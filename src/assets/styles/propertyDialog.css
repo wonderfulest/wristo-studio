@@ -1,0 +1,188 @@
+/* 属性对话框共享样式 */
+.property-form {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+.form-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: var(--el-fill-color-blank);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.field-help {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.code-text {
+  background-color: var(--el-fill-color-light);
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--el-color-primary);
+  font-family: monospace;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--el-fill-color-light);
+  border-radius: 6px;
+  transition: all 0.3s;
+  padding: 8px 0;
+}
+
+.option-item:hover {
+  background-color: var(--el-fill-color);
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-actions {
+  display: flex;
+  gap: 4px;
+  padding-right: 12px;
+}
+
+.option-actions .el-button {
+  padding: 4px;
+}
+
+.option-actions .el-button .el-icon {
+  font-size: 16px;
+}
+
+/* 颜色选项特定样式 */
+.color-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--el-border-color-lighter);
+  position: relative;
+  overflow: hidden;
+}
+
+.transparent-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.color-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-label {
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+/* 目标选项特定样式 */
+.goal-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+.goal-label {
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.goal-metric {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.option-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+}
+
+/* 表单元素样式 */
+.option-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.option-inputs .el-input {
+  flex: 1;
+}
+
+.is-invalid :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 500;
+}
+
+:deep(.el-input.is-disabled .el-input__wrapper) {
+  background-color: var(--el-fill-color-lighter);
+}
+
+/* 滚动条样式 */
+.property-form::-webkit-scrollbar {
+  width: 6px;
+}
+
+.property-form::-webkit-scrollbar-thumb {
+  background-color: var(--el-border-color-lighter);
+  border-radius: 3px;
+}
+
+.property-form::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* 其他通用样式 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.options-collapse {
+  margin-top: 16px;
+} 

@@ -1,0 +1,128 @@
+/* src/styles/dialog.scss */
+
+/* 通用对话框样式 */
+.el-dialog {
+    --el-dialog-padding-primary: 0;
+    border-radius: 8px;
+  
+    .el-dialog__header {
+      margin: 0;
+      padding: 32px 64px 24px;
+      border-bottom: 1px solid var(--el-border-color-lighter);
+    }
+  
+    .el-dialog__title {
+      font-size: 28px; // 标题字体加大
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+  
+    .el-dialog__body {
+      padding: 0;
+      font-size: 16px; // 内容默认字体加大
+      line-height: 1.6;
+      color: var(--el-text-color-primary);
+    }
+  
+    .el-dialog__footer {
+      padding: 0 64px 48px;
+      margin-top: 20px;
+      border-top: none;
+    }
+  
+    // 表单相关字体大小
+    .el-form-item__label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+  
+    .el-input__inner,
+    .el-textarea__inner {
+      font-size: 16px;
+    }
+  
+    .el-select {
+      font-size: 16px;
+    }
+  
+    // 表格相关字体大小
+    table {
+      font-size: 15px;
+    }
+  
+    // 列表相关字体大小
+    ul, ol {
+      font-size: 15px;
+    }
+  }
+  
+  /* 内容容器通用样式 */
+  .dialog-content {
+    padding: 48px 64px;
+  }
+  
+  /* 底部按钮通用样式 */
+  .dialog-footer {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 40px 0;
+  
+    .dialog-btn {
+      min-width: 120px;
+      padding: 14px 32px;
+      font-size: 16px; // 按钮字体大小
+      border-radius: 6px;
+  
+      &.el-button--primary {
+        font-weight: 500;
+      }
+    }
+  }
+  
+  /* 特定元素样式 */
+  .version-title {
+    font-size: 20px !important; // 版本标题加大
+  }
+  
+  .version-date {
+    font-size: 16px !important; // 日期字体加大
+  }
+  
+  .contact-info {
+    font-size: 16px !important; // 联系信息字体加大
+  }
+  
+  .shortcuts-table {
+    .action-cell {
+      font-size: 15px;
+    }
+    
+    .description-cell {
+      font-size: 15px;
+    }
+  }
+  
+  /* 深色模式适配 */
+  @media (prefers-color-scheme: dark) {
+    .el-dialog {
+      .el-dialog__header {
+        border-color: var(--el-border-color-darker);
+      }
+    }
+    
+    .dialog-btn:not(.el-button--primary) {
+      border-color: var(--el-border-color-darker);
+      background-color: var(--el-fill-color-dark);
+    }
+  }
+  
+  /* 下拉选项字体大小 */
+  .el-select-dropdown__item {
+    font-size: 15px !important;
+  }
+  
+  /* 复选框文字大小 */
+  .el-checkbox__label {
+    font-size: 15px !important;
+  }
