@@ -92,6 +92,7 @@
               </div>
             </div>
             <div class="meta">
+              <span>ID: {{ design.documentId }}</span>
               <span>KPay ID: {{ design.kpayId }}</span>
               <span>更新时间: {{ formatDate(design.updatedAt) }}</span>
             </div>
@@ -557,7 +558,6 @@ const handleEditSuccess = () => {
 }
 
 .header-actions .el-button {
-  padding: 4px 8px;
   height: 28px;
   font-size: 14px;
 }
