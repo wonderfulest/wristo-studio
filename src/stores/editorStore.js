@@ -4,8 +4,8 @@ export const useEditorStore = defineStore('editor', {
   state: () => ({
     zoomLevel: 1,
     backgroundColor: '#aaaaaa',
-    showTimeSimulator: true,
-    showZoomControls: true,
+    showTimeSimulator: false,
+    showZoomControls: false,
   }),
 
   getters: {
