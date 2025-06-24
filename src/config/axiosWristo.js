@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const instance = axios.create({
   baseURL: '/wristo-api', // 走 vite 代理
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
