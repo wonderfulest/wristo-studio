@@ -33,7 +33,9 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3030,
+    host: true,
+    port: 3004,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:1338',
