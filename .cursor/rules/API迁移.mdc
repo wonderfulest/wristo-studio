@@ -1,0 +1,136 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 登录，注册
+
+使用 SSO
+
+# 用户信息
+
+http://localhost:3004/api/auth/local
+返回：
+{
+    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzUxNTIxMTI3LCJleHAiOjE3NTQxMTMxMjd9.aPvSYOSD9OxUScw44XfxXubx8iBPrBrffrnia8HS2bg",
+    "user": {
+        "id": 1,
+        "documentId": "agckhdc74n4nlyx0aqnldxwu",
+        "username": "289869876@qq.com",
+        "email": "289869876@qq.com",
+        "provider": "local",
+        "confirmed": true,
+        "blocked": false,
+        "createdAt": "2025-04-05T15:20:13.420Z",
+        "updatedAt": "2025-06-22T17:36:40.217Z",
+        "publishedAt": "2025-04-05T15:20:13.304Z",
+        "merchant_token": "api__cTHWJsZEQg7ng8aliR6KgXOfPsAZahu"
+    }
+}
+
+
+## 设计列表
+
+http://localhost:3004/api/designs/getDesigns?pagination[page]=1&pagination[pageSize]=24&populate=*&sort=updatedAt:desc
+
+返回
+
+{
+    "data": [
+        {
+            "id": 1781,
+            "documentId": "oduspvzm88z571ba3n59nq6b",
+            "name": "ChronosData",
+            "configJson": {
+                "name": "ChronosData",
+            },
+            "localizations": [],
+            "creator": {
+                "id": 11,
+                "email": "wonder@wristo.io",
+                "username": "wonderful"
+            }
+        },
+    ],
+    "meta": {
+        "pagination": {
+            "page": 1,
+            "pageSize": "24",
+            "total": 916,
+            "pageCount": 39
+        }
+    }
+}
+
+
+# 获取设计
+
+GET:/api/designs/a59oobkvobs9ol3nn85ncw5v
+
+返回：
+
+{
+    "data": {
+        "id": 1726,
+        "documentId": "a59oobkvobs9ol3nn85ncw5v",
+        "name": "Pulse Circles",
+        "configJson": {},
+        "designStatus": "draft",
+        "description": "Pulse Circles",
+        "createdAt": "2025-06-24T02:26:41.262Z",
+        "updatedAt": "2025-06-25T01:52:57.787Z",
+        "publishedAt": "2025-06-24T02:26:41.262Z",
+        "kpayId": "993",
+        "userId": "10",
+        "screenshotUrl": "https://cdn.wristo.io/screenshot/c817cf03-e082-4413-acf1-224cd73474b3.png",
+        "garminAppUuid": null
+    },
+    "meta": {}
+}
+
+
+# 通过设计创建 Product
+
+/api/dsn/products/getOrCreateByDesignId
+
+{
+  "designId": "a59oobkvobs9ol3nn85ncw5v",
+  "name": "Pulse Circles",
+  "description": "Pulse Circles",
+  "trialLasts": 0.25,
+  "price": 1.99,
+  "garminImageUrl": "https://cdn.wristo.io/hero/a0ba1141-a760-4e3e-9e38-f39f71c64cee.png",
+  "garminStoreUrl": ""
+}
+
+返回
+
+{
+    "code": 0,
+    "msg": "success",
+    "data": {
+        "appId": 101351,
+        "designId": "a59oobkvobs9ol3nn85ncw5v",
+        "userId": 7,
+        "paddleProductId": "pro_01jygne8ejce6gy9pk9wce4p6y",
+        "paddlePriceId": "pri_01jygne8jhzdcv45xa1q5xtfhr",
+        "name": "Pulse Circles",
+        "description": "Pulse Circles",
+        "price": 1.99,
+        "garminImageUrl": "https://cdn.wristo.io/hero/a0ba1141-a760-4e3e-9e38-f39f71c64cee.png",
+        "garminStoreUrl": "",
+        "garminAppUuid": "",
+        "trialLasts": 0.25,
+        "createdAt": "2025-06-24 17:48:51",
+        "updatedAt": "2025-07-03 13:49:01",
+        "isActive": 1,
+        "isDeleted": 0,
+        "download": 0,
+        "purchase": 0,
+        "heroFile": null,
+        "backgroundFile": null,
+        "categories": null,
+        "packageStatus": 0
+    }
+}
+
