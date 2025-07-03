@@ -47,7 +47,9 @@ axiosInstance.interceptors.response.use(
           // 未授权，清除token并跳转到登录页
           const authStore = useAuthStore()
           authStore.logout()
-          router.push('/login')
+          const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
+          const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
+          window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
           messageStore.error('登录已过期，请重新登录')
           break
         case 403:
