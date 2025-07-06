@@ -77,16 +77,26 @@ router.beforeEach(async (to, _, next) => {
   // 检查路由是否需要认证
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
 
+  console.log('路由守卫检查:', {
+    to: to.path,
+    requiresAuth,
+    userInfo: userStore.userInfo,
+    isAuthenticated: userStore.isAuthenticated
+  })
+
   // 如果路由需要认证且用户未登录，重定向到登录页面
-  if (requiresAuth && !userStore.userInfo) {
+  if (requiresAuth && !userStore.isAuthenticated) {
+    console.log('用户未认证，重定向到登录页面')
     const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
     const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
     console.log('redirectUri 22222', redirectUri)
     setTimeout(() => {
       window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
     }, 1000)
-    return
+    // 阻止导航，不调用next()
+    return false
   }
+  
   // 如果用户已登录且访问登录页，重定向到首页
   next()
 })

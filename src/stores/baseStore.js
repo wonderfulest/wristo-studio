@@ -7,10 +7,10 @@ import { encodeElement } from '@/utils/elementCodec'
 import { compareColor } from '@/utils/colorUtils'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
-import { createOrUpdateDesign } from '@/api/design'
-import { getWPayProductByDesignId, updateProductByDesignId } from '@/api/wristo/products'
+import { designApi } from '@/api/wristo/design'
+import { productsApi } from '@/api/wristo/products'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 
 export const useBaseStore = defineStore('baseStore', {
   // state
@@ -390,8 +390,8 @@ export const useBaseStore = defineStore('baseStore', {
         ElMessage.error('createDesign 请先设置表盘名称和Kpay ID！')
         return false
       }
-      const authStore = useAuthStore()
-      const res = await createOrUpdateDesign({
+      const res = await designApi.updateDesign({
+        uid: this.id,
         name: this.watchFaceName,
         kpayId: this.kpayId,
         configJson: JSON.stringify(this.generateConfig()),
@@ -407,7 +407,7 @@ export const useBaseStore = defineStore('baseStore', {
         ElMessage.error('getWPayProductInfo 请先保存应用！')
         return false
       }
-      const res = await getWPayProductByDesignId({
+      const res = await productsApi.getOrCreateByDesignId({
         designId: this.id,
         name: this.watchFaceName,
         description: this.watchFaceName,
@@ -439,8 +439,8 @@ export const useBaseStore = defineStore('baseStore', {
           garminStoreUrl: '',
           name: '',
           description: '',
-          trialLasts: '',
-          price: ''
+          trialLasts: 0,
+          price: 0
         }
         return false
       }
@@ -451,7 +451,7 @@ export const useBaseStore = defineStore('baseStore', {
         ElMessage.error('updateWPayProductInfo 请先保存应用！')
         return false
       }
-      const res = await updateProductByDesignId({
+      const res = await productsApi.updateByDesignId({
         designId: this.id,
         name: this.watchFaceName,
         description: this.watchFaceName,

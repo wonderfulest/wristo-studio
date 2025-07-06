@@ -60,7 +60,7 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
-import { getDesign } from '@/api/design'
+import { designApi } from '@/api/wristo/design'
 import { useImageElementStore } from '@/stores/elements/imageElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { decodeElement } from '@/utils/elementCodec'
@@ -100,27 +100,54 @@ useKeyboardShortcuts()
 const backgroundColor = computed(() => editorStore.backgroundColor)
 
 // 加载设计配置
-const loadDesign = async (id) => {
+const loadDesign = async (designUid) => {
   try {
-    const response = await getDesign(id)
+    const response = await designApi.getDesignByUid(designUid)
     const designData = response.data
-    const config = designData.configJson
+    const config = designData.configJson || {}
     console.log(113, config)
-    // 加载属性
-    propertiesStore.loadProperties(config.properties)
-
+    
     // 设置基础信息
-    baseStore.id = id
+    baseStore.id = designUid
     baseStore.watchFaceName = designData.name
     baseStore.kpayId = designData.kpayId
-    baseStore.wpayEnabled = config.wpayEnabled
+    
+    // 如果配置为空，使用默认值
+    if (!config || Object.keys(config).length === 0) {
+      console.log('配置为空，使用默认值')
+      // 等待画布初始化完成
+      await waitCanvasReady()
+      
+      // 设置默认值
+      baseStore.watchFaceName = designData.name
+      baseStore.kpayId = designData.kpayId || ''
+      baseStore.themeBackgroundImages = []
+      baseStore.currentThemeIndex = 0
+      baseStore.wpayEnabled = false
+      baseStore.textCase = 0
+      baseStore.labelLengthType = 0
+      baseStore.showUnit = true
+      
+      // 初始化画布
+      baseStore.canvas.requestRenderAll()
+      return
+    }
+    
+    // 加载属性
+    if (config.properties) {
+      propertiesStore.loadProperties(config.properties)
+    }
+
+    // 设置WPay相关配置
+    baseStore.wpayEnabled = config.wpayEnabled || false
     // 获取WPay产品信息
     if (config.wpayEnabled) {
       await baseStore.getWPayProductInfo()
     }
+    
     console.log(114, config.themeBackgroundImages)
     // 设置主题背景图片
-    baseStore.themeBackgroundImages = config.themeBackgroundImages
+    baseStore.themeBackgroundImages = config.themeBackgroundImages || []
 
     // 设置文本大小写
     if (config.textCase !== undefined) {
@@ -151,12 +178,17 @@ const loadDesign = async (id) => {
 
     // 切换主题背景
     baseStore.toggleThemeBackground()
+    
     // 加载字体
-    await fontStore.loadFontsForElements(config.elements)
+    if (config.elements) {
+      await fontStore.loadFontsForElements(config.elements)
+    }
+    
     // 加载元素到画布
     if (config && config.elements) {
       await loadElements(config.elements)
     }
+    
     // 更新画布缩放
     canvasRef.value.updateZoom()
 
@@ -164,7 +196,9 @@ const loadDesign = async (id) => {
     await new Promise(resolve => setTimeout(resolve, 100))
 
     // 重新排序画布
-    reorderCanvasByIds(config.orderIds)
+    if (config.orderIds) {
+      reorderCanvasByIds(config.orderIds)
+    }
 
   } catch (error) {
     console.error('加载设计失败:', error)
@@ -248,7 +282,8 @@ onMounted(() => {
   if (designId) {
     loadDesign(designId)
   } else {
-    initNewDesign()
+    // 如果没有设计ID，跳转到设计列表页面
+    router.push('/designs')
   }
 
   // 设置自动保存

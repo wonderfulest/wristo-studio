@@ -54,13 +54,13 @@
       />
     </div>
 
-    <div class="user-menu" @click="toggleDropdown" v-if="authStore.isAuthenticated">
+    <div class="user-menu" @click="toggleDropdown" v-if="userStore.isAuthenticated">
       <div class="user-avatar">
         <div class="avatar-circle" :style="{ backgroundColor: avatarColor }">
           {{ userInitials }}
         </div>
         <el-tooltip 
-          :content="authStore.user.username"
+          :content="userStore.userInfo?.username"
           :disabled="!isUsernameTruncated"
           placement="bottom"
         >
@@ -91,15 +91,17 @@
     </div>
   </header>
   <WPayTokenDialog ref="wpayDialogRef" />
+  <CreateDesignDialog ref="createDesignDialogRef" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import { useMessageStore } from '@/stores/message'
 import WPayTokenDialog from '../dialogs/WPayTokenDialog.vue'
+import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
 
 const props = defineProps({
   // 其他需要保留的 props
@@ -110,16 +112,17 @@ const emit = defineEmits(['update:isDialogVisible'])
 const router = useRouter()
 const route = useRoute()
 const baseStore = useBaseStore()
-const authStore = useAuthStore()
+const userStore = useUserStore()
 const messageStore = useMessageStore()
 
-const user = computed(() => authStore.user)
+const user = computed(() => userStore.userInfo)
 const showDropdown = ref(false)
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
 const usernameRef = ref(null)
 const isUsernameTruncated = ref(false)
 const wpayDialogRef = ref(null)
+const createDesignDialogRef = ref(null)
 
 // 计算属性
 const watchFaceName = computed({
@@ -133,7 +136,7 @@ const kpayId = computed({
 })
 
 const userInitials = computed(() => {
-  const username = authStore.user.username || ''
+  const username = userStore.userInfo?.username || ''
   return username
     .split(/\s+/)
     .slice(0, 2)
@@ -147,7 +150,7 @@ const avatarColor = computed(() => {
     '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
     '#712fd1', '#f74584', '#13c2c2', '#6f42c1'
   ]
-  const username = authStore.user.username || ''
+  const username = userStore.userInfo?.username || ''
   const index = Array.from(username).reduce(
     (acc, char) => acc + char.charCodeAt(0), 0
   ) % colors.length
@@ -155,7 +158,7 @@ const avatarColor = computed(() => {
 })
 
 const truncatedUsername = computed(() => {
-  const username = authStore.user.username || ''
+  const username = userStore.userInfo?.username || ''
   const maxLength = 12
   if (username.length <= maxLength) return username
   return `${username.slice(0, maxLength)}...`
@@ -171,11 +174,7 @@ const showDesignsListConfirm = () => {
 
 const confirmNewDesign = () => {
   designerDialogVisible.value = false
-  baseStore.$reset()
-  router.push({
-    path: '/design',
-    query: { new: Date.now().toString() }
-  })
+  createDesignDialogRef.value?.show()
 }
 
 const confirmOpenDesignsList = () => {
@@ -189,7 +188,7 @@ const toggleDropdown = () => {
 }
 
 const handleLogout = () => {
-  authStore.logout()
+  userStore.logout()
   const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
   const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
   window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`

@@ -7,6 +7,19 @@ export const useUserStore = defineStore('user', {
     token: '',
     userInfo: null as UserInfo | null
   }),
+  getters: {
+    isAuthenticated: (state) => {
+      const hasToken = !!state.token
+      const hasUserInfo = !!state.userInfo
+      console.log('检查认证状态:', {
+        userInfo: state.userInfo,
+        hasUserInfo,
+        hasToken,
+        isAuthenticated: hasToken && hasUserInfo
+      })
+      return hasToken && hasUserInfo
+    }
+  },
   actions: {
     async logout() {
       try {
@@ -21,10 +34,14 @@ export const useUserStore = defineStore('user', {
     },
     setUserInfo(userInfo: UserInfo) {
       this.userInfo = userInfo
+    },
+    setToken(token: string) {
+      this.token = token
     }
   },
   persist: {
-    key: 'wristo-user',
-    storage: sessionStorage
+    key: 'user-store',
+    storage: localStorage,
+    paths: ['token', 'userInfo']
   }
-}) 
+})

@@ -80,20 +80,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Picture, Loading } from '@element-plus/icons-vue'
 import { useMessageStore } from '@/stores/message'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import moment from 'moment'
 import { getFavorites, toggleFavorite } from '@/api/favorites'
 import { ElMessageBox } from 'element-plus'
-import { createOrUpdateDesign } from '@/api/design'
+import { designApi } from '@/api/wristo/design'
+import { ApiResponse, Design } from '@/types/api'
+import { UpdateDesignParams } from '@/api/wristo/design'
 
 const router = useRouter()
 const messageStore = useMessageStore()
-const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const favorites = ref([])
 const loading = ref(false)
@@ -105,7 +107,7 @@ const total = ref(0)
 moment.locale('zh-cn')
 
 // 格式化日期
-const formatDate = (date) => {
+const formatDate = (date: number) => {
   const now = moment()
   const targetDate = moment(date)
   const diff = now.diff(targetDate, 'days')
@@ -136,7 +138,7 @@ const fetchFavorites = async () => {
     const response = await getFavorites({
       page: currentPage.value,
       pageSize: pageSize.value,
-      userId: authStore.user.id
+      userId: userStore.userInfo?.id
     })
     
     favorites.value = response.data
@@ -150,9 +152,9 @@ const fetchFavorites = async () => {
 }
 
 // 打开设计
-const openDesign = async (design) => {
+const openDesign = async (design: Design) => {
   try {
-    router.push(`/design?id=${design.documentId}`)
+    router.push(`/design?id=${design.id}`)
   } catch (error) {
     console.error('打开设计失败:', error)
     messageStore.error('打开设计失败')
@@ -160,7 +162,7 @@ const openDesign = async (design) => {
 }
 
 // 取消收藏
-const removeFavorite = async (favorite) => {
+const removeFavorite = async (favorite: Design) => {
   try {
     // 添加确认对话框
     await ElMessageBox.confirm(
@@ -174,7 +176,7 @@ const removeFavorite = async (favorite) => {
     )
 
     loading.value = favorite.id
-    await toggleFavorite(favorite.name, favorite.design.id, authStore.user.id, false)
+    await toggleFavorite(favorite.name, favorite.design.id, userStore.userInfo?.id, false)
     messageStore.success('取消收藏成功')
     
     // 如果当前页只有一条数据，且不是第一页，则跳转到上一页
@@ -208,32 +210,32 @@ const handleSizeChange = (size) => {
 }
 
 // 添加复制设计方法
-const copyDesign = async (design) => {
+const copyDesign = async (design: Design) => {
   try {
     loading.value = true
     
     // 生成新的表盘名称，添加"复制"后缀
     const newName = `${design.name}—copy`
-
-    // 生成新的 kpay ID，确保其唯一性
-    const newKpayId = new Date().getTime()
-
     // 创建新表盘数据
     const newDesignData = {
       name: newName,
-      kpayId: +newKpayId,
-      designStatus: 'draft',
       description: design.description,
-      screenshotUrl: design.screenshotUrl,
-      configJson: design.configJson,
-      userId: +authStore.user.id  // 使用当前用户的ID
     }
-    const response = await createOrUpdateDesign(newDesignData)
-
-    if (response.data) {
-      messageStore.success('复制成功')
-      // 可以选择是否跳转到我的设计页面
-      router.push('/designs')
+    const response: ApiResponse<Design> = await designApi.createDesign(newDesignData)
+    console.log('111 createDesign', response)
+    if (response.code === 0 && response.data) {
+    const updateDesignData = {
+      uid: response.data.id,
+      designStatus: 'draft',
+      configJson: design.configJson,
+    } as UpdateDesignParams
+    const updateResponse = await designApi.updateDesign(updateDesignData)
+    console.log('222 updateDesign', updateResponse)
+    if (updateResponse.code === 0 && updateResponse.data) {
+        messageStore.success('复制成功')
+        // 可以选择是否跳转到我的设计页面
+        router.push('/designs')
+      }
     }
   } catch (error) {
     console.error('复制失败:', error)

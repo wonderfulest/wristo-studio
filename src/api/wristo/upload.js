@@ -1,4 +1,4 @@
-import axiosWristoApi from '@/config/axiosWristo'
+import instance from '@/config/axios'
 
 /**
  * 上传截图
@@ -6,7 +6,7 @@ import axiosWristoApi from '@/config/axiosWristo'
  * @returns {Promise} 上传结果
  */
 export const uploadScreenshot = async (formData) => {
-  const response = await axiosWristoApi.post('/dsn/file/upload', formData, {
+  const response = await instance.post('/dsn/file/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }

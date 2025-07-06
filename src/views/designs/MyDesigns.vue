@@ -8,12 +8,7 @@
         <el-option label="草稿" value="draft" />
         <el-option label="已提交" value="submitted" />
       </el-select>
-      <el-select v-model="selectedUserId" placeholder="选择用户" clearable class="user-filter" @change="handleUserChange">
-        <el-option v-for="user in usersList" :key="user.id" :label="user.username" :value="user.id">
-          <span>{{ user.username }}</span>
-          <span class="user-email">({{ user.email }})</span>
-        </el-option>
-      </el-select>
+
       <el-select v-model="sortField" placeholder="排序字段" @change="handleSortChange" class="sort-field-filter">
         <el-option label="创建时间" value="createdAt" />
         <el-option label="更新时间" value="updatedAt" />
@@ -79,25 +74,19 @@
             </div>
           </template>
           <div class="design-info">
-            <div class="design-background" v-if="design.screenshotUrl">
-              <img :src="design.screenshotUrl" :alt="design.name" class="background-image" />
-              <div class="creator-badge" v-if="showCreator">
-                <span>作者：{{ getCreatorName(design) }}</span>
-              </div>
-            </div>
-            <div class="design-background" v-else-if="design.backgroundUrl">
-              <img :src="design.backgroundUrl" :alt="design.name" class="background-image" />
+            <div class="design-background" v-if="getDesignImageUrl(design)">
+              <img :src="getDesignImageUrl(design)" :alt="design.name" class="background-image" />
               <div class="creator-badge" v-if="showCreator">
                 <span>作者：{{ getCreatorName(design) }}</span>
               </div>
             </div>
             <div class="meta">
-              <span>ID: {{ design.documentId }}</span>
+              <span>ID: {{ design.designUid }}</span>
               <span>KPay ID: {{ design.kpayId }}</span>
               <span>更新时间: {{ formatDate(design.updatedAt) }}</span>
             </div>
             <div class="actions">
-              <el-button v-if="authStore.user.id == 1 || design.userId == authStore.user.id" type="primary" size="small" @click="openCanvas(design)">编 辑</el-button>
+              <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">编 辑</el-button>
               <el-button 
                 type="warning" 
                 size="small" 
@@ -159,22 +148,22 @@
 <script setup>
 import { ref, onMounted, watch, onUnmounted, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getDesigns, getDesign, updateDesignStatus, updateDesign, deleteDesign } from '@/api/design'
+// 移除旧的API导入，使用新的designApi
+import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
-import { createOrUpdateDesign } from '@/api/design'
 import dayjs from 'dayjs'
 import { Star, StarFilled, Edit, Delete } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
-import { useAuthStore } from '@/stores/auth'
-import { getUsers } from '@/api/users'
+import { useUserStore } from '@/stores/user'
+
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 const editDesignDialog = ref(null)
 const router = useRouter()
 const route = useRoute()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
-const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const designs = ref([])
 const currentPage = ref(1)
@@ -194,24 +183,11 @@ const loadingStates = ref({
 // 搜索相关状态
 const searchName = ref('')
 const selectedStatus = ref('')
-const selectedUserId = ref(null)
 const sortField = ref('updatedAt')
 const sortOrder = ref('desc')
-const usersList = ref([])
 
 // 添加作者显示控制
 const showCreator = ref(false)  // 默认隐藏作者
-
-// 获取用户列表
-const fetchUsers = async () => {
-  try {
-    const response = await getUsers()
-    usersList.value = response.data
-  } catch (error) {
-    console.error('获取用户列表失败:', error)
-    messageStore.error('获取用户列表失败')
-  }
-}
 
 // 处理搜索
 const handleSearch = () => {
@@ -221,12 +197,6 @@ const handleSearch = () => {
 
 // 处理状态变化
 const handleStatusChange = () => {
-  currentPage.value = 1
-  fetchDesigns()
-}
-
-// 处理用户选择变化
-const handleUserChange = () => {
   currentPage.value = 1
   fetchDesigns()
 }
@@ -248,31 +218,50 @@ const getStatusText = (status) => {
 
 // 格式化日期
 const formatDate = (date) => {
+  // 处理时间戳格式
+  if (typeof date === 'number') {
+    return dayjs(date).format('YYYY-MM-DD HH:mm')
+  }
   return dayjs(date).format('YYYY-MM-DD HH:mm')
 }
 
 // 获取创作者名称
 const getCreatorName = (design) => {
-  return design.creator.username || '未知用户'
+  return design.user?.username || '未知用户'
+}
+
+// 获取设计图片URL
+const getDesignImageUrl = (design) => {
+  return designApi.getDesignImageUrl(design, true)
 }
 
 // 获取设计列表
 const fetchDesigns = async () => {
   try {
+    console.log('fetchDesigns开始，用户信息:', userStore.userInfo)
     console.log('currentPage.value', currentPage.value)
-    const response = await getDesigns({
-      page: currentPage.value,
+    const params = {
+      pageNum: currentPage.value,
       pageSize: pageSize.value,
-      userId: selectedUserId.value || authStore.user.id,
       status: selectedStatus.value,
       name: searchName.value,
-      sort: `${sortField.value}:${sortOrder.value}`
-    })
-    console.log('response', response)
-    designs.value = response.data
-    total.value = response.meta.pagination.total
+      orderBy: `${sortField.value}:${sortOrder.value}`,
+      includeConfigJson: false
+    }
+    console.log('API请求参数:', params)
+    const response = await designApi.getDesignPage(params)
+    console.log('API响应:', response)
+    if (response.code === 0 && response.data) {
+      designs.value = response.data.list
+      total.value = response.data.total
+      console.log('设计列表获取成功，数量:', designs.value.length)
+    } else {
+      console.error('API返回错误:', response)
+      messageStore.error(response.msg || '获取设计列表失败')
+    }
   } catch (error) {
     console.error('[MyDesigns] fetchDesigns error:', error)
+    console.error('错误详情:', error.response?.data)
     messageStore.error('获取设计列表失败')
   }
 }
@@ -293,7 +282,7 @@ const handleSizeChange = (val) => {
 // 打开画布编辑器
 const openCanvas = async (design) => {
   try {
-    const response = await getDesign(design.documentId)
+    const response = await designApi.getDesignByUid(design.designUid)
     const designData = response.data
 
     baseStore.watchFaceName = designData.name
@@ -303,7 +292,7 @@ const openCanvas = async (design) => {
       baseStore.elements = designData.configJson
     }
 
-    router.push('/design?id=' + designData.documentId)
+    router.push('/design?id=' + designData.designUid)
   } catch (error) {
     console.error('加载设计失败:', error)
     messageStore.error('加载设计失败')
@@ -312,7 +301,7 @@ const openCanvas = async (design) => {
 
 // 编辑设计信息
 const editDesign = (design) => {
-  editDesignDialog.value?.show(design.documentId)
+  editDesignDialog.value?.show(design.designUid)
 }
 
 // 复制设计
@@ -326,14 +315,14 @@ const copyDesign = async (design) => {
       kpayId: new Date().getTime().toString(),
       designStatus: 'draft',
       description: design.description,
-      screenshotUrl: design.screenshotUrl,
-      configJson: design.configJson,
-      userId: authStore.user.id
+      configJson: design.configJson
     }
-    const response = await createOrUpdateDesign(newDesignData)
-    if (response.data) {
+    const response = await designApi.updateDesign(newDesignData)
+    if (response.code === 0 && response.data) {
       messageStore.success('复制成功')
       await fetchDesigns()
+    } else {
+      messageStore.error(response.msg || '复制失败')
     }
   } catch (error) {
     console.error('复制失败:', error)
@@ -355,10 +344,14 @@ const confirmDeleteDesign = async () => {
 
   try {
     loadingStates.value.delete.add(designToDelete.value.id)
-    await deleteDesign(designToDelete.value.documentId)
-    messageStore.success('删除成功')
-    deleteDialogVisible.value = false
-    await fetchDesigns()
+    const response = await designApi.deleteDesign(designToDelete.value.designUid)
+    if (response.code === 0) {
+      messageStore.success('删除成功')
+      deleteDialogVisible.value = false
+      await fetchDesigns()
+    } else {
+      messageStore.error(response.msg || '删除失败')
+    }
   } catch (error) {
     console.error('删除失败:', error)
     messageStore.error('删除失败')
@@ -373,7 +366,13 @@ const submitDesign = async (design) => {
   
   try {
     loadingStates.value.submit.add(design.id)
-    await updateDesignStatus(design.documentId, 'submitted')
+    const response = await designApi.updateDesign({
+      uid: design.designUid,
+      designStatus: 'submitted'
+    })
+    if (response.code !== 0) {
+      throw new Error(response.msg || '提交失败')
+    }
     messageStore.success('提交成功')
     await fetchDesigns()
   } catch (error) {
@@ -394,7 +393,7 @@ const handleRefresh = (event) => {
 
 // 首次挂载时加载数据
 onMounted(() => {
-  fetchUsers()
+  console.log('MyDesigns组件挂载，用户信息:', userStore.userInfo)
   fetchDesigns()
 })
 
@@ -409,7 +408,7 @@ const handleFavorite = async (design) => {
   
   try {
     loadingStates.value.favorite.add(design.id)
-    await toggleFavorite(design.name, design.id, authStore.user.id, true)
+    await toggleFavorite(design.name, design.id, userStore.userInfo?.id, true)
     messageStore.success('收藏成功')
   } catch (error) {
     console.error('收藏失败:', error)
@@ -595,15 +594,7 @@ const handleEditSuccess = () => {
   width: 200px;
 }
 
-.user-filter {
-  width: 200px;
-}
 
-.user-email {
-  margin-left: 8px;
-  color: #909399;
-  font-size: 12px;
-}
 
 .status-filter {
   width: 120px;

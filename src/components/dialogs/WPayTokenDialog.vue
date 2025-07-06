@@ -24,10 +24,10 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import { setWPayMerchantToken, getUser } from '@/api/users'
 
-const authStore = useAuthStore()
+const userStore = useUserStore()
 const dialogVisible = ref(false)
 const form = reactive({
   token: ''

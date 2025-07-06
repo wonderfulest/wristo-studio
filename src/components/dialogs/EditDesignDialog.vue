@@ -91,12 +91,12 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getDesign, updateDesign } from '@/api/design'
+// 移除旧的API导入，使用新的designApi
+import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useMessageStore } from '@/stores/message'
 import { ElMessageBox } from 'element-plus'
-import { createOrUpdateDesign } from '@/api/design'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import { DocumentCopy, Edit } from '@element-plus/icons-vue'
@@ -116,8 +116,8 @@ const form = reactive({
 
 const baseStore = useBaseStore()
 const messageStore = useMessageStore()
-const authStore = useAuthStore()
-const user = computed(() => authStore.user)
+const userStore = useUserStore()
+const user = computed(() => userStore.userInfo)
 
 const emit = defineEmits(['success', 'cancel'])
 
@@ -127,31 +127,36 @@ const jsonEditError = ref('')
 const jsonEditStatus = ref('')
 
 // 加载设计数据
-const loadDesign = async (documentId) => {
+const loadDesign = async (designUid) => {
   try {
-    const response = await getDesign(documentId)
-    const designData = response.data
-    
-    // 先设置基本信息
-    Object.assign(form, {
-      id: designData.id,
-      name: designData.name,
-      kpayId: designData.kpayId,
-      designStatus: designData.designStatus,
-      description: designData.description,
-      configJson: designData.configJson,
-      configJsonString: JSON.stringify(designData.configJson, null, 2)
-    })
+    const response = await designApi.getDesignByUid(designUid)
+    if (response.code === 0 && response.data) {
+      const designData = response.data
+      
+      // 先设置基本信息
+      Object.assign(form, {
+        id: designData.id,
+        name: designData.name,
+        kpayId: designData.kpayId,
+        designStatus: designData.designStatus,
+        description: designData.description,
+        configJson: designData.configJson,
+        configJsonString: JSON.stringify(designData.configJson, null, 2)
+      })
 
-    // 获取最新配置
-    const config = baseStore.generateConfig()
-    if (config) {
-      form.configJson = config
-      form.configJsonString = JSON.stringify(config, null, 2)
+      // 获取最新配置
+      const config = baseStore.generateConfig()
+      if (config) {
+        form.configJson = config
+        form.configJsonString = JSON.stringify(config, null, 2)
+      }
+
+      // 初始化编辑文本
+      jsonEditText.value = JSON.stringify(form.configJson, null, 2)
+    } else {
+      ElMessage.error(response.msg || '加载设计失败')
+      handleCancel()
     }
-
-    // 初始化编辑文本
-    jsonEditText.value = JSON.stringify(form.configJson, null, 2)
   } catch (error) {
     console.error('加载设计失败:', error)
     ElMessage.error('加载设计失败')
@@ -200,7 +205,7 @@ const handleConfirm = async () => {
       : form.configJson                 // 如果在预览模式，使用 form 中的配置
 
     const data = {
-      documentId: designId.value,
+      uid: designId.value,
       name: form.name,
       kpayId: form.kpayId,
       designStatus: form.designStatus,
@@ -209,10 +214,14 @@ const handleConfirm = async () => {
       userId: user.value.id
     }
 
-    const res = await createOrUpdateDesign(data)
+    const res = await designApi.updateDesign(data)
     
-    emit('success', res.data)
-    dialogVisible.value = false
+    if (res.code === 0 && res.data) {
+      emit('success', res.data)
+      dialogVisible.value = false
+    } else {
+      messageStore.error(res.msg || '更新设计失败')
+    }
 
   } catch (error) {
     console.error('更新设计失败:', error)
@@ -239,23 +248,23 @@ const copyConfig = () => {
 }
 
 // 定义 show 方法
-const show = async (documentId) => {
+const show = async (designUid) => {
   // 重置状态
   isEditing.value = false
   jsonEditText.value = ''
   jsonEditError.value = ''
   jsonEditStatus.value = ''
   
-  designId.value = documentId
-  await loadDesign(documentId)
+  designId.value = designUid
+  await loadDesign(designUid)
   dialogVisible.value = true
 }
 
 // 添加事件监听
 const handleOpenViewProperties = () => {
-  const designId = route.query.id
-  if (designId) {
-    show(designId)
+  const designUid = route.query.id
+  if (designUid) {
+    show(designUid)
   }
 }
 

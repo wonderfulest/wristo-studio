@@ -34,12 +34,25 @@
       </div>
       <div class="setting-item">
         <label>试用时长（小时）</label>
-        <el-input-number v-model="wpay.trialLasts" :min="0" @change="updateWpayTrialLasts" />
+        <el-input-number 
+          v-model="wpay.trialLasts" 
+          :min="0" 
+          @change="updateWpayTrialLasts"
+          :model-value="Number(wpay.trialLasts) || 0"
+        />
         <div class="setting-description">用户可免费试用的时长，单位为小时</div>
       </div>
       <div class="setting-item">
         <label>价格（美元）</label>
-        <el-input-number v-model="wpay.price" :min="0" :max="99.99" :step="0.01" :precision="2" @change="updateWpayPrice" />
+        <el-input-number 
+          v-model="wpay.price" 
+          :min="0" 
+          :max="99.99" 
+          :step="0.01" 
+          :precision="2" 
+          @change="updateWpayPrice"
+          :model-value="Number(wpay.price) || 0"
+        />
         <div class="setting-description">应用在 Garmin Connect IQ Store 中的售价</div>
       </div>
     </template>

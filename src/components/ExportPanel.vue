@@ -68,23 +68,24 @@
  * configuration object, exporting the configuration to a JSON file, uploading the
  * configuration to the server, and copying the configuration to the clipboard.
  */
-import { createOrUpdateDesign } from '@/api/design'
+// 移除旧的API导入，使用新的designApi
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ref, computed } from 'vue'
+import { designApi } from '@/api/wristo/design'
 import _ from 'lodash'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import { ElMessage, ElProgress, ElLoading, ElTag } from 'element-plus'
 import { useMessageStore } from '@/stores/message'
 import { getMetricBySymbol } from '@/config/settings'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
 import { useRouter } from 'vue-router'
 import { usePropertiesStore } from '@/stores/properties'
 const messageStore = useMessageStore()
 const router = useRouter()
-const authStore = useAuthStore()
-const user = computed(() => authStore.user)
+const userStore = useUserStore()
+const user = computed(() => userStore.userInfo)
 const propertiesStore = usePropertiesStore()
 // 定义属性
 const props = defineProps({
@@ -174,6 +175,7 @@ const uploadScreenshot = async () => {
     const screenshot = await baseStore.captureScreenshot(true)
     if (screenshot) {
       const screenshotUrl = await uploadBase64Image(screenshot, 'screenshot')
+      console.log('screenshotUrl', screenshotUrl)
       return screenshotUrl
     }
   } catch (screenshotError) {
@@ -208,16 +210,16 @@ const saveConfig = async () => {
       // 如果 id 存在，则更新; 否则创建
       data.documentId = baseStore.id
     }
-    const designRes = await createOrUpdateDesign(data)
-    console.log('自动保存成功', designRes)
-    // 如果 query 中 id 为空，则更新 query 中的 id
-    if (!router.currentRoute.value.query.id) {
-      router.push({
-        path: '/design',
-        query: { id: designRes.data.documentId }
-      })
-    }
-    return designRes.data.documentId
+    // const designRes = await saveDddddDesign(data)
+    // console.log('自动保存成功', designRes)
+    // // 如果 query 中 id 为空，则更新 query 中的 id
+    // if (!router.currentRoute.value.query.id) {
+    //   router.push({
+    //     path: '/design',
+    //     query: { id: designRes.data.documentId }
+    //   })
+    // }
+    // return designRes.data.documentId
   } catch (error) {
     console.error('自动保存失败', error)
     return ''
@@ -279,6 +281,8 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
+    console.log('screenshotUrl', screenshotUrl)
+
     // 配置更新
     currentStatus = '更新配置信息...'
     currentProgress = 60
@@ -287,21 +291,27 @@ const uploadApp = async () => {
     }
 
     const data = {
+      uid: baseStore.id,
       name: baseStore.watchFaceName,
       kpayId: baseStore.kpayId,
       description: baseStore.watchFaceName,
       designStatus: 'draft',
       userId: user.value.id,
       configJson: baseStore.generateConfig(),
-      screenshotUrl: screenshotUrl
+      backgroundImage: {
+        url: baseStore.themeBackgroundImages[0]
+      },
+      coverImage: {
+        url: screenshotUrl
+      }
     }
     console.log('上传配置', data)
     if (baseStore.id) {
       data.documentId = baseStore.id
     }
     // 创建或更新表盘设计
-    const res = await createOrUpdateDesign(data)
-    console.log('createOrUpdateDesign 666', res)
+    const res = await designApi.updateDesign(data)
+    console.log('updateDesign 666', res)
     // 更新 baseStore.id
     baseStore.id = res.data.documentId
 
@@ -337,7 +347,6 @@ const uploadApp = async () => {
         loadingInstance = null
       }
     }, 1000)
-
     return 0
   } catch (error) {
     console.error('配置上传失败:', error)

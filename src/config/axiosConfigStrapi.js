@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
 import { useMessageStore } from '@/stores/message'
 import router from '@/router'
 
@@ -15,10 +15,10 @@ const axiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    const authStore = useAuthStore()
-    console.log('authStore.token:', authStore.token)
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    const userStore = useUserStore()
+    console.log('userStore.token:', userStore.token)
+    if (userStore.token) {
+      config.headers.Authorization = `Bearer ${userStore.token}`
     }
     return config
   },
@@ -45,11 +45,13 @@ axiosInstance.interceptors.response.use(
       switch (error.response.status) {
         case 401:
           // 未授权，清除token并跳转到登录页
-          const authStore = useAuthStore()
-          authStore.logout()
+          const userStore = useUserStore()
+          userStore.logout()
           const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
           const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
-          window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
+          setTimeout(() => {
+            window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
+          }, 80000)
           messageStore.error('登录已过期，请重新登录')
           break
         case 403:

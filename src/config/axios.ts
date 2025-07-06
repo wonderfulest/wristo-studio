@@ -16,8 +16,14 @@ const instance = axios.create({
 instance.interceptors.request.use(config => {
   const userStore = useUserStore()
   const token = userStore.token
+  console.log('请求拦截器 - Token:', token)
+  console.log('请求URL:', config.url)
+  console.log('请求方法:', config.method)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    console.log('设置Authorization头:', `Bearer ${token}`)
+  } else {
+    console.log('Token为空，未设置Authorization头')
   }
   return config
 })
@@ -34,14 +40,16 @@ instance.interceptors.response.use(
     }
   },
   error => {
+    console.log('响应拦截器错误:', error.response?.status, error.response?.data)
+    console.log('错误对象:', error)
     if (error.response?.status === 403) {
-      console.log('403', error.response)
+      console.log('403错误，重定向到登录页面')
       ElMessage.error('登录已过期，请重新登录')
       setTimeout(() => {
         const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
         const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
-        window.location.href = `${ssoBaseUrl}?client=merchant&redirect_uri=${encodeURIComponent(redirectUri)}`  
-      }, 3000)
+        window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`  
+      }, 30000)
     } else {
       ElMessage.error('网络错误，请稍后重试')
     }
