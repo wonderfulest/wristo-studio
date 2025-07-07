@@ -145,32 +145,32 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, watch, onUnmounted, onActivated } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, StarFilled, Edit, Delete } from '@element-plus/icons-vue'
+import { Star, Edit, Delete } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
-
+import { CreateCopyDesignParams, UpdateDesignParams } from '@/api/wristo/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
+import { Design } from '@/types/api'
 const editDesignDialog = ref(null)
 const router = useRouter()
-const route = useRoute()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
 const userStore = useUserStore()
 
-const designs = ref([])
+const designs = ref<Design[]>([])
 const currentPage = ref(1)
 const pageSize = ref(24)
 const total = ref(0)
 const deleteDialogVisible = ref(false)
-const designToDelete = ref(null)
+const designToDelete = ref<Design | null>(null)
 
 // 添加加载状态
 const loadingStates = ref({
@@ -208,16 +208,16 @@ const handleSortChange = () => {
 }
 
 // 获取状态文本
-const getStatusText = (status) => {
+const getStatusText = (status: string) => {
   const statusMap = {
     draft: '草稿',
     submitted: '已提交'
   }
-  return statusMap[status] || '未知'
+  return statusMap[status as keyof typeof statusMap] || '未知'
 }
 
 // 格式化日期
-const formatDate = (date) => {
+const formatDate = (date: number) => {
   // 处理时间戳格式
   if (typeof date === 'number') {
     return dayjs(date).format('YYYY-MM-DD HH:mm')
@@ -226,13 +226,13 @@ const formatDate = (date) => {
 }
 
 // 获取创作者名称
-const getCreatorName = (design) => {
+const getCreatorName = (design: Design) => {
   return design.user?.username || '未知用户'
 }
 
 // 获取设计图片URL
-const getDesignImageUrl = (design) => {
-  return designApi.getDesignImageUrl(design, true)
+const getDesignImageUrl = (design: Design) => {
+  return designApi.getDesignImageUrl(design, true) || ''
 }
 
 // 获取设计列表
@@ -267,23 +267,23 @@ const fetchDesigns = async () => {
 }
 
 // 处理页码变化
-const handleCurrentChange = (val) => {
+const handleCurrentChange = (val: number) => {
   currentPage.value = val
   fetchDesigns()
 }
 
 // 处理每页数量变化
-const handleSizeChange = (val) => {
+const handleSizeChange = (val: number) => {
   pageSize.value = val
   currentPage.value = 1
   fetchDesigns()
 }
 
 // 打开画布编辑器
-const openCanvas = async (design) => {
+const openCanvas = async (design: Design) => {
   try {
     const response = await designApi.getDesignByUid(design.designUid)
-    const designData = response.data
+    const designData = response.data || {} as Design
 
     baseStore.watchFaceName = designData.name
     baseStore.kpayId = designData.kpayId
@@ -300,29 +300,26 @@ const openCanvas = async (design) => {
 }
 
 // 编辑设计信息
-const editDesign = (design) => {
+const editDesign = (design: Design) => {
   editDesignDialog.value?.show(design.designUid)
 }
 
 // 复制设计
-const copyDesign = async (design) => {
+const copyDesign = async (design: Design) => {
   if (loadingStates.value.copy.has(design.id)) return
   
   try {
     loadingStates.value.copy.add(design.id)
     const newDesignData = {
-      name: `${design.name}—copy`,
-      kpayId: new Date().getTime().toString(),
-      designStatus: 'draft',
-      description: design.description,
-      configJson: design.configJson
-    }
-    const response = await designApi.updateDesign(newDesignData)
-    if (response.code === 0 && response.data) {
+      uid: design.designUid
+    } as CreateCopyDesignParams
+    const createResponse = await designApi.createDesignByCopy(newDesignData)
+    console.log('111 createDesign', createResponse)
+    if (createResponse.code === 0 && createResponse.data) {
       messageStore.success('复制成功')
       await fetchDesigns()
     } else {
-      messageStore.error(response.msg || '复制失败')
+      messageStore.error(createResponse.msg || '复制失败')
     }
   } catch (error) {
     console.error('复制失败:', error)
@@ -333,7 +330,7 @@ const copyDesign = async (design) => {
 }
 
 // 确认删除
-const confirmDelete = (design) => {
+const confirmDelete = (design: Design) => {
   designToDelete.value = design
   deleteDialogVisible.value = true
 }
@@ -361,7 +358,7 @@ const confirmDeleteDesign = async () => {
 }
 
 // 提交设计
-const submitDesign = async (design) => {
+const submitDesign = async (design: Design) => {
   if (loadingStates.value.submit.has(design.id)) return
   
   try {
@@ -384,7 +381,7 @@ const submitDesign = async (design) => {
 }
 
 // 处理刷新事件
-const handleRefresh = (event) => {
+const handleRefresh = (event: any ) => {
   if (event.detail.route === 'my-designs') {
     currentPage.value = 1
     fetchDesigns()
@@ -403,7 +400,7 @@ onUnmounted(() => {
 })
 
 // 处理收藏
-const handleFavorite = async (design) => {
+const handleFavorite = async (design: Design) => {
   if (loadingStates.value.favorite.has(design.id)) return
   
   try {

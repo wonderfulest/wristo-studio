@@ -17,10 +17,16 @@ export interface CreateDesignParams {
 }
 
 /**
+ * 创建复制的请求参数
+ */
+export interface CreateCopyDesignParams {
+  uid: string
+}
+
+/**
  * 更新设计的请求参数
  */
 export interface UpdateDesignParams {
-  id?: number
   uid?: string
   name?: string
   description?: string
@@ -74,6 +80,12 @@ export const designApi = {
     return instance.post('/dsn/design/create', data)
   },
 
+  /**
+   * 创建设计
+   */
+  createDesignByCopy(data: CreateCopyDesignParams): Promise<ApiResponse<Design>> {
+    return instance.post('/dsn/design/create-by-copy', data)
+  },
   /**
    * 更新设计
    * @param data 设计数据
