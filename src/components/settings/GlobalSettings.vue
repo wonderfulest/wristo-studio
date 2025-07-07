@@ -4,11 +4,6 @@
       <label>表盘名称</label>
       <el-input type="text" v-model="watchFaceName" @change="updateWatchFaceName" />
     </div>
-    <div class="setting-item">
-      <label>启用 WPay</label>
-      <el-switch v-model="wpayEnabled" @change="updateWpayEnabled" />
-      <div class="setting-description">启用后将显示 WPay 相关设置项</div>
-    </div>
     <template v-if="wpayEnabled">
       <div class="setting-item">
         <label>WPay App ID</label>
@@ -56,11 +51,6 @@
         <div class="setting-description">应用在 Garmin Connect IQ Store 中的售价</div>
       </div>
     </template>
-    <div class="setting-item">
-      <label>Kpay ID</label>
-      <el-input type="text" v-model="kpayId" @change="updateKpayId" />
-    </div>
-    
     <div class="setting-item">
       <label>文本大小写设置</label>
       <el-select v-model="textCase" placeholder="请选择文本大小写样式" @change="updateTextCase">
@@ -119,20 +109,9 @@ const watchFaceName = computed({
   set: (value) => (baseStore.watchFaceName = value)
 })
 
-// Kpay ID
-const kpayId = computed({
-  get: () => baseStore.kpayId,
-  set: (value) => (baseStore.kpayId = value)
-})
-
 // 更新表盘名称
 const updateWatchFaceName = () => {
   baseStore.watchFaceName = watchFaceName.value
-}
-
-// 更新 Kpay ID
-const updateKpayId = () => {
-  baseStore.kpayId = kpayId.value
 }
 
 // 文本大小写设置
@@ -221,15 +200,6 @@ watch(
   (newName) => {
     if (newName !== watchFaceName.value) {
       watchFaceName.value = newName
-    }
-  }
-)
-
-watch(
-  () => baseStore.kpayId,
-  (newId) => {
-    if (newId !== kpayId.value) {
-      kpayId.value = newId
     }
   }
 )
@@ -421,26 +391,6 @@ const removeGarminImage = () => {
   baseStore.toggleThemeBackground()
 }
 
-// WPay 开关状态
-const wpayEnabled = computed({
-  get: () => baseStore.wpayEnabled,
-  set: (value) => (baseStore.wpayEnabled = value)
-})
-
-// 更新 WPay 开关
-const updateWpayEnabled = async () => {
-  if (!baseStore.id) {
-    const res = await baseStore.createDesign()
-    if (!res) {
-      wpayEnabled.value = false
-      return
-    }
-  }
-  if (wpayEnabled.value) {
-    await baseStore.getWPayProductInfo()
-  }
-  baseStore.wpayEnabled = wpayEnabled.value
-}
 
 </script>
 

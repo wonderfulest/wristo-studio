@@ -10,9 +10,6 @@
       <el-form-item label="名称">
         <el-input v-model="form.name" />
       </el-form-item>
-      <el-form-item label="KPay ID">
-        <el-input v-model="form.kpayId" />
-      </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="form.designStatus">
           <el-option label="草稿" value="draft" />
@@ -92,7 +89,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 // 移除旧的API导入，使用新的designApi
-import { designApi } from '@/api/wristo/design'
+import { designApi } from '@/api/wristo-v2/design-v2'
 import { useBaseStore } from '@/stores/baseStore'
 import { useMessageStore } from '@/stores/message'
 import { ElMessageBox } from 'element-plus'
@@ -107,7 +104,6 @@ const route = useRoute()
 const form = reactive({
   id: null,
   name: '',
-  kpayId: '',
   designStatus: '',
   description: '',
   configJson: {},
@@ -137,7 +133,6 @@ const loadDesign = async (designUid) => {
       Object.assign(form, {
         id: designData.id,
         name: designData.name,
-        kpayId: designData.kpayId,
         designStatus: designData.designStatus,
         description: designData.description,
         configJson: designData.configJson,
@@ -207,7 +202,6 @@ const handleConfirm = async () => {
     const data = {
       uid: designId.value,
       name: form.name,
-      kpayId: form.kpayId,
       designStatus: form.designStatus,
       description: form.description,
       configJson: configJson,

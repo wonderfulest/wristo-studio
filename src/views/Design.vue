@@ -60,7 +60,7 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
-import { designApi } from '@/api/wristo/design'
+import { designApi } from '@/api/wristo-v2/design-v2'
 import { useImageElementStore } from '@/stores/elements/imageElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { decodeElement } from '@/utils/elementCodec'
@@ -110,7 +110,6 @@ const loadDesign = async (designUid) => {
     // 设置基础信息
     baseStore.id = designUid
     baseStore.watchFaceName = designData.name
-    baseStore.kpayId = designData.kpayId
     
     // 如果配置为空，使用默认值
     if (!config || Object.keys(config).length === 0) {
@@ -120,7 +119,6 @@ const loadDesign = async (designUid) => {
       
       // 设置默认值
       baseStore.watchFaceName = designData.name
-      baseStore.kpayId = designData.kpayId || ''
       baseStore.themeBackgroundImages = []
       baseStore.currentThemeIndex = 0
       baseStore.wpayEnabled = false
@@ -213,7 +211,6 @@ const initNewDesign = async () => {
 
   // 设置默认值
   baseStore.watchFaceName = ''
-  baseStore.kpayId = ''
   baseStore.themeBackgroundImages = []
   baseStore.currentThemeIndex = 0
   baseStore.canvas.requestRenderAll()

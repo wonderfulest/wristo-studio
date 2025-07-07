@@ -149,7 +149,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
-import { designApi } from '@/api/wristo/design'
+import { designApi } from '@/api/wristo-v2/design-v2'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'

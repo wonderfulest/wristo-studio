@@ -7,7 +7,7 @@ import { encodeElement } from '@/utils/elementCodec'
 import { compareColor } from '@/utils/colorUtils'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
-import { designApi } from '@/api/wristo/design'
+import { designApi } from '@/api/wristo-v2/design-v2'
 import { productsApi } from '@/api/wristo/products'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -18,7 +18,6 @@ export const useBaseStore = defineStore('baseStore', {
     canvas: null,
     id: null, // 表盘ID
     watchFaceName: '',
-    kpayId: '',
     wpayEnabled: false,
     wpay: {
       appId: '', // WPay ID
@@ -386,14 +385,13 @@ export const useBaseStore = defineStore('baseStore', {
         ElMessage.error('createDesign 设计已存在！')
         return false
       }
-      if (!this.watchFaceName || !this.kpayId) {
-        ElMessage.error('createDesign 请先设置表盘名称和Kpay ID！')
+      if (!this.watchFaceName) {
+        ElMessage.error('请先设置表盘名称！')
         return false
       }
       const res = await designApi.updateDesign({
         uid: this.id,
         name: this.watchFaceName,
-        kpayId: this.kpayId,
         configJson: JSON.stringify(this.generateConfig()),
         userId: authStore.user.id
       })

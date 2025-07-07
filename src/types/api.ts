@@ -4,12 +4,12 @@ export interface ApiResponse<T> {
   data?: T
 }
 
-export interface PageResponse {
+export interface PageResponse<T> {
   pageNum: number
   pageSize: number
   total: number
   pages: number
-  list: Design[]
+  list: T[]
 }
 
 export interface UserInfo {
@@ -105,6 +105,28 @@ export interface Design {
   wpayId: string
   payMethod: string
   garminAppUuid: string
+  isActive: number
+  isDeleted: number
+  createdAt: number
+  updatedAt: number
+  version: number
+  user: {
+    id: number
+    username: string
+    nickname: string | null
+    avatar: string
+  }
+  coverImage?: Image | null
+  backgroundImage?: Image | null
+}
+
+export interface DesignV2 {
+  id: number
+  designUid: string
+  name: string
+  description: string
+  configJson: DesignConfig | null
+  designStatus: string
   isActive: number
   isDeleted: number
   createdAt: number

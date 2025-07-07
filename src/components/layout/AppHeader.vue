@@ -46,12 +46,6 @@
         placeholder="表盘名称" 
         :input-style="{ border: 'none', background: 'transparent' }" 
       />
-      <el-input 
-        type="text" 
-        v-model="kpayId" 
-        placeholder="KPAY" 
-        :input-style="{ border: 'none', background: 'transparent' }" 
-      />
     </div>
 
     <div class="user-menu" @click="toggleDropdown" v-if="userStore.isAuthenticated">
@@ -128,11 +122,6 @@ const createDesignDialogRef = ref(null)
 const watchFaceName = computed({
   get: () => baseStore.watchFaceName,
   set: (value) => baseStore.setWatchFaceName(value)
-})
-
-const kpayId = computed({
-  get: () => baseStore.kpayId,
-  set: (value) => baseStore.setKpayId(value)
 })
 
 const userInitials = computed(() => {

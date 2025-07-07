@@ -49,7 +49,7 @@ export const designApi = {
    * @param params 查询参数
    * @returns 设计列表分页数据
    */
-  getDesignPage(params: DesignPageParams): Promise<ApiResponse<PageResponse>> {
+  getDesignPage(params: DesignPageParams): Promise<ApiResponse<PageResponse<Design>>> {
     return instance.get('/dsn/design/page', { params })
   },
 

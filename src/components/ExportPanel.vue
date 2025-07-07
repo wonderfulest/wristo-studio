@@ -71,7 +71,7 @@
 // 移除旧的API导入，使用新的designApi
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ref, computed } from 'vue'
-import { designApi } from '@/api/wristo/design'
+import { designApi } from '@/api/wristo-v2/design-v2'
 import _ from 'lodash'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
@@ -148,8 +148,8 @@ const openDialog = () => {
 
 // 导出配置
 const dowloadConfig = async () => {
-  if (!baseStore.watchFaceName || !baseStore.kpayId) {
-    messageStore.error('请设置应用名称和kpayId')
+  if (!baseStore.watchFaceName) {
+    messageStore.error('请设置应用名称')
     return null
   }
   const config = baseStore.generateConfig()
@@ -161,7 +161,7 @@ const dowloadConfig = async () => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `face-${baseStore.kpayId}.json`
+  link.download = `face-${baseStore.id}.json`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -194,15 +194,14 @@ const saveConfig = async () => {
     messageStore.error('不是设计页面')
     return
   }
-  if (!baseStore.watchFaceName || !baseStore.kpayId) {
-    messageStore.error('请先设置应用名称和kpayId')
+  if (!baseStore.watchFaceName) {
+    messageStore.error('请先设置应用名称')
     return
   }
 
   try {
     const data = {
       name: baseStore.watchFaceName,
-      kpayId: baseStore.kpayId,
       configJson: JSON.stringify(baseStore.generateConfig()),
       // userId: user.value.id
     }
@@ -234,8 +233,8 @@ const uploadApp = async () => {
     messageStore.warning('没有可上传的配置')
     return -1
   }
-  if (!baseStore.watchFaceName || !baseStore.kpayId) {
-    messageStore.error('请设置应用名称和kpayId')
+  if (!baseStore.watchFaceName) {
+    messageStore.error('请设置应用名称')
     return -1
   }
 
@@ -293,7 +292,6 @@ const uploadApp = async () => {
     const data = {
       uid: baseStore.id,
       name: baseStore.watchFaceName,
-      kpayId: baseStore.kpayId,
       description: baseStore.watchFaceName,
       designStatus: 'draft',
       userId: user.value.id,
