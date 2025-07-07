@@ -2,8 +2,8 @@
   <header class="app-header">
     <div class="header-left">
       <div class="brand">
-        <img src="@/assets/favicon.svg" alt="Facer Studio" class="logo">
-        <h1 class="brand-title">Facer Studio</h1>
+        <img src="@/assets/favicon.svg" alt="Wristo Studio" class="logo">
+        <h1 class="brand-title">Wristo Studio</h1>
       </div>
       <nav class="header-nav">
         <a @click="showDesignerConfirm" class="nav-link">
