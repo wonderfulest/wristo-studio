@@ -6,7 +6,8 @@
       <el-select v-model="selectedStatus" placeholder="选择状态" class="status-filter" @change="handleStatusChange">
         <el-option label="全部" value="" />
         <el-option label="草稿" value="draft" />
-        <el-option label="已提交" value="submitted" />
+        <el-option label="待审核" value="submitted" />
+        <el-option label="已发布" value="published" />
       </el-select>
 
       <el-select v-model="sortField" placeholder="排序字段" @change="handleSortChange" class="sort-field-filter">
@@ -158,7 +159,7 @@ import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { CreateCopyDesignParams, UpdateDesignParams } from '@/api/wristo/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
-import { Design } from '@/types/api'
+import { Design, DesignStatus } from '@/types/api'
 const editDesignDialog = ref(null)
 const router = useRouter()
 const messageStore = useMessageStore()
@@ -208,12 +209,16 @@ const handleSortChange = () => {
 }
 
 // 获取状态文本
-const getStatusText = (status: string) => {
+const getStatusText = (status: DesignStatus) => {
   const statusMap = {
-    draft: '草稿',
-    submitted: '已提交'
+    draft: 'Designing',
+    submitted: 'Approving',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    packaged: 'Packaged',
+    published: 'Published'
   }
-  return statusMap[status as keyof typeof statusMap] || '未知'
+  return statusMap[status as keyof typeof statusMap] || 'Unknown'
 }
 
 // 格式化日期
@@ -365,7 +370,7 @@ const submitDesign = async (design: Design) => {
     loadingStates.value.submit.add(design.id)
     const response = await designApi.updateDesign({
       uid: design.designUid,
-      designStatus: 'submitted'
+      designStatus: 'submitted' as DesignStatus
     })
     if (response.code !== 0) {
       throw new Error(response.msg || '提交失败')
@@ -590,8 +595,6 @@ const handleEditSuccess = () => {
 .name-filter {
   width: 200px;
 }
-
-
 
 .status-filter {
   width: 120px;

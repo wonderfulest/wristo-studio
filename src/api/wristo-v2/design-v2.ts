@@ -5,7 +5,7 @@ import type {
   PageResponse,
   ImageBase,
   DesignV2,
-  Design
+  DesignStatus,
 } from '@/types/api'
 
 const baseV2Url = '/dsn/design/v2'
@@ -35,12 +35,22 @@ export interface UpdateDesignParamsV2 {
   coverImage?: ImageBase
   backgroundImage?: ImageBase
   configJson?: any
+  designStatus?: DesignStatus
 }
 
 /**
  * 设计相关API接口
  */
 export const designApi = {
+   /**
+   * 创建设计
+   * @param data 设计数据
+   * @returns 创建结果
+   */
+  createDesign(data: CreateDesignParams): Promise<ApiResponse<DesignV2>> {
+    return instance.post(`${baseV2Url}/create`, data)
+  },
+
   /**
    * 分页查询设计列表
    * @param params 查询参数

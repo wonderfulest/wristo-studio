@@ -61,6 +61,14 @@ export interface Image {
   publishedAt: number
 }
 
+export type DesignStatus =
+  | 'draft'
+  | 'submitted'
+  | 'approved'
+  | 'rejected'
+  | 'packaged'
+  | 'published';
+
 // 设计相关类型定义
 export interface DesignElement {
   x: number
@@ -100,7 +108,7 @@ export interface Design {
   name: string
   description: string
   configJson: DesignConfig | null
-  designStatus: string
+  designStatus: DesignStatus
   kpayId: string
   wpayId: string
   payMethod: string
@@ -126,7 +134,7 @@ export interface DesignV2 {
   name: string
   description: string
   configJson: DesignConfig | null
-  designStatus: string
+  designStatus: DesignStatus
   isActive: number
   isDeleted: number
   createdAt: number
