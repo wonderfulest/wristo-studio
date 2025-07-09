@@ -143,6 +143,9 @@
 
     <!-- 编辑对话框 -->
     <EditDesignDialog ref="editDesignDialog" @success="handleEditSuccess" />
+    
+    <!-- 提交设计对话框 -->
+    <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
   </div>
 </template>
 
@@ -159,8 +162,10 @@ import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { CreateCopyDesignParams, UpdateDesignParams } from '@/api/wristo/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
+import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import { Design, DesignStatus } from '@/types/api'
 const editDesignDialog = ref(null)
+const submitDesignDialog = ref(null)
 const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
@@ -251,7 +256,7 @@ const fetchDesigns = async () => {
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      includeConfigJson: false
+      populate: 'configJson,payment,release'
     }
     console.log('API请求参数:', params)
     const response = await designApi.getDesignPage(params)
@@ -364,25 +369,12 @@ const confirmDeleteDesign = async () => {
 
 // 提交设计
 const submitDesign = async (design: Design) => {
-  if (loadingStates.value.submit.has(design.id)) return
-  
-  try {
-    loadingStates.value.submit.add(design.id)
-    const response = await designApi.updateDesign({
-      uid: design.designUid,
-      designStatus: 'submitted' as DesignStatus
-    })
-    if (response.code !== 0) {
-      throw new Error(response.msg || '提交失败')
-    }
-    messageStore.success('提交成功')
-    await fetchDesigns()
-  } catch (error) {
-    console.error('提交失败:', error)
-    messageStore.error('提交失败')
-  } finally {
-    loadingStates.value.submit.delete(design.id)
-  }
+  submitDesignDialog.value?.show(design)
+}
+
+// 处理提交成功
+const handleSubmitSuccess = () => {
+  fetchDesigns() // 刷新设计列表
 }
 
 // 处理刷新事件

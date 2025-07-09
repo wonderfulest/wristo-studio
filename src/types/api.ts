@@ -154,7 +154,7 @@ export interface DesignPageParams {
   pageNum: number
   pageSize: number
   orderBy?: string
-  includeConfigJson?: boolean
+  populate?: string
   userId?: number
   status?: string
   name?: string

@@ -39,6 +39,22 @@ export interface UpdateDesignParamsV2 {
 }
 
 /**
+ * 提交设计的请求参数
+ */
+export interface DesignSubmitDTO {
+  designUid: string
+  paymentMethod: string
+  name?: string
+  description?: string
+  kpayId?: string
+  price?: number
+  trialLasts?: number
+}
+
+
+
+
+/**
  * 设计相关API接口
  */
 export const designApi = {
@@ -89,7 +105,14 @@ export const designApi = {
   updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<DesignV2>> {
     return instance.post(`${baseV2Url}/update`, data)
   },
-  
+  /**
+   * 提交设计
+   * @param designUid 设计UID
+   * @returns 提交结果
+   */
+  submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<DesignV2>> {
+    return instance.post(`${baseV2Url}/submit`, data)
+  }
 }
 
 export default designApi

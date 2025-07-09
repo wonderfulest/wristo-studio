@@ -69,7 +69,7 @@ public class DesignUpdateDTO {
 }
 
 ### Design 分页查询 - GET 方式
-GET {{baseUrl}}/api/dsn/design/page?pageNum=1&pageSize=1&orderBy=created_at:desc&includeConfigJson=false
+GET {{baseUrl}}/api/dsn/design/page?pageNum=1&pageSize=1&orderBy=created_at:desc&populate=configJson,payment,release
 Authorization: Bearer {{token}}
 
 返回：

@@ -182,7 +182,7 @@ const uploadScreenshot = async () => {
     console.error('上传表盘截图失败:', screenshotError)
     // 截图上传失败不影响整体上传过程
   }
-  return {}
+  return ""
 }
 
 // 添加一个互斥锁
@@ -274,7 +274,8 @@ const uploadApp = async () => {
     
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = '上传表盘截图...'
-    const screenshotUrl = await uploadScreenshot()
+    // const screenshotUrl = await uploadScreenshot()
+    const screenshotUrl = ''
     currentProgress = 40
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -299,10 +300,13 @@ const uploadApp = async () => {
       backgroundImage: {
         url: baseStore.themeBackgroundImages[0]
       },
-      coverImage: {
+    }
+    if (screenshotUrl) { // 屏幕截图成功时，上传
+      data.coverImage = {
         url: screenshotUrl
       }
     }
+
     console.log('上传配置', data)
     if (baseStore.id) {
       data.documentId = baseStore.id
