@@ -38,7 +38,7 @@
             <div class="card-header">
               <div class="header-left">
                 <span class="title">{{ design.name }}</span>
-                <div class="status-tag" :class="design.designStatus">
+                <div class="status-tag" :style="{ backgroundColor: getStatusColor(design.designStatus) }">
                   {{ getStatusText(design.designStatus) }}
                 </div>
               </div>
@@ -160,10 +160,11 @@ import dayjs from 'dayjs'
 import { Star, Edit, Delete } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
+import { ApiResponse, PageResponse } from '@/types/api'
 import { CreateCopyDesignParams, UpdateDesignParams } from '@/api/wristo/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
-import { Design, DesignStatus } from '@/types/api'
+import { Design, DesignStatus, DesignV2 } from '@/types/api'
 const editDesignDialog = ref(null)
 const submitDesignDialog = ref(null)
 const router = useRouter()
@@ -216,14 +217,27 @@ const handleSortChange = () => {
 // 获取状态文本
 const getStatusText = (status: DesignStatus) => {
   const statusMap = {
-    draft: 'Designing',
-    submitted: 'Approving',
+    draft: 'Draft',
+    submitted: 'Pending',
     approved: 'Approved',
     rejected: 'Rejected',
     packaged: 'Packaged',
     published: 'Published'
   }
   return statusMap[status as keyof typeof statusMap] || 'Unknown'
+}
+
+// 获取状态颜色
+const getStatusColor = (status: DesignStatus) => {
+  const statusMap = {
+    draft: '#606266',        // 暗色 - 草稿状态
+    submitted: '#909399',    // 灰色 - 待审核状态
+    approved: '#67C23A',     // 亮色 - 已批准状态
+    rejected: '#F56C6C',     // 红色 - 被拒绝状态
+    packaged: '#E6A23C',     // 橙色 - 已打包状态
+    published: '#409EFF'     // 蓝色 - 已发布状态
+  }
+  return statusMap[status as keyof typeof statusMap] || '#909399'
 }
 
 // 格式化日期
@@ -259,7 +273,7 @@ const fetchDesigns = async () => {
       populate: 'configJson,payment,release'
     }
     console.log('API请求参数:', params)
-    const response = await designApi.getDesignPage(params)
+    const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<DesignV2>>
     console.log('API响应:', response)
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
@@ -292,11 +306,10 @@ const handleSizeChange = (val: number) => {
 // 打开画布编辑器
 const openCanvas = async (design: Design) => {
   try {
-    const response = await designApi.getDesignByUid(design.designUid)
+    const response = await designApi.getDesignByUid(design.designUid) as ApiResponse<DesignV2>
     const designData = response.data || {} as Design
 
     baseStore.watchFaceName = designData.name
-    baseStore.kpayId = designData.kpayId
 
     if (designData.configJson) {
       baseStore.elements = designData.configJson
@@ -323,7 +336,7 @@ const copyDesign = async (design: Design) => {
     const newDesignData = {
       uid: design.designUid
     } as CreateCopyDesignParams
-    const createResponse = await designApi.createDesignByCopy(newDesignData)
+    const createResponse = await designApi.createCopyDesign(newDesignData) as ApiResponse<DesignV2>
     console.log('111 createDesign', createResponse)
     if (createResponse.code === 0 && createResponse.data) {
       messageStore.success('复制成功')
@@ -456,6 +469,7 @@ const handleEditSuccess = () => {
   border-radius: 4px;
   font-size: 12px;
   color: #fff;
+  background-color: var(--el-color-info);
 }
 
 .status-tag.draft {

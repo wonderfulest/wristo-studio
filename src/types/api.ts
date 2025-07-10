@@ -148,6 +148,17 @@ export interface DesignV2 {
   }
   coverImage?: Image | null
   backgroundImage?: Image | null
+  payment?: Payment | null
+  release?: Release | null
+}
+
+export interface Payment {
+  id: number
+  designUid: string
+  paymentMethod: string
+  kpayId: string
+  price: number
+  trialLasts: number
 }
 
 export interface DesignPageParams {
