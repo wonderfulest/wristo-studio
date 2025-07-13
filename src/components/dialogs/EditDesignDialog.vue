@@ -89,7 +89,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 // 移除旧的API导入，使用新的designApi
-import { designApi } from '@/api/wristo-v2/design-v2'
+import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useMessageStore } from '@/stores/message'
 import { ElMessageBox } from 'element-plus'

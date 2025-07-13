@@ -71,7 +71,7 @@
 // 移除旧的API导入，使用新的designApi
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ref, computed } from 'vue'
-import { designApi } from '@/api/wristo-v2/design-v2'
+import { designApi } from '@/api/wristo/design'
 import _ from 'lodash'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
@@ -295,7 +295,7 @@ const uploadApp = async () => {
       name: baseStore.watchFaceName,
       description: baseStore.watchFaceName,
       designStatus: 'draft',
-      userId: user.value.id,
+      // userId: user.value.id,
       configJson: baseStore.generateConfig(),
       backgroundImage: {
         url: baseStore.themeBackgroundImages[0]
@@ -308,9 +308,9 @@ const uploadApp = async () => {
     }
 
     console.log('上传配置', data)
-    if (baseStore.id) {
-      data.documentId = baseStore.id
-    }
+    // if (baseStore.id) {
+    //   data.documentId = baseStore.id
+    // }
     // 创建或更新表盘设计
     const res = await designApi.updateDesign(data)
     console.log('updateDesign 666', res)

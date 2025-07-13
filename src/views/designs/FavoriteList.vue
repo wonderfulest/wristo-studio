@@ -89,7 +89,7 @@ import { useUserStore } from '@/stores/user'
 import moment from 'moment'
 import { getFavorites, toggleFavorite } from '@/api/favorites'
 import { ElMessageBox } from 'element-plus'
-import { designApi } from '@/api/wristo-v2/design-v2'
+import { designApi } from '@/api/wristo/design'
 import { ApiResponse, Design } from '@/types/api'
 import { UpdateDesignParams } from '@/api/wristo/design'
 

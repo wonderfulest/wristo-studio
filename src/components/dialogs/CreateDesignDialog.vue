@@ -53,7 +53,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { designApi } from '@/api/wristo-v2/design-v2'
+import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 
 const router = useRouter()

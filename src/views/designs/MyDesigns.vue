@@ -1,32 +1,32 @@
 <template>
   <div class="my-designs">
     <div class="search-bar">
-      <el-input v-model="searchName" placeholder="搜索名称" class="name-filter" clearable
-        @keyup.enter="handleSearch" />
-      <el-select v-model="selectedStatus" placeholder="选择状态" class="status-filter" @change="handleStatusChange">
-        <el-option label="全部" value="" />
-        <el-option label="草稿" value="draft" />
-        <el-option label="待审核" value="submitted" />
-        <el-option label="已发布" value="published" />
+          <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
+      @keyup.enter="handleSearch" />
+      <el-select v-model="selectedStatus" placeholder="Select Status" class="status-filter" @change="handleStatusChange">
+        <el-option label="All" value="" />
+        <el-option label="Draft" value="draft" />
+        <el-option label="Pending" value="submitted" />
+        <el-option label="Published" value="published" />
       </el-select>
 
-      <el-select v-model="sortField" placeholder="排序字段" @change="handleSortChange" class="sort-field-filter">
-        <el-option label="创建时间" value="createdAt" />
-        <el-option label="更新时间" value="updatedAt" />
+      <el-select v-model="sortField" placeholder="Sort Field" @change="handleSortChange" class="sort-field-filter">
+        <el-option label="Created Time" value="createdAt" />
+        <el-option label="Updated Time" value="updatedAt" />
       </el-select>
-      <el-select v-model="sortOrder" placeholder="排序方式" @change="handleSortChange" class="sort-order-filter">
-        <el-option label="升序" value="asc" />
-        <el-option label="降序" value="desc" />
+      <el-select v-model="sortOrder" placeholder="Sort Order" @change="handleSortChange" class="sort-order-filter">
+        <el-option label="Ascending" value="asc" />
+        <el-option label="Descending" value="desc" />
       </el-select>
       <el-button type="primary" @click="handleSearch">
         <Icon icon="material-symbols:search" />
-        搜索
+        Search
       </el-button>
       <div class="display-options">
         <el-switch
           v-model="showCreator"
-          active-text="显示作者"
-          inactive-text="隐藏作者"
+          active-text="Show Creator"
+          inactive-text="Hide Creator"
         />
       </div>
     </div>
@@ -49,7 +49,7 @@
                     size="small" 
                     link 
                     @click.stop="handleFavorite(design)"
-                    :title="'收藏'"
+                    :title="'Favorite'"
                     :loading="loadingStates.favorite.has(design.id)"
                   >
                     <el-icon><Star /></el-icon>
@@ -78,23 +78,23 @@
             <div class="design-background" v-if="getDesignImageUrl(design)">
               <img :src="getDesignImageUrl(design)" :alt="design.name" class="background-image" />
               <div class="creator-badge" v-if="showCreator">
-                <span>作者：{{ getCreatorName(design) }}</span>
+                <span>Creator: {{ getCreatorName(design) }}</span>
               </div>
             </div>
             <div class="meta">
               <span>ID: {{ design.designUid }}</span>
-              <span>KPay ID: {{ design.kpayId }}</span>
-              <span>更新时间: {{ formatDate(design.updatedAt) }}</span>
+              <span>KPay ID: {{ design.payment?.kpayId || 'N/A' }}</span>
+              <span>Updated: {{ formatDate(design.updatedAt) }}</span>
             </div>
             <div class="actions">
-              <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">编 辑</el-button>
+              <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">Edit</el-button>
               <el-button 
                 type="warning" 
                 size="small" 
                 @click="copyDesign(design)"
                 :loading="loadingStates.copy.has(design.id)"
               >
-                复 制
+                Copy
               </el-button>
               <el-button 
                 v-if="design.designStatus === 'draft'" 
@@ -103,7 +103,25 @@
                 @click="submitDesign(design)"
                 :loading="loadingStates.submit.has(design.id)"
               >
-                提 交
+                Submit
+              </el-button>
+              <el-button 
+                v-if="hasDownloadablePackage(design)"
+                type="info" 
+                size="small"
+                @click="downloadPackage(design)"
+              >
+                <el-icon><Download /></el-icon>
+                Download
+              </el-button>
+              <el-button 
+                v-if="design.product?.release"
+                type="success" 
+                size="small"
+                @click="goLive(design)"
+              >
+                <el-icon><Promotion /></el-icon>
+                Go Live
               </el-button>
             </div>
           </div>
@@ -125,17 +143,17 @@
     </div>
 
     <!-- 删除确认对话框 -->
-    <el-dialog v-model="deleteDialogVisible" title="确认删除" width="30%">
-      <span>确定要删除这个表盘设计吗？此操作不可恢复。</span>
+    <el-dialog v-model="deleteDialogVisible" title="Confirm Delete" width="30%">
+      <span>Are you sure you want to delete this watch face design? This action cannot be undone.</span>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="deleteDialogVisible = false">取消</el-button>
+          <el-button @click="deleteDialogVisible = false">Cancel</el-button>
           <el-button 
             type="danger" 
             @click="confirmDeleteDesign"
             :loading="designToDelete && loadingStates.delete.has(designToDelete.id)"
           >
-            确认删除
+            Confirm Delete
           </el-button>
         </span>
       </template>
@@ -146,6 +164,9 @@
     
     <!-- 提交设计对话框 -->
     <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
+    
+    <!-- Go Live 对话框 -->
+    <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
   </div>
 </template>
 
@@ -153,20 +174,23 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
-import { designApi } from '@/api/wristo-v2/design-v2'
+import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete } from '@element-plus/icons-vue'
+import { Star, Edit, Delete, Download, Promotion } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api'
-import { CreateCopyDesignParams, UpdateDesignParams } from '@/api/wristo/design'
+import { CreateCopyDesignParams, UpdateDesignParamsV2 } from '@/types/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
-import { Design, DesignStatus, DesignV2 } from '@/types/api'
-const editDesignDialog = ref(null)
-const submitDesignDialog = ref(null)
+import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
+import { Design, DesignStatus } from '@/types/design'
+import { ProductRelease } from '@/types/product'
+const editDesignDialog = ref<any>(null)
+const submitDesignDialog = ref<any>(null)
+const goLiveDialog = ref<any>(null)
 const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
@@ -270,10 +294,10 @@ const fetchDesigns = async () => {
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      populate: 'configJson,payment,release'
+      populate: 'configJson,product,payment,release'
     }
     console.log('API请求参数:', params)
-    const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<DesignV2>>
+    const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<Design>>
     console.log('API响应:', response)
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
@@ -281,12 +305,12 @@ const fetchDesigns = async () => {
       console.log('设计列表获取成功，数量:', designs.value.length)
     } else {
       console.error('API返回错误:', response)
-      messageStore.error(response.msg || '获取设计列表失败')
+      messageStore.error(response.msg || 'Failed to get design list')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[MyDesigns] fetchDesigns error:', error)
     console.error('错误详情:', error.response?.data)
-    messageStore.error('获取设计列表失败')
+    messageStore.error('Failed to get design list')
   }
 }
 
@@ -306,7 +330,7 @@ const handleSizeChange = (val: number) => {
 // 打开画布编辑器
 const openCanvas = async (design: Design) => {
   try {
-    const response = await designApi.getDesignByUid(design.designUid) as ApiResponse<DesignV2>
+    const response = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
     const designData = response.data || {} as Design
 
     baseStore.watchFaceName = designData.name
@@ -318,13 +342,15 @@ const openCanvas = async (design: Design) => {
     router.push('/design?id=' + designData.designUid)
   } catch (error) {
     console.error('加载设计失败:', error)
-    messageStore.error('加载设计失败')
+    messageStore.error('Failed to load design')
   }
 }
 
 // 编辑设计信息
 const editDesign = (design: Design) => {
-  editDesignDialog.value?.show(design.designUid)
+  if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
+    editDesignDialog.value.show(design.designUid)
+  }
 }
 
 // 复制设计
@@ -336,17 +362,17 @@ const copyDesign = async (design: Design) => {
     const newDesignData = {
       uid: design.designUid
     } as CreateCopyDesignParams
-    const createResponse = await designApi.createCopyDesign(newDesignData) as ApiResponse<DesignV2>
+    const createResponse = await designApi.createDesignByCopy(newDesignData) as ApiResponse<Design>
     console.log('111 createDesign', createResponse)
     if (createResponse.code === 0 && createResponse.data) {
-      messageStore.success('复制成功')
+      messageStore.success('Copy successful')
       await fetchDesigns()
     } else {
-      messageStore.error(createResponse.msg || '复制失败')
+      messageStore.error(createResponse.msg || 'Copy failed')
     }
   } catch (error) {
     console.error('复制失败:', error)
-    messageStore.error('复制失败')
+    messageStore.error('Copy failed')
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
@@ -366,15 +392,15 @@ const confirmDeleteDesign = async () => {
     loadingStates.value.delete.add(designToDelete.value.id)
     const response = await designApi.deleteDesign(designToDelete.value.designUid)
     if (response.code === 0) {
-      messageStore.success('删除成功')
+      messageStore.success('Delete successful')
       deleteDialogVisible.value = false
       await fetchDesigns()
     } else {
-      messageStore.error(response.msg || '删除失败')
+      messageStore.error(response.msg || 'Delete failed')
     }
   } catch (error) {
     console.error('删除失败:', error)
-    messageStore.error('删除失败')
+    messageStore.error('Delete failed')
   } finally {
     loadingStates.value.delete.delete(designToDelete.value.id)
   }
@@ -382,7 +408,23 @@ const confirmDeleteDesign = async () => {
 
 // 提交设计
 const submitDesign = async (design: Design) => {
-  submitDesignDialog.value?.show(design)
+  if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
+    submitDesignDialog.value.show(design)
+  }
+}
+
+// 下载安装包
+const downloadPackage = (design: Design) => {
+  if (design.product?.release?.packageUrl) {
+    window.open(design.product.release.packageUrl, '_blank')
+  } else {
+    messageStore.error('Download link not available')
+  }
+}
+
+// 检查是否有可下载的安装包
+const hasDownloadablePackage = (design: Design): boolean => {
+  return !!(design.product?.release?.packageUrl)
 }
 
 // 处理提交成功
@@ -416,10 +458,10 @@ const handleFavorite = async (design: Design) => {
   try {
     loadingStates.value.favorite.add(design.id)
     await toggleFavorite(design.name, design.id, userStore.userInfo?.id, true)
-    messageStore.success('收藏成功')
+    messageStore.success('Favorite successful')
   } catch (error) {
     console.error('收藏失败:', error)
-    messageStore.error('收藏失败')
+    messageStore.error('Favorite failed')
   } finally {
     loadingStates.value.favorite.delete(design.id)
   }
@@ -427,6 +469,18 @@ const handleFavorite = async (design: Design) => {
 
 // 添加编辑成功处理方法
 const handleEditSuccess = () => {
+  fetchDesigns() // 刷新设计列表
+}
+
+// Go live 方法
+const goLive = (design: Design) => {
+  if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
+    goLiveDialog.value.show(design)
+  }
+}
+
+// 处理 Go Live 成功
+const handleGoLiveSuccess = () => {
   fetchDesigns() // 刷新设计列表
 }
 </script>
