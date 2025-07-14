@@ -294,7 +294,7 @@ const fetchDesigns = async () => {
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      populate: 'configJson,product,payment,release,cover'
+      populate: 'user,configJson,product,payment,release,cover'
     }
     console.log('API请求参数:', params)
     const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<Design>>
