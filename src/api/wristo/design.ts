@@ -98,8 +98,8 @@ export const designApi = {
     if (design.backgroundImage) {
       return design.backgroundImage.url
     }
-    if (!preferCover && design.coverImage) {
-      return design.coverImage.url
+    if (!preferCover && design.cover) {
+      return design.cover.url
     }
     return null
   },

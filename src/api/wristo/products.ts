@@ -54,6 +54,23 @@ export const productsApi = {
       garminImageUrl: data.garminImageUrl,
       garminStoreUrl: data.garminStoreUrl
     })
+  },
+
+  /**
+   * Go Live 接口
+   * @param data 产品数据
+   * @returns 更新结果
+   */
+  goLive(data: {
+    heroImage: string
+    appId: number
+    garminStoreUrl: string
+  }): Promise<ApiResponse<Product>> {
+    return instance.post('/dsn/products/goLive', {
+      heroImage: data.heroImage,
+      appId: data.appId,
+      garminStoreUrl: data.garminStoreUrl
+    })
   }
 }
 

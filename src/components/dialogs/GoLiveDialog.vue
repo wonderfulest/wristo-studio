@@ -13,12 +13,31 @@
       <el-form-item label="Description">
         <el-input v-model="form.description" type="textarea" :rows="3" />
       </el-form-item>
-      <el-form-item label="Garmin Image URL">
-        <el-input 
-          v-model="form.garminImageUrl" 
-          placeholder="Enter Garmin image URL"
-          clearable
-        />
+      <el-form-item label="Garmin Image">
+        <div class="image-upload-container">
+          <el-upload 
+            class="image-uploader" 
+            action="#" 
+            :auto-upload="false" 
+            :show-file-list="false" 
+            accept=".jpg,.jpeg,.png,.gif"
+            :before-upload="beforeImageUpload"
+            :on-change="handleImageChange"
+          >
+            <div class="upload-area">
+              <img v-if="form.garminImageUrl" :src="form.garminImageUrl" class="uploaded-image" />
+              <div v-else class="upload-placeholder">
+                <el-icon class="upload-icon"><Plus /></el-icon>
+                <span>Click to upload image</span>
+              </div>
+            </div>
+          </el-upload>
+          <div class="upload-actions" v-if="form.garminImageUrl">
+            <el-button size="small" type="danger" @click="removeImage">
+              Remove Image
+            </el-button>
+          </div>
+        </div>
         <div class="form-tip">
           This image will be displayed in the Garmin Connect IQ store
         </div>
@@ -78,7 +97,9 @@ import { ref, reactive } from 'vue'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/design'
-import { Product } from '@/types/product'
+import { Plus } from '@element-plus/icons-vue'
+import { uploadBase64Image, uploadImageFile } from '@/utils/image'
+import { ElMessage, ElLoading } from 'element-plus'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -134,20 +155,20 @@ const handleConfirm = async () => {
     return
   }
   
+  if (!currentDesign.value.product?.appId) {
+    messageStore.error('Product appId is required')
+    return
+  }
+  
   try {
     loading.value = true
     
     const data = {
-      designId: currentDesign.value.designUid,
-      name: form.name,
-      description: form.description,
-      garminImageUrl: form.garminImageUrl.trim(),
-      garminStoreUrl: form.garminStoreUrl.trim(),
-      trialLasts: form.trialLasts,
-      price: form.price
+      heroImage: form.garminImageUrl.trim(),
+      appId: currentDesign.value.product.appId,
+      garminStoreUrl: form.garminStoreUrl.trim()
     }
-    
-    const response = await productsApi.getOrCreateByDesignId(data)
+    const response = await productsApi.goLive(data)
     
     if (response.code === 0 && response.data) {
       messageStore.success('Product information updated successfully')
@@ -167,6 +188,82 @@ const handleConfirm = async () => {
 const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
+}
+
+// 图片上传前的验证
+const beforeImageUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('Please upload image files only!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('Image size cannot exceed 5MB!')
+    return false
+  }
+  return true
+}
+
+// 处理图片上传
+const handleImageChange = async (file: any) => {
+  if (!file || !file.raw) {
+    console.warn('Invalid file', file)
+    return
+  }
+
+  // 创建 loading 实例
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Uploading image...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      // 上传图片
+      const imageData = e.target?.result as string
+      let imageUploadUrl = ''
+      
+      if (imageData && imageData.startsWith('data:')) {
+        imageUploadUrl = await uploadBase64Image(imageData, 'hero')
+      } else if (imageData && imageData.startsWith('blob:')) {
+        imageUploadUrl = await uploadImageFile(imageData, 'hero')
+      } else if (imageData && imageData.startsWith('http')) {
+        imageUploadUrl = imageData
+      }
+      
+      if (!imageUploadUrl) {
+        throw new Error('Failed to upload image')
+      }
+
+      // 更新表单中的图片 URL
+      form.garminImageUrl = imageUploadUrl
+      
+      ElMessage.success('Image uploaded successfully')
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+      ElMessage.error('Failed to upload image')
+    } finally {
+      // 关闭 loading
+      loadingInstance.close()
+    }
+  }
+
+  reader.onerror = (error) => {
+    console.error('Error reading image file', error)
+    ElMessage.error('Failed to read image file')
+    loadingInstance.close()
+  }
+
+  reader.readAsDataURL(file.raw)
+}
+
+// 移除图片
+const removeImage = () => {
+  form.garminImageUrl = ''
 }
 
 // 定义 show 方法
@@ -211,6 +308,59 @@ defineExpose({
   line-height: 1.4;
 }
 
+/* 图片上传组件样式 */
+.image-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-uploader {
+  width: 100%;
+}
+
+.upload-area {
+  width: 160px;
+  height: 160px;
+  border: 2px dashed var(--el-border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  overflow: hidden;
+}
+
+.upload-area:hover {
+  border-color: var(--el-color-primary);
+  background-color: var(--el-fill-color-light);
+}
+
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+}
+
+.upload-icon {
+  font-size: 24px;
+  color: var(--el-text-color-placeholder);
+}
+
+.upload-actions {
+  display: flex;
+  gap: 8px;
+}
+
 /* 响应式调整 */
 @media screen and (max-width: 768px) {
   :deep(.go-live-dialog .el-dialog) {
@@ -219,6 +369,11 @@ defineExpose({
   
   .go-live-form {
     padding: 16px;
+  }
+  
+  .upload-area {
+    width: 100%;
+    height: 200px;
   }
 }
 </style> 
