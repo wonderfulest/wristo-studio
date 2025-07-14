@@ -92,8 +92,8 @@ export const designApi = {
    * @returns 图片URL
    */
   getDesignImageUrl(design: Design, preferCover: boolean = true): string | null {
-    if (preferCover && design.coverImage) {
-      return design.coverImage.url
+    if (preferCover && design.cover) {
+      return design.cover.url
     }
     if (design.backgroundImage) {
       return design.backgroundImage.url
