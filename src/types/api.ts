@@ -1,7 +1,3 @@
-import type { Product } from './product'
-import type { Image } from './image'
-import type { UserBase } from './user'
-import type { DesignStatus, DesignConfig, Payment, DesignPageParams } from './design'
 
 export interface ApiResponse<T> {
   code: number

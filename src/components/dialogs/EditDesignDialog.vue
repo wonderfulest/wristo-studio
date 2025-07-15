@@ -14,10 +14,19 @@
         <el-select v-model="form.designStatus">
           <el-option label="草稿" value="draft" />
           <el-option label="已提交" value="submitted" />
+          <el-option label="已审核" value="approved" />
+          <el-option label="已拒绝" value="rejected" />
         </el-select>
       </el-form-item>
       <el-form-item label="描述">
         <el-input v-model="form.description" type="textarea" :rows="2" />
+      </el-form-item>
+      <!-- 新增：支付方式和价格显示，只读 -->
+      <el-form-item label="支付方式" v-if="form.payment">
+        <el-input :value="form.payment.paymentMethod" disabled />
+      </el-form-item>
+      <el-form-item label="价格" v-if="form.payment">
+        <el-input :value="form.payment.price + ' 元'" disabled />
       </el-form-item>
       <el-form-item label="配置" class="config-form-item">
         <div class="json-editor">
@@ -84,21 +93,19 @@
   </el-dialog>
 </template>
 
-<script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import type { ApiResponse } from '@/types/api'
+import type { Design, UpdateDesignParamsV2, Payment } from '@/types/design'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-// 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
-import { useBaseStore } from '@/stores/baseStore'
 import { useMessageStore } from '@/stores/message'
-import { ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/stores/user'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 import { DocumentCopy, Edit } from '@element-plus/icons-vue'
-import emitter from '@/utils/eventBus'
-const designId = ref(null)
+import emitter from '@/utils/eventBus.ts'
+const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const route = useRoute()
 const form = reactive({
@@ -107,13 +114,11 @@ const form = reactive({
   designStatus: '',
   description: '',
   configJson: {},
-  configJsonString: ''
+  configJsonString: '',
+  payment: null as Payment | null // 新增字段
 })
 
-const baseStore = useBaseStore()
 const messageStore = useMessageStore()
-const userStore = useUserStore()
-const user = computed(() => userStore.userInfo)
 
 const emit = defineEmits(['success', 'cancel'])
 
@@ -123,12 +128,11 @@ const jsonEditError = ref('')
 const jsonEditStatus = ref('')
 
 // 加载设计数据
-const loadDesign = async (designUid) => {
+const loadDesign = async (designUid: string) => {
   try {
-    const response = await designApi.getDesignByUid(designUid)
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
     if (response.code === 0 && response.data) {
       const designData = response.data
-      
       // 先设置基本信息
       Object.assign(form, {
         id: designData.id,
@@ -136,16 +140,9 @@ const loadDesign = async (designUid) => {
         designStatus: designData.designStatus,
         description: designData.description,
         configJson: designData.configJson,
-        configJsonString: JSON.stringify(designData.configJson, null, 2)
+        configJsonString: JSON.stringify(designData.configJson, null, 2),
+        payment: designData.product?.payment || null // 新增赋值
       })
-
-      // 获取最新配置
-      const config = baseStore.generateConfig()
-      if (config) {
-        form.configJson = config
-        form.configJsonString = JSON.stringify(config, null, 2)
-      }
-
       // 初始化编辑文本
       jsonEditText.value = JSON.stringify(form.configJson, null, 2)
     } else {
@@ -180,13 +177,13 @@ const toggleEditMode = () => {
 }
 
 // 验证 JSON
-const validateJson = (value) => {
+const validateJson = (value: string) => {
   try {
     JSON.parse(value)
     jsonEditError.value = ''
     jsonEditStatus.value = 'success'
   } catch (error) {
-    jsonEditError.value = `JSON 格式错误: ${error.message}`
+    jsonEditError.value = `JSON 格式错误: ${error}`
     jsonEditStatus.value = 'error'
   }
 }
@@ -204,12 +201,11 @@ const handleConfirm = async () => {
       name: form.name,
       designStatus: form.designStatus,
       description: form.description,
-      configJson: configJson,
-      userId: user.value.id
+      configJson: configJson
     }
 
-    const res = await designApi.updateDesign(data)
-    
+    const res: ApiResponse<Design> = await designApi.updateDesign(data as unknown as UpdateDesignParamsV2)
+    console.log(222222, res)
     if (res.code === 0 && res.data) {
       emit('success', res.data)
       dialogVisible.value = false
@@ -219,7 +215,7 @@ const handleConfirm = async () => {
 
   } catch (error) {
     console.error('更新设计失败:', error)
-    messageStore.error(error.message || '更新设计失败')
+    messageStore.error(error as string || '更新设计失败')
   }
 }
 
@@ -242,7 +238,7 @@ const copyConfig = () => {
 }
 
 // 定义 show 方法
-const show = async (designUid) => {
+const show = async (designUid: string) => {
   // 重置状态
   isEditing.value = false
   jsonEditText.value = ''
@@ -256,7 +252,7 @@ const show = async (designUid) => {
 
 // 添加事件监听
 const handleOpenViewProperties = () => {
-  const designUid = route.query.id
+  const designUid = route.query.id as string
   if (designUid) {
     show(designUid)
   }

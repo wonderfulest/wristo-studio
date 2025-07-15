@@ -69,7 +69,6 @@ export interface Design {
   user: UserBase
   cover?: Image | null
   backgroundImage?: Image | null
-  payment?: Payment | null
   product?: Product | null
 }
 

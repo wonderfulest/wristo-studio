@@ -1,5 +1,6 @@
 <template>
   <div class="my-designs">
+    <!-- 搜索栏 -->
     <div class="search-bar">
           <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
       @keyup.enter="handleSearch" />
@@ -31,8 +32,10 @@
       </div>
     </div>
 
+    <!-- 设计列表 -->
     <el-row :gutter="20" class="design-grid">
       <el-col :xs="24" :sm="8" :md="6" :lg="4" :xl="3" v-for="design in designs" :key="design.id">
+        <!-- 设计卡片 -->
         <el-card class="design-card" shadow="hover">
           <template #header>
             <div class="card-header">
@@ -44,6 +47,7 @@
               </div>
               <div class="header-actions">
                 <el-button-group>
+                  <!-- 收藏 -->
                   <el-button 
                     type="primary" 
                     size="small" 
@@ -54,6 +58,7 @@
                   >
                     <el-icon><Star /></el-icon>
                   </el-button>
+                  <!-- 编辑 -->
                   <el-button 
                     type="primary" 
                     size="small" 
@@ -62,6 +67,7 @@
                   >
                     <el-icon><Edit /></el-icon>
                   </el-button>
+                  <!-- 删除 -->
                   <el-button 
                     type="danger" 
                     size="small" 
@@ -182,12 +188,11 @@ import { Star, Edit, Delete, Download, Promotion } from '@element-plus/icons-vue
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api'
-import { CreateCopyDesignParams, UpdateDesignParamsV2 } from '@/types/design'
+import { CreateCopyDesignParams } from '@/types/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { Design, DesignStatus } from '@/types/design'
-import { ProductRelease } from '@/types/product'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 const goLiveDialog = ref<any>(null)
@@ -286,15 +291,13 @@ const getDesignImageUrl = (design: Design) => {
 // 获取设计列表
 const fetchDesigns = async () => {
   try {
-    console.log('fetchDesigns开始，用户信息:', userStore.userInfo)
-    console.log('currentPage.value', currentPage.value)
     const params = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      populate: 'user,configJson,product,payment,release,cover'
+      populate: 'user,product,payment,release,cover'
     }
     console.log('API请求参数:', params)
     const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<Design>>
