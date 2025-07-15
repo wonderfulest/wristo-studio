@@ -19,7 +19,7 @@
       
       <el-form-item label="收款方式" prop="paymentMethod">
         <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
-          <el-radio label="kpay">KPay</el-radio>
+          <!-- <el-radio label="kpay">KPay</el-radio> -->
           <el-radio label="wpay">WPay</el-radio>
           <el-radio label="none">免费</el-radio>
         </el-radio-group>
@@ -210,13 +210,6 @@ const show = async (design: Design) => {
         form.kpayId = payment.kpayId || ''
         form.price = payment.price || 1.99
       }
-      // 如果design中有支付信息，预填充（兼容旧版本）
-      else if (designDetail.payment) {
-        form.paymentMethod = designDetail.payment.paymentMethod
-        form.kpayId = designDetail.payment.kpayId || ''
-        form.price = designDetail.payment.price || 1.99
-      }
-    
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || '获取设计详情失败')

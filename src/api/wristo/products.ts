@@ -65,11 +65,17 @@ export const productsApi = {
     heroImage: string
     appId: number
     garminStoreUrl: string
+    payment: {
+      paymentMethod: string
+      price: number
+      trialLasts: number
+    }
   }): Promise<ApiResponse<Product>> {
     return instance.post('/dsn/products/goLive', {
       heroImage: data.heroImage,
       appId: data.appId,
-      garminStoreUrl: data.garminStoreUrl
+      garminStoreUrl: data.garminStoreUrl,
+      payment: data.payment
     })
   }
 }

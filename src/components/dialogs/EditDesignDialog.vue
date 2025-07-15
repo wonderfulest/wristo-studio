@@ -24,7 +24,7 @@
       <!-- 支付方式、价格、试用时长，样式与SubmitDesignDialog一致 -->
       <el-form-item label="收款方式">
         <el-radio-group v-model="form.payment.paymentMethod" @change="handlePaymentMethodChange">
-          <el-radio label="kpay">KPay</el-radio>
+          <!-- <el-radio label="kpay">KPay</el-radio> -->
           <el-radio label="wpay">WPay</el-radio>
           <el-radio label="none">免费</el-radio>
         </el-radio-group>
@@ -141,7 +141,7 @@ const form = reactive({
   configJson: {},
   configJsonString: '',
   payment: { 
-    paymentMethod: 'none', price: 0, trialLasts: 0, kpayId: '' 
+    paymentMethod: 'none', price: 0, trialLasts: 0
   } as Payment // 默认结构
 })
 

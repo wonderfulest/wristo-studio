@@ -166,7 +166,12 @@ const handleConfirm = async () => {
     const data = {
       heroImage: form.garminImageUrl.trim(),
       appId: currentDesign.value.product.appId,
-      garminStoreUrl: form.garminStoreUrl.trim()
+      garminStoreUrl: form.garminStoreUrl.trim(),
+      payment: {
+        paymentMethod: 'wpay',
+        price: form.price,
+        trialLasts: form.trialLasts
+      }
     }
     const response = await productsApi.goLive(data)
     
