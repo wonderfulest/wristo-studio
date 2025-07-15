@@ -21,12 +21,37 @@
       <el-form-item label="描述">
         <el-input v-model="form.description" type="textarea" :rows="2" />
       </el-form-item>
-      <!-- 新增：支付方式和价格显示，只读 -->
-      <el-form-item label="支付方式" v-if="form.payment">
-        <el-input :value="form.payment.paymentMethod" disabled />
+      <!-- 支付方式、价格、试用时长，样式与SubmitDesignDialog一致 -->
+      <el-form-item label="收款方式">
+        <el-radio-group v-model="form.payment.paymentMethod" @change="handlePaymentMethodChange">
+          <el-radio label="kpay">KPay</el-radio>
+          <el-radio label="wpay">WPay</el-radio>
+          <el-radio label="none">免费</el-radio>
+        </el-radio-group>
       </el-form-item>
-      <el-form-item label="价格" v-if="form.payment">
-        <el-input :value="form.payment.price + ' 元'" disabled />
+      <el-form-item label="价格" v-if="form.payment.paymentMethod !== 'none'">
+        <el-input-number
+          v-model.number="form.payment.price"
+          :min="0"
+          :max="999.99"
+          :precision="2"
+          :step="0.01"
+          placeholder="请输入价格"
+          style="width: 100%"
+        />
+        <div class="form-tip">请输入价格（元）</div>
+      </el-form-item>
+      <el-form-item label="试用时长" v-if="form.payment.paymentMethod !== 'none'">
+        <el-input-number
+          v-model.number="form.payment.trialLasts"
+          :min="0"
+          :max="720"
+          :precision="2"
+          :step="0.25"
+          placeholder="请输入试用小时数"
+          style="width: 100%"
+        />
+        <div class="form-tip">请输入试用小时数（0-720小时，支持小数）</div>
       </el-form-item>
       <el-form-item label="配置" class="config-form-item">
         <div class="json-editor">
@@ -115,7 +140,9 @@ const form = reactive({
   description: '',
   configJson: {},
   configJsonString: '',
-  payment: null as Payment | null // 新增字段
+  payment: { 
+    paymentMethod: 'none', price: 0, trialLasts: 0, kpayId: '' 
+  } as Payment // 默认结构
 })
 
 const messageStore = useMessageStore()
@@ -141,7 +168,11 @@ const loadDesign = async (designUid: string) => {
         description: designData.description,
         configJson: designData.configJson,
         configJsonString: JSON.stringify(designData.configJson, null, 2),
-        payment: designData.product?.payment || null // 新增赋值
+        payment: {
+          paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
+          price: designData.product?.payment?.price || 1.99,
+          trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
+        }
       })
       // 初始化编辑文本
       jsonEditText.value = JSON.stringify(form.configJson, null, 2)
@@ -201,7 +232,8 @@ const handleConfirm = async () => {
       name: form.name,
       designStatus: form.designStatus,
       description: form.description,
-      configJson: configJson
+      configJson: configJson,
+      payment: form.payment // 新增
     }
 
     const res: ApiResponse<Design> = await designApi.updateDesign(data as unknown as UpdateDesignParamsV2)
@@ -235,6 +267,17 @@ const copyConfig = () => {
     .catch(() => {
       messageStore.error('复制失败')
     })
+}
+
+// 处理收款方式变化
+const handlePaymentMethodChange = (value: string) => {
+  if (value === 'none') {
+    form.payment.price = 0
+    form.payment.trialLasts = 0
+  } else {
+    form.payment.price = form.payment.price || 1.99
+    form.payment.trialLasts = form.payment.trialLasts || 1
+  }
 }
 
 // 定义 show 方法

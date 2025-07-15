@@ -21,7 +21,7 @@
         <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
           <el-radio label="kpay">KPay</el-radio>
           <el-radio label="wpay">WPay</el-radio>
-          <el-radio label="free">免费</el-radio>
+          <el-radio label="none">免费</el-radio>
         </el-radio-group>
       </el-form-item>
       
