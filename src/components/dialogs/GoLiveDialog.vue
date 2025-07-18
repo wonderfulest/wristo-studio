@@ -7,6 +7,9 @@
     class="go-live-dialog"
   >
     <el-form :model="form" label-width="120px" class="go-live-form">
+      <el-form-item label="App ID">
+        <el-input v-model="form.appId" disabled />
+      </el-form-item>
       <el-form-item label="Design Name">
         <el-input v-model="form.name" disabled />
       </el-form-item>
@@ -106,6 +109,7 @@ const loading = ref(false)
 const currentDesign = ref<Design | null>(null)
 
 const form = reactive({
+  appId: 0,
   name: '',
   description: '',
   garminImageUrl: '',
@@ -122,6 +126,7 @@ const loadDesign = (design: Design) => {
   currentDesign.value = design
   
   // 设置表单数据
+  form.appId = design.product?.appId ?? 0
   form.name = design.name
   form.description = design.description || ''
   
