@@ -195,7 +195,6 @@ Authorization: Bearer {{token}}
       "showUnit": false,
       "textCase": 0,
       "properties": {},
-      "wpayEnabled": true,
       "labelLengthType": 1,
       "themeBackgroundImages": []
     },

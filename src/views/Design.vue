@@ -121,7 +121,6 @@ const loadDesign = async (designUid) => {
       baseStore.watchFaceName = designData.name
       baseStore.themeBackgroundImages = []
       baseStore.currentThemeIndex = 0
-      baseStore.wpayEnabled = false
       baseStore.textCase = 0
       baseStore.labelLengthType = 0
       baseStore.showUnit = true
@@ -136,13 +135,6 @@ const loadDesign = async (designUid) => {
       propertiesStore.loadProperties(config.properties)
     }
 
-    // 设置WPay相关配置
-    baseStore.wpayEnabled = config.wpayEnabled || false
-    // 获取WPay产品信息
-    if (config.wpayEnabled) {
-      await baseStore.getWPayProductInfo()
-    }
-    
     console.log(114, config.themeBackgroundImages)
     // 设置主题背景图片
     baseStore.themeBackgroundImages = config.themeBackgroundImages || []

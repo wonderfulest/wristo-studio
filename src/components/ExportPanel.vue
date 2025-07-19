@@ -323,13 +323,6 @@ const uploadApp = async () => {
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
-    if (baseStore.wpayEnabled && baseStore.id) {
-      const wpayRes = await baseStore.updateWPayProductInfo()
-      if (!wpayRes) {
-        messageStore.error('更新WPay产品信息失败')
-        return -1
-      }
-    }
     currentStatus = '上传完成！'
     currentProgress = 100
     if (loadingInstance) {

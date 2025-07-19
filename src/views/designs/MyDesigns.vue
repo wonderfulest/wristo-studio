@@ -39,44 +39,57 @@
         <el-card class="design-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <div class="header-left">
+              <!-- 标题单独一行 -->
+              <div class="title-row">
                 <span class="title">{{ design.name }}</span>
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  link 
+                  @click="copyDesignName(design.name)"
+                  title="Copy Design Name"
+                >
+                  <el-icon><DocumentCopy /></el-icon>
+                </el-button>
+              </div>
+              <!-- 状态和操作按钮第二行 -->
+              <div class="status-actions-row">
                 <div class="status-tag" :style="{ backgroundColor: getStatusColor(design.designStatus) }">
                   {{ getStatusText(design.designStatus) }}
                 </div>
-              </div>
-              <div class="header-actions">
-                <el-button-group>
-                  <!-- 收藏 -->
-                  <el-button 
-                    type="primary" 
-                    size="small" 
-                    link 
-                    @click.stop="handleFavorite(design)"
-                    :title="'Favorite'"
-                    :loading="loadingStates.favorite.has(design.id)"
-                  >
-                    <el-icon><Star /></el-icon>
-                  </el-button>
-                  <!-- 编辑 -->
-                  <el-button 
-                    type="primary" 
-                    size="small" 
-                    link 
-                    @click="editDesign(design)"
-                  >
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <!-- 删除 -->
-                  <el-button 
-                    type="danger" 
-                    size="small" 
-                    link 
-                    @click="confirmDelete(design)"
-                  >
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </el-button-group>
+                <div class="header-actions">
+                  <el-button-group>
+                    <!-- 收藏 -->
+                    <el-button 
+                      type="primary" 
+                      size="small" 
+                      link 
+                      @click.stop="handleFavorite(design)"
+                      :title="'Favorite'"
+                      :loading="loadingStates.favorite.has(design.id)"
+                    >
+                      <el-icon><Star /></el-icon>
+                    </el-button>
+                    <!-- 编辑 -->
+                    <el-button 
+                      type="primary" 
+                      size="small" 
+                      link 
+                      @click="editDesign(design)"
+                    >
+                      <el-icon><Edit /></el-icon>
+                    </el-button>
+                    <!-- 删除 -->
+                    <el-button 
+                      type="danger" 
+                      size="small" 
+                      link 
+                      @click="confirmDelete(design)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </el-button-group>
+                </div>
               </div>
             </div>
           </template>
@@ -89,7 +102,6 @@
             </div>
             <div class="meta">
               <span>ID: {{ design.designUid }}</span>
-              <span>KPay ID: {{ design.payment?.kpayId || 'N/A' }}</span>
               <span>Updated: {{ formatDate(design.updatedAt) }}</span>
             </div>
             <div class="actions">
@@ -184,7 +196,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete, Download, Promotion } from '@element-plus/icons-vue'
+import { Star, Edit, Delete, Download, Promotion, DocumentCopy } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api'
@@ -381,6 +393,16 @@ const copyDesign = async (design: Design) => {
   }
 }
 
+// 复制设计名称
+const copyDesignName = (name: string) => {
+  navigator.clipboard.writeText(name).then(() => {
+    messageStore.success('Design name copied to clipboard!')
+  }).catch(err => {
+    console.error('Failed to copy design name:', err)
+    messageStore.error('Failed to copy design name')
+  })
+}
+
 // 确认删除
 const confirmDelete = (design: Design) => {
   designToDelete.value = design
@@ -501,30 +523,49 @@ const handleGoLiveSuccess = () => {
   overflow: hidden;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
+.design-card :deep(.el-card__body) {
+  padding: 8px;
 }
 
-.header-left {
+.design-card :deep(.el-card__header) {
+  padding: 6px 8px;
+}
+
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--el-text-color-primary);
+  word-break: break-word;
+  line-height: 1.2;
+  flex: 1;
+}
+
+.status-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
 }
 
 .status-tag {
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
   color: #fff;
   background-color: var(--el-color-info);
 }
@@ -540,8 +581,8 @@ const handleGoLiveSuccess = () => {
 .design-info {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .design-background {
@@ -576,24 +617,26 @@ const handleGoLiveSuccess = () => {
 .meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
+  gap: 2px;
+  font-size: 11px;
   color: var(--el-text-color-secondary);
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 3px;
   flex-wrap: wrap;
-  padding: 8px;
+  padding: 3px;
+  justify-content: center;
 }
 
 .actions .el-button {
-  font-size: 12px;
-  padding: 6px 12px;
+  font-size: 10px;
+  padding: 3px 6px;
   margin: 0;
   flex: 0 0 auto;
-  min-width: 60px;
+  min-width: 45px;
+  height: 24px;
 }
 
 .pagination-container {

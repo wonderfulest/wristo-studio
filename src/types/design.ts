@@ -98,8 +98,6 @@ export interface DesignElement {
 
 export interface DesignConfig {
   name: string
-  kpayId: string
-  wpayId: number
   version: string
   designId: string
   elements: DesignElement[]
@@ -107,7 +105,6 @@ export interface DesignConfig {
   showUnit: boolean
   textCase: number
   properties: Record<string, any>
-  wpayEnabled: boolean
   labelLengthType: number
   themeBackgroundImages: any[]
   [key: string]: any // 允许其他扩展属性

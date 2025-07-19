@@ -4,53 +4,6 @@
       <label>表盘名称</label>
       <el-input type="text" v-model="watchFaceName" @change="updateWatchFaceName" />
     </div>
-    <template v-if="wpayEnabled">
-      <div class="setting-item">
-        <label>WPay App ID</label>
-        <el-input disabled type="text" v-model="wpay.appId" />
-      </div>
-      <div class="setting-item">
-        <label>Garmin 图片</label>
-        <div class="background-image-control">
-          <el-upload action="#" :auto-upload="false" :show-file-list="false" accept=".jpg,.jpeg,.png" @change="handleGarminImageChange">
-            <el-button size="small" type="primary">选择图片</el-button>
-          </el-upload>
-          <el-button size="small" type="danger" @click="removeGarminImage" v-if="wpay.garminImageUrl">移除图片</el-button>
-        </div>
-        <div class="background-image-preview" v-if="wpay.garminImageUrl">
-          <img :src="wpay.garminImageUrl" alt="Garmin 图片预览" />
-        </div>
-        <div class="setting-description">Garmin Connect IQ Store 中显示的图片</div>
-      </div>
-      <div class="setting-item">
-        <label>Garmin Store URL</label>
-        <el-input type="text" v-model="wpay.garminStoreUrl" @change="updateWpayGarminStoreUrl" />
-        <div class="setting-description">Garmin Connect IQ Store 中的应用页面 URL</div>
-      </div>
-      <div class="setting-item">
-        <label>试用时长（小时）</label>
-        <el-input-number 
-          v-model="wpay.trialLasts" 
-          :min="0" 
-          @change="updateWpayTrialLasts"
-          :model-value="Number(wpay.trialLasts) || 0"
-        />
-        <div class="setting-description">用户可免费试用的时长，单位为小时</div>
-      </div>
-      <div class="setting-item">
-        <label>价格（美元）</label>
-        <el-input-number 
-          v-model="wpay.price" 
-          :min="0" 
-          :max="99.99" 
-          :step="0.01" 
-          :precision="2" 
-          @change="updateWpayPrice"
-          :model-value="Number(wpay.price) || 0"
-        />
-        <div class="setting-description">应用在 Garmin Connect IQ Store 中的售价</div>
-      </div>
-    </template>
     <div class="setting-item">
       <label>文本大小写设置</label>
       <el-select v-model="textCase" placeholder="请选择文本大小写样式" @change="updateTextCase">
@@ -222,16 +175,6 @@ watch(
     }
   },
   { deep: true }
-)
-
-// 监听 WPay 开关状态
-watch(
-  () => baseStore.wpayEnabled,
-  async (newValue) => {
-    if (newValue !== wpayEnabled.value) {
-      wpayEnabled.value = newValue
-    }
-  }
 )
 
 // 背景图片

@@ -8,9 +8,7 @@ import { compareColor } from '@/utils/colorUtils'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
-import { productsApi } from '@/api/wristo/products'
 import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/stores/user'
 
 export const useBaseStore = defineStore('baseStore', {
   // state
@@ -18,16 +16,6 @@ export const useBaseStore = defineStore('baseStore', {
     canvas: null,
     id: null, // 表盘ID
     watchFaceName: '',
-    wpayEnabled: false,
-    wpay: {
-      appId: '', // WPay ID
-      name: '', // 名称
-      description: '', // 描述
-      garminImageUrl: '', // Garmin 图片 URL
-      garminStoreUrl: '', // Garmin Store URL
-      trialLasts: null, // 试用时长
-      price: null, // 价格
-    },
     WATCH_SIZE: 454,
     themeBackgroundColors: ['#000000'],
     themeBackgroundImages: [],
@@ -399,72 +387,6 @@ export const useBaseStore = defineStore('baseStore', {
       this.id = res.data.documentId
       return res.code === 0
     },
-    // 获取WPay产品信息
-    async getWPayProductInfo() {
-      if (!this.id) {
-        ElMessage.error('getWPayProductInfo 请先保存应用！')
-        return false
-      }
-      const res = await productsApi.getOrCreateByDesignId({
-        designId: this.id,
-        name: this.watchFaceName,
-        description: this.watchFaceName,
-        trialLasts: this.wpay.trialLasts,
-        price: this.wpay.price,
-        garminImageUrl: this.wpay.garminImageUrl,
-        garminStoreUrl: this.wpay.garminStoreUrl
-      })
-      console.log('222 getWPayProductInfo', res)
-      if (res.code === 0) {
-        // 更新 store 中的数据
-        this.wpay = {
-          ...this.wpay,
-          appId: res.data.appId,
-          garminImageUrl: res.data.garminImageUrl,
-          garminStoreUrl: res.data.garminStoreUrl,
-          name: res.data.name,
-          description: res.data.description,
-          trialLasts: res.data.trialLasts,
-          price: res.data.price
-        }
-        return true
-      } else {
-        ElMessage.error(res.msg || 'WPay 产品创建失败')
-        this.wpay = {
-          ...this.wpay,
-          appId: '',
-          garminImageUrl: '',
-          garminStoreUrl: '',
-          name: '',
-          description: '',
-          trialLasts: 0,
-          price: 0
-        }
-        return false
-      }
-    },
-    // 更新WPay产品信息
-    async updateWPayProductInfo() {
-      if (!this.id) {
-        ElMessage.error('updateWPayProductInfo 请先保存应用！')
-        return false
-      }
-      const res = await productsApi.updateByDesignId({
-        designId: this.id,
-        name: this.watchFaceName,
-        description: this.watchFaceName,
-        trialLasts: this.wpay.trialLasts,
-        price: this.wpay.price,
-        garminImageUrl: this.wpay.garminImageUrl,
-        garminStoreUrl: this.wpay.garminStoreUrl
-      })
-      console.log('222 updateWPayProductInfo', res)
-      return res.code === 0
-    },
-    // 设置表盘ID
-    setKpayId(id) {
-      this.kpayId = id
-    },
     // 获取所有对象
     getObjects() {
       return this.canvas ? this.canvas.getObjects() : []
@@ -575,9 +497,6 @@ export const useBaseStore = defineStore('baseStore', {
         properties: propertiesStore.allProperties,
         designId: this.id,
         name: this.watchFaceName,
-        wpayEnabled: this.wpayEnabled,
-        wpayId: this.wpay.appId,
-        kpayId: this.kpayId,
         textCase: this.textCase,
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
@@ -664,7 +583,6 @@ export const useBaseStore = defineStore('baseStore', {
 
         config.elements.push(encodeConfig)
       }
-
       return config
     },
   
