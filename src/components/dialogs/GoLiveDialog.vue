@@ -55,6 +55,26 @@
           The URL where users can find your app in the Garmin Connect IQ store
         </div>
       </el-form-item>
+      <el-form-item label="Categories">
+        <el-select
+          v-model="form.categoryIds"
+          multiple
+          filterable
+          placeholder="Select categories"
+          :loading="loadingCategories"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="category in categories"
+            :key="category.id"
+            :label="category.name"
+            :value="category.id"
+          />
+        </el-select>
+        <div class="form-tip">
+          Select one or more categories for your app
+        </div>
+      </el-form-item>
       <el-form-item label="Trial Duration (hours)">
         <el-input-number 
           v-model="form.trialLasts" 
@@ -96,17 +116,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { getAllSeries } from '@/api/wristo/categories'
+import type { Category } from '@/types/category'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/design'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
+import { Product } from '@/types/product'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
 const currentDesign = ref<Design | null>(null)
+
+const categories = ref<Category[]>([])
+const loadingCategories = ref(false)
 
 const form = reactive({
   appId: 0,
@@ -114,6 +140,7 @@ const form = reactive({
   description: '',
   garminImageUrl: '',
   garminStoreUrl: '',
+  categoryIds: [] as number[],
   trialLasts: 0,
   price: 1.99
 })
@@ -164,10 +191,8 @@ const handleConfirm = async () => {
     messageStore.error('Product appId is required')
     return
   }
-  
   try {
     loading.value = true
-    
     const data = {
       heroImage: form.garminImageUrl.trim(),
       appId: currentDesign.value.product.appId,
@@ -176,20 +201,13 @@ const handleConfirm = async () => {
         paymentMethod: 'wpay',
         price: form.price,
         trialLasts: form.trialLasts
-      }
+      },
+      categoryIds: form.categoryIds
     }
-    const response = await productsApi.goLive(data)
-    
-    if (response.code === 0 && response.data) {
-      messageStore.success('Product information updated successfully')
-      emit('success', response.data)
-      dialogVisible.value = false
-    } else {
-      messageStore.error(response.msg || 'Failed to update product information')
-    }
-  } catch (error) {
-    console.error('Failed to update product information:', error)
-    messageStore.error('Failed to update product information')
+    await productsApi.goLive(data)
+    messageStore.success('Product information updated successfully')
+    emit('success')
+    dialogVisible.value = false
   } finally {
     loading.value = false
   }
@@ -199,6 +217,23 @@ const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
 }
+
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    loadingCategories.value = true
+    const response: Category[] = await getAllSeries()
+    categories.value = response
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+  } finally {
+    loadingCategories.value = false
+  }
+}
+
+onMounted(() => {
+  loadCategories()
+})
 
 // 图片上传前的验证
 const beforeImageUpload = (file: File) => {

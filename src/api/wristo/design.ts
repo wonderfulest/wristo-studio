@@ -1,6 +1,5 @@
 import instance from '@/config/axios'
 import type { 
-  ApiResponse, 
   PageResponse,
 } from '@/types/api'
 import type { 
@@ -21,7 +20,7 @@ export const designApi = {
    * @param params 查询参数
    * @returns 设计列表分页数据
    */
-  getDesignPage(params: DesignPageParams): Promise<ApiResponse<PageResponse<Design>>> {
+  getDesignPage(params: DesignPageParams): Promise<PageResponse<Design>> {
     return instance.get('/dsn/design/page', { params })
   },
 
@@ -30,14 +29,14 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 设计详情
    */
-  getDesignByUid(designUid: string): Promise<ApiResponse<Design>> {
+  getDesignByUid(designUid: string): Promise<Design> {
     return instance.get(`/dsn/design/uid/${designUid}?populate=configJson,product,payment`)
   },
 
   /**
    * 创建设计
    */
-  createDesignByCopy(data: { uid: string }): Promise<ApiResponse<Design>> {
+  createDesignByCopy(data: { uid: string }): Promise<Design> {
     return instance.post('/dsn/design/create-by-copy', data)
   },
  
@@ -73,7 +72,7 @@ export const designApi = {
    * @param data 设计数据
    * @returns 创建结果
    */
-  createDesign(data: CreateDesignParams): Promise<ApiResponse<Design>> {
+  createDesign(data: CreateDesignParams): Promise<Design> {
     return instance.post(`/dsn/design/create`, data)
   },
   /**
@@ -81,7 +80,7 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 删除结果
    */
-  deleteDesign(designUid: string): Promise<ApiResponse<boolean>> {
+  deleteDesign(designUid: string): Promise<boolean> {
     return instance.post(`/dsn/design/delete/${designUid}`)
   },
 
@@ -108,7 +107,7 @@ export const designApi = {
    * @param data 设计数据
    * @returns 更新结果
    */
-  updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<Design>> {
+  updateDesign(data: UpdateDesignParamsV2): Promise<Design> {
     return instance.post(`/dsn/design/update`, data)
   },
   /**
@@ -116,7 +115,7 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 提交结果
    */
-  submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
+  submitDesign(data: DesignSubmitDTO): Promise<Design> {
     return instance.post(`/dsn/design/submit`, data)
   }
 }

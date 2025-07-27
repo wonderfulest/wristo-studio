@@ -2,7 +2,9 @@ export interface Category {
   id: number
   name: string
   slug: string
+  image: string
   sort: number
+  isActive: number
 }
 
 export interface CategoryPageQuery {
