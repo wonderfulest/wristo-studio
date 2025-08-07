@@ -196,7 +196,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete, Download, Promotion, DocumentCopy } from '@element-plus/icons-vue'
+import { Star, Edit, Delete, Download, Promotion, DocumentCopy, Collection } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api'
@@ -309,10 +309,10 @@ const fetchDesigns = async () => {
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      populate: 'user,product,payment,release,cover'
+      populate: 'user,product,payment,release,cover,category,bundle'
     }
     console.log('API请求参数:', params)
-    const response = await designApi.getDesignPage(params) as ApiResponse<PageResponse<Design>>
+    const response: ApiResponse<PageResponse<Design>> = await designApi.getDesignPage(params)
     console.log('API响应:', response)
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
@@ -620,6 +620,18 @@ const handleGoLiveSuccess = () => {
   gap: 2px;
   font-size: 11px;
   color: var(--el-text-color-secondary);
+}
+
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-color-primary);
+  font-weight: 500;
+}
+
+.category-info .el-icon {
+  font-size: 12px;
 }
 
 .actions {

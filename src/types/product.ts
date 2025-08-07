@@ -1,6 +1,7 @@
 import type { UserBase } from './user'
 import type { Image } from './image'
 import type { Category } from './category'
+import type { Bundle } from './bundle'
 
 export interface Product {
   appId: number
@@ -22,6 +23,7 @@ export interface Product {
   updatedAt: number
   isActive: number
   isDeleted: number
+  bundles?: Bundle[] | null
 }
 
 export interface ProductRelease {
@@ -125,6 +127,8 @@ export interface GoToLiveDto {
   payment: ProductPaymentDto
   /** 分类ID列表 */
   categoryIds: number[]
+  /** Bundle ID列表 */
+  bundleIds?: number[]
 }
 
 /** 产品更新数据传输对象 */

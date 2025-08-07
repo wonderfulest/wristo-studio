@@ -72,7 +72,27 @@
           />
         </el-select>
         <div class="form-tip">
-          Select one or more categories for your app
+          Select one or more categories for your app, will be show on wristo store
+        </div>
+      </el-form-item>
+      <el-form-item label="Bundles">
+        <el-select
+          v-model="form.bundleIds"
+          multiple
+          filterable
+          placeholder="Select bundles"
+          :loading="loadingBundles"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="bundle in bundles"
+            :key="bundle.bundleId"
+            :label="bundle.bundleName"
+            :value="bundle.bundleId"
+          />
+        </el-select>
+        <div class="form-tip">
+          Select one or more bundles for your app
         </div>
       </el-form-item>
       <el-form-item label="Trial Duration (hours)">
@@ -119,13 +139,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getAllSeries } from '@/api/wristo/categories'
 import type { Category } from '@/types/category'
+import type { Bundle } from '@/types/bundle'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/design'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
-import { Product } from '@/types/product'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -134,6 +154,9 @@ const currentDesign = ref<Design | null>(null)
 const categories = ref<Category[]>([])
 const loadingCategories = ref(false)
 
+const bundles = ref<Bundle[]>([])
+const loadingBundles = ref(false)
+
 const form = reactive({
   appId: 0,
   name: '',
@@ -141,6 +164,7 @@ const form = reactive({
   garminImageUrl: '',
   garminStoreUrl: '',
   categoryIds: [] as number[],
+  bundleIds: [] as number[],
   trialLasts: 0,
   price: 1.99
 })
@@ -156,7 +180,11 @@ const loadDesign = (design: Design) => {
   form.appId = design.product?.appId ?? 0
   form.name = design.name
   form.description = design.description || ''
+  form.categoryIds = design.product?.categories?.map((category: Category) => category.id) || []
+  form.bundleIds = design.product?.bundles?.map((bundle: Bundle) => bundle.bundleId) || []
   
+  console.log('design', design)
+  console.log('design.categories', form.categoryIds)
   // 如果已有产品信息，使用现有数据
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''
@@ -202,7 +230,8 @@ const handleConfirm = async () => {
         price: form.price,
         trialLasts: form.trialLasts
       },
-      categoryIds: form.categoryIds
+      categoryIds: form.categoryIds,
+      bundleIds: form.bundleIds
     }
     await productsApi.goLive(data)
     messageStore.success('Product information updated successfully')
@@ -231,8 +260,24 @@ const loadCategories = async () => {
   }
 }
 
+// 加载Bundle数据
+const loadBundles = async () => {
+  try {
+    loadingBundles.value = true
+    const response = await productsApi.getBundles()
+    if (response.code === 0 && response.data) {
+      bundles.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to load bundles:', error)
+  } finally {
+    loadingBundles.value = false
+  }
+}
+
 onMounted(() => {
   loadCategories()
+  loadBundles()
 })
 
 // 图片上传前的验证

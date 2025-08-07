@@ -1,6 +1,7 @@
 import instance from '@/config/axios'
 import type { 
   PageResponse,
+  ApiResponse,
 } from '@/types/api'
 import type { 
   Design, 
@@ -20,7 +21,7 @@ export const designApi = {
    * @param params 查询参数
    * @returns 设计列表分页数据
    */
-  getDesignPage(params: DesignPageParams): Promise<PageResponse<Design>> {
+  getDesignPage(params: DesignPageParams): Promise<ApiResponse<PageResponse<Design>>> {
     return instance.get('/dsn/design/page', { params })
   },
 
@@ -30,7 +31,7 @@ export const designApi = {
    * @returns 设计详情
    */
   getDesignByUid(designUid: string): Promise<Design> {
-    return instance.get(`/dsn/design/uid/${designUid}?populate=configJson,product,payment`)
+    return instance.get(`/dsn/design/uid/${designUid}?populate=configJson,product,payment,category`)
   },
 
   /**

@@ -1,10 +1,12 @@
 import instance from '@/config/axios'
+import { ApiResponse } from '@/types/api'
 import type { 
   Product, 
   GoToLiveDto, 
   ProductUpdateDto,
   CreateProductDto,
 } from '@/types/product'
+import type { Bundle } from '@/types/bundle'
 
 /**
  * 产品相关API接口
@@ -35,6 +37,14 @@ export const productsApi = {
    */
   goLive(data: GoToLiveDto): Promise<boolean> {
     return instance.post('/dsn/products/goLive', data)
+  },
+
+  /**
+   * 获取 bundles
+   * @returns bundles
+   */
+  getBundles(): Promise<ApiResponse<Bundle[]>> {
+    return instance.get('/dsn/bundles/all')
   }
 }
 
