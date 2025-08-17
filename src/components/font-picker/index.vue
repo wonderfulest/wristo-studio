@@ -16,18 +16,19 @@
         <div v-if="searchQuery" class="font-section">
           <!-- 本地搜索结果 -->
           <template v-if="filteredFonts.length > 0">
-          <div class="section-header">
-            <span class="arrow expanded">›</span>
+            <div class="section-header">
+              <span class="arrow expanded">›</span>
               本地字体
-          </div>
-          <div class="section-content">
-            <div v-for="group in groupByFamily(filteredFonts)" :key="group.family" class="font-family-group">
-              <div class="family-name">{{ group.family }}</div>
-              <div v-for="font in group.fonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="selectFont(font)">
-                <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
+            </div>
+            <div class="section-content">
+              <div v-for="group in groupByFamily(filteredFonts)" :key="group.family" class="font-family-group">
+                <div class="family-name">{{ group.family }}</div>
+                <div v-for="font in group.fonts" :key="font.value" class="font-item"
+                  :class="{ active: modelValue === font.value }" @click="selectFont(font)">
+                  <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
+                </div>
               </div>
             </div>
-          </div>
           </template>
 
           <!-- 远程搜索结果 -->
@@ -39,7 +40,8 @@
             <div class="section-content">
               <div v-for="group in groupByFamily(remoteSearchResults)" :key="group.family" class="font-family-group">
                 <div class="family-name">{{ group.family }}</div>
-                <div v-for="font in group.fonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="selectFont(font)">
+                <div v-for="font in group.fonts" :key="font.value" class="font-item"
+                  :class="{ active: modelValue === font.value }" @click="selectFont(font)">
                   <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
                 </div>
               </div>
@@ -48,11 +50,13 @@
 
           <!-- 加载状态 -->
           <div v-if="isSearching" class="search-loading">
-            <el-icon class="is-loading"><Loading /></el-icon>
+            <el-icon class="is-loading">
+              <Loading />
+            </el-icon>
             正在搜索...
-        </div>
+          </div>
 
-        <!-- 无搜索结果提示 -->
+          <!-- 无搜索结果提示 -->
           <div v-if="!isSearching && filteredFonts.length === 0 && remoteSearchResults.length === 0" class="no-results">
             未找到匹配的字体
           </div>
@@ -67,7 +71,8 @@
           <div v-if="expandedSections[section.label]" class="section-content">
             <div v-for="group in groupByFamily(section.fonts)" :key="group.family" class="font-family-group">
               <div class="family-name">{{ group.family }}</div>
-              <div v-for="font in group.fonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="selectFont(font)">
+              <div v-for="font in group.fonts" :key="font.value" class="font-item"
+                :class="{ active: modelValue === font.value }" @click="selectFont(font)">
                 <span class="preview-text" :style="{ fontFamily: font.value }">
                   {{ section.label === 'icon' ? '0123456789' : '12:23 AM 72°F & Sunny 0123456789' }}
                 </span>
@@ -82,24 +87,15 @@
     </div>
 
     <!-- 添加字体对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      title="添加自定义字体"
-      width="500px"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="dialogVisible" title="添加自定义字体" width="500px" :close-on-click-modal="false">
       <div class="font-form">
         <!-- 拖拽上传区域 -->
-        <el-upload
-          class="font-upload-area"
-          drag
-          accept=".ttf"
-          :auto-upload="false"
-          :show-file-list="false"
-          :on-change="handleFontFileChange"
-        >
+        <el-upload class="font-upload-area" drag accept=".ttf" :auto-upload="false" :show-file-list="false"
+          :on-change="handleFontFileChange">
           <div class="upload-content">
-            <el-icon class="upload-icon"><Upload /></el-icon>
+            <el-icon class="upload-icon">
+              <Upload />
+            </el-icon>
             <div class="upload-text">
               <span>点击选择或拖拽上传字体文件</span>
               <p class="upload-tip">仅支持 TTF 格式</p>
@@ -111,22 +107,17 @@
         <div v-if="selectedFile" class="font-info">
           <div class="info-header">
             <span class="file-name">{{ selectedFile.name }}</span>
-            <el-button 
-              type="text" 
-              class="remove-btn"
-              @click="removeFile"
-            >
-              <el-icon><Close /></el-icon>
+            <el-button type="text" class="remove-btn" @click="removeFile">
+              <el-icon>
+                <Close />
+              </el-icon>
             </el-button>
           </div>
 
           <!-- 预览区域 -->
           <div class="preview-section">
             <div class="preview-label">预览效果：</div>
-            <div 
-              class="font-preview" 
-              :style="{ fontFamily: previewFontFamily }"
-            >
+            <div class="font-preview" :style="{ fontFamily: previewFontFamily }">
               <div class="preview-text">
                 <span class="preview-numbers">0123456789,:°F Sunny</span>
                 <span class="preview-letters">AaBbCcDdEe</span>
@@ -139,12 +130,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="cancelUpload">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="confirmUpload" 
-            :loading="uploading"
-            :disabled="!selectedFile"
-          >
+          <el-button type="primary" @click="confirmUpload" :loading="uploading" :disabled="!selectedFile">
             确认上传
           </el-button>
         </span>
@@ -157,9 +143,9 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
-import { getFonts, createFont, uploadFontFile, getFontBySlug } from '@/api/fonts'
+import { getFonts, createFont, getFontBySlug } from '@/api/fonts'
 import { Upload, Close, Loading } from '@element-plus/icons-vue'
-
+import { uploadFontFile } from '@/api/wristo/fonts'
 const props = defineProps({
   modelValue: {
     type: String,
@@ -226,10 +212,10 @@ const selectFont = (font) => {
 const filterFonts = async () => {
   // 先清空远程搜索结果
   remoteSearchResults.value = []
-  
+
   // 本地搜索
   filteredFonts.value = fontStore.searchFonts(searchQuery.value)
-  
+
   // 如果本地搜索无结果且搜索词不为空，则请求服务器
   if (searchQuery.value && filteredFonts.value.length === 0) {
     try {
@@ -240,7 +226,7 @@ const filterFonts = async () => {
         name: searchQuery.value,
         status: 'Approved' // 只搜索已审核通过的字体
       })
-      
+
       // 转换服务器返回的字体数据格式
       remoteSearchResults.value = response.data.map(font => ({
         label: font.attributes.name,
@@ -270,16 +256,16 @@ const previewFontFamily = computed(() => {
 // 处理字体文件选择
 const handleFontFileChange = async (file) => {
   if (!file) return
-  
+
   // 检查文件类型
   if (!file.raw.type.includes('font') && !file.name.endsWith('.ttf')) {
     messageStore.error('请上传TTF格式的字体文件')
-      return
-    }
+    return
+  }
 
-    try {
+  try {
     // 设置字体名称到 fontForm
-      const fontName = file.name.replace(/\.ttf$/i, '')
+    const fontName = file.name.replace(/\.ttf$/i, '')
     fontForm.value = {
       name: fontName,
       family: fontName
@@ -291,9 +277,9 @@ const handleFontFileChange = async (file) => {
       fontName,
       `url(${fontUrl})`
     )
-      await fontFace.load()
-      document.fonts.add(fontFace)
-      
+    await fontFace.load()
+    document.fonts.add(fontFace)
+
     selectedFile.value = file
   } catch (error) {
     messageStore.error('字体文件加载失败')
@@ -340,7 +326,7 @@ const confirmUpload = async () => {
 
     // 上传字体文件
     const fileResult = await uploadFontFile(selectedFile.value.raw)
-    
+
     // 创建字体记录
     const fontData = {
       name: fontName,
@@ -349,7 +335,7 @@ const confirmUpload = async () => {
       status: 'Submitted',
       ttf: fileResult.id
     }
-    
+
     await createFont(fontData)
 
     // 添加到字体库
@@ -359,7 +345,7 @@ const confirmUpload = async () => {
       family: fontName
     })
 
-    
+
     messageStore.success('字体上传成功，等待审核')
     dialogVisible.value = false
   } catch (error) {
@@ -393,10 +379,10 @@ onUnmounted(() => {
 
 const switchTab = (tab) => {
   if (activeTab.value === tab) return
-  
+
   // 先设置动画状态
   isAnimating.value = true
-  
+
   // 等待动画开始后再切换标签
   setTimeout(() => {
     activeTab.value = tab
