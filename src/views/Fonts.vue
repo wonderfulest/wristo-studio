@@ -91,18 +91,18 @@ const searchQuery = ref('')
 // 状态处理函数
 const getStatusType = (status) => {
   const types = {
-    'Approved': 'success',
-    'Submitted': 'warning',
-    'Rejected': 'danger'
+    'approved': 'success',
+    'submitted': 'warning',
+    'rejected': 'danger'
   }
   return types[status] || 'info'
 }
 
 const getStatusText = (status) => {
   const texts = {
-    'Approved': '已审核',
-    'Submitted': '待审核',
-    'Rejected': '已拒绝'
+    'approved': '已审核',
+    'submitted': '待审核',
+    'rejected': '已拒绝'
   }
   return texts[status] || status
 }
@@ -114,7 +114,7 @@ const loadFonts = async () => {
       page: currentPage.value,
       pageSize: pageSize.value,
       name: searchQuery.value,
-      status: 'Approved' // 注意这里使用正确的状态值
+      status: 'approved' // 注意这里使用正确的状态值
     })
     
     fonts.value = response.data

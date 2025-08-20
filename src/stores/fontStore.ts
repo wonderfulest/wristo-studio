@@ -623,7 +623,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
       async fetchFonts() {
         try {
           this.loading = true
-          const response: any = await getFonts()
+          const response: any = await getFonts({
+            pageNum: 1,
+            pageSize: 20
+          })
           // Some APIs return { data: { data: [...] } }, others { data: [...] }
           this.fonts = response?.data?.data ?? response?.data ?? []
           this.error = null
@@ -671,7 +674,9 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           if (!fontInfo) {
             const response: any = await getFonts({
               name: fontName,
-              // status: 'Approved'
+              status: 'approved',
+              pageNum: 1,
+              pageSize: 1
             })
 
             const list: ServerFontItem[] = response?.data ?? response?.data?.data ?? []

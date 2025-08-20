@@ -5,4 +5,4 @@ declare module '@/api/favorites' {
     userId: number | undefined,
     isFavorite: boolean
   ): Promise<any>
-} 
+}
