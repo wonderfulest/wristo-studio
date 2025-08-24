@@ -163,16 +163,27 @@ const loadDesign = async (designUid) => {
     // 默认选中第一个颜色
     baseStore.currentThemeIndex = 0
 
+    await fontStore.loadSystemFonts()
+
+    // 尽早并发启动字体加载，避免元素渲染时的闪动
+    const fontsLoadingPromise = (async () => {
+      if (config.elements) {
+        try {
+          await fontStore.loadFontsForElements(config.elements)
+        } catch (e) {
+          console.warn('预加载字体失败，继续后续流程', e)
+        }
+      }
+    })()
+
     // 等待画布初始化完成
     await waitCanvasReady()
 
     // 切换主题背景
     baseStore.toggleThemeBackground()
     
-    // 加载字体
-    if (config.elements) {
-      await fontStore.loadFontsForElements(config.elements)
-    }
+    // 确保字体加载完成后再加载元素到画布
+    await fontsLoadingPromise
     
     // 加载元素到画布
     if (config && config.elements) {

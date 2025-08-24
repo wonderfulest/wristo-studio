@@ -1,12 +1,12 @@
 <template>
   <div class="fonts-preview">
-    <h1 class="text-2xl font-bold mb-6">系统字体预览</h1>
+    <h1 class="text-2xl font-bold mb-6">System Fonts Preview</h1>
     
     <!-- 搜索栏 -->
     <div class="mb-6">
       <el-input
         v-model="searchQuery"
-        placeholder="搜索字体..."
+        placeholder="Search fonts..."
         class="w-64"
         clearable
         @input="handleSearch"
@@ -26,14 +26,14 @@
       >
         <!-- 字体信息 -->
         <div class="mb-4">
-          <h3 class="text-lg font-bold">{{ font.attributes.name }}</h3>
-          <p class="text-gray-600">{{ font.attributes.family }}</p>
+          <h3 class="text-lg font-bold">{{ font.fullName || font.family }}</h3>
+          <p class="text-gray-600">{{ font.family }}</p>
         </div>
         
         <!-- 字体预览 -->
         <div 
           class="preview-text"
-          :style="{ fontFamily: font.attributes.family }"
+          :style="{ fontFamily: font.previewFamily || font.family }"
         >
           <!-- 数字预览 -->
           <div class="preview-numbers">
@@ -52,9 +52,9 @@
         <div class="text-sm text-gray-500 mt-4">
           <el-tag 
             size="small" 
-            :type="getStatusType(font.attributes.status)"
+            :type="getStatusType(font.status)"
           >
-            {{ getStatusText(font.attributes.status) }}
+            {{ getStatusText(font.status) }}
           </el-tag>
         </div>
       </div>
@@ -75,65 +75,48 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getFonts } from '@/api/fonts'
+import { useFontStore } from '@/stores/fontStore'
 import { Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import type { DesignFontVO } from '@/types/font'
 
 // 状态
-const fonts = ref([])
+const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 const searchQuery = ref('')
+const fontStore = useFontStore()
 
 // 状态处理函数
-const getStatusType = (status) => {
-  const types = {
-    'approved': 'success',
-    'submitted': 'warning',
-    'rejected': 'danger'
+const getStatusType = (status: string) => {
+  const types: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
+    approved: 'success',
+    submitted: 'warning',
+    rejected: 'danger'
   }
   return types[status] || 'info'
 }
 
-const getStatusText = (status) => {
-  const texts = {
-    'approved': '已审核',
-    'submitted': '待审核',
-    'rejected': '已拒绝'
+const getStatusText = (status: string) => {
+  const texts: Record<string, string> = {
+    approved: 'Approved',
+    submitted: 'Submitted',
+    rejected: 'Rejected'
   }
   return texts[status] || status
 }
 
-// 加载字体
+// 加载字体（系统预置，通过 admin 接口），并以 slug 为准进行渲染
 const loadFonts = async () => {
   try {
-    const response = await getFonts({
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      name: searchQuery.value,
-      status: 'approved' // 注意这里使用正确的状态值
-    })
-    
-    fonts.value = response.data
-    total.value = response.meta?.pagination?.total || 0
-
-    // 预加载字体文件
-    response.data.forEach(font => {
-      if (font.attributes.ttf?.data?.attributes?.url) {
-        const fontFace = new FontFace(
-          font.attributes.family,
-          `url(${font.attributes.ttf.data.attributes.url})`
-        )
-        fontFace.load().then(() => {
-          document.fonts.add(fontFace)
-        }).catch(err => {
-          console.error('字体加载失败:', font.attributes.name, err)
-        })
-      }
-    })
+    const items = await fontStore.loadSystemFonts(searchQuery.value || '')
+    total.value = items.length
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
+    fonts.value = items.slice(start, end)
   } catch (error) {
     console.error('加载字体失败:', error)
     ElMessage.error('加载字体列表失败')
@@ -146,12 +129,12 @@ const handleSearch = () => {
   loadFonts()
 }
 
-const handleSizeChange = (val) => {
+const handleSizeChange = (val: number) => {
   pageSize.value = val
   loadFonts()
 }
 
-const handleCurrentChange = (val) => {
+const handleCurrentChange = (val: number) => {
   currentPage.value = val
   loadFonts()
 }

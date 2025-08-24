@@ -3,14 +3,18 @@ export interface UploadFontMeta {
   fullName: string
   postscriptName: string
   family: string
+  subfamily: string
   language: string
   type: string // 后端为枚举，这里用字符串，示例：'text_font'
   weight: string
   versionName: string
   glyphCount: number | string
-  // 可选字段
-  slug?: string
-  isSystem?: number
+  isSystem: number // 0/1
+  isMonospace: number // 0/1
+  italic: number // 0/1
+  weightClass: number
+  widthClass: number
+  copyright: string
 }
 
 // 文件信息
@@ -29,11 +33,17 @@ export interface DesignFontVO {
   postscriptName: string
   slug: string
   family: string
+  subfamily: string
   language: string
   type: string
   weight: string
   versionName: string
   glyphCount: number
+  isMonospace: number
+  italic: number
+  weightClass: number
+  widthClass: number
+  copyright: string
   isSystem: number
   status: string
   ttf: number
@@ -44,9 +54,5 @@ export interface DesignFontVO {
 export interface DesignFontPageQueryDTO {
   pageNum: number
   pageSize: number
-  status?: string
-  slug?: string
   name?: string
-  userId?: number
-  type?: string
 }

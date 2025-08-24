@@ -3,7 +3,7 @@
     <!-- Current selected font preview -->
     <div class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
-      <span class="preview-text" :style="{ fontFamily: modelValue }">12:23 AM 72°F & Sunny 0123456789</span>
+      <span class="preview-text" :style="{ fontFamily: selectedFontFamily }">12:23 AM 72°F & Sunny 0123456789</span>
     </div>
 
     <!-- Font selection panel -->
@@ -31,7 +31,7 @@
                 <div class="family-name">{{ group.family }}</div>
                 <div v-for="font in group.fonts" :key="font.value" class="font-item"
                   :class="{ active: modelValue === font.value }" @click="selectFont(font)">
-                  <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
+                  <span class="preview-text" :style="{ fontFamily: font.family }">12:23 AM 72°F & Sunny 0123456789</span>
                 </div>
               </div>
             </div>
@@ -48,7 +48,7 @@
                 <div class="family-name">{{ group.family }}</div>
                 <div v-for="font in group.fonts" :key="font.value" class="font-item"
                   :class="{ active: modelValue === font.value }" @click="selectFont(font)">
-                  <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
+                  <span class="preview-text" :style="{ fontFamily: font.family }">12:23 AM 72°F & Sunny 0123456789</span>
                 </div>
               </div>
             </div>
@@ -93,7 +93,7 @@
     <el-dialog v-model="dialogVisible" title="Add Custom Font" width="500px" :close-on-click-modal="false">
       <div class="font-form">
         <!-- Drag and drop upload area -->
-        <el-upload class="font-upload-area" drag accept=".ttf" :auto-upload="false" :show-file-list="false"
+        <el-upload class="font-upload-area" drag accept=".ttf,.otf" :auto-upload="false" :show-file-list="false"
           :on-change="handleFontFileChange">
           <div class="upload-content">
             <el-icon class="upload-icon">
@@ -101,7 +101,7 @@
             </el-icon>
             <div class="upload-text">
               <span>Click to select or drag and drop font file</span>
-              <p class="upload-tip">TTF only</p>
+              <p class="upload-tip">TTF / OTF</p>
             </div>
           </div>
         </el-upload>
@@ -127,6 +127,28 @@
               </div>
             </div>
           </div>
+
+          <!-- Parsed font details -->
+          <div class="preview-section" v-if="parsedInfo">
+            <div class="preview-label">Font details:</div>
+            <ul class="font-details">
+              <li v-if="parsedInfo.fullName"><strong>Full name:</strong> {{ parsedInfo.fullName }}</li>
+              <li v-if="parsedInfo.family"><strong>Family:</strong> {{ parsedInfo.family }}</li>
+              <li v-if="parsedInfo.subfamily"><strong>Subfamily:</strong> {{ parsedInfo.subfamily }}</li>
+              <li v-if="parsedInfo.version"><strong>Version:</strong> {{ parsedInfo.version }}</li>
+              <li v-if="parsedInfo.copyright"><strong>Copyright:</strong> {{ parsedInfo.copyright }}</li>
+              <li><strong>Glyphs:</strong> {{ parsedInfo.glyphCount }}</li>
+              <li v-if="parsedInfo.languageCodes?.length"><strong>Languages:</strong> {{ parsedInfo.languageCodes.join(', ') }}</li>
+              <li v-if="parsedInfo.unitsPerEm"><strong>Units per EM:</strong> {{ parsedInfo.unitsPerEm }}</li>
+              <li v-if="parsedInfo.isMonospace !== undefined"><strong>Monospace:</strong> {{ parsedInfo.isMonospace ? 'Yes' : 'No' }}</li>
+              <li v-if="parsedInfo.italic !== undefined"><strong>Italic:</strong> {{ parsedInfo.italic ? 'Yes' : 'No' }}</li>
+              <li v-if="parsedInfo.weightClass"><strong>Weight class:</strong> {{ parsedInfo.weightClass }}</li>
+              <li v-if="parsedInfo.widthClass"><strong>Width class:</strong> {{ parsedInfo.widthClass }}</li>
+              <li v-if="parsedInfo.ascent !== undefined"><strong>Ascent:</strong> {{ parsedInfo.ascent }}</li>
+              <li v-if="parsedInfo.descent !== undefined"><strong>Descent:</strong> {{ parsedInfo.descent }}</li>
+              <li v-if="parsedInfo.lineGap !== undefined"><strong>Line gap:</strong> {{ parsedInfo.lineGap }}</li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -148,7 +170,9 @@ import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
 import { Upload, Close, Loading } from '@element-plus/icons-vue'
 import { DesignFontVO, UploadFontMeta } from '@/types/font'
-import { uploadFontFile, getFonts, getFontBySlug } from '@/api/wristo/fonts'
+import { uploadFontFile, getFonts, getFontByName, getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
+import opentype, { Font, FontNames } from 'opentype.js'
+import type { ParsedFontInfo } from '@/types/font-parse'
 const props = defineProps({
   modelValue: {
     type: String,
@@ -174,13 +198,26 @@ const fontForm = ref<{ name: string; family: string }>({
   family: ''
 })
 
+// parsed font info
+const parsedInfo = ref<ParsedFontInfo | null>(null)
+
 const remoteSearchResults = ref<FontItem[]>([])
 const isSearching = ref<boolean>(false)
 
 // Store data with precise typing for template usage
-const fontSections = computed(() => fontStore.fontSections as Array<{ label: string; name: SectionName; fonts: FontItem[] }>)
-const expandedSections = computed(() => fontStore.expandedSections as Record<SectionName, boolean>)
+const fontSections = computed(() => fontStore.fontSections as Array<{ label: string; name: SectionName | string; fonts: FontItem[] }>)
+const expandedSections = computed(() => fontStore.expandedSections as Record<string, boolean>)
 const selectedFontLabel = computed(() => fontStore.getFontLabel(props.modelValue))
+// Map current value (slug) -> family for preview/rendering
+const selectedFontFamily = computed(() => {
+  const slug = props.modelValue
+  for (const sec of fontSections.value) {
+    const m = sec.fonts?.find(f => f.value === slug)
+    if (m) return m.family
+  }
+  // fallback to using the value directly as a family (for legacy/alias cases)
+  return slug
+})
 
 const groupByFamily = (fonts: FontItem[]) => {
   const groups = new Map()
@@ -202,13 +239,41 @@ const togglePanel = () => {
 }
 
 // 切换分组展开/收起
-const toggleSection = (section: SectionName) => {
+const toggleSection = (section: SectionName | string) => {
   fontStore.toggleSection(section)
 }
 
 // 选择字体
-const selectFont = (font: FontItem) => {
-  emit('update:modelValue', font.value)
+const ensureFontBySlug = async (slug: string, family: string) => {
+  try {
+    // if already available, skip
+    if (document.fonts && (document as any).fonts.check && (document as any).fonts.check(`12px ${family}`)) return
+    // fetch detail first
+    let url = ''
+    try {
+      const by = await getFontBySlug(slug)
+      url = by?.data?.ttfFile?.url || ''
+    } catch {}
+    if (!url) {
+      try {
+        const sys = await getSystemFonts()
+        const hit = (sys.data || []).find((f: any) => f.slug === slug)
+        url = hit?.ttfFile?.url || ''
+      } catch {}
+    }
+    if (!url) return
+    const ttfUrl = url.startsWith('http') ? url : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
+    const face = new FontFace(slug, `url(${ttfUrl})`)
+    console.log('注册字体:', slug, ttfUrl)
+    await face.load()
+    document.fonts.add(face)
+    await (document as any).fonts.ready
+  } catch {}
+}
+
+const selectFont = async (font: FontItem) => {
+  await ensureFontBySlug(font.value, font.family)
+  emit('update:modelValue', font.value) // value is slug
   emit('change', font.value)
   fontStore.addRecentFont(font)
   isOpen.value = false
@@ -229,8 +294,7 @@ const filterFonts = async () => {
       const response = await getFonts({
         pageNum: 1,
         pageSize: 20,
-        name: searchQuery.value,
-        status: 'approved' // 只搜索已审核通过的字体
+        name: searchQuery.value
       })
 
       // Convert server fonts (VO) to FontItem[]
@@ -238,7 +302,7 @@ const filterFonts = async () => {
       remoteSearchResults.value = list.map((font) => {
         const label = font.fullName || font.family
         const family = font.family || font.fullName
-        const value = family
+        const value = font.slug || family
         return { label, value, family }
       })
     } catch (error) {
@@ -258,7 +322,7 @@ const addCustomFont = () => {
 // 用于预览的字体样式
 const previewFontFamily = computed(() => {
   if (!selectedFile.value) return 'inherit'
-  return selectedFile.value.name.replace(/\.ttf$/i, '')
+  return selectedFile.value.name.replace(/\.(ttf|otf)$/i, '')
 })
 
 // 处理字体文件选择
@@ -266,27 +330,74 @@ const handleFontFileChange = async (file: any) => {
   if (!file) return
 
   // 检查文件类型
-  if (!file.raw.type.includes('font') && !file.name.endsWith('.ttf')) {
-    messageStore.error('Please upload TTF file')
+  const lower = (file.name || '').toLowerCase()
+  const isTTF = lower.endsWith('.ttf')
+  const isOTF = lower.endsWith('.otf')
+  if (!isTTF && !isOTF) {
+    messageStore.error('Please upload TTF/OTF file')
     return
   }
 
   try {
-    // 设置字体名称到 fontForm
-    const fontName = file.name.replace(/\.ttf$/i, '')
-    fontForm.value = {
-      name: fontName,
-      family: fontName
-    }
+    // 设置初始字体名称到 fontForm（后续会用解析结果覆盖）
+    const initialName = file.name.replace(/\.(ttf|otf)$/i, '')
+    fontForm.value = { name: initialName, family: initialName }
 
     // 创建 Font Face 用于预览
     const fontUrl = URL.createObjectURL(file.raw)
     const fontFace = new FontFace(
-      fontName,
+      initialName,
       `url(${fontUrl})`
     )
     await fontFace.load()
     document.fonts.add(fontFace)
+
+    // 解析字体元数据
+    const arrayBuffer: ArrayBuffer = await (file.raw as File).arrayBuffer()
+    const font: Font = opentype.parse(arrayBuffer)
+    const names = font?.names as FontNames
+    // tables for advanced attributes
+    const tables: any = (font as any)?.tables || {}
+    const os2 = tables.os2 || tables.OS_2
+    const post = tables.post
+
+    // collect language codes from multiple name records
+    const langSet = new Set<string>()
+    const collectLangs = (rec: Record<string, unknown> | undefined) => {
+      if (!rec) return
+      Object.keys(rec).forEach((k) => {
+        // simple filter for language-like keys
+        if (k.length >= 2 && k.length <= 8) langSet.add(k)
+      })
+    }
+    collectLangs(names?.fullName as any)
+    collectLangs(names?.fontFamily as any)
+    collectLangs(names?.fontSubfamily as any)
+    collectLangs(names?.version as any)
+
+    const subfamilyStr = names?.fontSubfamily?.en || names?.fontSubfamily?.enUS || names?.fontSubfamily?.enGB || ''
+
+    const info: ParsedFontInfo = {
+      fullName: names?.fullName?.en || names?.fullName?.enUS || names?.fullName?.enGB,
+      postscriptName: names?.postScriptName?.en || names?.postScriptName?.enUS || names?.postScriptName?.enGB,
+      family: names?.fontFamily?.en || names?.fontFamily?.enUS || names?.fontFamily?.enGB || initialName,
+      subfamily: subfamilyStr,
+      version: names?.version?.en || names?.version?.enUS || names?.version?.enGB,
+      copyright: names?.copyright?.en || names?.copyright?.enUS || names?.copyright?.enGB,
+      glyphCount: font?.glyphs?.length ?? 0,
+      languageCodes: Array.from(langSet),
+      isMonospace: !!post?.isFixedPitch,
+      italic: typeof os2?.fsSelection === 'number' ? Boolean(os2.fsSelection & 0x01) : /italic/i.test(subfamilyStr),
+      weightClass: os2?.usWeightClass,
+      widthClass: os2?.usWidthClass,
+    }
+
+    parsedInfo.value = info
+    // 使用解析到的名称覆盖表单，尽量保持英文
+    fontForm.value = {
+      name: info.fullName || info.family || initialName,
+      family: info.family || info.fullName || initialName,
+    }
 
     selectedFile.value = file
   } catch (error) {
@@ -298,12 +409,14 @@ const handleFontFileChange = async (file: any) => {
 // 移除已选文件
 const removeFile = () => {
   selectedFile.value = null
+  parsedInfo.value = null
 }
 
 // 取消上传
 const cancelUpload = () => {
   dialogVisible.value = false
   selectedFile.value = null
+  parsedInfo.value = null
 }
 
 // 确认上传
@@ -316,45 +429,115 @@ const confirmUpload = async () => {
   uploading.value = true
   try {
     const fontName = fontForm.value.name
-    const slug = fontName.toLowerCase().replace(/\s+/g, '-')
+    // 如果数据库中已经存在该字体，则复用该字体继续后续逻辑
+    const byName = await getFontByName(fontName)
+    const usedExisting = Boolean(byName.data)
 
-    // If font already exists in builtins/custom list, abort
-    const existsInStore = fontStore.isBuiltinFont(fontName) || fontStore.builtinFonts.custom.some(f => f.value === fontName)
-    if (existsInStore) {
-      messageStore.error('Font already exists in local library')
-      return
+    // Build upload meta for backend using parsed info when available
+    // map weight from OS/2 usWeightClass or subfamily
+    const mapWeight = (w?: number, sub?: string): string => {
+      const subLower = (sub || '').toLowerCase()
+      if (/bold/.test(subLower)) return 'bold'
+      if (/semi[- ]?bold|demi[- ]?bold/.test(subLower)) return 'semibold'
+      if (/medium/.test(subLower)) return 'medium'
+      if (/light|extralight|ultralight/.test(subLower)) return 'light'
+      if (/thin|hairline/.test(subLower)) return 'thin'
+      if (typeof w !== 'number') return 'regular'
+      if (w >= 900) return 'black'
+      if (w >= 800) return 'extrabold'
+      if (w >= 700) return 'bold'
+      if (w >= 600) return 'semibold'
+      if (w >= 500) return 'medium'
+      if (w <= 300) return 'light'
+      return 'regular'
     }
 
-    // 如果数据库中已经存在该字体，则直接返回
-    const bySlug = await getFontBySlug(slug)
-    if (bySlug.data) {
-      messageStore.error('Font already exists in server')
-      return
-    }
-
-    // Build upload meta for backend
     const meta: UploadFontMeta = {
-      fullName: fontName,
-      postscriptName: fontName,
-      family: fontName,
+      fullName: parsedInfo.value?.fullName || fontName,
+      postscriptName: parsedInfo.value?.postscriptName || fontName,
+      family: parsedInfo.value?.family || fontName,
+      subfamily: parsedInfo.value?.subfamily || '',
       language: 'en',
       type: 'text_font',
-      weight: 'regular',
-      versionName: '1.0',
-      glyphCount: 0,
-      slug,
+      weight: mapWeight(parsedInfo.value?.weightClass, parsedInfo.value?.subfamily),
+      versionName: parsedInfo.value?.version || '1.0',
+      glyphCount: parsedInfo.value?.glyphCount || 0,
       isSystem: 0,
+      // extended
+      isMonospace: typeof parsedInfo.value?.isMonospace === 'boolean' ? (parsedInfo.value?.isMonospace ? 1 : 0) : 0,
+      italic: typeof parsedInfo.value?.italic === 'boolean' ? (parsedInfo.value?.italic ? 1 : 0) : 0,
+      weightClass: parsedInfo.value?.weightClass || 500,
+      widthClass: parsedInfo.value?.widthClass || 5,
+      copyright: parsedInfo.value?.copyright || '',
     }
 
-    // Upload font file which creates the record and returns DesignFontVO
-    const uploadRes = await uploadFontFile(selectedFile.value.raw as File, meta)
-    const created = uploadRes.data as DesignFontVO
+    // 获取将要使用的 DesignFontVO：若已存在则复用，否则上传后使用
+    let created: DesignFontVO
+    if (usedExisting) {
+      created = byName.data as DesignFontVO
+    } else {
+      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, meta)
+      created = uploadRes.data as DesignFontVO
+    }
 
-    // Add to local library
-    fontStore.addCustomFont({ label: created.fullName || fontName, value: created.family || fontName, family: created.family || created.fullName || fontName })
+    // Register the uploaded font into document fonts using returned file URL
+    const familyName = created.family || created.fullName || created.postscriptName || fontName
+    const fullName = created.fullName
+    const psName = created.postscriptName
+    let rawUrl = created.ttfFile?.url
+    // Fallback: if missing ttf in slug detail, try from system fonts by slug
+    if (!rawUrl) {
+      try {
+        const sys = await getSystemFonts()
+        const hit = (sys.data || []).find((f: any) => f.slug === created.slug)
+        rawUrl = hit?.ttfFile?.url || ''
+      } catch {}
+    }
+    const ttfUrl = rawUrl
+      ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`)
+      : ''
+    if (ttfUrl) {
+      try {
+        // register by family
+        const faceFamily = new FontFace(familyName, `url(${ttfUrl})`)
+        await faceFamily.load()
+        document.fonts.add(faceFamily)
+        // also register aliases to reduce mismatch issues
+        if (fullName && fullName !== familyName) {
+          const faceFull = new FontFace(fullName, `url(${ttfUrl})`)
+          await faceFull.load()
+          document.fonts.add(faceFull)
+        }
+        if (psName && psName !== familyName && psName !== fullName) {
+          const facePS = new FontFace(psName, `url(${ttfUrl})`)
+          await facePS.load()
+          document.fonts.add(facePS)
+        }
+      } catch (e) {
+        console.warn('Failed to register uploaded font via FontFace:', e)
+      }
+    } else {
+      console.warn('Missing ttfFile.url in server response, cannot auto-register font')
+    }
 
+    // Proactively trigger font load and wait until ready
+    try {
+      await (document as any).fonts.load(`1rem "${familyName}"`)
+      await (document as any).fonts.ready
+    } catch {}
 
-    messageStore.success('Font uploaded successfully, pending review')
+    // Add to local library with the exact family used to register, and provide src for alias-based rendering
+    fontStore.addCustomFont({ label: created.fullName || familyName, value: created.slug, family: familyName, src: ttfUrl })
+
+    // 当存在 TTF URL 时，使用别名作为当前选中值，确保界面元素使用上传的 TTF 渲染
+    // 使用 slug 作为最终选中值
+    emit('update:modelValue', created.slug)
+    emit('change', created.slug)
+
+    // Record usage by slug (best-effort)
+    try { await increaseFontUsage(created.slug) } catch {}
+
+    messageStore.success(usedExisting ? 'Font already exists. Loaded into system.' : 'Font uploaded successfully, pending review')
     dialogVisible.value = false
   } catch (error: any) {
     messageStore.error(error?.response?.data?.message || 'Font upload failed')
@@ -367,6 +550,7 @@ const confirmUpload = async () => {
       name: '',
       family: ''
     }
+    parsedInfo.value = null
   }
 }
 
