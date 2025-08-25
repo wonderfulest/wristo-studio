@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visibleRef" title="Add Custom Font" width="500px" :close-on-click-modal="false">
+  <el-dialog v-model="visibleRef" title="Add Custom Font" width="500px" :close-on-click-modal="false" append-to-body>
     <div class="font-form">
       <el-upload
         class="font-upload-area"

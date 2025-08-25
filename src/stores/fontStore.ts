@@ -181,7 +181,11 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           }
           console.log('字体文件 URL:', ttfUrl)
 
-          const finalUrl = ttfUrl.startsWith('http') ? ttfUrl : `${location.origin}${ttfUrl.startsWith('/') ? '' : '/'}${ttfUrl}`
+          // Support absolute http(s), blob and data URLs; otherwise prefix with origin
+          let finalUrl = ttfUrl
+          if (!/^(https?:|blob:|data:)/i.test(finalUrl)) {
+            finalUrl = `${location.origin}${finalUrl.startsWith('/') ? '' : '/'}${finalUrl}`
+          }
           console.log('最终字体文件 URL:', finalUrl)
 
           // 加载字体
@@ -191,7 +195,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           // 等待字体实际可用
           await (document as any).fonts.ready
           // 再次确认字体是否可用
-          const isAvailable = (document as any).fonts.check(`12px ${slug}`)
+          const isAvailable = (document as any).fonts.check(`12px "${slug}"`)
           console.log('字体是否可用:', isAvailable)
           if (isAvailable) {
             this.loadedFonts.add(slug)

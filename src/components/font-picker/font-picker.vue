@@ -9,7 +9,7 @@
     <!-- Font selection panel -->
     <div v-if="isOpen" class="font-panel">
         <!-- Add custom font button -->
-        <button class="add-font-btn" @click="addCustomFont">Add Custom Font</button>
+        <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
         <!-- Search (extracted component) -->
         <FontSearch :model-value="modelValue" @select="selectFont" />
 

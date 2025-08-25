@@ -194,6 +194,10 @@ const handleSelect = (font: FontItem) => {
   margin-top: 8px;
   display: flex;
   gap: 16px;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 .filter-item {
   display: inline-flex;
@@ -201,6 +205,7 @@ const handleSelect = (font: FontItem) => {
   gap: 6px;
   font-size: 13px;
   color: #606266;
+  white-space: nowrap;
 }
 .section-header {
   padding: 12px;
@@ -252,8 +257,10 @@ const handleSelect = (font: FontItem) => {
 .open-library-anchor {
   margin-left: auto;
   font-size: 12px;
-  color: #909399;
+  color: #409eff;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .open-library-anchor:hover { color: #606266; text-decoration: underline; }
 </style>
