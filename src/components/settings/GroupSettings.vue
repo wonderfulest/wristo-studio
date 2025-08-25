@@ -68,7 +68,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 
 const baseStore = useBaseStore()
 const fontStore = useFontStore()

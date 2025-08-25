@@ -56,3 +56,18 @@ export interface DesignFontPageQueryDTO {
   pageSize: number
   name?: string
 }
+
+// 新的字体搜索 DTO（支持多条件 + 分页）
+export interface DesignFontSearchDTO {
+  pageNum: number
+  pageSize: number
+  orderBy?: string
+  name?: string
+  type?: string
+  isMonospace?: number // 0/1
+  italic?: number // 0/1
+  weight?: number
+  weightClass?: number
+  widthClass?: number
+  onlyApprovedActive?: boolean
+}

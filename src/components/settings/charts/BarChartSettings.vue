@@ -226,7 +226,7 @@ import { useBarChartStore } from '@/stores/elements/charts/barChartElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 import { usePropertiesStore } from '@/stores/properties'
 
 const props = defineProps({
@@ -318,4 +318,4 @@ const handlePositionChange = (type, value) => {
 .position-inputs .el-input-number {
   width: 120px;
 }
-</style> 
+</style>

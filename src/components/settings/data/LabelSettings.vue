@@ -100,7 +100,7 @@ import { ref, defineProps, defineEmits, defineExpose } from 'vue'
 import { useLabelStore } from '@/stores/elements/data/labelElement'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
 

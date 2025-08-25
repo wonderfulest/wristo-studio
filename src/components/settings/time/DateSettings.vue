@@ -80,7 +80,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { useDateStore } from '@/stores/elements/time/dateElement'
 import { fontSizes, originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 
 const props = defineProps({
   element: {

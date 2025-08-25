@@ -123,7 +123,7 @@ const loadDesign = async (designUid) => {
       baseStore.currentThemeIndex = 0
       baseStore.textCase = 0
       baseStore.labelLengthType = 0
-      baseStore.showUnit = true
+      baseStore.showUnit = false
       
       // 初始化画布
       baseStore.canvas.requestRenderAll()

@@ -265,7 +265,7 @@ import { useLineChartStore } from '@/stores/elements/charts/lineChartElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 import { usePropertiesStore } from '@/stores/properties'
 
 const props = defineProps({
@@ -382,4 +382,4 @@ const handlePositionChange = (type, value) => {
   font-size: 14px;
   font-weight: 500;
 }
-</style> 
+</style>

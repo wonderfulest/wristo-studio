@@ -1,5 +1,5 @@
 import instance from '@/config/axios'
-import type { UploadFontMeta, DesignFontVO, DesignFontPageQueryDTO } from '@/types/font'
+import type { UploadFontMeta, DesignFontVO, DesignFontSearchDTO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api'
 
 /**
@@ -35,11 +35,11 @@ export const uploadFontFile =  (
   )
 }
 
-// 分页搜索字体
-export const getFonts = (
-  params: DesignFontPageQueryDTO
+// 搜索字体（支持多条件 + 分页）
+export const searchFonts = (
+  params: DesignFontSearchDTO
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
-  return instance.post('/dsn/fonts/page?populate=ttf', params)
+  return instance.post('/dsn/fonts/search?populate=ttf', params)
 }
 
 // 根据 name 获取字体
@@ -54,7 +54,7 @@ export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> 
 
 // 获取已审核并启用的系统字体
 export const getSystemFonts = (): Promise<ApiResponse<DesignFontVO[]>> => {
-  return instance.get('/admin/fonts/system?populate=ttf')
+  return instance.get('/dsn/fonts/system?populate=ttf')
 }
 
 // increase usage by slug
@@ -63,9 +63,12 @@ export const increaseFontUsage = (slug: string): Promise<ApiResponse<number>> =>
 }
 
 // recent fonts for current designer
-export const getAdminRecentFonts = (limit?: number): Promise<ApiResponse<DesignFontVO[]>> => {
-  const q = typeof limit === 'number' ? `?limit=${limit}` : ''
-  return instance.get(`/dsn/fonts/recent${q}`)
+export const getRecentFonts = (limit?: number): Promise<ApiResponse<DesignFontVO[]>> => {
+  const params = new URLSearchParams()
+  if (typeof limit === 'number') params.set('limit', String(limit))
+  params.set('populate', 'ttf')
+  const q = params.toString()
+  return instance.get(`/dsn/fonts/recent${q ? `?${q}` : ''}`)
 }
 
 // frequent fonts for current designer

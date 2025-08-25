@@ -79,7 +79,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { useTimeStore } from '@/stores/elements/time/timeElement'
 import { fontSizes, originXOptions, TimeFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 
 const props = defineProps({
   element: {

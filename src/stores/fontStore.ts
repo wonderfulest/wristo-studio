@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getFontBySlug, getFonts, getSystemFonts } from '@/api/wristo/fonts'
+import { getFontBySlug, searchFonts, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
 import { ApiResponse } from '@/types/api'
 import { DesignFontVO } from '@/types/font'
 
@@ -53,7 +53,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   // actions
   initBuiltinFontsFromSystem(): Promise<void>
   fetchFonts(): Promise<void>
-  loadFont(slug: string): Promise<boolean>
+  initRecentFonts(): Promise<void>
+  loadFont(slug: string, url?: string): Promise<boolean>
   loadFonts(fontNames: string[]): Promise<boolean>
   loadFontsForElements(elements: Array<any>): Promise<boolean>
   loadSystemFonts(): Promise<DesignFontVO[]>
@@ -120,6 +121,107 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 
     actions: {
       /**
+       * 加载字体
+       * @param slug 字体名称
+       * @param url 字体文件 URL（可选）
+       * @returns 加载是否成功
+       */
+      async loadFont(slug: string, url?: string): Promise<boolean> {
+        console.log('加载字体:', slug, url)
+        if (!slug) return false
+
+        // 如果字体已加载，直接返回
+        if (this.loadedFonts.has(slug)) {
+          console.log('字体已加载:', slug)
+          return true
+        }
+
+        // 如果是内置字体，直接标记为已加载
+        if (this.isBuiltinFont(slug)) {
+          console.log('字体是内置字体:', slug)
+          this.loadedFonts.add(slug)
+          return true
+        }
+
+        // 如果字体正在加载中，等待加载完成
+        if (this.loadingFonts.has(slug)) {
+          console.log('字体正在加载中:', slug)
+          while (this.loadingFonts.has(slug)) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+          console.log('字体加载完成:', slug)
+          return this.loadedFonts.has(slug)
+        }
+
+        try {
+          this.loadingFonts.add(slug)
+          console.log('开始加载字体:', slug)
+
+          // 解析字体文件 URL：优先使用传入的 url，否则从服务器获取
+          let ttfUrl = url
+          if (!ttfUrl) {
+            // 如果已经获取过字体信息，直接使用
+            let fontInfo = this.serverFonts.get(slug)
+            if (!fontInfo) {
+              const response: ApiResponse<DesignFontVO> = await getFontBySlug(slug)
+              console.log('获取字体信息:', response)
+              fontInfo = response?.data
+              if (!fontInfo) {
+                console.warn(`No attributes for font: ${slug}`)
+                return false
+              }
+              this.serverFonts.set(slug, fontInfo)
+            }
+            ttfUrl = fontInfo.ttfFile?.url
+          }
+
+          if (!ttfUrl) {
+            console.warn('Missing ttfFile.url, cannot register font', slug)
+            return false
+          }
+          console.log('字体文件 URL:', ttfUrl)
+
+          const finalUrl = ttfUrl.startsWith('http') ? ttfUrl : `${location.origin}${ttfUrl.startsWith('/') ? '' : '/'}${ttfUrl}`
+          console.log('最终字体文件 URL:', finalUrl)
+
+          // 加载字体
+          const fontFace = new FontFace(slug, `url(${finalUrl})`)
+          await fontFace.load()
+          ;(document as any).fonts.add(fontFace)
+          // 等待字体实际可用
+          await (document as any).fonts.ready
+          // 再次确认字体是否可用
+          const isAvailable = (document as any).fonts.check(`12px ${slug}`)
+          console.log('字体是否可用:', isAvailable)
+          if (isAvailable) {
+            this.loadedFonts.add(slug)
+            return true
+          }
+          return false
+        } catch (error) {
+          console.error(`Failed to load font ${slug}:`, error)
+          return false
+        } finally {
+          this.loadingFonts.delete(slug)
+        }
+      },
+
+      /**
+       * 加载多个字体
+       * @param fontNames 字体名称数组
+       */
+      async loadFonts(fontNames: string[]): Promise<boolean> {
+        if (!fontNames || fontNames.length === 0) return true
+        try {
+          const results = await Promise.all(fontNames.map((name) => this.loadFont(name)))
+          return results.every(Boolean)
+        } catch (error) {
+          console.error('Failed to load fonts:', error)
+          return false
+        }
+      },
+
+      /**
        * 加载系统字体分页，并为每个字体以 slug 注册 FontFace 供预览/渲染
        * @param query 搜索关键词（匹配 fullName/family/slug，忽略大小写）
        * @returns { items, total }
@@ -168,6 +270,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             const option: FontOption = { label, value, family }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
+            this.loadFont(value, f.ttfFile?.url)
           }
           // 自定义字体分组保留
           const custom = this.builtinFonts.custom || []
@@ -177,119 +280,61 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         }
       },
 
+      /**
+       * 初始化最近使用字体，默认拉取 5 个
+       */
+      async initRecentFonts(): Promise<void> {
+        try {
+          const res = await getRecentFonts(5)
+          const list: DesignFontVO[] = res?.data ?? []
+          const mapped: FontOption[] = list.map((f) => ({
+            label: f.fullName || f.family || f.postscriptName || f.slug,
+            value: f.slug || f.postscriptName || f.family || f.fullName,
+            family: f.family || f.fullName || f.postscriptName || f.slug,
+            src: f.ttfFile?.url
+          }))
+          // 去重并只保留 5 个
+          const seen = new Set<string>()
+          this.recentFonts = mapped.filter((m) => {
+            if (!m?.value) return false
+            if (seen.has(m.value)) return false
+            seen.add(m.value)
+            return true
+          }).slice(0, 5)
+          this.recentFonts.forEach((f) => {
+            console.log('加载最近使用字体:', f)
+            this.loadFont(f.value, f.src)
+          })
+        } catch (e) {
+          console.warn('Failed to init recent fonts:', e)
+        }
+      },
+
+      /**
+       * 获取所有字体列表，包括系统字体和最近使用字体
+       */
       async fetchFonts() {
         try {
           this.loading = true
-          const response: any = await getFonts({
-            pageNum: 1,
-            pageSize: 20
-          })
-          // Some APIs return { data: { data: [...] } }, others { data: [...] }
-          this.fonts = response?.data?.data ?? response?.data ?? []
+          // const response: any = await searchFonts({
+          //   pageNum: 1,
+          //   pageSize: 20
+          // })
+          // // Some APIs return { data: { data: [...] } }, others { data: [...] }
+          // this.fonts = response?.data?.data ?? response?.data ?? []
           this.error = null
           // 懒加载系统内置字体（仅首次）
           if (!Object.keys(this.builtinFonts).length) {
             await this.initBuiltinFontsFromSystem()
           }
+          // 初始化最近使用字体（仅当为空时）
+          if (!this.recentFonts.length) {
+            await this.initRecentFonts()
+          }
         } catch (err: any) {
           this.error = err?.message ?? String(err)
         } finally {
           this.loading = false
-        }
-      },
-
-      /**
-       * 加载字体
-       * @param {string} slug - 字体名称
-       * @returns {Promise<boolean>} 加载是否成功
-       */
-      async loadFont(slug: string): Promise<boolean> {
-        console.log('加载字体:', slug)
-        if (!slug) return false
-
-        // 如果字体已加载，直接返回
-        if (this.loadedFonts.has(slug)) {
-          return true
-        }
-
-        // 如果是内置字体，直接标记为已加载
-        if (this.isBuiltinFont(slug)) {
-          this.loadedFonts.add(slug)
-          return true
-        }
-
-        // 如果字体正在加载中，等待加载完成
-        if (this.loadingFonts.has(slug)) {
-          while (this.loadingFonts.has(slug)) {
-            await new Promise(resolve => setTimeout(resolve, 100))
-          }
-          return this.loadedFonts.has(slug)
-        }
-
-        try {
-          this.loadingFonts.add(slug)
-
-          // 如果已经获取过字体信息，直接使用
-          let fontInfo = this.serverFonts.get(slug)
-          
-          // 否则从服务器获取字体信息
-          if (!fontInfo) {
-            const response: ApiResponse<DesignFontVO> = await getFontBySlug(slug)
-            console.log('获取字体信息:', response)
-            fontInfo = response?.data 
-            if (!fontInfo) {
-              console.warn(`No attributes for font: ${slug}`)
-              return false
-            }
-            this.serverFonts.set(slug, fontInfo)
-          }
-
-          // 检查字体文件URL是否存在
-          const ttfUrl = fontInfo.ttfFile?.url
-          if (!ttfUrl) {
-            console.warn('Missing ttfFile.url in server response, cannot auto-register font', slug)
-            return false
-          }
-
-          // 加载字体
-          const fontFace = new FontFace(slug, `url(${ttfUrl})`)
-          await fontFace.load()
-          ;(document as any).fonts.add(fontFace)
-          
-          // 等待字体实际可用
-          await (document as any).fonts.ready
-          
-          // 再次确认字体是否可用
-          const isAvailable = (document as any).fonts.check(`12px ${slug}`)
-          if (isAvailable) {
-            this.loadedFonts.add(slug)
-            return true
-          }
-          return false
-        } catch (error) {
-          console.error(`Failed to load font ${slug}:`, error)
-          return false
-        } finally {
-          this.loadingFonts.delete(slug)
-        }
-      },
-
-      /**
-       * 加载多个字体
-       * @param {Array<string>} fontNames - 字体名称数组
-       * @returns {Promise<boolean>} 是否全部加载成功
-       */
-      async loadFonts(fontNames: string[]): Promise<boolean> {
-        if (!fontNames || fontNames.length === 0) return true
-
-        try {
-          const results = await Promise.all(
-            fontNames.map(name => this.loadFont(name))
-          )
-          return results.every(result => result)
-        } catch (error) {
-          console.error('Failed to load fonts:', error)
-          return false
         }
       },
 

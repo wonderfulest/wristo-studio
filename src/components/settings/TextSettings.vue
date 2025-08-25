@@ -45,7 +45,7 @@ import { useTextStore } from '@/stores/elements/textElement'
 import { useFontStore } from '@/stores/fontStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import FontPicker from '@/components/font-picker/index.vue'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 
 const props = defineProps({
   element: {
