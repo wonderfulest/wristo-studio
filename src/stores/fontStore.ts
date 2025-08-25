@@ -231,12 +231,12 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * @returns { items, total }
        */
       async loadSystemFonts(): Promise<DesignFontVO[]> {
-        console.log('加载系统字体')
+        console.log('333 加载系统字体')
         const response: ApiResponse<DesignFontVO[]> = await getSystemFonts()
-        const pageItems = (response.data ?? []) as DesignFontVO[]
+        const sysFonts = (response.data ?? []) as DesignFontVO[]
         // 以 slug 为别名注册字体，绑定 ttf 文件
         const tasks: Promise<void>[] = []
-        pageItems.forEach((font) => {
+        sysFonts.forEach((font) => {
           const rawUrl: string | undefined = (font as any)?.ttfFile?.url
           if (!rawUrl || !font.slug) return
           const url = rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`
@@ -258,13 +258,13 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         })
         await Promise.all(tasks)
 
-        return pageItems
+        return sysFonts
       },
       // 初始化：从系统字体加载，按 subfamily 分组
       async initBuiltinFontsFromSystem(): Promise<void> {
         try {
-          const res: any = await getSystemFonts()
-          const list: Array<any> = res?.data ?? []
+          const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts()
+          const list: Array<DesignFontVO> = sysFonts?.data ?? []
           const groups: Record<string, FontOption[]> = {}
           for (const f of list) {
             const subfamily = f.subfamily || 'Others'
@@ -289,8 +289,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        */
       async initRecentFonts(): Promise<void> {
         try {
-          const res = await getRecentFonts(5)
-          const list: DesignFontVO[] = res?.data ?? []
+          const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5)
+          const list: DesignFontVO[] = recentFonts?.data ?? []
           const mapped: FontOption[] = list.map((f) => ({
             label: f.fullName || f.family || f.postscriptName || f.slug,
             value: f.slug || f.postscriptName || f.family || f.fullName,
