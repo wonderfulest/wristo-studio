@@ -11,7 +11,7 @@ export const elementAttribute = {
   fill: '#FFFFFF',
   bgColor: '#FFFFFF', // 进度环背景颜色
   backgroundColor: '#FFFFFF',
-  fontFamily: 'RobotoCondensed-Regular',
+  fontFamily: 'roboto-condensed-regular',
   color: '#FFFFFF', // 进度环颜色
   fontSize: 36,
   iconSize: 42,

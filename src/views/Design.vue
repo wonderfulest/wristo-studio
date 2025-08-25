@@ -111,6 +111,7 @@ const loadDesign = async (designUid) => {
     baseStore.id = designUid
     baseStore.watchFaceName = designData.name
     
+    await fontStore.fetchFonts()
     // 如果配置为空，使用默认值
     if (!config || Object.keys(config).length === 0) {
       console.log('配置为空，使用默认值')
@@ -127,6 +128,7 @@ const loadDesign = async (designUid) => {
       
       // 初始化画布
       baseStore.canvas.requestRenderAll()
+
       return
     }
     
@@ -163,19 +165,6 @@ const loadDesign = async (designUid) => {
     // 默认选中第一个颜色
     baseStore.currentThemeIndex = 0
 
-    await fontStore.loadSystemFonts()
-
-    // 尽早并发启动字体加载，避免元素渲染时的闪动
-    const fontsLoadingPromise = (async () => {
-      if (config.elements) {
-        try {
-          await fontStore.loadFontsForElements(config.elements)
-        } catch (e) {
-          console.warn('预加载字体失败，继续后续流程', e)
-        }
-      }
-    })()
-
     // 等待画布初始化完成
     await waitCanvasReady()
 
@@ -183,7 +172,7 @@ const loadDesign = async (designUid) => {
     baseStore.toggleThemeBackground()
     
     // 确保字体加载完成后再加载元素到画布
-    await fontsLoadingPromise
+    if (config.elements) await fontStore.loadFontsForElements(config.elements)
     
     // 加载元素到画布
     if (config && config.elements) {

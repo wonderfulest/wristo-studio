@@ -318,21 +318,18 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * 获取所有字体列表，包括系统字体和最近使用字体
        */
       async fetchFonts() {
+        console.log('获取所有字体列表')
         try {
           this.loading = true
-          // const response: any = await searchFonts({
-          //   pageNum: 1,
-          //   pageSize: 20
-          // })
-          // // Some APIs return { data: { data: [...] } }, others { data: [...] }
-          // this.fonts = response?.data?.data ?? response?.data ?? []
           this.error = null
           // 懒加载系统内置字体（仅首次）
           if (!Object.keys(this.builtinFonts).length) {
+            console.log('懒加载系统内置字体')
             await this.initBuiltinFontsFromSystem()
           }
           // 初始化最近使用字体（仅当为空时）
           if (!this.recentFonts.length) {
+            console.log('初始化最近使用字体')
             await this.initRecentFonts()
           }
         } catch (err: any) {
