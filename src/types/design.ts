@@ -2,7 +2,6 @@ import type { UserBase } from './user'
 import type { Image, ImageBase } from './image'
 import type { Product } from './product'
 import { Category } from './category'
-import { Bundle } from './bundle'
 
 /**
  * 创建设计的请求参数
@@ -30,6 +29,7 @@ export interface UpdateDesignParamsV2 {
   backgroundImage?: ImageBase
   configJson?: any
   designStatus?: DesignStatus
+  userId?: number
 }
 
 /**

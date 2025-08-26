@@ -46,7 +46,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, defineProps, watchEffect, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
@@ -74,6 +74,7 @@ import SidePanel from '@/components/SidePanel.vue'
 import ExportPanel from '@/components/ExportPanel.vue'
 import TimeSimulator from '@/components/TimeSimulator.vue'
 import ZoomControls from '@/components/ZoomControls.vue'
+import type { ElementConfig } from '@/types/element'
 
 const propertiesStore = usePropertiesStore()
 const imageStore = useImageElementStore()
@@ -84,14 +85,14 @@ const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const exportStore = useExportStore()
 const { waitCanvasReady } = useCanvas()
-const canvasRef = ref(null)
-const exportPanelRef = ref(null)
-const isDialogVisible = ref(false)
+const canvasRef = ref<InstanceType<typeof CanvasView> | null>(null)
+const exportPanelRef = ref<InstanceType<typeof ExportPanel> | null>(null)
+const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
-let saveTimer = null
+let saveTimer: number | null = null
 
-const changelogDialog = ref(null)
-const editorSettingsDialog = ref(null)
+const changelogDialog = ref<InstanceType<typeof ChangelogDialog> | null>(null)
+const editorSettingsDialog = ref<InstanceType<typeof EditorSettingsDialog> | null>(null)
 
 // 启用键盘快捷键
 useKeyboardShortcuts()
@@ -100,7 +101,7 @@ useKeyboardShortcuts()
 const backgroundColor = computed(() => editorStore.backgroundColor)
 
 // 加载设计配置
-const loadDesign = async (designUid) => {
+const loadDesign = async (designUid: string) => {
   try {
     const response = await designApi.getDesignByUid(designUid)
     const designData = response.data
@@ -112,6 +113,10 @@ const loadDesign = async (designUid) => {
     baseStore.watchFaceName = designData.name
     
     await fontStore.fetchFonts()
+    
+    // 确保字体加载完成后再加载元素到画布
+    if (config.elements) await fontStore.loadFontsForElements(config.elements)
+    
     // 如果配置为空，使用默认值
     if (!config || Object.keys(config).length === 0) {
       console.log('配置为空，使用默认值')
@@ -169,10 +174,7 @@ const loadDesign = async (designUid) => {
     await waitCanvasReady()
 
     // 切换主题背景
-    baseStore.toggleThemeBackground()
-    
-    // 确保字体加载完成后再加载元素到画布
-    if (config.elements) await fontStore.loadFontsForElements(config.elements)
+    baseStore.toggleThemeBackground()   
     
     // 加载元素到画布
     if (config && config.elements) {
@@ -180,7 +182,7 @@ const loadDesign = async (designUid) => {
     }
     
     // 更新画布缩放
-    canvasRef.value.updateZoom()
+    canvasRef.value?.updateZoom()
 
     // 等待100毫秒, fabric.js 加载元素为异步
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -223,10 +225,10 @@ const setupAutoSave = () => {
 }
 
 // 替换元素加载逻辑
-const loadElements = async (elements) => {
+const loadElements = async (elements: ElementConfig[]) => {
   try {
     for (const element of elements) {
-
+      console.log('加载元素:', element)
       const decodedElement = await decodeElement(element)
       if (!decodedElement) {
         console.warn(`Unknown element type: ${element.type}`)
@@ -247,11 +249,11 @@ const loadElements = async (elements) => {
     }
   } catch (error) {
     console.error('加载元素失败:', error)
-    messageStore.error('加载元素失败: ' + error.message)
+    messageStore.error('加载元素失败: ' + (error as any)?.message)
   }
 }
 
-const reorderCanvasByIds = (orderedIds) => {
+const reorderCanvasByIds = (orderedIds: string[]) => {
   const objects = baseStore.canvas.getObjects();
   orderedIds.forEach((id, index) => {
     const obj = objects.find(o => o.id === id);
@@ -267,7 +269,7 @@ onMounted(() => {
   changelogDialog.value?.checkShowChangelog()
 
   // 检查URL参数中是否有设计ID
-  const designId = route.query.id
+  const designId = route.query.id as string | undefined
   if (designId) {
     loadDesign(designId)
   } else {
@@ -286,7 +288,7 @@ onMounted(() => {
     }
   })
 
-  exportStore.setExportPanelRef(exportPanelRef.value)
+  exportStore.setExportPanelRef(exportPanelRef.value as any)
 })
 
 onBeforeUnmount(() => {

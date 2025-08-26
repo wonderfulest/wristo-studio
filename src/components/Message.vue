@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { useMessageStore } from '../stores/message'
+import { useMessageStore } from '@/stores/message'
 import { storeToRefs } from 'pinia'
 
 const messageStore = useMessageStore()

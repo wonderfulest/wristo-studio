@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { logout as logoutApi } from '@/api/wristo/auth'
-import { type UserInfo } from '@/types/api'
+import { type UserInfo } from '@/types/user'
 
 export const useUserStore = defineStore('user', {
   state: () => ({

@@ -139,11 +139,19 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           return true
         }
 
-        // 如果是内置字体，直接标记为已加载
+        // 如果是内置字体，不再直接返回；需要确保实际可用
         if (this.isBuiltinFont(slug)) {
           console.log('字体是内置字体:', slug)
-          this.loadedFonts.add(slug)
-          return true
+          // 若已在加载队列中，等待其完成
+          if (this.loadingFonts.has(slug)) {
+            console.log('字体正在加载中(内置):', slug)
+            while (this.loadingFonts.has(slug)) {
+              await new Promise((resolve) => setTimeout(resolve, 100))
+            }
+            console.log('字体加载完成(内置):', slug)
+            return this.loadedFonts.has(slug)
+          }
+          // 否则继续走后续的加载流程（使用传入 url 或远端查询）
         }
 
         // 如果字体正在加载中，等待加载完成
@@ -196,10 +204,14 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           await fontFace.load()
           ;(document as any).fonts.add(fontFace)
           // 等待字体实际可用
+          try {
+            // 先触发一次特定字体的加载与可用性确认
+            await (document as any).fonts.load(`12px "${slug}"`)
+          } catch {}
           await (document as any).fonts.ready
           // 再次确认字体是否可用
           const isAvailable = (document as any).fonts.check(`12px "${slug}"`)
-          console.log('字体是否可用:', isAvailable)
+          console.log(`字体${slug}是否可用:${isAvailable}`)
           if (isAvailable) {
             this.loadedFonts.add(slug)
             return true
@@ -269,6 +281,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts()
           const list: Array<DesignFontVO> = sysFonts?.data ?? []
           const groups: Record<string, FontOption[]> = {}
+          const pendingLoads: Promise<boolean>[] = []
           for (const f of list) {
             const subfamily = f.subfamily || 'Others'
             const label = f.fullName || f.family || f.postscriptName || f.slug
@@ -283,11 +296,14 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
-            this.loadFont(value, f.ttfFile?.url)
+            // 将内置字体的实际加载加入等待队列，避免竞态
+            pendingLoads.push(this.loadFont(value, f.ttfFile?.url))
           }
           // 自定义字体分组保留
           const custom = this.builtinFonts.custom || []
           this.builtinFonts = { ...groups, ...(custom.length ? { custom } : {}) }
+          // 等待所有内置字体完成注册（不要求全部成功）
+          try { await Promise.allSettled(pendingLoads) } catch {}
         } catch (e) {
           console.error('Failed to init builtin fonts from system:', e)
         }
@@ -316,10 +332,12 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             seen.add(m.value)
             return true
           }).slice(0, 5)
-          this.recentFonts.forEach((f) => {
+          // 并行加载最近字体并等待，避免后续使用时未就绪
+          const tasks = this.recentFonts.map((f) => {
             console.log('加载最近使用字体:', f)
-            this.loadFont(f.value, f.src)
+            return this.loadFont(f.value, f.src)
           })
+          try { await Promise.allSettled(tasks) } catch {}
         } catch (e) {
           console.warn('Failed to init recent fonts:', e)
         }
@@ -374,6 +392,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           // 处理配置中的字体
           if (element.font) fontNames.add(element.font as string)
         })
+
+        console.log('加载元素所需的字体:', Array.from(fontNames))
 
         return this.loadFonts(Array.from(fontNames))
       },
