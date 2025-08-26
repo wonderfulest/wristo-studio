@@ -53,11 +53,38 @@ export const useTimeStore = defineStore('timeStore', {
         this.baseStore.canvas.add(element)
         this.layerStore.addLayer(element)
         this.baseStore.canvas.setActiveObject(element)
+        // 记录时间元素
+        try { this.timeElements.push(element) } catch {}
         this.baseStore.canvas.renderAll()
         return element
       } catch (error) {
         console.error('创建时间元素失败:', error)
         throw error
+      }
+    },
+    /**
+     * 使用指定时间刷新所有时间文本元素
+     * @param {Date} date
+     */
+    updateByTime(date) {
+      if (!this.baseStore.canvas) return
+      const canvas = this.baseStore.canvas
+      const objects = canvas.getObjects ? canvas.getObjects() : []
+      let changed = false
+      objects.forEach((obj) => {
+        if (obj && obj.eleType === 'time') {
+          const fmt = obj.get ? obj.get('formatter') : obj.formatter
+          const txt = this.formatTime(date, fmt)
+          if (obj.get && obj.set) {
+            obj.set('text', txt)
+          } else if (obj.text !== undefined) {
+            obj.text = txt
+          }
+          changed = true
+        }
+      })
+      if (changed) {
+        canvas.renderAll && canvas.renderAll()
       }
     },
     updateElement(element, config) {

@@ -1,19 +1,19 @@
 <template>
     <div class="time-simulator">
         <div class="time-controls">
-            <el-time-picker v-model="simulatedTime" format="HH:mm:ss" placeholder="选择时间" @change="handleTimeChange" class="time-picker" />
+            <el-time-picker v-model="simulatedTime" format="HH:mm:ss" placeholder="Select time" @change="handleTimeChange" class="time-picker" />
             <div class="speed-controls">
-                <span class="speed-label">速度: {{ playbackSpeed }}x</span>
+                <span class="speed-label">Speed: {{ playbackSpeed }}x</span>
                 <el-slider v-model="playbackSpeed" :min="1" :max="1000" :step="1" :show-stops="false"
                     :show-tooltip="true" :format-tooltip="(val: number) => `${val}x`" class="speed-slider" />
             </div>
             <div class="step-controls">
                 <el-button-group class="step-buttons">
-                    <el-button size="small" @click="stepBackward">-1分钟</el-button>
-                    <el-button size="small" @click="stepForward">+1分钟</el-button>
+                    <el-button size="small" @click="stepBackward">-1 min</el-button>
+                    <el-button size="small" @click="stepForward">+1 min</el-button>
                 </el-button-group>
             </div>
-            <el-switch v-model="isTimeSimulationActive" active-text="启用模拟" @change="handleSimulationToggle" class="simulation-switch" />
+            <el-switch v-model="isTimeSimulationActive" active-text="Enable simulation" @change="handleSimulationToggle" class="simulation-switch" />
         </div>
     </div>
 </template>
@@ -22,9 +22,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useHourHandStore } from '@/stores/elements/hands/hourHandElement'  
 import { useMinuteHandStore } from '@/stores/elements/hands/minuteHandElement'
+import { useTimeStore } from '@/stores/elements/time/timeElement'
 
 const hourHandStore = useHourHandStore()
 const minuteHandStore = useMinuteHandStore()
+const timeStore = useTimeStore()
 const simulatedTime = ref(new Date())
 const playbackSpeed = ref(1)
 const isTimeSimulationActive = ref(false)
@@ -34,6 +36,7 @@ const handleTimeChange = (time: Date) => {
     if (!time) return
     simulatedTime.value = time
     updatePointers()
+    timeStore.updateByTime(simulatedTime.value)
 }
 
 const updatePointers = () => {
@@ -44,11 +47,13 @@ const updatePointers = () => {
 const stepForward = () => {
     simulatedTime.value = new Date(simulatedTime.value.getTime() + 60000)
     updatePointers()
+    timeStore.updateByTime(simulatedTime.value)
 }
 
 const stepBackward = () => {
     simulatedTime.value = new Date(simulatedTime.value.getTime() - 60000)
     updatePointers()
+    timeStore.updateByTime(simulatedTime.value)
 }
 
 const handleSimulationToggle = (value: boolean) => {
@@ -57,6 +62,7 @@ const handleSimulationToggle = (value: boolean) => {
         timer = window.setInterval(() => {
             simulatedTime.value = new Date(simulatedTime.value.getTime() + 1000 * playbackSpeed.value)
             updatePointers()
+            timeStore.updateByTime(simulatedTime.value)
         }, 1000)
     } else if (timer !== null) {
         clearInterval(timer)
@@ -66,6 +72,7 @@ const handleSimulationToggle = (value: boolean) => {
 
 onMounted(() => {
     updatePointers()
+    timeStore.updateByTime(simulatedTime.value)
 })
 
 onUnmounted(() => {
