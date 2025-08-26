@@ -7,7 +7,6 @@
     <div v-if="expanded" class="section-content">
       <div v-if="!fonts.length" class="no-fonts">No recent fonts</div>
       <div v-else class="font-family-group">
-        <div class="family-name">Recent</div>
         <div
           v-for="font in fonts"
           :key="font.value"
@@ -15,6 +14,7 @@
           :class="{ active: modelValue === font.value }"
           @click="$emit('select', font)"
         >
+          <div class="font-name">{{ font.family }}</div>
           <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
         </div>
       </div>
@@ -94,6 +94,11 @@ defineEmits<{
 .preview-text {
   font-size: 18px;
   color: #333;
+}
+
+.font-name {
+  font-size: 12px;
+  color: #909399;
 }
 
 .no-fonts {

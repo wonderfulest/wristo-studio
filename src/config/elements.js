@@ -33,7 +33,7 @@ export const elementAttribute = {
   badgeType: 12, // 徽章默认数据类型：电池电量
   textColor: '#FFFFFF',
   metricSymbol: ':FIELD_TYPE_HEART_RATE',
-  iconFontFamily: 'Yoghurt-One',
+  iconFontFamily: 'super-icons',
   startAngle: 120, // 进度环开始角度
   endAngle: 60, // 进度环结束角度
   counterClockwise: false, // 进度环方向: 顺时针: false, 逆时针: true
@@ -50,7 +50,7 @@ const indicatorAttribute = assign({}, elementAttribute, {
   originX: 'center',
   originY: 'center',
   fontSize: 42,
-  fontFamily: 'Yoghurt-One',
+  fontFamily: 'super-icons',
   color: '#FFFFFF',
 })
 
@@ -101,7 +101,7 @@ export const elementConfigs = {
   // },
   // 时间元素
   time: {
-    time: { icon: 'mdi:clock-time-four-outline', label: '时间', size: 96, formatter: 'HH:mm:ss', ...elementAttribute },
+    time: { icon: 'mdi:clock-time-four-outline', label: '时间', fontSize: 96, formatter: 'HH:mm:ss', ...elementAttribute },
     date: { icon: 'mdi:calendar', label: '日期', size: 36, ...elementAttribute },
   },
   // 数据项元素

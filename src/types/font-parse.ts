@@ -17,4 +17,6 @@ export interface ParsedFontInfo {
   ascent?: number
   descent?: number
   lineGap?: number
+  capHeight?: number
+  xHeight?: number
 }

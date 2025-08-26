@@ -33,6 +33,13 @@
         <div class="preview-section">
           <div class="preview-label">Preview:</div>
           <div class="font-preview" :style="{ fontFamily: previewFontFamily }">
+            <!-- <div v-if="parsedInfo" class="guide-layer" :style="guideStyle">
+              <div v-if="parsedInfo?.ascent !== undefined" class="guide-line ascender"><span>Ascender</span></div>
+              <div v-if="parsedInfo?.capHeight !== undefined" class="guide-line cap"><span>Cap</span></div>
+              <div v-if="parsedInfo?.xHeight !== undefined" class="guide-line xheight"><span>x-height</span></div>
+              <div v-if="parsedInfo?.ascent !== undefined && parsedInfo?.descent !== undefined" class="guide-line baseline"><span>Baseline</span></div>
+              <div v-if="parsedInfo?.descent !== undefined" class="guide-line descender"><span>Descender</span></div>
+            </div> -->
             <div class="preview-text">
               <span class="preview-numbers">0123456789,:°F Sunny</span>
               <span class="preview-letters">AaBbCcDdEe</span>
@@ -58,6 +65,8 @@
             <li v-if="parsedInfo.ascent !== undefined"><strong>Ascent:</strong> {{ parsedInfo.ascent }}</li>
             <li v-if="parsedInfo.descent !== undefined"><strong>Descent:</strong> {{ parsedInfo.descent }}</li>
             <li v-if="parsedInfo.lineGap !== undefined"><strong>Line gap:</strong> {{ parsedInfo.lineGap }}</li>
+            <li v-if="parsedInfo.capHeight !== undefined"><strong>Cap height:</strong> {{ parsedInfo.capHeight }}</li>
+            <li v-if="parsedInfo.xHeight !== undefined"><strong>x-height:</strong> {{ parsedInfo.xHeight }}</li>
           </ul>
         </div>
       </div>
@@ -158,6 +167,12 @@ const handleFontFileChange = async (file: any) => {
       italic: typeof os2?.fsSelection === 'number' ? Boolean(os2.fsSelection & 0x01) : /italic/i.test(subfamilyStr),
       weightClass: os2?.usWeightClass,
       widthClass: os2?.usWidthClass,
+      unitsPerEm: (font as any)?.unitsPerEm,
+      ascent: (font as any)?.tables?.hhea?.ascent ?? (font as any)?.ascender,
+      descent: (font as any)?.tables?.hhea?.descent ?? (font as any)?.descender,
+      lineGap: (font as any)?.tables?.hhea?.lineGap,
+      capHeight: os2?.sCapHeight,
+      xHeight: os2?.sxHeight,
     }
 
     parsedInfo.value = info
@@ -267,8 +282,82 @@ const confirmUpload = async () => {
     parsedInfo.value = null
   }
 }
+
+// 计算参考线样式（以容器高度为基准，使用百分比定位）
+const guideStyle = computed(() => {
+  if (!parsedInfo.value) return {}
+  // 正常字体：ascent>0, descent<0（OpenType hhea.descent 为负数）
+  const asc = Number(parsedInfo.value.ascent ?? 0)
+  const des = Number(parsedInfo.value.descent ?? 0)
+  // 将基线置于相对高度 asc/(asc - des)
+  const total = asc - des
+  if (!isFinite(total) || total <= 0) return {}
+  const style: Record<string, string> = {}
+  // ascender / descender / baseline
+  style['--guide-ascender'] = '0%'
+  style['--guide-descender'] = '100%'
+  style['--guide-baseline'] = `${(asc / total) * 100}%`
+  // cap / x-height（仅当存在时计算）
+  if (parsedInfo.value.capHeight !== undefined) {
+    const cap = Number(parsedInfo.value.capHeight)
+    style['--guide-cap'] = `${((asc - cap) / total) * 100}%`
+  }
+  if (parsedInfo.value.xHeight !== undefined) {
+    const xh = Number(parsedInfo.value.xHeight)
+    style['--guide-x'] = `${((asc - xh) / total) * 100}%`
+  }
+  return style as any
+})
+
 </script>
 
 <style scoped>
 /* 复用父组件样式类名 */
+.preview-label { margin-bottom: 8px; }
+.font-preview {
+  position: relative;
+  /* background: #0b0c10; */
+  /* border: 1px solid #1f2937; */
+  border-radius: 8px;
+  padding: 16px 20px;
+  overflow: hidden;
+}
+.preview-text {
+  display: block;
+  white-space: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.preview-text::-webkit-scrollbar { height: 6px; }
+.preview-text::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+.preview-text::-webkit-scrollbar-track { background: transparent; }
+.preview-text > span { display: inline-block; vertical-align: baseline; }
+.preview-numbers { font-size: 42px; line-height: 1.1; margin-right: 24px; }
+.preview-letters { font-size: 34px; line-height: 1.1; }
+.guide-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.guide-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(255,255,255,0.35);
+}
+.guide-line span {
+  position: absolute;
+  right: 8px;
+  top: -9px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.35);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.guide-line.ascender { top: var(--guide-ascender); }
+.guide-line.cap { top: var(--guide-cap); }
+.guide-line.xheight { top: var(--guide-x); }
+.guide-line.baseline { top: var(--guide-baseline); border-top: 1px solid rgba(255,255,255,0.9); }
+.guide-line.descender { top: var(--guide-descender); }
 </style>

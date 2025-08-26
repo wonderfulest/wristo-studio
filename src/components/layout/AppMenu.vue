@@ -58,36 +58,32 @@
           <el-icon><View /></el-icon>
           <span>View</span>
         </el-menu-item>
-
-        <!-- 分隔线 -->
+        <!-- 菜单栏分隔线 -->
         <el-divider direction="vertical" class="menu-divider" />
-
         <!-- 时间分组及其子项 -->
         <el-sub-menu index="time">
           <template #title>
             <el-icon><Timer /></el-icon>
             <span>Time</span>
           </template>
-          
           <!-- Time 分组 -->
           <div class="menu-group">
             <div class="menu-group-title">Time</div>
-            <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'hh:mm')">
+            <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'time', { formatter: 0 })">
               <el-icon><Clock /></el-icon>
               <span>hour:minute</span>
             </el-menu-item>
-            <el-menu-item index="time/second">
+            <el-menu-item index="time/second" @click="handleAddElement('time', 'time', { formatter: 4 })">
               <el-icon><Clock /></el-icon>
               <span>second</span>
             </el-menu-item>
-            <el-menu-item index="time/hour-minute-ampm">
+            <el-menu-item index="time/hour-minute-ampm" @click="addHourMinuteAmPm">
               <el-icon><Clock /></el-icon>
               <span>hour:minute am/pm</span>
             </el-menu-item>
           </div>
           
           <!-- Date 分组 -->
-          
           <div class="menu-group">
             <div class="menu-group-title">Date</div>
             <el-menu-item index="time/weekday-month-day">
@@ -370,7 +366,7 @@ document.addEventListener('keydown', (e) => {
 })
 
 // 添加元素（参考 AddElementPanel 实现）
-const handleAddElement = async (category, elementType) => {
+const handleAddElement = async (category, elementType, overrides = {}) => {
   console.log('Add Element:', category, elementType)
   try {
     let config
@@ -388,8 +384,10 @@ const handleAddElement = async (category, elementType) => {
         originX: 'center',
         originY: 'center'
       }
+      // 应用覆盖参数
+      config = { ...config, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      config = elementConfigs[category][elementType]
+      config = { ...elementConfigs[category][elementType], ...overrides }
     } else {
       messageStore.warning('元素类型不支持')
       return
@@ -408,6 +406,7 @@ const handleAddElement = async (category, elementType) => {
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
+        console.log('Add Element 2223:', config)
         addElement(config)
       } else {
         console.warn(`No add element handler registered for type: ${elementType}`)
@@ -418,6 +417,18 @@ const handleAddElement = async (category, elementType) => {
   } catch (error) {
     console.error('添加元素失败:', error)
     messageStore.error('添加元素失败')
+  }
+}
+
+// 组合添加：HH:mm 与 AM/PM 两个时间元素
+const addHourMinuteAmPm = async () => {
+  try {
+    // 添加 HH:mm
+    await handleAddElement('time', 'time', { formatter: 0, fontSize: 16 })
+    // 在右侧偏移添加 AM/PM（大写 A -> 7）
+    await handleAddElement('time', 'time', { formatter: 7 })
+  } catch (e) {
+    console.error('添加 hour:minute am/pm 失败:', e)
   }
 }
 
@@ -644,4 +655,4 @@ kbd {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
-</style> 
+</style>

@@ -10,11 +10,8 @@
     <div v-if="isOpen" class="font-panel">
         <!-- Add custom font button -->
         <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
-        <div class="section-divider"></div>
         <!-- Search (extracted component) -->
         <FontSearch :model-value="modelValue" @select="selectFont" />
-        <div class="section-divider"></div>
-
         <!-- Recent fonts -->
         <RecentFontList
             :fonts="recentFonts"
@@ -23,8 +20,6 @@
             @select="selectFont"
             @toggle="() => toggleSection('recent')"
         />
-        <div class="section-divider"></div>
-
         <!-- System fonts -->
         <SystemFontList
             :sections="systemSections as any"
