@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getFontBySlug, searchFonts, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
+import { getFontBySlug, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
 import { ApiResponse } from '@/types/api'
 import { DesignFontVO } from '@/types/font'
 
@@ -12,6 +12,9 @@ export interface FontOption {
   src?: string
   // Optional: the alias family actually registered for rendering
   alias?: string
+  // Optional metadata for precise local filtering
+  isMonospace?: boolean
+  italic?: boolean
 }
 
 interface FontSectionsState {
@@ -271,7 +274,13 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             const label = f.fullName || f.family || f.postscriptName || f.slug
             const family = f.family || f.fullName || f.postscriptName || f.slug
             const value = f.slug || family
-            const option: FontOption = { label, value, family }
+            const option: FontOption = {
+            label,
+            value,
+            family,
+            isMonospace: (f as any)?.isMonospace === 1,
+            italic: (f as any)?.italic === 1,
+          }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
             this.loadFont(value, f.ttfFile?.url)
@@ -292,10 +301,12 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5)
           const list: DesignFontVO[] = recentFonts?.data ?? []
           const mapped: FontOption[] = list.map((f) => ({
-            label: f.fullName || f.family || f.postscriptName || f.slug,
-            value: f.slug || f.postscriptName || f.family || f.fullName,
-            family: f.family || f.fullName || f.postscriptName || f.slug,
-            src: f.ttfFile?.url
+            label: f.fullName,
+            value: f.slug,
+            family: f.family,
+            src: f.ttfFile?.url,
+            isMonospace: (f as any)?.isMonospace === 1,
+            italic: (f as any)?.italic === 1,
           }))
           // 去重并只保留 5 个
           const seen = new Set<string>()
@@ -426,7 +437,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 
       // 搜索字体
       searchFonts(query: string): FontOption[] {
-        if (!query) return []
+        if (!query) return this.allFonts
 
         const q = query.toLowerCase()
         return (this as any).allFonts.filter((font: FontOption) =>

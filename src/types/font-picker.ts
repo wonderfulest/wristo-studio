@@ -4,6 +4,9 @@ export type FontItem = {
   family: string
   src?: string
   alias?: string
+  // Optional metadata for precise filtering
+  isMonospace?: boolean
+  italic?: boolean
 }
 
 export type Section = {

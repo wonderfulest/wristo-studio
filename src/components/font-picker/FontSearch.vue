@@ -11,23 +11,23 @@
       />
       <div class="filters">
         <label class="filter-item">
-          <input type="checkbox" v-model="monospaceChecked" @change="onInput" />
+          <input type="checkbox" v-model="monospaceChecked" @change="onFilterChange" />
           Monospace
         </label>
         <label class="filter-item">
-          <input type="checkbox" v-model="italicChecked" @change="onInput" />
+          <input type="checkbox" v-model="italicChecked" @change="onFilterChange" />
           Italic
         </label>
         <RouterLink class="open-library-anchor" to="/fonts" target="_blank" rel="noopener">Open Fonts Library</RouterLink>
       </div>
     </div>
 
-    <template v-if="searchQuery">
+    <template v-if="searchQuery || monospaceChecked || italicChecked">
       <!-- Local search results -->
       <template v-if="filteredFonts.length > 0">
         <div class="section-header">
           <span class="arrow expanded">›</span>
-          Local Fonts
+          Local Search Results
         </div>
         <div class="section-content">
           <div v-for="group in groupByFamily(filteredFonts)" :key="group.family" class="font-family-group">
@@ -44,7 +44,7 @@
       <template v-if="remoteSearchResults.length > 0">
         <div class="section-header">
           <span class="arrow expanded">›</span>
-          Online Fonts
+          Online Search Results
         </div>
         <div class="section-content">
           <div v-for="group in groupByFamily(remoteSearchResults)" :key="group.family" class="font-family-group">
@@ -76,10 +76,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
-import { useFontStore } from '@/stores/fontStore'
+import { FontOption, useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
 import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
+import { DesignFontVO } from '@/types/font'
 
 defineProps<{
   modelValue: string
@@ -108,13 +109,32 @@ const onInput = () => {
   searchTimer = window.setTimeout(filterFonts, 250)
 }
 
-const filterFonts = async () => {
-  // local filter
-  filteredFonts.value = fontStore.searchFonts(searchQuery.value)
+// immediate refresh when toggling filters
+const onFilterChange = () => {
+  if (searchTimer) window.clearTimeout(searchTimer)
+  filterFonts()
+}
 
+// Precise local style filters using metadata (fallback to heuristic if missing)
+const applyLocalStyleFilters = (items: FontItem[]) => {
+  console.log('Apply local style filters:', items, monospaceChecked.value, italicChecked.value)
+  return items.filter((f) => {
+    // monospace
+    if (monospaceChecked.value && (f as any).isMonospace !== true) return false
+    // italic
+    if (italicChecked.value && (f as any).italic !== true) return false
+    return true
+  })
+}
+
+const filterFonts = async () => {
+  console.log('Filter fonts:', monospaceChecked.value, italicChecked.value)
+  // local filter
+  const local = fontStore.searchFonts(searchQuery.value)
+  filteredFonts.value = applyLocalStyleFilters(local)
+  console.log('Local filter results:', filteredFonts.value)
   // remote search whenever query is not empty
   remoteSearchResults.value = []
-  if (!searchQuery.value) return
   try {
     isSearching.value = true
     const response = await searchFonts({
@@ -125,17 +145,17 @@ const filterFonts = async () => {
       italic: italicChecked.value ? 1 : undefined,
       onlyApprovedActive: true
     })
-    const list = (response.data?.list ?? []) as any[]
-    // build local font set to exclude already-present fonts from remote results
-    const localValues = new Set((fontStore as any).allFonts.map((f: any) => f.value))
-    const serverList = list.filter((font: any) => {
-      const val = font?.slug || font?.family || font?.fullName
+    const list = (response.data?.list ?? []) as DesignFontVO[]
+    console.log('Remote search results:', list)
+    const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
+    const serverList = list.filter((font: DesignFontVO) => {
+      const val = font.slug
       return !!val && !localValues.has(val)
     })
     // load fonts (register FontFace) before presenting results
     try {
       await Promise.all(
-        serverList.map((font: any) => {
+        serverList.map((font: DesignFontVO) => {
           font?.slug ? fontStore.loadFont(font.slug, font?.ttfFile?.url) : Promise.resolve(true)
         })
       )
@@ -143,12 +163,16 @@ const filterFonts = async () => {
       // ignore individual font load failures
       console.warn('Some remote fonts failed to load for preview', e)
     }
-    remoteSearchResults.value = serverList.map((font: any) => {
+    const remoteFonts = serverList.map((font: DesignFontVO) => {
       const label = font.fullName || font.family
       const family = font.family || font.fullName
       const value = font.slug || family
-      return { label, value, family } as FontItem
+      const isMonospace = (font?.isMonospace === 1)
+      const italic = (font?.italic === 1)
+      return { label, value, family, isMonospace, italic } as FontItem
     })
+    // Apply the same local style filters to remote results
+    remoteSearchResults.value = applyLocalStyleFilters(remoteFonts)
   } catch (error) {
     console.error('Remote font search error:', error)
     messageStore.error('Remote search failed')
@@ -263,4 +287,24 @@ const handleSelect = (font: FontItem) => {
   flex-shrink: 0;
 }
 .open-library-anchor:hover { color: #606266; text-decoration: underline; }
+
+/* active filter chips */
+.active-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #409eff;
+  background: #ecf5ff;
+  border: 1px solid #c6e2ff;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 </style>

@@ -10,8 +10,10 @@
     <div v-if="isOpen" class="font-panel">
         <!-- Add custom font button -->
         <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
+        <div class="section-divider"></div>
         <!-- Search (extracted component) -->
         <FontSearch :model-value="modelValue" @select="selectFont" />
+        <div class="section-divider"></div>
 
         <!-- Recent fonts -->
         <RecentFontList
@@ -21,6 +23,7 @@
             @select="selectFont"
             @toggle="() => toggleSection('recent')"
         />
+        <div class="section-divider"></div>
 
         <!-- System fonts -->
         <SystemFontList
@@ -209,6 +212,22 @@ onUnmounted(() => {
   background: #f5f7fa;
 }
 
+/* solid divider between sections (thicker with subtle pattern) */
+.section-divider {
+  width: 100%;
+  height: 6px; /* thicker */
+  border-radius: 4px;
+  margin: 12px 0; /* more spacing */
+  background: repeating-linear-gradient(
+    135deg,
+    #e5e7eb 0px,
+    #e5e7eb 8px,
+    #f3f4f6 8px,
+    #f3f4f6 16px
+  );
+  box-shadow: inset 0 0 0 1px #e5e7eb; /* crisp border */
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -381,6 +400,17 @@ onUnmounted(() => {
 
   .upload-tip {
     color: #888;
+  }
+
+  .section-divider {
+    background: repeating-linear-gradient(
+      135deg,
+      #343434 0px,
+      #343434 8px,
+      #2a2a2a 8px,
+      #2a2a2a 16px
+    );
+    box-shadow: inset 0 0 0 1px #3a3a3a;
   }
 }
 

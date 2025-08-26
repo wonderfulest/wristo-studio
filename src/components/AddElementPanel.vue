@@ -7,9 +7,13 @@
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
-          <button v-for="(config, type) in category" :key="type" @click="addElementByType(categoryKey, type, config)">
+          <button v-for="(config, type) in category" :key="type" 
+                  :class="{ disabled: type === 'line' }"
+                  :disabled="type === 'line'"
+                  @click="addElementByType(categoryKey, type, config)">
             <Icon :icon="config.icon" class="element-icon" />
             <span class="element-label">{{ config.label }}</span>
+            <span v-if="type === 'line'" class="soon-badge">即将上线</span>
           </button>
         </div>
       </div>
@@ -121,6 +125,7 @@ button {
   background: white;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
 }
 
 button:hover {
@@ -138,6 +143,35 @@ button:hover {
 .element-label {
   font-size: 14px;
   color: #333;
+}
+
+.soon-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #999;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+button.disabled {
+  background: #f5f5f5;
+  border-color: #ddd;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button.disabled:hover {
+  background: #f5f5f5;
+  transform: none;
+  box-shadow: none;
+}
+
+button.disabled .element-icon,
+button.disabled .element-label {
+  color: #999;
 }
 
 .panel-content.collapsed {

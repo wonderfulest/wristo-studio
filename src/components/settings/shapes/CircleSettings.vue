@@ -2,10 +2,10 @@
   <div class="settings-section">
     <el-form label-position="left" label-width="100px">
       <el-form-item label="半径">
-        <el-input-number 
+                <el-input-number 
           v-model="element.radius" 
           :min="10" 
-          :max="200" 
+          :max="227" 
           @change="updateElement" 
         />
       </el-form-item>
