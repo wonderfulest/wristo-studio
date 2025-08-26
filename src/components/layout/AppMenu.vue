@@ -141,23 +141,122 @@
             </el-menu-item>
           </div>
         </el-sub-menu>
+        <!-- 健康数据分组 -->
+        <el-sub-menu index="datafield">
+          <template #title>
+            <el-icon><DataLine /></el-icon>
+            <span>DataField</span>
+          </template>
+          <div class="menu-group">
+            <div class="menu-group-title">DataField</div>
+            <el-menu-item index="health/heart-rate" @click="handleAddElement('metric', 'data')">
+              <el-icon><Monitor /></el-icon>
+              <span>心率</span>
+            </el-menu-item>
+            <el-menu-item index="health/steps" @click="handleAddElement('metric', 'data')">
+              <el-icon><TrendCharts /></el-icon>
+              <span>步数</span>
+            </el-menu-item>
+            <el-menu-item index="health/calories" @click="handleAddElement('metric', 'data')">
+              <el-icon><Aim /></el-icon>
+              <span>卡路里</span>
+            </el-menu-item>
+            <el-menu-item index="health/distance" @click="handleAddElement('metric', 'data')">
+              <el-icon><Compass /></el-icon>
+              <span>距离</span>
+            </el-menu-item>
+            <el-menu-item index="health/floors" @click="handleAddElement('metric', 'data')">
+              <el-icon><Top /></el-icon>
+              <span>楼层</span>
+            </el-menu-item>
+          </div>
+          <div class="menu-group">
+            <div class="menu-group-title">Goal</div>
+            <el-menu-item index="goal/progress-bar" @click="handleAddElement('goal', 'goalBar')">
+              <el-icon><Operation /></el-icon>
+              <span>Progress Bar</span>
+            </el-menu-item>
+            <el-menu-item index="goal/progress-arc" @click="handleAddElement('goal', 'goalArc')">
+              <el-icon><Operation /></el-icon>
+              <span>Progress Arc</span>
+            </el-menu-item>
+          </div>
+          <div class="menu-group">
+            <div class="menu-group-title"><el-icon><TrendCharts /></el-icon>Chart</div>
+            <el-menu-item index="chart/bar" @click="handleAddElement('chart', 'barChart')">
+              <el-icon><TrendCharts /></el-icon>
+              <span>Bar Chart</span>
+            </el-menu-item>
+            <el-menu-item index="chart/line" @click="handleAddElement('chart', 'lineChart')">
+              <el-icon><DataLine /></el-icon>
+              <span>Line Chart</span>
+            </el-menu-item>
+          </div>
+        </el-sub-menu>
+    
+        <!-- 基础图形分组 -->
+        <el-sub-menu index="shape">
+          <template #title>
+            <el-icon><Stamp /></el-icon>
+            <span>Shape</span>
+          </template>
+          <div class="menu-group">
+            <el-menu-item index="basic/rectangle" @click="handleAddElement('shape', 'rectangle')">
+              <el-icon><Minus /></el-icon>
+              <span>矩形</span>
+            </el-menu-item>
+            <el-menu-item index="basic/circle" @click="handleAddElement('shape', 'circle')">
+              <el-icon><CircleCheck /></el-icon>
+              <span>圆形</span>
+            </el-menu-item>
+            <el-menu-item index="basic/text" @click="handleAddElement('time', 'time')">
+              <el-icon><Edit /></el-icon>
+              <span>时间文本</span>
+            </el-menu-item>
+            <el-menu-item index="basic/date" @click="handleAddElement('time', 'date')">
+              <el-icon><Calendar /></el-icon>
+              <span>日期文本</span>
+            </el-menu-item>
+            <el-menu-item index="basic/image" @click="handleAddElement('image')">
+              <el-icon><Picture /></el-icon>
+              <span>图片</span>
+            </el-menu-item>
+          </div>
+        </el-sub-menu>
 
-        <el-menu-item index="datafield">
-          <el-icon><DataLine /></el-icon>
-          <span>DataField</span>
-        </el-menu-item>
-        <el-menu-item index="goal">
-          <el-icon><Aim /></el-icon>
-          <span>Goal</span>
-        </el-menu-item>
-        <el-menu-item index="chart">
-          <el-icon><TrendCharts /></el-icon>
-          <span>Chart</span>
-        </el-menu-item>
-        <el-menu-item index="shape">
-          <el-icon><Stamp /></el-icon>
-          <span>Shape</span>
-        </el-menu-item>
+        <!-- 状态指示器分组 -->
+        <el-sub-menu index="indicator">
+          <template #title>
+            <el-icon><Connection /></el-icon>
+            <span>Indicator</span>
+          </template>
+          <div class="menu-group">
+            <div class="menu-group-title">状态指示</div>
+            <el-menu-item index="indicator/battery" @click="handleAddElement('status', 'battery')">
+              <el-icon><Battery /></el-icon>
+              <span>电池电量</span>
+            </el-menu-item>
+            <el-menu-item index="indicator/bluetooth" @click="handleAddElement('indicator', 'bluetooth')">
+              <el-icon><Connection /></el-icon>
+              <span>蓝牙指示</span>
+            </el-menu-item>
+            <el-menu-item index="indicator/notification" @click="handleAddElement('indicator', 'notification')">
+              <el-icon><Bell /></el-icon>
+              <span>消息通知</span>
+            </el-menu-item>
+            <el-menu-item index="indicator/disturb" @click="handleAddElement('indicator', 'disturb')">
+              <el-icon><Mute /></el-icon>
+              <span>勿扰时间</span>
+            </el-menu-item>
+            <el-menu-item index="indicator/alarms" @click="handleAddElement('indicator', 'alarms')">
+              <el-icon><AlarmClock /></el-icon>
+              <span>闹钟指示</span>
+            </el-menu-item>
+          </div>
+        </el-sub-menu>
+
+       
+       
         <el-menu-item index="image">
           <el-icon><Picture /></el-icon>
           <span>Image</span>
@@ -198,7 +297,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
-import { useTimeStore } from '@/stores/elements/time/timeElement'
+import { useFontStore } from '@/stores/fontStore'
+import { getAddElement } from '@/utils/elementCodec/registry'
 import {
   Operation,
   Edit,
@@ -217,7 +317,13 @@ import {
   Calendar,
   Watch,
   Mouse,
-  ChatLineSquare
+  ChatLineSquare,
+  Star, // 使用现有图标作为替代
+  Connection,
+  Bell,
+  Monitor,
+  Minus,
+  CircleCheck
 } from '@element-plus/icons-vue'
 import { elementConfigs } from '@/config/elements'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
@@ -231,7 +337,7 @@ const router = useRouter()
 const baseStore = useBaseStore()
 const exportStore = useExportStore()
 const messageStore = useMessageStore()
-const timeStore = useTimeStore()
+const fontStore = useFontStore()
 const activeMenu = computed(() => {
   return route.path
 })
@@ -263,12 +369,55 @@ document.addEventListener('keydown', (e) => {
   }
 })
 
-// 添加元素
-const handleAddElement = (category, type) => {
-  console.log('Add Element:', category, type)
-  if (category === 'time') {
-    const config = elementConfigs.time['time']
-    timeStore.addElement(config)
+// 添加元素（参考 AddElementPanel 实现）
+const handleAddElement = async (category, elementType) => {
+  console.log('Add Element:', category, elementType)
+  try {
+    let config
+    if (category === 'image') {
+      // 图片元素默认配置
+      config = {
+        left: 227,
+        top: 227,
+        width: 100,
+        height: 100,
+        type: 'image',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        originX: 'center',
+        originY: 'center'
+      }
+    } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
+      config = elementConfigs[category][elementType]
+    } else {
+      messageStore.warning('元素类型不支持')
+      return
+    }
+
+    // 预加载字体（若有）
+    try {
+      if (config?.fontFamily) {
+        await fontStore.loadFont(config.fontFamily)
+      }
+    } catch (e) {
+      console.warn('字体加载失败（忽略继续添加）:', e)
+    }
+
+    // 使用注册器添加元素
+    if (elementType) {
+      const addElement = getAddElement(elementType)
+      if (addElement) {
+        addElement(config)
+      } else {
+        console.warn(`No add element handler registered for type: ${elementType}`)
+      }
+    }
+
+    messageStore.success(`已添加 ${config.label || elementType}`)
+  } catch (error) {
+    console.error('添加元素失败:', error)
+    messageStore.error('添加元素失败')
   }
 }
 
