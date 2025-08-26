@@ -141,6 +141,19 @@ export const elementConfigs = {
       stroke: '#000000',
       strokeWidth: 0,
       opacity: 1
+    },
+    line: { 
+      icon: 'mdi:vector-line',
+      label: '直线',
+      ...elementAttribute,
+      width: 100,
+      height: 2,
+      stroke: '#FFFFFF',
+      strokeWidth: 2,
+      x1: 0,
+      y1: 0,
+      x2: 100,
+      y2: 0
     }
   },
   // 目标
