@@ -435,6 +435,7 @@ export const useBaseStore = defineStore('baseStore', {
 
       // 添加新的背景图片
       const currentBgImage = this.themeBackgroundImages[this.currentThemeIndex]
+      // 如果有背景图片
       if (currentBgImage) {
         // 创建一个新的 Image 对象
         const img = new Image()
@@ -484,9 +485,9 @@ export const useBaseStore = defineStore('baseStore', {
         // 设置图片源
         img.src = currentBgImage
         img.crossOrigin = 'anonymous'
-      } else if (watchFace) {
-        console.log('2222 watchFace', watchFace)
-        // 如果没有背景图片，确保背景圆在最底层
+      } 
+      // 如果没有背景图片，确保背景圆在最底层
+      else if (watchFace) {
         this.canvas.moveObjectTo(watchFace, 0)
         this.canvas.set({
           clipPath: this.watchFaceCircle
@@ -526,6 +527,7 @@ export const useBaseStore = defineStore('baseStore', {
       for (const element of objects) {
         config.orderIds.push(element.id || 'tianchong-' + nanoid())
         if (element.eleType === 'background-image') continue
+        if (element.eleType === 'global') continue
         
         // 使用编码器系统编码元素
         let encodeConfig: AnyObject = encodeElement(element)

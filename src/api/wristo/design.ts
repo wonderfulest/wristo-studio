@@ -30,14 +30,14 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 设计详情
    */
-  getDesignByUid(designUid: string): Promise<Design> {
+  getDesignByUid(designUid: string): Promise<ApiResponse<Design>> {
     return instance.get(`/dsn/design/uid/${designUid}?populate=configJson,product,payment,category`)
   },
 
   /**
    * 创建设计
    */
-  createDesignByCopy(data: { uid: string }): Promise<Design> {
+  createDesignByCopy(data: { uid: string }): Promise<ApiResponse<Design>> {
     return instance.post('/dsn/design/create-by-copy', data)
   },
  

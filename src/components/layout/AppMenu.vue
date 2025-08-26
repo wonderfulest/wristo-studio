@@ -407,7 +407,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       const addElement = getAddElement(elementType)
       if (addElement) {
         console.log('Add Element 2223:', config)
-        addElement(config)
+        addElement(elementType, config)
       } else {
         console.warn(`No add element handler registered for type: ${elementType}`)
       }

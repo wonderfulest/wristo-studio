@@ -3,7 +3,7 @@
     <div class="panel-content" :class="{ collapsed: isCollapsed }">
       <div v-for="(category, categoryKey) in elementConfigs" :key="categoryKey" class="element-section">
         <div class="section-header">
-          <h2>{{ getCategoryLabel(categoryKey) }}</h2>
+          <h2>{{ categoryKey }}</h2>
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
@@ -21,52 +21,45 @@
   </div>
 </template>
 
-<script setup>
-import { ref, getCurrentInstance } from 'vue'
+<script setup lang="ts">
+import { ref } from 'vue'
 import { elementConfigs } from '@/config/elements'
 import { useFontStore } from '@/stores/fontStore'
 import { getAddElement } from '@/utils/elementCodec/registry'
+import type { AnyElementConfig } from '@/types/elementConfig'
+import { useMessageStore } from '@/stores/message'
 
 const fontStore = useFontStore()
+const messageStore = useMessageStore()
 const isCollapsed = ref(false)
-const { proxy } = getCurrentInstance()
 
-const getCategoryLabel = (category) => {
-  const labels = {
-    status: 'Status',
-    basic: 'Basic',
-    time: 'Time',
-    metric: 'Metric',
-    indicator: 'Indicator',
-    goal: 'Goal',
-    shape: 'Shape',
-    chart: 'Chart',
-  }
-  return labels[category] || category
-}
-
-const addElementByType = async (category, elementType, config) => {
+const addElementByType = async (category: string, elementType: string, config: AnyElementConfig) => {
   console.log('Add Element:', category, elementType, config)
   try {
     // 加载字体
-    await fontStore.loadFont(config.fontFamily)
+    if (config.fontFamily) {
+      await fontStore.loadFont(config.fontFamily)
+    }
     
     // 使用注册器添加元素
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
-        addElement(config)
+        await addElement(elementType, config)
+        
+        // 添加元素后切换到图层面板
+        const panel = document.querySelector('.right-panel') as any
+        if (panel && panel.switchToLayer) {
+          panel.switchToLayer()
+        }
+        isCollapsed.value = true
       } else {
         console.warn(`No add element handler registered for type: ${elementType}`)
       }
     }
-
-    // 添加元素后切换到图层面板
-    proxy.$parent.switchToLayer()
-    isCollapsed.value = true
   } catch (error) {
     console.error('添加元素失败:', error)
-    alert(error.message)
+    messageStore.error('添加元素失败')
   }
 }
 </script>

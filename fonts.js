@@ -1,4 +1,4 @@
-fonts = {
+const fonts = {
   icon: [
     { label: 'Qiwei One', value: 'Qiwei-One', family: 'Qiwei-One' },
     { label: 'Qiwei Two', value: 'Qiwei-Two', family: 'Qiwei-Two' },

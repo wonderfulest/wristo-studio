@@ -47,12 +47,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, defineProps, watchEffect, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
 import emitter from '@/utils/eventBus'
-import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
-import { nanoid } from 'nanoid'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useCanvas } from '../composables/useCanvas'
 import { usePropertiesStore } from '@/stores/properties'
@@ -61,13 +59,12 @@ import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { designApi } from '@/api/wristo/design'
-import { useImageElementStore } from '@/stores/elements/imageElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { decodeElement } from '@/utils/elementCodec'
 import { getAddElement } from '@/utils/elementCodec/registry'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import ChangelogDialog from '@/components/dialogs/ChangelogDialog.vue'
-import appConfig from '@/config/appConfig'
+import appConfig from '@/config/appConfig.ts'
 import CanvasView from '@/views/Canvas.vue'
 import ElementSettings from '@/components/ElementSettings.vue'
 import SidePanel from '@/components/SidePanel.vue'
@@ -75,9 +72,10 @@ import ExportPanel from '@/components/ExportPanel.vue'
 import TimeSimulator from '@/components/TimeSimulator.vue'
 import ZoomControls from '@/components/ZoomControls.vue'
 import type { ElementConfig } from '@/types/element'
+import { ApiResponse } from '@/types/api'
+import type { Design, DesignConfig } from '@/types/design'
 
 const propertiesStore = usePropertiesStore()
-const imageStore = useImageElementStore()
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
@@ -103,18 +101,22 @@ const backgroundColor = computed(() => editorStore.backgroundColor)
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
   try {
-    const response = await designApi.getDesignByUid(designUid)
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
+    if (!response.data) {
+      messageStore.error('Design not found')
+      router.push('/designs')
+      return
+    }
     const designData = response.data
-    const config = designData.configJson || {}
-    console.log(113, config)
+    const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+    console.log('load design config', config)
     
     // 设置基础信息
     baseStore.id = designUid
     baseStore.watchFaceName = designData.name
     
+    // 加载字体
     await fontStore.fetchFonts()
-    
-    // 确保字体加载完成后再加载元素到画布
     if (config.elements) await fontStore.loadFontsForElements(config.elements)
     
     // 如果配置为空，使用默认值
@@ -122,7 +124,6 @@ const loadDesign = async (designUid: string) => {
       console.log('配置为空，使用默认值')
       // 等待画布初始化完成
       await waitCanvasReady()
-      
       // 设置默认值
       baseStore.watchFaceName = designData.name
       baseStore.themeBackgroundImages = []
@@ -132,7 +133,7 @@ const loadDesign = async (designUid: string) => {
       baseStore.showUnit = false
       
       // 初始化画布
-      baseStore.canvas.requestRenderAll()
+      baseStore.canvas?.requestRenderAll()
 
       return
     }
@@ -142,8 +143,7 @@ const loadDesign = async (designUid: string) => {
       propertiesStore.loadProperties(config.properties)
     }
 
-    console.log(114, config.themeBackgroundImages)
-    // 设置主题背景图片
+    // 加载主题背景图片
     baseStore.themeBackgroundImages = config.themeBackgroundImages || []
 
     // 设置文本大小写
@@ -151,7 +151,7 @@ const loadDesign = async (designUid: string) => {
       baseStore.textCase = config.textCase
       // 如果有设置文本大小写，则触发更新
       setTimeout(() => {
-        baseStore.setTextCase(config.textCase)
+        baseStore.setTextCase(baseStore.textCase)
       }, 500) // 等待画布加载完成
     }
 
@@ -160,7 +160,7 @@ const loadDesign = async (designUid: string) => {
       baseStore.labelLengthType = config.labelLengthType
       // 如果有设置标签长度类型，则触发更新
       setTimeout(() => {
-        baseStore.setLabelLengthType(config.labelLengthType)
+        baseStore.setLabelLengthType(baseStore.labelLengthType)
       }, 600) // 在文本大小写设置后执行
     }
     // 设置是否显示数据项单位
@@ -198,22 +198,11 @@ const loadDesign = async (designUid: string) => {
   }
 }
 
-// 初始化新设计
-const initNewDesign = async () => {
-  // 等待画布初始化完成
-  await waitCanvasReady()
-
-  // 设置默认值
-  baseStore.watchFaceName = ''
-  baseStore.themeBackgroundImages = []
-  baseStore.currentThemeIndex = 0
-  baseStore.canvas.requestRenderAll()
-}
-
 // 设置自动保存
 const setupAutoSave = () => {
   if (appConfig.autoSave.enabled) {
-    saveTimer = setInterval(() => {
+    // 使用 window.setInterval 强制使用 DOM 重载，返回值为 number
+    saveTimer = window.setInterval(() => {
       try {
         console.log('执行自动保存...')
         exportStore.saveConfig()
@@ -237,11 +226,9 @@ const loadElements = async (elements: ElementConfig[]) => {
       }
 
       const addElement = getAddElement(element.type)
-      if (element.type === 'goalBar') {
-        console.log('加载目标条元素:', decodedElement)
-      }
       if (addElement) {
-        await addElement(decodedElement)
+        console.log('添加元素 222:', decodedElement)
+        await addElement(element.type, decodedElement)
       } else {
         console.warn(`Unknown element type: ${element.type}`)
         messageStore.warning(`未知的元素类型:${element.type}`)
@@ -254,12 +241,14 @@ const loadElements = async (elements: ElementConfig[]) => {
 }
 
 const reorderCanvasByIds = (orderedIds: string[]) => {
-  const objects = baseStore.canvas.getObjects();
+  const c = baseStore.canvas
+  if (!c) return
+  const objects = c.getObjects();
   orderedIds.forEach((id, index) => {
     const obj = objects.find(o => o.id === id);
     if (obj) {
       console.log('重新排序元素:', obj.id, index)
-      baseStore.canvas.moveObjectTo(obj, index);
+      c.moveObjectTo(obj, index);
     }
   });
 };
@@ -294,7 +283,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // 清除自动保存定时器
   if (saveTimer) {
-    clearInterval(saveTimer)
+    // 使用 window.clearInterval 与上方保持一致的 DOM 重载
+    window.clearInterval(saveTimer)
   }
   // 移除快捷键事件监听
   document.removeEventListener('keydown', (e) => {

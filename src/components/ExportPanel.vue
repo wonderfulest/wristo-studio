@@ -51,7 +51,7 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" @click="dowloadConfig">
+        <el-button type="primary" @click="downloadConfig">
           <Icon icon="material-symbols:export-notes-rounded" />
           确认导出
         </el-button>
@@ -147,7 +147,7 @@ const openDialog = () => {
 }
 
 // 导出配置
-const dowloadConfig = async () => {
+const downloadConfig = async () => {
   if (!baseStore.watchFaceName) {
     messageStore.error('请设置应用名称')
     return null
@@ -410,7 +410,7 @@ const openExportDialog = () => {
 // 暴露方法给父组件
 defineExpose({
   uploadApp,
-  dowloadConfig,
+  downloadConfig,
   saveConfig,
   openExportDialog
 })
