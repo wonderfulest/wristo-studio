@@ -59,21 +59,16 @@ export interface ElementAttribute {
   targetHeight?: number
 }
 
-export interface ElementConfigItem extends ElementAttribute {
-  icon: string
-  label: string
-  type?: string
-  size?: number
-}
+import type { AnyElementConfig } from '@/types/elementConfig'
 
 export interface ElementConfigs {
-  dials: Record<string, ElementConfigItem>
-  hands: Record<string, ElementConfigItem>
-  status: Record<string, ElementConfigItem>
-  time: Record<string, ElementConfigItem>
-  metric: Record<string, ElementConfigItem>
-  indicator: Record<string, ElementConfigItem>
-  shape: Record<string, ElementConfigItem>
-  goal: Record<string, ElementConfigItem>
-  chart: Record<string, ElementConfigItem>
+  dials: Record<string, AnyElementConfig>
+  hands: Record<string, AnyElementConfig>
+  status: Record<string, AnyElementConfig>
+  time: Record<string, AnyElementConfig>
+  metric: Record<string, AnyElementConfig>
+  indicator: Record<string, AnyElementConfig>
+  shape: Record<string, AnyElementConfig>
+  goal: Record<string, AnyElementConfig>
+  chart: Record<string, AnyElementConfig>
 }

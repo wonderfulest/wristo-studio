@@ -52,7 +52,7 @@ export const useDataStore = defineStore('dataElement', {
       return group
     },
 
-    updateElement(element: FabricElement, config: Partial<DataElementConfig> = {}) {
+    updateElement(element: any, config: Partial<DataElementConfig> = {}) {
       const canvas = this.baseStore.canvas
       const group: any = canvas?.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!canvas || !group) return

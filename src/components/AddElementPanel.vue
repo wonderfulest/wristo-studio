@@ -29,6 +29,7 @@ import { getAddElement } from '@/utils/elementCodec/registry'
 import type { AnyElementConfig } from '@/types/elementConfig'
 import { useMessageStore } from '@/stores/message'
 
+
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)

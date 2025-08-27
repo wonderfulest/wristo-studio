@@ -3,21 +3,20 @@
  */
 
 import type { ElementType } from './element'
+import { MoveBarElementConfig } from './elements/status'
 
 
 // 基础元素配置 - 父类
 export interface BaseElementConfig {
   id?: string
-  type: ElementType
-  x: number
-  y: number
+  type?: ElementType
+  left: number
+  top: number
   originX?: string
   originY?: string
   fill?: string
   fontFamily?: string
   fontSize?: number
-  width?: number
-  height?: number
 }
 
 // 时间元素配置 - 子类
@@ -83,6 +82,14 @@ export interface ChartElementConfig extends BaseElementConfig {
   showYLabels?: boolean
 }
 
+// 电池
+export interface BatteryElementConfig extends BaseElementConfig {
+  width?: number
+  height?: number
+  color?: string
+  level?: number
+}
+
 // 联合类型 - 所有可能的元素配置
 export type AnyElementConfig = 
   | TimeElementConfig
@@ -94,6 +101,8 @@ export type AnyElementConfig =
   | GoalElementConfig
   | ChartElementConfig
   | BaseElementConfig
+  | BatteryElementConfig
+  | MoveBarElementConfig
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {

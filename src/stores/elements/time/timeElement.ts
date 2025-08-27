@@ -41,15 +41,16 @@ export const useTimeStore = defineStore('timeStore', {
         const timeOptions: Partial<TimeElementOptions> = {
           id: options.id || nanoid(),
           eleType: 'time',
-          left: options.x,
-          top: options.y,
+          left: options.left,
+          top: options.top,
           originX: options.originX as 'center' | 'left' | 'right',
           originY: options.originY as 'center' | 'top' | 'bottom',
           fill: options.fill ?? '#ffffff',
-          fontSize: Number(options.fontSize ?? 14),
+          fontSize: Number(options.fontSize),
           fontFamily: options.fontFamily ?? 'roboto-condensed-regular',
           formatter: options.formatter,
         }
+        console.log('timeOptions', timeOptions)
         const element = new FabricText(text, timeOptions as TimeElementOptions)
         this.baseStore.canvas.add(element as any)
         this.layerStore.addLayer(element as any)

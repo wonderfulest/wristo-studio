@@ -1,16 +1,15 @@
 import { ElementConfig } from "../element"
 
 export interface BaseChartConfig extends ElementConfig {
-  left?: number
-  top?: number
-  width?: number
-  height?: number
-  originX?: 'left' | 'center' | 'right'
-  originY?: 'top' | 'center' | 'bottom'
+  left: number
+  top: number
+  width: number
+  height: number
+  originX: 'left' | 'center' | 'right'
+  originY: 'top' | 'center' | 'bottom'
 }
 
 export interface BarChartElementConfig extends BaseChartConfig {
-  eleType?: 'barChart'
   color?: string
   bgColor?: string
   pointCount?: number
@@ -37,7 +36,6 @@ export interface BarChartElementConfig extends BaseChartConfig {
 }
 
 export interface LineChartElementConfig extends BaseChartConfig {
-  eleType?: 'lineChart'
   color?: string
   bgColor?: string
   pointCount?: number
