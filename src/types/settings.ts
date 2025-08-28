@@ -7,13 +7,7 @@ export interface AlignOption<T extends string> {
   icon: string
 }
 
-export interface TimeFormatOption {
-  value: number
-  label: string
-  example: string
-}
-
-export interface DateFormatOption {
+export interface OptionFormat {
   value: number
   label: string
   example: string

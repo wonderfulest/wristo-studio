@@ -41,41 +41,85 @@ export const originYOptions: AlignOption<VerticalAlign>[] = [
   { value: 'bottom', label: 'Align Bottom', icon: alignmentIcons.bottom },
 ]
 
-// Time format options
+
+// Value enum -----------------------------------------
+export enum TimeFormatConstants {
+  HH_MM = 0,
+  HH_MM_SS = 1,
+  HH = 2,
+  MM = 3,
+  SS = 4,
+  HH_COLON = 5,
+  COLON_MM = 6,
+  A = 7,
+  a = 8,
+}
+
+// Option array ---------------------------------------
+export interface TimeFormatOption {
+  value: TimeFormatConstants;
+  label: string;
+  example: string;
+}
+
 export const TimeFormatOptions: TimeFormatOption[] = [
-  { value: 0, label: 'HH:mm', example: '12:34' },
-  { value: 1, label: 'HH:mm:ss', example: '12:34:56' },
-  { value: 2, label: 'HH', example: '12' },
-  { value: 3, label: 'mm', example: '34' },
-  { value: 4, label: 'ss', example: '56' },
-  { value: 5, label: 'HH:', example: '12:' },
-  { value: 6, label: ':mm', example: ':34' },
-  { value: 7, label: 'A', example: 'PM' },
-  { value: 8, label: 'a', example: 'pm' },
+  { value: TimeFormatConstants.HH_MM,     label: 'HH:mm',     example: '12:34' },
+  { value: TimeFormatConstants.HH_MM_SS,  label: 'HH:mm:ss',  example: '12:34:56' },
+  { value: TimeFormatConstants.HH,        label: 'HH',        example: '12' },
+  { value: TimeFormatConstants.MM,        label: 'mm',        example: '34' },
+  { value: TimeFormatConstants.SS,        label: 'ss',        example: '56' },
+  { value: TimeFormatConstants.HH_COLON,  label: 'HH:',       example: '12:' },
+  { value: TimeFormatConstants.COLON_MM,  label: ':mm',       example: ':34' },
+  { value: TimeFormatConstants.A,         label: 'A',         example: 'PM' },
+  { value: TimeFormatConstants.a,         label: 'a',         example: 'pm' }
 ]
+
+// Date format enum
+export enum DateFormatConstants {
+  DD = 0,
+  DDD = 1,
+  DDDD = 2,
+  DO = 3,
+  MMM = 4,
+  MMMM = 5,
+  MMM_D = 6,
+  MMMM_D = 7,
+  DDD_DD = 8,
+  MMM_D_DDD = 9,
+  MMM_D_DDDD = 10,
+  MMMM_D_DDDD = 11,
+  DDDD_MMMM_D = 12,
+  MMM_D_YYYY = 13,
+  D_MMM_YYYY = 14,
+  DD_MM_YYYY = 15,
+  MM_DD_YYYY = 16,
+  YYYY_MM_DD = 17,
+  MMMM_DO_YYYY = 18,
+  MMM_D_YYYY_DDDD = 19,
+}
 
 // Date format options
 export const DateFormatOptions: DateFormatOption[] = [
-  { value: 8, label: 'ddd DD', example: 'Mon 05' },
-  { value: 9, label: 'MMM D, ddd', example: 'Sep 5, Mon' },
-  { value: 10, label: 'MMM D, dddd', example: 'Sep 5, Monday' },
-  { value: 0, label: 'DD', example: '05' },
-  { value: 1, label: 'ddd', example: 'Mon' },
-  { value: 2, label: 'dddd', example: 'Monday' },
-  { value: 3, label: 'Do', example: '5th' },
-  { value: 4, label: 'MMM', example: 'Sep' },
-  { value: 5, label: 'MMMM', example: 'September' },
-  { value: 6, label: 'MMM D', example: 'Sep 5' },
-  { value: 7, label: 'MMMM D', example: 'September 5' },
-  { value: 11, label: 'MMMM, D dddd', example: 'September, 5 Monday' },
-  { value: 12, label: 'dddd, MMMM D', example: 'Monday, September 5' },
-  { value: 13, label: 'MMM D, YYYY', example: 'Sep 5, 2023' },
-  { value: 14, label: 'D MMM YYYY', example: '5 Sep 2023' },
-  { value: 15, label: 'DD.MM.YYYY', example: '05.09.2023' },
-  { value: 16, label: 'MM/DD/YYYY', example: '09/05/2023' },
-  { value: 17, label: 'YYYY-MM-DD', example: '2023-09-05' },
-  { value: 18, label: 'MMMM Do, YYYY', example: 'September 5th, 2023' },
-  { value: 19, label: 'MMM D, YYYY, dddd', example: 'Sep 5, 2023, Monday' },
+  { value: DateFormatConstants.DD, label: 'DD', example: '05' },
+  { value: DateFormatConstants.DDD, label: 'ddd', example: 'Mon' },
+  { value: DateFormatConstants.DDDD, label: 'dddd', example: 'Monday' },
+  { value: DateFormatConstants.DO, label: 'Do', example: '5th' },
+  { value: DateFormatConstants.MMM, label: 'MMM', example: 'Sep' },
+  { value: DateFormatConstants.MMMM, label: 'MMMM', example: 'September' },
+  { value: DateFormatConstants.MMM_D, label: 'MMM D', example: 'Sep 5' },
+  { value: DateFormatConstants.MMMM_D, label: 'MMMM D', example: 'September 5' },
+  { value: DateFormatConstants.DDD_DD, label: 'ddd DD', example: 'Mon 05' },
+  { value: DateFormatConstants.MMM_D_DDD, label: 'MMM D, ddd', example: 'Sep 5, Mon' },
+  { value: DateFormatConstants.MMM_D_DDDD, label: 'MMM D, dddd', example: 'Sep 5, Monday' },
+  { value: DateFormatConstants.MMMM_D_DDDD, label: 'MMMM, D dddd', example: 'September, 5 Monday' },
+  { value: DateFormatConstants.DDDD_MMMM_D, label: 'dddd, MMMM D', example: 'Monday, September 5' },
+  { value: DateFormatConstants.MMM_D_YYYY, label: 'MMM D, YYYY', example: 'Sep 5, 2023' },
+  { value: DateFormatConstants.D_MMM_YYYY, label: 'D MMM YYYY', example: '5 Sep 2023' },
+  { value: DateFormatConstants.DD_MM_YYYY, label: 'DD.MM.YYYY', example: '05.09.2023' },
+  { value: DateFormatConstants.MM_DD_YYYY, label: 'MM/DD/YYYY', example: '09/05/2023' },
+  { value: DateFormatConstants.YYYY_MM_DD, label: 'YYYY-MM-DD', example: '2023-09-05' },
+  { value: DateFormatConstants.MMMM_DO_YYYY, label: 'MMMM Do, YYYY', example: 'September 5th, 2023' },
+  { value: DateFormatConstants.MMM_D_YYYY_DDDD, label: 'MMM D, YYYY, dddd', example: 'Sep 5, 2023, Monday' },
 ]
 
 // Layout options

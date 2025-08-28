@@ -1,19 +1,36 @@
 import { assign } from 'lodash-es'
-import type { AnyElementConfig, BaseElementConfig, BatteryElementConfig, DateElementConfig, IndicatorElementConfig, TimeElementConfig } from '@/types/elementConfig'
+import type { AnyElementConfig, BaseElementConfig, TextElementConfig, BatteryElementConfig, CircleElementConfig, DateElementConfig, IndicatorElementConfig, RectangleElementConfig, ShapeElementConfig, TimeElementConfig } from '@/types/elementConfig'
 import { MoveBarElementConfig } from '@/types/elements/status'
 import { BarChartElementConfig, LineChartElementConfig } from '@/types/elements/charts'
+import { TimeFormatConstants, DateFormatConstants } from './settings'
+
+const DEFAULT_LEFT: number = 227
+const DEFAULT_TOP: number = 227
+const DEFAULT_ORIGIN_X: string = 'center'
+const DEFAULT_ORIGIN_Y: string = 'center'
+const DEFAULT_FILL: string = '#FFFFFF'
+const DEFAULT_METRIC_SYMBOL: string = ':FIELD_TYPE_HEART_RATE'
+const DEFAULT_FONT_FAMILY: string = 'roboto-condensed-regular'
+const DEFAULT_FONT_SIZE: number = 36
 
 // 元素默认配置
 export const BASE_ELEMENT_CONFIG: BaseElementConfig = {
-  left: 227,
-  top: 227,
-  originX: 'center',
-  originY: 'center',
-  fill: '#FFFFFF',
-  fontFamily: 'roboto-condensed-regular',
-  fontSize: 36,
+  left: DEFAULT_LEFT,
+  top: DEFAULT_TOP,
+  originX: DEFAULT_ORIGIN_X,
+  originY: DEFAULT_ORIGIN_Y,
+  fill: DEFAULT_FILL
 }
 
+export const DEFAULT_TEXT_CONFIG: TextElementConfig = {
+  left: DEFAULT_LEFT,
+  top: DEFAULT_TOP,
+  originX: DEFAULT_ORIGIN_X,
+  originY: DEFAULT_ORIGIN_Y,
+  fill: DEFAULT_FILL,
+  fontFamily: DEFAULT_FONT_FAMILY,
+  fontSize: DEFAULT_FONT_SIZE,
+}
 // bgColor: '#FFFFFF', // 进度环背景颜色
 // backgroundColor: '#FFFFFF',
 // fontFamily: 'roboto-condensed-regular',
@@ -56,31 +73,26 @@ interface EDITOR_ELEMENT {
 export const TIME_ELEMENT_CONFIG: TimeElementConfig & EDITOR_ELEMENT = assign({
   icon: 'mdi:clock-time-eight-outline',
   label: '时间',
-  type: 'time',
-}, BASE_ELEMENT_CONFIG, {
-  formatter: 'HH:mm:ss',
+  type: 'time' as const,
+}, DEFAULT_TEXT_CONFIG, {
+  formatter: TimeFormatConstants.HH_MM_SS,
 })
 
 export const DATE_ELEMENT_CONFIG: DateElementConfig & EDITOR_ELEMENT = assign({
   icon: 'mdi:clock-time-eight-outline',
   label: '日期',
-  type: 'date',
-}, BASE_ELEMENT_CONFIG, {
-  dateFormatter: 8,
+  type: 'date' as const,
+}, DEFAULT_TEXT_CONFIG, {
+  dateFormatter: DateFormatConstants.MMM_D_YYYY,
 })
 
 export const INDICATOR_ELEMENT_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = assign({
   icon: 'mdi:clock-time-eight-outline',
   label: '指标',
-  type: 'indicator',
-}, BASE_ELEMENT_CONFIG, {
-  left: 227,
-  top: 227,
-  originX: 'center',
-  originY: 'center',
-  fontSize: 42,
+  type: 'indicator' as const,
+}, DEFAULT_TEXT_CONFIG, {
+  metricSymbol: DEFAULT_METRIC_SYMBOL,
   fontFamily: 'super-icons',
-  color: '#FFFFFF',
 })
 
 export const BATTERY_ELEMENT_CONFIG: BatteryElementConfig & EDITOR_ELEMENT = assign({
@@ -99,11 +111,12 @@ export const BARCHART_ELEMENT_CONFIG: BarChartElementConfig & EDITOR_ELEMENT = a
   label: '柱状图',
 }, BASE_ELEMENT_CONFIG, {
   eleType: 'barChart',
-  type: 'barChart',
+  type: 'barChart' as const,
+  fill: '#FFFFFF',
   width: 200,
   height: 80,
-  originX: 'left',
-  originY: 'top',
+  originX: 'left' as const,
+  originY: 'top' as const,
   fontSize: 12,
   bgColor: 'transparent',
   fillMissing: true,
@@ -114,10 +127,14 @@ export const BARCHART_ELEMENT_CONFIG: BarChartElementConfig & EDITOR_ELEMENT = a
 export const LINECHART_ELEMENT_CONFIG: LineChartElementConfig & EDITOR_ELEMENT = assign({
   icon: 'mdi:chart-line',
   label: '折线图',
-  type: 'lineChart',
+  type: 'lineChart' as const,
 }, BASE_ELEMENT_CONFIG, {
+  eleType: 'lineChart',
   width: 200,
   height: 80,
+  originX: 'center' as const,
+  originY: 'center' as const,
+  fill: '#FFFFFF',
   pointCount: 7,
   bgColor: 'transparent',
   fillMissing: true,
@@ -132,8 +149,9 @@ export const LINECHART_ELEMENT_CONFIG: LineChartElementConfig & EDITOR_ELEMENT =
 export const MOVE_BAR_ELEMENT_CONFIG: MoveBarElementConfig & EDITOR_ELEMENT = assign({
   icon: 'mdi:clock-time-eight-outline',
   label: '久坐提醒',
-  type: 'moveBar',
+  type: 'moveBar' as const,
 }, BASE_ELEMENT_CONFIG, {
+  eleType: 'moveBar',
   width: 150,
   height: 8,
   separator: 2 as any, // 未在通用类型中定义，保持兼容
@@ -142,6 +160,37 @@ export const MOVE_BAR_ELEMENT_CONFIG: MoveBarElementConfig & EDITOR_ELEMENT = as
   level: 0 as any, // 未在通用类型中定义，保持兼容
 })
 
+export const RECTANGLE_ELEMENT_CONFIG: RectangleElementConfig & EDITOR_ELEMENT = {
+  icon: 'mdi:rectangle',
+  label: '矩形',
+  type: 'shape' as const,
+  shapeType: 'rectangle',
+  left: 227,
+  top: 227,
+  width: 100,
+  height: 100,
+  fill: '#FFFFFF',
+  stroke: '#000000',
+  strokeWidth: 0,
+  borderRadius: 0,
+  originX: 'center',
+  originY: 'center',
+}
+
+export const CIRCLE_ELEMENT_CONFIG: CircleElementConfig & EDITOR_ELEMENT = {
+  icon: 'mdi:circle',
+  label: '圆形',
+  type: 'shape' as const,
+  shapeType: 'circle',
+  left: 227,
+  top: 227,
+  originX: 'center',
+  originY: 'center',
+  radius: 50,
+  fill: '#FFFFFF',
+  stroke: '#000000',
+  strokeWidth: 0,
+}
 export const elementConfigs: Record<string, Record<string, AnyElementConfig & EDITOR_ELEMENT>> = {
   dials: {
     tick12: { icon: 'mdi:clock-time-eight-outline', label: '12点刻度', type: 'tick12', size: 36, ...elementAttribute, fill: '#FFFFFF' },
@@ -173,30 +222,8 @@ export const elementConfigs: Record<string, Record<string, AnyElementConfig & ED
     notification: { metricSymbol: ':INDICATOR_TYPE_NOTIFICATIONS', type: 'notification', icon: 'hugeicons:notification-01', label: '手机通知', ...indicatorAttribute },
   },
   shape: {
-    rectangle: {
-      icon: 'mdi:rectangle',
-      label: '矩形',
-      type: 'rectangle',
-      ...elementAttribute,
-      width: 100,
-      height: 100,
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeWidth: 0,
-      opacity: 1,
-      borderRadius: 0,
-    },
-    circle: {
-      icon: 'mdi:circle',
-      label: '圆形',
-      type: 'circle',
-      ...elementAttribute,
-      radius: 50,
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeWidth: 0,
-      opacity: 1,
-    },
+    rectangle: RECTANGLE_ELEMENT_CONFIG,
+    circle: CIRCLE_ELEMENT_CONFIG,
     line: {
       icon: 'mdi:vector-line',
       label: '直线',

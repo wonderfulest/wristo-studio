@@ -12,54 +12,73 @@ export interface BaseElementConfig {
   type?: ElementType
   left: number
   top: number
-  originX?: string
-  originY?: string
-  fill?: string
-  fontFamily?: string
-  fontSize?: number
+  originX: string
+  originY: string
+  fill: string
+}
+
+export interface TextElementConfig extends BaseElementConfig {
+  fontFamily: string
+  fontSize: number
 }
 
 // 时间元素配置 - 子类
-export interface TimeElementConfig extends BaseElementConfig {
+export interface TimeElementConfig extends TextElementConfig {
   type: 'time'
   formatter: number
 }
 
 // 日期元素配置 - 子类
-export interface DateElementConfig extends BaseElementConfig {
+export interface DateElementConfig extends TextElementConfig {
   type: 'date'
   dateFormatter: number
 }
 
 // 图标元素配置 - 子类
-export interface IconElementConfig extends BaseElementConfig {
+export interface IconElementConfig extends TextElementConfig {
   type: 'icon'
-  metricSymbol?: string
-  iconSize?: number
+  metricSymbol: string
+  iconSize: number
 }
 
 // 数据元素配置 - 子类
-export interface DataElementConfig extends BaseElementConfig {
+export interface DataElementConfig extends TextElementConfig {
   type: 'data'
-  metricSymbol?: string
-  formatter?: string
+  metricSymbol: string
+  formatter: string
 }
 
 // 指标元素配置 - 子类
-export interface IndicatorElementConfig extends BaseElementConfig {
+export interface IndicatorElementConfig extends TextElementConfig {
   type: 'indicator'
-  metricSymbol?: string
+  metricSymbol: string
 }
 
 // 形状元素配置 - 子类
 export interface ShapeElementConfig extends BaseElementConfig {
   type: 'shape'
-  shapeType?: 'rectangle' | 'circle' | 'line'
-  stroke?: string
-  strokeWidth?: number
-  radius?: number
-  borderRadius?: number
+  shapeType: 'rectangle' | 'circle' | 'line'
+  fill: string
+  stroke: string
+  strokeWidth: number
 }
+
+export interface CircleElementConfig extends ShapeElementConfig {
+  shapeType: 'circle'
+  radius: number
+}
+
+export interface RectangleElementConfig extends ShapeElementConfig {
+  shapeType: 'rectangle'
+  width: number
+  height: number
+  borderRadius: number
+}
+
+export interface LineElementConfig extends ShapeElementConfig {
+  shapeType: 'line'
+}
+
 
 // 目标元素配置 - 子类
 export interface GoalElementConfig extends BaseElementConfig {
@@ -67,7 +86,7 @@ export interface GoalElementConfig extends BaseElementConfig {
   goalType?: 'bar' | 'arc'
   color?: string
   bgColor?: string
-  progress?: number
+  progress: number
   radius?: number
   strokeWidth?: number
 }
@@ -84,10 +103,10 @@ export interface ChartElementConfig extends BaseElementConfig {
 
 // 电池
 export interface BatteryElementConfig extends BaseElementConfig {
-  width?: number
-  height?: number
-  color?: string
-  level?: number
+  width: number
+  height: number
+  color: string
+  level: number
 }
 
 // 联合类型 - 所有可能的元素配置
