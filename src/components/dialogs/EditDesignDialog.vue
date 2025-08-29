@@ -120,7 +120,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse } from '@/types/api/api'
 import type { Design, UpdateDesignParamsV2, Payment } from '@/types/design'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -237,7 +237,7 @@ const handleConfirm = async () => {
     }
 
     const res: ApiResponse<Design> = await designApi.updateDesign(data as unknown as UpdateDesignParamsV2)
-    console.log(222222, res)
+    
     if (res.code === 0 && res.data) {
       emit('success', res.data)
       dialogVisible.value = false

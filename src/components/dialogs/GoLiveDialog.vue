@@ -139,7 +139,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getAllSeries } from '@/api/wristo/categories'
 import type { Category } from '@/types/category'
-import type { Bundle } from '@/types/bundle'
+import type { Bundle } from '@/types/api/bundle'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/design'
@@ -183,8 +183,8 @@ const loadDesign = (design: Design) => {
   form.categoryIds = design.product?.categories?.map((category: Category) => category.id) || []
   form.bundleIds = design.product?.bundles?.map((bundle: Bundle) => bundle.bundleId) || []
   
-  console.log('design', design)
-  console.log('design.categories', form.categoryIds)
+  
+  
   // 如果已有产品信息，使用现有数据
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''

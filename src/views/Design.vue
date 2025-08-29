@@ -72,7 +72,7 @@ import ExportPanel from '@/components/ExportPanel.vue'
 import TimeSimulator from '@/components/TimeSimulator.vue'
 import ZoomControls from '@/components/ZoomControls.vue'
 import type { ElementConfig } from '@/types/element'
-import { ApiResponse } from '@/types/api'
+import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/design'
 
 const propertiesStore = usePropertiesStore()
@@ -109,7 +109,7 @@ const loadDesign = async (designUid: string) => {
     }
     const designData = response.data
     const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
-    console.log('load design config', config)
+    
     
     // 设置基础信息
     baseStore.id = designUid
@@ -121,7 +121,7 @@ const loadDesign = async (designUid: string) => {
     
     // 如果配置为空，使用默认值
     if (!config || Object.keys(config).length === 0) {
-      console.log('配置为空，使用默认值')
+      
       // 等待画布初始化完成
       await waitCanvasReady()
       // 设置默认值
@@ -204,7 +204,7 @@ const setupAutoSave = () => {
     // 使用 window.setInterval 强制使用 DOM 重载，返回值为 number
     saveTimer = window.setInterval(() => {
       try {
-        console.log('执行自动保存...')
+        
         exportStore.saveConfig()
       } catch (error) {
         console.error('自动保存失败:', error)
@@ -217,7 +217,7 @@ const setupAutoSave = () => {
 const loadElements = async (elements: ElementConfig[]) => {
   try {
     for (const element of elements) {
-      console.log('加载元素:', element)
+      
       const decodedElement = await decodeElement(element)
       if (!decodedElement) {
         console.warn(`Unknown element type: ${element.type}`)
@@ -227,7 +227,7 @@ const loadElements = async (elements: ElementConfig[]) => {
 
       const addElement = getAddElement(element.type)
       if (addElement) {
-        console.log('添加元素 222:', decodedElement)
+        
         await addElement(element.type, decodedElement)
       } else {
         console.warn(`Unknown element type: ${element.type}`)
@@ -247,7 +247,7 @@ const reorderCanvasByIds = (orderedIds: string[]) => {
   orderedIds.forEach((id, index) => {
     const obj = objects.find(o => o.id === id);
     if (obj) {
-      console.log('重新排序元素:', obj.id, index)
+      
       c.moveObjectTo(obj, index);
     }
   });

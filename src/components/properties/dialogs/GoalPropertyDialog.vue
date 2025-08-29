@@ -188,7 +188,7 @@ const formData = reactive({
   errorMessage: ''
 })
 
-console.log('goalOptions', goalOptions)
+
 
 const initFormData = (data = null) => {
   isEdit.value = !!data

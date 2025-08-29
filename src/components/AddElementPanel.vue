@@ -7,13 +7,13 @@
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
+          <!-- :class="{ disabled: type === 'line' }"
+          :disabled="type === 'line'" -->
           <button v-for="(config, type) in category" :key="type" 
-                  :class="{ disabled: type === 'line' }"
-                  :disabled="type === 'line'"
                   @click="addElementByType(categoryKey, type, config)">
             <Icon :icon="config.icon" class="element-icon" />
             <span class="element-label">{{ config.label }}</span>
-            <span v-if="type === 'line'" class="soon-badge">即将上线</span>
+            <span v-if="type === 'line'" class="soon-badge">Coming soon</span>
           </button>
         </div>
       </div>
@@ -23,10 +23,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { elementConfigs } from '@/config/elements'
+import { elementConfigs } from '@/config/elements/elements'
 import { useFontStore } from '@/stores/fontStore'
 import { getAddElement } from '@/utils/elementCodec/registry'
-import type { AnyElementConfig } from '@/types/elementConfig'
+import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 
 
@@ -34,13 +34,22 @@ const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)
 
+const loadElementFont = async (config: AnyElementConfig) => {
+  if (config.fontFamily) {
+    await fontStore.loadFont(config.fontFamily)
+  }
+  if (config && (config as IconElementConfig).iconFontFamily) {
+    await fontStore.loadFont((config as IconElementConfig).iconFontFamily)
+  }
+}
 const addElementByType = async (category: string, elementType: string, config: AnyElementConfig) => {
-  console.log('Add Element:', category, elementType, config)
+  console.log('add element category', category)
+  console.log('add element elementType', elementType)
+  console.log('add element config', config)
+  
   try {
     // 加载字体
-    if (config.fontFamily) {
-      await fontStore.loadFont(config.fontFamily)
-    }
+    await loadElementFont(config)
     
     // 使用注册器添加元素
     if (elementType) {

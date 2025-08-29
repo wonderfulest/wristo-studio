@@ -10,7 +10,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchSsoToken, SsoTokenResponseData } from '@/api/wristo/auth'
 import { getUserInfo } from '@/api/wristo/auth'
-import type { ApiResponse } from '../types/api'
+import type { ApiResponse } from '../types/api/api'
 import { useUserStore } from '@/stores/user'
 
 const loading = ref(true)
@@ -24,7 +24,7 @@ const clientSecret = 'xxx'
 const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
 
 onMounted(async () => {
-  console.log('onMounted', userStore.userInfo)
+  
   const code = route.query.code as string
   if (!code) {
     error.value = '未获取到 code 参数'
@@ -38,20 +38,20 @@ onMounted(async () => {
       clientSecret,
       redirectUri
     })
-    console.log(code, clientId, clientSecret, redirectUri, 'res', res)
+    
     if (res.code === 0 && res.data?.accessToken) {
       userStore.setToken(res.data.accessToken)
-      console.log('Token已保存:', res.data.accessToken)
+      
       
       // 获取用户信息并保存
       try {
         const userRes = await getUserInfo()
-        console.log('获取用户信息响应:', userRes)
+        
         if (userRes.code === 0 && userRes.data) {
           userStore.userInfo = userRes.data
-          console.log('用户信息已保存到store:', userRes.data)
-          console.log('Store中的用户信息:', userStore.userInfo)
-          console.log('认证状态:', userStore.isAuthenticated)
+          
+          
+          
         } else {
           console.error('获取用户信息失败:', userRes)
         }
@@ -62,7 +62,7 @@ onMounted(async () => {
       
       // 延迟跳转，确保数据保存完成
       setTimeout(() => {
-        console.log('准备跳转到首页，当前认证状态:', userStore.isAuthenticated)
+        
         router.replace('/')
       }, 100)
     } else {

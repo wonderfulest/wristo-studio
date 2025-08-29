@@ -27,7 +27,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
-import { elementConfigs } from '@/config/elements'
+import { elementConfigs } from '@/config/elements/elements'
 import { useBaseStore } from '@/stores/baseStore'
 import GlobalSettings from './settings/GlobalSettings.vue'
 import BaseSettings from './settings/BaseSettings.vue'
@@ -41,7 +41,7 @@ const settingsComponent = ref(null)
 const activeElements = ref([])
 
 const updateElements = () => {
-  console.log('updateElements')
+  
   if (!baseStore.canvas) return
   activeElements.value = baseStore.canvas.getActiveObjects()
 }
@@ -67,7 +67,7 @@ onMounted(() => {
 
   // 设置事件监听
   emitter.on('refresh-element-settings', (opt) => {
-    console.log('111 refresh-element-settings', 111111, opt)
+    
     debouncedUpdateElements()
   })
 })

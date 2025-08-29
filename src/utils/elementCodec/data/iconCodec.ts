@@ -2,7 +2,7 @@ import { registerEncoder, registerDecoder, registerAddElement } from '../registr
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useIconStore } from '@/stores/elements/data/iconElement'
 import type { FabricElement } from '@/types/element'
-import type { IconElementConfig } from '@/types/elementConfig'
+import type { IconElementConfig } from '@/types/elements'
 
 // 图标编码器
 const encodeIcon: EncoderFn<'icon'> = (element: FabricElement) => {

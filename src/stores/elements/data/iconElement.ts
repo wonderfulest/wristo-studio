@@ -4,9 +4,9 @@ import { FabricText, TextProps } from 'fabric'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
-import type { IconElementConfig } from '@/types/elementConfig'
-import type { CustomTextProps } from '@/types/elements/custom-props'
-import type { CustomIconProps } from '@/types/elements/custom-props'
+import type { IconElementConfig } from '@/types/elements'
+import { getMetricBySymbol } from '@/config/settings'
+import { DataTypeOption } from '@/types/settings'
 
 export const useIconStore = defineStore('iconElement', {
   state: () => {
@@ -23,30 +23,39 @@ export const useIconStore = defineStore('iconElement', {
     }
   },
   actions: {
-    addElement(config: IconElementConfig): Promise<FabricElement> {
-      const id = nanoid()
-      type MyTextProps = TextProps & CustomTextProps & CustomIconProps
-      const options: Partial<MyTextProps> = {
-        id,
-        eleType: 'icon',
-        left: config.x,
-        top: config.y,
-        fontSize: Number(config.fontSize ?? this.defaults.fontSize),
-        fill: config.fill ?? this.defaults.fill,
-        fontFamily: config.fontFamily ?? this.defaults.iconFontFamily,
-        originX: config.originX as 'center' | 'left' | 'right' ?? 'center',
-        originY: config.originY as 'center' | 'top' | 'bottom' ?? 'center',
-        selectable: true,
-        hasControls: true,
-        hasBorders: true,
+    async addElement(options: IconElementConfig): Promise<FabricText> {
+      if (!this.baseStore.canvas) {
+        throw new Error('Canvas is not initialized, cannot add icon element')
       }
-      const element = new FabricText('1', options)
+      try {
+        type IconProps = TextProps & IconElementConfig
+        const iconOptions: Partial<IconProps> = {
+          id: options.id || nanoid(),
+          eleType: 'icon',
+          left: options.left,
+          top: options.top,
+          originX: options.originX as 'center' | 'left' | 'right',
+          originY: options.originY as 'center' | 'top' | 'bottom',
+          fill: options.fill ?? this.defaults.fill,
+          fontSize: Number(options.fontSize ?? this.defaults.fontSize),
+          fontFamily: options.iconFontFamily,
+          metricSymbol: options.metricSymbol,
+          selectable: true,
+          hasControls: true,
+          hasBorders: true,
+        }
 
-      this.baseStore.canvas?.add(element)
-      this.layerStore.addLayer(element)
-      this.baseStore.canvas?.setActiveObject(element)
-      this.baseStore.canvas?.renderAll()
-      return element
+        const metric: DataTypeOption = getMetricBySymbol(options.metricSymbol)
+        const element = new FabricText(metric.icon || '1', iconOptions as IconProps)
+        this.baseStore.canvas.add(element as any)
+        this.layerStore.addLayer(element as any)
+        this.baseStore.canvas.setActiveObject(element as any)
+        this.baseStore.canvas.renderAll()
+        return element
+      } catch (error) {
+        console.error('Failed to create icon element:', error)
+        throw error
+      }
     },
 
     updateElement(element: any, config: Partial<IconElementConfig>) {
@@ -54,10 +63,29 @@ export const useIconStore = defineStore('iconElement', {
       const obj: any = canvas?.getObjects().find((o: any) => o.id === element.id)
       if (!canvas || !obj) return
 
-      if (config.fill !== undefined) obj.set('fill', config.fill)
-      if (config.fontSize !== undefined) obj.set('fontSize', config.fontSize)
-      if (config.fontFamily !== undefined) obj.set('fontFamily', config.fontFamily)
-      if (config.metricSymbol !== undefined) obj.set('metricSymbol', config.metricSymbol)
+      const currentLeft = obj.left
+      const currentTop = obj.top
+
+      const updateProps: Record<string, any> = {
+        fontSize: config.fontSize,
+        fill: config.fill,
+        fontFamily: config.iconFontFamily,
+        metricSymbol: config.metricSymbol,
+        originX: config.originX,
+        originY: config.originY,
+        left: config.left,
+        top: config.top,
+      }
+
+      Object.keys(updateProps).forEach((key) => {
+        const value = updateProps[key]
+        if (value !== undefined) {
+          obj.set(key, value)
+        }
+      })
+
+      if (config.left === undefined) obj.set('left', currentLeft)
+      if (config.top === undefined) obj.set('top', currentTop)
 
       obj.setCoords()
       canvas.renderAll()
@@ -65,28 +93,30 @@ export const useIconStore = defineStore('iconElement', {
 
     encodeConfig(element: FabricElement): IconElementConfig {
       if (!element) throw new Error('Invalid element')
-      return {
-        id: element.id || '',
-        type: 'icon',
-        x: element.left || 0,
-        y: element.top || 0,
-        originX: element.originX || 'center',
-        originY: element.originY || 'center',
-        fontFamily: element.fontFamily || this.defaults.iconFontFamily,
-        fontSize: element.fontSize || this.defaults.fontSize,
-        fill: element.fill || this.defaults.fill,
-        metricSymbol: element.metricSymbol || ':FIELD_TYPE_HEART_RATE',
+      const config = {
+        id: element.id,
+        eleType: 'icon',
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
+        fontFamily: element.fontFamily,
+        fontSize: element.fontSize,
+        fill: element.fill,
+        iconSize: element.fontSize,
+        metricSymbol: element.metricSymbol,
       }
+      return config as IconElementConfig
     },
 
     decodeConfig(config: IconElementConfig): Partial<FabricElement> {
       return {
         id: config.id,
-        type: 'icon',
-        left: config.x,
-        top: config.y,
-        fontSize: config.fontSize,
-        fontFamily: config.fontFamily,
+        eleType: 'icon',
+        left: config.left,
+        top: config.top,
+        fontSize: config.iconSize,
+        fontFamily: config.iconFontFamily,
         fill: config.fill,
         originX: config.originX,
         originY: config.originY,

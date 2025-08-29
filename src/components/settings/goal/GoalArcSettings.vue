@@ -83,7 +83,7 @@
               v-model="mainRing.stroke"
               @change="
                 (val) => {
-                  console.log('更新前景色:', val)
+                  
                   goalArcStore.updateElement(element, {
                     color: val
                   })
@@ -96,7 +96,7 @@
               v-model="bgRing.stroke"
               @change="
                 (val) => {
-                  console.log('更新背景色:', val)
+                  
                   goalArcStore.updateElement(element, {
                     bgColor: val
                   })

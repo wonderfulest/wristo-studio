@@ -4,22 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { loadSVGFromURL, util } from 'fabric'
 import { nanoid } from 'nanoid'
 import { HourHandOptions } from '@/config/settings'
-
-interface RotationCenter {
-  x: number
-  y: number
-}
-
-export interface HandElementConfig {
-  id?: string
-  imageUrl?: string
-  fill?: string
-  rotationCenter?: RotationCenter
-  targetHeight?: number
-  moveDy?: number
-  left?: number
-  top?: number
-}
+import { HandElementConfig, RotationCenter } from '@/types/elements'
 
 export const useHourHandStore = defineStore('hourHandElement', {
   state: () => {

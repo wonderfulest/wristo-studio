@@ -90,7 +90,7 @@ import moment from 'moment'
 import { getFavorites, toggleFavorite } from '@/api/favorites'
 import { ElMessageBox } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
-import { ApiResponse, Design } from '@/types/api'
+import { ApiResponse, Design } from '@/types/api/api'
 import { UpdateDesignParams } from '@/api/wristo/design'
 
 const router = useRouter()
@@ -222,7 +222,7 @@ const copyDesign = async (design: Design) => {
       description: design.description,
     }
     const response: ApiResponse<Design> = await designApi.createDesign(newDesignData)
-    console.log('111 createDesign', response)
+    
     if (response.code === 0 && response.data) {
     const updateDesignData = {
       uid: response.data.id,
@@ -230,7 +230,7 @@ const copyDesign = async (design: Design) => {
       configJson: design.configJson,
     } as UpdateDesignParams
     const updateResponse = await designApi.updateDesign(updateDesignData)
-    console.log('222 updateDesign', updateResponse)
+    
     if (updateResponse.code === 0 && updateResponse.data) {
         messageStore.success('复制成功')
         // 可以选择是否跳转到我的设计页面

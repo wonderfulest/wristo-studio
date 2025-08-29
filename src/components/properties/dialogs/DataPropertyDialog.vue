@@ -214,7 +214,7 @@ const initFormData = (data = null) => {
 const emit = defineEmits(['confirm'])
 
 const handleValueChange = (value) => {
-  console.log('Value changed:', value)
+  
 }
 
 const handleConfirm = async () => {

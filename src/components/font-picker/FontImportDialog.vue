@@ -259,7 +259,7 @@ const confirmUpload = async () => {
     if (!rawUrl) {
       try {
         const sys = await getSystemFonts()
-        console.log('222 系统字体:', sys)
+        
         const hit = (sys.data || []).find((f: any) => f.slug === created.slug)
         rawUrl = hit?.ttfFile?.url || ''
       } catch {}

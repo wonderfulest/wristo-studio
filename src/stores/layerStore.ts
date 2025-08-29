@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from './baseStore'
 import type { LayerElement } from '@/types/layer'
+import { FabricElement } from '@/types/element'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -8,23 +9,32 @@ export const useLayerStore = defineStore('layerStore', {
     const baseStore = useBaseStore()
     return {
       baseStore,
-      layers: [] as LayerElement[]
+      layers: [] as LayerElement[] 
     }
   },
 
   // getters
   getters: {
-    allLayers: (state): LayerElement[] => state.layers
+    allLayers: (state): LayerElement[] => {
+      return state.layers
+    }
   },
-
   // actions
   actions: {
-    addLayer(element: LayerElement): void {
-      if (!element) {
+    addLayer(element: FabricElement): void {
+      if (!element || !element.id || !element.eleType) {
         console.error('无效的元素')
         return
       }
-      this.layers.push(element)
+      const layerElement: LayerElement = {
+        id: element.id,
+        visible: true,
+        locked: false,
+        selectable: true,
+        eleType: element.eleType,
+        element: element
+      }
+      this.layers.push(layerElement)
     },
     removeLayer(layerId: string): void {
       const index = this.layers.findIndex((layer) => layer.id === layerId)
@@ -39,13 +49,12 @@ export const useLayerStore = defineStore('layerStore', {
       }
     },
     toggleLayerLock(layerId: string): void {
-      console.log('toggle layer lock', layerId)
-      const element = this.layers.find((l) => l.id === layerId)
-      if (element) {
-        element.locked = !element.locked
-        element.selectable = !element.locked
-        if (element.locked) {
-          element.set?.('active', false)
+      const layer = this.layers.find((l) => l.id === layerId)
+      if (layer) {
+        layer.locked = !layer.locked
+        layer.selectable = !layer.locked
+        if (layer.locked) {
+          layer.element?.set?.('active', false)
           this.baseStore.canvas?.discardActiveObject?.()
           this.baseStore.canvas?.renderAll?.()
         }

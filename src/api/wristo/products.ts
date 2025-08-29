@@ -1,12 +1,12 @@
 import instance from '@/config/axios'
-import { ApiResponse } from '@/types/api'
+import { ApiResponse } from '@/types/api/api'
 import type { 
   Product, 
   GoToLiveDto, 
   ProductUpdateDto,
   CreateProductDto,
 } from '@/types/product'
-import type { Bundle } from '@/types/bundle'
+import type { Bundle } from '@/types/api/bundle'
 
 /**
  * 产品相关API接口

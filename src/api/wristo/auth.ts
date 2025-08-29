@@ -1,7 +1,7 @@
 import instance from '@/config/axios'
 import type { UserInfo } from '@/types/user'
 import type { SsoTokenRequestDto, SsoTokenResponseData } from '@/types/sso'
-import { ApiResponse } from '@/types/api'
+import { ApiResponse } from '@/types/api/api'
 
 /**
  * Logout

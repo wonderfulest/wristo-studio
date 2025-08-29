@@ -1,7 +1,7 @@
 import type { UserBase } from './user'
 import type { Image } from './image'
-import type { Category } from './category'
-import type { Bundle } from './bundle'
+import type { Category } from './api/category'
+import type { Bundle } from './api/bundle'
 
 export interface Product {
   appId: number

@@ -199,7 +199,7 @@ import dayjs from 'dayjs'
 import { Star, Edit, Delete, Download, Promotion, DocumentCopy, Collection } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
-import { ApiResponse, PageResponse } from '@/types/api'
+import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
@@ -311,13 +311,13 @@ const fetchDesigns = async () => {
       orderBy: `${sortField.value}:${sortOrder.value}`,
       populate: 'user,product,payment,release,cover,category,bundle'
     }
-    console.log('API请求参数:', params)
+    
     const response: ApiResponse<PageResponse<Design>> = await designApi.getDesignPage(params)
-    console.log('API响应:', response)
+    
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
       total.value = response.data.total
-      console.log('设计列表获取成功，数量:', designs.value.length)
+      
     } else {
       console.error('API返回错误:', response)
       messageStore.error(response.msg || 'Failed to get design list')
@@ -378,7 +378,7 @@ const copyDesign = async (design: Design) => {
       uid: design.designUid
     } as CreateCopyDesignParams
     const createResponse = await designApi.createDesignByCopy(newDesignData) as ApiResponse<Design>
-    console.log('111 createDesign', createResponse)
+    
     if (createResponse.code === 0 && createResponse.data) {
       messageStore.success('Copy successful')
       await fetchDesigns()
@@ -467,7 +467,7 @@ const handleRefresh = (event: any ) => {
 
 // 首次挂载时加载数据
 onMounted(() => {
-  console.log('MyDesigns组件挂载，用户信息:', userStore.userInfo)
+  
   fetchDesigns()
 })
 

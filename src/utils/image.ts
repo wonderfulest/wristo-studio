@@ -11,7 +11,7 @@ export const uploadHandSVG = async (svgUrl: string, type: UploadType) => {
     formData.append('file', blob, `hand.svg`)
     formData.append('type', type)
     const res = await uploadScreenshot(formData)
-    console.log('uploadHandSVG res', res)
+    
     return res.data as any
   } catch (error) {
     console.error('上传指针SVG失败:', error)
@@ -21,7 +21,7 @@ export const uploadHandSVG = async (svgUrl: string, type: UploadType) => {
 
 // 上传图片文件
 export const uploadImageFile = async (blobUrl: string, type: UploadType) => {
-  console.log('uploadImageFile', blobUrl, type)
+  
   try {
     const response = await fetch(blobUrl)
     const blob = await response.blob()
@@ -29,7 +29,7 @@ export const uploadImageFile = async (blobUrl: string, type: UploadType) => {
     formData.append('file', blob, 'background.png')
     formData.append('type', type)
     const res = await uploadScreenshot(formData)
-    console.log('uploadImageFile res', res)
+    
     return res.data as any
   } catch (error) {
     console.error('上传图片失败:', error)
@@ -57,7 +57,7 @@ export const uploadBase64Image = async (base64Data: string, type: UploadType) =>
     formData.append('file', blob, 'background.png')
     formData.append('type', type)
     const res = await uploadScreenshot(formData)
-    console.log('uploadBase64Image res', res)
+    
     return res as any
   } catch (error) {
     console.error('Failed to upload base64 image:', error)

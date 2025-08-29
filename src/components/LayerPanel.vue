@@ -43,7 +43,7 @@ import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
-import { elementConfigs } from '@/config/elements'
+import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
 
 const layerStore = useLayerStore()
@@ -89,7 +89,7 @@ const setupElementListeners = () => {
 }
 
 const selectLayer = async (layer) => {
-  console.log('select layer', layer)
+  
   
   baseStore.canvas.discardActiveObject()
   if (layer.eleType === 'global') {
@@ -127,7 +127,7 @@ const toggleVisibility = (layer) => {
 }
 
 const toggleLock = (layer) => {
-  console.log('toggle lock', layer)
+  
   layerStore.toggleLayerLock(layer.id)
 }
 
@@ -135,7 +135,7 @@ const toggleLock = (layer) => {
 const handleDragEnd = () => {
   // 直接使用 draggable 提供的顺序更新画布
   elements.value.forEach((element, index) => {
-    console.log('drag move element', element, index)
+    
     baseStore.canvas.moveObjectTo(element, index)
   })
   baseStore.canvas.renderAll()

@@ -321,7 +321,7 @@ import {
   Minus,
   CircleCheck
 } from '@element-plus/icons-vue'
-import { elementConfigs } from '@/config/elements'
+import { elementConfigs } from '@/config/elements/elements'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
@@ -367,7 +367,7 @@ document.addEventListener('keydown', (e) => {
 
 // 添加元素（参考 AddElementPanel 实现）
 const handleAddElement = async (category, elementType, overrides = {}) => {
-  console.log('Add Element:', category, elementType)
+  
   try {
     let config
     if (category === 'image') {
@@ -406,7 +406,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
-        console.log('Add Element 2223:', config)
+        
         addElement(elementType, config)
       } else {
         console.warn(`No add element handler registered for type: ${elementType}`)

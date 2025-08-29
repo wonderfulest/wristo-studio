@@ -89,7 +89,7 @@ const handleUpload = async (event) => {
   try {
     // 创建文件URL
     const fileUrl = URL.createObjectURL(file)
-    console.log('handleUpload fileUrl', fileUrl)
+    
     let imageUploadUrl = ''
     if (fileUrl && fileUrl.startsWith('data:')) {
       imageUploadUrl = await uploadBase64Image(fileUrl, 'hand')

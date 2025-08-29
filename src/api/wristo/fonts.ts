@@ -1,6 +1,6 @@
 import instance from '@/config/axios'
 import type { UploadFontMeta, DesignFontVO, DesignFontSearchDTO } from '@/types/font'
-import type { ApiResponse, PageResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/types/api/api'
 
 /**
  * 上传字体文件

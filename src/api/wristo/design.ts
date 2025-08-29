@@ -2,7 +2,7 @@ import instance from '@/config/axios'
 import type { 
   PageResponse,
   ApiResponse,
-} from '@/types/api'
+} from '@/types/api/api'
 import type { 
   Design, 
   DesignPageParams,

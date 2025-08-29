@@ -1,14 +1,8 @@
 export type HorizontalAlign = 'left' | 'center' | 'right'
 export type VerticalAlign = 'top' | 'center' | 'bottom'
 
-export interface AlignOption<T extends string> {
+export interface OptionFormat<T> {
   value: T
-  label: string
-  icon: string
-}
-
-export interface OptionFormat {
-  value: number
   label: string
   example: string
 }

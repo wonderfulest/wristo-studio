@@ -71,7 +71,7 @@ const propertiesStore = usePropertiesStore()
 
 const updateElement = async () => {
   try {
-    console.log('updateElement', props.element)
+    
     await formRef.value.validate()
     dataStore.updateElement(props.element, {
       dataProperty: props.element.dataProperty,

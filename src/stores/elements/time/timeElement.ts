@@ -5,10 +5,10 @@ import { nanoid } from 'nanoid'
 import moment from 'moment'
 import { FabricText, TextProps } from 'fabric'
 import { TimeFormatOptions } from '@/config/settings'
+import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
-import type { TimeElementConfig } from '@/types/elementConfig'
-import { TimeElementOptions } from '@/types/elementOptions'
 
+type TimeElementOptions = TimeElementConfig & TextProps
 
 export const useTimeStore = defineStore('timeStore', {
   state: () => {
@@ -32,7 +32,6 @@ export const useTimeStore = defineStore('timeStore', {
       return moment(date).format(format)
     },
     async addElement(options: TimeElementConfig): Promise<FabricText> {
-      console.log('add time element', options)
       if (!this.baseStore.canvas) {
         throw new Error('Canvas is not initialized, cannot add time element')
       }
@@ -50,11 +49,11 @@ export const useTimeStore = defineStore('timeStore', {
           fontFamily: options.fontFamily ?? 'roboto-condensed-regular',
           formatter: options.formatter,
         }
-        console.log('timeOptions', timeOptions)
+        
         const element = new FabricText(text, timeOptions as TimeElementOptions)
-        this.baseStore.canvas.add(element as any)
-        this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.setActiveObject(element as any)
+        this.baseStore.canvas.add(element as FabricText)
+        this.layerStore.addLayer(element as FabricText)
+        this.baseStore.canvas.setActiveObject(element as FabricText)
         try {
           this.timeElements.push(element)
         } catch {}
@@ -86,9 +85,9 @@ export const useTimeStore = defineStore('timeStore', {
         canvas.renderAll && canvas.renderAll()
       }
     },
-    updateElement(element: any, config: any) {
+    updateElement(element: FabricElement, config: TimeElementConfig) {
       if (!this.baseStore.canvas) return
-      const obj: any = this.baseStore.canvas.getObjects().find((o: any) => o.id === element.id)
+      const obj: FabricElement = this.baseStore.canvas.getObjects().find((o: any) => o.id === element.id)
       if (!obj) return
 
       const currentLeft = obj.left
@@ -131,31 +130,29 @@ export const useTimeStore = defineStore('timeStore', {
     },
     encodeConfig(element: FabricElement): TimeElementConfig {
       const config = {
-        id: element.id || '',
-        type: 'time',
-        x: element.left || 0,
-        y: element.top || 0,
-        originX: element.originX || 'center',
-        originY: element.originY || 'center',
+        id: element.id,
+        eleType: 'time',
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
         fontFamily: element.fontFamily || 'roboto-condensed-regular',
         fontSize: element.fontSize || 14,
         fill: element.fill || '#ffffff',
-        formatter: element.formatter ? +element.formatter : 0,
       }
       return config as TimeElementConfig
     },
     decodeConfig(config: TimeElementConfig): Partial<FabricElement> {
       const elementConfig = {
         id: config.id,
-        type: 'time',
-        left: config.x,
-        top: config.y,
+        eleType: 'time',
+        left: config.left,
+        top: config.top,
         fontSize: config.fontSize,
         fontFamily: config.fontFamily,
         fill: config.fill,
         originX: config.originX,
         originY: config.originY,
-        formatter: config.formatter,
       }
       return elementConfig as Partial<FabricElement>
     },

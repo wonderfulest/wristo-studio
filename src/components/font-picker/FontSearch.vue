@@ -117,7 +117,7 @@ const onFilterChange = () => {
 
 // Precise local style filters using metadata (fallback to heuristic if missing)
 const applyLocalStyleFilters = (items: FontItem[]) => {
-  console.log('Apply local style filters:', items, monospaceChecked.value, italicChecked.value)
+  
   return items.filter((f) => {
     // monospace
     if (monospaceChecked.value && (f as any).isMonospace !== true) return false
@@ -128,11 +128,11 @@ const applyLocalStyleFilters = (items: FontItem[]) => {
 }
 
 const filterFonts = async () => {
-  console.log('Filter fonts:', monospaceChecked.value, italicChecked.value)
+  
   // local filter
   const local = fontStore.searchFonts(searchQuery.value)
   filteredFonts.value = applyLocalStyleFilters(local)
-  console.log('Local filter results:', filteredFonts.value)
+  
   // remote search whenever query is not empty
   remoteSearchResults.value = []
   try {
@@ -146,7 +146,7 @@ const filterFonts = async () => {
       onlyApprovedActive: true
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
-    console.log('Remote search results:', list)
+    
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
     const serverList = list.filter((font: DesignFontVO) => {
       const val = font.slug

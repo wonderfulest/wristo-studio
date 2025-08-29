@@ -1,8 +1,6 @@
-import { ElementConfig } from "../element"
+import type { BaseElementConfig } from './base'
 
-export interface BaseTextConfig extends ElementConfig {
-  left: number
-  top: number
+export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
   fill: string
   fontFamily: string
@@ -11,23 +9,19 @@ export interface BaseTextConfig extends ElementConfig {
 }
 
 export interface DataElementConfig extends BaseTextConfig {
-  eleType: 'data'
-  dataProperty?: string | null
-  goalProperty?: string | null
+  eleType: 'data' | 'icon' | 'label' | 'unit'
+  dataProperty?: string
+  goalProperty?: string
 }
 
-export interface IconElementOptions extends BaseTextConfig {
+export interface IconElementConfig extends DataElementConfig {
   eleType: 'icon'
-  iconFontFamily?: string
-  dataProperty: string 
-  goalProperty: string
 }
 
-
-export interface LabelElementConfig extends BaseTextConfig {
+export interface LabelElementConfig extends DataElementConfig {
   eleType: 'label'
-  dataProperty?: string | null
-  goalProperty?: string | null
-  text?: string
-  originalText?: string
+}
+
+export interface UnitElementConfig extends DataElementConfig {
+  eleType: 'unit'
 }

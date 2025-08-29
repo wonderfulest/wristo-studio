@@ -99,7 +99,7 @@ const ensureFontBySlug = async (slug: string, family: string) => {
     if (!url) {
       try {
         const sys = await getSystemFonts()
-        console.log('1111 系统字体:', sys)
+        
         const hit = (sys.data || []).find((f: any) => f.slug === slug)
         url = hit?.ttfFile?.url || ''
       } catch {}

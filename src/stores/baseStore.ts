@@ -271,7 +271,7 @@ export const useBaseStore = defineStore('baseStore', {
     addBackground(): void {
       const editorStore = useEditorStore()
       const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
-      console.log('add Background', center)
+      
 
       // 创建表盘背景圆
       this.watchFaceCircle = new Circle({
@@ -289,7 +289,7 @@ export const useBaseStore = defineStore('baseStore', {
 
       // 设置背景图片
       const currentBgImage = this.$state.themeBackgroundImages[this.$state.currentThemeIndex]
-      console.log('currentBgImage', currentBgImage)
+      
       if (currentBgImage) {
         // fabric v6: fromURL returns a Promise
         FabricImage.fromURL(currentBgImage).then((img: AnyObject) => {
@@ -393,7 +393,7 @@ export const useBaseStore = defineStore('baseStore', {
         name: this.watchFaceName,
         configJson: JSON.stringify(this.generateConfig())
       })
-      console.log('111 createDesign', res)
+      
       this.id = res.data.documentId
       return res.code === 0
     },
@@ -477,7 +477,7 @@ export const useBaseStore = defineStore('baseStore', {
             clipPath: this.watchFaceCircle
           })
           this.canvas?.renderAll()
-          console.log('3333 watchFaceCircle', this.watchFaceCircle)
+          
         }
         img.onerror = (error) => { 
           console.error('加载图片出错', error)

@@ -1,0 +1,1 @@
+export { elementConfigs } from './map'

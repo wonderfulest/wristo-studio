@@ -1,12 +1,9 @@
-import { ElementConfig } from "../element"
+import type { BaseElementConfig } from './base'
 
-export interface BaseChartConfig extends ElementConfig {
-  left: number
-  top: number
+export interface BaseChartConfig extends BaseElementConfig {
   width: number
   height: number
-  originX: 'left' | 'center' | 'right'
-  originY: 'top' | 'center' | 'bottom'
+  fontSize?: number
 }
 
 export interface BarChartElementConfig extends BaseChartConfig {

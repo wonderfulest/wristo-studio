@@ -187,7 +187,7 @@ const currentBackgroundImage = computed({
 
 // 处理背景图片变化
 const handleBackgroundImageChange = (file) => {
-  console.log('开始处理背景图片变化', file)
+  
   if (!file || !file.raw) {
     console.warn('文件无效', file)
     return
@@ -276,7 +276,7 @@ const updateWpayPrice = async () => {
 
 // Garmin 图片上传
 const handleGarminImageChange = (file) => {
-  console.log('开始处理 Garmin 图片变化', file)
+  
   if (!file || !file.raw) {
     console.warn('文件无效', file)
     return

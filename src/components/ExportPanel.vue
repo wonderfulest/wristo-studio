@@ -175,7 +175,7 @@ const uploadScreenshot = async () => {
     const screenshot = await baseStore.captureScreenshot(true)
     if (screenshot) {
       const screenshotUrl = await uploadBase64Image(screenshot, 'screenshot')
-      console.log('screenshotUrl', screenshotUrl)
+      
       return screenshotUrl
     }
   } catch (screenshotError) {
@@ -210,7 +210,7 @@ const saveConfig = async () => {
       data.documentId = baseStore.id
     }
     // const designRes = await saveDddddDesign(data)
-    // console.log('自动保存成功', designRes)
+    // 
     // // 如果 query 中 id 为空，则更新 query 中的 id
     // if (!router.currentRoute.value.query.id) {
     //   router.push({
@@ -228,7 +228,7 @@ const saveConfig = async () => {
 // 上传配置到服务器
 const uploadApp = async () => {
   const config = baseStore.generateConfig()
-  console.log('上传配置', config)
+  
   if (!config) {
     messageStore.warning('没有可上传的配置')
     return -1
@@ -281,7 +281,7 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    console.log('screenshotUrl', screenshotUrl)
+    
 
     // 配置更新
     currentStatus = '更新配置信息...'
@@ -307,13 +307,13 @@ const uploadApp = async () => {
       }
     }
 
-    console.log('上传配置', data)
+    
     // if (baseStore.id) {
     //   data.documentId = baseStore.id
     // }
     // 创建或更新表盘设计
     const res = await designApi.updateDesign(data)
-    console.log('updateDesign 666', res)
+    
     // 更新 baseStore.id
     baseStore.id = res.data.documentId
 

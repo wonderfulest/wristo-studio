@@ -159,7 +159,7 @@ const addGuideLine = (canvas, orientation, position) => {
       name: 'guideLine'
     }
   )
-  console.log('添加辅助线: x1:', line.x1, 'y1:', line.y1, 'x2:', line.x2, 'y2:', line.y2)
+  
   canvas.add(line)
   canvas.requestRenderAll()
 }
@@ -201,7 +201,7 @@ const createVerticalGuideline = (x) => {
   const centerArea = document.querySelector('.center-area')
   const height = centerArea ? centerArea.clientHeight - RULER_OFFSET : WATCH_SIZE.value // 减去水平标尺高度
 
-  console.log('创建垂直辅助线: x1:', x, 'y1:', -height, 'x2:', x, 'y2:', height * 2)
+  
   const line = new Line([x, -height, x, height * 2], {
     stroke: '#0a90ff',
     strokeWidth: 1,
@@ -393,7 +393,7 @@ const updateZoom = () => {
     0, editorStore.zoomLevel,
     canvasOffset.value.x, canvasOffset.value.y
   ])
-  console.log('更新画布尺寸', WATCH_SIZE.value * editorStore.zoomLevel)
+  
   // 更新画布尺寸
   const canvasSize = WATCH_SIZE.value * editorStore.zoomLevel
   baseStore.canvas.setWidth(canvasSize)
@@ -520,7 +520,7 @@ const handleKeyUp = (e) => {
 const backgroundColor = ref(editorStore.backgroundColor)
 
 const refreshElementSettings = (opt) => {
-  console.log('refreshElementSettings', opt)
+  
   emitter.emit('refresh-element-settings', opt)
 }
 

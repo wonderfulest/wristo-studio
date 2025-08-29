@@ -1,7 +1,7 @@
 // Types for status elements
-export interface BatteryElementConfig {
-  left?: number
-  top?: number
+import type { BaseElementConfig } from './base'
+
+export interface BatteryElementConfig extends BaseElementConfig {
   width?: number
   height?: number
   headWidth?: number
@@ -24,9 +24,7 @@ export interface BatteryElementConfig {
   } | null
 }
 
-export interface MoveBarElementConfig {
-  left?: number
-  top?: number
+export interface MoveBarElementConfig extends BaseElementConfig {
   width?: number
   height?: number
   separator?: number

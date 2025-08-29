@@ -133,7 +133,7 @@ const updateColor = () => {
 
 // 处理选择
 const handleSelect = (value) => {
-  console.log('handleSelect romans dial', value)
+  
   romansStore.updateElement(props.element, {
     style: value
   })
