@@ -1,4 +1,5 @@
 import type { DataTypeOption } from '@/types/settings'
+import { usePropertiesStore } from '@/stores/properties'
 
 export const DataTypeOptions: DataTypeOption[] = [
   {
@@ -539,15 +540,26 @@ export function getMetricBySymbol(metricSymbol: string): DataTypeOption {
 }
 
 export function getMetricByProperty(
-  dataProperty: string,
-  propertiesStore: any,
+  propertyKey: string
 ): DataTypeOption {
-  if (!dataProperty || !propertiesStore) return DataTypeOptions[0]
-  const metric = propertiesStore[dataProperty].options.find((item: any) => {
-    return item.value == propertiesStore[dataProperty].value
-  })
+  if (!propertyKey) return DataTypeOptions[0]
+  const propertiesStore = usePropertiesStore()
+  console.log('getMetricByProperty:', propertyKey)
+  console.log('propertiesStore:', propertiesStore.allProperties)
+  const metricProperty = propertiesStore.allProperties[propertyKey]
+  if (!metricProperty) {
+    return DataTypeOptions[0]
+  }
+  const metric = DataTypeOptions.find((item) => item.value === metricProperty.value)
   if (!metric) {
     return DataTypeOptions[0]
   }
-  return metric as DataTypeOption
+  return metric
+  // const metric = propertiesStore.allProperties[propertyKey].options.find((item: any) => {
+  //   return item.value == propertiesStore[dataProperty].value
+  // })
+  // if (!metric) {
+  //   return DataTypeOptions[0]
+  // }
+  // return metric as DataTypeOption
 }

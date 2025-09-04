@@ -36,7 +36,19 @@ export const getAddElement = <T extends ElementType>(elementType: T): AddElement
   if (!addElement) {
     throw new Error(`No add-element handler found for element type: ${elementType}`)
   }
-  return addElement as AddElementFn<T>
+  // 包装以兼容两种调用方式：
+  // 1) 旧：addElement(elementType, config)
+  // 2) 新：addElement(config)
+  const wrapped: AddElementFn<T> = ((...args: any[]) => {
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+      // 仅传入 config 的情况
+      return (addElement as AddElementFn<T>)(elementType, args[0])
+    }
+    // 保持对旧签名的兼容
+    return (addElement as any)(...args)
+  }) as AddElementFn<T>
+
+  return wrapped
 }
 
 export const getEncoder = <T extends ElementType>(elementType: T): EncoderFn<T> => {

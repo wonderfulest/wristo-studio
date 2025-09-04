@@ -7,5 +7,5 @@ export interface TimeElementConfig extends TextElementConfig {
 
 export interface DateElementConfig extends TextElementConfig {
   eleType: 'date'
-  dateFormatter: number
+  formatter: number
 }

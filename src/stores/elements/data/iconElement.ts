@@ -5,7 +5,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
-import { getMetricBySymbol } from '@/config/settings'
+import { getMetricByProperty, getMetricBySymbol } from '@/config/settings'
 import { DataTypeOption } from '@/types/settings'
 
 export const useIconStore = defineStore('iconElement', {
@@ -29,6 +29,10 @@ export const useIconStore = defineStore('iconElement', {
       }
       try {
         type IconProps = TextProps & IconElementConfig
+       
+        // Backward compatibility: some saved configs used fontFamily/iconSize instead of iconFontFamily/iconSize
+        const resolvedFontFamily = options.iconFontFamily ?? (options as any).fontFamily ?? this.defaults.iconFontFamily
+        const resolvedFontSize = Number(options.iconSize ?? (options as any).fontSize ?? this.defaults.fontSize)
         const iconOptions: Partial<IconProps> = {
           id: options.id || nanoid(),
           eleType: 'icon',
@@ -36,17 +40,16 @@ export const useIconStore = defineStore('iconElement', {
           top: options.top,
           originX: options.originX as 'center' | 'left' | 'right',
           originY: options.originY as 'center' | 'top' | 'bottom',
-          fill: options.fill ?? this.defaults.fill,
-          fontSize: Number(options.fontSize ?? this.defaults.fontSize),
-          fontFamily: options.iconFontFamily,
+          fill: (options.fill as string) ?? this.defaults.fill,
+          fontSize: resolvedFontSize,
+          fontFamily: resolvedFontFamily,
           metricSymbol: options.metricSymbol,
+          dataProperty: options.dataProperty,
+          goalProperty: options.goalProperty,
           selectable: true,
-          hasControls: true,
-          hasBorders: true,
         }
-
-        const metric: DataTypeOption = getMetricBySymbol(options.metricSymbol)
-        const element = new FabricText(metric.icon || '1', iconOptions as IconProps)
+        const metric = getMetricByProperty(options.dataProperty || options.goalProperty || '')
+        const element = new FabricText(metric.icon, iconOptions as IconProps)
         this.baseStore.canvas.add(element as any)
         this.layerStore.addLayer(element as any)
         this.baseStore.canvas.setActiveObject(element as any)
@@ -100,11 +103,13 @@ export const useIconStore = defineStore('iconElement', {
         top: element.top,
         originX: element.originX,
         originY: element.originY,
-        fontFamily: element.fontFamily,
-        fontSize: element.fontSize,
-        fill: element.fill,
-        iconSize: element.fontSize,
+        iconFontFamily: element.fontFamily as string,
+        iconSize: Number(element.fontSize),
+        fontSize: Number(element.fontSize),
+        fill: element.fill as string,
         metricSymbol: element.metricSymbol,
+        dataProperty: element.dataProperty,
+        goalProperty: element.goalProperty,
       }
       return config as IconElementConfig
     },
@@ -115,12 +120,14 @@ export const useIconStore = defineStore('iconElement', {
         eleType: 'icon',
         left: config.left,
         top: config.top,
-        fontSize: config.iconSize,
-        fontFamily: config.iconFontFamily,
-        fill: config.fill,
+        fontSize: Number(config.iconSize ?? (config as any).fontSize),
+        fontFamily: (config.iconFontFamily ?? (config as any).fontFamily) as string,
+        fill: config.fill as string,
         originX: config.originX,
         originY: config.originY,
         metricSymbol: config.metricSymbol,
+        dataProperty: config.dataProperty,
+        goalProperty: config.goalProperty,
       }
     },
   },

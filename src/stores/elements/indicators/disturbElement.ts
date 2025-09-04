@@ -1,32 +1,25 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
-import { Text as FabricText } from 'fabric'
+import { FabricText } from 'fabric'
+import type { IndicatorElementConfig } from '@/types/elements'
+import type { FabricElement } from '@/types/element'
 
-interface IndicatorConfig {
-  left?: number
-  top?: number
-  fontSize?: number
-  fontFamily?: string
-  color?: string
-}
 
 export const useDisturbStore = defineStore('disturbElement', {
-  state: () => ({
-    elements: [] as any[],
-  }),
+  state: () => ({}),
 
   actions: {
-    addElement(config: IndicatorConfig = {}) {
+    addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) return
 
       const disturbIcon = new FabricText('\u0021', {
         eleType: 'disturb',
-        left: config.left ?? 100,
-        top: config.top ?? 100,
-        fontSize: config.fontSize ?? 24,
-        fontFamily: config.fontFamily ?? 'Yoghurt-One',
-        fill: config.color ?? '#ffffff',
+        left: config.left,
+        top: config.top,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
         selectable: true,
         evented: true,
         originX: 'center',
@@ -36,41 +29,41 @@ export const useDisturbStore = defineStore('disturbElement', {
       disturbIcon.set('text', '\u0021')
       baseStore.canvas.add(disturbIcon as any)
       baseStore.canvas.setActiveObject(disturbIcon as any)
-      this.elements.push(disturbIcon)
       baseStore.canvas.renderAll()
     },
 
     updateDisturbStatus(status: boolean) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) return
-
-      this.elements.forEach((element: any) => {
-        if (element.eleType === 'disturb') {
-          element.set('fill', status ? '#ffffff' : '#666666')
-          baseStore.canvas?.renderAll()
-        }
-      })
+      void status
     },
 
-    encodeConfig(element: any) {
-      return {
-        type: 'disturb',
-        x: element.left,
-        y: element.top,
-        size: element.fontSize,
-        font: element.fontFamily,
-        color: element.fill,
+    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+      const config: Partial<IndicatorElementConfig> = {
+        eleType: 'disturb',
+        id: element.id,
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fill: element.fill,
       }
+      return config as IndicatorElementConfig
     },
 
-    decodeConfig(config: any) {
+    decodeConfig(config: IndicatorElementConfig): Partial<FabricElement> {
       return {
         eleType: 'disturb',
-        left: config.x,
-        top: config.y,
-        fontSize: config.size,
-        fontFamily: config.font,
-        fill: config.color,
+        id: (config as any).id,
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
       }
     },
   },

@@ -5,15 +5,18 @@ export interface IconElementConfig extends TextElementConfig {
   metricSymbol: string
   iconSize: number
   iconFontFamily: string
+  dataProperty?: string
+  goalProperty?: string
 }
 
 export interface DataElementConfig extends TextElementConfig {
   eleType: 'data'
   metricSymbol: string
+  dataProperty?: string
+  goalProperty?: string
 }
 
 export interface IndicatorElementConfig extends TextElementConfig {
-  eleType: 'indicator'
-  metricSymbol: string
+  eleType: 'bluetooth' | 'disturb' | 'alarms' | 'notification'
 }
 

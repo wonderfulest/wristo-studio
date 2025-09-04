@@ -1,22 +1,15 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
-import { Text as FabricText } from 'fabric'
-
-interface IndicatorConfig {
-  left?: number
-  top?: number
-  fontSize?: number
-  fontFamily?: string
-  fill?: string
-}
+import { FabricText } from 'fabric'
+import { IndicatorElementConfig } from '@/types/elements'
+import { FabricElement } from '@/types/element'
 
 export const useAlarmsStore = defineStore('alarmsElement', {
   state: () => ({
-    elements: [] as any[],
   }),
 
   actions: {
-    addElement(config: IndicatorConfig = {}) {
+    addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) return
 
@@ -29,48 +22,42 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         fill: config.fill,
         selectable: true,
         evented: true,
-        originX: 'center',
-        originY: 'center',
+        originX: config.originX,
+        originY: config.originY,
       } as any)
 
       alarmsIcon.set('text', '\u0024')
       baseStore.canvas.add(alarmsIcon as any)
       baseStore.canvas.setActiveObject(alarmsIcon as any)
-      this.elements.push(alarmsIcon)
       baseStore.canvas.renderAll()
     },
 
-    updateAlarmsStatus(status: boolean) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
-
-      this.elements.forEach((element: any) => {
-        if (element.eleType === 'alarms') {
-          element.set('fill', status ? '#ffffff' : '#666666')
-          baseStore.canvas?.renderAll()
-        }
-      })
-    },
-
-    encodeConfig(element: any) {
-      return {
-        type: 'alarms',
-        x: element.left,
-        y: element.top,
-        size: element.fontSize,
-        font: element.fontFamily,
-        color: element.fill,
+    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+      const config: Partial<IndicatorElementConfig> = {
+        eleType: 'alarms',
+        id: element.id,
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fill: element.fill,
       }
+      return config as IndicatorElementConfig
     },
 
-    decodeConfig(config: any) {
+    decodeConfig(config: IndicatorElementConfig): Partial<FabricElement> {
       return {
-        eleType: 'bluetooth',
-        left: config.x,
-        top: config.y,
-        fontSize: config.size,
-        fontFamily: config.font,
-        fill: config.color,
+        eleType: 'alarms',
+        id: config.id,
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
       }
     },
   },

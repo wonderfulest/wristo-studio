@@ -15,5 +15,5 @@ export const DEFAULT_DATE_CONFIG: DateElementConfig & EDITOR_ELEMENT = Object.as
   label: 'Date',
   eleType: 'date' as const,
 }, DEFAULT_TEXT_CONFIG, {
-  dateFormatter: DateFormatConstants.MMM_D_YYYY,
+  formatter: DateFormatConstants.MMM_D_YYYY,
 })

@@ -7,8 +7,12 @@ export type ElementConfig = AnyElementConfig
 
 // Represent runtime Fabric instances; allow optional custom properties
 export type FabricElement = FabricText & {
-  id?: string
+  id: string
   eleType?: string
   metricSymbol?: string
   metricValue?: string
+  formatter?: number
+  dataProperty?: string
+  goalProperty?: string
+  fill?: string
 }

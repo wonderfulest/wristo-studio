@@ -1,26 +1,19 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
-import { Text as FabricText } from 'fabric'
-
-interface IndicatorConfig {
-  left?: number
-  top?: number
-  fontSize?: number
-  fontFamily?: string
-  fill?: string
-}
+import { FabricText } from 'fabric'
+import type { IndicatorElementConfig } from '@/types/elements'
+import type { FabricElement } from '@/types/element'
 
 export const useBluetoothStore = defineStore('bluetoothElement', {
   state: () => ({
-    elements: [] as any[],
   }),
 
   actions: {
-    addElement(config: IndicatorConfig = {}) {
+    addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) return
 
-      const options: any = {
+      const bluetoothIcon = new FabricText('\u0022', {
         eleType: 'bluetooth',
         left: config.left,
         top: config.top,
@@ -29,53 +22,48 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         fill: config.fill,
         selectable: true,
         evented: true,
-        originX: 'center',
-        originY: 'center',
-      }
-
-      const bluetoothIcon = new FabricText('\u0022', options)
+        originX: config.originX,
+        originY: config.originY,
+      } as any)
 
       bluetoothIcon.set('text', '\u0022')
-
       baseStore.canvas.add(bluetoothIcon as any)
       baseStore.canvas.setActiveObject(bluetoothIcon as any)
-
-      this.elements.push(bluetoothIcon)
-
       baseStore.canvas.renderAll()
     },
 
     updateBluetoothStatus(status: boolean) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) return
-
-      this.elements.forEach((element: any) => {
-        if (element.eleType === 'bluetooth') {
-          element.set('fill', status ? '#ffffff' : '#666666')
-          baseStore.canvas?.renderAll()
-        }
-      })
+      void status
     },
 
-    encodeConfig(element: any) {
-      return {
-        type: 'bluetooth',
-        x: element.left,
-        y: element.top,
-        size: element.fontSize,
-        font: element.fontFamily,
-        color: element.fill,
+    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+      const config: Partial<IndicatorElementConfig> = {
+        eleType: 'bluetooth',
+        id: element.id,
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fill: element.fill,
       }
+      return config as IndicatorElementConfig
     },
 
-    decodeConfig(config: any) {
+    decodeConfig(config: IndicatorElementConfig): Partial<FabricElement> {
       return {
         eleType: 'bluetooth',
-        left: config.x,
-        top: config.y,
-        fontSize: config.size,
-        fontFamily: config.font,
-        fill: config.color,
+        id: (config as any).id,
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
       }
     },
   },

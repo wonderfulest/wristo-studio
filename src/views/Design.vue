@@ -217,21 +217,20 @@ const setupAutoSave = () => {
 const loadElements = async (elements: ElementConfig[]) => {
   try {
     for (const element of elements) {
-      
+      console.log(`load element: ${JSON.stringify(element)}`)
       const decodedElement = await decodeElement(element)
       if (!decodedElement) {
-        console.warn(`Unknown element type: ${element.type}`)
-        messageStore.warning(`未知的元素类型:${element.type}`)
+        console.warn(`Unknown element type: ${element.eleType}`)
+        messageStore.warning(`未知的元素类型:${element.eleType}`)
         continue
       }
 
-      const addElement = getAddElement(element.type)
+      const addElement = getAddElement(element.eleType)
       if (addElement) {
-        
-        await addElement(element.type, decodedElement)
+        await addElement(element.eleType, decodedElement)
       } else {
-        console.warn(`Unknown element type: ${element.type}`)
-        messageStore.warning(`未知的元素类型:${element.type}`)
+        console.warn(`Unknown element type: ${element.eleType}`)
+        messageStore.warning(`未知的元素类型:${element.eleType}`)
       }
     }
   } catch (error) {

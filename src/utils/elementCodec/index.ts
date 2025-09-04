@@ -15,9 +15,9 @@ export const encodeElement = (element: EncodableElement) => {
 
 // 解码元素
 export const decodeElement = (element: DecodableElement) => {
-  const decoder = getDecoder((element as any).type)
+  const decoder = getDecoder(element.eleType)
   if (!decoder) {
-    console.warn(`No decoder found for element type: ${(element as any).type}`)
+    console.warn(`No decoder found for element type: ${element.eleType}`)
     return null
   }
   return decoder(element)

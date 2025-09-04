@@ -158,11 +158,11 @@
               <span>卡路里</span>
             </el-menu-item>
             <el-menu-item index="health/distance" @click="handleAddElement('metric', 'data')">
-              <el-icon><Compass /></el-icon>
+              <el-icon><Aim /></el-icon>
               <span>距离</span>
             </el-menu-item>
             <el-menu-item index="health/floors" @click="handleAddElement('metric', 'data')">
-              <el-icon><Top /></el-icon>
+              <el-icon><TrendCharts /></el-icon>
               <span>楼层</span>
             </el-menu-item>
           </div>
@@ -229,7 +229,7 @@
           <div class="menu-group">
             <div class="menu-group-title">状态指示</div>
             <el-menu-item index="indicator/battery" @click="handleAddElement('status', 'battery')">
-              <el-icon><Battery /></el-icon>
+              <el-icon><Monitor /></el-icon>
               <span>电池电量</span>
             </el-menu-item>
             <el-menu-item index="indicator/bluetooth" @click="handleAddElement('indicator', 'bluetooth')">
@@ -241,11 +241,11 @@
               <span>消息通知</span>
             </el-menu-item>
             <el-menu-item index="indicator/disturb" @click="handleAddElement('indicator', 'disturb')">
-              <el-icon><Mute /></el-icon>
+              <el-icon><Bell /></el-icon>
               <span>勿扰时间</span>
             </el-menu-item>
             <el-menu-item index="indicator/alarms" @click="handleAddElement('indicator', 'alarms')">
-              <el-icon><AlarmClock /></el-icon>
+              <el-icon><Timer /></el-icon>
               <span>闹钟指示</span>
             </el-menu-item>
           </div>

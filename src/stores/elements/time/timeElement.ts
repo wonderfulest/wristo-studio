@@ -15,7 +15,6 @@ export const useTimeStore = defineStore('timeStore', {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
     return {
-      timeElements: [] as any[],
       updateInterval: null as number | null,
       baseStore,
       layerStore,
@@ -23,7 +22,7 @@ export const useTimeStore = defineStore('timeStore', {
   },
 
   actions: {
-    formatTime(date: Date, formatter: number | string | undefined) {
+    formatTime(date: Date, formatter: number ) {
       let format = '--'
       const formatterOption = TimeFormatOptions.find((option) => option.value == formatter)
       if (formatterOption) {
@@ -52,11 +51,8 @@ export const useTimeStore = defineStore('timeStore', {
         
         const element = new FabricText(text, timeOptions as TimeElementOptions)
         this.baseStore.canvas.add(element as FabricText)
-        this.layerStore.addLayer(element as FabricText)
+        this.layerStore.addLayer(element as any)
         this.baseStore.canvas.setActiveObject(element as FabricText)
-        try {
-          this.timeElements.push(element)
-        } catch {}
         this.baseStore.canvas.renderAll()
         return element
       } catch (error) {
@@ -129,7 +125,7 @@ export const useTimeStore = defineStore('timeStore', {
       this.baseStore.canvas.renderAll()
     },
     encodeConfig(element: FabricElement): TimeElementConfig {
-      const config = {
+      const config: TimeElementConfig = {
         id: element.id,
         eleType: 'time',
         left: element.left,
@@ -138,12 +134,13 @@ export const useTimeStore = defineStore('timeStore', {
         originY: element.originY,
         fontFamily: element.fontFamily || 'roboto-condensed-regular',
         fontSize: element.fontSize || 14,
-        fill: element.fill || '#ffffff',
+        fill: element.fill as string,
+        formatter: Number((element as any).formatter ?? 0),
       }
       return config as TimeElementConfig
     },
     decodeConfig(config: TimeElementConfig): Partial<FabricElement> {
-      const elementConfig = {
+      const elementConfig: Partial<FabricElement> = {
         id: config.id,
         eleType: 'time',
         left: config.left,
@@ -153,6 +150,7 @@ export const useTimeStore = defineStore('timeStore', {
         fill: config.fill,
         originX: config.originX,
         originY: config.originY,
+        formatter: config.formatter,
       }
       return elementConfig as Partial<FabricElement>
     },

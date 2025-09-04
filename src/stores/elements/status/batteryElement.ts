@@ -143,9 +143,9 @@ export const useBatteryStore = defineStore('batteryElement', {
         throw new Error('Invalid element')
       }
       return {
-        type: 'battery',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        eleType: 'battery',
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         width: Math.round(batteryBody.width),
         height: Math.round(batteryBody.height),
         bodyStroke: batteryBody.stroke,
@@ -167,7 +167,7 @@ export const useBatteryStore = defineStore('batteryElement', {
 
     decodeConfig(config: any): BatteryElementConfig {
       return {
-        eleType: 'battery' as any,
+        eleType: 'battery',
         left: config.x,
         top: config.y,
         width: config.width,
