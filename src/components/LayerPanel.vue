@@ -230,11 +230,14 @@ const getLayerBackgroundColor = (layer) => {
 }
 
 const generateColorFromId = (id) => {
+  // 确保 id 是字符串类型
+  const idStr = String(id || '')
+  
   // 根据元素类型设置基础色调
-  const baseHue = id.startsWith('data_') ? 200 : 0 // data 用蓝色系，goal 用红色系
+  const baseHue = idStr.startsWith('data_') ? 200 : 0 // data 用蓝色系，goal 用红色系
 
   // 从 id 中提取数字部分
-  const num = parseInt(id.split('_')[1]) || 0
+  const num = parseInt(idStr.split('_')[1]) || 0
 
   // 根据数字生成不同的色相偏移
   const hueOffset = (num * 30) % 360

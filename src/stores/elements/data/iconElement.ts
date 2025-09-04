@@ -20,48 +20,32 @@ export const useIconStore = defineStore('iconElement', {
     }
   },
   actions: {
-    async addElement(options: IconElementConfig): Promise<FabricText> {
+    async addElement(config: IconElementConfig): Promise<FabricText> {
       if (!this.baseStore?.canvas) {
         throw new Error('Canvas is not initialized, cannot add icon element')
       }
       try {
         type IconProps = TextProps & IconElementConfig
-       
+        const metric = usePropertiesStore().getMetricByOptions(config)
         const iconOptions: Partial<IconProps> = {
-          id: options.id || nanoid(),
+          id: config.id || nanoid(),
           eleType: 'icon',
-          left: options.left,
-          top: options.top,
-          originX: options.originX as 'center' | 'left' | 'right',
-          originY: options.originY as 'center' | 'top' | 'bottom',
-          fill: options.fill,
-          fontSize: Number(options.fontSize),
-          fontFamily: options.iconFontFamily || 'super-icons',
+          left: config.left,
+          top: config.top,
+          originX: config.originX as 'center' | 'left' | 'right',
+          originY: config.originY as 'center' | 'top' | 'bottom',
+          fill: config.fill,
+          fontSize: Number(config.fontSize),
+          fontFamily: config.iconFontFamily || 'super-icons',
           selectable: true,
           hasControls: true,
           hasBorders: true,
-          metricSymbol: options.metricSymbol,
-          dataProperty: options.dataProperty,
-          goalProperty: options.goalProperty,
+          metricSymbol: config.metricSymbol,
+          dataProperty: config.dataProperty,
+          goalProperty: config.goalProperty,
         }
-        console.log('metric icon', options.metricSymbol)
-       
-        const metric: DataTypeOption = this.propertiesStore.getMetricByOptions({
-          goalProperty: options.goalProperty,
-          dataProperty: options.dataProperty,
-          metricSymbol: options.metricSymbol,
-        })
-        console.log('metric icon', metric?.icon)
-        // 确保字符为字符串，且 0 不被当作 falsy
         const element = new FabricText(metric.icon, iconOptions as TextProps & IconElementConfig)
-        element.set({
-          dataProperty: metric.value,
-          goalProperty: metric.value,
-          metricSymbol: metric.metricSymbol,
-          metricValue: metric.value,
-        })
         this.baseStore.canvas?.add(element as FabricText)
-        // addLayer expects MinimalFabricLike with eleType/id; runtime object has those props
         this.layerStore.addLayer(element as any)
         this.baseStore.canvas?.setActiveObject(element as FabricText)
         this.baseStore.canvas?.renderAll()
@@ -138,11 +122,11 @@ export const useIconStore = defineStore('iconElement', {
         fill: config.fill as string,
         originX: config.originX,
         originY: config.originY,
-        metricSymbol: config.metricSymbol,
         iconFontFamily: config.iconFontFamily,
         iconSize: config.iconSize,
         dataProperty: config.dataProperty,
         goalProperty: config.goalProperty,
+        metricSymbol: config.metricSymbol,
       }
     },
   },

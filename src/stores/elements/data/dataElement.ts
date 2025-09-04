@@ -62,6 +62,7 @@ export const useDataStore = defineStore('dataElement', {
         top: config.top,
         dataProperty: config.dataProperty,
         goalProperty: config.goalProperty,
+        metricSymbol: config.metricSymbol,
       }
 
       Object.keys(updateProps).forEach((key) => {
@@ -88,9 +89,9 @@ export const useDataStore = defineStore('dataElement', {
         fill: element.fill as any,
         fontSize: element.fontSize as any,
         fontFamily: element.fontFamily as any,
-        metricSymbol: (element as any).metricSymbol ?? '',
         dataProperty: (element as any).dataProperty ?? null,
         goalProperty: (element as any).goalProperty ?? null,
+        metricSymbol: (element as any).metricSymbol ?? '',
       }
       return config as ElementConfig
     },
@@ -106,9 +107,9 @@ export const useDataStore = defineStore('dataElement', {
         fill: config.fill,
         fontSize: config.fontSize,
         fontFamily: (config.fontFamily) as string,
-        metricSymbol: (config as any).metricSymbol ?? '',
         dataProperty: (config as any).dataProperty ?? null,
         goalProperty: (config as any).goalProperty ?? null,
+        metricSymbol: (config as any).metricSymbol ?? '',
       }
       return result as Partial<FabricElement>
     },
