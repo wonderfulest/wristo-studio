@@ -56,57 +56,47 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { debounce } from 'lodash-es'
-import moment from 'moment'
-import emitter from '@/utils/eventBus'
-import { nanoid } from 'nanoid'
-import { DataTypeOptions, getMetricByProperty } from '@/config/settings'
 import { useBaseStore } from '@/stores/baseStore'
-import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
+import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()
-const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
 
-const props = defineProps({
-  elements: {
-    type: Array,
-    required: true,
-    default: () => []
-  }
-})
+const props = defineProps<{
+  elements: FabricElement[]
+}>()
 
-const getElementByType = (type) => {
+const getElementByType = (type: string): FabricElement | undefined => {
   return props.elements.find((obj) => obj.eleType === type)
 }
 
 // 设置项的响应式状态
-const groupElement = props.elements
 const iconElement = computed(() => getElementByType('icon'))
 const dataElement = computed(() => getElementByType('data'))
 const labelElement = computed(() => getElementByType('label'))
 const goalBarElement = computed(() => getElementByType('goalBar'))
 const goalArcElement = computed(() => getElementByType('goalArc'))
 
-const isGoalGroup = ref(false)
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
 const fontFamily = ref(props.elements[0].fontFamily)
-const positionX = ref(Math.round(props.elements[0].left || 0))
-const positionY = ref(Math.round(props.elements[0].top || 0))
 const originX = ref(props.elements[0].originX || 'center')
 
-const dataProperty = ref('')
-const goalProperty = ref('')
+const dataProperty = ref<string>('')
+const goalProperty = ref<string>('')
 
 const updateDataProperty = () => {
-  const metric = getMetricByProperty(dataProperty.value || goalProperty.value, propertiesStore.allProperties)
+  console.log('updateDataProperty', dataProperty.value, goalProperty.value)
+  const prop = dataProperty.value || goalProperty.value
+  if (!prop) return
+
+  const metric = propertiesStore.getMetricByOptions({ dataProperty: dataProperty.value, goalProperty: goalProperty.value })
   if (dataProperty.value) {
     // 使用 nextTick 来避免同步更新导致的循环
     nextTick(() => {
@@ -126,13 +116,15 @@ const updateDataProperty = () => {
         labelElement.value.set('goalProperty', null)
         labelElement.value.set('text', metric.enLabel.short)
       }
-      baseStore.canvas.renderAll()
+      baseStore.canvas?.renderAll()
     })
   }
 }
 
 const updateGoalProperty = () => {
-  const metric = getMetricByProperty(goalProperty.value, propertiesStore.allProperties)
+  if (!goalProperty.value) return
+
+  const metric = propertiesStore.getMetricByOptions({ goalProperty: goalProperty.value, dataProperty: dataProperty.value })
   if (goalProperty.value) {
     // 使用 nextTick 来避免同步更新导致的循环
     nextTick(() => {
@@ -158,7 +150,7 @@ const updateGoalProperty = () => {
       if (goalArcElement.value) {
         goalArcElement.value.set('goalProperty', goalProperty.value)
       }
-      baseStore.canvas.renderAll()
+      baseStore.canvas?.renderAll()
     })
   }
 }
@@ -181,7 +173,8 @@ onMounted(() => {
 })
 
 const isUpdateColor = computed(() => {
-  if (!['time', 'date', 'icon', 'data', 'bluetooth', 'disturb'].includes(props.elements[0].eleType)) {
+  const eleType = props.elements[0]?.eleType
+  if (!eleType || !['time', 'date', 'icon', 'data', 'bluetooth', 'disturb'].includes(eleType)) {
     return false
   }
   return true
@@ -195,7 +188,8 @@ const isSameTypeLayer = computed(() => {
   if (props.elements.length <= 1) {
     return true
   }
-  const firstType = props.elements[0].eleType
+  const firstType = props.elements[0]?.eleType
+  if (!firstType) return false
   return props.elements.every((element) => element.eleType === firstType)
 })
 
@@ -203,30 +197,30 @@ const updateFontSize = () => {
   for (const element of props.elements) {
     element.set('fontSize', fontSize.value)
   }
-  baseStore.canvas.renderAll()
+  baseStore.canvas?.renderAll()
 }
 
 const updateTextColor = () => {
   for (const element of props.elements) {
     element.set('fill', textColor.value)
   }
-  baseStore.canvas.renderAll()
+  baseStore.canvas?.renderAll()
 }
 
 const updateFontFamily = () => {
   for (const element of props.elements) {
     element.set('fontFamily', fontFamily.value)
   }
-  baseStore.canvas.renderAll()
+  baseStore.canvas?.renderAll()
 }
 
-const updateOriginX = (originXVal) => {
+const updateOriginX = (originXVal: 'left' | 'center' | 'right') => {
   for (const element of props.elements) {
     element.set('originX', originXVal)
     element.setCoords()
   }
   originX.value = originXVal
-  baseStore.canvas.renderAll()
+  baseStore.canvas?.renderAll()
 }
 
 const showDataProperty = computed(() => {
@@ -238,16 +232,20 @@ const showDataProperty = computed(() => {
   // 检查是否只包含这三种类型的元素
   const validTypes = ['data', 'icon', 'label']
   const hasOnlyValidTypes = props.elements.every(element => 
-    validTypes.includes(element.eleType)
+    element.eleType && validTypes.includes(element.eleType)
   )
+  console.log('hasOnlyValidTypes', hasOnlyValidTypes)
   // 并且同一种类型的元素最多只能有一个
   const hasOnlyOneOfType = props.elements.every(element => {  
     const count = props.elements.filter(e => e.eleType === element.eleType).length
+    console.log('count', count, element.eleType)
     return count <= 1
   })
   
   // 当至少存在一个有效元素，且所有元素都是有效类型时显示
-  return (hasData || hasIcon || hasLabel) && hasOnlyValidTypes && hasOnlyOneOfType
+  const showDataProperty = (hasData || hasIcon || hasLabel) && hasOnlyValidTypes && hasOnlyOneOfType
+  console.log('showDataProperty', showDataProperty , `hasData: ${hasData}, hasIcon: ${hasIcon}, hasLabel: ${hasLabel}, hasOnlyValidTypes: ${hasOnlyValidTypes}, hasOnlyOneOfType: ${hasOnlyOneOfType}`)
+  return showDataProperty
 })
 
 const showGoalProperty = computed(() => {

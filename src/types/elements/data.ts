@@ -10,6 +10,8 @@ export interface BaseTextConfig extends BaseElementConfig {
 
 export interface DataElementConfig extends BaseTextConfig {
   eleType: 'data' | 'icon' | 'label' | 'unit'
+  metricSymbol: string
+  metricValue: string
   dataProperty?: string
   goalProperty?: string
 }
@@ -20,6 +22,7 @@ export interface IconElementConfig extends DataElementConfig {
 
 export interface LabelElementConfig extends DataElementConfig {
   eleType: 'label'
+  text: string
 }
 
 export interface UnitElementConfig extends DataElementConfig {

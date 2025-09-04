@@ -154,7 +154,7 @@ export const useRectangleStore = defineStore('rectangleElement', {
       }
 
       return {
-        type: 'rectangle',
+        eleType: 'rectangle',
         x: Math.round(element.left),
         y: Math.round(element.top),
         width: element.width,

@@ -1,5 +1,4 @@
 import type { DataTypeOption } from '@/types/settings'
-import { usePropertiesStore } from '@/stores/properties'
 
 export const DataTypeOptions: DataTypeOption[] = [
   {
@@ -530,36 +529,3 @@ export const DataTypeOptions: DataTypeOption[] = [
     enLabel: { short: '7 Days Push Distance', medium: '7 Days Push Distance', long: '7 Days Push Distance' },
   },
 ]
-
-export function getMetricBySymbol(metricSymbol: string): DataTypeOption {
-  const metric = DataTypeOptions.find((item) => item.metricSymbol === metricSymbol)
-  if (!metric) {
-    return DataTypeOptions[0]
-  }
-  return metric
-}
-
-export function getMetricByProperty(
-  propertyKey: string
-): DataTypeOption {
-  if (!propertyKey) return DataTypeOptions[0]
-  const propertiesStore = usePropertiesStore()
-  console.log('getMetricByProperty:', propertyKey)
-  console.log('propertiesStore:', propertiesStore.allProperties)
-  const metricProperty = propertiesStore.allProperties[propertyKey]
-  if (!metricProperty) {
-    return DataTypeOptions[0]
-  }
-  const metric = DataTypeOptions.find((item) => item.value === metricProperty.value)
-  if (!metric) {
-    return DataTypeOptions[0]
-  }
-  return metric
-  // const metric = propertiesStore.allProperties[propertyKey].options.find((item: any) => {
-  //   return item.value == propertiesStore[dataProperty].value
-  // })
-  // if (!metric) {
-  //   return DataTypeOptions[0]
-  // }
-  // return metric as DataTypeOption
-}

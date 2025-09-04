@@ -229,7 +229,7 @@
           <div class="menu-group">
             <div class="menu-group-title">状态指示</div>
             <el-menu-item index="indicator/battery" @click="handleAddElement('status', 'battery')">
-              <el-icon><Monitor /></el-icon>
+              <el-icon><Star /></el-icon>
               <span>电池电量</span>
             </el-menu-item>
             <el-menu-item index="indicator/bluetooth" @click="handleAddElement('indicator', 'bluetooth')">
@@ -319,7 +319,11 @@ import {
   Bell,
   Monitor,
   Minus,
-  CircleCheck
+  CircleCheck,
+  Compass,
+  Top,
+  Mute,
+  AlarmClock
 } from '@element-plus/icons-vue'
 import { elementConfigs } from '@/config/elements/elements'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'

@@ -18,7 +18,7 @@ export const useGoalBarStore = defineStore('goalBarStore', {
   },
 
   actions: {
-    async addElement(options: GoalBarElementConfig = {}) {
+    async addElement(options: GoalBarElementConfig) {
       if (!this.baseStore.canvas) {
         throw new Error('Canvas not initialized, cannot add goal bar element')
       }
@@ -169,7 +169,7 @@ export const useGoalBarStore = defineStore('goalBarStore', {
       const objects = element.getObjects()
       const background: any = objects.find((obj: any) => (obj as any).id.endsWith('_background'))
       return {
-        type: 'goalBar',
+        eleType: 'goalBar',
         x: element.left,
         y: element.top,
         width: background.width,

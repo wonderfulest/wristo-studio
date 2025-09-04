@@ -6,7 +6,7 @@
     <div class="settings-header">
       <h3 class="settings-title">元素设置</h3>
       <div class="element-type">
-        <Icon :icon="getElementIcon(activeElements[0].type)" class="element-icon" />
+        <Icon :icon="getElementIcon(activeElements[0].eleType)" class="element-icon" />
         <span class="type-name">{{ getElementTypeName(activeElements[0]) }}</span>
       </div>
     </div>
@@ -23,41 +23,29 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { elementConfigs } from '@/config/elements/elements'
 import { useBaseStore } from '@/stores/baseStore'
 import GlobalSettings from './settings/GlobalSettings.vue'
-import BaseSettings from './settings/BaseSettings.vue'
 import GroupSettings from './settings/GroupSettings.vue'
 import { getSettingsComponent } from './settings'
-import { ElMessage } from 'element-plus'
+import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()
 const settingsComponent = ref(null)
 
-const activeElements = ref([])
+const activeElements = ref([] as FabricElement[])
 
 const updateElements = () => {
-  
   if (!baseStore.canvas) return
+  console.log('activeElements', baseStore.canvas.getActiveObjects())
   activeElements.value = baseStore.canvas.getActiveObjects()
 }
 
 const debouncedUpdateElements = debounce(updateElements, 100)
-
-// 获取当前组件的表单引用
-const getCurrentFormRef = () => {
-  if (activeElements.value.length === 1) {
-    const component = settingsComponent.value
-    if (component && component.formRef) {
-      return component.formRef
-    }
-  }
-  return null
-}
 
 onMounted(() => {
   debouncedUpdateElements()
@@ -79,7 +67,8 @@ onUnmounted(() => {
 
 
 // 获取元素图标
-const getElementIcon = (type) => {
+const getElementIcon = (type: string) => {
+  console.log('getElementIcon', type)
   // 遍历所有分类和元素类型查找对应的图标
   for (const category of Object.values(elementConfigs)) {
     for (const [elementType, config] of Object.entries(category)) {
@@ -92,7 +81,7 @@ const getElementIcon = (type) => {
 }
 
 // 获取元素类型名称
-const getElementTypeName = (layer) => {
+const getElementTypeName = (layer: any) => {
   if (!layer) return ''
   return layer.eleType
 }

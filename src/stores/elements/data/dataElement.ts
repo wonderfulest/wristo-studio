@@ -5,7 +5,8 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { DataElementConfig } from '@/types/elements/data'
 import type { ElementConfig, FabricElement } from '@/types/element'
-import { getMetricByProperty } from '@/config/elements/options/dataTypes'
+import { usePropertiesStore } from '@/stores/properties'
+
 
 export const useDataStore = defineStore('dataElement', {
   state: () => {
@@ -14,17 +15,12 @@ export const useDataStore = defineStore('dataElement', {
     return {
       baseStore,
       layerStore,
-      defaults: {
-        fontSize: 14,
-        fill: '#ffffff',
-        fontFamily: 'roboto-condensed-regular',
-      },
     }
   },
   actions: {
     addElement(config: DataElementConfig): Promise<FabricElement> {
       const id = nanoid()
-      const metric = getMetricByProperty(config.dataProperty || config.goalProperty || '')
+      const metric = usePropertiesStore().getMetricByOptions(config)
       const element = new FabricText(metric.defaultValue, {
         id,
         eleType: 'data',
@@ -32,9 +28,9 @@ export const useDataStore = defineStore('dataElement', {
         top: config.top,
         originX: (config.originX ?? 'center') as any,
         originY: (config.originY ?? 'center') as any,
-        fill: (config.fill ?? this.defaults.fill) as any,
-        fontSize: (config.fontSize ?? this.defaults.fontSize) as any,
-        fontFamily: (config.fontFamily ?? this.defaults.fontFamily) as any,
+        fill: config.fill as any,
+        fontSize: config.fontSize as any,
+        fontFamily: config.fontFamily as any,
         selectable: true,
         dataProperty: config.dataProperty ?? null,
         goalProperty: config.goalProperty ?? null,
@@ -89,8 +85,8 @@ export const useDataStore = defineStore('dataElement', {
         top: Math.round(element.top),
         originX: element.originX as any,
         originY: element.originY as any,
-        fill: (element.fill as any) ?? this.defaults.fill,
-        fontSize: (element.fontSize as any) ?? this.defaults.fontSize,
+        fill: element.fill as any,
+        fontSize: element.fontSize as any,
         fontFamily: element.fontFamily as any,
         metricSymbol: (element as any).metricSymbol ?? '',
         dataProperty: (element as any).dataProperty ?? null,
@@ -107,9 +103,9 @@ export const useDataStore = defineStore('dataElement', {
         top: config.top,
         originX: (config as any).originX ?? 'center',
         originY: (config as any).originY ?? 'center',
-        fill: config.fill ?? this.defaults.fill,
-        fontSize: config.fontSize ?? this.defaults.fontSize,
-        fontFamily: (config.fontFamily ?? this.defaults.fontFamily) as string,
+        fill: config.fill,
+        fontSize: config.fontSize,
+        fontFamily: (config.fontFamily) as string,
         metricSymbol: (config as any).metricSymbol ?? '',
         dataProperty: (config as any).dataProperty ?? null,
         goalProperty: (config as any).goalProperty ?? null,

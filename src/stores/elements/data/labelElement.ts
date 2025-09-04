@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
+
 import { FabricText } from 'fabric'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { LabelElementConfig } from '@/types/elements/data'
-import type { ElementConfig, FabricElement } from '@/types/element'
-import { getMetricByProperty } from '@/config/elements/options/dataTypes'
+import type { FabricElement } from '@/types/element'
+import { usePropertiesStore } from '@/stores/properties'
 
 export const useLabelStore = defineStore('labelElement', {
   state: () => {
@@ -25,7 +26,7 @@ export const useLabelStore = defineStore('labelElement', {
   actions: {
     addElement(config: LabelElementConfig): Promise<FabricElement> {
       const id = nanoid()
-      const metric = getMetricByProperty(config.dataProperty || config.goalProperty || '')
+      const metric = usePropertiesStore().getMetricByOptions(config)
       const element = new FabricText(metric.enLabel.short, {
         id,
         eleType: 'label',
@@ -48,71 +49,77 @@ export const useLabelStore = defineStore('labelElement', {
       return element as any
     },
 
-    updateElement(element: any, config: Partial<LabelElementConfig> = {}) {
+    updateElement(element: FabricElement, config: Partial<LabelElementConfig> = {}) {
       const canvas = this.baseStore.canvas
-      const obj: any = canvas?.getObjects().find((o: any) => (o as any).id === element.id)
-      if (!canvas || !obj) return
+      const text = canvas?.getObjects().find((obj: any) => obj.id === element.id)
+      if (!canvas || !text) return
 
-      const currentLeft = obj.left
-      const currentTop = obj.top
+      const currentLeft = text.left
+      const currentTop = text.top
 
-      const updateProps: Record<string, any> = {
+      const updates: Record<string, any> = {
+        text: (config as any).text,
         fill: config.fill,
         fontSize: config.fontSize,
         fontFamily: config.fontFamily,
-        originX: config.originX,
-        originY: config.originY,
         left: config.left,
         top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        metricSymbol: config.metricSymbol,
+        metricValue: config.metricValue,
         dataProperty: config.dataProperty,
         goalProperty: config.goalProperty,
       }
 
-      Object.keys(updateProps).forEach((key) => {
-        const value = updateProps[key]
-        if (value !== undefined) obj.set(key, value)
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) (key === 'text' ? text.set('text', value) : text.set(key, value))
       })
 
-      if (config.left === undefined) obj.set('left', currentLeft)
-      if (config.top === undefined) obj.set('top', currentTop)
+      if (config.left === undefined) text.set('left', currentLeft)
+      if (config.top === undefined) text.set('top', currentTop)
 
-      obj.setCoords()
-      canvas.renderAll()
+      text.setCoords()
+      canvas.requestRenderAll?.()
     },
 
-    encodeConfig(element: FabricElement): ElementConfig {
+    encodeConfig(element: FabricElement): LabelElementConfig {
       if (!element) throw new Error('Invalid element')
-      const config: ElementConfig = {
+      const config = {
+        id: element.id ?? '',
         eleType: 'label',
-        id: element.id,
-        left: Math.round(element.left),
-        top: Math.round(element.top),
-        originX: element.originX as any,
-        originY: element.originY as any,
-        fill: (element.fill as any) ?? this.defaults.fill,
-        fontSize: (element.fontSize as any) ?? this.defaults.fontSize,
-        fontFamily: element.fontFamily as any,
+        left: element.left,
+        top: element.top,
+        originX: element.originX as 'left' | 'center' | 'right',
+        originY: element.originY as 'top' | 'center' | 'bottom',
+        fill: (element.fill as string) ?? '#ffffff',
+        fontSize: Number(element.fontSize ?? 14),
+        fontFamily: (element.fontFamily as string) ?? '',
         dataProperty: (element as any).dataProperty ?? null,
         goalProperty: (element as any).goalProperty ?? null,
-      } as any
-      return config
+        metricSymbol: (element as any).metricSymbol ?? null,
+        metricValue: (element as any).metricValue ?? null,
+      }
+      return config as LabelElementConfig
     },
 
-    decodeConfig(config: ElementConfig): Partial<FabricElement> {
-      const result: Partial<FabricElement> = {
+    decodeConfig(config: LabelElementConfig): Partial<FabricElement> {
+      const element = {
+        id: config.id,
         eleType: 'label',
-        id: (config as any).id ?? nanoid(),
-        left: (config as any).left,
-        top: (config as any).top,
-        originX: (config as any).originX ?? 'center',
-        originY: (config as any).originY ?? 'center',
-        fill: (config as any).fill ?? this.defaults.fill,
-        fontSize: (config as any).fontSize ?? this.defaults.fontSize,
-        fontFamily: ((config as any).fontFamily ?? this.defaults.fontFamily) as string,
-        dataProperty: (config as any).dataProperty ?? null,
-        goalProperty: (config as any).goalProperty ?? null,
-      }
-      return result as Partial<FabricElement>
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fill: config.fill,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        dataProperty: config.dataProperty,
+        goalProperty: config.goalProperty,
+        metricSymbol: config.metricSymbol,
+        metricValue: config.metricValue,
+      } 
+      return element as Partial<FabricElement>
     },
   },
 })

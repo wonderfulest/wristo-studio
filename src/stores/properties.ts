@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
+import { DataTypeOption } from '@/types/settings'
+import { DataTypeOptions } from '@/config/settings'
 
-export const usePropertiesStore = defineStore('properties', {
+export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
     defaultColorOptions: [
@@ -109,6 +111,33 @@ export const usePropertiesStore = defineStore('properties', {
       if (value === '-1') return true // 支持透明色
       return /^0x[0-9A-Fa-f]{6}$/.test(value)
     },
+    // 根据属性获取指标（getter 返回一个可接收参数的函数）
+    getMetricByOptions: (state) => {
+      return ({ dataProperty, goalProperty, metricSymbol }: { dataProperty?: string; goalProperty?: string; metricSymbol?: string }): DataTypeOption => {
+        // 1) 优先使用 goalProperty 从 store 中已选择的值映射到对应选项
+        if (goalProperty && state.properties[goalProperty]?.options && state.properties[goalProperty]?.value !== undefined) {
+          const sel = state.properties[goalProperty].value
+          const found = state.properties[goalProperty].options!.find((opt) => opt.value === sel)
+          if (found) return found as unknown as DataTypeOption
+        }
+
+        // 2) 其次使用 dataProperty
+        if (dataProperty && state.properties[dataProperty]?.options && state.properties[dataProperty]?.value !== undefined) {
+          const sel = state.properties[dataProperty].value
+          const found = state.properties[dataProperty].options!.find((opt) => opt.value === sel)
+          if (found) return found as unknown as DataTypeOption
+        }
+
+        // 3) 最后根据 metricSymbol 在全局 DataTypeOptions 中匹配
+        if (metricSymbol) {
+          const bySymbol = DataTypeOptions.find((opt) => opt.metricSymbol === metricSymbol)
+          if (bySymbol) return bySymbol
+        }
+
+        // 兜底返回默认项
+        return DataTypeOptions[0]
+      }
+    }
   },
 
   actions: {

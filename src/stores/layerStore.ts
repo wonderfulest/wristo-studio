@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from './baseStore'
 import type { LayerElement } from '@/types/layer'
-import { FabricElement } from '@/types/element'
+import type { MinimalFabricLike } from '@/types/layer'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -21,7 +21,7 @@ export const useLayerStore = defineStore('layerStore', {
   },
   // actions
   actions: {
-    addLayer(element: FabricElement): void {
+    addLayer(element: MinimalFabricLike): void {
       if (!element || !element.id || !element.eleType) {
         console.error('无效的元素')
         return

@@ -1,40 +1,42 @@
 import { getEncoder, getDecoder } from './registry'
+import type { FabricElement, ElementType, ElementConfig } from '@/types/element'
 
-export type EncodableElement = any
-export type DecodableElement = any
 
 // 编码元素
-export const encodeElement = (element: EncodableElement) => {
-  const encoder = getEncoder((element as any).eleType)
+export const encodeElement = (element: FabricElement) => {
+  const encoder = getEncoder((element as FabricElement).eleType)
   if (!encoder) {
-    console.warn(`No encoder found for element type: ${(element as any).eleType}`)
+    console.warn(`No encoder found for element type: ${(element as FabricElement).eleType}`)
     return null
   }
   return encoder(element)
 }
 
 // 解码元素
-export const decodeElement = (element: DecodableElement) => {
-  const decoder = getDecoder(element.eleType)
+export const decodeElement = (element: ElementConfig | any) => {
+  const type: ElementType | undefined = (element?.type as ElementType) ?? (element?.eleType as ElementType)
+  if (!type) {
+    console.warn('No decoder found because element.type is undefined')
+    return null
+  }
+  const decoder = getDecoder(type)
   if (!decoder) {
-    console.warn(`No decoder found for element type: ${element.eleType}`)
+    console.warn(`No decoder found for element type: ${type}`)
     return null
   }
   return decoder(element)
 }
 
 // 默认编码器
-export const defaultEncoder = (element: any) => {
+export const defaultEncoder = (element: FabricElement) => {
   return {
-    type: (element as any).eleType,
     ...element,
   }
 }
 
 // 默认解码器
-export const defaultDecoder = (element: any) => {
+export const defaultDecoder = (element: FabricElement) => {
   return {
-    eleType: (element as any).type,
     ...element,
   }
 }

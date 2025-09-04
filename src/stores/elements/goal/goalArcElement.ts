@@ -182,7 +182,7 @@ export const useGoalArcStore = defineStore('goalArcElement', {
         throw new Error('Invalid element')
       }
       return {
-        type: 'goalArc',
+        eleType: 'goalArc',
         x: Math.round(element.left),
         y: Math.round(element.top),
         startAngle: element.startAngle,

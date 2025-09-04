@@ -71,9 +71,10 @@ import SidePanel from '@/components/SidePanel.vue'
 import ExportPanel from '@/components/ExportPanel.vue'
 import TimeSimulator from '@/components/TimeSimulator.vue'
 import ZoomControls from '@/components/ZoomControls.vue'
-import type { ElementConfig } from '@/types/element'
+import type { ElementConfig, ElementType } from '@/types/element'
 import { ApiResponse } from '@/types/api/api'
-import type { Design, DesignConfig } from '@/types/design'
+import type { Design, DesignConfig } from '@/types/api/design'
+import type { FabricObject } from 'fabric'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
@@ -242,9 +243,9 @@ const loadElements = async (elements: ElementConfig[]) => {
 const reorderCanvasByIds = (orderedIds: string[]) => {
   const c = baseStore.canvas
   if (!c) return
-  const objects = c.getObjects();
+  const objects = c.getObjects() as (FabricObject & { id?: string })[];
   orderedIds.forEach((id, index) => {
-    const obj = objects.find(o => o.id === id);
+    const obj = objects.find((o: FabricObject & { id?: string }) => o.id === id);
     if (obj) {
       
       c.moveObjectTo(obj, index);

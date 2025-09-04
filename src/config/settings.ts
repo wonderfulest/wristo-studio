@@ -5,7 +5,7 @@ export { originXOptions } from './elements/options/align'
 export { TimeFormatConstants, TimeFormatOptions } from './elements/options/timeFormats'
 export { DateFormatConstants, DateFormatOptions } from './elements/options/dateFormats'
 export { LayoutOptions } from './elements/options/layout'
-export { DataTypeOptions, getMetricBySymbol, getMetricByProperty } from './elements/options/dataTypes'
+export { DataTypeOptions } from './elements/options/dataTypes'
 export { HourHandOptions, MinuteHandOptions, SecondHandOptions, Ticks12Options, Ticks60Options, RomansOptions } from './elements/options/analog'
 
 // moved to './elements/options/typography'

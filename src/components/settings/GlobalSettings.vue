@@ -52,8 +52,8 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import emitter from '@/utils/eventBus'
 import { ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
-import { getMetricBySymbol } from '@/config/settings'
-import { da } from 'element-plus/es/locales.mjs'
+import { usePropertiesStore } from '@/stores/properties'
+const propertiesStore = usePropertiesStore()
 const baseStore = useBaseStore()
 const currentThemeIndex = ref(0)
 // 表盘名称
@@ -120,7 +120,7 @@ const updateShowUnit = (value) => {
     
     for (const obj of objects) {
       if (obj.eleType === 'data') {
-        const metric = getMetricBySymbol(obj.metricSymbol)
+        const metric = propertiesStore.getMetricBySymbol({metricSymbol: obj.metricSymbol})
         obj.set({
           text: metric.defaultValue + (baseStore.showUnit ? metric.unit : ''),
         })

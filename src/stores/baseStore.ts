@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { Circle, FabricImage } from 'fabric'
-import { getMetricBySymbol } from '@/config/settings.ts'
 import _ from 'lodash'
 import { usePropertiesStore } from '@/stores/properties'
 import { encodeElement } from '@/utils/elementCodec'
@@ -9,7 +8,6 @@ import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
-
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -19,8 +17,9 @@ type Screenshot = string | null
 type CanvasLike = AnyObject | null
 
 export const useBaseStore = defineStore('baseStore', {
-  // state
+  // store
   state: () => ({
+    propertiesStore: usePropertiesStore(),
     canvas: null as CanvasLike,
     id: null as string | null, // 表盘ID
     watchFaceName: '' as string,
@@ -73,7 +72,7 @@ export const useBaseStore = defineStore('baseStore', {
             labelCount++
             
             // 重新加载标签内容
-            const metric = getMetricBySymbol(obj.metricSymbol)
+            const metric = this.propertiesStore.getMetricByOptions({metricSymbol: obj.metricSymbol})
             
             if (metric) {
               // 根据 labelLengthType 选择合适的标签长度
