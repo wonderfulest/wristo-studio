@@ -2,8 +2,8 @@
 import type { BaseElementConfig } from './base'
 
 export interface BatteryElementConfig extends BaseElementConfig {
-  width?: number
-  height?: number
+  width: number
+  height: number
   headWidth?: number
   headHeight?: number
   padding?: number

@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { Rect, Group } from 'fabric'
+import { Rect, Group, TOriginX, TOriginY } from 'fabric'
 import { nanoid } from 'nanoid'
 import { decodeColor } from '@/utils/colorUtils'
 import type { BatteryElementConfig } from '@/types/elements/status'
+import { FabricElement } from '@/types/element'
 
 export const useBatteryStore = defineStore('batteryElement', {
   state: () => {
@@ -23,6 +24,8 @@ export const useBatteryStore = defineStore('batteryElement', {
 
   actions: {
     addElement(config: BatteryElementConfig) {
+
+      console.log('addElement battery', config)
       const id = nanoid()
 
       const width = config.width || 28
@@ -131,7 +134,7 @@ export const useBatteryStore = defineStore('batteryElement', {
       this.baseStore.canvas.renderAll()
     },
 
-    encodeConfig(element: any) {
+    encodeConfig(element: Partial<FabricElement>): BatteryElementConfig {
       if (!element) {
         throw new Error('Invalid element')
       }
@@ -142,34 +145,43 @@ export const useBatteryStore = defineStore('batteryElement', {
       if (!batteryBody || !batteryHead || !batteryLevel) {
         throw new Error('Invalid element')
       }
-      return {
+      const safePadding = Math.round(((element as any).padding ?? 4) as number)
+      const config: BatteryElementConfig = {
+        id: String((element as any).id ?? ''),
         eleType: 'battery',
-        left: Math.round(element.left),
-        top: Math.round(element.top),
-        width: Math.round(batteryBody.width),
-        height: Math.round(batteryBody.height),
-        bodyStroke: batteryBody.stroke,
-        bodyFill: batteryBody.fill,
-        bodyStrokeWidth: Math.round(batteryBody.strokeWidth),
-        bodyRx: Math.round(batteryBody.rx),
-        bodyRy: Math.round(batteryBody.ry),
-        headWidth: Math.round(batteryHead.width),
-        headHeight: Math.round(batteryHead.height),
-        headFill: batteryHead.fill,
-        headRx: Math.round(batteryHead.rx),
-        headRy: Math.round(batteryHead.ry),
-        padding: Math.round(element.padding),
-        level: Number((batteryLevel.width / (batteryBody.width - element.padding * 2)).toFixed(2)),
-        levelColors: element.levelColors || this.defaultLevelColors,
-        headGap: Math.round(element.headGap) || 2,
+        originX: ((element as any).originX ?? 'center') as any,
+        originY: ((element as any).originY ?? 'center') as any,
+        left: Math.round(((element as any).left ?? 0) as number),
+        top: Math.round(((element as any).top ?? 0) as number),
+        width: Math.round((batteryBody as any).width as number),
+        height: Math.round((batteryBody as any).height as number),
+        bodyStroke: (batteryBody as any).stroke,
+        bodyFill: (batteryBody as any).fill,
+        bodyStrokeWidth: Math.round(((batteryBody as any).strokeWidth ?? 0) as number),
+        bodyRx: Math.round(((batteryBody as any).rx ?? 0) as number),
+        bodyRy: Math.round(((batteryBody as any).ry ?? 0) as number),
+        headWidth: Math.round((batteryHead as any).width as number),
+        headHeight: Math.round((batteryHead as any).height as number),
+        headFill: (batteryHead as any).fill,
+        headRx: Math.round(((batteryHead as any).rx ?? 0) as number),
+        headRy: Math.round(((batteryHead as any).ry ?? 0) as number),
+        padding: safePadding,
+        level: Number(((
+          ((batteryLevel as any).width as number) /
+          (((batteryBody as any).width as number) - safePadding * 2)
+        ).toFixed(2))),
+        levelColors: ((element as any).levelColors || this.defaultLevelColors) as any,
+        headGap: Math.round((((element as any).headGap ?? 2) as number)),
       }
+      return config
     },
 
-    decodeConfig(config: any): BatteryElementConfig {
-      return {
+    decodeConfig(config: BatteryElementConfig): Partial<FabricElement> {
+console.log('decodeConfig battery', config)
+      const decoded: Partial<FabricElement> = {
         eleType: 'battery',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         width: config.width,
         height: config.height,
         bodyStroke: config.bodyStroke,
@@ -186,7 +198,8 @@ export const useBatteryStore = defineStore('batteryElement', {
         level: config.level,
         levelColors: config.levelColors || this.defaultLevelColors,
         headGap: config.headGap || 2,
-      } as any
+      } 
+      return decoded
     },
 
     updateElement(element: any, config: any) {

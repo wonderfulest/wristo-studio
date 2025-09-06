@@ -155,8 +155,8 @@ export const useRectangleStore = defineStore('rectangleElement', {
 
       return {
         eleType: 'rectangle',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         width: element.width,
         height: element.height,
         fill: element.fill,
@@ -172,8 +172,8 @@ export const useRectangleStore = defineStore('rectangleElement', {
     decodeConfig(config: any) {
       return {
         eleType: 'rectangle',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         width: config.width,
         height: config.height,
         fill: config.fill,

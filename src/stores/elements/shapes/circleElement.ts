@@ -130,11 +130,10 @@ export const useCircleStore = defineStore('circleElement', {
       if (!element) {
         throw new Error('无效的元素')
       }
-
       return {
-        type: 'circle',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        eleType: 'circle',
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         radius: element.radius,
         fill: element.fill,
         stroke: element.stroke,
@@ -148,8 +147,8 @@ export const useCircleStore = defineStore('circleElement', {
     decodeConfig(config: any) {
       return {
         eleType: 'circle',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         radius: config.radius,
         fill: config.fill,
         stroke: config.stroke,

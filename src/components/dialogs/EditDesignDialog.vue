@@ -413,4 +413,8 @@ defineExpose({
   background-color: var(--el-color-danger-light-9);
   flex-shrink: 0;
 }
+:deep(.vjs-node-index) {
+  right: calc(100% + 60px);
+  margin-right: -48px;
+}
 </style> 
