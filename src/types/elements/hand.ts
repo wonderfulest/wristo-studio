@@ -10,4 +10,6 @@ export interface HandElementConfig extends BaseElementConfig {
   rotationCenter: RotationCenter
   targetHeight: number
   moveDy: number
+  angle: number
+  height: number
 }

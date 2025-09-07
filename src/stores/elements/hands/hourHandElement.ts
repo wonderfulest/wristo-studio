@@ -1,10 +1,16 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { loadSVGFromURL, util } from 'fabric'
+import { loadSVGFromURL, util, type FabricObject } from 'fabric'
 import { nanoid } from 'nanoid'
 import { HourHandOptions } from '@/config/settings'
 import { HandElementConfig, RotationCenter } from '@/types/elements'
+import type { FabricElement } from '@/types/element'
+
+// Helper type to access private _objects in grouped SVGs
+interface WithObjects {
+  _objects?: FabricObject[]
+}
 
 export const useHourHandStore = defineStore('hourHandElement', {
   state: () => {
@@ -21,7 +27,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
       defaultAngle: 0,
       defaultTargetHeight: 180,
       defaultRotationCenter: { x: 227, y: 227 } as RotationCenter,
-      updateTimer: null as any
+      updateTimer: null as number | null
     }
   },
 
@@ -29,7 +35,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
     /**
      * Common rotation method for hands
      */
-    rotateHand(svgGroup: any, angle: number) {
+    rotateHand(svgGroup: FabricElement, angle: number) {
       const targetHeight = svgGroup.targetHeight
       const moveDy = svgGroup.moveDy || 0
       const rotationCenter: RotationCenter = svgGroup.rotationCenter || { x: 227, y: 227 }
@@ -67,8 +73,9 @@ export const useHourHandStore = defineStore('hourHandElement', {
       const rotationCenter = config.rotationCenter || this.defaultRotationCenter
       const targetHeight = Math.min(config.targetHeight || this.defaultTargetHeight, 300)
       const moveDy = config.moveDy || 0
-      const loadedSVG: any = await loadSVGFromURL(imageUrl)
-      const svgGroup: any = util.groupSVGElements(loadedSVG.objects)
+      const loadedSVG = await loadSVGFromURL(imageUrl)
+      const groupedObjects = (loadedSVG.objects ?? []).filter((o): o is FabricObject => o != null)
+      const svgGroup = util.groupSVGElements(groupedObjects) as unknown as FabricElement & WithObjects
       const options = {
         id,
         eleType: 'hourHand',
@@ -96,14 +103,14 @@ export const useHourHandStore = defineStore('hourHandElement', {
       this.rotateHand(svgGroup, 0)
 
       if (Array.isArray(svgGroup._objects)) {
-        svgGroup._objects.forEach((obj: any) => obj.set('fill', fill))
+        svgGroup._objects.forEach((obj: FabricObject) => obj.set('fill', fill))
       } else if (svgGroup.type === 'path') {
         svgGroup.set('fill', fill)
       }
 
       // Movement event
-      svgGroup.on('moving', (e: any) => {
-        const y = e.transform.target.top
+      svgGroup.on('moving', (e: unknown) => {
+        const y = (e as { transform: { target: FabricElement } }).transform.target.top
         const distance = y + svgGroup.targetHeight / 2 - rotationCenter.y
         svgGroup.set('moveDy', distance)
       })
@@ -120,24 +127,27 @@ export const useHourHandStore = defineStore('hourHandElement', {
         }
       })
       svgGroup.setCoords()
-      this.baseStore.canvas?.add(svgGroup)
-      this.layerStore.addLayer(svgGroup)
+      this.baseStore.canvas?.add(svgGroup as unknown as FabricObject)
+      this.layerStore.addLayer(svgGroup as FabricElement & { eleType: string })
       this.baseStore.canvas?.requestRenderAll()
       this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(svgGroup)
+      this.baseStore.canvas?.setActiveObject(svgGroup as unknown as FabricObject)
     },
 
-    async updateHandSVG(element: any, config: HandElementConfig) {
+    async updateHandSVG(element: FabricElement, config: HandElementConfig) {
       if (!this.baseStore.canvas) return
-      let svgGroup: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      let svgGroup = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).id === element.id) as (FabricElement & WithObjects) | undefined
       if (!svgGroup) return
       const rotationCenter = config.rotationCenter || svgGroup.rotationCenter || this.defaultRotationCenter
       const targetHeight = config.targetHeight || svgGroup.targetHeight || this.defaultTargetHeight
       const moveDy = config.moveDy || svgGroup.moveDy || 0
       if (config.imageUrl && config.imageUrl !== svgGroup.imageUrl) {
-        this.baseStore.canvas.remove(svgGroup)
-        const loadedSVG: any = await loadSVGFromURL(config.imageUrl)
-        svgGroup = util.groupSVGElements(loadedSVG.objects)
+        this.baseStore.canvas.remove(svgGroup as unknown as FabricObject)
+        const loadedSVG = await loadSVGFromURL(config.imageUrl)
+        const groupedObjects = (loadedSVG.objects ?? []).filter((o): o is FabricObject => o != null)
+        svgGroup = util.groupSVGElements(groupedObjects) as unknown as FabricElement & WithObjects
         svgGroup.set({
           id: element.id,
           eleType: 'hourHand',
@@ -152,8 +162,9 @@ export const useHourHandStore = defineStore('hourHandElement', {
           targetHeight: targetHeight,
           moveDy: moveDy
         })
-        svgGroup.on('moving', (e: any) => {
-          const y = e.transform.target.top
+        svgGroup.on('moving', (e: unknown) => {
+          if (!svgGroup) return
+          const y = (e as { transform: { target: FabricElement } }).transform.target.top
           const distance = y + svgGroup.targetHeight / 2 - rotationCenter.y
           svgGroup.set('moveDy', distance)
         })
@@ -161,6 +172,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
           if (this.updateTimer) {
             this.stopTimeUpdate()
           }
+          if (!svgGroup) return
           this.rotateHand(svgGroup, 0)
         })
         svgGroup.on('deselected', () => {
@@ -168,11 +180,12 @@ export const useHourHandStore = defineStore('hourHandElement', {
             this.startTimeUpdate()
           }
         })
-        this.baseStore.canvas.add(svgGroup)
+        if (!svgGroup) return
+        this.baseStore.canvas.add(svgGroup as unknown as FabricObject)
       }
       const fillToSet = config.fill || this.defaultColors.color
       if (Array.isArray(svgGroup._objects)) {
-        svgGroup._objects.forEach((obj: any) => obj.set('fill', fillToSet))
+        svgGroup._objects.forEach((obj: FabricObject) => obj.set('fill', fillToSet))
       } else if (svgGroup.type === 'path') {
         svgGroup.set('fill', fillToSet)
       }
@@ -188,12 +201,14 @@ export const useHourHandStore = defineStore('hourHandElement', {
       svgGroup.setCoords()
       this.baseStore.canvas.requestRenderAll()
       this.baseStore.canvas.discardActiveObject()
-      this.baseStore.canvas.setActiveObject(svgGroup)
+      this.baseStore.canvas.setActiveObject(svgGroup as unknown as FabricObject)
     },
 
-    updateHeight(element: any, height: number) {
+    updateHeight(element: FabricElement, height: number) {
       if (!this.baseStore.canvas) return
-      const hourHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      const hourHand = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).id === element.id) as FabricElement | undefined
       if (!hourHand) return
       hourHand.scaleToHeight(height)
       hourHand.set({
@@ -204,20 +219,24 @@ export const useHourHandStore = defineStore('hourHandElement', {
       hourHand.setCoords()
       this.baseStore.canvas.requestRenderAll()
     },
-    updateRotationCenter(element: any, rotationCenter: RotationCenter) {
+    updateRotationCenter(element: FabricElement, rotationCenter: RotationCenter) {
       if (!this.baseStore.canvas) return
-      const hourHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      const hourHand = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).id === element.id) as FabricElement | undefined
       if (!hourHand) return
       hourHand.set('rotationCenter', rotationCenter)
     },
-    updateHandColor(element: any, color: string) {
+    updateHandColor(element: FabricElement, color: string) {
       if (!this.baseStore.canvas) return
-      const hourHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      const hourHand = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).id === element.id) as (FabricElement & WithObjects) | undefined
       if (!hourHand) return
 
       hourHand.set('fill', color)
       if (Array.isArray(hourHand._objects)) {
-        hourHand._objects.forEach((obj: any) => {
+        hourHand._objects.forEach((obj: FabricObject) => {
           obj.set('fill', color)
           obj.set('stroke', color)
         })
@@ -228,22 +247,26 @@ export const useHourHandStore = defineStore('hourHandElement', {
       hourHand.setCoords()
       this.baseStore.canvas.requestRenderAll()
     },
-    updateAngle(element: any, angle: number) {
+    updateAngle(element: FabricElement, angle: number) {
       if (!this.baseStore.canvas) return
-      const hourHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      const hourHand = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).id === element.id) as FabricElement | undefined
       if (!hourHand) return
       this.rotateHand(hourHand, angle)
     },
     updateTime(time?: Date) {
       if (!this.baseStore.canvas) return
-      const hourHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.eleType === 'hourHand')
+      const hourHand = this.baseStore.canvas
+        .getObjects()
+        .find((obj: FabricObject) => (obj as FabricElement).eleType === 'hourHand') as FabricElement | undefined
       if (!hourHand) return
       const angle = this.getHourHandAngle(time)
       this.rotateHand(hourHand, angle)
     },
     startTimeUpdate() {
       this.updateTime()
-      this.updateTimer = setInterval(() => {
+      this.updateTimer = window.setInterval(() => {
         this.updateTime()
       }, 3000)
     },
@@ -253,15 +276,15 @@ export const useHourHandStore = defineStore('hourHandElement', {
         this.updateTimer = null
       }
     },
-    encodeConfig(element: any) {
+    encodeConfig(element: FabricElement) {
       if (!element) throw new Error('Invalid element')
       return {
         id: element.id,
-        type: 'hourHand',
-        x: element.left,
-        y: element.top,
+        eleType: 'hourHand',
+        left: element.left,
+        top: element.top,
         height: element.height,
-        color: element.fill,
+        fill: element.fill,
         angle: element.angle,
         imageUrl: element.imageUrl,
         targetHeight: element.targetHeight,
@@ -269,14 +292,14 @@ export const useHourHandStore = defineStore('hourHandElement', {
         moveDy: element.moveDy,
       }
     },
-    decodeConfig(config: any) {
+    decodeConfig(config: HandElementConfig) {
       return {
         id: config.id,
         eleType: 'hourHand',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         height: config.height,
-        fill: config.color,
+        fill: config.fill,
         angle: config.angle,
         imageUrl: config.imageUrl,
         targetHeight: config.targetHeight,

@@ -136,11 +136,11 @@ export const useTick12Store = defineStore('tick12Element', {
       if (!element) throw new Error('Invalid element')
       return {
         id: element.id,
-        type: 'tick12',
-        x: element.left,
-        y: element.top,
+        eleType: 'tick12',
+        left: element.left,
+        top: element.top,
         height: element.height,
-        color: element.fill,
+        fill: element.fill,
         imageUrl: element.imageUrl,
       }
     },
@@ -149,10 +149,10 @@ export const useTick12Store = defineStore('tick12Element', {
       return {
         id: config.id,
         eleType: 'tick12',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         height: config.height,
-        fill: config.color,
+        fill: config.fill,
         imageUrl: config.imageUrl,
       }
     }

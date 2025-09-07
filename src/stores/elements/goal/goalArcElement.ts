@@ -183,8 +183,8 @@ export const useGoalArcStore = defineStore('goalArcElement', {
       }
       return {
         eleType: 'goalArc',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         startAngle: element.startAngle,
         endAngle: element.endAngle,
         radius: mainRing.radius,
@@ -202,8 +202,8 @@ export const useGoalArcStore = defineStore('goalArcElement', {
     decodeConfig(config: any): GoalArcElementConfig {
       return {
         eleType: 'goalArc' as any,
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         startAngle: config.startAngle,
         endAngle: config.endAngle,
         radius: config.radius,

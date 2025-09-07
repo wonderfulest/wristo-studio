@@ -145,6 +145,11 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties = properties || {}
     },
 
+    // Clear all properties - call this when creating a new design
+    clearProperties() {
+      this.properties = {}
+    },
+
     addProperty(propertyData: {
       key: string
       type: PropertyType

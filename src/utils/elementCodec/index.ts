@@ -1,44 +1,61 @@
 import { getEncoder, getDecoder } from './registry'
-import type { FabricElement, ElementType, ElementConfig } from '@/types/element'
-
+import type { FabricElement, ElementType } from '@/types/element'
+import type { AnyElementConfig } from '@/types/elements'
 
 // 编码元素
-export const encodeElement = (element: FabricElement) => {
-  const encoder = getEncoder((element as FabricElement).eleType)
-  if (!encoder) {
-    console.warn(`No encoder found for element type: ${(element as FabricElement).eleType}`)
-    return null
+export const encodeElement = (element: FabricElement): AnyElementConfig => {
+  // 类型收窄：eleType 可能为 string | undefined，需要先收窄为 ElementType
+  const type: ElementType = element.eleType as ElementType
+  if (!type) {
+    console.warn(`No encoder found because element.eleType is undefined`)
+    // 回退到默认编码器
+    return defaultEncoder(element)
   }
-  return encoder(element)
+  try {
+    const encoder = getEncoder(type)
+    const ret = encoder(element)
+    if (ret == null) {
+      console.warn(`Encoder returned null for element type: ${type}. Fallback to defaultEncoder.`)
+      return defaultEncoder(element)
+    }
+    return ret
+  } catch (e) {
+    console.warn(`No encoder found for element type: ${type}`, e)
+    // 回退到默认编码器
+    return defaultEncoder(element)
+  }
 }
 
 // 解码元素
-export const decodeElement = (element: ElementConfig | any) => {
-  const type: ElementType | undefined = (element?.type as ElementType) ?? (element?.eleType as ElementType)
+export const decodeElement = (element: AnyElementConfig): FabricElement => {
+  const type: ElementType = element?.eleType as ElementType
   if (!type) {
     console.warn('No decoder found because element.type is undefined')
-    return null
+    return {} as FabricElement
   }
   const decoder = getDecoder(type)
   if (!decoder) {
     console.warn(`No decoder found for element type: ${type}`)
-    return null
+    return {} as FabricElement
   }
-  return decoder(element)
+  const ret = decoder(element)
+  return ret as FabricElement
 }
 
-// 默认编码器
-export const defaultEncoder = (element: FabricElement) => {
-  return {
-    ...element,
+// 默认编码器: 直接回传（宽松类型）
+export const defaultEncoder = (element: FabricElement): AnyElementConfig => {
+  try {
+    return element as AnyElementConfig
+  } catch (e) {
+    console.error('Failed to encode element using default encoder', e)
+    return {} as AnyElementConfig
   }
 }
 
-// 默认解码器
-export const defaultDecoder = (element: FabricElement) => {
-  return {
-    ...element,
-  }
+// 默认解码器: 直接回传
+export const defaultDecoder = (element: FabricElement): FabricElement => {
+  // 保持返回原始 Fabric 实例以确保类型包含 FabricObject 的方法
+  return element
 }
 
 // 自动加载所有编解码器文件（支持 .ts 与 .js）

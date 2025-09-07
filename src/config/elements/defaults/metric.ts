@@ -10,7 +10,7 @@ export const DEFAULT_DATA_CONFIG: DataElementConfig & EDITOR_ELEMENT = Object.as
     eleType: 'data' as const,
     metricSymbol: ':FIELD_TYPE_HEART_RATE',
     iconSize: 42,
-    iconFontFamily: 'super-icons',
+    iconFont: 'super-icons',
   },
 )
 

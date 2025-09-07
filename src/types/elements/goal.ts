@@ -1,3 +1,4 @@
+import { TOriginX, TOriginY } from 'fabric'
 import type { BaseElementConfig } from './base'
 
 export interface GoalElementConfig extends BaseElementConfig {
@@ -33,8 +34,8 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   borderRadius: number
   progress: number
   padding: number
-  originX: 'left' | 'center' | 'right'
-  originY: 'top' | 'center' | 'bottom'
+  originX: TOriginX 
+  originY: TOriginY
   borderWidth: number
   borderColor: string
   goalProperty: string

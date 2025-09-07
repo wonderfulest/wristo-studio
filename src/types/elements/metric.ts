@@ -4,7 +4,7 @@ export interface IconElementConfig extends TextElementConfig {
   eleType: 'icon'
   metricSymbol: string
   iconSize: number
-  iconFontFamily: string
+  iconFont: string
   dataProperty?: string
   goalProperty?: string
 }

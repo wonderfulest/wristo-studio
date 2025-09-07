@@ -4,8 +4,8 @@ import { useLayerStore } from '@/stores/layerStore'
 import { loadSVGFromURL, util } from 'fabric'
 import { nanoid } from 'nanoid'
 import { MinuteHandOptions } from '@/config/settings'
-
-import type { HandElementConfig } from './hourHandElement'
+import { HandElementConfig, RotationCenter } from '@/types/elements'
+import { FabricElement } from '@/types/element'
 
 export const useMinuteHandStore = defineStore('minuteHandElement', {
   state: () => {
@@ -21,7 +21,7 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
       },
       defaultAngle: 0,
       defaultTargetHeight: 180,
-      defaultRotationCenter: { x: 227, y: 227 },
+      defaultRotationCenter: { x: 227, y: 227 } as RotationCenter,
       updateTimer: null as any
     }
   },
@@ -30,7 +30,7 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
     rotateHand(svgGroup: any, angle: number) {
       const targetHeight = svgGroup.targetHeight
       const moveDy = svgGroup.moveDy || 0
-      const rotationCenter = svgGroup.rotationCenter || { x: 227, y: 227 }
+      const rotationCenter = svgGroup.rotationCenter as RotationCenter || { x: 227, y: 227 }
 
       const radians = util.degreesToRadians(angle)
       const dx = 0
@@ -249,15 +249,15 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
         this.updateTimer = null
       }
     },
-    encodeConfig(element: any) {
+    encodeConfig(element: FabricElement) {
       if (!element) throw new Error('Invalid element')
       return {
         id: element.id,
-        type: 'minuteHand',
-        x: element.left,
-        y: element.top,
+        eleType: 'minuteHand',
+        left: element.left,
+        top: element.top,
         height: element.height,
-        color: element.fill,
+        fill: element.fill,
         angle: element.angle,
         imageUrl: element.imageUrl,
         targetHeight: element.targetHeight,
@@ -265,14 +265,14 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
         moveDy: element.moveDy,
       }
     },
-    decodeConfig(config: any) {
+    decodeConfig(config: HandElementConfig) {
       return {
         id: config.id,
         eleType: 'minuteHand',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         height: config.height,
-        fill: config.color,
+        fill: config.fill,
         angle: config.angle,
         imageUrl: config.imageUrl,
         targetHeight: config.targetHeight,

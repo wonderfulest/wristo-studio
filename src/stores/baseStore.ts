@@ -3,6 +3,7 @@ import { Circle, FabricImage } from 'fabric'
 import _ from 'lodash'
 import { usePropertiesStore } from '@/stores/properties'
 import { encodeElement } from '@/utils/elementCodec'
+import type { FabricElement } from '@/types/element'
 import { compareColor } from '@/utils/colorUtils'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
@@ -497,6 +498,7 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 生成配置
     generateConfig(): AnyObject | null {
+      console.log('this.canvas', this.canvas)
       if (!this.canvas || !this.canvas.getObjects().length) {
         console.warn('没有元素')
         return null
@@ -515,7 +517,7 @@ export const useBaseStore = defineStore('baseStore', {
         themeBackgroundImages: this.themeBackgroundImages
       }
 
-      const objects: AnyObject[] = this.canvas.getObjects()
+      const objects: FabricElement[] = this.canvas.getObjects() as FabricElement[]
       // 元素在同类中的下标，用于配置
       let imageId = 0,
         timeId = 0,
@@ -529,9 +531,10 @@ export const useBaseStore = defineStore('baseStore', {
         if (element.eleType === 'global') continue
         
         // 使用编码器系统编码元素
-        let encodeConfig: AnyObject = encodeElement(element)
-        if (!encodeConfig) continue
-
+        const encodeConfigNullable = encodeElement(element) as AnyObject | null
+        if (!encodeConfigNullable) continue
+        const encodeConfig = encodeConfigNullable
+        
         // 颜色属性映射配置
         const colorMappings = [
           { source: 'color', target: 'colorProperty' },
@@ -569,23 +572,23 @@ export const useBaseStore = defineStore('baseStore', {
         })
 
         // 获取imageId
-        if (encodeConfig.type == 'image') {
+        if (encodeConfig.eleType == 'image') {
           encodeConfig.imageId = imageId // imageId 用于标识图片配置
           imageId++
         }
         // 获取timeId
-        if (encodeConfig.type == 'time') {
+        if (encodeConfig.eleType == 'time') {
           encodeConfig.timeId = timeId // timeId 用于标识时间配置
           timeId++
         }
         // 获取dateId
-        if (encodeConfig.type == 'date') {
+        if (encodeConfig.eleType == 'date') {
           encodeConfig.dateId = dateId // dateId 用于标识日期配置
           dateId++
         }
 
         // 刻度盘 获取subItemId
-        if (encodeConfig.type == 'romans' || encodeConfig.type == 'tick12' || encodeConfig.type == 'tick60') {
+        if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
           encodeConfig.subItemId = subItemId // subItemId 用于标识子项配置
           subItemId++
         }

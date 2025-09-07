@@ -38,8 +38,8 @@ const loadElementFont = async (config: AnyElementConfig) => {
   if (config.fontFamily) {
     await fontStore.loadFont(config.fontFamily)
   }
-  if (config && (config as IconElementConfig).iconFontFamily) {
-    await fontStore.loadFont((config as IconElementConfig).iconFontFamily)
+  if (config && (config as IconElementConfig).iconFont) {
+    await fontStore.loadFont((config as IconElementConfig).iconFont)
   }
 }
 const addElementByType = async (category: string, elementType: string, config: AnyElementConfig) => {

@@ -156,9 +156,9 @@ export const useLineElementStore = defineStore('lineElement', {
       }
 
       return {
-        type: 'line',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        eleType: 'line',
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         x1: element.x1,
         y1: element.y1,
         x2: element.x2,
@@ -176,8 +176,8 @@ export const useLineElementStore = defineStore('lineElement', {
     decodeConfig(config: any) {
       return {
         eleType: 'line',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         x1: config.x1,
         y1: config.y1,
         x2: config.x2,

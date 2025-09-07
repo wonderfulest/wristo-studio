@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
+import { FabricElement } from '@/types/element'
 
 export const useGoalBarStore = defineStore('goalBarStore', {
   state: () => {
@@ -162,16 +163,16 @@ export const useGoalBarStore = defineStore('goalBarStore', {
       this.baseStore.canvas?.renderAll()
     },
 
-    encodeConfig(element: any) {
+    encodeConfig(element: Partial<FabricElement>) : GoalBarElementConfig {
       if (!element) {
         throw new Error('Invalid element')
       }
       const objects = element.getObjects()
       const background: any = objects.find((obj: any) => (obj as any).id.endsWith('_background'))
-      return {
+      const result: Partial<GoalBarElementConfig> = {
         eleType: 'goalBar',
-        x: element.left,
-        y: element.top,
+        left: element.left,
+        top: element.top,
         width: background.width,
         height: background.height,
         color: element.color,
@@ -185,13 +186,14 @@ export const useGoalBarStore = defineStore('goalBarStore', {
         borderColor: element.borderColor,
         goalProperty: element.goalProperty,
       }
+      return result as GoalBarElementConfig
     },
 
-    decodeConfig(config: any): GoalBarElementConfig {
-      return {
-        eleType: 'goalBar' as any,
-        left: config.x,
-        top: config.y,
+    decodeConfig(config: GoalBarElementConfig): Partial<FabricElement> {
+      const result: Partial<FabricElement> = {
+        eleType: 'goalBar',
+        left: config.left,
+        top: config.top,
         width: config.width,
         height: config.height,
         color: config.color,
@@ -204,7 +206,8 @@ export const useGoalBarStore = defineStore('goalBarStore', {
         borderWidth: config.borderWidth,
         borderColor: config.borderColor,
         goalProperty: config.goalProperty,
-      } as any
+      }
+      return result
     },
   },
 })

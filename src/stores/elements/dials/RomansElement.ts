@@ -143,11 +143,11 @@ export const useRomansStore = defineStore('romansElement', {
       if (!element) throw new Error('Invalid element')
       return {
         id: element.id,
-        type: 'romans',
-        x: element.left,
-        y: element.top,
+        eleType: 'romans',
+        left: element.left,
+        top: element.top,
         height: element.height,
-        color: element.fill,
+        fill: element.fill,
         imageUrl: element.imageUrl,
       }
     },
@@ -155,10 +155,10 @@ export const useRomansStore = defineStore('romansElement', {
       return {
         id: config.id,
         eleType: 'romans',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         height: config.height,
-        fill: config.color,
+        fill: config.fill,
         imageUrl: config.imageUrl,
       }
     }
