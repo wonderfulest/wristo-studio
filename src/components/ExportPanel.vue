@@ -273,8 +273,7 @@ const uploadApp = async () => {
     
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = '上传表盘截图...'
-    // const screenshotUrl = await uploadScreenshot()
-    const screenshotUrl = ''
+    const screenshotUrl = await uploadScreenshot()
     currentProgress = 40
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)

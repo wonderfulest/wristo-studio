@@ -465,7 +465,6 @@ export const useBaseStore = defineStore('baseStore', {
         
           })
 
-  
           // 添加图片并设置层级
           this.canvas?.add(fabricImage)
           this.canvas?.moveObjectTo(fabricImage, 1) // 背景图片放在最底层
@@ -494,7 +493,6 @@ export const useBaseStore = defineStore('baseStore', {
         })
         this.canvas.renderAll()
       }
- 
     },
     // 生成配置
     generateConfig(): AnyObject | null {
