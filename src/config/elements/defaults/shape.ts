@@ -25,15 +25,14 @@ export const DEFAULT_CIRCLE_CONFIG: CircleElementConfig & EDITOR_ELEMENT = Objec
 export const DEFAULT_LINE_CONFIG: LineElementConfig & EDITOR_ELEMENT = Object.assign({
   icon: 'mdi:vector-line',
   label: 'Line',
-  type: 'line' as const,
 }, DEFAULT_SHAPE_CONFIG, {
   eleType: 'line' as const,
   width: 100,
   height: 5,
   stroke: '#FFFFFF',
   strokeWidth: 2,
-  x1: 0,
-  y1: 0,
-  x2: 100,
-  y2: 0,
+  x1: 202,
+  y1: 227,
+  x2: 252,
+  y2: 227,
 })

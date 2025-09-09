@@ -7,13 +7,10 @@
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
-          <!-- :class="{ disabled: type === 'line' }"
-          :disabled="type === 'line'" -->
           <button v-for="(config, type) in category" :key="type" 
                   @click="addElementByType(categoryKey, type, config)">
             <Icon :icon="config.icon" class="element-icon" />
             <span class="element-label">{{ config.label }}</span>
-            <span v-if="type === 'line'" class="soon-badge">Coming soon</span>
           </button>
         </div>
       </div>

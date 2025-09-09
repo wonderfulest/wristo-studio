@@ -527,7 +527,6 @@ export const useBaseStore = defineStore('baseStore', {
         config.orderIds.push(element.id || 'tianchong-' + nanoid())
         if (element.eleType === 'background-image') continue
         if (element.eleType === 'global') continue
-        
         // 使用编码器系统编码元素
         const encodeConfigNullable = encodeElement(element) as AnyObject | null
         if (!encodeConfigNullable) continue

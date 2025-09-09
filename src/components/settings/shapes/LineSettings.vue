@@ -1,170 +1,115 @@
 <template>
-  <div class="line-settings">
-    <!-- 基础设置 -->
-    <BaseSettings :element="element" @update="handleUpdate" />
+  <div class="settings-section">
+    <el-form label-position="left" label-width="100px">
+      <el-form-item label="Start (X, Y)">
+        <div class="xy-pair">
+          <el-input-number 
+            v-model="element.x1"
+            :step="1"
+            controls-position="right"
+            @change="updateElement"
+          />
+          <span class="xy-sep">,</span>
+          <el-input-number 
+            v-model="element.y1"
+            :step="1"
+            controls-position="right"
+            @change="updateElement"
+          />
+        </div>
+      </el-form-item>
+      <el-form-item label="End (X, Y)">
+        <div class="xy-pair">
+          <el-input-number 
+            v-model="element.x2"
+            :step="1"
+            controls-position="right"
+            @change="updateElement"
+          />
+          <span class="xy-sep">,</span>
+          <el-input-number 
+            v-model="element.y2"
+            :step="1"
+            controls-position="right"
+            @change="updateElement"
+          />
+        </div>
+      </el-form-item>
+      <el-form-item label="Line Color">
+        <color-picker 
+          v-model="element.stroke"
+          show-alpha
+          @update:modelValue="updateElement" 
+        />
+      </el-form-item>
+      <el-form-item label="Line Width">
+        <el-input-number 
+          v-model="element.strokeWidth"
+          :min="1" 
+          :max="20" 
+          :step="1"
+          controls-position="right"
+          @change="updateElement"
+        />
+      </el-form-item>
+      <el-form-item label="Opacity">
+        <el-slider 
+          v-model="element.opacity"
+          :min="0" 
+          :max="1" 
+          :step="0.1"
+          @change="updateElement"
+        />
+      </el-form-item>
 
-    <!-- 直线样式设置 -->
-    <el-divider>直线样式</el-divider>
-    
-    <div class="setting-group">
-      <label>线条颜色</label>
-      <color-picker 
-        :modelValue="element.stroke" 
-        @update:modelValue="value => handleUpdate('stroke', value)"
-        show-alpha
-      />
-    </div>
-
-    <div class="setting-group">
-      <label>线条宽度</label>
-      <el-input-number 
-        :modelValue="element.strokeWidth" 
-        @update:modelValue="value => handleUpdate('strokeWidth', value)"
-        :min="1" 
-        :max="20" 
-        :step="1"
-        controls-position="right"
-      />
-    </div>
-
-    <div class="setting-group">
-      <label>线条透明度</label>
-      <el-slider 
-        :modelValue="element.opacity" 
-        @update:modelValue="value => handleUpdate('opacity', value)"
-        :min="0" 
-        :max="1" 
-        :step="0.1"
-      />
-    </div>
-
-    <!-- 线条端点样式 -->
-    <el-divider>端点样式</el-divider>
-    
-    <div class="setting-group">
-      <label>线条端点</label>
-      <el-select 
-        :modelValue="element.strokeLineCap" 
-        @update:modelValue="value => handleUpdate('strokeLineCap', value)"
-        placeholder="选择端点样式"
-      >
-        <el-option label="平头" value="butt" />
-        <el-option label="圆头" value="round" />
-        <el-option label="方头" value="square" />
-      </el-select>
-    </div>
-
-    <div class="setting-group">
-      <label>线条连接</label>
-      <el-select 
-        :modelValue="element.strokeLineJoin" 
-        @update:modelValue="value => handleUpdate('strokeLineJoin', value)"
-        placeholder="选择连接样式"
-      >
-        <el-option label="斜接" value="miter" />
-        <el-option label="圆角" value="round" />
-        <el-option label="斜角" value="bevel" />
-      </el-select>
-    </div>
-
-    <!-- 高级设置 -->
-    <el-divider>高级设置</el-divider>
-    
-    <div class="setting-group">
-      <label>起始点 X</label>
-      <el-input-number 
-        :modelValue="element.x1" 
-        @update:modelValue="value => handleUpdate('x1', value)"
-        :step="1"
-        controls-position="right"
-      />
-    </div>
-
-    <div class="setting-group">
-      <label>起始点 Y</label>
-      <el-input-number 
-        :modelValue="element.y1" 
-        @update:modelValue="value => handleUpdate('y1', value)"
-        :step="1"
-        controls-position="right"
-      />
-    </div>
-
-    <div class="setting-group">
-      <label>结束点 X</label>
-      <el-input-number 
-        :modelValue="element.x2" 
-        @update:modelValue="value => handleUpdate('x2', value)"
-        :step="1"
-        controls-position="right"
-      />
-    </div>
-
-    <div class="setting-group">
-      <label>结束点 Y</label>
-      <el-input-number 
-        :modelValue="element.y2" 
-        @update:modelValue="value => handleUpdate('y2', value)"
-        :step="1"
-        controls-position="right"
-      />
-    </div>
+    </el-form>
   </div>
+  
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import BaseSettings from '@/components/settings/BaseSettings.vue'
+<script setup lang="ts">
+import { watch } from 'vue'
+import { useLineElementStore } from '@/stores/elements/shapes/lineElement'
 import ColorPicker from '@/components/color-picker/index.vue'
 
-const props = defineProps({
-  element: {
-    type: Object,
-    required: true
-  }
-})
+const props = defineProps<{ element: any }>()
 
-const emit = defineEmits(['update'])
+const lineStore = useLineElementStore()
 
-// 计算当前元素
-const currentElement = computed(() => props.element)
+// 监听颜色变化，保持与 CircleSettings 行为一致
+watch(() => props.element.stroke, () => {
+  updateElement()
+}, { deep: true })
 
-// 处理属性更新
-const handleUpdate = (property, value) => {
-  emit('update', { [property]: value })
+const updateElement = () => {
+  lineStore.updateElement(props.element, {
+    stroke: props.element.stroke,
+    strokeWidth: props.element.strokeWidth,
+    opacity: props.element.opacity,
+    x1: props.element.x1,
+    y1: props.element.y1,
+    x2: props.element.x2,
+    y2: props.element.y2,
+  })
 }
 </script>
 
 <style scoped>
-.line-settings {
+.settings-section {
   padding: 16px;
 }
 
-.setting-group {
+.el-form-item {
+  margin-bottom: 16px;
+}
+
+.xy-pair {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
 }
 
-.setting-group label {
-  font-size: 14px;
-  color: #606266;
-  margin-right: 12px;
-  white-space: nowrap;
-}
-
-.setting-group :deep(.el-input-number),
-.setting-group :deep(.el-select) {
-  width: 120px;
-}
-
-.setting-group :deep(.el-slider) {
-  width: 120px;
-}
-
-:deep(.el-divider__text) {
-  font-size: 14px;
-  font-weight: 500;
+.xy-sep {
+  color: #909399;
 }
 </style>
