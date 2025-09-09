@@ -87,6 +87,7 @@ export const useTick60Store = defineStore('tick60Element', {
       this.baseStore.canvas?.requestRenderAll()
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(svgGroup)
+      return svgGroup
     },
     async updateElement(element: any, config: DialElementConfig) {
       if (!element) throw new Error('Invalid element')
@@ -171,6 +172,8 @@ export const useTick60Store = defineStore('tick60Element', {
         eleType: 'tick60',
         left: element.left,
         top: element.top,
+        originX: element.originX,
+        originY: element.originY,
         height: element.height,
         fill: element.fill,
         imageUrl: element.imageUrl,

@@ -70,6 +70,7 @@ export const useRomansStore = defineStore('romansElement', {
       this.baseStore.canvas?.requestRenderAll()
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(svgGroup)
+      return svgGroup
     },
     async updateSVG(element: any, config: DialElementConfig) {
       if (!this.baseStore.canvas) return
@@ -146,6 +147,8 @@ export const useRomansStore = defineStore('romansElement', {
         eleType: 'romans',
         left: element.left,
         top: element.top,
+        originX: element.originX,
+        originY: element.originY,
         height: element.height,
         fill: element.fill,
         imageUrl: element.imageUrl,

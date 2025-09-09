@@ -1,20 +1,22 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useTick12Store } from '@/stores/elements/dials/Tick12Element'
+import type { FabricElement } from '@/types/element'
+import type { TickElementConfig } from '@/types/elements'
 
-const encodeTick12: EncoderFn = (element: any) => {
+const encodeTick12: EncoderFn<'tick12'> = (element: FabricElement) => {
   const tick12Store = useTick12Store()
-  return tick12Store.encodeConfig(element)
+  return tick12Store.encodeConfig(element as any) as TickElementConfig
 }
 
-const decodeTick12: DecoderFn = (encoded: any) => {
+const decodeTick12: DecoderFn<'tick12'> = (encoded: TickElementConfig) => {
   const tick12Store = useTick12Store()
-  return tick12Store.decodeConfig(encoded)
+  return tick12Store.decodeConfig(encoded as any)
 }
 
-const addElement: AddElementFn = (_elementType, config: any) => {
+const addElement: AddElementFn<'tick12'> = (_elementType, config: TickElementConfig) => {
   const tick12Store = useTick12Store()
-  tick12Store.addElement(config)
+  return tick12Store.addElement(config) as unknown as FabricElement
 }
 
 export default () => {

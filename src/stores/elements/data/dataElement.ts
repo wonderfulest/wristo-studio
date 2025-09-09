@@ -4,7 +4,7 @@ import { FabricText } from 'fabric'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { DataElementConfig } from '@/types/elements/data'
-import type { ElementConfig, FabricElement } from '@/types/element'
+import type { FabricElement } from '@/types/element'
 import { usePropertiesStore } from '@/stores/properties'
 
 
@@ -32,8 +32,8 @@ export const useDataStore = defineStore('dataElement', {
         fontSize: config.fontSize as any,
         fontFamily: config.fontFamily as any,
         selectable: true,
-        dataProperty: config.dataProperty ?? null,
-        goalProperty: config.goalProperty ?? null,
+        dataProperty: config.dataProperty ?? undefined,
+        goalProperty: config.goalProperty ?? undefined,
         metricSymbol: (config as any).metricSymbol ?? '',
       } as any)
 
@@ -77,39 +77,39 @@ export const useDataStore = defineStore('dataElement', {
       canvas.renderAll()
     },
 
-    encodeConfig(element: FabricElement): ElementConfig {
+    encodeConfig(element: FabricElement): DataElementConfig {
       if (!element) throw new Error('Invalid element')
-      const config: ElementConfig = {
+      const config: DataElementConfig = {
         eleType: 'data',
-        id: element.id,
+        id: String(element.id ?? ''),
         left: Math.round(element.left),
         top: Math.round(element.top),
-        originX: element.originX as any,
-        originY: element.originY as any,
-        fill: element.fill as any,
-        fontSize: element.fontSize as any,
-        fontFamily: element.fontFamily as any,
+        originX: (element.originX as any) ?? 'center',
+        originY: (element.originY as any) ?? 'center',
+        fill: String((element.fill as any) ?? '#ffffff'),
+        fontSize: Number((element.fontSize as any) ?? 14),
+        fontFamily: String((element.fontFamily as any) ?? 'roboto-condensed-regular'),
         dataProperty: (element as any).dataProperty ?? null,
         goalProperty: (element as any).goalProperty ?? null,
-        metricSymbol: (element as any).metricSymbol ?? '',
+        metricSymbol: String((element as any).metricSymbol ?? ''),
       }
-      return config as ElementConfig
+      return config
     },
 
-    decodeConfig(config: ElementConfig): Partial<FabricElement> {
+    decodeConfig(config: DataElementConfig): Partial<FabricElement> {
       const result: Partial<FabricElement> = {
         eleType: 'data',
-        id: (config as any).id ?? nanoid(),
+        id: config.id ?? nanoid(),
         left: config.left,
         top: config.top,
-        originX: (config as any).originX ?? 'center',
-        originY: (config as any).originY ?? 'center',
+        originX: config.originX,
+        originY: config.originY,
         fill: config.fill,
         fontSize: config.fontSize,
-        fontFamily: (config.fontFamily) as string,
-        dataProperty: (config as any).dataProperty ?? null,
-        goalProperty: (config as any).goalProperty ?? null,
-        metricSymbol: (config as any).metricSymbol ?? '',
+        fontFamily: config.fontFamily,
+        dataProperty: config.dataProperty ?? null,
+        goalProperty: config.goalProperty ?? null,
+        metricSymbol: config.metricSymbol ?? '',
       }
       return result as Partial<FabricElement>
     },
