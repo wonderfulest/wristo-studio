@@ -79,6 +79,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
       this.baseStore.canvas?.renderAll()
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(group)
+      return group
     },
 
     getBarWidth(totalWidth: number, separator: number) {

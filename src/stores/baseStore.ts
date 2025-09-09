@@ -398,12 +398,12 @@ export const useBaseStore = defineStore('baseStore', {
       return res.code === 0
     },
     // 获取所有对象
-    getObjects(): any[] {
-      return this.canvas ? this.canvas.getObjects() : []
+    getObjects(): FabricElement[] {
+      return this.canvas ? (this.canvas.getObjects() as unknown as FabricElement[]) : []
     },
     // 获取选中对象
-    getActiveObjects(): any[] {
-      return this.canvas ? this.canvas.getActiveObjects() : []
+    getActiveObjects(): FabricElement[] {
+      return this.canvas ? (this.canvas.getActiveObjects() as unknown as FabricElement[]) : []
     },
     // 切换主题
     toggleTheme(): void {

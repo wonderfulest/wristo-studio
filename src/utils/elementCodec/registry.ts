@@ -1,8 +1,8 @@
 import { ref, type Ref } from 'vue'
 import type { ElementType, FabricElement } from '@/types/element'
-import type { AnyElementConfig, ElementConfigMap } from '@/types/elements'
+import type { ElementConfigMap } from '@/types/elements'
 
-// 泛型化的类型定义
+// 泛型化的类型定义（严格）
 export type AddElementFn<T extends ElementType = ElementType> = 
   (elementType: T, config: ElementConfigMap[T]) => Promise<FabricElement> | FabricElement
 

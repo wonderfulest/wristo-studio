@@ -22,4 +22,8 @@ export interface RectangleElementConfig extends ShapeElementConfig {
 
 export interface LineElementConfig extends ShapeElementConfig {
   eleType: 'line'
+  x1: number
+  y1: number
+  x2: number
+  y2: number
 }

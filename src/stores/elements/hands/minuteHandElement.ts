@@ -121,6 +121,7 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
       this.baseStore.canvas?.requestRenderAll()
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(svgGroup)
+      return svgGroup as unknown as FabricElement
     },
 
     async updateHandSVG(element: any, config: HandElementConfig) {
@@ -252,12 +253,14 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
     encodeConfig(element: FabricElement) {
       if (!element) throw new Error('Invalid element')
       return {
-        id: element.id,
+        id: String(element.id ?? ''),
         eleType: 'minuteHand',
         left: element.left,
         top: element.top,
+        originX: element.originX,
+        originY: element.originY,
         height: element.height,
-        fill: element.fill,
+        fill: (element.fill ?? undefined) as unknown as string | undefined,
         angle: element.angle,
         imageUrl: element.imageUrl,
         targetHeight: element.targetHeight,

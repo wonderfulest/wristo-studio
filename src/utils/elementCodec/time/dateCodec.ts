@@ -1,21 +1,21 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useDateStore } from '@/stores/elements/time/dateElement'
-import type { ElementConfig, FabricElement } from '@/types/element'
+import type { FabricElement } from '@/types/element'
+import type { DateElementConfig } from '@/types/elements'
 
-const encodeDate: EncoderFn = (element: FabricElement) => {
+const encodeDate: EncoderFn<'date'> = (element: FabricElement) => {
   const store = useDateStore()
   return store.encodeConfig(element)
 }
 
-const decodeDate: DecoderFn = (config: ElementConfig) => {
+const decodeDate: DecoderFn<'date'> = (config: DateElementConfig) => {
   const store = useDateStore()
   return store.decodeConfig(config)
 }
 
-const addElement: AddElementFn = (_elementType, config: ElementConfig) => {
+const addElement: AddElementFn<'date'> = (_elementType, config: DateElementConfig) => {
   const store = useDateStore()
-  config.type = _elementType
   return store.addElement(config)
 }
 

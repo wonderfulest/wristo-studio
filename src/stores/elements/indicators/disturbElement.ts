@@ -30,6 +30,7 @@ export const useDisturbStore = defineStore('disturbElement', {
       baseStore.canvas.add(disturbIcon as any)
       baseStore.canvas.setActiveObject(disturbIcon as any)
       baseStore.canvas.renderAll()
+      return disturbIcon
     },
 
     updateDisturbStatus(status: boolean) {
@@ -48,7 +49,7 @@ export const useDisturbStore = defineStore('disturbElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: (element.fill ?? undefined) as unknown as string | undefined,
       }
       return config as IndicatorElementConfig
     },

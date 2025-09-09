@@ -11,7 +11,7 @@ export const useNotificationStore = defineStore('notificationElement', {
   actions: {
     addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
       const notificationIcon = new FabricText('\u0025', {
         eleType: 'notification',
@@ -30,6 +30,7 @@ export const useNotificationStore = defineStore('notificationElement', {
       baseStore.canvas.add(notificationIcon as any)
       baseStore.canvas.setActiveObject(notificationIcon as any)
       baseStore.canvas.renderAll()
+      return notificationIcon
     },
 
     updateNotificationStatus(status: boolean) {
@@ -48,7 +49,7 @@ export const useNotificationStore = defineStore('notificationElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: (element.fill ?? undefined) as unknown as string | undefined,
       }
       return config as IndicatorElementConfig
     },

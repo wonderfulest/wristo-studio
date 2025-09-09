@@ -11,7 +11,7 @@ export interface BaseTextConfig extends BaseElementConfig {
 export interface DataElementConfig extends BaseTextConfig {
   eleType: 'data' | 'icon' | 'label' | 'unit'
   metricSymbol: string
-  metricValue: string
+  metricValue?: string
   dataProperty?: string
   goalProperty?: string
 }

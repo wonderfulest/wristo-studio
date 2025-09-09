@@ -132,6 +132,7 @@ export const useCircleStore = defineStore('circleElement', {
       }
       return {
         eleType: 'circle',
+        id: element.id,
         left: Math.round(element.left),
         top: Math.round(element.top),
         radius: element.radius,

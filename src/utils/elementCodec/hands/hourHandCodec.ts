@@ -1,23 +1,22 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useHourHandStore } from '@/stores/elements/hands/hourHandElement'
-import type { ElementConfig, FabricElement } from '@/types/element'
-import type { ElementType } from '@/types/element'
+import type { FabricElement } from '@/types/element'
+import type { HandElementConfig } from '@/types/elements'
 
-const encodeHourHand: EncoderFn = (element: FabricElement) => {
+const encodeHourHand: EncoderFn<'hourHand'> = (element: FabricElement) => {
   const store = useHourHandStore()
   return store.encodeConfig(element)
 }
 
-const decodeHourHand: DecoderFn = (config: ElementConfig) => {
+const decodeHourHand: DecoderFn<'hourHand'> = (config: HandElementConfig) => {
   const store = useHourHandStore()
   return store.decodeConfig(config)
 }
 
-const addElement: AddElementFn = (_elementType: ElementType, config: ElementConfig) => {
+const addElement: AddElementFn<'hourHand'> = (_elementType, config: HandElementConfig) => {
   const store = useHourHandStore()
-  store.addElement(config)
-  return {} as FabricElement
+  return store.addElement(config) as unknown as FabricElement
 }
 
 export default () => {

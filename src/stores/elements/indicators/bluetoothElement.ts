@@ -11,7 +11,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
   actions: {
     addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
       const bluetoothIcon = new FabricText('\u0022', {
         eleType: 'bluetooth',
@@ -30,6 +30,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
       baseStore.canvas.add(bluetoothIcon as any)
       baseStore.canvas.setActiveObject(bluetoothIcon as any)
       baseStore.canvas.renderAll()
+      return bluetoothIcon
     },
 
     updateBluetoothStatus(status: boolean) {
@@ -48,7 +49,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: (element.fill ?? undefined) as unknown as string | undefined,
       }
       return config as IndicatorElementConfig
     },

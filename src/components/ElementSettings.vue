@@ -41,8 +41,8 @@ const activeElements = ref([] as FabricElement[])
 
 const updateElements = () => {
   if (!baseStore.canvas) return
-  console.log('activeElements', baseStore.canvas.getActiveObjects())
-  activeElements.value = baseStore.canvas.getActiveObjects()
+  console.log('activeElements', baseStore.getActiveObjects())
+  activeElements.value = baseStore.getActiveObjects()
 }
 
 const debouncedUpdateElements = debounce(updateElements, 100)

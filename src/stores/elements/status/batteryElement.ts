@@ -4,7 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Rect, Group, TOriginX, TOriginY } from 'fabric'
 import { nanoid } from 'nanoid'
 import { decodeColor } from '@/utils/colorUtils'
-import type { BatteryElementConfig } from '@/types/elements/status'
+import type { BatteryElementConfig } from '@/types/elements/battery'
 import { FabricElement } from '@/types/element'
 
 export const useBatteryStore = defineStore('batteryElement', {
@@ -106,6 +106,7 @@ export const useBatteryStore = defineStore('batteryElement', {
       this.baseStore.canvas?.renderAll()
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(group)
+      return group
     },
 
     getLevelColor(level: number, levelColors: { low: string; medium: string; high: string } | null = null) {
@@ -177,7 +178,6 @@ export const useBatteryStore = defineStore('batteryElement', {
     },
 
     decodeConfig(config: BatteryElementConfig): Partial<FabricElement> {
-console.log('decodeConfig battery', config)
       const decoded: Partial<FabricElement> = {
         eleType: 'battery',
         left: config.left,

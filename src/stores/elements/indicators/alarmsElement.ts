@@ -11,7 +11,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
   actions: {
     addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
       const alarmsIcon = new FabricText('\u0024', {
         eleType: 'alarms',
@@ -30,6 +30,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
       baseStore.canvas.add(alarmsIcon as any)
       baseStore.canvas.setActiveObject(alarmsIcon as any)
       baseStore.canvas.renderAll()
+      return alarmsIcon
     },
 
     encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
@@ -42,7 +43,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: (element.fill ?? undefined) as unknown as string | undefined,
       }
       return config as IndicatorElementConfig
     },

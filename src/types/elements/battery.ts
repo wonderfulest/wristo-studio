@@ -7,4 +7,17 @@ export interface BatteryElementConfig extends BaseElementConfig {
   height: number
   color: string
   level: number
+  headWidth: number
+  headHeight: number
+  padding: number
+  headGap: number
+  bodyStrokeWidth: number
+  bodyStroke: string
+  bodyFill: string
+  bodyRx: number
+  bodyRy: number
+  headFill: string
+  headRx: number
+  headRy: number
+  levelColors: { low: string; medium: string; high: string } | null
 }

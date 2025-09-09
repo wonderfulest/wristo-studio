@@ -1,20 +1,22 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useDisturbStore } from '@/stores/elements/indicators/disturbElement'
+import type { FabricElement } from '@/types/element'
+import type { IndicatorElementConfig } from '@/types/elements'
 
-const encodeDisturb: EncoderFn = (element: any) => {
+const encodeDisturb: EncoderFn<'disturb'> = (element: FabricElement) => {
   const store = useDisturbStore()
   return store.encodeConfig(element)
 }
 
-const decodeDisturb: DecoderFn = (config: any) => {
+const decodeDisturb: DecoderFn<'disturb'> = (config: IndicatorElementConfig) => {
   const store = useDisturbStore()
   return store.decodeConfig(config)
 }
 
-const addElement: AddElementFn = (_elementType, config: any) => {
+const addElement: AddElementFn<'disturb'> = (_elementType, config: IndicatorElementConfig) => {
   const store = useDisturbStore()
-  store.addElement(config)
+  return store.addElement(config)
 }
 
 export default () => {
