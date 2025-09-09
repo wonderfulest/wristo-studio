@@ -78,18 +78,26 @@ const addElementByType = async (category: string, elementType: string, config: A
 }
 
 .panel-content {
-  padding: 16px;
+  padding: 10px;
 }
 
 .element-section {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 h4 {
@@ -108,8 +116,8 @@ h4 {
 
 .element-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 button {
@@ -118,10 +126,10 @@ button {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100px;
-  padding: 16px;
+  height: 72px;
+  padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 6px;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
@@ -130,18 +138,18 @@ button {
 
 button:hover {
   background: #f5f5f5;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .element-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
+  font-size: 24px;
+  margin-bottom: 6px;
   color: #409eff;
 }
 
 .element-label {
-  font-size: 14px;
+  font-size: 12px;
   color: #333;
 }
 
@@ -151,9 +159,9 @@ button:hover {
   right: 4px;
   background: #999;
   color: white;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 button.disabled {
