@@ -218,6 +218,7 @@ const setupAutoSave = () => {
 const loadElements = async (elements: ElementConfig[]) => {
   try {
     for (const element of elements) {
+      if (element.type == 'Line') continue
       console.log(`load element: ${JSON.stringify(element)}`)
       const decodedElement = await decodeElement(element)
       if (!decodedElement) {
