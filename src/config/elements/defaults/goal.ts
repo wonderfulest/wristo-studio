@@ -13,14 +13,14 @@ export const DEFAULT_GOAL_CONFIG: GoalElementConfig & EDITOR_ELEMENT = Object.as
 
 export const DEFAULT_GOALBAR_CONFIG: GoalElementConfig & EDITOR_ELEMENT = Object.assign(
   {}, DEFAULT_GOAL_CONFIG,{
-  icon: 'mdi:target-variant',
+  icon: 'mdi:target',
   label: 'Goal Bar',
   eleType: 'goalBar' as const,
 })
 
 export const DEFAULT_GOALARC_CONFIG: GoalArcElementConfig & EDITOR_ELEMENT = Object.assign(
   {}, DEFAULT_GOAL_CONFIG,{
-  icon: 'mdi:ray-end-vertex',
+  icon: 'mdi:chart-arc',
   label: 'Goal Arc',
   eleType: 'goalArc' as const,
   startAngle: 0,

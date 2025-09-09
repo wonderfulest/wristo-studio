@@ -274,29 +274,29 @@ onUnmounted(() => {
 }
 
 .layer-list {
-  padding: 16px;
+  padding: 8px;
 }
 
 .section-title {
-  margin: 0 0 16px;
+  margin: 0 0 8px;
   color: #333;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .layers-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .layer-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px;
+  padding: 6px;
   border: 1px solid #eee;
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -306,36 +306,36 @@ onUnmounted(() => {
 }
 
 .layer-selected {
-  border: 4px solid #1890ff;
+  border: 2px solid #1890ff;
   background: #e6f7ff;
 }
 
 .layer-content {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: move; /* 指示可拖动 */
 }
 
 .layer-icon {
-  font-size: 20px;
+  font-size: 16px;
   display: flex;
   align-items: center;
 }
 
 .layer-name {
-  font-size: 14px;
+  font-size: 12px;
   color: #333;
 }
 
 .layer-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .layer-btn {
-  padding: 4px;
-  font-size: 20px;
+  padding: 2px;
+  font-size: 16px;
   border: none;
   background: none;
   cursor: pointer;
@@ -348,7 +348,27 @@ onUnmounted(() => {
 }
 
 .layer-locked {
-  opacity: 0.7;
-  background-color: #555555;
+  opacity: 0.8;
+}
+
+/* 锁定状态置灰样式 */
+.layer-locked .layer-item {
+  background: #555555;
+  border-color: #555555;
+  filter: grayscale(100%);
+}
+
+.layer-locked .layer-name,
+.layer-locked .layer-icon,
+.layer-locked .layer-btn {
+  color: #9aa0a6;
+}
+
+.layer-locked .layer-item:hover {
+  background: #555555;
+}
+
+.layer-locked .layer-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 </style>

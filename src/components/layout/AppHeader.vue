@@ -8,31 +8,31 @@
       <nav class="header-nav">
         <a @click="showDesignerConfirm" class="nav-link">
           <Icon icon="material-symbols:edit-square" />
-          设计器
+          Designer
         </a>
-        <el-dialog v-model="designerDialogVisible" title="提示" width="30%">
-          <span>关闭当前操作，并打开新的设计？</span>
+        <el-dialog v-model="designerDialogVisible" title="Confirm" width="30%">
+          <span>Close current work and start a new design?</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="designerDialogVisible = false">取消</el-button>
-              <el-button type="primary" @click="confirmNewDesign">确定</el-button>
+              <el-button @click="designerDialogVisible = false">Cancel</el-button>
+              <el-button type="primary" @click="confirmNewDesign">Confirm</el-button>
             </span>
           </template>
         </el-dialog>
         <a @click="showDesignsListConfirm" class="nav-link">
           <Icon icon="material-symbols:list" />
-          我的设计
+          My Designs
         </a>
-        <router-link to="/sales" class="nav-link" >
+        <!-- <router-link to="/sales" class="nav-link" >
           <Icon icon="material-symbols:list" />
           销售数据
-        </router-link>
-        <el-dialog v-model="designsListDialogVisible" title="提示" width="30%">
-          <span>关闭当前操作，并打开设计列表？</span>
+        </router-link> -->
+        <el-dialog v-model="designsListDialogVisible" title="Confirm" width="30%">
+          <span>Close current work and open the designs list?</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="designsListDialogVisible = false">取消</el-button>
-              <el-button type="primary" @click="confirmOpenDesignsList">确定</el-button>
+              <el-button @click="designsListDialogVisible = false">Cancel</el-button>
+              <el-button type="primary" @click="confirmOpenDesignsList">Confirm</el-button>
             </span>
           </template>
         </el-dialog>
@@ -43,7 +43,7 @@
       <el-input 
         type="text" 
         v-model="watchFaceName" 
-        placeholder="表盘名称" 
+        placeholder="Watch face name" 
         :input-style="{ border: 'none', background: 'transparent' }" 
       />
     </div>
@@ -66,20 +66,20 @@
       <div class="dropdown-menu" v-if="showDropdown">
         <div class="dropdown-item" @click="router.push('/fonts')">
           <Icon icon="material-symbols:font-download-outline" />
-          字体预览
+          Font Preview
         </div>
         <div class="dropdown-item" @click="router.push('/FAQ')">
           <Icon icon="material-symbols:help-outline" />
-          帮助中心
+          Help Center
         </div>
         <div class="dropdown-item" @click="showWPayDialog">
           <Icon icon="material-symbols:help-outline" />
-          WPay接入
+          WPay Integration
         </div>
         <div class="dropdown-divider"></div>
         <div class="dropdown-item" @click="handleLogout">
           <Icon icon="material-symbols:logout" />
-          退出登录
+          Logout
         </div>
       </div>
     </div>
@@ -214,7 +214,7 @@ onMounted(() => {
 
 <style scoped>
 .app-header {
-  height: 60px;
+  height: 40px;
   background: #fff;
   border-bottom: 1px solid #eee;
   display: flex;

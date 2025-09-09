@@ -39,7 +39,7 @@
               @click="useTemplate(template)"
               :loading="loading === template.id"
             >
-              使用此模板
+              Use this template
             </el-button>
           </div>
         </div>
@@ -59,16 +59,16 @@
       />
     </div>
 
-    <!-- 空状态 -->
+    <!-- Empty state -->
     <el-empty
       v-if="templates.length === 0 && !loading"
-      description="暂无推荐模板"
+      description="No recommended templates"
     />
 
-    <!-- 加载状态 -->
+    <!-- Loading state -->
     <div v-if="loading === true" class="loading-container">
       <el-icon class="loading-icon"><Loading /></el-icon>
-      <span>加载中...</span>
+      <span>Loading...</span>
     </div>
   </div>
 </template>
@@ -90,8 +90,8 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 
-// 设置中文语言环境
-moment.locale('zh-cn')
+// Set English locale to ensure UI stays in English
+moment.locale('en')
 
 // 格式化日期
 const formatDate = (date) => {
@@ -99,27 +99,27 @@ const formatDate = (date) => {
   const targetDate = moment(date)
   const diff = now.diff(targetDate, 'days')
   
-  // 如果是今天
+  // If today
   if (diff === 0) {
     return targetDate.format('HH:mm')
   }
   
-  // 如果是昨天
+  // If yesterday
   if (diff === 1) {
-    return '昨天 ' + targetDate.format('HH:mm')
+    return 'Yesterday ' + targetDate.format('HH:mm')
   }
   
-  // 如果是最近7天
+  // Within last 7 days
   if (diff < 7) {
     return targetDate.fromNow()
   }
   
-  // 如果是今年
+  // If this year
   if (targetDate.year() === now.year()) {
     return targetDate.format('MM-DD HH:mm')
   }
   
-  // 其他情况显示完整日期
+  // Otherwise show full date
   return targetDate.format('YYYY-MM-DD HH:mm')
 }
 
@@ -135,8 +135,8 @@ const fetchTemplates = async () => {
     templates.value = response.data
     total.value = response.meta.pagination.total
   } catch (error) {
-    console.error('获取模板列表失败:', error)
-    messageStore.error('获取模板列表失败')
+    console.error('Failed to get template list:', error)
+    messageStore.error('Failed to get template list')
   } finally {
     loading.value = false
   }
@@ -146,11 +146,11 @@ const fetchTemplates = async () => {
 const useTemplate = async (template) => {
   loading.value = template.id
   try {
-    // TODO: 实现使用模板的逻辑
-    messageStore.success('模板应用成功')
+    // TODO: Implement use template logic
+    messageStore.success('Template applied successfully')
   } catch (error) {
-    console.error('应用模板失败:', error)
-    messageStore.error('应用模板失败')
+    console.error('Failed to apply template:', error)
+    messageStore.error('Failed to apply template')
   } finally {
     loading.value = false
   }

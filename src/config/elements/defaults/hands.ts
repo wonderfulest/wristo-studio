@@ -6,7 +6,7 @@ export const DEFAULT_HOUR_HAND_CONFIG: HandElementConfig & EDITOR_ELEMENT = Obje
   DEFAULT_HAND_CONFIG,
   {
     icon: 'mdi:clock-time-three-outline',
-    label: 'Hour hand',
+    label: 'Hour',
     eleType: 'hourHand' as const,
   },
 )
@@ -16,7 +16,7 @@ export const DEFAULT_MINUTE_HAND_CONFIG: HandElementConfig & EDITOR_ELEMENT = Ob
   DEFAULT_HAND_CONFIG,
   {
     icon: 'mdi:clock-time-six-outline',
-    label: 'Minute hand',
+    label: 'Minute',
     eleType: 'minuteHand' as const,
   },
 )
@@ -26,7 +26,7 @@ export const DEFAULT_SECOND_HAND_CONFIG: HandElementConfig & EDITOR_ELEMENT = Ob
   DEFAULT_HAND_CONFIG,
   {
     icon: 'mdi:clock-time-nine-outline',
-    label: 'Second hand',
+    label: 'Second',
     eleType: 'secondHand' as const,
   },
 )

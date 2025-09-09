@@ -39,14 +39,14 @@
               @click="copyDesign(favorite.design)"
               :loading="loading === favorite.id"
             >
-              复制设计
+              Copy Design
             </el-button>
             <el-button 
               type="danger" 
               @click="removeFavorite(favorite)"
               :loading="loading === favorite.id"
             >
-              取消收藏
+              Remove Favorite
             </el-button>
           </div>
         </div>
@@ -66,16 +66,16 @@
       />
     </div>
 
-    <!-- 空状态 -->
+    <!-- Empty state -->
     <el-empty
       v-if="favorites.length === 0 && !loading"
-      description="暂无收藏设计"
+      description="No favorite designs"
     />
 
-    <!-- 加载状态 -->
+    <!-- Loading state -->
     <div v-if="loading === true" class="loading-container">
       <el-icon class="loading-icon"><Loading /></el-icon>
-      <span>加载中...</span>
+      <span>Loading...</span>
     </div>
   </div>
 </template>
@@ -103,8 +103,8 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 
-// 设置中文语言环境
-moment.locale('zh-cn')
+// Set English locale to ensure UI stays in English
+moment.locale('en')
 
 // 格式化日期
 const formatDate = (date: number) => {
@@ -117,7 +117,7 @@ const formatDate = (date: number) => {
   }
   
   if (diff === 1) {
-    return '昨天 ' + targetDate.format('HH:mm')
+    return 'Yesterday ' + targetDate.format('HH:mm')
   }
   
   if (diff < 7) {
@@ -144,8 +144,8 @@ const fetchFavorites = async () => {
     favorites.value = response.data
     total.value = response.meta.pagination.total
   } catch (error) {
-    console.error('获取收藏列表失败:', error)
-    messageStore.error('获取收藏列表失败')
+    console.error('Failed to get favorites:', error)
+    messageStore.error('Failed to get favorites')
   } finally {
     loading.value = false
   }
@@ -156,8 +156,8 @@ const openDesign = async (design: Design) => {
   try {
     router.push(`/design?id=${design.id}`)
   } catch (error) {
-    console.error('打开设计失败:', error)
-    messageStore.error('打开设计失败')
+    console.error('Failed to open design:', error)
+    messageStore.error('Failed to open design')
   }
 }
 
@@ -166,18 +166,18 @@ const removeFavorite = async (favorite: Design) => {
   try {
     // 添加确认对话框
     await ElMessageBox.confirm(
-      '确定要取消收藏这个设计吗？',
-      '取消收藏',
+      'Are you sure you want to remove this favorite?',
+      'Remove Favorite',
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm',
+        cancelButtonText: 'Cancel',
         type: 'warning'
       }
     )
 
     loading.value = favorite.id
     await toggleFavorite(favorite.name, favorite.design.id, userStore.userInfo?.id, false)
-    messageStore.success('取消收藏成功')
+    messageStore.success('Removed from favorites')
     
     // 如果当前页只有一条数据，且不是第一页，则跳转到上一页
     if (favorites.value.length === 1 && currentPage.value > 1) {
@@ -187,9 +187,9 @@ const removeFavorite = async (favorite: Design) => {
     // 刷新列表
     await fetchFavorites()
   } catch (error) {
-    if (error !== 'cancel') { // 忽略用户取消的情况
-      console.error('取消收藏失败:', error)
-      messageStore.error('取消收藏失败')
+    if (error !== 'cancel') { // ignore user cancel
+      console.error('Failed to remove favorite:', error)
+      messageStore.error('Failed to remove favorite')
     }
   } finally {
     loading.value = false
@@ -214,7 +214,7 @@ const copyDesign = async (design: Design) => {
   try {
     loading.value = true
     
-    // 生成新的表盘名称，添加"复制"后缀
+    // Generate a new watch face name with a "copy" suffix
     const newName = `${design.name}—copy`
     // 创建新表盘数据
     const newDesignData = {
@@ -232,14 +232,14 @@ const copyDesign = async (design: Design) => {
     const updateResponse = await designApi.updateDesign(updateDesignData)
     
     if (updateResponse.code === 0 && updateResponse.data) {
-        messageStore.success('复制成功')
+        messageStore.success('Copy successful')
         // 可以选择是否跳转到我的设计页面
         router.push('/designs')
       }
     }
   } catch (error) {
-    console.error('复制失败:', error)
-    messageStore.error('复制失败')
+    console.error('Copy failed:', error)
+    messageStore.error('Copy failed')
   } finally {
     loading.value = false
   }

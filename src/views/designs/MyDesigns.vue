@@ -292,7 +292,7 @@ const formatDate = (date: number) => {
 
 // 获取创作者名称
 const getCreatorName = (design: Design) => {
-  return design.user?.username || '未知用户'
+  return design.user?.username || 'Unknown User'
 }
 
 // 获取设计图片URL

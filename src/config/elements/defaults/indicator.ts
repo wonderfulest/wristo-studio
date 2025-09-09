@@ -4,7 +4,7 @@ import { DEFAULT_TEXT_CONFIG, EDITOR_ELEMENT } from './base'
 const DEFAULT_METRIC_SYMBOL: string = ':FIELD_TYPE_HEART_RATE'
 
 export const DEFAULT_BLUETOOTH_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
-  icon: 'mdi:clock-time-eight-outline',
+  icon: 'mdi:bluetooth',
   eleType: 'bluetooth' as const,
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Bluetooth',
@@ -13,7 +13,7 @@ export const DEFAULT_BLUETOOTH_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT =
 })
 
 export const DEFAULT_DISTURB_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
-  icon: 'mdi:clock-time-eight-outline',
+  icon: 'mdi:minus-circle-off',
   eleType: 'disturb' as const,
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Disturb',
@@ -22,7 +22,7 @@ export const DEFAULT_DISTURB_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = O
 })
 
 export const DEFAULT_ALARMS_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
-  icon: 'mdi:clock-time-eight-outline',
+  icon: 'mdi:alarm',
   eleType: 'alarms' as const,
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Alarms',
@@ -31,7 +31,7 @@ export const DEFAULT_ALARMS_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Ob
 })
 
 export const DEFAULT_NOTIFICATION_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
-  icon: 'mdi:clock-time-eight-outline',
+  icon: 'mdi:bell-outline',
   eleType: 'notification' as const,
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Notification',

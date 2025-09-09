@@ -7,7 +7,7 @@
 
     <!-- 面板容器 -->
     <div class="panel-container">
-      <AddElementPanel v-if="isAddElementMode" />
+      <AddElementPanel v-if="isAddElementMode" @switch-to-layer="switchToLayer" />
       <LayerPanel v-else />
     </div>
 

@@ -58,4 +58,6 @@ export const DEFAULT_HAND_CONFIG: HandElementConfig & EDITOR_ELEMENT = Object.as
   rotationCenter: { x: DEFAULT_LEFT, y: DEFAULT_TOP },
   targetHeight: DEFAULT_HAND_HEIGHT,
   moveDy: DEFAULT_HAND_MOVE_DY,
+  angle: 0,
+  height: DEFAULT_HAND_HEIGHT,
 }, DEFAULT_BASE_CONFIG)

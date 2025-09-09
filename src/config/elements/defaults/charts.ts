@@ -3,7 +3,7 @@ import { DEFAULT_BASE_CONFIG, EDITOR_ELEMENT } from './base'
 
 export const DEFAULT_BARCHART_CONFIG: BarChartElementConfig & EDITOR_ELEMENT = Object.assign({
   icon: 'mdi:chart-bar',
-  label: '柱状图',
+  label: 'Bar Chart',
   eleType: 'barChart' as const,
 }, DEFAULT_BASE_CONFIG, {
   fill: '#FFFFFF',
@@ -20,7 +20,7 @@ export const DEFAULT_BARCHART_CONFIG: BarChartElementConfig & EDITOR_ELEMENT = O
 
 export const DEFAULT_LINECHART_CONFIG: LineChartElementConfig & EDITOR_ELEMENT = Object.assign({
   icon: 'mdi:chart-line',
-  label: '折线图',
+  label: 'Line Chart',
   eleType: 'lineChart' as const,
 }, DEFAULT_BASE_CONFIG, {
   width: 200,

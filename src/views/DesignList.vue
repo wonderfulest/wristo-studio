@@ -3,7 +3,7 @@
     <div class="header">
       <div class="header-left">
         <div class="icon-buttons">
-          <el-tooltip content="系统推荐模板" placement="bottom">
+          <el-tooltip content="Recommended Templates" placement="bottom">
             <el-button 
               class="icon-btn"
               :class="{ 'is-active': isTemplatesRoute }"
@@ -13,7 +13,7 @@
             </el-button>
           </el-tooltip>
           
-          <el-tooltip content="我的收藏" placement="bottom">
+          <el-tooltip content="My Favorites" placement="bottom">
             <el-button 
               class="icon-btn"
               :class="{ 'is-active': isFavoritesRoute }"
@@ -27,7 +27,7 @@
           :class="{ 'active': isMyDesignsRoute }" 
           @click="navigateTo('my-designs')"
         >
-          我的设计
+          My Designs
         </h2>
       </div>
     </div>
@@ -70,7 +70,7 @@ const navigateTo = async (routeName) => {
     })
   } catch (error) {
     console.error('[DesignList] navigation error:', error)
-    messageStore.error('页面切换失败')
+    messageStore.error('Navigation failed')
   }
 }
 

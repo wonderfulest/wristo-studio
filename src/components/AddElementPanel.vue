@@ -3,7 +3,7 @@
     <div class="panel-content" :class="{ collapsed: isCollapsed }">
       <div v-for="(category, categoryKey) in elementConfigs" :key="categoryKey" class="element-section">
         <div class="section-header">
-          <h2>{{ categoryKey }}</h2>
+          <h2>{{ formatCategory(categoryKey) }}</h2>
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
@@ -30,6 +30,14 @@ import { useMessageStore } from '@/stores/message'
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)
+const emit = defineEmits<{
+  (e: 'switch-to-layer'): void
+}>()
+
+const formatCategory = (key: string): string => {
+  if (!key) return ''
+  return key.charAt(0).toUpperCase() + key.slice(1)
+}
 
 const loadElementFont = async (config: AnyElementConfig) => {
   if (config.fontFamily) {
@@ -40,8 +48,6 @@ const loadElementFont = async (config: AnyElementConfig) => {
   }
 }
 const addElementByType = async (category: string, elementType: string, config: AnyElementConfig) => {
-  console.log('add element category', category)
-  console.log('add element elementType', elementType)
   console.log('add element config', config)
   
   try {
@@ -53,12 +59,8 @@ const addElementByType = async (category: string, elementType: string, config: A
       const addElement = getAddElement(elementType)
       if (addElement) {
         await addElement(elementType, config)
-        
-        // 添加元素后切换到图层面板
-        const panel = document.querySelector('.right-panel') as any
-        if (panel && panel.switchToLayer) {
-          panel.switchToLayer()
-        }
+        // 添加元素后通知父级切换到图层面板
+        emit('switch-to-layer')
         isCollapsed.value = true
       } else {
         console.warn(`No add element handler registered for type: ${elementType}`)
