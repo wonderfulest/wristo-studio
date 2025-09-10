@@ -1,8 +1,9 @@
 import type { BaseElementConfig } from './base'
+import type { FabricFill } from '@/types/fabric'
 
 export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
-  fill: string
+  fill: FabricFill
   fontFamily: string
   originX: 'left' | 'center' | 'right'
   originY: 'top' | 'center' | 'bottom'
@@ -18,6 +19,8 @@ export interface DataElementConfig extends BaseTextConfig {
 
 export interface IconElementConfig extends DataElementConfig {
   eleType: 'icon'
+  iconFont: string
+  iconSize: number
 }
 
 export interface LabelElementConfig extends DataElementConfig {

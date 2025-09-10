@@ -1,6 +1,7 @@
 // Base element shared config
 
 import { TOriginX, TOriginY } from "fabric"
+import type { FabricFill } from "@/types/fabric"
 
 export interface BaseElementConfig {
   id: string
@@ -9,7 +10,7 @@ export interface BaseElementConfig {
   top: number
   originX: TOriginX
   originY: TOriginY
-  fill?: string
+  fill?: FabricFill
   fontFamily?: string
   fontSize?: number
 }

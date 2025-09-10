@@ -5,8 +5,8 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
-import { DataTypeOption } from '@/types/settings'
 import { usePropertiesStore } from '@/stores/properties'
+import type { MinimalFabricLike } from '@/types/layer'
 
 export const useIconStore = defineStore('iconElement', {
   state: () => {
@@ -46,7 +46,7 @@ export const useIconStore = defineStore('iconElement', {
         }
         const element = new FabricText(metric.icon, iconOptions as TextProps & IconElementConfig)
         this.baseStore.canvas?.add(element as FabricText)
-        this.layerStore.addLayer(element as any)
+        this.layerStore.addLayer(element as unknown as MinimalFabricLike)
         this.baseStore.canvas?.setActiveObject(element as FabricText)
         this.baseStore.canvas?.renderAll()
         return element
@@ -56,18 +56,20 @@ export const useIconStore = defineStore('iconElement', {
       }
     },
 
-    updateElement(element: any, config: Partial<IconElementConfig>) {
+    updateElement(element: FabricElement, config: Partial<IconElementConfig>) {
       const canvas = this.baseStore.canvas
-      const obj: any = canvas?.getObjects().find((o: any) => o.id === element.id)
-      if (!canvas || !obj) return
+      if (!canvas) return
+      const objects = canvas.getObjects() as FabricText[]
+      const obj = objects.find((o) => (o as unknown as FabricElement).id === element.id)
+      if (!obj) return
 
       const currentLeft = obj.left
       const currentTop = obj.top
 
-      const updateProps: Record<string, any> = {
+      const updateProps: Partial<TextProps & IconElementConfig> = {
         fontSize: config.fontSize,
         fill: config.fill,
-        fontFamily: config.iconFont,
+        fontFamily: config.iconFont ?? config.fontFamily,
         originX: config.originX,
         originY: config.originY,
         left: config.left,
@@ -77,10 +79,9 @@ export const useIconStore = defineStore('iconElement', {
         goalProperty: config.goalProperty,
       }
 
-      Object.keys(updateProps).forEach((key) => {
-        const value = updateProps[key]
+      Object.entries(updateProps).forEach(([key, value]) => {
         if (value !== undefined) {
-          obj.set(key, value)
+          obj.set(key as keyof TextProps, value as never)
         }
       })
 
@@ -98,9 +99,11 @@ export const useIconStore = defineStore('iconElement', {
         eleType: 'icon',
         left: element.left,
         top: element.top,
-        fill: element.fill as string,
+        fill: element.fill,
         originX: element.originX,
         originY: element.originY,
+        fontFamily: element.fontFamily as string,
+        fontSize: Number(element.fontSize),
         iconFont: element.fontFamily as string,
         iconSize: Number(element.fontSize),
         dataProperty: element.dataProperty,
@@ -116,9 +119,11 @@ export const useIconStore = defineStore('iconElement', {
         eleType: 'icon',
         left: config.left,
         top: config.top,
-        fill: config.fill as string,
+        fill: config.fill,
         originX: config.originX,
         originY: config.originY,
+        fontFamily: config.fontFamily,
+        fontSize: config.fontSize,
         iconFont: config.iconFont,
         iconSize: config.iconSize,
         dataProperty: config.dataProperty,

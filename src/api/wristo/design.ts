@@ -9,7 +9,7 @@ import type {
   CreateDesignParams,
   UpdateDesignParamsV2,
   DesignSubmitDTO,
-} from '@/types/design'
+} from '@/types/api/design'
 import type { Image } from '@/types/image'
 
 /**

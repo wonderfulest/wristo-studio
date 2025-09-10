@@ -24,11 +24,11 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         evented: true,
         originX: config.originX,
         originY: config.originY,
-      } as any)
+      } as unknown as Record<string, unknown>)
 
       alarmsIcon.set('text', '\u0024')
-      baseStore.canvas.add(alarmsIcon as any)
-      baseStore.canvas.setActiveObject(alarmsIcon as any)
+      baseStore.canvas.add(alarmsIcon)
+      baseStore.canvas.setActiveObject(alarmsIcon)
       baseStore.canvas.renderAll()
       return alarmsIcon
     },
@@ -43,7 +43,8 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: (element.fill ?? undefined) as unknown as string | undefined,
+        // Pass through Fabric-compatible fill
+        fill: element.fill,
       }
       return config as IndicatorElementConfig
     },

@@ -86,11 +86,12 @@ export const useDataStore = defineStore('dataElement', {
         top: Math.round(element.top),
         originX: (element.originX as any) ?? 'center',
         originY: (element.originY as any) ?? 'center',
-        fill: String((element.fill as any) ?? '#ffffff'),
+        // Fabric fill may be Gradient/Pattern/null; store only string
+        fill: typeof (element as any).fill === 'string' ? ((element as any).fill as string) : '#ffffff',
         fontSize: Number((element.fontSize as any) ?? 14),
         fontFamily: String((element.fontFamily as any) ?? 'roboto-condensed-regular'),
-        dataProperty: (element as any).dataProperty ?? null,
-        goalProperty: (element as any).goalProperty ?? null,
+        dataProperty: (element as any).dataProperty ?? undefined,
+        goalProperty: (element as any).goalProperty ?? undefined,
         metricSymbol: String((element as any).metricSymbol ?? ''),
       }
       return config
@@ -107,8 +108,8 @@ export const useDataStore = defineStore('dataElement', {
         fill: config.fill,
         fontSize: config.fontSize,
         fontFamily: config.fontFamily,
-        dataProperty: config.dataProperty ?? null,
-        goalProperty: config.goalProperty ?? null,
+        dataProperty: config.dataProperty ?? undefined,
+        goalProperty: config.goalProperty ?? undefined,
         metricSymbol: config.metricSymbol ?? '',
       }
       return result as Partial<FabricElement>

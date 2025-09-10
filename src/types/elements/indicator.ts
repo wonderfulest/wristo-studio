@@ -1,6 +1,6 @@
 import type { TextElementConfig } from './text'
 
 export interface IndicatorElementConfig extends TextElementConfig {
-  eleType: 'indicator'
-  metricSymbol: string
+  eleType: 'bluetooth' | 'disturb' | 'alarms' | 'notification'
+  metricSymbol?: string
 }

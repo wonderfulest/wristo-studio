@@ -1,5 +1,5 @@
 import axiosInstance from '@/config/axios'
-import type { Category} from '@/types/category'
+import type { Category } from '@/types/api/category'
 
 /**
  * 获取所有系列分类
