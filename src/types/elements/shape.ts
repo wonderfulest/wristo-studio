@@ -2,7 +2,7 @@ import type { BaseElementConfig } from './base'
 
 export interface ShapeElementConfig extends BaseElementConfig {
   eleType: 'rectangle' | 'circle' | 'line'
-  fill: string
+  fill?: string
   stroke: string
   strokeWidth: number
   opacity?: number

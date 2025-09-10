@@ -95,10 +95,10 @@ export const useLabelStore = defineStore('labelElement', {
         fill: (element.fill as string) ?? '#ffffff',
         fontSize: Number(element.fontSize ?? 14),
         fontFamily: (element.fontFamily as string) ?? '',
-        dataProperty: (element as any).dataProperty ?? null,
-        goalProperty: (element as any).goalProperty ?? null,
-        metricSymbol: (element as any).metricSymbol ?? null,
-        metricValue: (element as any).metricValue ?? null,
+        dataProperty: (element as any).dataProperty ?? undefined,
+        goalProperty: (element as any).goalProperty ?? undefined,
+        metricSymbol: (element as any).metricSymbol ?? undefined,
+        metricValue: (element as any).metricValue ?? undefined,
       }
       return config as LabelElementConfig
     },

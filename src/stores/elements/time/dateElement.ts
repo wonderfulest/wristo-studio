@@ -168,7 +168,7 @@ export const useDateStore = defineStore('dateElement', {
     },
     encodeConfig(element: FabricElement): DateElementConfig {
       const config: DateElementConfig = {
-        id: element.id,
+        id: String(element.id ?? ''),
         eleType: 'date',
         left: Math.round(element.left),
         top: Math.round(element.top),

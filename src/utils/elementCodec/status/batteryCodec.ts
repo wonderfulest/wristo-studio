@@ -1,7 +1,7 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useBatteryStore } from '@/stores/elements/status/batteryElement'
-import type { BatteryElementConfig } from '@/types/elements'
+import type { BatteryElementConfig } from '@/types/elements/battery'
 import type { FabricElement } from '@/types/element'
 
 const encodeBattery: EncoderFn<'battery'> = (element: FabricElement) => {

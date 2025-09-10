@@ -1,20 +1,22 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
 import { useGoalArcStore } from '@/stores/elements/goal/goalArcElement'
+import type { FabricElement } from '@/types/element'
+import type { GoalArcElementConfig } from '@/types/elements'
 
-const encodeGoalArc: EncoderFn = (element: any) => {
+const encodeGoalArc: EncoderFn<'goalArc'> = (element: FabricElement) => {
   const store = useGoalArcStore()
-  return store.encodeConfig(element)
+  return store.encodeConfig(element) as GoalArcElementConfig
 }
 
-const decodeGoalArc: DecoderFn = (config: any) => {
+const decodeGoalArc: DecoderFn<'goalArc'> = (config: GoalArcElementConfig) => {
   const store = useGoalArcStore()
   return store.decodeConfig(config)
 }
 
-const addElement: AddElementFn = (_elementType, config: any) => {
+const addElement: AddElementFn<'goalArc'> = (_elementType, config: GoalArcElementConfig) => {
   const store = useGoalArcStore()
-  store.addElement(config)
+  return store.addElement(config) as unknown as FabricElement
 }
 
 export default () => {

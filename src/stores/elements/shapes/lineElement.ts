@@ -195,7 +195,6 @@ export const useLineElementStore = defineStore('lineElement', {
         top: Math.round(element.top),
         originX: element.originX,
         originY: element.originY,
-        // 有用属性
         x1: element.x1,
         y1: element.y1,
         x2: element.x2,

@@ -126,7 +126,7 @@ export const useTimeStore = defineStore('timeStore', {
     },
     encodeConfig(element: FabricElement): TimeElementConfig {
       const config: TimeElementConfig = {
-        id: element.id,
+        id: String(element.id ?? ''),
         eleType: 'time',
         left: element.left,
         top: element.top,

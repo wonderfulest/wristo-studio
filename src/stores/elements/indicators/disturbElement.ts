@@ -11,7 +11,7 @@ export const useDisturbStore = defineStore('disturbElement', {
   actions: {
     addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
       const disturbIcon = new FabricText('\u0021', {
         eleType: 'disturb',
@@ -27,15 +27,15 @@ export const useDisturbStore = defineStore('disturbElement', {
       } as any)
 
       disturbIcon.set('text', '\u0021')
-      baseStore.canvas.add(disturbIcon as any)
-      baseStore.canvas.setActiveObject(disturbIcon as any)
-      baseStore.canvas.renderAll()
-      return disturbIcon
+      baseStore.canvas?.add(disturbIcon as any)
+      baseStore.canvas?.setActiveObject(disturbIcon as any)
+      baseStore.canvas?.renderAll()
+      return disturbIcon as any
     },
 
     updateDisturbStatus(status: boolean) {
       const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
       void status
     },
 

@@ -4,7 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Group, Line, Rect, Text } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { BarChartElementConfig } from '@/types/elements/charts'
-import type { ElementConfig, FabricElement } from '@/types/element'
+import type { FabricElement } from '@/types/element'
 
 export const useBarChartStore = defineStore('barChartElement', {
   state: () => {
@@ -365,7 +365,7 @@ export const useBarChartStore = defineStore('barChartElement', {
       this.baseStore.canvas?.renderAll()
     },
 
-    encodeConfig(element: FabricElement): ElementConfig {
+    encodeConfig(element: FabricElement): any {
       if (!element) {
         throw new Error('Invalid element')
       }
@@ -402,12 +402,14 @@ export const useBarChartStore = defineStore('barChartElement', {
       }
     },
 
-    decodeConfig(config: ElementConfig): BarChartElementConfig {
+    decodeConfig(config: any): BarChartElementConfig {
       return {
-        type: 'barChart',
         eleType: 'barChart',
+        id: String(config.id ?? ''),
         left: config.x,
         top: config.y,
+        originX: (config.originX ?? 'center') as any,
+        originY: (config.originY ?? 'center') as any,
         width: config.width,
         height: config.height,
         color: config.color || this.defaultColors.color,
