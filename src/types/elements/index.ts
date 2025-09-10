@@ -11,8 +11,10 @@ export type { RotationCenter, HandElementConfig } from './hand'
 // time & date
 export type { TimeElementConfig, DateElementConfig } from './time'
 
-// metric related (legacy metricSymbol-based)
-export type { IconElementConfig, DataElementConfig, IndicatorElementConfig } from './metric'
+// data-related
+export type { IconElementConfig, DataElementConfig } from './data'
+// indicators
+export type { IndicatorElementConfig } from './indicator'
 
 // goal related
 export type { GoalElementConfig, GoalBarElementConfig, GoalArcElementConfig } from './goal'
@@ -30,9 +32,8 @@ export type { TickElementConfig } from './tick'
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
-import type { IconElementConfig as _Icon, IndicatorElementConfig as _Indicator } from './metric'
-import type { LabelElementConfig as _Label } from './data'
-import type { DataElementConfig as _DataText } from './data'
+import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText } from './data'
+import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc } from './goal'
 import type { BarChartElementConfig as _BarChart, LineChartElementConfig as _LineChart } from './charts'

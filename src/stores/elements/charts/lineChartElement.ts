@@ -128,7 +128,7 @@ export const useLineChartStore = defineStore('lineChartElement', {
         const x = -width / 2 + j * stepX
         const line: any = new Line([x, -height / 2, x, height / 2], { stroke: gridColor, strokeWidth: 1, selectable: false })
         group.add(line)
-      } as any
+      }
     },
 
     createAxis(group: any) {
@@ -228,8 +228,8 @@ export const useLineChartStore = defineStore('lineChartElement', {
       if (!element) throw new Error('Invalid element')
       return {
         type: 'lineChart',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         width: Math.round(element.width),
         height: Math.round(element.height),
         color: element.color ?? this.defaults.color,
@@ -262,11 +262,11 @@ export const useLineChartStore = defineStore('lineChartElement', {
       }
     },
 
-    decodeConfig(config: any): LineChartElementConfig {
-      return {
+    decodeConfig(config: any): Partial<LineChartElementConfig> {
+      const result: Partial<LineChartElementConfig> = {
         eleType: 'lineChart',
-        left: config.x,
-        top: config.y,
+        left: config.left,
+        top: config.top,
         width: config.width,
         height: config.height,
         color: config.color ?? this.defaults.color,
@@ -297,6 +297,7 @@ export const useLineChartStore = defineStore('lineChartElement', {
         xLabelHeight: config.xLabelHeight ?? this.defaults.xLabelHeight,
         chartProperty: config.chartProperty,
       }
+      return result
     },
   },
 })

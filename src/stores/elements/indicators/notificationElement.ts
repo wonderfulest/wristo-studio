@@ -24,11 +24,11 @@ export const useNotificationStore = defineStore('notificationElement', {
         evented: true,
         originX: 'center',
         originY: 'center',
-      } as any)
+      } as Partial<import('fabric').TextProps & import('@/types/element').FabricElement>)
 
       notificationIcon.set('text', '\u0025')
-      baseStore.canvas.add(notificationIcon as any)
-      baseStore.canvas.setActiveObject(notificationIcon as any)
+      baseStore.canvas.add(notificationIcon)
+      baseStore.canvas.setActiveObject(notificationIcon)
       baseStore.canvas.renderAll()
       return notificationIcon
     },
@@ -49,7 +49,7 @@ export const useNotificationStore = defineStore('notificationElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: (element.fill ?? undefined) as unknown as string | undefined,
+        fill: element.fill as any,
       }
       return config as IndicatorElementConfig
     },

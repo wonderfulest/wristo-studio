@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { Rect, Group, TOriginX, TOriginY } from 'fabric'
+import { Rect, Group } from 'fabric'
 import { nanoid } from 'nanoid'
 import { decodeColor } from '@/utils/colorUtils'
 import type { BatteryElementConfig } from '@/types/elements/battery'

@@ -1,22 +1,4 @@
-import type { TextElementConfig } from './text'
-
-export interface IconElementConfig extends TextElementConfig {
-  eleType: 'icon'
-  metricSymbol: string
-  iconSize: number
-  iconFont: string
-  dataProperty?: string
-  goalProperty?: string
-}
-
-export interface DataElementConfig extends TextElementConfig {
-  eleType: 'data'
-  metricSymbol: string
-  dataProperty?: string
-  goalProperty?: string
-}
-
-export interface IndicatorElementConfig extends TextElementConfig {
-  eleType: 'bluetooth' | 'disturb' | 'alarms' | 'notification'
-}
+// Deprecated: legacy metric types. Unified under data.ts and indicator.ts
+export type { IconElementConfig, DataElementConfig } from './data'
+export type { IndicatorElementConfig } from './indicator'
 

@@ -24,11 +24,11 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         evented: true,
         originX: config.originX,
         originY: config.originY,
-      } as any)
+      } as Partial<import('fabric').TextProps & import('@/types/element').FabricElement>)
 
       bluetoothIcon.set('text', '\u0022')
-      baseStore.canvas.add(bluetoothIcon as any)
-      baseStore.canvas.setActiveObject(bluetoothIcon as any)
+      baseStore.canvas.add(bluetoothIcon)
+      baseStore.canvas.setActiveObject(bluetoothIcon)
       baseStore.canvas.renderAll()
       return bluetoothIcon
     },
@@ -49,7 +49,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: (element.fill ?? undefined) as unknown as string | undefined,
+        fill: element.fill,
       }
       return config as IndicatorElementConfig
     },
