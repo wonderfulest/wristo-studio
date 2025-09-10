@@ -128,7 +128,7 @@ export const useLineChartStore = defineStore('lineChartElement', {
         const x = -width / 2 + j * stepX
         const line: any = new Line([x, -height / 2, x, height / 2], { stroke: gridColor, strokeWidth: 1, selectable: false })
         group.add(line)
-      } as any
+      }
     },
 
     createAxis(group: any) {

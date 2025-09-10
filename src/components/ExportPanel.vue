@@ -269,7 +269,7 @@ const uploadApp = async () => {
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
-    config.themeBackgroundImages = baseStore.themeBackgroundImages
+    config.themeBackgroundImages = (baseStore.themeBackgroundImages || []).filter((s) => s !== '')
     
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = '上传表盘截图...'
