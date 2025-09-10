@@ -371,9 +371,10 @@ export const useBarChartStore = defineStore('barChartElement', {
       }
 
       return {
-        type: 'barChart',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
+        eleType: 'barChart',
+        id: String(element.id ?? ''),
+        left: Math.round(element.left),
+        top: Math.round(element.top),
         width: Math.round(element.width),
         height: Math.round(element.height),
         color: element.color || this.defaultColors.color,
