@@ -8,7 +8,7 @@
       <nav class="header-nav">
         <a @click="showDesignerConfirm" class="nav-link">
           <Icon icon="material-symbols:edit-square" />
-          Designer
+          New Design
         </a>
         <el-dialog v-model="designerDialogVisible" title="Confirm" width="30%">
           <span>Close current work and start a new design?</span>
@@ -21,7 +21,7 @@
         </el-dialog>
         <a @click="showDesignsListConfirm" class="nav-link">
           <Icon icon="material-symbols:list" />
-          My Designs
+          Designs List
         </a>
         <!-- <router-link to="/sales" class="nav-link" >
           <Icon icon="material-symbols:list" />

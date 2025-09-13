@@ -73,7 +73,6 @@ export interface Design {
   backgroundImage?: Image | null
   product?: Product | null
   categories?: Category[] | null
-  
 }
 
 export type DesignStatus =

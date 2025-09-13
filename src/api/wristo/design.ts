@@ -73,7 +73,7 @@ export const designApi = {
    * @param data 设计数据
    * @returns 创建结果
    */
-  createDesign(data: CreateDesignParams): Promise<Design> {
+  createDesign(data: CreateDesignParams): Promise<ApiResponse<Design>> {
     return instance.post(`/dsn/design/create`, data)
   },
   /**

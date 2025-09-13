@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useBaseStore } from '../baseStore'
 import { useLayerStore } from '../layerStore'
 import { nanoid } from 'nanoid'
-import { Text as FabricText } from 'fabric'
+import { FabricText } from 'fabric'
 
 interface TextOptions {
   text?: string

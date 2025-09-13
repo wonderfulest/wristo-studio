@@ -1,132 +1,109 @@
 <template>
-  <el-dialog 
-    v-model="dialogVisible" 
-    title="创建新设计" 
-    width="500px"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
-  >
-    <el-form 
-      :model="form" 
-      :rules="rules"
-      ref="formRef"
-      label-width="100px"
-      class="create-design-form"
-    >
-      <el-form-item label="设计名称" prop="name">
-        <el-input 
-          v-model="form.name" 
-          placeholder="请输入设计名称"
-          maxlength="50"
-          show-word-limit
-        />
+  <el-dialog v-model="dialogVisible" title="Create New Design" width="600px" :close-on-click-modal="false"
+    :close-on-press-escape="false" :show-close="false">
+    <el-form :model="form" :rules="rules" ref="formRef" label-width="80px" class="create-design-form">
+      <el-form-item label="Name" prop="name">
+        <el-input v-model="form.name" placeholder="Enter design name" maxlength="50" show-word-limit />
       </el-form-item>
-      <el-form-item label="设计描述" prop="description">
-        <el-input 
-          v-model="form.description" 
-          type="textarea" 
-          :rows="4"
-          placeholder="请输入设计描述"
-          maxlength="200"
-          show-word-limit
-        />
+      <el-form-item label="Description" prop="description">
+        <el-input v-model="form.description" type="textarea" :rows="4" placeholder="Enter design description"
+          maxlength="200" show-word-limit />
       </el-form-item>
     </el-form>
-    
+
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button 
-          type="primary" 
-          @click="handleConfirm"
-          :loading="loading"
-        >
-          创建设计
+        <el-button @click="handleCancel">Cancel</el-button>
+        <el-button type="primary" @click="handleConfirm" :loading="loading">
+          Create Design
         </el-button>
       </span>
     </template>
   </el-dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
+import type { Design } from '@/types/api/design'
+import type { ApiResponse } from '@/types/api/api'
+import { usePropertiesStore } from '@/stores/properties'
 
 const router = useRouter()
 const baseStore = useBaseStore()
+const propertiesStore = usePropertiesStore()
 
-const dialogVisible = ref(false)
-const loading = ref(false)
-const formRef = ref(null)
+const dialogVisible = ref<boolean>(false)
+const loading = ref<boolean>(false)
+const formRef = ref<FormInstance | null>(null)
 
-const form = reactive({
+interface CreateDesignForm {
+  name: string
+  description: string
+}
+
+const form = reactive<CreateDesignForm>({
   name: '',
   description: ''
 })
 
-const rules = {
+const rules: FormRules = {
   name: [
-    { required: true, message: '请输入设计名称', trigger: 'blur' },
-    { min: 1, max: 50, message: '设计名称长度在 1 到 50 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter a design name', trigger: 'blur' },
+    { min: 1, max: 50, message: 'Design name must be between 1 and 50 characters', trigger: 'blur' }
   ],
   description: [
-    { required: true, message: '请输入设计描述', trigger: 'blur' },
-    { min: 1, max: 200, message: '设计描述长度在 1 到 200 个字符', trigger: 'blur' }
+    { required: true, message: 'Please enter a design description', trigger: 'blur' },
+    { min: 1, max: 200, message: 'Design description must be between 1 and 200 characters', trigger: 'blur' }
   ]
 }
 
-const emit = defineEmits(['success', 'cancel'])
-
-const handleConfirm = async () => {
+const handleConfirm = async (): Promise<void> => {
   if (!formRef.value) return
-  
+
   try {
     await formRef.value.validate()
-    
+
     loading.value = true
-    
-    const response = await designApi.createDesign({
+
+    const response: ApiResponse<Design> = await designApi.createDesign({
       name: form.name,
       description: form.description
     })
-    
-    if (response.code === 0 && response.data) {
-      ElMessage.success('设计创建成功')
-      
-      // 设置基础信息
+
+    if (response.code === 0 && response.data && response.data.designUid) {
+      ElMessage.success('Design created successfully')
+      // set base info
       baseStore.watchFaceName = form.name
-      baseStore.kpayId = response.data.designUid || ''
-      
-      // 跳转到设计页面
+      // reset properties after creating a new design
+      propertiesStore.clearProperties()
+      // navigate to design page
       router.push({
         path: '/design',
         query: { id: response.data.designUid }
       })
-      
-      emit('success', response.data)
       dialogVisible.value = false
     } else {
-      ElMessage.error(response.msg || '创建设计失败')
+      ElMessage.error('Failed to create design')
     }
   } catch (error) {
-    console.error('创建设计失败:', error)
-    ElMessage.error('创建设计失败')
+    console.error('Failed to create design:', error)
+    ElMessage.error('Failed to create design')
   } finally {
     loading.value = false
   }
 }
 
-const handleCancel = () => {
-  emit('cancel')
+const handleCancel = (): void => {
   dialogVisible.value = false
 }
 
-// 重置表单
-const resetForm = () => {
+// reset form
+const resetForm = (): void => {
   form.name = ''
   form.description = ''
   if (formRef.value) {
@@ -134,13 +111,13 @@ const resetForm = () => {
   }
 }
 
-// 显示对话框
-const show = () => {
+// show dialog
+const show = (): void => {
   resetForm()
   dialogVisible.value = true
 }
 
-// 暴露方法给父组件
+// expose methods to parent
 defineExpose({
   show
 })
@@ -148,7 +125,9 @@ defineExpose({
 
 <style scoped>
 .create-design-form {
-  padding: 20px 0;
+  padding: 20px 24px;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .dialog-footer {
@@ -156,4 +135,4 @@ defineExpose({
   justify-content: flex-end;
   gap: 12px;
 }
-</style> 
+</style>
