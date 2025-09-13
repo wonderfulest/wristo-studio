@@ -81,7 +81,7 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 删除结果
    */
-  deleteDesign(designUid: string): Promise<boolean> {
+  deleteDesign(designUid: string): Promise<ApiResponse<boolean>> {
     return instance.post(`/dsn/design/delete/${designUid}`)
   },
 
@@ -108,7 +108,7 @@ export const designApi = {
    * @param data 设计数据
    * @returns 更新结果
    */
-  updateDesign(data: UpdateDesignParamsV2): Promise<Design> {
+  updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<Design>> {
     return instance.post(`/dsn/design/update`, data)
   },
   /**
@@ -116,7 +116,7 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 提交结果
    */
-  submitDesign(data: DesignSubmitDTO): Promise<Design> {
+  submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
     return instance.post(`/dsn/design/submit`, data)
   }
 }

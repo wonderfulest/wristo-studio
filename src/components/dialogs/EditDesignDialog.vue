@@ -1,119 +1,169 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    title="编辑设计" 
-    width="60%" 
-    :top="'5vh'"
+    title="Edit Design" 
+    width="70%" 
+    :top="'3vh'"
     class="edit-design-dialog"
+    :close-on-click-modal="false"
   >
-    <el-form :model="form" label-width="120px" class="edit-form">
-      <el-form-item label="名称">
-        <el-input v-model="form.name" />
-      </el-form-item>
-      <el-form-item label="状态">
-        <el-select v-model="form.designStatus">
-          <el-option label="草稿" value="draft" />
-          <el-option label="已提交" value="submitted" />
-          <el-option label="已审核" value="approved" />
-          <el-option label="已拒绝" value="rejected" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="描述">
-        <el-input v-model="form.description" type="textarea" :rows="2" />
-      </el-form-item>
-      <!-- 支付方式、价格、试用时长，样式与SubmitDesignDialog一致 -->
-      <el-form-item label="收款方式">
-        <el-radio-group v-model="form.payment.paymentMethod" @change="handlePaymentMethodChange">
-          <!-- <el-radio label="kpay">KPay</el-radio> -->
-          <el-radio label="wpay">WPay</el-radio>
-          <el-radio label="none">免费</el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="价格" v-if="form.payment.paymentMethod !== 'none'">
-        <el-input-number
-          v-model.number="form.payment.price"
-          :min="0"
-          :max="999.99"
-          :precision="2"
-          :step="0.01"
-          placeholder="请输入价格"
-          style="width: 100%"
-        />
-        <div class="form-tip">请输入价格（元）</div>
-      </el-form-item>
-      <el-form-item label="试用时长" v-if="form.payment.paymentMethod !== 'none'">
-        <el-input-number
-          v-model.number="form.payment.trialLasts"
-          :min="0"
-          :max="720"
-          :precision="2"
-          :step="0.25"
-          placeholder="请输入试用小时数"
-          style="width: 100%"
-        />
-        <div class="form-tip">请输入试用小时数（0-720小时，支持小数）</div>
-      </el-form-item>
-      <el-form-item label="配置" class="config-form-item">
-        <div class="json-editor">
-          <div class="json-toolbar">
-            <el-button-group>
-              <el-button size="small" @click="copyConfig">
-                <el-icon><DocumentCopy /></el-icon>
-                复制
-              </el-button>
-              <el-button 
-                size="small" 
-                type="primary" 
-                @click="toggleEditMode"
-              >
-                <el-icon><Edit /></el-icon>
-                {{ isEditing ? '预览' : '编辑' }}
-              </el-button>
-            </el-button-group>
+    <div class="dialog-content">
+      <!-- Header Section -->
+      <div class="form-section">
+        <div class="section-title">Basic Information</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="field-label">Name</label>
+            <el-input 
+              v-model="form.name" 
+              placeholder="Enter design name"
+              class="apple-input"
+            />
           </div>
-          <div class="json-content">
-            <!-- JSON 预览模式 -->
+          <div class="form-field">
+            <label class="field-label">Status</label>
+            <el-select 
+              v-model="form.designStatus" 
+              placeholder="Select status"
+              class="apple-select"
+            >
+              <el-option label="Draft" value="draft" />
+              <el-option label="Submitted" value="submitted" />
+              <el-option label="Approved" value="approved" />
+              <el-option label="Rejected" value="rejected" />
+            </el-select>
+          </div>
+        </div>
+        <div class="form-field full-width">
+          <label class="field-label">Description</label>
+          <el-input 
+            v-model="form.description" 
+            type="textarea" 
+            :rows="2"
+            placeholder="Enter design description"
+            class="apple-textarea"
+          />
+        </div>
+      </div>
+
+      <!-- Payment Section -->
+      <div class="form-section">
+        <div class="section-title">Payment Settings</div>
+        <div class="payment-grid">
+          <div class="form-field">
+            <label class="field-label">Payment Method</label>
+            <el-radio-group 
+              v-model="form.payment.paymentMethod" 
+              class="apple-radio-group"
+              @change="handlePaymentMethodChange"
+            >
+              <el-radio label="wpay" class="apple-radio">WPay</el-radio>
+              <el-radio label="none" class="apple-radio">Free</el-radio>
+            </el-radio-group>
+          </div>
+          <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
+            <label class="field-label">Price (CNY)</label>
+            <el-input-number
+              v-model.number="form.payment.price"
+              :min="0"
+              :max="999.99"
+              :precision="2"
+              :step="0.01"
+              placeholder="0.00"
+              class="apple-number-input"
+            />
+          </div>
+          <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
+            <label class="field-label">Trial Hours</label>
+            <el-input-number
+              v-model.number="form.payment.trialLasts"
+              :min="0"
+              :max="720"
+              :precision="2"
+              :step="0.25"
+              placeholder="0.25"
+              class="apple-number-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuration Section -->
+      <div class="form-section config-section">
+        <div class="section-header">
+          <div class="section-title">Configuration</div>
+          <div class="config-actions">
+            <el-button 
+              size="small" 
+              @click="copyConfig"
+              class="apple-button secondary"
+            >
+              <el-icon><DocumentCopy /></el-icon>
+              Copy
+            </el-button>
+            <el-button 
+              size="small" 
+              type="primary" 
+              @click="toggleEditMode"
+              class="apple-button primary"
+            >
+              <el-icon><Edit /></el-icon>
+              {{ isEditing ? 'Preview' : 'Edit' }}
+            </el-button>
+          </div>
+        </div>
+        <div class="config-editor">
+          <div class="config-content">
+            <!-- JSON Preview -->
             <vue-json-pretty
               v-if="!isEditing"
               :data="form.configJson"
-              :deep="3"
+              :deep="4"
               :showLength="true" 
               :showLineNumber="true"
               :showDoubleQuotes="true"
               :highlightMouseoverNode="true"
               :selectOnClickNode="true"
               :collapsedOnClickBrackets="true"
-              style="min-width: 100%;"
+              class="json-preview"
             />
-            <!-- JSON 编辑模式 -->
+            <!-- JSON Edit -->
             <el-input
               v-else
               v-model="jsonEditText"
               type="textarea"
-              :rows="20"
+              :rows="32"
               :status="jsonEditStatus"
               @input="validateJson"
-              style="font-family: monospace; font-size: 14px;"
+              class="json-editor-input"
             />
           </div>
-          <!-- JSON 验证错误提示 -->
+          <!-- JSON error -->
           <div v-if="jsonEditError" class="json-error">
+            <el-icon class="error-icon"><WarningFilled /></el-icon>
             {{ jsonEditError }}
           </div>
         </div>
-      </el-form-item>
-    </el-form>
+      </div>
+    </div>
+    
     <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="handleCancel">取消</el-button>
+      <div class="dialog-footer">
+        <el-button 
+          @click="handleCancel"
+          class="apple-button secondary"
+        >
+          Cancel
+        </el-button>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :disabled="!!jsonEditError"
+          class="apple-button primary"
         >
-          保存
+          Save Changes
         </el-button>
-      </span>
+      </div>
     </template>
   </el-dialog>
 </template>
@@ -121,18 +171,20 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import type { ApiResponse } from '@/types/api/api'
-import type { Design, UpdateDesignParamsV2, Payment } from '@/types/design'
+import type { Design, UpdateDesignParamsV2, Payment } from '@/types/api/design'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
-import { DocumentCopy, Edit } from '@element-plus/icons-vue'
+import { DocumentCopy, Edit, WarningFilled } from '@element-plus/icons-vue'
 import emitter from '@/utils/eventBus.ts'
+import { useBaseStore } from '@/stores/baseStore'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const route = useRoute()
+const baseStore = useBaseStore()
 const form = reactive({
   id: null,
   name: '',
@@ -160,20 +212,41 @@ const loadDesign = async (designUid: string) => {
     const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
     if (response.code === 0 && response.data) {
       const designData = response.data
-      // 先设置基本信息
-      Object.assign(form, {
-        id: designData.id,
-        name: designData.name,
-        designStatus: designData.designStatus,
-        description: designData.description,
-        configJson: designData.configJson,
-        configJsonString: JSON.stringify(designData.configJson, null, 2),
-        payment: {
-          paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
-          price: designData.product?.payment?.price || 1.99,
-          trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
-        }
-      })
+      // 路由判断：仅在画布页（/design 且包含 id 参数）时使用实时画布配置；否则使用服务端配置
+      const isInCanvas = route.path.includes('/design') && !!route.query.id
+
+      if (isInCanvas) {
+        const realtimeConfig = baseStore?.generateConfig?.() || {}
+        Object.assign(form, {
+          id: designData.id,
+          name: designData.name,
+          designStatus: designData.designStatus,
+          description: designData.description,
+          configJson: realtimeConfig,
+          configJsonString: JSON.stringify(realtimeConfig, null, 2),
+          payment: {
+            paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
+            price: designData.product?.payment?.price || 1.99,
+            trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
+          }
+        })
+      } else {
+        const serverConfig = designData.configJson
+        Object.assign(form, {
+          id: designData.id,
+          name: designData.name,
+          designStatus: designData.designStatus,
+          description: designData.description,
+          configJson: serverConfig,
+          configJsonString: JSON.stringify(serverConfig, null, 2),
+          payment: {
+            paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
+            price: designData.product?.payment?.price || 1.99,
+            trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
+          }
+        })
+      }
+
       // 初始化编辑文本
       jsonEditText.value = JSON.stringify(form.configJson, null, 2)
     } else {
@@ -316,105 +389,327 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 对话框样式 */
+/* Apple-style Dialog */
 :deep(.edit-design-dialog .el-dialog) {
-  margin-top: 5vh !important;
-  margin-bottom: 5vh !important;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
+  margin-top: 3vh !important;
+  margin-bottom: 3vh !important;
+  max-height: 94vh;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  /* Compact controls */
+  --el-component-size: 26px;
+  --el-font-size-base: 13px;
+}
+
+:deep(.edit-design-dialog .el-dialog__header) {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+:deep(.edit-design-dialog .el-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.022em;
 }
 
 :deep(.edit-design-dialog .el-dialog__body) {
-  flex: 1;
-  overflow: hidden;
   padding: 0;
+  overflow: hidden;
 }
 
-/* 表单样式 */
-.edit-form {
-  height: 100%;
+:deep(.edit-design-dialog .el-dialog__footer) {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+/* Dialog Content */
+.dialog-content {
+  height: calc(94vh - 140px);
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px 12px 12px;
+  background: #ffffff;
 }
 
-/* 配置表单项样式 */
-.config-form-item {
-  width: 100%;
+/* Form Sections */
+.form-section {
+  margin-bottom: 20px;
 }
 
-:deep(.config-form-item .el-form-item__content) {
-  flex: 1;
-  overflow-x: hidden; /* 防止水平溢出 */
-  min-width: 0; /* 允许内容收缩 */
+.form-section:last-child {
+  margin-bottom: 0;
 }
 
-/* JSON 编辑器样式 */
-.json-editor {
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 12px;
+  letter-spacing: -0.022em;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-field {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 300px;
-  max-height: calc(90vh - 400px);
-  width: 100%; /* 设置宽度为100% */
-  min-width: 0; /* 允许内容收缩 */
 }
 
-.json-content {
-  padding: 16px;
-  background-color: var(--el-bg-color);
+.form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #424245;
+  margin-bottom: 4px;
+  letter-spacing: -0.016em;
+}
+
+/* Apple-style Inputs */
+:deep(.apple-input .el-input__wrapper) {
+  border-radius: 8px;
+  border: 1px solid #d2d2d7;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  padding: 8px 10px;
+}
+
+:deep(.apple-input .el-input__wrapper:hover) {
+  border-color: #007aff;
+}
+
+:deep(.apple-input .el-input__wrapper.is-focus) {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+:deep(.apple-select .el-select__wrapper) {
+  border-radius: 8px;
+  border: 1px solid #d2d2d7;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  padding: 8px 10px;
+}
+
+:deep(.apple-select .el-select__wrapper:hover) {
+  border-color: #007aff;
+}
+
+:deep(.apple-select .el-select__wrapper.is-focused) {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+:deep(.apple-textarea .el-textarea__inner) {
+  border-radius: 8px;
+  border: 1px solid #d2d2d7;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  padding: 8px 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  resize: none;
+}
+
+:deep(.apple-textarea .el-textarea__inner:hover) {
+  border-color: #007aff;
+}
+
+:deep(.apple-textarea .el-textarea__inner:focus) {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+:deep(.apple-number-input .el-input__wrapper) {
+  border-radius: 8px;
+  border: 1px solid #d2d2d7;
+  box-shadow: none;
+  transition: all 0.2s ease;
+  padding: 8px 10px;
+}
+
+:deep(.apple-number-input .el-input__wrapper:hover) {
+  border-color: #007aff;
+}
+
+:deep(.apple-number-input .el-input__wrapper.is-focus) {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+/* Radio Group */
+.apple-radio-group {
+  display: flex;
+  gap: 8px;
+}
+
+:deep(.apple-radio .el-radio__input.is-checked .el-radio__inner) {
+  background-color: #007aff;
+  border-color: #007aff;
+}
+
+:deep(.apple-radio .el-radio__label) {
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+/* Buttons */
+.apple-button {
+  border-radius: 8px;
+  font-weight: 500;
+  letter-spacing: -0.016em;
+  transition: all 0.2s ease;
+  padding: 8px 14px;
+}
+
+:deep(.apple-button.secondary) {
+  background: #f2f2f7;
+  border: 1px solid #d2d2d7;
+  color: #1d1d1f;
+}
+
+:deep(.apple-button.secondary:hover) {
+  background: #e8e8ed;
+  border-color: #c7c7cc;
+}
+
+:deep(.apple-button.primary) {
+  background: #007aff;
+  border: 1px solid #007aff;
+  color: white;
+}
+
+:deep(.apple-button.primary:hover) {
+  background: #0056cc;
+  border-color: #0056cc;
+}
+
+:deep(.apple-button.primary:disabled) {
+  background: #c7c7cc;
+  border-color: #c7c7cc;
+  color: #8e8e93;
+}
+
+/* Config Section */
+.config-section {
   flex: 1;
-  overflow: auto; /* 同时允许水平和垂直滚动 */
-  min-height: 200px;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* JSON 预览模式的样式 */
-:deep(.vjs-tree) {
-  width: 100%;
-  overflow-x: auto; /* 允许水平滚动 */
-  white-space: pre-wrap; /* 允许文本换行 */
-  word-break: break-all; /* 允许在任意字符间断行 */
+.config-actions {
+  display: flex;
+  gap: 8px;
 }
 
-/* JSON 编辑模式的样式 */
-:deep(.el-textarea__inner) {
-  font-family: monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  width: 100%;
-  resize: none; /* 禁用手动调整大小 */
+.config-editor {
+  flex: 1;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fafafa;
+  min-height: 800px;
+  max-height: calc(94vh - 800px);
+  display: flex;
+  flex-direction: column;
 }
 
-/* 移除之前的 min-width: 800px 设置 */
-:deep(.json-editor), 
-:deep(.json-content),
-:deep(.el-textarea__inner) {
-  min-width: unset;
+.config-content {
+  flex: 1;
+  overflow: auto;
+  background: white;
+  margin: 1px;
+  border-radius: 11px;
 }
 
-.json-toolbar {
-  padding: 8px;
-  background-color: var(--el-fill-color-light);
-  border-bottom: 1px solid var(--el-border-color);
+/* JSON Preview */
+.json-preview {
+  padding: 14px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+:deep(.json-preview .vjs-tree) {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+/* JSON Editor Input */
+:deep(.json-editor-input .el-textarea__inner) {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  background: white;
+}
+
+:deep(.json-editor-input .el-textarea__inner:focus) {
+  box-shadow: none;
+}
+
+/* JSON Error */
+.json-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fff2f0;
+  border-top: 1px solid #ffccc7;
+  color: #cf1322;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.error-icon {
+  color: #cf1322;
+}
+
+/* Dialog Footer */
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  flex-shrink: 0;
+  padding: 8px 16px;
+  align-items: center;
 }
 
-.json-error {
-  padding: 8px 16px;
-  color: var(--el-color-danger);
-  font-size: 14px;
-  border-top: 1px solid var(--el-border-color);
-  background-color: var(--el-color-danger-light-9);
-  flex-shrink: 0;
-}
-:deep(.vjs-node-index) {
-  right: calc(100% + 60px);
-  margin-right: -48px;
+/* Responsive */
+@media (max-width: 1200px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .payment-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style> 

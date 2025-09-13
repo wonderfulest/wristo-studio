@@ -2,9 +2,9 @@ import { defineStore } from 'pinia'
 import { Circle, FabricImage } from 'fabric'
 import _ from 'lodash'
 import { usePropertiesStore } from '@/stores/properties'
+import type { PropertiesMap } from '@/types/properties'
 import { encodeElement } from '@/utils/elementCodec'
 import type { FabricElement } from '@/types/element'
-import { compareColor } from '@/utils/colorUtils'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
@@ -22,7 +22,7 @@ export const useBaseStore = defineStore('baseStore', {
   state: () => ({
     propertiesStore: usePropertiesStore(),
     canvas: null as CanvasLike,
-    id: null as string | null, // 表盘ID
+    id: '' as string, // 表盘ID
     watchFaceName: '' as string,
     WATCH_SIZE: 454 as number,
     themeBackgroundColors: ['#000000'] as string[],
@@ -42,6 +42,43 @@ export const useBaseStore = defineStore('baseStore', {
 
   // actions
   actions: {
+    // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
+    mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
+      const colorMappings: Array<{ source: string; target: string }> = [
+        { source: 'color', target: 'colorProperty' },
+        { source: 'bgColor', target: 'bgColorProperty' },
+        { source: 'stroke', target: 'strokeProperty' },
+        { source: 'borderColor', target: 'borderColorProperty' },
+        { source: 'bodyStroke', target: 'bodyStrokeProperty' },
+        { source: 'headFill', target: 'headFillProperty' },
+        { source: 'bodyFill', target: 'bodyFillProperty' },
+        { source: 'fill', target: 'fillProperty' },
+        { source: 'activeColor', target: 'activeColorProperty' },
+        { source: 'inactiveColor', target: 'inactiveColorProperty' },
+        { source: 'gridColor', target: 'gridColorProperty' },
+        { source: 'xAxisColor', target: 'xAxisColorProperty' },
+        { source: 'yAxisColor', target: 'yAxisColorProperty' },
+        { source: 'xLabelColor', target: 'xLabelColorProperty' },
+        { source: 'yLabelColor', target: 'yLabelColorProperty' },
+      ]
+
+      const encRec: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
+      for (const { source, target } of colorMappings) {
+        const val = encRec[source]
+        if (val === undefined) continue
+        if (val === 'transparent') {
+          encRec[source] = -1
+          continue
+        }
+        const match = Object.entries(properties)
+          .find(([, p]) => {
+            return p.type === 'color' && Array.isArray(p.options) && p.options.some((opt) => opt?.value === val)
+          })
+        if (match) {
+          encRec[target] = match[0]
+        }
+      }
+    },
     // 取消所有选中对象
     deactivateObject(): void {
       if (!this.canvas) return
@@ -495,22 +532,22 @@ export const useBaseStore = defineStore('baseStore', {
       }
     },
     // 生成配置
-    generateConfig(): AnyObject | null {
+    generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
       console.log('this.canvas', this.canvas)
       if (!this.canvas || !this.canvas.getObjects().length) {
         console.warn('没有元素')
         return null
       }
       const propertiesStore = usePropertiesStore()
-      const config: AnyObject = {
+      const config: import('@/types/app/config').RuntimeDesignConfig = {
         version: '1.0',
         properties: propertiesStore.allProperties,
-        designId: this.id,
+        designId: this.id || '',
         name: this.watchFaceName,
         textCase: this.textCase,
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
-        elements: [] as AnyObject[],
+        elements: [] as import('@/types/elements').AnyElementConfig[],
         orderIds: [] as string[],
         themeBackgroundImages: this.themeBackgroundImages
       }
@@ -528,66 +565,27 @@ export const useBaseStore = defineStore('baseStore', {
         if (element.eleType === 'background-image') continue
         if (element.eleType === 'global') continue
         // 使用编码器系统编码元素
-        const encodeConfigNullable = encodeElement(element) as AnyObject | null
+        const encodeConfigNullable = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
         if (!encodeConfigNullable) continue
         const encodeConfig = encodeConfigNullable
         
-        // 颜色属性映射配置
-        const colorMappings = [
-          { source: 'color', target: 'colorProperty' },
-          { source: 'bgColor', target: 'bgColorProperty' },
-          { source: 'stroke', target: 'strokeProperty' },
-          { source: 'borderColor', target: 'borderColorProperty' },
-          { source: 'bodyStroke', target: 'bodyStrokeProperty' },
-          { source: 'headFill', target: 'headFillProperty' },
-          { source: 'bodyFill', target: 'bodyFillProperty' },
-          { source: 'fill', target: 'fillProperty' },
-          { source: 'activeColor', target: 'activeColorProperty' },
-          { source: 'inactiveColor', target: 'inactiveColorProperty' },
-          { source: 'gridColor', target: 'gridColorProperty' },
-          { source: 'xAxisColor', target: 'xAxisColorProperty' },
-          { source: 'yAxisColor', target: 'yAxisColorProperty' },
-          { source: 'xLabelColor', target: 'xLabelColorProperty' },
-          { source: 'yLabelColor', target: 'yLabelColorProperty' },
-        ]
+        // 颜色属性映射（提取为独立方法）
+        this.mapColorProperties(encodeConfig, propertiesStore.allProperties)
 
-        // 处理所有颜色属性映射
-        colorMappings.forEach(({ source, target }) => {
-          if (encodeConfig[source]) {
-            if (encodeConfig[source] == 'transparent') {
-              encodeConfig[source] = -1;
-              return;
-            }
-            const matchingProperty = Object.entries(propertiesStore.allProperties)
-              .find(([, p]: [string, any]) => {
-                return (p as any).type == 'color' && compareColor((p as any).value, encodeConfig[source])
-              })
-            if (matchingProperty) {
-              encodeConfig[target] = matchingProperty[0] // 返回 key 值
-            }
-          }
-        })
-
-        // 获取imageId
-        if (encodeConfig.eleType == 'image') {
-          encodeConfig.imageId = imageId // imageId 用于标识图片配置
-          imageId++
+        // 一个可变的记录对象，用来设置动态键，避免对联合类型直接用 string 索引
+        const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
+        const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
+        if (element.eleType === 'image') {
+          idCarrier.imageId = imageId++
         }
-        // 获取timeId
-        if (encodeConfig.eleType == 'time') {
-          encodeConfig.timeId = timeId // timeId 用于标识时间配置
-          timeId++
+        if (element.eleType === 'time') {
+          idCarrier.timeId = timeId++
         }
-        // 获取dateId
-        if (encodeConfig.eleType == 'date') {
-          encodeConfig.dateId = dateId // dateId 用于标识日期配置
-          dateId++
+        if (element.eleType === 'date') {
+          idCarrier.dateId = dateId++
         }
-
-        // 刻度盘 获取subItemId
-        if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
-          encodeConfig.subItemId = subItemId // subItemId 用于标识子项配置
-          subItemId++
+        if (['icon', 'data', 'label', 'unit'].includes(element.eleType || '')) {
+          idCarrier.subItemId = subItemId++
         }
 
         config.elements.push(encodeConfig)
