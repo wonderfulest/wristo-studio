@@ -17,7 +17,7 @@ export type { IconElementConfig, DataElementConfig } from './data'
 export type { IndicatorElementConfig } from './indicator'
 
 // goal related
-export type { GoalElementConfig, GoalBarElementConfig, GoalArcElementConfig } from './goal'
+export type { GoalElementConfig, GoalBarElementConfig, GoalArcElementConfig, GoalSegmentBarElementConfig } from './goal'
 
 // status related
 export type { MoveBarElementConfig } from './status'
@@ -35,7 +35,7 @@ import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './t
 import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
-import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc } from './goal'
+import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc, GoalSegmentBarElementConfig as _GoalSegBar } from './goal'
 import type { BarChartElementConfig as _BarChart, LineChartElementConfig as _LineChart } from './charts'
 import type { MoveBarElementConfig as _MoveBar } from './status'
 import type { BatteryElementConfig as _Battery } from './battery'
@@ -58,6 +58,7 @@ export type AnyElementConfig =
   | _Tick
   | _GoalBar
   | _GoalArc
+  | _GoalSegBar
   | _BarChart
   | _LineChart
 
@@ -86,6 +87,7 @@ export interface ElementConfigMap {
   'goal': _Goal
   'goalBar': _GoalBar
   'goalArc': _GoalArc
+  'goalSegmentBar': _GoalSegBar
   'barChart': _BarChart
   'lineChart': _LineChart
   'battery': _Battery

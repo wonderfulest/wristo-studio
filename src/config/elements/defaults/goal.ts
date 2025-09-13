@@ -35,3 +35,22 @@ export const DEFAULT_GOALARC_CONFIG: GoalArcElementConfig & EDITOR_ELEMENT = Obj
   goalProperty: '',
   progress: 0,
 })
+
+export const DEFAULT_GOALSEGMENTBAR_CONFIG = Object.assign(
+  {}, DEFAULT_GOAL_CONFIG, {
+    icon: 'mdi:view-sequential-outline',
+    label: 'Segment Bar',
+    eleType: 'goalSegmentBar' as const,
+    width: 200,
+    height: 5,
+    color: '#00FF00',
+    bgColor: '#333333',
+    borderRadius: 2,
+    segments: 10,
+    gap: 2,
+    progress: 0.667,
+    originX: 'center',
+    originY: 'center',
+    goalProperty: '',
+  }
+)

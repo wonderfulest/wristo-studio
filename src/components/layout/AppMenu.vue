@@ -175,6 +175,10 @@
             <el-icon><Operation /></el-icon>
             <span>Progress Arc</span>
           </el-menu-item>
+          <el-menu-item index="goal/progress-segments" @click="handleAddElement('goal', 'goalSegmentBar')">
+            <el-icon><Operation /></el-icon>
+            <span>Progress Segments</span>
+          </el-menu-item>
         </div>
         <div class="menu-group">
           <div class="menu-group-title"><el-icon><TrendCharts /></el-icon>Chart</div>

@@ -7,7 +7,7 @@ import { DEFAULT_BATTERY_CONFIG, DEFAULT_MOVE_BAR_CONFIG } from './defaults/stat
 import { DEFAULT_RECTANGLE_CONFIG, DEFAULT_CIRCLE_CONFIG, DEFAULT_LINE_CONFIG } from './defaults/shape'
 import { DEFAULT_DATA_CONFIG, DEFAULT_LABEL_CONFIG, DEFAULT_UNIT_CONFIG, DEFAULT_ICON_CONFIG } from './defaults/metric'
 import { DEFAULT_HOUR_HAND_CONFIG, DEFAULT_MINUTE_HAND_CONFIG, DEFAULT_SECOND_HAND_CONFIG } from './defaults/hands'
-import { DEFAULT_GOALBAR_CONFIG, DEFAULT_GOALARC_CONFIG } from './defaults/goal'
+import { DEFAULT_GOALBAR_CONFIG, DEFAULT_GOALARC_CONFIG, DEFAULT_GOALSEGMENTBAR_CONFIG } from './defaults/goal'
 import { DEFAULT_TICK_CONFIG, DEFAULT_TICK60_CONFIG, DEFAULT_ROMANS_CONFIG } from './defaults/dials'
 import { DEFAULT_BARCHART_CONFIG, DEFAULT_LINECHART_CONFIG } from './defaults/charts'
 
@@ -50,6 +50,7 @@ export const elementConfigs: Record<string, Record<string, AnyElementConfig & ED
   goal: {
     goalBar: DEFAULT_GOALBAR_CONFIG,
     goalArc: DEFAULT_GOALARC_CONFIG,
+    goalSegmentBar: DEFAULT_GOALSEGMENTBAR_CONFIG,
   },
   chart: {
     barChart: DEFAULT_BARCHART_CONFIG,
