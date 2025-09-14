@@ -54,25 +54,25 @@
               <el-icon>
                 <Brush />
               </el-icon>
-              color select
+              Color Select
             </el-button>
             <el-button type="text" @click="addProperty('goal')">
               <el-icon>
                 <Histogram />
               </el-icon>
-              goal select
+              Goal Select
             </el-button>
             <el-button type="text" @click="addProperty('data')">
               <el-icon>
                 <DataLine />
               </el-icon>
-              data select
+              Data Select
             </el-button>
             <el-button type="text" @click="addProperty('chart')">
               <el-icon>
                 <TrendCharts />
               </el-icon>
-              chart select
+              Chart Select
             </el-button>
           </el-button-group>
         </div>

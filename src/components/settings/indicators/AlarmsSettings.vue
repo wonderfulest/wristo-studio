@@ -19,16 +19,9 @@
 
         <div class="setting-item">
             <label>位置</label>
-            <div class="position-inputs">
-                <div>
-                    <span>X:</span>
-                    <input type="number" v-model.number="positionX" @change="updatePosition" />
-                </div>
-                <div>
-                    <span>Y:</span>
-                    <input type="number" v-model.number="positionY" @change="updatePosition" />
-                </div>
-            </div>
+            <PositionInputs :left="element.left" :top="element.top" @update:left="(v) => element.left = v"
+                @update:top="(v) => element.top = v"
+                @change="(p) => updateElement({ left: Math.round(p.left), top: Math.round(p.top) })" />
         </div>
     </div>
 </template>
@@ -39,6 +32,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 
 const props = defineProps({
     element: {

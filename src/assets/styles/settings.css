@@ -102,11 +102,13 @@ input[type='range'] {
 .align-buttons {
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
 .align-buttons button {
   flex: 1;
   height: 32px;
+  min-width: 0;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   background: white;
@@ -146,4 +148,62 @@ input[type='range'] {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* =====================
+   Shared color input styles (migrated from settings views)
+   ===================== */
+.color-input {
+  position: relative;
+  width: 100%;
+}
+
+.color-input input {
+  width: 100%;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  color: transparent;
+}
+
+.color-input input:hover {
+  border-color: #409eff;
+}
+
+.color-input .color-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 1000;
+}
+
+/* =====================
+   Validation message behavior for settings pages
+   Make errors part of normal flow so they push items below
+   ===================== */
+.settings-section .el-form-item__error {
+  position: static;
+  margin-top: 4px;
+}
+
+.settings-section .el-form-item__content {
+  padding-bottom: 0 !important;
+}
+
+/* Tighten multi-line label spacing for all settings forms */
+.settings-section .el-form-item__label {
+  line-height: 1.1; /* tighter line height for wrapped labels */
+  padding-top: 0;   /* remove extra vertical padding */
+  padding-bottom: 0;
+}
+
+/* Ensure wrapped label container applies the same spacing */
+.settings-section .el-form-item__label-wrap .el-form-item__label {
+  line-height: 1.1;
+  padding-top: 0;
+  padding-bottom: 0;
 }

@@ -11,16 +11,13 @@
       <!-- 位置设置 -->
       <div class="setting-item">
         <label>位置</label>
-        <div class="position-inputs">
-          <div class="input-group">
-            <label>X</label>
-            <input type="number" :value="element.left" @input="(e) => (element.left = Number(e.target.value))" @change="updatePosition" />
-          </div>
-          <div class="input-group">
-            <label>Y</label>
-            <input type="number" :value="element.top" @input="(e) => (element.top = Number(e.target.value))" @change="updatePosition" />
-          </div>
-        </div>
+        <PositionInputs 
+          :left="element.left"
+          :top="element.top"
+          @update:left="(v)=> element.left = v"
+          @update:top="(v)=> element.top = v"
+          @change="(p)=> updateElement({ left: Math.round(p.left), top: Math.round(p.top) })"
+        />
       </div>
       <!-- 尺寸属性 -->
       <div class="setting-item">
@@ -136,6 +133,7 @@ import { ElTooltip } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 
 const emit = defineEmits(['close'])
 

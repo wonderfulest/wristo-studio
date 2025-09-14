@@ -7,6 +7,7 @@ import '@iconify/iconify'
 
 import '@/assets/styles/fonts.css'
 import '@/assets/styles/main.css'
+import '@/assets/styles/settings.css'
 
 import ElementPlus from 'element-plus'
 import 'element-plus/theme-chalk/src/index.scss'

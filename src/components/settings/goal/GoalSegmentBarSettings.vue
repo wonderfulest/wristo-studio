@@ -37,27 +37,11 @@
       </el-form-item>
 
       <el-form-item label="Active Color">
-        <color-picker v-model="element.color" @change="updateElement" />
+        <color-picker v-model="element.color" @change="handleActiveColorChange" />
       </el-form-item>
 
       <el-form-item label="Background Color">
-        <color-picker v-model="element.bgColor" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Origin X">
-        <el-select v-model="element.originX" @change="updateElement">
-          <el-option label="center" value="center" />
-          <el-option label="left" value="left" />
-          <el-option label="right" value="right" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="Origin Y">
-        <el-select v-model="element.originY" @change="updateElement">
-          <el-option label="center" value="center" />
-          <el-option label="top" value="top" />
-          <el-option label="bottom" value="bottom" />
-        </el-select>
+        <color-picker v-model="element.bgColor" @change="handleBgColorChange" />
       </el-form-item>
     </el-form>
   </div>
@@ -95,6 +79,23 @@ const updateElement = async () => {
     goalProperty: props.element.goalProperty,
   })
   emit('update')
+}
+
+// 颜色互斥：前景与背景不能同时设置
+const handleActiveColorChange = (val: string) => {
+  // 当前设置前景色，置背景为透明
+  props.element.color = val
+  props.element.bgColor = 'transparent'
+  // 更新
+  void updateElement()
+}
+
+const handleBgColorChange = (val: string) => {
+  // 当前设置背景色，置前景为透明
+  props.element.bgColor = val
+  props.element.color = 'transparent'
+  // 更新
+  void updateElement()
 }
 </script>
 

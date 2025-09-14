@@ -222,19 +222,6 @@ defineExpose({
   width: 60px;
 }
 
-.color-input {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.color-input input {
-  width: 120px;
-  padding: 4px 8px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-}
-
 .tips {
   margin-top: 8px;
   padding: 8px;

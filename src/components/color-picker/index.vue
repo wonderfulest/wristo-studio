@@ -45,6 +45,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 
@@ -131,6 +132,8 @@ const colorMatrix = [
 
 // 状态
 const isOpen = ref(false)
+// 为每个实例生成唯一标识，用于互斥控制
+const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
 const hexColor = ref(props.modelValue)
 
 // 获取当前使用的颜色
@@ -187,10 +190,17 @@ const handleOutsideClick = (event) => {
 // 添加和移除事件监听
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
+  // 监听全局事件：有其他 color-picker 打开时，关闭当前
+  emitter.on('color-picker-open', (id) => {
+    if (id !== instanceId) {
+      isOpen.value = false
+    }
+  })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
+  emitter.off?.('color-picker-open')
 })
 
 // 监听 modelValue 变化
@@ -204,7 +214,12 @@ watch(
 )
 
 const togglePicker = () => {
-  isOpen.value = true
+  // 切换打开/关闭；当打开时，广播给其他实例进行关闭
+  const willOpen = !isOpen.value
+  isOpen.value = willOpen
+  if (willOpen) {
+    emitter.emit?.('color-picker-open', instanceId)
+  }
 }
 </script>
 

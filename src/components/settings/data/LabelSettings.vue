@@ -36,32 +36,21 @@
       </el-form-item>
 
       <el-form-item label="位置">
-        <div class="position-inputs">
-          <el-input-number 
-            v-model="element.left" 
-            @change="updateElement"
-            placeholder="X"
-          />
-          <el-input-number 
-            v-model="element.top" 
-            @change="updateElement"
-            placeholder="Y"
-          />
-        </div>
+        <PositionInputs 
+          :left="element.left"
+          :top="element.top"
+          @update:left="(v)=> element.left = v"
+          @update:top="(v)=> element.top = v"
+          @change="updateElement"
+        />
       </el-form-item>
 
       <el-form-item label="对齐方式">
-        <el-select 
-          v-model="element.originX" 
-          @change="updateElement"
-        >
-          <el-option 
-            v-for="align in originXOptions" 
-            :key="align.value" 
-            :label="align.label" 
-            :value="align.value" 
-          />
-        </el-select>
+        <AlignXButtons 
+          :options="originXOptions" 
+          v-model="element.originX"
+          @update:modelValue="updateElement"
+        />
       </el-form-item>
 
       <el-form-item label="字体大小">
@@ -101,6 +90,8 @@ import { useLabelStore } from '@/stores/elements/data/labelElement'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
 
@@ -152,6 +143,7 @@ defineExpose({
 </script>
 
 <style scoped>
+@import '@/assets/styles/settings.css';
 .settings-section {
   padding: 16px;
 }

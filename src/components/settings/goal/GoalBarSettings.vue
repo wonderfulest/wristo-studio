@@ -6,12 +6,16 @@
       label-position="left" 
       label-width="100px"
       :rules="rules"
+      status-icon
+      validate-on-rule-change
     >
-      <el-form-item label="目标属性" prop="goalProperty" :rules="[{ required: true, message: '请选择目标属性', trigger: 'change' }]">
+      <el-form-item class="goal-field" label="Goal Property" prop="goalProperty" required :show-message="true" inline-message>
         <el-select 
           v-model="element.goalProperty" 
           @change="updateElement"
-          placeholder="选择目标属性"
+          placeholder="Select goal property"
+          clearable
+          filterable
         >
           <el-option 
             v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal')" 
@@ -21,7 +25,7 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="宽度">
+      <el-form-item label="Width">
         <el-input-number 
           v-model="element.width" 
           :min="50" 
@@ -30,7 +34,7 @@
         />
       </el-form-item>
       
-      <el-form-item label="高度">
+      <el-form-item label="Height">
         <el-input-number 
           v-model="element.height" 
           :min="4" 
@@ -39,7 +43,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="圆角">
+      <el-form-item label="Border Radius">
         <el-input-number 
           v-model="element.borderRadius" 
           :min="0" 
@@ -48,7 +52,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="内边距">
+      <el-form-item label="Padding">
         <el-input-number 
           v-model="element.padding" 
           :min="0" 
@@ -57,16 +61,15 @@
         />
       </el-form-item>
 
-      <el-form-item label="对齐方式">
-        <el-select 
-          v-model="element.originX" 
-          @change="updateElement"
-        >
-          <el-option label="居中" value="center" />
-        </el-select>
+      <el-form-item label="Alignment">
+        <AlignXButtons 
+          :options="originXOptions"
+          v-model="element.originX"
+          @update:modelValue="() => updateElement()"
+        />
       </el-form-item>
 
-      <el-form-item label="进度">
+      <el-form-item label="Progress">
         <el-slider 
           v-model="element.progress" 
           :min="0" 
@@ -76,33 +79,33 @@
         />
       </el-form-item>
 
-      <el-form-item label="进度颜色">
+      <el-form-item label="Active Color">
         <color-picker 
           v-model="element.color" 
-          @change="updateElement" 
+          @change="handleMainColorChange" 
         />
       </el-form-item>
 
-      <el-form-item label="背景颜色">
+      <el-form-item label="Background Color">
         <color-picker 
           v-model="element.bgColor" 
-          @change="updateElement" 
+          @change="handleBgColorChange" 
         />
       </el-form-item>
 
       
 
-      <el-form-item label="前景对齐">
+      <el-form-item label="Progress Align">
         <el-select 
           v-model="element.progressAlign" 
           @change="updateElement"
         >
-          <el-option label="左对齐" value="left" />
-          <el-option label="右对齐" value="right" />
+          <el-option label="Left" value="left" />
+          <el-option label="Right" value="right" />
         </el-select>
       </el-form-item>
 
-      <el-form-item label="边框宽度">
+      <el-form-item label="Border Width">
         <el-input-number 
           v-model="element.borderWidth" 
           :min="0" 
@@ -111,7 +114,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="边框颜色">
+      <el-form-item label="Border Color">
         <color-picker 
           v-model="element.borderColor" 
           @change="updateElement" 
@@ -122,12 +125,13 @@
 </template>
 
 <script setup>
-import { ref, watch, defineEmits, defineExpose } from 'vue'
+import { ref, watch, defineEmits, defineExpose, onMounted, nextTick } from 'vue'
 import { useGoalBarStore } from '@/stores/elements/goal/goalBarElement'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { DataTypeOptions } from '@/config/settings'
+import { DataTypeOptions, originXOptions } from '@/config/settings'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 
 const emit = defineEmits(['close'])
 
@@ -145,10 +149,22 @@ const propertiesStore = usePropertiesStore()
 
 const rules = {
   goalProperty: [
-    { required: true, message: '请选择目标属性', trigger: 'change' }
+    { required: true, message: 'Please select a goal property, if none, please add it in Actions -> Add Property -> Goal.', trigger: 'change' }
   ]
 }
 
+// 颜色互斥：主色与背景色不能同时设置
+const handleMainColorChange = async (val) => {
+  props.element.color = val
+  props.element.bgColor = 'transparent'
+  await updateElement()
+}
+
+const handleBgColorChange = async (val) => {
+  props.element.bgColor = val
+  props.element.color = 'transparent'
+  await updateElement()
+}
 const updateElement = async () => {
   try {
     await formRef.value.validate()
@@ -166,7 +182,7 @@ const updateElement = async () => {
       borderColor: props.element.borderColor
     })
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('Form validation failed:', error)
   }
 }
 
@@ -176,9 +192,26 @@ const handleClose = async () => {
     await formRef.value.validate()
     emit('close')
   } catch (error) {
-    ElMessage.warning('请先完成必填项设置')
+    ElMessage.warning('Please complete the required fields first')
   }
 }
+
+// 初次挂载时如果未选择 goalProperty，则触发校验以显示提示
+onMounted(() => {
+  if (!props.element.goalProperty) {
+    nextTick(() => {
+      formRef.value?.validateField?.('goalProperty')
+    })
+  }
+})
+
+// 当 goalProperty 变化时，重新校验以实时显示/隐藏提示
+watch(
+  () => props.element.goalProperty,
+  () => {
+    formRef.value?.validateField?.('goalProperty')
+  }
+)
 
 // 暴露方法给父组件
 defineExpose({
@@ -194,5 +227,30 @@ defineExpose({
 
 .el-form-item {
   margin-bottom: 16px;
+}
+
+/* Make ALL validation errors occupy normal flow so they push items below */
+:deep(.el-form-item__error) {
+  position: static;
+  margin-top: 4px;
+}
+
+/* Ensure content area doesn't collapse when error appears */
+:deep(.el-form-item__content) {
+  padding-bottom: 0 !important;
+}
+
+/* Reduce line spacing for multi-line labels to the minimum reasonable */
+:deep(.el-form-item__label) {
+  line-height: 1.1; /* tighter line height for wrapped labels */
+  padding-top: 0;   /* remove extra vertical padding */
+  padding-bottom: 0;
+}
+
+/* When label is wrapped by helper container, ensure same effect */
+:deep(.el-form-item__label-wrap .el-form-item__label) {
+  line-height: 1.1;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 </style>

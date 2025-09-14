@@ -2,24 +2,21 @@
   <div class="settings-section">
     <div class="setting-item">
       <label>位置</label>
-      <div class="position-inputs">
-        <div>
-          <span>X:</span>
-          <input type="number" v-model.number="positionX" @change="updatePosition" />
-        </div>
-        <div>
-          <span>Y:</span>
-          <input type="number" v-model.number="positionY" @change="updatePosition" />
-        </div>
-      </div>
+      <PositionInputs 
+        :left="positionX"
+        :top="positionY"
+        @update:left="(v)=> positionX = v"
+        @update:top="(v)=> positionY = v"
+        @change="updatePosition"
+      />
     </div>
     <div class="setting-item">
       <label>对齐方式</label>
-      <div class="align-buttons">
-        <button v-for="align in originXOptions" :key="align.value" @click="updateOriginX(align.value)" :class="{ active: originX === align.value }" :title="align.label">
-          <Icon :icon="align.icon" />
-        </button>
-      </div>
+      <AlignXButtons 
+        :options="originXOptions"
+        v-model="originX"
+        @update:modelValue="updateOriginX"
+      />
     </div>
     <div class="setting-item">
       <label>字体大小</label>
@@ -49,6 +46,8 @@ import { ref, watch, onMounted } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import { useFontStore } from '@/stores/fontStore'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {

@@ -7,18 +7,13 @@
       label-width="100px"
     >
       <el-form-item label="位置">
-        <div class="position-inputs">
-          <el-input-number 
-            v-model="element.left" 
-            @change="(val) => handlePositionChange('left', val)"
-            placeholder="X"
-          />
-          <el-input-number 
-            v-model="element.top" 
-            @change="(val) => handlePositionChange('top', val)"
-            placeholder="Y"
-          />
-        </div>
+        <PositionInputs 
+          :left="element.left"
+          :top="element.top"
+          @update:left="(v)=> element.left = v"
+          @update:top="(v)=> element.top = v"
+          @change="(p)=>{ handlePositionChange('left', p.left); handlePositionChange('top', p.top) }"
+        />
       </el-form-item>
 
       <el-form-item label="宽度">
@@ -74,17 +69,11 @@
       </el-form-item>
 
       <el-form-item label="对齐方式">
-        <el-select 
-          v-model="element.originX" 
-          @change="updateElement"
-        >
-          <el-option 
-            v-for="align in originXOptions" 
-            :key="align.value" 
-            :label="align.label" 
-            :value="align.value" 
-          />
-        </el-select>
+        <AlignXButtons 
+          :options="originXOptions"
+          v-model="element.originX"
+          @update:modelValue="updateElement"
+        />
       </el-form-item>
     </el-form>
   </div>
@@ -96,6 +85,8 @@ import { useMoveBarStore } from '@/stores/elements/status/moveBarElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {

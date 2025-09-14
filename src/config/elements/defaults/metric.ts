@@ -14,7 +14,7 @@ export const DEFAULT_DATA_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
   originY: 'center',
   fill: base.fill || '#FFFFFF',
   fontSize: 42,
-  fontFamily: 'super-icons',
+  fontFamily: 'roboto-condensed-regular',
   metricSymbol: ':FIELD_TYPE_HEART_RATE',
 }
 
@@ -23,6 +23,7 @@ export const DEFAULT_LABEL_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
   icon: 'mdi:label-outline',
   label: 'Label',
   eleType: 'label',
+  fontFamily: 'roboto-condensed-regular',
 }
 
 export const DEFAULT_UNIT_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
@@ -30,6 +31,7 @@ export const DEFAULT_UNIT_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
   icon: 'mdi:ruler-square',
   label: 'Unit',
   eleType: 'unit',
+  fontFamily: 'roboto-condensed-regular',
 }
 
 export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
@@ -39,4 +41,5 @@ export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
   eleType: 'icon',
   iconFont: 'super-icons',
   iconSize: 42,
+  fontFamily: 'roboto-condensed-regular',
 }

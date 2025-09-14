@@ -33,11 +33,11 @@
     </div>
     <div class="setting-item" v-if="isSameTypeLayer && !isTimeGroup">
       <label>对齐方式</label>
-      <div class="align-buttons">
-        <button v-for="align in originXOptions" :key="align.value" @click="updateOriginX(align.value)" :class="{ active: originX === align.value }" :title="align.label">
-          <Icon :icon="align.icon" />
-        </button>
-      </div>
+      <AlignXButtons 
+        :options="originXOptions"
+        v-model="originX"
+        @update:modelValue="updateOriginX"
+      />
     </div>
     <div class="setting-item" v-if="isSameTypeLayer">
       <label>字体大小</label>
@@ -57,12 +57,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()
@@ -86,7 +87,7 @@ const goalArcElement = computed(() => getElementByType('goalArc'))
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
 const fontFamily = ref(props.elements[0].fontFamily)
-const originX = ref(props.elements[0].originX || 'center')
+const originX = ref<string>(String(props.elements[0].originX || 'center'))
 
 const dataProperty = ref<string>('')
 const goalProperty = ref<string>('')
@@ -214,9 +215,9 @@ const updateFontFamily = () => {
   baseStore.canvas?.renderAll()
 }
 
-const updateOriginX = (originXVal: 'left' | 'center' | 'right') => {
+const updateOriginX = (originXVal: string) => {
   for (const element of props.elements) {
-    element.set('originX', originXVal)
+    element.set('originX', originXVal as 'left' | 'center' | 'right')
     element.setCoords()
   }
   originX.value = originXVal

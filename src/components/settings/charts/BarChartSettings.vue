@@ -12,18 +12,13 @@
         </el-select>
       </el-form-item>
       <el-form-item label="位置">
-        <div class="position-inputs">
-          <el-input-number 
-            v-model="element.left" 
-            @change="(val) => handlePositionChange('left', val)"
-            placeholder="X"
-          />
-          <el-input-number 
-            v-model="element.top" 
-            @change="(val) => handlePositionChange('top', val)"
-            placeholder="Y"
-          />
-        </div>
+        <PositionInputs 
+          :left="element.left"
+          :top="element.top"
+          @update:left="(v)=> element.left = v"
+          @update:top="(v)=> element.top = v"
+          @change="(p)=>{ handlePositionChange('left', p.left); handlePositionChange('top', p.top) }"
+        />
       </el-form-item>
 
       <el-form-item label="宽度">
@@ -77,14 +72,14 @@
       <el-form-item label="线条颜色">
         <color-picker 
           v-model="element.color" 
-          @change="updateElement" 
+          @change="handleMainColorChange" 
         />
       </el-form-item>
 
       <el-form-item label="背景颜色">
         <color-picker 
           v-model="element.bgColor" 
-          @change="updateElement" 
+          @change="handleBgColorChange" 
         />
       </el-form-item>
 
@@ -194,17 +189,11 @@
       </el-form-item>
 
       <el-form-item label="对齐方式">
-        <el-select 
-          v-model="element.originX" 
-          @change="updateElement"
-        >
-          <el-option 
-            v-for="align in originXOptions" 
-            :key="align.value" 
-            :label="align.label" 
-            :value="align.value" 
-          />
-        </el-select>
+        <AlignXButtons 
+          :options="originXOptions" 
+          v-model="element.originX"
+          @update:modelValue="updateElement"
+        />
       </el-form-item>
 
       <el-form-item label="柱形宽度">
@@ -228,6 +217,8 @@ import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { usePropertiesStore } from '@/stores/properties'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 
 const props = defineProps({
   element: {
@@ -244,6 +235,19 @@ const propertiesStore = usePropertiesStore()
 const getFabricElement = () => {
   if (!baseStore.canvas) return null
   return baseStore.canvas.getObjects().find(obj => obj.id === props.element.id)
+}
+
+// 颜色互斥：主色与背景色不能同时设置
+const handleMainColorChange = (val) => {
+  props.element.color = val
+  props.element.bgColor = 'transparent'
+  updateElement()
+}
+
+const handleBgColorChange = (val) => {
+  props.element.bgColor = val
+  props.element.color = 'transparent'
+  updateElement()
 }
 
 // 更新元素
