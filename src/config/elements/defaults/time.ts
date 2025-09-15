@@ -7,7 +7,7 @@ export const DEFAULT_TIME_CONFIG: TimeElementConfig & EDITOR_ELEMENT = Object.as
   label: 'Time',
   eleType: 'time' as const,
 }, DEFAULT_TEXT_CONFIG, {
-  formatter: TimeFormatConstants.HH_MM_SS,
+  formatter: TimeFormatConstants.HH_MM,
 })
 
 export const DEFAULT_DATE_CONFIG: DateElementConfig & EDITOR_ELEMENT = Object.assign({

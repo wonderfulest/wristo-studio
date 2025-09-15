@@ -45,11 +45,13 @@
           @change="updateElement({ formatter: $event.target.value })"
         >
           <el-option 
-            v-for="option in TimeFormatOptions" 
-            :key="option.value" 
-            :value="option.value"
+            v-for="{ label, value, example } in TimeFormatOptions" 
+            :key="value" 
+            :label="label" 
+            :value="value" 
+            :title="'e.g.: ' + example"
           >
-            {{ option.label }}
+            {{ label }} - e.g.: {{ example }}
           </el-option>
         </el-select>
       </el-form-item>
@@ -61,7 +63,7 @@
 import { onMounted } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useTimeStore } from '@/stores/elements/time/timeElement'
-import { fontSizes, originXOptions, DateFormatOptions } from '@/config/settings'
+import { fontSizes, originXOptions, TimeFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
