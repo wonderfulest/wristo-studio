@@ -101,7 +101,7 @@
 import { ref, reactive, computed } from 'vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
-import type { Design, DesignSubmitDTO } from '@/types/design'
+import type { Design, DesignSubmitDTO } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
 
 const dialogVisible = ref(false)

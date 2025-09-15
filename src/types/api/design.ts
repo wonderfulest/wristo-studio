@@ -63,6 +63,7 @@ export interface Design {
   description: string
   configJson: DesignConfig | null
   designStatus: DesignStatus
+  reviewComment?: string | null
   isActive: number
   isDeleted: number
   createdAt: number

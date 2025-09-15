@@ -138,11 +138,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { getAllSeries } from '@/api/wristo/categories'
-import type { Category } from '@/types/category'
+import type { Category } from '@/types/api/category'
 import type { Bundle } from '@/types/api/bundle'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
-import { Design } from '@/types/design'
+import { Design } from '@/types/api/design'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'

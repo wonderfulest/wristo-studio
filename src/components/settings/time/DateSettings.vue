@@ -2,7 +2,7 @@
   <div class="settings-section">
     <el-form :model="props.element" label-position="left" label-width="100px">
       <el-form-item label="Font Size">
-        <el-select v-model.number="props.element.fontSize" @change="updateElement({ fontSize: $event.target.value })">
+        <el-select v-model.number="props.element.fontSize" @change="(v) => updateElement({ fontSize: v })">
           <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
         </el-select>
       </el-form-item>
@@ -34,14 +34,14 @@
         <AlignXButtons 
           :options="originXOptions"
           v-model="props.element.originX"
-          @update:modelValue="updateElement({ originX: $event })"
+          @update:modelValue="(val) => updateElement({ originX: val })"
         />
       </el-form-item>
 
       <el-form-item label="Date Format">
         <el-select 
-          v-model="props.element.formatter" 
-          @change="updateElement({ formatter: $event.target.value })"
+          v-model.number="props.element.formatter" 
+          @change="(v) => updateElement({ formatter: v })"
         >
           <el-option 
             v-for="{ label, value, example } in DateFormatOptions" 

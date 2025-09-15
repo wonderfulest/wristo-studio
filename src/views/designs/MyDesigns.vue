@@ -54,7 +54,20 @@
               </div>
               <!-- 状态和操作按钮第二行 -->
               <div class="status-actions-row">
-                <div class="status-tag" :style="{ backgroundColor: getStatusColor(design.designStatus) }">
+                <el-tooltip
+                  v-if="design.designStatus === 'rejected' && design.reviewComment"
+                  :content="design.reviewComment"
+                  placement="top"
+                >
+                  <div class="status-tag" :style="{ backgroundColor: getStatusColor(design.designStatus) }">
+                    {{ getStatusText(design.designStatus) }}
+                  </div>
+                </el-tooltip>
+                <div
+                  v-else
+                  class="status-tag"
+                  :style="{ backgroundColor: getStatusColor(design.designStatus) }"
+                >
                   {{ getStatusText(design.designStatus) }}
                 </div>
                 <div class="header-actions">
@@ -200,11 +213,11 @@ import { Star, Edit, Delete, Download, Promotion, DocumentCopy, Collection } fro
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
-import { CreateCopyDesignParams } from '@/types/design'
+import { CreateCopyDesignParams } from '@/types/api/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
-import { Design, DesignStatus } from '@/types/design'
+import { Design, DesignStatus } from '@/types/api/design'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 const goLiveDialog = ref<any>(null)
