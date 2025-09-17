@@ -584,8 +584,9 @@ export const useBaseStore = defineStore('baseStore', {
         if (element.eleType === 'date') {
           idCarrier.dateId = dateId++
         }
-        if (['icon', 'data', 'label', 'unit'].includes(element.eleType || '')) {
-          idCarrier.subItemId = subItemId++
+        // 刻度盘 获取subItemId
+        if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
+          idCarrier.subItemId = subItemId++ // subItemId 用于标识子项配置
         }
 
         config.elements.push(encodeConfig)
