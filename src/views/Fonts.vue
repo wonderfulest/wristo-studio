@@ -78,7 +78,7 @@
       <!-- Toolbar: total + reset -->
       <div class="search-toolbar flex items-center justify-between">
         <span class="text-sm text-gray-600">Total: {{ total }}</span>
-        <el-button size="small" @click="handleResetFilters">Reset Filters</el-button>
+        <el-button size="small" style="margin-left: 12px;" @click="handleResetFilters">Reset Filters</el-button>
       </div>
     </div>
 
@@ -124,7 +124,7 @@ import type { DesignFontVO } from '@/types/font'
 // 状态
 const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])
 const currentPage = ref(1)
-const pageSize = ref(12)
+const pageSize = ref(48)
 const total = ref(0)
 const searchQuery = ref('')
 const fontStore = useFontStore()
@@ -229,16 +229,16 @@ onMounted(() => {
 
 .fonts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
   margin-top: 8px;
 }
 
 .font-card {
   background: #fff;
   border: 1px solid #eee;
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 6px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -248,11 +248,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 2px;
 }
 
 .font-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #333;
   overflow: hidden;
@@ -261,7 +261,8 @@ onMounted(() => {
 }
 
 .preview-oneline {
-  font-size: 16px;
+  font-size: 32px;
+  min-height: 32px;
   color: #444;
   white-space: nowrap;
   overflow: hidden;
