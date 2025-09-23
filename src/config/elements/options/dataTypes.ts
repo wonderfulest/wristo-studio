@@ -5,7 +5,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     labelCn: '心率',
     metricSymbol: ':FIELD_TYPE_HEART_RATE',
     value: 0,
-    defaultValue: '80',
+    defaultValue: '82',
     icon: '\u0030',
     unit: 'bpm',
     label: 'Heart Rate',

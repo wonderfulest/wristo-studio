@@ -1,7 +1,7 @@
 <template>
   <div class="layer-panel">
     <div class="layer-list">
-      <h2 class="section-title">图层</h2>
+      <h2 class="section-title">Layers</h2>
       <draggable :list="elements" class="layers-list" :animation="150" @end="handleDragEnd" item-key="id" handle=".layer-content">
         <template #item="{ element: layer }">
           <div
@@ -37,182 +37,232 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
 import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
+import type { MinimalFabricLike } from '@/types/layer'
+import { debug } from '@/utils/logger'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
 
-// 对元素进行排序
-const elements = ref([])
-const activeElements = ref([])
+// no store-based selection syncing; rely on Fabric object's `active` flag
 
-// 批量更新
-const batchUpdate = () => {
-  if (!baseStore.canvas) return
+// elements shown in layer list
+const elements = ref<MinimalFabricLike[]>([])
+// kept for internal operations but selection highlight uses store
+const activeElements = ref<MinimalFabricLike[]>([])
+// reactive selected ids derived from activeElements to drive highlighting
+const selectedIds = ref<string[]>([])
+
+// disposer for selection listeners and watcher stop handle
+const selectionCleanup = ref<null | (() => void)>(null)
+let stopWatchCanvas: null | (() => void) = null
+
+const summarizeObjects = (objs: MinimalFabricLike[]): Array<{ id?: string; eleType?: string; active?: boolean; locked?: boolean; visible?: boolean }> =>
+  objs.map((o) => ({
+    id: o.id,
+    eleType: o.eleType,
+    active: (o as { active?: boolean }).active,
+    locked: (o as { locked?: boolean }).locked,
+    visible: (o as { visible?: boolean }).visible
+  }))
+
+// batch update from canvas
+const batchUpdate = (): void => {
+  if (!baseStore.canvas) {
+    debug('LayerPanel', 'batchUpdate skipped: no canvas')
+    return
+  }
   requestAnimationFrame(() => {
-    elements.value = baseStore.canvas.getObjects()
-    activeElements.value = baseStore.canvas.getActiveObjects()
-    baseStore.canvas.renderAll()
+    // Fabric returns objects array
+    const all = (baseStore.canvas!.getObjects?.() as MinimalFabricLike[]) || []
+    const actives = (baseStore.canvas!.getActiveObjects?.() as MinimalFabricLike[]) || []
+    // clone arrays to ensure Vue reactivity notices changes
+    elements.value = [...all]
+    activeElements.value = [...actives]
+    selectedIds.value = actives.map((o) => o.id).filter((id): id is string => typeof id === 'string')
+    debug('LayerPanel', 'batchUpdate', {
+      total: all.length,
+      actives: actives.length,
+      activeIds: actives.map((o) => o.id),
+      firstFew: summarizeObjects(all.slice(0, 5))
+    })
+    baseStore.canvas!.renderAll?.()
   })
 }
 
-// 优化后的更新元素函数
-const updateElements = () => {
+const updateElements = (): void => {
   batchUpdate()
 }
 
-// 使用更短的延迟时间
 const debouncedUpdateElements = debounce(updateElements, 100)
 
-// 监听元素属性变化
-const setupElementListeners = () => {
+// keep selectedIds in sync even if activeElements changes outside batchUpdate timing
+watch(activeElements, (newVal) => {
+  const ids = (newVal || []).map((o) => o.id).filter((id): id is string => typeof id === 'string')
+  selectedIds.value = ids
+  debug('LayerPanel', 'watch activeElements -> selectedIds', { ids })
+})
+
+// listen for element property changes to trigger re-render
+type ElementState = { dataProperty?: string; goalProperty?: string }
+type FabricModifiedEvent = { transform?: unknown; target: ElementState & { _previousState?: ElementState } }
+const setupElementListeners = (): void => {
   elements.value.forEach((element) => {
-    element.on('modified', (e) => {
-      if (e.transform) return // 忽略位置和大小的修改
-      if (e.target.dataProperty !== e.target._previousState?.dataProperty || e.target.goalProperty !== e.target._previousState?.goalProperty) {
-        // 保存当前状态用于下次比较
+    element.on?.('modified', (e: FabricModifiedEvent) => {
+      if (e.transform) return
+      if (
+        e.target.dataProperty !== e.target._previousState?.dataProperty ||
+        e.target.goalProperty !== e.target._previousState?.goalProperty
+      ) {
         e.target._previousState = {
           dataProperty: e.target.dataProperty,
           goalProperty: e.target.goalProperty
         }
-        baseStore.canvas.renderAll()
+        debug('LayerPanel', 'element modified -> re-render', { id: (element as MinimalFabricLike).id })
+        baseStore.canvas?.renderAll?.()
       }
     })
   })
 }
 
-const selectLayer = async (layer) => {
-  
-  
-  baseStore.canvas.discardActiveObject()
-  if (layer.eleType === 'global') {
-    // 打开全局配置
-  } else if (baseStore.canvas && layer) {
-    baseStore.canvas.setActiveObject(layer)
+// select a layer from side panel and sync to canvas + store
+const selectLayer = async (layer: MinimalFabricLike): Promise<void> => {
+  debug('LayerPanel', 'selectLayer click', { id: layer.id, eleType: layer.eleType })
+  // do not allow selecting locked layers from panel
+  if ((layer as { locked?: boolean }).locked) {
+    debug('LayerPanel', 'skip select: layer is locked', { id: layer.id })
+    return
   }
-  // 更新设置
+  baseStore.canvas?.discardActiveObject?.()
+  if (layer.eleType === 'global') {
+    // open global settings if needed
+  } else if (baseStore.canvas && layer) {
+    baseStore.canvas.setActiveObject?.(layer as unknown as object)
+    const current = baseStore.canvas.getActiveObject?.() as MinimalFabricLike | undefined
+    debug('LayerPanel', 'after setActiveObject', { activeId: current?.id })
+  }
   emitter.emit('refresh-element-settings', {})
-  // 更新画布
-  baseStore.canvas.renderAll()
-  // 更新图层
+  baseStore.canvas?.renderAll?.()
   debouncedUpdateElements()
 }
 
-const isActived = (layerId) => {
-  // 如果是 global 元素，永远不显示为选中状态
-  const layer = elements.value.find((el) => el.id === layerId)
+// determine if a layer is selected using reactive selectedIds derived from activeElements
+const isActived = (layerId: string | undefined): boolean => {
+  if (!layerId) return false
+  const layer = elements.value.find((el) => el.id === layerId) as (MinimalFabricLike & { type?: string; locked?: boolean }) | undefined
   if (layer && layer.type === 'global') return false
-
-  // 检查是否在活动元素中
-  for (const element of activeElements.value) {
-    if (element.id == layerId) {
-      return true
-    }
+  if (layer && layer.locked) return false
+  const result = selectedIds.value.includes(layerId)
+  if (result) {
+    debug('LayerPanel', 'isActived -> true', { id: layerId })
   }
-  return false
+  return result
 }
 
-const toggleVisibility = (layer) => {
+const toggleVisibility = (layer: MinimalFabricLike): void => {
+  if (!layer.id) return
+  debug('LayerPanel', 'toggleVisibility: before', { id: layer.id, prev: (layer as { visible?: boolean }).visible })
   layerStore.toggleLayerVisibility(layer.id)
-  if (baseStore.canvas) {
-    baseStore.canvas.renderAll()
-  }
+  baseStore.canvas?.renderAll?.()
+  debouncedUpdateElements()
+  debug('LayerPanel', 'toggleVisibility: after', { id: layer.id })
 }
 
-const toggleLock = (layer) => {
-  
+const toggleLock = (layer: MinimalFabricLike): void => {
+  if (!layer.id) return
+  debug('LayerPanel', 'toggleLock: before', { id: layer.id, prev: (layer as { locked?: boolean }).locked })
   layerStore.toggleLayerLock(layer.id)
-}
-
-// 处理拖拽结束事件
-const handleDragEnd = () => {
-  // 直接使用 draggable 提供的顺序更新画布
-  elements.value.forEach((element, index) => {
-    
-    baseStore.canvas.moveObjectTo(element, index)
+  // After store syncs Fabric object, refresh list so class/background/icon update
+  debouncedUpdateElements()
+  // print fabric object's latest flags
+  const obj = (elements.value.find(o => o.id === layer.id) as MinimalFabricLike | undefined) || layer
+  debug('LayerPanel', 'toggleLock: after', {
+    id: layer.id,
+    nowLocked: (obj as { locked?: boolean }).locked,
+    selectable: (obj as { selectable?: boolean }).selectable,
+    evented: (obj as { evented?: boolean }).evented
   })
-  baseStore.canvas.renderAll()
 }
 
-// 历史记录管理
-const history = ref([])
-const currentHistoryIndex = ref(-1)
+// drag end reorders canvas stacking
+const handleDragEnd = (): void => {
+  elements.value.forEach((element, index) => {
+    baseStore.canvas?.moveObjectTo?.(element as unknown as object, index)
+  })
+  baseStore.canvas?.renderAll?.()
+}
 
-// 添加操作到历史记录
-const addToHistory = (action) => {
-  // 如果当前不在历史记录末尾，清除后面的记录
+// simple undo buffer for deletes
+type DeleteAction = { type: 'delete'; element: MinimalFabricLike }
+const history = ref<DeleteAction[]>([])
+const currentHistoryIndex = ref<number>(-1)
+
+const addToHistory = (action: DeleteAction): void => {
   if (currentHistoryIndex.value < history.value.length - 1) {
     history.value = history.value.slice(0, currentHistoryIndex.value + 1)
   }
-
   history.value.push(action)
   currentHistoryIndex.value = history.value.length - 1
 }
 
-// 撤销操作
-const undo = () => {
+const undo = (): void => {
   if (currentHistoryIndex.value >= 0) {
     const action = history.value[currentHistoryIndex.value]
     if (action.type === 'delete') {
-      // 恢复删除的元素
-      baseStore.canvas.add(action.element)
+      baseStore.canvas?.add?.(action.element as unknown as object)
       layerStore.addLayer(action.element)
     }
     currentHistoryIndex.value--
-    baseStore.canvas.renderAll()
+    baseStore.canvas?.renderAll?.()
   }
 }
 
-const deleteLayer = (layer) => {
+const deleteLayer = (layer: MinimalFabricLike): void => {
   if (layer.locked) return
   if (baseStore.canvas) {
-    // 保存删除操作到历史记录
-    addToHistory({
-      type: 'delete',
-      element: layer
-    })
-
-    baseStore.canvas.remove(layer)
-    layerStore.removeLayer(layer.id)
-    debouncedUpdateElements() // 删除后重新排序
-    baseStore.canvas.discardActiveObject()
+    addToHistory({ type: 'delete', element: layer })
+    baseStore.canvas.remove?.(layer as unknown as object)
+    if (layer.id) {
+      layerStore.removeLayer(layer.id)
+    }
+    debouncedUpdateElements()
+    baseStore.canvas.discardActiveObject?.()
   }
 }
 
-const handleKeyDown = (event) => {
-  // 检查当前焦点元素
-  const activeElement = document.activeElement
-  const isInputActive = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable
+const handleKeyDown = (event: KeyboardEvent): void => {
+  const activeElement = document.activeElement as HTMLElement | null
+  const isInputActive = !!activeElement && (
+    activeElement.tagName === 'INPUT' ||
+    activeElement.tagName === 'TEXTAREA' ||
+    (activeElement as HTMLElement).isContentEditable
+  )
+  if (isInputActive) return
 
-  // 如果当前在输入框中，不处理删除快捷键
-  if (isInputActive) {
-    return
-  }
-
-  // 删除快捷键
   if (event.key === 'Delete' || event.key === 'Backspace') {
-    const activeObject = baseStore.canvas.getActiveObject()
+    const activeObject = baseStore.canvas?.getActiveObject?.() as MinimalFabricLike | undefined
     if (activeObject) {
       deleteLayer(activeObject)
     }
   }
 
-  // 撤销快捷键 (Command + Z)
   if (event.key === 'z' && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault() // 阻止浏览器默认的撤销行为
+    event.preventDefault()
     undo()
   }
 }
 
-const getElementIcon = (eleType) => {
-  for (const category of Object.values(elementConfigs)) {
+type CategoryConfigs = Record<string, Record<string, { icon: string }>>
+const getElementIcon = (eleType: string): string => {
+  const configs = elementConfigs as unknown as CategoryConfigs
+  for (const category of Object.values(configs)) {
     if (category[eleType]) {
       return category[eleType].icon
     }
@@ -220,50 +270,106 @@ const getElementIcon = (eleType) => {
   return 'material-symbols:circle'
 }
 
-const getLayerBackgroundColor = (layer) => {
-  if ((layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar') && (layer.dataProperty || layer.goalProperty)) {
-    const id = layer.dataProperty || layer.goalProperty
-    const color = generateColorFromId(id)
+const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {
+  // locked layers: force gray background
+  if (layer.locked) {
+    debug('LayerPanel', 'background -> locked gray', { id: layer.id })
+    return { backgroundColor: '#555555' }
+  }
+  const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar'
+  const id = layer.dataProperty || layer.goalProperty
+  if (hasTypeMatch && id) {
+    const color = generateColorFromId(String(id))
+    debug('LayerPanel', 'background -> data/goal color', { id: layer.id, color })
     return { backgroundColor: color }
   }
   return {}
 }
 
-const generateColorFromId = (id) => {
-  // 确保 id 是字符串类型
+const generateColorFromId = (id: string): string => {
   const idStr = String(id || '')
-  
-  // 根据元素类型设置基础色调
-  const baseHue = idStr.startsWith('data_') ? 200 : 0 // data 用蓝色系，goal 用红色系
-
-  // 从 id 中提取数字部分
+  const baseHue = idStr.startsWith('data_') ? 200 : 0
   const num = parseInt(idStr.split('_')[1]) || 0
-
-  // 根据数字生成不同的色相偏移
   const hueOffset = (num * 30) % 360
-
-  // 组合基础色调和偏移
   const hue = (baseHue + hueOffset) % 360
-
-  // 使用固定的饱和度和亮度
   const saturation = 70
   const lightness = 80
-
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
-onMounted(() => {
+onMounted((): void => {
   debouncedUpdateElements()
-  emitter.on('refresh-canvas', (data) => {
+  emitter.on('refresh-canvas', () => {
+    debug('LayerPanel', 'on refresh-canvas')
     debouncedUpdateElements()
   })
   window.addEventListener('keydown', handleKeyDown)
-  setupElementListeners() // 设置元素监听器
+  setupElementListeners()
+
+  // listen to selection changes to refresh highlighting (based on object.active)
+  const bindSelectionHandlers = (c: unknown): void => {
+    const canvas = c as { on?: Function; off?: Function }
+    if (!canvas?.on) return
+    const handleCreated = (): void => {
+      const ids = ((baseStore.canvas?.getActiveObjects?.() as MinimalFabricLike[] | undefined) || []).map((o) => o.id)
+      debug('LayerPanel', 'event selection:created', { ids })
+      debouncedUpdateElements()
+    }
+    const handleUpdated = (): void => {
+      const ids = ((baseStore.canvas?.getActiveObjects?.() as MinimalFabricLike[] | undefined) || []).map((o) => o.id)
+      debug('LayerPanel', 'event selection:updated', { ids })
+      debouncedUpdateElements()
+    }
+    const handleCleared = (): void => {
+      debug('LayerPanel', 'event selection:cleared')
+      debouncedUpdateElements()
+    }
+    canvas.on?.('selection:created', handleCreated)
+    canvas.on?.('selection:updated', handleUpdated)
+    canvas.on?.('selection:cleared', handleCleared)
+    // save disposer
+    selectionCleanup.value = () => {
+      canvas.off?.('selection:created', handleCreated)
+      canvas.off?.('selection:updated', handleUpdated)
+      canvas.off?.('selection:cleared', handleCleared)
+    }
+  }
+
+  if (baseStore.canvas) {
+    debug('LayerPanel', 'bind selection handlers on mounted')
+    bindSelectionHandlers(baseStore.canvas)
+  }
+  // watch for late initialization or canvas replacement
+  stopWatchCanvas = watch(
+    () => baseStore.canvas,
+    (newCanvas, _oldCanvas) => {
+      // cleanup old
+      if (selectionCleanup.value) {
+        debug('LayerPanel', 'cleanup previous selection handlers')
+        selectionCleanup.value()
+        selectionCleanup.value = null
+      }
+      // bind new
+      if (newCanvas) {
+        debug('LayerPanel', 'bind selection handlers on new canvas')
+        bindSelectionHandlers(newCanvas)
+        debouncedUpdateElements()
+      }
+    }
+  )
 })
 
-onUnmounted(() => {
+onUnmounted((): void => {
   emitter.off('refresh-canvas')
   window.removeEventListener('keydown', handleKeyDown)
+  if (selectionCleanup.value) {
+    selectionCleanup.value()
+    selectionCleanup.value = null
+  }
+  if (stopWatchCanvas) {
+    stopWatchCanvas()
+    stopWatchCanvas = null
+  }
 })
 </script>
 

@@ -86,7 +86,7 @@ const goalArcElement = computed(() => getElementByType('goalArc'))
 
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
-const fontFamily = ref(props.elements[0].fontFamily)
+const fontFamily = ref<string>(props.elements[0].fontFamily || 'roboto-condensed-regular')
 const originX = ref<string>(String(props.elements[0].originX || 'center'))
 
 const dataProperty = ref<string>('')

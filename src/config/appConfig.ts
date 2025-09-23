@@ -20,6 +20,14 @@ const appConfig: AppConfig = {
     storageKey: 'last-viewed-changelog-version',
     versions: [
       {
+        version: '1.0.14',
+        date: '2025-09-23',
+        updates: [
+          '1. 修复了画布和图层，元素选中状态不同步的问题',
+          '2. 修复了锁定元素失效的问题',
+        ],
+      },
+      {
         version: '1.0.13',
         date: '2025-05-14',
         updates: ['增加背景颜色配置'],

@@ -20,7 +20,7 @@ export const elementConfigs: Record<string, Record<string, AnyElementConfig & ED
     icon: DEFAULT_ICON_CONFIG,
     data: DEFAULT_DATA_CONFIG,
     label: DEFAULT_LABEL_CONFIG,
-    unit: DEFAULT_UNIT_CONFIG,
+    // unit: DEFAULT_UNIT_CONFIG,
   },
   indicator: {
     bluetooth: DEFAULT_BLUETOOTH_CONFIG,
