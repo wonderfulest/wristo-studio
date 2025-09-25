@@ -9,6 +9,7 @@ import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
+import { debug } from 'console'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -72,7 +73,11 @@ export const useBaseStore = defineStore('baseStore', {
         }
         const match = Object.entries(properties)
           .find(([, p]) => {
-            return p.type === 'color' && Array.isArray(p.options) && p.options.some((opt) => opt?.value === val)
+            return p.type === 'color' && Array.isArray(p.options) && p.options.some((opt) => {
+              const optValue = opt?.value.toLowerCase().slice(-6)
+              const valValue = val?.toString().toLowerCase().slice(-6)
+              return optValue == valValue
+            })
           })
         if (match) {
           encRec[target] = match[0]
