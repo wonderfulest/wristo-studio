@@ -45,6 +45,8 @@ export const useBaseStore = defineStore('baseStore', {
   actions: {
     // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
     mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
+
+      console.log('🎨 [BaseStore] Mapping color properties:', encodeConfig, properties)
       const colorMappings: Array<{ source: string; target: string }> = [
         { source: 'color', target: 'colorProperty' },
         { source: 'bgColor', target: 'bgColorProperty' },
@@ -72,12 +74,9 @@ export const useBaseStore = defineStore('baseStore', {
           continue
         }
         const match = Object.entries(properties)
-          .find(([, p]) => {
-            return p.type === 'color' && Array.isArray(p.options) && p.options.some((opt) => {
-              const optValue = opt?.value.toLowerCase().slice(-6)
-              const valValue = val?.toString().toLowerCase().slice(-6)
-              return optValue == valValue
-            })
+          .find(([, colorProperty]) => {
+            return colorProperty.type === 'color' 
+              && colorProperty.value.toLowerCase().slice(-6) == val?.toString().toLowerCase().slice(-6)
           })
         if (match) {
           encRec[target] = match[0]
@@ -445,7 +444,13 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 获取选中对象
     getActiveObjects(): FabricElement[] {
-      return this.canvas ? (this.canvas.getActiveObjects() as unknown as FabricElement[]) : []
+      if (!this.canvas) {
+        console.log('🔍 [BaseStore] getActiveObjects: Canvas not available')
+        return []
+      }
+      const activeObjects = this.canvas.getActiveObjects() as unknown as FabricElement[]
+      console.log('🔍 [BaseStore] getActiveObjects:', activeObjects.length, activeObjects.map(obj => ({ id: obj.id, eleType: obj.eleType })))
+      return activeObjects
     },
     // 切换主题
     toggleTheme(): void {
@@ -570,10 +575,9 @@ export const useBaseStore = defineStore('baseStore', {
         if (element.eleType === 'background-image') continue
         if (element.eleType === 'global') continue
         // 使用编码器系统编码元素
-        const encodeConfigNullable = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
-        if (!encodeConfigNullable) continue
-        const encodeConfig = encodeConfigNullable
-        
+        const encodeConfig = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
+        // 如果编码失败，跳过
+        if (!encodeConfig) continue
         // 颜色属性映射（提取为独立方法）
         this.mapColorProperties(encodeConfig, propertiesStore.allProperties)
 

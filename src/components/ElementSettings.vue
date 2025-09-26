@@ -40,21 +40,32 @@ const settingsComponent = ref(null)
 const activeElements = ref([] as FabricElement[])
 
 const updateElements = () => {
-  if (!baseStore.canvas) return
-  console.log('activeElements', baseStore.getActiveObjects())
-  activeElements.value = baseStore.getActiveObjects()
+  console.log('🔄 [ElementSettings] updateElements called')
+  if (!baseStore.canvas) {
+    console.log('❌ [ElementSettings] Canvas not available')
+    return
+  }
+  const activeObjects = baseStore.getActiveObjects()
+  console.log('📊 [ElementSettings] Active objects:', activeObjects.length, activeObjects)
+  activeElements.value = activeObjects
+  console.log('✅ [ElementSettings] activeElements updated:', activeElements.value.length)
 }
 
 const debouncedUpdateElements = debounce(updateElements, 100)
 
 onMounted(() => {
+  // 初始加载
   debouncedUpdateElements()
-  emitter.on('refresh-canvas', (data) => {
+
+  // 画布刷新事件
+  emitter.on('refresh-canvas', () => {
+    console.log('📡 [ElementSettings] Received refresh-canvas event')
     debouncedUpdateElements()
   })
 
   // 设置事件监听
-  emitter.on('refresh-element-settings', (opt) => {
+  emitter.on('refresh-element-settings', () => {
+    console.log('📡 [ElementSettings] Received refresh-element-settings event')
     debouncedUpdateElements()
   })
 })
@@ -67,7 +78,6 @@ onUnmounted(() => {
 
 // 获取元素图标
 const getElementIcon = (type: string) => {
-  console.log('getElementIcon', type)
   // 遍历所有分类和元素类型查找对应的图标
   for (const category of Object.values(elementConfigs)) {
     for (const [elementType, config] of Object.entries(category)) {

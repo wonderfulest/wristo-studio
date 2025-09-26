@@ -17,7 +17,7 @@ export interface PropertyItem {
   type: PropertyType
   title: string
   options?: PropertyOption[]
-  value: unknown
+  value: string
   prompt?: string
   errorMessage?: string
 }

@@ -25,6 +25,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { getAddElement } from '@/utils/elementCodec/registry'
 import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
+import emitter from '@/utils/eventBus'
 
 
 const fontStore = useFontStore()
@@ -47,8 +48,7 @@ const loadElementFont = async (config: AnyElementConfig) => {
     await fontStore.loadFont((config as IconElementConfig).iconFont)
   }
 }
-const addElementByType = async (category: string, elementType: string, config: AnyElementConfig) => {
-  console.log('add element config', config)
+const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   
   try {
     // 加载字体
@@ -58,16 +58,22 @@ const addElementByType = async (category: string, elementType: string, config: A
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
-        await addElement(elementType, config)
+        const element = await addElement(elementType, config)
+        
+        // 等待一小段时间确保元素已经被选中
+        setTimeout(() => {
+          emitter.emit('refresh-element-settings')
+        }, 50)
+        
         // 添加元素后通知父级切换到图层面板
         emit('switch-to-layer')
         isCollapsed.value = true
       } else {
-        console.warn(`No add element handler registered for type: ${elementType}`)
+        console.warn(`❌ [AddElement] No add element handler registered for type: ${elementType}`)
       }
     }
   } catch (error) {
-    console.error('添加元素失败:', error)
+    console.error('❌ [AddElement] 添加元素失败:', error)
     messageStore.error('添加元素失败')
   }
 }
