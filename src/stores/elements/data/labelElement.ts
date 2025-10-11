@@ -100,6 +100,16 @@ export const useLabelStore = defineStore('labelElement', {
         metricSymbol: (element as any).metricSymbol ?? undefined,
         metricValue: (element as any).metricValue ?? undefined,
       }
+      // 如果 dataProperty 和 goalProperty 都为空，抛出错误
+      if (config.dataProperty == null && config.goalProperty == null) {
+        const eleId = String(element.id ?? '')
+        const eleType = String((element as any).eleType ?? 'data')
+        const eleLeft = Math.round(Number((element as any).left ?? config.left ?? 0))
+        const eleTop = Math.round(Number((element as any).top ?? config.top ?? 0))
+        throw new Error(
+          `Invalid element: dataProperty and goalProperty are both null (type=${eleType}, id=${eleId}, left=${eleLeft}, top=${eleTop})`
+        )
+      }
       return config as LabelElementConfig
     },
 

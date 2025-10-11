@@ -572,38 +572,56 @@ export const useBaseStore = defineStore('baseStore', {
         dateId = 0,
         subItemId = 0
 
-      // 遍历每个元素
-      for (const element of objects) {
-        config.orderIds.push(element.id || 'tianchong-' + nanoid())
-        if (element.eleType === 'background-image') continue
-        if (element.eleType === 'global') continue
-        // 使用编码器系统编码元素
-        const encodeConfig = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
-        // 如果编码失败，跳过
-        if (!encodeConfig) continue
-        // 颜色属性映射（提取为独立方法）
-        this.mapColorProperties(encodeConfig, propertiesStore.allProperties)
+      try {
+        // 遍历每个元素
+        for (const element of objects) {
+          config.orderIds.push(element.id || 'tianchong-' + nanoid())
+          if (element.eleType === 'background-image') continue
+          if (element.eleType === 'global') continue
+          // 使用编码器系统编码元素（捕获异常并中止生成）
+          let encodeConfig: import('@/types/elements').AnyElementConfig | null = null
+          try {
+            encodeConfig = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
+          } catch (err) {
+            console.error('Failed to encode element with exception:', element, err)
+            const message = (err as Error)?.message || 'Encode element failed'
+            ElMessage.error(message)
+            return null
+          }
+          // 如果编码失败，直接终止
+          if (!encodeConfig) {
+            console.error('Failed to encode element:', element)
+            return null
+          }
+          // 颜色属性映射（提取为独立方法）
+          this.mapColorProperties(encodeConfig, propertiesStore.allProperties)
 
-        // 一个可变的记录对象，用来设置动态键，避免对联合类型直接用 string 索引
-        const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
-        const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
-        if (element.eleType === 'image') {
-          idCarrier.imageId = imageId++
-        }
-        if (element.eleType === 'time') {
-          idCarrier.timeId = timeId++
-        }
-        if (element.eleType === 'date') {
-          idCarrier.dateId = dateId++
-        }
-        // 刻度盘 获取subItemId
-        if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
-          idCarrier.subItemId = subItemId++ // subItemId 用于标识子项配置
-        }
+          // 一个可变的记录对象，用来设置动态键，避免对联合类型直接用 string 索引
+          const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
+          const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
+          if (element.eleType === 'image') {
+            idCarrier.imageId = imageId++
+          }
+          if (element.eleType === 'time') {
+            idCarrier.timeId = timeId++
+          }
+          if (element.eleType === 'date') {
+            idCarrier.dateId = dateId++
+          }
+          // 刻度盘 获取subItemId
+          if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
+            idCarrier.subItemId = subItemId++ // subItemId 用于标识子项配置
+          }
 
-        config.elements.push(encodeConfig)
+          config.elements.push(encodeConfig)
+        }
+        return config
+      } catch (err) {
+        console.error('Generate config failed:', err)
+        const message = (err as Error)?.message || 'Failed to generate configuration'
+        ElMessage.error(message)
+        return null
       }
-      return config
     },
   
   },

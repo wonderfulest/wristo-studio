@@ -226,14 +226,14 @@ const saveConfig = async () => {
 
 // 上传配置到服务器
 const uploadApp = async () => {
-  const config = baseStore.generateConfig()
-  
-  if (!config) {
-    messageStore.warning('没有可上传的配置')
-    return -1
-  }
+  // 检查应用名称
   if (!baseStore.watchFaceName) {
     messageStore.error('请设置应用名称')
+    return -1
+  }
+  // 生成配置
+  const config = baseStore.generateConfig()
+  if (!config) {
     return -1
   }
 
@@ -263,6 +263,24 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
+    const configJson = baseStore.generateConfig()
+    if (!configJson) {
+      // Failed to generate configuration, abort upload
+      currentStatus = 'Failed to generate configuration'
+      currentProgress = 0
+      if (loadingInstance) {
+        loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
+      }
+      messageStore.error('Failed to generate configuration. Upload aborted')
+      // 关闭上传状态与遮罩
+      uploading.value = false
+      clearTimeout(uploadTimeoutTimer)
+      if (loadingInstance) {
+        loadingInstance.close()
+        loadingInstance = null
+      }
+      return -1
+    }
     // 上传背景图片
     currentStatus = '上传背景图片...'
     currentProgress = 20
@@ -291,8 +309,7 @@ const uploadApp = async () => {
       name: baseStore.watchFaceName,
       description: baseStore.watchFaceName,
       designStatus: 'draft',
-      // userId: user.value.id,
-      configJson: baseStore.generateConfig(),
+      configJson: configJson,
       backgroundImage: {
         url: baseStore.themeBackgroundImages[0]
       },

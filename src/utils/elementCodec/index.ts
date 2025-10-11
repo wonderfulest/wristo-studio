@@ -11,19 +11,13 @@ export const encodeElement = (element: FabricElement): AnyElementConfig => {
     // 回退到默认编码器
     return defaultEncoder(element)
   }
-  try {
-    const encoder = getEncoder(type)
-    const ret = encoder(element)
-    if (ret == null) {
-      console.warn(`Encoder returned null for element type: ${type}. Fallback to defaultEncoder.`)
-      return defaultEncoder(element)
-    }
-    return ret
-  } catch (e) {
-    console.warn(`No encoder found for element type: ${type}`, e)
-    // 回退到默认编码器
+  const encoder = getEncoder(type)
+  const ret = encoder(element)
+  if (ret == null) {
+    console.warn(`Encoder returned null for element type: ${type}. Fallback to defaultEncoder.`)
     return defaultEncoder(element)
   }
+  return ret
 }
 
 // 解码元素
