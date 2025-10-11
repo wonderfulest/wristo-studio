@@ -68,13 +68,13 @@
             <el-slider v-model="element.level" :min="0" :max="1" :step="0.01" :format-tooltip="(val) => `${Math.round(val * 100)}%`" @change="updateElement" />
           </el-form-item>
           <el-form-item label="低电量颜色（<20%）">
-            <color-picker v-model="element.levelColors.low" @change="updateElement" />
+            <color-picker v-model="element.levelColorLow" @change="updateElement" />
           </el-form-item>
           <el-form-item label="中等电量颜色（20%-50%）">
-            <color-picker v-model="element.levelColors.medium" @change="updateElement" />
+            <color-picker v-model="element.levelColorMedium" @change="updateElement" />
           </el-form-item>
           <el-form-item label="高电量颜色（>50%）">
-            <color-picker v-model="element.levelColors.high" @change="updateElement" />
+            <color-picker v-model="element.levelColorHigh" @change="updateElement" />
           </el-form-item>
         </el-form>
       </el-collapse-item>
@@ -96,9 +96,18 @@ const props = defineProps({
 
 const batteryStore = useBatteryStore()
 
-// 确保 levelColors 对象存在
-if (!props.element.levelColors) {
-  props.element.levelColors = { ...batteryStore.defaultLevelColors }
+// 确保单独的颜色字段存在（优先读取画布组的分散颜色字段）
+if (props.element) {
+  const group = batteryStore.baseStore.canvas.getObjects().find((obj) => obj.id === props.element.id)
+  if (props.element.levelColorLow == null) {
+    props.element.levelColorLow = (group && group.levelColorLow) || batteryStore.defaultLevelColorLow
+  }
+  if (props.element.levelColorMedium == null) {
+    props.element.levelColorMedium = (group && group.levelColorMedium) || batteryStore.defaultLevelColorMedium
+  }
+  if (props.element.levelColorHigh == null) {
+    props.element.levelColorHigh = (group && group.levelColorHigh) || batteryStore.defaultLevelColorHigh
+  }
 }
 
 // 从画布元素中获取实际属性值
@@ -138,6 +147,13 @@ const initElementProperties = () => {
   // 计算头部间距
   const headGap = Math.round(batteryHead.left - (batteryBody.left + batteryBody.width))
   props.element.headGap = headGap
+
+  // 读取组上的颜色配置到单字段（仅当未设置时）
+  if (group) {
+    if (props.element.levelColorLow == null) props.element.levelColorLow = group.levelColorLow || batteryStore.defaultLevelColorLow
+    if (props.element.levelColorMedium == null) props.element.levelColorMedium = group.levelColorMedium || batteryStore.defaultLevelColorMedium
+    if (props.element.levelColorHigh == null) props.element.levelColorHigh = group.levelColorHigh || batteryStore.defaultLevelColorHigh
+  }
 }
 
 // 组件挂载时初始化属性
@@ -176,7 +192,9 @@ const updateElement = () => {
     headRy: props.element.headRy,
     padding: props.element.padding,
     level: props.element.level,
-    levelColors: props.element.levelColors,
+    levelColorLow: props.element.levelColorLow,
+    levelColorMedium: props.element.levelColorMedium,
+    levelColorHigh: props.element.levelColorHigh,
     left: props.element.left,
     top: props.element.top,
     headGap: props.element.headGap

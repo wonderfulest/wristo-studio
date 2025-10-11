@@ -145,7 +145,7 @@
               <div class="faq-content">
                 <p>如需帮助，可通过以下方式联系我们：</p>
                 <ul class="list-disc ml-4">
-                  <li>发送邮件至：wonder.gface@gmail.com</li>
+                  <li>发送邮件至：support@wristo.io</li>
                   <li>工作时间：周一至周日 0:00-24:00</li>
                   <li>在线客服：点击右下角客服图标</li>
                 </ul>

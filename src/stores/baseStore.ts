@@ -63,6 +63,9 @@ export const useBaseStore = defineStore('baseStore', {
         { source: 'yAxisColor', target: 'yAxisColorProperty' },
         { source: 'xLabelColor', target: 'xLabelColorProperty' },
         { source: 'yLabelColor', target: 'yLabelColorProperty' },
+        { source: 'levelColorHigh', target: 'levelColorHighProperty' },
+        { source: 'levelColorMedium', target: 'levelColorMediumProperty' },
+        { source: 'levelColorLow', target: 'levelColorLowProperty' },
       ]
 
       const encRec: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>

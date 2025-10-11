@@ -19,5 +19,7 @@ export interface BatteryElementConfig extends BaseElementConfig {
   headFill?: string
   headRx?: number
   headRy?: number
-  levelColors?: { low: string; medium: string; high: string } | null
+  levelColorLow?: string | null
+  levelColorMedium?: string | null
+  levelColorHigh?: string | null
 }

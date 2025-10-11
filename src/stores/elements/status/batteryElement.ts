@@ -14,11 +14,9 @@ export const useBatteryStore = defineStore('batteryElement', {
     return {
       baseStore,
       layerStore,
-      defaultLevelColors: {
-        low: '#ff0000',
-        medium: '#ffaa00',
-        high: '#00ff00',
-      } as { low: string; medium: string; high: string },
+      defaultLevelColorLow: '#ff0000' as string,
+      defaultLevelColorMedium: '#ffaa00' as string,
+      defaultLevelColorHigh: '#00ff00' as string,
     }
   },
 
@@ -72,10 +70,14 @@ export const useBatteryStore = defineStore('batteryElement', {
         left: width / 2 + headGap,
       })
 
+      const colorLow = config.levelColorLow ?? this.defaultLevelColorLow
+      const colorMedium = config.levelColorMedium ?? this.defaultLevelColorMedium
+      const colorHigh = config.levelColorHigh ?? this.defaultLevelColorHigh
+
       const batteryLevel: any = new Rect({
         width: (width - padding * 2) * level,
         height: height - padding * 2,
-        fill: this.getLevelColor(level, config.levelColors),
+        fill: this.getLevelColor(level, colorLow, colorMedium, colorHigh),
         id: id + '_level',
         originX: 'left',
         originY: 'center',
@@ -96,7 +98,9 @@ export const useBatteryStore = defineStore('batteryElement', {
           originY: 'center',
           padding,
           headGap,
-          levelColors: config.levelColors || this.defaultLevelColors,
+          levelColorLow: colorLow,
+          levelColorMedium: colorMedium,
+          levelColorHigh: colorHigh,
         } as any
       )
 
@@ -109,11 +113,18 @@ export const useBatteryStore = defineStore('batteryElement', {
       return group
     },
 
-    getLevelColor(level: number, levelColors: { low: string; medium: string; high: string } | null = null) {
-      const colors = levelColors || this.defaultLevelColors
-      if (level <= 0.2) return colors.low
-      if (level <= 0.5) return colors.medium
-      return colors.high
+    getLevelColor(
+      level: number,
+      levelColorLow?: string | null,
+      levelColorMedium?: string | null,
+      levelColorHigh?: string | null,
+    ) {
+      const low = levelColorLow ?? this.defaultLevelColorLow
+      const medium = levelColorMedium ?? this.defaultLevelColorMedium
+      const high = levelColorHigh ?? this.defaultLevelColorHigh
+      if (level <= 0.2) return low
+      if (level <= 0.5) return medium
+      return high
     },
 
     updateLevel(element: any, level: number) {
@@ -171,7 +182,9 @@ export const useBatteryStore = defineStore('batteryElement', {
           ((batteryLevel as any).width as number) /
           (((batteryBody as any).width as number) - safePadding * 2)
         ).toFixed(2))),
-        levelColors: ((element as any).levelColors || this.defaultLevelColors) as any,
+        levelColorLow: (((element as any).levelColorLow ?? (element as any).levelColorLow) ?? this.defaultLevelColorLow) as string,
+        levelColorMedium: (((element as any).levelColorMedium ?? (element as any).levelColorMedium) ?? this.defaultLevelColorMedium) as string,
+        levelColorHigh: (((element as any).levelColorHigh ?? (element as any).levelColorHigh) ?? this.defaultLevelColorHigh) as string,
         headGap: Math.round((((element as any).headGap ?? 2) as number)),
       }
       return config
@@ -196,7 +209,9 @@ export const useBatteryStore = defineStore('batteryElement', {
         headRy: config.headRy,
         padding: config.padding,
         level: config.level,
-        levelColors: config.levelColors || this.defaultLevelColors,
+        levelColorLow: config.levelColorLow ?? this.defaultLevelColorLow,
+        levelColorMedium: config.levelColorMedium ?? this.defaultLevelColorMedium,
+        levelColorHigh: config.levelColorHigh ?? this.defaultLevelColorHigh,
         headGap: config.headGap || 2,
       } 
       return decoded
@@ -238,10 +253,13 @@ export const useBatteryStore = defineStore('batteryElement', {
       })
 
       const padding = config.padding || 4
+      const nextLow = (config.levelColorLow ?? (group as any).levelColorLow ?? this.defaultLevelColorLow) as string
+      const nextMedium = (config.levelColorMedium ?? (group as any).levelColorMedium ?? this.defaultLevelColorMedium) as string
+      const nextHigh = (config.levelColorHigh ?? (group as any).levelColorHigh ?? this.defaultLevelColorHigh) as string
       batteryLevel.set({
         width: (config.width - padding * 2) * config.level,
         height: config.height - padding * 2,
-        fill: this.getLevelColor(config.level, config.levelColors),
+        fill: this.getLevelColor(config.level, nextLow, nextMedium, nextHigh),
         originX: 'left',
         originY: 'center',
         left: -config.width / 2 + padding,
@@ -249,7 +267,9 @@ export const useBatteryStore = defineStore('batteryElement', {
 
       if (config.left !== undefined) group.set('left', config.left)
       if (config.top !== undefined) group.set('top', config.top)
-      if (config.levelColors !== undefined) group.set('levelColors', config.levelColors)
+      if (config.levelColorLow !== undefined) (group as any).set('levelColorLow', nextLow)
+      if (config.levelColorMedium !== undefined) (group as any).set('levelColorMedium', nextMedium)
+      if (config.levelColorHigh !== undefined) (group as any).set('levelColorHigh', nextHigh)
 
       group.setCoords()
       this.baseStore.canvas.renderAll()
