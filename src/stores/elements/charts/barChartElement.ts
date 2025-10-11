@@ -32,26 +32,23 @@ export const useBarChartStore = defineStore('barChartElement', {
   actions: {
     addElement(config: BarChartElementConfig): Promise<FabricElement> {
       const id = nanoid()
-
       const width = config.width || 150
       const height = config.height || 50
-      const pointCount = config.pointCount || 240
+      const pointCount = config.pointCount || 8
       const fillMissing = config.fillMissing !== undefined ? config.fillMissing : true
       const minY = config.minY
       const maxY = config.maxY
-
       const color = config.color || this.defaultColors.color
       const bgColor = config.bgColor || this.defaultColors.bgColor
-
       const showGrid = config.showGrid !== undefined ? config.showGrid : false
       const gridColor = config.gridColor || this.defaultColors.gridColor
       const gridYCount = config.gridYCount || this.defaultGridYCount
-      const showXAxis = config.showXAxis !== undefined ? config.showXAxis : true
-      const showYAxis = config.showYAxis !== undefined ? config.showYAxis : true
+      const showXAxis = config.showXAxis !== undefined ? config.showXAxis : false
+      const showYAxis = config.showYAxis !== undefined ? config.showYAxis : false
       const xAxisColor = config.xAxisColor || this.defaultColors.xAxisColor
       const yAxisColor = config.yAxisColor || this.defaultColors.yAxisColor
-      const showXLabels = config.showXLabels !== undefined ? config.showXLabels : true
-      const showYLabels = config.showYLabels !== undefined ? config.showYLabels : true
+      const showXLabels = config.showXLabels !== undefined ? config.showXLabels : false
+      const showYLabels = config.showYLabels !== undefined ? config.showYLabels : false
       const xLabelColor = config.xLabelColor || this.defaultColors.xLabelColor
       const yLabelColor = config.yLabelColor || this.defaultColors.yLabelColor
       const xFont = config.xFont
@@ -59,7 +56,8 @@ export const useBarChartStore = defineStore('barChartElement', {
       const xFontSize = config.xFontSize || this.defaultXFontSize
       const yFontSize = config.yFontSize || this.defaultYFontSize
 
-      const barWidth = config.barWidth || this.defaultBarWidth
+      const safePointCount = Math.max(1, pointCount)
+      const barWidth = width / safePointCount * 2 / 3 // 留出 1/3 的空间给轴
       const group: any = new Group([], {
         left: config.left,
         top: config.top,

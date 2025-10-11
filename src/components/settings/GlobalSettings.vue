@@ -245,6 +245,8 @@ const handleBackgroundImageChange = (file) => {
 // 移除背景图片
 const removeBackgroundImage = () => {
   currentBackgroundImage.value = ''
+  // 同时清空主题背景图片数组
+  baseStore.themeBackgroundImages = []
   baseStore.toggleThemeBackground()
 }
 

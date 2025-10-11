@@ -14,9 +14,11 @@ export const useLineChartStore = defineStore('lineChartElement', {
       baseStore,
       layerStore,
       defaults: {
+        width: 150,
+        height: 50,
         color: '#ffffff',
         bgColor: '#000000',
-        pointCount: 120,
+        pointCount: 7,
         fillMissing: true,
         lineWidth: 2,
         smoothFactor: 0.2,
@@ -47,14 +49,17 @@ export const useLineChartStore = defineStore('lineChartElement', {
   actions: {
     addElement(config: LineChartElementConfig): Promise<FabricElement> {
       const id = nanoid()
-      const width = config.width || 150
-      const height = config.height || 50
-
+      const width = config.width || this.defaults.width
+      const height = config.height || this.defaults.height
+      const canvasWidth = this.baseStore.canvas?.getWidth?.() ?? this.baseStore.WATCH_SIZE
+      const canvasHeight = this.baseStore.canvas?.getHeight?.() ?? this.baseStore.WATCH_SIZE
+      const left = config.left ?? canvasWidth / 2
+      const top = config.top ?? canvasHeight / 2
       const group: any = new Group([], {
         id,
         eleType: 'lineChart',
-        left: config.left,
-        top: config.top,
+        left,
+        top,
         originX: 'center',
         originY: 'center',
         width,
@@ -106,8 +111,13 @@ export const useLineChartStore = defineStore('lineChartElement', {
 
       if (group.showYLabels) this.createYLabels(group)
 
+      // 重新设置位置，确保在子元素添加并计算尺寸后正确居中
+      group.set({ left, top, originX: 'center', originY: 'center' })
       group.setCoords()
       this.baseStore.canvas?.add(group)
+      // 使用 canvas 的居中方法，避免由于边界计算导致的偏移
+      this.baseStore.canvas?.centerObject(group)
+      group.setCoords()
       this.layerStore.addLayer(group)
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(group)

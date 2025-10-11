@@ -5,9 +5,12 @@
       :model="element" 
       label-position="left" 
       label-width="100px"
+      :rules="rules"
+      status-icon
+      validate-on-rule-change
     >
-      <el-form-item label="图表属性" prop="chartProperty" :rules="[{ required: true, message: '请选择图表属性', trigger: 'change' }]">
-        <el-select v-model="element.chartProperty" @change="updateElement" placeholder="选择图表属性">
+      <el-form-item label="图表属性" prop="chartProperty" required :show-message="true" inline-message>
+        <el-select v-model="element.chartProperty" @change="updateElement" placeholder="Select chart property">
           <el-option v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'chart')" :key="key" :label="prop.title" :value="key" />
         </el-select>
       </el-form-item>
@@ -210,7 +213,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps } from 'vue'
+import { ref, defineProps, onMounted, nextTick, watch } from 'vue'
 import { useBarChartStore } from '@/stores/elements/charts/barChartElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes, originXOptions } from '@/config/settings'
@@ -231,6 +234,12 @@ const formRef = ref(null)
 const barChartStore = useBarChartStore()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+
+const rules = {
+  chartProperty: [
+    { required: true, message: 'Please select a chart property, if none, please add it in Actions -> Add Property -> Chart.', trigger: 'change' }
+  ]
+}
 // 获取画布上的实际元素
 const getFabricElement = () => {
   if (!baseStore.canvas) return null
@@ -293,6 +302,23 @@ const updateElement = () => {
 
   barChartStore.updateElement(props.element, updateConfig)
 }
+
+// 初次挂载时如果未选择 chartProperty，则触发校验以显示提示
+onMounted(() => {
+  if (!props.element.chartProperty) {
+    nextTick(() => {
+      formRef.value?.validateField?.('chartProperty')
+    })
+  }
+})
+
+// 当 chartProperty 变化时，重新校验以实时显示/隐藏提示
+watch(
+  () => props.element.chartProperty,
+  () => {
+    formRef.value?.validateField?.('chartProperty')
+  }
+)
 
 // 处理位置更新
 const handlePositionChange = (type, value) => {
