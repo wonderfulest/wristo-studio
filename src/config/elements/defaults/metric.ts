@@ -1,4 +1,5 @@
 import type { IconElementConfig, DataElementConfig } from '@/types/elements'
+import type { MoonElementConfig } from '@/types/elements/data'
 import { DEFAULT_TEXT_CONFIG, EDITOR_ELEMENT } from './base'
 
 const base = DEFAULT_TEXT_CONFIG
@@ -42,4 +43,19 @@ export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
   iconFont: 'super-icons',
   iconSize: 42,
   fontFamily: 'roboto-condensed-regular',
+}
+
+export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
+  icon: 'mdi:moon-waning-crescent',
+  label: 'Moon Phase',
+  eleType: 'moon',
+  id: '',
+  left: base.left,
+  top: base.top,
+  originX: 'center',
+  originY: 'center',
+  fill: '#000000',
+  fontSize: 42,
+  fontFamily: 'weather-regular',
+  bgColor: '#ffffff',
 }

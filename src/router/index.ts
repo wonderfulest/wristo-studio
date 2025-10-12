@@ -10,6 +10,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/moon',
+    name: 'MoonPreview',
+    component: () => import('@/views/MoonView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/',
     name: 'Home',
     component: Layout,

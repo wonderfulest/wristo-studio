@@ -23,6 +23,7 @@ import { ref } from 'vue'
 import { elementConfigs } from '@/config/elements/elements'
 import { useFontStore } from '@/stores/fontStore'
 import { getAddElement } from '@/utils/elementCodec/registry'
+import '@/utils/elementCodec'
 import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
@@ -58,7 +59,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
-        const element = await addElement(elementType, config)
+        await addElement(elementType, config)
         
         // 等待一小段时间确保元素已经被选中
         setTimeout(() => {

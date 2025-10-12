@@ -1,21 +1,3 @@
-/* @font-face {
-  font-family: 'roboto-semibold';
-  src: url('/src/assets/fonts/Roboto-SemiBold.ttf') format('truetype');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'roboto-thin';
-  src: url('/src/assets/fonts/Roboto-Thin.ttf') format('truetype');
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
-}
-   */
-
-
 /* Icon Fonts */
 @font-face {
   font-family: 'qiwei-one';
@@ -43,7 +25,15 @@
 
 @font-face {
   font-family: 'super-icons';
-  src: url('/src/assets/fonts/SuperIcons.ttf') format('truetype');
+  src: url('/src/assets/fonts/super-icons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'weather-regular';
+  src: url('/src/assets/fonts/weather-regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

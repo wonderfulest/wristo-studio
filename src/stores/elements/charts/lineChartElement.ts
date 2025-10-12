@@ -29,10 +29,10 @@ export const useLineChartStore = defineStore('lineChartElement', {
         gridColor: '#555555',
         gridYCount: 3,
         gridXCount: 4,
-        showAxis: true,
+        showAxis: false,
         axisColor: '#aaaaaa',
-        showXLabels: true,
-        showYLabels: true,
+        showXLabels: false,
+        showYLabels: false,
         xLabelColor: '#ffffff',
         yLabelColor: '#ffffff',
         xFont: undefined as string | undefined,
@@ -115,9 +115,7 @@ export const useLineChartStore = defineStore('lineChartElement', {
       group.set({ left, top, originX: 'center', originY: 'center' })
       group.setCoords()
       this.baseStore.canvas?.add(group)
-      // 使用 canvas 的居中方法，避免由于边界计算导致的偏移
-      this.baseStore.canvas?.centerObject(group)
-      group.setCoords()
+
       this.layerStore.addLayer(group)
       this.baseStore.canvas?.discardActiveObject()
       this.baseStore.canvas?.setActiveObject(group)

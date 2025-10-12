@@ -31,3 +31,11 @@ export interface LabelElementConfig extends DataElementConfig {
 export interface UnitElementConfig extends DataElementConfig {
   eleType: 'unit'
 }
+
+export interface MoonElementConfig extends BaseElementConfig {
+  eleType: 'moon'
+  // image-based rendering
+  imageUrl?: string
+  width?: number
+  height?: number
+}
