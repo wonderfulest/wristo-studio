@@ -19,7 +19,7 @@
         <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
       </el-form-item>
           <el-form-item label="Phase Index">
-        <el-slider v-model="phaseIndex" :min="1" :max="assetUrls.length" :step="1" show-stops @change="onPhaseChange" />
+        <el-slider v-model="phaseIndex" :min="0" :max="assetUrls.length - 1" :step="1" show-stops @change="onPhaseChange" />
       </el-form-item>
 
     </el-form>
@@ -77,12 +77,21 @@ const assetOptions = computed<AssetOption[]>(() => {
     })
 })
 
-const assetUrls = computed<string[]>(() => assetOptions.value.map(o => o.value))
-const phaseIndex = ref<number>(1)
+const assetUrls = computed<string[]>(() =>
+  assetOptions.value
+    .map(o => o.value)
+    .slice()
+    .sort((a, b) => {
+      const na = Number(a.match(/h-phase-(\d+)\.png$/)?.[1] ?? Number.MAX_SAFE_INTEGER)
+      const nb = Number(b.match(/h-phase-(\d+)\.png$/)?.[1] ?? Number.MAX_SAFE_INTEGER)
+      return na - nb
+    })
+)
+const phaseIndex = ref<number>(0)
 const syncPhaseIndex = (): void => {
   const url = (props.element as unknown as { imageUrl?: string }).imageUrl
   const idx = url ? assetUrls.value.findIndex(u => u === url) : -1
-  phaseIndex.value = idx >= 0 ? idx + 1 : 1
+  phaseIndex.value = idx >= 0 ? idx : 0
 }
 watch(() => (props.element as unknown as { imageUrl?: string }).imageUrl, () => {
   syncPhaseIndex()
@@ -90,8 +99,8 @@ watch(() => (props.element as unknown as { imageUrl?: string }).imageUrl, () => 
 
 const onPhaseChange = (val: number): void => {
   const total = assetUrls.value.length
-  const clamped = Math.max(1, Math.min(Number(val || 1), total))
-  const idx = clamped - 1
+  const clamped = Math.max(0, Math.min(Number(val || 0), total - 1))
+  const idx = clamped
   const nextUrl = assetUrls.value[idx]
   ;(props.element as unknown as { imageUrl?: string }).imageUrl = nextUrl
   updateElement()
