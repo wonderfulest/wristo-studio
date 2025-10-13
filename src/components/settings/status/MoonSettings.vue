@@ -14,10 +14,10 @@
             </el-select>
           </el-form-item>
           <el-form-item label="Image Width">
-            <el-input-number v-model="element.imageWidth" :min="1" :max="2000" @change="onWidthChange" />
+            <el-input-number v-model="element.width" :min="1" :max="2000" @change="onWidthChange" />
           </el-form-item>
           <el-form-item label="Image Height">
-            <el-input-number v-model="element.imageHeight" :min="1" :max="2000" @change="onHeightChange" />
+            <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
           </el-form-item>
         </el-form>
       </el-collapse-item>
@@ -45,15 +45,15 @@ const initElementProperties = (): void => {
 
   const meta = group as unknown as { moonImageUrl?: string; moonImageWidth?: number; moonImageHeight?: number }
   const imageUrl = meta.moonImageUrl
-  const imageWidth = meta.moonImageWidth
-  const imageHeight = meta.moonImageHeight
+  const width = meta.moonImageWidth
+  const height = meta.moonImageHeight
 
-  console.log('[MoonSettings] initElementProperties', { imageUrl, imageWidth, imageHeight })
+  console.log('[MoonSettings] initElementProperties', { imageUrl, width, height })
 
-  const el = props.element as unknown as { imageUrl?: string; imageWidth?: number; imageHeight?: number }
+  const el = props.element as unknown as { imageUrl?: string; width?: number; height?: number }
   if (typeof imageUrl === 'string') el.imageUrl = imageUrl
-  if (typeof imageWidth === 'number') el.imageWidth = imageWidth
-  if (typeof imageHeight === 'number') el.imageHeight = imageHeight
+  if (typeof width === 'number') el.width = width
+  if (typeof height === 'number') el.height = height
 }
 
 // 组件挂载时初始化属性
@@ -64,25 +64,23 @@ onMounted(() => {
 // load built asset urls for moon phases
 type AssetOption = { label: string; value: string }
 const assetModules = import.meta.glob('/src/assets/moonphase/*.png', { eager: true, import: 'default' }) as Record<string, string>
+const CDN_BASE = 'https://cdn.wristo.io/moonphase/'
 const assetOptions = computed<AssetOption[]>(() => {
-  return Object.entries(assetModules)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([path, url]) => ({ label: path.split('/').pop() ?? path, value: url }))
+  return Object.keys(assetModules)
+    .sort((a, b) => a.localeCompare(b))
+    .map((path) => {
+      const filename = path.split('/').pop() ?? path
+      return { label: filename, value: `${CDN_BASE}${filename}` }
+    })
 })
 
 // 更新元素
 const updateElement = (): void => {
-  console.log('[MoonSettings] updateElement', { 
-    imageUrl: (props.element as unknown as { imageUrl?: string }).imageUrl, 
-    imageWidth: (props.element as unknown as { imageWidth?: number }).imageWidth, 
-    imageHeight: (props.element as unknown as { imageHeight?: number }).imageHeight 
-  })
-  
   // 更新画布上的元素
   moonStore.updateElement(props.element, {
     imageUrl: (props.element as unknown as { imageUrl?: string }).imageUrl,
-    imageWidth: (props.element as unknown as { imageWidth?: number }).imageWidth,
-    imageHeight: (props.element as unknown as { imageHeight?: number }).imageHeight,
+    width: (props.element as unknown as { width?: number }).width,
+    height: (props.element as unknown as { height?: number }).height,
   })
 }
 
@@ -93,9 +91,9 @@ const normalizeSize = (v: number | undefined): number => {
 }
 
 const setSquare = (size: number): void => {
-  const el = props.element as unknown as { imageWidth?: number; imageHeight?: number }
-  el.imageWidth = size
-  el.imageHeight = size
+  const el = props.element as unknown as { width?: number; height?: number }
+  el.width = size
+  el.height = size
 }
 
 const onWidthChange = (val: number): void => {
