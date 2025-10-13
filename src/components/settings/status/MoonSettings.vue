@@ -1,32 +1,34 @@
 <template>
   <div class="moon-properties">
-    <el-collapse>
-      <el-collapse-item title="Image" name="image">
-        <el-form label-position="left" label-width="120px">
-          <el-form-item label="Asset">
-            <el-select v-model="element.imageUrl" placeholder="Select moon image" filterable @change="updateElement" style="width: 100%">
-              <el-option
-                v-for="opt in assetOptions"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Image Width">
-            <el-input-number v-model="element.width" :min="1" :max="2000" @change="onWidthChange" />
-          </el-form-item>
-          <el-form-item label="Image Height">
-            <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
-          </el-form-item>
-        </el-form>
-      </el-collapse-item>
-    </el-collapse>
+
+    <el-form label-position="left" label-width="120px">
+      <el-form-item label="Asset">
+        <el-select v-model="element.imageUrl" placeholder="Select moon image" filterable @change="updateElement" style="width: 100%">
+          <el-option
+            v-for="opt in assetOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="Image Width">
+        <el-input-number v-model="element.width" :min="1" :max="2000" @change="onWidthChange" />
+      </el-form-item>
+      <el-form-item label="Image Height">
+        <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
+      </el-form-item>
+          <el-form-item label="Phase Index">
+        <el-slider v-model="phaseIndex" :min="1" :max="assetUrls.length" :step="1" show-stops @change="onPhaseChange" />
+      </el-form-item>
+
+    </el-form>
+ 
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useMoonStore } from '@/stores/elements/status/moonElement'
 import type { FabricElement } from '@/types/element'
 
@@ -59,6 +61,7 @@ const initElementProperties = (): void => {
 // 组件挂载时初始化属性
 onMounted(() => {
   initElementProperties()
+  syncPhaseIndex()
 })
 
 // load built asset urls for moon phases
@@ -73,6 +76,26 @@ const assetOptions = computed<AssetOption[]>(() => {
       return { label: filename, value: `${CDN_BASE}${filename}` }
     })
 })
+
+const assetUrls = computed<string[]>(() => assetOptions.value.map(o => o.value))
+const phaseIndex = ref<number>(1)
+const syncPhaseIndex = (): void => {
+  const url = (props.element as unknown as { imageUrl?: string }).imageUrl
+  const idx = url ? assetUrls.value.findIndex(u => u === url) : -1
+  phaseIndex.value = idx >= 0 ? idx + 1 : 1
+}
+watch(() => (props.element as unknown as { imageUrl?: string }).imageUrl, () => {
+  syncPhaseIndex()
+})
+
+const onPhaseChange = (val: number): void => {
+  const total = assetUrls.value.length
+  const clamped = Math.max(1, Math.min(Number(val || 1), total))
+  const idx = clamped - 1
+  const nextUrl = assetUrls.value[idx]
+  ;(props.element as unknown as { imageUrl?: string }).imageUrl = nextUrl
+  updateElement()
+}
 
 // 更新元素
 const updateElement = (): void => {
