@@ -214,8 +214,8 @@ export const useMoonStore = defineStore('moonElement', {
             obj.add(image as unknown as FabricObject)
             ;(obj as unknown as { moonIsImage?: boolean }).moonIsImage = true
             ;(obj as unknown as { moonImageUrl?: string }).moonImageUrl = String(newUrl)
-            if (newW != null) (obj as unknown as { moonImageWidth?: number }).moonImageWidth = Number(newW)
-            if (newH != null) (obj as unknown as { moonImageHeight?: number }).moonImageHeight = Number(newH)
+            if (newW != null) (obj as unknown as { width?: number }).width = Number(newW)
+            if (newH != null) (obj as unknown as { height?: number }).height = Number(newH)
             obj.set({ visible: true } as unknown as GroupProps)
             obj.setCoords()
             try { (obj as unknown as { bringToFront?: () => void }).bringToFront?.() } catch {}
@@ -254,8 +254,8 @@ export const useMoonStore = defineStore('moonElement', {
               }
               ;(imageObj as unknown as { role?: string }).role = 'image'
               ;(obj as unknown as { moonImageUrl?: string }).moonImageUrl = String(newUrl)
-              if (newW != null) (obj as unknown as { moonImageWidth?: number }).moonImageWidth = Number(newW)
-              if (newH != null) (obj as unknown as { moonImageHeight?: number }).moonImageHeight = Number(newH)
+              if (newW != null) (obj as unknown as { width?: number }).width = Number(newW)
+              if (newH != null) (obj as unknown as { height?: number }).height = Number(newH)
               imageObj.setCoords?.()
               // force group to recalc bounds by re-adding the updated child
               obj.remove(imageObj as unknown as FabricObject)
