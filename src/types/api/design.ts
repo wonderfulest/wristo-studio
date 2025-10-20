@@ -72,7 +72,7 @@ export interface Design {
   user: UserBase
   cover?: Image | null
   backgroundImage?: Image | null
-  product?: Product | null
+  product: Product
   categories?: Category[] | null
 }
 

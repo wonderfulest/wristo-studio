@@ -119,10 +119,14 @@ export interface ProductPaymentDto {
 export interface GoToLiveDto {
   /** 应用ID */
   appId: number
+  /** 产品描述 */
+  description: string
   /** Garmin 商店URL */
-  garminStoreUrl?: string
+  garminStoreUrl: string
   /** 英雄图URL */
-  heroImage?: string
+  heroImage: string
+  /** Banner 图URL */
+  bannerImage: string
   /** 支付信息 */
   payment: ProductPaymentDto
   /** 分类ID列表 */

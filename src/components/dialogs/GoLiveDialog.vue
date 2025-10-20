@@ -8,13 +8,20 @@
   >
     <el-form :model="form" label-width="120px" class="go-live-form">
       <el-form-item label="App ID">
-        <el-input v-model="form.appId" disabled />
+        <el-input v-model="form.appId" disabled>
+          <template #append>
+            <el-button @click="copyAppId" :icon="CopyDocument">Copy</el-button>
+          </template>
+        </el-input>
       </el-form-item>
       <el-form-item label="Design Name">
         <el-input v-model="form.name" disabled />
       </el-form-item>
       <el-form-item label="Description">
-        <el-input v-model="form.description" type="textarea" :rows="3" />
+        <el-input v-model="form.description" type="textarea" :rows="10" />
+        <div class="form-tip">
+          Please keep this description consistent with the one in the Garmin Connect IQ store; inconsistencies may cause the review to fail.
+        </div>
       </el-form-item>
       <el-form-item label="Garmin Image">
         <div class="image-upload-container">
@@ -27,7 +34,7 @@
             :before-upload="beforeImageUpload"
             :on-change="handleImageChange"
           >
-            <div class="upload-area">
+            <div class="upload-area garmin-area">
               <img v-if="form.garminImageUrl" :src="form.garminImageUrl" class="uploaded-image" />
               <div v-else class="upload-placeholder">
                 <el-icon class="upload-icon"><Plus /></el-icon>
@@ -43,6 +50,35 @@
         </div>
         <div class="form-tip">
           This image will be displayed in the Garmin Connect IQ store
+        </div>
+      </el-form-item>
+      <el-form-item label="Homepage Banner">
+        <div class="image-upload-container">
+          <el-upload 
+            class="image-uploader" 
+            action="#" 
+            :auto-upload="false" 
+            :show-file-list="false" 
+            accept=".jpg,.jpeg,.png,.gif"
+            :before-upload="beforeBannerUpload"
+            :on-change="handleBannerChange"
+          >
+            <div class="upload-area banner-area">
+              <img v-if="form.bannerImageUrl" :src="form.bannerImageUrl" class="uploaded-image" />
+              <div v-else class="upload-placeholder">
+                <el-icon class="upload-icon"><Plus /></el-icon>
+                <span>Click to upload banner</span>
+              </div>
+            </div>
+          </el-upload>
+          <div class="upload-actions" v-if="form.bannerImageUrl">
+            <el-button size="small" type="danger" @click="removeBannerImage">
+              Remove Image
+            </el-button>
+          </div>
+        </div>
+        <div class="form-tip">
+          Include a mobile-optimized image to promote your app. The image (in JPG, GIF, or PNG format) should be 1440 × 720 pixels and no larger than 2048 KB.
         </div>
       </el-form-item>
       <el-form-item label="Garmin Store URL">
@@ -143,9 +179,10 @@ import type { Bundle } from '@/types/api/bundle'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, CopyDocument } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
+import type { UploadFile } from 'element-plus'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -162,11 +199,12 @@ const form = reactive({
   name: '',
   description: '',
   garminImageUrl: '',
+  bannerImageUrl: '',
   garminStoreUrl: '',
   categoryIds: [] as number[],
   bundleIds: [] as number[],
-  trialLasts: 0,
-  price: 1.99
+  trialLasts: 0.25,
+  price: 2.39
 })
 
 const messageStore = useMessageStore()
@@ -177,26 +215,26 @@ const loadDesign = (design: Design) => {
   currentDesign.value = design
   
   // 设置表单数据
-  form.appId = design.product?.appId ?? 0
-  form.name = design.name
-  form.description = design.description || ''
-  form.categoryIds = design.product?.categories?.map((category: Category) => category.id) || []
-  form.bundleIds = design.product?.bundles?.map((bundle: Bundle) => bundle.bundleId) || []
-  
-  
+  form.appId = design.product.appId
+  form.name = design.product.name
+  form.description = design.product.description
+  form.categoryIds = design.product.categories.map((category: Category) => category.id)
+  form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
   
   // 如果已有产品信息，使用现有数据
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''
+    form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.trialLasts = design.product.trialLasts || 0
-    form.price = design.product.payment?.price || 1.99
+    form.price = design.product.payment.price || 2.39
   } else {
     // 重置为默认值
     form.garminImageUrl = ''
+    form.bannerImageUrl = ''
     form.garminStoreUrl = ''
-    form.trialLasts = 0
-    form.price = 1.99
+    form.trialLasts = 0.25
+    form.price = 2.39
   }
 }
 
@@ -215,14 +253,16 @@ const handleConfirm = async () => {
     return
   }
   
-  if (!currentDesign.value.product?.appId) {
+  if (!currentDesign.value.product.appId) {
     messageStore.error('Product appId is required')
     return
   }
   try {
     loading.value = true
     const data = {
+      description: form.description.trim(),
       heroImage: form.garminImageUrl.trim(),
+      bannerImage: form.bannerImageUrl.trim(),
       appId: currentDesign.value.product.appId,
       garminStoreUrl: form.garminStoreUrl.trim(),
       payment: {
@@ -245,6 +285,15 @@ const handleConfirm = async () => {
 const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
+}
+
+const copyAppId = async (): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(String(form.appId))
+    ElMessage.success('Copied')
+  } catch {
+    ElMessage.error('Copy failed')
+  }
 }
 
 // 加载分类数据
@@ -283,21 +332,35 @@ onMounted(() => {
 // 图片上传前的验证
 const beforeImageUpload = (file: File) => {
   const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
+  const isLe500K = file.size <= 500 * 1024
 
   if (!isImage) {
     ElMessage.error('Please upload image files only!')
     return false
   }
-  if (!isLt5M) {
-    ElMessage.error('Image size cannot exceed 5MB!')
+  if (!isLe500K) {
+    ElMessage.error('Image size cannot exceed 500KB!')
+    return false
+  }
+  return true
+}
+
+const beforeBannerUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLe2M = file.size <= 2 * 1024 * 1024
+  if (!isImage) {
+    ElMessage.error('Please upload image files only!')
+    return false
+  }
+  if (!isLe2M) {
+    ElMessage.error('Banner image size cannot exceed 2MB!')
     return false
   }
   return true
 }
 
 // 处理图片上传
-const handleImageChange = async (file: any) => {
+const handleImageChange = async (file: UploadFile) => {
   if (!file || !file.raw) {
     console.warn('Invalid file', file)
     return
@@ -354,6 +417,71 @@ const handleImageChange = async (file: any) => {
 // 移除图片
 const removeImage = () => {
   form.garminImageUrl = ''
+}
+
+const handleBannerChange = async (file: UploadFile) => {
+  if (!file || !file.raw) {
+    console.warn('Invalid file', file)
+    return
+  }
+
+  const sizeOk = file.raw.size <= 2 * 1024 * 1024
+  if (!sizeOk) {
+    ElMessage.error('Banner image size cannot exceed 2MB!')
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Uploading banner...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const dataUrl = e.target?.result as string
+      const img = new Image()
+      img.onload = async () => {
+        if (img.width !== 1440 || img.height !== 720) {
+          ElMessage.error('Banner image must be 1440 × 720 pixels')
+          loadingInstance.close()
+          return
+        }
+        let uploadedUrl = ''
+        if (dataUrl && dataUrl.startsWith('data:')) {
+          uploadedUrl = await uploadBase64Image(dataUrl, 'banner')
+        } else {
+          uploadedUrl = ''
+        }
+        if (!uploadedUrl) {
+          throw new Error('Failed to upload banner')
+        }
+        form.bannerImageUrl = uploadedUrl
+        ElMessage.success('Banner uploaded successfully')
+        loadingInstance.close()
+      }
+      img.onerror = () => {
+        ElMessage.error('Failed to read banner image')
+        loadingInstance.close()
+      }
+      img.src = dataUrl
+    } catch (err) {
+      console.error('Failed to upload banner:', err)
+      ElMessage.error('Failed to upload banner')
+      loadingInstance.close()
+    }
+  }
+  reader.onerror = (error) => {
+    console.error('Error reading banner file', error)
+    ElMessage.error('Failed to read banner file')
+    loadingInstance.close()
+  }
+  reader.readAsDataURL(file.raw)
+}
+
+const removeBannerImage = () => {
+  form.bannerImageUrl = ''
 }
 
 // 定义 show 方法
@@ -422,6 +550,17 @@ defineExpose({
   overflow: hidden;
 }
 
+.garmin-area {
+  width: 120px;
+  height: 120px;
+}
+
+.banner-area {
+  width: 240px;
+  height: auto;
+  aspect-ratio: 2 / 1;
+}
+
 .upload-area:hover {
   border-color: var(--el-color-primary);
   background-color: var(--el-fill-color-light);
@@ -464,6 +603,15 @@ defineExpose({
   .upload-area {
     width: 100%;
     height: 200px;
+  }
+  .garmin-area {
+    width: 120px;
+    height: 120px;
+  }
+  /* Keep banner 2:1 on mobile */
+  .banner-area {
+    width: 100%;
+    height: auto;
   }
 }
 </style> 
