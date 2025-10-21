@@ -39,14 +39,9 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/designs/MyDesigns.vue'),
           },
           {
-            path: 'templates',
-            name: 'design-templates',
-            component: () => import('@/views/designs/TemplateList.vue'),
-          },
-          {
-            path: 'favorites',
-            name: 'favorite-designs',
-            component: () => import('@/views/designs/FavoriteList.vue'),
+            path: 'pending',
+            name: 'pending-go-live',
+            component: () => import('@/views/designs/PendingGoLiveList.vue'),
           },
         ],
       },

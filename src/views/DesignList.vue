@@ -3,24 +3,32 @@
     <div class="header">
       <div class="header-left">
         <div class="icon-buttons">
-          <el-tooltip content="Recommended Templates" placement="bottom">
-            <el-button 
-              class="icon-btn"
-              :class="{ 'is-active': isTemplatesRoute }"
-              @click="navigateTo('design-templates')"
-            >
-              <el-icon><Star /></el-icon>
-            </el-button>
-          </el-tooltip>
-          
-          <el-tooltip content="My Favorites" placement="bottom">
-            <el-button 
-              class="icon-btn"
-              :class="{ 'is-active': isFavoritesRoute }"
-              @click="navigateTo('favorite-designs')"
-            >
-              <el-icon><Collection /></el-icon>
-            </el-button>
+          <el-tooltip content="Pending Go Live" placement="bottom">
+            <template #default>
+              <el-badge 
+                v-if="hasPending"
+                :value="pendingCount"
+                :max="99"
+                type="danger"
+                class="pending-badge"
+              >
+                <el-button 
+                  class="icon-btn"
+                  :class="{ 'is-active': isPendingRoute }"
+                  @click="navigateTo('pending-go-live')"
+                >
+                  <el-icon><Promotion /></el-icon>
+                </el-button>
+              </el-badge>
+              <el-button 
+                v-else
+                class="icon-btn"
+                :class="{ 'is-active': isPendingRoute }"
+                @click="navigateTo('pending-go-live')"
+              >
+                <el-icon><Promotion /></el-icon>
+              </el-button>
+            </template>
           </el-tooltip>
         </div>
         <h2 
@@ -46,11 +54,12 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, computed, defineAsyncComponent, onActivated } from 'vue'
+<script setup lang="ts">
+import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessageStore } from '@/stores/message'
-import { Star, Collection } from '@element-plus/icons-vue'
+import { Promotion } from '@element-plus/icons-vue'
+import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 
 const router = useRouter()
 const route = useRoute()
@@ -58,11 +67,15 @@ const messageStore = useMessageStore()
 
 // 计算当前路由状态
 const isMyDesignsRoute = computed(() => route.name === 'my-designs')
-const isTemplatesRoute = computed(() => route.name === 'design-templates')
-const isFavoritesRoute = computed(() => route.name === 'favorite-designs')
+const isPendingRoute = computed(() => route.name === 'pending-go-live')
+
+// Pending count for Go Live via store
+const pendingStore = usePendingGoLiveStore()
+const pendingCount = computed<number>(() => pendingStore.count)
+const hasPending = computed<boolean>(() => pendingStore.count > 0)
 
 // 导航方法
-const navigateTo = async (routeName) => {
+const navigateTo = async (routeName: string) => {
   try {
     await router.push({ 
       name: routeName,
@@ -74,14 +87,8 @@ const navigateTo = async (routeName) => {
   }
 }
 
-// 异步导入组件
-const MyDesigns = defineAsyncComponent(() => import('./designs/MyDesigns.vue'))
-const TemplateList = defineAsyncComponent(() => import('./designs/TemplateList.vue'))
-
 onMounted(() => {
-})
-
-onActivated(() => {
+  pendingStore.fetch()
 })
 </script>
 

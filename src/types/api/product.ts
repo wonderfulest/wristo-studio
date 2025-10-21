@@ -72,4 +72,5 @@ export interface Product {
   packageLog: ProductPackagingLogVo
   release: ProductReleaseVo
   bundles: Bundle[]
+  lastGoLive: number
 }

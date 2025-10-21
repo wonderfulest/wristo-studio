@@ -51,6 +51,8 @@
                 >
                   <el-icon><DocumentCopy /></el-icon>
                 </el-button>
+              
+               
               </div>
               <!-- 状态和操作按钮第二行 -->
               <div class="status-actions-row">
@@ -114,8 +116,20 @@
               </div>
             </div>
             <div class="meta">
-              <span>ID: {{ design.designUid }}</span>
-              <span>Updated: {{ formatDate(design.updatedAt) }}</span>
+              <span>App ID: {{ design.product?.appId }}</span>
+              <span>Design: {{ design.designUid }}</span>
+              <div class="last-go-live-row">
+                <span>Last Go Live: {{ formatDateNullable(design.product?.lastGoLive ?? null) }}</span>
+                <el-tooltip
+                  v-if="hasNewRelease(design)"
+                  content="New version available to upload"
+                  placement="top"
+                >
+                  <span class="new-release-indicator" role="img" aria-label="New version available to upload">
+                    <span class="dot"></span>
+                  </span>
+                </el-tooltip>
+              </div>
             </div>
             <div class="actions">
               <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">Edit</el-button>
@@ -209,7 +223,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete, Download, Promotion, DocumentCopy, Collection } from '@element-plus/icons-vue'
+import { Star, Edit, Delete, Download, Promotion, DocumentCopy } from '@element-plus/icons-vue'
 import { toggleFavorite } from '@/api/favorites'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
@@ -294,12 +308,9 @@ const getStatusColor = (status: DesignStatus) => {
   return statusMap[status as keyof typeof statusMap] || '#909399'
 }
 
-// 格式化日期
-const formatDate = (date: number) => {
-  // 处理时间戳格式
-  if (typeof date === 'number') {
-    return dayjs(date).format('YYYY-MM-DD HH:mm')
-  }
+// 格式化可空日期（用于 Last Go Live）
+const formatDateNullable = (date: string | number | null | undefined) => {
+  if (!date) return 'Never'
   return dayjs(date).format('YYYY-MM-DD HH:mm')
 }
 
@@ -465,6 +476,25 @@ const hasDownloadablePackage = (design: Design): boolean => {
   return !!(design.product?.release?.packageUrl)
 }
 
+// 检查是否有新版本需要上传
+const hasNewRelease = (design: Design): boolean => {
+  const releaseExists = !!design.product?.release
+  if (!releaseExists) return false
+
+  const releaseUpdatedAt = (design.product?.release as { updatedAt?: string | number })?.updatedAt
+  const lastGoLive = (design.product as { lastGoLive?: string | number | null })?.lastGoLive
+
+  if (!releaseUpdatedAt) return false
+  if (!lastGoLive) return true
+
+  return dayjs(releaseUpdatedAt).isAfter(dayjs(lastGoLive))
+}
+
+// 点击新版本红点提示
+const showNewReleaseTip = (): void => {
+  messageStore.info('New version available to upload')
+}
+
 // 处理提交成功
 const handleSubmitSuccess = () => {
   fetchDesigns() // 刷新设计列表
@@ -549,6 +579,7 @@ const handleGoLiveSuccess = () => {
   flex-direction: column;
   gap: 4px;
   padding: 6px 8px;
+  position: relative;
 }
 
 .title-row {
@@ -633,6 +664,29 @@ const handleGoLiveSuccess = () => {
   gap: 2px;
   font-size: 11px;
   color: var(--el-text-color-secondary);
+}
+
+.last-go-live-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.last-go-live-row .new-release-indicator {
+  position: static;
+  top: auto;
+  right: auto;
+  width: 10px;
+  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+}
+
+.last-go-live-row .new-release-indicator .dot {
+  width: 8px;
+  height: 8px;
 }
 
 .category-info {
@@ -767,6 +821,27 @@ const handleGoLiveSuccess = () => {
   .design-info .actions .el-button {
     padding: 4px 8px;
   }
+}
+
+.new-release-indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.new-release-indicator .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
 }
 
 @media screen and (min-width: 769px) and (max-width: 992px) {

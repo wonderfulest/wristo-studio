@@ -7,6 +7,7 @@ import type {
   CreateProductDto,
 } from '@/types/product'
 import type { Bundle } from '@/types/api/bundle'
+import type { Product as ProductVo } from '@/types/api/product'
 
 /**
  * 产品相关API接口
@@ -45,6 +46,13 @@ export const productsApi = {
    */
   getBundles(): Promise<ApiResponse<Bundle[]>> {
     return instance.get('/dsn/bundles/all')
+  },
+
+  /**
+   * 获取待上架产品列表
+   */
+  getGoLivePendingList(): Promise<ApiResponse<ProductVo[]>> {
+    return instance.get('/dsn/products/goLive/pending-list?populate=release')
   }
 }
 
