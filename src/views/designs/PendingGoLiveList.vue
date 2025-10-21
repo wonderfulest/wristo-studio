@@ -36,8 +36,9 @@
             <span>{{ row.release?.releaseNote ?? '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="120" fixed="right">
+        <el-table-column label="Actions" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" size="small" :disabled="!row.release?.packageUrl" @click="download(row)">Download</el-button>
             <el-button type="success" size="small" @click="goLive(row)">Go Live</el-button>
           </template>
         </el-table-column>
@@ -88,6 +89,15 @@ const goLive = async (row: Product): Promise<void> => {
     }
   } catch (e) {
     messageStore.error('Failed to load design')
+  }
+}
+
+const download = (row: Product): void => {
+  const url = row.release?.packageUrl
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } else {
+    messageStore.error('No package available')
   }
 }
 
