@@ -2,7 +2,7 @@
   <div class="side-panel">
     <!-- 添加元素按钮，仅在图层面板时显示 -->
     <div v-if="!isAddElementMode" class="add-element-button">
-      <el-button class="op-btn" round type="primary" @click="switchToAddElement">添加元素</el-button>
+      <el-button class="op-btn" round type="primary" @click="switchToAddElement">Add Element</el-button>
     </div>
 
     <!-- 面板容器 -->
@@ -13,7 +13,7 @@
 
     <!-- 取消按钮，仅在添加元素面板时显示 -->
     <div v-if="isAddElementMode" class="cancel-button">
-      <el-button round type="info" @click="switchToLayer" class="op-btn">取 消</el-button>
+      <el-button round type="info" @click="switchToLayer" class="op-btn">Cancel</el-button>
     </div>
   </div>
 </template>

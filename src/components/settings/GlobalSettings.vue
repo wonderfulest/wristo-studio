@@ -1,45 +1,45 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
-      <label>表盘名称</label>
+      <label>Watch Face Name</label>
       <el-input type="text" v-model="watchFaceName" @change="updateWatchFaceName" />
     </div>
     <div class="setting-item">
-      <label>文本大小写设置</label>
-      <el-select v-model="textCase" placeholder="请选择文本大小写样式" @change="updateTextCase">
-        <el-option :value="0" label="默认" />
-        <el-option :value="1" label="全大写 (UPPERCASE)" />
-        <el-option :value="2" label="全小写 (lowercase)" />
-        <el-option :value="3" label="驼峰式 (CamelCase)" />
+      <label>Text Case</label>
+      <el-select v-model="textCase" placeholder="Select text case style" @change="updateTextCase">
+        <el-option :value="0" label="Default" />
+        <el-option :value="1" label="UPPERCASE" />
+        <el-option :value="2" label="lowercase" />
+        <el-option :value="3" label="CamelCase" />
       </el-select>
-      <div class="setting-description">影响日期、标签等文本元素的显示样式</div>
+      <div class="setting-description">Affects display style for text elements like date and labels</div>
     </div>
     
     <div class="setting-item">
-      <label>是否显示数据项单位</label>
+      <label>Show Unit</label>
       <el-switch v-model="showUnit" @change="updateShowUnit" />
     </div>
 
     <div class="setting-item">
-      <label>标签长度类型</label>
-      <el-select v-model="labelLengthType" placeholder="请选择标签长度类型" @change="updateLabelLengthType">
-        <el-option :value="1" label="短文本 (Short)" />
-        <el-option :value="2" label="中等文本 (Medium)" />
-        <el-option :value="3" label="长文本 (Long)" />
+      <label>Label Length</label>
+      <el-select v-model="labelLengthType" placeholder="Select label length" @change="updateLabelLengthType">
+        <el-option :value="1" label="Short" />
+        <el-option :value="2" label="Medium" />
+        <el-option :value="3" label="Long" />
       </el-select>
-      <div class="setting-description">仅影响标签元素的显示文本长度</div>
+      <div class="setting-description">Affects only the display text length of label elements</div>
     </div>
 
     <div class="setting-item">
-      <label>背景图片</label>
+      <label>Background Image</label>
       <div class="background-image-control">
-        <el-upload action="#" :auto-upload="false" :show-file-list="false" accept=".jpg,.jpeg,.png" @change="handleBackgroundImageChange">
-          <el-button size="small" type="primary">选择图片</el-button>
+        <el-upload action="#" :auto-upload="false" :show-file-list="false" accept=".jpg,.jpeg,.png" :before-upload="beforeBackgroundImageUpload" @change="handleBackgroundImageChange">
+          <el-button size="small" type="primary">Select Image</el-button>
         </el-upload>
-        <el-button size="small" type="danger" @click="removeBackgroundImage" v-if="currentBackgroundImage">移除图片</el-button>
+        <el-button size="small" type="danger" @click="removeBackgroundImage" v-if="currentBackgroundImage">Remove Image</el-button>
       </div>
       <div class="background-image-preview" v-if="currentBackgroundImage">
-        <img :src="currentBackgroundImage" alt="背景图片预览" />
+        <img :src="currentBackgroundImage" alt="Background Image Preview" />
       </div>
     </div>
   </div>
@@ -185,18 +185,32 @@ const currentBackgroundImage = computed({
   }
 })
 
-// 处理背景图片变化
+const MAX_BG_SIZE = 2 * 1024 * 1024
+const beforeBackgroundImageUpload = (rawFile) => {
+  if (!rawFile) return false
+  if (rawFile.size > MAX_BG_SIZE) {
+    ElMessage.error('Image size must not exceed 2MB')
+    return false
+  }
+  return true
+}
+
 const handleBackgroundImageChange = (file) => {
   
   if (!file || !file.raw) {
-    console.warn('文件无效', file)
+    console.warn('Invalid file', file)
+    return
+  }
+
+  if (file.raw.size > MAX_BG_SIZE) {
+    ElMessage.error('Image size must not exceed 2MB')
     return
   }
 
   // 创建 loading 实例
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: '正在上传图片...',
+    text: 'Uploading image... ',
     background: 'rgba(0, 0, 0, 0.7)'
   })
 
@@ -215,7 +229,7 @@ const handleBackgroundImageChange = (file) => {
       }
       
       if (!imageUploadUrl) {
-        throw new Error('上传背景图片失败')
+        throw new Error('Failed to upload background image')
       }
 
       // 更新当前主题的背景图片
@@ -223,10 +237,10 @@ const handleBackgroundImageChange = (file) => {
       // 强制更新画布背景
       baseStore.toggleThemeBackground()
       
-      ElMessage.success('图片上传成功')
+      ElMessage.success('Image uploaded successfully')
     } catch (error) {
-      console.error('上传背景图片失败:', error)
-      ElMessage.error('上传背景图片失败')
+      console.error('Failed to upload background image:', error)
+      ElMessage.error('Failed to upload background image')
     } finally {
       // 关闭 loading
       loadingInstance.close()
@@ -234,8 +248,8 @@ const handleBackgroundImageChange = (file) => {
   }
 
   reader.onerror = (error) => {
-    console.error('读取图片出错', error)
-    ElMessage.error('读取图片失败')
+    console.error('Failed to read image', error)
+    ElMessage.error('Failed to read image')
     loadingInstance.close()
   }
 
@@ -280,14 +294,14 @@ const updateWpayPrice = async () => {
 const handleGarminImageChange = (file) => {
   
   if (!file || !file.raw) {
-    console.warn('文件无效', file)
+    console.warn('Invalid file', file)
     return
   }
 
   // 创建 loading 实例
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: '正在上传图片...',
+    text: 'Uploading image... ',
     background: 'rgba(0, 0, 0, 0.7)'
   })
 
@@ -306,15 +320,15 @@ const handleGarminImageChange = (file) => {
       }
       
       if (!imageUploadUrl) {
-        throw new Error('上传 Garmin 图片失败')
+        throw new Error('Failed to upload Garmin image')
       }
       // 更新 Garmin 图片 URL
       baseStore.wpay.garminImageUrl = imageUploadUrl
       // 更新 wristo api 中的 product 图片
-      ElMessage.success('图片上传成功')
+      ElMessage.success('Image uploaded successfully')
     } catch (error) {
-      console.error('上传 Garmin 图片失败:', error)
-      ElMessage.error('上传 Garmin 图片失败')
+      console.error('Failed to upload Garmin image:', error)
+      ElMessage.error('Failed to upload Garmin image')
     } finally {
       // 关闭 loading
       loadingInstance.close()
@@ -322,8 +336,8 @@ const handleGarminImageChange = (file) => {
   }
 
   reader.onerror = (error) => {
-    console.error('读取图片出错', error)
-    ElMessage.error('读取图片失败')
+    console.error('Failed to read image', error)
+    ElMessage.error('Failed to read image')
     loadingInstance.close()
   }
 
@@ -433,5 +447,34 @@ const removeGarminImage = () => {
   font-size: 12px;
   color: #909399;
   line-height: 1.4;
+}
+
+.settings-section :deep(.el-input__inner) {
+  border: none;
+}
+
+.settings-section :deep(.el-input__wrapper) {
+  outline: none;
+}
+
+.settings-section :deep(.el-input__inner:focus),
+.settings-section :deep(.el-input__inner:focus-visible) {
+  outline: none;
+}
+
+.settings-section :deep(.el-input__wrapper:focus-within) {
+  outline: none;
+}
+
+.settings-section :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset !important;
+}
+
+.settings-section :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-border-color) inset;
+}
+
+.settings-section :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset;
 }
 </style>
