@@ -115,36 +115,16 @@ function onSortChange(): void {
 
 onMounted(loadData)
 
-function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9-_\.]+/g, '_')
-}
-
 async function downloadDevicePng(row: GarminDeviceVO): Promise<void> {
   try {
     if (!row.devicePng) return
-    // Try to download via fetch to support CORS with blob fallback
-    const response = await fetch(row.devicePng, { credentials: 'include' })
-    if (!response.ok) {
-      // fallback: open in new tab
-      const a = document.createElement('a')
-      a.href = row.devicePng
-      a.target = '_blank'
-      a.rel = 'noopener noreferrer'
-      a.click()
-      return
-    }
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    const base = row.displayName || row.deviceId || `device_${row.id}`
-    a.href = url
-    a.download = `${sanitizeFilename(base)}.png`
-    document.body.appendChild(a)
+    a.href = row.devicePng
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
     a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
   } catch (e) {
-    ElMessage.error('Failed to download PNG')
+    ElMessage.error('Failed to open PNG')
   }
 }
 </script>
