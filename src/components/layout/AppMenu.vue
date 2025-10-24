@@ -253,9 +253,7 @@
           </el-menu-item>
         </div>
       </el-sub-menu>
-
-      
-      
+            
       <el-menu-item index="image">
         <el-icon><Picture /></el-icon>
         <span>Image</span>

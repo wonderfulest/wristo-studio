@@ -23,6 +23,10 @@
           <Icon icon="material-symbols:list" />
           Designs List
         </a>
+        <a @click="showDevicesConfirm" class="nav-link">
+          <Icon icon="material-symbols:extension" />
+          Devices
+        </a>
         <!-- <router-link to="/sales" class="nav-link" >
           <Icon icon="material-symbols:list" />
           销售数据
@@ -33,6 +37,15 @@
             <span class="dialog-footer">
               <el-button @click="designsListDialogVisible = false">Cancel</el-button>
               <el-button type="primary" @click="confirmOpenDesignsList">Confirm</el-button>
+            </span>
+          </template>
+        </el-dialog>
+        <el-dialog v-model="devicesDialogVisible" title="Confirm" width="30%">
+          <span>Close current work and open the devices?</span>
+          <template #footer>
+            <span class="dialog-footer">
+              <el-button @click="devicesDialogVisible = false">Cancel</el-button>
+              <el-button type="primary" @click="confirmOpenDevices">Confirm</el-button>
             </span>
           </template>
         </el-dialog>
@@ -113,6 +126,7 @@ const user = computed(() => userStore.userInfo)
 const showDropdown = ref(false)
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
+const devicesDialogVisible = ref(false)
 const usernameRef = ref(null)
 const isUsernameTruncated = ref(false)
 const wpayDialogRef = ref(null)
@@ -161,6 +175,10 @@ const showDesignsListConfirm = () => {
   designsListDialogVisible.value = true
 }
 
+const showDevicesConfirm = () => {
+  devicesDialogVisible.value = true
+}
+
 const confirmNewDesign = () => {
   designerDialogVisible.value = false
   createDesignDialogRef.value?.show()
@@ -170,6 +188,12 @@ const confirmOpenDesignsList = () => {
   designsListDialogVisible.value = false
   baseStore.$reset()
   router.push('/designs')
+}
+
+const confirmOpenDevices = () => {
+  devicesDialogVisible.value = false
+  baseStore.$reset()
+  router.push('/devices')
 }
 
 const toggleDropdown = () => {
