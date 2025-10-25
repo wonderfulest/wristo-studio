@@ -27,6 +27,10 @@
           <Icon icon="material-symbols:extension" />
           Devices
         </a>
+        <a @click="showTicketsConfirm" class="nav-link">
+          <Icon icon="material-symbols:confirmation-number-outline" />
+          Tickets
+        </a>
         <!-- <router-link to="/sales" class="nav-link" >
           <Icon icon="material-symbols:list" />
           销售数据
@@ -46,6 +50,15 @@
             <span class="dialog-footer">
               <el-button @click="devicesDialogVisible = false">Cancel</el-button>
               <el-button type="primary" @click="confirmOpenDevices">Confirm</el-button>
+            </span>
+          </template>
+        </el-dialog>
+        <el-dialog v-model="ticketsDialogVisible" title="Confirm" width="30%">
+          <span>Close current work and open the tickets?</span>
+          <template #footer>
+            <span class="dialog-footer">
+              <el-button @click="ticketsDialogVisible = false">Cancel</el-button>
+              <el-button type="primary" @click="confirmOpenTickets">Confirm</el-button>
             </span>
           </template>
         </el-dialog>
@@ -127,6 +140,7 @@ const showDropdown = ref(false)
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
 const devicesDialogVisible = ref(false)
+const ticketsDialogVisible = ref(false)
 const usernameRef = ref(null)
 const isUsernameTruncated = ref(false)
 const wpayDialogRef = ref(null)
@@ -179,6 +193,10 @@ const showDevicesConfirm = () => {
   devicesDialogVisible.value = true
 }
 
+const showTicketsConfirm = () => {
+  ticketsDialogVisible.value = true
+}
+
 const confirmNewDesign = () => {
   designerDialogVisible.value = false
   createDesignDialogRef.value?.show()
@@ -194,6 +212,12 @@ const confirmOpenDevices = () => {
   devicesDialogVisible.value = false
   baseStore.$reset()
   router.push('/devices')
+}
+
+const confirmOpenTickets = () => {
+  ticketsDialogVisible.value = false
+  baseStore.$reset()
+  router.push('/tickets')
 }
 
 const toggleDropdown = () => {
