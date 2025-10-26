@@ -234,7 +234,8 @@ import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { Design, DesignStatus } from '@/types/api/design'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
-const goLiveDialog = ref<any>(null)
+type GoLiveDialogRef = { show: (design: Design) => void }
+const goLiveDialog = ref<GoLiveDialogRef | null>(null)
 const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
@@ -541,9 +542,19 @@ const handleEditSuccess = () => {
 }
 
 // Go live 方法
-const goLive = (design: Design) => {
-  if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
-    goLiveDialog.value.show(design)
+const goLive = async (design: Design) => {
+  try {
+    const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
+    const fullDesign = res.data as Design
+    if (!fullDesign) {
+      messageStore.error('Failed to load design')
+      return
+    }
+    if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
+      goLiveDialog.value.show(fullDesign)
+    }
+  } catch (e) {
+    messageStore.error('Failed to load design')
   }
 }
 

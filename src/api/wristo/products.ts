@@ -7,7 +7,7 @@ import type {
   CreateProductDto,
 } from '@/types/product'
 import type { Bundle } from '@/types/api/bundle'
-import type { Product as ProductVo } from '@/types/api/product'
+import type { Product as ProductVo, GenerateDescriptionDto } from '@/types/api/product'
 
 /**
  * 产品相关API接口
@@ -53,6 +53,13 @@ export const productsApi = {
    */
   getGoLivePendingList(): Promise<ApiResponse<ProductVo[]>> {
     return instance.get('/dsn/products/goLive/pending-list?populate=release')
+  },
+
+  /**
+   * Generate product description from template
+   */
+  generateDescription(data: GenerateDescriptionDto): Promise<ApiResponse<string>> {
+    return instance.post('/dsn/products/generate-description', data)
   }
 }
 

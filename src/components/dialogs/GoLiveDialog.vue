@@ -19,8 +19,12 @@
       </el-form-item>
       <el-form-item label="Description">
         <el-input v-model="form.description" type="textarea" :rows="10" />
+        <el-button size="small" style="margin-top: 8px;" @click="refreshDescription">Refresh</el-button>
         <div class="form-tip">
           Please keep this description consistent with the one in the Garmin Connect IQ store; inconsistencies may cause the review to fail.
+        </div>
+        <div class="form-tip">
+          You can edit the description template in Settings (top-right user menu). <el-link type="primary" @click="openSettings" style="font-size: 12px;">Open Settings</el-link>
         </div>
       </el-form-item>
       <el-form-item label="Garmin Image">
@@ -169,6 +173,7 @@
       </span>
     </template>
   </el-dialog>
+  <DesignerDefaultConfigDialog ref="designerConfigDialog" />
 </template>
 
 <script setup lang="ts">
@@ -183,10 +188,21 @@ import { Plus, CopyDocument } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import type { ApiResponse } from '@/types/api/api'
+import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
 const currentDesign = ref<Design | null>(null)
+type DesignerConfigDialogRef = { show: () => void | Promise<void> }
+
+const openSettings = (): void => {
+  if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
+    designerConfigDialog.value.show()
+  }
+}
+const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 
 const categories = ref<Category[]>([])
 const loadingCategories = ref(false)
@@ -208,6 +224,7 @@ const form = reactive({
 })
 
 const messageStore = useMessageStore()
+const userStore = useUserStore()
 const emit = defineEmits(['success', 'cancel'])
 
 // 加载设计数据
@@ -484,6 +501,25 @@ const removeBannerImage = () => {
   form.bannerImageUrl = ''
 }
 
+const refreshDescription = async () => {
+  if (!currentDesign.value) return
+  const uid = userStore.userInfo?.id
+  if (!uid) {
+    ElMessage.error('User not logged in')
+    return
+  }
+  const pid = currentDesign.value.product.id
+  try {
+    const res = await productsApi.generateDescription({ userId: uid, productId: pid }) as ApiResponse<string>
+    if (typeof res.data === 'string') {
+      form.description = res.data
+      ElMessage.success('Description updated')
+    }
+  } catch (e) {
+    ElMessage.error('Failed to generate description')
+  }
+}
+
 // 定义 show 方法
 const show = (design: Design) => {
   loadDesign(design)
@@ -523,6 +559,7 @@ defineExpose({
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-top: 4px;
+  margin-left: 12px;
   line-height: 1.4;
 }
 

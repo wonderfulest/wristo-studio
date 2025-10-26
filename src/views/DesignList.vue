@@ -69,7 +69,6 @@ const messageStore = useMessageStore()
 const isMyDesignsRoute = computed(() => route.name === 'my-designs')
 const isPendingRoute = computed(() => route.name === 'pending-go-live')
 
-// Pending count for Go Live via store
 const pendingStore = usePendingGoLiveStore()
 const pendingCount = computed<number>(() => pendingStore.count)
 const hasPending = computed<boolean>(() => pendingStore.count > 0)

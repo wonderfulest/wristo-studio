@@ -68,8 +68,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Enter template... You can insert variables from the right panel.',
-  prefix: '{{',
-  suffix: '}}',
+  prefix: '[[${',
+  suffix: '}]]',
   showSidebar: true,
 })
 
@@ -233,8 +233,4 @@ onMounted(() => {
 .mb-2 { margin-bottom: 8px; }
 .mt-3 { margin-top: 12px; }
 
-@media (max-width: 900px) {
-  .template-editor { grid-template-columns: 1fr; }
-  .sidebar { border-left: none; border-top: 1px solid #eee; padding-left: 0; padding-top: 12px; }
-}
 </style>

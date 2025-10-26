@@ -74,3 +74,8 @@ export interface Product {
   bundles: Bundle[]
   lastGoLive: number
 }
+
+export interface GenerateDescriptionDto {
+  userId: number
+  productId: number
+}
