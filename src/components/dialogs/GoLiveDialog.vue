@@ -19,7 +19,7 @@
       </el-form-item>
       <el-form-item label="Description">
         <el-input v-model="form.description" type="textarea" :rows="10" />
-        <el-button size="small" style="margin-top: 8px;" @click="refreshDescription">Refresh</el-button>
+        <el-button size="small" type="primary" style="margin-right: 8px;" @click="refreshDescription">Refresh</el-button>
         <div class="form-tip">
           Please keep this description consistent with the one in the Garmin Connect IQ store; inconsistencies may cause the review to fail.
         </div>
@@ -27,33 +27,61 @@
           You can edit the description template in Settings (top-right user menu). <el-link type="primary" @click="openSettings" style="font-size: 12px;">Open Settings</el-link>
         </div>
       </el-form-item>
-      <el-form-item label="Garmin Image">
-        <div class="image-upload-container">
-          <el-upload 
-            class="image-uploader" 
-            action="#" 
-            :auto-upload="false" 
-            :show-file-list="false" 
-            accept=".jpg,.jpeg,.png,.gif"
-            :before-upload="beforeImageUpload"
-            :on-change="handleImageChange"
-          >
-            <div class="upload-area garmin-area">
-              <img v-if="form.garminImageUrl" :src="form.garminImageUrl" class="uploaded-image" />
-              <div v-else class="upload-placeholder">
-                <el-icon class="upload-icon"><Plus /></el-icon>
-                <span>Click to upload image</span>
+      <el-form-item label="Hero Image">
+        <div class="image-pair">
+          <div class="image-upload-container">
+            <div class="upload-title">Crop Image</div>
+            <div class="form-tip">This image will be displayed in the Garmin Connect IQ store</div>
+            <el-upload 
+              class="image-uploader" 
+              action="#" 
+              :auto-upload="false" 
+              :show-file-list="false" 
+              accept=".jpg,.jpeg,.png,.gif"
+              :before-upload="beforeImageUpload"
+              :on-change="handleImageChange"
+            >
+              <div class="upload-area garmin-area">
+                <img v-if="form.garminImageUrl" :src="form.garminImageUrl" class="uploaded-image" />
+                <div v-else class="upload-placeholder">
+                  <el-icon class="upload-icon"><Plus /></el-icon>
+                  <span>Click to upload image</span>
+                </div>
               </div>
+            </el-upload>
+            <div class="upload-actions" v-if="form.garminImageUrl">
+              <el-button size="small" type="danger" @click="removeImage">
+                Remove Image
+              </el-button>
             </div>
-          </el-upload>
-          <div class="upload-actions" v-if="form.garminImageUrl">
-            <el-button size="small" type="danger" @click="removeImage">
-              Remove Image
-            </el-button>
           </div>
-        </div>
-        <div class="form-tip">
-          This image will be displayed in the Garmin Connect IQ store
+
+          <div class="image-upload-container">
+            <div class="upload-title">Raw Image</div>
+            <div class="form-tip">This is the original raw image for preservation</div>
+            <el-upload 
+              class="image-uploader" 
+              action="#" 
+              :auto-upload="false" 
+              :show-file-list="false" 
+              accept=".jpg,.jpeg,.png,.gif"
+              :before-upload="beforeImageUpload"
+              :on-change="handleRawImageChange"
+            >
+              <div class="upload-area garmin-area">
+                <img v-if="form.rawImageUrl" :src="form.rawImageUrl" class="uploaded-image" />
+                <div v-else class="upload-placeholder">
+                  <el-icon class="upload-icon"><Plus /></el-icon>
+                  <span>Click to upload image</span>
+                </div>
+              </div>
+            </el-upload>
+            <div class="upload-actions" v-if="form.rawImageUrl">
+              <el-button size="small" type="danger" @click="removeRawImage">
+                Remove Image
+              </el-button>
+            </div>
+          </div>
         </div>
       </el-form-item>
       <el-form-item label="Homepage Banner">
@@ -215,6 +243,7 @@ const form = reactive({
   name: '',
   description: '',
   garminImageUrl: '',
+  rawImageUrl: '',
   bannerImageUrl: '',
   garminStoreUrl: '',
   categoryIds: [] as number[],
@@ -241,6 +270,7 @@ const loadDesign = (design: Design) => {
   // 如果已有产品信息，使用现有数据
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''
+    form.rawImageUrl = ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.trialLasts = design.product.trialLasts || 0
@@ -248,6 +278,7 @@ const loadDesign = (design: Design) => {
   } else {
     // 重置为默认值
     form.garminImageUrl = ''
+    form.rawImageUrl = ''
     form.bannerImageUrl = ''
     form.garminStoreUrl = ''
     form.trialLasts = 0.25
@@ -431,9 +462,58 @@ const handleImageChange = async (file: UploadFile) => {
   reader.readAsDataURL(file.raw)
 }
 
+// 处理 Raw 图片上传
+const handleRawImageChange = async (file: UploadFile) => {
+  if (!file || !file.raw) {
+    console.warn('Invalid file', file)
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Uploading image...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const imageData = e.target?.result as string
+      let imageUploadUrl = ''
+      if (imageData && imageData.startsWith('data:')) {
+        imageUploadUrl = await uploadBase64Image(imageData, 'raw')
+      } else if (imageData && imageData.startsWith('blob:')) {
+        imageUploadUrl = await uploadImageFile(imageData, 'raw')
+      } else if (imageData && imageData.startsWith('http')) {
+        imageUploadUrl = imageData
+      }
+      if (!imageUploadUrl) {
+        throw new Error('Failed to upload image')
+      }
+      form.rawImageUrl = imageUploadUrl
+      ElMessage.success('Image uploaded successfully')
+    } catch (error) {
+      console.error('Failed to upload raw image:', error)
+      ElMessage.error('Failed to upload image')
+    } finally {
+      loadingInstance.close()
+    }
+  }
+  reader.onerror = (error) => {
+    console.error('Error reading raw image file', error)
+    ElMessage.error('Failed to read image file')
+    loadingInstance.close()
+  }
+  reader.readAsDataURL(file.raw)
+}
+
 // 移除图片
 const removeImage = () => {
   form.garminImageUrl = ''
+}
+
+const removeRawImage = () => {
+  form.rawImageUrl = ''
 }
 
 const handleBannerChange = async (file: UploadFile) => {
@@ -558,9 +638,6 @@ defineExpose({
 .form-tip {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-top: 4px;
-  margin-left: 12px;
-  line-height: 1.4;
 }
 
 /* 图片上传组件样式 */
@@ -625,6 +702,18 @@ defineExpose({
 .upload-actions {
   display: flex;
   gap: 8px;
+}
+
+/* Keep the two image uploaders side-by-side without wrapping */
+.image-pair {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+.image-pair .image-upload-container {
+  flex: 0 0 auto;
 }
 
 /* 响应式调整 */
