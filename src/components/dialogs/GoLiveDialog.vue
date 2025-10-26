@@ -310,6 +310,7 @@ const handleConfirm = async () => {
     const data = {
       description: form.description.trim(),
       heroImage: form.garminImageUrl.trim(),
+      rawImage: form.rawImageUrl.trim(),
       bannerImage: form.bannerImageUrl.trim(),
       appId: currentDesign.value.product.appId,
       garminStoreUrl: form.garminStoreUrl.trim(),

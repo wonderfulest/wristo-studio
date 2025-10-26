@@ -125,6 +125,8 @@ export interface GoToLiveDto {
   garminStoreUrl: string
   /** 英雄图URL */
   heroImage: string
+  /** 原图 */
+  rawImage: string
   /** Banner 图URL */
   bannerImage: string
   /** 支付信息 */
