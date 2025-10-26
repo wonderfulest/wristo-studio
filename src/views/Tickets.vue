@@ -207,7 +207,6 @@ const status = ref<string>('')
 const statusesSelected = ref<string[]>(['open', 'resolved'])
 const priority = ref<string>('')
 const prioritiesSelected = ref<string[]>([])
-const assigneeId = ref<number | undefined>()
 const dateRange = ref<[string, string] | ''>('')
 const loading = ref<boolean>(false)
 const statuses = ref<string[]>([])
@@ -246,7 +245,7 @@ async function loadData(): Promise<void> {
       status: (statusesSelected.value && statusesSelected.value.length > 0) ? undefined : (status.value || undefined),
       priorities: (prioritiesSelected.value && prioritiesSelected.value.length > 0) ? prioritiesSelected.value : undefined,
       priority: (prioritiesSelected.value && prioritiesSelected.value.length > 0) ? undefined : (priority.value || undefined),
-      assigneeId: assigneeId.value || undefined,
+      assigneeId: userStore.userInfo?.id ?? undefined,
       beginAt,
       endAt,
     })
