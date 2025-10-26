@@ -27,14 +27,6 @@
           <Icon icon="material-symbols:extension" />
           Devices
         </a>
-        <a @click="showTicketsConfirm" class="nav-link">
-          <Icon icon="material-symbols:confirmation-number-outline" />
-          Tickets
-        </a>
-        <!-- <router-link to="/sales" class="nav-link" >
-          <Icon icon="material-symbols:list" />
-          销售数据
-        </router-link> -->
         <el-dialog v-model="designsListDialogVisible" title="Confirm" width="30%">
           <span>Close current work and open the designs list?</span>
           <template #footer>
@@ -74,54 +66,18 @@
       />
     </div>
 
-    <div class="user-menu" @click="toggleDropdown" v-if="userStore.isAuthenticated">
-      <div class="user-avatar">
-        <div class="avatar-circle" :style="{ backgroundColor: avatarColor }">
-          {{ userInitials }}
-        </div>
-        <el-tooltip 
-          :content="userStore.userInfo?.username"
-          :disabled="!isUsernameTruncated"
-          placement="bottom"
-        >
-          <span class="username" ref="usernameRef">
-            {{ truncatedUsername }}
-          </span>
-        </el-tooltip>
-      </div>
-      <div class="dropdown-menu" v-if="showDropdown">
-        <div class="dropdown-item" @click="router.push('/fonts')">
-          <Icon icon="material-symbols:font-download-outline" />
-          Font Preview
-        </div>
-        <div class="dropdown-item" @click="router.push('/FAQ')">
-          <Icon icon="material-symbols:help-outline" />
-          Help Center
-        </div>
-        <div class="dropdown-item" @click="showWPayDialog">
-          <Icon icon="material-symbols:help-outline" />
-          WPay Integration
-        </div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item" @click="handleLogout">
-          <Icon icon="material-symbols:logout" />
-          Logout
-        </div>
-      </div>
-    </div>
+    <UserMenu />
   </header>
-  <WPayTokenDialog ref="wpayDialogRef" />
   <CreateDesignDialog ref="createDesignDialogRef" />
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
-import { useUserStore } from '@/stores/user'
 import { useMessageStore } from '@/stores/message'
-import WPayTokenDialog from '../dialogs/WPayTokenDialog.vue'
 import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
+import UserMenu from './UserMenu.vue'
 
 const props = defineProps({
   // 其他需要保留的 props
@@ -132,18 +88,12 @@ const emit = defineEmits(['update:isDialogVisible'])
 const router = useRouter()
 const route = useRoute()
 const baseStore = useBaseStore()
-const userStore = useUserStore()
 const messageStore = useMessageStore()
 
-const user = computed(() => userStore.userInfo)
-const showDropdown = ref(false)
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
 const devicesDialogVisible = ref(false)
 const ticketsDialogVisible = ref(false)
-const usernameRef = ref(null)
-const isUsernameTruncated = ref(false)
-const wpayDialogRef = ref(null)
 const createDesignDialogRef = ref(null)
 
 // 计算属性
@@ -152,34 +102,6 @@ const watchFaceName = computed({
   set: (value) => baseStore.setWatchFaceName(value)
 })
 
-const userInitials = computed(() => {
-  const username = userStore.userInfo?.username || ''
-  return username
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(word => word.charAt(0).toUpperCase())
-    .join('')
-    || username.charAt(0).toUpperCase()
-})
-
-const avatarColor = computed(() => {
-  const colors = [
-    '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
-    '#712fd1', '#f74584', '#13c2c2', '#6f42c1'
-  ]
-  const username = userStore.userInfo?.username || ''
-  const index = Array.from(username).reduce(
-    (acc, char) => acc + char.charCodeAt(0), 0
-  ) % colors.length
-  return colors[index]
-})
-
-const truncatedUsername = computed(() => {
-  const username = userStore.userInfo?.username || ''
-  const maxLength = 12
-  if (username.length <= maxLength) return username
-  return `${username.slice(0, maxLength)}...`
-})
 
 const showDesignerConfirm = () => {
   designerDialogVisible.value = true
@@ -220,44 +142,8 @@ const confirmOpenTickets = () => {
   router.push('/tickets')
 }
 
-const toggleDropdown = () => {
-  showDropdown.value = !showDropdown.value
-}
 
-const handleLogout = () => {
-  userStore.logout()
-  const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
-  const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
-  window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
-}
 
-const showWPayDialog = () => {
-  wpayDialogRef.value?.show()
-}
-
-// 生命周期钩子
-onMounted(() => {
-  const checkTruncation = () => {
-    if (!usernameRef.value) return
-    const element = usernameRef.value
-    isUsernameTruncated.value = element.scrollWidth > element.clientWidth
-  }
-
-  const closeDropdown = (e) => {
-    if (!e.target.closest('.user-menu')) {
-      showDropdown.value = false
-    }
-  }
-
-  checkTruncation()
-  window.addEventListener('resize', checkTruncation)
-  window.addEventListener('click', closeDropdown)
-
-  onUnmounted(() => {
-    window.removeEventListener('resize', checkTruncation)
-    window.removeEventListener('click', closeDropdown)
-  })
-})
 </script>
 
 <style scoped>

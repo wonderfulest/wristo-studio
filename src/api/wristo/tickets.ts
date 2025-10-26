@@ -16,6 +16,9 @@ export const ticketsApi = {
   page(data: TicketQueryDTO): Promise<ApiResponse<PageResponse<TicketVO>>> {
     return instance.post('/dsn/contact/tickets/page?populate=*', data)
   },
+  count(assigneeId: number, status: string): Promise<ApiResponse<number>> {
+    return instance.get('/dsn/contact/tickets/count', { params: { assigneeId, status  } })
+  },
   detail(id: number): Promise<ApiResponse<TicketVO>> {
     return instance.get(`/dsn/contact/tickets/${id}`)
   },
