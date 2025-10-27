@@ -270,7 +270,7 @@ const loadDesign = (design: Design) => {
   // 如果已有产品信息，使用现有数据
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''
-    form.rawImageUrl = ''
+    form.rawImageUrl = design.product.rawImageUrl || ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.trialLasts = design.product.trialLasts || 0

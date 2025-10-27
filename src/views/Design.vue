@@ -25,6 +25,7 @@
       <!-- 缩放控件 -->
       <div class="editor-controls">
         <ZoomControls :canvas-ref="canvasRef" />
+        <HistoryControls :canvas-ref="canvasRef" />
       </div>
     </div>
     <!-- 右侧设置面板 -->
@@ -66,6 +67,7 @@ import SidePanel from '@/components/SidePanel.vue'
 import ExportPanel from '@/components/ExportPanel.vue'
 import TimeSimulator from '@/components/TimeSimulator.vue'
 import ZoomControls from '@/components/ZoomControls.vue'
+import HistoryControls from '@/components/HistoryControls.vue'
 import type { ElementConfig, ElementType } from '@/types/element'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'

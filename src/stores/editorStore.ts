@@ -7,6 +7,7 @@ export const useEditorStore = defineStore('editor', {
     backgroundColor: '#aaaaaa',
     showTimeSimulator: false,
     showZoomControls: false,
+    showHistoryControls: true,
   }),
 
   getters: {
@@ -16,6 +17,8 @@ export const useEditorStore = defineStore('editor', {
     getShowTimeSimulator: (state): boolean => state.showTimeSimulator,
     // 获取缩放控制显示状态
     getShowZoomControls: (state): boolean => state.showZoomControls,
+    // 获取撤销/回退控制显示状态
+    getShowHistoryControls: (state): boolean => state.showHistoryControls,
   },
 
   // 添加持久化配置（由持久化插件提供）
@@ -36,6 +39,7 @@ export const useEditorStore = defineStore('editor', {
       if (settings.backgroundColor !== undefined) this.$state.backgroundColor = settings.backgroundColor
       if (settings.showTimeSimulator !== undefined) this.$state.showTimeSimulator = settings.showTimeSimulator
       if (settings.showZoomControls !== undefined) this.$state.showZoomControls = settings.showZoomControls
+      if (settings.showHistoryControls !== undefined) this.$state.showHistoryControls = settings.showHistoryControls
     },
 
     // 重置所有设置
@@ -44,6 +48,7 @@ export const useEditorStore = defineStore('editor', {
       this.$state.backgroundColor = 'rgba(0, 0, 0, 0.8)'
       this.$state.showTimeSimulator = true
       this.$state.showZoomControls = true
+      this.$state.showHistoryControls = true
     },
   }
 })

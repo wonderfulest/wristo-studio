@@ -55,6 +55,7 @@ export interface Product {
   name: string
   description: string
   price: number
+  rawImageUrl: string
   garminImageUrl: string
   garminStoreUrl: string
   garminAppUuid: string

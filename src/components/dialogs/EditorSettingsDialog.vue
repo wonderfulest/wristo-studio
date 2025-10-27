@@ -44,6 +44,18 @@
       </div>
 
       <div class="setting-item">
+        <div class="setting-label">撤销/回退控制</div>
+        <div class="setting-control">
+          <el-switch
+            v-model="showHistoryControls"
+            @change="handleHistoryControlsChange"
+            active-text="显示"
+            inactive-text="隐藏"
+          />
+        </div>
+      </div>
+
+      <div class="setting-item">
         <div class="setting-label">Ruler Guides</div>
         <div class="setting-control">
           <el-switch
@@ -147,6 +159,8 @@ const backgroundColor = ref<string>(editorStore.backgroundColor)
 const showTimeSimulator = ref<boolean>(editorStore.showTimeSimulator)
 // 缩放控制显示状态
 const showZoomControls = ref<boolean>(editorStore.showZoomControls)
+// 撤销/回退控制显示状态
+const showHistoryControls = ref<boolean>(editorStore.showHistoryControls)
 // Ruler guides
 const showRulerGuides = ref<boolean>(true)
 // Ruler guides style
@@ -178,6 +192,11 @@ const handleZoomControlsChange = (value: boolean) => {
       zoomControls.classList.add('zoom-controls-collapsed')
     }
   }
+}
+
+// 处理撤销/回退控制显示状态变化
+const handleHistoryControlsChange = (value: boolean) => {
+  showHistoryControls.value = value
 }
 
 // 处理标尺辅助线显示
@@ -218,7 +237,8 @@ const saveSettings = () => {
     editorStore.updateSettings({
       backgroundColor: backgroundColor.value,
       showTimeSimulator: showTimeSimulator.value,
-      showZoomControls: showZoomControls.value
+      showZoomControls: showZoomControls.value,
+      showHistoryControls: showHistoryControls.value
     })
 
     // 更新画布背景元素
@@ -238,6 +258,7 @@ const openDialog = () => {
   backgroundColor.value = editorStore.backgroundColor
   showTimeSimulator.value = editorStore.showTimeSimulator
   showZoomControls.value = editorStore.showZoomControls
+  showHistoryControls.value = editorStore.showHistoryControls
   // 默认开启 ruler guides（可根据需要读取存储）
   emitter.emit('toggle-ruler-guides', showRulerGuides.value)
   // 同步一次网格样式

@@ -32,7 +32,6 @@ import ZoomManager from '@/components/ZoomManager.vue'
 import GuidelineManager from '@/components/GuidelineManager.vue'
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
-let updateInterval: number | undefined
 const WATCH_SIZE = computed(() => baseStore.WATCH_SIZE)
 const RULER_OFFSET = 40
 const MIN_ZOOM = 0.1
@@ -76,6 +75,7 @@ const history = useHistory(baseStore as unknown as MinimalBaseStore)
 const refreshElementSettings = (opt?: unknown) => {
   emitter.emit('refresh-element-settings', opt)
 }
+
 
 onMounted(() => {
   // 创建画布, 尺寸比手表大一些以显示边界
@@ -158,6 +158,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
 
+
   // 初始化容器样式
   const containerInit = document.querySelector('.canvas-container') as HTMLElement | null
   if (containerInit) {
@@ -168,9 +169,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (updateInterval) {
-    clearInterval(updateInterval)
-  }
 
   // 移除键盘事件监听
   window.removeEventListener('keydown', handleKeyDown)
@@ -189,6 +187,9 @@ defineExpose({
   updateZoom: () => zoomManagerRef.value?.updateZoom?.(),
   undo: () => history.undo(),
   redo: () => history.redo()
+  ,
+  canUndo: () => history.canUndo(),
+  canRedo: () => history.canRedo()
 })
 </script>
 
@@ -249,4 +250,5 @@ defineExpose({
   font-size: 14px;
   color: #666;
 }
+
 </style>

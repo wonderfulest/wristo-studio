@@ -5,4 +5,5 @@ export interface EditorState {
   backgroundColor: string
   showTimeSimulator: boolean
   showZoomControls: boolean
+  showHistoryControls: boolean
 }
