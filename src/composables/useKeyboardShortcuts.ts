@@ -4,6 +4,9 @@ import { useBaseElementStore } from '@/stores/elements/baseElement'
 import emitter from '@/utils/eventBus'
 import { useRoute } from 'vue-router'
 
+// 记录 Mousetrap 原始 stopCallback，便于还原
+let originalStop: ((e: KeyboardEvent, element: Element, combo: string) => boolean) | null = null
+
 export function useKeyboardShortcuts(): void {
   // baseElementStore 是 JS 实现，临时使用 any
   const baseStore = useBaseElementStore() as any
@@ -17,7 +20,10 @@ export function useKeyboardShortcuts(): void {
   // 阻止浏览器默认快捷键
   const preventDefaultShortcuts = (e: KeyboardEvent) => {
     // 如果不在编辑器页面，不阻止默认行为
-    if (!isInEditor()) return
+    if (!isInEditor()) {
+      console.log('[Shortcuts] skip preventDefault (not in editor)')
+      return
+    }
 
     // 如果是在输入框内，允许默认行为
     const target = e.target as HTMLElement | null
@@ -25,6 +31,7 @@ export function useKeyboardShortcuts(): void {
       target &&
       (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')
     ) {
+      console.log('[Shortcuts] allow default inside input/textarea/select')
       return
     }
 
@@ -44,7 +51,6 @@ export function useKeyboardShortcuts(): void {
       'command+p',
       'command+s',
       'command+w',
-      'command+z',
       'command+y',
     ]
 
@@ -53,17 +59,28 @@ export function useKeyboardShortcuts(): void {
     const isCommand = e.metaKey
     const shortcut = `${isCtrl ? 'ctrl+' : isCommand ? 'command+' : ''}${key}`
 
-    if (blockedShortcuts.includes(shortcut)) {
+    const willBlock = blockedShortcuts.includes(shortcut)
+    console.log('[Shortcuts] keydown', { key, isCtrl, isCommand, shortcut, willBlock })
+    if (willBlock) {
       e.preventDefault()
       // stopImmediatePropagation 在类型上存在于 Event，但此处确认为 KeyboardEvent 也具备
       ;(e as any).stopImmediatePropagation?.()
+      console.log('[Shortcuts] default prevented for', shortcut)
       return
     }
   }
 
   onMounted(() => {
+    console.log('[Shortcuts] onMounted: register Mousetrap bindings')
     // 在捕获阶段添加事件监听
     document.addEventListener('keydown', preventDefaultShortcuts as EventListener, { capture: true })
+
+    // 让 Mousetrap 在编辑器中对输入框也生效（避免输入框吞掉快捷键）
+    originalStop = Mousetrap.stopCallback
+    Mousetrap.stopCallback = (e: KeyboardEvent, element: Element, combo: string) => {
+      if (isInEditor()) return false
+      return originalStop ? originalStop(e, element, combo) : false
+    }
 
     // 绑定方向键
     Mousetrap.bind('left', () => {
@@ -116,6 +133,25 @@ export function useKeyboardShortcuts(): void {
       }
     })
 
+    // 撤销/重做快捷键（统一由此发出事件给画布处理）
+    Mousetrap.bind(['command+z', 'ctrl+z'], (e?: KeyboardEvent) => {
+      if (isInEditor()) {
+        console.log('[Shortcuts] undo via Mousetrap')
+        ;(emitter as any).emit('canvas-undo')
+        e?.preventDefault?.()
+        return false as unknown as void
+      }
+    })
+
+    Mousetrap.bind(['shift+command+z', 'shift+ctrl+z'], (e?: KeyboardEvent) => {
+      console.log('[Shortcuts] redo via Mousetrap (Shift+Z)')
+      if (isInEditor()) {
+        ;(emitter as any).emit('canvas-redo')
+        e?.preventDefault?.()
+        return false as unknown as void
+      }
+    })
+
     // 绑定 App Properties 快捷键
     Mousetrap.bind(['command+,', 'ctrl+,'], () => {
       if (isInEditor()) {
@@ -134,6 +170,7 @@ export function useKeyboardShortcuts(): void {
   })
 
   onUnmounted(() => {
+    console.log('[Shortcuts] onUnmounted: cleanup Mousetrap bindings')
     // 清理绑定
     Mousetrap.unbind([
       'left',
@@ -150,6 +187,10 @@ export function useKeyboardShortcuts(): void {
       'ctrl+c',
       'command+v',
       'ctrl+v',
+      'command+z',
+      'ctrl+z',
+      'shift+command+z',
+      'shift+ctrl+z',
       'command+,',
       'ctrl+,',
       'command+.',
@@ -157,5 +198,7 @@ export function useKeyboardShortcuts(): void {
     ])
     // 移除事件监听
     document.removeEventListener('keydown', preventDefaultShortcuts as EventListener, { capture: true })
+    // 恢复 Mousetrap 默认 stopCallback
+    Mousetrap.stopCallback = originalStop ?? ((e: KeyboardEvent, element: Element, combo: string) => false)
   })
 }

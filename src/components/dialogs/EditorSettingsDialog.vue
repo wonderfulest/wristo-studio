@@ -42,6 +42,18 @@
           />
         </div>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Ruler Guides</div>
+        <div class="setting-control">
+          <el-switch
+            v-model="showRulerGuides"
+            @change="handleRulerGuidesChange"
+            active-text="Show"
+            inactive-text="Hide"
+          />
+        </div>
+      </div>
     </div>
     <template #footer>
       <span class="dialog-footer">
@@ -56,6 +68,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useMessageStore } from '@/stores/message'
@@ -71,6 +84,8 @@ const backgroundColor = ref(editorStore.backgroundColor)
 const showTimeSimulator = ref(editorStore.showTimeSimulator)
 // 缩放控制显示状态
 const showZoomControls = ref(editorStore.showZoomControls)
+// Ruler guides
+const showRulerGuides = ref(true)
 
 // 处理背景色变化
 const handleBackgroundColorChange = (color) => {
@@ -92,6 +107,12 @@ const handleZoomControlsChange = (value) => {
       zoomControls.classList.add('zoom-controls-collapsed')
     }
   }
+}
+
+// 处理标尺辅助线显示
+const handleRulerGuidesChange = (value) => {
+  showRulerGuides.value = value
+  emitter.emit('toggle-ruler-guides', value)
 }
 
 // 保存设置
@@ -121,6 +142,8 @@ const openDialog = () => {
   backgroundColor.value = editorStore.backgroundColor
   showTimeSimulator.value = editorStore.showTimeSimulator
   showZoomControls.value = editorStore.showZoomControls
+  // 默认开启 ruler guides（可根据需要读取存储）
+  emitter.emit('toggle-ruler-guides', showRulerGuides.value)
   dialogVisible.value = true
 }
 

@@ -9,6 +9,7 @@
     <!-- 中间画布区域 -->
     <div class="center-area">
       <!-- 画布 -->
+      <CanvasRulers :watch-size="baseStore.WATCH_SIZE" :ruler-offset="40" />
       <div class="canvas-container">
         <CanvasView ref="canvasRef" />
       </div>
@@ -18,14 +19,7 @@
           <Setting />
         </el-icon>
       </div>
-      <!-- 标尺 -->
-      <div class="ruler-corner"></div>
-      <div class="ruler-horizontal-wrapper">
-        <canvas class="ruler-horizontal"></canvas>
-      </div>
-      <div class="ruler-vertical-wrapper">
-        <canvas class="ruler-vertical"></canvas>
-      </div>
+      
       <!-- 时间模拟器 -->
       <TimeSimulator v-if="baseStore.canvas != null && editorStore.showTimeSimulator" />
       <!-- 缩放控件 -->
@@ -62,6 +56,7 @@ import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { decodeElement } from '@/utils/elementCodec'
 import { getAddElement } from '@/utils/elementCodec/registry'
+import CanvasRulers from '@/components/CanvasRulers.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import ChangelogDialog from '@/components/dialogs/ChangelogDialog.vue'
 import appConfig from '@/config/appConfig.ts'
