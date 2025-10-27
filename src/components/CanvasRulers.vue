@@ -20,6 +20,9 @@ const hRef = ref<HTMLCanvasElement | null>(null)
 const vRef = ref<HTMLCanvasElement | null>(null)
 const extRef = ref<HTMLCanvasElement | null>(null)
 let showGuides = true
+let guideColor = '#ffffff'
+let guideAlphaMajor = 0.3
+let guideAlphaMinor = 0.16
 
 const drawHorizontal = (ctx: CanvasRenderingContext2D, width: number, zoom: number, canvasLeft: number, offset: number) => {
   ctx.clearRect(0, 0, width, offset)
@@ -125,11 +128,13 @@ const update = () => {
       const x = Math.round(i * zoom + canvasLeft)
       const screenX = x + innerLeft
       extCtx.beginPath()
-      extCtx.strokeStyle = i % 100 === 0 ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.06)'
+      extCtx.strokeStyle = guideColor
+      extCtx.globalAlpha = i % 100 === 0 ? guideAlphaMajor : guideAlphaMinor
       extCtx.lineWidth = 1
       extCtx.moveTo(screenX, innerTop)
       extCtx.lineTo(screenX, innerTop + innerHeight)
       extCtx.stroke()
+      extCtx.globalAlpha = 1
     }
     // 横向延伸线（来自垂直标尺的刻度）
     const startY = -canvasTop / zoom
@@ -138,11 +143,13 @@ const update = () => {
       const y = Math.round(i * zoom + canvasTop)
       const screenY = y + innerTop
       extCtx.beginPath()
-      extCtx.strokeStyle = i % 100 === 0 ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.06)'
+      extCtx.strokeStyle = guideColor
+      extCtx.globalAlpha = i % 100 === 0 ? guideAlphaMajor : guideAlphaMinor
       extCtx.lineWidth = 1
       extCtx.moveTo(innerLeft, screenY)
       extCtx.lineTo(innerLeft + innerWidth, screenY)
       extCtx.stroke()
+      extCtx.globalAlpha = 1
     }
   }
 }
@@ -190,6 +197,13 @@ onMounted(() => {
     showGuides = Boolean(v)
     update()
   })
+  emitter.on('ruler-guides-style', (payload: unknown) => {
+    const p = payload as { color?: string; major?: number; minor?: number }
+    if (p.color) guideColor = p.color
+    if (typeof p.major === 'number') guideAlphaMajor = p.major
+    if (typeof p.minor === 'number') guideAlphaMinor = p.minor
+    update()
+  })
 })
 
 onUnmounted(() => {
@@ -197,6 +211,7 @@ onUnmounted(() => {
   const centerArea = document.querySelector('.center-area') as HTMLElement | null
   centerArea?.removeEventListener('scroll', update)
   emitter.off('toggle-ruler-guides')
+  emitter.off('ruler-guides-style')
 })
 
 watch(() => props.watchSize, () => update())
@@ -208,6 +223,8 @@ watch(() => props.watchSize, () => update())
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  z-index: 10;
   pointer-events: none;
 }
 .ruler-horizontal {
@@ -216,6 +233,7 @@ watch(() => props.watchSize, () => update())
   left: 40px;
   right: 0;
   height: 40px;
+  z-index: 10;
   pointer-events: auto;
 }
 .ruler-vertical {
@@ -224,6 +242,7 @@ watch(() => props.watchSize, () => update())
   left: 0;
   bottom: 0;
   width: 40px;
+  z-index: 10;
   pointer-events: auto;
 }
 .ruler-extensions {
@@ -232,6 +251,7 @@ watch(() => props.watchSize, () => update())
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 10;
   pointer-events: none;
 }
 </style>

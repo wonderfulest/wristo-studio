@@ -316,7 +316,6 @@ export const useBaseStore = defineStore('baseStore', {
       const editorStore = useEditorStore()
       const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
       
-
       // 创建表盘背景圆
       this.watchFaceCircle = new Circle({
         eleType: 'global',
@@ -328,7 +327,14 @@ export const useBaseStore = defineStore('baseStore', {
         fill: this.$state.themeBackgroundColors[this.$state.currentThemeIndex] || '#000000',
         backgroundColor: 'transparent',
         selectable: false,
-        evented: true
+        evented: true,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
+        hasBorders: false,
+        hasControls: false
       }) as unknown as AnyObject
 
       // 设置背景图片

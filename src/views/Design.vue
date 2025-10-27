@@ -9,10 +9,10 @@
     <!-- 中间画布区域 -->
     <div class="center-area">
       <!-- 画布 -->
-      <CanvasRulers :watch-size="baseStore.WATCH_SIZE" :ruler-offset="40" />
       <div class="canvas-container">
         <CanvasView ref="canvasRef" />
       </div>
+      <CanvasRulers :watch-size="baseStore.WATCH_SIZE" :ruler-offset="40" />
       <!-- 编辑器设置按钮 -->
       <div class="editor-settings-btn" @click="openEditorSettings">
         <el-icon>
@@ -301,6 +301,23 @@ const openEditorSettings = () => {
 }
 </script>
 
+<style scoped>
+.center-area {
+  position: relative;
+}
+.canvas-container {
+  position: relative;
+  z-index: 0;
+}
+/* Ensure Fabric canvas layers are below rulers overlay */
+.center-area .canvas-container canvas {
+  position: absolute;
+  z-index: 1;
+}
+.center-area .canvas-container .upper-canvas {
+  z-index: 2;
+}
+</style>
 <style scoped>
 .left-panel {
   width: 300px;

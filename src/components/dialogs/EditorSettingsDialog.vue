@@ -54,6 +54,69 @@
           />
         </div>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Key Guidelines</div>
+        <div class="setting-control">
+          <el-switch
+            v-model="showKeyGuidelines"
+            @change="handleKeyGuidelinesToggle"
+            active-text="Show"
+            inactive-text="Hide"
+          />
+          <el-select
+            v-model="keyGuidelineDivisions"
+            :disabled="!showKeyGuidelines"
+            placeholder="Divisions"
+            style="width: 140px;"
+            @change="handleKeyGuidelinesDivisionsChange"
+          >
+            <el-option :label="'2'" :value="2" />
+            <el-option :label="'3'" :value="3" />
+            <el-option :label="'4'" :value="4" />
+            <el-option :label="'5'" :value="5" />
+            <el-option :label="'6'" :value="6" />
+            <el-option :label="'8'" :value="8" />
+          </el-select>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Grid Color</div>
+        <div class="setting-control">
+          <el-color-picker
+            v-model="rulerGuidesColor"
+            @change="applyRulerGuidesStyle"
+          />
+          <div class="color-value">{{ rulerGuidesColor }}</div>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Major Opacity</div>
+        <div class="setting-control">
+          <el-input-number
+            v-model="rulerGuidesMajor"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            @change="applyRulerGuidesStyle"
+          />
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Minor Opacity</div>
+        <div class="setting-control">
+          <el-input-number
+            v-model="rulerGuidesMinor"
+            :min="0"
+            :max="1"
+            :step="0.01"
+            @change="applyRulerGuidesStyle"
+          />
+        </div>
+      </div>
     </div>
     <template #footer>
       <span class="dialog-footer">
@@ -66,8 +129,8 @@
   </el-dialog>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref } from 'vue'
 import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
 import { useEditorStore } from '@/stores/editorStore'
@@ -76,29 +139,37 @@ import { useMessageStore } from '@/stores/message'
 const baseStore = useBaseStore()
 const editorStore = useEditorStore()
 const messageStore = useMessageStore()
-const dialogVisible = ref(false)
+const dialogVisible = ref<boolean>(false)
 
 // 背景色
-const backgroundColor = ref(editorStore.backgroundColor)
+const backgroundColor = ref<string>(editorStore.backgroundColor)
 // 时间模拟器显示状态
-const showTimeSimulator = ref(editorStore.showTimeSimulator)
+const showTimeSimulator = ref<boolean>(editorStore.showTimeSimulator)
 // 缩放控制显示状态
-const showZoomControls = ref(editorStore.showZoomControls)
+const showZoomControls = ref<boolean>(editorStore.showZoomControls)
 // Ruler guides
-const showRulerGuides = ref(true)
+const showRulerGuides = ref<boolean>(true)
+// Ruler guides style
+const rulerGuidesColor = ref<string>('#ffffff')
+const rulerGuidesMajor = ref<number>(0.3)
+const rulerGuidesMinor = ref<number>(0.16)
+
+// Key guidelines
+const showKeyGuidelines = ref<boolean>(false)
+const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(4)
 
 // 处理背景色变化
-const handleBackgroundColorChange = (color) => {
+const handleBackgroundColorChange = (color: string) => {
   backgroundColor.value = color
 }
 
 // 处理时间模拟器显示状态变化
-const handleTimeSimulatorChange = (value) => {
+const handleTimeSimulatorChange = (value: boolean) => {
   showTimeSimulator.value = value
 }
 
 // 处理缩放控制显示状态变化
-const handleZoomControlsChange = (value) => {
+const handleZoomControlsChange = (value: boolean) => {
   showZoomControls.value = value
   // 如果设置为隐藏，则触发收起状态
   if (!value) {
@@ -110,9 +181,34 @@ const handleZoomControlsChange = (value) => {
 }
 
 // 处理标尺辅助线显示
-const handleRulerGuidesChange = (value) => {
+const handleRulerGuidesChange = (value: boolean) => {
   showRulerGuides.value = value
   emitter.emit('toggle-ruler-guides', value)
+}
+
+// 应用标尺网格样式
+const applyRulerGuidesStyle = () => {
+  emitter.emit('ruler-guides-style', {
+    color: rulerGuidesColor.value,
+    major: Number(rulerGuidesMajor.value),
+    minor: Number(rulerGuidesMinor.value),
+  })
+}
+
+// Key guidelines handlers
+const handleKeyGuidelinesToggle = (value: boolean) => {
+  showKeyGuidelines.value = value
+  emitter.emit('toggle-key-guidelines', value)
+  if (value) {
+    emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
+  }
+}
+
+const handleKeyGuidelinesDivisionsChange = (value: number) => {
+  const valid: ReadonlyArray<number> = [2, 3, 4, 5, 6, 8]
+  if (!valid.includes(value)) return
+  keyGuidelineDivisions.value = value as 2 | 3 | 4 | 5 | 6 | 8
+  emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
 }
 
 // 保存设置
@@ -144,6 +240,11 @@ const openDialog = () => {
   showZoomControls.value = editorStore.showZoomControls
   // 默认开启 ruler guides（可根据需要读取存储）
   emitter.emit('toggle-ruler-guides', showRulerGuides.value)
+  // 同步一次网格样式
+  applyRulerGuidesStyle()
+  // 同步关键辅助线配置
+  emitter.emit('toggle-key-guidelines', showKeyGuidelines.value)
+  emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
   dialogVisible.value = true
 }
 
