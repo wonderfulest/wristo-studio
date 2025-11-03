@@ -1,16 +1,12 @@
 <template>
   <div class="settings-section">
-    <h3>进度环设置</h3>
+    <h3>Goal Arc Settings</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px" :rules="rules">
-      <el-form-item label="目标属性" prop="goalProperty" :rules="[{ required: true, message: '请选择目标属性', trigger: 'change' }]">
-        <el-select v-model="element.goalProperty" @change="updateElement" placeholder="选择目标属性">
-          <el-option v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal')" :key="key" :label="prop.title" :value="key" />
-        </el-select>
-      </el-form-item>
+      <GoalPropertyField v-model="element.goalProperty" @change="updateElement" />
       <!-- 位置设置 -->
       <div class="setting-item">
-        <label>位置</label>
+        <label>Position</label>
         <PositionInputs 
           :left="element.left"
           :top="element.top"
@@ -21,22 +17,22 @@
       </div>
       <!-- 尺寸属性 -->
       <div class="setting-item">
-        <label>尺寸</label>
+        <label>Size</label>
         <div class="size-inputs">
           <div class="input-group">
-            <label>前景半径</label>
+            <label>Foreground Radius</label>
             <input type="number" :value="mainRing?.radius" @input="(e) => (mainRing.radius = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
-            <label>背景半径</label>
+            <label>Background Radius</label>
             <input type="number" :value="bgRing?.radius" @input="(e) => (bgRing.radius = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
-            <label>前景线宽</label>
+            <label>Foreground Stroke Width</label>
             <input type="number" :value="mainRing?.strokeWidth" @input="(e) => (mainRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
-            <label>背景线宽</label>
+            <label>Background Stroke Width</label>
             <input type="number" :value="bgRing?.strokeWidth" @input="(e) => (bgRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
           </div>
         </div>
@@ -45,37 +41,37 @@
       <!-- 角度设置 -->
       <div class="setting-item">
         <div class="setting-header">
-          <label>角度设置</label>
+          <label>Angle Settings</label>
           <el-tooltip :content="tooltipContent" placement="top" effect="light" :show-after="0" raw-content>
             <el-icon class="help-icon"><Warning /></el-icon>
           </el-tooltip>
         </div>
         <div class="angle-inputs">
           <div class="input-group">
-            <label>起始角度</label>
+            <label>Start Angle</label>
             <input type="number" :value="element.startAngle" @input="(e) => (element.startAngle = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
-            <label>结束角度</label>
+            <label>End Angle</label>
             <input type="number" :value="element.endAngle" @input="(e) => (element.endAngle = Number(e.target.value))" @change="updateElement" />
           </div>
         </div>
         <!-- 添加方向选择 -->
         <div class="direction-group">
-          <label>方向</label>
+          <label>Direction</label>
           <el-radio-group v-model="element.counterClockwise" @change="updateElement">
-            <el-radio :label="false">顺时针</el-radio>
-            <el-radio :label="true">逆时针</el-radio>
+            <el-radio :label="false">Clockwise</el-radio>
+            <el-radio :label="true">Counterclockwise</el-radio>
           </el-radio-group>
         </div>
       </div>
 
       <!-- 颜色属性 -->
       <div class="setting-item">
-        <label>颜色</label>
+        <label>Colors</label>
         <div class="color-inputs">
           <div class="input-group">
-            <label>前景色</label>
+            <label>Foreground Color</label>
             <ColorPicker
               v-model="mainRing.stroke"
               @change="
@@ -88,7 +84,7 @@
               " />
           </div>
           <div class="input-group">
-            <label>背景色</label>
+            <label>Background Color</label>
             <ColorPicker
               v-model="bgRing.stroke"
               @change="
@@ -105,7 +101,7 @@
 
       <!-- 进度值（用于测试） -->
       <div class="setting-item">
-        <label>进度值</label>
+        <label>Progress</label>
         <input
           type="range"
           :value="goalArcStore.progressMap.get(element.id) * 100"
@@ -131,9 +127,9 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import { DataTypeOptions } from '@/config/settings'
 import { ElTooltip } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
-import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 
@@ -146,7 +142,6 @@ const props = defineProps({
 
 const baseStore = useBaseStore()
 const goalArcStore = useGoalArcStore()
-const propertiesStore = usePropertiesStore()
 
 const formRef = ref(null)
 
@@ -161,15 +156,15 @@ const bgRing = computed(() => props.element.getObjects().find((obj) => obj.id.en
 // 定义提示内容，使用 HTML 格式
 const tooltipContent = `
   <div class="tooltip-content">
-    <p>1. 3点钟为0度，6点钟为90度，9点钟为180度，12点钟为270度</p>
-    <p>2. 顺时针方向增加角度</p>
-    <p>3. 角度范围0到359</p>
-    <p>4. 开始和结束的角度不应该相同</p>
+    <p>1. 3 o'clock is 0°, 6 o'clock is 90°, 9 o'clock is 180°, 12 o'clock is 270°</p>
+    <p>2. Angles increase clockwise</p>
+    <p>3. Angle range is 0 to 359</p>
+    <p>4. Start and end angles should not be equal</p>
   </div>
 `
 
 const rules = {
-  goalProperty: [{ required: true, message: '请选择目标属性', trigger: 'change' }]
+  goalProperty: [{ required: true, message: 'Please select a goal property', trigger: 'change' }]
 }
 
 // 更新元素
@@ -196,7 +191,7 @@ const updateElement = async () => {
     })
 
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('Form validation failed:', error)
   }
 }
 
@@ -227,7 +222,7 @@ const handleClose = async () => {
     await formRef.value.validate()
     emit('close')
   } catch (error) {
-    ElMessage.warning('请先完成必填项设置')
+    ElMessage.warning('Please complete the required fields first')
   }
 }
 

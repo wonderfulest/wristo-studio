@@ -8,6 +8,12 @@ export const useEditorStore = defineStore('editor', {
     showTimeSimulator: false,
     showZoomControls: false,
     showHistoryControls: true,
+    showRulerGuides: true,
+    rulerGuidesColor: '#ffffff',
+    rulerGuidesMajor: 0.3,
+    rulerGuidesMinor: 0.16,
+    showKeyGuidelines: false,
+    keyGuidelineDivisions: 4,
   }),
 
   getters: {
@@ -40,6 +46,12 @@ export const useEditorStore = defineStore('editor', {
       if (settings.showTimeSimulator !== undefined) this.$state.showTimeSimulator = settings.showTimeSimulator
       if (settings.showZoomControls !== undefined) this.$state.showZoomControls = settings.showZoomControls
       if (settings.showHistoryControls !== undefined) this.$state.showHistoryControls = settings.showHistoryControls
+      if (settings.showRulerGuides !== undefined) this.$state.showRulerGuides = settings.showRulerGuides
+      if (settings.rulerGuidesColor !== undefined) this.$state.rulerGuidesColor = settings.rulerGuidesColor
+      if (settings.rulerGuidesMajor !== undefined) this.$state.rulerGuidesMajor = settings.rulerGuidesMajor
+      if (settings.rulerGuidesMinor !== undefined) this.$state.rulerGuidesMinor = settings.rulerGuidesMinor
+      if (settings.showKeyGuidelines !== undefined) this.$state.showKeyGuidelines = settings.showKeyGuidelines
+      if (settings.keyGuidelineDivisions !== undefined) this.$state.keyGuidelineDivisions = settings.keyGuidelineDivisions
     },
 
     // 重置所有设置
@@ -49,6 +61,12 @@ export const useEditorStore = defineStore('editor', {
       this.$state.showTimeSimulator = true
       this.$state.showZoomControls = true
       this.$state.showHistoryControls = true
+      this.$state.showRulerGuides = true
+      this.$state.rulerGuidesColor = '#ffffff'
+      this.$state.rulerGuidesMajor = 0.3
+      this.$state.rulerGuidesMinor = 0.16
+      this.$state.showKeyGuidelines = false
+      this.$state.keyGuidelineDivisions = 4
     },
   }
 })

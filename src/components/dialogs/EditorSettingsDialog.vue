@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    title="编辑器设置"
+    title="Editor Settings"
     v-model="dialogVisible"
     width="500px"
     :close-on-click-modal="false"
@@ -8,7 +8,7 @@
   >
     <div class="settings-container">
       <div class="setting-item">
-        <div class="setting-label">编辑区背景色</div>
+        <div class="setting-label">Canvas Background</div>
         <div class="setting-control">
           <el-color-picker
             v-model="backgroundColor"
@@ -20,37 +20,37 @@
       </div>
       
       <div class="setting-item">
-        <div class="setting-label">时间模拟器</div>
+        <div class="setting-label">Time Simulator</div>
         <div class="setting-control">
           <el-switch
             v-model="showTimeSimulator"
             @change="handleTimeSimulatorChange"
-            active-text="显示"
-            inactive-text="隐藏"
+            active-text="Show"
+            inactive-text="Hide"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">缩放控制</div>
+        <div class="setting-label">Zoom Controls</div>
         <div class="setting-control">
           <el-switch
             v-model="showZoomControls"
             @change="handleZoomControlsChange"
-            active-text="显示"
-            inactive-text="隐藏"
+            active-text="Show"
+            inactive-text="Hide"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">撤销/回退控制</div>
+        <div class="setting-label">History Controls</div>
         <div class="setting-control">
           <el-switch
             v-model="showHistoryControls"
             @change="handleHistoryControlsChange"
-            active-text="显示"
-            inactive-text="隐藏"
+            active-text="Show"
+            inactive-text="Hide"
           />
         </div>
       </div>
@@ -132,9 +132,9 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
         <el-button type="primary" @click="saveSettings">
-          确定
+          Confirm
         </el-button>
       </span>
     </template>
@@ -162,15 +162,15 @@ const showZoomControls = ref<boolean>(editorStore.showZoomControls)
 // 撤销/回退控制显示状态
 const showHistoryControls = ref<boolean>(editorStore.showHistoryControls)
 // Ruler guides
-const showRulerGuides = ref<boolean>(true)
+const showRulerGuides = ref<boolean>(editorStore.showRulerGuides)
 // Ruler guides style
-const rulerGuidesColor = ref<string>('#ffffff')
-const rulerGuidesMajor = ref<number>(0.3)
-const rulerGuidesMinor = ref<number>(0.16)
+const rulerGuidesColor = ref<string>(editorStore.rulerGuidesColor)
+const rulerGuidesMajor = ref<number>(editorStore.rulerGuidesMajor)
+const rulerGuidesMinor = ref<number>(editorStore.rulerGuidesMinor)
 
 // Key guidelines
-const showKeyGuidelines = ref<boolean>(false)
-const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(4)
+const showKeyGuidelines = ref<boolean>(editorStore.showKeyGuidelines)
+const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelineDivisions)
 
 // 处理背景色变化
 const handleBackgroundColorChange = (color: string) => {
@@ -238,17 +238,23 @@ const saveSettings = () => {
       backgroundColor: backgroundColor.value,
       showTimeSimulator: showTimeSimulator.value,
       showZoomControls: showZoomControls.value,
-      showHistoryControls: showHistoryControls.value
+      showHistoryControls: showHistoryControls.value,
+      showRulerGuides: showRulerGuides.value,
+      rulerGuidesColor: rulerGuidesColor.value,
+      rulerGuidesMajor: Number(rulerGuidesMajor.value),
+      rulerGuidesMinor: Number(rulerGuidesMinor.value),
+      showKeyGuidelines: showKeyGuidelines.value,
+      keyGuidelineDivisions: keyGuidelineDivisions.value,
     })
 
     // 更新画布背景元素
     baseStore.updateBackgroundElements()
     
-    messageStore.success('设置已保存')
+    messageStore.success('Settings saved')
     dialogVisible.value = false
   } catch (error) {
-    console.error('保存设置失败:', error)
-    messageStore.error('保存设置失败')
+    console.error('Failed to save settings:', error)
+    messageStore.error('Failed to save settings')
   }
 }
 
@@ -259,11 +265,17 @@ const openDialog = () => {
   showTimeSimulator.value = editorStore.showTimeSimulator
   showZoomControls.value = editorStore.showZoomControls
   showHistoryControls.value = editorStore.showHistoryControls
-  // 默认开启 ruler guides（可根据需要读取存储）
+  // 同步 ruler guides
+  showRulerGuides.value = editorStore.showRulerGuides
+  rulerGuidesColor.value = editorStore.rulerGuidesColor
+  rulerGuidesMajor.value = editorStore.rulerGuidesMajor
+  rulerGuidesMinor.value = editorStore.rulerGuidesMinor
   emitter.emit('toggle-ruler-guides', showRulerGuides.value)
   // 同步一次网格样式
   applyRulerGuidesStyle()
   // 同步关键辅助线配置
+  showKeyGuidelines.value = editorStore.showKeyGuidelines
+  keyGuidelineDivisions.value = editorStore.keyGuidelineDivisions
   emitter.emit('toggle-key-guidelines', showKeyGuidelines.value)
   emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
   dialogVisible.value = true

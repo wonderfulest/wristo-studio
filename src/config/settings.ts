@@ -7,17 +7,3 @@ export { DateFormatConstants, DateFormatOptions } from './elements/options/dateF
 export { LayoutOptions } from './elements/options/layout'
 export { DataTypeOptions } from './elements/options/dataTypes'
 export { HourHandOptions, MinuteHandOptions, SecondHandOptions, Ticks12Options, Ticks60Options, RomansOptions } from './elements/options/analog'
-
-// moved to './elements/options/typography'
-
-// moved to './elements/options/align'
-
-// moved to './elements/options/timeFormats'
-
-// moved to './elements/options/dateFormats'
-
-// moved to './elements/options/layout'
-
-// moved to './elements/options/dataTypes'
-
-// moved to './elements/options/analog'

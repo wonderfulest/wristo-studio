@@ -22,17 +22,14 @@ export const useBatteryStore = defineStore('batteryElement', {
 
   actions: {
     addElement(config: BatteryElementConfig) {
-
-      console.log('addElement battery', config)
       const id = nanoid()
-
       const width = config.width || 28
       const height = config.height || 18
       const headWidth = Math.round(config.headWidth || width * 0.08)
       const headHeight = Math.round(config.headHeight || height * 0.5)
-      const padding = Math.round(config.padding || 4)
+      const padding = Math.round(config.padding || 2)
       const level = config.level || 0.5
-      const headGap = Math.round(config.headGap || 2)
+      const headGap = Math.round(config.headGap || 1)
 
       const bodyStrokeWidth = config.bodyStrokeWidth || 2
       const bodyStroke = config.bodyStroke || '#ffffff'

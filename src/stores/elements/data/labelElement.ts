@@ -37,7 +37,6 @@ export const useLabelStore = defineStore('labelElement', {
         fill: (config.fill ?? this.defaults.fill) as any,
         fontSize: (config.fontSize ?? this.defaults.fontSize) as any,
         fontFamily: (config.fontFamily ?? this.defaults.fontFamily) as any,
-        selectable: true,
         dataProperty: config.dataProperty ?? null,
         goalProperty: config.goalProperty ?? null,
       } as any)

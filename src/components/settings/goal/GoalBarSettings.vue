@@ -9,22 +9,10 @@
       status-icon
       validate-on-rule-change
     >
-      <el-form-item class="goal-field" label="Goal Property" prop="goalProperty" required :show-message="true" inline-message>
-        <el-select 
-          v-model="element.goalProperty" 
-          @change="updateElement"
-          placeholder="Select goal property"
-          clearable
-          filterable
-        >
-          <el-option 
-            v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal')" 
-            :key="key" 
-            :label="prop.title" 
-            :value="key" 
-          />
-        </el-select>
-      </el-form-item>
+      <GoalPropertyField
+        v-model="element.goalProperty"
+        @change="updateElement"
+      />
       <el-form-item label="Width">
         <el-input-number 
           v-model="element.width" 
@@ -130,6 +118,7 @@ import { DataTypeOptions, originXOptions } from '@/config/settings'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 

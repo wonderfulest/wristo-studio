@@ -207,3 +207,25 @@ input[type='range'] {
   padding-top: 0;
   padding-bottom: 0;
 }
+
+/* =====================
+   Global required asterisk and label alignment for settings pages
+   ===================== */
+.settings-section .el-form-item__label {
+  position: relative;
+  display: flex;
+  align-items: center; /* vertical align text */
+  justify-content: flex-start;
+  text-align: left;
+  padding-left: 0;
+  box-sizing: border-box;
+}
+
+.settings-section .el-form-item.is-required > .el-form-item__label:before,
+.settings-section .el-form-item.is-required > .el-form-item__label-wrap > .el-form-item__label:before {
+  content: '*' !important;
+  position: absolute;
+  left: -10px; /* overflow to the left */
+  margin: 0;
+  color: var(--el-color-danger);
+}

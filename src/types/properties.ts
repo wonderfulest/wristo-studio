@@ -7,6 +7,7 @@ export type PropertyType =
   | 'select'
   | 'goal'
   | 'data'
+  | 'chart'
 
 export interface PropertyOption {
   label: string

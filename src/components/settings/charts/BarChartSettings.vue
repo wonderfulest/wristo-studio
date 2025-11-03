@@ -5,15 +5,10 @@
       :model="element" 
       label-position="left" 
       label-width="100px"
-      :rules="rules"
       status-icon
       validate-on-rule-change
     >
-      <el-form-item label="图表属性" prop="chartProperty" required :show-message="true" inline-message>
-        <el-select v-model="element.chartProperty" @change="updateElement" placeholder="Select chart property">
-          <el-option v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'chart')" :key="key" :label="prop.title" :value="key" />
-        </el-select>
-      </el-form-item>
+      <ChartPropertyField v-model="element.chartProperty" @change="updateElement" />
       <el-form-item label="位置">
         <PositionInputs 
           :left="element.left"
@@ -213,13 +208,13 @@
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted, nextTick, watch } from 'vue'
+import { ref, defineProps, onMounted, nextTick, watch, computed } from 'vue'
 import { useBarChartStore } from '@/stores/elements/charts/barChartElement'
 import { useBaseStore } from '@/stores/baseStore'
-import { fontSizes, originXOptions } from '@/config/settings'
+import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import { usePropertiesStore } from '@/stores/properties'
+import ChartPropertyField from '@/components/settings/common/ChartPropertyField.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 
@@ -233,13 +228,8 @@ const props = defineProps({
 const formRef = ref(null)
 const barChartStore = useBarChartStore()
 const baseStore = useBaseStore()
-const propertiesStore = usePropertiesStore()
 
-const rules = {
-  chartProperty: [
-    { required: true, message: 'Please select a chart property, if none, please add it in Actions -> Add Property -> Chart.', trigger: 'change' }
-  ]
-}
+
 // 获取画布上的实际元素
 const getFabricElement = () => {
   if (!baseStore.canvas) return null

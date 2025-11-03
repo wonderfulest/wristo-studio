@@ -6,12 +6,13 @@
         readonly
         :class="{ 'transparent-input': modelValue === 'transparent' }"
         :style="{
-          backgroundColor: modelValue === 'transparent' ? 'transparent' : modelValue
+          backgroundColor: modelValue === 'transparent' ? 'transparent' : modelValue,
+          color: modelValue === 'transparent' ? '#666' : textColor
         }" />
     </div>
     <div v-if="isOpen" class="color-picker">
       <div class="tabs">
-        <div class="tab" :class="{ active: true }">纯色</div>
+        <div class="tab" :class="{ active: true }">Solid</div>
       </div>
       <!-- 颜色矩阵 -->
       <div class="color-matrix">
@@ -21,9 +22,9 @@
       <!-- 当前使用的颜色 -->
       <div v-if="colorProperties.length > 0" class="recent-colors">
         <div class="recent-colors-header">
-          <div class="recent-colors-title">当前设置的颜色</div>
+          <div class="recent-colors-title">Current Colors</div>
           <button class="toggle-list-btn" @click="toggleColorList">
-            {{ showColorList ? '收起' : '展开' }}
+            {{ showColorList ? 'Collapse' : 'Expand' }}
           </button>
         </div>
         <div v-if="!showColorList" class="recent-colors-grid">
@@ -152,6 +153,29 @@ const colorProperties = computed(() => {
     }))
 })
 
+// Helper: convert hex string to RGB
+const hexToRgb = (hex) => {
+  if (!hex) return null
+  const h = hex.startsWith('#') ? hex.slice(1) : (hex.startsWith('0x') ? hex.slice(2) : hex)
+  if (h.length !== 6) return null
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return { r, g, b }
+}
+
+// Dynamic text color for the input based on luminance of background color
+const textColor = computed(() => {
+  if (props.modelValue === 'transparent') return '#222222'
+  const current = typeof props.modelValue === 'string' && props.modelValue
+    ? (props.modelValue.startsWith('#') ? props.modelValue : (props.modelValue.startsWith('0x') ? `#${props.modelValue.slice(2)}` : hexColor.value))
+    : hexColor.value
+  const rgb = hexToRgb(current)
+  if (!rgb) return '#222222'
+  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255
+  return luminance < 0.5 ? '#dddddd' : '#222222'
+})
+
 // 切换颜色列表展开/收起
 const toggleColorList = () => {
   showColorList.value = !showColorList.value
@@ -208,7 +232,7 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue !== hexColor.value) {
-      hexColor.value = newValue === 'transparent' ? '#000000' : newValue
+      hexColor.value = newValue === 'transparent' ? '#222222' : newValue
     }
   }
 )

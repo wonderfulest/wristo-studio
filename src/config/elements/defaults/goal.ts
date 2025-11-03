@@ -24,7 +24,7 @@ export const DEFAULT_GOALARC_CONFIG: GoalArcElementConfig & EDITOR_ELEMENT = Obj
   label: 'Goal Arc',
   eleType: 'goalArc' as const,
   startAngle: 0,
-  endAngle: 360,
+  endAngle: 359,
   radius: 50,
   bgRadius: 50,
   strokeWidth: 2,

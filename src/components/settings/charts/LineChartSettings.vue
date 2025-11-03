@@ -6,11 +6,7 @@
       label-position="left" 
       label-width="100px"
     >
-      <el-form-item label="图表属性" prop="chartProperty" :rules="[{ required: true, message: '请选择图表属性', trigger: 'change' }]">
-        <el-select v-model="element.chartProperty" @change="updateElement" placeholder="选择图表属性">
-          <el-option v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'chart')" :key="key" :label="prop.title" :value="key" />
-        </el-select>
-      </el-form-item>
+      <ChartPropertyField v-model="element.chartProperty" @change="updateElement" />
 
       <el-form-item label="位置">
         <PositionInputs 
@@ -261,7 +257,8 @@ import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import { usePropertiesStore } from '@/stores/properties'
+import ChartPropertyField from '@/components/settings/common/ChartPropertyField.vue'
+import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {
@@ -273,7 +270,6 @@ const props = defineProps({
 const formRef = ref(null)
 const lineChartStore = useLineChartStore()
 const baseStore = useBaseStore()
-const propertiesStore = usePropertiesStore()
 
 // 计算可用的字体大小（最大到96）
 const availableFontSizes = computed(() => {

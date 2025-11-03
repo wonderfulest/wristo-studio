@@ -1,22 +1,10 @@
 <template>
   <div class="settings-section">
     <el-form ref="formRef" :model="element" label-position="left" label-width="120px">
-      <el-form-item label="Goal Property" prop="goalProperty" :rules="[{ required: true, message: 'Please select a goal property', trigger: 'change' }]">
-        <el-select
-          v-model="element.goalProperty"
-          placeholder="Select goal property"
-          clearable
-          filterable
-          @change="updateElement"
-        >
-          <el-option
-            v-for="[key, prop] in goalOptions"
-            :key="key"
-            :label="prop.title"
-            :value="key"
-          />
-        </el-select>
-      </el-form-item>
+      <GoalPropertyField
+        v-model="element.goalProperty"
+        @change="updateElement"
+      />
 
       <el-form-item label="Width">
         <el-input-number v-model="element.designWidth" :min="50" :max="600" @change="updateElement" />
@@ -65,19 +53,17 @@
 import { computed, ref } from 'vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useGoalSegmentBarStore } from '@/stores/elements/goal/goalSegmentBarElement'
-import { usePropertiesStore } from '@/stores/properties'
 import type { FabricElement } from '@/types/element'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import { originXOptions } from '@/config/settings'
+import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 
 const props = defineProps<{ element: FabricElement }>()
 const emit = defineEmits<{ (e: 'update'): void }>()
 
 const formRef = ref()
 const store = useGoalSegmentBarStore()
-const propertiesStore = usePropertiesStore()
-
-const goalOptions = computed(() => Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal'))
+ 
 
 const originXModel = computed<string>({
   get: () => {

@@ -31,7 +31,6 @@ export const useDataStore = defineStore('dataElement', {
         fill: config.fill as any,
         fontSize: config.fontSize as any,
         fontFamily: config.fontFamily as any,
-        selectable: true,
         dataProperty: config.dataProperty ?? undefined,
         goalProperty: config.goalProperty ?? undefined,
         metricSymbol: (config as any).metricSymbol ?? '',

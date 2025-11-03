@@ -6,36 +6,17 @@
       label-position="left" 
       label-width="100px"
     >
-      <el-form-item label="数据属性" v-if="element.dataProperty" prop="dataProperty" :rules="[{ required: true, message: '请选择数据属性', trigger: 'change' }]">
-        <el-select 
-          v-model="element.dataProperty" 
-          @change="updateElement"
-          placeholder="选择数据属性"
-        >
-          <el-option 
-            v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'data')" 
-            :key="key" 
-            :label="prop.title" 
-            :value="key" 
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="目标属性" v-if="element.goalProperty" prop="goalProperty" :rules="[{ required: true, message: '请选择目标属性', trigger: 'change' }]">
-        <el-select 
-          v-model="element.goalProperty" 
-          @change="updateElement"
-          placeholder="选择目标属性"
-        >
-          <el-option 
-            v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal')" 
-            :key="key" 
-            :label="prop.title" 
-            :value="key" 
-          />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="位置">
+      <DataPropertyField
+        v-if="!element.goalProperty"
+        v-model="element.dataProperty"
+        @change="updateElement"
+      />
+      <GoalPropertyField
+        v-if="element.goalProperty"
+        v-model="element.goalProperty"
+        @change="updateElement"
+      />
+      <el-form-item label="Position">
         <PositionInputs 
           :left="element.left"
           :top="element.top"
@@ -45,7 +26,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="对齐方式">
+      <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions" 
           v-model="element.originX"
@@ -53,7 +34,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="字体大小">
+      <el-form-item label="Font Size">
         <el-select 
           v-model="element.fontSize" 
           @change="updateElement"
@@ -67,14 +48,14 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="字体颜色">
+      <el-form-item label="Text Color">
         <color-picker 
           v-model="element.fill" 
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="字体">
+      <el-form-item label="Font">
         <font-picker 
           v-model="element.fontFamily" 
           @change="updateElement" 
@@ -94,6 +75,8 @@ import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
+import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
+import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 
@@ -121,7 +104,7 @@ const updateElement = async () => {
       top: props.element.top
     })
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('Form validation failed:', error)
   }
 }
 
@@ -131,7 +114,7 @@ const handleClose = async () => {
     await formRef.value.validate()
     emit('close')
   } catch (error) {
-    ElMessage.warning('请先完成必填项设置')
+    ElMessage.warning('Please complete the required fields first')
   }
 }
 

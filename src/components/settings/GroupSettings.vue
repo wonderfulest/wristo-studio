@@ -1,69 +1,55 @@
 <template>
   <div class="settings-group">
-    <h3>数据组设置</h3>
-    <div class="setting-item" v-if="showDataProperty">
-      <label>数据属性</label>
-      <el-select 
-        v-model="dataProperty" 
+    <h3>Data Group Settings</h3>
+    <el-form ref="formRef" :model="formModel" label-position="left" label-width="120px">
+      <DataPropertyField
+        v-if="showDataProperty"
+        v-model="dataProperty"
         @change="updateDataProperty"
-        placeholder="选择数据属性"
-      >
-        <el-option 
-          v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'data')" 
-          :key="key" 
-          :label="prop.title" 
-          :value="key" 
-        />
-      </el-select>
-    </div>
-    <div class="setting-item" v-if="showGoalProperty">
-      <label>目标属性</label>
-      <el-select 
-        v-model="goalProperty" 
-        @change="updateGoalProperty"
-        placeholder="选择目标属性"
-      >
-        <el-option 
-          v-for="[key, prop] in Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal')" 
-          :key="key" 
-          :label="prop.title" 
-          :value="key" 
-        />
-      </el-select>
-    </div>
-    <div class="setting-item" v-if="isSameTypeLayer && !isTimeGroup">
-      <label>对齐方式</label>
-      <AlignXButtons 
-        :options="originXOptions"
-        v-model="originX"
-        @update:modelValue="updateOriginX"
       />
-    </div>
-    <div class="setting-item" v-if="isSameTypeLayer">
-      <label>字体大小</label>
-      <select v-model.number="fontSize" @change="updateFontSize">
-        <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
-      </select>
-    </div>
-    <div class="setting-item" v-if="isUpdateColor">
-      <label>字体颜色</label>
-      <color-picker v-model="textColor" @change="updateTextColor" />
-    </div>
-    <div class="setting-item" v-if="isSameTypeLayer">
-      <label>字体</label>
-      <font-picker v-model="fontFamily" @change="updateFontFamily" />
-    </div>
+
+      <GoalPropertyField
+        v-if="showGoalProperty"
+        v-model="goalProperty"
+        @change="updateGoalProperty"
+      />
+
+      <el-form-item v-if="isSameTypeLayer && !isTimeGroup" label="Alignment" required>
+        <AlignXButtons 
+          :options="originXOptions"
+          v-model="originX"
+          @update:modelValue="updateOriginX"
+        />
+      </el-form-item>
+
+      <el-form-item v-if="isSameTypeLayer" label="Font Size" required>
+        <el-select v-model.number="fontSize" @change="updateFontSize">
+          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item v-if="isUpdateColor" label="Text Color" required>
+        <color-picker v-model="textColor" @change="updateTextColor" />
+      </el-form-item>
+
+      <el-form-item v-if="isSameTypeLayer" label="Font" required>
+        <font-picker v-model="fontFamily" @change="updateFontFamily" />
+      </el-form-item>
+    </el-form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, watch, computed, onMounted, nextTick } from 'vue'
+import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
+import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()
@@ -92,9 +78,25 @@ const originX = ref<string>(String(props.elements[0].originX || 'center'))
 
 const dataProperty = ref<string>('')
 const goalProperty = ref<string>('')
+const formRef = ref<FormInstance>()
+
+// Element Plus form model to drive validation state
+const formModel = reactive({
+  dataProperty: '',
+  goalProperty: '',
+})
+
+// Keep form model in sync with field
+watch(dataProperty, (val) => {
+  formModel.dataProperty = val
+})
+
+watch(goalProperty, (val) => {
+  formModel.goalProperty = val
+})
+
 
 const updateDataProperty = () => {
-  console.log('updateDataProperty', dataProperty.value, goalProperty.value)
   const prop = dataProperty.value || goalProperty.value
   if (!prop) return
 
@@ -119,6 +121,8 @@ const updateDataProperty = () => {
         labelElement.value.set('text', metric.enLabel.short)
       }
       baseStore.canvas?.renderAll()
+      // clear validation error once selected
+      formRef.value?.clearValidate?.('dataProperty')
     })
   }
 }
@@ -156,6 +160,8 @@ const updateGoalProperty = () => {
         goalSegmentBarElement.value.set('goalProperty', goalProperty.value)
       }
       baseStore.canvas?.renderAll()
+      // clear validation error once selected
+      formRef.value?.clearValidate?.('goalProperty')
     })
   }
 }
@@ -168,6 +174,7 @@ onMounted(() => {
   const allSame = dataProperties.every(prop => prop === dataProperties[0])
   // 如果都相同则使用该值，否则使用空字符串
   dataProperty.value = allSame ? dataProperties[0] || '' : ''
+  formModel.dataProperty = dataProperty.value
 
   // 获取组内所有元素的 goalProperty 值
   const goalProperties = props.elements.map(el => el.goalProperty)
@@ -175,6 +182,7 @@ onMounted(() => {
   const allSameGoal = goalProperties.every(prop => prop === goalProperties[0])
   // 如果都相同则使用该值，否则使用空字符串
   goalProperty.value = allSameGoal ? goalProperties[0] || '' : ''
+  formModel.goalProperty = goalProperty.value
 })
 
 const isUpdateColor = computed(() => {
@@ -239,7 +247,6 @@ const showDataProperty = computed(() => {
   const hasOnlyValidTypes = props.elements.every(element => 
     element.eleType && validTypes.includes(element.eleType)
   )
-  console.log('hasOnlyValidTypes', hasOnlyValidTypes)
   // 并且同一种类型的元素最多只能有一个
   const hasOnlyOneOfType = props.elements.every(element => {  
     const count = props.elements.filter(e => e.eleType === element.eleType).length
@@ -249,7 +256,6 @@ const showDataProperty = computed(() => {
   
   // 当至少存在一个有效元素，且所有元素都是有效类型时显示
   const showDataProperty = (hasData || hasIcon || hasLabel) && hasOnlyValidTypes && hasOnlyOneOfType
-  console.log('showDataProperty', showDataProperty , `hasData: ${hasData}, hasIcon: ${hasIcon}, hasLabel: ${hasLabel}, hasOnlyValidTypes: ${hasOnlyValidTypes}, hasOnlyOneOfType: ${hasOnlyOneOfType}`)
   return showDataProperty
 })
 
@@ -272,5 +278,10 @@ const showGoalProperty = computed(() => {
 /* 添加图标样式 */
 .align-buttons .iconify {
   font-size: 18px;
+}
+
+.required {
+  color: var(--el-color-danger);
+  margin-left: 4px;
 }
 </style>
