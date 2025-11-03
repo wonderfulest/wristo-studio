@@ -276,7 +276,7 @@ const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: str
     debug('LayerPanel', 'background -> locked gray', { id: layer.id })
     return { backgroundColor: '#555555' }
   }
-  const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar'
+  const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar' || layer.eleType === 'goalSegmentBar'
   const id = layer.dataProperty || layer.goalProperty
   if (hasTypeMatch && id) {
     const color = generateColorFromId(String(id))

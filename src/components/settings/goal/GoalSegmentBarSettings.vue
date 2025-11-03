@@ -2,7 +2,13 @@
   <div class="settings-section">
     <el-form ref="formRef" :model="element" label-position="left" label-width="120px">
       <el-form-item label="Goal Property" prop="goalProperty" :rules="[{ required: true, message: 'Please select a goal property', trigger: 'change' }]">
-        <el-select v-model="element.goalProperty" placeholder="Select goal property" @change="updateElement">
+        <el-select
+          v-model="element.goalProperty"
+          placeholder="Select goal property"
+          clearable
+          filterable
+          @change="updateElement"
+        >
           <el-option
             v-for="[key, prop] in goalOptions"
             :key="key"
@@ -32,6 +38,14 @@
         <el-input-number v-model="element.borderRadius" :min="0" :max="30" @change="updateElement" />
       </el-form-item>
 
+      <el-form-item label="Alignment">
+        <AlignXButtons
+          :options="originXOptions"
+          v-model="originXModel"
+          @update:modelValue="() => updateElement()"
+        />
+      </el-form-item>
+
       <el-form-item label="Progress">
         <el-slider v-model="element.progress" :min="0" :max="1" :step="0.01" @change="updateElement" />
       </el-form-item>
@@ -53,6 +67,8 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import { useGoalSegmentBarStore } from '@/stores/elements/goal/goalSegmentBarElement'
 import { usePropertiesStore } from '@/stores/properties'
 import type { FabricElement } from '@/types/element'
+import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import { originXOptions } from '@/config/settings'
 
 const props = defineProps<{ element: FabricElement }>()
 const emit = defineEmits<{ (e: 'update'): void }>()
@@ -62,6 +78,16 @@ const store = useGoalSegmentBarStore()
 const propertiesStore = usePropertiesStore()
 
 const goalOptions = computed(() => Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal'))
+
+const originXModel = computed<string>({
+  get: () => {
+    const v = (props.element as any).originX
+    return (v === 'left' || v === 'center' || v === 'right') ? v : 'center'
+  },
+  set: (val: string) => {
+    ;(props.element as any).originX = val as any
+  },
+})
 
 const updateElement = async () => {
   await formRef.value?.validate?.()

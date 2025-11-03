@@ -83,6 +83,7 @@ const dataElement = computed(() => getElementByType('data'))
 const labelElement = computed(() => getElementByType('label'))
 const goalBarElement = computed(() => getElementByType('goalBar'))
 const goalArcElement = computed(() => getElementByType('goalArc'))
+const goalSegmentBarElement = computed(() => getElementByType('goalSegmentBar'))
 
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
@@ -150,6 +151,9 @@ const updateGoalProperty = () => {
       }
       if (goalArcElement.value) {
         goalArcElement.value.set('goalProperty', goalProperty.value)
+      }
+      if (goalSegmentBarElement.value) {
+        goalSegmentBarElement.value.set('goalProperty', goalProperty.value)
       }
       baseStore.canvas?.renderAll()
     })
@@ -252,7 +256,8 @@ const showDataProperty = computed(() => {
 const showGoalProperty = computed(() => {
   const hasGoalBar = goalBarElement.value !== undefined
   const hasGoalArc = goalArcElement.value !== undefined
-  return hasGoalBar || hasGoalArc
+  const hasGoalSegmentBar = goalSegmentBarElement.value !== undefined
+  return hasGoalBar || hasGoalArc || hasGoalSegmentBar
 })
 
 </script>
