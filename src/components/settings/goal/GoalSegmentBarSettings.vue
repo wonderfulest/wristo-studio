@@ -81,20 +81,13 @@ const updateElement = async () => {
   emit('update')
 }
 
-// 颜色互斥：前景与背景不能同时设置
 const handleActiveColorChange = (val: string) => {
-  // 当前设置前景色，置背景为透明
   props.element.color = val
-  props.element.bgColor = 'transparent'
-  // 更新
   void updateElement()
 }
 
 const handleBgColorChange = (val: string) => {
-  // 当前设置背景色，置前景为透明
   props.element.bgColor = val
-  props.element.color = 'transparent'
-  // 更新
   void updateElement()
 }
 </script>

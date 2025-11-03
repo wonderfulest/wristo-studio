@@ -151,7 +151,6 @@ const rules = {
   ]
 }
 
-// 颜色互斥：主色与背景色不能同时设置
 const handleMainColorChange = async (val) => {
   props.element.color = val
   await updateElement()
@@ -182,7 +181,6 @@ const updateElement = async () => {
   }
 }
 
-// 添加关闭时的验证方法
 const handleClose = async () => {
   try {
     await formRef.value.validate()
