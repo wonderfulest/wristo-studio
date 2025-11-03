@@ -93,8 +93,6 @@
         />
       </el-form-item>
 
-      
-
       <el-form-item label="Progress Align">
         <el-select 
           v-model="element.progressAlign" 
@@ -156,13 +154,11 @@ const rules = {
 // 颜色互斥：主色与背景色不能同时设置
 const handleMainColorChange = async (val) => {
   props.element.color = val
-  props.element.bgColor = 'transparent'
   await updateElement()
 }
 
 const handleBgColorChange = async (val) => {
   props.element.bgColor = val
-  props.element.color = 'transparent'
   await updateElement()
 }
 const updateElement = async () => {
