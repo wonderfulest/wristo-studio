@@ -26,13 +26,13 @@
         <el-input-number v-model="element.borderRadius" :min="0" :max="30" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Alignment">
+      <!-- <el-form-item label="Alignment">
         <AlignXButtons
           :options="originXOptions"
           v-model="originXModel"
           @update:modelValue="() => updateElement()"
         />
-      </el-form-item>
+      </el-form-item> -->
 
       <el-form-item label="Progress">
         <el-slider v-model="element.progress" :min="0" :max="1" :step="0.01" @change="updateElement" />
