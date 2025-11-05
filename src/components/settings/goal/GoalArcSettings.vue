@@ -73,10 +73,9 @@
           <div class="input-group">
             <label>Foreground Color</label>
             <ColorPicker
-              v-model="mainRing.stroke"
+              v-model="fgColor"
               @change="
                 (val) => {
-                  
                   goalArcStore.updateElement(element, {
                     color: val
                   })
@@ -86,10 +85,9 @@
           <div class="input-group">
             <label>Background Color</label>
             <ColorPicker
-              v-model="bgRing.stroke"
+              v-model="bgColor"
               @change="
                 (val) => {
-                  
                   goalArcStore.updateElement(element, {
                     bgColor: val
                   })
@@ -120,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, defineEmits, defineExpose } from 'vue'
+import { ref, watch, computed, defineEmits, defineExpose, watchEffect } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useGoalArcStore } from '@/stores/elements/goal/goalArcElement'
 import ColorPicker from '@/components/color-picker/index.vue'
@@ -153,6 +151,20 @@ const mainRing = computed(() =>
 )
 const bgRing = computed(() => props.element.getObjects().find((obj) => obj.id.endsWith('_bg')))
 
+// 颜色本地状态，避免直接修改 fabric 对象属性导致不渲染
+const fgColor = ref('#FFFFFF')
+const bgColor = ref('#555555')
+
+// 初始化并在 element 变动时同步颜色
+watchEffect(() => {
+  if (mainRing.value && typeof mainRing.value.stroke === 'string') {
+    fgColor.value = mainRing.value.stroke
+  }
+  if (bgRing.value && typeof bgRing.value.stroke === 'string') {
+    bgColor.value = bgRing.value.stroke
+  }
+})
+
 // 定义提示内容，使用 HTML 格式
 const tooltipContent = `
   <div class="tooltip-content">
@@ -181,8 +193,8 @@ const updateElement = async () => {
       bgRadius: bgRing.value.radius,
       strokeWidth: mainRing.value.strokeWidth,
       bgStrokeWidth: bgRing.value.strokeWidth,
-      color: mainRing.value.stroke,
-      bgColor: bgRing.value.stroke,
+      color: fgColor.value,
+      bgColor: bgColor.value,
       startAngle: props.element.startAngle,
       endAngle: props.element.endAngle,
       counterClockwise: props.element.counterClockwise,

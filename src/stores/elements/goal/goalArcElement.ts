@@ -118,6 +118,8 @@ export const useGoalArcStore = defineStore('goalArcElement', {
     },
 
     updateElement(element: any, options: Partial<GoalArcElementConfig> = {}) {
+      console.log('Updating element:', element)
+      console.log('Options:', options)
       if (!element || !element.getObjects) return
       const objects = element.getObjects()
       const mainRing: any = objects.find((obj: any) => (obj as any).id === element.id + '_main')
