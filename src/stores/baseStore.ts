@@ -9,7 +9,6 @@ import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
-import { debug } from 'console'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>

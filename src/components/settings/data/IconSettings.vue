@@ -26,7 +26,6 @@
           @change="updateElement"
         />
       </el-form-item>
-
       <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions" 
@@ -34,7 +33,6 @@
           @update:modelValue="updateElement"
         />
       </el-form-item>
-
       <el-form-item label="Font Size">
         <el-select 
           v-model="element.fontSize" 
@@ -48,14 +46,12 @@
           />
         </el-select>
       </el-form-item>
-
       <el-form-item label="Text Color">
         <color-picker 
           v-model="element.fill" 
           @change="updateElement" 
         />
       </el-form-item>
-
       <el-form-item label="Font">
         <font-picker 
           v-model="element.fontFamily" 
