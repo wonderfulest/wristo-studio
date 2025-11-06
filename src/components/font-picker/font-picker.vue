@@ -10,8 +10,12 @@
     <div v-if="isOpen" class="font-panel">
         <!-- Add custom font button -->
         <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
+        <!-- Icon library guidance (only for icon fonts) -->
+        <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
+          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
+        </div>
         <!-- Search (extracted component) -->
-        <FontSearch :model-value="modelValue" @select="selectFont" />
+        <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
         <!-- Recent fonts -->
         <RecentFontList
             :fonts="recentFonts"
@@ -35,9 +39,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
+import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
+import { FontTypes } from '@/constants/fonts'
 import RecentFontList from './RecentFontList.vue'
 import SystemFontList from './SystemFontList.vue'
 import FontImportDialog from './FontImportDialog.vue'
@@ -48,11 +54,18 @@ const props = defineProps({
   modelValue: {
     type: String,
     required: true
+  },
+  // Optional font type filter, e.g. 'number_font', 'text_font', 'icon_font', ...
+  type: {
+    type: String,
+    required: false,
+    default: 'text_font'
   }
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
+const userStore = useUserStore()
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
@@ -98,7 +111,7 @@ const ensureFontBySlug = async (slug: string, family: string) => {
     } catch {}
     if (!url) {
       try {
-        const sys = await getSystemFonts()
+        const sys = await getSystemFonts(undefined, userStore.userInfo?.id)
         
         const hit = (sys.data || []).find((f: any) => f.slug === slug)
         url = hit?.ttfFile?.url || ''
@@ -114,7 +127,7 @@ const selectFont = async (font: FontItem) => {
   await ensureFontBySlug(font.value, font.family)
   emit('update:modelValue', font.value)
   emit('change', font.value)
-  try { await increaseFontUsage(font.value) } catch {}
+  try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
   fontStore.addRecentFont(font)
   isOpen.value = false
 }
@@ -140,12 +153,35 @@ const handleOutsideClick = (event: MouseEvent) => {
 
 onMounted(async () => {
   await fontStore.fetchFonts()
+  // initial refresh with current type (if provided)
+  if (props.type !== undefined) {
+    try {
+      await Promise.all([
+        fontStore.initBuiltinFontsFromSystem(props.type),
+        fontStore.initRecentFonts(props.type)
+      ])
+    } catch {}
+  }
   document.addEventListener('click', handleOutsideClick)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
+
+// When type changes, refresh system and recent fonts for the new type
+watch(
+  () => props.type,
+  async (newType, oldType) => {
+    if (newType === oldType) return
+    try {
+      await Promise.all([
+        fontStore.initBuiltinFontsFromSystem(newType),
+        fontStore.initRecentFonts(newType)
+      ])
+    } catch {}
+  }
+)
 </script>
 
 <style scoped>
@@ -205,6 +241,17 @@ onUnmounted(() => {
 
 .add-font-btn:hover {
   background: #f5f7fa;
+}
+
+.icon-lib-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  color: #606266;
 }
 
 /* solid divider between sections (thicker with subtle pattern) */

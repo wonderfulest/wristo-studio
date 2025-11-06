@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { getFontBySlug, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
+import { useUserStore } from '@/stores/user'
 import { ApiResponse } from '@/types/api/api'
 import { DesignFontVO } from '@/types/font'
 
@@ -54,13 +55,13 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   isBuiltinFont(state: FontStoreState): (fontName: string) => boolean
 }, {
   // actions
-  initBuiltinFontsFromSystem(): Promise<void>
+  initBuiltinFontsFromSystem(type?: string): Promise<void>
   fetchFonts(): Promise<void>
-  initRecentFonts(): Promise<void>
+  initRecentFonts(type?: string): Promise<void>
   loadFont(slug: string, url?: string): Promise<boolean>
   loadFonts(fontNames: string[]): Promise<boolean>
   loadFontsForElements(elements: Array<any>): Promise<boolean>
-  loadSystemFonts(): Promise<DesignFontVO[]>
+  loadSystemFonts(type?: string): Promise<DesignFontVO[]>
   addRecentFont(font: FontOption): void
   addCustomFont(font: FontOption): void
   toggleSection(sectionName: keyof FontSectionsState | string): void
@@ -130,7 +131,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * @returns 加载是否成功
        */
       async loadFont(slug: string, url?: string): Promise<boolean> {
-        
+        console.log('loadFont', slug, url)
         if (!slug) return false
 
         // 如果字体已加载，直接返回
@@ -165,7 +166,6 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         try {
           this.loadingFonts.add(slug)
           
-
           // 解析字体文件 URL：优先使用传入的 url，否则从服务器获取
           let ttfUrl = url
           if (!ttfUrl) {
@@ -243,9 +243,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * @param query 搜索关键词（匹配 fullName/family/slug，忽略大小写）
        * @returns { items, total }
        */
-      async loadSystemFonts(): Promise<DesignFontVO[]> {
+      async loadSystemFonts(type?: string): Promise<DesignFontVO[]> {
         
-        const response: ApiResponse<DesignFontVO[]> = await getSystemFonts()
+        const userStore = useUserStore()
+        const response: ApiResponse<DesignFontVO[]> = await getSystemFonts(type, userStore.userInfo?.id)
         const sysFonts = (response.data ?? []) as DesignFontVO[]
         // 以 slug 为别名注册字体，绑定 ttf 文件
         const tasks: Promise<void>[] = []
@@ -274,9 +275,11 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         return sysFonts
       },
       // 初始化：从系统字体加载，按 subfamily 分组
-      async initBuiltinFontsFromSystem(): Promise<void> {
+      async initBuiltinFontsFromSystem(type?: string): Promise<void> {
         try {
-          const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts()
+          const userStore = useUserStore()
+          const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts(type, userStore.userInfo?.id)
+          console.log('sysFonts', sysFonts)
           const list: Array<DesignFontVO> = sysFonts?.data ?? []
           const groups: Record<string, FontOption[]> = {}
           const pendingLoads: Promise<boolean>[] = []
@@ -286,12 +289,12 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             const family = f.family || f.fullName || f.postscriptName || f.slug
             const value = f.slug || family
             const option: FontOption = {
-            label,
-            value,
-            family,
-            isMonospace: (f as any)?.isMonospace === 1,
-            italic: (f as any)?.italic === 1,
-          }
+              label,
+              value,
+              family,
+              isMonospace: (f as any)?.isMonospace === 1,
+              italic: (f as any)?.italic === 1,
+            }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
             // 将内置字体的实际加载加入等待队列，避免竞态
@@ -310,9 +313,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
       /**
        * 初始化最近使用字体，默认拉取 5 个
        */
-      async initRecentFonts(): Promise<void> {
+      async initRecentFonts(type?: string): Promise<void> {
         try {
-          const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5)
+          const userStore = useUserStore()
+          const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id)
           const list: DesignFontVO[] = recentFonts?.data ?? []
           const mapped: FontOption[] = list.map((f) => ({
             label: f.fullName,

@@ -52,6 +52,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'icon-library',
+        name: 'IconLibrary',
+        component: () => import('@/views/icons/IconLibrary.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'FAQ',
         name: 'FAQ',
         component: () => import('@/views/FAQ.vue'),

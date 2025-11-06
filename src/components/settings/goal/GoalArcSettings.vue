@@ -17,23 +17,22 @@
       </div>
       <!-- 尺寸属性 -->
       <div class="setting-item">
-        <label>Size</label>
         <div class="size-inputs">
           <div class="input-group">
             <label>Foreground Radius</label>
-            <input type="number" :value="mainRing?.radius" @input="(e) => (mainRing.radius = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="mainRing?.radius" @input="(e) => (mainRing.radius = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Background Radius</label>
-            <input type="number" :value="bgRing?.radius" @input="(e) => (bgRing.radius = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="bgRing?.radius" @input="(e) => (bgRing.radius = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Foreground Stroke Width</label>
-            <input type="number" :value="mainRing?.strokeWidth" @input="(e) => (mainRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="mainRing?.strokeWidth" @input="(e) => (mainRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Background Stroke Width</label>
-            <input type="number" :value="bgRing?.strokeWidth" @input="(e) => (bgRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="bgRing?.strokeWidth" @input="(e) => (bgRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
           </div>
         </div>
       </div>
@@ -49,11 +48,11 @@
         <div class="angle-inputs">
           <div class="input-group">
             <label>Start Angle</label>
-            <input type="number" :value="element.startAngle" @input="(e) => (element.startAngle = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="element.startAngle" @input="(e) => (element.startAngle = Number(e.target.value))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>End Angle</label>
-            <input type="number" :value="element.endAngle" @input="(e) => (element.endAngle = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="element.endAngle" @input="(e) => (element.endAngle = Number(e.target.value))" @change="updateElement" />
           </div>
         </div>
         <!-- 添加方向选择 -->

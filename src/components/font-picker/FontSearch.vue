@@ -82,8 +82,9 @@ import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import { DesignFontVO } from '@/types/font'
 
-defineProps<{
+const props = defineProps<{
   modelValue: string
+  type?: string
 }>()
 
 const emit = defineEmits<{
@@ -141,6 +142,7 @@ const filterFonts = async () => {
       pageNum: 1,
       pageSize: 20,
       name: searchQuery.value,
+      type: props.type,
       isMonospace: monospaceChecked.value ? 1 : undefined,
       italic: italicChecked.value ? 1 : undefined,
       onlyApprovedActive: true

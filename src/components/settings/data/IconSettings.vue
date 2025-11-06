@@ -54,7 +54,8 @@
       </el-form-item>
       <el-form-item label="Font">
         <font-picker 
-          v-model="element.fontFamily" 
+          v-model="element.fontFamily"
+          :type="FontTypes.ICON_FONT"
           @change="updateElement" 
         />
       </el-form-item>
@@ -74,6 +75,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
 import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import { FontTypes } from '@/constants/fonts'
 
 const emit = defineEmits(['close'])
 

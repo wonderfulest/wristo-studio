@@ -39,6 +39,7 @@ export const uploadFontFile =  (
 export const searchFonts = (
   params: DesignFontSearchDTO
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
+  // server supports extended filters including type; userId may be provided for auditing/stat
   return instance.post('/dsn/fonts/search?populate=ttf', params)
 }
 
@@ -53,22 +54,37 @@ export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> 
 }
 
 // 获取已审核并启用的系统字体
-export const getSystemFonts = (): Promise<ApiResponse<DesignFontVO[]>> => {
-  return instance.get('/dsn/fonts/system?populate=ttf')
+export const getSystemFonts = (type?: string, userId?: number): Promise<ApiResponse<DesignFontVO[]>> => {
+  const params = new URLSearchParams()
+  if (type) params.set('type', type)
+  if (typeof userId === 'number') params.set('user_id', String(userId))
+  params.set('populate', 'ttf')
+  const q = params.toString()
+  return instance.get(`/dsn/fonts/system${q ? `?${q}` : ''}`)
 }
 
 // increase usage by slug
-export const increaseFontUsage = (slug: string): Promise<ApiResponse<number>> => {
-  return instance.post(`/dsn/fonts/use/${encodeURIComponent(slug)}`)
+export const increaseFontUsage = (slug: string, userId?: number): Promise<ApiResponse<number>> => {
+  const params = new URLSearchParams()
+  if (typeof userId === 'number') params.set('user_id', String(userId))
+  const q = params.toString()
+  return instance.post(`/dsn/fonts/use/${encodeURIComponent(slug)}${q ? `?${q}` : ''}`)
 }
 
 // recent fonts for current designer
-export const getRecentFonts = (limit?: number): Promise<ApiResponse<DesignFontVO[]>> => {
+export const getRecentFonts = (limit?: number, type?: string, userId?: number): Promise<ApiResponse<DesignFontVO[]>> => {
   const params = new URLSearchParams()
   if (typeof limit === 'number') params.set('limit', String(limit))
+  if (type) params.set('type', type)
+  if (typeof userId === 'number') params.set('user_id', String(userId))
   params.set('populate', 'ttf')
   const q = params.toString()
   return instance.get(`/dsn/fonts/recent${q ? `?${q}` : ''}`)
+}
+
+// public: list available font types
+export const getFontTypes = (): Promise<ApiResponse<string[]>> => {
+  return instance.get('/public/fonts/types')
 }
 
 // frequent fonts for current designer

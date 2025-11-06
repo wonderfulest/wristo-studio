@@ -571,7 +571,7 @@ const handleGoLiveSuccess = () => {
 }
 
 .design-card {
-  margin-bottom: 20px;
+  border-radius: 12px;
   transition: all 0.3s;
   height: 100%;
   overflow: hidden;
@@ -588,8 +588,7 @@ const handleGoLiveSuccess = () => {
 .card-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
+  padding: 0 4px;
   position: relative;
 }
 

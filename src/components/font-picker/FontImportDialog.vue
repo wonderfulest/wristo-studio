@@ -33,13 +33,6 @@
         <div class="preview-section">
           <div class="preview-label">Preview:</div>
           <div class="font-preview" :style="{ fontFamily: previewFontFamily }">
-            <!-- <div v-if="parsedInfo" class="guide-layer" :style="guideStyle">
-              <div v-if="parsedInfo?.ascent !== undefined" class="guide-line ascender"><span>Ascender</span></div>
-              <div v-if="parsedInfo?.capHeight !== undefined" class="guide-line cap"><span>Cap</span></div>
-              <div v-if="parsedInfo?.xHeight !== undefined" class="guide-line xheight"><span>x-height</span></div>
-              <div v-if="parsedInfo?.ascent !== undefined && parsedInfo?.descent !== undefined" class="guide-line baseline"><span>Baseline</span></div>
-              <div v-if="parsedInfo?.descent !== undefined" class="guide-line descender"><span>Descender</span></div>
-            </div> -->
             <div class="preview-text">
               <span class="preview-numbers">0123456789,:°F Sunny</span>
               <span class="preview-letters">AaBbCcDdEe</span>
@@ -85,6 +78,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useUserStore } from '@/stores/user'
 import { Upload, Close } from '@element-plus/icons-vue'
 import opentype, { Font, FontNames } from 'opentype.js'
 import type { ParsedFontInfo } from '@/types/font-parse'
@@ -107,6 +101,7 @@ watch(visibleRef, v => emit('update:visible', v))
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
+const userStore = useUserStore()
 
 const uploading = ref<boolean>(false)
 const selectedFile = ref<any | null>(null)
@@ -258,7 +253,7 @@ const confirmUpload = async () => {
     let rawUrl = created.ttfFile?.url
     if (!rawUrl) {
       try {
-        const sys = await getSystemFonts()
+        const sys = await getSystemFonts(undefined, userStore.userInfo?.id)
         
         const hit = (sys.data || []).find((f: any) => f.slug === created.slug)
         rawUrl = hit?.ttfFile?.url || ''
@@ -267,7 +262,7 @@ const confirmUpload = async () => {
     const ttfUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`) : ''
     fontStore.addCustomFont({ label: created.fullName || familyName, value: created.slug, family: familyName, src: ttfUrl })
 
-    try { await increaseFontUsage(created.slug) } catch {}
+    try { await increaseFontUsage(created.slug, userStore.userInfo?.id) } catch {}
 
     messageStore.success(usedExisting ? 'Font already exists. Loaded into system.' : 'Font uploaded successfully, pending review')
     emit('selected', created.slug)
@@ -282,33 +277,6 @@ const confirmUpload = async () => {
     parsedInfo.value = null
   }
 }
-
-// 计算参考线样式（以容器高度为基准，使用百分比定位）
-const guideStyle = computed(() => {
-  if (!parsedInfo.value) return {}
-  // 正常字体：ascent>0, descent<0（OpenType hhea.descent 为负数）
-  const asc = Number(parsedInfo.value.ascent ?? 0)
-  const des = Number(parsedInfo.value.descent ?? 0)
-  // 将基线置于相对高度 asc/(asc - des)
-  const total = asc - des
-  if (!isFinite(total) || total <= 0) return {}
-  const style: Record<string, string> = {}
-  // ascender / descender / baseline
-  style['--guide-ascender'] = '0%'
-  style['--guide-descender'] = '100%'
-  style['--guide-baseline'] = `${(asc / total) * 100}%`
-  // cap / x-height（仅当存在时计算）
-  if (parsedInfo.value.capHeight !== undefined) {
-    const cap = Number(parsedInfo.value.capHeight)
-    style['--guide-cap'] = `${((asc - cap) / total) * 100}%`
-  }
-  if (parsedInfo.value.xHeight !== undefined) {
-    const xh = Number(parsedInfo.value.xHeight)
-    style['--guide-x'] = `${((asc - xh) / total) * 100}%`
-  }
-  return style as any
-})
-
 </script>
 
 <style scoped>
