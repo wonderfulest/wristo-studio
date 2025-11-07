@@ -8,30 +8,30 @@
 
     <!-- Font selection panel -->
     <div v-if="isOpen" class="font-panel">
-        <!-- Add custom font button -->
-        <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
-        <!-- Icon library guidance (only for icon fonts) -->
-        <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
-          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
-        </div>
-        <!-- Search (extracted component) -->
-        <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
-        <!-- Recent fonts -->
-        <RecentFontList
-            :fonts="recentFonts"
-            :model-value="modelValue"
-            :expanded="expandedSections['recent']"
-            @select="selectFont"
-            @toggle="() => toggleSection('recent')"
-        />
-        <!-- System fonts -->
-        <SystemFontList
-            :sections="systemSections as any"
-            :expanded-map="expandedSections"
-            :model-value="modelValue"
-            @select="selectFont"
-            @toggle="toggleSection"
-        />
+      <!-- Add custom font button -->
+      <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
+      <!-- Icon library guidance (only for icon fonts) -->
+      <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
+        <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
+      </div>
+      <!-- Search (extracted component) -->
+      <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
+      <!-- Recent fonts -->
+      <RecentFontList
+          :fonts="recentFonts"
+          :model-value="modelValue"
+          :expanded="expandedSections['recent']"
+          @select="selectFont"
+          @toggle="() => toggleSection('recent')"
+      />
+      <!-- System fonts -->
+      <SystemFontList
+          :sections="systemSections as any"
+          :expanded-map="expandedSections"
+          :model-value="modelValue"
+          @select="selectFont"
+          @toggle="toggleSection"
+      />
     </div>
     <!-- Add font dialog -->
     <FontImportDialog v-model:visible="dialogVisible" @selected="onFontUploaded" />

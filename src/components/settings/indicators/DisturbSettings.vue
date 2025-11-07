@@ -7,7 +7,7 @@
 
     <div class="setting-item">
       <label>字体</label>
-      <FontPicker v-model="fontFamily" :font-type="'icon'" @update:modelValue="updateFontFamily" />
+      <FontPicker v-model="fontFamily" :type="FontTypes.ICON_FONT" @update:modelValue="updateFontFamily" />
     </div>
 
     <div class="setting-item">
@@ -39,6 +39,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
+import { FontTypes } from '@/constants/fonts'
 
 const props = defineProps({
   element: {
