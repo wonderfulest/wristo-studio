@@ -85,7 +85,7 @@ export const pageIconGlyphs = (dto: IconGlyphPageQueryDTO): Promise<ApiResponse<
 }
 
 export const pageIconGlyphAssets = (dto: IconGlyphAssetPageQueryDTO): Promise<ApiResponse<PageResponse<IconGlyphAssetVO>>> => {
-  return instance.post('/admin/icon-glyph-asset/page?populate=*', dto)
+  return instance.post('/dsn/icon-glyph-asset/page?populate=*', dto)
 }
 
 export const createIconGlyph = (dto: IconGlyphCreateDTO): Promise<ApiResponse<IconGlyphVO>> => {
@@ -93,7 +93,7 @@ export const createIconGlyph = (dto: IconGlyphCreateDTO): Promise<ApiResponse<Ic
 }
 
 export const pageIconAssets = (dto: IconAssetPageQueryDTO): Promise<ApiResponse<PageResponse<IconAssetVO>>> => {
-  return instance.post('/admin/icon-asset/page', dto)
+  return instance.post('/dsn/icon-asset/page', dto)
 }
 
 export const bindAssetsToGlyph = (glyphId: number, assetIds: number[]): Promise<ApiResponse<IconGlyphAssetVO[]>> => {
