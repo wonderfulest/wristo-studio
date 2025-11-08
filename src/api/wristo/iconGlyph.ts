@@ -32,6 +32,7 @@ export interface IconGlyphAssetPageQueryDTO {
   pageNum: number
   pageSize: number
   glyphId: number
+  displayType?: DisplayType
   assetId?: number
   active?: number
   orderBy?: string
@@ -51,6 +52,7 @@ export interface IconAssetVO {
   iconId: number
   sourceType: string
   format: string
+  displayType?: DisplayType
   svgContent?: string
   imageUrl?: string
   previewUrl?: string
@@ -65,10 +67,13 @@ export interface IconAssetPageQueryDTO {
   pageNum: number
   pageSize: number
   iconId?: number
+  displayType?: DisplayType
   active?: number
   keyword?: string
   orderBy?: string
 }
+
+export type DisplayType = 'mip' | 'amoled'
 
 export interface IconGlyphAssetVO {
   id: number
@@ -112,11 +117,13 @@ export const submitIconGlyph = (id: number): Promise<ApiResponse<IconGlyphVO>> =
 export const uploadIconSvg = (
   file: File,
   unicode?: string,
+  displayType?: DisplayType,
   onUploadProgress?: (evt: AxiosProgressEvent) => void,
 ): Promise<ApiResponse<IconAssetVO>> => {
   const form = new FormData()
   form.append('file', file)
   if (unicode) form.append('unicode', unicode)
+  if (displayType) form.append('displayType', displayType)
   return instance.post('/dsn/icon-asset/upload-svg', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress,

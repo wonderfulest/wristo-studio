@@ -20,6 +20,14 @@
         </div>
         <template #tip>
           <div class="el-upload__tip">
+            <div class="upload-extra">
+              <div class="row">
+                <span class="label">显示类型：</span>
+                <el-radio-group v-model="displayType">
+                  <el-radio v-for="opt in displayTypeOptions" :key="opt.value" :label="opt.value">{{ opt.name || opt.value }}</el-radio>
+                </el-radio-group>
+              </div>
+            </div>
             <div class="symbol-quick">
               <div class="label">Symbol Code 速查表</div>
               <div class="symbol-selected">
@@ -57,7 +65,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { uploadIconSvg, listIconLibrary, type IconLibraryVO } from '@/api/wristo/iconGlyph'
+import { uploadIconSvg, listIconLibrary, type IconLibraryVO, type DisplayType } from '@/api/wristo/iconGlyph'
+import { getEnumOptions, type EnumOption } from '@/api/common'
 
 const emit = defineEmits<{ (e: 'uploaded'): void }>()
 
@@ -65,6 +74,8 @@ const uploading = ref(false)
 const dialogVisible = ref(false)
 const iconList = ref<Pick<IconLibraryVO, 'symbolCode' | 'label' | 'iconUnicode'>[]>([])
 const selectedSymbolCode = ref<string | undefined>(undefined)
+const displayType = ref<DisplayType>('mip')
+const displayTypeOptions = ref<EnumOption[]>([])
 
 watch(dialogVisible, async (v) => {
   if (v && iconList.value.length === 0) {
@@ -77,6 +88,17 @@ watch(dialogVisible, async (v) => {
     } catch {
       // silent
     }
+  }
+  if (v && displayTypeOptions.value.length === 0) {
+    try {
+      const res: any = await getEnumOptions('DisplayType')
+      const list: EnumOption[] = res?.data ?? res ?? []
+      displayTypeOptions.value = Array.isArray(list) && list.length ? list : [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
+    } catch {
+      displayTypeOptions.value = [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
+    }
+    // ensure default
+    if (!displayType.value) displayType.value = 'mip'
   }
 })
 
@@ -109,7 +131,7 @@ const doUpload = async (options: { file: File }) => {
       return
     }
 
-    await uploadIconSvg(file, unicode)
+    await uploadIconSvg(file, unicode, displayType.value)
     ElMessage.success(`${file.name} 上传成功`)
     emit('uploaded')
   } catch (e) {

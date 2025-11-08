@@ -23,6 +23,11 @@
       </el-table-column>
       <el-table-column prop="id" label="ID" width="120" />
       <el-table-column prop="format" label="Format" width="120" />
+      <el-table-column prop="displayType" label="Display" width="120">
+        <template #default="{ row }">
+          {{ row.displayType || '-' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="author" label="Author" />
       <el-table-column label="Action" width="140" fixed="right">
         <template #default="{ row }">

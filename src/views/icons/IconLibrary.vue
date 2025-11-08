@@ -19,61 +19,22 @@
           :label="tabLabel(glyph)"
           :name="String(glyph.id)"
         >
-          <div class="tab-toolbar">
-            <div class="info">
-              <span class="badge" :class="{ custom: glyph.isDefault === 0 }">{{ glyph.isDefault === 1 ? 'Default' : 'Custom' }}</span>
-              <span class="meta">Style: {{ glyph.style || '-' }}</span>
-              <span class="meta">Version: {{ glyph.version ?? '-' }}</span>
-            </div>
-            <div class="actions" v-if="glyph.isDefault === 0">
-              <el-button size="small" @click="openImportDialog(glyph)">Import From Font</el-button>
-              <el-button type="primary" size="small" @click="handleSubmitGlyph()">Submit Font</el-button>
-            </div>
-          </div>
-
-          <div class="assets-grid">
-            <div v-if="loadingAssets" class="loading">
-              <el-icon class="is-loading"><Loading /></el-icon>
-              Loading icons...
-            </div>
-            <template v-else>
-              <div v-if="assets.length === 0" class="empty">
-                No icons
-                <el-button type="primary" text @click="openBindDialog(Number(activeTab))">Bind Assets</el-button>
-              </div>
-              <div v-else class="grid">
-                <div v-for="item in assets" :key="item.id" class="grid-item">
-                  <template v-if="getAssetImage(item)">
-                    <div class="overlay overlay-actions">
-                      <span v-if="glyph.isDefault === 0" class="action" @click="handleEdit(item)">Edit</span>
-                      <span v-if="glyph.isDefault === 0" class="action" @click="openBindDialog(Number(activeTab), item.icon?.id)">Rebind</span>
-                    </div>
-                    <div class="preview">
-                      <img :src="getAssetImage(item)" alt="icon" />
-                    </div>
-                  </template>
-                  <template v-else>
-                    <el-button type="primary" circle plain @click="openBindDialog(Number(activeTab), item.icon?.id)">
-                      <el-icon><Plus /></el-icon>
-                    </el-button>
-                  </template>
-                  <div class="grid-meta">
-                    {{ item.icon?.iconUnicode }}
-                  </div>
-                </div>
-              </div>
-              <div class="pager">
-                <el-pagination
-                  background
-                  layout="prev, pager, next"
-                  :current-page="assetPage"
-                  :page-size="assetPageSize"
-                  :total="assetTotal"
-                  @current-change="onAssetPageChange"
-                />
-              </div>
-            </template>
-          </div>
+          <GlyphAssetsPanel
+            v-if="String(glyph.id) === activeTab"
+            :glyph="glyph"
+            :assets="assets"
+            :loading="loadingAssets"
+            :page="assetPage"
+            :page-size="assetPageSize"
+            :total="assetTotal"
+            v-model:displayType="displayType"
+            @edit="handleEdit"
+            @openBind="(p)=> openBindDialog(p.glyphId, p.iconId)"
+            @pageChange="onAssetPageChange"
+            @import="openImportDialog"
+            @submitGlyph="handleSubmitGlyph"
+            @displayTypeChange="onDisplayTypeChange"
+          />
         </el-tab-pane>
       </el-tabs>
 
@@ -89,21 +50,12 @@
       </div>
     </div>
 
-    <!-- Create Glyph Dialog -->
-    <el-dialog v-model="createVisible" title="Create Icon Font" width="460px">
-      <el-form :model="createForm" label-width="96px">
-        <el-form-item label="Glyph Code">
-          <el-input v-model="createForm.glyphCode" placeholder="e.g. my-icons" />
-        </el-form-item>
-        <el-form-item label="Style">
-          <el-input v-model="createForm.style" placeholder="e.g. Regular" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible=false">Cancel</el-button>
-        <el-button type="primary" :loading="creating" @click="handleCreateGlyph">Create</el-button>
-      </template>
-    </el-dialog>
+    <CreateGlyphDialog
+      v-model="createVisible"
+      :loading="creating"
+      :form="createForm"
+      @confirm="onCreateConfirm"
+    />
 
     <EditSvgDialog
       v-model="editVisible"
@@ -129,36 +81,26 @@
       @bind="handleBindSingle"
     />
 
-    <!-- Import From Font Dialog -->
-    <el-dialog v-model="importVisible" title="Import Assets From Font" width="460px">
-      <el-form label-width="96px">
-        <el-form-item label="From Font">
-          <el-select v-model="importFromGlyphId" placeholder="Select a font" filterable style="width: 100%">
-            <el-option
-              v-for="g in importableGlyphs"
-              :key="g.id"
-              :label="tabLabel(g)"
-              :value="g.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="importVisible=false">Cancel</el-button>
-        <el-button type="primary" :disabled="!importFromGlyphId" :loading="importing" @click="handleImport">Import</el-button>
-      </template>
-    </el-dialog>
+    <ImportFromFontDialog
+      v-model="importVisible"
+      :glyphs="importableGlyphs"
+      v-model:selectedId="importFromGlyphId"
+      :loading="importing"
+      @confirm="handleImport"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Loading, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
+import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
+import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
+import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
 import {
   pageIconGlyphs,
   pageIconGlyphAssets,
@@ -172,6 +114,7 @@ import {
   type IconAssetVO,
   type IconGlyphCreateDTO,
   type IconAssetPageQueryDTO,
+  type DisplayType,
 } from '@/api/wristo/iconGlyph'
 
 const route = useRoute()
@@ -190,6 +133,7 @@ const assetTotal = ref(0)
 const assetPage = ref(1)
 const assetPageSize = ref(120)
 const loadingAssets = ref(false)
+const displayType = ref<DisplayType>('mip')
 
 const fetchGlyphs = async () => {
   try {
@@ -223,8 +167,9 @@ const fetchAssets = async (glyphId: number) => {
     loadingAssets.value = true
     const { data } = await pageIconGlyphAssets({
       pageNum: assetPage.value,
-      pageSize: assetPageSize.value,
+      pageSize: assetPage.value ? assetPageSize.value : assetPageSize.value,
       glyphId,
+      displayType: displayType.value,
       orderBy: 'id:asc',
     } as any)
     assets.value = data?.list ?? []
@@ -247,6 +192,12 @@ const onGlyphPageChange = async (page: number) => {
 
 const onAssetPageChange = async (page: number) => {
   assetPage.value = page
+  await fetchAssets(Number(activeTab.value))
+}
+
+const onDisplayTypeChange = async (_v: DisplayType) => {
+  // reset to first page when switching display type
+  assetPage.value = 1
   await fetchAssets(Number(activeTab.value))
 }
 
@@ -281,17 +232,7 @@ onMounted(async () => {
   await fetchGlyphs()
 })
 
-// Convert relative to absolute URL
-const toAbsUrl = (url: string) => {
-  if (!url) return ''
-  return /^(https?:|data:|blob:)/i.test(url) ? url : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
-}
-
-// Resolve asset image preview source (prefer previewUrl > imageUrl)
-const getAssetImage = (item: IconGlyphAssetVO): string => {
-  const raw = item?.asset?.previewUrl || item?.asset?.imageUrl || ''
-  return raw ? toAbsUrl(raw) : ''
-}
+// 
 
 const editVisible = ref(false)
 const editAssetId = ref<number | null>(null)
@@ -308,11 +249,11 @@ const createVisible = ref(false)
 const creating = ref(false)
 const createForm = ref<IconGlyphCreateDTO>({ glyphCode: '', style: '', isDefault: 0, isActive: 1 })
 const onAddGlyph = () => { createVisible.value = true }
-const handleCreateGlyph = async () => {
-  if (!createForm.value.glyphCode) return
+const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
+  if (!payload.glyphCode) return
   try {
     creating.value = true
-    const { data } = await createIconGlyph(createForm.value)
+    const { data } = await createIconGlyph(payload)
     createVisible.value = false
     // refresh list and switch to new glyph
     await fetchGlyphs()
@@ -356,6 +297,7 @@ const loadBindAssets = async () => {
       pageNum: bindPage.value,
       pageSize: bindPageSize.value,
       iconId: bindIconId.value ?? undefined,
+      displayType: displayType.value,
       keyword: bindKeyword.value || undefined,
       orderBy: 'id:desc',
     }

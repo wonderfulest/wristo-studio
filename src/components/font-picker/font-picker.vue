@@ -59,7 +59,7 @@ const props = defineProps({
   type: {
     type: String,
     required: false,
-    default: 'text_font'
+    default: FontTypes.TEXT_FONT
   }
 })
 
