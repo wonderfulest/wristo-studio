@@ -45,7 +45,6 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        // Pass through Fabric-compatible fill
         fill: element.fill,
       }
       return config as IndicatorElementConfig
