@@ -27,6 +27,8 @@ export const useIconStore = defineStore('iconElement', {
       try {
         type IconProps = TextProps & IconElementConfig
         const metric = usePropertiesStore().getMetricByOptions(config)
+        const resolvedFontFamily = this.baseStore.currentIconFontSlug ?? config.iconFont
+        const resolvedFontSize = this.baseStore.currentIconFontSize ?? Number(config.iconSize)
         const iconOptions: Partial<IconProps> = {
           id: config.id || nanoid(),
           eleType: 'icon',
@@ -35,8 +37,8 @@ export const useIconStore = defineStore('iconElement', {
           originX: config.originX as 'center' | 'left' | 'right',
           originY: config.originY as 'center' | 'top' | 'bottom',
           fill: config.fill,
-          fontSize: Number(config.iconSize),
-          fontFamily: config.iconFont,
+          fontSize: resolvedFontSize,
+          fontFamily: resolvedFontFamily,
           metricSymbol: config.metricSymbol,
           dataProperty: config.dataProperty,
           goalProperty: config.goalProperty,

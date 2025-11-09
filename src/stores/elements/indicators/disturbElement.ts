@@ -13,12 +13,15 @@ export const useDisturbStore = defineStore('disturbElement', {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
+      const resolvedFontFamily = baseStore.currentIconFontSlug ?? config.fontFamily
+      const resolvedFontSize = baseStore.currentIconFontSize ?? Number(config.fontSize)
+
       const disturbIcon = new FabricText('\u0021', {
         eleType: 'disturb',
         left: config.left,
         top: config.top,
-        fontSize: config.fontSize,
-        fontFamily: config.fontFamily,
+        fontSize: resolvedFontSize,
+        fontFamily: resolvedFontFamily,
         fill: config.fill,
         selectable: true,
         hasControls: false,
@@ -49,7 +52,7 @@ export const useDisturbStore = defineStore('disturbElement', {
         top: element.top,
         originX: element.originX,
         originY: element.originY,
-        fontSize: element.fontSize,
+        fontSize: Number(element.fontSize),
         fontFamily: element.fontFamily,
         fill: (element.fill ?? undefined) as unknown as string | undefined,
       }
@@ -64,7 +67,7 @@ export const useDisturbStore = defineStore('disturbElement', {
         top: config.top,
         originX: config.originX,
         originY: config.originY,
-        fontSize: config.fontSize,
+        fontSize: Number(config.fontSize),
         fontFamily: config.fontFamily,
         fill: config.fill,
       }
