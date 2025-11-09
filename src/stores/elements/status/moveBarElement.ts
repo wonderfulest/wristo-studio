@@ -38,7 +38,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
         id,
         eleType: 'moveBar',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         originX: 'center',
         originY: 'center',

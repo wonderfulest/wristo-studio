@@ -72,7 +72,7 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         angle: 0,
         imageUrl: imageUrl,

@@ -63,7 +63,7 @@ export const useGoalArcStore = defineStore('goalArcElement', {
         id: id,
         eleType: 'goalArc',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         originX: 'center',
         originY: 'center',

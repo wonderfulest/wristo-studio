@@ -1,24 +1,24 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
-      <label>颜色</label>
+      <label>Color</label>
       <ColorPicker v-model="color" @update:modelValue="updateColor" />
     </div>
 
     <div class="setting-item">
-      <label>字体</label>
+      <label>Font</label>
       <FontPicker v-model="fontFamily" :type="FontTypes.ICON_FONT" @update:modelValue="updateFontFamily" />
     </div>
 
     <div class="setting-item">
-      <label>大小</label>
+      <label>Font Size</label>
       <el-select v-model="fontSize" placeholder="选择大小" @change="updateFontSize">
         <el-option v-for="size in availableFontSizes" :key="size" :label="size + 'px'" :value="size" />
       </el-select>
     </div>
 
     <div class="setting-item">
-      <label>位置</label>
+      <label>Position</label>
       <div class="position-inputs">
         <div>
           <span>X:</span>
@@ -70,17 +70,21 @@ const updateColor = (newColor) => {
 }
 
 // 更新字体
-const updateFontFamily = (newFontFamily) => {
+const updateFontFamily = async (newFontFamily) => {
   if (!props.element || !baseStore.canvas) return
   props.element.set('fontFamily', newFontFamily)
   baseStore.canvas.renderAll()
 }
 
-// 更新字体大小
-const updateFontSize = (newSize) => {
+// 初始化全局图标字体大小（若未设置）
+if (baseStore.currentIconFontSize == null && props.element?.fontSize) {
+  baseStore.setIconFontSize(props.element.fontSize)
+}
+
+// 更新字体大小（集中处理，确保统一）
+const updateFontSize = async (newSize) => {
   if (!props.element || !baseStore.canvas) return
-  props.element.set('fontSize', newSize)
-  baseStore.canvas.renderAll()
+  await baseStore.requestUpdateIconFontSize(props.element, newSize)
 }
 
 // 更新位置

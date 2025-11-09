@@ -40,10 +40,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
 import { FontTypes } from '@/constants/fonts'
+import { useBaseStore } from '@/stores/baseStore'
 import RecentFontList from './RecentFontList.vue'
 import SystemFontList from './SystemFontList.vue'
 import FontImportDialog from './FontImportDialog.vue'
@@ -66,6 +68,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
 const userStore = useUserStore()
+const baseStore = useBaseStore()
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
@@ -124,7 +127,31 @@ const ensureFontBySlug = async (slug: string, family: string) => {
 }
 
 const selectFont = async (font: FontItem) => {
-  await ensureFontBySlug(font.value, font.family)
+  // If selecting icon font, enforce single set per watch face
+  if (props.type === FontTypes.ICON_FONT) {
+    const current = baseStore.currentIconFontSlug
+    if (current && current !== font.value) {
+      try {
+        await ElMessageBox.confirm(
+          'Only one icon font set can be used per watch face. Switching will update all existing icon elements to use this font. Continue?',
+          'Switch Icon Font',
+          { type: 'warning', confirmButtonText: 'Switch', cancelButtonText: 'Cancel' }
+        )
+      } catch {
+        return
+      }
+      await ensureFontBySlug(font.value, font.family)
+      baseStore.updateAllIconFont(font.value)
+    } else if (!current) {
+      baseStore.setIconFontSlug(font.value)
+      await ensureFontBySlug(font.value, font.family)
+    } else {
+      await ensureFontBySlug(font.value, font.family)
+    }
+  } else {
+    await ensureFontBySlug(font.value, font.family)
+  }
+
   emit('update:modelValue', font.value)
   emit('change', font.value)
   try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
@@ -133,7 +160,24 @@ const selectFont = async (font: FontItem) => {
 }
 
 // 上传完成回调（来自子组件）
-const onFontUploaded = (slug: string) => {
+const onFontUploaded = async (slug: string) => {
+  if (props.type === FontTypes.ICON_FONT) {
+    const current = baseStore.currentIconFontSlug
+    if (current && current !== slug) {
+      try {
+        await ElMessageBox.confirm(
+          'Only one icon font set can be used per watch face. Switching will update all existing icon elements to use this font. Continue?',
+          'Switch Icon Font',
+          { type: 'warning', confirmButtonText: 'Switch', cancelButtonText: 'Cancel' }
+        )
+      } catch {
+        return
+      }
+      baseStore.updateAllIconFont(slug)
+    } else if (!current) {
+      baseStore.setIconFontSlug(slug)
+    }
+  }
   emit('update:modelValue', slug)
   emit('change', slug)
   isOpen.value = false

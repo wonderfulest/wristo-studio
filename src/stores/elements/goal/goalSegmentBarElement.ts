@@ -56,7 +56,9 @@ function buildSegments(params: BuildSegmentsParams) {
       ry: borderRadius,
       originX: 'center',
       originY: 'center',
-      selectable: false,
+      selectable: true,
+      hasControls: false,
+      hasBorders: true,
       evented: false,
     }) as unknown as Rect
     bgRects.push(bgRect)

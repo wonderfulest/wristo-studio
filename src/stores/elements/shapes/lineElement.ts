@@ -92,7 +92,7 @@ export const useLineElementStore = defineStore('lineElement', {
           strokeUniform: true,
           visible: true,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
           lockScalingFlip: true,
         }

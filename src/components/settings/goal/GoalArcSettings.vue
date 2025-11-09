@@ -20,19 +20,19 @@
         <div class="size-inputs">
           <div class="input-group">
             <label>Foreground Radius</label>
-            <el-input type="number" :value="mainRing?.radius" @input="(e) => (mainRing.radius = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="mainRing?.radius" @input="(val) => (mainRing.radius = Number(val))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Background Radius</label>
-            <el-input type="number" :value="bgRing?.radius" @input="(e) => (bgRing.radius = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="bgRing?.radius" @input="(val) => (bgRing.radius = Number(val))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Foreground Stroke Width</label>
-            <el-input type="number" :value="mainRing?.strokeWidth" @input="(e) => (mainRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="mainRing?.strokeWidth" @input="(val) => (mainRing.strokeWidth = Number(val))" @change="updateElement" />
           </div>
           <div class="input-group">
             <label>Background Stroke Width</label>
-            <el-input type="number" :value="bgRing?.strokeWidth" @input="(e) => (bgRing.strokeWidth = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" :value="bgRing?.strokeWidth" @input="(val) => (bgRing.strokeWidth = Number(val))" @change="updateElement" />
           </div>
         </div>
       </div>

@@ -40,6 +40,9 @@ export const useIconStore = defineStore('iconElement', {
           metricSymbol: config.metricSymbol,
           dataProperty: config.dataProperty,
           goalProperty: config.goalProperty,
+          selectable: true,
+          hasControls: false,
+          hasBorders: true,
         }
         const element = new FabricText(metric.icon, iconOptions as TextProps & IconElementConfig)
         this.baseStore.canvas?.add(element as FabricText)

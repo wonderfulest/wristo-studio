@@ -111,6 +111,8 @@ export interface DesignConfig {
   properties: Record<string, any>
   labelLengthType: number
   themeBackgroundImages: any[]
+  currentIconFontSlug: string // 当前图标字体(适用于icon、indicator元素)
+  currentIconFontSize: number // 当前图标字体大小(适用于icon、indicator元素)
   [key: string]: any // 允许其他扩展属性
 }
 

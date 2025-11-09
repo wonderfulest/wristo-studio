@@ -59,7 +59,7 @@ export const useTick60Store = defineStore('tick60Element', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
         targetSize: targetSize,

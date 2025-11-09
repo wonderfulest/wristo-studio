@@ -62,7 +62,7 @@ export const useGoalBarStore = defineStore('goalBarStore', {
         left: Number(options.left) || 0,
         top: Number(options.top) || 0,
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         originX: 'center',
         originY: 'center',

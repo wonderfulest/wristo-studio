@@ -39,6 +39,9 @@ export const useLabelStore = defineStore('labelElement', {
         fontFamily: (config.fontFamily ?? this.defaults.fontFamily) as any,
         dataProperty: config.dataProperty ?? null,
         goalProperty: config.goalProperty ?? null,
+        selectable: true,
+        hasControls: false,
+        hasBorders: true,
       } as any)
 
       this.baseStore.canvas?.add(element as any)

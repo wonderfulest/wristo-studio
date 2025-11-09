@@ -61,7 +61,7 @@ export const useRectangleStore = defineStore('rectangleElement', {
           originX: 'center',
           originY: 'center',
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
           lockScalingFlip: true,
           initialConfig: {

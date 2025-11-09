@@ -21,6 +21,8 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         fontFamily: config.fontFamily,
         fill: config.fill,
         selectable: true,
+        hasControls: false,
+        hasBorders: true,
         evented: true,
         originX: config.originX,
         originY: config.originY,

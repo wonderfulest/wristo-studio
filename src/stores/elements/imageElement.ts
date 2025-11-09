@@ -48,7 +48,7 @@ export const useImageElementStore = defineStore('imageElement', {
             scaleX: options.scaleX ?? scale,
             scaleY: options.scaleY ?? scale,
             selectable: false,
-            hasControls: true,
+            hasControls: false,
             hasBorders: true,
           } as any)
 

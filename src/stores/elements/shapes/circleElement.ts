@@ -54,7 +54,7 @@ export const useCircleStore = defineStore('circleElement', {
           originX: 'center',
           originY: 'center',
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
           lockScalingFlip: true,
           initialConfig: {

@@ -69,9 +69,7 @@ export const useDateStore = defineStore('dateElement', {
           fill: options.fill,
           fontFamily: options.fontFamily,
           formatter: options.formatter,
-          selectable: true,
-          hasControls: true,
-          hasBorders: true,
+          hasControls: false,
         } as any)
 
         const updateTextCase = () => {

@@ -47,8 +47,8 @@ export const useTimeStore = defineStore('timeStore', {
           fontSize: Number(options.fontSize),
           fontFamily: options.fontFamily ?? 'roboto-condensed-regular',
           formatter: options.formatter,
+          hasControls: false,
         }
-        
         const element = new FabricText(text, timeOptions as TimeElementOptions)
         this.baseStore.canvas.add(element as FabricText)
         this.layerStore.addLayer(element as any)

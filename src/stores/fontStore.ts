@@ -3,7 +3,7 @@ import { getFontBySlug, getSystemFonts, getRecentFonts } from '@/api/wristo/font
 import { useUserStore } from '@/stores/user'
 import { ApiResponse } from '@/types/api/api'
 import { DesignFontVO } from '@/types/font'
-
+import { DesignElement } from '@/types/api/design'
 // Types
 export interface FontOption {
   label: string
@@ -60,7 +60,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   initRecentFonts(type?: string): Promise<void>
   loadFont(slug: string, url?: string): Promise<boolean>
   loadFonts(fontNames: string[]): Promise<boolean>
-  loadFontsForElements(elements: Array<any>): Promise<boolean>
+  loadFontsForElements(elements: Array<DesignElement>): Promise<boolean>
   loadSystemFonts(type?: string): Promise<DesignFontVO[]>
   addRecentFont(font: FontOption): void
   addCustomFont(font: FontOption): void
@@ -386,13 +386,19 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           // 处理组元素
           if (element._objects) {
             element._objects.forEach((obj: any) => {
-              if (obj.fontFamily) fontNames.add(obj.fontFamily as string)
+              if (obj.fontFamily) {
+                fontNames.add(obj.fontFamily as string)
+              }
             })
           }
           // 处理单个元素
-          if (element.fontFamily) fontNames.add(element.fontFamily as string)
+          if (element.fontFamily) {
+            fontNames.add(element.fontFamily as string)
+          }
           // 处理配置中的字体
-          if (element.font) fontNames.add(element.font as string)
+          if (element.font) {
+            fontNames.add(element.font as string)
+          }
         })
 
         return this.loadFonts(Array.from(fontNames))

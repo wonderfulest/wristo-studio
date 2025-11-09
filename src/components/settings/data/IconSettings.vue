@@ -36,7 +36,7 @@
       <el-form-item label="Font Size">
         <el-select 
           v-model="element.fontSize" 
-          @change="updateElement"
+          @change="handleFontSizeChange"
         >
           <el-option 
             v-for="size in fontSizes" 
@@ -76,6 +76,7 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
 import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 import { FontTypes } from '@/constants/fonts'
+import { useBaseStore } from '@/stores/baseStore'
 
 const emit = defineEmits(['close'])
 
@@ -89,6 +90,7 @@ const props = defineProps({
 const formRef = ref(null)
 const iconStore = useIconStore()
 const propertiesStore = usePropertiesStore()
+const baseStore = useBaseStore()
 
 const rules = {
   dataProperty: [
@@ -111,6 +113,16 @@ const updateElement = async () => {
   } catch (error) {
     console.error('Form validation failed:', error)
   }
+}
+
+// initialize global icon font size if missing
+if (baseStore.currentIconFontSize == null && props.element?.fontSize) {
+  baseStore.setIconFontSize(props.element.fontSize)
+}
+
+const handleFontSizeChange = async (newSize) => {
+  await baseStore.requestUpdateIconFontSize(props.element, newSize)
+  await updateElement()
 }
 
 // 添加关闭时的验证方法

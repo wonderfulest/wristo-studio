@@ -42,6 +42,9 @@ export const useLineChartStore = defineStore('lineChartElement', {
         timeFormat: 'HH:mm',
         yLabelWidth: 20,
         xLabelHeight: 16,
+        selectable: true,
+        hasControls: false,
+        hasBorders: true,
       },
     }
   },

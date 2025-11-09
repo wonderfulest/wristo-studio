@@ -63,9 +63,6 @@ export const useBarChartStore = defineStore('barChartElement', {
         top: config.top,
         id,
         eleType: 'barChart',
-        selectable: true,
-        hasControls: true,
-        hasBorders: true,
         originX: 'center',
         originY: 'center',
         width: width,
@@ -93,6 +90,10 @@ export const useBarChartStore = defineStore('barChartElement', {
         yFont: yFont,
         xFontSize: xFontSize,
         yFontSize: yFontSize,
+
+        selectable: true,
+        hasControls: false,
+        hasBorders: true,
       } as any)
 
       const bgRect: any = new Rect({
@@ -101,8 +102,6 @@ export const useBarChartStore = defineStore('barChartElement', {
         fill: bgColor,
         left: -width / 2,
         top: -height / 2,
-        selectable: false,
-        hasControls: false,
       })
       group.add(bgRect)
 

@@ -8,7 +8,8 @@ import type { FabricElement } from '@/types/element'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { hasIconFont } from '@/utils/elementUtils'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -34,7 +35,9 @@ export const useBaseStore = defineStore('baseStore', {
     screenshot: null as Screenshot, // 存储表盘截图数据
     // 添加背景元素的引用
     watchFaceCircle: null as AnyObject | null,
-    backgroundImage: null as AnyObject | null
+    backgroundImage: null as AnyObject | null,
+    currentIconFontSlug: null as string | null,
+    currentIconFontSize: null as number | null
   }),
 
   getters: {
@@ -42,6 +45,81 @@ export const useBaseStore = defineStore('baseStore', {
 
   // actions
   actions: {
+    setIconFontSlug(slug: string): void {
+      this.currentIconFontSlug = slug
+    },
+    updateAllIconFont(slug: string): void {
+      if (!this.canvas) return
+      const objects: FabricElement[] = this.canvas.getObjects()
+      for (const obj of objects) {
+        if (hasIconFont(obj)) {
+          if ('fontFamily' in obj) {
+            obj.set('fontFamily', slug)
+          }
+        }
+      }
+      this.currentIconFontSlug = slug
+      this.canvas.renderAll()
+    },
+    setIconFontSize(size: number): void {
+      this.currentIconFontSize = size
+    },
+    updateAllIconFontSize(size: number): void {
+      if (!this.canvas) return
+      const objects: FabricElement[] = this.canvas.getObjects()
+      for (const obj of objects) {
+        if (hasIconFont(obj)) {
+          if ('fontSize' in obj) {
+            obj.set('fontSize', size)
+          }
+        }
+      }
+      this.currentIconFontSize = size
+      this.canvas.renderAll()
+    },
+    async requestUpdateIconFontSize(element: AnyObject, newSize: number): Promise<boolean> {
+      // Initialize global size if not set
+      if (this.currentIconFontSize == null) {
+        if (element && 'fontSize' in element) {
+          element.set('fontSize', newSize)
+          this.currentIconFontSize = newSize
+          this.canvas?.renderAll()
+          return true
+        }
+        return false
+      }
+      // If same as current, just apply to the element
+      if (this.currentIconFontSize === newSize) {
+        if (element && 'fontSize' in element) {
+          element.set('fontSize', newSize)
+          this.canvas?.renderAll()
+          return true
+        }
+        return false
+      }
+      // Ask user to confirm updating all icons
+      try {
+        await ElMessageBox.confirm(
+          `当前表盘只允许一个图标字体大小。是否将所有图标元素大小统一为 ${newSize}px?`,
+          '统一图标字体大小',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
+        )
+        // Confirmed: update all
+        this.updateAllIconFontSize(newSize)
+        return true
+      } catch {
+        // Canceled: revert element to current global size if element exists
+        if (element && 'fontSize' in element) {
+          element.set('fontSize', this.currentIconFontSize)
+          this.canvas?.renderAll()
+        }
+        return false
+      }
+    },
     // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
     mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
 
@@ -567,7 +645,9 @@ export const useBaseStore = defineStore('baseStore', {
         showUnit: this.showUnit,
         elements: [] as import('@/types/elements').AnyElementConfig[],
         orderIds: [] as string[],
-        themeBackgroundImages: this.themeBackgroundImages
+        themeBackgroundImages: this.themeBackgroundImages,
+        currentIconFontSlug: this.currentIconFontSlug,
+        currentIconFontSize: this.currentIconFontSize,
       }
 
       const objects: FabricElement[] = this.canvas.getObjects() as FabricElement[]

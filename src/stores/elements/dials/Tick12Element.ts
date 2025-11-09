@@ -41,7 +41,7 @@ export const useTick12Store = defineStore('tick12Element', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
         fill: fill,

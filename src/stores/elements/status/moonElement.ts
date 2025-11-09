@@ -70,9 +70,7 @@ export const useMoonStore = defineStore('moonElement', {
       const imgH = config.height ?? imgW
       if (!imgUrl) {
         imgUrl = getDefaultMoonImage()
-        console.log('[MoonStore] addElement using default asset', { imgUrl })
       }
-      console.log('[MoonStore] addElement image params', { imgUrl, imgW, imgH })
       return new Promise<FabricElement>((resolve) => {
         const createEmptyGroup = () => {
           const group = new FabricGroup([], {
@@ -81,7 +79,7 @@ export const useMoonStore = defineStore('moonElement', {
             originX: 'center',
             originY: 'center',
             selectable: true,
-            hasControls: true,
+            hasControls: false,
             hasBorders: true,
             objectCaching: false,
           } as GroupProps)
@@ -89,17 +87,14 @@ export const useMoonStore = defineStore('moonElement', {
           if (imgUrl) (group as unknown as { moonImageUrl?: string }).moonImageUrl = imgUrl
           ;(group as unknown as { width?: number }).width = imgW
           ;(group as unknown as { height?: number }).height = imgH
-          console.log('[MoonStore] addElement created empty group', { id, imgUrlEmpty: !imgUrl })
           const el = addGroupToCanvas(group)
           resolve(el)
         }
 
         if (!imgUrl) {
-          console.warn('[MoonStore] addElement no imageUrl and no default asset, creating empty group')
           createEmptyGroup()
           return
         }
-        console.log('[MoonStore] addElement loading image via HTMLImageElement', { imgUrl })
         let resolved = false
         setTimeout(() => { if (!resolved) console.warn('[MoonStore] addElement image load not resolved yet', { imgUrl }) }, 2000)
         loadHtmlImage(imgUrl)
@@ -134,7 +129,7 @@ export const useMoonStore = defineStore('moonElement', {
               originX: 'center',
               originY: 'center',
               selectable: true,
-              hasControls: true,
+              hasControls: false,
               hasBorders: true,
               objectCaching: false,
               visible: true,
@@ -143,9 +138,7 @@ export const useMoonStore = defineStore('moonElement', {
             ;(group as unknown as { width?: number }).width = imgW
             ;(group as unknown as { height?: number }).height = imgH
             ;(group as unknown as { moonIsImage?: boolean }).moonIsImage = true
-            console.log('[MoonStore] addElement group ready, adding to canvas', { id })
             const el = addGroupToCanvas(group)
-            console.log('[MoonStore] addElement group added', { id })
             resolve(el)
           })
           .catch((err) => {
@@ -160,17 +153,6 @@ export const useMoonStore = defineStore('moonElement', {
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>).find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
       if (!obj) return
-      console.log('[MoonStore] updateElement payload (image-only)', JSON.stringify(config))
-      console.log('[MoonStore] updateElement current meta', {
-        hasCanvas: Boolean(canvas),
-        id: element.id,
-        stored: {
-          url: (obj as unknown as { moonImageUrl?: string }).moonImageUrl,
-          w: (obj as unknown as { width?: number }).width,
-          h: (obj as unknown as { height?: number }).height,
-        }
-      })
-
       // preserve group position if caller didn't request move
       const shouldLockPosition = (config.left === undefined && config.top === undefined)
       const prevPos = shouldLockPosition ? { left: (obj as unknown as { left?: number }).left, top: (obj as unknown as { top?: number }).top } : null
@@ -184,10 +166,8 @@ export const useMoonStore = defineStore('moonElement', {
       const newUrl = newUrlRaw ? normalizeUrl(String(newUrlRaw)) : undefined
       const newW = (config as unknown as { width?: number }).width ?? (obj as unknown as { width?: number }).width
       const newH = (config as unknown as { height?: number }).height ?? (obj as unknown as { height?: number }).height
-      console.log('[MoonStore] updateElement resolved params', { hasImageObj: Boolean(imageObj), newUrl, newW, newH, childRoles: children.map(c => (c as unknown as { role?: string }).role) })
       if (!imageObj && newUrl) {
         // 组内无图片，加载新增
-        console.log('[MoonStore] updateElement loading new image via HTMLImageElement', { newUrl })
         let resolved = false
         setTimeout(() => { if (!resolved) console.warn('[MoonStore] updateElement image load not resolved yet', { newUrl }) }, 2000)
         loadHtmlImage(String(newUrl))
@@ -208,7 +188,6 @@ export const useMoonStore = defineStore('moonElement', {
                 image.set({ scaleX: sx, scaleY: sy } as unknown as ImageProps)
               }
             }
-            console.log('[MoonStore] updateElement image loaded & scaled', { w: image.getScaledWidth?.(), h: image.getScaledHeight?.() })
             ;(image as unknown as { role?: string }).role = 'image'
             children.forEach(ch => obj.remove(ch))
             obj.add(image as unknown as FabricObject)
@@ -227,7 +206,6 @@ export const useMoonStore = defineStore('moonElement', {
           })
       } else if (imageObj) {
         if (newUrl && newUrl !== currentUrl) {
-          console.log('[MoonStore] updateElement replacing image', { from: (obj as unknown as { moonImageUrl?: string }).moonImageUrl, to: config.imageUrl })
           let resolved = false
           setTimeout(() => { if (!resolved) console.warn('[MoonStore] updateElement replace image load not resolved yet', { to: config.imageUrl }) }, 2000)
           loadHtmlImage(String(newUrl))
@@ -270,7 +248,6 @@ export const useMoonStore = defineStore('moonElement', {
               console.error('[MoonStore] updateElement replace image load error', { to: config.imageUrl, err })
             })
         } else {
-          console.log('[MoonStore] updateElement resizing image', { w: newW, h: newH })
           const targetW = Math.max(1, Number(newW ?? (obj as unknown as { width?: number }).width))
           const targetH = Math.max(1, Number(newH ?? (obj as unknown as { height?: number }).height))
           // 统一走 setImageSize，保证缩放计算与渲染一致
@@ -282,7 +259,6 @@ export const useMoonStore = defineStore('moonElement', {
         obj.set('left', (prevPos.left ?? obj.left) as never)
         obj.set('top', (prevPos.top ?? obj.top) as never)
       }
-      console.log('[MoonStore] updateElement done renderAll')
       canvas.renderAll()
     },
 
@@ -295,7 +271,6 @@ export const useMoonStore = defineStore('moonElement', {
       const imageObj = children.find(c => (c as unknown as { role?: string }).role === 'image') as unknown as FabricImage | undefined
       const w = Math.max(1, Number(width))
       const h = Math.max(1, Number(height))
-      console.log('[MoonStore] setImageSize called', { id: (obj as unknown as { id?: string }).id, hasImageObj: Boolean(imageObj), targetW: w, targetH: h })
       if (imageObj) {
         const origW = (imageObj as unknown as { width?: number }).width ?? 1
         const origH = (imageObj as unknown as { height?: number }).height ?? 1
@@ -307,7 +282,6 @@ export const useMoonStore = defineStore('moonElement', {
         obj.remove(imageObj as unknown as FabricObject)
         obj.add(imageObj as unknown as FabricObject)
         obj.setCoords()
-        console.log('[MoonStore] setImageSize applied scales', { scaleX, scaleY, origW, origH, finalW: imageObj.getScaledWidth?.(), finalH: imageObj.getScaledHeight?.() })
       } else {
         console.warn('[MoonStore] setImageSize no image child found in group; updating metadata only')
       }

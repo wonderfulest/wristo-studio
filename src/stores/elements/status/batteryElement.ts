@@ -89,7 +89,7 @@ export const useBatteryStore = defineStore('batteryElement', {
           id,
           eleType: 'battery',
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
           originX: 'center',
           originY: 'center',

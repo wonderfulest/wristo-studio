@@ -43,7 +43,7 @@ export const useRomansStore = defineStore('romansElement', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
         fill: fill,

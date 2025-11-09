@@ -82,7 +82,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         angle: 0,
         imageUrl: imageUrl,

@@ -1,7 +1,7 @@
 <template>
     <el-tabs v-model="innerTab">
       <el-tab-pane
-        v-for="opt in options"
+        v-for="opt in visibleOptions"
         :key="opt.value"
         :label="opt.name || opt.value"
         :name="opt.value"
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { Loading, Plus } from '@element-plus/icons-vue'
 import type { IconGlyphVO, IconGlyphAssetVO, DisplayType } from '@/api/wristo/iconGlyph'
 import { getEnumOptions } from '@/api/common'
@@ -98,6 +98,15 @@ const defaultOptions: EnumOption[] = [
   { name: 'mip', value: 'mip' },
   { name: 'amoled', value: 'amoled' },
 ]
+
+// Only show 'mip' for default fonts
+const visibleOptions = computed<EnumOption[]>(() => {
+  const list = options.value
+  if (props.glyph?.isDefault === 1) {
+    return list.filter(o => String(o.value).toLowerCase() === 'mip')
+  }
+  return list
+})
 onMounted(async () => {
   try {
     const res: any = await getEnumOptions('DisplayType')
@@ -116,6 +125,21 @@ onMounted(async () => {
 watch((): DisplayType | undefined => props.displayType, (v: DisplayType | undefined) => {
   if (v && v !== innerTab.value) innerTab.value = v
 }, { immediate: true })
+// enforce 'mip' for default glyphs and keep innerTab valid for custom
+watch(
+  () => [props.glyph?.isDefault, options.value.map(o => o.value).join(',')],
+  () => {
+    if (props.glyph?.isDefault === 1) {
+      if (innerTab.value !== 'mip') innerTab.value = 'mip'
+    } else {
+      const values = new Set(visibleOptions.value.map(o => o.value))
+      if (!values.has(innerTab.value)) {
+        innerTab.value = (visibleOptions.value[0]?.value as DisplayType) || 'mip'
+      }
+    }
+  },
+  { immediate: true }
+)
 // emit to parent on change
 watch(innerTab, (v: DisplayType) => {
   emit('update:displayType', v)

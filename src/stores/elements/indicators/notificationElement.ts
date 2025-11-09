@@ -21,6 +21,8 @@ export const useNotificationStore = defineStore('notificationElement', {
         fontFamily: config.fontFamily,
         fill: config.fill,
         selectable: true,
+        hasControls: false,
+        hasBorders: true,
         evented: true,
         originX: 'center',
         originY: 'center',

@@ -72,6 +72,7 @@ import type { ElementConfig, ElementType } from '@/types/element'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
+import { AnyElementConfig } from '@/types/elements'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
@@ -106,8 +107,8 @@ const loadDesign = async (designUid: string) => {
       return
     }
     const designData = response.data
+    console.log(322, designData)
     const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
-    
     
     // 设置基础信息
     baseStore.id = designUid
@@ -115,7 +116,9 @@ const loadDesign = async (designUid: string) => {
     
     // 加载字体
     await fontStore.fetchFonts()
-    if (config.elements) await fontStore.loadFontsForElements(config.elements)
+    if (config.elements) {
+      await fontStore.loadFontsForElements(config.elements)
+    }
     
     // 如果配置为空，使用默认值
     if (!config || Object.keys(config).length === 0) {
@@ -129,6 +132,7 @@ const loadDesign = async (designUid: string) => {
       baseStore.textCase = 0
       baseStore.labelLengthType = 0
       baseStore.showUnit = false
+     
       
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
@@ -143,7 +147,9 @@ const loadDesign = async (designUid: string) => {
 
     // 加载主题背景图片
     baseStore.themeBackgroundImages = config.themeBackgroundImages || []
-
+    // 设置当前图标字体和大小
+    baseStore.currentIconFontSlug = config.currentIconFontSlug || null
+    baseStore.currentIconFontSize = config.currentIconFontSize || null
     // 设置文本大小写
     if (config.textCase !== undefined) {
       baseStore.textCase = config.textCase
@@ -212,10 +218,10 @@ const setupAutoSave = () => {
 }
 
 // 替换元素加载逻辑
-const loadElements = async (elements: ElementConfig[]) => {
+const loadElements = async (elements: AnyElementConfig[]) => {
   try {
     for (const element of elements) {
-      if (element.type == 'Line') continue
+      if (element.eleType == 'Line') continue
       console.log(`load element: ${JSON.stringify(element)}`)
       const decodedElement = await decodeElement(element)
       if (!decodedElement) {

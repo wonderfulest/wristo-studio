@@ -34,6 +34,9 @@ export const useDataStore = defineStore('dataElement', {
         dataProperty: config.dataProperty ?? undefined,
         goalProperty: config.goalProperty ?? undefined,
         metricSymbol: (config as any).metricSymbol ?? '',
+selectable: true,
+hasControls: false,
+hasBorders: true,
       } as any)
 
       this.baseStore.canvas?.add(element as any)

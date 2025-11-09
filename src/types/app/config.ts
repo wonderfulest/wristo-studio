@@ -12,4 +12,6 @@ export interface RuntimeDesignConfig {
   elements: AnyElementConfig[]
   orderIds: string[]
   themeBackgroundImages: unknown[]
+  currentIconFontSlug: string // 当前图标字体(适用于icon、indicator元素)
+  currentIconFontSize: number // 当前图标字体大小(适用于icon、indicator元素)
 }

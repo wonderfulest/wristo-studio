@@ -73,7 +73,7 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         angle: 0,
         imageUrl: imageUrl,
