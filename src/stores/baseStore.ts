@@ -576,11 +576,8 @@ export const useBaseStore = defineStore('baseStore', {
           // 创建 Fabric.Image 实例
           const fabricImage: AnyObject = new FabricImage(img, {
             eleType: 'background-image',
-            selectable: false,
-            evented: false,
             originX: 'left',
             originY: 'top',
-            
           }) as unknown as AnyObject
 
           // 计算缩放比例以填充圆形区域
@@ -595,7 +592,10 @@ export const useBaseStore = defineStore('baseStore', {
             scaleY: scale,
             left: left,
             top: top,
-        
+            selectable: false,
+            evented: false,
+            hasControls: false,
+            hasBorders: false,
           })
 
           // 添加图片并设置层级
