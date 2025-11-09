@@ -107,39 +107,57 @@ export const useBaseElementStore = defineStore('baseElement', {
       if (!this._clipboard) return
       // clone again, so you can do multiple copies.
       const clonedObj: any = await this._clipboard.clone()
+      // 清除旧选择
       canvas.discardActiveObject()
       clonedObj.set({
         left: clonedObj.left + 30,
         top: clonedObj.top + 30,
         evented: true,
       })
-      for (const obj of clonedObj._objects ?? []) {
-        const changed = {
-          id: nanoid(),
-          eleType: obj.eleType,
+      // 为克隆对象分配新 id（无论是组还是单个）
+      if (clonedObj._objects && Array.isArray(clonedObj._objects)) {
+        for (const obj of clonedObj._objects) {
+          obj.set({ id: nanoid() })
         }
-        obj.set(changed)
+      } else {
+        clonedObj.set({ id: nanoid() })
       }
       if (clonedObj instanceof ActiveSelection) {
         // active selection needs a reference to the canvas.
         clonedObj.canvas = canvas
         clonedObj.forEachObject((obj: any) => {
           canvas.add(obj)
+          // 同步到图层
+          this.layerStore.addLayer(obj as any)
         })
         // this should solve the unselectability
         clonedObj.setCoords?.()
       } else {
         canvas.add(clonedObj)
+        // 同步到图层
+        this.layerStore.addLayer(clonedObj as any)
       }
       this._clipboard.top += 20
       this._clipboard.left += 20
 
-      // 添加到图层
-      this.layerStore.addLayer(clonedObj as any)
       // 设置区同步
       emitter.emit('refresh-canvas')
 
+      // 仅将新对象设为激活，并同步图层选中
       canvas.setActiveObject(clonedObj)
+      if (clonedObj._objects && Array.isArray(clonedObj._objects)) {
+        // 如果是多对象粘贴，默认选中整个分组的第一个对象的 id，或保持分组对象被选中（无 id）
+        const first = clonedObj._objects[0]
+        if (first && first.id) {
+          this.layerStore.selectOne(first.id)
+        } else {
+          this.layerStore.clearSelected()
+        }
+      } else if (clonedObj.id) {
+        this.layerStore.selectOne(clonedObj.id)
+      } else {
+        this.layerStore.clearSelected()
+      }
       canvas.requestRenderAll()
     },
 
