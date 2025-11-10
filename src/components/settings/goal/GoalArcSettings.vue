@@ -20,19 +20,19 @@
         <div class="size-inputs">
           <div class="input-group">
             <label>Foreground Radius</label>
-            <el-input type="number" :value="mainRing?.radius" @input="(val) => (mainRing.radius = Number(val))" @change="updateElement" />
+            <el-input type="number" v-model="mainRadius" @change="onMainRadiusChange" />
           </div>
           <div class="input-group">
             <label>Background Radius</label>
-            <el-input type="number" :value="bgRing?.radius" @input="(val) => (bgRing.radius = Number(val))" @change="updateElement" />
+            <el-input type="number" v-model="bgRadius" @change="onBgRadiusChange" />
           </div>
           <div class="input-group">
             <label>Foreground Stroke Width</label>
-            <el-input type="number" :value="mainRing?.strokeWidth" @input="(val) => (mainRing.strokeWidth = Number(val))" @change="updateElement" />
+            <el-input type="number" v-model="mainStrokeWidth" @change="onMainStrokeWidthChange" />
           </div>
           <div class="input-group">
             <label>Background Stroke Width</label>
-            <el-input type="number" :value="bgRing?.strokeWidth" @input="(val) => (bgRing.strokeWidth = Number(val))" @change="updateElement" />
+            <el-input type="number" v-model="bgStrokeWidth" @change="onBgStrokeWidthChange" />
           </div>
         </div>
       </div>
@@ -48,11 +48,11 @@
         <div class="angle-inputs">
           <div class="input-group">
             <label>Start Angle</label>
-            <el-input type="number" :value="element.startAngle" @input="(e) => (element.startAngle = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" v-model="startAngleLocal" @change="onStartAngleChange" />
           </div>
           <div class="input-group">
             <label>End Angle</label>
-            <el-input type="number" :value="element.endAngle" @input="(e) => (element.endAngle = Number(e.target.value))" @change="updateElement" />
+            <el-input type="number" v-model="endAngleLocal" @change="onEndAngleChange" />
           </div>
         </div>
         <!-- 添加方向选择 -->
@@ -154,6 +154,14 @@ const bgRing = computed(() => props.element.getObjects().find((obj) => obj.id.en
 const fgColor = ref('#FFFFFF')
 const bgColor = ref('#555555')
 
+// 本地响应式中间变量，避免直接在输入过程中修改 fabric 对象
+const mainRadius = ref(0)
+const bgRadius = ref(0)
+const mainStrokeWidth = ref(0)
+const bgStrokeWidth = ref(0)
+const startAngleLocal = ref(0)
+const endAngleLocal = ref(0)
+
 // 初始化并在 element 变动时同步颜色
 watchEffect(() => {
   if (mainRing.value && typeof mainRing.value.stroke === 'string') {
@@ -161,6 +169,20 @@ watchEffect(() => {
   }
   if (bgRing.value && typeof bgRing.value.stroke === 'string') {
     bgColor.value = bgRing.value.stroke
+  }
+
+  // 同步数值到本地变量
+  if (mainRing.value) {
+    mainRadius.value = Number(mainRing.value.radius || 0)
+    mainStrokeWidth.value = Number(mainRing.value.strokeWidth || 0)
+  }
+  if (bgRing.value) {
+    bgRadius.value = Number(bgRing.value.radius || 0)
+    bgStrokeWidth.value = Number(bgRing.value.strokeWidth || 0)
+  }
+  if (props.element) {
+    startAngleLocal.value = Number(props.element.startAngle || 0)
+    endAngleLocal.value = Number(props.element.endAngle || 0)
   }
 })
 
@@ -176,6 +198,54 @@ const tooltipContent = `
 
 const rules = {
   goalProperty: [{ required: true, message: 'Please select a goal property', trigger: 'change' }]
+}
+
+// 变更处理：半径与描边
+const onMainRadiusChange = (val) => {
+  if (!mainRing.value) return
+  const n = Number(val)
+  mainRing.value.radius = n
+  goalArcStore.updateElement(props.element, { radius: n })
+}
+const onBgRadiusChange = (val) => {
+  if (!bgRing.value) return
+  const n = Number(val)
+  bgRing.value.radius = n
+  goalArcStore.updateElement(props.element, { bgRadius: n })
+}
+const onMainStrokeWidthChange = (val) => {
+  if (!mainRing.value) return
+  const n = Number(val)
+  mainRing.value.strokeWidth = n
+  goalArcStore.updateElement(props.element, { strokeWidth: n })
+}
+const onBgStrokeWidthChange = (val) => {
+  if (!bgRing.value) return
+  const n = Number(val)
+  bgRing.value.strokeWidth = n
+  goalArcStore.updateElement(props.element, { bgStrokeWidth: n })
+}
+
+// 变更处理：角度
+const normalizeAngle = (v) => {
+  const n = Number(v)
+  if (Number.isNaN(n)) return 0
+  // 保持 0-359 范围
+  let a = Math.round(n) % 360
+  if (a < 0) a += 360
+  return a
+}
+const onStartAngleChange = (val) => {
+  const n = normalizeAngle(val)
+  startAngleLocal.value = n
+  props.element.startAngle = n
+  goalArcStore.updateElement(props.element, { startAngle: n })
+}
+const onEndAngleChange = (val) => {
+  const n = normalizeAngle(val)
+  endAngleLocal.value = n
+  props.element.endAngle = n
+  goalArcStore.updateElement(props.element, { endAngle: n })
 }
 
 // 更新元素
