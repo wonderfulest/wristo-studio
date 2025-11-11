@@ -2,7 +2,7 @@
   <div class="icon-library">
     <div class="header">
       <h2>Icon Library</h2>
-      <HeaderUploadSvg @uploaded="onHeaderUploaded" />
+      <el-button type="primary" @click="goToIconAssets">图标素材库</el-button>
     </div>
 
     <div class="content-card">
@@ -93,10 +93,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
-import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
 import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
@@ -118,6 +117,10 @@ import {
 } from '@/api/wristo/iconGlyph'
 
 const route = useRoute()
+
+const goToIconAssets = () => {
+  window.open('/icon-assets', '_blank')
+}
 
 // glyph list (tabs)
 const glyphs = ref<IconGlyphVO[]>([])
@@ -371,19 +374,14 @@ const handleImport = async () => {
   }
 }
 
-const onHeaderUploaded = async () => {
-  // If bind dialog is open, refresh the list so newly uploaded assets appear
-  if (bindVisible.value) {
-    await loadBindAssets()
-  }
-}
+// (upload header button removed)
 </script>
 
 <style scoped>
 .icon-library { padding: 16px; }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .content-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-.tab-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+.tab-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0px 0 8px 0; }
 .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eef2ff; color: #4f46e5; margin-right: 8px; }
 .badge.custom { background: #ecfdf5; color: #059669; }
 .meta { font-size: 12px; color: #606266; margin-right: 12px; }

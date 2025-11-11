@@ -22,14 +22,13 @@
           <div class="el-upload__tip">
             <div class="upload-extra">
               <div class="row">
-                <span class="label">显示类型：</span>
+                <span class="label"><span style="color:#f56c6c">*</span> 显示类型（必选）：</span>
                 <el-radio-group v-model="displayType">
                   <el-radio v-for="opt in displayTypeOptions" :key="opt.value" :label="opt.value">{{ opt.name || opt.value }}</el-radio>
                 </el-radio-group>
               </div>
             </div>
             <div class="symbol-quick">
-              <div class="label">Symbol Code 速查表</div>
               <div class="symbol-selected">
                 <span>已选择图标类型：</span>
                 <span class="code" v-if="selectedSymbolCode">{{ selectedSymbolCode }}</span>
@@ -68,13 +67,15 @@ import { ElMessage } from 'element-plus'
 import { uploadIconSvg, listIconLibrary, type IconLibraryVO, type DisplayType } from '@/api/wristo/iconGlyph'
 import { getEnumOptions, type EnumOption } from '@/api/common'
 
+const props = defineProps<{ iconUnicode?: string }>()
 const emit = defineEmits<{ (e: 'uploaded'): void }>()
 
 const uploading = ref(false)
 const dialogVisible = ref(false)
 const iconList = ref<Pick<IconLibraryVO, 'symbolCode' | 'label' | 'iconUnicode'>[]>([])
 const selectedSymbolCode = ref<string | undefined>(undefined)
-const displayType = ref<DisplayType>('mip')
+const pendingIconUnicode = ref<string | undefined>(undefined)
+const displayType = ref<DisplayType | undefined>(undefined)
 const displayTypeOptions = ref<EnumOption[]>([])
 
 watch(dialogVisible, async (v) => {
@@ -97,10 +98,36 @@ watch(dialogVisible, async (v) => {
     } catch {
       displayTypeOptions.value = [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
     }
-    // ensure default
-    if (!displayType.value) displayType.value = 'mip'
+    // no default; user must select explicitly
+  }
+  // apply pending preselection if possible
+  if (v && pendingIconUnicode.value && iconList.value.length) {
+    const found = iconList.value.find(it => it.iconUnicode === pendingIconUnicode.value)
+    if (found?.symbolCode) selectedSymbolCode.value = found.symbolCode
+    pendingIconUnicode.value = undefined
   }
 })
+
+// react to prop change
+watch(
+  () => props.iconUnicode,
+  (u) => {
+    if (!u) {
+      // clear selection only if not uploading
+      if (!uploading.value) selectedSymbolCode.value = undefined
+      pendingIconUnicode.value = undefined
+      return
+    }
+    if (iconList.value.length > 0) {
+      const found = iconList.value.find(it => it.iconUnicode === u)
+      selectedSymbolCode.value = found?.symbolCode
+      pendingIconUnicode.value = undefined
+    } else {
+      pendingIconUnicode.value = u
+    }
+  },
+  { immediate: true }
+)
 
 const beforeUpload = (file: File) => {
   const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
@@ -114,6 +141,10 @@ const beforeUpload = (file: File) => {
 const doUpload = async (options: { file: File }) => {
   const file = options.file
   if (!beforeUpload(file)) return
+  if (!displayType.value) {
+    ElMessage.error('请选择显示类型')
+    return
+  }
   uploading.value = true
   try {
     // Determine unicode: prefer selected icon; otherwise infer from file name by matching symbolCode

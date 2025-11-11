@@ -44,8 +44,9 @@
                     <el-icon><Plus /></el-icon>
                   </el-button>
                 </template>
-                <div class="grid-meta">
-                  {{ item.icon?.iconUnicode }}
+                <div class="grid-meta meta-codes">
+                  <!-- <div class="symbol-code">{{ item.icon?.symbolCode }}</div> -->
+                  <div class="symbol-unicode">{{ item.icon?.iconUnicode }}</div>
                 </div>
               </div>
             </div>
@@ -176,6 +177,9 @@ const getAssetImage = (item: IconGlyphAssetVO): string => {
 .overlay-actions .action { display: block; width: 100%; text-align: center; color: #0b2a4a; background: rgba(230,240,255,.95); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 6px 10px; border-radius: 6px; }
 .overlay-actions .action:hover { background: #409eff; color: #fff; }
 .grid-meta { font-weight: 900; font-size: 12px; color: #909399; }
+.meta-codes { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.symbol-code { font-weight: 700; color: #303133; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: normal; word-break: break-all; text-align: center; max-width: 100%; }
+.symbol-unicode { font-size: 12px; color: #909399; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 .pager { display: flex; justify-content: center; padding: 8px 0; }
 </style>
 

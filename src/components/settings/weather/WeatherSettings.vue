@@ -15,18 +15,36 @@
       </el-form-item>
     </el-form>
 
+    <div class="tabs-extra">
+      <el-button size="small" @click="onRefreshTab">Refresh</el-button>
+    </div>
     <el-tabs v-model="activeTab" class="weather-tabs">
       <el-tab-pane label="MIP" name="mip">
         <div class="conditions" v-loading="loading.mip">
           <div v-for="c in conditions.mip" :key="c.condition" class="condition-item">
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
-              <div v-if="c.asset" class="asset">
-                <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
-                <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
-                <div v-else class="no-preview">No preview</div>
-              </div>
-              <div v-else class="no-preview">No asset</div>
+              <template v-if="c.asset">
+                <el-tooltip content="Change binding" placement="top">
+                  <div class="asset clickable-link" @click="goIconLibrary">
+                    <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
+                    <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
+                    <div v-else class="no-preview">No preview</div>
+                  </div>
+                </el-tooltip>
+              </template>
+              <template v-else>
+                <el-tooltip content="Bind asset (upload SVG)" placement="top">
+                  <el-upload
+                    :show-file-list="false"
+                    accept=".svg"
+                    :before-upload="beforeUploadSVG"
+                    :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
+                  >
+                    <div class="no-preview clickable-link">Bind asset</div>
+                  </el-upload>
+                </el-tooltip>
+              </template>
             </div>
           </div>
         </div>
@@ -36,12 +54,27 @@
           <div v-for="c in conditions.amoled" :key="c.condition" class="condition-item">
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
-              <div v-if="c.asset" class="asset">
-                <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
-                <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
-                <div v-else class="no-preview">No preview</div>
-              </div>
-              <div v-else class="no-preview">No asset</div>
+              <template v-if="c.asset">
+                <el-tooltip content="Change binding" placement="top">
+                  <div class="asset clickable-link" @click="goIconLibrary">
+                    <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
+                    <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
+                    <div v-else class="no-preview">No preview</div>
+                  </div>
+                </el-tooltip>
+              </template>
+              <template v-else>
+                <el-tooltip content="Bind asset (upload SVG)" placement="top">
+                  <el-upload
+                    :show-file-list="false"
+                    accept=".svg"
+                    :before-upload="beforeUploadSVG"
+                    :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
+                  >
+                    <div class="no-preview clickable-link">Bind asset</div>
+                  </el-upload>
+                </el-tooltip>
+              </template>
             </div>
           </div>
         </div>
@@ -56,7 +89,8 @@ import { useWeatherStore } from '@/stores/elements/weather/weatherElement'
 import type { FabricElement } from '@/types/element'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { FontTypes } from '@/constants/fonts'
-import { getWeatherConditions } from '@/api/wristo/weather'
+import { getWeatherConditions, uploadWeatherSvg } from '@/api/wristo/weather'
+import { ElMessage } from 'element-plus'
 import type { WeatherConditionAssetsVO } from '@/types/api/weather'
 
 const props = defineProps<{ element: FabricElement }>()
@@ -146,6 +180,48 @@ const onFontChange = () => {
 watch(activeTab, () => {
   if (!conditions[activeTab.value].length && fontSlug.value) fetchConditions(activeTab.value)
 })
+
+function goIconLibrary() {
+  window.open('/icon-library', '_blank')
+}
+
+function onRefreshTab() {
+  if (activeTab.value) {
+    fetchConditions(activeTab.value)
+  }
+}
+
+// ---- upload bind helpers ----
+const beforeUploadSVG = (file: File) => {
+  const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+  if (!isSvg) {
+    ElMessage.error('Please upload an SVG file')
+    return false
+  }
+  if (!fontSlug.value) {
+    ElMessage.error('Please select a Weather Font first')
+    return false
+  }
+  return true
+}
+
+const handleUpload = async (options: { file: File }, unicode?: string) => {
+  const file = options?.file
+  if (!file) return
+  if (!beforeUploadSVG(file)) return
+  if (!unicode) {
+    ElMessage.error('Missing icon unicode for this condition')
+    return
+  }
+  try {
+    const dt = activeTab.value
+    await uploadWeatherSvg(file, dt, unicode, fontSlug.value)
+    ElMessage.success('Uploaded and bound successfully')
+    await fetchConditions(dt)
+  } catch (e) {
+    ElMessage.error('Upload failed')
+  }
+}
 </script>
 
 <style scoped>
@@ -160,4 +236,9 @@ watch(activeTab, () => {
 .asset img { max-width: 100%; max-height: 72px; object-fit: contain; }
 .asset .svg :deep(svg) { width: 72px; height: 72px; }
 .no-preview { font-size: 12px; color: #909399; }
+/* tabs extra toolbar */
+.tabs-extra { display: flex; justify-content: flex-end; margin-top: 8px; }
+/* hyperlink-like clickable styling */
+.clickable-link { cursor: pointer; color: #409eff; }
+.clickable-link:hover { text-decoration: underline; }
 </style>
