@@ -39,3 +39,11 @@ export interface MoonElementConfig extends BaseElementConfig {
   width?: number
   height?: number
 }
+
+export interface WeatherElementConfig extends BaseElementConfig {
+  eleType: 'weather'
+  // image-based rendering
+  imageUrl?: string
+  width?: number
+  height?: number
+}

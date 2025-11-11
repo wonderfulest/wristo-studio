@@ -1,6 +1,6 @@
 import { registerEncoder, registerDecoder, registerAddElement } from '../registry'
 import type { EncoderFn, DecoderFn, AddElementFn } from '../registry'
-import { useMoonStore } from '@/stores/elements/status/moonElement'
+import { useMoonStore } from '@/stores/elements/weather/moonElement'
 import type { FabricElement } from '@/types/element'
 import type { MoonElementConfig } from '@/types/elements/data'
 

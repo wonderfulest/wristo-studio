@@ -32,7 +32,7 @@ export type { TickElementConfig } from './tick'
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
-import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon } from './data'
+import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon, WeatherElementConfig as _Weather } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc, GoalSegmentBarElementConfig as _GoalSegBar } from './goal'
@@ -49,6 +49,7 @@ export type AnyElementConfig =
   | _Label
   | _DataText
   | _Moon
+  | _Weather
   | _Indicator
   | _Hand
   | _Shape
@@ -71,6 +72,7 @@ export interface ElementConfigMap {
   'label': _Label
   'data': _DataText
   'moon': _Moon
+  'weather': _Weather
   'indicator': _Indicator
   'bluetooth': _Indicator
   'alarms': _Indicator

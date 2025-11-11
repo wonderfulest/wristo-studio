@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 import { onMounted, computed, ref, watch } from 'vue'
-import { useMoonStore } from '@/stores/elements/status/moonElement'
+import { useMoonStore } from '@/stores/elements/weather/moonElement'
 import type { FabricElement } from '@/types/element'
 
 const props = defineProps<{ element: FabricElement }>()

@@ -1,5 +1,5 @@
 import type { IconElementConfig, DataElementConfig } from '@/types/elements'
-import type { MoonElementConfig } from '@/types/elements/data'
+import type { MoonElementConfig, WeatherElementConfig } from '@/types/elements/data'
 import { DEFAULT_TEXT_CONFIG, EDITOR_ELEMENT } from './base'
 
 const base = DEFAULT_TEXT_CONFIG
@@ -17,6 +17,20 @@ export const DEFAULT_DATA_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
   fontSize: 42,
   fontFamily: 'roboto-condensed-regular',
   metricSymbol: ':FIELD_TYPE_HEART_RATE',
+}
+
+export const DEFAULT_WEATHER_CONFIG: WeatherElementConfig & EDITOR_ELEMENT = {
+  icon: 'mdi:weather-partly-cloudy',
+  label: 'Weather',
+  eleType: 'weather',
+  id: '',
+  left: base.left,
+  top: base.top,
+  originX: 'center',
+  originY: 'center',
+  fill: '#000000',
+  fontSize: 42,
+  fontFamily: 'weather-regular',
 }
 
 export const DEFAULT_LABEL_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
@@ -57,5 +71,4 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   fill: '#000000',
   fontSize: 42,
   fontFamily: 'weather-regular',
-  bgColor: '#ffffff',
 }
