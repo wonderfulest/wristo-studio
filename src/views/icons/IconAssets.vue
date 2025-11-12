@@ -18,7 +18,7 @@
         <el-select v-model="displayType" placeholder="显示类型" clearable style="width: 160px" @change="handleSearch" :loading="loadingEnums">
           <el-option v-for="opt in displayTypeOptions" :key="String(opt.value)" :label="opt.name || String(opt.value)" :value="opt.value as any" />
         </el-select>
-        <HeaderUploadSvg :icon-unicode="iconUnicode" @uploaded="fetchPage" />
+        <HeaderUploadSvg v-model:iconUnicode="iconUnicode" @uploaded="fetchPage" />
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="fetchPage">刷新</el-button>
       </div>
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
@@ -174,6 +174,11 @@ onMounted(async () => {
     loadingEnums.value = false
   }
   fetchPage()
+})
+
+// auto refresh when icon selection changes programmatically (from HeaderUploadSvg)
+watch(iconUnicode, () => {
+  handleSearch()
 })
 
 const openEdit = (row: IconAssetVO) => {

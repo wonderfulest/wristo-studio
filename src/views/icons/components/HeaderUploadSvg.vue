@@ -68,7 +68,10 @@ import { uploadIconSvg, listIconLibrary, type IconLibraryVO, type DisplayType } 
 import { getEnumOptions, type EnumOption } from '@/api/common'
 
 const props = defineProps<{ iconUnicode?: string }>()
-const emit = defineEmits<{ (e: 'uploaded'): void }>()
+const emit = defineEmits<{
+  (e: 'uploaded'): void
+  (e: 'update:iconUnicode', val?: string): void
+}>()
 
 const uploading = ref(false)
 const dialogVisible = ref(false)
@@ -176,14 +179,23 @@ function toggleSelect(code?: string) {
   if (uploading.value) return
   if (!code) {
     selectedSymbolCode.value = undefined
+    emit('update:iconUnicode', undefined)
     return
   }
   selectedSymbolCode.value = selectedSymbolCode.value === code ? undefined : code
+  // emit corresponding unicode to parent for syncing selection in IconAssets
+  if (selectedSymbolCode.value) {
+    const found = iconList.value.find(it => it.symbolCode === selectedSymbolCode.value)
+    emit('update:iconUnicode', found?.iconUnicode)
+  } else {
+    emit('update:iconUnicode', undefined)
+  }
 }
 
 function clearSelect() {
   if (uploading.value) return
   selectedSymbolCode.value = undefined
+  emit('update:iconUnicode', undefined)
 }
 </script>
 
