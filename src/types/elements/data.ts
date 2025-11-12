@@ -46,4 +46,7 @@ export interface WeatherElementConfig extends BaseElementConfig {
   imageUrl?: string
   width?: number
   height?: number
+  // weather specific
+  fontFamily?: string
+  fill?: string
 }

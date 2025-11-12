@@ -35,6 +35,39 @@ function normalizeUrl(u: string): string {
   return u
 }
 
+function isSvgUrl(url?: string): boolean {
+  if (!url) return false
+  const u = url.toLowerCase()
+  return u.startsWith('data:image/svg+xml') || u.endsWith('.svg')
+}
+
+async function recolorSvgToDataUrl(svgSourceUrl: string, color: string): Promise<string> {
+  try {
+    let svgText = ''
+    if (svgSourceUrl.startsWith('data:image/svg+xml')) {
+      const raw = decodeURIComponent(svgSourceUrl.split(',')[1] || '')
+      svgText = raw
+    } else {
+      const res = await fetch(svgSourceUrl, { mode: 'cors' })
+      svgText = await res.text()
+    }
+    // Inject style setting fill/stroke; preserve viewBox etc.
+    const hasStyle = /<style[\s\S]*?>[\s\S]*?<\/style>/i.test(svgText)
+    const styleTag = `<style>* { fill: ${color} !important; stroke: ${color} !important; }</style>`
+    let patched = svgText
+    if (hasStyle) {
+      patched = svgText.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/i, styleTag)
+    } else {
+      patched = svgText.replace(/<svg(\b[^>]*)>/i, (_m, attrs) => `<svg${attrs}>${styleTag}`)
+    }
+    const encoded = encodeURIComponent(patched)
+    return `data:image/svg+xml,${encoded}`
+  } catch (e) {
+    console.warn('[WeatherStore] recolorSvgToDataUrl failed, using original', e)
+    return svgSourceUrl
+  }
+}
+
 export const useWeatherStore = defineStore('weatherElement', {
   state: () => {
     const baseStore = useBaseStore()
@@ -43,13 +76,18 @@ export const useWeatherStore = defineStore('weatherElement', {
   },
   actions: {
     addElement(config: WeatherElementConfig): Promise<FabricElement> {
+      console.log('add wecdsa Element', config)
+      
       const id = config.id || nanoid()
       const cx = config.left ?? 0
       const cy = config.top ?? 0
+      config.fill = config.fill || '#ffffff'
       
       const addGroupToCanvas = (group: FabricGroup) => {
         ;(group as unknown as { id?: string }).id = id
         ;(group as unknown as { eleType?: string }).eleType = 'weather'
+        if (config.fontFamily) (group as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
+        if (config.fill) (group as unknown as { fill?: string }).fill = config.fill
         this.baseStore.canvas?.add(group as unknown as FabricObject)
         this.layerStore.addLayer(group as unknown as MinimalFabricLike)
         this.baseStore.canvas?.setActiveObject(group as unknown as FabricObject)
@@ -78,6 +116,8 @@ export const useWeatherStore = defineStore('weatherElement', {
           if (imgUrl) (group as unknown as { weatherImageUrl?: string }).weatherImageUrl = imgUrl
           ;(group as unknown as { width?: number }).width = imgW
           ;(group as unknown as { height?: number }).height = imgH
+          if (config.fontFamily) (group as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
+          if (config.fill) (group as unknown as { fill?: string }).fill = config.fill
           const el = addGroupToCanvas(group)
           resolve(el)
         }
@@ -127,6 +167,8 @@ export const useWeatherStore = defineStore('weatherElement', {
             ;(group as unknown as { width?: number }).width = imgW
             ;(group as unknown as { height?: number }).height = imgH
             ;(group as unknown as { weatherIsImage?: boolean }).weatherIsImage = true
+            if (config.fontFamily) (group as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
+            if (config.fill) (group as unknown as { fill?: string }).fill = config.fill
             const el = addGroupToCanvas(group)
             resolve(el)
           })
@@ -146,6 +188,8 @@ export const useWeatherStore = defineStore('weatherElement', {
       const prevPos = shouldLockPosition ? { left: (obj as unknown as { left?: number }).left, top: (obj as unknown as { top?: number }).top } : null
       if (config.left !== undefined) obj.set('left', config.left as never)
       if (config.top !== undefined) obj.set('top', config.top as never)
+      if (config.fontFamily !== undefined) (obj as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
+      if (config.fill !== undefined) (obj as unknown as { fill?: string }).fill = config.fill
       const children = obj.getObjects() as FabricObject[]
       const imageObj = children.find(c => (c as unknown as { role?: string }).role === 'image') as unknown as FabricImage | undefined
       const currentUrlRaw = (obj as unknown as { weatherImageUrl?: string }).weatherImageUrl
@@ -154,11 +198,20 @@ export const useWeatherStore = defineStore('weatherElement', {
       const newUrl = newUrlRaw ? normalizeUrl(String(newUrlRaw)) : undefined
       const newW = (config as unknown as { width?: number }).width ?? (obj as unknown as { width?: number }).width
       const newH = (config as unknown as { height?: number }).height ?? (obj as unknown as { height?: number }).height
+      const colorForSvg = (obj as unknown as { fill?: string }).fill
+
+      const maybeColorizedUrlPromise = async (): Promise<string | undefined> => {
+        if (!newUrl) return undefined
+        if (!isSvgUrl(newUrl)) return newUrl
+        if (!colorForSvg) return newUrl
+        return recolorSvgToDataUrl(String(newUrl), String(colorForSvg))
+      }
 
       if (!imageObj && newUrl) {
         let resolved = false
         setTimeout(() => { if (!resolved) console.warn('[WeatherStore] updateElement image load not resolved yet', { newUrl }) }, 2000)
-        loadHtmlImage(String(newUrl))
+        ;(async () => await maybeColorizedUrlPromise())()
+          .then((finalUrl) => loadHtmlImage(String(finalUrl || newUrl)))
           .then((imgEl) => {
             resolved = true
             const image = new FabricImage(imgEl as HTMLImageElement, { originX: 'center', originY: 'center', left: 0, top: 0, objectCaching: false, visible: true, opacity: 1 } as ImageProps)
@@ -195,7 +248,8 @@ export const useWeatherStore = defineStore('weatherElement', {
         if (newUrl && newUrl !== currentUrl) {
           let resolved = false
           setTimeout(() => { if (!resolved) console.warn('[WeatherStore] updateElement replace image load not resolved yet', { to: config.imageUrl }) }, 2000)
-          loadHtmlImage(String(newUrl))
+          ;(async () => await maybeColorizedUrlPromise())()
+            .then((finalUrl) => loadHtmlImage(String(finalUrl || newUrl)))
             .then((imgEl) => {
               resolved = true
               try { (imageObj as unknown as { setElement?: (el: HTMLImageElement) => void }).setElement?.(imgEl as HTMLImageElement) } catch {}
@@ -233,6 +287,24 @@ export const useWeatherStore = defineStore('weatherElement', {
           const targetW = Math.max(1, Number(newW ?? (obj as unknown as { width?: number }).width))
           const targetH = Math.max(1, Number(newH ?? (obj as unknown as { height?: number }).height))
           this.setImageSize(element, targetW, targetH)
+          // recolor current image in-place if only color changed and it's SVG
+          if (isSvgUrl(currentUrl) && colorForSvg) {
+            ;(async () => await recolorSvgToDataUrl(String(currentUrl), String(colorForSvg)))()
+              .then((finalUrl) => {
+                if (!finalUrl) return
+                return loadHtmlImage(String(finalUrl))
+              })
+              .then((imgEl) => {
+                if (!imgEl) return
+                try { (imageObj as unknown as { setElement?: (el: HTMLImageElement) => void }).setElement?.(imgEl as HTMLImageElement) } catch {}
+                imageObj.setCoords?.()
+                obj.remove(imageObj as unknown as FabricObject)
+                obj.add(imageObj as unknown as FabricObject)
+                obj.setCoords()
+                canvas.requestRenderAll()
+              })
+              .catch(() => {})
+          }
         }
       }
       if (shouldLockPosition && prevPos) {
@@ -269,19 +341,19 @@ export const useWeatherStore = defineStore('weatherElement', {
     },
 
     encodeConfig(element: FabricElement): WeatherElementConfig {
-      const imageUrl = (element as unknown as { weatherImageUrl?: string }).weatherImageUrl
-      const width = (element as unknown as { width?: number }).width
-      const height = (element as unknown as { height?: number }).height
+      const fontFamily = (element as unknown as { fontFamily?: string }).fontFamily
+      const fill = (element as unknown as { fill?: string }).fill || '#ffffff'
       return {
         eleType: 'weather',
         id: String(element.id ?? ''),
-        left: Number(element.left),
-        top: Number(element.top),
+        left: parseInt(String(element.left)),
+        top: parseInt(String(element.top)),
         originX: 'center',
         originY: 'center',
-        imageUrl,
-        width,
-        height,
+        width: parseInt(String(element.width)),
+        height: parseInt(String(element.height)),
+        fontFamily,
+        fill,
       }
     },
 
@@ -296,6 +368,8 @@ export const useWeatherStore = defineStore('weatherElement', {
         imageUrl: config.imageUrl,
         width: config.width,
         height: config.height,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
       }
     },
   },

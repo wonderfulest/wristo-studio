@@ -2,16 +2,16 @@
   <div class="weather-properties">
     <el-form label-position="left" label-width="120px">
       <el-form-item label="Weather Font">
-        <font-picker v-model="fontSlug" :type="FontTypes.ICON_FONT" @change="onFontChange" />
+        <font-picker v-model="fontFamily" :type="FontTypes.ICON_FONT" @change="onFontChange" />
       </el-form-item>
-      <el-form-item label="Asset URL">
-        <el-input v-model="element.imageUrl" disabled />
+      <el-form-item v-if="activeTab === 'mip'" label="Font Color">
+        <ColorPicker v-model="fill" @change="onColorChange" />
       </el-form-item>
       <el-form-item label="Width">
-        <el-input-number v-model="element.width" :min="1" :max="400" @change="onWidthChange" />
+        <el-input-number v-model="element.width" :min="1" :max="400" :step="1" :precision="0" @change="onWidthChange" />
       </el-form-item>
       <el-form-item label="Height">
-        <el-input-number v-model="element.height" :min="1" :max="400" @change="onHeightChange" />
+        <el-input-number v-model="element.height" :min="1" :max="400" :step="1" :precision="0" @change="onHeightChange" />
       </el-form-item>
     </el-form>
 
@@ -106,10 +106,13 @@ import { FontTypes } from '@/constants/fonts'
 import { getWeatherConditions, uploadWeatherSvg } from '@/api/wristo/weather'
 import { ElMessage } from 'element-plus'
 import type { WeatherConditionAssetsVO } from '@/types/api/weather'
+import { getIconAsset } from '@/api/wristo/iconGlyph'
+import ColorPicker from '@/components/color-picker/index.vue'
 
 const props = defineProps<{ element: FabricElement }>()
 const weatherStore = useWeatherStore()
-const fontSlug = ref<string>('')
+const fontFamily = ref<string>('')
+const fill = ref<string>('')
 const activeTab = ref<'mip' | 'amoled'>('amoled')
 const conditions = reactive<{ mip: WeatherConditionAssetsVO[]; amoled: WeatherConditionAssetsVO[] }>({ mip: [], amoled: [] })
 const loading = reactive<{ mip: boolean; amoled: boolean }>({ mip: false, amoled: false })
@@ -120,23 +123,27 @@ const initElementProperties = (): void => {
   if (!canvas) return
   const group = (canvas.getObjects() as Array<{ id?: string } & Record<string, unknown>>).find(o => o.id === props.element.id)
   if (!group) return
-  const meta = group as unknown as { weatherImageUrl?: string; width?: number; height?: number }
+  const meta = group as unknown as { weatherImageUrl?: string; width?: number; height?: number; fontFamily?: string; fill?: string }
   const imageUrl = meta.weatherImageUrl
   const width = meta.width
   const height = meta.height
+  const wf = meta.fontFamily
+  const fc = meta.fill
   const el = props.element as unknown as { imageUrl?: string; width?: number; height?: number }
   if (typeof imageUrl === 'string') el.imageUrl = imageUrl
   if (typeof width === 'number') el.width = width
   if (typeof height === 'number') el.height = height
+  if (typeof wf === 'string') fontFamily.value = wf
+  if (typeof fc === 'string') fill.value = fc
 }
 
 onMounted(() => {
   initElementProperties()
-  if (!fontSlug.value) {
+  if (!fontFamily.value) {
     const base = weatherStore.baseStore as unknown as { currentIconFontSlug?: string | null }
-    fontSlug.value = base?.currentIconFontSlug || 'yoghurt-one'
+    fontFamily.value = base?.currentIconFontSlug || 'yoghurt-one'
   }
-  if (fontSlug.value) {
+  if (fontFamily.value) {
     fetchConditions('mip')
     fetchConditions('amoled')
   }
@@ -147,6 +154,8 @@ const updateElement = (): void => {
     imageUrl: (props.element as unknown as { imageUrl?: string }).imageUrl,
     width: (props.element as unknown as { width?: number }).width,
     height: (props.element as unknown as { height?: number }).height,
+    fontFamily: fontFamily.value,
+    fill: activeTab.value === 'mip' ? fill.value : undefined,
   })
 }
 
@@ -176,14 +185,14 @@ const onHeightChange = (val: number): void => {
 }
 
 const fetchConditions = async (displayType: 'mip' | 'amoled') => {
-  if (!fontSlug.value) {
+  if (!fontFamily.value) {
     conditions[displayType] = []
     selected[displayType] = null
     return
   }
   loading[displayType] = true
   try {
-    const res = await getWeatherConditions(fontSlug.value, displayType)
+    const res = await getWeatherConditions(fontFamily.value, displayType)
     conditions[displayType] = res.data || []
     applyDefaultSelection(displayType)
   } finally {
@@ -192,12 +201,21 @@ const fetchConditions = async (displayType: 'mip' | 'amoled') => {
 }
 
 const onFontChange = () => {
+  // persist selection on element and refresh lists
+  weatherStore.updateElement(props.element, { fontFamily: fontFamily.value })
   fetchConditions('mip')
   fetchConditions('amoled')
 }
 
+const onColorChange = () => {
+  if (activeTab.value === 'mip') {
+    // try to recolor current selected condition's SVG via API svgContent
+    recolorCurrentMipSelection()
+  }
+}
+
 watch(activeTab, () => {
-  if (!conditions[activeTab.value].length && fontSlug.value) fetchConditions(activeTab.value)
+  if (!conditions[activeTab.value].length && fontFamily.value) fetchConditions(activeTab.value)
   else applyDefaultSelection(activeTab.value)
 })
 
@@ -219,7 +237,7 @@ const beforeUploadSVG = (file: File) => {
     ElMessage.error('Please upload an SVG file')
     return false
   }
-  if (!fontSlug.value) {
+  if (!fontFamily.value) {
     ElMessage.error('Please select a Weather Font first')
     return false
   }
@@ -236,7 +254,7 @@ const handleUpload = async (options: { file: File }, unicode?: string) => {
   }
   try {
     const dt = activeTab.value
-    await uploadWeatherSvg(file, dt, unicode, fontSlug.value)
+    await uploadWeatherSvg(file, dt, unicode, fontFamily.value)
     ElMessage.success('Uploaded and bound successfully')
     await fetchConditions(dt)
   } catch (e) {
@@ -257,19 +275,27 @@ function applyDefaultSelection(dt: 'mip' | 'amoled') {
     const firstWithImage = list.find((x: any) => hasImageUrl(x))
     selected[dt] = firstWithImage ? firstWithImage.condition : null
     if (firstWithImage && dt === activeTab.value) {
-      const url = firstWithImage?.asset?.imageUrl as string | undefined
+      if (dt === 'mip' && fill.value && firstWithImage?.asset?.id) {
+        recolorAndApplyByAssetId(firstWithImage.asset.id, fill.value)
+      } else {
+        const url = firstWithImage?.asset?.imageUrl as string | undefined
+        if (url) {
+          const el = props.element as unknown as { imageUrl?: string }
+          el.imageUrl = url
+          updateElement()
+        }
+      }
+    }
+  } else if (dt === activeTab.value && hasImageUrl(current)) {
+    if (dt === 'mip' && fill.value && current?.asset?.id) {
+      recolorAndApplyByAssetId(current.asset.id, fill.value)
+    } else {
+      const url = current?.asset?.imageUrl as string | undefined
       if (url) {
         const el = props.element as unknown as { imageUrl?: string }
         el.imageUrl = url
         updateElement()
       }
-    }
-  } else if (dt === activeTab.value && hasImageUrl(current)) {
-    const url = current?.asset?.imageUrl as string | undefined
-    if (url) {
-      const el = props.element as unknown as { imageUrl?: string }
-      el.imageUrl = url
-      updateElement()
     }
   }
 }
@@ -277,13 +303,53 @@ function applyDefaultSelection(dt: 'mip' | 'amoled') {
 function onSelect(dt: 'mip' | 'amoled', c: any) {
   selected[dt] = c?.condition ?? null
   if (hasImageUrl(c)) {
-    const url = c?.asset?.imageUrl as string | undefined
-    if (url) {
-      const el = props.element as unknown as { imageUrl?: string }
-      el.imageUrl = url
-      updateElement()
+    if (dt === 'mip' && fill.value && c?.asset?.id) {
+      recolorAndApplyByAssetId(c.asset.id, fill.value)
+    } else {
+      const url = c?.asset?.imageUrl as string | undefined
+      if (url) {
+        const el = props.element as unknown as { imageUrl?: string }
+        el.imageUrl = url
+        updateElement()
+      }
     }
   }
+}
+
+// --- helpers for SVG recolor using API svgContent ---
+function buildColoredSvgDataUrl(svgContent: string, color: string): string {
+  const hasStyle = /<style[\s\S]*?>[\s\S]*?<\/style>/i.test(svgContent)
+  const styleTag = `<style>* { fill: ${color} !important; stroke: ${color} !important; }</style>`
+  let patched = svgContent
+  if (hasStyle) patched = svgContent.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/i, styleTag)
+  else patched = svgContent.replace(/<svg(\b[^>]*)>/i, (_m, attrs) => `<svg${attrs}>${styleTag}`)
+  return `data:image/svg+xml,${encodeURIComponent(patched)}`
+}
+
+async function recolorAndApplyByAssetId(assetId: number, color: string) {
+  try {
+    const res = await getIconAsset(assetId)
+    const svg = res?.data?.svgContent || ''
+    if (!svg) return
+    const dataUrl = buildColoredSvgDataUrl(svg, color)
+    const el = props.element as unknown as { imageUrl?: string }
+    el.imageUrl = dataUrl
+    updateElement()
+  } catch {}
+}
+
+function recolorCurrentMipSelection() {
+  const currentKey = selected.mip
+  if (!currentKey) {
+    // only persist fill change to store if no current selection
+    weatherStore.updateElement(props.element, { fill: fill.value })
+    return
+  }
+  const list = conditions.mip || []
+  const current = list.find((x: any) => x?.condition === currentKey)
+  const assetId = current?.asset?.id
+  if (assetId) recolorAndApplyByAssetId(assetId, fill.value)
+  else weatherStore.updateElement(props.element, { fill: fill.value })
 }
 </script>
 

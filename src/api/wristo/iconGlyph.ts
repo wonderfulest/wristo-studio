@@ -136,3 +136,7 @@ export const listIconLibrary = (category?: string): Promise<ApiResponse<IconLibr
   const suffix = params.toString() ? `?${params.toString()}` : ''
   return instance.get(`/dsn/icon-library/list${suffix}`)
 }
+
+export const getIconAsset = (id: number): Promise<ApiResponse<IconAssetVO>> => {
+  return instance.get(`/dsn/icon-asset/get/${id}`)
+}
