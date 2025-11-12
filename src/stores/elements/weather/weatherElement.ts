@@ -343,6 +343,8 @@ export const useWeatherStore = defineStore('weatherElement', {
     encodeConfig(element: FabricElement): WeatherElementConfig {
       const fontFamily = (element as unknown as { fontFamily?: string }).fontFamily
       const fill = (element as unknown as { fill?: string }).fill || '#ffffff'
+      const standard_sizes = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 21, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 96, 108, 120, 132, 144, 156, 168, 180, 192, 204, 216, 228, 240, 264, 288, 312]
+      const fontSize = this.getClosestNumber(parseInt(String(element.width)), standard_sizes)
       return {
         eleType: 'weather',
         id: String(element.id ?? ''),
@@ -353,10 +355,14 @@ export const useWeatherStore = defineStore('weatherElement', {
         width: parseInt(String(element.width)),
         height: parseInt(String(element.height)),
         fontFamily,
+        fontSize,  
         fill,
       }
     },
 
+    getClosestNumber(num: number, arr: number[]): number {
+      return arr.reduce((prev, curr) => (Math.abs(curr - num) < Math.abs(prev - num) ? curr : prev))
+    },
     decodeConfig(config: WeatherElementConfig): Partial<FabricElement> {
       return {
         eleType: 'weather',
