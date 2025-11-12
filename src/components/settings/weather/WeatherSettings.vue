@@ -5,23 +5,30 @@
         <font-picker v-model="fontSlug" :type="FontTypes.ICON_FONT" @change="onFontChange" />
       </el-form-item>
       <el-form-item label="Asset URL">
-        <el-input v-model="element.imageUrl" placeholder="https://.../weather.png" @change="updateElement" />
+        <el-input v-model="element.imageUrl" disabled />
       </el-form-item>
       <el-form-item label="Width">
-        <el-input-number v-model="element.width" :min="1" :max="2000" @change="onWidthChange" />
+        <el-input-number v-model="element.width" :min="1" :max="400" @change="onWidthChange" />
       </el-form-item>
       <el-form-item label="Height">
-        <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
+        <el-input-number v-model="element.height" :min="1" :max="400" @change="onHeightChange" />
       </el-form-item>
     </el-form>
 
     <div class="tabs-extra">
-      <el-button size="small" @click="onRefreshTab">Refresh</el-button>
+      <el-button size="small" style="background-color: #409EFF; color: #fff;" @click="onRefreshTab">Refresh</el-button>
     </div>
-    <el-tabs v-model="activeTab" class="weather-tabs">
-      <el-tab-pane label="MIP" name="mip">
+    <div class="weather-tabs-wrapper">
+      <el-tabs v-model="activeTab" class="weather-tabs">
+        <el-tab-pane label="MIP" name="mip">
         <div class="conditions" v-loading="loading.mip">
-          <div v-for="c in conditions.mip" :key="c.condition" class="condition-item">
+          <div
+            v-for="c in conditions.mip"
+            :key="c.condition"
+            class="condition-item"
+            :class="{ selected: selected.mip === c.condition }"
+            @click="onSelect('mip', c)"
+          >
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
               <template v-if="c.asset">
@@ -51,7 +58,13 @@
       </el-tab-pane>
       <el-tab-pane label="AMOLED" name="amoled">
         <div class="conditions" v-loading="loading.amoled">
-          <div v-for="c in conditions.amoled" :key="c.condition" class="condition-item">
+          <div
+            v-for="c in conditions.amoled"
+            :key="c.condition"
+            class="condition-item"
+            :class="{ selected: selected.amoled === c.condition }"
+            @click="onSelect('amoled', c)"
+          >
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
               <template v-if="c.asset">
@@ -79,7 +92,8 @@
           </div>
         </div>
       </el-tab-pane>
-    </el-tabs>
+      </el-tabs>
+    </div>
   </div>
 </template>
 
@@ -96,9 +110,10 @@ import type { WeatherConditionAssetsVO } from '@/types/api/weather'
 const props = defineProps<{ element: FabricElement }>()
 const weatherStore = useWeatherStore()
 const fontSlug = ref<string>('')
-const activeTab = ref<'mip' | 'amoled'>('mip')
+const activeTab = ref<'mip' | 'amoled'>('amoled')
 const conditions = reactive<{ mip: WeatherConditionAssetsVO[]; amoled: WeatherConditionAssetsVO[] }>({ mip: [], amoled: [] })
 const loading = reactive<{ mip: boolean; amoled: boolean }>({ mip: false, amoled: false })
+const selected = reactive<{ mip: string | null; amoled: string | null }>({ mip: null, amoled: null })
 
 const initElementProperties = (): void => {
   const canvas = weatherStore.baseStore.canvas
@@ -117,6 +132,10 @@ const initElementProperties = (): void => {
 
 onMounted(() => {
   initElementProperties()
+  if (!fontSlug.value) {
+    const base = weatherStore.baseStore as unknown as { currentIconFontSlug?: string | null }
+    fontSlug.value = base?.currentIconFontSlug || 'yoghurt-one'
+  }
   if (fontSlug.value) {
     fetchConditions('mip')
     fetchConditions('amoled')
@@ -144,29 +163,29 @@ const setSize = (w: number, h: number): void => {
 
 const onWidthChange = (val: number): void => {
   const size = normalizeSize(val)
-  const h = normalizeSize((props.element as any).height)
-  setSize(size, h)
-  weatherStore.setImageSize(props.element, size, h)
+  setSize(size, size)
+  weatherStore.setImageSize(props.element, size, size)
   updateElement()
 }
 
 const onHeightChange = (val: number): void => {
   const size = normalizeSize(val)
-  const w = normalizeSize((props.element as any).width)
-  setSize(w, size)
-  weatherStore.setImageSize(props.element, w, size)
+  setSize(size, size)
+  weatherStore.setImageSize(props.element, size, size)
   updateElement()
 }
 
 const fetchConditions = async (displayType: 'mip' | 'amoled') => {
   if (!fontSlug.value) {
     conditions[displayType] = []
+    selected[displayType] = null
     return
   }
   loading[displayType] = true
   try {
     const res = await getWeatherConditions(fontSlug.value, displayType)
     conditions[displayType] = res.data || []
+    applyDefaultSelection(displayType)
   } finally {
     loading[displayType] = false
   }
@@ -179,6 +198,7 @@ const onFontChange = () => {
 
 watch(activeTab, () => {
   if (!conditions[activeTab.value].length && fontSlug.value) fetchConditions(activeTab.value)
+  else applyDefaultSelection(activeTab.value)
 })
 
 function goIconLibrary() {
@@ -187,6 +207,7 @@ function goIconLibrary() {
 
 function onRefreshTab() {
   if (activeTab.value) {
+    ElMessage.success('Refreshing tab...')
     fetchConditions(activeTab.value)
   }
 }
@@ -222,12 +243,56 @@ const handleUpload = async (options: { file: File }, unicode?: string) => {
     ElMessage.error('Upload failed')
   }
 }
+
+// ---- selection helpers ----
+function hasImageUrl(c: any): boolean {
+  return !!(c && c.asset && c.asset.imageUrl)
+}
+
+function applyDefaultSelection(dt: 'mip' | 'amoled') {
+  const list = conditions[dt] || []
+  const currentKey = selected[dt]
+  let current = currentKey ? list.find((x: any) => x?.condition === currentKey) : undefined
+  if (!current || !hasImageUrl(current)) {
+    const firstWithImage = list.find((x: any) => hasImageUrl(x))
+    selected[dt] = firstWithImage ? firstWithImage.condition : null
+    if (firstWithImage && dt === activeTab.value) {
+      const url = firstWithImage?.asset?.imageUrl as string | undefined
+      if (url) {
+        const el = props.element as unknown as { imageUrl?: string }
+        el.imageUrl = url
+        updateElement()
+      }
+    }
+  } else if (dt === activeTab.value && hasImageUrl(current)) {
+    const url = current?.asset?.imageUrl as string | undefined
+    if (url) {
+      const el = props.element as unknown as { imageUrl?: string }
+      el.imageUrl = url
+      updateElement()
+    }
+  }
+}
+
+function onSelect(dt: 'mip' | 'amoled', c: any) {
+  selected[dt] = c?.condition ?? null
+  if (hasImageUrl(c)) {
+    const url = c?.asset?.imageUrl as string | undefined
+    if (url) {
+      const el = props.element as unknown as { imageUrl?: string }
+      el.imageUrl = url
+      updateElement()
+    }
+  }
+}
 </script>
 
 <style scoped>
 .weather-properties { padding: 16px; }
 ::v-deep(.el-collapse-item__wrap) { overflow: visible; }
 .weather-tabs { margin-top: 12px; }
+.weather-tabs-wrapper { display: flex; align-items: center; justify-content: space-between; }
+.weather-tabs .tabs-extra { margin-left: auto; }
 .conditions { display: flex; flex-direction: column; gap: 12px; }
 .condition-item { border: 1px solid #ebeef5; border-radius: 6px; padding: 8px; }
 .condition-name { font-size: 12px; color: #606266; margin-bottom: 6px; }
@@ -236,9 +301,9 @@ const handleUpload = async (options: { file: File }, unicode?: string) => {
 .asset img { max-width: 100%; max-height: 72px; object-fit: contain; }
 .asset .svg :deep(svg) { width: 72px; height: 72px; }
 .no-preview { font-size: 12px; color: #909399; }
-/* tabs extra toolbar */
-.tabs-extra { display: flex; justify-content: flex-end; margin-top: 8px; }
 /* hyperlink-like clickable styling */
 .clickable-link { cursor: pointer; color: #409eff; }
 .clickable-link:hover { text-decoration: underline; }
+/* selected condition style */
+.condition-item.selected { border-width: 2px; border-color: #409eff; box-shadow: 0 0 0 1px rgba(64,158,255,0.3) inset; }
 </style>

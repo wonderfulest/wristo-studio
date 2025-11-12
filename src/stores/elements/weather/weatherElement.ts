@@ -8,7 +8,7 @@ import type { MinimalFabricLike } from '@/types/layer'
 import type { WeatherElementConfig } from '@/types/elements/data'
 
 function getDefaultWeatherImage(): string {
-  return 'https://cdn.wristo.io/weather/default.png'
+  return 'https://cdn.wristo.io/product/0ead49628f08435497e54594ad08b8f3/original.png'
 }
 
 function loadHtmlImage(url: string): Promise<HTMLImageElement> {
