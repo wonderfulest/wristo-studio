@@ -172,6 +172,7 @@ const fetchAssets = async (glyphId: number) => {
       pageNum: assetPage.value,
       pageSize: assetPage.value ? assetPageSize.value : assetPageSize.value,
       glyphId,
+      active: 1,
       displayType: displayType.value,
       orderBy: 'id:asc',
     } as any)
