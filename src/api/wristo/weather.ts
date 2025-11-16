@@ -10,7 +10,7 @@ export const getWeatherConditions = (
   params.set('fontSlug', fontSlug)
   params.set('displayType', displayType)
   const q = params.toString()
-  return instance.get(`/dsn/weather/conditions${q ? `?${q}` : ''}`)
+  return instance.get(`/dsn/weather/icons${q ? `?${q}` : ''}`)
 }
 
 export const uploadWeatherSvg = (
