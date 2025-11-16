@@ -2,7 +2,7 @@
   <div class="icon-library">
     <div class="header">
       <h2>Icon Library</h2>
-      <el-button type="primary" @click="goToIconAssets">图标素材库</el-button>
+      <el-button type="primary" @click="goToIconAssets">Go to Icon Assets</el-button>
     </div>
 
     <div class="content-card">
@@ -72,12 +72,9 @@
       :total="bindTotal"
       :keyword="bindKeyword"
       :binding="binding"
-      :selected-ids="bindSelected"
       @update:keyword="(v:string)=> bindKeyword = v"
       @search="loadBindAssets"
       @pageChange="onBindPageChange"
-      @selectionChange="(ids:number[])=> bindSelected = ids"
-      @confirm="handleBind"
       @bind="handleBindSingle"
     />
 
@@ -284,7 +281,6 @@ const bindPageSize = ref(12)
 const bindTotal = ref(0)
 const bindAssets = ref<IconAssetVO[]>([])
 const bindLoading = ref(false)
-const bindSelected = ref<number[]>([])
 
 const openBindDialog = async (glyphId: number, iconId?: number) => {
   bindGlyphId.value = glyphId
@@ -318,26 +314,11 @@ const onBindPageChange = async (page: number) => {
   await loadBindAssets()
 }
 
-// selection and preview are handled in BindAssetsDialog
-
-const handleBind = async () => {
-  if (!bindGlyphId.value || bindSelected.value.length === 0) return
-  try {
-    binding.value = true
-    await bindAssetsToGlyph(bindGlyphId.value, bindSelected.value)
-    bindVisible.value = false
-    // refresh assets of the active glyph
-    await fetchAssets(Number(activeTab.value))
-  } finally {
-    binding.value = false
-  }
-}
-
 const handleBindSingle = async (assetId: number) => {
   if (!bindGlyphId.value || !assetId) return
   try {
     binding.value = true
-    await bindAssetsToGlyph(bindGlyphId.value, [assetId])
+    await bindAssetsToGlyph(bindGlyphId.value,  assetId)
     bindVisible.value = false
     await fetchAssets(Number(activeTab.value))
   } finally {

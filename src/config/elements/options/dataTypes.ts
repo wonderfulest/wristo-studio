@@ -1,5 +1,6 @@
 import type { DataTypeOption } from '@/types/settings'
 
+// TODO 从后端获取
 export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '心率',

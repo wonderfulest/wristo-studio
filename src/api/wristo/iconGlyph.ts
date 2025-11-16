@@ -101,8 +101,8 @@ export const pageIconAssets = (dto: IconAssetPageQueryDTO): Promise<ApiResponse<
   return instance.post('/dsn/icon-asset/page', dto)
 }
 
-export const bindAssetsToGlyph = (glyphId: number, assetIds: number[]): Promise<ApiResponse<IconGlyphAssetVO[]>> => {
-  return instance.post(`/dsn/icon-glyph-asset/bind-to-glyph/${glyphId}`, assetIds)
+export const bindAssetsToGlyph = (glyphId: number, assetId: number): Promise<ApiResponse<Boolean>> => {
+  return instance.post(`/dsn/icon-glyph-asset/bind-to-glyph/${glyphId}?assetId=${assetId}`)
 }
 
 export const importAssetsToGlyph = (fromGlyphId: number, toGlyphId: number): Promise<ApiResponse<IconGlyphAssetVO[]>> => {

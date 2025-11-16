@@ -14,8 +14,7 @@
         <el-button :loading="loading" @click="$emit('search')">Search</el-button>
       </div>
     </div>
-    <el-table :data="assets" v-loading="loading" height="420" @selection-change="onSelectionChange">
-      <el-table-column type="selection" width="48" />
+    <el-table :data="assets" v-loading="loading" height="420">
       <el-table-column label="Preview" width="96">
         <template #default="{ row }">
           <img :src="getAssetPreview(row)" alt="preview" style="width:48px;height:48px;object-fit:contain" />
@@ -64,15 +63,12 @@ const props = defineProps<{
   total: number
   keyword: string
   binding: boolean
-  selectedIds?: number[]
 }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'update:keyword', v: string): void
-  (e: 'selectionChange', ids: number[]): void
   (e: 'pageChange', page: number): void
   (e: 'search'): void
-  (e: 'confirm'): void
   (e: 'bind', id: number): void
   (e: 'uploaded'): void
 }>()
@@ -89,10 +85,6 @@ const toAbsUrl = (url: string) => {
 const getAssetPreview = (row: IconAssetVO) => {
   const raw = row.previewUrl || row.imageUrl || ''
   return raw ? toAbsUrl(raw) : ''
-}
-
-const onSelectionChange = (rows: IconAssetVO[]) => {
-  emit('selectionChange', rows.map(r => r.id))
 }
 </script>
 
