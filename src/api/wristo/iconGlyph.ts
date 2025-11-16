@@ -114,6 +114,10 @@ export const submitIconGlyph = (id: number): Promise<ApiResponse<IconGlyphVO>> =
   return instance.post(`/dsn/icon-glyph/submit/${id}`)
 }
 
+export const getIconGlyphByCode = (glyphCode: string): Promise<ApiResponse<IconGlyphVO>> => {
+  return instance.get(`/dsn/icon-glyph/get-by-glyph-code/${glyphCode}`)
+}
+
 export const uploadIconSvg = (
   file: File,
   unicode?: string,

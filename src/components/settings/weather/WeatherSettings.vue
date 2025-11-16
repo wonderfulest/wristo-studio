@@ -33,7 +33,7 @@
             <div class="assets">
               <template v-if="c.asset">
                 <el-tooltip content="Change binding" placement="top">
-                  <div class="asset clickable-link" @click="goIconLibrary">
+                  <div class="asset clickable-link" @click.stop="openChangeBindingDialog('mip', c)">
                     <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
                     <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
                     <div v-else class="no-preview">No preview</div>
@@ -69,7 +69,7 @@
             <div class="assets">
               <template v-if="c.asset">
                 <el-tooltip content="Change binding" placement="top">
-                  <div class="asset clickable-link" @click="goIconLibrary">
+                  <div class="asset clickable-link" @click.stop="openChangeBindingDialog('amoled', c)">
                     <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
                     <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
                     <div v-else class="no-preview">No preview</div>
@@ -94,6 +94,14 @@
       </el-tab-pane>
       </el-tabs>
     </div>
+
+    <WeatherBindingDialog
+      v-model="bindingDialogVisible"
+      :icon-id="bindingIconId"
+      :glyph-id="bindingGlyphId"
+      :display-type="bindingDisplayType"
+      @bound="fetchConditions(bindingDisplayType)"
+    />
   </div>
 </template>
 
@@ -106,7 +114,8 @@ import { FontTypes } from '@/constants/fonts'
 import { getWeatherConditions, uploadWeatherSvg } from '@/api/wristo/weather'
 import { ElMessage } from 'element-plus'
 import type { WeatherConditionAssetsVO } from '@/types/api/weather'
-import { getIconAsset } from '@/api/wristo/iconGlyph'
+import { getIconAsset, getIconGlyphByCode, type DisplayType } from '@/api/wristo/iconGlyph'
+import WeatherBindingDialog from './WeatherBindingDialog.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 
 const props = defineProps<{ element: FabricElement }>()
@@ -117,6 +126,7 @@ const activeTab = ref<'mip' | 'amoled'>('amoled')
 const conditions = reactive<{ mip: WeatherConditionAssetsVO[]; amoled: WeatherConditionAssetsVO[] }>({ mip: [], amoled: [] })
 const loading = reactive<{ mip: boolean; amoled: boolean }>({ mip: false, amoled: false })
 const selected = reactive<{ mip: string | null; amoled: string | null }>({ mip: null, amoled: null })
+const bindingDialogVisible = ref(false)
 
 const initElementProperties = (): void => {
   const canvas = weatherStore.baseStore.canvas
@@ -137,12 +147,27 @@ const initElementProperties = (): void => {
   if (typeof fc === 'string') fill.value = fc
 }
 
+const loadBindingFontId = async () => {
+  if (!fontFamily.value) {
+    bindingGlyphId.value = null
+    return
+  }
+  try {
+    const { data } = await getIconGlyphByCode(fontFamily.value)
+    bindingGlyphId.value = data?.id ?? null
+  } catch {
+    bindingGlyphId.value = null
+  }
+}
+
 onMounted(() => {
   initElementProperties()
   if (!fontFamily.value) {
     const base = weatherStore.baseStore as unknown as { currentIconFontSlug?: string | null }
     fontFamily.value = base?.currentIconFontSlug || 'yoghurt-one'
   }
+  // load current font's id for binding
+  loadBindingFontId()
   if (fontFamily.value) {
     fetchConditions('mip')
     fetchConditions('amoled')
@@ -201,6 +226,9 @@ const fetchConditions = async (displayType: 'mip' | 'amoled') => {
 }
 
 const onFontChange = () => {
+  console.log('Font changed:', fontFamily.value)
+  // update binding glyph id based on current font slug
+  loadBindingFontId()
   // persist selection on element and refresh lists
   weatherStore.updateElement(props.element, { fontFamily: fontFamily.value })
   fetchConditions('mip')
@@ -219,8 +247,14 @@ watch(activeTab, () => {
   else applyDefaultSelection(activeTab.value)
 })
 
-function goIconLibrary() {
-  window.open('/icon-library', '_blank')
+const bindingDisplayType = ref<DisplayType>('amoled')
+const bindingIconId = ref<number | null>(null)
+const bindingGlyphId = ref<number | null>(null)
+
+const openChangeBindingDialog = async (dt: 'mip' | 'amoled', c: WeatherConditionAssetsVO) => {
+  bindingDisplayType.value = dt
+  bindingIconId.value = c.iconId ?? null
+  bindingDialogVisible.value = true
 }
 
 function onRefreshTab() {
@@ -372,4 +406,5 @@ function recolorCurrentMipSelection() {
 .clickable-link:hover { text-decoration: underline; }
 /* selected condition style */
 .condition-item.selected { border-width: 2px; border-color: #409eff; box-shadow: 0 0 0 1px rgba(64,158,255,0.3) inset; }
+.pager { display: flex; justify-content: center; padding: 8px 0; }
 </style>
