@@ -135,6 +135,14 @@ const assetPageSize = ref(120)
 const loadingAssets = ref(false)
 const displayType = ref<DisplayType>('mip')
 
+const ensureDisplayTypeForGlyph = (glyphId: number) => {
+  const g = glyphs.value.find(x => x.id === glyphId)
+  if (!g) return
+  if (g.isDefault === 1 && displayType.value !== 'mip') {
+    displayType.value = 'mip'
+  }
+}
+
 const fetchGlyphs = async () => {
   try {
     loadingGlyphs.value = true
@@ -154,7 +162,11 @@ const fetchGlyphs = async () => {
       activeTab.value = qGlyphId || (list[0] ? String(list[0].id) : '')
     }
     if (activeTab.value) {
-      await fetchAssets(Number(activeTab.value))
+      const idNum = Number(activeTab.value)
+      // default to 'mip' when (re)initializing active glyph
+      displayType.value = 'mip'
+      ensureDisplayTypeForGlyph(idNum)
+      await fetchAssets(idNum)
     }
   } finally {
     loadingGlyphs.value = false
@@ -183,7 +195,11 @@ const fetchAssets = async (glyphId: number) => {
 const onTabChange = async (name: string) => {
   activeTab.value = name
   assetPage.value = 1
-  await fetchAssets(Number(name))
+  const idNum = Number(name)
+  // reset display type to 'mip' when switching glyph tab
+  displayType.value = 'mip'
+  ensureDisplayTypeForGlyph(idNum)
+  await fetchAssets(idNum)
 }
 
 const onGlyphPageChange = async (page: number) => {
