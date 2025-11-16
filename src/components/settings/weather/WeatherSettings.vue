@@ -33,7 +33,7 @@
             <div class="assets">
               <template v-if="c.asset">
                 <el-tooltip content="Change binding" placement="top">
-                  <div class="asset clickable-link" @click.stop="openChangeBindingDialog('mip', c)">
+                  <div class="asset clickable-link">
                     <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
                     <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
                     <div v-else class="no-preview">No preview</div>
@@ -351,12 +351,24 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
 }
 
 // --- helpers for SVG recolor using API svgContent ---
-function buildColoredSvgDataUrl(svgContent: string, color: string): string {
+function buildColoredSvgDataUrl(svgContent: string, color: string, width?: number, height?: number): string {
   const hasStyle = /<style[\s\S]*?>[\s\S]*?<\/style>/i.test(svgContent)
   const styleTag = `<style>* { fill: ${color} !important; stroke: ${color} !important; }</style>`
   let patched = svgContent
   if (hasStyle) patched = svgContent.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/i, styleTag)
   else patched = svgContent.replace(/<svg(\b[^>]*)>/i, (_m, attrs) => `<svg${attrs}>${styleTag}`)
+  // enforce size using configured width/height if provided
+  if (width || height) {
+    const sizeAttrs: string[] = []
+    if (width) sizeAttrs.push(`width="${width}"`)
+    if (height) sizeAttrs.push(`height="${height}"`)
+    patched = patched.replace(/<svg(\b[^>]*)>/i, (_m, attrs) => {
+      let a = attrs || ''
+      a = a.replace(/\swidth=".*?"/i, '').replace(/\sheight=".*?"/i, '')
+      const extra = sizeAttrs.length ? ` ${sizeAttrs.join(' ')}` : ''
+      return `<svg${a}${extra}>`
+    })
+  }
   return `data:image/svg+xml,${encodeURIComponent(patched)}`
 }
 
@@ -365,8 +377,10 @@ async function recolorAndApplyByAssetId(assetId: number, color: string) {
     const res = await getIconAsset(assetId)
     const svg = res?.data?.svgContent || ''
     if (!svg) return
-    const dataUrl = buildColoredSvgDataUrl(svg, color)
-    const el = props.element as unknown as { imageUrl?: string }
+    const el = props.element as unknown as { imageUrl?: string; width?: number; height?: number }
+    const w = normalizeSize(el.width)
+    const h = normalizeSize(el.height)
+    const dataUrl = buildColoredSvgDataUrl(svg, color, w, h)
     el.imageUrl = dataUrl
     updateElement()
   } catch {}
