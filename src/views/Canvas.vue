@@ -45,6 +45,21 @@ const zoomManagerRef = ref<InstanceType<typeof ZoomManager> | null>(null)
 applyFabricCustomProperties()
 
 const handleKeyDown = (e: KeyboardEvent) => {
+  const target = e.target as HTMLElement | null
+  if (target) {
+    const tag = target.tagName
+    const isEditable =
+      tag === 'INPUT' ||
+      tag === 'TEXTAREA' ||
+      tag === 'SELECT' ||
+      target.isContentEditable
+
+    // 如果当前在可编辑输入区域内，允许空格等按键正常输入
+    if (isEditable) {
+      return
+    }
+  }
+
   if (e.code === 'Space' && !isSpacePressed.value) {
     isSpacePressed.value = true
     // 更新鼠标样式为抓手

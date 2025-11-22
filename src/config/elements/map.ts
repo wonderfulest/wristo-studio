@@ -1,5 +1,5 @@
 import type { AnyElementConfig } from '@/types/elements'
-import type { EDITOR_ELEMENT } from './defaults/base'
+import { DEFAULT_TEXT_ELEMENT_CONFIG, DEFAULT_SCROLLABLE_TEXT_ELEMENT_CONFIG, DEFAULT_ANGLED_TEXT_ELEMENT_CONFIG, DEFAULT_RADIAL_TEXT_ELEMENT_CONFIG, type EDITOR_ELEMENT } from './defaults/base'
 
 import { DEFAULT_TIME_CONFIG, DEFAULT_DATE_CONFIG } from './defaults/time'
 import { DEFAULT_BLUETOOTH_CONFIG, DEFAULT_DISTURB_CONFIG, DEFAULT_ALARMS_CONFIG, DEFAULT_NOTIFICATION_CONFIG } from './defaults/indicator'
@@ -32,6 +32,12 @@ export const elementConfigs: Record<string, Record<string, AnyElementConfig & ED
     battery: DEFAULT_BATTERY_CONFIG,
     moveBar: DEFAULT_MOVE_BAR_CONFIG,
    
+  },
+  texts: {
+    text: DEFAULT_TEXT_ELEMENT_CONFIG,
+    scrollableText: DEFAULT_SCROLLABLE_TEXT_ELEMENT_CONFIG,
+    angledText: DEFAULT_ANGLED_TEXT_ELEMENT_CONFIG,
+    radialText: DEFAULT_RADIAL_TEXT_ELEMENT_CONFIG,
   },
   weather: {
     weather: DEFAULT_WEATHER_CONFIG,

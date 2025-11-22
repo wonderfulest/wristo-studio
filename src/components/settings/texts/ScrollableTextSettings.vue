@@ -2,17 +2,17 @@
   <div class="settings-section">
     <div class="setting-item">
       <label>位置</label>
-      <PositionInputs 
-        :left="positionX" 
-        :top="positionY" 
-        @update:left="(v)=> positionX = v" 
-        @update:top="(v)=> positionY = v" 
-        @change="updatePosition" 
+      <PositionInputs
+        :left="positionX"
+        :top="positionY"
+        @update:left="(v) => (positionX = v)"
+        @update:top="(v) => (positionY = v)"
+        @change="updatePosition"
       />
     </div>
     <div class="setting-item">
       <label>对齐方式</label>
-      <AlignXButtons 
+      <AlignXButtons
         :options="originXOptions"
         v-model="originX"
         @update:modelValue="updateOriginX"
@@ -32,39 +32,42 @@
       <label>字体</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
+    <div class="setting-item">
+      <label>文本内容</label>
+      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
-import { useTextStore } from '@/stores/elements/textElement'
 import { useFontStore } from '@/stores/fontStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
+import TextTemplateEditor from '@/components/settings/texts/components/TextTemplateEditor.vue'
 
 const props = defineProps({
   element: {
     type: Object,
-    required: true
-  }
+    required: true,
+  },
 })
 
 const baseStore = useBaseStore()
 const fontStore = useFontStore()
 
-// 设置项的响应式状态
 const fontSize = ref(props.element?.fontSize || 36)
 const textColor = ref(props.element?.fill || '#FFFFFF')
 const fontFamily = ref(props.element?.fontFamily)
 const originX = ref(props.element?.originX || 'center')
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
+const textTemplate = ref(props.element?.text || '')
 
-// 监听元素属性变化
 watch(
   () => props.element,
   (obj) => {
@@ -73,18 +76,15 @@ watch(
   { deep: true }
 )
 
-// 加载字体列表
 onMounted(async () => {
   if (fontStore.fonts.length === 0) {
     await fontStore.fetchFonts()
   }
-  // 如果有字体，预加载当前字体
   if (fontFamily.value) {
     await fontStore.loadFont(fontFamily.value)
   }
 })
 
-// 更新方法
 const updateFontSize = () => {
   if (!props.element || !baseStore.canvas) return
   props.element.set('fontSize', fontSize.value)
@@ -100,10 +100,8 @@ const updateTextColor = () => {
 const updateFontFamily = async () => {
   if (!props.element || !baseStore.canvas) return
 
-  // 加载新字体
   await fontStore.loadFont(fontFamily.value)
 
-  // 确保字体已加载
   document.fonts.ready.then(() => {
     props.element.set('fontFamily', fontFamily.value)
     baseStore.canvas.renderAll()
@@ -113,7 +111,7 @@ const updateFontFamily = async () => {
 const updateOriginX = (value) => {
   if (!props.element || !baseStore.canvas) return
   props.element.set({
-    originX: value
+    originX: value,
   })
 
   originX.value = value
@@ -125,12 +123,17 @@ const updatePosition = () => {
   if (!props.element || !baseStore.canvas) return
   props.element.set({
     left: positionX.value,
-    top: positionY.value
+    top: positionY.value,
   })
   baseStore.canvas.renderAll()
 }
 
-// 监听画布上的对象变化
+const updateTextTemplate = () => {
+  if (!props.element || !baseStore.canvas) return
+  props.element.set('text', textTemplate.value)
+  baseStore.canvas.renderAll()
+}
+
 watch(
   () => props.element?.left,
   (newLeft) => {
@@ -149,7 +152,6 @@ watch(
   }
 )
 
-// 监听字体大小变化
 watch(
   () => props.element?.fontSize,
   (newFontSize) => {
@@ -158,12 +160,20 @@ watch(
     }
   }
 )
+
+watch(
+  () => props.element?.text,
+  (newText) => {
+    if (typeof newText === 'string') {
+      textTemplate.value = newText
+    }
+  }
+)
 </script>
 
 <style scoped>
 @import '@/assets/styles/settings.css';
 
-/* 添加图标样式 */
 .align-buttons button {
   display: flex;
   align-items: center;

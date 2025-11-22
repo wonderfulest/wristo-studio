@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '../baseStore'
-import { useLayerStore } from '../layerStore'
+import { useBaseStore } from '../../baseStore'
+import { useLayerStore } from '../../layerStore'
 import { nanoid } from 'nanoid'
 import { FabricText } from 'fabric'
+import type { FabricElement } from '@/types/element'
+import type { TextElementConfig } from '@/types/elements'
 
 interface TextOptions {
   text?: string
@@ -48,22 +50,11 @@ export const useTextStore = defineStore('textElement', {
           originY: options.originY || 'center',
         } as any)
 
-        console.log('📝 [TextElement] Adding element to canvas:', element)
         this.baseStore.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
-
-        console.log('📋 [TextElement] Adding element to layer store')
         this.layerStore.addLayer(element as any)
-
-        console.log('🎨 [TextElement] Rendering canvas')
         this.baseStore.canvas.renderAll()
-
-        console.log('🎯 [TextElement] Setting element as active object:', (element as any).id)
         this.baseStore.canvas.setActiveObject(element as any)
-        
-        // 验证元素是否真的被选中了
-        const activeObjects = this.baseStore.canvas.getActiveObjects()
-        console.log('✅ [TextElement] Active objects after setActiveObject:', activeObjects.length, activeObjects)
 
         return element
       } catch (error) {
@@ -86,6 +77,23 @@ export const useTextStore = defineStore('textElement', {
         color: element.fill || '',
         formatter: element.formatter || '',
       }
+    },
+    decodeConfig(config: TextElementConfig): Partial<FabricElement> {
+      const textTemplate = (config as any).textTemplate ?? ''
+      const element: Partial<FabricElement> = {
+        id: config.id,
+        eleType: 'text',
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fill: config.fill,
+        fontFamily: config.fontFamily,
+        fontSize: config.fontSize,
+        textTemplate,
+        text: textTemplate,
+      } as any
+      return element
     },
   },
 })

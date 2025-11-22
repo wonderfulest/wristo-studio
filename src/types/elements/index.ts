@@ -31,6 +31,7 @@ export type { TickElementConfig } from './tick'
 
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
+import type { TextElementConfig as _Text } from './text'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
 import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon, WeatherElementConfig as _Weather } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
@@ -55,6 +56,7 @@ export type AnyElementConfig =
   | _Shape
   | _Goal
   | _Base
+  | _Text
   | _Battery
   | _MoveBar
   | _Tick
@@ -68,6 +70,10 @@ export type AnyElementConfig =
 export interface ElementConfigMap {
   'time': _Time
   'date': _Date
+  'text': _Text
+  'scrollableText': _Text
+  'angledText': _Text
+  'radialText': _Text
   'icon': _Icon
   'label': _Label
   'data': _DataText
