@@ -3,21 +3,21 @@
     <div class="setting-item">
       <label>位置</label>
       <PositionInputs
-        :left="positionX"
-        :top="positionY"
-        @update:left="(v) => (positionX = v)"
-        @update:top="(v) => (positionY = v)"
+        :left="scrollAreaLeft"
+        :top="scrollAreaTop"
+        @update:left="(v) => (scrollAreaLeft = v)"
+        @update:top="(v) => (scrollAreaTop = v)"
         @change="updatePosition"
       />
     </div>
-    <div class="setting-item">
+    <!-- <div class="setting-item">
       <label>对齐方式</label>
       <AlignXButtons
         :options="originXOptions"
         v-model="originX"
         @update:modelValue="updateOriginX"
       />
-    </div>
+    </div> -->
     <div class="setting-item">
       <label>字体大小</label>
       <select v-model.number="fontSize" @change="updateFontSize">
@@ -29,8 +29,21 @@
       <ColorPicker v-model="textColor" @change="updateTextColor" />
     </div>
     <div class="setting-item">
+      <label>滚动区域背景</label>
+      <ColorPicker v-model="scrollAreaBackground" @change="updateScrollAreaBackground" />
+    </div>
+    <div class="setting-item">
       <label>字体</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
+    </div>
+    <div class="setting-item">
+      <label>滚动区域宽度</label>
+      <input
+        type="number"
+        min="10"
+        v-model.number="scrollAreaWidth"
+        @change="updateScrollAreaWidth"
+      >
     </div>
     <div class="setting-item">
       <label>文本内容</label>
@@ -43,6 +56,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useFontStore } from '@/stores/fontStore'
+import { useScrollableTextStore } from '@/stores/elements/texts/scrollableTextElement'
 import { fontSizes, originXOptions } from '@/config/settings'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
@@ -59,14 +73,18 @@ const props = defineProps({
 
 const baseStore = useBaseStore()
 const fontStore = useFontStore()
+const scrollableTextStore = useScrollableTextStore()
 
 const fontSize = ref(props.element?.fontSize || 36)
 const textColor = ref(props.element?.fill || '#FFFFFF')
 const fontFamily = ref(props.element?.fontFamily)
-const originX = ref(props.element?.originX || 'center')
-const positionX = ref(Math.round(props.element?.left || 0))
-const positionY = ref(Math.round(props.element?.top || 0))
+// 水平对齐方式：滚动文本只支持居中
+const originX = ref('center')
 const textTemplate = ref(props.element?.text || '')
+const scrollAreaWidth = ref(Math.round(props.element?.scrollAreaWidth || 100))
+const scrollAreaLeft = ref(Math.round(props.element?.scrollAreaLeft ?? 227))
+const scrollAreaTop = ref(Math.round(props.element?.scrollAreaTop ?? 227))
+const scrollAreaBackground = ref(props.element?.scrollAreaBackground || 'rgba(0,0,0,0)')
 
 watch(
   () => props.element,
@@ -97,6 +115,13 @@ const updateTextColor = () => {
   baseStore.canvas.renderAll()
 }
 
+const updateScrollAreaBackground = () => {
+  if (!props.element || !baseStore.canvas) return
+  props.element.scrollAreaBackground = scrollAreaBackground.value
+  baseStore.canvas.renderAll()
+  scrollableTextStore.showScrollRegion(props.element)
+}
+
 const updateFontFamily = async () => {
   if (!props.element || !baseStore.canvas) return
 
@@ -110,6 +135,8 @@ const updateFontFamily = async () => {
 
 const updateOriginX = (value) => {
   if (!props.element || !baseStore.canvas) return
+  // 无论按钮点击什么，都强制使用居中对齐
+  value = 'center'
   props.element.set({
     originX: value,
   })
@@ -122,10 +149,17 @@ const updateOriginX = (value) => {
 const updatePosition = () => {
   if (!props.element || !baseStore.canvas) return
   props.element.set({
-    left: positionX.value,
-    top: positionY.value,
+    left: scrollAreaLeft.value,
+    top: scrollAreaTop.value,
+    scrollAreaLeft: scrollAreaLeft.value,
+    scrollAreaTop: scrollAreaTop.value,
   })
+  // 重置裁剪区域和滚动起始状态，使文本在新位置重新从右侧进入
+  props.element.clipPath = null
+  props.element.__scrollInitDone = false
   baseStore.canvas.renderAll()
+  scrollableTextStore.showScrollRegion(props.element)
+  scrollableTextStore.startScrollableAnimation(props.element)
 }
 
 const updateTextTemplate = () => {
@@ -134,11 +168,21 @@ const updateTextTemplate = () => {
   baseStore.canvas.renderAll()
 }
 
+const updateScrollAreaWidth = () => {
+  if (!props.element || !baseStore.canvas) return
+  const value = Number(scrollAreaWidth.value) || 0
+  if (value <= 0) return
+  props.element.set('scrollAreaWidth', value)
+  baseStore.canvas.renderAll()
+  // 宽度变更时，立即刷新滚动区域矩形
+  scrollableTextStore.showScrollRegion(props.element)
+}
+
 watch(
   () => props.element?.left,
   (newLeft) => {
-    if (newLeft !== undefined) {
-      positionX.value = Math.round(newLeft)
+    if (newLeft !== undefined && props.element?.scrollAreaLeft === undefined) {
+      scrollAreaLeft.value = Math.round(newLeft)
     }
   }
 )
@@ -146,8 +190,8 @@ watch(
 watch(
   () => props.element?.top,
   (newTop) => {
-    if (newTop !== undefined) {
-      positionY.value = Math.round(newTop)
+    if (newTop !== undefined && props.element?.scrollAreaTop === undefined) {
+      scrollAreaTop.value = Math.round(newTop)
     }
   }
 )
@@ -166,6 +210,48 @@ watch(
   (newText) => {
     if (typeof newText === 'string') {
       textTemplate.value = newText
+    }
+  }
+)
+
+watch(
+  () => props.element?.scrollAreaLeft,
+  (newLeft) => {
+    if (typeof newLeft === 'number') {
+      scrollAreaLeft.value = Math.round(newLeft)
+    }
+  }
+)
+
+watch(
+  () => props.element?.scrollAreaTop,
+  (newTop) => {
+    if (typeof newTop === 'number') {
+      scrollAreaTop.value = Math.round(newTop)
+    }
+  }
+)
+
+watch(
+  () => props.element?.scrollAreaWidth,
+  (newWidth) => {
+    if (typeof newWidth === 'number' && newWidth > 0) {
+      scrollAreaWidth.value = Math.round(newWidth)
+      if (props.element) {
+        scrollableTextStore.showScrollRegion(props.element)
+      }
+    }
+  }
+)
+
+watch(
+  () => props.element?.scrollAreaBackground,
+  (newColor) => {
+    if (typeof newColor === 'string') {
+      scrollAreaBackground.value = newColor
+      if (props.element) {
+        scrollableTextStore.showScrollRegion(props.element)
+      }
     }
   }
 )

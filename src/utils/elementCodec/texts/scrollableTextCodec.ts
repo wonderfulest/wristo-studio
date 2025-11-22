@@ -15,6 +15,10 @@ const addElement: AddElementFn<'scrollableText'> = (_elementType: 'scrollableTex
     fontFamily: config.fontFamily,
     originX: (config.originX ?? 'center') as string,
     originY: (config.originY ?? 'center') as string,
+    scrollAreaWidth: typeof config.scrollAreaWidth === 'number' ? config.scrollAreaWidth : 454,
+    scrollAreaLeft: typeof config.scrollAreaLeft === 'number' ? config.scrollAreaLeft : 227,
+    scrollAreaTop: typeof config.scrollAreaTop === 'number' ? config.scrollAreaTop : 227,
+    scrollAreaBackground: (config as any).scrollAreaBackground,
   }) as unknown as FabricElement
 
   ;(element as any).eleType = 'scrollableText'
@@ -35,6 +39,10 @@ const encodeScrollableText: EncoderFn<'scrollableText'> = (element: FabricElemen
     fill: (element as any).fill ?? '#FFFFFF',
     fontFamily: fabricAny.fontFamily ?? '',
     fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 18,
+    scrollAreaWidth: typeof fabricAny.scrollAreaWidth === 'number' ? fabricAny.scrollAreaWidth : 454,
+    scrollAreaLeft: typeof fabricAny.scrollAreaLeft === 'number' ? fabricAny.scrollAreaLeft : 227,
+    scrollAreaTop: typeof fabricAny.scrollAreaTop === 'number' ? fabricAny.scrollAreaTop : element.top,
+    scrollAreaBackground: (fabricAny as any).scrollAreaBackground,
     textTemplate: typeof fabricAny.textTemplate === 'string'
       ? fabricAny.textTemplate
       : (typeof fabricAny.text === 'string' ? fabricAny.text : ''),
@@ -53,6 +61,10 @@ const decodeScrollableText: DecoderFn<'scrollableText'> = (config: TextElementCo
     fill: config.fill,
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
+    scrollAreaWidth: typeof config.scrollAreaWidth === 'number' ? config.scrollAreaWidth : 454,
+    scrollAreaLeft: typeof config.scrollAreaLeft === 'number' ? config.scrollAreaLeft : 227,
+    scrollAreaTop: typeof config.scrollAreaTop === 'number' ? config.scrollAreaTop : config.top,
+    scrollAreaBackground: (config as any).scrollAreaBackground,
     textTemplate,
     text: textTemplate,
   } as unknown as FabricElement

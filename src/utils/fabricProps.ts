@@ -12,6 +12,11 @@ const DEFAULT_FABRIC_PROPS = [
   // 常见绑定字段
   'dataProperty',
   'goalProperty',
+  // 滚动字段
+  'scrollAreaWidth',
+  'scrollAreaLeft',
+  'scrollAreaTop',
+  'scrollAreaBackground',
 ] as const
 
 const registry = new Set<string>(DEFAULT_FABRIC_PROPS)

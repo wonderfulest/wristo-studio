@@ -9,4 +9,8 @@ export interface TextElementConfig extends BaseElementConfig {
   radius?: number
   direction?: string
   justification?: string | number
+  scrollAreaWidth?: number
+  scrollAreaLeft?: number
+  scrollAreaTop?: number
+  scrollAreaBackground?: string
 }
