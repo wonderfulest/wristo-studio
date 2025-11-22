@@ -42,7 +42,7 @@ const isEdit = ref(false)
 const formData = reactive({
   title: '',
   propertyKey: '',
-  type: 'string',
+  type: 'text',
   options: [],
   value: '',
   prompt: '',
@@ -65,7 +65,7 @@ const initFormData = (data = null) => {
     Object.assign(formData, {
       title: 'Text 1',
       propertyKey: 'text_1',
-      type: 'string',
+      type: 'text',
       options: [],
       value: '',
       prompt: '',
@@ -82,7 +82,7 @@ const handleConfirm = async () => {
   try {
     await formRef.value.validate()
     emit('confirm', {
-      type: 'string',
+      type: 'text',
       key: formData.propertyKey,
       title: formData.title,
       options: [],
