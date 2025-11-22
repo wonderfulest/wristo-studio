@@ -20,6 +20,7 @@ interface TextOptions {
   scrollAreaLeft?: number
   scrollAreaTop?: number
   scrollAreaBackground?: string
+  textProperty?: string
 }
 
 export const useScrollableTextStore = defineStore('scrollableTextElement', {
@@ -37,6 +38,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
 
   actions: {
     async addElement(options: TextOptions = {}) {
+      console.log('Adding scrollable text element with options:', options)
       if (!this.baseStore.canvas) {
         throw new Error('Canvas is not initialized, cannot add scrollable text element')
       }
@@ -61,6 +63,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
           scrollAreaLeft: typeof options.scrollAreaLeft === 'number' ? options.scrollAreaLeft : options.left,
           scrollAreaTop: typeof options.scrollAreaTop === 'number' ? options.scrollAreaTop : options.top,
           scrollAreaBackground: options.scrollAreaBackground,
+          textProperty: options.textProperty,
         } as any)
 
         this.baseStore.canvas.add(element as any)
@@ -77,26 +80,27 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
         throw error
       }
     },
-    encodeConfig(element: any) {
-      if (!element) {
-        throw new Error('Invalid element')
-      }
-      const textTemplate = (element as any).textTemplate ?? element.text ?? ''
+    // 导出用：将画布上的 scrollableText 元素编码为通用 TextElementConfig
+    encodeConfig(element: FabricElement): TextElementConfig {
+      const fabricAny = element as any
       return {
-        type: 'scrollableText',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
-        originX: element.originX,
-        originY: element.originY,
-        font: element.fontFamily || '',
-        size: element.fontSize || '-1',
-        color: element.fill || '',
-        scrollAreaWidth: (element as any).scrollAreaWidth,
-        // 导出时如果未单独设置，回退为元素自身位置，避免导出 undefined
-        scrollAreaLeft: Math.round((element as any).scrollAreaLeft),
-        scrollAreaTop: Math.round((element as any).scrollAreaTop),
-        scrollAreaBackground: (element as any).scrollAreaBackground,
-        formatter: textTemplate,
+        id: fabricAny.id ?? '',
+        eleType: 'scrollableText',
+        left: typeof element.left === 'number' ? element.left : 0,
+        top: typeof element.top === 'number' ? element.top : 0,
+        originX: (element as any).originX ?? 'center',
+        originY: (element as any).originY ?? 'center',
+        fill: (element as any).fill ?? '#FFFFFF',
+        fontFamily: fabricAny.fontFamily ?? '',
+        fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 18,
+        scrollAreaWidth: typeof fabricAny.scrollAreaWidth === 'number' ? fabricAny.scrollAreaWidth : 454,
+        scrollAreaLeft: typeof fabricAny.scrollAreaLeft === 'number' ? fabricAny.scrollAreaLeft : 227,
+        scrollAreaTop: typeof fabricAny.scrollAreaTop === 'number' ? fabricAny.scrollAreaTop : (element.top as number),
+        scrollAreaBackground: (fabricAny as any).scrollAreaBackground,
+        textProperty: (fabricAny as any).textProperty,
+        textTemplate: typeof fabricAny.textTemplate === 'string'
+          ? fabricAny.textTemplate
+          : (typeof fabricAny.text === 'string' ? fabricAny.text : ''),
       }
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
@@ -116,6 +120,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
         scrollAreaLeft: config.scrollAreaLeft,
         scrollAreaTop: config.scrollAreaTop,
         scrollAreaBackground: config.scrollAreaBackground,
+        textProperty: config.textProperty,
         textTemplate,
         text: textTemplate,
       } as any

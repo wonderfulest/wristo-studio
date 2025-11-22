@@ -10,6 +10,7 @@ const DEFAULT_FABRIC_PROPS = [
   'keyGuideline',
   'type',
   // 常见绑定字段
+  'textProperty',
   'dataProperty',
   'goalProperty',
   // 滚动字段

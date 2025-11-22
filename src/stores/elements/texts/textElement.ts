@@ -15,6 +15,7 @@ interface TextOptions {
   fontFamily?: string
   originX?: string
   originY?: string
+  textProperty?: string
 }
 
 export const useTextStore = defineStore('textElement', {
@@ -30,6 +31,7 @@ export const useTextStore = defineStore('textElement', {
 
   actions: {
     async addElement(options: TextOptions = {}) {
+      console.log('Adding text element with options:', options)
       if (!this.baseStore.canvas) {
         throw new Error('Canvas is not initialized, cannot add text element')
       }
@@ -48,6 +50,7 @@ export const useTextStore = defineStore('textElement', {
           hasBorders: true,
           originX: options.originX || 'center',
           originY: options.originY || 'center',
+          textProperty: options.textProperty,
         } as any)
 
         this.baseStore.canvas.add(element as any)
@@ -62,20 +65,23 @@ export const useTextStore = defineStore('textElement', {
         throw error
       }
     },
-    encodeConfig(element: any) {
-      if (!element) {
-        throw new Error('Invalid element')
-      }
+    // 导出用：将画布上的 text 元素编码为通用 TextElementConfig
+    encodeConfig(element: FabricElement): TextElementConfig {
+      const fabricAny = element as any
       return {
-        type: 'text',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
-        originX: element.originX,
-        originY: element.originY,
-        font: element.fontFamily || '',
-        size: element.fontSize || '-1',
-        color: element.fill || '',
-        formatter: element.formatter || '',
+        id: fabricAny.id ?? '',
+        eleType: 'text',
+        left: typeof element.left === 'number' ? element.left : 0,
+        top: typeof element.top === 'number' ? element.top : 0,
+        originX: (element as any).originX ?? 'center',
+        originY: (element as any).originY ?? 'center',
+        fill: (element as any).fill ?? '#FFFFFF',
+        fontFamily: fabricAny.fontFamily ?? '',
+        fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 18,
+        textProperty: fabricAny.textProperty,
+        textTemplate: typeof fabricAny.textTemplate === 'string'
+          ? fabricAny.textTemplate
+          : (typeof fabricAny.text === 'string' ? fabricAny.text : ''),
       }
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
@@ -90,6 +96,7 @@ export const useTextStore = defineStore('textElement', {
         fill: config.fill,
         fontFamily: config.fontFamily,
         fontSize: config.fontSize,
+        textProperty: config.textProperty,
         textTemplate,
         text: textTemplate,
       } as any

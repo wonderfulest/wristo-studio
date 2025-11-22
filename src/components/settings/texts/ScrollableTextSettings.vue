@@ -2,7 +2,7 @@
   <div class="settings-section">
     <div class="setting-item">
       <TextPropertyField
-        v-model="textPropertyKey"
+        v-model="textProperty"
         label="文本变量"
         placeholder="选择字符串属性"
         @change="applyTextProperty"
@@ -92,11 +92,11 @@ const scrollAreaWidth = ref(Math.round(props.element?.scrollAreaWidth || 100))
 const scrollAreaLeft = ref(Math.round(props.element?.scrollAreaLeft ?? 227))
 const scrollAreaTop = ref(Math.round(props.element?.scrollAreaTop ?? 227))
 const scrollAreaBackground = ref(props.element?.scrollAreaBackground || 'rgba(0,0,0,0)')
-const textPropertyKey = ref('')
+const textProperty = ref(props.element?.textProperty || '')
 
 const selectedTextProperty = computed(() => {
-  if (!textPropertyKey.value) return null
-  return propertiesStore.allProperties[textPropertyKey.value] || null
+  if (!textProperty.value) return null
+  return propertiesStore.allProperties[textProperty.value] || null
 })
 
 watch(
@@ -176,9 +176,10 @@ const updatePosition = () => {
 }
 
 const applyTextProperty = () => {
-  if (!textPropertyKey.value || !props.element || !baseStore.canvas) return
-  const value = propertiesStore.getPropertyValue(textPropertyKey.value)
+  if (!textProperty.value || !props.element || !baseStore.canvas) return
+  const value = propertiesStore.getPropertyValue(textProperty.value)
   if (typeof value === 'string') {
+    props.element.textProperty = textProperty.value
     props.element.set('text', value)
     // 重置裁剪区域和滚动起始状态，使新文本在当前滚动区域重新从右侧进入
     props.element.clipPath = null

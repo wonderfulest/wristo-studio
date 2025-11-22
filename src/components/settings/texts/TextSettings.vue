@@ -2,7 +2,7 @@
   <div class="settings-section">
     <div class="setting-item">
       <TextPropertyField
-        v-model="textPropertyKey"
+        v-model="textProperty"
         label="文本变量"
         placeholder="选择字符串属性"
         @change="applyTextProperty"
@@ -84,11 +84,11 @@ const fontFamily = ref(props.element?.fontFamily)
 const originX = ref(props.element?.originX || 'center')
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
-const textPropertyKey = ref('')
+const textProperty = ref(props.element?.textProperty || '')
 
 const selectedTextProperty = computed(() => {
-  if (!textPropertyKey.value) return null
-  return propertiesStore.allProperties[textPropertyKey.value] || null
+  if (!textProperty.value) return null
+  return propertiesStore.allProperties[textProperty.value] || null
 })
 
 // 监听元素属性变化
@@ -158,9 +158,10 @@ const updatePosition = () => {
 }
 
 const applyTextProperty = () => {
-  if (!textPropertyKey.value || !props.element || !baseStore.canvas) return
-  const value = propertiesStore.getPropertyValue(textPropertyKey.value)
+  if (!textProperty.value || !props.element || !baseStore.canvas) return
+  const value = propertiesStore.getPropertyValue(textProperty.value)
   if (typeof value === 'string') {
+    props.element.textProperty = textProperty.value
     props.element.set('text', value)
     baseStore.canvas.renderAll()
   }
