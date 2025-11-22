@@ -28,6 +28,9 @@
                   <div v-else-if="prop.type === 'data'" class="data-value-preview">
                     <span class="data-label">{{ getDataOption(prop)?.label }}</span>
                   </div>
+                  <div v-else-if="prop.type === 'string'" class="text-value-preview">
+                    <span class="text-label">{{ prop.value }}</span>
+                  </div>
                   <div class="property-actions">
                     <el-button type="primary" link @click="editProperty(key, prop)">
                       <el-icon>
@@ -74,6 +77,12 @@
               </el-icon>
               Chart Select
             </el-button>
+            <el-button type="text" @click="addProperty('string')">
+              <el-icon>
+                <Document />
+              </el-icon>
+              Text String
+            </el-button>
           </el-button-group>
         </div>
       </div>
@@ -83,6 +92,7 @@
     <GoalPropertyDialog ref="goalPropertyDialog" @confirm="handlePropertyConfirm" />
     <DataPropertyDialog ref="dataPropertyDialog" @confirm="handlePropertyConfirm" />
     <ChartPropertyDialog ref="chartPropertyDialog" @confirm="handlePropertyConfirm" />
+    <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
   </el-drawer>
 </template>
 
@@ -108,6 +118,7 @@ import ColorPropertyDialog from '@/components/properties/dialogs/ColorPropertyDi
 import GoalPropertyDialog from '@/components/properties/dialogs/GoalPropertyDialog.vue'
 import DataPropertyDialog from '@/components/properties/dialogs/DataPropertyDialog.vue'
 import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDialog.vue'
+import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 
@@ -116,6 +127,7 @@ const colorPropertyDialog = ref(null)
 const goalPropertyDialog = ref(null)
 const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
+const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 
 // 监听打开 App Properties 事件
@@ -139,6 +151,8 @@ const addProperty = (type) => {
     dataPropertyDialog.value?.show()
   } else if (type === 'chart') {
     chartPropertyDialog.value?.show()
+  } else if (type === 'string') {
+    textPropertyDialog.value?.show()
   }
 }
 // 编辑属性
@@ -160,6 +174,11 @@ const editProperty = (key, prop) => {
     })
   } else if (prop.type === 'chart') {
     chartPropertyDialog.value?.show({
+      ...prop,
+      propertyKey: key
+    })
+  } else if (prop.type === 'string') {
+    textPropertyDialog.value?.show({
       ...prop,
       propertyKey: key
     })

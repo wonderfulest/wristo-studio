@@ -1,6 +1,24 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
+      <TextPropertyField
+        v-model="textPropertyKey"
+        label="文本变量"
+        placeholder="选择字符串属性"
+        @change="applyTextProperty"
+      />
+      <div v-if="selectedTextProperty" class="text-property-preview">
+        <div class="text-property-meta">
+          <span class="label">变量名：</span>
+          <span class="value">{{ selectedTextProperty.title }}</span>
+        </div>
+        <div class="text-property-meta">
+          <span class="label">默认内容：</span>
+        </div>
+        <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
+      </div>
+    </div>
+    <div class="setting-item">
       <label>位置</label>
       <PositionInputs
         :left="scrollAreaLeft"
@@ -10,14 +28,6 @@
         @change="updatePosition"
       />
     </div>
-    <!-- <div class="setting-item">
-      <label>对齐方式</label>
-      <AlignXButtons
-        :options="originXOptions"
-        v-model="originX"
-        @update:modelValue="updateOriginX"
-      />
-    </div> -->
     <div class="setting-item">
       <label>字体大小</label>
       <select v-model.number="fontSize" @change="updateFontSize">
@@ -45,24 +55,21 @@
         @change="updateScrollAreaWidth"
       >
     </div>
-    <div class="setting-item">
-      <label>文本内容</label>
-      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useFontStore } from '@/stores/fontStore'
 import { useScrollableTextStore } from '@/stores/elements/texts/scrollableTextElement'
+import { usePropertiesStore } from '@/stores/properties'
 import { fontSizes, originXOptions } from '@/config/settings'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextTemplateEditor from '@/components/settings/texts/components/TextTemplateEditor.vue'
+import TextPropertyField from '@/components/settings/common/TextPropertyField.vue'
 
 const props = defineProps({
   element: {
@@ -74,17 +81,23 @@ const props = defineProps({
 const baseStore = useBaseStore()
 const fontStore = useFontStore()
 const scrollableTextStore = useScrollableTextStore()
+const propertiesStore = usePropertiesStore()
 
 const fontSize = ref(props.element?.fontSize || 36)
 const textColor = ref(props.element?.fill || '#FFFFFF')
 const fontFamily = ref(props.element?.fontFamily)
 // 水平对齐方式：滚动文本只支持居中
 const originX = ref('center')
-const textTemplate = ref(props.element?.text || '')
 const scrollAreaWidth = ref(Math.round(props.element?.scrollAreaWidth || 100))
 const scrollAreaLeft = ref(Math.round(props.element?.scrollAreaLeft ?? 227))
 const scrollAreaTop = ref(Math.round(props.element?.scrollAreaTop ?? 227))
 const scrollAreaBackground = ref(props.element?.scrollAreaBackground || 'rgba(0,0,0,0)')
+const textPropertyKey = ref('')
+
+const selectedTextProperty = computed(() => {
+  if (!textPropertyKey.value) return null
+  return propertiesStore.allProperties[textPropertyKey.value] || null
+})
 
 watch(
   () => props.element,
@@ -162,10 +175,18 @@ const updatePosition = () => {
   scrollableTextStore.startScrollableAnimation(props.element)
 }
 
-const updateTextTemplate = () => {
-  if (!props.element || !baseStore.canvas) return
-  props.element.set('text', textTemplate.value)
-  baseStore.canvas.renderAll()
+const applyTextProperty = () => {
+  if (!textPropertyKey.value || !props.element || !baseStore.canvas) return
+  const value = propertiesStore.getPropertyValue(textPropertyKey.value)
+  if (typeof value === 'string') {
+    props.element.set('text', value)
+    // 重置裁剪区域和滚动起始状态，使新文本在当前滚动区域重新从右侧进入
+    props.element.clipPath = null
+    props.element.__scrollInitDone = false
+    baseStore.canvas.renderAll()
+    scrollableTextStore.showScrollRegion(props.element)
+    scrollableTextStore.startScrollableAnimation(props.element)
+  }
 }
 
 const updateScrollAreaWidth = () => {
@@ -201,15 +222,6 @@ watch(
   (newFontSize) => {
     if (newFontSize !== undefined) {
       fontSize.value = newFontSize
-    }
-  }
-)
-
-watch(
-  () => props.element?.text,
-  (newText) => {
-    if (typeof newText === 'string') {
-      textTemplate.value = newText
     }
   }
 )

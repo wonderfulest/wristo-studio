@@ -1,6 +1,24 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
+      <TextPropertyField
+        v-model="textPropertyKey"
+        label="文本变量"
+        placeholder="选择字符串属性"
+        @change="applyTextProperty"
+      />
+      <div v-if="selectedTextProperty" class="text-property-preview">
+        <div class="text-property-meta">
+          <span class="label">变量名：</span>
+          <span class="value">{{ selectedTextProperty.title }}</span>
+        </div>
+        <div class="text-property-meta">
+          <span class="label">默认内容：</span>
+        </div>
+        <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
+      </div>
+    </div>
+    <div class="setting-item">
       <label>位置</label>
       <PositionInputs 
         :left="positionX" 
@@ -32,24 +50,21 @@
       <label>字体</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
-    <div class="setting-item">
-      <label>文本内容</label>
-      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useTextStore } from '@/stores/elements/texts/textElement'
+import { usePropertiesStore } from '@/stores/properties'
 import { useFontStore } from '@/stores/fontStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextTemplateEditor from '@/components/settings/texts/components/TextTemplateEditor.vue'
+import TextPropertyField from '@/components/settings/common/TextPropertyField.vue'
 
 const props = defineProps({
   element: {
@@ -60,6 +75,7 @@ const props = defineProps({
 
 const baseStore = useBaseStore()
 const fontStore = useFontStore()
+const propertiesStore = usePropertiesStore()
 
 // 设置项的响应式状态
 const fontSize = ref(props.element?.fontSize || 36)
@@ -68,7 +84,12 @@ const fontFamily = ref(props.element?.fontFamily)
 const originX = ref(props.element?.originX || 'center')
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
-const textTemplate = ref(props.element?.text || '')
+const textPropertyKey = ref('')
+
+const selectedTextProperty = computed(() => {
+  if (!textPropertyKey.value) return null
+  return propertiesStore.allProperties[textPropertyKey.value] || null
+})
 
 // 监听元素属性变化
 watch(
@@ -136,10 +157,13 @@ const updatePosition = () => {
   baseStore.canvas.renderAll()
 }
 
-const updateTextTemplate = () => {
-  if (!props.element || !baseStore.canvas) return
-  props.element.set('text', textTemplate.value)
-  baseStore.canvas.renderAll()
+const applyTextProperty = () => {
+  if (!textPropertyKey.value || !props.element || !baseStore.canvas) return
+  const value = propertiesStore.getPropertyValue(textPropertyKey.value)
+  if (typeof value === 'string') {
+    props.element.set('text', value)
+    baseStore.canvas.renderAll()
+  }
 }
 
 // 监听画布上的对象变化
@@ -176,7 +200,7 @@ watch(
   () => props.element?.text,
   (newText) => {
     if (typeof newText === 'string') {
-      textTemplate.value = newText
+      // 文本内容来源于属性，保持只读，不在这里编辑
     }
   }
 )

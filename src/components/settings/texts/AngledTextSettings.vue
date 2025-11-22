@@ -52,7 +52,7 @@ import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextTemplateEditor from '@/components/settings/texts/components/TextTemplateEditor.vue'
+import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
 
 const props = defineProps({
   element: {
