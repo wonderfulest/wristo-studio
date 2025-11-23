@@ -28,7 +28,7 @@
                   <div v-else-if="prop.type === 'data'" class="data-value-preview">
                     <span class="data-label">{{ getDataOption(prop)?.label }}</span>
                   </div>
-                  <div v-else-if="prop.type === 'string'" class="text-value-preview">
+                  <div v-else-if="prop.type === 'text'" class="text-value-preview">
                     <span class="text-label">{{ prop.value }}</span>
                   </div>
                   <div class="property-actions">
@@ -77,7 +77,7 @@
               </el-icon>
               Chart Select
             </el-button>
-            <el-button type="text" @click="addProperty('string')">
+            <el-button type="text" @click="addProperty('text')">
               <el-icon>
                 <Document />
               </el-icon>
