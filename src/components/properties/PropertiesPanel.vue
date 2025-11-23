@@ -151,7 +151,7 @@ const addProperty = (type) => {
     dataPropertyDialog.value?.show()
   } else if (type === 'chart') {
     chartPropertyDialog.value?.show()
-  } else if (type === 'string') {
+  } else if (type === 'text') {
     textPropertyDialog.value?.show()
   }
 }
@@ -177,7 +177,7 @@ const editProperty = (key, prop) => {
       ...prop,
       propertyKey: key
     })
-  } else if (prop.type === 'string') {
+  } else if (prop.type === 'text') {
     textPropertyDialog.value?.show({
       ...prop,
       propertyKey: key
