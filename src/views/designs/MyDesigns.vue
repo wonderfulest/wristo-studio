@@ -259,7 +259,7 @@ const loadingStates = ref({
 // 搜索相关状态
 const searchName = ref('')
 const selectedStatus = ref('')
-const sortField = ref('updatedAt')
+const sortField = ref('updated_at')
 const sortOrder = ref('desc')
 
 // 添加作者显示控制
