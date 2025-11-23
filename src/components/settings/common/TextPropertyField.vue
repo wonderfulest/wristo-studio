@@ -55,7 +55,7 @@ const emit = defineEmits<{
 
 const propertiesStore = usePropertiesStore()
 const textOptions = computed(() =>
-  Object.entries(propertiesStore.allProperties).filter(([, p]) => p.type === 'string')
+  Object.entries(propertiesStore.allProperties).filter(([, p]) => p.type === 'text')
 )
 
 const localValue = computed({

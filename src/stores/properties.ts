@@ -86,7 +86,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
           return '0xffffff'
         case 'number':
           return 0
-        case 'string':
+        case 'text':
           return ''
         case 'boolean':
           return false

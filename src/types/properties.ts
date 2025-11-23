@@ -1,7 +1,7 @@
 export type PropertyType =
   | 'color'
   | 'number'
-  | 'string'
+  | 'text'
   | 'boolean'
   | 'date'
   | 'select'
