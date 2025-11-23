@@ -12,8 +12,8 @@
       </el-select>
 
       <el-select v-model="sortField" placeholder="Sort Field" @change="handleSortChange" class="sort-field-filter">
-        <el-option label="Created Time" value="createdAt" />
-        <el-option label="Updated Time" value="updatedAt" />
+        <el-option label="Created Time" value="created_at" />
+        <el-option label="Updated Time" value="updated_at" />
       </el-select>
       <el-select v-model="sortOrder" placeholder="Sort Order" @change="handleSortChange" class="sort-order-filter">
         <el-option label="Ascending" value="asc" />
