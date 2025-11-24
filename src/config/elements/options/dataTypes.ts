@@ -533,7 +533,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '天气描述',
     metricSymbol: ':FIELD_TYPE_WEATHER_DESCRIPTION',
-    value: 159,
+    value: 36,
     defaultValue: 'Sunny',
     icon: '\u0021',
     unit: '',
@@ -543,7 +543,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '天气',
     metricSymbol: ':FIELD_TYPE_WEATHER',
-    value: 160,
+    value: 30,
     defaultValue: '25',
     icon: '\u0021',
     unit: '°C',
@@ -553,7 +553,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '湿度',
     metricSymbol: ':FIELD_TYPE_WEATHER_HUMIDITY',
-    value: 161,
+    value: 33,
     defaultValue: '60',
     icon: '\u0021',
     unit: '%',
@@ -563,7 +563,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '云量',
     metricSymbol: ':FIELD_TYPE_WEATHER_CLOUDS',
-    value: 162,
+    value: 54,
     defaultValue: '40',
     icon: '\u0021',
     unit: '%',
@@ -573,7 +573,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '风速',
     metricSymbol: ':FIELD_TYPE_WEATHER_WIND_SPEED',
-    value: 163,
+    value: 34,
     defaultValue: '5',
     icon: '\u0021',
     unit: 'm/s',
@@ -583,7 +583,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '风向',
     metricSymbol: ':FIELD_TYPE_WEATHER_WIND_DIRECTION',
-    value: 164,
+    value: 44,
     defaultValue: '90',
     icon: '\u0021',
     unit: '°',
@@ -593,7 +593,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '温度',
     metricSymbol: ':FIELD_TYPE_TEMPERATURE',
-    value: 165,
+    value: 31,
     defaultValue: '25',
     icon: '\u0021',
     unit: '°C',
@@ -603,7 +603,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '最高温度',
     metricSymbol: ':FIELD_TYPE_TEMPERATURE_HIGH',
-    value: 166,
+    value: 41,
     defaultValue: '30',
     icon: '\u0021',
     unit: '°C',
@@ -613,7 +613,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '最低温度',
     metricSymbol: ':FIELD_TYPE_TEMPERATURE_LOW',
-    value: 167,
+    value: 42,
     defaultValue: '18',
     icon: '\u0021',
     unit: '°C',
@@ -623,7 +623,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '位置',
     metricSymbol: ':FIELD_TYPE_LOCATION',
-    value: 171,
+    value: 58,
     defaultValue: 'City',
     icon: '\u0021',
     unit: '',
@@ -633,7 +633,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '经纬度',
     metricSymbol: ':FIELD_TYPE_POSITION',
-    value: 172,
+    value: 56,
     defaultValue: '0,0',
     icon: '\u0021',
     unit: '',
@@ -643,7 +643,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '空气质量指数',
     metricSymbol: ':FIELD_TYPE_AQI',
-    value: 173,
+    value: 59,
     defaultValue: '50',
     icon: '\u0021',
     unit: '',
@@ -653,7 +653,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: 'PM2.5',
     metricSymbol: ':FIELD_TYPE_AQI_PM25',
-    value: 174,
+    value: 60,
     defaultValue: '35',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -663,7 +663,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: 'PM10',
     metricSymbol: ':FIELD_TYPE_AQI_PM10',
-    value: 175,
+    value: 61,
     defaultValue: '40',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -673,7 +673,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '臭氧 O₃',
     metricSymbol: ':FIELD_TYPE_AQI_O3',
-    value: 176,
+    value: 62,
     defaultValue: '80',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -683,7 +683,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '二氧化氮 NO₂',
     metricSymbol: ':FIELD_TYPE_AQI_NO2',
-    value: 177,
+    value: 63,
     defaultValue: '40',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -693,7 +693,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '二氧化硫 SO₂',
     metricSymbol: ':FIELD_TYPE_AQI_SO2',
-    value: 178,
+    value: 64,
     defaultValue: '20',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -703,7 +703,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '一氧化碳 CO',
     metricSymbol: ':FIELD_TYPE_AQI_CO',
-    value: 179,
+    value: 65,
     defaultValue: '1',
     icon: '\u0021',
     unit: 'mg/m³',
@@ -713,7 +713,7 @@ export const DataTypeOptions: DataTypeOption[] = [
   {
     labelCn: '氨气 NH₃',
     metricSymbol: ':FIELD_TYPE_AQI_NH3',
-    value: 180,
+    value: 66,
     defaultValue: '1',
     icon: '\u0021',
     unit: 'µg/m³',
@@ -722,8 +722,8 @@ export const DataTypeOptions: DataTypeOption[] = [
   },
   {
     labelCn: '一年中的第几天',
-    metricSymbol: ':FIELD_TYPE_DATE_DAY_OF_YEAR',
-    value: 183,
+    metricSymbol: ':FIELD_TYPE_DATE_YEARDAY',
+    value: 78,
     defaultValue: '200',
     icon: '\u0021',
     unit: '',
