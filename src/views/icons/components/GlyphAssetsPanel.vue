@@ -33,7 +33,23 @@
                 <template v-if="getAssetImage(item)">
                   <div class="overlay overlay-actions">
                     <span v-if="glyph.isDefault === 0 && displayType === 'mip'" class="action" @click="emit('edit', item)">Edit</span>
-                    <span v-if="glyph.isDefault === 0" class="action" @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })">Rebind</span>
+                    <span
+                      v-if="glyph.isDefault === 0"
+                      class="action"
+                      @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })"
+                    >Rebind</span>
+                    <span
+                      v-if="glyph.isDefault === 0 && displayType === 'amoled'"
+                      class="action delete"
+                      @click="() => {
+                        const assetId = item.asset?.id 
+                        if (!assetId) {
+                          console.warn('[GlyphAssetsPanel] Missing assetId for unbind', item)
+                          return
+                        }
+                        emit('unbind', { glyphId: glyph.id, assetId })
+                      }"
+                    >Unbind</span>
                   </div>
                   <div class="preview">
                     <img :src="getAssetImage(item)" alt="icon" />
@@ -86,6 +102,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'edit', item: IconGlyphAssetVO): void
   (e: 'openBind', payload: { glyphId: number; iconId?: number }): void
+  (e: 'unbind', payload: { glyphId: number; assetId: number }): void
   (e: 'pageChange', page: number): void
   (e: 'import', glyph: IconGlyphVO): void
   (e: 'submitGlyph'): void
@@ -176,6 +193,8 @@ const getAssetImage = (item: IconGlyphAssetVO): string => {
 .overlay-actions { width: 42%; min-width: 96px; height: 100%; display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; padding: 8px; background: rgba(0,0,0,0.88); border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
 .overlay-actions .action { display: block; width: 100%; text-align: center; color: #0b2a4a; background: rgba(230,240,255,.95); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 6px 10px; border-radius: 6px; }
 .overlay-actions .action:hover { background: #409eff; color: #fff; }
+.overlay-actions .action.delete { background: rgba(245,108,108,.96); color: #fff; }
+.overlay-actions .action.delete:hover { background: #f44336; color: #fff; }
 .grid-meta { font-weight: 900; font-size: 12px; color: #909399; }
 .meta-codes { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .symbol-code { font-weight: 700; color: #303133; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: normal; word-break: break-all; text-align: center; max-width: 100%; }

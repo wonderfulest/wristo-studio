@@ -105,6 +105,10 @@ export const bindAssetsToGlyph = (glyphId: number, assetId: number): Promise<Api
   return instance.post(`/dsn/icon-glyph-asset/bind-to-glyph/${glyphId}?assetId=${assetId}`)
 }
 
+export const unbindAssetFromGlyph = (glyphId: number, assetId: number): Promise<ApiResponse<Boolean>> => {
+  return instance.post(`/dsn/icon-glyph-asset/unbind-from-glyph/${glyphId}?assetId=${assetId}`)
+}
+
 export const importAssetsToGlyph = (fromGlyphId: number, toGlyphId: number): Promise<ApiResponse<IconGlyphAssetVO[]>> => {
   const params = new URLSearchParams({ fromGlyphId: String(fromGlyphId), toGlyphId: String(toGlyphId) })
   return instance.post(`/dsn/icon-glyph-asset/import-to-glyph?${params.toString()}`)

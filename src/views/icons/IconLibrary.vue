@@ -30,6 +30,7 @@
             v-model:displayType="displayType"
             @edit="handleEdit"
             @openBind="(p)=> openBindDialog(p.glyphId, p.iconId)"
+            @unbind="(p)=> handleUnbind(p.glyphId, p.assetId)"
             @pageChange="onAssetPageChange"
             @import="openImportDialog"
             @submitGlyph="handleSubmitGlyph"
@@ -90,7 +91,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
@@ -103,6 +104,7 @@ import {
   createIconGlyph,
   pageIconAssets,
   bindAssetsToGlyph,
+  unbindAssetFromGlyph,
   importAssetsToGlyph,
   submitIconGlyph,
   type IconGlyphVO,
@@ -210,6 +212,34 @@ const onGlyphPageChange = async (page: number) => {
 const onAssetPageChange = async (page: number) => {
   assetPage.value = page
   await fetchAssets(Number(activeTab.value))
+}
+
+const handleUnbind = async (glyphId: number, assetId: number) => {
+  if (!glyphId || !assetId) return
+  try {
+    console.log('[IconLibrary] handleUnbind called', { glyphId, assetId })
+    await ElMessageBox.confirm(
+      'Are you sure you want to unbind this asset from the font?',
+      'Unbind Asset',
+      {
+        type: 'warning',
+        confirmButtonText: 'Unbind',
+        cancelButtonText: 'Cancel',
+      }
+    )
+  } catch {
+    return
+  }
+  try {
+    console.log('[IconLibrary] calling unbindAssetFromGlyph', { glyphId, assetId })
+    await unbindAssetFromGlyph(glyphId, assetId)
+    ElMessage.success('Unbound successfully')
+    if (String(glyphId) === activeTab.value) {
+      await fetchAssets(glyphId)
+    }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 const onDisplayTypeChange = async (_v: DisplayType) => {
