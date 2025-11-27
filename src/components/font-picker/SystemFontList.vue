@@ -15,9 +15,7 @@
             :class="{ active: modelValue === font.value }"
             @click="$emit('select', font)"
           >
-            <span class="preview-text" :style="{ fontFamily: font.value }">
-              {{ section.name === 'icon' ? '0123456789' : '12:23 AM 72°F & Sunny 0123456789' }}
-            </span>
+            <FontPreviewText :font-family="font.value" :type="type" :section-name="section.name" />
           </div>
         </div>
       </div>
@@ -27,11 +25,13 @@
 
 <script setup lang="ts">
 import type { FontItem, Section } from '@/types/font-picker'
+import FontPreviewText from './FontPreviewText.vue'
 
-defineProps<{
+const { sections, expandedMap, modelValue, type } = defineProps<{
   sections: Section[]
   expandedMap: Record<string, boolean>
   modelValue: string
+  type?: string
 }>()
 
 defineEmits<{
@@ -106,5 +106,12 @@ const groupByFamily = (fonts: FontItem[]) => {
 .preview-text {
   font-size: 18px;
   color: #333;
+}
+
+.preview-text-icon {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 </style>

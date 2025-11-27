@@ -31,10 +31,3 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'weather-regular';
-  src: url('/src/assets/fonts/weather-regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}

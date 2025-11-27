@@ -17,6 +17,7 @@
       <el-form-item label="Font">
         <font-picker 
           v-model="props.element.fontFamily" 
+          :type="fontTypeForTime"
           @change="updateElement({ fontFamily: $event })" 
         />
       </el-form-item>
@@ -60,10 +61,10 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useTimeStore } from '@/stores/elements/time/timeElement'
-import { fontSizes, originXOptions, TimeFormatOptions } from '@/config/settings'
+import { fontSizes, originXOptions, TimeFormatOptions, TimeFormatConstants } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
@@ -78,6 +79,19 @@ const props = defineProps({
 
 const fontStore = useFontStore()
 const timeStore = useTimeStore()
+
+const fontTypeForTime = computed(() => {
+  const fmt = props.element.formatter
+  const hourOrMinuteFormats = [
+    TimeFormatConstants.HH_MM,
+    TimeFormatConstants.HH_MM_SS,
+    TimeFormatConstants.HH,
+    TimeFormatConstants.MM,
+    TimeFormatConstants.HH_COLON,
+    TimeFormatConstants.COLON_MM,
+  ]
+  return hourOrMinuteFormats.includes(fmt) ? 'number_font' : 'text_font'
+})
 
 // 加载字体列表
 onMounted(async () => {

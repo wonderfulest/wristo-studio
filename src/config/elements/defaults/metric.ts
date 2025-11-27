@@ -30,7 +30,7 @@ export const DEFAULT_WEATHER_CONFIG: WeatherElementConfig & EDITOR_ELEMENT = {
   originY: 'center',
   fill: '#000000',
   fontSize: 42,
-  fontFamily: 'weather-regular',
+  fontFamily: 'jun',
 }
 
 export const DEFAULT_LABEL_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
@@ -70,5 +70,5 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   originY: 'center',
   fill: '#000000',
   fontSize: 42,
-  fontFamily: 'weather-regular',
+  fontFamily: 'jun',
 }

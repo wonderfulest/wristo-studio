@@ -40,6 +40,19 @@
           </div>
         </div>
 
+        <div class="preview-section">
+          <div class="preview-label">Font type:</div>
+          <el-radio-group v-model="selectedFontType" :disabled="loadingFontTypes || !fontTypeOptions.length">
+            <el-radio-button
+              v-for="opt in fontTypeOptions"
+              :key="opt.value"
+              :label="opt.value"
+            >
+              {{ opt.name }}
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+
         <div class="preview-section" v-if="parsedInfo">
           <div class="preview-label">Font details:</div>
           <ul class="font-details">
@@ -77,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { Upload, Close } from '@element-plus/icons-vue'
 import opentype, { Font, FontNames } from 'opentype.js'
@@ -86,6 +99,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
 import { uploadFontFile, getFontByName, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
 import type { DesignFontVO, UploadFontMeta } from '@/types/font'
+import { getEnumOptions, type EnumOption } from '@/api/common'
 
 const props = defineProps<{
   visible: boolean
@@ -108,9 +122,31 @@ const selectedFile = ref<any | null>(null)
 const fontForm = ref<{ name: string; family: string }>({ name: '', family: '' })
 const parsedInfo = ref<ParsedFontInfo | null>(null)
 
+const fontTypeOptions = ref<EnumOption[]>([])
+const loadingFontTypes = ref(false)
+const selectedFontType = ref<string>('')
+
 const previewFontFamily = computed(() => {
   if (!selectedFile.value) return 'inherit'
   return selectedFile.value.name.replace(/\.(ttf|otf)$/i, '')
+})
+
+onMounted(async () => {
+  try {
+    loadingFontTypes.value = true
+    const res: any = await getEnumOptions('DesignFontType')
+    const list: EnumOption[] = res?.data ?? res ?? []
+    fontTypeOptions.value = Array.isArray(list) && list.length
+      ? list
+      : [ { name: 'ratio', value: 'ratio' } ]
+    if (!selectedFontType.value && fontTypeOptions.value.length) {
+      selectedFontType.value = fontTypeOptions.value[0].value
+    }
+  } catch {
+    fontTypeOptions.value = [ { name: 'ratio', value: 'ratio' } ]
+  } finally {
+    loadingFontTypes.value = false
+  }
 })
 
 const handleFontFileChange = async (file: any) => {
@@ -199,6 +235,10 @@ const confirmUpload = async () => {
     messageStore.error('Please select a font file')
     return
   }
+  if (!selectedFontType.value) {
+    messageStore.error('Please select a font type')
+    return
+  }
   uploading.value = true
   try {
     const fontName = fontForm.value.name
@@ -228,7 +268,7 @@ const confirmUpload = async () => {
       family: parsedInfo.value?.family || fontName,
       subfamily: parsedInfo.value?.subfamily || '',
       language: 'en',
-      type: 'text_font',
+      type: selectedFontType.value,
       weight: mapWeight(parsedInfo.value?.weightClass, parsedInfo.value?.subfamily),
       versionName: parsedInfo.value?.version || '1.0',
       glyphCount: parsedInfo.value?.glyphCount || 0,

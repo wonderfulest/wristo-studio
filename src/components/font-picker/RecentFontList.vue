@@ -15,7 +15,7 @@
           @click="$emit('select', font)"
         >
           <div class="font-name">{{ font.family }}</div>
-          <span class="preview-text" :style="{ fontFamily: font.value }">12:23 AM 72°F & Sunny 0123456789</span>
+          <FontPreviewText :font-family="font.value" :type="type" />
         </div>
       </div>
     </div>
@@ -24,11 +24,13 @@
 
 <script setup lang="ts">
 import type { FontItem } from '@/types/font-picker'
+import FontPreviewText from './FontPreviewText.vue'
 
 defineProps<{
   fonts: FontItem[]
   modelValue: string
   expanded: boolean
+  type?: string
 }>()
 
 defineEmits<{
@@ -94,6 +96,13 @@ defineEmits<{
 .preview-text {
   font-size: 18px;
   color: #333;
+}
+
+.preview-text-icon {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .font-name {

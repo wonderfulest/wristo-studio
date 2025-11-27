@@ -3,7 +3,7 @@
     <!-- Current selected font preview -->
     <div class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
-      <span class="preview-text" :style="{ fontFamily: selectedFontFamily }">12:23 AM 72°F & Sunny 0123456789</span>
+      <FontPreviewText :font-family="selectedFontFamily" :type="type" />
     </div>
 
     <!-- Font selection panel -->
@@ -14,6 +14,10 @@
       <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
         <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
       </div>
+      <!-- Number font library guidance (only for number fonts) -->
+      <div v-if="type === FontTypes.NUMBER_FONT" class="icon-lib-tip">
+        <RouterLink class="open-library-anchor" to="/number-font-library" target="_blank" rel="noopener">Manage your number fonts in Number Font Library</RouterLink>
+      </div>
       <!-- Search (extracted component) -->
       <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
       <!-- Recent fonts -->
@@ -21,6 +25,7 @@
           :fonts="recentFonts"
           :model-value="modelValue"
           :expanded="expandedSections['recent']"
+          :type="type"
           @select="selectFont"
           @toggle="() => toggleSection('recent')"
       />
@@ -29,6 +34,7 @@
           :sections="systemSections as any"
           :expanded-map="expandedSections"
           :model-value="modelValue"
+          :type="type"
           @select="selectFont"
           @toggle="toggleSection"
       />
@@ -50,6 +56,7 @@ import RecentFontList from './RecentFontList.vue'
 import SystemFontList from './SystemFontList.vue'
 import FontImportDialog from './FontImportDialog.vue'
 import FontSearch from './FontSearch.vue'
+import FontPreviewText from './FontPreviewText.vue'
 import type { FontItem } from '@/types/font-picker'
 
 const props = defineProps({
@@ -126,6 +133,7 @@ const ensureFontBySlug = async (slug: string, family: string) => {
   } catch {}
 }
 
+// 选择字体
 const selectFont = async (font: FontItem) => {
   // If selecting icon font, enforce single set per watch face
   if (props.type === FontTypes.ICON_FONT) {
@@ -262,7 +270,6 @@ watch(
   z-index: 1000;
 }
 
-
 .font-name {
   font-size: 13px;
   color: #666;
@@ -271,7 +278,19 @@ watch(
 .preview-text {
   font-size: 18px;
   color: #333;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.preview-text-icon {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
 .add-font-btn {
   width: 100%;
   padding: 12px;
