@@ -5,10 +5,12 @@
     width="840px"
   >
     <div class="glyph-dialog-body">
+      <NumberFontNamingBar ref="namingRef" />
       <p class="glyph-tip">
         Please upload 11 SVG files for digits 0-9 and colon (:). All glyphs should be monospaced and
         visually aligned for best results.
       </p>
+
       <div class="glyph-grid">
         <div
           v-for="ch in glyphChars"
@@ -19,21 +21,26 @@
             class="glyph-upload-box"
             :show-file-list="false"
             accept=".svg"
+            :auto-upload="false"
+            :http-request="noopHttpRequest"
             :before-upload="beforeGlyphUpload"
             :on-change="(file: any) => handleGlyphFileChange(ch, file)"
           >
             <template #trigger>
               <div class="glyph-box">
                 <div class="glyph-text">
-                  <span v-if="glyphFiles[ch]" class="glyph-file">
-                    {{ glyphFiles[ch]?.name }}
+                  <span class="glyph-file">
+                    {{ ch }}
                   </span>
-                  <el-tooltip v-if="!glyphFiles[ch]" content="Upload SVG" placement="top">
-                    <span class="glyph-file glyph-file--empty"></span>
-                  </el-tooltip>
                 </div>
                 <div class="glyph-inner">
-                  <div class="glyph-bg">{{ ch }}</div>
+                  <div v-if="!glyphPreviews[ch]" class="glyph-bg">{{ ch }}</div>
+                  <img
+                    v-if="glyphPreviews[ch]"
+                    :class="['glyph-img', { 'glyph-img--colon': ch === ':' }]"
+                    :src="glyphPreviews[ch] as string"
+                    alt="glyph preview"
+                  />
                 </div>
               </div>
             </template>
@@ -44,20 +51,53 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="visible = false">Cancel</el-button>
-        <el-button type="primary" disabled>Save (API pending)</el-button>
+        <!-- :disabled="!canSave || saving" -->
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="handleSave"
+        >
+          Save
+        </el-button>
       </span>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import JSZip from 'jszip'
+import NumberFontNamingBar from './NumberFontNamingBar.vue'
+import { createFontGlyph } from '@/api/wristo/fontGlyph'
 
 const visible = ref(false)
 const glyphChars = ['0','1','2','3','4','5','6','7','8','9',':'] as const
 export type GlyphChar = (typeof glyphChars)[number]
 const glyphFiles = ref<Record<GlyphChar, File | null>>({
+  '0': null,
+  '1': null,
+  '2': null,
+  '3': null,
+  '4': null,
+  '5': null,
+  '6': null,
+  '7': null,
+  '8': null,
+  '9': null,
+  ':': null,
+})
+
+// 禁用 el-upload 内置 HTTP 上传，确保只做本地处理
+const noopHttpRequest = () => {
+  return undefined
+}
+
+const namingRef = ref<InstanceType<typeof NumberFontNamingBar> | null>(null)
+const saving = ref(false)
+const canSave = computed(() => glyphChars.every(ch => !!glyphFiles.value[ch]))
+
+const glyphPreviews = ref<Record<GlyphChar, string | null>>({
   '0': null,
   '1': null,
   '2': null,
@@ -84,7 +124,72 @@ const handleGlyphFileChange = (ch: GlyphChar, file: any) => {
   const raw = file?.raw as File | undefined
   if (!raw) return
   if (!beforeGlyphUpload(raw)) return
+  // 释放旧的预览 URL，避免内存泄露
+  const prevUrl = glyphPreviews.value[ch]
+  if (prevUrl) URL.revokeObjectURL(prevUrl)
+
   glyphFiles.value[ch] = raw
+  glyphPreviews.value[ch] = URL.createObjectURL(raw)
+}
+
+const handleSave = async () => {
+  if (!canSave.value || saving.value) {
+    ElMessage.error('Please upload all glyph files before saving')
+    return
+  }
+  saving.value = true
+  try {
+    const zip = new JSZip()
+    for (const ch of glyphChars) {
+      const file = glyphFiles.value[ch]
+      if (!file) continue
+      const code = ch.codePointAt(0)!.toString(16).padStart(4, '0')
+      const filename = `${code}.svg`
+      zip.file(filename, file)
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const namingInstance = namingRef.value as any
+    let namingPreview: string | undefined
+
+    const exposed = namingInstance?.namingPreview
+    if (typeof exposed === 'string') {
+      namingPreview = exposed
+    } else if (exposed && typeof exposed.value === 'string') {
+      namingPreview = exposed.value
+    }
+
+    if (!namingPreview || !namingPreview.trim()) {
+      ElMessage.error('Please enter a valid font name before saving')
+      saving.value = false
+      return
+    }
+
+    const glyphCode = namingPreview.trim()
+    // 从字体名中解析 style：{series}-{use}-{style}-{variant}
+    const parts = glyphCode.split('-')
+    const styleFromName = parts[2] || 'mono'
+    const style = styleFromName
+    const zipName = glyphCode + '.zip'
+
+    const zipFile = new File([blob], zipName, { type: 'application/zip' })
+
+    await createFontGlyph(zipFile, {
+      glyphCode,
+      style,
+      isDefault: 0,
+      isActive: 1,
+      fontType: 'number_font',
+    })
+
+    ElMessage.success('Number glyph font uploaded')
+    visible.value = false
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('Failed to upload number glyph font')
+  } finally {
+    saving.value = false
+  }
 }
 
 const open = () => {
@@ -179,6 +284,19 @@ defineExpose({ open, close })
   color: rgba(0,0,0,0.04);
   user-select: none;
   pointer-events: none;
+}
+
+.glyph-img {
+  position: relative;
+  z-index: 1;
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+}
+
+/* 冒号宽度为其他字的 50%，高度按比例缩放 */
+.glyph-img--colon {
+  max-width: 40%;
 }
 
 .glyph-overlay {

@@ -63,32 +63,6 @@
         <p class="upload-description">Upload TTF or OTF font files for number-only fonts.</p>
       </div>
 
-      <!-- Number font naming guidance -->
-      <div class="naming-guidance">
-        <div class="naming-row">
-          <span class="naming-label">Series</span>
-          <el-select v-model="namingSeries" size="small" placeholder="Select series" class="naming-select">
-            <el-option v-for="s in namingSeriesOptions" :key="s" :label="s" :value="s" />
-          </el-select>
-        </div>
-        <div class="naming-row">
-          <span class="naming-label">Style</span>
-          <el-select v-model="namingStyle" size="small" placeholder="Select style" class="naming-select">
-            <el-option v-for="s in namingStyleOptions" :key="s" :label="s" :value="s" />
-          </el-select>
-        </div>
-        <div class="naming-row">
-          <span class="naming-label">Variant</span>
-          <el-select v-model="namingVariant" size="small" placeholder="Select variant" class="naming-select">
-            <el-option v-for="v in namingVariantOptions" :key="v" :label="v" :value="v" />
-          </el-select>
-        </div>
-        <div class="naming-preview">
-          <span class="naming-preview-label">Suggested name:</span>
-          <span class="naming-preview-value">{{ namingPreview }}</span>
-        </div>
-      </div>
-
       <el-upload
         class="font-upload-area"
         drag
