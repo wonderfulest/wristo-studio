@@ -34,6 +34,7 @@
           :model-value="modelValue"
           :type="type"
           @select="selectFont"
+          @scroll="onDesignerScroll"
       />
     </div>
     <!-- Add font dialog -->
@@ -105,6 +106,12 @@ const togglePanel = () => {
 // 切换分组展开/收起
 const toggleSection = (section: SectionName | string) => {
   fontStore.toggleSection(section)
+}
+
+const onDesignerScroll = () => {
+  if (fontStore.expandedSections?.recent) {
+    fontStore.toggleSection('recent')
+  }
 }
 
 // 选择字体

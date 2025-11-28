@@ -45,7 +45,7 @@ defineEmits<{
 }
 
 .section-header {
-  padding: 12px;
+  padding: 4px 12px;
   font-size: 13px;
   color: #333;
   cursor: pointer;

@@ -51,6 +51,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', font: FontItem): void
+  (e: 'scroll'): void
 }>()
 
 const fonts = ref<DesignFontVO[]>([])
@@ -86,6 +87,7 @@ const loadPage = async () => {
 }
 
 const onScroll = () => {
+  emit('scroll')
   const el = scrollContainer.value
   if (!el || loading.value || !hasMore.value) return
   const threshold = 80
@@ -164,7 +166,7 @@ watch(
 
 .font-name {
   font-size: 12px;
-  color: #eeeeee;
+  color: #909399;
 }
 
 .font-tags {
