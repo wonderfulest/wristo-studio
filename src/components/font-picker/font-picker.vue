@@ -29,14 +29,11 @@
           @select="selectFont"
           @toggle="() => toggleSection('recent')"
       />
-      <!-- System fonts -->
-      <SystemFontList
-          :sections="systemSections as any"
-          :expanded-map="expandedSections"
+      <!-- Designer available fonts (paginated by usage) -->
+      <DesignerFontList
           :model-value="modelValue"
           :type="type"
           @select="selectFont"
-          @toggle="toggleSection"
       />
     </div>
     <!-- Add font dialog -->
@@ -53,7 +50,7 @@ import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/f
 import { FontTypes } from '@/constants/fonts'
 import { useBaseStore } from '@/stores/baseStore'
 import RecentFontList from './RecentFontList.vue'
-import SystemFontList from './SystemFontList.vue'
+import DesignerFontList from './DesignerFontList.vue'
 import FontImportDialog from './FontImportDialog.vue'
 import FontSearch from './FontSearch.vue'
 import FontPreviewText from './FontPreviewText.vue'

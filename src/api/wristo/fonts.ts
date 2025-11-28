@@ -43,6 +43,21 @@ export const searchFonts = (
   return instance.post('/dsn/fonts/search?populate=ttf', params)
 }
 
+// 根据类型分页获取当前设计师可以使用的字体
+export const getDesignerUsageFontsPage = (
+  params: {
+    pageNum: number
+    pageSize: number
+    type: string
+    isMonospace?: number
+    italic?: number
+    weight?: string
+    subfamily?: string
+  }
+): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
+  return instance.get('/dsn/fonts/usage/page', { params })
+}
+
 // 根据 name 获取字体
 export const getFontByName = (name: string): Promise<ApiResponse<DesignFontVO>> => {
   return instance.get(`/dsn/fonts/get-by-name/${name}?populate=ttf`)
