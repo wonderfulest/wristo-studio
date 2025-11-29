@@ -11,6 +11,32 @@
         visually aligned for best results.
       </p>
 
+      <div class="batch-toggle-row">
+        <el-switch
+          v-model="showBatchUpload"
+          active-text="Enable batch upload"
+        />
+      </div>
+
+      <!-- Batch upload: drag multiple SVG files at once -->
+      <el-upload
+        v-if="showBatchUpload"
+        class="glyph-batch-upload"
+        drag
+        multiple
+        accept=".svg"
+        :auto-upload="false"
+        :show-file-list="false"
+        :http-request="noopHttpRequest"
+        :before-upload="beforeGlyphUpload"
+        :on-change="handleBatchFileChange"
+      >
+        <div class="upload-content">
+          <p class="upload-main">Drag multiple SVG files here to auto-fill glyphs</p>
+          <p class="upload-sub">Filename should be like <code>0.svg</code> / <code>1.svg</code> / <code>0030.svg</code> / <code>0031.svg</code></p>
+        </div>
+      </el-upload>
+
       <div class="glyph-grid">
         <div
           v-for="ch in glyphChars"
@@ -34,11 +60,11 @@
                   </span>
                 </div>
                 <div class="glyph-inner">
-                  <div v-if="!numberGlyphStore.glyphPreviews[ch]" class="glyph-bg">{{ ch }}</div>
+                  <div v-if="!glyphPreviews[ch]" class="glyph-bg">{{ ch }}</div>
                   <img
-                    v-if="numberGlyphStore.glyphPreviews[ch]"
+                    v-if="glyphPreviews[ch]"
                     :class="['glyph-img', { 'glyph-img--colon': ch === ':' }]"
-                    :src="numberGlyphStore.glyphPreviews[ch] as string"
+                    :src="glyphPreviews[ch] as string"
                     alt="glyph preview"
                   />
                 </div>
@@ -69,13 +95,39 @@ import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import JSZip from 'jszip'
 import NumberFontNamingBar from './NumberFontNamingBar.vue'
-import { createFontGlyph } from '@/api/wristo/fontGlyph'
-import { useNumberGlyphStore, glyphChars, type GlyphChar } from '@/stores/numberGlyphStore'
+import { autoNumberFontBuild } from '@/api/wristo/fonts'
 
-const numberGlyphStore = useNumberGlyphStore()
-const visible = computed({
-  get: () => numberGlyphStore.visible,
-  set: (v: boolean) => numberGlyphStore.setVisible(v),
+const visible = ref(false)
+const glyphChars = ['0','1','2','3','4','5','6','7','8','9',':'] as const
+export type GlyphChar = (typeof glyphChars)[number]
+const glyphSet = new Set<string>(glyphChars as unknown as string[])
+const showBatchUpload = ref(false)
+const glyphFiles = ref<Record<GlyphChar, File | null>>({
+  '0': null,
+  '1': null,
+  '2': null,
+  '3': null,
+  '4': null,
+  '5': null,
+  '6': null,
+  '7': null,
+  '8': null,
+  '9': null,
+  ':': null,
+})
+
+const glyphPreviews = ref<Record<GlyphChar, string | null>>({
+  '0': null,
+  '1': null,
+  '2': null,
+  '3': null,
+  '4': null,
+  '5': null,
+  '6': null,
+  '7': null,
+  '8': null,
+  '9': null,
+  ':': null,
 })
 
 // 禁用 el-upload 内置 HTTP 上传，确保只做本地处理
@@ -85,7 +137,7 @@ const noopHttpRequest = () => {
 
 const namingRef = ref<InstanceType<typeof NumberFontNamingBar> | null>(null)
 const saving = ref(false)
-const canSave = computed(() => glyphChars.every(ch => !!numberGlyphStore.glyphFiles[ch]))
+const canSave = computed(() => glyphChars.every(ch => !!glyphFiles.value[ch]))
 
 const beforeGlyphUpload = (file: File) => {
   const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
@@ -96,16 +148,55 @@ const beforeGlyphUpload = (file: File) => {
   return true
 }
 
+const inferGlyphFromFilename = (name: string): GlyphChar | null => {
+  const lower = (name || '').toLowerCase()
+  const base = lower.replace(/\.svg$/i, '')
+  if (!base) return null
+
+  // 1) 直接是字符本身，例如 "0" 或 ":"
+  if (base.length === 1 && glyphSet.has(base)) {
+    return base as GlyphChar
+  }
+
+  // 2) 视为 Unicode 16 进制码，例如 "0030" -> '0'
+  const code = Number.parseInt(base, 16)
+  if (!Number.isNaN(code)) {
+    const ch = String.fromCodePoint(code)
+    if (glyphSet.has(ch)) return ch as GlyphChar
+  }
+
+  return null
+}
+
 const handleGlyphFileChange = (ch: GlyphChar, file: any) => {
   const raw = file?.raw as File | undefined
   if (!raw) return
   if (!beforeGlyphUpload(raw)) return
   // 释放旧的预览 URL，避免内存泄露
-  const prevUrl = numberGlyphStore.glyphPreviews[ch]
+  const prevUrl = glyphPreviews.value[ch]
   if (prevUrl) URL.revokeObjectURL(prevUrl)
 
-  numberGlyphStore.setGlyphFile(ch, raw)
-  numberGlyphStore.setGlyphPreview(ch, URL.createObjectURL(raw))
+  glyphFiles.value[ch] = raw
+  glyphPreviews.value[ch] = URL.createObjectURL(raw)
+}
+
+const handleBatchFileChange = (file: any) => {
+  const raw = file?.raw as File | undefined
+  if (!raw) return
+  if (!beforeGlyphUpload(raw)) return
+  const target = inferGlyphFromFilename(raw.name || file.name || '')
+  if (!target) {
+    // 文件名不能映射到 0-9 或 ':'，忽略
+    console.warn('Cannot infer glyph from filename', raw.name || file.name)
+    return
+  }
+
+  // 释放旧的预览 URL，避免内存泄露
+  const prevUrl = glyphPreviews.value[target]
+  if (prevUrl) URL.revokeObjectURL(prevUrl)
+
+  glyphFiles.value[target] = raw
+  glyphPreviews.value[target] = URL.createObjectURL(raw)
 }
 
 const handleSave = async () => {
@@ -117,7 +208,7 @@ const handleSave = async () => {
   try {
     const zip = new JSZip()
     for (const ch of glyphChars) {
-      const file = numberGlyphStore.glyphFiles[ch]
+      const file = glyphFiles.value[ch]
       if (!file) continue
       const code = ch.codePointAt(0)!.toString(16).padStart(4, '0')
       const filename = `${code}.svg`
@@ -142,24 +233,36 @@ const handleSave = async () => {
     }
 
     const glyphCode = namingPreview.trim()
-    // 从字体名中解析 style：{series}-{use}-{style}-{variant}
-    const parts = glyphCode.split('-')
-    const styleFromName = parts[2] || 'mono'
-    const style = styleFromName
     const zipName = glyphCode + '.zip'
 
     const zipFile = new File([blob], zipName, { type: 'application/zip' })
 
-    await createFontGlyph(zipFile, {
-      glyphCode,
-      style,
-      isDefault: 0,
-      isActive: 1,
-      fontType: 'number_font',
-    })
+    const { data } = await autoNumberFontBuild(zipFile)
 
-    ElMessage.success('Number glyph font uploaded')
-    numberGlyphStore.resetAll()
+    // 返回的是构建好的 DesignFontVO，其中 ttfFile.url 为 TTF 下载链接
+    const url = (data as any)?.ttfFile?.url
+    if (url) {
+      const absoluteUrl = url.startsWith('http')
+        ? url
+        : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
+
+      const a = document.createElement('a')
+      a.href = absoluteUrl
+      a.download = data?.ttfFile?.name || `${glyphCode}.ttf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+
+    ElMessage.success('Number glyph font built')
+    // 构建完成后清空本地状态并关闭弹窗
+    for (const ch of glyphChars) {
+      const prev = glyphPreviews.value[ch]
+      if (prev) URL.revokeObjectURL(prev)
+      glyphFiles.value[ch] = null
+      glyphPreviews.value[ch] = null
+    }
+    visible.value = false
   } catch (e) {
     console.error(e)
     ElMessage.error('Failed to upload number glyph font')
@@ -191,6 +294,7 @@ defineExpose({ open, close })
 }
 
 .glyph-grid {
+  margin-top: 12px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;

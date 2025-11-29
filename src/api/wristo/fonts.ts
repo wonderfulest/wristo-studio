@@ -22,6 +22,20 @@ export const uploadFontFile =  (
   )
 }
 
+// 自动构建数字字体：上传 glyph zip，返回构建后的 DesignFontVO（包含 ttfFile.url）
+export const autoNumberFontBuild = (
+  zipFile: File,
+): Promise<ApiResponse<DesignFontVO>> => {
+  const formData = new FormData()
+  formData.append('file', zipFile)
+
+  return instance.post(
+    '/dsn/fonts/auto-number-font-build?populate=ttf,user',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+}
+
 // 搜索字体（支持多条件 + 分页）
 export const searchFonts = (
   params: DesignFontSearchDTO

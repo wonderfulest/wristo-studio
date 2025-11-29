@@ -43,6 +43,18 @@ export const useNumberGlyphStore = defineStore('numberGlyphStore', {
     glyphFiles: createEmptyFiles(),
     glyphPreviews: createEmptyPreviews(),
   }),
+  // 持久化到 localStorage，刷新后仍保留当前编辑的 glyph 状态
+  persist: {
+    enabled: true,
+    strategies: [
+      {
+        key: 'number-glyph-store',
+        storage: localStorage,
+        // 只持久化简单可序列化字段，避免 File/blob 反序列化为普通对象导致错误
+        paths: ['visible'],
+      },
+    ],
+  } as any,
   actions: {
     setVisible(v: boolean) {
       this.visible = v

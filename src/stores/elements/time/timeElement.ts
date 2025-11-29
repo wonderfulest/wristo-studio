@@ -114,6 +114,12 @@ export const useTimeStore = defineStore('timeStore', {
         obj.set('text', this.formatTime(new Date(), config.formatter))
       }
 
+      // 如果字体家族或字号发生变化，强制让 Fabric 重新计算文本尺寸，确保边框区域更新
+      if ((config.fontFamily !== undefined || config.fontSize !== undefined) &&
+        typeof (obj as any).initDimensions === 'function') {
+        ;(obj as any).initDimensions()
+      }
+
       if (config.left === undefined) {
         obj.set('left', currentLeft)
       }
