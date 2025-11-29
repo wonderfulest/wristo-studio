@@ -2,14 +2,14 @@
   <span
     class="preview-text"
     :class="{ 'preview-text-icon': isIcon }"
-    :style="{ fontFamily }"
+    :style="{ fontFamily: effectiveFontFamily }"
   >
     {{ sampleText }}
   </span>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { FontTypes } from '@/constants/fonts'
 
 const ICON_FONT_UNICODES = [
@@ -29,9 +29,14 @@ const props = defineProps<{
   fontFamily: string
   type?: string
   sectionName?: string
+  fontUrl?: string
 }>()
 
 const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
+
+const loadedFontFamily = ref<string | null>(null)
+
+const effectiveFontFamily = computed(() => loadedFontFamily.value || props.fontFamily)
 
 const sampleText = computed(() => {
   if (isIcon.value) {
@@ -42,6 +47,42 @@ const sampleText = computed(() => {
   }
   return '12:34 AM 72°F & Sunny 0123456789'
 })
+
+const loadFontFromUrl = async (url?: string) => {
+  console.log('[FontPreviewText] loadFontFromUrl', url)
+  if (!url) {
+    loadedFontFamily.value = null
+    return
+  }
+
+  try {
+    const baseFamily = props.fontFamily || 'PreviewFont'
+    const uniqueSuffix = Math.random().toString(36).slice(2, 8)
+    const familyName = `${baseFamily}-${uniqueSuffix}`
+
+    const fontFace = new FontFace(familyName, `url(${url})`)
+    await fontFace.load()
+
+    ;(document as any).fonts?.add(fontFace)
+    loadedFontFamily.value = familyName
+  } catch (e) {
+    console.error('Failed to load preview font from URL', e)
+    loadedFontFamily.value = null
+  }
+}
+
+onMounted(() => {
+  if (props.fontUrl) {
+    loadFontFromUrl(props.fontUrl)
+  }
+})
+
+watch(
+  () => props.fontUrl,
+  (newUrl) => {
+    loadFontFromUrl(newUrl)
+  }
+)
 </script>
 
 <style scoped>

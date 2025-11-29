@@ -16,6 +16,7 @@
           :is-monospace="font.isMonospace === 1"
           :subfamily="font.subfamily || ''"
           :font-id="font.id"
+          :font-url="font.ttfFile?.url"
           @removed="onFontRemoved"
         />
       </div>

@@ -24,7 +24,12 @@
         <el-icon><Delete /></el-icon>
       </button>
     </div>
-    <FontPreviewText :font-family="fontFamily" :type="type" :section-name="sectionName" />
+    <FontPreviewText
+      :font-family="fontFamily"
+      :type="type"
+      :section-name="sectionName"
+      :font-url="fontUrl"
+    />
   </div>
   <div v-else class="font-main">
     <div class="font-header">
@@ -49,6 +54,7 @@ const props = defineProps<{
   isMonospace?: boolean
   subfamily?: string
   fontId?: number
+  fontUrl?: string
 }>()
 
 const emit = defineEmits<{ (e: 'removed', id: number): void }>()

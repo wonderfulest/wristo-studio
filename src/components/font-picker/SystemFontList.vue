@@ -17,6 +17,7 @@
             :font-family="font.value"
             :type="type"
             :section-name="section.name"
+            :font-url="font.src"
           />
         </div>
       </div>

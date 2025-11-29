@@ -18,6 +18,7 @@
             :label="font.family"
             :font-family="font.value"
             :type="type"
+            :font-url="font.src"
           />
         </div>
       </div>
