@@ -1,18 +1,24 @@
 <template>
   <div class="designer-font-list">
     <div ref="scrollContainer" class="font-list-scroll" @scroll.passive="onScroll">
-      <FontListItem
+      <div
         v-for="font in fonts"
         :key="font.id"
+        class="font-item"
         :class="{ active: modelValue === font.slug }"
-        :label="font.fullName || font.family || font.slug"
-        :font-family="font.slug"
-        :type="type"
-        :is-system="font.isSystem === 1"
-        :is-monospace="font.isMonospace === 1"
-        :subfamily="font.subfamily || ''"
         @click="handleSelect(font)"
-      />
+      >
+        <FontListItem
+          :label="font.fullName || font.family || font.slug"
+          :font-family="font.slug"
+          :type="type"
+          :is-system="font.isSystem === 1"
+          :is-monospace="font.isMonospace === 1"
+          :subfamily="font.subfamily || ''"
+          :font-id="font.id"
+          @removed="onFontRemoved"
+        />
+      </div>
       <div v-if="loading" class="loading">Loading...</div>
       <div v-else-if="!hasMore && fonts.length" class="end-tip">No more fonts</div>
     </div>
@@ -89,6 +95,10 @@ const handleSelect = (font: DesignFontVO) => {
     italic: font.italic === 1
   }
   emit('select', item)
+}
+
+const onFontRemoved = (id: number) => {
+  fonts.value = fonts.value.filter(f => f.id !== id)
 }
 
 onMounted(() => {

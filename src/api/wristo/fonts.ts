@@ -104,3 +104,8 @@ export const getFrequentFonts = (limit?: number): Promise<ApiResponse<DesignFont
   const q = typeof limit === 'number' ? `?limit=${limit}` : ''
   return instance.get(`/dsn/fonts/frequent${q}`)
 }
+
+// remove designer's own font by id
+export const removeMyFont = (id: number): Promise<ApiResponse<boolean>> => {
+  return instance.post(`/dsn/fonts/remove/${id}`)
+}

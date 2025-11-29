@@ -6,21 +6,18 @@
         {{ section.name.toUpperCase() }}
       </div>
       <div v-if="expandedMap[section.name]" class="section-content">
-        <div v-for="group in groupByFamily(section.fonts)" :key="group.family" class="font-family-group">
-          <div class="family-name">{{ group.family }}</div>
-          <div
-            v-for="font in group.fonts"
-            :key="font.value"
-            class="font-item"
-            :class="{ active: modelValue === font.value }"
-            @click="$emit('select', font)"
-          >
-            <FontListItem
-              :font-family="font.value"
-              :type="type"
-              :section-name="section.name"
-            />
-          </div>
+        <div
+          v-for="font in section.fonts"
+          :key="font.value"
+          class="font-item"
+          :class="{ active: modelValue === font.value }"
+          @click="$emit('select', font)"
+        >
+          <FontListItem
+            :font-family="font.value"
+            :type="type"
+            :section-name="section.name"
+          />
         </div>
       </div>
     </div>
@@ -29,7 +26,6 @@
 
 <script setup lang="ts">
 import type { FontItem, Section } from '@/types/font-picker'
-import FontPreviewText from './FontPreviewText.vue'
 import FontListItem from './FontListItem.vue'
 
 const { sections, expandedMap, modelValue, type } = defineProps<{
@@ -43,15 +39,6 @@ defineEmits<{
   (e: 'select', font: FontItem): void
   (e: 'toggle', sectionName: string): void
 }>()
-
-const groupByFamily = (fonts: FontItem[]) => {
-  const groups = new Map<string, FontItem[]>()
-  fonts.forEach((font) => {
-    if (!groups.has(font.family)) groups.set(font.family, [])
-    groups.get(font.family)!.push(font)
-  })
-  return Array.from(groups.entries()).map(([family, fonts]) => ({ family, fonts }))
-}
 </script>
 
 <style scoped>

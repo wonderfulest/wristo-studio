@@ -30,10 +30,8 @@
           Local Search Results
         </div>
         <div class="section-content">
-          <div v-for="group in groupByFamily(filteredFonts)" :key="group.family" class="font-family-group">
-            <div class="family-name">{{ group.family }}</div>
             <div
-              v-for="font in group.fonts"
+              v-for="font in filteredFonts"
               :key="font.value"
               class="font-item"
               :class="{ active: modelValue === font.value }"
@@ -46,7 +44,6 @@
                 :is-monospace="(font as any).isMonospace === true"
               />
             </div>
-          </div>
         </div>
       </template>
 
