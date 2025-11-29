@@ -50,13 +50,9 @@ export const getDesignerUsageFontsPage = (
     pageNum: number
     pageSize: number
     type: string
-    isMonospace?: number
-    italic?: number
-    weight?: string
-    subfamily?: string
   }
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
-  return instance.get('/dsn/fonts/usage/page', { params })
+  return instance.post('/dsn/fonts/usage/page', params)
 }
 
 // 根据 name 获取字体
