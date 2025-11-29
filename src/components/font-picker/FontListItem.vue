@@ -1,5 +1,5 @@
 <template>
-  <div class="font-main">
+  <div class="font-main" v-show="isReady">
     <div class="font-header" v-if="label || hasTags || (fontId != null && !isSystem)">
       <div class="font-name" v-if="label">{{ label }}</div>
       <div class="font-tags" v-if="hasTags">
@@ -29,8 +29,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ElTag } from 'element-plus'
+import { computed, h, onMounted, ref } from 'vue'
+import { ElTag, ElMessageBox } from 'element-plus'
 import { Monitor, Delete } from '@element-plus/icons-vue'
 import FontPreviewText from './FontPreviewText.vue'
 import { removeMyFont } from '@/api/wristo/fonts'
@@ -48,11 +48,46 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'removed', id: number): void }>()
 
+const isReady = ref(false)
+
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
+
+onMounted(async () => {
+  try {
+    const fontFamily = props.fontFamily
+    // Use FontFaceSet API when available to wait for font load
+    const anyDoc = document as any
+    if (anyDoc.fonts && typeof anyDoc.fonts.load === 'function' && fontFamily) {
+      // use a generic font-size for measuring
+      await anyDoc.fonts.load(`16px "${fontFamily}"`)
+    }
+  } catch (e) {
+    // ignore font loading errors; fall back to showing item
+    console.error('font load check failed', e)
+  } finally {
+    isReady.value = true
+  }
+})
 
 const onDelete = async () => {
   if (props.fontId == null) return
   try {
+    await ElMessageBox({
+      title: 'Delete Font',
+      message: h('div', null, [
+        h('p', null, 'Are you sure you want to delete this font?'),
+        h(FontPreviewText, {
+          fontFamily: props.fontFamily,
+          type: props.type,
+          sectionName: props.sectionName,
+        }),
+      ]),
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+    })
+
     const resp = await removeMyFont(props.fontId)
     if (resp.code === 0 && resp.data) {
       emit('removed', props.fontId)

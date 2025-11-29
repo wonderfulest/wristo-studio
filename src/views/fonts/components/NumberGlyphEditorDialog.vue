@@ -10,6 +10,16 @@
         Please upload 11 SVG files for digits 0-9 and colon (:). All glyphs should be monospaced and
         visually aligned for best results.
       </p>
+      <p class="glyph-tip">
+        For detailed guidelines and examples, please see the tutorial in our
+        <a
+          href="https://wiki.wristo.io/02-design/07-tutorials-and-cases/02-large-monospaced-digits.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          design wiki
+        </a>.
+      </p>
 
       <div class="batch-toggle-row">
         <el-switch
