@@ -21,6 +21,12 @@ export interface IconGlyphVO {
   isActive: number
 }
 
+export interface IconGlyphUpdateDTO {
+  id: number
+  glyphCode: string
+  style?: string
+}
+
 export interface IconGlyphCreateDTO {
   glyphCode: string
   style?: string
@@ -112,6 +118,10 @@ export const unbindAssetFromGlyph = (glyphId: number, assetId: number): Promise<
 export const importAssetsToGlyph = (fromGlyphId: number, toGlyphId: number): Promise<ApiResponse<IconGlyphAssetVO[]>> => {
   const params = new URLSearchParams({ fromGlyphId: String(fromGlyphId), toGlyphId: String(toGlyphId) })
   return instance.post(`/dsn/icon-glyph-asset/import-to-glyph?${params.toString()}`)
+}
+
+export const editIconGlyph = (dto: IconGlyphUpdateDTO): Promise<ApiResponse<IconGlyphVO>> => {
+  return instance.post('/dsn/icon-glyph/edit', dto)
 }
 
 export const submitIconGlyph = (id: number): Promise<ApiResponse<IconGlyphVO>> => {

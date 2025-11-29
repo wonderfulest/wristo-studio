@@ -5,9 +5,9 @@ import App from './App.vue'
 import router from './router'
 import '@iconify/iconify'
 
-import '@/assets/styles/fonts.css'
 import '@/assets/styles/main.css'
 import '@/assets/styles/settings.css'
+import '@/assets/iconfont/iconfont.css'
 
 import ElementPlus from 'element-plus'
 import 'element-plus/theme-chalk/src/index.scss'

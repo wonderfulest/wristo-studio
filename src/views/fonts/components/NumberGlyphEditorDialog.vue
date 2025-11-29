@@ -5,7 +5,7 @@
     width="840px"
   >
     <div class="glyph-dialog-body">
-      <NumberFontNamingBar ref="namingRef" />
+      <FontNamingBar ref="namingRef" />
       <p class="glyph-tip">
         Please upload 11 SVG files for digits 0-9 and colon (:). All glyphs should be monospaced and
         visually aligned for best results.
@@ -104,7 +104,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import JSZip from 'jszip'
-import NumberFontNamingBar from './NumberFontNamingBar.vue'
+import FontNamingBar from '@/components/FontNamingBar.vue'
 import { autoNumberFontBuild } from '@/api/wristo/fonts'
 
 const visible = ref(false)
@@ -145,7 +145,7 @@ const noopHttpRequest = () => {
   return undefined
 }
 
-const namingRef = ref<InstanceType<typeof NumberFontNamingBar> | null>(null)
+const namingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 const saving = ref(false)
 const canSave = computed(() => glyphChars.every(ch => !!glyphFiles.value[ch]))
 

@@ -1,23 +1,17 @@
 <template>
   <el-dialog v-model="model" title="Create Icon Font" width="460px">
-    <el-form :model="localForm" label-width="96px">
-      <el-form-item label="Glyph Code">
-        <el-input v-model="localForm.glyphCode" placeholder="e.g. my-icons" />
-      </el-form-item>
-      <el-form-item label="Style">
-        <el-input v-model="localForm.style" placeholder="e.g. Regular" />
-      </el-form-item>
-    </el-form>
+    <FontNamingBar ref="namingRef" />
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">Cancel</el-button>
-      <el-button type="primary" :loading="loading" :disabled="!localForm.glyphCode" @click="onConfirm">Create</el-button>
+      <el-button type="primary" :loading="loading" @click="onConfirm">Create</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { IconGlyphCreateDTO } from '@/api/wristo/iconGlyph'
+import FontNamingBar from '@/components/FontNamingBar.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -37,6 +31,8 @@ const model = computed({
 
 const localForm = reactive<IconGlyphCreateDTO>({ glyphCode: '', style: '', isDefault: 0, isActive: 1 })
 
+const namingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
+
 watch(() => props.form, (f) => {
   if (f) Object.assign(localForm, { glyphCode: f.glyphCode ?? '', style: f.style ?? '', isDefault: 0, isActive: 1 })
 }, { immediate: true })
@@ -44,6 +40,25 @@ watch(() => props.form, (f) => {
 const loading = computed(() => !!props.loading)
 
 const onConfirm = () => {
-  emit('confirm', { ...localForm })
+  console.log('onConfirm', namingRef.value)
+  const naming = namingRef.value as any
+  const namingPreview = naming?.namingPreview ?? ''
+  if (!namingPreview) {
+    console.log('onConfirm 111')
+    return
+  }
+
+  const code = String(namingPreview)
+  const parts = code.split('-').filter(Boolean)
+  const last = parts[parts.length - 1] || ''
+
+  const payload: IconGlyphCreateDTO = {
+    ...localForm,
+    glyphCode: code,
+    style: last,
+  }
+    console.log('onConfirm  22',  payload)
+
+  emit('confirm', payload)
 }
 </script>

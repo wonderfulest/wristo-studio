@@ -4,8 +4,8 @@
       <div class="font-name" v-if="label">{{ label }}</div>
       <div class="font-tags" v-if="hasTags">
         <el-tooltip v-if="isSystem" content="System Font" placement="top">
-          <el-tag size="small" type="info">
-            <el-icon><Monitor /></el-icon>
+          <el-tag size="small" type="info" class="system-icon-tag">
+            <i class="iconfont icon-system"></i>
           </el-tag>
         </el-tooltip>
         <!-- <el-tag v-if="isMonospace" size="small">
@@ -41,7 +41,7 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { ElTag, ElMessageBox } from 'element-plus'
-import { Monitor, Delete } from '@element-plus/icons-vue'
+import { Delete } from '@element-plus/icons-vue'
 import FontPreviewText from './FontPreviewText.vue'
 import { removeMyFont } from '@/api/wristo/fonts'
 

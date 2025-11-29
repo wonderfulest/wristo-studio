@@ -1,0 +1,16 @@
+{
+  "id": "5077089",
+  "name": "wristo-icon",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "46222319",
+      "name": "系统默认",
+      "font_class": "system",
+      "unicode": "e625",
+      "unicode_decimal": 58917
+    }
+  ]
+}

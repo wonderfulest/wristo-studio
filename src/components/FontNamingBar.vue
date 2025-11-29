@@ -1,25 +1,19 @@
 <template>
-  <div class="number-font-naming">
+  <div class="font-naming">
     <div class="naming-preview-row">
       <span class="naming-preview-label">
         <span class="naming-required">*</span>
-        Number Font Name
+        Font Name
       </span>
       <el-input
         class="naming-preview-input"
         size="small"
         :model-value="namingPreview"
-        placeholder="click to name this number font"
+        placeholder="click to name this font"
         readonly
         @focus="editing = true"
         @click="editing = true"
       />
-    </div>
-
-     <div class="naming-tip">
-      <div class="naming-tip-line">命名格式：<code>{series}-{use}-{style}-{variant}</code></div>
-      <div class="naming-tip-line">use 固定为 <code>number</code>，style 如 <code>mono/round/sharp/segment</code>，variant 如 <code>regular/outline/bold/light</code></div>
-      <div class="naming-tip-line">示例：<code>aura-number-mono-regular</code>，<code>neon-number-segment-bold</code></div>
     </div>
 
     <div v-if="editing" class="naming-bar">
@@ -72,6 +66,23 @@
           :value="item"
         />
       </el-select>
+    </div>
+
+    <div class="naming-tip">
+      <div class="naming-tip-line">命名格式：<code>{series}-{use}-{style}-{variant}</code></div>
+      <div class="naming-tip-line">use 固定为 <code>number</code>，style 如 <code>mono/round/sharp/segment</code>，variant 如 <code>regular/outline/bold/light</code></div>
+      <div class="naming-tip-line">示例：<code>aura-number-mono-regular</code>，<code>neon-number-segment-bold</code></div>
+      <div class="naming-tip-line">
+        更完整的命名规范和术语说明，请参考
+        <a
+          href="https://wiki.wristo.io/02-design/02-design-guideline/04-font-name-glossary.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Font Name Glossary
+        </a>
+        。
+      </div>
     </div>
   </div>
 </template>
@@ -135,11 +146,24 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 </script>
 
 <style scoped>
-.number-font-naming {
-  margin-bottom: 4px;
-  padding: 4px 6px;
+.font-naming {
+  margin-bottom: 8px;
+  padding: 6px 8px;
   border-radius: 6px;
   background-color: #f5f7fa;
+}
+
+.naming-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.naming-preview-label {
+  color: #606266;
+  white-space: nowrap;
 }
 
 .naming-bar {
@@ -165,18 +189,6 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 
 .naming-sep {
   padding: 0 2px;
-  color: #909399;
-}
-
-.naming-preview-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.naming-preview-label {
   color: #909399;
 }
 

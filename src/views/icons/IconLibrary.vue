@@ -25,9 +25,16 @@
               content="System Icon"
               placement="top"
             >
-              <el-tag size="small" type="info" class="system-icon-tag">
-                <el-icon><Monitor /></el-icon>
-              </el-tag>
+              <i class="icon-tag iconfont icon-system"></i>
+            </el-tooltip>
+            <el-tooltip
+              v-if="glyph.isDefault === 0"
+              content="Rename Icon Font"
+              placement="top"
+            >
+              <el-icon class="glyph-edit-icon" @click.stop="openRenameDialog(glyph)">
+                <Edit />
+              </el-icon>
             </el-tooltip>
           </template>
 
@@ -70,6 +77,14 @@
       @confirm="onCreateConfirm"
     />
 
+    <el-dialog v-model="renameVisible" title="Rename Icon Font" width="460px">
+      <FontNamingBar ref="renameNamingRef" />
+      <template #footer>
+        <el-button @click="renameVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="renaming" @click="handleRenameConfirm">Save</el-button>
+      </template>
+    </el-dialog>
+
     <EditSvgDialog
       v-model="editVisible"
       :asset-id="editAssetId"
@@ -102,16 +117,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElTag } from 'element-plus'
-import { Monitor } from '@element-plus/icons-vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit } from '@element-plus/icons-vue'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
 import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
+import FontNamingBar from '@/components/FontNamingBar.vue'
 import {
   pageIconGlyphs,
   pageIconGlyphAssets,
@@ -120,12 +135,14 @@ import {
   bindAssetsToGlyph,
   unbindAssetFromGlyph,
   importAssetsToGlyph,
+  editIconGlyph,
   type IconGlyphVO,
   type IconGlyphAssetVO,
   type IconAssetVO,
   type IconGlyphCreateDTO,
   type IconAssetPageQueryDTO,
   type DisplayType,
+  type IconGlyphUpdateDTO,
 } from '@/api/wristo/iconGlyph'
 import { autoIconFontBuild } from '@/api/wristo/fonts'
 
@@ -150,6 +167,12 @@ const assetPage = ref(1)
 const assetPageSize = ref(120)
 const loadingAssets = ref(false)
 const displayType = ref<DisplayType>('mip')
+
+// rename dialog state
+const renameVisible = ref(false)
+const renaming = ref(false)
+const renameGlyphId = ref<number | null>(null)
+const renameNamingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 
 const ensureDisplayTypeForGlyph = (glyphId: number) => {
   const g = glyphs.value.find(x => x.id === glyphId)
@@ -265,6 +288,56 @@ const onDisplayTypeChange = async (_v: DisplayType) => {
 const tabLabel = (g: IconGlyphVO) => {
   // Keep label simple; system/default glyphs are indicated via tooltip+tag in the tab label slot
   return g.glyphCode || 'Font'
+}
+
+const openRenameDialog = async (glyph: IconGlyphVO) => {
+  if (!glyph || glyph.isDefault === 1) return
+  renameGlyphId.value = glyph.id
+  renameVisible.value = true
+
+  await nextTick()
+  const naming = renameNamingRef.value as any
+  if (!naming) return
+
+  const code = glyph.glyphCode || ''
+  const parts = code.split('-').filter(Boolean)
+  const [series, use, style, variant] = parts
+
+  if (series != null) naming.seriesPart.value = series
+  if (use != null) naming.usePart.value = use
+  if (style != null) naming.stylePart.value = style
+  if (variant != null) naming.variantPart.value = variant
+}
+
+const handleRenameConfirm = async () => {
+  if (!renameGlyphId.value) return
+
+  const naming = renameNamingRef.value as any
+  const namingPreview = naming?.namingPreview ?? ''
+  if (!namingPreview) {
+    ElMessage.error('Please enter a valid font name before saving.')
+    return
+  }
+
+  const code = String(namingPreview)
+  const parts = code.split('-').filter(Boolean)
+  const last = parts[parts.length - 1] || ''
+
+  const dto: IconGlyphUpdateDTO = {
+    id: renameGlyphId.value,
+    glyphCode: code,
+    style: last,
+  }
+
+  try {
+    renaming.value = true
+    await editIconGlyph(dto)
+    ElMessage.success('Icon font name updated.')
+    renameVisible.value = false
+    await fetchGlyphs()
+  } finally {
+    renaming.value = false
+  }
 }
 
 const handleSubmitGlyph = async () => {
@@ -461,4 +534,6 @@ const handleImport = async () => {
 .grid-meta .delete { color: #f56c6c; margin-left: 6px; cursor: pointer; font-weight: 500; }
 .pager { display: flex; justify-content: center; padding: 8px 0; }
 .bind-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.icon-tag {margin-left: 4px; color: #909399; font-size: 12px;}
+.glyph-edit-icon { margin-left: 4px; color: #909399; font-size: 14px; cursor: pointer; }
 </style>
