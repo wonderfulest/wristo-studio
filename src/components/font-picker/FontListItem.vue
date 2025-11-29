@@ -64,6 +64,7 @@ const isReady = ref(false)
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
 
 const loadFont = async (fontFamily: string | undefined) => {
+  console.log('[FontListItem] loadFont', fontFamily)
   if (!fontFamily) {
     isReady.value = true
     return

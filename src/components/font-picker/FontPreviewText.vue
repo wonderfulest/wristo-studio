@@ -72,14 +72,14 @@ const loadFontFromUrl = async (url?: string) => {
 }
 
 onMounted(() => {
-  if (props.fontUrl) {
-    loadFontFromUrl(props.fontUrl)
-  }
+  console.log('[FontPreviewText] onMounted fontUrl', props.fontUrl)
+  loadFontFromUrl(props.fontUrl)
 })
 
 watch(
   () => props.fontUrl,
   (newUrl) => {
+    console.log('[FontPreviewText] fontUrl changed', newUrl)
     loadFontFromUrl(newUrl)
   }
 )

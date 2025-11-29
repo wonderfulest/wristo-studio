@@ -36,6 +36,15 @@ export const autoNumberFontBuild = (
   )
 }
 
+// 自动构建 Icon 字体：根据 glyphCode 构建并返回 DesignFontVO（包含 ttfFile.url）
+export const autoIconFontBuild = (
+  glyphCode: string,
+): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.post(
+    `/dsn/fonts/auto-icon-font-build/${encodeURIComponent(glyphCode)}?populate=ttf,user`,
+  )
+}
+
 // 搜索字体（支持多条件 + 分页）
 export const searchFonts = (
   params: DesignFontSearchDTO
@@ -52,7 +61,7 @@ export const getDesignerUsageFontsPage = (
     type: string
   }
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
-  return instance.post('/dsn/fonts/usage/page', params)
+  return instance.post('/dsn/fonts/usage/page?populate=ttf', params)
 }
 
 // 根据 name 获取字体

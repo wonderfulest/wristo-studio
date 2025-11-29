@@ -3,7 +3,6 @@ const fonts = {
     { label: 'Qiwei One', value: 'Qiwei-One', family: 'Qiwei-One' },
     { label: 'Qiwei Two', value: 'Qiwei-Two', family: 'Qiwei-Two' },
     { label: 'Yoghurt One', value: 'Yoghurt-One', family: 'Yoghurt-One' },
-    { label: 'SuperIcons', value: 'SuperIcons', family: 'SuperIcons' },
   ],
   lcd: [
     {

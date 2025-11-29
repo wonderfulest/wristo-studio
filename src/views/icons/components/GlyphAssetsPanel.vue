@@ -24,12 +24,12 @@
             Loading icons...
           </div>
           <template v-else>
-            <div v-if="assets.length === 0" class="empty">
+            <div v-if="displayAssets.length === 0" class="empty">
               No icons
               <el-button type="primary" text @click="emit('openBind', { glyphId: glyph.id })">Bind Assets</el-button>
             </div>
             <div v-else class="grid">
-              <div v-for="item in assets" :key="item.id" class="grid-item">
+              <div v-for="item in displayAssets" :key="item.id" class="grid-item">
                 <template v-if="getAssetImage(item)">
                   <div class="overlay overlay-actions">
                     <span v-if="glyph.isDefault === 0 && displayType === 'mip'" class="action" @click="emit('edit', item)">Edit</span>
@@ -124,6 +124,22 @@ const visibleOptions = computed<EnumOption[]>(() => {
     return list.filter(o => String(o.value).toLowerCase() === 'mip')
   }
   return list
+})
+
+// For amoled display type, only show icons with unicode after 0x101d
+const displayAssets = computed<IconGlyphAssetVO[]>(() => {
+  if (innerTab.value !== 'amoled') {
+    return props.assets
+  }
+
+  const threshold = parseInt('101d', 16)
+  return props.assets.filter(item => {
+    const raw = item.icon?.iconUnicode
+    if (!raw) return false
+    const code = parseInt(String(raw), 16)
+    if (Number.isNaN(code)) return false
+    return code >= threshold
+  })
 })
 onMounted(async () => {
   try {

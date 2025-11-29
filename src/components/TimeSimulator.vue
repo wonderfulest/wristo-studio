@@ -87,7 +87,8 @@ onUnmounted(() => {
     position: absolute;
     bottom: 20px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scale(1.5);
+    transform-origin: bottom center;
     background: rgba(255, 255, 255, 0.95);
     padding: 8px 12px;
     border-radius: 4px;

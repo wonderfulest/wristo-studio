@@ -16,9 +16,21 @@
         <el-tab-pane
           v-for="glyph in glyphs"
           :key="glyph.id"
-          :label="tabLabel(glyph)"
           :name="String(glyph.id)"
         >
+          <template #label>
+            <span>{{ tabLabel(glyph) }}</span>
+            <el-tooltip
+              v-if="glyph.isDefault === 1"
+              content="System Icon"
+              placement="top"
+            >
+              <el-tag size="small" type="info" class="system-icon-tag">
+                <el-icon><Monitor /></el-icon>
+              </el-tag>
+            </el-tooltip>
+          </template>
+
           <GlyphAssetsPanel
             v-if="String(glyph.id) === activeTab"
             :glyph="glyph"
@@ -91,6 +103,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ElTag } from 'element-plus'
+import { Monitor } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
@@ -106,7 +120,6 @@ import {
   bindAssetsToGlyph,
   unbindAssetFromGlyph,
   importAssetsToGlyph,
-  submitIconGlyph,
   type IconGlyphVO,
   type IconGlyphAssetVO,
   type IconAssetVO,
@@ -114,6 +127,7 @@ import {
   type IconAssetPageQueryDTO,
   type DisplayType,
 } from '@/api/wristo/iconGlyph'
+import { autoIconFontBuild } from '@/api/wristo/fonts'
 
 const route = useRoute()
 
@@ -249,29 +263,44 @@ const onDisplayTypeChange = async (_v: DisplayType) => {
 }
 
 const tabLabel = (g: IconGlyphVO) => {
-  const tag = g.isDefault === 1 ? 'Default' : 'Custom'
-  return `${g.glyphCode || 'Font'} · ${tag}`
+  // Keep label simple; system/default glyphs are indicated via tooltip+tag in the tab label slot
+  return g.glyphCode || 'Font'
 }
 
 const handleSubmitGlyph = async () => {
   try {
     await ElMessageBox.confirm(
-      'After submitting, the system will process your font within 1 business day. You will receive a system notification when processing is complete, and the icons will automatically appear in your icon list.',
-      'Submit Font',
+      'After submitting, the system will build an icon font from the current glyph and make it available in your fonts list.',
+      'Build Icon Font',
       {
         type: 'info',
-        confirmButtonText: 'Submit',
+        confirmButtonText: 'Build',
         cancelButtonText: 'Cancel',
       }
     )
+
     const glyphId = Number(activeTab.value)
     if (!glyphId) return
-    await submitIconGlyph(glyphId)
-    ElMessage.success('Submitted. We will process it within 1 business day and notify you.')
-    // Optionally refresh current glyph data
-    await fetchGlyphs()
+
+    const glyph = glyphs.value.find(g => g.id === glyphId)
+    if (!glyph || !glyph.glyphCode) {
+      ElMessage.error('Missing glyphCode for current glyph, cannot build icon font.')
+      return
+    }
+
+    const { data } = await autoIconFontBuild(glyph.glyphCode)
+
+    if (data?.ttfFile?.url) {
+      const url = data.ttfFile.url
+      // 自动在新标签页打开 TTF 链接，方便用户下载或预览
+      window.open(url, '_blank')
+      ElMessage.success('Icon font built successfully. The TTF file has been opened in a new tab.')
+      // 可选：后续根据需要，触发字体列表刷新
+    } else {
+      ElMessage.warning('Build request sent, but no TTF file URL was returned.')
+    }
   } catch {
-    // user canceled
+    // user canceled or request failed silently handled elsewhere
   }
 }
 

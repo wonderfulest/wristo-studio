@@ -52,7 +52,7 @@ const baseStore = useBaseStore()
 
 // 响应式状态
 const color = ref(props.element?.fill || '#ffffff')
-const fontFamily = ref(props.element?.fontFamily || 'SuperIcons')
+const fontFamily = ref(props.element?.fontFamily || 'wristo-icon')
 const fontSize = ref(props.element?.fontSize || 24)
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
