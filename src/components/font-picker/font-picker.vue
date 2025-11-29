@@ -16,7 +16,9 @@
       </div>
       <!-- Number font library guidance (only for number fonts) -->
       <div v-if="type === FontTypes.NUMBER_FONT" class="icon-lib-tip">
-        <RouterLink class="open-library-anchor" to="/number-font-library" target="_blank" rel="noopener">Manage your number fonts in Number Font Library</RouterLink>
+        <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
+          Custom your number fonts
+        </button>
       </div>
       <!-- Search (extracted component) -->
       <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
@@ -39,6 +41,8 @@
     </div>
     <!-- Add font dialog -->
     <FontImportDialog v-model:visible="dialogVisible" @selected="onFontUploaded" />
+    <!-- Number glyph editor dialog (for number fonts) -->
+    <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
   </div>
 </template>
 
@@ -53,6 +57,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import RecentFontList from './RecentFontList.vue'
 import DesignerFontList from './DesignerFontList.vue'
 import FontImportDialog from './FontImportDialog.vue'
+import NumberGlyphEditorDialog from '@/views/fonts/components/NumberGlyphEditorDialog.vue'
 import FontSearch from './FontSearch.vue'
 import FontPreviewText from './FontPreviewText.vue'
 import type { FontItem } from '@/types/font-picker'
@@ -74,6 +79,7 @@ const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
 const userStore = useUserStore()
 const baseStore = useBaseStore()
+const numberGlyphDialogRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
@@ -112,6 +118,10 @@ const onDesignerScroll = () => {
   if (fontStore.expandedSections?.recent) {
     fontStore.toggleSection('recent')
   }
+}
+
+const openNumberGlyphEditor = () => {
+	numberGlyphDialogRef.value?.open()
 }
 
 // 选择字体

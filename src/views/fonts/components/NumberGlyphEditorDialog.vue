@@ -34,11 +34,11 @@
                   </span>
                 </div>
                 <div class="glyph-inner">
-                  <div v-if="!glyphPreviews[ch]" class="glyph-bg">{{ ch }}</div>
+                  <div v-if="!numberGlyphStore.glyphPreviews[ch]" class="glyph-bg">{{ ch }}</div>
                   <img
-                    v-if="glyphPreviews[ch]"
+                    v-if="numberGlyphStore.glyphPreviews[ch]"
                     :class="['glyph-img', { 'glyph-img--colon': ch === ':' }]"
-                    :src="glyphPreviews[ch] as string"
+                    :src="numberGlyphStore.glyphPreviews[ch] as string"
                     alt="glyph preview"
                   />
                 </div>
@@ -70,22 +70,12 @@ import { ElMessage } from 'element-plus'
 import JSZip from 'jszip'
 import NumberFontNamingBar from './NumberFontNamingBar.vue'
 import { createFontGlyph } from '@/api/wristo/fontGlyph'
+import { useNumberGlyphStore, glyphChars, type GlyphChar } from '@/stores/numberGlyphStore'
 
-const visible = ref(false)
-const glyphChars = ['0','1','2','3','4','5','6','7','8','9',':'] as const
-export type GlyphChar = (typeof glyphChars)[number]
-const glyphFiles = ref<Record<GlyphChar, File | null>>({
-  '0': null,
-  '1': null,
-  '2': null,
-  '3': null,
-  '4': null,
-  '5': null,
-  '6': null,
-  '7': null,
-  '8': null,
-  '9': null,
-  ':': null,
+const numberGlyphStore = useNumberGlyphStore()
+const visible = computed({
+  get: () => numberGlyphStore.visible,
+  set: (v: boolean) => numberGlyphStore.setVisible(v),
 })
 
 // 禁用 el-upload 内置 HTTP 上传，确保只做本地处理
@@ -95,21 +85,7 @@ const noopHttpRequest = () => {
 
 const namingRef = ref<InstanceType<typeof NumberFontNamingBar> | null>(null)
 const saving = ref(false)
-const canSave = computed(() => glyphChars.every(ch => !!glyphFiles.value[ch]))
-
-const glyphPreviews = ref<Record<GlyphChar, string | null>>({
-  '0': null,
-  '1': null,
-  '2': null,
-  '3': null,
-  '4': null,
-  '5': null,
-  '6': null,
-  '7': null,
-  '8': null,
-  '9': null,
-  ':': null,
-})
+const canSave = computed(() => glyphChars.every(ch => !!numberGlyphStore.glyphFiles[ch]))
 
 const beforeGlyphUpload = (file: File) => {
   const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
@@ -125,11 +101,11 @@ const handleGlyphFileChange = (ch: GlyphChar, file: any) => {
   if (!raw) return
   if (!beforeGlyphUpload(raw)) return
   // 释放旧的预览 URL，避免内存泄露
-  const prevUrl = glyphPreviews.value[ch]
+  const prevUrl = numberGlyphStore.glyphPreviews[ch]
   if (prevUrl) URL.revokeObjectURL(prevUrl)
 
-  glyphFiles.value[ch] = raw
-  glyphPreviews.value[ch] = URL.createObjectURL(raw)
+  numberGlyphStore.setGlyphFile(ch, raw)
+  numberGlyphStore.setGlyphPreview(ch, URL.createObjectURL(raw))
 }
 
 const handleSave = async () => {
@@ -141,7 +117,7 @@ const handleSave = async () => {
   try {
     const zip = new JSZip()
     for (const ch of glyphChars) {
-      const file = glyphFiles.value[ch]
+      const file = numberGlyphStore.glyphFiles[ch]
       if (!file) continue
       const code = ch.codePointAt(0)!.toString(16).padStart(4, '0')
       const filename = `${code}.svg`
@@ -183,7 +159,7 @@ const handleSave = async () => {
     })
 
     ElMessage.success('Number glyph font uploaded')
-    visible.value = false
+    numberGlyphStore.resetAll()
   } catch (e) {
     console.error(e)
     ElMessage.error('Failed to upload number glyph font')
