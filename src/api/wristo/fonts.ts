@@ -1,33 +1,20 @@
 import instance from '@/config/axios'
-import type { UploadFontMeta, DesignFontVO, DesignFontSearchDTO } from '@/types/font'
+import type { DesignFontVO, DesignFontSearchDTO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 
 /**
- * 上传字体文件
- * @param {File} file - TTF文件
+ * 上传字体文件（仅 file + type）
+ * @param {File} file - 字体文件（TTF/OTF）
+ * @param {string} type - 设计师字体类型枚举字符串
  * @returns {Promise} 上传结果
  */
 export const uploadFontFile =  (
   file: File,
-  meta: UploadFontMeta
+  type: string
 ): Promise<ApiResponse<DesignFontVO>> => {
   const formData = new FormData()
-  formData.append('fullName', meta.fullName)
-  formData.append('postscriptName', meta.postscriptName)
-  formData.append('family', meta.family)
-  formData.append('subfamily', meta.subfamily)
-  formData.append('type', meta.type)
-  formData.append('weight', meta.weight)
-  formData.append('versionName', meta.versionName)
-  formData.append('glyphCount', String(meta.glyphCount))
-  formData.append('language', meta.language)
-  formData.append('ttf', file, file.name)
-  formData.append('isSystem', String(meta.isSystem))
-  formData.append('isMonospace', String(meta.isMonospace))
-  formData.append('italic', String(meta.italic))
-  formData.append('weightClass', String(meta.weightClass))
-  formData.append('widthClass', String(meta.widthClass))
-  formData.append('copyright', meta.copyright)
+  formData.append('file', file)
+  formData.append('type', type)
   return instance.post(
     '/dsn/fonts/upload?populate=ttf',
     formData,

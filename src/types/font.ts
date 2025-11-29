@@ -1,20 +1,6 @@
 // 提交表单字段（后端 @ModelAttribute DTO）
 export interface UploadFontMeta {
-  fullName: string
-  postscriptName: string
-  family: string
-  subfamily: string
-  language: string
   type: string // 后端为枚举，这里用字符串，示例：'text_font'
-  weight: string
-  versionName: string
-  glyphCount: number | string
-  isSystem: number // 0/1
-  isMonospace: number // 0/1
-  italic: number // 0/1
-  weightClass: number
-  widthClass: number
-  copyright: string
 }
 
 // 文件信息

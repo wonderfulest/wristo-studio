@@ -233,7 +233,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { Search, Upload, Close, Check, Warning, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { searchFonts, uploadFontFile, getFontByName, increaseFontUsage } from '@/api/wristo/fonts'
-import type { DesignFontVO, UploadFontMeta } from '@/types/font'
+import type { DesignFontVO } from '@/types/font'
 import type { ParsedFontInfo } from '@/types/font-parse'
 import opentype, { Font, FontNames } from 'opentype.js'
 
@@ -494,29 +494,11 @@ const uploadSingleFont = async (item: UploadQueueItem) => {
     return 'regular'
   }
   
-  const meta: UploadFontMeta = {
-    fullName: item.parsedInfo.fullName || fontName,
-    postscriptName: item.parsedInfo.postscriptName || fontName,
-    family: item.parsedInfo.family || fontName,
-    subfamily: item.parsedInfo.subfamily || '',
-    language: 'en',
-    type: 'text_font',
-    weight: mapWeight(item.parsedInfo.weightClass, item.parsedInfo.subfamily),
-    versionName: item.parsedInfo.version || '1.0',
-    glyphCount: item.parsedInfo.glyphCount || 0,
-    isSystem: 0,
-    isMonospace: typeof item.parsedInfo.isMonospace === 'boolean' ? (item.parsedInfo.isMonospace ? 1 : 0) : 0,
-    italic: typeof item.parsedInfo.italic === 'boolean' ? (item.parsedInfo.italic ? 1 : 0) : 0,
-    weightClass: item.parsedInfo.weightClass || 500,
-    widthClass: item.parsedInfo.widthClass || 5,
-    copyright: item.parsedInfo.copyright || '',
-  }
-  
   let created: DesignFontVO
   if (usedExisting) {
     created = byName.data as DesignFontVO
   } else {
-    const uploadRes = await uploadFontFile(item.file, meta)
+    const uploadRes = await uploadFontFile(item.file, 'text_font')
     created = uploadRes.data as DesignFontVO
   }
   

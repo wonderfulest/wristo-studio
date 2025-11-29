@@ -98,7 +98,7 @@ import type { ParsedFontInfo } from '@/types/font-parse'
 import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
 import { uploadFontFile, getFontByName, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
-import type { DesignFontVO, UploadFontMeta } from '@/types/font'
+import type { DesignFontVO } from '@/types/font'
 import { getEnumOptions, type EnumOption } from '@/api/common'
 
 const props = defineProps<{
@@ -245,46 +245,12 @@ const confirmUpload = async () => {
     const byName = await getFontByName(fontName)
     const usedExisting = Boolean(byName.data)
 
-    const mapWeight = (w?: number, sub?: string): string => {
-      const subLower = (sub || '').toLowerCase()
-      if (/bold/.test(subLower)) return 'bold'
-      if (/semi[- ]?bold|demi[- ]?bold/.test(subLower)) return 'semibold'
-      if (/medium/.test(subLower)) return 'medium'
-      if (/light|extralight|ultralight/.test(subLower)) return 'light'
-      if (/thin|hairline/.test(subLower)) return 'thin'
-      if (typeof w !== 'number') return 'regular'
-      if (w >= 900) return 'black'
-      if (w >= 800) return 'extrabold'
-      if (w >= 700) return 'bold'
-      if (w >= 600) return 'semibold'
-      if (w >= 500) return 'medium'
-      if (w <= 300) return 'light'
-      return 'regular'
-    }
-
-    const meta: UploadFontMeta = {
-      fullName: parsedInfo.value?.fullName || fontName,
-      postscriptName: parsedInfo.value?.postscriptName || fontName,
-      family: parsedInfo.value?.family || fontName,
-      subfamily: parsedInfo.value?.subfamily || '',
-      language: 'en',
-      type: selectedFontType.value,
-      weight: mapWeight(parsedInfo.value?.weightClass, parsedInfo.value?.subfamily),
-      versionName: parsedInfo.value?.version || '1.0',
-      glyphCount: parsedInfo.value?.glyphCount || 0,
-      isSystem: 0,
-      isMonospace: typeof parsedInfo.value?.isMonospace === 'boolean' ? (parsedInfo.value?.isMonospace ? 1 : 0) : 0,
-      italic: typeof parsedInfo.value?.italic === 'boolean' ? (parsedInfo.value?.italic ? 1 : 0) : 0,
-      weightClass: parsedInfo.value?.weightClass || 500,
-      widthClass: parsedInfo.value?.widthClass || 5,
-      copyright: parsedInfo.value?.copyright || '',
-    }
-
     let created: DesignFontVO
     if (usedExisting) {
       created = byName.data as DesignFontVO
     } else {
-      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, meta)
+      console.log('uploading font type', selectedFontType.value)
+      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, selectedFontType.value)
       created = uploadRes.data as DesignFontVO
     }
 
