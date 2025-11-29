@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import { ElTag, ElMessageBox } from 'element-plus'
 import { Monitor, Delete } from '@element-plus/icons-vue'
 import FontPreviewText from './FontPreviewText.vue'
@@ -52,9 +52,14 @@ const isReady = ref(false)
 
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
 
-onMounted(async () => {
+const loadFont = async (fontFamily: string | undefined) => {
+  if (!fontFamily) {
+    isReady.value = true
+    return
+  }
+
+  isReady.value = false
   try {
-    const fontFamily = props.fontFamily
     // Use FontFaceSet API when available to wait for font load
     const anyDoc = document as any
     if (anyDoc.fonts && typeof anyDoc.fonts.load === 'function' && fontFamily) {
@@ -67,7 +72,18 @@ onMounted(async () => {
   } finally {
     isReady.value = true
   }
+}
+
+onMounted(() => {
+  loadFont(props.fontFamily)
 })
+
+watch(
+  () => props.fontFamily,
+  (newFont) => {
+    loadFont(newFont)
+  }
+)
 
 const onDelete = async () => {
   if (props.fontId == null) return
