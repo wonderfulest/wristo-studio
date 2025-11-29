@@ -1,5 +1,5 @@
 <template>
-  <div class="font-main" v-show="isReady">
+  <div class="font-main" v-if="isReady">
     <div class="font-header" v-if="label || hasTags || (fontId != null && !isSystem)">
       <div class="font-name" v-if="label">{{ label }}</div>
       <div class="font-tags" v-if="hasTags">
@@ -25,6 +25,11 @@
       </button>
     </div>
     <FontPreviewText :font-family="fontFamily" :type="type" :section-name="sectionName" />
+  </div>
+  <div v-else class="font-main">
+    <div class="font-header">
+      <div class="font-name">Loading...</div>
+    </div>
   </div>
 </template>
 
