@@ -43,3 +43,10 @@ const sampleText = computed(() => {
   return '12:34 AM 72°F & Sunny 0123456789'
 })
 </script>
+
+<style scoped>
+.preview-text {
+  color: #191919;
+  font-size: 28px;
+}
+</style>

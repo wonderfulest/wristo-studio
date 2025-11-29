@@ -14,8 +14,11 @@
           :class="{ active: modelValue === font.value }"
           @click="$emit('select', font)"
         >
-          <div class="font-name">{{ font.family }}</div>
-          <FontPreviewText :font-family="font.value" :type="type" />
+          <FontListItem
+            :label="font.family"
+            :font-family="font.value"
+            :type="type"
+          />
         </div>
       </div>
     </div>
@@ -24,7 +27,7 @@
 
 <script setup lang="ts">
 import type { FontItem } from '@/types/font-picker'
-import FontPreviewText from './FontPreviewText.vue'
+import FontListItem from './FontListItem.vue'
 
 defineProps<{
   fonts: FontItem[]

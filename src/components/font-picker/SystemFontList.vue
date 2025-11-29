@@ -15,7 +15,11 @@
             :class="{ active: modelValue === font.value }"
             @click="$emit('select', font)"
           >
-            <FontPreviewText :font-family="font.value" :type="type" :section-name="section.name" />
+            <FontListItem
+              :font-family="font.value"
+              :type="type"
+              :section-name="section.name"
+            />
           </div>
         </div>
       </div>
@@ -26,6 +30,7 @@
 <script setup lang="ts">
 import type { FontItem, Section } from '@/types/font-picker'
 import FontPreviewText from './FontPreviewText.vue'
+import FontListItem from './FontListItem.vue'
 
 const { sections, expandedMap, modelValue, type } = defineProps<{
   sections: Section[]

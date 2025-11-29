@@ -1,33 +1,18 @@
 <template>
   <div class="designer-font-list">
     <div ref="scrollContainer" class="font-list-scroll" @scroll.passive="onScroll">
-      <div v-for="font in fonts" :key="font.id" class="font-item" :class="{ active: modelValue === font.slug }" @click="handleSelect(font)">
-        <div class="font-main">
-          <div class="font-header">
-            <div class="font-name">{{ font.fullName || font.family || font.slug }}</div>
-            <div class="font-tags">
-              <el-tag v-if="font.isSystem === 1" size="small" type="info">
-                <el-icon><Monitor /></el-icon>
-              </el-tag>
-              <el-tag v-if="font.isMonospace === 1" size="small">
-                <el-icon><Rank /></el-icon>
-              </el-tag>
-              <!--
-              <el-tag v-if="font.italic === 1" size="small" type="warning">
-                <el-icon><Italic /></el-icon>
-              </el-tag>
-              <el-tag v-if="font.weight" size="small" effect="plain">
-                <el-icon><ScaleToOriginal /></el-icon>
-              </el-tag>
-              -->
-              <el-tag v-if="font.subfamily" size="small" effect="plain">
-                <el-icon><CollectionTag /></el-icon>
-              </el-tag>
-            </div>
-          </div>
-          <FontPreviewText :font-family="font.slug" :type="type" />
-        </div>
-      </div>
+      <FontListItem
+        v-for="font in fonts"
+        :key="font.id"
+        :class="{ active: modelValue === font.slug }"
+        :label="font.fullName || font.family || font.slug"
+        :font-family="font.slug"
+        :type="type"
+        :is-system="font.isSystem === 1"
+        :is-monospace="font.isMonospace === 1"
+        :subfamily="font.subfamily || ''"
+        @click="handleSelect(font)"
+      />
       <div v-if="loading" class="loading">Loading...</div>
       <div v-else-if="!hasMore && fonts.length" class="end-tip">No more fonts</div>
     </div>
@@ -36,13 +21,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { ElTag } from 'element-plus'
-import { Monitor, Rank, CollectionTag } from '@element-plus/icons-vue'
 import type { DesignFontVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import { getDesignerUsageFontsPage } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
-import FontPreviewText from './FontPreviewText.vue'
+import FontListItem from './FontListItem.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -130,6 +113,7 @@ watch(
 }
 
 .font-list-scroll {
+  padding: 8px 12px;
   max-height: 320px;
   overflow-y: auto;
 }
@@ -173,12 +157,6 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-
-/* 强化预览文字的可读性：更深颜色、更大字号 */
-.designer-font-list :deep(.preview-text) {
-  color: #191919;
-  font-size: 20px;
 }
 
 .loading,
