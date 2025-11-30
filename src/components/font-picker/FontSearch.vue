@@ -161,7 +161,6 @@ const filterFonts = async () => {
       type: props.type,
       isMonospace: monospaceChecked.value ? 1 : undefined,
       italic: italicChecked.value ? 1 : undefined,
-      // onlyApprovedActive: true
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
     

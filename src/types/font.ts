@@ -55,5 +55,4 @@ export interface DesignFontSearchDTO {
   weight?: number
   weightClass?: number
   widthClass?: number
-  onlyApprovedActive?: boolean
 }

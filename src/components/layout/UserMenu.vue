@@ -17,6 +17,10 @@
     </div>
 
     <div class="dropdown-menu" v-if="showDropdown">
+      <div class="dropdown-item" @click="go('/devices')">
+        <Icon icon="material-symbols:extension" />
+        Devices
+      </div>
       <div class="dropdown-item" @click="go('/fonts')">
         <Icon icon="material-symbols:font-download-outline" />
         Font Preview

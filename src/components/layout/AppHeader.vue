@@ -23,9 +23,9 @@
           <Icon icon="material-symbols:list" />
           Designs List
         </a>
-        <a @click="showDevicesConfirm" class="nav-link">
-          <Icon icon="material-symbols:extension" />
-          Devices
+        <a @click="showFontsConfirm" class="nav-link">
+          <Icon icon="material-symbols:font-download-outline" />
+          Font Preview
         </a>
         <el-dialog v-model="designsListDialogVisible" title="Confirm" width="30%">
           <span>Close current work and open the designs list?</span>
@@ -33,6 +33,15 @@
             <span class="dialog-footer">
               <el-button @click="designsListDialogVisible = false">Cancel</el-button>
               <el-button type="primary" @click="confirmOpenDesignsList">Confirm</el-button>
+            </span>
+          </template>
+        </el-dialog>
+        <el-dialog v-model="fontsDialogVisible" title="Confirm" width="30%">
+          <span>Close current work and open the font preview?</span>
+          <template #footer>
+            <span class="dialog-footer">
+              <el-button @click="fontsDialogVisible = false">Cancel</el-button>
+              <el-button type="primary" @click="confirmOpenFonts">Confirm</el-button>
             </span>
           </template>
         </el-dialog>
@@ -92,6 +101,7 @@ const messageStore = useMessageStore()
 
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
+const fontsDialogVisible = ref(false)
 const devicesDialogVisible = ref(false)
 const ticketsDialogVisible = ref(false)
 const createDesignDialogRef = ref(null)
@@ -111,6 +121,10 @@ const showDesignsListConfirm = () => {
   designsListDialogVisible.value = true
 }
 
+const showFontsConfirm = () => {
+  fontsDialogVisible.value = true
+}
+
 const showDevicesConfirm = () => {
   devicesDialogVisible.value = true
 }
@@ -128,6 +142,12 @@ const confirmOpenDesignsList = () => {
   designsListDialogVisible.value = false
   baseStore.$reset()
   router.push('/designs')
+}
+
+const confirmOpenFonts = () => {
+  fontsDialogVisible.value = false
+  baseStore.$reset()
+  router.push('/fonts')
 }
 
 const confirmOpenDevices = () => {

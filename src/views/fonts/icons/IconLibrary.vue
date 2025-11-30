@@ -254,7 +254,6 @@ const onAssetPageChange = async (page: number) => {
 const handleUnbind = async (glyphId: number, assetId: number) => {
   if (!glyphId || !assetId) return
   try {
-    console.log('[IconLibrary] handleUnbind called', { glyphId, assetId })
     await ElMessageBox.confirm(
       'Are you sure you want to unbind this asset from the font?',
       'Unbind Asset',
@@ -268,7 +267,6 @@ const handleUnbind = async (glyphId: number, assetId: number) => {
     return
   }
   try {
-    console.log('[IconLibrary] calling unbindAssetFromGlyph', { glyphId, assetId })
     await unbindAssetFromGlyph(glyphId, assetId)
     ElMessage.success('Unbound successfully')
     if (String(glyphId) === activeTab.value) {

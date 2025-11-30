@@ -1,11 +1,11 @@
 <template>
   <div class="fonts-preview">
-    <!-- 搜索栏 -->
+    <!-- Search & filters (same layout as Fonts.vue, but focused on number fonts) -->
     <div class="search-panel">
       <div class="search-inputs">
         <el-input
           v-model="searchQuery"
-          placeholder="Search fonts..."
+          placeholder="Search number fonts..."
           class="search-input"
           clearable
           @input="handleSearch"
@@ -17,95 +17,52 @@
             <el-button :icon="Search" @click="handleSearch">Search</el-button>
           </template>
         </el-input>
-        
+
         <el-input
           v-model="previewText"
-          placeholder="Enter preview text..."
+          placeholder="1234567890:"
           class="preview-input"
           clearable
           @input="handlePreviewTextChange"
         >
           <template #prefix>
-            <span class="preview-prefix">Aa</span>
+            <span class="preview-prefix"></span>
           </template>
         </el-input>
       </div>
       <el-divider />
-      <!-- Filters -->
-      <el-form :inline="true" class="filters-form" label-position="left" size="small">
-        <el-form-item>
-          <template #label>
-            Monospace: {{ isMonospace ? 'On' : 'Off' }}
-          </template>
-          <el-switch
-            v-model="isMonospace"
-            active-text="On"
-            inactive-text="Off"
-            inline-prompt
-            @change="handleFilterChange"
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            Italic: {{ italic ? 'On' : 'Off' }}
-          </template>
-          <el-switch
-            v-model="italic"
-            active-text="On"
-            inactive-text="Off"
-            inline-prompt
-            @change="handleFilterChange"
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            Weight: {{ weightClass ?? 'Any' }}
-          </template>
-          <el-select
-            v-model="weightClass"
-            placeholder="Any"
-            class="w-40"
-            clearable
-            @change="handleFilterChange"
-          >
-            <el-option v-for="w in [100,200,300,400,500,600,700,800,900]" :key="w" :label="String(w)" :value="w" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            Width: {{ widthClass ?? 'Any' }}
-          </template>
-          <el-select
-            v-model="widthClass"
-            placeholder="Any"
-            class="w-40"
-            clearable
-            @change="handleFilterChange"
-          >
-            <el-option v-for="w in [1,2,3,4,5,6,7,8,9]" :key="w" :label="String(w)" :value="w" />
-          </el-select>
-        </el-form-item>
-      </el-form>
 
-      <!-- Toolbar: total + reset -->
+      <!-- Toolbar: upload & reset -->
       <div class="search-toolbar flex items-center justify-between">
         <div class="toolbar-actions">
-          <el-button size="small" @click="showUploadArea = !showUploadArea" :type="showUploadArea ? 'primary' : 'default'">
+          <el-button
+            size="small"
+            @click="showUploadArea = !showUploadArea"
+            :type="showUploadArea ? 'primary' : 'default'"
+          >
             <el-icon><Upload /></el-icon>
-            Upload Fonts
+            Upload Number Fonts
           </el-button>
-          <el-button size="small" style="margin-left: 12px;" @click="handleResetFilters">Reset Filters</el-button>
+          <el-button size="small" style="margin-left: 12px;" @click="handleResetFilters">Reset</el-button>
+          <el-button
+            size="small"
+            type="primary"
+            style="margin-left: 12px;"
+            @click="openGlyphEditor"
+          >
+            Edit Number Glyphs (0-9 & :)
+          </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 字体上传区域 -->
+    <!-- Upload area -->
     <div v-show="showUploadArea" class="upload-section">
       <div class="upload-header">
-        <h3>Upload Custom Fonts</h3>
-        <p class="upload-description">Upload TTF or OTF font files. Multiple files are supported.</p>
+        <h3>Upload Custom Number Fonts</h3>
+        <p class="upload-description">Upload TTF or OTF font files for number-only fonts.</p>
       </div>
-      
+
       <el-upload
         class="font-upload-area"
         drag
@@ -126,7 +83,7 @@
         </div>
       </el-upload>
 
-      <!-- 上传文件处理列表 -->
+      <!-- Upload processing queue -->
       <div v-if="uploadQueue.length > 0" class="upload-queue">
         <div class="queue-header">
           <span>Processing {{ uploadQueue.length }} font{{ uploadQueue.length > 1 ? 's' : '' }}</span>
@@ -134,10 +91,10 @@
             Clear All
           </el-button>
         </div>
-        
+
         <div class="queue-list">
-          <div 
-            v-for="(item, index) in uploadQueue" 
+          <div
+            v-for="(item, index) in uploadQueue"
             :key="index"
             class="queue-item"
             :class="{
@@ -153,7 +110,7 @@
                 <span v-if="item.parsedInfo.subfamily"> - {{ item.parsedInfo.subfamily }}</span>
               </div>
             </div>
-            
+
             <div class="item-status">
               <el-icon v-if="item.status === 'pending'" class="status-pending">
                 <Upload />
@@ -168,12 +125,12 @@
                 <Warning />
               </el-icon>
             </div>
-            
+
             <div class="item-actions">
-              <el-button 
+              <el-button
                 v-if="item.status === 'pending' || item.status === 'error'"
-                size="small" 
-                type="text" 
+                size="small"
+                type="text"
                 @click="removeFromQueue(index)"
                 :disabled="isProcessing"
               >
@@ -182,11 +139,11 @@
             </div>
           </div>
         </div>
-        
+
         <div class="queue-actions">
-          <el-button 
-            type="primary" 
-            @click="processQueue" 
+          <el-button
+            type="primary"
+            @click="processQueue"
             :loading="isProcessing"
             :disabled="uploadQueue.every(item => item.status === 'completed')"
           >
@@ -196,23 +153,25 @@
       </div>
     </div>
 
-    <!-- 字体列表（紧凑网格） -->
+    <!-- Number font list -->
     <div class="fonts-grid">
-      <div 
-        v-for="font in fonts" 
+      <div
+        v-for="font in fonts"
         :key="font.id"
         class="font-card"
       >
         <div class="font-card-header">
-          <div class="font-name" :title="font.fullName || font.family">{{ font.fullName || font.family }}</div>
+          <div class="font-name" :title="font.fullName || font.family">
+            {{ font.fullName || font.family }}
+          </div>
         </div>
         <div class="preview-oneline" :style="{ fontFamily: font.previewFamily || font.family }">
-          {{ previewText || '12:23 AM 72°F & Sunny 0123456789' }}
+          {{ previewText || '1234567890:' }}
         </div>
       </div>
     </div>
 
-    <!-- 分页 -->
+    <!-- Pagination -->
     <div class="pagination-wrap flex justify-center">
       <el-pagination
         v-model:current-page="currentPage"
@@ -224,6 +183,9 @@
         @current-change="handleCurrentChange"
       />
     </div>
+
+    <!-- Number glyph editor dialog component -->
+    <NumberGlyphEditorDialog ref="glyphEditorRef" />
   </div>
 </template>
 
@@ -236,22 +198,22 @@ import { searchFonts, uploadFontFile, getFontByName, increaseFontUsage } from '@
 import type { DesignFontVO } from '@/types/font'
 import type { ParsedFontInfo } from '@/types/font-parse'
 import opentype, { Font, FontNames } from 'opentype.js'
+import NumberGlyphEditorDialog from '@/views/fonts/number/NumberGlyphEditorDialog.vue'
 
-// 状态
 const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])
 const currentPage = ref(1)
 const pageSize = ref(48)
 const total = ref(0)
 const searchQuery = ref('')
-const previewText = ref('')
-const fontStore = useFontStore()
+const previewText = ref('1234567890:')
 
-// 上传相关状态
 const showUploadArea = ref(false)
 const uploadQueue = ref<UploadQueueItem[]>([])
 const isProcessing = ref(false)
 
-// 上传队列项类型
+const fontStore = useFontStore()
+const glyphEditorRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
+
 interface UploadQueueItem {
   file: File
   status: 'pending' | 'processing' | 'completed' | 'error'
@@ -259,30 +221,21 @@ interface UploadQueueItem {
   error?: string
 }
 
-// Filters
-const isMonospace = ref<boolean>(false)
-const italic = ref<boolean>(false)
-const weightClass = ref<number | undefined>(undefined)
-const widthClass = ref<number | undefined>(undefined)
+const openGlyphEditor = () => {
+  glyphEditorRef.value?.open()
+}
 
-// Apple UI 风格：移除状态展示，无需状态映射函数
-
-// 使用 searchFonts 服务端搜索 + 分页，并以 slug 为准进行预览渲染
 const loadFonts = async () => {
   try {
     const { data } = await searchFonts({
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       name: searchQuery.value || undefined,
-      isMonospace: isMonospace.value ? 1 : undefined,
-      italic: italic.value ? 1 : undefined,
-      weightClass: weightClass.value,
-      widthClass: widthClass.value,
-      onlyApprovedActive: true
+      type: 'number_font'
     })
     const list = data?.list ?? []
     total.value = data?.total ?? 0
-    // 预注册本页字体，使用 slug 作为 font-family
+    // preload fonts using slug as family via fontStore
     await Promise.all(
       list.map((f: DesignFontVO) =>
         f?.slug ? fontStore.loadFont(f.slug, (f as any)?.ttfFile?.url) : Promise.resolve(true)
@@ -290,19 +243,18 @@ const loadFonts = async () => {
     )
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
   } catch (error) {
-    console.error('加载字体失败:', error)
-    ElMessage.error('加载字体列表失败')
+    console.error('Failed to load number fonts:', error)
+    ElMessage.error('Failed to load number fonts')
   }
 }
 
-// 事件处理
 const handleSearch = () => {
   currentPage.value = 1
   loadFonts()
 }
 
 const handlePreviewTextChange = () => {
-  // 预览文本变化时不需要重新加载字体列表，只需要重新渲染即可
+  // only rerender
 }
 
 const handleSizeChange = (val: number) => {
@@ -315,51 +267,36 @@ const handleCurrentChange = (val: number) => {
   loadFonts()
 }
 
-// 当筛选条件变化时，重置页码并重新加载
-const handleFilterChange = () => {
-  currentPage.value = 1
-  loadFonts()
-}
-
-// 重置筛选条件并重新加载
 const handleResetFilters = () => {
   searchQuery.value = ''
-  isMonospace.value = false
-  italic.value = false
-  weightClass.value = undefined
-  widthClass.value = undefined
   currentPage.value = 1
   loadFonts()
 }
 
-// 字体上传相关方法
 const handleFontFilesChange = async (file: any) => {
   if (!file?.raw) return
-  
+
   const lower = (file.name || '').toLowerCase()
   const isTTF = lower.endsWith('.ttf')
   const isOTF = lower.endsWith('.otf')
-  
+
   if (!isTTF && !isOTF) {
     ElMessage.error('Please upload TTF/OTF files only')
     return
   }
-  
-  // 检查是否已存在
+
   const exists = uploadQueue.value.some(item => item.file.name === file.name)
   if (exists) {
     ElMessage.warning(`Font "${file.name}" is already in the queue`)
     return
   }
-  
+
   const queueItem: UploadQueueItem = {
     file: file.raw as File,
-    status: 'pending'
+    status: 'pending',
   }
-  
   uploadQueue.value.push(queueItem)
-  
-  // 异步解析字体信息
+
   try {
     const parsedInfo = await parseFontFile(file.raw as File)
     queueItem.parsedInfo = parsedInfo
@@ -376,7 +313,7 @@ const parseFontFile = async (file: File): Promise<ParsedFontInfo> => {
   const tables: any = (font as any)?.tables || {}
   const os2 = tables.os2 || tables.OS_2
   const post = tables.post
-  
+
   const langSet = new Set<string>()
   const collectLangs = (rec: Record<string, unknown> | undefined) => {
     if (!rec) return
@@ -388,10 +325,10 @@ const parseFontFile = async (file: File): Promise<ParsedFontInfo> => {
   collectLangs(names?.fontFamily as any)
   collectLangs(names?.fontSubfamily as any)
   collectLangs(names?.version as any)
-  
+
   const subfamilyStr = names?.fontSubfamily?.en || names?.fontSubfamily?.enUS || names?.fontSubfamily?.enGB || ''
   const initialName = file.name.replace(/\.(ttf|otf)$/i, '')
-  
+
   return {
     fullName: names?.fullName?.en || names?.fullName?.enUS || names?.fullName?.enGB,
     postscriptName: names?.postScriptName?.en || names?.postScriptName?.enUS || names?.postScriptName?.enGB,
@@ -424,16 +361,16 @@ const clearQueue = () => {
 
 const processQueue = async () => {
   if (isProcessing.value) return
-  
+
   isProcessing.value = true
   let successCount = 0
   let errorCount = 0
-  
+
   for (const item of uploadQueue.value) {
     if (item.status === 'completed') continue
-    
+
     item.status = 'processing'
-    
+
     try {
       await uploadSingleFont(item)
       item.status = 'completed'
@@ -444,14 +381,12 @@ const processQueue = async () => {
       errorCount++
       console.error('Font upload error:', error)
     }
-    
-    // 添加小延迟避免请求过于频繁
+
     await new Promise(resolve => setTimeout(resolve, 500))
   }
-  
+
   isProcessing.value = false
-  
-  // 显示结果消息
+
   if (successCount > 0 && errorCount === 0) {
     ElMessage.success(`Successfully uploaded ${successCount} font${successCount > 1 ? 's' : ''}`)
   } else if (successCount > 0 && errorCount > 0) {
@@ -459,8 +394,7 @@ const processQueue = async () => {
   } else if (errorCount > 0) {
     ElMessage.error(`Failed to upload ${errorCount} font${errorCount > 1 ? 's' : ''}`)
   }
-  
-  // 刷新字体列表
+
   if (successCount > 0) {
     loadFonts()
   }
@@ -470,13 +404,12 @@ const uploadSingleFont = async (item: UploadQueueItem) => {
   if (!item.parsedInfo) {
     throw new Error('Font parsing failed')
   }
-  
+
   const fontName = item.parsedInfo.fullName || item.parsedInfo.family || item.file.name.replace(/\.(ttf|otf)$/i, '')
-  
-  // 检查字体是否已存在
+
   const byName = await getFontByName(fontName)
   const usedExisting = Boolean(byName.data)
-  
+
   const mapWeight = (w?: number, sub?: string): string => {
     const subLower = (sub || '').toLowerCase()
     if (/bold/.test(subLower)) return 'bold'
@@ -493,36 +426,27 @@ const uploadSingleFont = async (item: UploadQueueItem) => {
     if (w <= 300) return 'light'
     return 'regular'
   }
-  
+
   let created: DesignFontVO
   if (usedExisting) {
     created = byName.data as DesignFontVO
   } else {
-    const uploadRes = await uploadFontFile(item.file, 'text_font')
+    const uploadRes = await uploadFontFile(item.file, 'number_font')
     created = uploadRes.data as DesignFontVO
   }
-  
-  // 注册到本地字体存储
+
   const familyName = created.family || created.fullName || created.postscriptName || fontName
-  const rawUrl = created.ttfFile?.url || ''
-  const ttfUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`) : ''
-  
-  fontStore.addCustomFont({ 
-    label: created.fullName || familyName, 
-    value: created.slug, 
-    family: familyName, 
-    src: ttfUrl 
-  })
-  
-  // 记录使用次数
-  try { 
-    await increaseFontUsage(created.slug) 
+
+  try {
+    await increaseFontUsage(created.slug)
   } catch {}
-  
+
+  // NOTE: we do not register to fontStore here to avoid circular imports; runtime font-picker will handle loading.
+  ;(created as any).previewFamily = created.slug || familyName
+
   return created
 }
 
-// 初始化
 onMounted(() => {
   loadFonts()
 })
@@ -531,7 +455,6 @@ onMounted(() => {
 <style scoped>
 .fonts-preview {
   padding: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 .search-panel {
@@ -564,13 +487,8 @@ onMounted(() => {
   font-weight: 500;
   color: #666;
 }
-.filters-form { margin-top: 12px; }
-.filters-form :deep(.el-form-item) { margin-right: 16px; margin-bottom: 8px; }
-.filters-form :deep(.el-select) { min-width: 160px; }
 
 .search-toolbar { margin-top: 12px; }
-
-.filters-form { margin-top: 12px; }
 
 .fonts-grid {
   display: grid;
@@ -616,7 +534,6 @@ onMounted(() => {
 
 .pagination-wrap { margin-top: 20px; }
 
-/* 上传区域样式 */
 .upload-section {
   background: #fff;
   border: 1px solid rgba(0,0,0,0.06);
@@ -687,7 +604,6 @@ onMounted(() => {
   color: #999;
 }
 
-/* 上传队列样式 */
 .upload-queue {
   border-top: 1px solid #eee;
   padding-top: 16px;

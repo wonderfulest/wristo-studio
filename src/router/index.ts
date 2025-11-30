@@ -48,25 +48,25 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'fonts',
         name: 'Fonts',
-        component: () => import('@/views/Fonts.vue'),
+        component: () => import('@/views/fonts/Fonts.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: 'number-font-library',
         name: 'NumberFontLibrary',
-        component: () => import('@/views/fonts/NumberFontLibrary.vue'),
+        component: () => import('@/views/fonts/number/NumberFontLibrary.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: 'icon-library',
         name: 'IconLibrary',
-        component: () => import('@/views/icons/IconLibrary.vue'),
+        component: () => import('@/views/fonts/icons/IconLibrary.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: 'icon-assets',
         name: 'IconAssets',
-        component: () => import('@/views/icons/IconAssets.vue'),
+        component: () => import('@/views/fonts/icons/IconAssets.vue'),
         meta: { requiresAuth: true },
       },
       {
