@@ -15,8 +15,8 @@
       >
         <el-tab-pane
           v-for="glyph in glyphs"
-          :key="glyph.id"
-          :name="String(glyph.id)"
+          :key="glyph.glyphCode || glyph.id"
+          :name="glyph.glyphCode || String(glyph.id)"
         >
           <template #label>
             <span>{{ tabLabel(glyph) }}</span>
@@ -39,7 +39,7 @@
           </template>
 
           <GlyphAssetsPanel
-            v-if="String(glyph.id) === activeTab"
+            v-if="glyph.glyphCode === activeTab"
             :glyph="glyph"
             :assets="assets"
             :loading="loadingAssets"
@@ -157,7 +157,7 @@ const glyphs = ref<IconGlyphVO[]>([])
 const glyphTotal = ref(0)
 const glyphPage = ref(1)
 const glyphPageSize = ref(10)
-const activeTab = ref<string>('')
+const activeTab = ref<string>('') // stores glyphCode of active glyph
 const loadingGlyphs = ref(false)
 
 // assets for selected glyph
@@ -174,8 +174,8 @@ const renaming = ref(false)
 const renameGlyphId = ref<number | null>(null)
 const renameNamingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 
-const ensureDisplayTypeForGlyph = (glyphId: number) => {
-  const g = glyphs.value.find(x => x.id === glyphId)
+const ensureDisplayTypeForGlyph = (glyphCode: string) => {
+  const g = glyphs.value.find(x => x.glyphCode === glyphCode)
   if (!g) return
   if (g.isDefault === 1 && displayType.value !== 'mip') {
     displayType.value = 'mip'
@@ -193,19 +193,30 @@ const fetchGlyphs = async () => {
       orderBy: 'id:asc',
     })
     const list = (data?.list ?? []) as IconGlyphVO[]
+    console.log('glyphs list', list)
     glyphs.value = list
     glyphTotal.value = data?.total ?? 0
     // set active tab
+    const qGlyphCode = route.query.glyphCode as string | undefined
     const qGlyphId = route.query.glyphId as string | undefined
     if (!activeTab.value) {
-      activeTab.value = qGlyphId || (list[0] ? String(list[0].id) : '')
+      if (qGlyphCode) {
+        activeTab.value = qGlyphCode
+      } else if (qGlyphId) {
+        const found = list.find(g => String(g.id) === qGlyphId)
+        activeTab.value = found?.glyphCode || (list[0]?.glyphCode || '')
+      } else {
+        activeTab.value = list[0]?.glyphCode || ''
+      }
     }
     if (activeTab.value) {
-      const idNum = Number(activeTab.value)
-      // default to 'mip' when (re)initializing active glyph
-      displayType.value = 'mip'
-      ensureDisplayTypeForGlyph(idNum)
-      await fetchAssets(idNum)
+      const g = list.find(x => x.glyphCode === activeTab.value)
+      if (g) {
+        // default to 'mip' when (re)initializing active glyph
+        displayType.value = 'mip'
+        ensureDisplayTypeForGlyph(g.glyphCode)
+        await fetchAssets(g.id)
+      }
     }
   } finally {
     loadingGlyphs.value = false
@@ -232,13 +243,14 @@ const fetchAssets = async (glyphId: number) => {
 }
 
 const onTabChange = async (name: string) => {
-  activeTab.value = name
+  activeTab.value = name // name is glyphCode
   assetPage.value = 1
-  const idNum = Number(name)
+  const g = glyphs.value.find(x => x.glyphCode === name)
+  if (!g) return
   // reset display type to 'mip' when switching glyph tab
   displayType.value = 'mip'
-  ensureDisplayTypeForGlyph(idNum)
-  await fetchAssets(idNum)
+  ensureDisplayTypeForGlyph(g.glyphCode)
+  await fetchAssets(g.id)
 }
 
 const onGlyphPageChange = async (page: number) => {
@@ -248,7 +260,9 @@ const onGlyphPageChange = async (page: number) => {
 
 const onAssetPageChange = async (page: number) => {
   assetPage.value = page
-  await fetchAssets(Number(activeTab.value))
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  if (!g) return
+  await fetchAssets(g.id)
 }
 
 const handleUnbind = async (glyphId: number, assetId: number) => {
@@ -269,7 +283,8 @@ const handleUnbind = async (glyphId: number, assetId: number) => {
   try {
     await unbindAssetFromGlyph(glyphId, assetId)
     ElMessage.success('Unbound successfully')
-    if (String(glyphId) === activeTab.value) {
+    const active = glyphs.value.find(g => g.glyphCode === activeTab.value)
+    if (active && active.id === glyphId) {
       await fetchAssets(glyphId)
     }
   } catch (e) {
@@ -280,7 +295,9 @@ const handleUnbind = async (glyphId: number, assetId: number) => {
 const onDisplayTypeChange = async (_v: DisplayType) => {
   // reset to first page when switching display type
   assetPage.value = 1
-  await fetchAssets(Number(activeTab.value))
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  if (!g) return
+  await fetchAssets(g.id)
 }
 
 const tabLabel = (g: IconGlyphVO) => {
@@ -350,10 +367,7 @@ const handleSubmitGlyph = async () => {
       }
     )
 
-    const glyphId = Number(activeTab.value)
-    if (!glyphId) return
-
-    const glyph = glyphs.value.find(g => g.id === glyphId)
+    const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
     if (!glyph || !glyph.glyphCode) {
       ElMessage.error('Missing glyphCode for current glyph, cannot build icon font.')
       return
@@ -388,7 +402,9 @@ const handleEdit = (item: IconGlyphAssetVO) => {
   editVisible.value = true
 }
 const onEditSaved = async () => {
-  await fetchAssets(Number(activeTab.value))
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  if (!g) return
+  await fetchAssets(g.id)
 }
 
 // ---------------- Create glyph ----------------
@@ -466,7 +482,9 @@ const handleBindSingle = async (assetId: number) => {
     binding.value = true
     await bindAssetsToGlyph(bindGlyphId.value,  assetId)
     bindVisible.value = false
-    await fetchAssets(Number(activeTab.value))
+    const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+    if (!g) return
+    await fetchAssets(g.id)
   } finally {
     binding.value = false
   }
@@ -494,7 +512,8 @@ const handleImport = async () => {
     await importAssetsToGlyph(importFromGlyphId.value, importTargetGlyphId.value)
     importVisible.value = false
     // refresh assets of target glyph (if it's the active tab)
-    if (String(importTargetGlyphId.value) === activeTab.value) {
+    const active = glyphs.value.find(g => g.glyphCode === activeTab.value)
+    if (active && active.id === importTargetGlyphId.value) {
       await fetchAssets(importTargetGlyphId.value)
     }
   } finally {

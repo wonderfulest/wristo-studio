@@ -143,7 +143,14 @@ const onDelete = async () => {
 }
 
 const onEditIcon = () => {
-  router.push({ path: '/icon-library' })
+  // Use glyphCode to open the corresponding tab in IconLibrary.
+  // For icon fonts, the glyphCode is encoded in the font family name.
+  router.push({
+    path: '/icon-library',
+    query: {
+      glyphCode: props.fontFamily,
+    },
+  })
 }
 </script>
 
