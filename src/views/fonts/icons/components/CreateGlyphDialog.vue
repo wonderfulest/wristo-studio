@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="model" title="Create Icon Font" width="460px">
-    <FontNamingBar ref="namingRef" />
+    <FontNamingBar ref="namingRef" type="icon"/>
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">Cancel</el-button>
       <el-button type="primary" :loading="loading" @click="onConfirm">Create</el-button>
@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import type { IconGlyphCreateDTO } from '@/api/wristo/iconGlyph'
-import FontNamingBar from '@/components/FontNamingBar.vue'
+import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 
 const props = defineProps<{
   modelValue: boolean

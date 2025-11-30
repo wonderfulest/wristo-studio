@@ -15,14 +15,24 @@
           <el-icon><CollectionTag /></el-icon>
         </el-tag> -->
       </div>
-      <button
-        v-if="fontId != null && !isSystem"
-        type="button"
-        class="font-delete"
-        @click.stop="onDelete"
-      >
-        <el-icon><Delete /></el-icon>
-      </button>
+      <div class="font-actions" v-if="!isSystem">
+        <button
+          v-if="isIcon"
+          type="button"
+          class="font-edit"
+          @click.stop="onEditIcon"
+        >
+          <el-icon><Edit /></el-icon>
+        </button>
+        <button
+          v-if="fontId != null"
+          type="button"
+          class="font-delete"
+          @click.stop="onDelete"
+        >
+          <el-icon><Delete /></el-icon>
+        </button>
+      </div>
     </div>
     <FontPreviewText
       :font-family="fontFamily"
@@ -40,10 +50,12 @@
 
 <script setup lang="ts">
 import { computed, h, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElTag, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
-import FontPreviewText from './FontPreviewText.vue'
+import { Edit, Delete } from '@element-plus/icons-vue'
+import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { removeMyFont } from '@/api/wristo/fonts'
+import { FontTypes } from '@/constants/fonts'
 
 const props = defineProps<{
   label?: string
@@ -60,6 +72,10 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'removed', id: number): void }>()
 
 const isReady = ref(false)
+
+const router = useRouter()
+
+const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
 
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
 
@@ -125,6 +141,10 @@ const onDelete = async () => {
     console.error('remove font failed', e)
   }
 }
+
+const onEditIcon = () => {
+  router.push({ path: '/icon-library' })
+}
 </script>
 
 <style scoped>
@@ -152,11 +172,24 @@ const onDelete = async () => {
   gap: 4px;
 }
 
+.font-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .font-delete {
-  margin-left: 8px;
   border: none;
   background: transparent;
   color: #f56c6c;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.font-edit {
+  border: none;
+  background: transparent;
+  color: #409eff;
   font-size: 12px;
   cursor: pointer;
 }

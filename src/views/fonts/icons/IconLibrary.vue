@@ -78,7 +78,7 @@
     />
 
     <el-dialog v-model="renameVisible" title="Rename Icon Font" width="460px">
-      <FontNamingBar ref="renameNamingRef" />
+      <FontNamingBar ref="renameNamingRef" type="icon"/>
       <template #footer>
         <el-button @click="renameVisible = false">Cancel</el-button>
         <el-button type="primary" :loading="renaming" @click="handleRenameConfirm">Save</el-button>
@@ -126,7 +126,7 @@ import EditSvgDialog from './components/EditSvgDialog.vue'
 import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
-import FontNamingBar from '@/components/FontNamingBar.vue'
+import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import {
   pageIconGlyphs,
   pageIconGlyphAssets,

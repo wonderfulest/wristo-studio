@@ -32,7 +32,7 @@ import type { DesignFontVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import { getDesignerUsageFontsPage } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
-import FontListItem from './FontListItem.vue'
+import FontListItem from '@/components/fonts/FontListItem.vue'
 
 const props = defineProps<{
   modelValue: string

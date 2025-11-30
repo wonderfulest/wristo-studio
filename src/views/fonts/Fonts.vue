@@ -70,7 +70,7 @@ import type { DesignFontVO } from '@/types/font'
 import FontImportDialog from '@/components/font-picker/FontImportDialog.vue'
 import FontsSearchPanel from './FontsSearchPanel.vue'
 import { getEnumOptions, type EnumOption } from '@/api/common'
-import FontListItem from '@/components/font-picker/FontListItem.vue'
+import FontListItem from '@/components/fonts/FontListItem.vue'
 
 // 状态
 const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])

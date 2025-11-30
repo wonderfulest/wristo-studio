@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import type { FontItem } from '@/types/font-picker'
-import FontListItem from './FontListItem.vue'
+import FontListItem from '@/components/fonts/FontListItem.vue'
 
 defineProps<{
   fonts: FontItem[]

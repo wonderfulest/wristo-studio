@@ -95,8 +95,7 @@ import { useMessageStore } from '@/stores/message'
 import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import { DesignFontVO } from '@/types/font'
-import FontPreviewText from './FontPreviewText.vue'
-import FontListItem from './FontListItem.vue'
+import FontListItem from '@/components/fonts/FontListItem.vue'
 
 const props = defineProps<{
   modelValue: string

@@ -25,6 +25,7 @@
         @keyup.enter="finishEditing"
       />
       <span class="naming-sep">-</span>
+      <!-- 不可编辑 -->
       <el-input
         v-model="usePart"
         size="small"
@@ -90,8 +91,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+
+const props = defineProps<{
+  type: 'number' | 'text' | 'icon'
+}>()
+
 const seriesPart = ref('')
-const usePart = ref('number')
+const usePart = ref(props.type || 'number')
 const stylePart = ref('mono')
 const variantPart = ref('regular')
 const editing = ref(false)
@@ -117,6 +123,13 @@ const namingPreview = computed(() => {
   const v = normalize(variantPart.value, 'regular')
   return `${s}-${u}-${st}-${v}`
 })
+
+watch(
+  () => props.type,
+  (val) => {
+    usePart.value = val || 'number'
+  }
+)
 
 // 校验：每一部分都不能以数字开头，且只能包含 [a-z0-9_]，非法输入时恢复到之前的值
 const makeNoDigitStartWatcher = (part: typeof seriesPart, label: string) => {
