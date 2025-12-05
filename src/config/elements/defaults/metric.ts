@@ -30,7 +30,7 @@ export const DEFAULT_WEATHER_CONFIG: WeatherElementConfig & EDITOR_ELEMENT = {
   originY: 'center',
   fill: '#000000',
   fontSize: 42,
-  fontFamily: 'jun',
+  fontFamily: 'wristo-icon',
 }
 
 export const DEFAULT_LABEL_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
@@ -54,7 +54,7 @@ export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
   icon: 'mdi:image-outline',
   label: 'Icon',
   eleType: 'icon',
-  iconFont: 'super-icons',
+  iconFont: 'wristo-icon',
   iconSize: 42,
   fontFamily: 'roboto-condensed-regular',
 }
@@ -70,5 +70,5 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   originY: 'center',
   fill: '#000000',
   fontSize: 42,
-  fontFamily: 'jun',
+  fontFamily: 'wristo-icon',
 }

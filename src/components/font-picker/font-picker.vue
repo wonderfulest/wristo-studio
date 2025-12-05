@@ -136,7 +136,6 @@ const ensureFontBySlug = async (slug: string, family: string) => {
     if (!url) {
       try {
         const sys = await getSystemFonts(undefined, userStore.userInfo?.id)
-        
         const hit = (sys.data || []).find((f: any) => f.slug === slug)
         url = hit?.ttfFile?.url || ''
       } catch {}

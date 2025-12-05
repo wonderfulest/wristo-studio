@@ -56,6 +56,7 @@ import { Edit, Delete } from '@element-plus/icons-vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { removeMyFont } from '@/api/wristo/fonts'
 import { FontTypes } from '@/constants/fonts'
+import { useFontStore } from '@/stores/fontStore'
 
 const props = defineProps<{
   label?: string
@@ -74,42 +75,37 @@ const emit = defineEmits<{ (e: 'removed', id: number): void }>()
 const isReady = ref(false)
 
 const router = useRouter()
+const fontStore = useFontStore()
 
 const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
 
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
 
-const loadFont = async (fontFamily: string | undefined) => {
-  console.log('[FontListItem] loadFont', fontFamily)
-  if (!fontFamily) {
+const loadFont = async (slug: string | undefined, url?: string) => {
+  console.log('[FontListItem] loadFont via store', slug, url)
+  if (!slug) {
     isReady.value = true
     return
   }
 
   isReady.value = false
   try {
-    // Use FontFaceSet API when available to wait for font load
-    const anyDoc = document as any
-    if (anyDoc.fonts && typeof anyDoc.fonts.load === 'function' && fontFamily) {
-      // use a generic font-size for measuring
-      await anyDoc.fonts.load(`16px "${fontFamily}"`)
-    }
+    await fontStore.loadFont(slug, url)
   } catch (e) {
-    // ignore font loading errors; fall back to showing item
-    console.error('font load check failed', e)
+    console.error('fontStore.loadFont failed', e)
   } finally {
     isReady.value = true
   }
 }
 
 onMounted(() => {
-  loadFont(props.fontFamily)
+  loadFont(props.fontFamily, props.fontUrl)
 })
 
 watch(
-  () => props.fontFamily,
-  (newFont) => {
-    loadFont(newFont)
+  () => [props.fontFamily, props.fontUrl],
+  ([newSlug, newUrl]) => {
+    loadFont(newSlug, newUrl)
   }
 )
 

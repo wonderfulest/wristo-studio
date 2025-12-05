@@ -12,7 +12,7 @@
             <span class="meta">Style: {{ glyph.style || '-' }}</span>
             <span class="meta">Version: {{ glyph.version ?? '-' }}</span>
           </div>
-          <div class="actions" v-if="glyph.isDefault === 0">
+          <div class="actions" v-if="glyph.isDefault === 0"> 
             <el-button size="small" @click="emit('import', glyph)">Import From Font</el-button>
             <el-button type="primary" size="small" @click="emit('submitGlyph')">Submit Font</el-button>
           </div>

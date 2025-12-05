@@ -9,7 +9,7 @@ export const DEFAULT_BLUETOOTH_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT =
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Bluetooth',
   metricSymbol: DEFAULT_METRIC_SYMBOL,
-  fontFamily: 'super-icons',
+  fontFamily: 'wristo-icon',
 })
 
 export const DEFAULT_DISTURB_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
@@ -18,7 +18,7 @@ export const DEFAULT_DISTURB_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = O
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Disturb',
   metricSymbol: DEFAULT_METRIC_SYMBOL,
-  fontFamily: 'super-icons',
+  fontFamily: 'wristo-icon',
 })
 
 export const DEFAULT_ALARMS_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
@@ -27,7 +27,7 @@ export const DEFAULT_ALARMS_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Ob
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Alarms',
   metricSymbol: DEFAULT_METRIC_SYMBOL,
-  fontFamily: 'super-icons',
+  fontFamily: 'wristo-icon',
 })
 
 export const DEFAULT_NOTIFICATION_CONFIG: IndicatorElementConfig & EDITOR_ELEMENT = Object.assign({
@@ -36,6 +36,6 @@ export const DEFAULT_NOTIFICATION_CONFIG: IndicatorElementConfig & EDITOR_ELEMEN
 }, DEFAULT_TEXT_CONFIG, {
   label: 'Notification',
   metricSymbol: DEFAULT_METRIC_SYMBOL,
-  fontFamily: 'super-icons',
+  fontFamily: 'wristo-icon',
 })
 
