@@ -120,7 +120,19 @@ const updateFontSize = () => {
 
 const updateTextColor = () => {
   if (!props.element || !baseStore.canvas) return
+  // 对于普通文本，直接设置 fill 即可
   props.element.set('fill', textColor.value)
+
+  // 对于径向文本（radialText），实际渲染往往是一个由多个子对象组成的组合
+  // 需要同时更新子对象的 fill，颜色才会生效
+  if (props.element.eleType === 'radialText') {
+    const group = props.element
+    if (Array.isArray(group._objects)) {
+      group._objects.forEach((child) => {
+        child.set && child.set('fill', textColor.value)
+      })
+    }
+  }
   baseStore.canvas.renderAll()
 }
 
