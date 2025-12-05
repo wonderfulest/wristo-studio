@@ -102,8 +102,8 @@ const stylePart = ref('mono')
 const variantPart = ref('regular')
 const editing = ref(false)
 
-const styleOptions = ['mono', 'round', 'sharp', 'segment']
-const variantOptions = ['regular', 'outline', 'bold', 'light']
+const styleOptions = ['mono', 'round', 'italic', 'sharp', 'segment', 'hand']
+const variantOptions = ['light', 'regular', 'semi-bold', 'bold', 'outline']
 
 const normalize = (value: string, fallback: string) => {
   // 只做基础规范：trim + 小写；合法性由 watcher 保证
@@ -131,16 +131,16 @@ watch(
   }
 )
 
-// 校验：每一部分都不能以数字开头，且只能包含 [a-z0-9_]，非法输入时恢复到之前的值
+// 校验：每一部分都不能以数字开头，且只能包含 [a-z0-9_-]，非法输入时恢复到之前的值
 const makeNoDigitStartWatcher = (part: typeof seriesPart, label: string) => {
   watch(part, (val, oldVal) => {
     if (val == null) return
     const current = String(val).trim()
     const lower = current.toLowerCase()
     const startsWithDigit = /^[0-9]/.test(lower)
-    const hasInvalidChar = /[^a-z0-9_]/.test(lower)
+    const hasInvalidChar = /[^a-z0-9_-]/.test(lower)
     if (startsWithDigit || hasInvalidChar) {
-      ElMessage.error(`${label} 只能使用小写字母、数字和下划线，且不能以数字开头。`)
+      ElMessage.error(`${label} 只能使用小写字母、数字、下划线和中划线，且不能以数字开头。`)
       part.value = oldVal
     }
   })

@@ -17,7 +17,7 @@
           target="_blank"
           rel="noopener noreferrer"
         >
-          design wiki
+          Design Wiki
         </a>.
       </p>
 
