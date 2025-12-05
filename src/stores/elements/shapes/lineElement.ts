@@ -64,7 +64,6 @@ export const useLineElementStore = defineStore('lineElement', {
       }
 
       const line = new Line([x1, y1, x2, y2], lineOptions as any)
-
       // 创建两个端点句柄（Circle）
       const startHandle = new Circle({
         left: x1,
@@ -114,7 +113,6 @@ export const useLineElementStore = defineStore('lineElement', {
           x2,
           y2,
         })
-
         canvas.requestRenderAll()
       }
 
@@ -179,13 +177,31 @@ export const useLineElementStore = defineStore('lineElement', {
         canvas.requestRenderAll()
       })
 
-      // 当整条线被整体移动时，同步端点句柄位置
+      // 当整条线被整体移动时，同步端点句柄位置（根据 left/top 的增量移动端点）
+      let lastLeft = (line as any).left ?? 0
+      let lastTop = (line as any).top ?? 0
       line.on('moving', () => {
-        startHandle.set({ left: line.x1, top: line.y1 })
-        startHandle.setCoords()
+        const currentLeft = (line as any).left ?? 0
+        const currentTop = (line as any).top ?? 0
+        const dx = currentLeft - lastLeft
+        const dy = currentTop - lastTop
 
-        endHandle.set({ left: line.x2, top: line.y2 })
-        endHandle.setCoords()
+        if (dx !== 0 || dy !== 0) {
+          startHandle.set({
+            left: (startHandle.left ?? 0) + dx,
+            top: (startHandle.top ?? 0) + dy,
+          })
+          startHandle.setCoords()
+
+          endHandle.set({
+            left: (endHandle.left ?? 0) + dx,
+            top: (endHandle.top ?? 0) + dy,
+          })
+          endHandle.setCoords()
+        }
+
+        lastLeft = currentLeft
+        lastTop = currentTop
 
         canvas.requestRenderAll()
       })
@@ -276,6 +292,33 @@ export const useLineElementStore = defineStore('lineElement', {
         strokeLineJoin: config.strokeLineJoin,
         opacity: config.opacity,
       }
+    },
+
+    /**
+     * 来自图层面板的选中事件：高亮被选中直线的端点
+     */
+    handleSelectedFromLayer(layer: any) {
+      const canvas = this.baseStore.canvas
+      if (!canvas) return
+
+      const objects = (canvas.getObjects ? canvas.getObjects() : []) as any[]
+      const selectedId = layer && layer.id
+
+      objects.forEach((obj) => {
+        if (obj.eleType !== 'line') return
+        const startHandle = (obj as any)._startHandle
+        const endHandle = (obj as any)._endHandle
+        const isSelected = selectedId && obj.id === selectedId
+        const opacity = isSelected ? 1 : 0
+        if (startHandle) {
+          startHandle.set('opacity', opacity)
+        }
+        if (endHandle) {
+          endHandle.set('opacity', opacity)
+        }
+      })
+
+      canvas.requestRenderAll?.()
     },
   },
 })

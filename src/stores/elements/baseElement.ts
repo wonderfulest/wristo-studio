@@ -71,19 +71,52 @@ export const useBaseElementStore = defineStore('baseElement', {
       for (const element of selectedElements) {
         const currentX = element.left
         const currentY = element.top
+
+        let dx = 0
+        let dy = 0
+
         switch (direction) {
           case 'left':
+            dx = -step
             this.updateElement({ ...element, id: element.id, x: currentX - step })
             break
           case 'right':
+            dx = step
             this.updateElement({ ...element, id: element.id, x: currentX + step })
             break
           case 'up':
+            dy = -step
             this.updateElement({ ...element, id: element.id, y: currentY - step })
             break
           case 'down':
+            dy = step
             this.updateElement({ ...element, id: element.id, y: currentY + step })
             break
+        }
+
+        // 如果是直线元素，则让端点句柄一起移动
+        if (element.eleType === 'line' && (dx !== 0 || dy !== 0)) {
+          const startHandle = (element as any)._startHandle
+          const endHandle = (element as any)._endHandle
+          const canvas = this.baseStore.canvas as any
+
+          if (startHandle) {
+            startHandle.set({
+              left: (startHandle.left ?? 0) + dx,
+              top: (startHandle.top ?? 0) + dy,
+            })
+            startHandle.setCoords?.()
+          }
+
+          if (endHandle) {
+            endHandle.set({
+              left: (endHandle.left ?? 0) + dx,
+              top: (endHandle.top ?? 0) + dy,
+            })
+            endHandle.setCoords?.()
+          }
+
+          canvas?.requestRenderAll?.()
         }
       }
     },
