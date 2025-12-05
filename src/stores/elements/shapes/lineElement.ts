@@ -3,19 +3,18 @@ import { useBaseStore } from '../../baseStore'
 import { useLayerStore } from '../../layerStore'
 import { useBaseElementStore } from '../baseElement'
 import { nanoid } from 'nanoid'
-import { Line } from 'fabric'
+import { Line, Circle } from 'fabric'
 
 interface LineOptions {
   stroke: string
   strokeWidth: number
   opacity: number
   x1: number
-  y1: number 
+  y1: number
   x2: number
   y2: number
   strokeLineCap?: 'butt' | 'round' | 'square'
   strokeLineJoin?: 'bevel' | 'round' | 'miter'
-  constrainInside?: boolean
 }
 
 type LineUpdateOptions = Partial<LineOptions>
@@ -39,149 +38,208 @@ export const useLineElementStore = defineStore('lineElement', {
         throw new Error('画布未初始化，无法添加直线元素')
       }
 
-      try {
-        console.log('add line options', options)
-        const stroke = options.stroke
-        const strokeWidth = Number(options.strokeWidth)
+      const canvas = this.baseStore.canvas
 
-        // 默认值改为“居中水平线”，仅当未传入对应坐标时使用默认
-        const canvasWidth = Number(this.baseStore.canvas?.getWidth?.() ?? this.baseStore.WATCH_SIZE)
-        const canvasHeight = Number(this.baseStore.canvas?.getHeight?.() ?? this.baseStore.WATCH_SIZE)
-        const centerX = canvasWidth / 2
-        const centerY = canvasHeight / 2
-        let x1 = Math.round(options.x1)
-        let y1 = Math.round(options.y1)
-        let x2 = Math.round(options.x2)
-        let y2 = Math.round(options.y2)
+      const stroke = options.stroke
+      const strokeWidth = Number(options.strokeWidth)
 
-        // Constrain endpoints inside the circular clipPath by default to avoid being clipped
-        const shouldConstrain = options.constrainInside !== false
-        if (shouldConstrain) {
-          const circle: any = this.baseStore.watchFaceCircle
-          const cx = Number(circle?.left ?? centerX)
-          const cy = Number(circle?.top ?? centerY)
-          const r = Number(circle?.radius ?? Math.min(canvasWidth, canvasHeight) / 2)
-          const margin = Math.max(1, strokeWidth) // keep a small margin inside the circle
+      let x1 = Math.round(options.x1)
+      let y1 = Math.round(options.y1)
+      let x2 = Math.round(options.x2)
+      let y2 = Math.round(options.y2)
 
-          const clampToCircle = (px: number, py: number) => {
-            const dx = px - cx
-            const dy = py - cy
-            const dist = Math.sqrt(dx * dx + dy * dy)
-            const maxDist = Math.max(0, r - margin)
-            if (dist === 0) return { x: cx, y: cy }
-            if (dist <= maxDist) return { x: px, y: py }
-            const scale = maxDist / dist
-            return { x: cx + dx * scale, y: cy + dy * scale }
-          }
-
-          const p1 = clampToCircle(x1, y1)
-          const p2 = clampToCircle(x2, y2)
-          x1 = p1.x
-          y1 = p1.y
-          x2 = p2.x
-          y2 = p2.y
-        }
-
-        const lineOptions: any = {
-          id: nanoid(),
-          eleType: 'line',
-          stroke: stroke,
-          strokeWidth: strokeWidth,
-          strokeLineCap: options.strokeLineCap || 'butt',
-          strokeLineJoin: options.strokeLineJoin || 'bevel',
-          strokeUniform: true,
-          visible: true,
-          selectable: true,
-          hasControls: false,
-          hasBorders: true,
-          lockScalingFlip: true,
-        }
-
-        console.log('draw line', [x1, y1, x2, y2], lineOptions)
-        const line = new Line([x1, y1, x2, y2], lineOptions as any)
-
-        this.baseStore.canvas.add(line as any)
-        this.layerStore.addLayer(line as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(line as any)
-
-        return line
-      } catch (error) {
-        console.error('创建直线元素失败:', error)
-        throw error
+      const lineOptions: any = {
+        id: nanoid(),
+        eleType: 'line',
+        stroke,
+        strokeWidth,
+        strokeLineCap: options.strokeLineCap || 'butt',
+        strokeLineJoin: options.strokeLineJoin || 'bevel',
+        strokeUniform: true,
+        opacity: options.opacity,
+        visible: true,
+        selectable: false, // 仅支持拖动端点，不拖整条线
+        hasControls: false,
+        hasBorders: true,
       }
+
+      const line = new Line([x1, y1, x2, y2], lineOptions as any)
+
+      // 创建两个端点句柄（Circle）
+      const startHandle = new Circle({
+        left: x1,
+        top: y1,
+        radius: 6,
+        fill: 'transparent',
+        stroke,
+        strokeWidth,
+        originX: 'center',
+        originY: 'center',
+        opacity: 0, // 初始隐藏
+        selectable: true,
+        hasBorders: false,
+        hasControls: false,
+        hoverCursor: 'pointer',
+      }) as any
+
+      const endHandle = new Circle({
+        left: x2,
+        top: y2,
+        radius: 6,
+        fill: 'transparent',
+        stroke,
+        strokeWidth,
+        originX: 'center',
+        originY: 'center',
+        opacity: 0, // 初始隐藏
+        selectable: true,
+        hasBorders: false,
+        hasControls: false,
+        hoverCursor: 'pointer',
+      }) as any
+
+      // 关联到 line，便于后续通过 updateElement 同步
+      ;(line as any)._startHandle = startHandle
+      ;(line as any)._endHandle = endHandle
+
+      const updateLineFromHandles = () => {
+        x1 = startHandle.left ?? x1
+        y1 = startHandle.top ?? y1
+        x2 = endHandle.left ?? x2
+        y2 = endHandle.top ?? y2
+
+        line.set({
+          x1,
+          y1,
+          x2,
+          y2,
+        })
+
+        canvas.requestRenderAll()
+      }
+
+      // 端点 hover 显示 / 离开隐藏
+      startHandle.on('mouseover', () => {
+        startHandle.set('opacity', 1)
+        canvas.requestRenderAll()
+      })
+
+      startHandle.on('mouseout', () => {
+        // 如果当前直线是选中状态，则保持端点可见
+        const actives = canvas.getActiveObjects ? canvas.getActiveObjects() : []
+        const isActive = Array.isArray(actives) && actives.includes(line as any)
+        if (!isActive) {
+          startHandle.set('opacity', 0)
+          canvas.requestRenderAll()
+        }
+      })
+
+      endHandle.on('mouseover', () => {
+        endHandle.set('opacity', 1)
+        canvas.requestRenderAll()
+      })
+
+      endHandle.on('mouseout', () => {
+        // 如果当前直线是选中状态，则保持端点可见
+        const actives = canvas.getActiveObjects ? canvas.getActiveObjects() : []
+        const isActive = Array.isArray(actives) && actives.includes(line as any)
+        if (!isActive) {
+          endHandle.set('opacity', 0)
+          canvas.requestRenderAll()
+        }
+      })
+
+      // 端点拖拽逻辑
+      startHandle.on('moving', () => {
+        // 拖拽过程中保持可见
+        startHandle.set('opacity', 1)
+        startHandle.set({
+          left: Math.max(0, Math.min(startHandle.left ?? 0, canvas.getWidth() ?? 0)),
+          top: Math.max(0, Math.min(startHandle.top ?? 0, canvas.getHeight() ?? 0)),
+        })
+        updateLineFromHandles()
+      })
+
+      endHandle.on('moving', () => {
+        // 拖拽过程中保持可见
+        endHandle.set('opacity', 1)
+        endHandle.set({
+          left: Math.max(0, Math.min(endHandle.left ?? 0, canvas.getWidth() ?? 0)),
+          top: Math.max(0, Math.min(endHandle.top ?? 0, canvas.getHeight() ?? 0)),
+        })
+        updateLineFromHandles()
+      })
+
+      // 拖拽结束后，如果鼠标离开端点区域，交给 mouseout 事件隐藏
+      startHandle.on('mouseup', () => {
+        canvas.requestRenderAll()
+      })
+
+      endHandle.on('mouseup', () => {
+        canvas.requestRenderAll()
+      })
+
+      // 当整条线被整体移动时，同步端点句柄位置
+      line.on('moving', () => {
+        startHandle.set({ left: line.x1, top: line.y1 })
+        startHandle.setCoords()
+
+        endHandle.set({ left: line.x2, top: line.y2 })
+        endHandle.setCoords()
+
+        canvas.requestRenderAll()
+      })
+
+      canvas.add(line as any, startHandle, endHandle)
+      this.layerStore.addLayer(line as any)
+      canvas.requestRenderAll()
+      canvas.setActiveObject(line as any)
+
+      return line
     },
 
+    /**
+     * 更新直线属性（简化版）
+     */
     updateElement(element: any, options: LineUpdateOptions = {}) {
       if (!element) return
 
-      // 基础样式
       if (options.stroke !== undefined) element.set('stroke', options.stroke)
-      if (options.strokeWidth !== undefined) element.set('strokeWidth', Number(options.strokeWidth))
+      if (options.strokeWidth !== undefined)
+        element.set('strokeWidth', Number(options.strokeWidth))
       if (options.opacity !== undefined) element.set('opacity', Number(options.opacity))
 
-      // 端点坐标
       if (options.x1 !== undefined) element.set('x1', Math.round(Number(options.x1)))
       if (options.y1 !== undefined) element.set('y1', Math.round(Number(options.y1)))
       if (options.x2 !== undefined) element.set('x2', Math.round(Number(options.x2)))
       if (options.y2 !== undefined) element.set('y2', Math.round(Number(options.y2)))
 
-      // 约束到圆形裁剪内（默认开启）以避免被裁剪
-      const shouldConstrain = options.constrainInside !== false
-      if (shouldConstrain) {
-        const canvasWidth = Number(this.baseStore.canvas?.getWidth?.() ?? this.baseStore.WATCH_SIZE)
-        const canvasHeight = Number(this.baseStore.canvas?.getHeight?.() ?? this.baseStore.WATCH_SIZE)
-        const centerX = canvasWidth / 2
-        const centerY = canvasHeight / 2
-        const circle: any = this.baseStore.watchFaceCircle
-        const cx = Number(circle?.left ?? centerX)
-        const cy = Number(circle?.top ?? centerY)
-        const r = Number(circle?.radius ?? Math.min(canvasWidth, canvasHeight) / 2)
-        const margin = Math.max(1, Number(element.strokeWidth) || 1)
-
-        const clampToCircle = (px: number, py: number) => {
-          const dx = px - cx
-          const dy = py - cy
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          const maxDist = Math.max(0, r - margin)
-          if (dist === 0) return { x: cx, y: cy }
-          if (dist <= maxDist) return { x: px, y: py }
-          const scale = maxDist / dist
-          return { x: cx + dx * scale, y: cy + dy * scale }
-        }
-
-        const p1 = clampToCircle(Number(element.x1), Number(element.y1))
-        const p2 = clampToCircle(Number(element.x2), Number(element.y2))
-        element.set({ x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y })
-      }
-
-      if (options.strokeLineCap !== undefined) {
+      if (options.strokeLineCap !== undefined)
         element.set('strokeLineCap', options.strokeLineCap)
-      }
-
-      if (options.strokeLineJoin !== undefined) {
+      if (options.strokeLineJoin !== undefined)
         element.set('strokeLineJoin', options.strokeLineJoin)
+
+      // 同步端点句柄位置（如果存在）
+      const startHandle = (element as any)._startHandle
+      const endHandle = (element as any)._endHandle
+
+      if (startHandle) {
+        startHandle.set({ left: element.x1, top: element.y1 })
+        startHandle.setCoords()
       }
 
-
-      element.initialConfig = {
-        stroke: element.stroke,
-        strokeWidth: element.strokeWidth,
-        opacity: element.opacity,
-        x1: element.x1,
-        y1: element.y1,
-        x2: element.x2,
-        y2: element.y2,
-        strokeLineCap: element.strokeLineCap,
-        strokeLineJoin: element.strokeLineJoin,
+      if (endHandle) {
+        endHandle.set({ left: element.x2, top: element.y2 })
+        endHandle.setCoords()
       }
 
       element.setCoords()
-      element.dirty = true
-      // 使用 requestRenderAll 提升性能，避免频繁完整重绘
       this.baseStore.canvas?.requestRenderAll()
     },
 
+    /**
+     * 编码
+     */
     encodeConfig(element: any) {
       if (!element) {
         throw new Error('无效的元素')
@@ -190,11 +248,6 @@ export const useLineElementStore = defineStore('lineElement', {
       return {
         eleType: 'line',
         id: element.id,
-        // 无用属性
-        left: Math.round(element.left),
-        top: Math.round(element.top),
-        originX: element.originX,
-        originY: element.originY,
         x1: element.x1,
         y1: element.y1,
         x2: element.x2,
@@ -207,6 +260,9 @@ export const useLineElementStore = defineStore('lineElement', {
       }
     },
 
+    /**
+     * 解码
+     */
     decodeConfig(config: any) {
       return {
         eleType: 'line',

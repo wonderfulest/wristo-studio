@@ -118,7 +118,7 @@ export function useKeyboardShortcuts(): void {
       if (isInEditor()) baseStore.changeFontSize(-1)
     })
 
-    // 绑定复制粘贴快捷键
+    // 绑定复制快捷键
     Mousetrap.bind(['command+c', 'ctrl+c'], () => {
       if (isInEditor()) {
         baseStore.copySelectedElements()
@@ -126,6 +126,7 @@ export function useKeyboardShortcuts(): void {
       }
     })
 
+    // 粘贴
     Mousetrap.bind(['command+v', 'ctrl+v'], () => {
       if (isInEditor()) {
         baseStore.pasteElements()

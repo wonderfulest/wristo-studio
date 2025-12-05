@@ -43,6 +43,7 @@ import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
+import { useLineElementStore } from '@/stores/elements/shapes/lineElement'
 import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -50,6 +51,7 @@ import { debug } from '@/utils/logger'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
+const lineElementStore = useLineElementStore()
 
 // no store-based selection syncing; rely on Fabric object's `active` flag
 
@@ -149,6 +151,8 @@ const selectLayer = async (layer: MinimalFabricLike): Promise<void> => {
     debug('LayerPanel', 'after setActiveObject', { activeId: current?.id })
   }
   emitter.emit('refresh-element-settings', {})
+  // 通知各元素 store，图层被选中（用于高亮直线端点等效果）
+  lineElementStore.handleSelectedFromLayer(layer)
   baseStore.canvas?.renderAll?.()
   debouncedUpdateElements()
 }

@@ -660,6 +660,7 @@ export const useBaseStore = defineStore('baseStore', {
       try {
         // 遍历每个元素
         for (const element of objects) {
+          if (!element.eleType) continue
           config.orderIds.push(element.id || 'tianchong-' + nanoid())
           if (element.eleType === 'background-image') continue
           if (element.eleType === 'global') continue

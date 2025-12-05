@@ -5,6 +5,7 @@ import { getFontSizeByStep } from '@/config/settings'
 import { ActiveSelection } from 'fabric'
 import { nanoid } from 'nanoid'
 import emitter from '@/utils/eventBus'
+import { ElMessage } from 'element-plus'
 
 // Minimal typings to keep flexibility with Fabric objects
 interface ElementUpdate {
@@ -94,6 +95,11 @@ export const useBaseElementStore = defineStore('baseElement', {
       if (!activeObject) {
         return
       }
+      // 不支持 Line 元素的复制
+      if (activeObject.eleType === 'line') {
+        ElMessage?.warning?.('直线元素不支持复制，请使用新增按钮创建新的直线')
+        return
+      }
       const clonedObject = await activeObject.clone()
       this._clipboard = clonedObject
       // 存储到剪贴板
@@ -105,6 +111,10 @@ export const useBaseElementStore = defineStore('baseElement', {
       const canvas: any = this.baseStore.canvas
       if (!canvas) return
       if (!this._clipboard) return
+      // 不支持 Line 元素的粘贴
+      if (this._clipboard.eleType === 'line') {
+        return
+      }
       // clone again, so you can do multiple copies.
       const clonedObj: any = await this._clipboard.clone()
       // 清除旧选择

@@ -43,7 +43,7 @@ const sampleText = computed(() => {
     return iconPreviewText
   }
   if (props.type === FontTypes.NUMBER_FONT) {
-    return '0123456789'
+    return '0123456789:'
   }
   return '12:34 AM 72°F & Sunny 0123456789'
 })
