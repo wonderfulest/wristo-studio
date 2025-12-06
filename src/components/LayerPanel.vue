@@ -47,7 +47,6 @@ import { useLineElementStore } from '@/stores/elements/shapes/lineElement'
 import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
-import { debug } from '@/utils/logger'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -78,7 +77,6 @@ const summarizeObjects = (objs: MinimalFabricLike[]): Array<{ id?: string; eleTy
 // batch update from canvas
 const batchUpdate = (): void => {
   if (!baseStore.canvas) {
-    debug('LayerPanel', 'batchUpdate skipped: no canvas')
     return
   }
   requestAnimationFrame(() => {
@@ -89,12 +87,6 @@ const batchUpdate = (): void => {
     elements.value = [...all]
     activeElements.value = [...actives]
     selectedIds.value = actives.map((o) => o.id).filter((id): id is string => typeof id === 'string')
-    debug('LayerPanel', 'batchUpdate', {
-      total: all.length,
-      actives: actives.length,
-      activeIds: actives.map((o) => o.id),
-      firstFew: summarizeObjects(all.slice(0, 5))
-    })
     baseStore.canvas!.renderAll?.()
   })
 }
@@ -109,7 +101,6 @@ const debouncedUpdateElements = debounce(updateElements, 100)
 watch(activeElements, (newVal) => {
   const ids = (newVal || []).map((o) => o.id).filter((id): id is string => typeof id === 'string')
   selectedIds.value = ids
-  debug('LayerPanel', 'watch activeElements -> selectedIds', { ids })
 })
 
 // listen for element property changes to trigger re-render
@@ -127,7 +118,6 @@ const setupElementListeners = (): void => {
           dataProperty: e.target.dataProperty,
           goalProperty: e.target.goalProperty
         }
-        debug('LayerPanel', 'element modified -> re-render', { id: (element as MinimalFabricLike).id })
         baseStore.canvas?.renderAll?.()
       }
     })
@@ -136,10 +126,8 @@ const setupElementListeners = (): void => {
 
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: MinimalFabricLike): Promise<void> => {
-  debug('LayerPanel', 'selectLayer click', { id: layer.id, eleType: layer.eleType })
   // do not allow selecting locked layers from panel
   if ((layer as { locked?: boolean }).locked) {
-    debug('LayerPanel', 'skip select: layer is locked', { id: layer.id })
     return
   }
   baseStore.canvas?.discardActiveObject?.()
@@ -147,8 +135,7 @@ const selectLayer = async (layer: MinimalFabricLike): Promise<void> => {
     // open global settings if needed
   } else if (baseStore.canvas && layer) {
     baseStore.canvas.setActiveObject?.(layer as unknown as object)
-    const current = baseStore.canvas.getActiveObject?.() as MinimalFabricLike | undefined
-    debug('LayerPanel', 'after setActiveObject', { activeId: current?.id })
+    baseStore.canvas.getActiveObject?.() as MinimalFabricLike | undefined
   }
   emitter.emit('refresh-element-settings', {})
   // 通知各元素 store，图层被选中（用于高亮直线端点等效果）
@@ -164,35 +151,21 @@ const isActived = (layerId: string | undefined): boolean => {
   if (layer && layer.type === 'global') return false
   if (layer && layer.locked) return false
   const result = selectedIds.value.includes(layerId)
-  if (result) {
-    debug('LayerPanel', 'isActived -> true', { id: layerId })
-  }
   return result
 }
 
 const toggleVisibility = (layer: MinimalFabricLike): void => {
   if (!layer.id) return
-  debug('LayerPanel', 'toggleVisibility: before', { id: layer.id, prev: (layer as { visible?: boolean }).visible })
   layerStore.toggleLayerVisibility(layer.id)
   baseStore.canvas?.renderAll?.()
   debouncedUpdateElements()
-  debug('LayerPanel', 'toggleVisibility: after', { id: layer.id })
 }
 
 const toggleLock = (layer: MinimalFabricLike): void => {
   if (!layer.id) return
-  debug('LayerPanel', 'toggleLock: before', { id: layer.id, prev: (layer as { locked?: boolean }).locked })
   layerStore.toggleLayerLock(layer.id)
   // After store syncs Fabric object, refresh list so class/background/icon update
   debouncedUpdateElements()
-  // print fabric object's latest flags
-  const obj = (elements.value.find(o => o.id === layer.id) as MinimalFabricLike | undefined) || layer
-  debug('LayerPanel', 'toggleLock: after', {
-    id: layer.id,
-    nowLocked: (obj as { locked?: boolean }).locked,
-    selectable: (obj as { selectable?: boolean }).selectable,
-    evented: (obj as { evented?: boolean }).evented
-  })
 }
 
 // drag end reorders canvas stacking
@@ -277,14 +250,12 @@ const getElementIcon = (eleType: string): string => {
 const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {
   // locked layers: force gray background
   if (layer.locked) {
-    debug('LayerPanel', 'background -> locked gray', { id: layer.id })
     return { backgroundColor: '#555555' }
   }
   const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar' || layer.eleType === 'goalSegmentBar'
   const id = layer.dataProperty || layer.goalProperty
   if (hasTypeMatch && id) {
     const color = generateColorFromId(String(id))
-    debug('LayerPanel', 'background -> data/goal color', { id: layer.id, color })
     return { backgroundColor: color }
   }
   return {}
@@ -304,7 +275,6 @@ const generateColorFromId = (id: string): string => {
 onMounted((): void => {
   debouncedUpdateElements()
   emitter.on('refresh-canvas', () => {
-    debug('LayerPanel', 'on refresh-canvas')
     debouncedUpdateElements()
   })
   window.addEventListener('keydown', handleKeyDown)
@@ -315,17 +285,12 @@ onMounted((): void => {
     const canvas = c as { on?: Function; off?: Function }
     if (!canvas?.on) return
     const handleCreated = (): void => {
-      const ids = ((baseStore.canvas?.getActiveObjects?.() as MinimalFabricLike[] | undefined) || []).map((o) => o.id)
-      debug('LayerPanel', 'event selection:created', { ids })
       debouncedUpdateElements()
     }
     const handleUpdated = (): void => {
-      const ids = ((baseStore.canvas?.getActiveObjects?.() as MinimalFabricLike[] | undefined) || []).map((o) => o.id)
-      debug('LayerPanel', 'event selection:updated', { ids })
       debouncedUpdateElements()
     }
     const handleCleared = (): void => {
-      debug('LayerPanel', 'event selection:cleared')
       debouncedUpdateElements()
     }
     canvas.on?.('selection:created', handleCreated)
@@ -340,7 +305,6 @@ onMounted((): void => {
   }
 
   if (baseStore.canvas) {
-    debug('LayerPanel', 'bind selection handlers on mounted')
     bindSelectionHandlers(baseStore.canvas)
   }
   // watch for late initialization or canvas replacement
@@ -349,13 +313,11 @@ onMounted((): void => {
     (newCanvas, _oldCanvas) => {
       // cleanup old
       if (selectionCleanup.value) {
-        debug('LayerPanel', 'cleanup previous selection handlers')
         selectionCleanup.value()
         selectionCleanup.value = null
       }
       // bind new
       if (newCanvas) {
-        debug('LayerPanel', 'bind selection handlers on new canvas')
         bindSelectionHandlers(newCanvas)
         debouncedUpdateElements()
       }

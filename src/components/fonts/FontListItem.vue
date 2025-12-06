@@ -82,7 +82,6 @@ const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectio
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
 
 const loadFont = async (slug: string | undefined, url?: string) => {
-  console.log('[FontListItem] loadFont via store', slug, url)
   if (!slug) {
     isReady.value = true
     return

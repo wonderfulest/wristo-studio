@@ -26,7 +26,7 @@
     </div>
     <div class="setting-item">
       <label>字体颜色</label>
-      <ColorPicker v-model="textColor" @change="updateTextColor" />
+      <ColorPicker v-model="fill" @change="updateTextColor" />
     </div>
     <div class="setting-item">
       <label>字体</label>
@@ -48,15 +48,15 @@
       <label>方向</label>
       <select v-model="direction" @change="updateDirection">
         <option value="clockwise">顺时针</option>
-        <option value="counterClockwise">逆时针</option>
+        <option value="counterClockwise" disabled>逆时针</option>
       </select>
     </div>
     <div class="setting-item">
       <label>对齐方式</label>
       <select v-model="justification" @change="updateJustification">
-        <option value="left">左对齐</option>
+        <option value="left" disabled>左对齐</option>
         <option value="center">居中</option>
-        <option value="right">右对齐</option>
+        <option value="right" disabled>右对齐</option>
       </select>
     </div>
   </div>
@@ -84,13 +84,17 @@ const baseStore = useBaseStore()
 const fontStore = useFontStore()
 
 const fontSize = ref(props.element?.fontSize || 36)
-const textColor = ref(props.element?.fill || '#FFFFFF')
-const fontFamily = ref(props.element?.fontFamily)
+const fill = ref(props.element?.fill || '#FFFFFF')
+const fontFamily = ref(props.element?.fontFamily || '')
 const originX = ref(props.element?.originX || 'center')
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
 const textTemplate = ref(props.element?.text || '')
-const angle = ref(typeof props.element?.angle === 'number' ? props.element.angle : 0)
+const angle = ref(
+  typeof props.element?.startAngle === 'number'
+    ? props.element.startAngle
+    : (props.element?.radialMeta?.startAngle ?? 0)
+)
 const radius = ref(typeof props.element?.radius === 'number' ? props.element.radius : 100)
 const direction = ref(props.element?.direction || 'clockwise')
 const justification = ref(props.element?.justification || 'center')
@@ -101,6 +105,15 @@ watch(
     if (!obj) return
   },
   { deep: true }
+)
+
+watch(
+  () => props.element?.fontFamily,
+  (newFont) => {
+    if (typeof newFont === 'string') {
+      fontFamily.value = newFont
+    }
+  }
 )
 
 onMounted(async () => {
@@ -114,14 +127,32 @@ onMounted(async () => {
 
 const updateFontSize = () => {
   if (!props.element || !baseStore.canvas) return
+  // 更新 group 本身的字体大小
   props.element.set('fontSize', fontSize.value)
+
+  // 同步更新环形文字中每个字符的字体大小
+  if (Array.isArray(props.element._objects)) {
+    props.element._objects.forEach((child) => {
+      child.set && child.set('fontSize', fontSize.value)
+    })
+  }
+
+  // 更新元数据中的 fontSize，供 updateRadialLayout 使用
+  if (props.element.radialMeta) {
+    props.element.radialMeta.fontSize = fontSize.value
+  }
+
+  // 重新布局环形文字
+  if (typeof props.element.updateRadialLayout === 'function') {
+    props.element.updateRadialLayout()
+  }
   baseStore.canvas.renderAll()
 }
 
 const updateTextColor = () => {
   if (!props.element || !baseStore.canvas) return
   // 对于普通文本，直接设置 fill 即可
-  props.element.set('fill', textColor.value)
+  props.element.set('fill', fill.value)
 
   // 对于径向文本（radialText），实际渲染往往是一个由多个子对象组成的组合
   // 需要同时更新子对象的 fill，颜色才会生效
@@ -129,7 +160,7 @@ const updateTextColor = () => {
     const group = props.element
     if (Array.isArray(group._objects)) {
       group._objects.forEach((child) => {
-        child.set && child.set('fill', textColor.value)
+        child.set && child.set('fill', fill.value)
       })
     }
   }
@@ -142,7 +173,25 @@ const updateFontFamily = async () => {
   await fontStore.loadFont(fontFamily.value)
 
   document.fonts.ready.then(() => {
+    // 更新 group 的字体
     props.element.set('fontFamily', fontFamily.value)
+
+    // 同步更新每个字符的字体
+    if (Array.isArray(props.element._objects)) {
+      props.element._objects.forEach((child) => {
+        child.set && child.set('fontFamily', fontFamily.value)
+      })
+    }
+
+    // 更新元数据中的 fontFamily
+    if (props.element.radialMeta) {
+      props.element.radialMeta.fontFamily = fontFamily.value
+    }
+
+    // 重新布局
+    if (typeof props.element.updateRadialLayout === 'function') {
+      props.element.updateRadialLayout()
+    }
     baseStore.canvas.renderAll()
   })
 }
@@ -169,26 +218,65 @@ const updatePosition = () => {
 
 const updateTextTemplate = () => {
   if (!props.element || !baseStore.canvas) return
-  props.element.set('text', textTemplate.value)
+  // 统一交给 group.updateRadialText 处理（内部负责增删 child 并重排）
+  if (typeof props.element.updateRadialText === 'function') {
+    props.element.updateRadialText(textTemplate.value)
+  } else {
+    // 兜底：至少更新文本并请求重排
+    props.element.set('text', textTemplate.value)
+    props.element.textTemplate = textTemplate.value
+    if (props.element.radialMeta) props.element.radialMeta.text = textTemplate.value
+    if (typeof props.element.updateRadialLayout === 'function') {
+      props.element.updateRadialLayout()
+    } else {
+      props.element.setCoords && props.element.setCoords()
+    }
+  }
+
   baseStore.canvas.renderAll()
 }
 
 const updateAngle = () => {
   if (!props.element || !baseStore.canvas) return
-  props.element.set('angle', angle.value)
-  props.element.setCoords()
+  
+  // 使用自定义属性 startAngle，而不是 Fabric 的 angle（后者会导致 group 整体旋转）
+  props.element.startAngle = angle.value
+  
+  // 同步更新元数据
+  if (props.element.radialMeta) {
+    props.element.radialMeta.startAngle = angle.value
+  }
+
+  // 角度变化时通过 updateRadialLayout 重新排布字符位置
+  if (typeof props.element.updateRadialLayout === 'function') {
+    props.element.updateRadialLayout()
+  } else {
+    props.element.setCoords()
+  }
   baseStore.canvas.renderAll()
 }
 
 const updateRadius = () => {
   if (!props.element || !baseStore.canvas) return
   props.element.set('radius', radius.value)
+  if (typeof props.element.updateRadialLayout === 'function') {
+    props.element.updateRadialLayout()
+  }
   baseStore.canvas.renderAll()
 }
 
 const updateDirection = () => {
   if (!props.element || !baseStore.canvas) return
   props.element.set('direction', direction.value)
+
+  // 更新元数据中的方向
+  if (props.element.radialMeta) {
+    props.element.radialMeta.direction = direction.value === 'counterClockwise' ? -1 : 1
+  }
+
+  if (typeof props.element.updateRadialLayout === 'function') {
+    props.element.updateRadialLayout()
+  }
   baseStore.canvas.renderAll()
 }
 

@@ -49,7 +49,6 @@ const sampleText = computed(() => {
 })
 
 const loadFontFromUrl = async (url?: string) => {
-  console.log('[FontPreviewText] loadFontFromUrl', url)
   if (!url) {
     loadedFontFamily.value = null
     return
@@ -72,14 +71,12 @@ const loadFontFromUrl = async (url?: string) => {
 }
 
 onMounted(() => {
-  console.log('[FontPreviewText] onMounted fontUrl', props.fontUrl)
   loadFontFromUrl(props.fontUrl)
 })
 
 watch(
   () => props.fontUrl,
   (newUrl) => {
-    console.log('[FontPreviewText] fontUrl changed', newUrl)
     loadFontFromUrl(newUrl)
   }
 )

@@ -6,21 +6,6 @@ import FabricRadialText from '@/lib/radialText'
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 
-interface TextOptions {
-  text?: string
-  left?: number
-  top?: number
-  size?: number | string
-  textColor?: string
-  fontFamily?: string
-  originX?: string
-  originY?: string
-  angle?: number
-  radius?: number
-  direction?: string
-  justification?: string | number
-}
-
 export const useRadialTextStore = defineStore('radialTextElement', {
   state: () => {
     const baseStore = useBaseStore()
@@ -33,10 +18,11 @@ export const useRadialTextStore = defineStore('radialTextElement', {
   },
 
   actions: {
-    async addElement(options: TextOptions = {}) {
+    async addElement(options: TextElementConfig ) {
       if (!this.baseStore.canvas) {
         throw new Error('Canvas is not initialized, cannot add radial text element')
       }
+      console.log('[111 addElement radialText] options', options)
 
       try {
         const cx = options.left ?? 0
@@ -46,26 +32,38 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         const direction = options.direction === 'counterClockwise' ? -1 : 1
 
         const radial = new FabricRadialText({
-          text: options.text || 'Radial Text',
+          text: options.textTemplate || 'Radial Text',
           cx,
           cy,
           radius,
-          fontSize: Number(options.size) || 36,
-          fontFamily: options.fontFamily || 'Noto Sans SC',
+          fontSize: Number(options.fontSize),
+          fontFamily: options.fontFamily,
           startAngle: angle,
           direction,
           inner: false,
           charSpacing: 0,
-          fill: options.textColor || '#FFFFFF',
+          fill: options.fill,
         })
 
         const element = radial.render() as any
+
+        // 基本标识
         element.id = nanoid()
         element.eleType = 'radialText'
+
+        // 位置与布局相关属性
         element.radius = radius
-        element.angle = angle
+        element.startAngle = angle
         element.direction = options.direction || 'clockwise'
         element.justification = options.justification || 'center'
+
+        // 同步文本与字体相关属性，方便设置面板直接读取
+        element.fill = options.fill
+        element.fontFamily = options.fontFamily
+        element.fontSize = options.fontSize
+        const textTemplate = options.textTemplate || 'Radial Text'
+        element.textTemplate = textTemplate
+        element.text = textTemplate
 
         this.baseStore.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
@@ -79,26 +77,37 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         throw error
       }
     },
-    encodeConfig(element: any) {
+    encodeConfig(element: any): TextElementConfig {
       if (!element) {
         throw new Error('Invalid element')
       }
-      const textTemplate = (element as any).textTemplate ?? element.text ?? ''
-      return {
-        type: 'radialText',
-        x: Math.round(element.left),
-        y: Math.round(element.top),
-        originX: element.originX,
-        originY: element.originY,
-        font: element.fontFamily || '',
-        size: element.fontSize || '-1',
-        color: element.fill || '',
-        formatter: textTemplate,
-        angle: typeof element.angle === 'number' ? element.angle : 0,
-        radius: typeof (element as any).radius === 'number' ? (element as any).radius : 100,
-        direction: (element as any).direction || 'clockwise',
-        justification: (element as any).justification || 'center',
+
+      const fabricAny = element as any
+      const textTemplate =
+        typeof fabricAny.textTemplate === 'string'
+          ? fabricAny.textTemplate
+          : (typeof fabricAny.text === 'string' ? fabricAny.text : '')
+
+      const config: TextElementConfig = {
+        id: fabricAny.id ?? '',
+        eleType: 'radialText',
+        left: typeof element.left === 'number' ? element.left : 0,
+        top: typeof element.top === 'number' ? element.top : 0,
+        originX: fabricAny.originX ?? 'center',
+        originY: fabricAny.originY ?? 'center',
+        fill: fabricAny.fill ?? '#FFFFFF',
+        fontFamily: fabricAny.fontFamily ?? 'Noto Sans SC',
+        fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 36,
+        textTemplate,
+        angle: typeof fabricAny.startAngle === 'number' ? fabricAny.startAngle : (fabricAny.radialMeta?.startAngle ?? 0),
+        radius: typeof fabricAny.radius === 'number' ? fabricAny.radius : 100,
+        direction: fabricAny.direction || 'clockwise',
+        justification: fabricAny.justification || 'center',
       }
+
+      console.log('[111 encodeConfig radialText] config', config)
+
+      return config
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
       const textTemplate = (config as any).textTemplate ?? ''

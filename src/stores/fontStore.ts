@@ -131,7 +131,6 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * @returns 加载是否成功
        */
       async loadFont(slug: string, url?: string): Promise<boolean> {
-        console.log('loadFont', slug, url)
         if (!slug) return false
 
         // 如果字体已加载，直接返回
@@ -279,7 +278,6 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         try {
           const userStore = useUserStore()
           const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts(type, userStore.userInfo?.id)
-          console.log('sysFonts', sysFonts)
           const list: Array<DesignFontVO> = sysFonts?.data ?? []
           const groups: Record<string, FontOption[]> = {}
           const pendingLoads: Promise<boolean>[] = []
