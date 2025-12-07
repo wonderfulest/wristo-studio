@@ -185,6 +185,8 @@ const handleTimeSimulatorChange = (value: boolean) => {
 // 处理缩放控制显示状态变化
 const handleZoomControlsChange = (value: boolean) => {
   showZoomControls.value = value
+  // persist to store so other components can react
+  editorStore.updateSetting('showZoomControls', value)
   // 如果设置为隐藏，则触发收起状态
   if (!value) {
     const zoomControls = document.querySelector('.zoom-controls')
@@ -202,24 +204,27 @@ const handleHistoryControlsChange = (value: boolean) => {
 // 处理标尺辅助线显示
 const handleRulerGuidesChange = (value: boolean) => {
   showRulerGuides.value = value
-  emitter.emit('toggle-ruler-guides', value)
+  // use editorStore for state, CanvasRulers watches store
+  editorStore.updateSetting('showRulerGuides', value)
 }
 
 // 应用标尺网格样式
 const applyRulerGuidesStyle = () => {
-  emitter.emit('ruler-guides-style', {
-    color: rulerGuidesColor.value,
-    major: Number(rulerGuidesMajor.value),
-    minor: Number(rulerGuidesMinor.value),
+  // persist style in store; CanvasRulers reacts via watchers
+  editorStore.updateSettings({
+    rulerGuidesColor: rulerGuidesColor.value,
+    rulerGuidesMajor: Number(rulerGuidesMajor.value),
+    rulerGuidesMinor: Number(rulerGuidesMinor.value),
   })
 }
 
 // Key guidelines handlers
 const handleKeyGuidelinesToggle = (value: boolean) => {
   showKeyGuidelines.value = value
-  emitter.emit('toggle-key-guidelines', value)
+  // use editorStore for state; GuidelineManager watches store
+  editorStore.updateSetting('showKeyGuidelines', value)
   if (value) {
-    emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
+    editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
   }
 }
 
@@ -227,7 +232,7 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   const valid: ReadonlyArray<number> = [2, 3, 4, 5, 6, 8]
   if (!valid.includes(value)) return
   keyGuidelineDivisions.value = value as 2 | 3 | 4 | 5 | 6 | 8
-  emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
+  editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
 }
 
 // 保存设置
@@ -270,14 +275,12 @@ const openDialog = () => {
   rulerGuidesColor.value = editorStore.rulerGuidesColor
   rulerGuidesMajor.value = editorStore.rulerGuidesMajor
   rulerGuidesMinor.value = editorStore.rulerGuidesMinor
-  emitter.emit('toggle-ruler-guides', showRulerGuides.value)
-  // 同步一次网格样式
-  applyRulerGuidesStyle()
+  // no emitter; CanvasRulers initializes and watches store
   // 同步关键辅助线配置
   showKeyGuidelines.value = editorStore.showKeyGuidelines
   keyGuidelineDivisions.value = editorStore.keyGuidelineDivisions
-  emitter.emit('toggle-key-guidelines', showKeyGuidelines.value)
-  emitter.emit('set-key-guidelines-divisions', keyGuidelineDivisions.value)
+  // GuidelineManager reacts to store for toggle
+  // GuidelineManager will react to store for divisions
   dialogVisible.value = true
 }
 

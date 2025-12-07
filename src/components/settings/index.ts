@@ -15,7 +15,6 @@ Object.entries(modules).forEach(([path, mod]) => {
 })
 
 export function getSettingsComponent(type?: string): Component | null {
-  console.log('getSettingsComponent type', type)
   if (type == null) return null
 
   // direct match

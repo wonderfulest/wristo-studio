@@ -7,8 +7,8 @@ export const useEditorStore = defineStore('editor', {
     backgroundColor: '#aaaaaa',
     showTimeSimulator: false,
     showZoomControls: false,
-    showHistoryControls: true,
-    showRulerGuides: true,
+    showHistoryControls: false,
+    showRulerGuides: false,
     rulerGuidesColor: '#ffffff',
     rulerGuidesMajor: 0.3,
     rulerGuidesMinor: 0.16,
@@ -58,10 +58,10 @@ export const useEditorStore = defineStore('editor', {
     resetSettings(): void {
       this.$state.zoomLevel = 1
       this.$state.backgroundColor = 'rgba(0, 0, 0, 0.8)'
-      this.$state.showTimeSimulator = true
-      this.$state.showZoomControls = true
-      this.$state.showHistoryControls = true
-      this.$state.showRulerGuides = true
+      this.$state.showTimeSimulator = false
+      this.$state.showZoomControls = false
+      this.$state.showHistoryControls = false
+      this.$state.showRulerGuides = false
       this.$state.rulerGuidesColor = '#ffffff'
       this.$state.rulerGuidesMajor = 0.3
       this.$state.rulerGuidesMinor = 0.16

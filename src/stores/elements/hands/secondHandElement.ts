@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { loadSVGFromURL, util } from 'fabric'
+import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import { SecondHandOptions } from '@/config/settings'
 
-import { HandElementConfig, RotationCenter } from '@/types/elements'
+import { HandElementConfig } from '@/types/elements'
 import { FabricElement } from '@/types/element'
 
 export const useSecondHandStore = defineStore('secondHandElement', {
@@ -21,52 +21,30 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         bgColor: 'transparent'
       },
       defaultAngle: 0,
-      defaultTargetHeight: 180,
-      defaultRotationCenter: { x: 227, y: 227 } as RotationCenter,
       updateTimer: null as any
     }
   },
 
   actions: {
-    rotateHand(svgGroup: any, angle: number) {
-      const targetHeight = svgGroup.targetHeight
-      const moveDy = svgGroup.moveDy || 0
-      const rotationCenter = svgGroup.rotationCenter || { x: 227, y: 227 } as RotationCenter
-
-      const radians = util.degreesToRadians(angle)
-      const dx = 0
-      const dy = -targetHeight / 2 + moveDy
-      const rotatedX = dx * Math.cos(radians) - dy * Math.sin(radians)
-      const rotatedY = dx * Math.sin(radians) + dy * Math.cos(radians)
-      svgGroup.set({
-        left: rotationCenter.x + rotatedX,
-        top: rotationCenter.y + rotatedY,
-        angle: angle,
-        originX: 'center',
-        originY: 'center',
-        scaleX: svgGroup.targetScaleX,
-        scaleY: svgGroup.targetScaleY
-      })
-      svgGroup.setCoords()
+    rotateHand(img: any, angle: number) {
+      img.set({ angle })
+      img.setCoords()
       this.baseStore.canvas?.requestRenderAll()
     },
 
     getSecondHandAngle(time?: Date) {
       const now = time || new Date()
       const seconds = now.getSeconds()
-      const angle = seconds * 6
+      const ms = now.getMilliseconds()
+      // second hand: 6 deg per second
+      const angle = (seconds + ms / 1000) * 6
       return angle
     },
 
     async addElement(config: HandElementConfig) {
       const id = config.id || nanoid()
       const imageUrl = config.imageUrl || SecondHandOptions[0].url
-      const fill = config.fill || this.defaultColors.color
-      const rotationCenter = config.rotationCenter || this.defaultRotationCenter
-      const targetHeight = Math.min(config.targetHeight || this.defaultTargetHeight, 300)
-      const moveDy = config.moveDy || 0
-      const loadedSVG: any = await loadSVGFromURL(imageUrl)
-      const svgGroup: any = util.groupSVGElements(loadedSVG.objects)
+      const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,
         eleType: 'secondHand',
@@ -75,157 +53,69 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         selectable: true,
         hasControls: false,
         hasBorders: true,
-        angle: 0,
+        angle: this.getSecondHandAngle(),
         imageUrl: imageUrl,
-        fill: fill,
-        rotationCenter: rotationCenter,
-        targetHeight: targetHeight,
-        targetScaleY: 1,
-        moveDy: moveDy,
-        left: config.left,
-        top: config.top,
+        left: config.left ?? this.baseStore.WATCH_SIZE / 2,
+        top: config.top ?? this.baseStore.WATCH_SIZE / 2,
       }
-      svgGroup.set(options)
-      svgGroup.scaleToHeight(targetHeight)
-      svgGroup.set({
-        targetScaleX: svgGroup.scaleX,
-        targetScaleY: svgGroup.scaleY
-      })
-      this.rotateHand(svgGroup, 0)
-
-      if (Array.isArray(svgGroup._objects)) {
-        svgGroup._objects.forEach((obj: any) => obj.set('fill', fill))
-      } else if (svgGroup.type === 'path') {
-        svgGroup.set('fill', fill)
+      img.set(options)
+      const iw = img.width || 0
+      const ih = img.height || 0
+      if (iw > 0 && ih > 0) {
+        const scale = this.baseStore.WATCH_SIZE / Math.max(iw, ih)
+        img.set({ scaleX: scale, scaleY: scale })
       }
-
-      svgGroup.on('moving', (e: any) => {
-        const y = e.transform.target.top
-        const distance = y + svgGroup.targetHeight / 2 - rotationCenter.y
-        svgGroup.set('moveDy', distance)
-      })
-
-      svgGroup.on('selected', () => {
-        if (this.updateTimer) {
-          this.stopTimeUpdate()
-        }
-        this.rotateHand(svgGroup, 0)
-      })
-      svgGroup.on('deselected', () => {
-        if (!this.updateTimer) {
-          this.startTimeUpdate()
-        }
-      })
-      svgGroup.setCoords()
-      this.baseStore.canvas?.add(svgGroup)
-      this.layerStore.addLayer(svgGroup)
+      img.setCoords()
+      this.baseStore.canvas?.add(img)
+      this.layerStore.addLayer(img)
       this.baseStore.canvas?.requestRenderAll()
       this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(svgGroup)
-      return svgGroup as unknown as FabricElement
+      this.baseStore.canvas?.setActiveObject(img)
+      this.startTimeUpdate()
+      return img as unknown as FabricElement
     },
 
     async updateHandSVG(element: any, config: HandElementConfig) {
       if (!this.baseStore.canvas) return
-      let svgGroup: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
-      if (!svgGroup) return
-      const rotationCenter = config.rotationCenter || svgGroup.rotationCenter || this.defaultRotationCenter
-      const targetHeight = config.targetHeight || svgGroup.targetHeight || this.defaultTargetHeight
-      const moveDy = config.moveDy || svgGroup.moveDy || 0
-      if (config.imageUrl && config.imageUrl !== svgGroup.imageUrl) {
-        this.baseStore.canvas.remove(svgGroup)
-        const loadedSVG: any = await loadSVGFromURL(config.imageUrl)
-        svgGroup = util.groupSVGElements(loadedSVG.objects)
-        svgGroup.set({
+      let hand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      if (!hand) return
+      if (config.imageUrl && config.imageUrl !== hand.imageUrl) {
+        const prevLeft = hand.left
+        const prevTop = hand.top
+        const prevAngle = hand.angle
+        this.baseStore.canvas.remove(hand)
+        const img: any = await FabricImage.fromURL(config.imageUrl, { crossOrigin: 'anonymous' } as any)
+        hand = img
+        hand.set({
           id: element.id,
           eleType: 'secondHand',
           originX: 'center',
           originY: 'center',
+          left: prevLeft,
+          top: prevTop,
+          angle: prevAngle,
+          imageUrl: config.imageUrl,
           selectable: true,
           hasControls: true,
           hasBorders: true,
-          imageUrl: config.imageUrl,
-          fill: '#ffffff',
-          rotationCenter: rotationCenter,
-          targetHeight: targetHeight,
-          moveDy: moveDy
         })
-        svgGroup.on('moving', (e: any) => {
-          const y = e.transform.target.top
-          const distance = y + svgGroup.targetHeight / 2 - rotationCenter.y
-          svgGroup.set('moveDy', distance)
-        })
-        svgGroup.on('selected', () => {
-          if (this.updateTimer) {
-            this.stopTimeUpdate()
-          }
-          this.rotateHand(svgGroup, 0)
-        })
-        svgGroup.on('deselected', () => {
-          if (!this.updateTimer) {
-            this.startTimeUpdate()
-          }
-        })
-        this.baseStore.canvas.add(svgGroup)
+        const iw = hand.width || 0
+        const ih = hand.height || 0
+        if (iw > 0 && ih > 0) {
+          const scale = this.baseStore.WATCH_SIZE / Math.max(iw, ih)
+          hand.set({ scaleX: scale, scaleY: scale })
+        }
+        this.baseStore.canvas.add(hand)
       }
-      const fillToSet = config.fill || this.defaultColors.color
-      if (Array.isArray(svgGroup._objects)) {
-        svgGroup._objects.forEach((obj: any) => obj.set('fill', fillToSet))
-      } else if (svgGroup.type === 'path') {
-        svgGroup.set('fill', fillToSet)
-      }
-      svgGroup.scaleToHeight(targetHeight)
-      svgGroup.set({
-        moveDy: moveDy,
-        rotationCenter: rotationCenter,
-        targetHeight: targetHeight,
-        targetScaleX: svgGroup.scaleX,
-        targetScaleY: svgGroup.scaleY
-      })
-      this.rotateHand(svgGroup, 0)
-      svgGroup.setCoords()
+      const newAngle = this.getSecondHandAngle()
+      this.rotateHand(hand, newAngle)
+      hand.setCoords()
       this.baseStore.canvas.requestRenderAll()
       this.baseStore.canvas.discardActiveObject()
-      this.baseStore.canvas.setActiveObject(svgGroup)
+      this.baseStore.canvas.setActiveObject(hand)
     },
 
-    updateHeight(element: any, height: number) {
-      if (!this.baseStore.canvas) return
-      const secondHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
-      if (!secondHand) return
-      secondHand.scaleToHeight(height)
-      secondHand.set({
-        targetHeight: height,
-        targetScaleX: secondHand.scaleX,
-        targetScaleY: secondHand.scaleY
-      })
-      secondHand.setCoords()
-      this.baseStore.canvas.requestRenderAll()
-    },
-    updateRotationCenter(element: any, rotationCenter: { x: number; y: number }) {
-      if (!this.baseStore.canvas) return
-      const secondHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
-      if (!secondHand) return
-      secondHand.set('rotationCenter', rotationCenter)
-    },
-    updateHandColor(element: any, color: string) {
-      if (!this.baseStore.canvas) return
-      const secondHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
-      if (!secondHand) return
-
-      secondHand.set('fill', color)
-      if (Array.isArray(secondHand._objects)) {
-        secondHand._objects.forEach((obj: any) => {
-          obj.set('fill', color)
-          obj.set('stroke', color)
-        })
-      } else if (secondHand.type === 'path') {
-        secondHand.set('fill', color)
-        secondHand.set('stroke', color)
-      }
-      secondHand.setCoords()
-      this.baseStore.canvas.requestRenderAll()
-    },
+    // removed height/rotation-center/color manual updates in minimal mode
     updateAngle(element: any, angle: number) {
       if (!this.baseStore.canvas) return
       const secondHand: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
@@ -240,10 +130,14 @@ export const useSecondHandStore = defineStore('secondHandElement', {
       this.rotateHand(secondHand, angle)
     },
     startTimeUpdate() {
+      if (this.updateTimer) {
+        clearInterval(this.updateTimer)
+        this.updateTimer = null
+      }
       this.updateTime()
       this.updateTimer = setInterval(() => {
         this.updateTime()
-      }, 1000)
+      }, 200)
     },
     stopTimeUpdate() {
       if (this.updateTimer) {
@@ -260,13 +154,8 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         top: element.top,
         originX: element.originX,
         originY: element.originY,
-        height: element.height,
-        fill: (element.fill ?? undefined) as unknown as string | undefined,
         angle: element.angle,
         imageUrl: element.imageUrl,
-        targetHeight: element.targetHeight,
-        rotationCenter: element.rotationCenter,
-        moveDy: element.moveDy,
       }
     },
     decodeConfig(config: HandElementConfig) {
@@ -275,13 +164,8 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         eleType: 'secondHand',
         left: config.left,
         top: config.top,
-        height: config.height,
-        fill: config.fill,
         angle: config.angle,
         imageUrl: config.imageUrl,
-        targetHeight: config.targetHeight,
-        rotationCenter: config.rotationCenter,
-        moveDy: config.moveDy,
       }
     }
   }

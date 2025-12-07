@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
+import { useEditorStore } from '@/stores/editorStore'
 import emitter from '@/utils/eventBus'
 
 const props = defineProps<{
@@ -19,10 +20,20 @@ const props = defineProps<{
 const hRef = ref<HTMLCanvasElement | null>(null)
 const vRef = ref<HTMLCanvasElement | null>(null)
 const extRef = ref<HTMLCanvasElement | null>(null)
-let showGuides = true
+let showGuides = false
 let guideColor = '#ffffff'
 let guideAlphaMajor = 0.3
 let guideAlphaMinor = 0.16
+
+// Use editorStore as single source of truth for ruler guides
+const editorStore = useEditorStore()
+const applyGuidesFromStore = () => {
+  showGuides = Boolean(editorStore.showRulerGuides)
+  guideColor = editorStore.rulerGuidesColor
+  guideAlphaMajor = Number(editorStore.rulerGuidesMajor)
+  guideAlphaMinor = Number(editorStore.rulerGuidesMinor)
+  update()
+}
 
 const drawHorizontal = (ctx: CanvasRenderingContext2D, width: number, zoom: number, canvasLeft: number, offset: number) => {
   ctx.clearRect(0, 0, width, offset)
@@ -188,33 +199,28 @@ const onDblclick = (e: MouseEvent, isHorizontal: boolean) => {
 
 onMounted(() => {
   update()
+  // initialize guides from store
+  applyGuidesFromStore()
+  // listeners for layout changes
   window.addEventListener('resize', update)
   const centerArea = document.querySelector('.center-area') as HTMLElement | null
   centerArea?.addEventListener('scroll', update)
   hRef.value?.addEventListener('dblclick', (e) => onDblclick(e, true))
   vRef.value?.addEventListener('dblclick', (e) => onDblclick(e, false))
-  emitter.on('toggle-ruler-guides', (v: unknown) => {
-    showGuides = Boolean(v)
-    update()
-  })
-  emitter.on('ruler-guides-style', (payload: unknown) => {
-    const p = payload as { color?: string; major?: number; minor?: number }
-    if (p.color) guideColor = p.color
-    if (typeof p.major === 'number') guideAlphaMajor = p.major
-    if (typeof p.minor === 'number') guideAlphaMinor = p.minor
-    update()
-  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', update)
   const centerArea = document.querySelector('.center-area') as HTMLElement | null
   centerArea?.removeEventListener('scroll', update)
-  emitter.off('toggle-ruler-guides')
-  emitter.off('ruler-guides-style')
 })
 
 watch(() => props.watchSize, () => update())
+// react to store changes
+watch(() => editorStore.showRulerGuides, applyGuidesFromStore)
+watch(() => editorStore.rulerGuidesColor, applyGuidesFromStore)
+watch(() => editorStore.rulerGuidesMajor, applyGuidesFromStore)
+watch(() => editorStore.rulerGuidesMinor, applyGuidesFromStore)
 </script>
 
 <style scoped>

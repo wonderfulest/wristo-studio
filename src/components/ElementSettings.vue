@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { elementConfigs } from '@/config/elements/elements'
@@ -40,15 +40,11 @@ const settingsComponent = ref(null)
 const activeElements = ref([] as FabricElement[])
 
 const updateElements = () => {
-  console.log('🔄 [ElementSettings] updateElements called')
   if (!baseStore.canvas) {
-    console.log('❌ [ElementSettings] Canvas not available')
     return
   }
   const activeObjects = baseStore.getActiveObjects()
-  console.log('📊 [ElementSettings] Active objects:', activeObjects.length, activeObjects)
   activeElements.value = activeObjects
-  console.log('✅ [ElementSettings] activeElements updated:', activeElements.value.length)
 }
 
 const debouncedUpdateElements = debounce(updateElements, 100)
@@ -59,13 +55,11 @@ onMounted(() => {
 
   // 画布刷新事件
   emitter.on('refresh-canvas', () => {
-    console.log('📡 [ElementSettings] Received refresh-canvas event')
     debouncedUpdateElements()
   })
 
   // 设置事件监听
   emitter.on('refresh-element-settings', () => {
-    console.log('📡 [ElementSettings] Received refresh-element-settings event')
     debouncedUpdateElements()
   })
 })

@@ -5,8 +5,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { Canvas, FabricObject, Line } from 'fabric'
-import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
+import { useEditorStore } from '@/stores/editorStore'
 
 const props = defineProps<{
   watchSize: number
@@ -14,6 +14,7 @@ const props = defineProps<{
 }>()
 
 const baseStore = useBaseStore()
+const editorStore = useEditorStore()
 
 // 类型定义，兼容 Fabric.js 属性
 type GuidelineObject = FabricObject & {
@@ -210,53 +211,6 @@ const attachCanvasMouseDown = () => {
   }
 }
 
-// 监听 ruler 组件事件与关键辅助线切换
-const attachEventBus = () => {
-  emitter.on('add-horizontal-guideline', (y: unknown) => {
-    const yy = Number(y)
-    createHorizontalGuideline(yy)
-    if (baseStore.canvas) {
-      ;(baseStore.canvas as Canvas).requestRenderAll()
-    }
-  })
-  emitter.on('add-vertical-guideline', (x: unknown) => {
-    const xx = Number(x)
-    createVerticalGuideline(xx)
-    if (baseStore.canvas) {
-      ;(baseStore.canvas as Canvas).requestRenderAll()
-    }
-  })
-  emitter.on('toggle-key-guidelines', (event: unknown) => {
-    const show = Boolean(event)
-    showKeyGuidelines.value = show
-    if (show) {
-      createKeyGuidelines()
-    } else {
-      keyGuidelines.value.forEach(guideline => {
-        ;(baseStore.canvas as Canvas).remove(guideline as unknown as FabricObject)
-      })
-      keyGuidelines.value = []
-      ;(baseStore.canvas as Canvas).requestRenderAll()
-    }
-  })
-  emitter.on('set-key-guidelines-divisions', (value: unknown) => {
-    const n = Number(value)
-    if (!Number.isFinite(n)) return
-    const valid = [2,3,4,5,6,8]
-    keyDivisions.value = valid.includes(n) ? n : 4
-    if (showKeyGuidelines.value) {
-      createKeyGuidelines()
-    }
-  })
-}
-
-const detachEventBus = () => {
-  emitter.off('add-horizontal-guideline')
-  emitter.off('add-vertical-guideline')
-  emitter.off('toggle-key-guidelines')
-  emitter.off('set-key-guidelines-divisions')
-}
-
 // 监听 watchSize 变化，更新尺寸
 watch(() => props.watchSize, () => {
   updateGuidelineSize()
@@ -275,7 +229,32 @@ onMounted(() => {
     })
   }
 
-  attachEventBus()
+  // init from editor store
+  showKeyGuidelines.value = Boolean(editorStore.showKeyGuidelines)
+  keyDivisions.value = Number(editorStore.keyGuidelineDivisions)
+  if (showKeyGuidelines.value) {
+    createKeyGuidelines()
+  }
+  // watch store changes
+  watch(() => editorStore.showKeyGuidelines, (val) => {
+    showKeyGuidelines.value = Boolean(val)
+    if (showKeyGuidelines.value) {
+      createKeyGuidelines()
+    } else {
+      keyGuidelines.value.forEach(guideline => {
+        ;(baseStore.canvas as Canvas).remove(guideline as unknown as FabricObject)
+      })
+      keyGuidelines.value = []
+      ;(baseStore.canvas as Canvas).requestRenderAll()
+    }
+  })
+  watch(() => editorStore.keyGuidelineDivisions, (n) => {
+    const valid = [2,3,4,5,6,8]
+    keyDivisions.value = valid.includes(Number(n)) ? Number(n) : 4
+    if (showKeyGuidelines.value) {
+      createKeyGuidelines()
+    }
+  })
   window.addEventListener('resize', updateGuidelineSize)
 })
 
@@ -284,7 +263,6 @@ onUnmounted(() => {
     removeCanvasMouseDown()
   }
   window.removeEventListener('resize', updateGuidelineSize)
-  detachEventBus()
 
   // 清除关键辅助线
   if (baseStore.canvas) {

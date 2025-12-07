@@ -122,8 +122,6 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
     mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
-
-      console.log('🎨 [BaseStore] Mapping color properties:', encodeConfig, properties)
       const colorMappings: Array<{ source: string; target: string }> = [
         { source: 'color', target: 'colorProperty' },
         { source: 'bgColor', target: 'bgColorProperty' },
@@ -531,11 +529,9 @@ export const useBaseStore = defineStore('baseStore', {
     // 获取选中对象
     getActiveObjects(): FabricElement[] {
       if (!this.canvas) {
-        console.log('🔍 [BaseStore] getActiveObjects: Canvas not available')
         return []
       }
       const activeObjects = this.canvas.getActiveObjects() as unknown as FabricElement[]
-      console.log('🔍 [BaseStore] getActiveObjects:', activeObjects.length, activeObjects.map(obj => ({ id: obj.id, eleType: obj.eleType })))
       return activeObjects
     },
     // 切换主题
