@@ -7,9 +7,10 @@
         <label>指针hand</label>
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
+          :selected-asset-id="element.assetId"
           asset-type="hour"
-          :on-select="(url) => hourHandStore.updateHandSVG(element, { imageUrl: url })"
-          :on-upload="(url) => hourHandStore.updateHandSVG(element, { imageUrl: url })"
+          :on-select="(url, asset) => hourHandStore.updateHandSVG(element, { imageUrl: url, assetId: asset?.id })"
+          :on-upload="(url, asset) => hourHandStore.updateHandSVG(element, { imageUrl: url, assetId: asset?.id })"
         />
       </div>
     </el-form>

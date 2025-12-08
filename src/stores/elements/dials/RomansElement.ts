@@ -4,10 +4,12 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import { RomansOptions } from '@/config/settings'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 export interface DialElementConfig {
   id?: string
   imageUrl?: string
+  assetId?: number
   fill?: string
   left?: number
   top?: number
@@ -31,7 +33,17 @@ export const useRomansStore = defineStore('romansElement', {
   actions: {
     async addElement(options: DialElementConfig = {}) {
       const id = options.id || nanoid()
-      const imageUrl = options.imageUrl || RomansOptions[0].url
+      // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
+      let imageUrl = options.imageUrl
+      if (!imageUrl && options.assetId) {
+        try {
+          const res = await analogAssetApi.get(options.assetId)
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || RomansOptions[0].url
+        } catch (e) {
+          imageUrl = RomansOptions[0].url
+        }
+      }
+      imageUrl = imageUrl || RomansOptions[0].url
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let group: any = img
       group.set({
@@ -47,6 +59,7 @@ export const useRomansStore = defineStore('romansElement', {
         hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
+        assetId: options.assetId,
       })
       const gw = group.width || 0
       const gh = group.height || 0
@@ -102,6 +115,9 @@ export const useRomansStore = defineStore('romansElement', {
         }
         this.baseStore.canvas.add(group)
       }
+      if (typeof config.assetId === 'number') {
+        group.assetId = config.assetId
+      }
       group.on('moving', () => {})
       group.on('selected', () => {})
       group.on('deselected', () => {})
@@ -128,6 +144,7 @@ export const useRomansStore = defineStore('romansElement', {
         height: element.height,
         fill: element.fill,
         imageUrl: element.imageUrl,
+        assetId: (element as any).assetId,
       }
     },
     decodeConfig(config: any) {
@@ -139,6 +156,7 @@ export const useRomansStore = defineStore('romansElement', {
         height: config.height,
         fill: config.fill,
         imageUrl: config.imageUrl,
+        assetId: config.assetId,
       }
     }
   }

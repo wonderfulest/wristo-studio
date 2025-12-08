@@ -18,7 +18,7 @@
       v-for="asset in assets" 
       :key="asset.id" 
       class="asset-item"
-      :class="{ active: selectedUrl === getAssetUrl(asset) }"
+      :class="{ active: (selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset)) }"
       @click="handleSelect(asset)"
     >
       <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
@@ -62,6 +62,11 @@ const props = defineProps({
   assetType: {
     type: String as PropType<AnalogAssetType>,
     required: true
+  },
+  /** 当前选中的素材ID（优先于selectedUrl） */
+  selectedAssetId: {
+    type: Number,
+    default: null
   },
   /** 选择回调 */
   onSelect: {

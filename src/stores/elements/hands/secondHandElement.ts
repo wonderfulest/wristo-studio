@@ -4,6 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import { SecondHandOptions } from '@/config/settings'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import { HandElementConfig } from '@/types/elements'
 import { FabricElement } from '@/types/element'
@@ -43,7 +44,17 @@ export const useSecondHandStore = defineStore('secondHandElement', {
 
     async addElement(config: HandElementConfig) {
       const id = config.id || nanoid()
-      const imageUrl = config.imageUrl || SecondHandOptions[0].url
+      // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
+      let imageUrl = config.imageUrl
+      if (!imageUrl && config.assetId) {
+        try {
+          const res = await analogAssetApi.get(config.assetId)
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || SecondHandOptions[0].url
+        } catch (e) {
+          imageUrl = SecondHandOptions[0].url
+        }
+      }
+      imageUrl = imageUrl || SecondHandOptions[0].url
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,
@@ -54,9 +65,10 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         hasControls: false,
         hasBorders: true,
         angle: this.getSecondHandAngle(),
-        imageUrl: imageUrl,
         left: config.left ?? this.baseStore.WATCH_SIZE / 2,
         top: config.top ?? this.baseStore.WATCH_SIZE / 2,
+        imageUrl: imageUrl,
+        assetId: config.assetId,
       }
       img.set(options)
       const iw = img.width || 0
@@ -107,6 +119,9 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         }
         this.baseStore.canvas.add(hand)
       }
+      if (typeof config.assetId === 'number') {
+        hand.assetId = config.assetId
+      }
       const newAngle = this.getSecondHandAngle()
       this.rotateHand(hand, newAngle)
       hand.setCoords()
@@ -156,6 +171,7 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         originY: element.originY,
         angle: element.angle,
         imageUrl: element.imageUrl,
+        assetId: (element as any).assetId,
       }
     },
     decodeConfig(config: HandElementConfig) {
@@ -166,6 +182,7 @@ export const useSecondHandStore = defineStore('secondHandElement', {
         top: config.top,
         angle: config.angle,
         imageUrl: config.imageUrl,
+        assetId: config.assetId,
       }
     }
   }

@@ -8,9 +8,10 @@
         <label>数字样式</label>
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
+          :selected-asset-id="element.assetId"
           asset-type="romans"
-          :on-select="(url) => romansStore.updateSVG(element, { imageUrl: url })"
-          :on-upload="(url) => romansStore.updateSVG(element, { imageUrl: url })"
+          :on-select="(url, asset) => romansStore.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
+          :on-upload="(url, asset) => romansStore.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
         />
         <div class="tips">
           <p>小贴士：</p>

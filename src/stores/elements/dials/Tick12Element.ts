@@ -4,6 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import { Ticks12Options } from '@/config/settings'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from './RomansElement'
 
@@ -25,7 +26,17 @@ export const useTick12Store = defineStore('tick12Element', {
   actions: {
     async addElement(options: DialElementConfig = {}) {
       const id = options.id || nanoid()
-      const imageUrl = options.imageUrl || Ticks12Options[0].url
+      // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
+      let imageUrl = options.imageUrl
+      if (!imageUrl && options.assetId) {
+        try {
+          const res = await analogAssetApi.get(options.assetId)
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || Ticks12Options[0].url
+        } catch (e) {
+          imageUrl = Ticks12Options[0].url
+        }
+      }
+      imageUrl = imageUrl || Ticks12Options[0].url
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let svgGroup: any = img
 
@@ -42,6 +53,7 @@ export const useTick12Store = defineStore('tick12Element', {
         hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
+        assetId: options.assetId,
       })
       // Scale to fit within WATCH_SIZE x WATCH_SIZE while preserving aspect ratio and transparent margins
       const gw = svgGroup.width || 0
@@ -115,6 +127,10 @@ export const useTick12Store = defineStore('tick12Element', {
         console.log('[Tick12.updateSVG] imageUrl unchanged, skipping replace')
       }
 
+      if (typeof config.assetId === 'number') {
+        svgGroup.assetId = config.assetId
+      }
+
       svgGroup.on('moving', () => {})
       svgGroup.on('selected', () => {})
       svgGroup.on('deselected', () => {})
@@ -136,6 +152,7 @@ export const useTick12Store = defineStore('tick12Element', {
         height: element.height,
         fill: element.fill,
         imageUrl: element.imageUrl,
+        assetId: (element as any).assetId,
       }
     },
 
@@ -148,6 +165,7 @@ export const useTick12Store = defineStore('tick12Element', {
         height: config.height,
         fill: config.fill,
         imageUrl: config.imageUrl,
+        assetId: config.assetId,
       }
     }
   }

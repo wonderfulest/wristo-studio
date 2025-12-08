@@ -4,6 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import { Ticks60Options } from '@/config/settings'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from './RomansElement'
 
@@ -25,7 +26,17 @@ export const useTick60Store = defineStore('tick60Element', {
   actions: {
     async addElement(options: DialElementConfig = {}) {
       const id = options.id || nanoid()
-      const imageUrl = options.imageUrl || Ticks60Options[0].url
+      // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
+      let imageUrl = options.imageUrl
+      if (!imageUrl && (options as any).assetId) {
+        try {
+          const res = await analogAssetApi.get((options as any).assetId as number)
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || Ticks60Options[0].url
+        } catch (e) {
+          imageUrl = Ticks60Options[0].url
+        }
+      }
+      imageUrl = imageUrl || Ticks60Options[0].url
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let group: any = img
 
@@ -42,6 +53,7 @@ export const useTick60Store = defineStore('tick60Element', {
         hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
+        assetId: (options as any).assetId,
       })
       const gw = group.width || 0
       const gh = group.height || 0
@@ -104,6 +116,9 @@ export const useTick60Store = defineStore('tick60Element', {
 
         this.baseStore.canvas.add(group)
       }
+      if (typeof (config as any).assetId === 'number') {
+        group.assetId = (config as any).assetId
+      }
 
       group.on('moving', () => {})
       group.on('selected', () => {})
@@ -126,6 +141,7 @@ export const useTick60Store = defineStore('tick60Element', {
         height: element.height,
         fill: element.fill,
         imageUrl: element.imageUrl,
+        assetId: (element as any).assetId,
       }
     },
     decodeConfig(config: any) {
@@ -137,6 +153,7 @@ export const useTick60Store = defineStore('tick60Element', {
         height: config.height,
         fill: config.fill,
         imageUrl: config.imageUrl,
+        assetId: config.assetId,
       }
     }
   }

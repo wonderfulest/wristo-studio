@@ -30,6 +30,15 @@ export const analogAssetApi = {
    */
   page(dto: AnalogAssetPageQueryDTO): Promise<ApiResponse<PageResponse<AnalogAssetVO>>> {
     return instance.post('/dsn/analog-asset/page?populate=asset', dto)
+  },
+
+  /**
+   * 获取素材详情
+   */
+  get(id: number): Promise<ApiResponse<AnalogAssetVO>> {
+    return instance.post('/dsn/analog-asset/get?populate=asset', null, {
+      params: { id }
+    })
   }
 }
 

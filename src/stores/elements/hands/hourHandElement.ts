@@ -4,6 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage, type FabricObject } from 'fabric'
 import { nanoid } from 'nanoid'
 import { HourHandOptions } from '@/config/settings'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { HandElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 
@@ -45,7 +46,17 @@ export const useHourHandStore = defineStore('hourHandElement', {
 
     async addElement(config: HandElementConfig) {
       const id = config.id || nanoid()
-      const imageUrl = config.imageUrl || HourHandOptions[0].url
+      // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
+      let imageUrl = config.imageUrl
+      if (!imageUrl && config.assetId) {
+        try {
+          const res = await analogAssetApi.get(config.assetId)
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || HourHandOptions[0].url
+        } catch (e) {
+          imageUrl = HourHandOptions[0].url
+        }
+      }
+      imageUrl = imageUrl || HourHandOptions[0].url
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,
@@ -56,9 +67,10 @@ export const useHourHandStore = defineStore('hourHandElement', {
         hasControls: false,
         hasBorders: true,
         angle: this.getHourHandAngle(),
-        imageUrl: imageUrl,
         left: config.left ?? this.baseStore.WATCH_SIZE / 2,
         top: config.top ?? this.baseStore.WATCH_SIZE / 2,
+        imageUrl: imageUrl,
+        assetId: config.assetId,
       }
       img.set(options)
       const iw = img.width || 0
@@ -110,6 +122,9 @@ export const useHourHandStore = defineStore('hourHandElement', {
           hand.set({ scaleX: scale, scaleY: scale })
         }
         this.baseStore.canvas.add(hand as unknown as FabricObject)
+      }
+      if (typeof config.assetId === 'number') {
+        ;(hand as any).assetId = config.assetId
       }
       const newAngle = this.getHourHandAngle()
       this.rotateHand(hand, newAngle)
@@ -164,6 +179,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
         originY: element.originY,
         angle: element.angle,
         imageUrl: element.imageUrl,
+        assetId: (element as any).assetId,
       }
     },
     decodeConfig(config: HandElementConfig) {
@@ -174,6 +190,7 @@ export const useHourHandStore = defineStore('hourHandElement', {
         top: config.top,
         angle: config.angle,
         imageUrl: config.imageUrl,
+        assetId: config.assetId,
       }
     }
   }

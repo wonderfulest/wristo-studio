@@ -8,9 +8,10 @@
         <label>刻度样式</label>
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
+          :selected-asset-id="element.assetId"
           asset-type="tick12"
-          :on-select="(url) => tick12Store.updateSVG(element, { imageUrl: url })"
-          :on-upload="(url) => tick12Store.updateSVG(element, { imageUrl: url })"
+          :on-select="(url, asset) => tick12Store.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
+          :on-upload="(url, asset) => tick12Store.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
         />
         <div class="tips">
           <p>小贴士：</p>
