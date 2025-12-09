@@ -64,6 +64,9 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         const textTemplate = options.textTemplate || 'Radial Text'
         element.textTemplate = textTemplate
         element.text = textTemplate
+        if (options.textProperty) {
+          element.textProperty = options.textProperty
+        }
 
         this.baseStore.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
@@ -99,6 +102,7 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         fontFamily: fabricAny.fontFamily ?? 'Noto Sans SC',
         fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 36,
         textTemplate,
+        textProperty: fabricAny.textProperty,
         angle: typeof fabricAny.startAngle === 'number' ? fabricAny.startAngle : (fabricAny.radialMeta?.startAngle ?? 0),
         radius: typeof fabricAny.radius === 'number' ? fabricAny.radius : 100,
         direction: fabricAny.direction || 'clockwise',
@@ -122,6 +126,7 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         fontFamily: config.fontFamily,
         fontSize: config.fontSize,
         textTemplate,
+        textProperty: (config as any).textProperty,
         text: textTemplate,
         angle: typeof (config as any).angle === 'number' ? (config as any).angle : 0,
         radius: typeof (config as any).radius === 'number' ? (config as any).radius : 100,

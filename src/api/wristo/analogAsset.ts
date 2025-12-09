@@ -40,6 +40,12 @@ export const analogAssetApi = {
       params: { id }
     })
   }
+  ,
+  remove(id: number): Promise<ApiResponse<boolean>> {
+    return instance.post('/dsn/analog-asset/remove', null, {
+      params: { id }
+    })
+  }
 }
 
 export default analogAssetApi

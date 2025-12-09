@@ -18,10 +18,21 @@
       v-for="asset in assets" 
       :key="asset.id" 
       class="asset-item"
-      :class="{ active: (selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset)) }"
+      :class="{
+        active: (selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset)),
+        deleting: deletingId === asset.id
+      }"
       @click="handleSelect(asset)"
     >
       <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
+      <el-icon
+        v-if="!asset.isSystem && !(selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset))"
+        class="delete-icon"
+        @click.stop="handleRemove(asset)"
+        :title="'删除素材'"
+      >
+        <Delete />
+      </el-icon>
       <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
     </div>
 
@@ -47,8 +58,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, PropType } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, ArrowDown, Refresh, Loading, Star } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, ArrowDown, Refresh, Loading, Star, Delete } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
 
@@ -86,6 +97,7 @@ const loading = ref(false)
 const hasMore = ref(true)
 const pageNum = ref(1)
 const pageSize = 12
+const deletingId = ref<number | null>(null)
 
 /**
  * 获取素材预览URL（优先使用预览图 PNG），否则回退到原文件URL
@@ -201,6 +213,38 @@ const handleSelect = (asset: AnalogAssetVO) => {
   }
 }
 
+/**
+ * 删除素材
+ */
+const handleRemove = async (asset: AnalogAssetVO) => {
+  try {
+    await ElMessageBox.confirm('确认删除该素材？此操作不可撤销。', '提示', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+
+  deletingId.value = asset.id
+  try {
+    const res = await analogAssetApi.remove(asset.id)
+    if (res.data) {
+      const idx = assets.value.findIndex(a => a.id === asset.id)
+      if (idx !== -1) assets.value.splice(idx, 1)
+      ElMessage.success('删除成功')
+    } else {
+      ElMessage.error('删除失败')
+    }
+  } catch (e) {
+    console.error('删除素材失败:', e)
+    ElMessage.error('删除失败')
+  } finally {
+    deletingId.value = null
+  }
+}
+
 // 初始化加载
 onMounted(() => {
   loadAssets(true)
@@ -245,6 +289,11 @@ defineExpose({
   border-color: #409eff;
   background-color: #ecf5ff;
   border-width: 2px;
+}
+
+.asset-item.deleting {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .asset-item img {
@@ -330,5 +379,23 @@ defineExpose({
   right: 4px;
   font-size: 14px;
   color: #e6a23c;
+}
+
+.delete-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 16px;
+  color: #f56c6c;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+
+.asset-item:hover .delete-icon {
+  opacity: 1;
 }
 </style>

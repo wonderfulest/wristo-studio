@@ -33,8 +33,22 @@
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
     <div class="setting-item">
-      <label>文本内容</label>
-      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
+      <TextPropertyField
+        v-model="textProperty"
+        label="文本变量"
+        placeholder="选择字符串属性"
+        @change="applyTextProperty"
+      />
+      <div v-if="selectedTextProperty" class="text-property-preview">
+        <div class="text-property-meta">
+          <span class="label">变量名：</span>
+          <span class="value">{{ selectedTextProperty.title }}</span>
+        </div>
+        <div class="text-property-meta">
+          <span class="label">默认内容：</span>
+        </div>
+        <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
+      </div>
     </div>
     <div class="setting-item">
       <label>角度</label>
@@ -63,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useFontStore } from '@/stores/fontStore'
 import { fontSizes, originXOptions } from '@/config/settings'
@@ -71,7 +85,8 @@ import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import TextPropertyField from '@/components/settings/common/TextPropertyField.vue'
+import { usePropertiesStore } from '@/stores/properties'
 
 const props = defineProps({
   element: {
@@ -82,6 +97,7 @@ const props = defineProps({
 
 const baseStore = useBaseStore()
 const fontStore = useFontStore()
+const propertiesStore = usePropertiesStore()
 
 const fontSize = ref(props.element?.fontSize || 36)
 const fill = ref(props.element?.fill || '#FFFFFF')
@@ -89,7 +105,7 @@ const fontFamily = ref(props.element?.fontFamily || '')
 const originX = ref(props.element?.originX || 'center')
 const positionX = ref(Math.round(props.element?.left || 0))
 const positionY = ref(Math.round(props.element?.top || 0))
-const textTemplate = ref(props.element?.text || '')
+const textProperty = ref(props.element?.textProperty || '')
 const angle = ref(
   typeof props.element?.startAngle === 'number'
     ? props.element.startAngle
@@ -98,6 +114,11 @@ const angle = ref(
 const radius = ref(typeof props.element?.radius === 'number' ? props.element.radius : 100)
 const direction = ref(props.element?.direction || 'clockwise')
 const justification = ref(props.element?.justification || 'center')
+
+const selectedTextProperty = computed(() => {
+  if (!textProperty.value) return null
+  return propertiesStore.allProperties[textProperty.value] || null
+})
 
 watch(
   () => props.element,
@@ -216,24 +237,24 @@ const updatePosition = () => {
   baseStore.canvas.renderAll()
 }
 
-const updateTextTemplate = () => {
-  if (!props.element || !baseStore.canvas) return
-  // 统一交给 group.updateRadialText 处理（内部负责增删 child 并重排）
-  if (typeof props.element.updateRadialText === 'function') {
-    props.element.updateRadialText(textTemplate.value)
-  } else {
-    // 兜底：至少更新文本并请求重排
-    props.element.set('text', textTemplate.value)
-    props.element.textTemplate = textTemplate.value
-    if (props.element.radialMeta) props.element.radialMeta.text = textTemplate.value
-    if (typeof props.element.updateRadialLayout === 'function') {
-      props.element.updateRadialLayout()
+const applyTextProperty = () => {
+  if (!textProperty.value || !props.element || !baseStore.canvas) return
+  const value = propertiesStore.getPropertyValue(textProperty.value)
+  if (typeof value === 'string') {
+    props.element.textProperty = textProperty.value
+    if (typeof props.element.updateRadialText === 'function') {
+      props.element.updateRadialText(value)
     } else {
-      props.element.setCoords && props.element.setCoords()
+      props.element.set('text', value)
+      if (props.element.radialMeta) props.element.radialMeta.text = value
+      if (typeof props.element.updateRadialLayout === 'function') {
+        props.element.updateRadialLayout()
+      } else if (props.element.setCoords) {
+        props.element.setCoords()
+      }
     }
+    baseStore.canvas.renderAll()
   }
-
-  baseStore.canvas.renderAll()
 }
 
 const updateAngle = () => {
@@ -313,14 +334,6 @@ watch(
   }
 )
 
-watch(
-  () => props.element?.text,
-  (newText) => {
-    if (typeof newText === 'string') {
-      textTemplate.value = newText
-    }
-  }
-)
 
 watch(
   () => props.element?.angle,
