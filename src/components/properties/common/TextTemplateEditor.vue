@@ -9,7 +9,7 @@
       @input="onInput"
     />
     <div class="variables">
-      <span class="variables-label">变量：</span>
+      <span class="variables-label">Variables:</span>
       <el-button
         v-for="variable in variables"
         :key="variable.name"

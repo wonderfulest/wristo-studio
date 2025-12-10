@@ -29,23 +29,12 @@
           </div>
         </el-form-item>
 
-        <el-form-item 
-          label="Property Key" 
-          prop="propertyKey"
-          :rules="[
-            { required: true, message: 'Please input property key', trigger: 'blur' },
-            { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: 'Only letters, numbers and underscore allowed, must start with letter', trigger: 'blur' }
-          ]"
-        >
-          <el-input 
-            v-model="formData.propertyKey" 
-            placeholder="goal_1" 
-            :disabled="isEdit"
-          />
-          <div class="field-help">
-            The key of the property that this setting will manage. Letter, under score, and number only, no space and special characters allow. To access this property value in your design, use <code class="code-text">(prop.{{ formData.propertyKey || 'propertykey' }})</code> in the expression.
-          </div>
-        </el-form-item>
+        <PropertyKeyField
+          v-model="formData.propertyKey"
+          :is-edit="isEdit"
+          default-key="goal_1"
+          placeholder="goal_1"
+        />
 
         <el-form-item label="Type">
           <el-input v-model="formData.type" disabled placeholder="goal" />
@@ -169,6 +158,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { DataTypeOptions } from '@/config/settings'
+import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 
 const dialogVisible = ref(false)
 const formRef = ref(null)

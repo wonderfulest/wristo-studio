@@ -4,12 +4,14 @@
       <el-form-item label="Title" prop="title" :rules="[{ required: true, message: 'Title is required', trigger: 'blur' }]"></el-form-item>
       <el-input v-model="formData.title" />
 
-      <el-form-item label="Property Key" prop="propertyKey" :rules="[{ required: true, message: 'Key is required', trigger: 'blur' }]"></el-form-item>
-      <el-input v-model="formData.propertyKey" />
+      <PropertyKeyField
+        v-model="formData.propertyKey"
+        :is-edit="isEdit"
+        default-key="text_1"
+        placeholder="text_1"
+      />
 
-      <el-form-item label="Default Text" prop="value">
-        <TextTemplateEditor v-model="formData.value" />
-      </el-form-item>
+      <DefaultTextField v-model="formData.value" />
 
       <el-form-item label="Prompt (optional)">
         <el-input v-model="formData.prompt" />
@@ -32,6 +34,8 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import DefaultTextField from '@/components/properties/common/DefaultTextField.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 

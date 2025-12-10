@@ -20,12 +20,6 @@
         :label="`${prop.title} — ${getTypeLabel(key)}`"
         :value="key"
       />
-      <template #empty>
-        <div class="select-empty">
-          No data properties available
-          <el-button type="primary" link @click="openAppProperties">Add Property</el-button>
-        </div>
-      </template>
       <template #footer>
         <div class="select-footer">
           <span class="footer-text">Can’t find what you need?</span>
