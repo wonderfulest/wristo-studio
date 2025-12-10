@@ -23,6 +23,8 @@
         deleting: deletingId === asset.id
       }"
       @click="handleSelect(asset)"
+      @mouseenter="handleMouseEnter(asset)"
+      @mouseleave="handleMouseLeave"
     >
       <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
       <el-icon
@@ -34,6 +36,14 @@
         <Delete />
       </el-icon>
       <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
+
+      <!-- 悬停大图预览（贴在当前项左侧） -->
+      <div
+        v-if="hoverPreviewUrl && hoverPreviewAsset?.id === asset.id"
+        class="asset-large-preview"
+      >
+        <img :src="hoverPreviewUrl" :alt="hoverPreviewAsset?.file?.name" />
+      </div>
     </div>
 
     <!-- 加载中 -->
@@ -57,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, PropType } from 'vue'
+import { ref, onMounted, PropType, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown, Refresh, Loading, Star, Delete } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
@@ -98,6 +108,12 @@ const hasMore = ref(true)
 const pageNum = ref(1)
 const pageSize = 12
 const deletingId = ref<number | null>(null)
+const hoverPreviewAsset = ref<AnalogAssetVO | null>(null)
+
+const hoverPreviewUrl = computed(() => {
+  if (!hoverPreviewAsset.value) return undefined
+  return getAssetUrl(hoverPreviewAsset.value)
+})
 
 /**
  * 获取素材预览URL（优先使用预览图 PNG），否则回退到原文件URL
@@ -214,6 +230,17 @@ const handleSelect = (asset: AnalogAssetVO) => {
 }
 
 /**
+ * 悬停预览
+ */
+const handleMouseEnter = (asset: AnalogAssetVO) => {
+  hoverPreviewAsset.value = asset
+}
+
+const handleMouseLeave = () => {
+  hoverPreviewAsset.value = null
+}
+
+/**
  * 删除素材
  */
 const handleRemove = async (asset: AnalogAssetVO) => {
@@ -267,7 +294,7 @@ defineExpose({
 .asset-item {
   width: 80px;
   height: 80px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid #c0c4cc;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -276,8 +303,7 @@ defineExpose({
   justify-content: center;
   transition: all 0.2s;
   position: relative;
-  overflow: hidden;
-  background-color: #fff;
+  background-color: #f7f7f7;
 }
 
 .asset-item:hover {
@@ -300,6 +326,7 @@ defineExpose({
   width: 60px;
   height: 60px;
   object-fit: contain;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
 }
 
 .upload-item {
@@ -356,6 +383,36 @@ defineExpose({
   border-style: dashed;
   background-color: #fafafa;
   cursor: default;
+}
+
+.asset-large-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+  border: 1px solid #dcdfe6;
+  background-image:
+    linear-gradient(45deg, #eee 25%, transparent 25%),
+    linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%),
+    linear-gradient(-45deg, transparent 75%, #eee 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.asset-large-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .loading-icon {

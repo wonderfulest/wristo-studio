@@ -4,7 +4,6 @@
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
-        <label>指针hand</label>
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
