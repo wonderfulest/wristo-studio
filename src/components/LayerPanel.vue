@@ -65,15 +65,6 @@ const selectedIds = ref<string[]>([])
 const selectionCleanup = ref<null | (() => void)>(null)
 let stopWatchCanvas: null | (() => void) = null
 
-const summarizeObjects = (objs: MinimalFabricLike[]): Array<{ id?: string; eleType?: string; active?: boolean; locked?: boolean; visible?: boolean }> =>
-  objs.map((o) => ({
-    id: o.id,
-    eleType: o.eleType,
-    active: (o as { active?: boolean }).active,
-    locked: (o as { locked?: boolean }).locked,
-    visible: (o as { visible?: boolean }).visible
-  }))
-
 // batch update from canvas
 const batchUpdate = (): void => {
   if (!baseStore.canvas) {

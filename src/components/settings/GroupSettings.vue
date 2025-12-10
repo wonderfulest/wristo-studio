@@ -33,7 +33,7 @@
       </el-form-item>
 
       <el-form-item v-if="isSameTypeLayer" label="Font" required>
-        <font-picker v-model="fontFamily" @change="updateFontFamily" />
+        <font-picker v-model="fontFamily" :type="fontType" @change="updateFontFamily" />
       </el-form-item>
     </el-form>
   </div>
@@ -51,6 +51,7 @@ import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
 import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
 import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
 import type { FabricElement } from '@/types/element'
+import { FontTypes } from '@/constants/fonts'
 
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
@@ -204,6 +205,25 @@ const isSameTypeLayer = computed(() => {
   const firstType = props.elements[0]?.eleType
   if (!firstType) return false
   return props.elements.every((element) => element.eleType === firstType)
+})
+
+// 根据分组内元素类型，确定字体选择器的字体类型
+const fontType = computed(() => {
+  const eleType = props.elements[0]?.eleType
+  switch (eleType) {
+    case 'icon':
+      return FontTypes.ICON_FONT
+    case 'time':
+      return FontTypes.NUMBER_FONT
+    case 'data':
+      return FontTypes.TEXT_FONT
+    case 'label':
+      return FontTypes.TEXT_FONT
+    case 'date':
+      return FontTypes.TEXT_FONT
+    default:
+      return FontTypes.TEXT_FONT
+  }
 })
 
 const updateFontSize = () => {

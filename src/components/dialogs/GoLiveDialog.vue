@@ -123,46 +123,16 @@
           The URL where users can find your app in the Garmin Connect IQ store
         </div>
       </el-form-item>
-      <el-form-item label="Categories">
-        <el-select
-          v-model="form.categoryIds"
-          multiple
-          filterable
-          placeholder="Select categories"
-          :loading="loadingCategories"
-          style="width: 100%"
-        >
-          <el-option
-            v-for="category in categories"
-            :key="category.id"
-            :label="category.name"
-            :value="category.id"
-          />
-        </el-select>
-        <div class="form-tip">
-          Select one or more categories for your app, will be show on wristo store
-        </div>
-      </el-form-item>
-      <el-form-item label="Bundles">
-        <el-select
-          v-model="form.bundleIds"
-          multiple
-          filterable
-          placeholder="Select bundles"
-          :loading="loadingBundles"
-          style="width: 100%"
-        >
-          <el-option
-            v-for="bundle in bundles"
-            :key="bundle.bundleId"
-            :label="bundle.bundleName"
-            :value="bundle.bundleId"
-          />
-        </el-select>
-        <div class="form-tip">
-          Select one or more bundles for your app
-        </div>
-      </el-form-item>
+      <CategorySelector
+        v-model:categoryIds="form.categoryIds"
+        :categories="categories"
+        :loadingCategories="loadingCategories"
+      />
+      <BundleSelector
+        v-model:bundleIds="form.bundleIds"
+        :bundles="bundles"
+        :loadingBundles="loadingBundles"
+      />
       <el-form-item label="Trial Duration (hours)">
         <el-input-number 
           v-model="form.trialLasts" 
@@ -219,6 +189,8 @@ import type { UploadFile } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
+import CategorySelector from '@/components/common/CategorySelector.vue'
+import BundleSelector from '@/components/common/BundleSelector.vue'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -264,7 +236,9 @@ const loadDesign = (design: Design) => {
   form.appId = design.product.appId
   form.name = design.product.name
   form.description = design.product.description
-  form.categoryIds = design.product.categories.map((category: Category) => category.id)
+  form.categoryIds = design.product.categories
+    .filter((category: Category) => category.id !== 1)
+    .map((category: Category) => category.id)
   form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
   
   // 如果已有产品信息，使用现有数据

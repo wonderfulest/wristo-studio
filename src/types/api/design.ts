@@ -43,6 +43,8 @@ export interface DesignSubmitDTO {
   kpayId?: string
   price?: number
   trialLasts?: number
+  categoryIds?: number[]
+  bundleIds?: number[]
 }
 
 export interface FetchDesignReviewPageParams {

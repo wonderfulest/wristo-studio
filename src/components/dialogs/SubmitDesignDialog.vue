@@ -80,6 +80,16 @@
           placeholder="请输入设计描述"
         />
       </el-form-item>
+      <CategorySelector
+        v-model:categoryIds="form.categoryIds"
+        :categories="categories"
+        :loadingCategories="loadingCategories"
+      />
+      <BundleSelector
+        v-model:bundleIds="form.bundleIds"
+        :bundles="bundles"
+        :loadingBundles="loadingBundles"
+      />
     </el-form>
     
     <template #footer>
@@ -103,6 +113,12 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import type { Design, DesignSubmitDTO } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
+import { getAllSeries } from '@/api/wristo/categories'
+import type { Category } from '@/types/api/category'
+import { productsApi } from '@/api/wristo/products'
+import type { Bundle } from '@/types/api/bundle'
+import CategorySelector from '@/components/common/CategorySelector.vue'
+import BundleSelector from '@/components/common/BundleSelector.vue'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -117,7 +133,9 @@ const form = reactive({
   paymentMethod: 'wpay',
   kpayId: '',
   price: 1.99,
-  trialLasts: 1 // 默认1小时
+  trialLasts: 1, // 默认1小时
+  categoryIds: [] as number[],
+  bundleIds: [] as number[]
 })
 
 const rules = computed(() => ({
@@ -158,10 +176,54 @@ const rules = computed(() => ({
       message: '试用时长必须在0-720小时之间', 
       trigger: 'blur' 
     }
+  ],
+  categoryIds: [
+    { required: true, type: 'array', message: '请选择分类', trigger: 'change' },
+    { 
+      validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
+        const len = Array.isArray(value) ? value.length : 0
+        if (len === 0) return callback(new Error('请选择分类'))
+        if (len > 3) return callback(new Error('分类最多选择3个'))
+        callback()
+      },
+      trigger: 'change'
+    }
   ]
 }))
 
 const emit = defineEmits(['success', 'cancel'])
+
+// 分类/套餐 选项数据
+const categories = ref<Category[]>([])
+const loadingCategories = ref(false)
+const bundles = ref<Bundle[]>([])
+const loadingBundles = ref(false)
+
+const loadCategories = async () => {
+  try {
+    loadingCategories.value = true
+    const res: Category[] = await getAllSeries()
+    categories.value = res
+  } catch (e) {
+    console.error('加载分类失败:', e)
+  } finally {
+    loadingCategories.value = false
+  }
+}
+
+const loadBundles = async () => {
+  try {
+    loadingBundles.value = true
+    const res = await productsApi.getBundles()
+    if (res.code === 0 && res.data) {
+      bundles.value = res.data
+    }
+  } catch (e) {
+    console.error('加载套餐失败:', e)
+  } finally {
+    loadingBundles.value = false
+  }
+}
 
 // 处理收款方式变化
 const handlePaymentMethodChange = (value: string) => {
@@ -197,11 +259,20 @@ const show = async (design: Design) => {
         paymentMethod: 'none',
         kpayId: '',
         price: 1.99,
-        trialLasts: 1
+        trialLasts: 1,
+        categoryIds: [],
+        bundleIds: []
       })
       
       if (product) {
         form.trialLasts = product.trialLasts
+        // 初始化分类与套餐
+        if (Array.isArray(product.categories)) {
+          form.categoryIds = product.categories.filter((c: Category) => c.id !== 1).map((c: Category) => c.id)
+        }
+        if (Array.isArray(product.bundles)) {
+          form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)
+        }
       }
       // 如果product中有支付信息，预填充
       if (product?.payment) {
@@ -210,6 +281,8 @@ const show = async (design: Design) => {
         form.kpayId = payment.kpayId || ''
         form.price = payment.price || 1.99
       }
+      // 加载分类与套餐选项
+      await Promise.all([loadCategories(), loadBundles()])
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || '获取设计详情失败')
@@ -235,7 +308,9 @@ const handleConfirm = async () => {
       designUid: form.designUid,
       paymentMethod: form.paymentMethod,
       name: form.name,
-      description: form.description
+      description: form.description,
+      categoryIds: form.categoryIds,
+      bundleIds: form.bundleIds
     }
     
     // 根据收款方式添加相应参数
@@ -248,7 +323,6 @@ const handleConfirm = async () => {
       submitData.trialLasts = form.trialLasts
     }
     // free模式不需要额外参数
-    
     const response = await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
