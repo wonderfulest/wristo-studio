@@ -40,8 +40,13 @@ export const useTick60Store = defineStore('tick60Element', {
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
         await analogAssetStore.loadAssets('tick60')
-        imageUrl = analogAssetStore.getFirstUrl('tick60')
-        (options as any).assetId = analogAssetStore.getFirstId('tick60')
+
+        // 明确告诉 TS：这是一个 (type: AnalogAssetType) => string | null 的函数
+        const getFirstUrl = analogAssetStore.getFirstUrl as (type: 'tick60') => string | null
+        const getFirstId = analogAssetStore.getFirstId as (type: 'tick60') => number | null
+
+        imageUrl = getFirstUrl('tick60')
+        ;(options as any).assetId = getFirstId('tick60')
       }
 
       if (!imageUrl) {
