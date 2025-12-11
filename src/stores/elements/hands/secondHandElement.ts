@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
-import { SecondHandOptions } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import { HandElementConfig } from '@/types/elements'
@@ -49,12 +49,21 @@ export const useSecondHandStore = defineStore('secondHandElement', {
       if (!imageUrl && config.assetId) {
         try {
           const res = await analogAssetApi.get(config.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || SecondHandOptions[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = SecondHandOptions[0].url
+          console.error('Failed to fetch second hand asset:', e)
         }
       }
-      imageUrl = imageUrl || SecondHandOptions[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('second')
+        imageUrl = analogAssetStore.getFirstUrl('second')
+      }
+
+      if (!imageUrl) {
+        console.error('No active second hand assets available for default second hand.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,

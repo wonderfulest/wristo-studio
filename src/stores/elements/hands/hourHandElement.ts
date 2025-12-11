@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage, type FabricObject } from 'fabric'
 import { nanoid } from 'nanoid'
-import { HourHandOptions } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { HandElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
@@ -51,12 +51,21 @@ export const useHourHandStore = defineStore('hourHandElement', {
       if (!imageUrl && config.assetId) {
         try {
           const res = await analogAssetApi.get(config.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || HourHandOptions[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = HourHandOptions[0].url
+          console.error('Failed to fetch hour hand asset:', e)
         }
       }
-      imageUrl = imageUrl || HourHandOptions[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('hour')
+        imageUrl = analogAssetStore.getFirstUrl('hour')
+      }
+
+      if (!imageUrl) {
+        console.error('No active hour hand assets available for default hour hand.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,

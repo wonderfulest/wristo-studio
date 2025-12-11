@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
-import { Ticks12Options } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from './RomansElement'
@@ -31,12 +31,21 @@ export const useTick12Store = defineStore('tick12Element', {
       if (!imageUrl && options.assetId) {
         try {
           const res = await analogAssetApi.get(options.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || Ticks12Options[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = Ticks12Options[0].url
+          console.error('Failed to fetch tick12 asset:', e)
         }
       }
-      imageUrl = imageUrl || Ticks12Options[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('tick12')
+        imageUrl = analogAssetStore.getFirstUrl('tick12')
+      }
+
+      if (!imageUrl) {
+        console.error('No active tick12 assets available for default tick12.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let svgGroup: any = img
 

@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
-import { MinuteHandOptions } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { HandElementConfig } from '@/types/elements'
 import { FabricElement } from '@/types/element'
@@ -50,12 +50,21 @@ export const useMinuteHandStore = defineStore('minuteHandElement', {
       if (!imageUrl && config.assetId) {
         try {
           const res = await analogAssetApi.get(config.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || MinuteHandOptions[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = MinuteHandOptions[0].url
+          console.error('Failed to fetch minute hand asset:', e)
         }
       }
-      imageUrl = imageUrl || MinuteHandOptions[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('minute')
+        imageUrl = analogAssetStore.getFirstUrl('minute')
+      }
+
+      if (!imageUrl) {
+        console.error('No active minute hand assets available for default minute hand.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       const options = {
         id,

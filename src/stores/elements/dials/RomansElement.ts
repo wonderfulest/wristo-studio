@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
-import { RomansOptions } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 export interface DialElementConfig {
@@ -38,12 +38,21 @@ export const useRomansStore = defineStore('romansElement', {
       if (!imageUrl && options.assetId) {
         try {
           const res = await analogAssetApi.get(options.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || RomansOptions[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = RomansOptions[0].url
+          console.error('Failed to fetch romans asset:', e)
         }
       }
-      imageUrl = imageUrl || RomansOptions[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('romans')
+        imageUrl = analogAssetStore.getFirstUrl('romans')
+      }
+
+      if (!imageUrl) {
+        console.error('No active romans assets available for default romans.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let group: any = img
       group.set({

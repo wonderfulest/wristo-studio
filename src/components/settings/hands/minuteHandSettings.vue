@@ -22,7 +22,6 @@ import { ref, defineEmits, defineExpose } from 'vue'
 import { useMinuteHandStore } from '@/stores/elements/hands/minuteHandElement'
 import HandPicker from '@/components/hand-picker/index.vue'
 import { ElMessage } from 'element-plus'
-import { MinuteHandOptions } from '@/config/settings'
 import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
 
 const emit = defineEmits(['close'])
@@ -36,9 +35,6 @@ const props = defineProps({
 
 const minuteHandStore = useMinuteHandStore()
 const formRef = ref(null)
-
-// 可用的时针hand
-const availableHands = ref(MinuteHandOptions)
 
 // 最小化设置，无位置/尺寸/颜色/旋转控件
 

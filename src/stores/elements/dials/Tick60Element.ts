@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
-import { Ticks60Options } from '@/config/settings'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from './RomansElement'
@@ -31,12 +31,21 @@ export const useTick60Store = defineStore('tick60Element', {
       if (!imageUrl && (options as any).assetId) {
         try {
           const res = await analogAssetApi.get((options as any).assetId as number)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || Ticks60Options[0].url
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
         } catch (e) {
-          imageUrl = Ticks60Options[0].url
+          console.error('Failed to fetch tick60 asset:', e)
         }
       }
-      imageUrl = imageUrl || Ticks60Options[0].url
+      if (!imageUrl) {
+        const analogAssetStore = useAnalogAssetStore()
+        await analogAssetStore.loadAssets('tick60')
+        imageUrl = analogAssetStore.getFirstUrl('tick60')
+      }
+
+      if (!imageUrl) {
+        console.error('No active tick60 assets available for default tick60.')
+        return
+      }
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let group: any = img
 

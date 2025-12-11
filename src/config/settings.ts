@@ -6,4 +6,4 @@ export { TimeFormatConstants, TimeFormatOptions } from './elements/options/timeF
 export { DateFormatConstants, DateFormatOptions } from './elements/options/dateFormats'
 export { LayoutOptions } from './elements/options/layout'
 export { DataTypeOptions } from './elements/options/dataTypes'
-export { HourHandOptions, MinuteHandOptions, SecondHandOptions, Ticks12Options, Ticks60Options, RomansOptions } from './elements/options/analog'
+export { getHourHandOptions, getMinuteHandOptions, getSecondHandOptions, getTicks12Options, getTicks60Options, getRomansOptions } from './elements/options/analog'
