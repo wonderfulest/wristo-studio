@@ -8,7 +8,7 @@ export const DEFAULT_TICK_CONFIG: TickElementConfig & EDITOR_ELEMENT = Object.as
     icon: 'mdi:decagram-outline',
     label: 'Tick 12',
     eleType: 'tick12' as const,
-    disabled: true,
+    // disabled: true,
   },
 )
 
@@ -19,7 +19,7 @@ export const DEFAULT_TICK60_CONFIG: TickElementConfig & EDITOR_ELEMENT = Object.
     icon: 'mdi:circle-slice-6',
     label: 'Tick 60',
     eleType: 'tick60' as const,
-    disabled: true,
+    // disabled: true,
   },
 )
 
@@ -30,6 +30,6 @@ export const DEFAULT_ROMANS_CONFIG: TickElementConfig & EDITOR_ELEMENT = Object.
     icon: 'mdi:format-letter-case',
     label: 'Romans',
     eleType: 'romans' as const,
-    disabled: true,
+    // disabled: true,
   },
 )

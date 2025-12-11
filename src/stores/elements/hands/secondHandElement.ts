@@ -49,15 +49,17 @@ export const useSecondHandStore = defineStore('secondHandElement', {
       if (!imageUrl && config.assetId) {
         try {
           const res = await analogAssetApi.get(config.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || null
         } catch (e) {
           console.error('Failed to fetch second hand asset:', e)
+          imageUrl = null
         }
       }
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
         await analogAssetStore.loadAssets('second')
         imageUrl = analogAssetStore.getFirstUrl('second')
+        config.assetId = analogAssetStore.getFirstId('second')
       }
 
       if (!imageUrl) {

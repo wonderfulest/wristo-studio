@@ -8,8 +8,8 @@ import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 export interface DialElementConfig {
   id?: string
-  imageUrl?: string
-  assetId?: number
+  imageUrl: string | null
+  assetId: number | null
   fill?: string
   left?: number
   top?: number
@@ -31,22 +31,24 @@ export const useRomansStore = defineStore('romansElement', {
     }
   },
   actions: {
-    async addElement(options: DialElementConfig = {}) {
+    async addElement(options: DialElementConfig) {
       const id = options.id || nanoid()
       // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
       let imageUrl = options.imageUrl
       if (!imageUrl && options.assetId) {
         try {
           const res = await analogAssetApi.get(options.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || null
         } catch (e) {
           console.error('Failed to fetch romans asset:', e)
+          imageUrl = null
         }
       }
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
         await analogAssetStore.loadAssets('romans')
         imageUrl = analogAssetStore.getFirstUrl('romans')
+        options.assetId = analogAssetStore.getFirstId('romans')
       }
 
       if (!imageUrl) {

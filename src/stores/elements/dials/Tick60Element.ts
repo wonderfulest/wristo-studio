@@ -24,22 +24,24 @@ export const useTick60Store = defineStore('tick60Element', {
   },
 
   actions: {
-    async addElement(options: DialElementConfig = {}) {
+    async addElement(options: DialElementConfig) {
       const id = options.id || nanoid()
       // Prefer provided imageUrl; if missing but assetId exists, fetch by assetId
       let imageUrl = options.imageUrl
       if (!imageUrl && (options as any).assetId) {
         try {
           const res = await analogAssetApi.get((options as any).assetId as number)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || null
         } catch (e) {
           console.error('Failed to fetch tick60 asset:', e)
+          imageUrl = null
         }
       }
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
         await analogAssetStore.loadAssets('tick60')
         imageUrl = analogAssetStore.getFirstUrl('tick60')
+        (options as any).assetId = analogAssetStore.getFirstId('tick60')
       }
 
       if (!imageUrl) {

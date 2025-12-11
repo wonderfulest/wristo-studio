@@ -11,7 +11,8 @@ export interface AnalogAssetStoreState {
 
 export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetStoreState, {
   getOptions(state: AnalogAssetStoreState): (type: AnalogAssetType) => HandOption[]
-  getFirstUrl(state: AnalogAssetStoreState): (type: AnalogAssetType) => string | undefined
+  getFirstUrl(state: AnalogAssetStoreState): (type: AnalogAssetType) => string | null
+  getFirstId(state: AnalogAssetStoreState): (type: AnalogAssetType) => number | null
 }, {
   loadAssets(type: AnalogAssetType): Promise<void>
 }>(
@@ -34,12 +35,17 @@ export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetSt
           }
         }).filter(opt => !!opt.url)
       },
-      getFirstUrl: (state) => (type: AnalogAssetType): string | undefined => {
+      getFirstUrl: (state) => (type: AnalogAssetType): string | null => {
         const list = state.assetsByType[type] || []
-        if (!list.length) return undefined
+        if (!list.length) return null
         const first = list[0]
-        return first.file?.previewUrl || first.file?.url
+        return first.file?.previewUrl || first.file?.url || null
       },
+      getFirstId: (state) => (type: AnalogAssetType): number | null => {
+        const list = state.assetsByType[type] || []
+        if (!list.length) return null
+        return list[0].id;
+      }
     },
 
     actions: {

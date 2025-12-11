@@ -6,8 +6,8 @@ export interface RotationCenter {
 }
 
 export interface HandElementConfig extends BaseElementConfig {
-  assetId?: number
-  imageUrl?: string
+  assetId: number | null
+  imageUrl: string | null
   rotationCenter: RotationCenter
   targetHeight: number
   moveDy: number

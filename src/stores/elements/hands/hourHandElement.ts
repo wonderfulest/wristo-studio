@@ -51,15 +51,17 @@ export const useHourHandStore = defineStore('hourHandElement', {
       if (!imageUrl && config.assetId) {
         try {
           const res = await analogAssetApi.get(config.assetId)
-          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl
+          imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || null
         } catch (e) {
           console.error('Failed to fetch hour hand asset:', e)
+          imageUrl = null
         }
       }
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
         await analogAssetStore.loadAssets('hour')
         imageUrl = analogAssetStore.getFirstUrl('hour')
+        config.assetId = analogAssetStore.getFirstId('hour')
       }
 
       if (!imageUrl) {
