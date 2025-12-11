@@ -32,7 +32,6 @@ export const elementConfigs: Record<string, Record<string, AnyElementConfig & ED
   status: {
     battery: DEFAULT_BATTERY_CONFIG,
     moveBar: DEFAULT_MOVE_BAR_CONFIG,
-   
   },
   texts: {
     text: DEFAULT_TEXT_ELEMENT_CONFIG,

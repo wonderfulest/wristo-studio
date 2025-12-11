@@ -7,11 +7,16 @@
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
-          <button v-for="(config, type) in category" :key="type" 
-                  @click="addElementByType(categoryKey, type, config)">
-            <Icon :icon="config.icon" class="element-icon" />
-            <span class="element-label">{{ config.label }}</span>
-          </button>
+          <template v-for="(config, type) in category" :key="type">
+            <button
+              :class="{ disabled: config.disabled }"
+              :disabled="config.disabled"
+              @click="addElementByType(categoryKey, type, config)"
+            >
+              <Icon :icon="config.icon" class="element-icon" />
+              <span class="element-label">{{ config.label }}</span>
+            </button>
+          </template>
         </div>
       </div>
     </div>

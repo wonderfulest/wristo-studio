@@ -30,6 +30,9 @@ export const DEFAULT_ANGLED_TEXT_ELEMENT_CONFIG: TextElementConfig & EDITOR_ELEM
     eleType: 'angledText' as const,
   },
   DEFAULT_TEXT_CONFIG,
+  {
+    disabled: true,
+  }
 )
 
 export const DEFAULT_RADIAL_TEXT_ELEMENT_CONFIG: TextElementConfig & EDITOR_ELEMENT = Object.assign(

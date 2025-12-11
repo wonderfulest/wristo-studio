@@ -14,6 +14,8 @@ export interface EDITOR_ELEMENT {
   icon: string
   label: string
   eleType: string
+  
+  disabled?: boolean;
 }
 
 export const DEFAULT_BASE_CONFIG: BaseElementConfig = {
