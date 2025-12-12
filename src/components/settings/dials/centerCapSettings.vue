@@ -9,7 +9,7 @@
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
-          asset-type="tick60"
+          asset-type="centerCap"
           :on-select="(url, asset) => centerCapStore.updateSVG(element, { imageUrl: url, assetId: asset?.id, targetSize: localSize })"
           :on-upload="(url, asset) => centerCapStore.updateSVG(element, { imageUrl: url, assetId: asset?.id, targetSize: localSize })"
         />
