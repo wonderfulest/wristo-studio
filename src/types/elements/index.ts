@@ -94,6 +94,7 @@ export interface ElementConfigMap {
   'romans': _Tick
   'tick12': _Tick
   'tick60': _Tick
+  'centerCap': _Tick
   'goal': _Goal
   'goalBar': _GoalBar
   'goalArc': _GoalArc

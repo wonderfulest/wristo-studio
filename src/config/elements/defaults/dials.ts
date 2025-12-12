@@ -33,3 +33,14 @@ export const DEFAULT_ROMANS_CONFIG: TickElementConfig & EDITOR_ELEMENT = Object.
     // disabled: true,
   },
 )
+
+export const DEFAULT_CENTER_CAP_CONFIG: TickElementConfig & EDITOR_ELEMENT = Object.assign(
+  {},
+  DEFAULT_TICK_CONFIG,
+  {
+    icon: 'mdi:circle-slice-8',
+    label: 'Center Cap',
+    eleType: 'centerCap' as const,
+    // disabled: true,
+  },
+)
