@@ -40,13 +40,13 @@ export const useCenterCapStore = defineStore('centerCapElement', {
 
       if (!imageUrl) {
         const analogAssetStore = useAnalogAssetStore()
-        // 暂时复用 tick60 资源类型，如果后续有独立的 centerCap 资源类型再调整
-        await analogAssetStore.loadAssets('tick60' as any)
+        // 暂时复用 center_cap 资源类型，如果后续有独立的 centerCap 资源类型再调整
+        await analogAssetStore.loadAssets('center_cap' as any)
         const getFirstUrl = analogAssetStore.getFirstUrl as (type: any) => string | null
         const getFirstId = analogAssetStore.getFirstId as (type: any) => number | null
 
-        imageUrl = getFirstUrl('tick60')
-        ;(options as any).assetId = getFirstId('tick60')
+        imageUrl = getFirstUrl('center_cap')
+        ;(options as any).assetId = getFirstId('center_cap')
       }
 
       if (!imageUrl) {

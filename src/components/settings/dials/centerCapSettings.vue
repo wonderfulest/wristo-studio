@@ -2,14 +2,14 @@
   <div class="settings-section">
     <h3>中心盖设置</h3>
 
-    <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
+    <el-form ref="formRef" :model="element" label-position="left" label-width="100px" @submit.prevent>
       <!-- 资源选择 -->
       <div class="setting-item">
         <label>样式</label>
         <AnalogAssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
-          asset-type="centerCap"
+          asset-type="center_cap"
           :on-select="(url, asset) => centerCapStore.updateSVG(element, { imageUrl: url, assetId: asset?.id, targetSize: localSize })"
           :on-upload="(url, asset) => centerCapStore.updateSVG(element, { imageUrl: url, assetId: asset?.id, targetSize: localSize })"
         />
@@ -32,6 +32,7 @@
             :max="baseStore.WATCH_SIZE"
             :step="2"
             @change="handleSizeChange"
+            @keydown.enter.prevent
           />
           <span class="size-unit">px</span>
         </div>
@@ -90,6 +91,7 @@ const handleSizeChange = (val) => {
   const baseSize = Math.max(el.width || 1, el.height || 1)
   const scale = val / baseSize
   el.set({ scaleX: scale, scaleY: scale })
+  el.setCoords?.()
   baseStore.canvas?.requestRenderAll()
 }
 
