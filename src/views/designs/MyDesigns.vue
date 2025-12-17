@@ -133,14 +133,14 @@
             </div>
             <div class="actions">
               <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">Edit</el-button>
-              <el-button 
+              <!-- <el-button 
                 type="warning" 
                 size="small" 
                 @click="copyDesign(design)"
                 :loading="loadingStates.copy.has(design.id)"
               >
                 Copy
-              </el-button>
+              </el-button> -->
               <el-button 
                 v-if="design.designStatus === 'draft'" 
                 type="success" 
