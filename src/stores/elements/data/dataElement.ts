@@ -6,7 +6,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import type { DataElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
 import { usePropertiesStore } from '@/stores/properties'
-
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useDataStore = defineStore('dataElement', {
   state: () => {
@@ -34,9 +34,9 @@ export const useDataStore = defineStore('dataElement', {
         dataProperty: config.dataProperty ?? undefined,
         goalProperty: config.goalProperty ?? undefined,
         metricSymbol: (config as any).metricSymbol ?? '',
-selectable: true,
-hasControls: false,
-hasBorders: true,
+        selectable: true,
+        hasControls: false,
+        hasBorders: true,
       } as any)
 
       this.baseStore.canvas?.add(element as any)
@@ -94,6 +94,7 @@ hasBorders: true,
         dataProperty: (element as any).dataProperty ?? undefined,
         goalProperty: (element as any).goalProperty ?? undefined,
         metricSymbol: String((element as any).metricSymbol ?? ''),
+        topBase: encodeTopBaseForElement(element),
       }
       // 如果 dataProperty 和 goalProperty 都为空，抛出错误
       if (config.dataProperty == null && config.goalProperty == null) {

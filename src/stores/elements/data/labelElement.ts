@@ -7,6 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import type { LabelElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
 import { usePropertiesStore } from '@/stores/properties'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useLabelStore = defineStore('labelElement', {
   state: () => {
@@ -101,6 +102,7 @@ export const useLabelStore = defineStore('labelElement', {
         goalProperty: (element as any).goalProperty ?? undefined,
         metricSymbol: (element as any).metricSymbol ?? undefined,
         metricValue: (element as any).metricValue ?? undefined,
+        topBase: encodeTopBaseForElement(element),
       }
       // 如果 dataProperty 和 goalProperty 都为空，抛出错误
       if (config.dataProperty == null && config.goalProperty == null) {

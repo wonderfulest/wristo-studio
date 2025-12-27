@@ -7,7 +7,7 @@ import { Text as FabricText } from 'fabric'
 import { DateFormatOptions } from '@/config/settings'
 import { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
-import { encodeTopBaseForElement } from './baselineUtil'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 // 统一与 timeElement.ts 的配置类型：使用 DateElementConfig
 

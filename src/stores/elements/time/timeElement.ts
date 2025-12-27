@@ -7,7 +7,7 @@ import { FabricText, TextProps } from 'fabric'
 import { TimeFormatOptions } from '@/config/settings'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
-import { encodeTopBaseForElement } from './baselineUtil'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 

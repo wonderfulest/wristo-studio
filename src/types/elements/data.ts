@@ -1,12 +1,13 @@
 import type { BaseElementConfig } from './base'
 import type { FabricFill } from '@/types/fabric'
-
+import { encodeTopBaseForElement } from './baselineUtil'
 export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
   fill: FabricFill
   fontFamily: string
   originX: 'left' | 'center' | 'right'
-  originY: 'top' | 'center' | 'bottom'
+  originY: 'center'
+  topBase?: number
 }
 
 export interface DataElementConfig extends BaseTextConfig {

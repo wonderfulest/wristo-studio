@@ -7,6 +7,7 @@ import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
 import { usePropertiesStore } from '@/stores/properties'
 import type { MinimalFabricLike } from '@/types/layer'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useIconStore = defineStore('iconElement', {
   state: () => {
@@ -35,7 +36,7 @@ export const useIconStore = defineStore('iconElement', {
           left: config.left,
           top: config.top,
           originX: config.originX as 'center' | 'left' | 'right',
-          originY: config.originY as 'center' | 'top' | 'bottom',
+          originY: 'center',
           fill: config.fill,
           fontSize: resolvedFontSize,
           fontFamily: resolvedFontFamily,
@@ -111,6 +112,7 @@ export const useIconStore = defineStore('iconElement', {
         dataProperty: element.dataProperty,
         goalProperty: element.goalProperty,
         metricSymbol: element.metricSymbol,
+        topBase: encodeTopBaseForElement(element),
       }
       // 如果 dataProperty 和 goalProperty 都为空，抛出错误
       if (config.dataProperty == null && config.goalProperty == null) {
