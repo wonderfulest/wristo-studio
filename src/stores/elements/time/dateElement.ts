@@ -7,6 +7,7 @@ import { Text as FabricText } from 'fabric'
 import { DateFormatOptions } from '@/config/settings'
 import { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
+import { encodeTopBaseForElement } from './baselineUtil'
 
 // 统一与 timeElement.ts 的配置类型：使用 DateElementConfig
 
@@ -176,6 +177,8 @@ export const useDateStore = defineStore('dateElement', {
         fontSize: element.fontSize || 14,
         fill: element.fill as string,
         formatter: Number((element as any).formatter ?? 0),
+        // 仅用于导出：文字 baseline 的纵坐标
+        topBase: encodeTopBaseForElement(element),
       }
       return config as DateElementConfig
     },
