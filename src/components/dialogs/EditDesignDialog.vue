@@ -216,6 +216,7 @@ const loadDesign = async (designUid: string) => {
       const isInCanvas = route.path.includes('/design') && !!route.query.id
 
       if (isInCanvas) {
+        console.log('isInCanvas', isInCanvas)
         const realtimeConfig = baseStore?.generateConfig?.() || {}
         Object.assign(form, {
           id: designData.id,
@@ -355,6 +356,7 @@ const handlePaymentMethodChange = (value: string) => {
 
 // 定义 show 方法
 const show = async (designUid: string) => {
+  console.log('show design', designUid)
   // 重置状态
   isEditing.value = false
   jsonEditText.value = ''

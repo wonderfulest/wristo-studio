@@ -446,6 +446,7 @@ const handleSelect = (key) => {
     // 获取当前设计ID并打开编辑对话框
     const designId = route.query.id
     if (designId) {
+      console.log('designId', designId)
       editDesignDialog.value?.show(designId)
     } else {
       messageStore.warning('请先保存设计')
