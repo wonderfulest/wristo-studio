@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 import { FabricText, Rect } from 'fabric'
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 interface TextOptions {
   text?: string
@@ -101,6 +102,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
         textTemplate: typeof fabricAny.textTemplate === 'string'
           ? fabricAny.textTemplate
           : (typeof fabricAny.text === 'string' ? fabricAny.text : ''),
+        topBase: encodeTopBaseForElement(element),
       }
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {

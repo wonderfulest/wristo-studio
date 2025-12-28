@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 import { FabricText } from 'fabric'
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 interface TextOptions {
   text?: string
@@ -82,6 +83,7 @@ export const useTextStore = defineStore('textElement', {
         textTemplate: typeof fabricAny.textTemplate === 'string'
           ? fabricAny.textTemplate
           : (typeof fabricAny.text === 'string' ? fabricAny.text : ''),
+        topBase: encodeTopBaseForElement(element),
       }
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
