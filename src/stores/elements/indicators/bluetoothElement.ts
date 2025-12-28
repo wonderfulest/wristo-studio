@@ -3,6 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
 import type { IndicatorElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useBluetoothStore = defineStore('bluetoothElement', {
   state: () => ({
@@ -41,7 +42,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
       void status
     },
 
-    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+    encodeConfig(element: FabricElement): IndicatorElementConfig {
       const config: Partial<IndicatorElementConfig> = {
         eleType: 'bluetooth',
         id: element.id,
@@ -51,7 +52,8 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: element.fill as string,
+        topBase: encodeTopBaseForElement(element),
       }
       return config as IndicatorElementConfig
     },

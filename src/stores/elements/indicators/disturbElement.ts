@@ -3,7 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
 import type { IndicatorElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
-
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useDisturbStore = defineStore('disturbElement', {
   state: () => ({}),
@@ -44,7 +44,7 @@ export const useDisturbStore = defineStore('disturbElement', {
       void status
     },
 
-    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+    encodeConfig(element: FabricElement): IndicatorElementConfig {
       const config: Partial<IndicatorElementConfig> = {
         eleType: 'disturb',
         id: element.id,
@@ -54,7 +54,8 @@ export const useDisturbStore = defineStore('disturbElement', {
         originY: element.originY,
         fontSize: Number(element.fontSize),
         fontFamily: element.fontFamily,
-        fill: (element.fill ?? undefined) as unknown as string | undefined,
+        fill: element.fill as string,
+        topBase: encodeTopBaseForElement(element),
       }
       return config as IndicatorElementConfig
     },

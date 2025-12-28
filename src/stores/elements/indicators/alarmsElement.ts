@@ -3,6 +3,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
 import { IndicatorElementConfig } from '@/types/elements'
 import { FabricElement } from '@/types/element'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export const useAlarmsStore = defineStore('alarmsElement', {
   state: () => ({
@@ -35,7 +36,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
       return alarmsIcon
     },
 
-    encodeConfig(element: Partial<FabricElement>): IndicatorElementConfig {
+    encodeConfig(element: FabricElement): IndicatorElementConfig {
       const config: Partial<IndicatorElementConfig> = {
         eleType: 'alarms',
         id: element.id,
@@ -45,7 +46,8 @@ export const useAlarmsStore = defineStore('alarmsElement', {
         originY: element.originY,
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
-        fill: element.fill,
+        fill: element.fill as string,
+        topBase: encodeTopBaseForElement(element),
       }
       return config as IndicatorElementConfig
     },
