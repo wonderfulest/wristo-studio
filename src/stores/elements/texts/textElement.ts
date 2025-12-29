@@ -6,18 +6,7 @@ import { FabricText } from 'fabric'
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-
-interface TextOptions {
-  text?: string
-  left?: number
-  top?: number
-  size?: number | string
-  textColor?: string
-  fontFamily?: string
-  originX?: string
-  originY?: string
-  textProperty?: string
-}
+import { getDataValueByName } from '@/utils/dataSimulator'
 
 export const useTextStore = defineStore('textElement', {
   state: () => {
@@ -31,20 +20,24 @@ export const useTextStore = defineStore('textElement', {
   },
 
   actions: {
-    async addElement(options: TextOptions = {}) {
+    async addElement(options: TextElementConfig) {
       console.log('Adding text element with options:', options)
       if (!this.baseStore.canvas) {
         throw new Error('Canvas is not initialized, cannot add text element')
       }
 
       try {
-        const element = new FabricText(options.text || 'New Text', {
+        const resolvedText = options.textTemplate?.replace(/\{\{([^}]+)\}\}/g, (_m, p1) => {
+          const key = String(p1 || '').trim()
+          return key ? getDataValueByName(key) : ''
+        })
+        const element = new FabricText(resolvedText || 'New Text', {
           id: nanoid(),
           eleType: 'text',
           left: options.left,
           top: options.top,
-          fontSize: Number(options.size) || 36,
-          fill: options.textColor || '#FFFFFF',
+          fontSize: Number(options.fontSize) || 36,
+          fill: options.fill || '#FFFFFF',
           fontFamily: options.fontFamily,
           selectable: true,
           hasControls: true,
@@ -52,6 +45,7 @@ export const useTextStore = defineStore('textElement', {
           originX: options.originX || 'center',
           originY: options.originY || 'center',
           textProperty: options.textProperty,
+          textTemplate: options.textTemplate,
         } as any)
 
         this.baseStore.canvas.add(element as any)
@@ -88,6 +82,11 @@ export const useTextStore = defineStore('textElement', {
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
       const textTemplate = (config as any).textTemplate ?? ''
+      // 使用与径向文字相同的规则：保留模板到 textTemplate，展示解析后的文本
+      const resolvedText = (textTemplate || '').replace(/\{\{([^}]+)\}\}/g, (_match: string, p1: string) => {
+        const key = String(p1 || '').trim()
+        return key ? getDataValueByName(key) : ''
+      })
       const element: Partial<FabricElement> = {
         id: config.id,
         eleType: 'text',
@@ -100,7 +99,7 @@ export const useTextStore = defineStore('textElement', {
         fontSize: config.fontSize,
         textProperty: config.textProperty,
         textTemplate,
-        text: textTemplate,
+        text: resolvedText,
       } as any
       return element
     },

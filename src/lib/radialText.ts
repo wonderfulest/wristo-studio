@@ -1,4 +1,5 @@
 import { FabricText, Group as FabricGroup } from 'fabric'
+import { getDataValueByName } from '@/utils/dataSimulator'
 
 interface FabricRadialTextOptions {
   text?: string
@@ -48,7 +49,13 @@ export class FabricRadialText {
 
   // 生成环形文字，返回 fabric.Group
   render() {
-    const chars = this.text.split('')
+    const templateText = this.text || ''
+    const baseResolvedText = templateText.replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
+      const key = String(p1 || '').trim()
+      return key ? getDataValueByName(key) : ''
+    })
+
+    const chars = baseResolvedText.split('')
     const items: FabricText[] = []
     const rad = (deg: number) => (deg * Math.PI) / 180
 
@@ -157,7 +164,7 @@ export class FabricRadialText {
       direction: this.direction,
       inner: this.inner,
       charSpacing: this.charSpacing,
-      text: this.text,
+      text: baseResolvedText,
     }
 
     ;(group as any).radialMeta = meta
@@ -206,15 +213,22 @@ export class FabricRadialText {
 
     // 统一文本更新：根据新文本增删子对象并重排
     ;(group as any).updateRadialText = function updateRadialText(newText: string) {
-      console.log('[111 updateRadialText] newText', newText)
+      console.log('[111 updateRadialText] newText (template)', newText)
       const g: any = this
       const m = g.radialMeta || meta
-      // 更新文本到 group 与 meta
-      g.text = newText
-      g.textTemplate = newText
-      if (m) m.text = newText
+      // 1) 先把模板字符串解析为真实展示文本
+      // 支持简单形式："hr" 或 "{{hr}}"，以及混合文本例如 "HR {{hr}} bpm"
+      const resolvedText = (newText || '').replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
+        const key = String(p1 || '').trim()
+        return key ? getDataValueByName(key) : ''
+      })
 
-      const chars = (newText || '').split('')
+      // 2) 更新模板与解析后的文本
+      g.textTemplate = newText
+      g.text = resolvedText
+      if (m) m.text = resolvedText
+
+      const chars = resolvedText.split('')
       const current: any[] = Array.isArray(g._objects) ? g._objects : []
 
       // 删除多余字符

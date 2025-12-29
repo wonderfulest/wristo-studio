@@ -6,6 +6,7 @@ import { FabricText, Rect } from 'fabric'
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { getDataValueByName } from '@/utils/dataSimulator'
 
 interface TextOptions {
   text?: string
@@ -21,6 +22,7 @@ interface TextOptions {
   scrollAreaLeft?: number
   scrollAreaTop?: number
   scrollAreaBackground?: string
+  textTemplate?: string
   textProperty?: string
 }
 
@@ -45,7 +47,13 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
       }
 
       try {
-        const element = new FabricText(options.text || 'New Text', {
+        const template = options.textTemplate ?? options.text ?? 'New Text'
+        const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_match: string, p1: string) => {
+          const key = String(p1 || '').trim()
+          return key ? getDataValueByName(key) : ''
+        })
+
+        const element = new FabricText(resolvedText || 'New Text', {
           id: nanoid(),
           eleType: 'scrollableText',
           left: options.left,
@@ -65,6 +73,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
           scrollAreaTop: typeof options.scrollAreaTop === 'number' ? options.scrollAreaTop : options.top,
           scrollAreaBackground: options.scrollAreaBackground,
           textProperty: options.textProperty,
+          textTemplate: template,
         } as any)
 
         this.baseStore.canvas.add(element as any)
@@ -107,6 +116,11 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
       const textTemplate = (config as any).textTemplate ?? ''
+      const resolvedText = (textTemplate || '').replace(/\{\{([^}]+)\}\}/g, (_match: string, p1: string) => {
+        const key = String(p1 || '').trim()
+        return key ? getDataValueByName(key) : ''
+      })
+
       const element: Partial<FabricElement> = {
         id: config.id,
         eleType: 'scrollableText',
@@ -124,7 +138,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
         scrollAreaBackground: config.scrollAreaBackground,
         textProperty: config.textProperty,
         textTemplate,
-        text: textTemplate,
+        text: resolvedText,
       } as any
       return element
     },
@@ -165,7 +179,9 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
       const regionEnd = regionStart + areaWidth
 
       const textHeight = Number(t.height ?? t.fontSize ?? 20)
-      const baseY = typeof t.scrollAreaTop === 'number' ? t.scrollAreaTop : Number(t.top ?? 0)
+      // 垂直方向：始终跟随文本本身的位置，拖动文本时 Scroll Region 一起移动
+      const baseY = Number(t.top ?? 0)
+      t.scrollAreaTop = baseY
       let regionTop = baseY
       if (originY === 'center') {
         regionTop = baseY - textHeight / 2

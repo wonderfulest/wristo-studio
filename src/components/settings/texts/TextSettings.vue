@@ -65,6 +65,7 @@ import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/components/settings/common/TextPropertyField.vue'
+import { getDataValueByName } from '@/utils/dataSimulator'
 
 const props = defineProps({
   element: {
@@ -159,10 +160,17 @@ const updatePosition = () => {
 
 const applyTextProperty = () => {
   if (!textProperty.value || !props.element || !baseStore.canvas) return
-  const value = propertiesStore.getPropertyValue(textProperty.value)
-  if (typeof value === 'string') {
+  const template = propertiesStore.getPropertyValue(textProperty.value)
+  if (typeof template === 'string') {
+    // 将属性值视为模板字符串：保存到 textTemplate，并解析出实际展示文本
+    const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
+      const key = String(p1 || '').trim()
+      return key ? getDataValueByName(key) : ''
+    })
+
     props.element.textProperty = textProperty.value
-    props.element.set('text', value)
+    props.element.textTemplate = template
+    props.element.set('text', resolvedText)
     baseStore.canvas.renderAll()
   }
 }

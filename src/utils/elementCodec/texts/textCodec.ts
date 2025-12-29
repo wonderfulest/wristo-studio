@@ -6,17 +6,7 @@ import type { TextElementConfig } from '@/types/elements'
 
 const addElement: AddElementFn<'text'> = (_elementType: 'text', config: TextElementConfig) => {
   const store = useTextStore()
-  return store.addElement({
-    text: config.textTemplate ?? '',
-    left: config.left,
-    top: config.top,
-    size: config.fontSize,
-    textColor: (config.fill ?? '#FFFFFF') as string,
-    fontFamily: config.fontFamily,
-    originX: (config.originX ?? 'center') as string,
-    originY: (config.originY ?? 'center') as string,
-    textProperty: config.textProperty,
-  }) as unknown as FabricElement
+  return store.addElement(config)
 }
 
 // 将画布上的 text 元素编码为通用 TextElementConfig

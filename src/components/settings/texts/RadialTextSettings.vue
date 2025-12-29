@@ -241,6 +241,7 @@ const applyTextProperty = () => {
   if (!textProperty.value || !props.element || !baseStore.canvas) return
   const value = propertiesStore.getPropertyValue(textProperty.value)
   if (typeof value === 'string') {
+    console.log('applyTextProperty', value)
     props.element.textProperty = textProperty.value
     if (typeof props.element.updateRadialText === 'function') {
       props.element.updateRadialText(value)

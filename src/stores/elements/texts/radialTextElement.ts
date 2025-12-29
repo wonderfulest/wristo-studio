@@ -107,6 +107,7 @@ export const useRadialTextStore = defineStore('radialTextElement', {
         radius: typeof fabricAny.radius === 'number' ? fabricAny.radius : 100,
         direction: fabricAny.direction || 'clockwise',
         justification: fabricAny.justification || 'center',
+        topBase: -1, // 径向文字不需要baseLine
       }
 
       console.log('[111 encodeConfig radialText] config', config)

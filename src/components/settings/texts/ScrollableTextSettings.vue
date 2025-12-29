@@ -70,6 +70,7 @@ import PositionInputs from '@/components/settings/common/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/components/settings/common/TextPropertyField.vue'
+import { getDataValueByName } from '@/utils/dataSimulator'
 
 const props = defineProps({
   element: {
@@ -86,7 +87,6 @@ const propertiesStore = usePropertiesStore()
 const fontSize = ref(props.element?.fontSize || 36)
 const textColor = ref(props.element?.fill || '#FFFFFF')
 const fontFamily = ref(props.element?.fontFamily)
-// 水平对齐方式：滚动文本只支持居中
 const originX = ref('center')
 const scrollAreaWidth = ref(Math.round(props.element?.scrollAreaWidth || 100))
 const scrollAreaLeft = ref(Math.round(props.element?.scrollAreaLeft ?? 227))
@@ -177,10 +177,16 @@ const updatePosition = () => {
 
 const applyTextProperty = () => {
   if (!textProperty.value || !props.element || !baseStore.canvas) return
-  const value = propertiesStore.getPropertyValue(textProperty.value)
-  if (typeof value === 'string') {
+  const template = propertiesStore.getPropertyValue(textProperty.value)
+  if (typeof template === 'string') {
     props.element.textProperty = textProperty.value
-    props.element.set('text', value)
+    // 将属性值视为模板字符串：保存到 textTemplate，并解析出实际展示文本
+    const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
+      const key = String(p1 || '').trim()
+      return key ? getDataValueByName(key) : ''
+    })
+
+    props.element.set('text', resolvedText)
     // 重置裁剪区域和滚动起始状态，使新文本在当前滚动区域重新从右侧进入
     props.element.clipPath = null
     props.element.__scrollInitDone = false
@@ -188,6 +194,22 @@ const applyTextProperty = () => {
     scrollableTextStore.showScrollRegion(props.element)
     scrollableTextStore.startScrollableAnimation(props.element)
   }
+
+
+  //  if (!textProperty.value || !props.element || !baseStore.canvas) return
+  // const template = propertiesStore.getPropertyValue(textProperty.value)
+  // if (typeof template === 'string') {
+  //   // 将属性值视为模板字符串：保存到 textTemplate，并解析出实际展示文本
+  //   const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
+  //     const key = String(p1 || '').trim()
+  //     return key ? getDataValueByName(key) : ''
+  //   })
+
+  //   props.element.textProperty = textProperty.value
+  //   props.element.textTemplate = template
+  //   props.element.set('text', resolvedText)
+  //   baseStore.canvas.renderAll()
+  // }
 }
 
 const updateScrollAreaWidth = () => {
