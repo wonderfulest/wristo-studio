@@ -129,7 +129,7 @@ watch(
 </script>
 
 <style scoped>
-@import '../../assets/styles/settings.css';
+@import '@/assets/styles/settings.css';
 
 .avatar-uploader {
   text-align: center;

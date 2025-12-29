@@ -7,6 +7,7 @@ export const DEFAULT_TIME_CONFIG: TimeElementConfig & EDITOR_ELEMENT = Object.as
   label: 'Time',
   eleType: 'time' as const,
 }, DEFAULT_TEXT_CONFIG, {
+  fontSize: 96,
   formatter: TimeFormatConstants.HH_MM,
 })
 
@@ -15,5 +16,6 @@ export const DEFAULT_DATE_CONFIG: DateElementConfig & EDITOR_ELEMENT = Object.as
   label: 'Date',
   eleType: 'date' as const,
 }, DEFAULT_TEXT_CONFIG, {
+  fontSize: 36,
   formatter: DateFormatConstants.MMM_D_YYYY,
 })

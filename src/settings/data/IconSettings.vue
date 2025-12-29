@@ -5,6 +5,7 @@
       :model="element" 
       label-position="left" 
       label-width="100px"
+      :rules="rules"
     >
       <DataPropertyField
         v-if="!element.goalProperty"
@@ -25,7 +26,6 @@
           @change="updateElement"
         />
       </el-form-item>
-
       <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions" 
@@ -33,11 +33,10 @@
           @update:modelValue="updateElement"
         />
       </el-form-item>
-
       <el-form-item label="Font Size">
         <el-select 
           v-model="element.fontSize" 
-          @change="updateElement"
+          @change="handleFontSizeChange"
         >
           <el-option 
             v-for="size in fontSizes" 
@@ -47,17 +46,16 @@
           />
         </el-select>
       </el-form-item>
-
       <el-form-item label="Text Color">
         <color-picker 
           v-model="element.fill" 
           @change="updateElement" 
         />
       </el-form-item>
-
       <el-form-item label="Font">
         <font-picker 
-          v-model="element.fontFamily" 
+          v-model="element.fontFamily"
+          :type="FontTypes.ICON_FONT"
           @change="updateElement" 
         />
       </el-form-item>
@@ -67,16 +65,18 @@
 
 <script setup>
 import { ref, defineProps, defineEmits, defineExpose } from 'vue'
-import { useLabelStore } from '@/stores/elements/data/labelElement'
+import { useIconStore } from '@/stores/elements/data/iconElement'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
-import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
-import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import DataPropertyField from '@/settings/common/DataPropertyField.vue'
+import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
+import { FontTypes } from '@/constants/fonts'
+import { useBaseStore } from '@/stores/baseStore'
 
 const emit = defineEmits(['close'])
 
@@ -88,13 +88,20 @@ const props = defineProps({
 })
 
 const formRef = ref(null)
-const labelStore = useLabelStore()
+const iconStore = useIconStore()
 const propertiesStore = usePropertiesStore()
+const baseStore = useBaseStore()
+
+const rules = {
+  dataProperty: [
+    { required: true, message: 'Please select a data property', trigger: 'change' }
+  ]
+}
 
 const updateElement = async () => {
   try {
     await formRef.value.validate()
-    labelStore.updateElement(props.element, {
+    iconStore.updateElement(props.element, {
       dataProperty: props.element.dataProperty,
       fontSize: props.element.fontSize,
       fill: props.element.fill,
@@ -106,6 +113,16 @@ const updateElement = async () => {
   } catch (error) {
     console.error('Form validation failed:', error)
   }
+}
+
+// initialize global icon font size if missing
+if (baseStore.currentIconFontSize == null && props.element?.fontSize) {
+  baseStore.setIconFontSize(props.element.fontSize)
+}
+
+const handleFontSizeChange = async (newSize) => {
+  await baseStore.requestUpdateIconFontSize(props.element, newSize)
+  await updateElement()
 }
 
 // 添加关闭时的验证方法
@@ -126,7 +143,6 @@ defineExpose({
 </script>
 
 <style scoped>
-@import '@/assets/styles/settings.css';
 .settings-section {
   padding: 16px;
 }

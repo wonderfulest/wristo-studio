@@ -13,7 +13,14 @@
               :disabled="config.disabled"
               @click="addElementByType(categoryKey, type, config)"
             >
-              <Icon :icon="config.icon" class="element-icon" />
+              <!-- iconfont 图标 -->
+              <i v-if="typeof config.icon === 'string' && config.icon.trim().startsWith('iconfont')" class="element-icon" :class="config.icon"></i>
+              <!-- 其他图标 -->
+              <Icon
+                v-else
+                :icon="config.icon as string"
+                class="element-icon"
+              />
               <span class="element-label">{{ config.label }}</span>
             </button>
           </template>
@@ -157,14 +164,24 @@ button:hover {
 }
 
 .element-icon {
-  font-size: 24px;
+  /* 统一图标盒子尺寸，保证同一行垂直对齐 */
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   margin-bottom: 6px;
   color: #409eff;
 }
 
 .element-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #333;
+  text-align: center;
+  line-height: 1.2;
+  /* 允许折行，但保持在按钮中水平居中 */
+  word-break: break-word;
 }
 
 .soon-badge {

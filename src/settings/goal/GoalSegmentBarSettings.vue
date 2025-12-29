@@ -54,9 +54,9 @@ import { computed, ref } from 'vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useGoalSegmentBarStore } from '@/stores/elements/goal/goalSegmentBarElement'
 import type { FabricElement } from '@/types/element'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
 import { originXOptions } from '@/config/settings'
-import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
 
 const props = defineProps<{ element: FabricElement }>()
 const emit = defineEmits<{ (e: 'update'): void }>()

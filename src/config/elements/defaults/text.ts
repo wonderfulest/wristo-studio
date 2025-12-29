@@ -16,7 +16,7 @@ export const DEFAULT_TEXT_ELEMENT_CONFIG: TextElementConfig & EDITOR_ELEMENT = O
 export const DEFAULT_SCROLLABLE_TEXT_ELEMENT_CONFIG: TextElementConfig & EDITOR_ELEMENT =
   Object.assign(
     {
-      icon: 'mdi:format-text-rotation-none-variant',
+      icon: 'iconfont icon-scrolltext',
       label: 'Scrollable Text',
       eleType: 'scrollableText' as const,
     },

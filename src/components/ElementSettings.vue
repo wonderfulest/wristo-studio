@@ -29,9 +29,9 @@ import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { elementConfigs } from '@/config/elements/elements'
 import { useBaseStore } from '@/stores/baseStore'
-import GlobalSettings from './settings/GlobalSettings.vue'
-import GroupSettings from './settings/GroupSettings.vue'
-import { getSettingsComponent } from './settings'
+import GlobalSettings from '@/settings/GlobalSettings.vue'
+import GroupSettings from '@/settings/GroupSettings.vue'
+import { getSettingsComponent } from '@/settings'
 import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()

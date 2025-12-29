@@ -117,8 +117,8 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import { DataTypeOptions, originXOptions } from '@/config/settings'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
-import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
+import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 

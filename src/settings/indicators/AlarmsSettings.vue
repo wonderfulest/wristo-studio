@@ -32,7 +32,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 import { FontTypes } from '@/constants/fonts'
 
 const props = defineProps({

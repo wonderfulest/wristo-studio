@@ -13,7 +13,7 @@ export const DEFAULT_GOAL_CONFIG: GoalElementConfig & EDITOR_ELEMENT = Object.as
 
 export const DEFAULT_GOALBAR_CONFIG: GoalElementConfig & EDITOR_ELEMENT = Object.assign(
   {}, DEFAULT_GOAL_CONFIG,{
-  icon: 'mdi:target',
+  icon: 'iconfont icon-goalbar',
   label: 'Goal Bar',
   eleType: 'goalBar' as const,
 })
@@ -38,7 +38,7 @@ export const DEFAULT_GOALARC_CONFIG: GoalArcElementConfig & EDITOR_ELEMENT = Obj
 
 export const DEFAULT_GOALSEGMENTBAR_CONFIG = Object.assign(
   {}, DEFAULT_GOAL_CONFIG, {
-    icon: 'mdi:view-sequential-outline',
+    icon: 'iconfont icon-goal-bar-segment',
     label: 'Segment Bar',
     eleType: 'goalSegmentBar' as const,
     width: 200,

@@ -125,8 +125,8 @@ import { DataTypeOptions } from '@/config/settings'
 import { ElTooltip } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
-import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
+import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 

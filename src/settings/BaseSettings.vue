@@ -46,8 +46,8 @@ import { ref, watch, onMounted } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import { useFontStore } from '@/stores/fontStore'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {
@@ -170,7 +170,7 @@ watch(
 </script>
 
 <style scoped>
-@import '../../assets/styles/settings.css';
+@import '@/assets/styles/settings.css';
 
 /* 添加图标样式 */
 .align-buttons button {

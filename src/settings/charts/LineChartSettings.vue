@@ -5,10 +5,9 @@
       :model="element" 
       label-position="left" 
       label-width="100px"
-      status-icon
-      validate-on-rule-change
     >
       <ChartPropertyField v-model="element.chartProperty" @change="updateElement" />
+
       <el-form-item label="位置">
         <PositionInputs 
           :left="element.left"
@@ -46,23 +45,44 @@
         />
       </el-form-item>
 
-      <el-form-item label="Y轴最小值">
+      <el-form-item label="线条宽度">
         <el-input-number 
-          v-model="element.minY" 
+          v-model="element.lineWidth" 
+          :min="1" 
+          :max="10" 
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="Y轴最大值">
-        <el-input-number 
-          v-model="element.maxY" 
+      <el-form-item label="平滑因子">
+        <el-slider 
+          v-model="element.smoothFactor" 
+          :min="0" 
+          :max="1" 
+          :step="0.1"
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="填充缺失数据">
+      <el-form-item label="显示数据点">
         <el-switch 
-          v-model="element.fillMissing" 
+          v-model="element.showPoints" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+      <el-form-item label="数据点颜色" v-if="element.showPoints">
+        <color-picker 
+          v-model="element.pointColor" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+      <el-form-item label="数据点半径" v-if="element.showPoints">
+        <el-input-number 
+          v-model="element.pointRadius" 
+          :min="1" 
+          :max="10" 
           @change="updateElement" 
         />
       </el-form-item>
@@ -78,6 +98,13 @@
         <color-picker 
           v-model="element.bgColor" 
           @change="handleBgColorChange" 
+        />
+      </el-form-item>
+
+      <el-form-item label="填充缺失数据">
+        <el-switch 
+          v-model="element.fillMissing" 
+          @change="updateElement" 
         />
       </el-form-item>
 
@@ -104,119 +131,134 @@
         />
       </el-form-item>
 
-      <el-form-item label="显示X轴">
-        <el-switch 
-          v-model="element.showXAxis" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="显示Y轴">
-        <el-switch 
-          v-model="element.showYAxis" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="X轴颜色" v-if="element.showXAxis">
-        <color-picker 
-          v-model="element.xAxisColor" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="Y轴颜色" v-if="element.showYAxis">
-        <color-picker 
-          v-model="element.yAxisColor" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="显示X轴标签">
-        <el-switch 
-          v-model="element.showXLabels" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="显示Y轴标签">
-        <el-switch 
-          v-model="element.showYLabels" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="X轴标签颜色" v-if="element.showXLabels">
-        <color-picker 
-          v-model="element.xLabelColor" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="Y轴标签颜色" v-if="element.showYLabels">
-        <color-picker 
-          v-model="element.yLabelColor" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="X轴标签字体" v-if="element.showXLabels">
-        <font-picker 
-          v-model="element.xFont" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="X轴标签大小" v-if="element.showXLabels">
-        <el-select v-model="element.xFontSize" @change="updateElement">
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="Y轴标签字体" v-if="element.showYLabels">
-        <font-picker 
-          v-model="element.yFont" 
-          @change="updateElement" 
-        />
-      </el-form-item>
-
-      <el-form-item label="Y轴标签大小" v-if="element.showYLabels">
-        <el-select v-model="element.yFontSize" @change="updateElement">
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="对齐方式">
-        <AlignXButtons 
-          :options="originXOptions" 
-          v-model="element.originX"
-          @update:modelValue="updateElement"
-        />
-      </el-form-item>
-
-      <el-form-item label="柱形宽度">
+      <el-form-item label="X轴网格数量" v-if="element.showGrid">
         <el-input-number 
-          v-model="element.barWidth" 
+          v-model="element.gridXCount" 
           :min="1" 
-          :max="30" 
-          :step="1"
+          :max="50" 
           @change="updateElement" 
         />
       </el-form-item>
+
+      <el-form-item label="显示坐标轴">
+        <el-switch 
+          v-model="element.showAxis" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+      <el-form-item label="坐标轴颜色" v-if="element.showAxis">
+        <color-picker 
+          v-model="element.axisColor" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+      <!-- X轴设置 -->
+      <div class="axis-section">
+        <h4>X轴设置</h4>
+      <el-form-item label="显示标签">
+        <el-switch 
+            v-model="element.showXLabels" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+        <template v-if="element.showXLabels">
+          <el-form-item label="标签颜色">
+        <color-picker 
+              v-model="element.xLabelColor" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+          <el-form-item label="时间格式">
+        <el-select v-model="element.timeFormat" @change="updateElement">
+          <el-option label="HH:mm" value="HH:mm" />
+          <el-option label="mm:ss" value="mm:ss" />
+          <el-option label="MM/dd" value="MM/dd" />
+        </el-select>
+      </el-form-item>
+
+          <el-form-item label="标签高度">
+        <el-input-number 
+              v-model="element.xLabelHeight" 
+          :min="0" 
+          :max="100" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+          <el-form-item label="标签字体">
+            <font-picker 
+              v-model="element.xFont" 
+              @change="updateElement" 
+            />
+          </el-form-item>
+
+          <el-form-item label="字体大小">
+            <el-select v-model="element.xFontSize" @change="updateElement">
+              <el-option v-for="size in availableFontSizes" :key="size" :label="`${size}px`" :value="size" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </div>
+
+      <!-- Y轴设置 -->
+      <div class="axis-section">
+        <h4>Y轴设置</h4>
+        <el-form-item label="显示标签">
+          <el-switch 
+            v-model="element.showYLabels" 
+            @change="updateElement" 
+          />
+        </el-form-item>
+
+        <template v-if="element.showYLabels">
+          <el-form-item label="标签颜色">
+            <color-picker 
+              v-model="element.yLabelColor" 
+              @change="updateElement" 
+            />
+          </el-form-item>
+
+          <el-form-item label="标签宽度">
+        <el-input-number 
+              v-model="element.yLabelWidth" 
+          :min="0" 
+          :max="100" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+          <el-form-item label="标签字体">
+        <font-picker 
+              v-model="element.yFont" 
+          @change="updateElement" 
+        />
+      </el-form-item>
+
+          <el-form-item label="字体大小">
+            <el-select v-model="element.yFontSize" @change="updateElement">
+          <el-option v-for="size in availableFontSizes" :key="size" :label="`${size}px`" :value="size" />
+        </el-select>
+      </el-form-item>
+        </template>
+      </div>
+
     </el-form>
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted, nextTick, watch, computed } from 'vue'
-import { useBarChartStore } from '@/stores/elements/charts/barChartElement'
+import { ref, defineProps, computed } from 'vue'
+import { useLineChartStore } from '@/stores/elements/charts/lineChartElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import ChartPropertyField from '@/components/settings/common/ChartPropertyField.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
+import ChartPropertyField from '@/settings/common/ChartPropertyField.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {
@@ -226,9 +268,13 @@ const props = defineProps({
 })
 
 const formRef = ref(null)
-const barChartStore = useBarChartStore()
+const lineChartStore = useLineChartStore()
 const baseStore = useBaseStore()
 
+// 计算可用的字体大小（最大到96）
+const availableFontSizes = computed(() => {
+  return fontSizes.filter((size) => size <= 96)
+})
 
 // 获取画布上的实际元素
 const getFabricElement = () => {
@@ -264,51 +310,39 @@ const updateElement = () => {
     width: props.element.width,
     height: props.element.height,
     pointCount: props.element.pointCount,
-    minY: props.element.minY,
-    maxY: props.element.maxY,
-    fillMissing: props.element.fillMissing,
+    lineWidth: props.element.lineWidth,
+    smoothFactor: props.element.smoothFactor,
+    showPoints: props.element.showPoints,
+    pointColor: props.element.pointColor,
+    pointRadius: props.element.pointRadius,
     color: props.element.color,
     bgColor: props.element.bgColor,
-    originX: props.element.originX,
-    barWidth: props.element.barWidth,
-    chartProperty: props.element.chartProperty,
-    // 新增的图表显示属性
+    fillMissing: props.element.fillMissing,
     showGrid: props.element.showGrid,
     gridColor: props.element.gridColor,
     gridYCount: props.element.gridYCount,
-    showXAxis: props.element.showXAxis,
-    showYAxis: props.element.showYAxis,
-    xAxisColor: props.element.xAxisColor,
-    yAxisColor: props.element.yAxisColor,
+    gridXCount: props.element.gridXCount,
+    showAxis: props.element.showAxis,
+    axisColor: props.element.axisColor,
+    // X轴设置
     showXLabels: props.element.showXLabels,
-    showYLabels: props.element.showYLabels,
     xLabelColor: props.element.xLabelColor,
-    yLabelColor: props.element.yLabelColor,
     xFont: props.element.xFont,
-    yFont: props.element.yFont,
     xFontSize: props.element.xFontSize,
-    yFontSize: props.element.yFontSize
+    xLabelHeight: props.element.xLabelHeight,
+    // Y轴设置
+    showYLabels: props.element.showYLabels,
+    yLabelColor: props.element.yLabelColor,
+    yFont: props.element.yFont,
+    yFontSize: props.element.yFontSize,
+    yLabelWidth: props.element.yLabelWidth,
+    // 其他设置
+    timeFormat: props.element.timeFormat,
+    chartProperty: props.element.chartProperty
   }
 
-  barChartStore.updateElement(props.element, updateConfig)
+  lineChartStore.updateElement(props.element, updateConfig)
 }
-
-// 初次挂载时如果未选择 chartProperty，则触发校验以显示提示
-onMounted(() => {
-  if (!props.element.chartProperty) {
-    nextTick(() => {
-      formRef.value?.validateField?.('chartProperty')
-    })
-  }
-})
-
-// 当 chartProperty 变化时，重新校验以实时显示/隐藏提示
-watch(
-  () => props.element.chartProperty,
-  () => {
-    formRef.value?.validateField?.('chartProperty')
-  }
-)
 
 // 处理位置更新
 const handlePositionChange = (type, value) => {
@@ -337,5 +371,19 @@ const handlePositionChange = (type, value) => {
 
 .position-inputs .el-input-number {
   width: 120px;
+}
+
+.axis-section {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.axis-section h4 {
+  margin: 0 0 16px 0;
+  color: #606266;
+  font-size: 14px;
+  font-weight: 500;
 }
 </style>

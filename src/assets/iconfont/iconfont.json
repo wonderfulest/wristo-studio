@@ -6,6 +6,34 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "46489782",
+      "name": "进度条",
+      "font_class": "goalbar",
+      "unicode": "e629",
+      "unicode_decimal": 58921
+    },
+    {
+      "icon_id": "46489781",
+      "name": "分段进度条",
+      "font_class": "goal-bar-segment",
+      "unicode": "e62a",
+      "unicode_decimal": 58922
+    },
+    {
+      "icon_id": "46489780",
+      "name": "滚动文本",
+      "font_class": "scrolltext",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "46222324",
+      "name": "edit",
+      "font_class": "edit",
+      "unicode": "e626",
+      "unicode_decimal": 58918
+    },
+    {
       "icon_id": "46222319",
       "name": "系统默认",
       "font_class": "system",

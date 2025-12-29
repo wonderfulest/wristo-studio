@@ -49,12 +49,12 @@ import { useDataStore } from '@/stores/elements/data/dataElement'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
-import DataPropertyField from '@/components/settings/common/DataPropertyField.vue'
-import GoalPropertyField from '@/components/settings/common/GoalPropertyField.vue'
+import DataPropertyField from '@/settings/common/DataPropertyField.vue'
+import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 

@@ -85,8 +85,8 @@ import { useMoveBarStore } from '@/stores/elements/status/moveBarElement'
 import { useBaseStore } from '@/stores/baseStore'
 import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
 
 const props = defineProps({
   element: {

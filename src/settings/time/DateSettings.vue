@@ -8,7 +8,7 @@
       </el-form-item>
 
       <el-form-item label="Font Color">
-        <color-picker 
+        <ColorPicker 
           v-model="props.element.fill" 
           @change="updateElement({ fill: $event })" 
         />
@@ -17,11 +17,9 @@
       <el-form-item label="Font">
         <font-picker 
           v-model="props.element.fontFamily" 
-          :type="fontTypeForTime"
           @change="updateElement({ fontFamily: $event })" 
         />
       </el-form-item>
-
       <el-form-item label="Position">
         <PositionInputs 
           :left="props.element.left"
@@ -40,13 +38,13 @@
         />
       </el-form-item>
 
-      <el-form-item label="Time Format">
+      <el-form-item label="Date Format">
         <el-select 
           v-model.number="props.element.formatter" 
           @change="(v) => updateElement({ formatter: v })"
         >
           <el-option 
-            v-for="{ label, value, example } in TimeFormatOptions" 
+            v-for="{ label, value, example } in DateFormatOptions" 
             :key="value" 
             :label="label" 
             :value="value" 
@@ -58,17 +56,18 @@
       </el-form-item>
     </el-form>
   </div>
+  
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
-import { useTimeStore } from '@/stores/elements/time/timeElement'
-import { fontSizes, originXOptions, TimeFormatOptions, TimeFormatConstants } from '@/config/settings'
+import { useDateStore } from '@/stores/elements/time/dateElement'
+import { fontSizes, originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import AlignXButtons from '@/components/settings/common/AlignXButtons.vue'
-import PositionInputs from '@/components/settings/common/PositionInputs.vue'
+import PositionInputs from '@/settings/common/PositionInputs.vue'
+import AlignXButtons from '@/settings/common/AlignXButtons.vue'
 
 const props = defineProps({
   element: {
@@ -78,20 +77,7 @@ const props = defineProps({
 })
 
 const fontStore = useFontStore()
-const timeStore = useTimeStore()
-
-const fontTypeForTime = computed(() => {
-  const fmt = props.element.formatter
-  const hourOrMinuteFormats = [
-    TimeFormatConstants.HH_MM,
-    TimeFormatConstants.HH_MM_SS,
-    TimeFormatConstants.HH,
-    TimeFormatConstants.MM,
-    TimeFormatConstants.HH_COLON,
-    TimeFormatConstants.COLON_MM,
-  ]
-  return hourOrMinuteFormats.includes(fmt) ? 'number_font' : 'text_font'
-})
+const dateStore = useDateStore()
 
 // 加载字体列表
 onMounted(async () => {
@@ -106,11 +92,10 @@ onMounted(async () => {
 
 // 统一的更新方法
 const updateElement = (config) => {
-  timeStore.updateElement(props.element, config)
+  dateStore.updateElement(props.element, config)
 }
 </script>
 
 <style scoped>
-@import '../../../assets/styles/settings.css';
-
+@import '@/assets/styles/settings.css';
 </style>
