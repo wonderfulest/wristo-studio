@@ -42,7 +42,7 @@
 
     <!-- per-value theme config tabs: background & color variables -->
     <ThemeConfigSettings
-      v-if="appId && ruleCalculation"
+      v-if="appId && ruleCalculation && active"
       :app-id="appId"
       :rule-calculation="ruleCalculation"
     />

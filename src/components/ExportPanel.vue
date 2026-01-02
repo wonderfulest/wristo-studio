@@ -174,7 +174,6 @@ const uploadScreenshot = async () => {
     const screenshot = await baseStore.captureScreenshot(true)
     if (screenshot) {
       const screenshotUrl = await uploadBase64Image(screenshot, 'screenshot')
-      
       return screenshotUrl
     }
   } catch (screenshotError) {

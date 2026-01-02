@@ -514,8 +514,8 @@ export const useBaseStore = defineStore('baseStore', {
         editorStore.updateSetting('zoomLevel', zoom)
       }
       zoom = editorStore.zoomLevel
-      const center = this.$state.WATCH_SIZE / 2
-      const radius = this.$state.WATCH_SIZE / 2
+      const center = this.$state.WATCH_SIZE * zoom / 2
+      const radius = this.$state.WATCH_SIZE * zoom / 2
 
       if (this.watchFaceCircle) {
         this.watchFaceCircle.set({
@@ -536,7 +536,7 @@ export const useBaseStore = defineStore('baseStore', {
       }
 
       if (this.backgroundImage) {
-        const scale = radius / Math.min(this.backgroundImage.width, this.backgroundImage.height)
+        const scale = this.$state.WATCH_SIZE * zoom / Math.min(this.backgroundImage.width, this.backgroundImage.height)
         this.backgroundImage.set({
           left: center,
           top: center,
