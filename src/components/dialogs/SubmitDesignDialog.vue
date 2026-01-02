@@ -278,7 +278,6 @@ const show = async (design: Design) => {
       if (product?.payment) {
         const payment = product.payment
         form.paymentMethod = payment.paymentMethod
-        form.kpayId = payment.kpayId || ''
         form.price = payment.price || 1.99
       }
       // 加载分类与套餐选项

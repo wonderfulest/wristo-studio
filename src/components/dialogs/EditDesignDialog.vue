@@ -214,7 +214,7 @@ const loadDesign = async (designUid: string) => {
       const designData = response.data
       // 路由判断：仅在画布页（/design 且包含 id 参数）时使用实时画布配置；否则使用服务端配置
       const isInCanvas = route.path.includes('/design') && !!route.query.id
-
+      baseStore.appId = designData.product?.appId || -1
       if (isInCanvas) {
         console.log('isInCanvas', isInCanvas)
         const realtimeConfig = baseStore?.generateConfig?.() || {}

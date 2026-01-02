@@ -1,5 +1,5 @@
 <template>
-  <div class="color-picker-wrapper" @click.stop>
+  <div class="color-picker-wrapper" @click.stop ref="wrapperRef">
     <div class="color-input" @click="togglePicker">
       <input
         :value="modelValue === 'transparent' ? 'transparent' : modelValue"
@@ -10,7 +10,7 @@
           color: modelValue === 'transparent' ? '#666' : textColor
         }" />
     </div>
-    <div v-if="isOpen" class="color-picker">
+    <div v-if="isOpen" class="color-picker" :style="pickerStyle">
       <div class="tabs">
         <div class="tab" :class="{ active: true }">Solid</div>
       </div>
@@ -133,6 +133,8 @@ const colorMatrix = [
 
 // 状态
 const isOpen = ref(false)
+const wrapperRef = ref(null)
+const pickerStyle = ref({})
 // 为每个实例生成唯一标识，用于互斥控制
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
 const hexColor = ref(props.modelValue)
@@ -243,6 +245,37 @@ const togglePicker = () => {
   isOpen.value = willOpen
   if (willOpen) {
     emitter.emit?.('color-picker-open', instanceId)
+    nextTick(() => {
+      const el = wrapperRef.value
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0
+      const popupHeight = 320 // 近似高度：矩阵+标题+边距
+      const popupWidth = 300
+
+      // 计算默认向下展开的位置
+      let top = rect.bottom + 4
+      let left = rect.left
+
+      // 如果下面空间不够，改为向上展开
+      const spaceBelow = viewportHeight - rect.bottom
+      if (spaceBelow < popupHeight && rect.top > popupHeight) {
+        top = rect.top - popupHeight - 4
+      }
+
+      // 避免越出右侧边界
+      if (left + popupWidth > viewportWidth - 8) {
+        left = Math.max(8, viewportWidth - popupWidth - 8)
+      }
+
+      pickerStyle.value = {
+        position: 'fixed',
+        top: top + 'px',
+        left: left + 'px',
+        zIndex: 10000
+      }
+    })
   }
 }
 </script>

@@ -374,10 +374,7 @@ const openCanvas = async (design: Design) => {
     const designData = response.data || {} as Design
 
     baseStore.watchFaceName = designData.name
-
-    if (designData.configJson) {
-      baseStore.elements = designData.configJson
-    }
+    baseStore.appId = designData.product?.appId || -1
 
     router.push('/design?id=' + designData.designUid)
   } catch (error) {

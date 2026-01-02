@@ -72,6 +72,7 @@ import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
 import { AnyElementConfig } from '@/types/elements'
+import { findImageByUrl } from '@/api/image'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
@@ -96,6 +97,45 @@ useKeyboardShortcuts()
 // 添加背景色计算属性
 const backgroundColor = computed(() => editorStore.backgroundColor)
 
+// 根据配置中的 backgroundImage / themeBackgroundImages 应用背景图片到画布
+const applyBackgroundFromConfig = (config: Partial<DesignConfig> | null) => {
+  console.log('applyBackgroundFromConfig called with config:', config);
+  if (!config) {
+    baseStore.setBackgroundImageFromUrl(null)
+    return
+  }
+
+  // 加载背景图片：优先使用新字段 backgroundImage，其次兼容旧的 themeBackgroundImages[0]
+  let bgUrl = null
+  let bgId = null
+
+  const anyConfig = config || {}
+  if (anyConfig.backgroundImage && typeof anyConfig.backgroundImage === 'object') {
+    console.log('applyBackgroundFromConfig backgroundImage:', anyConfig.backgroundImage);
+    bgUrl = anyConfig.backgroundImage.url || null
+    bgId = anyConfig.backgroundImage.id ?? null
+  }
+  if (!bgUrl && Array.isArray(anyConfig.themeBackgroundImages) && anyConfig.themeBackgroundImages.length > 0) {
+    const first = anyConfig.themeBackgroundImages[0]
+    if (typeof first === 'string') {
+      console.log('applyBackgroundFromConfig themeBackgroundImages[0] string')
+      bgUrl = first
+    } else if (first && typeof first === 'object') {
+      console.log('applyBackgroundFromConfig themeBackgroundImages[0] obj')
+      bgUrl = first.url || null
+      bgId = first.id ?? null
+    }
+  }
+
+  if (bgUrl) {
+    console.log('applyBackgroundFromConfig setBackgroundImageFromUrl', bgUrl, bgId)
+    baseStore.setBackgroundImageFromUrl(bgUrl, bgId ?? null)
+  } else {
+    console.log('applyBackgroundFromConfig setBackgroundImageFromUrl null')
+    baseStore.setBackgroundImageFromUrl(null)
+  }
+}
+
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
   try {
@@ -106,12 +146,13 @@ const loadDesign = async (designUid: string) => {
       return
     }
     const designData = response.data
-    console.log(322, designData)
+
     const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
     
     // 设置基础信息
     baseStore.id = designUid
     baseStore.watchFaceName = designData.name
+    baseStore.appId = designData.product?.appId || -1
     
     // 加载字体
     await fontStore.fetchFonts()
@@ -126,13 +167,10 @@ const loadDesign = async (designUid: string) => {
       await waitCanvasReady()
       // 设置默认值
       baseStore.watchFaceName = designData.name
-      baseStore.themeBackgroundImages = []
-      baseStore.currentThemeIndex = 0
       baseStore.textCase = 0
       baseStore.labelLengthType = 0
       baseStore.showUnit = false
      
-      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
 
@@ -144,11 +182,9 @@ const loadDesign = async (designUid: string) => {
       propertiesStore.loadProperties(config.properties)
     }
 
-    // 加载主题背景图片
-    baseStore.themeBackgroundImages = config.themeBackgroundImages || []
     // 设置当前图标字体和大小
-    baseStore.currentIconFontSlug = config.currentIconFontSlug || null
-    baseStore.currentIconFontSize = config.currentIconFontSize || null
+    baseStore.currentIconFontSlug = config.currentIconFontSlug || ''
+    baseStore.currentIconFontSize = config.currentIconFontSize || -1
     // 设置文本大小写
     if (config.textCase !== undefined) {
       baseStore.textCase = config.textCase
@@ -157,6 +193,8 @@ const loadDesign = async (designUid: string) => {
         baseStore.setTextCase(baseStore.textCase)
       }, 500) // 等待画布加载完成
     }
+
+
 
     // 设置标签长度类型
     if (config.labelLengthType !== undefined) {
@@ -170,15 +208,12 @@ const loadDesign = async (designUid: string) => {
     if (config.showUnit !== undefined) {
       baseStore.showUnit = config.showUnit
     }
-    // 默认选中第一个颜色
-    baseStore.currentThemeIndex = 0
-
     // 等待画布初始化完成
     await waitCanvasReady()
 
-    // 切换主题背景
-    baseStore.toggleThemeBackground()   
-    
+    // 应用背景图片到画布（封装为独立方法，兼容新旧配置字段）
+    applyBackgroundFromConfig(config)
+ 
     // 加载元素到画布
     if (config && config.elements) {
       await loadElements(config.elements)

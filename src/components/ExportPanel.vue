@@ -281,14 +281,12 @@ const uploadApp = async () => {
       }
       return -1
     }
-    // 上传背景图片
-    currentStatus = '上传背景图片...'
+    // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
+    currentStatus = '处理背景图片配置...'
     currentProgress = 20
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
-    config.themeBackgroundImages = (baseStore.themeBackgroundImages || []).filter((s) => s !== '')
-    
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = '上传表盘截图...'
     const screenshotUrl = await uploadScreenshot()
@@ -310,9 +308,8 @@ const uploadApp = async () => {
       description: baseStore.watchFaceName,
       designStatus: 'draft',
       configJson: configJson,
-      backgroundImage: {
-        url: baseStore.themeBackgroundImages[0]
-      },
+      // 直接使用配置中的 backgroundImage 元信息
+      backgroundImage: (configJson && configJson.backgroundImage) || null,
     }
     if (screenshotUrl) { // 屏幕截图成功时，上传
       data.coverImage = {

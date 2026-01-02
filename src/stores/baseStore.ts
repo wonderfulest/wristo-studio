@@ -25,19 +25,18 @@ export const useBaseStore = defineStore('baseStore', {
     canvas: null as CanvasLike,
     id: '' as string, // 表盘ID
     watchFaceName: '' as string,
+    appId: -1 as number,
     WATCH_SIZE: 454 as number,
-    themeBackgroundColors: ['#000000'] as string[],
-    themeBackgroundImages: [] as string[],
-    currentThemeIndex: 0 as number,
     textCase: 0 as number, // 文本大小写设置：0=默认, 1=全大写, 2=全小写, 3=驼峰
     labelLengthType: 1 as number, // 标签长度类型：1=短文本, 2=中等文本, 3=长文本
     showUnit: false as boolean, // 是否显示数据项单位
     screenshot: null as Screenshot, // 存储表盘截图数据
     // 添加背景元素的引用
     watchFaceCircle: null as AnyObject | null,
+    // 当前背景图片对应的 Fabric.Image 实例
     backgroundImage: null as AnyObject | null,
-    currentIconFontSlug: null as string | null,
-    currentIconFontSize: null as number | null
+    currentIconFontSlug: '' as string,
+    currentIconFontSize: -1 as number
   }),
 
   getters: {
@@ -379,19 +378,79 @@ export const useBaseStore = defineStore('baseStore', {
       this.canvas = fabricCanvas
       // 禁用自动渲染，手动控制渲染时机
       this.canvas.renderOnAddRemove = false
-    
-      // 设置画布的裁剪路径
-      this.canvas.set({
-        clipPath: this.watchFaceCircle
-      })
+
+      // 创建背景圆和背景图，并在其中设置裁剪路径
       this.addBackground()
     },
-    // 添加背景
+    // 根据 URL 创建或移除画布背景图片，仅负责更新 this.backgroundImage 与画布
+    setBackgroundImageFromUrl(url: string | null, imageId?: number | null): void {
+      console.log('setBackgroundColorFromUrl called with url:', url, 'imageId:', imageId);
+      if (!this.canvas) return
+
+      // 移除现有背景图
+      if (this.backgroundImage) {
+        try {
+          this.canvas.remove(this.backgroundImage)
+        } catch (e) {
+          console.warn('Failed to remove previous background image', e)
+        }
+        this.backgroundImage = null
+      }
+
+      if (!url) {
+        this.canvas.renderAll()
+        return
+      }
+
+      const editorStore = useEditorStore()
+      const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
+
+      FabricImage.fromURL(url).then((img: AnyObject) => {
+        if (!img || !this.canvas) return
+        const c = this.canvas
+        const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
+        this.backgroundImage = img
+        img.set({
+          eleType: 'background',
+          scaleX: scale,
+          scaleY: scale,
+          left: center,
+          top: center,
+          originX: 'center',
+          originY: 'center',
+          selectable: false,
+          evented: false,
+          // 记录元数据，便于导出配置
+          wristoImageId: imageId ?? null,
+          wristoImageUrl: url,
+        })
+        if (!c.getObjects().includes(img)) {
+          c.add(img)
+        }
+
+        // 调整层级：global 在最底层，其上一层为 background
+        if (this.watchFaceCircle && c.getObjects().includes(this.watchFaceCircle)) {
+          const globalIndex = c.getObjects().indexOf(this.watchFaceCircle)
+          const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
+          c.moveObjectTo(this.watchFaceCircle, 0)
+          c.moveObjectTo(img, targetIndex)
+        } else {
+          // 没有全局背景圆时，尽量把图片放在最底层
+          c.moveObjectTo(img, 0)
+        }
+
+        c.renderAll()
+      })
+    },
+
+    // 添加背景（背景圆 + 当前背景图）
     addBackground(): void {
       const editorStore = useEditorStore()
       const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
-      
-      // 创建表盘背景圆
+      const c = this.canvas
+      if (!c) return
+
+      // 创建或更新表盘背景圆
       this.watchFaceCircle = new Circle({
         eleType: 'global',
         left: center,
@@ -399,7 +458,8 @@ export const useBaseStore = defineStore('baseStore', {
         originX: 'center',
         originY: 'center',
         radius: this.$state.WATCH_SIZE * editorStore.zoomLevel / 2,
-        fill: this.$state.themeBackgroundColors[this.$state.currentThemeIndex] || '#000000',
+        // 固定使用黑色作为表盘背景色
+        fill: '#000000',
         backgroundColor: 'transparent',
         selectable: false,
         evented: true,
@@ -412,38 +472,40 @@ export const useBaseStore = defineStore('baseStore', {
         hasControls: false
       }) as unknown as AnyObject
 
-      // 设置背景图片
-      const currentBgImage = this.$state.themeBackgroundImages[this.$state.currentThemeIndex]
-      
-      if (currentBgImage) {
-        // fabric v6: fromURL returns a Promise
-        FabricImage.fromURL(currentBgImage).then((img: AnyObject) => {
-          if (!img) return
-          // 计算缩放比例以填充圆形区域
-          const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
-          this.backgroundImage = img
-          img.set({
-            eleType: 'background-image',
-            scaleX: scale,
-            scaleY: scale,
-            left: center,
-            top: center,
-            originX: 'center',
-            originY: 'center',
-            selectable: false,
-            evented: false
-          })
-          this.canvas?.add(img)
-          this.canvas?.moveObjectTo(img, 0)
-        })
+      // 确保背景圆添加到画布，并始终在最底层（global 最底层）
+      if (!c.getObjects().includes(this.watchFaceCircle)) {
+        c.add(this.watchFaceCircle)
       }
-      this.canvas?.add(this.watchFaceCircle)
-      this.canvas?.set({
+      c.moveObjectTo(this.watchFaceCircle, 0)
+
+      // 使用 global 圆作为画布蒙版，只显示圆内区域
+      c.set({
         clipPath: this.watchFaceCircle
       })
-      // 确保背景圆在最上层
-      this.canvas?.moveObjectTo(this.watchFaceCircle, 0)
-        
+
+      // 如果已经有背景图片，按照当前圆的大小重新布局
+      if (this.backgroundImage) {
+        const img = this.backgroundImage
+        const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
+        img.set({
+          eleType: 'background',
+          scaleX: scale,
+          scaleY: scale,
+          left: center,
+          top: center,
+          originX: 'center',
+          originY: 'center',
+          selectable: false,
+          evented: false
+        })
+        if (!c.getObjects().includes(img)) {
+          c.add(img)
+        }
+        // 将背景图层放在 global 之上，其余元素之下
+        const globalIndex = c.getObjects().indexOf(this.watchFaceCircle)
+        const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
+        c.moveObjectTo(img, targetIndex)
+      }
     },
     // 更新背景元素大小和位置
     updateBackgroundElements(zoom?: number): void {
@@ -550,70 +612,44 @@ export const useBaseStore = defineStore('baseStore', {
       const objects = this.canvas.getObjects()
 
       const watchFace = objects.find((obj: AnyObject) => obj.eleType === 'global')
-      const oldBgImage = objects.find((obj: AnyObject) => obj.eleType === 'background-image')
-
-      // 更新背景颜色
-      if (watchFace) {
-        watchFace.set('fill', this.themeBackgroundColors[this.currentThemeIndex])
-      }
-
+      const oldBgImage = objects.find((obj: AnyObject) => obj.eleType === 'background')
       // 先移除旧的背景图片
       if (oldBgImage) {
         this.canvas.remove(oldBgImage)
       }
 
-      // 添加新的背景图片
-      const currentBgImage = this.themeBackgroundImages[this.currentThemeIndex]
-      // 如果有背景图片
-      if (currentBgImage) {
-        // 创建一个新的 Image 对象
-        const img = new Image()
-        img.onload = () => {
-          // 创建 Fabric.Image 实例
-          const fabricImage: AnyObject = new FabricImage(img, {
-            eleType: 'background-image',
-            originX: 'left',
-            originY: 'top',
-          }) as unknown as AnyObject
+      // 如果存在背景图片，重新布局
+      if (this.backgroundImage) {
+        const img = this.backgroundImage
+        const radius = this.WATCH_SIZE / 2
+        const scale = radius / Math.min(img.width, img.height)
+        const left = (this.WATCH_SIZE - img.width * scale) / 2
+        const top = (this.WATCH_SIZE - img.height * scale) / 2
 
-          // 计算缩放比例以填充圆形区域
-          const scale = this.WATCH_SIZE / Math.min(img.width, img.height)
+        img.set({
+          scaleX: scale,
+          scaleY: scale,
+          left,
+          top,
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+        })
 
-          // 计算居中位置
-          const left = (this.WATCH_SIZE - img.width * scale) / 2
-          const top = (this.WATCH_SIZE - img.height * scale) / 2
-
-          fabricImage.set({
-            scaleX: scale,
-            scaleY: scale,
-            left: left,
-            top: top,
-            selectable: false,
-            evented: false,
-            hasControls: false,
-            hasBorders: false,
-          })
-
-          // 添加图片并设置层级
-          this.canvas?.add(fabricImage)
-          this.canvas?.moveObjectTo(fabricImage, 1) // 背景图片放在最底层
-
-          if (watchFace) {
-            this.canvas?.moveObjectTo(watchFace, 0) // 背景圆放在背景图片之上
-          }
-          this.canvas?.set({
-            clipPath: this.watchFaceCircle
-          })
-          this.canvas?.renderAll()
-          
+        if (!this.canvas.getObjects().includes(img)) {
+          this.canvas.add(img)
         }
-        img.onerror = (error) => { 
-          console.error('加载图片出错', error)
+        this.canvas.moveObjectTo(img, 1)
+
+        if (watchFace) {
+          this.canvas.moveObjectTo(watchFace, 0)
         }
-        // 设置图片源
-        img.src = currentBgImage
-        img.crossOrigin = 'anonymous'
-      } 
+        this.canvas.set({
+          clipPath: this.watchFaceCircle
+        })
+        this.canvas.renderAll()
+      }
       // 如果没有背景图片，确保背景圆在最底层
       else if (watchFace) {
         this.canvas.moveObjectTo(watchFace, 0)
@@ -641,9 +677,23 @@ export const useBaseStore = defineStore('baseStore', {
         showUnit: this.showUnit,
         elements: [] as import('@/types/elements').AnyElementConfig[],
         orderIds: [] as string[],
-        themeBackgroundImages: this.themeBackgroundImages,
+        // 背景图元信息（仅导出 id + url），运行时真实图片由 backgroundImage Fabric 对象维护
+        backgroundImage: undefined,
         currentIconFontSlug: this.currentIconFontSlug,
         currentIconFontSize: this.currentIconFontSize,
+      }
+
+      // 导出当前背景图元信息
+      if (this.backgroundImage) {
+        const anyImg: any = this.backgroundImage
+        const url: string =
+          anyImg.wristoImageUrl ||
+          (typeof anyImg.getSrc === 'function' ? anyImg.getSrc() : '') ||
+          ''
+        const id: number | null = anyImg.wristoImageId ?? null
+        if (url) {
+          ;(config as any).backgroundImage = { id, url }
+        }
       }
 
       const objects: FabricElement[] = this.canvas.getObjects() as FabricElement[]
@@ -658,7 +708,7 @@ export const useBaseStore = defineStore('baseStore', {
         for (const element of objects) {
           if (!element.eleType) continue
           config.orderIds.push(element.id || 'tianchong-' + nanoid())
-          if (element.eleType === 'background-image') continue
+          if (element.eleType === 'background') continue
           if (element.eleType === 'global') continue
           // 使用编码器系统编码元素（捕获异常并中止生成）
           let encodeConfig: import('@/types/elements').AnyElementConfig | null = null

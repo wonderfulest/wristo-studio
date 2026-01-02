@@ -32,17 +32,24 @@
 
     <div class="setting-item">
       <label>Background Image</label>
-      <div class="background-image-control">
-        <el-upload action="#" :auto-upload="false" :show-file-list="false" accept=".jpg,.jpeg,.png" :before-upload="beforeBackgroundImageUpload" @change="handleBackgroundImageChange">
-          <el-button size="small" type="primary">Select Image</el-button>
-        </el-upload>
-        <el-button size="small" type="danger" @click="removeBackgroundImage" v-if="currentBackgroundImage">Remove Image</el-button>
-      </div>
-      <div class="background-image-preview" v-if="currentBackgroundImage">
-        <img :src="currentBackgroundImage" alt="Background Image Preview" />
-      </div>
+      <ImageUpload
+        :model-value="currentBackgroundImageId"
+        :preview-url="currentBackgroundImageUrl"
+        @update:modelValue="handleBackgroundImageIdChange"
+        @uploaded="handleBackgroundImageUploaded"
+      />
+      <el-button
+        v-if="currentBackgroundImageUrl"
+        type="text"
+        size="small"
+        @click="removeBackgroundImage"
+      >Remove Image</el-button>
     </div>
+
+    <!-- Theme Rule Settings -->
+    <ThemeRuleSettings />
   </div>
+
 </template>
 
 <script setup>
@@ -53,9 +60,10 @@ import emitter from '@/utils/eventBus'
 import { ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus'
 import { uploadBase64Image, uploadImageFile } from '@/utils/image'
 import { usePropertiesStore } from '@/stores/properties'
+import ThemeRuleSettings from '@/settings/ThemeRuleSettings.vue'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 const propertiesStore = usePropertiesStore()
 const baseStore = useBaseStore()
-const currentThemeIndex = ref(0)
 // 表盘名称
 const watchFaceName = computed({
   get: () => baseStore.watchFaceName,
@@ -177,91 +185,34 @@ watch(
   { deep: true }
 )
 
-// 背景图片
-const currentBackgroundImage = computed({
-  get: () => baseStore.themeBackgroundImages[currentThemeIndex.value],
-  set: (value) => {
-    baseStore.themeBackgroundImages[currentThemeIndex.value] = value
-  }
+// 背景图片：从 baseStore.backgroundImage 的元数据中读取 id 和 url
+const currentBackgroundImageId = computed(() => {
+  const raw = baseStore.backgroundImage
+  return raw && raw.wristoImageId != null ? raw.wristoImageId : undefined
 })
 
-const MAX_BG_SIZE = 2 * 1024 * 1024
-const beforeBackgroundImageUpload = (rawFile) => {
-  if (!rawFile) return false
-  if (rawFile.size > MAX_BG_SIZE) {
-    ElMessage.error('Image size must not exceed 2MB')
-    return false
-  }
-  return true
+const currentBackgroundImageUrl = computed(() => {
+  const raw = baseStore.backgroundImage
+  if (!raw) return ''
+  return raw.wristoImageUrl || ''
+})
+
+// ImageUpload 回调：这里只接受上传完成后的完整 ImageVO，由 setBackgroundImageFromUrl 负责更新画布
+const handleBackgroundImageIdChange = () => {
+  // id 变化由 uploaded 中的完整 ImageVO 统一处理，这里无需额外逻辑
 }
 
-const handleBackgroundImageChange = (file) => {
-  
-  if (!file || !file.raw) {
-    console.warn('Invalid file', file)
-    return
-  }
-
-  if (file.raw.size > MAX_BG_SIZE) {
-    ElMessage.error('Image size must not exceed 2MB')
-    return
-  }
-
-  // 创建 loading 实例
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: 'Uploading image... ',
-    background: 'rgba(0, 0, 0, 0.7)'
-  })
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      // 上传背景图片
-      const bgImage = e.target.result
-      let imageUploadUrl  
-      if (bgImage && bgImage.startsWith('data:')) {
-        imageUploadUrl = await uploadBase64Image(bgImage, 'background')
-      } else if (bgImage && bgImage.startsWith('blob:')) {
-        imageUploadUrl = await uploadImageFile(bgImage, 'background')
-      } else if (bgImage && bgImage.startsWith('http')) {
-        imageUploadUrl = bgImage
-      }
-      
-      if (!imageUploadUrl) {
-        throw new Error('Failed to upload background image')
-      }
-
-      // 更新当前主题的背景图片
-      baseStore.themeBackgroundImages[currentThemeIndex.value] = imageUploadUrl
-      // 强制更新画布背景
-      baseStore.toggleThemeBackground()
-      
-      ElMessage.success('Image uploaded successfully')
-    } catch (error) {
-      console.error('Failed to upload background image:', error)
-      ElMessage.error('Failed to upload background image')
-    } finally {
-      // 关闭 loading
-      loadingInstance.close()
-    }
-  }
-
-  reader.onerror = (error) => {
-    console.error('Failed to read image', error)
-    ElMessage.error('Failed to read image')
-    loadingInstance.close()
-  }
-
-  reader.readAsDataURL(file.raw)
+// ImageUpload 回调：上传成功后更新当前背景图，并刷新画布
+const handleBackgroundImageUploaded = (img) => {
+  if (!img) return
+  const url = img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
+  baseStore.setBackgroundImageFromUrl(url || null, img.id || null)
+  ElMessage.success('Image uploaded successfully')
 }
 
 // 移除背景图片
 const removeBackgroundImage = () => {
-  currentBackgroundImage.value = ''
-  // 同时清空主题背景图片数组
-  baseStore.themeBackgroundImages = []
-  baseStore.toggleThemeBackground()
+  baseStore.setBackgroundImageFromUrl(null)
 }
 
 // WPay ID

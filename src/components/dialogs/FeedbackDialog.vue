@@ -54,7 +54,7 @@
       <div class="contact-info">
         <el-icon><Message /></el-icon>
         <span>遇到问题？请联系我！发送邮件至：</span>
-        <a href="mailto:service@garminface.com">service@garminface.com</a>
+        <a href="mailto:service@wristo.io">service@wristo.io</a>
       </div>
     </div>
 
