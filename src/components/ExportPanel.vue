@@ -171,7 +171,7 @@ const downloadConfig = async () => {
 const uploadScreenshot = async () => {
   try {
     // 先捕获最新的画布截图
-    const screenshot = await baseStore.captureScreenshot(true)
+    const screenshot = await baseStore.captureScreenshot()
     if (screenshot) {
       const screenshotUrl = await uploadBase64Image(screenshot, 'screenshot')
       return screenshotUrl

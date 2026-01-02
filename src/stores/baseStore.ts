@@ -300,70 +300,37 @@ export const useBaseStore = defineStore('baseStore', {
       }, 10)
     },
     // 捕获并保存表盘截图
-    captureScreenshot(forceRefresh: boolean = false): Promise<string | null> | string | null {
+    captureScreenshot(): Promise<string | null> {
       if (!this.canvas) {
         console.error('没有可用的画布')
         return this.getFallbackScreenshot()
       }
-      if (this.screenshot && !forceRefresh) {
-        return this.screenshot
-      }
       try {
         // 确保画布内容是最新的
         this.canvas.renderAll()
-        
-        // 获取截图数据
+
+        // 获取截图数据（只截当前画布内容，不再使用任何备用图片）
         const dataURL = this.canvas.toDataURL({
           format: 'png',
           quality: 1
         })
-        
+
         // 保存截图数据到 state
         this.screenshot = dataURL
-        
-        return dataURL
+
+        return Promise.resolve(dataURL)
       } catch (error) {
         console.error('截图捕获失败:', error)
-        // 如果截图失败，使用备用图片
-        return this.getFallbackScreenshot()
+        // 截图失败时不再使用本地备用图片，直接返回 null
+        this.screenshot = null
+        return Promise.resolve(null)
       }
     },
     // 获取备用截图
     getFallbackScreenshot(): Promise<string | null> {
-      // 使用本地图片作为备用
-      const localImagePath = '/screen-default.png';
-      
-      // 创建一个新的 Image 对象来加载本地图片
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      img.src = localImagePath;
-      // 返回一个 Promise，当图片加载完成后解析
-      return new Promise((resolve) => {
-        img.onload = () => {
-          // 创建一个临时画布来获取图片数据
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = img.width;
-          tempCanvas.height = img.height;
-          const ctx = tempCanvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0);
-          
-          // 获取数据 URL
-          const dataURL = tempCanvas.toDataURL('image/png');
-          
-          // 保存截图数据到 state
-          this.screenshot = dataURL;
-          
-          resolve(dataURL);
-        };
-        
-        img.onerror = () => {
-          console.error('加载备用图片失败');
-          // 即使备用图片加载失败也返回 null
-          this.screenshot = null;
-          resolve(null);
-        };
-      });
+      // 不再使用本地备用图片，直接返回 null
+      this.screenshot = null
+      return Promise.resolve(null)
     },
     // 获取当前截图
     getScreenshot(): string | null {
@@ -405,7 +372,8 @@ export const useBaseStore = defineStore('baseStore', {
       const editorStore = useEditorStore()
       const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
 
-      FabricImage.fromURL(url).then((img: AnyObject) => {
+      // 使用 CORS 加载远程背景图，避免污染 canvas，保证可以调用 toDataURL 截图
+      FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: AnyObject) => {
         if (!img || !this.canvas) return
         const c = this.canvas
         const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
