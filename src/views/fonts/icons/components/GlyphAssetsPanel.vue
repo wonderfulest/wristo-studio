@@ -120,9 +120,9 @@ const defaultOptions: EnumOption[] = [
 // Only show 'mip' for default fonts
 const visibleOptions = computed<EnumOption[]>(() => {
   const list = options.value
-  if (props.glyph?.isDefault === 1) {
-    return list.filter(o => String(o.value).toLowerCase() === 'mip')
-  }
+  // if (props.glyph?.isDefault === 1) {
+  //   return list.filter(o => String(o.value).toLowerCase() === 'mip')
+  // }
   return list
 })
 

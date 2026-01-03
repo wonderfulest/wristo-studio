@@ -47,7 +47,7 @@
     </div>
 
     <!-- Theme Rule Settings -->
-    <ThemeRuleSettings />
+    <ThemeRuleSettings v-if="appId > 0"/>
   </div>
 
 </template>
@@ -64,6 +64,8 @@ import ThemeRuleSettings from '@/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 const propertiesStore = usePropertiesStore()
 const baseStore = useBaseStore()
+
+const appId = computed(() => baseStore.appId)
 // 表盘名称
 const watchFaceName = computed({
   get: () => baseStore.watchFaceName,
