@@ -33,8 +33,8 @@
                 <template v-if="getAssetImage(item)">
                   <div class="overlay overlay-actions">
                     <span v-if="glyph.isDefault === 0 && displayType === 'mip'" class="action" @click="emit('edit', item)">Edit</span>
+                    <!-- v-if="glyph.isDefault === 0" -->
                     <span
-                      v-if="glyph.isDefault === 0"
                       class="action"
                       @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })"
                     >Rebind</span>
