@@ -1,6 +1,6 @@
 import type { BaseElementConfig } from './base'
 import type { FabricFill } from '@/types/fabric'
-import { encodeTopBaseForElement } from './baselineUtil'
+
 export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
   fill: FabricFill

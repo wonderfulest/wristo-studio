@@ -6,6 +6,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { MoonElementConfig } from '@/types/elements/data'
+
 function getDefaultMoonImage(): string {
   return 'https://cdn.wristo.io/moonphase/h-phase-16.png'
 }

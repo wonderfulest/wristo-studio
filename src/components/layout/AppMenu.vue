@@ -28,10 +28,10 @@
           <el-icon><Upload /></el-icon>
           <span>Save</span>
         </el-menu-item>
-        <!-- <el-menu-item index="actions/screenshot" @click="handleScreenshot">
+        <el-menu-item index="actions/screenshot" @click="handleScreenshot">
           <el-icon><Picture /></el-icon>
           <span>Screenshot</span>
-        </el-menu-item> -->
+        </el-menu-item>
         <!-- 加个分隔线 -->
         <el-divider direction="horizontal" class="menu-sub-divider" />
         <!-- 属性 -->

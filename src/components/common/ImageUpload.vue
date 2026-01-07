@@ -34,7 +34,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadImage } from '@/api/image'
-import { IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/store/common'
+import { IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
 
 const extractRatio = (it) => {
   const candidates = [it?.props?.ratio, it?.ratio, it?.category, it?.description, it?.name, it?.value]

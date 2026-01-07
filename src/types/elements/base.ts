@@ -13,4 +13,5 @@ export interface BaseElementConfig {
   fill?: FabricFill
   fontFamily?: string
   fontSize?: number
+  topBase?: number
 }
