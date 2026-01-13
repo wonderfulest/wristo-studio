@@ -17,6 +17,10 @@
     </div>
 
     <div class="dropdown-menu" v-if="showDropdown">
+      <div class="dropdown-item" @click="go('/profile')">
+        <Icon icon="material-symbols:account-circle" />
+        User Profile
+      </div>
       <div class="dropdown-item" @click="go('/devices')">
         <Icon icon="material-symbols:extension" />
         Devices
@@ -64,7 +68,6 @@
       </template>
     </el-dialog>
 
-    <WPayTokenDialog ref="wpayDialogRef" />
     <DesignerDefaultConfigDialog ref="designerConfigDialogRef" />
   </div>
 </template>
@@ -73,7 +76,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import WPayTokenDialog from '@/components/dialogs/WPayTokenDialog.vue'
 import { ticketsApi } from '@/api/wristo/tickets'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 
@@ -83,7 +85,6 @@ const userStore = useUserStore()
 const showDropdown = ref(false)
 const usernameRef = ref<HTMLElement | null>(null)
 const isUsernameTruncated = ref(false)
-const wpayDialogRef = ref<InstanceType<typeof WPayTokenDialog> | null>(null)
 const designerConfigDialogRef = ref<InstanceType<typeof DesignerDefaultConfigDialog> | null>(null)
 
 const ticketsAlertVisible = ref(false)

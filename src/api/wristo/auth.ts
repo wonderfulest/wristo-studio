@@ -3,6 +3,14 @@ import type { UserInfo } from '@/types/user'
 import type { SsoTokenRequestDto, SsoTokenResponseData } from '@/types/sso'
 import { ApiResponse } from '@/types/api/api'
 
+export interface UpdateMyInfoPayload {
+  username?: string
+  nickname?: string
+  avatar?: string
+  status?: number
+  deviceId?: string
+}
+
 /**
  * Logout
  * @returns {Promise} Logout result
@@ -16,7 +24,14 @@ export const logout = async () : Promise<ApiResponse<string>> => {
  * @returns {Promise} User info
  */
 export const getUserInfo = () : Promise<ApiResponse<UserInfo>> => {
-  return instance.get('/users/info')
+  return instance.get('/users/info?populate=*')
+}
+
+/**
+ * 更新当前用户信息
+ */
+export const updateMyInfo = async (payload: UpdateMyInfoPayload): Promise<any> => {
+  return instance.post(`/users/update/my-info`, payload)
 }
 
 /**

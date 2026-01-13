@@ -118,6 +118,15 @@ export const designApi = {
    */
   submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
     return instance.post(`/dsn/design/submit`, data)
+  },
+
+  /**
+   * 提交 PRG 打包任务
+   * @param designUid 设计UID
+   * @param deviceId 设备ID
+   */
+  submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
+    return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
   }
 }
 

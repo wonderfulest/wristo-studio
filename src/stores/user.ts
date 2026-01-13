@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { logout as logoutApi } from '@/api/wristo/auth'
-import { type UserInfo } from '@/types/user'
+import { logout as logoutApi, updateMyInfo } from '@/api/wristo/auth'
+import { type UserInfo, type GarminDeviceVO } from '@/types/user'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -37,6 +37,19 @@ export const useUserStore = defineStore('user', {
     },
     setToken(token: string) {
       this.token = token
+    },
+    async updateDevice(device: GarminDeviceVO) {
+      try {
+        await updateMyInfo({ deviceId: device.deviceId })
+        if (this.userInfo) {
+          this.userInfo = {
+            ...this.userInfo,
+            device,
+          }
+        }
+      } catch (e) {
+        console.error('update device failed', e)
+      }
     }
   },
   persist: ({

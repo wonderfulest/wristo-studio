@@ -15,5 +15,6 @@ export function encodeTopBaseForElement(
   const scaleY = (element.scaleY ?? 1) as number
 
   // element.top 是 originY='center' 的中心点时：
+  console.log('top:', top, 'scaleY:', scaleY, 'fontSize:', fontSize, 'FONT_SIZE_MULT:', FONT_SIZE_MULT, 'FONT_SIZE_FRACTION:', FONT_SIZE_FRACTION)
   return top + scaleY * fontSize * FONT_SIZE_MULT * (0.5 - FONT_SIZE_FRACTION)
 }

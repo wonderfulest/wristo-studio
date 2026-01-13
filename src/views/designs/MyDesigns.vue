@@ -132,14 +132,35 @@
               </div>
             </div>
             <div class="actions">
-              <el-button v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" type="primary" size="small" @click="openCanvas(design)">Edit</el-button>
+              <el-button 
+                v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" 
+                type="primary" 
+                size="small" 
+                @click="openCanvas(design)"
+              >
+                ✏️ Edit
+              </el-button>
               <el-button 
                 type="warning" 
                 size="small" 
                 @click="copyDesign(design)"
                 :loading="loadingStates.copy.has(design.id)"
               >
-                Copy
+                📋 Copy
+              </el-button>
+              <el-button 
+                type="default" 
+                size="small"
+                @click="buildPrg(design)"
+                :loading="loadingStates.prgBuild.has(design.id)"
+              >
+                🛠 Build (PRG)
+              </el-button>
+              <el-button 
+                type="default" 
+                size="small"
+              >
+                ▶ Run (PRG)
               </el-button>
               <el-button 
                 v-if="design.designStatus === 'draft'" 
@@ -148,7 +169,7 @@
                 @click="submitDesign(design)"
                 :loading="loadingStates.submit.has(design.id)"
               >
-                Submit
+                📦 Build IQ
               </el-button>
               <el-button 
                 v-if="hasDownloadablePackage(design)"
@@ -156,8 +177,7 @@
                 size="small"
                 @click="downloadPackage(design)"
               >
-                <el-icon><Download /></el-icon>
-                Download
+                ⬇️ Download IQ
               </el-button>
               <el-button 
                 v-if="design.product?.release"
@@ -165,8 +185,7 @@
                 size="small"
                 @click="goLive(design)"
               >
-                <el-icon><Promotion /></el-icon>
-                Go Live
+                🚀 Publish IQ
               </el-button>
             </div>
           </div>
@@ -223,8 +242,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete, Download, Promotion, DocumentCopy } from '@element-plus/icons-vue'
-import { toggleFavorite } from '@/api/favorites'
+import { Star, Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
@@ -253,7 +271,8 @@ const loadingStates = ref({
   submit: new Set(),
   copy: new Set(),
   delete: new Set(),
-  favorite: new Set()
+  favorite: new Set(),
+  prgBuild: new Set()
 })
 
 // 搜索相关状态
@@ -460,6 +479,35 @@ const submitDesign = async (design: Design) => {
   }
 }
 
+// 提交 PRG 打包任务
+const buildPrg = async (design: Design) => {
+  if (loadingStates.value.prgBuild.has(design.id)) return
+
+  // 获取当前设备 ID：优先使用用户资料中的设备，其次尝试本地已选设备
+  let deviceId: string | undefined
+  deviceId = (userStore.userInfo as any)?.device?.deviceId
+
+  if (!deviceId) {
+    messageStore.error('Please select a device first')
+    return
+  }
+
+  try {
+    loadingStates.value.prgBuild.add(design.id)
+    const res = await designApi.submitPrgPackageTask(design.designUid, String(deviceId)) as ApiResponse<boolean>
+    if (res.code === 0 && res.data) {
+      messageStore.success('PRG build task submitted')
+    } else {
+      messageStore.error(res.msg || 'Failed to submit PRG build task')
+    }
+  } catch (error) {
+    console.error('Submit PRG build task failed:', error)
+    messageStore.error('Failed to submit PRG build task')
+  } finally {
+    loadingStates.value.prgBuild.delete(design.id)
+  }
+}
+
 // 下载安装包
 const downloadPackage = (design: Design) => {
   if (design.product?.release?.packageUrl) {
@@ -488,11 +536,6 @@ const hasNewRelease = (design: Design): boolean => {
   return dayjs(releaseUpdatedAt).isAfter(dayjs(lastGoLive))
 }
 
-// 点击新版本红点提示
-const showNewReleaseTip = (): void => {
-  messageStore.info('New version available to upload')
-}
-
 // 处理提交成功
 const handleSubmitSuccess = () => {
   fetchDesigns() // 刷新设计列表
@@ -516,22 +559,6 @@ onUnmounted(() => {
   // 清理事件监听
   window.removeEventListener('refresh-list', handleRefresh)
 })
-
-// 处理收藏
-const handleFavorite = async (design: Design) => {
-  if (loadingStates.value.favorite.has(design.id)) return
-  
-  try {
-    loadingStates.value.favorite.add(design.id)
-    await toggleFavorite(design.name, design.id, userStore.userInfo?.id, true)
-    messageStore.success('Favorite successful')
-  } catch (error) {
-    console.error('收藏失败:', error)
-    messageStore.error('Favorite failed')
-  } finally {
-    loadingStates.value.favorite.delete(design.id)
-  }
-}
 
 // 添加编辑成功处理方法
 const handleEditSuccess = () => {

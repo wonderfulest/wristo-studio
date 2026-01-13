@@ -75,6 +75,12 @@
       />
     </div>
 
+    <DeviceDisplay 
+      class="current-device-display"
+      @select-device="handleDeviceSelect"
+      @device-selected="onDeviceSelected"
+    />
+
     <UserMenu />
   </header>
   <CreateDesignDialog ref="createDesignDialogRef" />
@@ -85,6 +91,8 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
 import { useMessageStore } from '@/stores/message'
+import { useUserStore } from '@/stores/user'
+import DeviceDisplay from '@/components/DeviceDisplay.vue'
 import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
 import UserMenu from './UserMenu.vue'
 
@@ -98,6 +106,7 @@ const router = useRouter()
 const route = useRoute()
 const baseStore = useBaseStore()
 const messageStore = useMessageStore()
+const userStore = useUserStore()
 
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
@@ -106,13 +115,18 @@ const devicesDialogVisible = ref(false)
 const ticketsDialogVisible = ref(false)
 const createDesignDialogRef = ref(null)
 
-// 计算属性
 const watchFaceName = computed({
   get: () => baseStore.watchFaceName,
   set: (value) => baseStore.setWatchFaceName(value)
 })
+// 可以在后续需要时暴露设备事件
+const handleDeviceSelect = () => {
+  // placeholder: 可以在这里加埋点或提示
+}
 
-
+const onDeviceSelected = (device) => {
+  // 设备更新逻辑已在 DeviceSelector 中完成（更新接口 + 刷新 userStore）
+}
 const showDesignerConfirm = () => {
   designerDialogVisible.value = true
 }
@@ -168,7 +182,7 @@ const confirmOpenTickets = () => {
 
 <style scoped>
 .app-header {
-  height: 40px;
+  height: 48px;
   background: #fff;
   border-bottom: 1px solid #eee;
   display: flex;
