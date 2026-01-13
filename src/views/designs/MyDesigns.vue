@@ -74,17 +74,6 @@
                 </div>
                 <div class="header-actions">
                   <el-button-group>
-                    <!-- 收藏 -->
-                    <el-button 
-                      type="primary" 
-                      size="small" 
-                      link 
-                      @click.stop="handleFavorite(design)"
-                      :title="'Favorite'"
-                      :loading="loadingStates.favorite.has(design.id)"
-                    >
-                      <el-icon><Star /></el-icon>
-                    </el-button>
                     <!-- 编辑 -->
                     <el-button 
                       type="primary" 
@@ -157,8 +146,10 @@
                 🛠 Build (PRG)
               </el-button>
               <el-button 
+                v-if="design.product?.prgRelease"
                 type="default" 
                 size="small"
+                @click="runPrg(design)"
               >
                 ▶ Run (PRG)
               </el-button>
@@ -249,7 +240,7 @@ import { CreateCopyDesignParams } from '@/types/api/design'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
-import { Design, DesignStatus } from '@/types/api/design'
+import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -347,7 +338,7 @@ const getDesignImageUrl = (design: Design) => {
 // 获取设计列表
 const fetchDesigns = async () => {
   try {
-    const params = {
+    const params: DesignPageParams = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       status: selectedStatus.value,
@@ -355,7 +346,12 @@ const fetchDesigns = async () => {
       orderBy: `${sortField.value}:${sortOrder.value}`,
       populate: 'user,product,payment,release,cover,category,bundle'
     }
-    
+
+    const deviceId = (userStore.userInfo as any)?.device?.deviceId
+    if (deviceId) {
+      params.device = deviceId
+    }
+
     const response: ApiResponse<PageResponse<Design>> = await designApi.getDesignPage(params)
     
     if (response.code === 0 && response.data) {
@@ -514,6 +510,16 @@ const downloadPackage = (design: Design) => {
     window.open(design.product.release.packageUrl, '_blank')
   } else {
     messageStore.error('Download link not available')
+  }
+}
+
+// 运行 PRG：跳转下载 prgUrl
+const runPrg = (design: Design) => {
+  const url = (design.product as any)?.prgRelease?.prgUrl
+  if (url) {
+    window.open(url, '_blank')
+  } else {
+    messageStore.error('PRG package not available for this device')
   }
 }
 

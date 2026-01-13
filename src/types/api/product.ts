@@ -48,6 +48,22 @@ export interface ProductReleaseVo {
   version: number
 }
 
+export interface ProductReleasePrgVo {
+  id: number
+  productId: number
+  deviceId: string
+  releaseVersion: string
+  releaseTime: number
+  prgUrl: string
+  releaseNote: string
+  packageSize: number
+  packageMd5: string
+  isDeleted: number
+  createdAt: number
+  updatedAt: number
+  version: number
+}
+
 export interface Product {
   id: number
   appId: number
@@ -72,6 +88,7 @@ export interface Product {
   payment: ProductPaymentVo
   packageLog: ProductPackagingLogVo
   release: ProductReleaseVo
+  prgRelease?: ProductReleasePrgVo
   bundles: Bundle[]
   lastGoLive: number
 }

@@ -135,4 +135,5 @@ export interface DesignPageParams {
   userId?: number
   status?: string
   name?: string
+  device?: string
 } 
