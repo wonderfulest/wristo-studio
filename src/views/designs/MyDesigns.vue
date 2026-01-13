@@ -163,7 +163,7 @@
                 ▶ Run (PRG)
               </el-button>
               <el-button 
-                v-if="design.designStatus === 'draft'" 
+                v-if="design.designStatus === 'draft' || design.updatedAt > design.product?.release?.updatedAt" 
                 type="success" 
                 size="small"
                 @click="submitDesign(design)"
