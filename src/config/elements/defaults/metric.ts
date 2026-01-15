@@ -56,7 +56,6 @@ export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
   eleType: 'icon',
   iconFont: 'wristo-icon',
   iconSize: 42,
-  fontFamily: 'roboto-condensed-regular',
 }
 
 export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {

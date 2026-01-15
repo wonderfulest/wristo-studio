@@ -76,7 +76,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
         // 等待一小段时间确保元素已经被选中
         setTimeout(() => {
           emitter.emit('refresh-element-settings')
-        }, 50)
+        }, 30)
         
         // 添加元素后通知父级切换到图层面板
         emit('switch-to-layer')

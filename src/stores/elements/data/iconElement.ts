@@ -22,14 +22,17 @@ export const useIconStore = defineStore('iconElement', {
   },
   actions: {
     async addElement(config: IconElementConfig): Promise<FabricText> {
+      console.log('addElement icon', config)
       if (!this.baseStore?.canvas) {
         throw new Error('Canvas is not initialized, cannot add icon element')
       }
       try {
         type IconProps = TextProps & IconElementConfig
         const metric = usePropertiesStore().getMetricByOptions(config)
-        const resolvedFontFamily = this.baseStore.currentIconFontSlug ?? config.iconFont
-        const resolvedFontSize = this.baseStore.currentIconFontSize ?? Number(config.iconSize)
+        const resolvedFontFamily = this.baseStore.currentIconFontSlug || config.iconFont
+        const resolvedFontSize = this.baseStore.currentIconFontSize === -1 ? Number(config.iconSize) : this.baseStore.currentIconFontSize
+        console.log('resolvedFontFamily', resolvedFontFamily)
+        console.log('resolvedFontSize', resolvedFontSize)
         const iconOptions: Partial<IconProps> = {
           id: config.id || nanoid(),
           eleType: 'icon',

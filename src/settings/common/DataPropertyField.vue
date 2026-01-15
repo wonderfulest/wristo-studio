@@ -36,7 +36,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 
 const props = withDefaults(defineProps<{
-  modelValue: string
+  modelValue?: string
   label?: string
   placeholder?: string
   required?: boolean
@@ -64,7 +64,7 @@ const getTypeLabel = (key: string): string => {
 }
 
 const localValue = computed({
-  get: () => props.modelValue,
+  get: () => props.modelValue ?? '',
   set: (val: string) => emit('update:modelValue', val),
 })
 
