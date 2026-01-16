@@ -6,7 +6,7 @@
       @select="handleSelect"
       class="menu-list"
     >
-      <!-- Actions 分组及其子项 -->
+      <!-- Actions group and items -->
       <el-sub-menu index="actions">
         <template #title>
           <el-icon><Operation /></el-icon>
@@ -18,12 +18,12 @@
           <span>View</span>
           <span class="shortcut-hint">⌘ + .</span>
         </el-menu-item>
-        <!-- 构建 -->
+        <!-- Build -->
         <el-menu-item index="actions/build" @click="handleBuild">
           <el-icon><Box /></el-icon>
           <span>Build</span>
         </el-menu-item>
-        <!-- 保存 -->
+        <!-- Save -->
         <el-menu-item index="actions/save" @click="handleSave">
           <el-icon><Upload /></el-icon>
           <span>Save</span>
@@ -32,15 +32,15 @@
           <el-icon><Picture /></el-icon>
           <span>Screenshot</span>
         </el-menu-item>
-        <!-- 加个分隔线 -->
+        <!-- Divider -->
         <el-divider direction="horizontal" class="menu-sub-divider" />
-        <!-- 属性 -->
+        <!-- App Properties -->
         <el-menu-item index="actions/properties">
           <el-icon><Setting /></el-icon>
           <span>App Properties</span>
           <span class="shortcut-hint">⌘ + ,</span>
         </el-menu-item>
-        <!-- 辅助线功能 -->
+        <!-- Key guidelines toggle -->
         <el-menu-item index="actions/showKeyGuidelines" @click="toggleKeyGuidelines">
           <el-icon><Setting /></el-icon>
           <span>{{ showKeyGuidelines ? 'Hide Key Guidelines' : 'Show Key Guidelines' }}</span>
@@ -48,7 +48,7 @@
         </el-menu-item>
       </el-sub-menu>
 
-      <!-- 其他主菜单项 -->
+      <!-- Other main menu items -->
       <el-menu-item index="edit">
         <el-icon><Edit /></el-icon>
         <span>Edit</span>
@@ -57,15 +57,15 @@
         <el-icon><View /></el-icon>
         <span>View</span>
       </el-menu-item>
-      <!-- 菜单栏分隔线 -->
+      <!-- Main menu divider -->
       <el-divider direction="vertical" class="menu-divider" />
-      <!-- 时间分组及其子项 -->
+      <!-- Time group and items -->
       <el-sub-menu index="time">
         <template #title>
           <el-icon><Timer /></el-icon>
           <span>Time</span>
         </template>
-        <!-- Time 分组 -->
+        <!-- Time subgroup -->
         <div class="menu-group">
           <div class="menu-group-title">Time</div>
           <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'time', { formatter: 0 })">
@@ -82,7 +82,7 @@
           </el-menu-item>
         </div>
         
-        <!-- Date 分组 -->
+        <!-- Date subgroup -->
         <div class="menu-group">
           <div class="menu-group-title">Date</div>
           <el-menu-item index="time/weekday-month-day">
@@ -103,7 +103,7 @@
           </el-menu-item>
         </div>
         
-        <!-- Analog 分组 -->
+        <!-- Analog subgroup -->
         <div class="menu-group">
           <div class="menu-group-title">Analog</div>
           <el-menu-item index="time/analog-hands">
@@ -136,7 +136,7 @@
           </el-menu-item>
         </div>
       </el-sub-menu>
-      <!-- 健康数据分组 -->
+      <!-- Health data group -->
       <el-sub-menu index="datafield">
         <template #title>
           <el-icon><DataLine /></el-icon>
@@ -146,23 +146,23 @@
           <div class="menu-group-title">DataField</div>
           <el-menu-item index="health/heart-rate" @click="handleAddElement('metric', 'data')">
             <el-icon><Monitor /></el-icon>
-            <span>心率</span>
+            <span>Heart Rate</span>
           </el-menu-item>
           <el-menu-item index="health/steps" @click="handleAddElement('metric', 'data')">
             <el-icon><TrendCharts /></el-icon>
-            <span>步数</span>
+            <span>Steps</span>
           </el-menu-item>
           <el-menu-item index="health/calories" @click="handleAddElement('metric', 'data')">
             <el-icon><Aim /></el-icon>
-            <span>卡路里</span>
+            <span>Calories</span>
           </el-menu-item>
           <el-menu-item index="health/distance" @click="handleAddElement('metric', 'data')">
             <el-icon><Aim /></el-icon>
-            <span>距离</span>
+            <span>Distance</span>
           </el-menu-item>
           <el-menu-item index="health/floors" @click="handleAddElement('metric', 'data')">
             <el-icon><TrendCharts /></el-icon>
-            <span>楼层</span>
+            <span>Floors</span>
           </el-menu-item>
         </div>
         <div class="menu-group">
@@ -193,7 +193,7 @@
         </div>
       </el-sub-menu>
   
-      <!-- 基础图形分组 -->
+      <!-- Shape group -->
       <el-sub-menu index="shape">
         <template #title>
           <el-icon><Stamp /></el-icon>
@@ -202,54 +202,54 @@
         <div class="menu-group">
           <el-menu-item index="basic/rectangle" @click="handleAddElement('shape', 'rectangle')">
             <el-icon><Minus /></el-icon>
-            <span>矩形</span>
+            <span>Rectangle</span>
           </el-menu-item>
           <el-menu-item index="basic/circle" @click="handleAddElement('shape', 'circle')">
             <el-icon><CircleCheck /></el-icon>
-            <span>圆形</span>
+            <span>Circle</span>
           </el-menu-item>
           <el-menu-item index="basic/text" @click="handleAddElement('time', 'time')">
             <el-icon><Edit /></el-icon>
-            <span>时间文本</span>
+            <span>Time Text</span>
           </el-menu-item>
           <el-menu-item index="basic/date" @click="handleAddElement('time', 'date')">
             <el-icon><Calendar /></el-icon>
-            <span>日期文本</span>
+            <span>Date Text</span>
           </el-menu-item>
           <el-menu-item index="basic/image" @click="handleAddElement('image')">
             <el-icon><Picture /></el-icon>
-            <span>图片</span>
+            <span>Image</span>
           </el-menu-item>
         </div>
       </el-sub-menu>
 
-      <!-- 状态指示器分组 -->
+      <!-- Status indicator group -->
       <el-sub-menu index="indicator">
         <template #title>
           <el-icon><Connection /></el-icon>
           <span>Indicator</span>
         </template>
         <div class="menu-group">
-          <div class="menu-group-title">状态指示</div>
+          <div class="menu-group-title">Status Indicators</div>
           <el-menu-item index="indicator/battery" @click="handleAddElement('status', 'battery')">
             <el-icon><Star /></el-icon>
-            <span>电池电量</span>
+            <span>Battery Level</span>
           </el-menu-item>
           <el-menu-item index="indicator/bluetooth" @click="handleAddElement('indicator', 'bluetooth')">
             <el-icon><Connection /></el-icon>
-            <span>蓝牙指示</span>
+            <span>Bluetooth</span>
           </el-menu-item>
           <el-menu-item index="indicator/notification" @click="handleAddElement('indicator', 'notification')">
             <el-icon><Bell /></el-icon>
-            <span>消息通知</span>
+            <span>Notifications</span>
           </el-menu-item>
           <el-menu-item index="indicator/disturb" @click="handleAddElement('indicator', 'disturb')">
             <el-icon><Bell /></el-icon>
-            <span>勿扰时间</span>
+            <span>Do Not Disturb</span>
           </el-menu-item>
           <el-menu-item index="indicator/alarms" @click="handleAddElement('indicator', 'alarms')">
             <el-icon><Timer /></el-icon>
-            <span>闹钟指示</span>
+            <span>Alarms</span>
           </el-menu-item>
         </div>
       </el-sub-menu>
@@ -273,14 +273,14 @@
         <el-menu-item index="help/feedback" @click="showFeedbackDialog">
           <template #title>
             <el-icon><ChatLineSquare /></el-icon>
-            <span>提交建议</span>
+            <span>Send Feedback</span>
           </template>
         </el-menu-item>
       </el-sub-menu>
     </el-menu>
   </nav>
 
-  <!-- 使用新的快捷键组件 -->
+  <!-- Shortcuts and feedback dialogs -->
   <ShortcutsDialog v-model="shortcutsDialogVisible" />
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
@@ -314,7 +314,7 @@ import {
   Watch,
   Mouse,
   ChatLineSquare,
-  Star, // 使用现有图标作为替代
+  Star, // use existing icon as a placeholder
   Connection,
   Bell,
   Monitor,
@@ -341,27 +341,27 @@ const fontStore = useFontStore()
 const activeMenu = computed(() => {
   return route.path
 })
-// 计算属性
+// Computed properties
 const watchFaceName = computed(() => {
   return baseStore.watchFaceName
 })
 
-// 控制快捷键弹框显示
+// Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
 const feedbackDialog = ref(null)
 const propertiesPanel = ref(null)
 const editDesignDialog = ref(null)
 
-// 关键辅助线状态
+// Key guidelines state
 const showKeyGuidelines = ref(false)
 
-// 切换关键辅助线
+// Toggle key guidelines
 const toggleKeyGuidelines = () => {
   showKeyGuidelines.value = !showKeyGuidelines.value
   emitter.emit('toggle-key-guidelines', showKeyGuidelines.value)
 }
 
-// 监听快捷键
+// Listen for keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === ';') {
     e.preventDefault()
@@ -369,13 +369,13 @@ document.addEventListener('keydown', (e) => {
   }
 })
 
-// 添加元素（参考 AddElementPanel 实现）
+// Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category, elementType, overrides = {}) => {
   
   try {
     let config
     if (category === 'image') {
-      // 图片元素默认配置
+      // Default config for image element
       config = {
         left: 227,
         top: 227,
@@ -388,25 +388,25 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
         originX: 'center',
         originY: 'center'
       }
-      // 应用覆盖参数
+      // Apply overrides
       config = { ...config, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
       config = { ...elementConfigs[category][elementType], ...overrides }
     } else {
-      messageStore.warning('元素类型不支持')
+      messageStore.warning('Element type is not supported')
       return
     }
 
-    // 预加载字体（若有）
+    // Preload fonts if necessary
     try {
       if (config?.fontFamily) {
         await fontStore.loadFont(config.fontFamily)
       }
     } catch (e) {
-      console.warn('字体加载失败（忽略继续添加）:', e)
+      console.warn('Failed to load font (continue adding element):', e)
     }
 
-    // 使用注册器添加元素
+    // Use registry to add element
     if (elementType) {
       const addElement = getAddElement(elementType)
       if (addElement) {
@@ -417,26 +417,26 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       }
     }
 
-    messageStore.success(`已添加 ${config.label || elementType}`)
+    messageStore.success(`Element added: ${config.label || elementType}`)
   } catch (error) {
-    console.error('添加元素失败:', error)
-    messageStore.error('添加元素失败')
+    console.error('Failed to add element:', error)
+    messageStore.error('Failed to add element')
   }
 }
 
-// 组合添加：HH:mm 与 AM/PM 两个时间元素
+// Composite add: HH:mm and AM/PM time elements
 const addHourMinuteAmPm = async () => {
   try {
-    // 添加 HH:mm
+    // Add HH:mm
     await handleAddElement('time', 'time', { formatter: 0, fontSize: 16 })
-    // 在右侧偏移添加 AM/PM（大写 A -> 7）
+    // Add AM/PM time element
     await handleAddElement('time', 'time', { formatter: 7 })
   } catch (e) {
-    console.error('添加 hour:minute am/pm 失败:', e)
+    console.error('Failed to add hour:minute am/pm elements:', e)
   }
 }
 
-// 选择菜单
+// Handle menu selection
 const handleSelect = (key) => {
   if (key === 'help/shortcuts') {
     shortcutsDialogVisible.value = true
@@ -449,26 +449,26 @@ const handleSelect = (key) => {
       console.log('designId', designId)
       editDesignDialog.value?.show(designId)
     } else {
-      messageStore.warning('请先保存设计')
+      messageStore.warning('Please save the design first')
     }
   }
 }
 
-// 构建
+// Build
 const handleBuild = async () => {
-  messageStore.warning('暂不支持！')
+  messageStore.warning('Not supported yet')
 }
 
-// 截图
+// Screenshot
 const handleScreenshot = async () => {
   baseStore.deactivateObject()
   try {
     const dataURL = await baseStore.captureScreenshot()
     if (!dataURL) {
-      throw new Error('截图数据为空')
+      throw new Error('Screenshot data is empty')
     }
     if (!watchFaceName.value) {
-      throw new Error('手表名称不能为空')
+      throw new Error('Watch face name is required')
     }
     const link = document.createElement('a')
     const filename = `${watchFaceName.value}.png`
@@ -477,27 +477,27 @@ const handleScreenshot = async () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    messageStore.success('截图已保存')
+    messageStore.success('Screenshot saved')
   } catch (error) {
-    console.error('截图保存失败:', error)
-    messageStore.error('截图保存失败')
+    console.error('Failed to save screenshot:', error)
+    messageStore.error('Failed to save screenshot')
   }
 }
 
-// 保存
+// Save current design
 const handleSave =async () => {
   baseStore.deactivateObject()
   try {
     const result = await exportStore.uploadApp()
     if (result === 0) {
-      // 上传成功后跳转到设计列表
+      // After successful upload, navigate to designs list
       router.push({
         path: '/designs'
       })
     }
   } catch (error) {
-    console.error('上传失败:', error)
-    messageStore.error('上传失败: ' + (error.message || '未知错误'))
+    console.error('Upload failed:', error)
+    messageStore.error('Upload failed: ' + (error.message || 'Unknown error'))
   }
 }
 
@@ -505,10 +505,10 @@ const showFeedbackDialog = () => {
   feedbackDialog.value?.showDialog()
 }
 
-// 添加编辑成功处理方法
+// Handle edit success
 const handleEditSuccess = () => {
-  // 可以在这里添加需要的处理逻辑，比如刷新数据等
-  messageStore.success('设计更新成功')
+  // Add any follow-up logic here, e.g. refresh data
+  messageStore.success('Design updated successfully')
 }
 </script>
 

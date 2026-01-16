@@ -14,12 +14,23 @@ export const useNotificationStore = defineStore('notificationElement', {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
+      if ((baseStore as any).currentIconFontSize == -1) {
+        (baseStore as any).currentIconFontSize = config.fontSize
+      } else {
+        config.fontSize = (baseStore as any).currentIconFontSize
+      }
+      if ((baseStore as any).currentIconFontSlug == '') {
+        (baseStore as any).currentIconFontSlug = config.fontFamily
+      } else {
+        config.fontFamily = (baseStore as any).currentIconFontSlug
+      }
+      
       const notificationIcon = new FabricText('\u0025', {
         eleType: 'notification',
         left: config.left,
         top: config.top,
-        fontSize: (baseStore as any).currentIconFontSize ?? config.fontSize,
-        fontFamily: (baseStore as any).currentIconFontSlug ?? config.fontFamily,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
         fill: config.fill,
         selectable: true,
         hasControls: false,

@@ -71,9 +71,12 @@ const onDeviceSelected = (device: ApiGarminDeviceVO) => {
 }
 
 // Expose current device for parent components
-// (if future Studio pages need to access it)
+// 以及方法 openSelector 以便父组件主动打开选择器
 defineExpose({
   currentDevice,
+  openSelector: () => {
+    showSelector.value = true
+  },
 })
 </script>
 

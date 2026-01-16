@@ -15,7 +15,7 @@
         <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
       </div>
       <!-- Number font library guidance (only for number fonts) -->
-      <div v-if="type === FontTypes.NUMBER_FONT" class="icon-lib-tip">
+      <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
         <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
           Custom your number fonts
         </button>
@@ -73,6 +73,11 @@ const props = defineProps({
     required: false,
     default: FontTypes.TEXT_FONT
   }
+})
+// 是否为商家用户（拥有 ROLE_MERCHANT 角色）
+const isMerchantUser = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])

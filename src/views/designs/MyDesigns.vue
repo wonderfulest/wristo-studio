@@ -1,5 +1,7 @@
 <template>
   <div class="my-designs">
+    <!-- 当前设备展示与选择 -->
+    <DeviceDisplay ref="deviceDisplayRef" />
     <!-- 搜索栏 -->
     <div class="search-bar">
           <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
@@ -154,7 +156,7 @@
                 ▶ Run (PRG)
               </el-button>
               <el-button 
-                v-if="design.designStatus === 'draft' || design.updatedAt > design.product?.release?.updatedAt" 
+                v-if="isMerchantUser && (design.designStatus === 'draft' || design.updatedAt > design.product?.release?.updatedAt)" 
                 type="success" 
                 size="small"
                 @click="submitDesign(design)"
@@ -163,7 +165,7 @@
                 📦 Build IQ
               </el-button>
               <el-button 
-                v-if="hasDownloadablePackage(design)"
+                v-if="isMerchantUser && hasDownloadablePackage(design)"
                 type="info" 
                 size="small"
                 @click="downloadPackage(design)"
@@ -171,7 +173,7 @@
                 ⬇️ Download IQ
               </el-button>
               <el-button 
-                v-if="design.product?.release"
+                v-if="isMerchantUser && design.product?.release"
                 type="success" 
                 size="small"
                 @click="goLive(design)"
@@ -226,17 +228,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Star, Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
+import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
+import DeviceDisplay from '@/components/DeviceDisplay.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
@@ -251,6 +254,7 @@ const baseStore = useBaseStore()
 const userStore = useUserStore()
 
 const designs = ref<Design[]>([])
+const deviceDisplayRef = ref<InstanceType<typeof DeviceDisplay> | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(24)
 const total = ref(0)
@@ -271,6 +275,12 @@ const searchName = ref('')
 const selectedStatus = ref('')
 const sortField = ref('updated_at')
 const sortOrder = ref('desc')
+
+// 是否为商家用户（拥有 ROLE_MERCHANT 角色）
+const isMerchantUser = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
+})
 
 // 添加作者显示控制
 const showCreator = ref(false)  // 默认隐藏作者
@@ -485,6 +495,8 @@ const buildPrg = async (design: Design) => {
 
   if (!deviceId) {
     messageStore.error('Please select a device first')
+    // 联动打开设备选择器
+    deviceDisplayRef.value?.openSelector?.()
     return
   }
 

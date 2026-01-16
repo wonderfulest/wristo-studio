@@ -13,13 +13,24 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
     addElement(config: IndicatorElementConfig) {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) throw new Error('Canvas is not initialized')
+      console.log('add bluetooth element', config, )
+      if ((baseStore as any).currentIconFontSize == -1) {
+        (baseStore as any).currentIconFontSize = config.fontSize
+      } else {
+        config.fontSize = (baseStore as any).currentIconFontSize
+      }
+      if ((baseStore as any).currentIconFontSlug == '') {
+        (baseStore as any).currentIconFontSlug = config.fontFamily
+      } else {
+        config.fontFamily = (baseStore as any).currentIconFontSlug
+      }
 
       const bluetoothIcon = new FabricText('\u0022', {
         eleType: 'bluetooth',
         left: config.left,
         top: config.top,
-        fontSize: (baseStore as any).currentIconFontSize ?? config.fontSize,
-        fontFamily: (baseStore as any).currentIconFontSlug ?? config.fontFamily,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
         fill: config.fill,
         selectable: true,
         hasControls: false,

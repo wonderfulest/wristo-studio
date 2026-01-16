@@ -14,7 +14,7 @@ export const DEFAULT_DATA_CONFIG: DataElementConfig & EDITOR_ELEMENT = {
   originX: 'center',
   originY: 'center',
   fill: base.fill || '#FFFFFF',
-  fontSize: 42,
+  fontSize: 36,
   fontFamily: 'roboto-condensed-regular',
   metricSymbol: ':FIELD_TYPE_HEART_RATE',
 }
@@ -29,7 +29,7 @@ export const DEFAULT_WEATHER_CONFIG: WeatherElementConfig & EDITOR_ELEMENT = {
   originX: 'center',
   originY: 'center',
   fill: '#000000',
-  fontSize: 42,
+  fontSize: 36,
   fontFamily: 'wristo-icon',
 }
 
@@ -55,7 +55,7 @@ export const DEFAULT_ICON_CONFIG: IconElementConfig & EDITOR_ELEMENT = {
   label: 'Icon',
   eleType: 'icon',
   iconFont: 'wristo-icon',
-  iconSize: 42,
+  iconSize: 36,
 }
 
 export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
@@ -68,6 +68,6 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   originX: 'center',
   originY: 'center',
   fill: '#000000',
-  fontSize: 42,
+  fontSize: 60,
   fontFamily: 'wristo-icon',
 }

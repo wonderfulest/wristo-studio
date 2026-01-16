@@ -13,15 +13,23 @@ export const useDisturbStore = defineStore('disturbElement', {
       const baseStore = useBaseStore()
       if (!baseStore.canvas) throw new Error('Canvas is not initialized')
 
-      const resolvedFontFamily = baseStore.currentIconFontSlug ?? config.fontFamily
-      const resolvedFontSize = baseStore.currentIconFontSize ?? Number(config.fontSize)
-
+      if ((baseStore as any).currentIconFontSize == -1) {
+        (baseStore as any).currentIconFontSize = config.fontSize
+      } else {
+        config.fontSize = (baseStore as any).currentIconFontSize
+      }
+      if ((baseStore as any).currentIconFontSlug == '') {
+        (baseStore as any).currentIconFontSlug = config.fontFamily
+      } else {
+        config.fontFamily = (baseStore as any).currentIconFontSlug
+      }
+      
       const disturbIcon = new FabricText('\u0021', {
         eleType: 'disturb',
         left: config.left,
         top: config.top,
-        fontSize: resolvedFontSize,
-        fontFamily: resolvedFontFamily,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
         fill: config.fill,
         selectable: true,
         hasControls: false,
