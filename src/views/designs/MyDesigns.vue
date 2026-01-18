@@ -68,7 +68,7 @@
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :page-sizes="[24, 48, 72, 96]"
+        :page-sizes="[12, 24, 48, 72, 96]"
         :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="handleSizeChange"
@@ -101,6 +101,9 @@
     
     <!-- Go Live 对话框 -->
     <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
+
+    <!-- 创建设计对话框：用于在列表为空时自动弹出 -->
+    <CreateDesignDialog ref="createDesignDialog" />
   </div>
 </template>
 
@@ -119,12 +122,15 @@ import DeviceDisplay from '@/components/DeviceDisplay.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
+import CreateDesignDialog from '@/components/dialogs/CreateDesignDialog.vue'
 import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
 const goLiveDialog = ref<GoLiveDialogRef | null>(null)
+type CreateDesignDialogRef = { show: () => void }
+const createDesignDialog = ref<CreateDesignDialogRef | null>(null)
 const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
@@ -141,7 +147,7 @@ interface LoadingStates {
 const designs = ref<Design[]>([])
 const deviceDisplayRef = ref<InstanceType<typeof DeviceDisplay> | null>(null)
 const currentPage = ref(1)
-const pageSize = ref(24)
+const pageSize = ref(12)
 const total = ref(0)
 const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
@@ -255,6 +261,11 @@ const fetchDesigns = async () => {
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
       total.value = response.data.total
+
+      // 如果在第一页且没有任何设计，则自动打开创建设计对话框
+      if (currentPage.value === 1 && response.data.list.length === 0) {
+        createDesignDialog.value?.show()
+      }
       
     } else {
       console.error('API返回错误:', response)

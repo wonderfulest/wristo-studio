@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="系统更新日志"
+    title="System Changelog"
     width="1024px"
     :show-close="true"
     destroy-on-close
@@ -22,9 +22,9 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <el-checkbox v-model="dontShowAgain">不再显示此版本更新提醒</el-checkbox>
+        <el-checkbox v-model="dontShowAgain">Do not show this version update reminder again</el-checkbox>
         <el-button type="primary" @click="handleClose" class="dialog-btn">
-          确定
+          OK
         </el-button>
       </div>
     </template>
@@ -40,30 +40,30 @@ const config = appConfig
 const dialogVisible = ref(false)
 const dontShowAgain = ref(false)
 
-// 在 localStorage 中存储用户已查看的最新版本
+// Store the latest viewed version in localStorage
 const lastViewedVersion = useLocalStorage(config.changelog.storageKey, null)
 
-// 检查是否需要显示更新日志
+// Check whether the changelog dialog should be displayed
 const checkShowChangelog = () => {
-  // 如果功能未启用，直接返回
+  // If the feature is disabled, do nothing
   if (!config.changelog.enabled) {
     return
   }
 
-  // 如果 lastViewedVersion 为 null，说明是第一次访问
+  // If lastViewedVersion is null, it means this is the first visit
   if (lastViewedVersion.value === null) {
     dialogVisible.value = true
     return
   }
 
   const latestVersion = config.changelog.versions[0].version
-  // 比较版本号
+  // Compare version numbers
   if (compareVersions(lastViewedVersion.value, latestVersion) < 0) {
     dialogVisible.value = true
   }
 }
 
-// 版本号比较函数
+// Version comparison function
 const compareVersions = (v1, v2) => {
   const parts1 = v1.split('.').map(Number)
   const parts2 = v2.split('.').map(Number)
@@ -79,24 +79,24 @@ const compareVersions = (v1, v2) => {
   return 0
 }
 
-// 处理关闭对话框
+// Handle dialog close
 const handleClose = () => {
   if (dontShowAgain.value) {
-    // 如果用户选择不再显示，更新最后查看的版本
+    // If user chose not to show again, update the last viewed version
     lastViewedVersion.value = config.changelog.versions[0].version
   }
   dialogVisible.value = false
 }
 
-// 组件挂载时检查是否需要显示更新日志
+// On mounted, check whether to show the changelog dialog
 onMounted(() => {
-  // 添加一个小延时，确保在其他组件加载完成后显示
+  // Add a slight delay to ensure other components finish loading first
   setTimeout(() => {
     checkShowChangelog()
   }, 500)
 })
 
-// 导出方法供外部调用
+// Expose methods for external use
 defineExpose({
   checkShowChangelog
 })

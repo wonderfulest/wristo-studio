@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted, computed } from 'vue'
-import { Canvas, FabricObject, Point } from 'fabric'
+import { Canvas, Point } from 'fabric'
 import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
 import { initAligningGuidelines } from '@/lib/aligning_guidelines'

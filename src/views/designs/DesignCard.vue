@@ -19,15 +19,16 @@
         </div>
         <!-- 状态和操作按钮第二行 -->
         <div class="status-actions-row">
-          <div class="header-actions" v-if="isMerchantUser">
+          <div class="header-actions">
             <el-button-group>
-              <el-button type="primary" size="small" link @click="emit('copy-name', design.name)" title="Copy Design Name">
+              <!-- 复制设计名称 -->
+              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('copy-name', design.name)" title="Copy Design Name">
                 <el-icon>
                   <DocumentCopy />
                 </el-icon>
               </el-button>
               <!-- 编辑 -->
-              <el-button type="primary" size="small" link @click="emit('edit', design)">
+              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('edit', design)">
                 <el-icon>
                   <Edit />
                 </el-icon>
@@ -47,7 +48,7 @@
       <div class="design-background" v-if="designImageUrl">
         <img :src="designImageUrl" :alt="design.name" class="background-image" />
         <div class="creator-badge" v-if="showCreator">
-          <span>Creator: {{ creatorName }}</span>
+          <span>{{ creatorName }}</span>
         </div>
       </div>
       <div class="meta">
@@ -75,7 +76,7 @@
       <div class="actions">
         <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
         <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease &&design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
-          🛠 Build (PRG)
+          🛠 Build PRG
         </el-button>
         <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
         <el-button
@@ -245,8 +246,8 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
 .creator-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 0px;
+  right: 4px;
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
   padding: 4px 8px;
