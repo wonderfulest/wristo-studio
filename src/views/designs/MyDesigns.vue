@@ -1,10 +1,10 @@
 <template>
   <div class="my-designs">
-    <!-- 当前设备展示与选择 -->
-    <DeviceDisplay ref="deviceDisplayRef" />
     <!-- 搜索栏 -->
     <div class="search-bar">
-          <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
+      <!-- 当前设备展示与选择 -->
+      <DeviceDisplay ref="deviceDisplayRef" />
+      <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
       @keyup.enter="handleSearch" />
       <el-select v-model="selectedStatus" placeholder="Select Status" class="status-filter" @change="handleStatusChange">
         <el-option label="All" value="" />
@@ -37,168 +37,29 @@
     <!-- 设计列表 -->
     <el-row :gutter="20" class="design-grid">
       <el-col :xs="24" :sm="8" :md="6" :lg="4" :xl="3" v-for="design in designs" :key="design.id">
-        <!-- 设计卡片 -->
-        <el-card class="design-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <!-- 标题单独一行 -->
-              <div class="title-row">
-                <span class="title">{{ design.name }}</span>
-                <el-button 
-                  type="primary" 
-                  size="small" 
-                  link 
-                  @click="copyDesignName(design.name)"
-                  title="Copy Design Name"
-                >
-                  <el-icon><DocumentCopy /></el-icon>
-                </el-button>
-              
-               
-              </div>
-              <!-- 状态和操作按钮第二行 -->
-              <div class="status-actions-row">
-                <el-tooltip
-                  v-if="design.designStatus === 'rejected' && design.reviewComment"
-                  :content="design.reviewComment"
-                  placement="top"
-                >
-                  <div class="status-tag" :style="{ backgroundColor: getStatusColor(design.designStatus) }">
-                    {{ getStatusText(design.designStatus) }}
-                  </div>
-                </el-tooltip>
-                <div
-                  v-else
-                  class="status-tag"
-                  :style="{ backgroundColor: getStatusColor(design.designStatus) }"
-                >
-                  {{ getStatusText(design.designStatus) }}
-                </div>
-                <div class="header-actions">
-                  <el-button-group>
-                    <!-- 编辑 -->
-                    <el-button 
-                      type="primary" 
-                      size="small" 
-                      link 
-                      @click="editDesign(design)"
-                    >
-                      <el-icon><Edit /></el-icon>
-                    </el-button>
-                    <!-- 删除 -->
-                    <el-button 
-                      type="danger" 
-                      size="small" 
-                      link 
-                      @click="confirmDelete(design)"
-                    >
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
-                  </el-button-group>
-                </div>
-              </div>
-            </div>
-          </template>
-          <div class="design-info">
-            <div class="design-background" v-if="getDesignImageUrl(design)">
-              <img :src="getDesignImageUrl(design)" :alt="design.name" class="background-image" />
-              <div class="creator-badge" v-if="showCreator">
-                <span>Creator: {{ getCreatorName(design) }}</span>
-              </div>
-            </div>
-            <div class="meta">
-              <span>App ID: {{ design.product?.appId }}</span>
-              <span>Design: {{ design.designUid }}</span>
-              <div class="last-go-live-row">
-                <span>Last Go Live: {{ formatDateNullable(design.product?.lastGoLive ?? null) }}</span>
-                <el-tooltip
-                  v-if="hasNewRelease(design)"
-                  content="New version available to upload"
-                  placement="top"
-                >
-                  <span class="new-release-indicator" role="img" aria-label="New version available to upload">
-                    <span class="dot"></span>
-                  </span>
-                </el-tooltip>
-              </div>
-              <div
-                class="package-info"
-                v-if="design.product?.packagingLog?.rank || design.product?.prgPackagingLog?.rank"
-              >
-                <div v-if="design.product?.packagingLog?.rank" class="package-info-item">
-                  <strong>IQ build in queue: </strong>
-                  <span class="package-rank">Position #{{ design.product.packagingLog.rank }}</span>
-                </div>
-                <div v-if="design.product?.prgPackagingLog?.rank" class="package-info-item">
-                  <strong>PRG build in queue: </strong>
-                  <span class="package-rank">Position #{{ design.product.prgPackagingLog.rank }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="actions">
-              <el-button 
-                v-if="userStore.userInfo?.id == 1 || design.user.id == userStore.userInfo?.id" 
-                type="primary" 
-                size="small" 
-                @click="openCanvas(design)"
-              >
-                ✏️ Edit
-              </el-button>
-              <el-button 
-                type="warning" 
-                size="small" 
-                @click="copyDesign(design)"
-                :loading="loadingStates.copy.has(design.id)"
-              >
-                📋 Copy
-              </el-button>
-              <el-button 
-                type="default" 
-                size="small"
-                @click="buildPrg(design)"
-                :loading="loadingStates.prgBuild.has(design.id)"
-                :disabled="!!design.product?.prgPackagingLog?.rank"
-              >
-                🛠 Build (PRG)
-              </el-button>
-              <el-button 
-                v-if="design.product?.prgRelease"
-                type="default" 
-                size="small"
-                @click="runPrg(design)"
-              >
-                ▶ Run (PRG)
-              </el-button>
-              <el-button 
-                v-if="isMerchantUser && (design.designStatus === 'draft' || design.updatedAt > design.product?.release?.updatedAt)" 
-                type="success" 
-                size="small"
-                @click="submitDesign(design)"
-                :loading="loadingStates.submit.has(design.id)"
-                :disabled="!!design.product?.packagingLog?.rank"
-              >
-                📦 Build IQ
-              </el-button>
-              <el-button 
-                v-if="isMerchantUser && hasDownloadablePackage(design)"
-                type="info" 
-                size="small"
-                @click="downloadPackage(design)"
-              >
-                ⬇️ Download IQ
-              </el-button>
-              <el-button 
-                v-if="isMerchantUser && design.product?.release"
-                type="success" 
-                size="small"
-                @click="goLive(design)"
-              >
-                🚀 Publish IQ
-              </el-button>
-            </div>
-           
-          </div>
-        </el-card>
+        <DesignCard
+          :design="design"
+          :is-merchant-user="isMerchantUser"
+          :show-creator="showCreator"
+          :loading-states="loadingStatesPlain"
+          :current-user-id="userStore.userInfo?.id ?? null"
+          :status-text="getStatusText(design.designStatus)"
+          :status-color="getStatusColor(design.designStatus)"
+          :last-go-live-text="formatDateNullable(design.product?.lastGoLive ?? null)"
+          :creator-name="getCreatorName(design)"
+          :design-image-url="getDesignImageUrl(design)"
+          :has-new-release="hasNewRelease(design)"
+          :has-downloadable-package="hasDownloadablePackage(design)"
+          @edit="editDesign"
+          @delete="confirmDelete"
+          @open="openCanvas"
+          @build-prg="buildPrg"
+          @run-prg="runPrg"
+          @submit="submitDesign"
+          @download-package="downloadPackage"
+          @go-live="goLive"
+          @copy-name="copyDesignName"
+        />
       </el-col>
     </el-row>
 
@@ -251,7 +112,6 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
-import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
@@ -260,6 +120,7 @@ import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
+import DesignCard from '@/views/designs/DesignCard.vue'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -268,6 +129,14 @@ const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
 const userStore = useUserStore()
+
+interface LoadingStates {
+  submit: Set<number>
+  copy: Set<number>
+  delete: Set<number>
+  favorite: Set<number>
+  prgBuild: Set<number>
+}
 
 const designs = ref<Design[]>([])
 const deviceDisplayRef = ref<InstanceType<typeof DeviceDisplay> | null>(null)
@@ -278,13 +147,16 @@ const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
 
 // 添加加载状态
-const loadingStates = ref({
-  submit: new Set(),
-  copy: new Set(),
-  delete: new Set(),
-  favorite: new Set(),
-  prgBuild: new Set()
+const loadingStates = ref<LoadingStates>({
+  submit: new Set<number>(),
+  copy: new Set<number>(),
+  delete: new Set<number>(),
+  favorite: new Set<number>(),
+  prgBuild: new Set<number>()
 })
+
+// plain loading states object for child components
+const loadingStatesPlain = computed(() => loadingStates.value)
 
 // 搜索相关状态
 const searchName = ref('')
@@ -666,125 +538,7 @@ const handleGoLiveSuccess = () => {
   flex: 1;
 }
 
-.status-actions-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-tag {
-  display: inline-block;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-size: 10px;
-  color: #fff;
-  background-color: var(--el-color-info);
-}
-
-.status-tag.draft {
-  background-color: var(--el-color-info);
-}
-
-.status-tag.submitted {
-  background-color: var(--el-color-success);
-}
-
-.design-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-}
-
-.design-background {
-  position: relative;
-  width: 100%;
-  padding-bottom: 100%;
-  overflow: hidden;
-  border-radius: 8px;
-}
-
-.background-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.creator-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  backdrop-filter: blur(3px);
-}
-
-.meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-}
-
-.last-go-live-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.last-go-live-row .new-release-indicator {
-  position: static;
-  top: auto;
-  right: auto;
-  width: 10px;
-  height: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 2px;
-}
-
-.last-go-live-row .new-release-indicator .dot {
-  width: 8px;
-  height: 8px;
-}
-
-.category-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--el-color-primary);
-  font-weight: 500;
-}
-
-.category-info .el-icon {
-  font-size: 12px;
-}
-
-.actions {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-  padding: 3px;
-  justify-content: center;
-}
-
-.actions .el-button {
-  font-size: 10px;
-  padding: 3px 6px;
-  margin: 0;
-  flex: 0 0 auto;
-  min-width: 45px;
-  height: 24px;
-}
+/* Card-internal layout is now styled inside DesignCard.vue */
 
 .pagination-container {
   display: flex;
@@ -794,48 +548,7 @@ const handleGoLiveSuccess = () => {
   padding: 20px 0;
 }
 
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .creator-badge {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.header-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.header-actions .el-button-group {
-  display: flex;
-  gap: 2px;
-}
-
-.header-actions .el-button {
-  height: 28px;
-  font-size: 14px;
-}
-
-.header-actions .el-button:hover {
-  background-color: var(--el-fill-color-light);
-  border-radius: 4px;
-}
-
-.header-actions .el-button.el-button--primary.is-link {
-  color: var(--el-text-color-regular);
-}
-
-.header-actions .el-button.el-button--primary.is-link:hover {
-  color: var(--el-color-primary);
-}
-
-.header-actions .el-button.el-button--danger.is-link {
-  color: var(--el-text-color-regular);
-}
-
-.header-actions .el-button.el-button--danger.is-link:hover {
-  color: var(--el-color-danger);
-}
+/* Header action button tweaks now live in DesignCard.vue */
 
 .search-bar {
   display: flex;
@@ -867,9 +580,7 @@ const handleGoLiveSuccess = () => {
   margin-left: auto;
 }
 
-.package-rank {
-  color: #ff4d4f;
-}
+/* Package rank color is styled within DesignCard.vue */
 
 /* 响应式布局调整 */
 @media screen and (max-width: 768px) {
@@ -881,39 +592,6 @@ const handleGoLiveSuccess = () => {
     padding: 0 10px;
     margin-bottom: 20px;
   }
-
-  .header-actions .el-button {
-    padding: 2px 6px;
-  }
-  
-  .design-info .actions {
-    justify-content: center;
-  }
-  
-  .design-info .actions .el-button {
-    padding: 4px 8px;
-  }
-}
-
-.new-release-indicator {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 12px;
-  height: 12px;
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-}
-
-.new-release-indicator .dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  background-color: #ff4d4f;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
 }
 
 @media screen and (min-width: 769px) and (max-width: 992px) {
