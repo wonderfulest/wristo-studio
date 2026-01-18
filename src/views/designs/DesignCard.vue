@@ -74,12 +74,12 @@
       </div>
       <div class="actions">
         <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
-        <el-button type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)" :disabled="!!design.product?.prgPackagingLog?.rank">
+        <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease &&design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
           🛠 Build (PRG)
         </el-button>
-        <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ Download PRG</el-button>
+        <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
         <el-button
-          v-if="isMerchantUser && (design.designStatus === 'draft' || design.updatedAt > (design.product?.release?.updatedAt ?? 0))"
+          v-if="isMerchantUser && !design.product?.packagingLog?.rank && (design.designStatus === 'draft' || design.updatedAt > (design.product?.release?.updatedAt ?? 0))"
           type="info"
           size="small"
           @click="emit('submit', design)"
@@ -87,8 +87,8 @@
           :disabled="!!design.product?.packagingLog?.rank">
           📦 Build IQ
         </el-button>
-        <el-button v-if="isMerchantUser && hasDownloadablePackage" type="info" size="small" @click="emit('download-package', design)">⬇Download IQ</el-button>
-        <el-button v-if="isMerchantUser && design.product?.release" type="info" size="small" @click="emit('go-live', design)">🚀 Publish IQ</el-button>
+        <el-button v-if="isMerchantUser && hasDownloadablePackage && design.product?.release && design.product?.release.updatedAt > design.updatedAt " type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
+        <el-button v-if="isMerchantUser && design.product?.release && design.product?.release.updatedAt > design.updatedAt" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
       </div>
     </div>
   </el-card>
