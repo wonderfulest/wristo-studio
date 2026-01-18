@@ -29,7 +29,17 @@ export interface ProductPackagingLogVo {
   version: number
   isDeleted: number
   isActive: number
+  /** packaging type: iq or prg */
+  type?: string
+  /** device id for this packaging task */
+  deviceId?: string
+  /** queue priority, 0 is highest, larger is lower; null means not in queue */
+  priority?: number | null
+  /** rank in queue, null means not in queue */
+  rank?: number | null
   product: ProductBase
+  /** all prg packaging logs for same app, including running and finished */
+  prgProductPackagingLogs?: ProductPackagingLogVo[]
 }
 
 export interface ProductReleaseVo {
@@ -86,7 +96,12 @@ export interface Product {
   isDeleted: number
   status: number
   payment: ProductPaymentVo
+  /** legacy packaging log */
   packageLog: ProductPackagingLogVo
+  /** iq packaging log */
+  packagingLog?: ProductPackagingLogVo
+  /** prg packaging log */
+  prgPackagingLog?: ProductPackagingLogVo
   release: ProductReleaseVo
   prgRelease?: ProductReleasePrgVo
   bundles: Bundle[]

@@ -121,6 +121,19 @@
                   </span>
                 </el-tooltip>
               </div>
+              <div
+                class="package-info"
+                v-if="design.product?.packagingLog?.rank || design.product?.prgPackagingLog?.rank"
+              >
+                <div v-if="design.product?.packagingLog?.rank" class="package-info-item">
+                  <strong>IQ build in queue: </strong>
+                  <span class="package-rank">Position #{{ design.product.packagingLog.rank }}</span>
+                </div>
+                <div v-if="design.product?.prgPackagingLog?.rank" class="package-info-item">
+                  <strong>PRG build in queue: </strong>
+                  <span class="package-rank">Position #{{ design.product.prgPackagingLog.rank }}</span>
+                </div>
+              </div>
             </div>
             <div class="actions">
               <el-button 
@@ -144,6 +157,7 @@
                 size="small"
                 @click="buildPrg(design)"
                 :loading="loadingStates.prgBuild.has(design.id)"
+                :disabled="!!design.product?.prgPackagingLog?.rank"
               >
                 🛠 Build (PRG)
               </el-button>
@@ -161,6 +175,7 @@
                 size="small"
                 @click="submitDesign(design)"
                 :loading="loadingStates.submit.has(design.id)"
+                :disabled="!!design.product?.packagingLog?.rank"
               >
                 📦 Build IQ
               </el-button>
@@ -181,6 +196,7 @@
                 🚀 Publish IQ
               </el-button>
             </div>
+           
           </div>
         </el-card>
       </el-col>
@@ -354,7 +370,7 @@ const fetchDesigns = async () => {
       status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
-      populate: 'user,product,payment,release,cover,category,bundle'
+      populate: 'user,product,payment,release,cover,category,bundle,package_log'
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId
@@ -494,7 +510,7 @@ const buildPrg = async (design: Design) => {
   deviceId = (userStore.userInfo as any)?.device?.deviceId
 
   if (!deviceId) {
-    messageStore.error('Please select a device first')
+    messageStore.warning('Please select a device first')
     // 联动打开设备选择器
     deviceDisplayRef.value?.openSelector?.()
     return
@@ -849,6 +865,10 @@ const handleGoLiveSuccess = () => {
   display: flex;
   align-items: center;
   margin-left: auto;
+}
+
+.package-rank {
+  color: #ff4d4f;
 }
 
 /* 响应式布局调整 */

@@ -1,7 +1,7 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    title="提交设计" 
+    title="Submit Design" 
     width="50%" 
     :top="'10vh'"
     class="submit-design-dialog"
@@ -10,36 +10,22 @@
       :model="form" 
       :rules="rules" 
       ref="formRef" 
-      label-width="120px" 
+      label-width="180px" 
       class="submit-form"
     >
-      <el-form-item label="设计名称">
+      <el-form-item label="Design Name">
         <el-input v-model="form.name" disabled />
       </el-form-item>
       
-      <el-form-item label="收款方式" prop="paymentMethod">
+      <el-form-item label="Payment Method" prop="paymentMethod">
         <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
-          <!-- <el-radio label="kpay">KPay</el-radio> -->
+          <el-radio label="free">Free</el-radio>
           <el-radio label="wpay">WPay</el-radio>
-          <el-radio label="none">免费</el-radio>
         </el-radio-group>
       </el-form-item>
       
       <el-form-item 
-        label="KPay ID" 
-        prop="kpayId" 
-        v-if="form.paymentMethod === 'kpay'"
-      >
-        <el-input 
-          v-model="form.kpayId" 
-          placeholder="请输入KPay产品ID"
-          clearable
-        />
-        <div class="form-tip">KPay支付时必须填写KPay产品ID</div>
-      </el-form-item>
-      
-      <el-form-item 
-        label="价格" 
+        label="Price" 
         prop="price"
         v-if="form.paymentMethod !== 'free'"
       >
@@ -49,14 +35,14 @@
           :max="999.99" 
           :precision="2"
           :step="0.01"
-          placeholder="请输入价格"
+          placeholder="Enter price"
           style="width: 100%"
         />
-        <div class="form-tip">请输入价格（美元）</div>
+        <div class="form-tip">Please enter the price (USD)</div>
       </el-form-item>
       
       <el-form-item 
-        label="试用时长" 
+        label="Trial Duration" 
         prop="trialLasts"
         v-if="form.paymentMethod !== 'free'"
       >
@@ -66,18 +52,18 @@
           :max="720" 
           :precision="2"
           :step="0.25"
-          placeholder="请输入试用小时数"
+          placeholder="Enter trial hours"
           style="width: 100%"
         />
-        <div class="form-tip">请输入试用小时数（0-720小时，支持小数）</div>
+        <div class="form-tip">Please enter trial hours (0-720 hours, supports decimals)</div>
       </el-form-item>
       
-      <el-form-item label="描述">
+      <el-form-item label="Description">
         <el-input 
           v-model="form.description" 
           type="textarea" 
           :rows="3" 
-          placeholder="请输入设计描述"
+          placeholder="Enter design description"
         />
       </el-form-item>
       <CategorySelector
@@ -94,13 +80,13 @@
     
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">取消</el-button>
+        <el-button @click="handleCancel">Cancel</el-button>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
         >
-          提交
+          Submit
         </el-button>
       </span>
     </template>
@@ -133,57 +119,57 @@ const form = reactive({
   paymentMethod: 'wpay',
   kpayId: '',
   price: 1.99,
-  trialLasts: 1, // 默认1小时
+  trialLasts: 1, // default 1 hour
   categoryIds: [] as number[],
   bundleIds: [] as number[]
 })
 
 const rules = computed(() => ({
   paymentMethod: [
-    { required: true, message: '请选择收款方式', trigger: 'change' }
+    { required: true, message: 'Please select a payment method', trigger: 'change' }
   ],
   kpayId: [
     { 
       required: form.paymentMethod === 'kpay', 
-      message: 'KPay支付时必须填写KPay产品ID', 
+      message: 'KPay product ID is required when using KPay payment', 
       trigger: 'blur' 
     }
   ],
   price: [
     { 
       required: form.paymentMethod !== 'free', 
-      message: '请输入价格', 
+      message: 'Please enter the price', 
       trigger: 'blur' 
     },
     { 
       type: 'number', 
       min: 1.99, 
       max: 99.99, 
-      message: '价格必须在1.99-99.99之间', 
+      message: 'Price must be between 1.99 and 99.99', 
       trigger: 'blur' 
     }
   ],
   trialLasts: [
     { 
       required: form.paymentMethod !== 'free', 
-      message: '请输入试用时长', 
+      message: 'Please enter trial duration', 
       trigger: 'blur' 
     },
     { 
       type: 'number', 
       min: 0, 
       max: 720, 
-      message: '试用时长必须在0-720小时之间', 
+      message: 'Trial duration must be between 0 and 720 hours', 
       trigger: 'blur' 
     }
   ],
   categoryIds: [
-    { required: true, type: 'array', message: '请选择分类', trigger: 'change' },
+    { required: true, type: 'array', message: 'Please select at least one category', trigger: 'change' },
     { 
       validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
         const len = Array.isArray(value) ? value.length : 0
-        if (len === 0) return callback(new Error('请选择分类'))
-        if (len > 3) return callback(new Error('分类最多选择3个'))
+        if (len === 0) return callback(new Error('Please select at least one category'))
+        if (len > 3) return callback(new Error('You can select up to 3 categories'))
         callback()
       },
       trigger: 'change'
@@ -193,7 +179,7 @@ const rules = computed(() => ({
 
 const emit = defineEmits(['success', 'cancel'])
 
-// 分类/套餐 选项数据
+// Category / bundle options
 const categories = ref<Category[]>([])
 const loadingCategories = ref(false)
 const bundles = ref<Bundle[]>([])
@@ -205,7 +191,7 @@ const loadCategories = async () => {
     const res: Category[] = await getAllSeries()
     categories.value = res
   } catch (e) {
-    console.error('加载分类失败:', e)
+    console.error('Failed to load categories:', e)
   } finally {
     loadingCategories.value = false
   }
@@ -219,39 +205,39 @@ const loadBundles = async () => {
       bundles.value = res.data
     }
   } catch (e) {
-    console.error('加载套餐失败:', e)
+    console.error('Failed to load bundles:', e)
   } finally {
     loadingBundles.value = false
   }
 }
 
-// 处理收款方式变化
+// Handle payment method change
 const handlePaymentMethodChange = (value: string) => {
   if (value === 'free') {
     form.price = 0
     form.trialLasts = 0
   } else if (value === 'kpay') {
     form.price = form.price || 1.99
-    form.trialLasts = form.trialLasts || 1 // 1小时
+    form.trialLasts = form.trialLasts || 1 // 1 hour
   } else if (value === 'wpay') {
     form.price = form.price || 1.99
-    form.trialLasts = form.trialLasts || 1 // 1小时
+    form.trialLasts = form.trialLasts || 1 // 1 hour
   }
 }
 
-// 显示对话框
+// Show dialog
 const show = async (design: Design) => {
   try {
     loading.value = true
     
-    // 先请求获取设计详情
+    // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid)
     
     if (response.code === 0 && response.data) {
       const designDetail = response.data
       const product = designDetail.product
       
-      // 重置表单并填充最新数据
+      // Reset form and populate with latest data
       Object.assign(form, {
         designUid: designDetail.designUid,
         name: designDetail.name,
@@ -266,7 +252,7 @@ const show = async (design: Design) => {
       
       if (product) {
         form.trialLasts = product.trialLasts
-        // 初始化分类与套餐
+        // Initialize categories and bundles
         if (Array.isArray(product.categories)) {
           form.categoryIds = product.categories.filter((c: Category) => c.id !== 1).map((c: Category) => c.id)
         }
@@ -274,27 +260,35 @@ const show = async (design: Design) => {
           form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)
         }
       }
-      // 如果product中有支付信息，预填充
+      // If product contains payment info, prefill
       if (product?.payment) {
         const payment = product.payment
         form.paymentMethod = payment.paymentMethod
-        form.price = payment.price || 1.99
+        if (payment.paymentMethod === 'free') {
+          // Free mode: price and trial last should be 0
+          form.price = 0
+          form.trialLasts = 0
+        } else {
+          // Paid modes: use provided price / trialLasts with sensible defaults
+          form.price = payment.price ?? 1.99
+          form.trialLasts = payment.trialLasts ?? 1
+        }
       }
-      // 加载分类与套餐选项
+      // Load category and bundle options
       await Promise.all([loadCategories(), loadBundles()])
       dialogVisible.value = true
     } else {
-      messageStore.error(response.msg || '获取设计详情失败')
+      messageStore.error(response.msg || 'Failed to get design details')
     }
   } catch (error) {
-    console.error('获取设计详情失败:', error)
-    messageStore.error('获取设计详情失败')
+    console.error('Failed to get design details:', error)
+    messageStore.error('Failed to get design details')
   } finally {
     loading.value = false
   }
 }
 
-// 确认提交
+// Confirm submit
 const handleConfirm = async () => {
   if (!formRef.value) return
   
@@ -312,7 +306,7 @@ const handleConfirm = async () => {
       bundleIds: form.bundleIds
     }
     
-    // 根据收款方式添加相应参数
+    // Add parameters based on payment method
     if (form.paymentMethod === 'kpay') {
       submitData.kpayId = form.kpayId
       submitData.price = form.price
@@ -321,31 +315,31 @@ const handleConfirm = async () => {
       submitData.price = form.price
       submitData.trialLasts = form.trialLasts
     }
-    // free模式不需要额外参数
+    // Free mode does not require extra parameters
     const response = await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
-      messageStore.success('提交成功')
+      messageStore.success('Submitted successfully')
       emit('success')
       dialogVisible.value = false
     } else {
-      messageStore.error(response.msg || '提交失败')
+      messageStore.error(response.msg || 'Submit failed')
     }
   } catch (error) {
-    console.error('提交失败:', error)
-    messageStore.error('提交失败')
+    console.error('Submit failed:', error)
+    messageStore.error('Submit failed')
   } finally {
     loading.value = false
   }
 }
 
-// 取消
+// Cancel
 const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
 }
 
-// 暴露方法给父组件
+// Expose methods to parent
 defineExpose({
   show
 })
