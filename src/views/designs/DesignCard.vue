@@ -6,18 +6,19 @@
         <!-- 标题单独一行 -->
         <div class="title-row">
           <span class="title">{{ design.name }}</span>
+           <!-- 状态小点 + Tooltip，不占据标题高度 -->
+          <el-tooltip
+            :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
+            placement="top"
+          >
+            <span
+              class="status-dot"
+              :style="{ backgroundColor: statusColor }"
+            />
+          </el-tooltip>
         </div>
         <!-- 状态和操作按钮第二行 -->
         <div class="status-actions-row">
-          <el-tooltip v-if="design.designStatus === 'rejected' && design.reviewComment" :content="design.reviewComment" placement="top">
-            <div class="status-tag" :style="{ backgroundColor: statusColor }">
-              {{ statusText }}
-            </div>
-          </el-tooltip>
-          <div v-else class="status-tag" :style="{ backgroundColor: statusColor }">
-            {{ statusText }}
-          </div>
-
           <div class="header-actions" v-if="isMerchantUser">
             <el-button-group>
               <el-button type="primary" size="small" link @click="emit('copy-name', design.name)" title="Copy Design Name">
@@ -76,7 +77,7 @@
         <el-button type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)" :disabled="!!design.product?.prgPackagingLog?.rank">
           🛠 Build (PRG)
         </el-button>
-        <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">Download PRG</el-button>
+        <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ Download PRG</el-button>
         <el-button
           v-if="isMerchantUser && (design.designStatus === 'draft' || design.updatedAt > (design.product?.release?.updatedAt ?? 0))"
           type="info"
@@ -86,7 +87,7 @@
           :disabled="!!design.product?.packagingLog?.rank">
           📦 Build IQ
         </el-button>
-        <el-button v-if="isMerchantUser && hasDownloadablePackage" type="info" size="small" @click="emit('download-package', design)">⬇️ Download IQ</el-button>
+        <el-button v-if="isMerchantUser && hasDownloadablePackage" type="info" size="small" @click="emit('download-package', design)">⬇Download IQ</el-button>
         <el-button v-if="isMerchantUser && design.product?.release" type="info" size="small" @click="emit('go-live', design)">🚀 Publish IQ</el-button>
       </div>
     </div>
@@ -150,7 +151,7 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 <style scoped>
 .design-card {
   border-radius: 12px;
-  transition: all 0.3s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   height: 100%;
   overflow: hidden;
 }
@@ -161,6 +162,11 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
 .design-card :deep(.el-card__header) {
   padding: 6px 8px;
+}
+
+.design-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 .card-header {
@@ -174,7 +180,7 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
 .title-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   gap: 6px;
   grid-column: 1;
@@ -185,27 +191,32 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
   font-size: 24px;
   font-weight: 500;
   color: var(--el-text-color-primary);
-  word-break: break-word;
   line-height: 1.2;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0; /* 允许在 flex 容器中收缩以便省略号生效 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-actions-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   grid-column: 2;
   grid-row: 1; /* 位于右上角 */
 }
 
-.status-tag {
+.status-dot {
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 14px;
-  color: #fff;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
   background-color: var(--el-color-info);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06);
+  margin-left: 6px;
+  flex-shrink: 0;
 }
 
 .design-info {
@@ -256,6 +267,9 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
   gap: 2px;
   font-size: 11px;
   color: var(--el-text-color-secondary);
+  border-top: 1px solid var(--el-border-color-lighter);
+  margin-top: 8px;
+  padding-top: 8px;
 }
 
 .last-go-live-row {
@@ -320,11 +334,15 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
 .actions .el-button {
   font-size: 10px;
-  padding: 3px 6px;
+  padding: 4px 6px;
   margin: 0;
   flex: 0 0 auto;
-  min-width: 45px;
-  height: 24px;
+  min-width: 56px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 4px;
 }
 
 /* Actions button layout: equal width, up to 3 per row, left aligned */
