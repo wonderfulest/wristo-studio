@@ -54,6 +54,13 @@
       <div class="meta">
         <span>App ID: {{ design.product?.appId }}</span>
         <span>Design: {{ design.designUid }}</span>
+        <!-- 显示最后一次设计更新时间 -->
+        <div class="last-go-live-row">
+          <span>Last Updated: {{ lastUpdatedText }}</span>
+        </div>
+        <div v-if="hasDownloadablePackage" class="last-go-live-row">
+          <span>Last Package: {{ lastPackageTimeText }}</span>
+        </div>
         <div class="last-go-live-row">
           <span>Last Go Live: {{ lastGoLiveText }}</span>
           <el-tooltip v-if="hasNewRelease" content="New version available to upload" placement="top">
@@ -119,8 +126,8 @@
           :disabled="!!design.product?.packagingLog?.rank">
           📦 Build IQ
         </el-button>
-        <el-button v-if="isMerchantUser && hasDownloadablePackage && design.product?.release && design.product?.release.updatedAt > design.updatedAt " type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
-        <el-button v-if="isMerchantUser && design.product?.release && design.product?.release.updatedAt > design.updatedAt" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
+        <el-button v-if="isMerchantUser && hasDownloadablePackage" type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
+        <el-button v-if="isMerchantUser && design.product?.release" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
       </div>
     </div>
   </el-card>
@@ -128,6 +135,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
 import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 
@@ -178,6 +186,18 @@ const creatorName = computed(() => props.creatorName)
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
+
+const lastPackageTimeText = computed(() => {
+  const updatedAt = (design.value.product as any)?.release?.updatedAt as string | number | undefined
+  if (!updatedAt) return 'Unknown'
+  return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
+})
+
+const lastUpdatedText = computed(() => {
+  const updatedAt = design.value.updatedAt as string | number | undefined
+  if (!updatedAt) return 'Unknown'
+  return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
+})
 </script>
 
 <style scoped>
