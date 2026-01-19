@@ -64,10 +64,10 @@
         </div>
         <div
           class="package-info"
-          v-if="design.product?.packagingLog?.rank !== undefined || design.product?.prgPackagingLog?.rank !== undefined"
+          v-if="design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null"
         >
           <div
-            v-if="design.product?.packagingLog && design.product.packagingLog.rank !== undefined"
+            v-if="design.product?.packagingLog && design.product.packagingLog.rank !== null"
             class="package-info-item"
           >
             <strong>IQ build in queue:</strong>
@@ -85,7 +85,7 @@
             </span>
           </div>
           <div
-            v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== undefined"
+            v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== null"
             class="package-info-item"
           >
             <strong>PRG build in queue:</strong>
