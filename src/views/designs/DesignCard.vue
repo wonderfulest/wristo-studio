@@ -62,14 +62,45 @@
             </span>
           </el-tooltip>
         </div>
-        <div class="package-info" v-if="design.product?.packagingLog?.rank || design.product?.prgPackagingLog?.rank">
-          <div v-if="design.product?.packagingLog?.rank" class="package-info-item">
+        <div
+          class="package-info"
+          v-if="design.product?.packagingLog?.rank !== undefined || design.product?.prgPackagingLog?.rank !== undefined"
+        >
+          <div
+            v-if="design.product?.packagingLog && design.product.packagingLog.rank !== undefined"
+            class="package-info-item"
+          >
             <strong>IQ build in queue:</strong>
-            <span class="package-rank">Position #{{ design.product.packagingLog.rank }}</span>
+            <span
+              class="package-rank"
+              v-if="design.product.packagingLog!.rank! > 0"
+            >
+              Position #{{ design.product.packagingLog!.rank }}
+            </span>
+            <span
+              class="package-rank packaging-progress"
+              v-else
+            >
+              Packaging<span class="ellipsis">...</span>
+            </span>
           </div>
-          <div v-if="design.product?.prgPackagingLog?.rank" class="package-info-item">
+          <div
+            v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== undefined"
+            class="package-info-item"
+          >
             <strong>PRG build in queue:</strong>
-            <span class="package-rank">Position #{{ design.product.prgPackagingLog.rank }}</span>
+            <span
+              class="package-rank"
+              v-if="design.product.prgPackagingLog!.rank! > 0"
+            >
+              Position #{{ design.product.prgPackagingLog!.rank }}
+            </span>
+            <span
+              class="package-rank packaging-progress"
+              v-else
+            >
+              Packaging<span class="ellipsis">...</span>
+            </span>
           </div>
         </div>
       </div>
@@ -323,6 +354,29 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
 .package-rank {
   color: #ff4d4f;
+}
+
+.packaging-progress .ellipsis {
+  display: inline-block;
+  width: 0ch;
+  overflow: hidden;
+  vertical-align: baseline;
+  animation: dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    width: 0ch;
+  }
+  33% {
+    width: 1ch;
+  }
+  66% {
+    width: 2ch;
+  }
+  100% {
+    width: 3ch;
+  }
 }
 
 .actions {
