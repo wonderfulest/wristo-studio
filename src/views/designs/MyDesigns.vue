@@ -488,14 +488,15 @@ const goLive = async (design: Design) => {
     const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
     const fullDesign = res.data as Design
     if (!fullDesign) {
-      messageStore.error('Failed to load design')
+      messageStore.error('Failed to load design 11')
       return
     }
     if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
+      console.log('show go live dialog')
       goLiveDialog.value.show(fullDesign)
     }
   } catch (e) {
-    messageStore.error('Failed to load design')
+    messageStore.error('Failed to load design 22')
   }
 }
 

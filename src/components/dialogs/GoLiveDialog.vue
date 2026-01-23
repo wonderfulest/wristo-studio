@@ -248,15 +248,15 @@ const loadDesign = (design: Design) => {
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.trialLasts = design.product.trialLasts || 0
-    form.price = design.product.payment.price || 2.39
+    form.price = (design.product.payment?.price ?? 0.00)
   } else {
     // 重置为默认值
     form.garminImageUrl = ''
     form.rawImageUrl = ''
     form.bannerImageUrl = ''
     form.garminStoreUrl = ''
-    form.trialLasts = 0.25
-    form.price = 2.39
+    form.trialLasts = 0
+    form.price = 0.00
   }
 }
 
