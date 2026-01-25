@@ -182,7 +182,6 @@ const handleBackgroundImageUploaded = (img) => {
   if (!img) return
   const url = img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
   baseStore.setBackgroundImageFromUrl(url || null, img.id || null)
-  ElMessage.success('Image uploaded successfully')
 }
 
 // 移除背景图片
