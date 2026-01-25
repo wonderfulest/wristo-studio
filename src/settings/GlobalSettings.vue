@@ -4,7 +4,7 @@
       <label>Watch Face Name</label>
       <el-input type="text" v-model="watchFaceName" @change="updateWatchFaceName" />
     </div>
-    <div class="setting-item">
+    <!-- <div class="setting-item">
       <label>Text Case</label>
       <el-select v-model="textCase" placeholder="Select text case style" @change="updateTextCase">
         <el-option :value="0" label="Default" />
@@ -14,13 +14,13 @@
       </el-select>
       <div class="setting-description">Affects display style for text elements like date and labels</div>
     </div>
-    
-    <div class="setting-item">
+     -->
+    <!-- <div class="setting-item">
       <label>Show Unit</label>
       <el-switch v-model="showUnit" @change="updateShowUnit" />
-    </div>
+    </div> -->
 
-    <div class="setting-item">
+    <!-- <div class="setting-item">
       <label>Label Length</label>
       <el-select v-model="labelLengthType" placeholder="Select label length" @change="updateLabelLengthType">
         <el-option :value="1" label="Short" />
@@ -28,22 +28,17 @@
         <el-option :value="3" label="Long" />
       </el-select>
       <div class="setting-description">Affects only the display text length of label elements</div>
-    </div>
+    </div> -->
 
     <div class="setting-item">
       <label>Background Image</label>
       <ImageUpload
         :model-value="currentBackgroundImageId"
         :preview-url="currentBackgroundImageUrl"
+        :aspect-code="IMAGE_ASPECT_CODE.BACKGROUND"
         @update:modelValue="handleBackgroundImageIdChange"
         @uploaded="handleBackgroundImageUploaded"
       />
-      <el-button
-        v-if="currentBackgroundImageUrl"
-        type="text"
-        size="small"
-        @click="removeBackgroundImage"
-      >Remove Image</el-button>
     </div>
 
     <!-- Theme Rule Settings -->
@@ -55,6 +50,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
+import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ColorPicker from '@/components/color-picker/index.vue'
 import emitter from '@/utils/eventBus'
 import { ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus'
@@ -302,8 +298,6 @@ const removeGarminImage = () => {
   baseStore.wpay.garminImageUrl = ''
   baseStore.toggleThemeBackground()
 }
-
-
 </script>
 
 <style scoped>

@@ -10,12 +10,29 @@ interface EnumState {
 
 // ===== Typed helpers for specific enums =====
 export const ANALOG_ASSET_TYPE_ENUM_NAME = 'AnalogAssetType'
-export const IMAGE_ASPECT_ENUM_NAME = 'ImageAspectEnum'
+export const IMAGE_ASPECT_ENUM_NAME = 'com.wukong.face.modules.storage.enums.ImageAspectEnum'
 export const DESIGN_FONT_TYPE_ENUM_NAME = 'DesignFontType'
 export const DISPLAY_TYPE_ENUM_NAME = 'DisplayType'
 export const ICON_CATEGORY_ENUM_NAME = 'IconCategory'
 export const DATA_TYPE_CATEGORY_ENUM_NAME = 'DataTypeCategory'
 export const WEBSITE_BANNER_LINK_TYPE_ENUM_NAME = 'com.wukong.face.modules.website.enums.BannerLinkType'
+
+// ===== Image aspect codes (mirror backend ImageAspectEnum) =====
+export const IMAGE_ASPECT_CODE = {
+  HERO: 'hero',
+  BANNER: 'banner',
+  AVATAR: 'avatar',
+  PRODUCT: 'product',
+  GENERAL: 'general',
+  BACKGROUND: 'background',
+  SCREENSHOT: 'screenshot',
+  DESIGN: 'design',
+  INSPIRATION: 'inspiration',
+  ICON: 'icon',
+  FONT_GLYPH: 'font_glyph',
+} as const
+
+export type ImageAspectCode = (typeof IMAGE_ASPECT_CODE)[keyof typeof IMAGE_ASPECT_CODE]
 
 // ===== Store =====
 export const useEnumStore = defineStore('enum', {

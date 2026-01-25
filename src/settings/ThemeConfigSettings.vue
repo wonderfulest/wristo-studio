@@ -24,6 +24,7 @@
             <ImageUpload
               :model-value="currentConfigMap[val].imageId"
               :preview-url="currentConfigMap[val].imageUrl"
+              :aspect-code="IMAGE_ASPECT_CODE.BACKGROUND"
               @update:modelValue="(id) => handleImageIdChange(val, id)"
               @uploaded="(img) => handleImageUploaded(val, img)"
             />
@@ -110,6 +111,7 @@ import {
 } from '@/api/wristo/themeConfigs'
 import { usePropertiesStore } from '@/stores/properties'
 import { useBaseStore } from '@/stores/baseStore'
+import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 

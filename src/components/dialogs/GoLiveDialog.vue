@@ -34,6 +34,7 @@
             <div class="form-tip">This image will be displayed in the Garmin Connect IQ store</div>
             <ImageUpload
               v-model="form.heroImageId"
+              :aspect-code="IMAGE_ASPECT_CODE.HERO"
               :preview-url="form.garminImageUrl"
               @uploaded="onHeroImageUploaded"
             />
@@ -44,6 +45,7 @@
             <div class="form-tip">This is the original raw image for preservation</div>
             <ImageUpload
               v-model="form.rawImageId"
+              :aspect-code="IMAGE_ASPECT_CODE.GENERAL"
               :preview-url="form.rawImageUrl"
               @uploaded="onRawImageUploaded"
             />
@@ -163,6 +165,7 @@ import { Plus, CopyDocument } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
+import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'

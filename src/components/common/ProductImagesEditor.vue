@@ -42,10 +42,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/image'
+import { IMAGE_ASPECT_CODE, IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
 
 export interface ProductImageItem {
   id: number
@@ -62,6 +64,73 @@ const emit = defineEmits<{
 }>()
 
 const max = props.max ?? 5
+
+// ===== Aspect ratio validation (PRODUCT) =====
+const enumStore = useEnumStore()
+
+const aspectRatioMap = ref<Record<string, string>>({})
+
+const initAspectRatioMap = async () => {
+  if (Object.keys(aspectRatioMap.value).length > 0) return
+  const list = await enumStore.getEnumOptions(IMAGE_ASPECT_ENUM_NAME)
+  const map: Record<string, string> = {}
+  for (const it of list || []) {
+    const code = (it as any)?.value as string | undefined
+    if (!code || typeof code !== 'string') continue
+    const text = [
+      (it as any)?.props?.ratio,
+      (it as any)?.ratio,
+      (it as any)?.category,
+      (it as any)?.description,
+      (it as any)?.name,
+      (it as any)?.value,
+    ]
+      .filter((x) => typeof x === 'string')
+      .join(' ')
+    const m = text.match(/(\d+)\s*:\s*(\d+)/)
+    const ratio = m ? `${m[1]}:${m[2]}` : '1:1'
+    map[code] = ratio
+  }
+  aspectRatioMap.value = map
+}
+
+const ensureProductAspectValid = async (file: File) => {
+  const code = IMAGE_ASPECT_CODE.PRODUCT
+  if (!code) return true
+
+  await initAspectRatioMap()
+  const ratio = aspectRatioMap.value[code] || '1:1'
+  const [w, h] = ratio.split(':').map((x: string) => Number(x))
+  if (!w || !h) return true
+
+  const expected = w / h
+
+  const url = URL.createObjectURL(file)
+  try {
+    const actual = await new Promise<number>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          reject(new Error('Failed to get image dimensions'))
+          return
+        }
+        resolve(img.naturalWidth / img.naturalHeight)
+      }
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = url
+    })
+
+    const diff = Math.abs(actual - expected) / expected
+    if (diff > 0.01) {
+      const actualRatio = `${Math.round(actual * 100) / 100}:1`
+      ElMessage.error(`Image aspect ratio should be close to ${ratio}, current is approximately ${actualRatio}`)
+      return false
+    }
+    return true
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
 
 const beforeUpload = (file: File) => {
   const isImage = file.type.startsWith('image/')
@@ -88,6 +157,10 @@ const handleChange = async (file: UploadFile) => {
     return
   }
 
+  // Validate aspect ratio for PRODUCT images before uploading
+  const aspectOk = await ensureProductAspectValid(file.raw)
+  if (!aspectOk) return
+
   const loadingInstance = ElLoading.service({
     lock: true,
     text: 'Uploading product image...',
@@ -95,8 +168,8 @@ const handleChange = async (file: UploadFile) => {
   })
 
   try {
-    // 调用后端 /dsn/image/upload 接口，使用默认 aspect（DESIGN）
-    const res = await uploadImage(file.raw)
+    // Call backend /dsn/image/upload with PRODUCT aspect
+    const res = await uploadImage(file.raw, IMAGE_ASPECT_CODE.PRODUCT)
     const image = res.data
 
     if (!image || typeof image.id !== 'number' || !image.url) {

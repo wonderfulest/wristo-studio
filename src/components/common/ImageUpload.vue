@@ -23,7 +23,7 @@
 
         <div v-if="ratioTip" class="ratio-tip" :title="ratioTip">{{ ratioTip }}</div>
 
-        <div v-if="uploading" class="mask">上传中...</div>
+        <div v-if="uploading" class="mask">Uploading...</div>
         <el-button
           v-if="previewUrl"
           class="clear"
@@ -97,12 +97,7 @@ const ensureAspectCodeValid = async () => {
   await initAspectRatioMap()
   const ok = validAspectCodes.value.includes(code)
   if (!ok) {
-    console.warn('[ImageUpload] Invalid aspectCode', {
-      aspectCode: code,
-      validAspectCodes: validAspectCodes.value,
-      ratioMap: aspectRatioMap.value
-    })
-    ElMessage.error(`图片尺寸类型不合法：${code}`)
+    ElMessage.error(`Invalid aspectCode: ${code}`)
   }
   return ok
 }
@@ -121,13 +116,45 @@ const initAspectRatioMap = async () => {
   }
   aspectRatioMap.value = map
   aspectEnumCodes.value = codes
+}
 
-  console.debug('[ImageUpload] Loaded ImageAspectEnum', {
-    enumName: IMAGE_ASPECT_ENUM_NAME,
-    optionsCount: Array.isArray(list) ? list.length : 0,
-    optionsSample: Array.isArray(list) ? list.slice(0, 10) : list,
-    ratioMapKeys: Object.keys(map)
-  })
+// 根据当前 aspectCode 对应的理想比例，对图片实际宽高做校验，允许 1% 误差
+const ensureImageAspectValid = async (file) => {
+  const code = props.aspectCode
+  if (!code) return true
+
+  await initAspectRatioMap()
+  const ratio = aspectRatioMap.value[code] || '1:1'
+  const [w, h] = ratio.split(':').map((x) => Number(x))
+  if (!w || !h) return true
+
+  const expected = w / h
+
+  const url = URL.createObjectURL(file)
+  try {
+    const actual = await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          reject(new Error('Failed to get image dimensions'))
+          return
+        }
+        resolve(img.naturalWidth / img.naturalHeight)
+      }
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = url
+    })
+
+    const diff = Math.abs(actual - expected) / expected
+    if (diff > 0.01) {
+      const actualRatio = `${Math.round(actual * 100) / 100}:1`
+      ElMessage.error(`Image aspect ratio should be close to ${ratio}, current is approximately ${actualRatio}`)
+      return false
+    }
+    return true
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 const aspectRatioCss = computed(() => {
@@ -188,13 +215,13 @@ watch(
 const beforeUpload = (file) => {
   const isImage = file.type.startsWith('image/')
   if (!isImage) {
-    ElMessage.error('仅支持上传图片文件')
+    ElMessage.error('Only image files are allowed')
     return false
   }
   const max = props.maxSizeMB || 10
   const sizeOk = file.size / 1024 / 1024 <= max
   if (!sizeOk) {
-    ElMessage.error(`图片大小不能超过 ${max}MB`)
+    ElMessage.error(`Image size must not exceed ${max}MB`)
     return false
   }
   return true
@@ -206,19 +233,22 @@ const uploadRawFile = async (raw) => {
   const ok = await ensureAspectCodeValid()
   if (!ok) return
 
+  const aspectOk = await ensureImageAspectValid(raw)
+  if (!aspectOk) return
+
   uploading.value = true
   try {
     const res = await uploadImage(raw, props.aspectCode)
     const img = res && res.data
     if (!img || !img.id) {
-      throw new Error('上传失败')
+      throw new Error('Upload failed')
     }
     emit('update:modelValue', img.id)
     preview.value = img.previewUrl || (img.formats && img.formats.thumbnail && img.formats.thumbnail.url) || img.url || ''
     emit('uploaded', img)
-    ElMessage.success('图片已上传')
+    ElMessage.success('Image uploaded successfully')
   } catch (e) {
-    ElMessage.error(e && e.msg ? e.msg : '上传失败')
+    ElMessage.error(e && e.msg ? e.msg : 'Upload failed')
   } finally {
     uploading.value = false
   }
