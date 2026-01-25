@@ -4,32 +4,7 @@
       <label>Watch Face Name</label>
       <el-input type="text" v-model="watchFaceName" @change="updateWatchFaceName" />
     </div>
-    <!-- <div class="setting-item">
-      <label>Text Case</label>
-      <el-select v-model="textCase" placeholder="Select text case style" @change="updateTextCase">
-        <el-option :value="0" label="Default" />
-        <el-option :value="1" label="UPPERCASE" />
-        <el-option :value="2" label="lowercase" />
-        <el-option :value="3" label="CamelCase" />
-      </el-select>
-      <div class="setting-description">Affects display style for text elements like date and labels</div>
-    </div>
-     -->
-    <!-- <div class="setting-item">
-      <label>Show Unit</label>
-      <el-switch v-model="showUnit" @change="updateShowUnit" />
-    </div> -->
-
-    <!-- <div class="setting-item">
-      <label>Label Length</label>
-      <el-select v-model="labelLengthType" placeholder="Select label length" @change="updateLabelLengthType">
-        <el-option :value="1" label="Short" />
-        <el-option :value="2" label="Medium" />
-        <el-option :value="3" label="Long" />
-      </el-select>
-      <div class="setting-description">Affects only the display text length of label elements</div>
-    </div> -->
-
+    <!-- Background Image -->
     <div class="setting-item">
       <label>Background Image</label>
       <ImageUpload
@@ -40,7 +15,6 @@
         @uploaded="handleBackgroundImageUploaded"
       />
     </div>
-
     <!-- Theme Rule Settings -->
     <ThemeRuleSettings v-if="appId > 0"/>
   </div>
@@ -195,9 +169,12 @@ const currentBackgroundImageUrl = computed(() => {
   return raw.wristoImageUrl || ''
 })
 
-// ImageUpload 回调：这里只接受上传完成后的完整 ImageVO，由 setBackgroundImageFromUrl 负责更新画布
-const handleBackgroundImageIdChange = () => {
-  // id 变化由 uploaded 中的完整 ImageVO 统一处理，这里无需额外逻辑
+// ImageUpload 回调：接收背景图 ID 变化
+// 当 ID 被清空（例如用户点击清除按钮）时，需要同步清理画布背景
+const handleBackgroundImageIdChange = (id) => {
+  if (!id) {
+    baseStore.setBackgroundImageFromUrl(null, null)
+  }
 }
 
 // ImageUpload 回调：上传成功后更新当前背景图，并刷新画布
