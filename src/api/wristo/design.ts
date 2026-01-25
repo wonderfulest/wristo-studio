@@ -31,7 +31,7 @@ export const designApi = {
    * @returns 设计详情
    */
   getDesignByUid(designUid: string): Promise<ApiResponse<Design>> {
-    return instance.get(`/dsn/design/uid/${designUid}?populate=user,product,payment,release,cover,category,bundle,configJson`)
+    return instance.get(`/dsn/design/uid/${designUid}?populate=user,product,payment,release,cover,image,category,bundle,configJson`)
   },
 
   /**

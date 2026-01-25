@@ -24,7 +24,17 @@
         <div v-if="ratioTip" class="ratio-tip" :title="ratioTip">{{ ratioTip }}</div>
 
         <div v-if="uploading" class="mask">上传中...</div>
-        <button v-if="modelValue" type="button" class="clear" :disabled="uploading" @click.stop="clear">×</button>
+        <el-button
+          v-if="previewUrl"
+          class="clear"
+          type="danger"
+          circle
+          size="small"
+          :disabled="uploading"
+          @click.stop="clear"
+        >
+          ×
+        </el-button>
       </div>
     </el-upload>
   </div>
@@ -306,7 +316,6 @@ const clear = () => {
   height: 22px;
   border-radius: 999px;
   border: 0;
-  background: rgba(0, 0, 0, 0.45);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -314,5 +323,11 @@ const clear = () => {
   line-height: 1;
   text-align: center;
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.box:hover .clear {
+  opacity: 1;
 }
 </style>

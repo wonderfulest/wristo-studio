@@ -32,55 +32,21 @@
           <div class="image-upload-container">
             <div class="upload-title">Crop Image</div>
             <div class="form-tip">This image will be displayed in the Garmin Connect IQ store</div>
-            <el-upload 
-              class="image-uploader" 
-              action="#" 
-              :auto-upload="false" 
-              :show-file-list="false" 
-              accept=".jpg,.jpeg,.png,.gif"
-              :before-upload="beforeImageUpload"
-              :on-change="handleImageChange"
-            >
-              <div class="upload-area garmin-area">
-                <img v-if="form.garminImageUrl" :src="form.garminImageUrl" class="uploaded-image" />
-                <div v-else class="upload-placeholder">
-                  <el-icon class="upload-icon"><Plus /></el-icon>
-                  <span>Click to upload image</span>
-                </div>
-              </div>
-            </el-upload>
-            <div class="upload-actions" v-if="form.garminImageUrl">
-              <el-button size="small" type="danger" @click="removeImage">
-                Remove Image
-              </el-button>
-            </div>
+            <ImageUpload
+              v-model="form.heroImageId"
+              :preview-url="form.garminImageUrl"
+              @uploaded="onHeroImageUploaded"
+            />
           </div>
 
           <div class="image-upload-container">
             <div class="upload-title">Raw Image</div>
             <div class="form-tip">This is the original raw image for preservation</div>
-            <el-upload 
-              class="image-uploader" 
-              action="#" 
-              :auto-upload="false" 
-              :show-file-list="false" 
-              accept=".jpg,.jpeg,.png,.gif"
-              :before-upload="beforeImageUpload"
-              :on-change="handleRawImageChange"
-            >
-              <div class="upload-area garmin-area">
-                <img v-if="form.rawImageUrl" :src="form.rawImageUrl" class="uploaded-image" />
-                <div v-else class="upload-placeholder">
-                  <el-icon class="upload-icon"><Plus /></el-icon>
-                  <span>Click to upload image</span>
-                </div>
-              </div>
-            </el-upload>
-            <div class="upload-actions" v-if="form.rawImageUrl">
-              <el-button size="small" type="danger" @click="removeRawImage">
-                Remove Image
-              </el-button>
-            </div>
+            <ImageUpload
+              v-model="form.rawImageId"
+              :preview-url="form.rawImageUrl"
+              @uploaded="onRawImageUploaded"
+            />
           </div>
         </div>
       </el-form-item>
@@ -113,6 +79,13 @@
           Include a mobile-optimized image to promote your app. The image (in JPG, GIF, or PNG format) should be 1440 × 720 pixels and no larger than 2048 KB.
         </div>
       </el-form-item>
+
+      <!-- Product images -->
+      <el-form-item label="Product Images">
+        <ProductImagesEditor v-model="form.productImages" :max="5" />
+      </el-form-item>
+
+      <!-- Garmin Store URL -->
       <el-form-item label="Garmin Store URL">
         <el-input 
           v-model="form.garminStoreUrl" 
@@ -123,6 +96,8 @@
           The URL where users can find your app in the Garmin Connect IQ store
         </div>
       </el-form-item>
+
+      <!-- Category Selector -->
       <CategorySelector
         v-model:categoryIds="form.categoryIds"
         :categories="categories"
@@ -136,24 +111,26 @@
       <el-form-item label="Trial Duration (hours)">
         <el-input-number 
           v-model="form.trialLasts" 
+          :disabled="true"
           :min="0" 
           :max="720" 
           :precision="2"
           :step="0.25"
         />
-        <div class="form-tip">
+        <div class="form-tip-margin">
           How long the trial period lasts (0 = no trial)
         </div>
       </el-form-item>
       <el-form-item label="Price (USD)">
         <el-input-number 
           v-model="form.price" 
+          :disabled="true"
           :min="0" 
           :max="99.99" 
           :precision="2"
           :step="0.01"
         />
-        <div class="form-tip">
+        <div class="form-tip-margin">
           Price in USD for the app
         </div>
       </el-form-item>
@@ -183,7 +160,7 @@ import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
 import { Plus, CopyDocument } from '@element-plus/icons-vue'
-import { uploadBase64Image, uploadImageFile } from '@/utils/image'
+import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -191,18 +168,20 @@ import type { ApiResponse } from '@/types/api/api'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
+import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
 const currentDesign = ref<Design | null>(null)
 type DesignerConfigDialogRef = { show: () => void | Promise<void> }
+const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 
 const openSettings = (): void => {
   if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
     designerConfigDialog.value.show()
   }
 }
-const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 
 const categories = ref<Category[]>([])
 const loadingCategories = ref(false)
@@ -214,6 +193,7 @@ const form = reactive({
   appId: 0,
   name: '',
   description: '',
+  // Hero / raw image URLs used by goLive payload
   garminImageUrl: '',
   rawImageUrl: '',
   bannerImageUrl: '',
@@ -221,7 +201,12 @@ const form = reactive({
   categoryIds: [] as number[],
   bundleIds: [] as number[],
   trialLasts: 0.25,
-  price: 2.39
+  price: 2.39,
+  // Hero / raw image ids from ImageUpload (for future use if needed)
+  heroImageId: undefined as number | undefined,
+  rawImageId: undefined as number | undefined,
+  // productImages: keep id + imageUrl, used by ProductImagesEditor and goLive payload
+  productImages: [] as { id: number; imageUrl: string }[]
 })
 
 const messageStore = useMessageStore()
@@ -248,7 +233,34 @@ const loadDesign = (design: Design) => {
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.trialLasts = design.product.trialLasts || 0
-    form.price = (design.product.payment?.price ?? 0.00)
+    form.price = (design.product.payment?.price ?? 2.39)
+    // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
+    const backendProductImages = (design.product as any).productImages as
+      | {
+          id?: number
+          imageId?: number
+          imageUrl?: string
+          image?: {
+            url?: string
+            formats?: { thumbnail?: { url?: string } }
+          }
+        }[]
+      | undefined
+
+    form.productImages = Array.isArray(backendProductImages)
+      ? backendProductImages
+          .map((img) => {
+            if (!img) return null
+            // 对于 goLive 的 productImages，应使用 imageId 作为前端的 id，避免用到 ProductImageVO 自身的主键 id
+            const imageId = (img.imageId ?? 0) as number
+            const urlFromImage = img.image?.formats?.thumbnail?.url || img.image?.url
+            const imageUrl = img.imageUrl || urlFromImage
+            if (!imageUrl || !imageId) return null
+            return { id: imageId, imageUrl }
+          })
+          .filter((item): item is { id: number; imageUrl: string } => !!item)
+          .slice(0, 5)
+      : []
   } else {
     // 重置为默认值
     form.garminImageUrl = ''
@@ -281,7 +293,7 @@ const handleConfirm = async () => {
   }
   try {
     loading.value = true
-    const data = {
+    const data: any = {
       description: form.description.trim(),
       heroImage: form.garminImageUrl.trim(),
       rawImage: form.rawImageUrl.trim(),
@@ -295,6 +307,12 @@ const handleConfirm = async () => {
       },
       categoryIds: form.categoryIds,
       bundleIds: form.bundleIds
+    }
+    if (form.productImages.length > 0) {
+      // Only send image id list as required by backend GoToLiveDTO.productImages
+      data.productImages = form.productImages
+        .map((img) => img.id)
+        .filter((id) => typeof id === 'number' && id > 0)
     }
     await productsApi.goLive(data)
     messageStore.success('Product information updated successfully')
@@ -317,6 +335,21 @@ const copyAppId = async (): Promise<void> => {
   } catch {
     ElMessage.error('Copy failed')
   }
+}
+// Hero / Raw image uploaded handlers from ImageUpload
+const onHeroImageUploaded = (img: any) => {
+  if (!img) return
+  form.heroImageId = typeof img.id === 'number' ? img.id : form.heroImageId
+  // 优先使用 previewUrl 或 thumbnail，其次原图
+  form.garminImageUrl =
+    img.previewUrl || img.formats?.thumbnail?.url || img.url || form.garminImageUrl
+}
+
+const onRawImageUploaded = (img: any) => {
+  if (!img) return
+  form.rawImageId = typeof img.id === 'number' ? img.id : form.rawImageId
+  form.rawImageUrl =
+    img.previewUrl || img.formats?.thumbnail?.url || img.url || form.rawImageUrl
 }
 
 // 加载分类数据
@@ -352,22 +385,6 @@ onMounted(() => {
   loadBundles()
 })
 
-// 图片上传前的验证
-const beforeImageUpload = (file: File) => {
-  const isImage = file.type.startsWith('image/')
-  const isLe500K = file.size <= 500 * 1024
-
-  if (!isImage) {
-    ElMessage.error('Please upload image files only!')
-    return false
-  }
-  if (!isLe500K) {
-    ElMessage.error('Image size cannot exceed 500KB!')
-    return false
-  }
-  return true
-}
-
 const beforeBannerUpload = (file: File) => {
   const isImage = file.type.startsWith('image/')
   const isLe2M = file.size <= 2 * 1024 * 1024
@@ -382,114 +399,7 @@ const beforeBannerUpload = (file: File) => {
   return true
 }
 
-// 处理图片上传
-const handleImageChange = async (file: UploadFile) => {
-  if (!file || !file.raw) {
-    console.warn('Invalid file', file)
-    return
-  }
 
-  // 创建 loading 实例
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: 'Uploading image...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  })
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      // 上传图片
-      const imageData = e.target?.result as string
-      let imageUploadUrl = ''
-      
-      if (imageData && imageData.startsWith('data:')) {
-        imageUploadUrl = await uploadBase64Image(imageData, 'hero')
-      } else if (imageData && imageData.startsWith('blob:')) {
-        imageUploadUrl = await uploadImageFile(imageData, 'hero')
-      } else if (imageData && imageData.startsWith('http')) {
-        imageUploadUrl = imageData
-      }
-      
-      if (!imageUploadUrl) {
-        throw new Error('Failed to upload image')
-      }
-
-      // 更新表单中的图片 URL
-      form.garminImageUrl = imageUploadUrl
-      
-      ElMessage.success('Image uploaded successfully')
-    } catch (error) {
-      console.error('Failed to upload image:', error)
-      ElMessage.error('Failed to upload image')
-    } finally {
-      // 关闭 loading
-      loadingInstance.close()
-    }
-  }
-
-  reader.onerror = (error) => {
-    console.error('Error reading image file', error)
-    ElMessage.error('Failed to read image file')
-    loadingInstance.close()
-  }
-
-  reader.readAsDataURL(file.raw)
-}
-
-// 处理 Raw 图片上传
-const handleRawImageChange = async (file: UploadFile) => {
-  if (!file || !file.raw) {
-    console.warn('Invalid file', file)
-    return
-  }
-
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: 'Uploading image...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  })
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      const imageData = e.target?.result as string
-      let imageUploadUrl = ''
-      if (imageData && imageData.startsWith('data:')) {
-        imageUploadUrl = await uploadBase64Image(imageData, 'raw')
-      } else if (imageData && imageData.startsWith('blob:')) {
-        imageUploadUrl = await uploadImageFile(imageData, 'raw')
-      } else if (imageData && imageData.startsWith('http')) {
-        imageUploadUrl = imageData
-      }
-      if (!imageUploadUrl) {
-        throw new Error('Failed to upload image')
-      }
-      form.rawImageUrl = imageUploadUrl
-      ElMessage.success('Image uploaded successfully')
-    } catch (error) {
-      console.error('Failed to upload raw image:', error)
-      ElMessage.error('Failed to upload image')
-    } finally {
-      loadingInstance.close()
-    }
-  }
-  reader.onerror = (error) => {
-    console.error('Error reading raw image file', error)
-    ElMessage.error('Failed to read image file')
-    loadingInstance.close()
-  }
-  reader.readAsDataURL(file.raw)
-}
-
-// 移除图片
-const removeImage = () => {
-  form.garminImageUrl = ''
-}
-
-const removeRawImage = () => {
-  form.rawImageUrl = ''
-}
 
 const handleBannerChange = async (file: UploadFile) => {
   if (!file || !file.raw) {
@@ -611,6 +521,11 @@ defineExpose({
 }
 
 .form-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.form-tip-margin {
+  margin-left: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
