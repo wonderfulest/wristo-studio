@@ -113,6 +113,15 @@
       </div>
       <div class="actions">
         <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
+        <el-button
+          v-if="isAdminUser"
+          type="default"
+          size="small"
+          @click="emit('copy', design)"
+          :loading="loadingStates.copy.has(design.id)"
+        >
+          📄 Copy
+        </el-button>
         <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease &&design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
           🛠 Build PRG
         </el-button>
@@ -150,6 +159,7 @@ interface LoadingStates {
 const props = defineProps<{
   design: Design
   isMerchantUser: boolean
+  isAdminUser: boolean
   showCreator: boolean
   loadingStates: LoadingStates
   currentUserId: number | null
@@ -166,6 +176,7 @@ const emit = defineEmits<{
   (e: 'edit', design: Design): void
   (e: 'delete', design: Design): void
   (e: 'open', design: Design): void
+  (e: 'copy', design: Design): void
   (e: 'build-prg', design: Design): void
   (e: 'run-prg', design: Design): void
   (e: 'submit', design: Design): void
@@ -176,6 +187,7 @@ const emit = defineEmits<{
 
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
+const isAdminUser = computed(() => props.isAdminUser)
 const showCreator = computed(() => props.showCreator)
 const loadingStates = computed(() => props.loadingStates)
 const currentUserId = computed(() => props.currentUserId)

@@ -40,6 +40,7 @@
         <DesignCard
           :design="design"
           :is-merchant-user="isMerchantUser"
+          :is-admin-user="isAdminUser"
           :show-creator="showCreator"
           :loading-states="loadingStatesPlain"
           :current-user-id="userStore.userInfo?.id ?? null"
@@ -59,6 +60,7 @@
           @download-package="downloadPackage"
           @go-live="goLive"
           @copy-name="copyDesignName"
+          @copy="copyDesign"
         />
       </el-col>
     </el-row>
@@ -174,6 +176,12 @@ const sortOrder = ref('desc')
 const isMerchantUser = computed(() => {
   const roles = userStore.userInfo?.roles || []
   return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
+})
+
+// Whether the current user is an admin (has ROLE_ADMIN)
+const isAdminUser = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
 })
 
 // 添加作者显示控制
