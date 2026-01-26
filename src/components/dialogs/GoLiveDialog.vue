@@ -6,7 +6,7 @@
     :top="'5vh'"
     class="go-live-dialog"
   >
-    <el-form :model="form" label-width="120px" class="go-live-form">
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
       <el-form-item label="App ID">
         <el-input v-model="form.appId" disabled>
           <template #append>
@@ -15,7 +15,11 @@
         </el-input>
       </el-form-item>
       <el-form-item label="Design Name">
-        <el-input v-model="form.name" disabled />
+        <el-input v-model="form.name" disabled>
+          <template #append>
+            <el-button @click="copyDesignName" :icon="CopyDocument">Copy</el-button>
+          </template>
+        </el-input>
       </el-form-item>
       <el-form-item label="Description">
         <el-input v-model="form.description" type="textarea" :rows="10" />
@@ -30,8 +34,12 @@
       <el-form-item label="Hero Image">
         <div class="image-pair">
           <div class="image-upload-container">
-            <div class="upload-title">Crop Image</div>
-            <div class="form-tip">This image will be displayed in the Garmin Connect IQ store</div>
+            <div class="upload-title-row">
+              <div class="upload-title">Crop Image</div>
+              <el-tooltip content="This image will be displayed in the Garmin Connect IQ store" placement="top">
+                <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </div>
             <ImageUpload
               v-model="form.heroImageId"
               :aspect-code="IMAGE_ASPECT_CODE.HERO"
@@ -41,8 +49,12 @@
           </div>
 
           <div class="image-upload-container">
-            <div class="upload-title">Raw Image</div>
-            <div class="form-tip">This is the original raw image for preservation</div>
+            <div class="upload-title-row">
+              <div class="upload-title">Raw Image</div>
+              <el-tooltip content="This is the original raw image for preservation" placement="top">
+                <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </div>
             <ImageUpload
               v-model="form.rawImageId"
               :aspect-code="IMAGE_ASPECT_CODE.GENERAL"
@@ -54,6 +66,12 @@
       </el-form-item>
       <el-form-item label="Homepage Banner">
         <div class="image-upload-container">
+          <el-tooltip
+            content="Include a mobile-optimized image to promote your app. The image (in JPG, GIF, or PNG format) should be 1440 × 720 pixels and no larger than 2048 KB."
+            placement="top"
+          >
+            <el-icon class="tip-icon"><QuestionFilled /></el-icon>
+          </el-tooltip>
           <el-upload 
             class="image-uploader" 
             action="#" 
@@ -77,9 +95,6 @@
             </el-button>
           </div>
         </div>
-        <div class="form-tip">
-          Include a mobile-optimized image to promote your app. The image (in JPG, GIF, or PNG format) should be 1440 × 720 pixels and no larger than 2048 KB.
-        </div>
       </el-form-item>
 
       <!-- Product images -->
@@ -88,7 +103,7 @@
       </el-form-item>
 
       <!-- Garmin Store URL -->
-      <el-form-item label="Garmin Store URL">
+      <el-form-item label="Garmin Store URL" prop="garminStoreUrl" required>
         <el-input 
           v-model="form.garminStoreUrl" 
           placeholder="Enter Garmin Connect IQ store URL"
@@ -161,13 +176,14 @@ import type { Bundle } from '@/types/api/bundle'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
-import { Plus, CopyDocument } from '@element-plus/icons-vue'
+import { Plus, CopyDocument, QuestionFilled } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
+import type { FormInstance, FormRules } from 'element-plus'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
@@ -177,8 +193,15 @@ import ImageUpload from '@/components/common/ImageUpload.vue'
 const dialogVisible = ref(false)
 const loading = ref(false)
 const currentDesign = ref<Design | null>(null)
+const formRef = ref<FormInstance | null>(null)
 type DesignerConfigDialogRef = { show: () => void | Promise<void> }
 const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
+
+const rules: FormRules = {
+  garminStoreUrl: [
+    { required: true, message: 'Garmin Store URL is required', trigger: ['blur', 'change'] },
+  ],
+}
 
 const openSettings = (): void => {
   if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
@@ -278,6 +301,9 @@ const loadDesign = (design: Design) => {
 // 提交表单
 const handleConfirm = async () => {
   if (!currentDesign.value) return
+
+  const valid = await formRef.value?.validate?.().catch(() => false)
+  if (valid === false) return
   
   // 验证必填字段
   if (!form.garminImageUrl.trim()) {
@@ -334,6 +360,15 @@ const handleCancel = () => {
 const copyAppId = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(String(form.appId))
+    ElMessage.success('Copied')
+  } catch {
+    ElMessage.error('Copy failed')
+  }
+}
+
+const copyDesignName = async (): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(String(form.name || ''))
     ElMessage.success('Copied')
   } catch {
     ElMessage.error('Copy failed')
@@ -535,9 +570,34 @@ defineExpose({
 
 /* 图片上传组件样式 */
 .image-upload-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.upload-title-row {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 4px;
+  width: fit-content;
+}
+
+.tip-icon-inline {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  line-height: 1;
+}
+
+.tip-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  z-index: 2;
 }
 
 .image-uploader {
