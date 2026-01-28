@@ -53,7 +53,7 @@ import { usePropertiesStore } from '@/stores/properties'
 const props = defineProps({
   modelValue: {
     type: String,
-    default: '#000000'
+    default: '#FFFFFF'
   }
 })
 

@@ -76,7 +76,7 @@ export const useWeatherStore = defineStore('weatherElement', {
   },
   actions: {
     addElement(config: WeatherElementConfig): Promise<FabricElement> {
-      console.log('add wecdsa Element', config)
+      console.log('add weather Element', config)
       
       const id = config.id || nanoid()
       const cx = config.left ?? 0

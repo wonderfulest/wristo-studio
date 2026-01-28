@@ -113,8 +113,8 @@
       </div>
       <div class="actions">
         <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
+        <!-- v-if="isAdminUser" -->
         <el-button
-          v-if="isAdminUser"
           type="default"
           size="small"
           @click="emit('copy', design)"

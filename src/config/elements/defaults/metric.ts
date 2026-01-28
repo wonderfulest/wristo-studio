@@ -28,7 +28,7 @@ export const DEFAULT_WEATHER_CONFIG: WeatherElementConfig & EDITOR_ELEMENT = {
   top: base.top,
   originX: 'center',
   originY: 'center',
-  fill: '#000000',
+  fill: '#FFFFFF',
   fontSize: 36,
   fontFamily: 'wristo-icon',
 }
@@ -67,7 +67,7 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   top: base.top,
   originX: 'center',
   originY: 'center',
-  fill: '#000000',
+  fill: '#FFFFFF',
   fontSize: 60,
   fontFamily: 'wristo-icon',
 }
