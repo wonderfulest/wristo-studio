@@ -351,7 +351,7 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 根据 URL 创建或移除画布背景图片，仅负责更新 this.backgroundImage 与画布
     setBackgroundImageFromUrl(url: string | null, imageId?: number | null): void {
-      console.log('setBackgroundColorFromUrl called with url:', url, 'imageId:', imageId);
+      console.log('setBackgroundColorFromUrl called with url:', url, 'imageId:', imageId)
       if (!this.canvas) return
 
       // 移除现有背景图
@@ -369,14 +369,13 @@ export const useBaseStore = defineStore('baseStore', {
         return
       }
 
-      const editorStore = useEditorStore()
-      const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
+      const center = this.$state.WATCH_SIZE / 2
 
       // 使用 CORS 加载远程背景图，避免污染 canvas，保证可以调用 toDataURL 截图
       FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: AnyObject) => {
         if (!img || !this.canvas) return
         const c = this.canvas
-        const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
+        const scale = this.$state.WATCH_SIZE / Math.min(img.width, img.height)
         this.backgroundImage = img
         img.set({
           eleType: 'background',
@@ -408,13 +407,13 @@ export const useBaseStore = defineStore('baseStore', {
         }
 
         c.renderAll()
+
       })
     },
 
     // 添加背景（背景圆 + 当前背景图）
     addBackground(): void {
-      const editorStore = useEditorStore()
-      const center = this.$state.WATCH_SIZE * editorStore.zoomLevel / 2
+      const center = this.$state.WATCH_SIZE / 2
       const c = this.canvas
       if (!c) return
 
@@ -425,7 +424,7 @@ export const useBaseStore = defineStore('baseStore', {
         top: center,
         originX: 'center',
         originY: 'center',
-        radius: this.$state.WATCH_SIZE * editorStore.zoomLevel / 2,
+        radius: this.$state.WATCH_SIZE / 2,
         // 固定使用黑色作为表盘背景色
         fill: '#000000',
         backgroundColor: 'transparent',
@@ -454,7 +453,7 @@ export const useBaseStore = defineStore('baseStore', {
       // 如果已经有背景图片，按照当前圆的大小重新布局
       if (this.backgroundImage) {
         const img = this.backgroundImage
-        const scale = this.$state.WATCH_SIZE * editorStore.zoomLevel / Math.min(img.width, img.height)
+        const scale = this.$state.WATCH_SIZE / Math.min(img.width, img.height)
         img.set({
           eleType: 'background',
           scaleX: scale,
@@ -482,8 +481,8 @@ export const useBaseStore = defineStore('baseStore', {
         editorStore.updateSetting('zoomLevel', zoom)
       }
       zoom = editorStore.zoomLevel
-      const center = this.$state.WATCH_SIZE * zoom / 2
-      const radius = this.$state.WATCH_SIZE * zoom / 2
+      const center = this.$state.WATCH_SIZE / 2
+      const radius = this.$state.WATCH_SIZE / 2
 
       if (this.watchFaceCircle) {
         this.watchFaceCircle.set({
@@ -504,7 +503,7 @@ export const useBaseStore = defineStore('baseStore', {
       }
 
       if (this.backgroundImage) {
-        const scale = this.$state.WATCH_SIZE * zoom / Math.min(this.backgroundImage.width, this.backgroundImage.height)
+        const scale = this.$state.WATCH_SIZE / Math.min(this.backgroundImage.width, this.backgroundImage.height)
         this.backgroundImage.set({
           left: center,
           top: center,
@@ -517,16 +516,6 @@ export const useBaseStore = defineStore('baseStore', {
           evented: false
         })
         this.backgroundImage.setCoords()
-      }
-
-      // 确保画布尺寸足够大
-      if (this.canvas) {
-        const size = this.$state.WATCH_SIZE * (zoom ?? 1)
-        this.canvas.setDimensions({
-          width: size,
-          height: size
-        })
-        this.canvas.requestRenderAll()
       }
     },
     // 设置表盘名称
@@ -629,9 +618,7 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 生成配置
     generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
-      console.log('this.canvas', this.canvas)
       if (!this.canvas || !this.canvas.getObjects().length) {
-        console.warn('没有元素')
         return null
       }
       const propertiesStore = usePropertiesStore()
@@ -645,7 +632,6 @@ export const useBaseStore = defineStore('baseStore', {
         showUnit: this.showUnit,
         elements: [] as import('@/types/elements').AnyElementConfig[],
         orderIds: [] as string[],
-        // 背景图元信息（仅导出 id + url），运行时真实图片由 backgroundImage Fabric 对象维护
         backgroundImage: undefined,
         currentIconFontSlug: this.currentIconFontSlug,
         currentIconFontSize: this.currentIconFontSize,

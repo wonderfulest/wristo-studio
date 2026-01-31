@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, onUnmounted, computed } from 'vue'
+import { onMounted, ref, onUnmounted, computed, nextTick } from 'vue'
 import { Canvas, Point } from 'fabric'
 import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
@@ -91,12 +91,11 @@ const refreshElementSettings = (opt?: unknown) => {
   emitter.emit('refresh-element-settings', opt)
 }
 
-
 onMounted(() => {
   // 创建画布, 尺寸比手表大一些以显示边界
   const canvas = new Canvas(canvasRef.value as HTMLCanvasElement, {
-    width: WATCH_SIZE.value * editorStore.zoomLevel,
-    height: WATCH_SIZE.value * editorStore.zoomLevel,
+    width: WATCH_SIZE.value,
+    height: WATCH_SIZE.value,
     centeredScaling: true,  // 确保缩放以中心点为基准
     centeredRotation: true  // 确保旋转以中心点为基准
   })
@@ -142,6 +141,11 @@ onMounted(() => {
   // 先设置全局 canvas 引用
   baseStore.setCanvas(canvas)
 
+  // 初始化时如果 zoomLevel 非 1，确保立即应用 viewportTransform 与画布/容器尺寸
+  nextTick(() => {
+    zoomManagerRef.value?.updateZoom()
+  })
+
   // 绑定到历史控制器并记录初始快照、注册事件
   history.attachCanvas(canvas)
   history.saveInitial()
@@ -161,11 +165,9 @@ onMounted(() => {
 
   // 监听全局撤销/重做事件（由 useKeyboardShortcuts 发出）
   emitter.on('canvas-undo', () => {
-    console.log('[Canvas] eventBus undo')
     history.undo()
   })
   emitter.on('canvas-redo', () => {
-    console.log('[Canvas] eventBus redo')
     history.redo()
   })
 
@@ -201,8 +203,7 @@ defineExpose({
   resetZoom: () => zoomManagerRef.value?.resetZoom?.(),
   updateZoom: () => zoomManagerRef.value?.updateZoom?.(),
   undo: () => history.undo(),
-  redo: () => history.redo()
-  ,
+  redo: () => history.redo(),
   canUndo: () => history.canUndo(),
   canRedo: () => history.canRedo()
 })

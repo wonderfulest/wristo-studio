@@ -68,22 +68,21 @@ watch(
 )
 
 const handleZoomIn = () => {
-  if (editorStore.zoomLevel < 2) {
-    editorStore.updateSetting('zoomLevel', editorStore.zoomLevel + 0.1)
-    props.canvasRef?.zoomIn()
+  if (props.canvasRef && typeof props.canvasRef.zoomIn === 'function') {
+    props.canvasRef.zoomIn()
   }
 }
 
 const handleZoomOut = () => {
-  if (editorStore.zoomLevel > 0.5) {
-    editorStore.updateSetting('zoomLevel', editorStore.zoomLevel - 0.1)
-    props.canvasRef?.zoomOut()
+  if (props.canvasRef && typeof props.canvasRef.zoomOut === 'function') {
+    props.canvasRef.zoomOut()
   }
 }
 
 const handleResetZoom = () => {
-  editorStore.updateSetting('zoomLevel', 1)
-  props.canvasRef?.resetZoom()
+  if (props.canvasRef && typeof props.canvasRef.resetZoom === 'function') {
+    props.canvasRef.resetZoom()
+  }
 }
 
 const toggleCollapse = () => {
