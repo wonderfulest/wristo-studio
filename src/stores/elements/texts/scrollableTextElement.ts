@@ -47,7 +47,15 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
       }
 
       try {
-        const template = options.textTemplate ?? options.text ?? 'New Text'
+        const propertyKey = typeof options.textProperty === 'string' ? options.textProperty : ''
+        const propertyValue = propertyKey
+          ? (this.baseStore.propertiesStore?.allProperties as any)?.[propertyKey]?.value
+          : undefined
+        const template =
+          (typeof propertyValue === 'string' && propertyValue !== ''
+            ? propertyValue
+            : (options.textTemplate ?? options.text))
+          ?? 'New Text'
         const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_match: string, p1: string) => {
           const key = String(p1 || '').trim()
           return key ? getDataValueByName(key) : ''
@@ -62,7 +70,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
           fill: options.textColor || '#FFFFFF',
           fontFamily: options.fontFamily,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
           // 水平对齐方式只支持居中
           originX: 'center',
@@ -115,7 +123,13 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
       }
     },
     decodeConfig(config: TextElementConfig): Partial<FabricElement> {
-      const textTemplate = (config as any).textTemplate ?? ''
+      const propertyKey = typeof (config as any).textProperty === 'string' ? (config as any).textProperty : ''
+      const propertyValue = propertyKey
+        ? (this.baseStore.propertiesStore?.allProperties as any)?.[propertyKey]?.value
+        : undefined
+      const fallbackTemplate = (config as any).textTemplate ?? ''
+      const textTemplate =
+        (typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : fallbackTemplate) ?? ''
       const resolvedText = (textTemplate || '').replace(/\{\{([^}]+)\}\}/g, (_match: string, p1: string) => {
         const key = String(p1 || '').trim()
         return key ? getDataValueByName(key) : ''
@@ -157,6 +171,16 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
       const t = element as any
       const id = String(t.id ?? '')
       if (!id) return
+
+      console.log('[scrollableText] showScrollRegion', {
+        id,
+        left: t.left,
+        top: t.top,
+        scrollAreaLeft: t.scrollAreaLeft,
+        scrollAreaTop: t.scrollAreaTop,
+        scrollAreaWidth: t.scrollAreaWidth,
+        clipPath: !!t.clipPath,
+      })
 
       // 若已存在边界矩形，先移除
       const prevRect = this.scrollRegionRects[id]
@@ -254,16 +278,140 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
 
       const t = element as any
 
+      const syncScrollAreaAndClip = (updateBasePosition: boolean) => {
+        const tt = element as any
+        if (!tt) return
+
+        const left = Number(tt.left ?? 0)
+        const top = Number(tt.top ?? 0)
+
+        // scrollAreaLeft/Top 代表“滚动窗口基准位置”，不应在滚动动画过程中被覆盖。
+        // 仅在用户拖动/修改元素位置时更新它。
+        if (updateBasePosition) {
+          tt.scrollAreaLeft = left
+          tt.scrollAreaTop = top
+        }
+
+        const configuredAreaWidth = Number(tt.scrollAreaWidth ?? canvas.getWidth() ?? 0)
+        const areaWidth = Math.max(configuredAreaWidth, 0)
+        const originX = (tt.originX ?? 'center') as string
+        const originY = (tt.originY ?? 'top') as string
+
+        const baseX = Number(tt.scrollAreaLeft ?? left)
+        const baseY = Number(tt.scrollAreaTop ?? top)
+
+        let regionStart = baseX
+        if (originX === 'center') {
+          regionStart = baseX - areaWidth / 2
+        } else if (originX === 'right') {
+          regionStart = baseX - areaWidth
+        }
+
+        const textHeight = Number(tt.height ?? tt.fontSize ?? 20)
+        let regionTop = baseY
+        if (originY === 'center') {
+          regionTop = baseY - textHeight / 2
+        } else if (originY === 'bottom') {
+          regionTop = baseY - textHeight
+        }
+
+        if (tt.clipPath) {
+          tt.clipPath.set({
+            left: regionStart,
+            top: regionTop,
+            width: configuredAreaWidth,
+            height: textHeight,
+            absolutePositioned: true,
+          })
+          if (typeof tt.clipPath.setCoords === 'function') {
+            tt.clipPath.setCoords()
+          }
+        }
+
+        const rect = this.scrollRegionRects[id]
+        if (rect) {
+          rect.set({
+            left: regionStart,
+            top: regionTop,
+            width: areaWidth,
+            height: textHeight,
+          })
+          if (typeof rect.setCoords === 'function') {
+            rect.setCoords()
+          }
+        }
+      }
+
       // 绑定选中/取消选中事件：选中时暂停滚动并显示区域边界，取消选中时隐藏边界并恢复滚动
       if (!t.__scrollEventsBound) {
         t.on('selected', () => {
           this.pauseScrollableAnimation(t as FabricElement)
+          ;(t as any).__scrollRegionVisible = true
           this.showScrollRegion(t as FabricElement)
+
+          // 选中时确保文字在可视裁剪区域内（否则可能“选中了但字不见了”）
+          const baseX = Number((t as any).scrollAreaLeft ?? t.left ?? 0)
+          const baseY = Number((t as any).scrollAreaTop ?? t.top ?? 0)
+          const configuredAreaWidth = Number((t as any).scrollAreaWidth ?? canvas.getWidth() ?? 0)
+          const areaWidth = Math.max(configuredAreaWidth, 0)
+          const originX = ((t as any).originX ?? 'center') as string
+
+          let regionStart = baseX
+          if (originX === 'center') {
+            regionStart = baseX - areaWidth / 2
+          } else if (originX === 'right') {
+            regionStart = baseX - areaWidth
+          }
+          const regionEnd = regionStart + areaWidth
+          const width = Number((t as any).width ?? 0)
+
+          // 把文字拉回到窗口内：尽量放在窗口右侧边缘内，保证可见
+          const nextLeft = Math.min(Math.max(baseX, regionStart), Math.max(regionEnd - Math.min(width, areaWidth), regionStart))
+          ;(t as any).set('left', nextLeft)
+          ;(t as any).set('top', baseY)
+          ;(t as any).setCoords()
+
+          // 同步 clipPath/矩形到基准位置
+          syncScrollAreaAndClip(false)
+
+          console.log('[scrollableText] selected -> ensure visible', {
+            id: (t as any).id,
+            baseX,
+            baseY,
+            areaWidth,
+            regionStart,
+            regionEnd,
+            textWidth: width,
+            appliedLeft: nextLeft,
+            clipPath: (t as any).clipPath
+              ? {
+                  left: (t as any).clipPath.left,
+                  top: (t as any).clipPath.top,
+                  width: (t as any).clipPath.width,
+                  height: (t as any).clipPath.height,
+                }
+              : null,
+          })
+
+          canvas.requestRenderAll()
         })
         t.on('deselected', () => {
+          ;(t as any).__scrollRegionVisible = false
           this.hideScrollRegion(t as FabricElement)
           this.startScrollableAnimation(t as FabricElement)
         })
+
+        t.on('moving', () => {
+          this.pauseScrollableAnimation(t as FabricElement)
+          syncScrollAreaAndClip(true)
+          canvas.requestRenderAll()
+        })
+
+        t.on('modified', () => {
+          syncScrollAreaAndClip(true)
+          this.startScrollableAnimation(t as FabricElement)
+        })
+
         t.__scrollEventsBound = true
       }
 
@@ -280,7 +428,7 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
 
         // 滚动区域宽度：使用 scrollAreaWidth，至少不小于文本本身宽度
         const configuredAreaWidth = Number(t.scrollAreaWidth ?? canvas.getWidth() ?? 0)
-        const areaWidth = Math.max(configuredAreaWidth, width || 0)
+        const areaWidth = Math.max(configuredAreaWidth, 0)
         const originX = (t.originX ?? 'center') as string
         const originY = (t.originY ?? 'top') as string
 
@@ -311,6 +459,9 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
           }) as any
 
           t.clipPath = clipRect
+        } else {
+          // 拖动后 scrollAreaLeft/Top 可能改变，确保 clipPath 始终对齐当前区域
+          syncScrollAreaAndClip(false)
         }
 
         // 根据对齐方式和宽度计算滚动区域 [regionStart, regionEnd]
@@ -332,8 +483,8 @@ export const useScrollableTextStore = defineStore('scrollableTextElement', {
         // 文本从右向左移动
         let nextLeft = currentLeft - speed
 
-        // 当整行文本完全从左侧离开区域后（nextLeft + width < regionStart），
-        // 再从右侧边界 regionEnd 重新进入，这样在 clipPath 下会一个字一个字出现。
+        // 当整行文本完全从左侧离开可视区域后（nextLeft + width < regionStart），
+        // 再从右侧边界 regionEnd 重新进入，这样会循环滚动。
         if (nextLeft + width < regionStart) {
           nextLeft = regionEnd
         }
