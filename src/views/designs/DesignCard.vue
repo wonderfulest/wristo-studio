@@ -122,7 +122,7 @@
         >
           📄 Copy
         </el-button>
-        <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease &&design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
+        <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease && design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
           🛠 Build PRG
         </el-button>
         <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
