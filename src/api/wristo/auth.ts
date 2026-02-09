@@ -16,7 +16,7 @@ export interface UpdateMyInfoPayload {
  * @returns {Promise} Logout result
  */
 export const logout = async () : Promise<ApiResponse<string>> => {
-  return instance.post('/public/auth/logout')
+  return instance.post('/auth/logout')
 }
 
 /**

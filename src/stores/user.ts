@@ -52,9 +52,8 @@ export const useUserStore = defineStore('user', {
       }
     }
   },
-  persist: ({
-    key: 'user-store',
-    storage: localStorage,
-    paths: ['token', 'userInfo']
-  } as any)
+  persist: {
+    key: 'wristo-user',
+    storage: localStorage
+  }
 })

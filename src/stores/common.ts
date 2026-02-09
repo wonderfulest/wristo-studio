@@ -71,7 +71,7 @@ export const useEnumStore = defineStore('enum', {
   },
   persist: {
     key: 'wristo-enums',
-    storage: sessionStorage,
+    storage: localStorage,
     pick: ['options', 'loaded'],
   },
 })
