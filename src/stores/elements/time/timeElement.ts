@@ -43,7 +43,7 @@ async function createBitmapTimeGroup(params: {
 
   const images: any[] = []
   const fontSize = Number(options.fontSize) || 24
-  const spacing = 4
+  const spacing = options.fontGap != null ? Number(options.fontGap) : 4
   let currentX = 0
 
   console.debug('[time/bitmap] createBitmapTimeGroup', {
@@ -104,6 +104,7 @@ async function createBitmapTimeGroup(params: {
   group.isBitmapTimeGroup = true
   group.fontSize = fontSize
   group.fill = options.fill ?? '#ffffff'
+  ;(group as any).fontGap = spacing
   group.hasControls = false
 
   return group as FabricElement
@@ -226,6 +227,7 @@ export const useTimeStore = defineStore('timeStore', {
                 formatter: fmt,
                 fontRenderType: 'bitmap',
                 bitmapFontId: obj.bitmapFontId,
+                fontGap: (obj as any).fontGap,
               } as TimeElementConfig,
             })
             const index = canvas.getObjects().indexOf(obj)
@@ -358,6 +360,7 @@ export const useTimeStore = defineStore('timeStore', {
                 formatter,
                 fontRenderType: 'bitmap',
                 bitmapFontId: fontId,
+                fontGap: (config as any).fontGap ?? (obj as any).fontGap,
                 topBase: 0,
               } as TimeElementConfig,
             })
@@ -392,7 +395,8 @@ export const useTimeStore = defineStore('timeStore', {
             config.top !== undefined ||
             config.originX !== undefined ||
             config.originY !== undefined ||
-            config.fill !== undefined
+            config.fill !== undefined ||
+            (config as any).fontGap !== undefined
 
           if (shouldRebuild) {
             try {
@@ -414,6 +418,7 @@ export const useTimeStore = defineStore('timeStore', {
                   formatter,
                   fontRenderType: 'bitmap',
                   bitmapFontId: fontId,
+                  fontGap: (config as any).fontGap ?? (obj as any).fontGap,
                   topBase: 0,
                 } as TimeElementConfig,
               })
@@ -493,6 +498,7 @@ export const useTimeStore = defineStore('timeStore', {
         formatter: Number((element as any).formatter ?? 0),
         fontRenderType: (element as any).fontRenderType ?? 'truetype',
         bitmapFontId: (element as any).bitmapFontId ?? null,
+        fontGap: (element as any).fontGap,
         // 仅用于导出：文字 baseline 的纵坐标
         topBase: encodeTopBaseForElement(element),
       }
@@ -512,6 +518,7 @@ export const useTimeStore = defineStore('timeStore', {
         formatter: config.formatter,
         fontRenderType: config.fontRenderType ?? 'truetype',
         bitmapFontId: config.bitmapFontId ?? null,
+        fontGap: config.fontGap,
       }
       return elementConfig as Partial<FabricElement>
     },

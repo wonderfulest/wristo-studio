@@ -27,6 +27,14 @@
           <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
         </el-select>
       </el-form-item>
+      <el-form-item v-if="fontRenderType === 'bitmap'" label="Font Gap">
+        <el-input-number
+          v-model.number="props.element.fontGap"
+          :min="0"
+          :max="100"
+          @change="(v) => updateElement({ fontGap: v })"
+        />
+      </el-form-item>
       <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions"

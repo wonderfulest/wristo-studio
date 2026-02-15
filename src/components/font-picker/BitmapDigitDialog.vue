@@ -8,12 +8,13 @@
   >
     <el-tabs v-model="activeTab">
       <el-tab-pane label="DIGIT" name="digit" />
-      <el-tab-pane label="SYMBOL" name="symbol" disabled />
+      <el-tab-pane label="SYMBOL" name="symbol" />
       <el-tab-pane label="OTHER" name="other" disabled />
       <el-tab-pane label="CUSTOM" name="custom" disabled />
     </el-tabs>
 
-    <div class="bitmap-rows">
+    <!-- DIGIT 0-9 -->
+    <div v-if="activeTab === 'digit'" class="bitmap-rows">
       <div
         v-for="row in localRows"
         :key="row.index"
@@ -49,6 +50,42 @@
       </div>
     </div>
 
+    <!-- SYMBOL，例如 ':' -->
+    <div v-else-if="activeTab === 'symbol'" class="bitmap-rows">
+      <div
+        v-for="row in localSymbolRows"
+        :key="row.index"
+        class="bitmap-row"
+      >
+        <div class="bitmap-row-index">{{ row.index }}</div>
+        <div class="bitmap-row-preview" :class="{ empty: !row.imageUrl }">
+          <el-upload
+            class="bitmap-upload"
+            :show-file-list="false"
+            :auto-upload="false"
+            accept="image/*"
+            @change="(file) => handleFileChange(file, row.index)"
+          >
+            <template v-if="row.imageUrl">
+              <img :src="row.imageUrl" class="bitmap-image" alt="symbol preview" />
+            </template>
+            <template v-else>
+              <button type="button" class="bitmap-add-btn">+</button>
+            </template>
+          </el-upload>
+        </div>
+        <div class="bitmap-row-height">317px</div>
+        <el-button
+          size="small"
+          class="bitmap-row-reset"
+          :disabled="!row.imageUrl"
+          @click="emit('reset-row', row.index)"
+        >
+          Reset
+        </el-button>
+      </div>
+    </div>
+
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="onCancel">Cancel</el-button>
@@ -62,19 +99,22 @@
 import { ref, watch } from 'vue'
 
 export interface DigitRowState {
-  index: number
+  // 字符值，例如 '0'-'9' 或 ':'
+  index: string
   imageUrl?: string
 }
 
 const props = defineProps<{
   modelValue: boolean
   rows: DigitRowState[]
+  // 符号行，例如 ':'
+  symbolRows?: DigitRowState[]
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
-  (e: 'reset-row', index: number): void
-  (e: 'upload-row', payload: { index: number; file: File; previewUrl: string }): void
+  (e: 'reset-row', index: string): void
+  (e: 'upload-row', payload: { index: string; file: File; previewUrl: string }): void
   (e: 'confirm'): void
 }>()
 
@@ -88,6 +128,7 @@ watch(visibleRef, v => emit('update:modelValue', v))
 const activeTab = ref<'digit' | 'symbol' | 'other' | 'custom'>('digit')
 
 const localRows = ref<DigitRowState[]>([])
+const localSymbolRows = ref<DigitRowState[]>([])
 watch(
   () => props.rows,
   (rows) => {
@@ -96,13 +137,25 @@ watch(
   { immediate: true, deep: true },
 )
 
-const handleFileChange = (file: { raw?: File }, index: number) => {
+watch(
+  () => props.symbolRows,
+  (rows) => {
+    localSymbolRows.value = (rows || []).map(r => ({ ...r }))
+  },
+  { immediate: true, deep: true },
+)
+
+const handleFileChange = (file: any, index: string) => {
   if (!file?.raw) return
   const raw = file.raw as File
   const url = URL.createObjectURL(raw)
   const row = localRows.value.find(r => r.index === index)
   if (row) {
     row.imageUrl = url
+  }
+  const symbolRow = localSymbolRows.value.find(r => r.index === index)
+  if (symbolRow) {
+    symbolRow.imageUrl = url
   }
   emit('upload-row', { index, file: raw, previewUrl: url })
 }

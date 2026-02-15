@@ -7,6 +7,8 @@ export interface TimeElementConfig extends TextElementConfig {
   fontRenderType?: 'truetype' | 'bitmap'
   // bitmap 字体 ID，仅在 fontRenderType === 'bitmap' 时使用
   bitmapFontId?: number | null
+  // bitmap 字体字符间距（像素），仅在 fontRenderType === 'bitmap' 时使用
+  fontGap?: number
   // 仅用于导出：文字 baseline 的纵坐标
   topBase: number
 }

@@ -25,6 +25,7 @@
     <BitmapDigitDialog
       v-model="bitmapDialogVisible"
       :rows="digitRows"
+      :symbol-rows="symbolRows"
       @reset-row="handleResetRowByIndex"
       @upload-row="handleUploadRow"
       @confirm="confirmBitmapDialog"
@@ -70,14 +71,17 @@ const activeTab = ref<'digit' | 'symbol' | 'other' | 'custom'>('digit')
 const currentFontName = ref<string>('')
 const isTempRandFont = ref<boolean>(false)
 type BitmapRow = {
-  index: number
+  // 字符值：'0'-'9' 或 ':' 等
+  index: string
   hasValue: boolean
   relationId?: number
   imageUrl?: string
 }
 
-// 内部存储 DIGIT 行，index 0-9
-const rows = ref<BitmapRow[]>(Array.from({ length: 10 }, (_, i) => ({ index: i, hasValue: false })))
+// 内部存储 DIGIT 行，index '0'-'9'
+const rows = ref<BitmapRow[]>(Array.from({ length: 10 }, (_, i) => ({ index: String(i), hasValue: false })))
+// SYMBOL 行，目前只支持 ':'
+const symbolRowList = ref<BitmapRow[]>([{ index: ':', hasValue: false }])
 
 // bitmap font list state
 const bitmapFonts = ref<BitmapFontVO[]>([])
@@ -88,6 +92,7 @@ const bitmapTotal = ref(0)
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
 const digitRows = computed<DigitRowState[]>(() => rows.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
+const symbolRows = computed<DigitRowState[]>(() => symbolRowList.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
 // bitmap 字体的显示名称：优先使用当前字体名，其次从列表中查找，最后才 fallback 到占位
 const selectedFontLabel = computed(() => {
   const id = props.modelValue
@@ -178,22 +183,40 @@ const onDesignerScroll = () => {
   }
 }
 
-// 从后端加载 bitmap 字体的字符绑定，并映射到 0-4 行（仅 DIGIT 0-4）
+// 从后端加载 bitmap 字体的字符绑定，映射到 DIGIT 0-9 和 SYMBOL ':'
 const loadBitmapRows = async (fontId: number) => {
   try {
     const res = await listBitmapFontChars(fontId)
     const list = (res.data || []) as BitmapFontAssetRelationVO[]
     const digitMap = new Map<string, BitmapFontAssetRelationVO>()
-    list
-      .filter(r => r.charType === 'digital')
-      .forEach(r => {
-        if (typeof r.charValue === 'string') {
-          digitMap.set(r.charValue, r)
-        }
-      })
+    const symbolMap = new Map<string, BitmapFontAssetRelationVO>()
 
+    list.forEach(r => {
+      if (typeof r.charValue !== 'string') return
+      if (r.charType === 'digital') {
+        digitMap.set(r.charValue, r)
+      } else if (r.charType === 'symbol') {
+        symbolMap.set(r.charValue, r)
+      }
+    })
+
+    // digits '0'-'9'
     rows.value = rows.value.map(row => {
-      const rel = digitMap.get(String(row.index))
+      const rel = digitMap.get(row.index)
+      if (!rel) {
+        return { index: row.index, hasValue: false }
+      }
+      return {
+        index: row.index,
+        hasValue: true,
+        relationId: rel.id,
+        imageUrl: rel.image?.previewUrl || rel.image?.url,
+      }
+    })
+
+    // symbol ':'
+    symbolRowList.value = symbolRowList.value.map(row => {
+      const rel = symbolMap.get(row.index)
       if (!rel) {
         return { index: row.index, hasValue: false }
       }
@@ -290,8 +313,12 @@ const addCustomFont = () => {
   dialogVisible.value = true
 }
 
-const handleResetRowByIndex = async (index: number) => {
-  const row = rows.value.find(r => r.index === index)
+const handleResetRowByIndex = async (index: string) => {
+  // 先在 digit 中找
+  let row = rows.value.find(r => r.index === index)
+  if (!row) {
+    row = symbolRowList.value.find(r => r.index === index)
+  }
   if (!row || !row.relationId) return
   try {
     await unbindBitmapFontAsset(row.relationId)
@@ -303,14 +330,15 @@ const handleResetRowByIndex = async (index: number) => {
   }
 }
 
-const handleUploadRow = async (payload: { index: number; file: File; previewUrl: string }) => {
+const handleUploadRow = async (payload: { index: string; file: File; previewUrl: string }) => {
   if (!props.modelValue) return
   try {
+    const isSymbol = payload.index === ':'
     await bindBitmapFontAsset({
       file: payload.file,
       fontId: props.modelValue,
-      charType: 'digital',
-      charValue: String(payload.index),
+      charType: isSymbol ? 'symbol' : 'digital',
+      charValue: payload.index,
     })
     // 绑定成功后重新加载该字体的行数据
     await loadBitmapRows(props.modelValue)
