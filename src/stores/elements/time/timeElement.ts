@@ -4,7 +4,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import moment from 'moment'
 import { FabricText, TextProps, Group, FabricImage } from 'fabric'
-import { TimeFormatOptions } from '@/config/settings'
+import { TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
@@ -45,14 +45,6 @@ async function createBitmapTimeGroup(params: {
   const fontSize = Number(options.fontSize) || 24
   const spacing = options.fontGap != null ? Number(options.fontGap) : 4
   let currentX = 0
-
-  console.debug('[time/bitmap] createBitmapTimeGroup', {
-    id,
-    text,
-    fontId,
-    fontSize,
-    charCount: chars.length,
-  })
 
   for (const ch of text) {
     const rel = charMap.get(ch)
@@ -128,7 +120,23 @@ export const useTimeStore = defineStore('timeStore', {
       if (formatterOption) {
         format = formatterOption.label
       }
-      return moment(date).format(format)
+      const m = moment(date)
+      const hour = m.format('HH') // 00~23
+      const minute = m.format('mm') // 00~59
+
+      switch (formatter) {
+        case TimeFormatConstants.H10:
+          return hour[0]        // 小时十位
+        case TimeFormatConstants.H:
+          return hour[1]        // 小时个位
+        case TimeFormatConstants.M10:
+          return minute[0]      // 分钟十位
+        case TimeFormatConstants.M:
+          return minute[1]      // 分钟个位
+        default: {
+          return moment(date).format(format)
+        }
+      }
     },
     async addElement(options: TimeElementConfig): Promise<FabricElement> {
       if (!this.baseStore.canvas) {
@@ -137,15 +145,6 @@ export const useTimeStore = defineStore('timeStore', {
       try {
         const text = this.formatTime(new Date(), options.formatter)
         const id = options.id || nanoid()
-
-        console.debug('[time/addElement]', {
-          id,
-          text,
-          fontRenderType: options.fontRenderType,
-          bitmapFontId: options.bitmapFontId,
-          fontSize: options.fontSize,
-          fontFamily: options.fontFamily,
-        })
 
         // bitmap 模式：创建由图片组成的 Group
         if (options.fontRenderType === 'bitmap' && options.bitmapFontId) {
@@ -198,16 +197,6 @@ export const useTimeStore = defineStore('timeStore', {
         if (!obj || obj.eleType !== 'time') continue
         const fmt = obj.get ? obj.get('formatter') : obj.formatter
         const txt = this.formatTime(date, fmt)
-
-        console.debug('[time/updateByTime] before update', {
-          id: obj.id,
-          txt,
-          fontRenderType: obj.fontRenderType,
-          bitmapFontId: obj.bitmapFontId,
-          fontSize: obj.fontSize,
-          type: obj.type,
-        })
-
         const isGroup = (obj as any).type === 'group'
         // bitmap 模式：重建 Group 内的图片（用真实类型判断，避免 fontRenderType 被覆盖）
         if (isGroup && obj.bitmapFontId) {
@@ -268,14 +257,6 @@ export const useTimeStore = defineStore('timeStore', {
       if (!this.baseStore.canvas) return
       const obj: FabricElement = this.baseStore.canvas.getObjects().find((o: any) => o.id === element.id)
       if (!obj) return
-
-      console.debug('[time/updateElement] start', {
-        id: obj.id,
-        fromType: (obj as any).type,
-        fromRender: (obj as any).fontRenderType,
-        toRender: config.fontRenderType,
-        bitmapFontId: config.bitmapFontId,
-      })
 
       const currentLeft = obj.left
       const currentTop = obj.top

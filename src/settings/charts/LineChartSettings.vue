@@ -172,7 +172,7 @@
         />
       </el-form-item>
 
-          <el-form-item label="时间格式">
+      <el-form-item label="时间格式">
         <el-select v-model="element.timeFormat" @change="updateElement">
           <el-option label="HH:mm" value="HH:mm" />
           <el-option label="mm:ss" value="mm:ss" />
