@@ -8,6 +8,22 @@
     >
       <div class="info" @click="() => emit('select', font)">
         <div class="name">{{ font.fontName }}</div>
+        <!-- glyph preview: 0-9 and ':' -->
+        <div class="glyph-preview" v-if="font.id && glyphMap[font.id]">
+          <div
+            v-for="ch in DIGIT_ORDER"
+            :key="ch"
+            class="glyph-cell"
+          >
+            <img
+              v-if="getGlyphUrl(font.id, ch)"
+              :src="getGlyphUrl(font.id, ch)"
+              class="glyph-img"
+              :alt="`${font.fontName} ${ch}`"
+            />
+            <span v-else class="glyph-placeholder">{{ ch }}</span>
+          </div>
+        </div>
       </div>
       <div class="actions">
         <el-button type="text" size="small" @click.stop="() => emit('edit', font)">
@@ -35,7 +51,9 @@
 </template>
 
 <script setup lang="ts">
-import type { BitmapFontVO } from '@/api/wristo/bitmapFont'
+import { ref, watch } from 'vue'
+import type { BitmapFontVO, BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
+import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 
 const props = defineProps<{
   fonts: BitmapFontVO[]
@@ -50,6 +68,53 @@ const emit = defineEmits<{
   (e: 'edit', font: BitmapFontVO): void
   (e: 'page-change', page: number): void
 }>()
+
+// 需要展示的字符顺序：0-9 和 ':'
+const DIGIT_ORDER = ['0','1','2','3','4','5','6','7','8','9',':'] as const
+
+// 每个字体 id 对应的字符图片 url 映射，例如 { 1: { '0': 'url0', '1': 'url1', ... } }
+const glyphMap = ref<Record<number, Record<string, string>>>({})
+const loadingMap = ref<Record<number, boolean>>({})
+
+const loadGlyphsForFont = async (fontId: number) => {
+  if (!fontId) return
+  if (glyphMap.value[fontId] || loadingMap.value[fontId]) return
+  loadingMap.value[fontId] = true
+  try {
+    const res = await listBitmapFontChars(fontId)
+    const list = (res.data || []) as BitmapFontAssetRelationVO[]
+    const charMap: Record<string, string> = {}
+    list.forEach((r) => {
+      if (typeof r.charValue !== 'string') return
+      if (!DIGIT_ORDER.includes(r.charValue as any)) return
+      const img = (r as any).image
+      const url = img?.previewUrl || img?.url
+      if (url) {
+        charMap[r.charValue] = url
+      }
+    })
+    glyphMap.value = { ...glyphMap.value, [fontId]: charMap }
+  } catch (e) {
+    // 忽略单个字体加载失败
+  } finally {
+    loadingMap.value[fontId] = false
+  }
+}
+
+// 当列表字体变化时，为当前页字体预加载字符图片
+watch(
+  () => props.fonts,
+  (fonts) => {
+    (fonts || []).forEach((f) => {
+      if (f?.id) {
+        void loadGlyphsForFont(f.id)
+      }
+    })
+  },
+  { immediate: true },
+)
+
+const getGlyphUrl = (fontId: number, ch: string) => glyphMap.value[fontId]?.[ch]
 </script>
 
 <style scoped>
@@ -100,6 +165,35 @@ const emit = defineEmits<{
   gap: 6px;
   font-size: 11px;
   color: #909399;
+}
+
+.glyph-preview {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.glyph-cell {
+  width: 18px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #f5f7fa;
+  overflow: hidden;
+}
+
+.glyph-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.glyph-placeholder {
+  font-size: 11px;
+  color: #c0c4cc;
 }
 
 .tag {

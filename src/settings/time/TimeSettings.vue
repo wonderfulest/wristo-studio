@@ -18,7 +18,7 @@
         <template v-else>
           <BitmapFontPicker
             v-model="props.element.bitmapFontId"
-            @change="updateElement({ bitmapFontId: $event })"
+            @change="updateElement({ fontRenderType: 'bitmap', bitmapFontId: $event })"
           />
         </template>
       </el-form-item>
