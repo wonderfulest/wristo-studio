@@ -11,7 +11,7 @@
         <template v-if="fontRenderType === 'truetype'">
           <font-picker 
             v-model="safeFontFamily" 
-            :type="fontTypeForTime"
+            :type="FontTypes.TEXT_FONT"
             @change="updateElement({ fontFamily: $event })" 
           />
         </template>
@@ -87,6 +87,7 @@ import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
 import AlignXButtons from '@/settings/common/AlignXButtons.vue'
 import PositionInputs from '@/settings/common/PositionInputs.vue'
+import { FontTypes } from '@/constants/fonts'
 
 const props = defineProps({
   element: {
@@ -127,19 +128,6 @@ const safeFontFamily = computed({
   set(v) {
     props.element.fontFamily = v
   }
-})
-
-const fontTypeForTime = computed(() => {
-  const fmt = props.element.formatter
-  const hourOrMinuteFormats = [
-    TimeFormatConstants.HH_MM,
-    TimeFormatConstants.HH_MM_SS,
-    TimeFormatConstants.HH,
-    TimeFormatConstants.MM,
-    TimeFormatConstants.HH_COLON,
-    TimeFormatConstants.COLON_MM,
-  ]
-  return hourOrMinuteFormats.includes(fmt) ? 'number_font' : 'text_font'
 })
 
 // 加载字体列表

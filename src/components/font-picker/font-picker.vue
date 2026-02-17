@@ -15,11 +15,11 @@
         <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
       </div>
       <!-- Number font library guidance (only for number fonts) -->
-      <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
+      <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
         <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
           Custom your number fonts
         </button>
-      </div>
+      </div> -->
       <!-- Search (extracted component) -->
       <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
       <!-- Recent fonts -->
@@ -67,7 +67,7 @@ const props = defineProps({
     type: String,
     required: true
   },
-  // Optional font type filter, e.g. 'number_font', 'text_font', 'icon_font', ...
+  // Optional font type filter, e.g. 'text_font', 'icon_font', ...
   type: {
     type: String,
     required: false,

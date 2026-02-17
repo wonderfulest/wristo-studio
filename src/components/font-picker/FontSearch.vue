@@ -25,10 +25,10 @@
     <template v-if="searchQuery || monospaceChecked || italicChecked">
       <!-- Local search results -->
       <template v-if="filteredFonts.length > 0">
-        <div class="section-header">
+        <!-- <div class="section-header">
           <span class="arrow expanded">›</span>
           Local Search Results
-        </div>
+        </div> -->
         <div class="section-content">
             <div
               v-for="font in filteredFonts"
@@ -49,10 +49,10 @@
 
       <!-- Remote search results -->
       <template v-if="remoteSearchResults.length > 0">
-        <div class="section-header">
+        <!-- <div class="section-header">
           <span class="arrow expanded">›</span>
           Online Search Results
-        </div>
+        </div> -->
         <div class="section-content">
           <div
             v-for="font in remoteSearchResults"
@@ -125,6 +125,10 @@ const onInput = () => {
   searchTimer = window.setTimeout(filterFonts, 250)
 }
 
+const onMounted = () => {
+  filterFonts()
+}
+onMounted()
 // immediate refresh when toggling filters
 const onFilterChange = () => {
   if (searchTimer) window.clearTimeout(searchTimer)

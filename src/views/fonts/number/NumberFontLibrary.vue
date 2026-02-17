@@ -231,7 +231,7 @@ const loadFonts = async () => {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       name: searchQuery.value || undefined,
-      type: 'number_font'
+      type: 'text_font'
     })
     const list = data?.list ?? []
     total.value = data?.total ?? 0
@@ -409,23 +409,6 @@ const uploadSingleFont = async (item: UploadQueueItem) => {
 
   const byName = await getFontByName(fontName)
   const usedExisting = Boolean(byName.data)
-
-  const mapWeight = (w?: number, sub?: string): string => {
-    const subLower = (sub || '').toLowerCase()
-    if (/bold/.test(subLower)) return 'bold'
-    if (/semi[- ]?bold|demi[- ]?bold/.test(subLower)) return 'semibold'
-    if (/medium/.test(subLower)) return 'medium'
-    if (/light|extralight|ultralight/.test(subLower)) return 'light'
-    if (/thin|hairline/.test(subLower)) return 'thin'
-    if (typeof w !== 'number') return 'regular'
-    if (w >= 900) return 'black'
-    if (w >= 800) return 'extrabold'
-    if (w >= 700) return 'bold'
-    if (w >= 600) return 'semibold'
-    if (w >= 500) return 'medium'
-    if (w <= 300) return 'light'
-    return 'regular'
-  }
 
   let created: DesignFontVO
   if (usedExisting) {

@@ -125,7 +125,7 @@ watch(
 
 .font-list-scroll {
   padding: 8px 12px;
-  max-height: 320px;
+  max-height: 800px;
   overflow-y: auto;
 }
 
