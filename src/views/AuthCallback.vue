@@ -1,7 +1,7 @@
 <template>
   <div class="auth-callback">
-    <p v-if="loading">正在登录，请稍候...</p>
-    <p v-else-if="error">登录失败：{{ error }}</p>
+    <p v-if="loading">Signing in, please wait...</p>
+    <p v-else-if="error">Login failed: {{ error }}</p>
   </div>
 </template>
 
@@ -27,7 +27,7 @@ onMounted(async () => {
   
   const code = route.query.code as string
   if (!code) {
-    error.value = '未获取到 code 参数'
+    error.value = 'Failed to get code parameter'
     loading.value = false
     return
   }
@@ -53,11 +53,11 @@ onMounted(async () => {
           
           
         } else {
-          console.error('获取用户信息失败:', userRes)
+          console.error('Failed to get user info:', userRes)
         }
       } catch (e) {
         // 可选：用户信息获取失败处理
-        console.error('获取用户信息失败', e)
+        console.error('Failed to get user info', e)
       }
       
       // 延迟跳转，确保数据保存完成
@@ -66,7 +66,7 @@ onMounted(async () => {
         router.replace('/')
       }, 100)
     } else {
-      error.value = res.msg || '登录失败'
+      error.value = res.msg || 'Login failed'
       const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
       const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
       setTimeout(() => {
@@ -74,7 +74,7 @@ onMounted(async () => {
       }, 5000)
     }
   } catch (e: any) {
-    error.value = e?.response?.data?.msg || e.message || '请求失败'
+    error.value = e?.response?.data?.msg || e.message || 'Request failed'
     const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
     const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
     setTimeout(() => {

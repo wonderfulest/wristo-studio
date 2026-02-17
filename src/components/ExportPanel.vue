@@ -2,10 +2,10 @@
   <el-dialog :model-value="isDialogVisible" title="导出配置" class="export-dialog" @open="openDialog" @update:model-value="emit('update:isDialogVisible', $event)" :before-close="closeDialog">
     <div v-if="uploading" class="upload-progress">
       <div class="upload-header">
-        <h3>正在上传...</h3>
+        <h3>Uploading...</h3>
         <div class="upload-info">
           <div class="info-item">
-            <el-tag type="primary" effect="dark" size="large">进度: {{ currentProgress }}%</el-tag>
+            <el-tag type="primary" effect="dark" size="large">Progress: {{ currentProgress }}%</el-tag>
           </div>
           <div class="info-item">
             <el-tag type="success" effect="dark" size="large">状态: {{ currentStatus }}</el-tag>
