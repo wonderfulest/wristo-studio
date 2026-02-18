@@ -6,6 +6,16 @@
     append-to-body
     @close="handleClose"
   >
+    <div class="bitmap-dialog-header-extra">
+      <a
+        href="https://youtu.be/gNikiDDrrpU?si=FptKoIr0HL0EhX7R"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="bitmap-tutorial-link"
+      >
+        Watch tutorial (YouTube)
+      </a>
+    </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="DIGIT" name="digit" />
       <el-tab-pane label="SYMBOL" name="symbol" />
@@ -241,5 +251,21 @@ const handleClose = () => {
   justify-content: flex-end;
   width: 100%;
   gap: 8px;
+}
+
+.bitmap-dialog-header-extra {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.bitmap-tutorial-link {
+  font-size: 12px;
+  color: #409eff;
+  text-decoration: none;
+}
+
+.bitmap-tutorial-link:hover {
+  text-decoration: underline;
 }
 </style>

@@ -68,38 +68,43 @@
         <!-- Time subgroup -->
         <div class="menu-group">
           <div class="menu-group-title">Time</div>
-          <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'time', { formatter: 0 })">
+          <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.HH_MM, fontSize: 96 })">
             <el-icon><Clock /></el-icon>
             <span>hour:minute</span>
           </el-menu-item>
-          <el-menu-item index="time/second" @click="handleAddElement('time', 'time', { formatter: 4 })">
+          <el-menu-item index="time/second" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.SS, fontSize: 36 })">
             <el-icon><Clock /></el-icon>
             <span>second</span>
           </el-menu-item>
-          <el-menu-item index="time/hour-minute-ampm" @click="addHourMinuteAmPm">
+          <el-menu-item index="time/am-pm" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.A, fontSize: 30 })">
             <el-icon><Clock /></el-icon>
-            <span>hour:minute am/pm</span>
+            <span>am/pm</span>
           </el-menu-item>
         </div>
         
         <!-- Date subgroup -->
         <div class="menu-group">
           <div class="menu-group-title">Date</div>
-          <el-menu-item index="time/weekday-month-day">
+          <el-menu-item
+            index="time/month-day-with-weekday"
+            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MMM_D_DDD, fontSize: 36 })"
+          >
             <el-icon><Calendar /></el-icon>
-            <span>weekday month day</span>
+            <span>month day (with weekday)</span>
           </el-menu-item>
-          <el-menu-item index="time/month-day">
+          <el-menu-item
+            index="time/month-day"
+            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MMM_D, fontSize: 36 })"
+          >
             <el-icon><Calendar /></el-icon>
             <span>month day</span>
           </el-menu-item>
-          <el-menu-item index="time/month-slash-day">
+          <el-menu-item
+            index="time/month-day-slash"
+            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MM_DD_YYYY, fontSize: 36 })"
+          >
             <el-icon><Calendar /></el-icon>
-            <span>month/day</span>
-          </el-menu-item>
-          <el-menu-item index="time/iso-week">
-            <el-icon><Calendar /></el-icon>
-            <span>ISO week number</span>
+            <span>month/day/year</span>
           </el-menu-item>
         </div>
         
@@ -144,23 +149,38 @@
         </template>
         <div class="menu-group">
           <div class="menu-group-title">DataField</div>
-          <el-menu-item index="health/heart-rate" @click="handleAddElement('metric', 'data')">
+          <el-menu-item
+            index="health/heart-rate"
+            @click="handleAddDataField(':FIELD_TYPE_HEART_RATE')"
+          >
             <el-icon><Monitor /></el-icon>
             <span>Heart Rate</span>
           </el-menu-item>
-          <el-menu-item index="health/steps" @click="handleAddElement('metric', 'data')">
+          <el-menu-item
+            index="health/steps"
+            @click="handleAddDataField(':FIELD_TYPE_STEPS')"
+          >
             <el-icon><TrendCharts /></el-icon>
             <span>Steps</span>
           </el-menu-item>
-          <el-menu-item index="health/calories" @click="handleAddElement('metric', 'data')">
+          <el-menu-item
+            index="health/calories"
+            @click="handleAddDataField(':FIELD_TYPE_CALORIES')"
+          >
             <el-icon><Aim /></el-icon>
             <span>Calories</span>
           </el-menu-item>
-          <el-menu-item index="health/distance" @click="handleAddElement('metric', 'data')">
+          <el-menu-item
+            index="health/distance"
+            @click="handleAddDataField(':FIELD_TYPE_DISTANCE')"
+          >
             <el-icon><Aim /></el-icon>
             <span>Distance</span>
           </el-menu-item>
-          <el-menu-item index="health/floors" @click="handleAddElement('metric', 'data')">
+          <el-menu-item
+            index="health/floors"
+            @click="handleAddDataField(':FIELD_TYPE_FLOORS_CLIMBED')"
+          >
             <el-icon><TrendCharts /></el-icon>
             <span>Floors</span>
           </el-menu-item>
@@ -294,6 +314,11 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
+import { usePropertiesStore } from '@/stores/properties'
+import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
+import { DateFormatConstants } from '@/config/elements/options/dateFormats'
+import { DataTypeOptions } from '@/config/settings'
+
 import { getAddElement } from '@/utils/elementCodec/registry'
 import {
   Operation,
@@ -338,6 +363,7 @@ const baseStore = useBaseStore()
 const exportStore = useExportStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
+const propertiesStore = usePropertiesStore()
 const activeMenu = computed(() => {
   return route.path
 })
@@ -424,15 +450,72 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
   }
 }
 
-// Composite add: HH:mm and AM/PM time elements
-const addHourMinuteAmPm = async () => {
+// Quick add: create a new data property (DataN / data_N) and add paired icon + data elements
+// metricSymbol: optional, used to choose default data option (Heart Rate, Steps, etc.)
+const handleAddDataField = async (metricSymbol) => {
   try {
-    // Add HH:mm
-    await handleAddElement('time', 'time', { formatter: 0, fontSize: 16 })
-    // Add AM/PM time element
-    await handleAddElement('time', 'time', { formatter: 7 })
+    // Find next available index based on existing data_* properties
+    const allProps = propertiesStore.allProperties
+    let maxIndex = 0
+    Object.keys(allProps || {}).forEach((key) => {
+      const match = key.match(/^data_(\d+)$/)
+      if (match) {
+        const num = Number(match[1]) || 0
+        if (num > maxIndex) maxIndex = num
+      }
+    })
+    const nextIndex = maxIndex + 1
+    const propertyKey = `data_${nextIndex}`
+    const title = `Data ${nextIndex}`
+
+    // Choose default option based on metricSymbol (fallback to first)
+    let defaultOption = DataTypeOptions[0]
+    if (metricSymbol) {
+      const found = DataTypeOptions.find((opt) => opt.metricSymbol === metricSymbol)
+      if (found) defaultOption = found
+    }
+
+    // If property already exists (edge case), just reuse it; otherwise create with default value
+    if (!allProps[propertyKey]) {
+      propertiesStore.addProperty({
+        key: propertyKey,
+        type: 'data',
+        title,
+        options: DataTypeOptions,
+        defaultValue: defaultOption.value,
+      })
+    }
+
+    // Base position from default data config
+    const baseConfig = (elementConfigs.metric && elementConfigs.metric.data) || {}
+    const baseLeft = baseConfig.left ?? 227
+    const baseTop = baseConfig.top ?? 227
+    const gap = (baseConfig.fontSize ?? 36) * 0.1
+    const iconLeft = baseLeft - gap / 2
+    const dataLeft = baseLeft + gap / 2
+
+    // Add icon bound to this data property (left side, right-aligned)
+    await handleAddElement('metric', 'icon', {
+      dataProperty: propertyKey,
+      goalProperty: null,
+      metricSymbol,
+      left: iconLeft,
+      top: baseTop,
+      originX: 'right',
+    })
+
+    // Add data text bound to this data property (right side, left-aligned)
+    await handleAddElement('metric', 'data', {
+      dataProperty: propertyKey,
+      goalProperty: null,
+      metricSymbol,
+      left: dataLeft,
+      top: baseTop,
+      originX: 'left',
+    })
   } catch (e) {
-    console.error('Failed to add hour:minute am/pm elements:', e)
+    console.error('Failed to add data field (icon + data):', e)
+    messageStore.error('Failed to add data field')
   }
 }
 
