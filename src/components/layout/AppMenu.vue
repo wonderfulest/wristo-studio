@@ -7,296 +7,53 @@
       class="menu-list"
     >
       <!-- Actions group and items -->
-      <el-sub-menu index="actions">
-        <template #title>
-          <el-icon><Operation /></el-icon>
-          <span>Actions</span>
-        </template>
-        <!-- View Json Config -->
-        <el-menu-item index="actions/viewJsonConfig">
-          <el-icon><View /></el-icon>
-          <span>View</span>
-          <span class="shortcut-hint">⌘ + .</span>
-        </el-menu-item>
-        <!-- Build -->
-        <el-menu-item index="actions/build" @click="handleBuild">
-          <el-icon><Box /></el-icon>
-          <span>Build</span>
-        </el-menu-item>
-        <!-- Save -->
-        <el-menu-item index="actions/save" @click="handleSave">
-          <el-icon><Upload /></el-icon>
-          <span>Save</span>
-        </el-menu-item>
-        <el-menu-item index="actions/screenshot" @click="handleScreenshot">
-          <el-icon><Picture /></el-icon>
-          <span>Screenshot</span>
-        </el-menu-item>
-        <!-- Divider -->
-        <el-divider direction="horizontal" class="menu-sub-divider" />
-        <!-- App Properties -->
-        <el-menu-item index="actions/properties">
-          <el-icon><Setting /></el-icon>
-          <span>App Properties</span>
-          <span class="shortcut-hint">⌘ + ,</span>
-        </el-menu-item>
-        <!-- Key guidelines toggle -->
-        <el-menu-item index="actions/showKeyGuidelines" @click="toggleKeyGuidelines">
-          <el-icon><Setting /></el-icon>
-          <span>{{ showKeyGuidelines ? 'Hide Key Guidelines' : 'Show Key Guidelines' }}</span>
-          <span class="shortcut-hint">⌘ + ;</span>
-        </el-menu-item>
-      </el-sub-menu>
-
-      <!-- Other main menu items -->
-      <el-menu-item index="edit">
+      <AppMenuActions
+        :on-build="handleBuild"
+        :on-save="handleSave"
+        :on-screenshot="handleScreenshot"
+        :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
+        :on-open-editor-settings="() => {
+          console.log('[AppMenu] onOpenEditorSettings called', editorSettingsDialog)
+          if (!editorSettingsDialog) {
+            console.warn('[AppMenu] editorSettingsDialog ref is not ready', editorSettingsDialog)
+            return
+          }
+          if (typeof editorSettingsDialog.openDialog !== 'function') {
+            console.warn('[AppMenu] editorSettingsDialog.openDialog is not a function', editorSettingsDialog)
+            return
+          }
+          editorSettingsDialog.openDialog()
+        }"
+      />
+      <el-menu-item index="actions/editDesign" @click="handleEditDesign">
         <el-icon><Edit /></el-icon>
-        <span>Edit</span>
-      </el-menu-item>
-      <el-menu-item index="view">
-        <el-icon><View /></el-icon>
-        <span>View</span>
+        <span>Edit Design</span>
       </el-menu-item>
       <!-- Main menu divider -->
       <el-divider direction="vertical" class="menu-divider" />
       <!-- Time group and items -->
-      <el-sub-menu index="time">
-        <template #title>
-          <el-icon><Timer /></el-icon>
-          <span>Time</span>
-        </template>
-        <!-- Time subgroup -->
-        <div class="menu-group">
-          <div class="menu-group-title">Time</div>
-          <el-menu-item index="time/hour-minute" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.HH_MM, fontSize: 96 })">
-            <el-icon><Clock /></el-icon>
-            <span>hour:minute</span>
-          </el-menu-item>
-          <el-menu-item index="time/second" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.SS, fontSize: 36 })">
-            <el-icon><Clock /></el-icon>
-            <span>second</span>
-          </el-menu-item>
-          <el-menu-item index="time/am-pm" @click="handleAddElement('time', 'time', { formatter: TimeFormatConstants.A, fontSize: 30 })">
-            <el-icon><Clock /></el-icon>
-            <span>am/pm</span>
-          </el-menu-item>
-        </div>
-        
-        <!-- Date subgroup -->
-        <div class="menu-group">
-          <div class="menu-group-title">Date</div>
-          <el-menu-item
-            index="time/month-day-with-weekday"
-            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MMM_D_DDD, fontSize: 36 })"
-          >
-            <el-icon><Calendar /></el-icon>
-            <span>month day (with weekday)</span>
-          </el-menu-item>
-          <el-menu-item
-            index="time/month-day"
-            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MMM_D, fontSize: 36 })"
-          >
-            <el-icon><Calendar /></el-icon>
-            <span>month day</span>
-          </el-menu-item>
-          <el-menu-item
-            index="time/month-day-slash"
-            @click="handleAddElement('time', 'date', { formatter: DateFormatConstants.MM_DD_YYYY, fontSize: 36 })"
-          >
-            <el-icon><Calendar /></el-icon>
-            <span>month/day/year</span>
-          </el-menu-item>
-        </div>
-        
-        <!-- Analog subgroup -->
-        <div class="menu-group">
-          <div class="menu-group-title">Analog</div>
-          <el-menu-item index="time/analog-hands">
-            <el-icon><Watch /></el-icon>
-            <span>hour/minute/second hands</span>
-          </el-menu-item>
-          <el-menu-item index="time/image-hour">
-            <el-icon><Watch /></el-icon>
-            <span>image 12-hour hand</span>
-          </el-menu-item>
-          <el-menu-item index="time/image-minute">
-            <el-icon><Watch /></el-icon>
-            <span>image minute hand</span>
-          </el-menu-item>
-          <el-menu-item index="time/image-second">
-            <el-icon><Watch /></el-icon>
-            <span>image second hand</span>
-          </el-menu-item>
-          <el-menu-item index="time/svg-hour">
-            <el-icon><Watch /></el-icon>
-            <span>svg hour hand</span>
-          </el-menu-item>
-          <el-menu-item index="time/svg-minute">
-            <el-icon><Watch /></el-icon>
-            <span>svg minute hand</span>
-          </el-menu-item>
-          <el-menu-item index="time/svg-second">
-            <el-icon><Watch /></el-icon>
-            <span>svg second hand</span>
-          </el-menu-item>
-        </div>
-      </el-sub-menu>
+      <AppMenuTimeGroup @add-element="handleAddElement" />
       <!-- Health data group -->
-      <el-sub-menu index="datafield">
-        <template #title>
-          <el-icon><DataLine /></el-icon>
-          <span>DataField</span>
-        </template>
-        <div class="menu-group">
-          <div class="menu-group-title">DataField</div>
-          <el-menu-item
-            index="health/heart-rate"
-            @click="handleAddDataField(':FIELD_TYPE_HEART_RATE')"
-          >
-            <el-icon><Monitor /></el-icon>
-            <span>Heart Rate</span>
-          </el-menu-item>
-          <el-menu-item
-            index="health/steps"
-            @click="handleAddDataField(':FIELD_TYPE_STEPS')"
-          >
-            <el-icon><TrendCharts /></el-icon>
-            <span>Steps</span>
-          </el-menu-item>
-          <el-menu-item
-            index="health/calories"
-            @click="handleAddDataField(':FIELD_TYPE_CALORIES')"
-          >
-            <el-icon><Aim /></el-icon>
-            <span>Calories</span>
-          </el-menu-item>
-          <el-menu-item
-            index="health/distance"
-            @click="handleAddDataField(':FIELD_TYPE_DISTANCE')"
-          >
-            <el-icon><Aim /></el-icon>
-            <span>Distance</span>
-          </el-menu-item>
-          <el-menu-item
-            index="health/floors"
-            @click="handleAddDataField(':FIELD_TYPE_FLOORS_CLIMBED')"
-          >
-            <el-icon><TrendCharts /></el-icon>
-            <span>Floors</span>
-          </el-menu-item>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Goal</div>
-          <el-menu-item index="goal/progress-bar" @click="handleAddElement('goal', 'goalBar')">
-            <el-icon><Operation /></el-icon>
-            <span>Progress Bar</span>
-          </el-menu-item>
-          <el-menu-item index="goal/progress-arc" @click="handleAddElement('goal', 'goalArc')">
-            <el-icon><Operation /></el-icon>
-            <span>Progress Arc</span>
-          </el-menu-item>
-          <el-menu-item index="goal/progress-segments" @click="handleAddElement('goal', 'goalSegmentBar')">
-            <el-icon><Operation /></el-icon>
-            <span>Progress Segments</span>
-          </el-menu-item>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title"><el-icon><TrendCharts /></el-icon>Chart</div>
-          <el-menu-item index="chart/bar" @click="handleAddElement('chart', 'barChart')">
-            <el-icon><TrendCharts /></el-icon>
-            <span>Bar Chart</span>
-          </el-menu-item>
-          <el-menu-item index="chart/line" @click="handleAddElement('chart', 'lineChart')">
-            <el-icon><DataLine /></el-icon>
-            <span>Line Chart</span>
-          </el-menu-item>
-        </div>
-      </el-sub-menu>
+      <AppMenuDataFieldGroup
+        @add-data-field="handleAddDataField"
+        @add-goal-progress-bar="handleAddGoalProgressBarField"
+        @add-goal-arc="handleAddGoalArcField"
+        @add-goal-segment="handleAddGoalSegmentField"
+        @add-element="handleAddElement"
+      />
   
       <!-- Shape group -->
-      <el-sub-menu index="shape">
-        <template #title>
-          <el-icon><Stamp /></el-icon>
-          <span>Shape</span>
-        </template>
-        <div class="menu-group">
-          <el-menu-item index="basic/rectangle" @click="handleAddElement('shape', 'rectangle')">
-            <el-icon><Minus /></el-icon>
-            <span>Rectangle</span>
-          </el-menu-item>
-          <el-menu-item index="basic/circle" @click="handleAddElement('shape', 'circle')">
-            <el-icon><CircleCheck /></el-icon>
-            <span>Circle</span>
-          </el-menu-item>
-          <el-menu-item index="basic/text" @click="handleAddElement('time', 'time')">
-            <el-icon><Edit /></el-icon>
-            <span>Time Text</span>
-          </el-menu-item>
-          <el-menu-item index="basic/date" @click="handleAddElement('time', 'date')">
-            <el-icon><Calendar /></el-icon>
-            <span>Date Text</span>
-          </el-menu-item>
-          <el-menu-item index="basic/image" @click="handleAddElement('image')">
-            <el-icon><Picture /></el-icon>
-            <span>Image</span>
-          </el-menu-item>
-        </div>
-      </el-sub-menu>
+      <AppMenuShape @add-element="handleAddElement" />
 
       <!-- Status indicator group -->
-      <el-sub-menu index="indicator">
-        <template #title>
-          <el-icon><Connection /></el-icon>
-          <span>Indicator</span>
-        </template>
-        <div class="menu-group">
-          <div class="menu-group-title">Status Indicators</div>
-          <el-menu-item index="indicator/battery" @click="handleAddElement('status', 'battery')">
-            <el-icon><Star /></el-icon>
-            <span>Battery Level</span>
-          </el-menu-item>
-          <el-menu-item index="indicator/bluetooth" @click="handleAddElement('indicator', 'bluetooth')">
-            <el-icon><Connection /></el-icon>
-            <span>Bluetooth</span>
-          </el-menu-item>
-          <el-menu-item index="indicator/notification" @click="handleAddElement('indicator', 'notification')">
-            <el-icon><Bell /></el-icon>
-            <span>Notifications</span>
-          </el-menu-item>
-          <el-menu-item index="indicator/disturb" @click="handleAddElement('indicator', 'disturb')">
-            <el-icon><Bell /></el-icon>
-            <span>Do Not Disturb</span>
-          </el-menu-item>
-          <el-menu-item index="indicator/alarms" @click="handleAddElement('indicator', 'alarms')">
-            <el-icon><Timer /></el-icon>
-            <span>Alarms</span>
-          </el-menu-item>
-        </div>
-      </el-sub-menu>
-            
-      <el-menu-item index="image">
-        <el-icon><Picture /></el-icon>
-        <span>Image</span>
-      </el-menu-item>
-      <el-sub-menu index="help">
-        <template #title>
-          <el-icon><QuestionFilled /></el-icon>
-          <span>Help</span>
-        </template>
-        <el-menu-item index="help/shortcuts" @click="shortcutsDialogVisible = true">
-          <template #title>
-            <!-- <Icon icon="material-symbols:keyboard" /> -->
-            <el-icon><Mouse /></el-icon>
-            <span>Keyboard/Mouse Usage</span>
-          </template>
-        </el-menu-item>
-        <el-menu-item index="help/feedback" @click="showFeedbackDialog">
-          <template #title>
-            <el-icon><ChatLineSquare /></el-icon>
-            <span>Send Feedback</span>
-          </template>
-        </el-menu-item>
-      </el-sub-menu>
+      <AppMenuIndicator @add-element="handleAddElement" />
+
+      <AppMenuWeatherGroup @add-element="handleAddElement" />
+
+      <AppMenuHelp
+        :on-open-shortcuts="() => shortcutsDialogVisible = true"
+        :on-open-feedback="showFeedbackDialog"
+      />
     </el-menu>
   </nav>
 
@@ -305,6 +62,7 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" @success="handleEditSuccess" />
+  <EditorSettingsDialog ref="editorSettingsDialog" />
 </template>
 
 <script setup>
@@ -315,8 +73,6 @@ import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
-import { DateFormatConstants } from '@/config/elements/options/dateFormats'
 import { DataTypeOptions } from '@/config/settings'
 
 import { getAddElement } from '@/utils/elementCodec/registry'
@@ -324,19 +80,15 @@ import {
   Operation,
   Edit,
   View,
-  Timer,
   DataLine,
   Aim,
   TrendCharts,
   Stamp,
-  Picture,
   QuestionFilled,
   Box,
   Upload,
   Setting,
   Clock,
-  Calendar,
-  Watch,
   Mouse,
   ChatLineSquare,
   Star, // use existing icon as a placeholder
@@ -355,6 +107,15 @@ import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
+import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
+import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
+import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
+import AppMenuDataFieldGroup from '@/components/layout/app-menu/AppMenuDataFieldGroup.vue'
+import AppMenuActions from '@/components/layout/app-menu/AppMenuActions.vue'
+import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'
+import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
+import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
+import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
 import emitter from '@/utils/eventBus'
 
 const route = useRoute()
@@ -377,21 +138,30 @@ const shortcutsDialogVisible = ref(false)
 const feedbackDialog = ref(null)
 const propertiesPanel = ref(null)
 const editDesignDialog = ref(null)
-
-// Key guidelines state
-const showKeyGuidelines = ref(false)
-
-// Toggle key guidelines
-const toggleKeyGuidelines = () => {
-  showKeyGuidelines.value = !showKeyGuidelines.value
-  emitter.emit('toggle-key-guidelines', showKeyGuidelines.value)
-}
+let editorSettingsDialog
 
 // Listen for keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+  // Cmd/Ctrl + ; 打开 Editor Settings 弹窗
   if ((e.metaKey || e.ctrlKey) && e.key === ';') {
     e.preventDefault()
-    toggleKeyGuidelines()
+    console.log('[AppMenu] Cmd/Ctrl+; pressed, try open EditorSettingsDialog', editorSettingsDialog)
+    if (!editorSettingsDialog || typeof editorSettingsDialog.openDialog !== 'function') {
+      console.warn('[AppMenu] EditorSettingsDialog is not ready or openDialog missing', editorSettingsDialog)
+      return
+    }
+    editorSettingsDialog.openDialog()
+  }
+
+  // Cmd/Ctrl + . 打开 Edit Design（应用设置）
+  if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+    e.preventDefault()
+    console.log('[AppMenu] Cmd/Ctrl+. pressed, call handleEditDesign')
+    try {
+      handleEditDesign()
+    } catch (err) {
+      console.warn('[AppMenu] handleEditDesign failed', err)
+    }
   }
 })
 
@@ -519,6 +289,243 @@ const handleAddDataField = async (metricSymbol) => {
   }
 }
 
+// Goal quick-add: Progress Bar (steps), bar with icon/data at two ends above bar
+const handleAddGoalProgressBarField = async () => {
+  try {
+    const allProps = propertiesStore.allProperties
+
+    // Compute next goal index from existing goal_* properties
+    let maxIndex = 0
+    Object.keys(allProps || {}).forEach((key) => {
+      const match = key.match(/^goal_(\d+)$/)
+      if (match) {
+        const num = Number(match[1]) || 0
+        if (num > maxIndex) maxIndex = num
+      }
+    })
+    const nextIndex = maxIndex + 1
+    const propertyKey = `goal_${nextIndex}`
+    const title = `Goal ${nextIndex}`
+
+    // Use goal options (DataTypeOptions filtered by :GOAL_TYPE_), prefer steps
+    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
+    let defaultOption = goalOptions[0] || DataTypeOptions[0]
+    const stepsOption = goalOptions.find((opt) => opt.metricSymbol === ':GOAL_TYPE_STEPS')
+    if (stepsOption) defaultOption = stepsOption
+
+    if (!allProps[propertyKey]) {
+      propertiesStore.addProperty({
+        key: propertyKey,
+        type: 'goal',
+        title,
+        options: goalOptions,
+        defaultValue: defaultOption ? defaultOption.value : undefined,
+      })
+    }
+
+    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalBar) || {}
+    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
+    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
+    const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
+    const half = width / 2
+
+    const iconLeft = baseLeft - half
+    const dataLeft = baseLeft + half
+    const iconTop = baseTop - 20
+    const dataTop = baseTop - 20
+
+    // bar 本身
+    await handleAddElement('goal', 'goalBar', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+    })
+
+    // 左端 icon
+    await handleAddElement('metric', 'icon', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: iconLeft,
+      top: iconTop,
+      originX: 'right',
+      fontSize: 24,
+      iconSize: 24,
+    })
+
+    // 右端 data
+    await handleAddElement('metric', 'data', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: dataLeft,
+      top: dataTop,
+      originX: 'left',
+      fontSize: 24,
+    })
+  } catch (e) {
+    console.error('Failed to add goal progress bar (goal + icon + data):', e)
+    messageStore.error('Failed to add goal field')
+  }
+}
+
+// Goal quick-add: Progress Arc, icon/data stacked in center of ring, thicker stroke, 45% progress
+const handleAddGoalArcField = async () => {
+  try {
+    const allProps = propertiesStore.allProperties
+
+    let maxIndex = 0
+    Object.keys(allProps || {}).forEach((key) => {
+      const match = key.match(/^goal_(\d+)$/)
+      if (match) {
+        const num = Number(match[1]) || 0
+        if (num > maxIndex) maxIndex = num
+      }
+    })
+    const nextIndex = maxIndex + 1
+    const propertyKey = `goal_${nextIndex}`
+    const title = `Goal ${nextIndex}`
+
+    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
+    const defaultOption = goalOptions[0] || DataTypeOptions[0]
+
+    if (!allProps[propertyKey]) {
+      propertiesStore.addProperty({
+        key: propertyKey,
+        type: 'goal',
+        title,
+        options: goalOptions,
+        defaultValue: defaultOption ? defaultOption.value : undefined,
+      })
+    }
+
+    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalArc) || {}
+    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
+    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
+
+    const iconLeft = baseLeft
+    const dataLeft = baseLeft
+    const iconTop = baseTop - 16
+    const dataTop = baseTop + 16
+
+    await handleAddElement('goal', 'goalArc', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      strokeWidth: 4,
+      bgStrokeWidth: 4,
+      progress: 0.45,
+    })
+
+    await handleAddElement('metric', 'icon', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: iconLeft,
+      top: iconTop,
+      originX: 'center',
+      fontSize: 24,
+      iconSize: 24,
+    })
+
+    await handleAddElement('metric', 'data', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: dataLeft,
+      top: dataTop,
+      originX: 'center',
+      fontSize: 24,
+    })
+  } catch (e) {
+    console.error('Failed to add goal arc (goal + icon + data):', e)
+    messageStore.error('Failed to add goal field')
+  }
+}
+
+// Goal quick-add: Progress Segments, bar with icon/data at two ends above bar
+const handleAddGoalSegmentField = async () => {
+  try {
+    const allProps = propertiesStore.allProperties
+
+    let maxIndex = 0
+    Object.keys(allProps || {}).forEach((key) => {
+      const match = key.match(/^goal_(\d+)$/)
+      if (match) {
+        const num = Number(match[1]) || 0
+        if (num > maxIndex) maxIndex = num
+      }
+    })
+    const nextIndex = maxIndex + 1
+    const propertyKey = `goal_${nextIndex}`
+    const title = `Goal ${nextIndex}`
+
+    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
+    const defaultOption = goalOptions[0] || DataTypeOptions[0]
+
+    if (!allProps[propertyKey]) {
+      propertiesStore.addProperty({
+        key: propertyKey,
+        type: 'goal',
+        title,
+        options: goalOptions,
+        defaultValue: defaultOption ? defaultOption.value : undefined,
+      })
+    }
+
+    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalSegmentBar) || {}
+    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
+    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
+    const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
+    const half = width / 2
+
+    const iconLeft = baseLeft - half
+    const dataLeft = baseLeft + half
+    const iconTop = baseTop - 20
+    const dataTop = baseTop - 20
+
+    await handleAddElement('goal', 'goalSegmentBar', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+    })
+
+    await handleAddElement('metric', 'icon', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: iconLeft,
+      top: iconTop,
+      originX: 'right',
+      fontSize: 24,
+      iconSize: 24,
+    })
+
+    await handleAddElement('metric', 'data', {
+      goalProperty: propertyKey,
+      dataProperty: null,
+      left: dataLeft,
+      top: dataTop,
+      originX: 'left',
+      fontSize: 24,
+    })
+  } catch (e) {
+    console.error('Failed to add goal segment bar (goal + icon + data):', e)
+    messageStore.error('Failed to add goal field')
+  }
+}
+
+// 打开应用设置（Edit Design），供菜单项和快捷键复用
+const handleEditDesign = () => {
+  const designId = route.query.id
+  console.log('[AppMenu] handleEditDesign called, designId =', designId)
+  if (designId) {
+    if (!editDesignDialog || !editDesignDialog.value) {
+      console.warn('[AppMenu] editDesignDialog ref is not ready', editDesignDialog)
+      return
+    }
+    if (typeof editDesignDialog.value.show !== 'function') {
+      console.warn('[AppMenu] editDesignDialog.show is not a function', editDesignDialog.value)
+      return
+    }
+    editDesignDialog.value.show(designId)
+  } else {
+    messageStore.warning('Please save the design first')
+  }
+}
+
 // Handle menu selection
 const handleSelect = (key) => {
   if (key === 'help/shortcuts') {
@@ -526,14 +533,8 @@ const handleSelect = (key) => {
   } else if (key === 'actions/properties') {
     propertiesPanel.value?.show()
   } else if (key === 'actions/viewJsonConfig') {
-    // 获取当前设计ID并打开编辑对话框
-    const designId = route.query.id
-    if (designId) {
-      console.log('designId', designId)
-      editDesignDialog.value?.show(designId)
-    } else {
-      messageStore.warning('Please save the design first')
-    }
+    // 复用 Edit Design 打开逻辑
+    handleEditDesign()
   }
 }
 
@@ -611,7 +612,7 @@ const handleEditSuccess = () => {
 .menu-divider {
   height: 20px;
   margin: 10px 12px;
-  border-left: 1px solid var(--el-border-color-lighter);
+  border-left: 2px solid var(--el-border-color-lighter);
 }
 .menu-sub-divider {
   height: 2px;
@@ -642,9 +643,6 @@ const handleEditSuccess = () => {
   min-width: 160px;
 }
 
-:deep(.el-sub-menu .el-menu--popup) {
-  min-width: 160px;
-}
 
 /* 确保菜单项不会被压缩 */
 :deep(.el-menu--horizontal) {

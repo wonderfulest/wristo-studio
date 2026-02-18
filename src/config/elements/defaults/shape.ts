@@ -8,9 +8,11 @@ export const DEFAULT_RECTANGLE_CONFIG: RectangleElementConfig & EDITOR_ELEMENT =
 }, DEFAULT_SHAPE_CONFIG, {
   eleType: 'rectangle' as const,
   width: 100,
-  height: 100,
-  strokeWidth: 0,
-  borderRadius: 0,
+  height: 50,
+  fill: 'transparent',
+  stroke: '#FFFFFF',
+  strokeWidth: 2,
+  borderRadius: 5,
 })
 
 export const DEFAULT_CIRCLE_CONFIG: CircleElementConfig & EDITOR_ELEMENT = Object.assign({
@@ -20,6 +22,9 @@ export const DEFAULT_CIRCLE_CONFIG: CircleElementConfig & EDITOR_ELEMENT = Objec
 }, DEFAULT_SHAPE_CONFIG, {
   eleType: 'circle' as const,
   radius: 50,
+  fill: 'transparent',
+  stroke: '#FFFFFF',
+  strokeWidth: 2,
 })
 
 export const DEFAULT_LINE_CONFIG: LineElementConfig & EDITOR_ELEMENT = Object.assign({

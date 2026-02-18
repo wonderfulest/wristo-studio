@@ -2,7 +2,7 @@
   <el-dialog
     title="Editor Settings"
     v-model="dialogVisible"
-    width="500px"
+    width="800px"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
   >
