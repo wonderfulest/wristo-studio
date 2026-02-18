@@ -73,11 +73,18 @@ const loadingNextPage = ref(false)
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id as number | undefined)
+const isAdmin = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role: any) => role.roleCode === 'ROLE_ADMIN')
+})
 
 const canEdit = (font: BitmapFontVO) => {
   const uid = currentUserId.value
   if (!uid) return false
-  return font.userId === uid
+  // 拥有者 或 管理员 均可编辑
+  if (font.userId === uid) return true
+  if (isAdmin.value) return true
+  return false
 }
 
 const loadGlyphsForFont = async (fontId: number) => {
