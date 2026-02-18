@@ -16,6 +16,8 @@ type TimeElementOptions = TimeElementConfig & TextProps
 const bitmapCharCache = new Map<number, BitmapFontAssetRelationVO[]>()
 // 缓存 bitmap 字体图片，按 url 复用，避免重复下载
 const bitmapImageCache = new Map<string, any>()
+// 控制同一时间元素的 bitmap Group 重建不并发执行，避免出现多个 time 元素
+const bitmapUpdateLocks = new Set<string>()
 
 async function getBitmapChars(fontId: number): Promise<BitmapFontAssetRelationVO[]> {
   if (bitmapCharCache.has(fontId)) return bitmapCharCache.get(fontId) as BitmapFontAssetRelationVO[]
@@ -352,6 +354,12 @@ export const useTimeStore = defineStore('timeStore', {
         const fontId = config.bitmapFontId ?? (obj as any).bitmapFontId
         if (fontId) {
           try {
+            const lockId = String(obj.id || element.id || '')
+            if (lockId && bitmapUpdateLocks.has(lockId)) {
+              // 同一元素的 bitmap 重建正在进行中，避免并发执行
+              return
+            }
+            if (lockId) bitmapUpdateLocks.add(lockId)
             const formatter = config.formatter ?? (obj as any).formatter ?? 0
             const text = this.formatTime(new Date(), Number(formatter))
             const group = await createBitmapTimeGroup({
@@ -387,6 +395,9 @@ export const useTimeStore = defineStore('timeStore', {
             console.debug('[time/updateElement] switched truetype->bitmap', { id: (group as any).id, fontId })
           } catch (e) {
             console.warn('[time/updateElement] switch truetype->bitmap failed', e)
+          } finally {
+            const lockId = String(obj.id || element.id || '')
+            if (lockId) bitmapUpdateLocks.delete(lockId)
           }
           return
         }
@@ -409,6 +420,12 @@ export const useTimeStore = defineStore('timeStore', {
 
           if (shouldRebuild) {
             try {
+              const lockId = String(obj.id || element.id || '')
+              if (lockId && bitmapUpdateLocks.has(lockId)) {
+                // 同一元素的 bitmap 重建正在进行中，避免并发执行
+                return
+              }
+              if (lockId) bitmapUpdateLocks.add(lockId)
               const formatter = config.formatter ?? (obj as any).formatter ?? 0
               const text = this.formatTime(new Date(), Number(formatter))
               const group = await createBitmapTimeGroup({
@@ -444,6 +461,9 @@ export const useTimeStore = defineStore('timeStore', {
               console.debug('[time/updateElement] bitmap group rebuilt', { id: (group as any).id, fontId })
             } catch (e) {
               console.warn('[time/updateElement] bitmap group rebuild failed', e)
+            } finally {
+              const lockId = String(obj.id || element.id || '')
+              if (lockId) bitmapUpdateLocks.delete(lockId)
             }
             return
           }
