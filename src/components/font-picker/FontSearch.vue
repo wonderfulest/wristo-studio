@@ -5,7 +5,7 @@
       <input
         type="text"
         v-model="searchQuery"
-        placeholder="Search fonts..."
+        placeholder="Search fonts ..."
         class="search-input"
         @input="onInput"
       />
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { FontOption, useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
@@ -113,6 +113,11 @@ const searchQuery = ref<string>('')
 const filteredFonts = ref<FontItem[]>([])
 const remoteSearchResults = ref<FontItem[]>([])
 const isSearching = ref<boolean>(false)
+
+console.log('[FontSearch] setup init', {
+  modelValue: props.modelValue,
+  type: props.type,
+})
 let searchTimer: number | undefined
 
 // filters
@@ -120,43 +125,77 @@ const monospaceChecked = ref<boolean>(false)
 const italicChecked = ref<boolean>(false)
 
 const onInput = () => {
+  console.log('[FontSearch] onInput', {
+    rawQuery: searchQuery.value,
+  })
   // debounce input to reduce remote requests
   if (searchTimer) window.clearTimeout(searchTimer)
   searchTimer = window.setTimeout(filterFonts, 250)
 }
 
-const onMounted = () => {
+onMounted(() => {
+  console.log('[FontSearch] onMounted', {
+    initialQuery: searchQuery.value,
+    monospaceChecked: monospaceChecked.value,
+    italicChecked: italicChecked.value,
+  })
   filterFonts()
-}
-onMounted()
+})
 // immediate refresh when toggling filters
 const onFilterChange = () => {
+  console.log('[FontSearch] onFilterChange', {
+    query: searchQuery.value,
+    monospaceChecked: monospaceChecked.value,
+    italicChecked: italicChecked.value,
+  })
   if (searchTimer) window.clearTimeout(searchTimer)
   filterFonts()
 }
 
 // Precise local style filters using metadata (fallback to heuristic if missing)
 const applyLocalStyleFilters = (items: FontItem[]) => {
-  
-  return items.filter((f) => {
+  const beforeCount = items.length
+  const result = items.filter((f) => {
     // monospace
     if (monospaceChecked.value && (f as any).isMonospace !== true) return false
     // italic
     if (italicChecked.value && (f as any).italic !== true) return false
     return true
   })
+  console.log('[FontSearch] applyLocalStyleFilters', {
+    inputCount: beforeCount,
+    outputCount: result.length,
+    monospaceChecked: monospaceChecked.value,
+    italicChecked: italicChecked.value,
+  })
+  return result
 }
 
 const filterFonts = async () => {
-  
+  console.log('[FontSearch] filterFonts start', {
+    query: searchQuery.value,
+    type: props.type,
+    monospaceChecked: monospaceChecked.value,
+    italicChecked: italicChecked.value,
+  })
   // local filter
   const local = fontStore.searchFonts(searchQuery.value)
   filteredFonts.value = applyLocalStyleFilters(local)
+  console.log('[FontSearch] local search done', {
+    rawLocalCount: local.length,
+    filteredLocalCount: filteredFonts.value.length,
+  })
   
   // remote search whenever query is not empty
   remoteSearchResults.value = []
   try {
     isSearching.value = true
+    console.log('[FontSearch] remote search request', {
+      query: searchQuery.value,
+      type: props.type,
+      monospaceChecked: monospaceChecked.value,
+      italicChecked: italicChecked.value,
+    })
     const response = await searchFonts({
       pageNum: 1,
       pageSize: 20,
@@ -166,11 +205,18 @@ const filterFonts = async () => {
       italic: italicChecked.value ? 1 : undefined,
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
+    console.log('[FontSearch] remote search response', {
+      listLength: list.length,
+      rawResponse: response,
+    })
     
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
     const serverList = list.filter((font: DesignFontVO) => {
       const val = font.slug
       return !!val && !localValues.has(val)
+    })
+    console.log('[FontSearch] remote fonts after dedupe', {
+      serverListCount: serverList.length,
     })
     // load fonts (register FontFace) before presenting results
     try {
@@ -191,12 +237,23 @@ const filterFonts = async () => {
       const italic = (font?.italic === 1)
       return { label, value, family, isMonospace, italic } as FontItem
     })
+    console.log('[FontSearch] remoteFonts mapped', {
+      remoteFontsCount: remoteFonts.length,
+    })
     // Apply the same local style filters to remote results
     remoteSearchResults.value = applyLocalStyleFilters(remoteFonts)
+    console.log('[FontSearch] remoteSearchResults final', {
+      remoteSearchResultsCount: remoteSearchResults.value.length,
+    })
   } catch (error) {
-    console.error('Remote font search error:', error)
+    console.error('[FontSearch] Remote font search error:', error)
     messageStore.error('Remote search failed')
   } finally {
+    console.log('[FontSearch] filterFonts finally', {
+      isSearching: isSearching.value,
+      filteredFontsCount: filteredFonts.value.length,
+      remoteSearchResultsCount: remoteSearchResults.value.length,
+    })
     isSearching.value = false
   }
 }
@@ -213,6 +270,9 @@ const groupByFamily = (fonts: FontItem[]) => {
 }
 
 const handleSelect = (font: FontItem) => {
+  console.log('[FontSearch] handleSelect', {
+    font,
+  })
   emit('select', font)
 }
 </script>

@@ -3,7 +3,7 @@
     <div class="search-inputs">
       <el-input
         :model-value="searchQuery"
-        placeholder="Search fonts..."
+        placeholder="Search fonts 1..."
         class="search-input"
         clearable
         @input="onSearchInput"
