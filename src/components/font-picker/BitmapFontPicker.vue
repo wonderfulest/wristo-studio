@@ -243,11 +243,20 @@ const loadBitmapFonts = async () => {
     const res = await pageBitmapFonts(dto)
     const data = res.data
     const list = (data?.list || []) as BitmapFontVO[]
-    // page 1 覆盖，后续页面在原有列表基础上追加，实现“无限滚动”效果
+    // 统一做一次按 id 去重合并，保证列表没有重复元素
+    const merged = [...bitmapFonts.value]
+    const exists = new Set<number>(merged.map(f => f.id))
+    for (const font of list) {
+      if (!exists.has(font.id)) {
+        merged.push(font)
+        exists.add(font.id)
+      }
+    }
+    // 如果是第一页，优先使用第一页顺序；否则在原有基础上追加不重复项
     if (pageNum.value <= 1) {
       bitmapFonts.value = list
     } else {
-      bitmapFonts.value = [...bitmapFonts.value, ...list]
+      bitmapFonts.value = merged
     }
     bitmapTotal.value = data?.total || 0
   } catch (e) {
