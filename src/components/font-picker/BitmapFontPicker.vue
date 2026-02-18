@@ -131,6 +131,8 @@ const openNewBitmapFont = async () => {
       await loadBitmapRows(font.id)
       // 新建后刷新列表以便展示新字体
       void bitmapFontStore.loadPage(1)
+      // 新建后清理 session 缓存，确保后续列表从最新数据加载
+      bitmapFontStore.clearSession()
     }
   } catch (e) {
     console.warn('create bitmap font failed', e)
@@ -138,10 +140,11 @@ const openNewBitmapFont = async () => {
 }
 
 // 打开已有 bitmap 字体的编辑弹框（由 Edit 触发）
-const openBitmapDialog = async () => {
-  if (!props.modelValue) return
+const openBitmapDialog = async (fontId?: number) => {
+  const id = fontId ?? props.modelValue
+  if (!id) return
   bitmapDialogVisible.value = true
-  await loadBitmapRows(props.modelValue)
+  await loadBitmapRows(id)
 }
 
 const closeBitmapDialog = () => {
@@ -175,6 +178,10 @@ const confirmBitmapDialog = async () => {
     // 用户取消重命名则保持原名
   } finally {
     bitmapDialogVisible.value = false
+    // 每次点击 OK 结束编辑后，清理 bitmap 字体缓存
+    bitmapFontStore.clearSession()
+    // 并重新加载列表，确保 UI 展示的是最新的 bitmap 字体信息
+    void bitmapFontStore.loadPage(1)
   }
 }
 
@@ -255,7 +262,8 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
   emit('change', font.id)
   currentFontName.value = font.fontName
   isTempRandFont.value = typeof font.fontName === 'string' && font.fontName.startsWith('rand_')
-  await openBitmapDialog()
+  // 直接使用当前点击的字体 id，避免依赖父组件异步更新后的 props.modelValue 造成一次延迟
+  await openBitmapDialog(font.id)
 }
 
 const ensureFontBySlug = async (slug: string, family: string) => {
@@ -314,6 +322,9 @@ const handleResetRowByIndex = async (index: string) => {
     row.imageUrl = undefined
   } catch (e) {
     console.warn('unbind bitmap font asset failed', e)
+  } finally {
+    // 删除某个 glyph 后，同步清理缓存
+    bitmapFontStore.clearSession()
   }
 }
 
@@ -331,6 +342,9 @@ const handleUploadRow = async (payload: { index: string; file: File; previewUrl:
     await loadBitmapRows(props.modelValue)
   } catch (e) {
     console.warn('bind bitmap font asset failed', e)
+  } finally {
+    // 上传/绑定 glyph 后，同步清理缓存
+    bitmapFontStore.clearSession()
   }
 }
 

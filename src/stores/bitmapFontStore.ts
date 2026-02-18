@@ -54,7 +54,15 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
         }
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload))
       } catch {
-        // ignore quota / access errors
+        // ignore quota exceeded
+      }
+    },
+
+    clearSession() {
+      try {
+        sessionStorage.removeItem(SESSION_KEY)
+      } catch {
+        // ignore
       }
     },
 

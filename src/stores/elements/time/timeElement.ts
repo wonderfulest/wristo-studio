@@ -14,10 +14,21 @@ type TimeElementOptions = TimeElementConfig & TextProps
 
 // 缓存 bitmap 字体的字符绑定，避免频繁请求
 const bitmapCharCache = new Map<number, BitmapFontAssetRelationVO[]>()
-// 缓存 bitmap 字体图片，按 url 复用，避免重复下载
-const bitmapImageCache = new Map<string, any>()
 // 控制同一时间元素的 bitmap Group 重建不并发执行，避免出现多个 time 元素
 const bitmapUpdateLocks = new Set<string>()
+
+// 确保同一 id 的 bitmap 时间元素在画布上只存在一个 Group
+function removeBitmapTimeGroupsById(canvas: any, id: string) {
+  if (!canvas || !canvas.getObjects) return
+  const objects = canvas.getObjects()
+  objects.forEach((o: any) => {
+    if (!o) return
+    if (o.eleType !== 'time') return
+    if (!o.bitmapFontId) return
+    if (String(o.id) !== String(id)) return
+    canvas.remove(o)
+  })
+}
 
 async function getBitmapChars(fontId: number): Promise<BitmapFontAssetRelationVO[]> {
   if (bitmapCharCache.has(fontId)) return bitmapCharCache.get(fontId) as BitmapFontAssetRelationVO[]
@@ -59,36 +70,11 @@ async function createBitmapTimeGroup(params: {
       continue
     }
 
-    // 使用 CORS 以便后续截图不被污染，同时对相同 url 做图片缓存，避免重复下载
-    let baseImg = bitmapImageCache.get(url) as any
-    if (!baseImg) {
-      baseImg = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-      if (baseImg && baseImg.width && baseImg.height) {
-        bitmapImageCache.set(url, baseImg)
-      }
-    }
-
-    if (!baseImg || !baseImg.width || !baseImg.height) {
+    // 为每个字符创建全新的 FabricImage，避免复用导致 Group 内部状态冲突
+    const img: any = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
+    if (!img || !img.width || !img.height) {
+      currentX += spacing
       continue
-    }
-
-    // 为当前字符克隆一份，避免在画布上共享同一实例
-    let img: any = baseImg
-    if (baseImg.clone) {
-      try {
-        img = await new Promise((resolve) => {
-          baseImg.clone((cloned: any) => {
-            if (!cloned) {
-              // 克隆失败时退回使用 baseImg，避免抛错
-              resolve(baseImg)
-            } else {
-              resolve(cloned)
-            }
-          })
-        })
-      } catch {
-        img = baseImg
-      }
     }
 
     const scale = fontSize / img.height
@@ -183,6 +169,8 @@ export const useTimeStore = defineStore('timeStore', {
             text,
             options,
           })
+          // 先移除画布上同 id 的旧 bitmap Group，避免同一个元素残留多份
+          removeBitmapTimeGroupsById(this.baseStore.canvas, String(id))
           this.baseStore.canvas.add(group as any)
           this.layerStore.addLayer(group as any)
           this.baseStore.canvas.setActiveObject(group as any)
@@ -251,6 +239,8 @@ export const useTimeStore = defineStore('timeStore', {
             })
             const index = canvas.getObjects().indexOf(obj)
             canvas.remove(obj)
+            // 清理同 id 的其他 bitmap Group，再添加新的
+            removeBitmapTimeGroupsById(canvas, String(obj.id))
             canvas.add(group)
             if (index >= 0) {
               canvas.moveObjectTo(group, index)
@@ -384,6 +374,8 @@ export const useTimeStore = defineStore('timeStore', {
 
             const index = canvas.getObjects().indexOf(obj)
             canvas.remove(obj)
+            // 清理同 id 的其他 bitmap Group，再添加新的
+            removeBitmapTimeGroupsById(canvas, String(obj.id || element.id || ''))
             canvas.add(group as any)
             if (index >= 0) {
               canvas.moveObjectTo(group as any, index)
@@ -451,6 +443,8 @@ export const useTimeStore = defineStore('timeStore', {
 
               const index = canvas.getObjects().indexOf(obj)
               canvas.remove(obj)
+              // 清理同 id 的其他 bitmap Group，再添加新的
+              removeBitmapTimeGroupsById(canvas, String(obj.id || element.id || ''))
               canvas.add(group as any)
               if (index >= 0) {
                 canvas.moveObjectTo(group as any, index)

@@ -45,6 +45,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 import emitter from '@/utils/eventBus'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useCanvas } from '../composables/useCanvas'
@@ -71,8 +72,7 @@ import HistoryControls from '@/components/HistoryControls.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
-import { AnyElementConfig } from '@/types/elements'
-import { findImageByUrl } from '@/api/image'
+import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
@@ -193,9 +193,7 @@ const loadDesign = async (designUid: string) => {
         baseStore.setTextCase(baseStore.textCase)
       }, 500) // 等待画布加载完成
     }
-
-
-
+2
     // 设置标签长度类型
     if (config.labelLengthType !== undefined) {
       baseStore.labelLengthType = config.labelLengthType
@@ -253,28 +251,42 @@ const setupAutoSave = () => {
 
 // 替换元素加载逻辑
 const loadElements = async (elements: AnyElementConfig[]) => {
-  try {
-    for (const element of elements) {
-      if (element.eleType == 'Line') continue
-      console.log(`load element: ${JSON.stringify(element)}`)
-      const decodedElement = await decodeElement(element)
-      if (!decodedElement) {
-        console.warn(`Unknown element type: ${element.eleType}`)
-        messageStore.warning(`未知的元素类型:${element.eleType}`)
-        continue
-      }
-
-      const addElement = getAddElement(element.eleType)
-      if (addElement) {
-        await addElement(element.eleType, decodedElement)
-      } else {
-        console.warn(`Unknown element type: ${element.eleType}`)
-        messageStore.warning(`未知的元素类型:${element.eleType}`)
-      }
+  for (const element of elements) {
+    if (element.eleType == 'Line') continue
+    console.log(`load element: ${JSON.stringify(element)}`)
+    const decodedElement = await decodeElement(element)
+    if (!decodedElement) {
+      console.warn(`Unknown element type: ${element.eleType}`)
+      messageStore.warning(`未知的元素类型:${element.eleType}`)
+      continue
     }
-  } catch (error) {
-    console.error('加载元素失败:', error)
-    messageStore.error('加载元素失败: ' + (error as any)?.message)
+
+    const addElement = getAddElement(element.eleType)
+    if (!addElement) {
+      console.warn(`Unknown element type: ${element.eleType}`)
+      messageStore.warning(`未知的元素类型:${element.eleType}`)
+      continue
+    }
+
+    try {
+      // 确保 id 存在，满足 BaseElementConfig 的类型要求
+      const config = {
+        ...decodedElement,
+        id: decodedElement.id ?? element.id ?? crypto.randomUUID(),
+      } as BaseElementConfig
+      await addElement(element.eleType, config)
+    } catch (error) {
+      console.error('加载元素失败:', element, error)
+      const name = (element as any)?.name || element.eleType || '未知元素'
+      await ElMessageBox.alert(
+        `元素「${name}」加载失败: ` + ((error as any)?.message || ''),
+        '加载元素失败',
+        {
+          confirmButtonText: '确定',
+          type: 'error',
+        },
+      )
+    }
   }
 }
 
