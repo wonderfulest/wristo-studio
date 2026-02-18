@@ -242,7 +242,13 @@ const loadBitmapFonts = async () => {
     }
     const res = await pageBitmapFonts(dto)
     const data = res.data
-    bitmapFonts.value = (data?.list || []) as BitmapFontVO[]
+    const list = (data?.list || []) as BitmapFontVO[]
+    // page 1 覆盖，后续页面在原有列表基础上追加，实现“无限滚动”效果
+    if (pageNum.value <= 1) {
+      bitmapFonts.value = list
+    } else {
+      bitmapFonts.value = [...bitmapFonts.value, ...list]
+    }
     bitmapTotal.value = data?.total || 0
   } catch (e) {
     console.warn('load bitmap fonts failed', e)

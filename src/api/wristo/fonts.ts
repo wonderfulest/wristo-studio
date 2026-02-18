@@ -98,7 +98,7 @@ export const getRecentFonts = (limit?: number, type?: string, userId?: number): 
   if (typeof limit === 'number') params.set('limit', String(limit))
   if (type) params.set('type', type)
   if (typeof userId === 'number') params.set('user_id', String(userId))
-  params.set('populate', 'ttf')
+  params.set('populate', 'ttf,user')
   const q = params.toString()
   return instance.get(`/dsn/fonts/recent${q ? `?${q}` : ''}`)
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="bitmap-font-list">
+  <div class="bitmap-font-list" @scroll="onScroll">
     <div
       v-for="font in fonts"
       :key="font.id"
@@ -26,7 +26,12 @@
         </div>
       </div>
       <div class="actions">
-        <el-button type="text" size="small" @click.stop="() => emit('edit', font)">
+        <el-button
+          v-if="canEdit(font)"
+          type="text"
+          size="small"
+          @click.stop="() => emit('edit', font)"
+        >
           Edit
         </el-button>
       </div>
@@ -35,25 +40,14 @@
     <div v-if="!fonts.length" class="bitmap-font-empty">
       No bitmap fonts yet.
     </div>
-
-    <div v-if="total > pageSize" class="bitmap-font-pager">
-      <el-pagination
-        background
-        layout="prev, pager, next"
-        :current-page="pageNum"
-        :page-size="pageSize"
-        :total="total"
-        small
-        @current-change="(p:number) => emit('page-change', p)"
-      />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import type { BitmapFontVO, BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps<{
   fonts: BitmapFontVO[]
@@ -75,6 +69,16 @@ const DIGIT_ORDER = ['0','1','2','3','4','5','6','7','8','9',':'] as const
 // 每个字体 id 对应的字符图片 url 映射，例如 { 1: { '0': 'url0', '1': 'url1', ... } }
 const glyphMap = ref<Record<number, Record<string, string>>>({})
 const loadingMap = ref<Record<number, boolean>>({})
+const loadingNextPage = ref(false)
+
+const userStore = useUserStore()
+const currentUserId = computed(() => userStore.userInfo?.id as number | undefined)
+
+const canEdit = (font: BitmapFontVO) => {
+  const uid = currentUserId.value
+  if (!uid) return false
+  return font.userId === uid
+}
 
 const loadGlyphsForFont = async (fontId: number) => {
   if (!fontId) return
@@ -115,6 +119,29 @@ watch(
 )
 
 const getGlyphUrl = (fontId: number, ch: string) => glyphMap.value[fontId]?.[ch]
+
+// 滚动到底部时自动加载下一页
+const onScroll = (e: Event) => {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+
+  const { scrollTop, clientHeight, scrollHeight } = target
+  const distanceToBottom = scrollHeight - (scrollTop + clientHeight)
+
+  const hasMore = props.pageNum * props.pageSize < props.total
+  if (!hasMore || loadingNextPage.value) return
+
+  // 距离底部 40px 以内触发加载下一页
+  if (distanceToBottom <= 40) {
+    loadingNextPage.value = true
+    const nextPage = props.pageNum + 1
+    emit('page-change', nextPage)
+    // 父组件加载完成会重新渲染列表，这里简单延迟重置，避免频繁触发
+    setTimeout(() => {
+      loadingNextPage.value = false
+    }, 300)
+  }
+}
 </script>
 
 <style scoped>
@@ -122,7 +149,7 @@ const getGlyphUrl = (fontId: number, ch: string) => glyphMap.value[fontId]?.[ch]
   margin-top: 8px;
   border-top: 1px solid #ebeef5;
   padding-top: 8px;
-  max-height: 260px;
+  max-height: 660px;
   overflow-y: auto;
 }
 
