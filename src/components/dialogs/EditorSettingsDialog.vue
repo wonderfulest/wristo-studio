@@ -94,6 +94,18 @@
       </div>
 
       <div class="setting-item">
+        <div class="setting-label">Manual Guides</div>
+        <div class="setting-control">
+          <el-switch
+            v-model="enableManualGuides"
+            @change="handleManualGuidesToggle"
+            active-text="Enable Shift/Cmd Guides"
+            inactive-text="Disable"
+          />
+        </div>
+      </div>
+
+      <div class="setting-item">
         <div class="setting-label">Grid Color</div>
         <div class="setting-control">
           <el-color-picker
@@ -171,6 +183,8 @@ const rulerGuidesMinor = ref<number>(editorStore.rulerGuidesMinor)
 // Key guidelines
 const showKeyGuidelines = ref<boolean>(editorStore.showKeyGuidelines)
 const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelineDivisions)
+// Manual guides (Shift/Cmd click)
+const enableManualGuides = ref<boolean>(editorStore.enableManualGuides)
 
 // 处理背景色变化
 const handleBackgroundColorChange = (color: string) => {
@@ -235,6 +249,12 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
 }
 
+// Manual guides toggle
+const handleManualGuidesToggle = (value: boolean) => {
+  enableManualGuides.value = value
+  editorStore.updateSetting('enableManualGuides', value)
+}
+
 // 保存设置
 const saveSettings = () => {
   try {
@@ -279,6 +299,7 @@ const openDialog = () => {
   // 同步关键辅助线配置
   showKeyGuidelines.value = editorStore.showKeyGuidelines
   keyGuidelineDivisions.value = editorStore.keyGuidelineDivisions
+  enableManualGuides.value = editorStore.enableManualGuides
   // GuidelineManager reacts to store for toggle
   // GuidelineManager will react to store for divisions
   dialogVisible.value = true

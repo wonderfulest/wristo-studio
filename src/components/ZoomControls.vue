@@ -44,6 +44,8 @@
 import { ref, watch } from 'vue'
 import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
 import { useEditorStore } from '@/stores/editorStore'
+import { useBaseStore } from '@/stores/baseStore'
+import { clearAllGuidelines } from '@/utils/guidelineUtil'
 
 const props = defineProps({
   canvasRef: {
@@ -54,6 +56,7 @@ const props = defineProps({
 })
 
 const editorStore = useEditorStore()
+const baseStore = useBaseStore()
 const isCollapsed = ref(false)
 
 // 监听 store 中的显示状态
@@ -80,9 +83,13 @@ const handleZoomOut = () => {
 }
 
 const handleResetZoom = () => {
+  // reset zoom via canvasRef API if available
   if (props.canvasRef && typeof props.canvasRef.resetZoom === 'function') {
     props.canvasRef.resetZoom()
   }
+
+  // clear all guidelines (manual + key guidelines) from canvas via shared helper
+  clearAllGuidelines(baseStore.canvas)
 }
 
 const toggleCollapse = () => {

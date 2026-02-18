@@ -14,6 +14,7 @@ export const useEditorStore = defineStore('editor', {
     rulerGuidesMinor: 0.16,
     showKeyGuidelines: false,
     keyGuidelineDivisions: 4,
+    enableManualGuides: false,
   }),
 
   getters: {
@@ -52,6 +53,7 @@ export const useEditorStore = defineStore('editor', {
       if (settings.rulerGuidesMinor !== undefined) this.$state.rulerGuidesMinor = settings.rulerGuidesMinor
       if (settings.showKeyGuidelines !== undefined) this.$state.showKeyGuidelines = settings.showKeyGuidelines
       if (settings.keyGuidelineDivisions !== undefined) this.$state.keyGuidelineDivisions = settings.keyGuidelineDivisions
+      if (settings.enableManualGuides !== undefined) this.$state.enableManualGuides = settings.enableManualGuides
     },
 
     // 重置所有设置
@@ -67,6 +69,7 @@ export const useEditorStore = defineStore('editor', {
       this.$state.rulerGuidesMinor = 0.16
       this.$state.showKeyGuidelines = false
       this.$state.keyGuidelineDivisions = 4
+      this.$state.enableManualGuides = false
     },
   }
 })

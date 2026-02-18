@@ -12,4 +12,5 @@ export interface EditorState {
   rulerGuidesMinor: number
   showKeyGuidelines: boolean
   keyGuidelineDivisions: 2 | 3 | 4 | 5 | 6 | 8
+  enableManualGuides: boolean
 }

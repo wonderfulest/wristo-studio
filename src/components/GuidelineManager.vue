@@ -197,10 +197,17 @@ const attachCanvasMouseDown = () => {
   const handler = (opt: unknown) => {
     const e = (opt as { e?: MouseEvent }).e
     if (!e) return
+    // respect global toggle; if disabled, do nothing
+    if (!editorStore.enableManualGuides) return
     const pointer = canvas.getPointer(e as MouseEvent)
-    if ((e as MouseEvent).shiftKey) {
+    const hasCmd = e.metaKey || e.ctrlKey // Command (Mac) or Ctrl (fallback)
+    const hasShift = e.shiftKey
+    const hasCtrl = e.ctrlKey
+
+    // Require Cmd+Shift for horizontal, Cmd+Ctrl for vertical (or Cmd+Ctrl on non-Mac)
+    if (hasCmd && hasShift) {
       createHorizontalGuideline(pointer.y)
-    } else if ((e as MouseEvent).ctrlKey) {
+    } else if (hasCmd && hasCtrl) {
       createVerticalGuideline(pointer.x)
     }
   }
