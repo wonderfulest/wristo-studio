@@ -14,6 +14,8 @@ type TimeElementOptions = TimeElementConfig & TextProps
 
 // 缓存 bitmap 字体的字符绑定，避免频繁请求
 const bitmapCharCache = new Map<number, BitmapFontAssetRelationVO[]>()
+// 缓存 bitmap 字体图片，按 url 复用，避免重复下载
+const bitmapImageCache = new Map<string, any>()
 
 async function getBitmapChars(fontId: number): Promise<BitmapFontAssetRelationVO[]> {
   if (bitmapCharCache.has(fontId)) return bitmapCharCache.get(fontId) as BitmapFontAssetRelationVO[]
@@ -55,10 +57,36 @@ async function createBitmapTimeGroup(params: {
       continue
     }
 
-    // 使用 CORS 以便后续截图不被污染
-    const img: any = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-    if (!img || !img.width || !img.height) {
+    // 使用 CORS 以便后续截图不被污染，同时对相同 url 做图片缓存，避免重复下载
+    let baseImg = bitmapImageCache.get(url) as any
+    if (!baseImg) {
+      baseImg = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
+      if (baseImg && baseImg.width && baseImg.height) {
+        bitmapImageCache.set(url, baseImg)
+      }
+    }
+
+    if (!baseImg || !baseImg.width || !baseImg.height) {
       continue
+    }
+
+    // 为当前字符克隆一份，避免在画布上共享同一实例
+    let img: any = baseImg
+    if (baseImg.clone) {
+      try {
+        img = await new Promise((resolve) => {
+          baseImg.clone((cloned: any) => {
+            if (!cloned) {
+              // 克隆失败时退回使用 baseImg，避免抛错
+              resolve(baseImg)
+            } else {
+              resolve(cloned)
+            }
+          })
+        })
+      } catch {
+        img = baseImg
+      }
     }
 
     const scale = fontSize / img.height

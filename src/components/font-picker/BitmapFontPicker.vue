@@ -39,10 +39,11 @@ import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
-import { pageBitmapFonts, createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, type BitmapFontAssetRelationVO, type BitmapFontVO, type BitmapFontPageQueryDTO } from '@/api/wristo/bitmapFont'
+import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
 import type { FontItem } from '@/types/font-picker'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
+import { useBitmapFontStore } from '@/stores/bitmapFontStore'
 
 const BITMAP_FONT_TYPE = 'bitmap_font'
 
@@ -83,11 +84,12 @@ const rows = ref<BitmapRow[]>(Array.from({ length: 10 }, (_, i) => ({ index: Str
 // SYMBOL 行，目前只支持 ':'
 const symbolRowList = ref<BitmapRow[]>([{ index: ':', hasValue: false }])
 
-// bitmap font list state
-const bitmapFonts = ref<BitmapFontVO[]>([])
-const pageNum = ref(1)
-const pageSize = ref(10)
-const bitmapTotal = ref(0)
+// bitmap font list state from store
+const bitmapFontStore = useBitmapFontStore()
+const bitmapFonts = computed<BitmapFontVO[]>(() => bitmapFontStore.fonts)
+const pageNum = computed(() => bitmapFontStore.pageNum)
+const pageSize = computed(() => bitmapFontStore.pageSize)
+const bitmapTotal = computed(() => bitmapFontStore.total)
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
@@ -105,7 +107,10 @@ const selectedFontLabel = computed(() => {
 const togglePanel = () => {
   isOpen.value = !isOpen.value
   if (isOpen.value && bitmapFonts.value.length === 0) {
-    void loadBitmapFonts()
+    bitmapFontStore.loadFromSession()
+    if (!bitmapFontStore.fonts.length) {
+      void bitmapFontStore.loadPage(1)
+    }
   }
 }
 
@@ -125,7 +130,7 @@ const openNewBitmapFont = async () => {
       rows.value = rows.value.map(row => ({ index: row.index, hasValue: false }))
       await loadBitmapRows(font.id)
       // 新建后刷新列表以便展示新字体
-      void loadBitmapFonts()
+      void bitmapFontStore.loadPage(1)
     }
   } catch (e) {
     console.warn('create bitmap font failed', e)
@@ -232,41 +237,8 @@ const loadBitmapRows = async (fontId: number) => {
   }
 }
 
-// 加载 bitmap 字体分页列表
-const loadBitmapFonts = async () => {
-  try {
-    const dto: BitmapFontPageQueryDTO = {
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-      isActive: 1,
-    }
-    const res = await pageBitmapFonts(dto)
-    const data = res.data
-    const list = (data?.list || []) as BitmapFontVO[]
-    // 统一做一次按 id 去重合并，保证列表没有重复元素
-    const merged = [...bitmapFonts.value]
-    const exists = new Set<number>(merged.map(f => f.id))
-    for (const font of list) {
-      if (!exists.has(font.id)) {
-        merged.push(font)
-        exists.add(font.id)
-      }
-    }
-    // 如果是第一页，优先使用第一页顺序；否则在原有基础上追加不重复项
-    if (pageNum.value <= 1) {
-      bitmapFonts.value = list
-    } else {
-      bitmapFonts.value = merged
-    }
-    bitmapTotal.value = data?.total || 0
-  } catch (e) {
-    console.warn('load bitmap fonts failed', e)
-  }
-}
-
 const handleBitmapPageChange = async (page: number) => {
-  pageNum.value = page
-  await loadBitmapFonts()
+  await bitmapFontStore.loadPage(page)
 }
 
 const handleSelectBitmapFont = async (font: BitmapFontVO) => {
