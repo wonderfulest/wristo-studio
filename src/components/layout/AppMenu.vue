@@ -25,9 +25,9 @@
           editorSettingsDialog.openDialog()
         }"
       />
-      <el-menu-item index="actions/editDesign" @click="handleEditDesign">
-        <el-icon><Edit /></el-icon>
-        <span>Edit Design</span>
+      <el-menu-item index="actions/save" @click="handleSave">
+        <el-icon><CircleCheck /></el-icon>
+        <span>Save</span>
       </el-menu-item>
       <!-- Main menu divider -->
       <el-divider direction="vertical" class="menu-divider" />

@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Home',
     component: Layout,
-    redirect: '/design',
+    redirect: '/designs/new-projects',
     meta: { requiresAuth: true },
     children: [
       {
@@ -42,6 +42,11 @@ const routes: RouteRecordRaw[] = [
             path: 'pending',
             name: 'pending-go-live',
             component: () => import('@/views/designs/PendingGoLiveList.vue'),
+          },
+          {
+            path: 'new-projects',
+            name: 'new-projects',
+            component: () => import('@/views/designs/NewProjects.vue'),
           },
         ],
       },

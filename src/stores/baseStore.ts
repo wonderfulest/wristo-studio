@@ -36,7 +36,8 @@ export const useBaseStore = defineStore('baseStore', {
     // 当前背景图片对应的 Fabric.Image 实例
     backgroundImage: null as AnyObject | null,
     currentIconFontSlug: '' as string,
-    currentIconFontSize: -1 as number
+    currentIconFontSize: -1 as number,
+    inCanvasWorkarea: false as boolean
   }),
 
   getters: {
@@ -44,6 +45,9 @@ export const useBaseStore = defineStore('baseStore', {
 
   // actions
   actions: {
+    setInCanvasWorkarea(flag: boolean): void {
+      this.inCanvasWorkarea = flag
+    },
     setIconFontSlug(slug: string): void {
       this.currentIconFontSlug = slug
     },

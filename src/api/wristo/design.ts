@@ -26,6 +26,14 @@ export const designApi = {
   },
 
   /**
+   * 获取模板设计列表（Sample Projects）
+   * 对应后端 /api/dsn/design/templates
+   */
+  getTemplateDesigns(params: { device?: string; populate?: string }): Promise<ApiResponse<Design[]>> {
+    return instance.get('/dsn/design/templates', { params })
+  },
+
+  /**
    * 获取设计详情
    * @param designUid 设计UID
    * @returns 设计详情

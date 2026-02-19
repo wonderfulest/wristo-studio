@@ -328,6 +328,7 @@ onMounted(() => {
   })
 
   exportStore.setExportPanelRef(exportPanelRef.value as any)
+  baseStore.setInCanvasWorkarea(true)
 })
 
 onBeforeUnmount(() => {
@@ -343,6 +344,7 @@ onBeforeUnmount(() => {
       emitter.emit('open-app-properties')
     }
   })
+  baseStore.setInCanvasWorkarea(false)
 })
 
 // 向外部暴露方法

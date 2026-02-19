@@ -35,7 +35,7 @@
           :class="{ 'active': isMyDesignsRoute }" 
           @click="navigateTo('my-designs')"
         >
-          My Designs
+          My Projects
         </h2>
       </div>
     </div>

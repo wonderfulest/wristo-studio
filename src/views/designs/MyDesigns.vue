@@ -36,7 +36,7 @@
 
     <!-- 设计列表 -->
     <el-row :gutter="20" class="design-grid">
-      <el-col :xs="24" :sm="8" :md="6" :lg="4" :xl="3" v-for="design in designs" :key="design.id">
+      <el-col :xs="24" :sm="8" :md="6" :lg="4" v-for="design in designs" :key="design.id">
         <DesignCard
           :design="design"
           :is-merchant-user="isMerchantUser"

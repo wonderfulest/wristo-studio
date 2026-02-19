@@ -33,8 +33,14 @@
                   <Edit />
                 </el-icon>
               </el-button>
-              <!-- 删除 -->
-              <el-button type="danger" size="small" link @click="emit('delete', design)">
+              <!-- 删除（仅商户或管理员可见） -->
+              <el-button
+                v-if="isMerchantUser || isAdminUser"
+                type="danger"
+                size="small"
+                link
+                @click="emit('delete', design)"
+              >
                 <el-icon>
                   <Delete />
                 </el-icon>
@@ -45,8 +51,14 @@
       </div>
     </template>
     <div class="design-info">
-      <div class="design-background" v-if="designImageUrl">
-        <img :src="designImageUrl" :alt="design.name" class="background-image" />
+      <div class="design-background">
+        <img
+          v-if="designImageUrl"
+          :src="designImageUrl"
+          :alt="design.name"
+          class="background-image"
+        />
+        <div v-else class="placeholder-circle"></div>
         <div class="creator-badge" v-if="showCreator">
           <span>{{ creatorName }}</span>
         </div>
@@ -305,6 +317,16 @@ const lastUpdatedText = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.placeholder-circle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #000;
 }
 
 .creator-badge {

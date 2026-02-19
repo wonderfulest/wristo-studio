@@ -8,10 +8,10 @@
       <nav class="header-nav">
         <a @click="showDesignerConfirm" class="nav-link">
           <Icon icon="material-symbols:edit-square" />
-          New Design
+          New Project
         </a>
         <el-dialog v-model="designerDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and start a new design?</span>
+          <span>Close current work and open New Projects?</span>
           <template #footer>
             <span class="dialog-footer">
               <el-button @click="designerDialogVisible = false">Cancel</el-button>
@@ -21,14 +21,14 @@
         </el-dialog>
         <a @click="showDesignsListConfirm" class="nav-link">
           <Icon icon="material-symbols:list" />
-          Designs List
+          Workspace
         </a>
-        <a @click="showFontsConfirm" class="nav-link">
+        <!-- <a @click="showFontsConfirm" class="nav-link">
           <Icon icon="material-symbols:font-download-outline" />
           Font Preview
-        </a>
+        </a> -->
         <el-dialog v-model="designsListDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and open the designs list?</span>
+          <span>Save current project and open the workspace?</span>
           <template #footer>
             <span class="dialog-footer">
               <el-button @click="designsListDialogVisible = false">Cancel</el-button>
@@ -90,11 +90,13 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
+import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import DeviceDisplay from '@/components/DeviceDisplay.vue'
 import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
 import UserMenu from './UserMenu.vue'
+import emitter from '@/utils/eventBus'
 
 const props = defineProps({
   // 其他需要保留的 props
@@ -105,6 +107,7 @@ const emit = defineEmits(['update:isDialogVisible'])
 const router = useRouter()
 const route = useRoute()
 const baseStore = useBaseStore()
+const exportStore = useExportStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 
@@ -128,11 +131,31 @@ const onDeviceSelected = (device) => {
   // 设备更新逻辑已在 DeviceSelector 中完成（更新接口 + 刷新 userStore）
 }
 const showDesignerConfirm = () => {
-  designerDialogVisible.value = true
+  // 只有在画布路由（/design?id=xxx）下才弹出确认提示
+  const query = route.query || {}
+  if (route.name === 'Design' && query.id) {
+    designerDialogVisible.value = true
+    return
+  }
+
+  // 如果当前已经在 New Projects 页面，直接触发全局事件打开弹框，可重复触发
+  if (route.name === 'new-projects') {
+    emitter.emit('open-new-project-dialog')
+    return
+  }
+
+  // 其他页面：重置状态并跳转到 New Projects，由 NewProjects 自己在 mounted/activated 时弹框
+  baseStore.$reset()
+  router.push('/designs/new-projects')
 }
 
 const showDesignsListConfirm = () => {
-  designsListDialogVisible.value = true
+  if (baseStore.inCanvasWorkarea) {
+    designsListDialogVisible.value = true
+  } else {
+    baseStore.$reset()
+    router.push('/designs')
+  }
 }
 
 const showFontsConfirm = () => {
@@ -149,13 +172,27 @@ const showTicketsConfirm = () => {
 
 const confirmNewDesign = () => {
   designerDialogVisible.value = false
-  createDesignDialogRef.value?.show()
+  baseStore.$reset()
+  router.push('/designs/new-projects')
 }
 
-const confirmOpenDesignsList = () => {
-  designsListDialogVisible.value = false
-  baseStore.$reset()
-  router.push('/designs')
+const confirmOpenDesignsList = async () => {
+  try {
+    // 先保存当前 Project
+    baseStore.deactivateObject && baseStore.deactivateObject()
+    const result = await exportStore.uploadApp()
+    if (result !== 0) {
+      // 保存失败或被取消
+      return
+    }
+    // 保存成功后再关闭弹窗并跳转 Workspace
+    designsListDialogVisible.value = false
+    baseStore.$reset()
+    router.push('/designs')
+  } catch (error) {
+    console.error('[AppHeader] confirmOpenDesignsList save failed:', error)
+    messageStore.error('Failed to save project')
+  }
 }
 
 const confirmOpenFonts = () => {
