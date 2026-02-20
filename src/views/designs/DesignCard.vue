@@ -63,7 +63,7 @@
           <span>{{ creatorName }}</span>
         </div>
       </div>
-      <div class="meta">
+      <div class="meta" v-if="isMerchantUser">
         <span>App ID: {{ design.product?.appId }}</span>
         <span>Design: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->

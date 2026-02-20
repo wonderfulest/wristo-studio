@@ -3,9 +3,28 @@
     <div class="page-header">
       <h2>Recent Projects</h2>
     </div>
+    <el-input
+      v-model="searchQuery"
+      placeholder="Search project name"
+      clearable
+      class="search-input"
+    />
     <el-row :gutter="24" class="design-grid">
+      <!-- 空卡片：用于引导创建新应用 -->
       <el-col
-        v-for="design in designs"
+        :xs="24"
+        :sm="8"
+        :md="6"
+        :lg="4"
+        :xl="4"
+      >
+        <div class="empty-card" @click="handleCreateNewProject">
+          <div class="empty-card-plus">+</div>
+          <div class="empty-card-text">New Project</div>
+        </div>
+      </el-col>
+      <el-col
+        v-for="design in filteredDesigns"
         :key="design.id"
         :xs="24"
         :sm="8"
@@ -15,8 +34,8 @@
       >
         <DesignCard
           :design="design"
-          :is-merchant-user="false"
-          :is-admin-user="false"
+          :is-merchant-user="isMerchantUser"
+          :is-admin-user="isAdminUser"
           :show-creator="false"
           :loading-states="loadingStatesPlain"
           :current-user-id="userStore.userInfo?.id ?? null"
@@ -44,12 +63,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { designApi } from '@/api/wristo/design'
 import type { Design } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import dayjs from 'dayjs'
+import emitter from '@/utils/eventBus'
+
+// 是否为商家用户（拥有 ROLE_MERCHANT 角色）
+const isMerchantUser = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
+})
+
+// Whether the current user is an admin (has ROLE_ADMIN)
+const isAdminUser = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
+})
 
 const props = defineProps<{
   designs: Design[]
@@ -78,8 +110,17 @@ const loadingStates = computed<LoadingStates>(() => ({
 }))
 
 const loadingStatesPlain = computed(() => loadingStates.value)
+const searchQuery = ref('')
 
-const designs = computed(() => props.designs)
+const filteredDesigns = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  let list = props.designs || []
+  if (q) {
+    list = list.filter((d) => (d.name || '').toLowerCase().includes(q))
+  }
+  // 只显示前 5 个
+  return list.slice(0, 5)
+})
 
 const getDesignImageUrl = (design: Design) => {
   return designApi.getDesignImageUrl(design, true) || ''
@@ -134,6 +175,10 @@ const hasNewRelease = (design: Design): boolean => {
 
   return dayjs(releaseUpdatedAt).isAfter(dayjs(lastGoLive))
 }
+
+const handleCreateNewProject = () => {
+  emitter.emit('open-new-project-dialog')
+}
 </script>
 
 <style scoped>
@@ -143,7 +188,45 @@ const hasNewRelease = (design: Design): boolean => {
   font-weight: 800;
 }
 
+.search-input {
+  margin-top: 8px;
+  max-width: 320px;
+}
+
 .design-grid {
   margin-top: 16px;
+}
+
+.empty-card {
+  height: 100%;
+  min-height: 180px;
+  border-radius: 12px;
+  border: 2px dashed #d3d7de;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #f9fafb;
+}
+
+.empty-card-plus {
+  font-size: 40px;
+  line-height: 1;
+  color: #3b82f6;
+  margin-bottom: 4px;
+}
+
+.empty-card-text {
+  font-size: 13px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.empty-card:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
 }
 </style>

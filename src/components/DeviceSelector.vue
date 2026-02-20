@@ -4,6 +4,7 @@
     title="Select Your Device"
     width="min(880px, 95vw)"
     :before-close="handleClose"
+    :z-index="3000"
     class="device-selector-dialog"
   >
     <div class="device-selector-content">
@@ -62,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, Check, Warning, Search } from '@element-plus/icons-vue'
 import { getDeviceList, getDeviceDetail, type GarminDeviceBaseVO, type GarminDeviceVO } from '@/api/device'
@@ -122,6 +123,19 @@ watch(
     }
   }
 )
+
+// 当用户还没有绑定设备时，组件挂载后自动弹出设备选择对话框（同时只会有一个实例显示）
+onMounted(() => {
+  // 已经是可见状态时不再重复触发
+  if (visible.value) return
+
+  const currentDeviceId = (userStore.userInfo as any)?.device?.deviceId
+  if (!currentDeviceId) {
+    visible.value = true
+    emit('update:modelValue', true)
+    loadDeviceList()
+  }
+})
 
 // Watch for visible changes
 watch(visible, (newValue) => {
