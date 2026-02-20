@@ -84,10 +84,11 @@
         </div>
         <div
           class="package-info"
-          v-if="isMerchantUser && (design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null)"
+          v-if="design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null"
         >
+          <!-- 只有商户用户可以看到，IQ build in queue -->
           <div
-            v-if="design.product?.packagingLog && design.product.packagingLog.rank !== null"
+            v-if="isMerchantUser && (design.product?.packagingLog && design.product.packagingLog.rank !== null)"
             class="package-info-item"
           >
             <strong>IQ build in queue:</strong>
@@ -104,6 +105,7 @@
               Packaging<span class="ellipsis">...</span>
             </span>
           </div>
+          <!-- 所有用户都可以看到，PRG build in queue -->
           <div
             v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== null"
             class="package-info-item"
@@ -232,9 +234,7 @@ const showBuildPrgButton = computed(() => {
 const showRunPrgButton = computed(() => {
   const product = design.value.product as any
   if (!product) return false
-  //  "2026-02-20 02:40:46",
   const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
-  //  "2026-02-20T02:40:41.590+00:00"
   const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
   if (!releaseUpdatedAtRaw || !designUpdatedAtRaw) return false
 
