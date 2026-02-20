@@ -184,7 +184,7 @@ const fetchRecentDesigns = async () => {
       pageNum: 1,
       pageSize: 5,
       orderBy: 'updated_at:desc',
-      populate: 'user,product,cover',
+      populate: 'user,product,payment,release,cover,category,bundle,package_log',
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId

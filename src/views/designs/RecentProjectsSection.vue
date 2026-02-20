@@ -14,8 +14,8 @@
       <el-col
         :xs="24"
         :sm="12"
-        :md="8"
-        :lg="6"
+        :md="6"
+        :lg="4"
         :xl="4"
       >
         <div class="empty-card" @click="handleCreateNewProject">
@@ -32,8 +32,8 @@
         :key="design.id"
         :xs="24"
         :sm="12"
-        :md="8"
-        :lg="6"
+        :md="6"
+        :lg="4"
         :xl="4"
       >
         <DesignCard
