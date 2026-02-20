@@ -6,8 +6,9 @@
         <!-- 标题单独一行 -->
         <div class="title-row">
           <span class="title">{{ design.name }}</span>
-           <!-- 状态小点 + Tooltip，不占据标题高度 -->
+          <!-- 状态小点 + Tooltip，不占据标题高度 -->
           <el-tooltip
+            v-if="isMerchantUser || isAdminUser"
             :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
             placement="top"
           >
@@ -33,9 +34,9 @@
                   <Edit />
                 </el-icon>
               </el-button>
-              <!-- 删除（仅商户或管理员可见） -->
+              <!-- 删除（仅管理员和自己的应用可见） -->
               <el-button
-                v-if="isMerchantUser || isAdminUser"
+                v-if="isAdminUser || design.user.id === currentUserId"
                 type="danger"
                 size="small"
                 link
@@ -63,17 +64,17 @@
           <span>{{ creatorName }}</span>
         </div>
       </div>
-      <div class="meta" v-if="isMerchantUser">
-        <span>App ID: {{ design.product?.appId }}</span>
-        <span>Design: {{ design.designUid }}</span>
+      <div class="meta">
+        <span v-if="isMerchantUser">App ID: {{ design.product?.appId }}</span>
+        <span v-if="isMerchantUser">Design: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
-        <div class="last-go-live-row">
+        <div v-if="isMerchantUser" class="last-go-live-row">
           <span>Last Updated: {{ lastUpdatedText }}</span>
         </div>
-        <div v-if="hasDownloadablePackage" class="last-go-live-row">
+        <div v-if="isMerchantUser && hasDownloadablePackage" class="last-go-live-row">
           <span>Last Package: {{ lastPackageTimeText }}</span>
         </div>
-        <div class="last-go-live-row">
+        <div v-if="isMerchantUser" class="last-go-live-row">
           <span>Last Go Live: {{ lastGoLiveText }}</span>
           <el-tooltip v-if="hasNewRelease" content="New version available to upload" placement="top">
             <span class="new-release-indicator" role="img" aria-label="New version available to upload">
@@ -83,7 +84,7 @@
         </div>
         <div
           class="package-info"
-          v-if="design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null"
+          v-if="isMerchantUser && (design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null)"
         >
           <div
             v-if="design.product?.packagingLog && design.product.packagingLog.rank !== null"
@@ -125,21 +126,20 @@
       </div>
       <div class="actions">
         <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
-        <!-- v-if="isAdminUser" -->
         <el-button
           type="default"
           size="small"
           @click="emit('copy', design)"
           :loading="loadingStates.copy.has(design.id)"
         >
-          📄 Copy
+          📄 Duplicate
         </el-button>
-        <el-button v-if="!design.product?.prgPackagingLog?.rank && design.product?.prgRelease && design.product?.prgRelease?.updatedAt < design.updatedAt" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
+        <el-button v-if="showBuildPrgButton" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
           🛠 Build PRG
         </el-button>
-        <el-button v-if="design.product?.prgRelease && design.product?.prgRelease.updatedAt > design.updatedAt" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
+        <el-button v-if="showRunPrgButton" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
         <el-button
-          v-if="isMerchantUser && !design.product?.packagingLog?.rank && (design.designStatus === 'draft' || design.updatedAt > (design.product?.release?.updatedAt ?? 0))"
+          v-if="showBuildIqButton"
           type="info"
           size="small"
           @click="emit('submit', design)"
@@ -147,8 +147,8 @@
           :disabled="!!design.product?.packagingLog?.rank">
           📦 Build IQ
         </el-button>
-        <el-button v-if="isMerchantUser && hasDownloadablePackage" type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
-        <el-button v-if="isMerchantUser && design.product?.release" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
+        <el-button v-if="showDownloadIqButton" type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
+        <el-button v-if="showPublishButton" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
       </div>
     </div>
   </el-card>
@@ -210,6 +210,51 @@ const creatorName = computed(() => props.creatorName)
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
+
+const showBuildPrgButton = computed(() => {
+  const product = design.value.product as any
+  if (!product) return false
+  const hasQueue = !!product.prgPackagingLog?.rank
+  const releaseUpdatedAt = product.prgRelease?.updatedAt as string | number | undefined
+  const designUpdatedAt = design.value.updatedAt as string | number | undefined
+  if (!releaseUpdatedAt) return true
+  if (!designUpdatedAt) return false
+  return !hasQueue && releaseUpdatedAt < designUpdatedAt
+})
+
+const showRunPrgButton = computed(() => {
+  const product = design.value.product as any
+  if (!product) return false
+  const releaseUpdatedAt = product.prgRelease?.updatedAt as string | number | undefined
+  const designUpdatedAt = design.value.updatedAt as string | number | undefined
+  if (!releaseUpdatedAt || !designUpdatedAt) return false
+  return !!product.prgRelease && releaseUpdatedAt > designUpdatedAt
+})
+
+const showBuildIqButton = computed(() => {
+  if (!isMerchantUser.value) return false
+  const product = design.value.product as any
+  if (!product) return false
+
+  const hasQueue = !!product.packagingLog?.rank
+  const designStatus = design.value.designStatus
+  const productReleaseUpdatedAt = (product.release as { updatedAt?: any } | undefined)?.updatedAt ?? 0
+  const designUpdatedAt = (design.value.updatedAt ?? 0) as any
+
+  return (
+    !hasQueue &&
+    (designStatus === 'draft' || designUpdatedAt > productReleaseUpdatedAt)
+  )
+})
+
+const showDownloadIqButton = computed(() => {
+  return isMerchantUser.value && hasDownloadablePackage.value
+})
+
+const showPublishButton = computed(() => {
+  const product = design.value.product
+  return isMerchantUser.value && !!product?.release
+})
 
 const lastPackageTimeText = computed(() => {
   const updatedAt = (design.value.product as any)?.release?.updatedAt as string | number | undefined

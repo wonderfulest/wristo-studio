@@ -4,14 +4,13 @@
     <div class="search-bar">
       <!-- 当前设备展示与选择 -->
       <DeviceDisplay ref="deviceDisplayRef" />
-      <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable
-      @keyup.enter="handleSearch" />
-      <el-select v-model="selectedStatus" placeholder="Select Status" class="status-filter" @change="handleStatusChange">
+      <el-input v-model="searchName" placeholder="Search Name" class="name-filter" clearable @keyup.enter="handleSearch" />
+      <!-- <el-select v-model="selectedStatus" placeholder="Select Status" class="status-filter" @change="handleStatusChange">
         <el-option label="All" value="" />
         <el-option label="Draft" value="draft" />
         <el-option label="Pending" value="submitted" />
         <el-option label="Published" value="published" />
-      </el-select>
+      </el-select> -->
 
       <el-select v-model="sortField" placeholder="Sort Field" @change="handleSortChange" class="sort-field-filter">
         <el-option label="Created Time" value="created_at" />
@@ -174,7 +173,7 @@ const loadingStatesPlain = computed(() => loadingStates.value)
 
 // 搜索相关状态
 const searchName = ref('')
-const selectedStatus = ref('')
+// const selectedStatus = ref('')
 const sortField = ref('updated_at')
 const sortOrder = ref('desc')
 
@@ -259,7 +258,7 @@ const fetchDesigns = async () => {
     const params: DesignPageParams = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      status: selectedStatus.value,
+      // status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
       populate: 'user,product,payment,release,cover,category,bundle,package_log'
@@ -424,6 +423,7 @@ const buildPrg = async (design: Design) => {
     const res = await designApi.submitPrgPackageTask(design.designUid, String(deviceId)) as ApiResponse<boolean>
     if (res.code === 0 && res.data) {
       messageStore.success('PRG build task submitted')
+      await fetchDesigns()
     } else {
       messageStore.error(res.msg || 'Failed to submit PRG build task')
     }
@@ -595,15 +595,15 @@ const handleGoLiveSuccess = () => {
 }
 
 .status-filter {
-  width: 120px;
+  width: 180px;
 }
 
 .sort-field-filter {
-  width: 120px;
+  width: 180px;
 }
 
 .sort-order-filter {
-  width: 100px;
+  width: 180px;
 }
 
 .display-options {

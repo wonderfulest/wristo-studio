@@ -182,7 +182,7 @@ const fetchRecentDesigns = async () => {
   try {
     const params: DesignPageParams = {
       pageNum: 1,
-      pageSize: 6,
+      pageSize: 5,
       orderBy: 'updated_at:desc',
       populate: 'user,product,cover',
     }

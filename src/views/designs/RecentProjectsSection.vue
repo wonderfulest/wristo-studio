@@ -3,23 +3,27 @@
     <div class="page-header">
       <h2>Recent Projects</h2>
     </div>
-    <el-input
+    <!-- <el-input
       v-model="searchQuery"
       placeholder="Search project name"
       clearable
       class="search-input"
-    />
+    /> -->
     <el-row :gutter="24" class="design-grid">
       <!-- 空卡片：用于引导创建新应用 -->
       <el-col
         :xs="24"
-        :sm="8"
-        :md="6"
-        :lg="4"
+        :sm="12"
+        :md="8"
+        :lg="6"
         :xl="4"
       >
         <div class="empty-card" @click="handleCreateNewProject">
-          <div class="empty-card-plus">+</div>
+          <div class="empty-card-visual">
+            <div class="empty-card-circle">
+              <span class="empty-card-plus">+</span>
+            </div>
+          </div>
           <div class="empty-card-text">New Project</div>
         </div>
       </el-col>
@@ -27,9 +31,9 @@
         v-for="design in filteredDesigns"
         :key="design.id"
         :xs="24"
-        :sm="8"
-        :md="6"
-        :lg="4"
+        :sm="12"
+        :md="8"
+        :lg="6"
         :xl="4"
       >
         <DesignCard
@@ -208,20 +212,42 @@ const handleCreateNewProject = () => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
-  background: #f9fafb;
+}
+
+.empty-card-visual {
+  position: relative;
+  width: 340px;
+  height: 340px;
+  max-width: 100%;
+  max-height: 100%;
+  margin-bottom: 6px;
+}
+
+.empty-card-circle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-card-plus {
-  font-size: 40px;
+  font-size: 108px;
   line-height: 1;
-  color: #3b82f6;
-  margin-bottom: 4px;
+  color: #fff;
+  font-weight: 700;
 }
 
 .empty-card-text {
-  font-size: 13px;
-  color: #4b5563;
-  font-weight: 500;
+  font-size: 18px;
+  color: #111827;
+  font-weight: 600;
 }
 
 .empty-card:hover {
