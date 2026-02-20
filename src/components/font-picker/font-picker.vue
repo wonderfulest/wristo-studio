@@ -182,7 +182,6 @@ const selectFont = async (font: FontItem) => {
   emit('change', font.value)
   try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
   fontStore.addRecentFont(font)
-  isOpen.value = false
 }
 
 // 上传完成回调（来自子组件）
