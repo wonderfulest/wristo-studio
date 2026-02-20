@@ -215,20 +215,32 @@ const showBuildPrgButton = computed(() => {
   const product = design.value.product as any
   if (!product) return false
   const hasQueue = !!product.prgPackagingLog?.rank
-  const releaseUpdatedAt = product.prgRelease?.updatedAt as string | number | undefined
-  const designUpdatedAt = design.value.updatedAt as string | number | undefined
-  if (!releaseUpdatedAt) return true
-  if (!designUpdatedAt) return false
-  return !hasQueue && releaseUpdatedAt < designUpdatedAt
+  const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
+  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
+
+  // 若设计本身没有更新时间，则不允许构建
+  if (!designUpdatedAtRaw) return false
+
+  const designTs = +new Date(designUpdatedAtRaw)
+  // 如果没有 PRG release 更新时间，视为需要构建
+  if (!releaseUpdatedAtRaw) return !hasQueue
+
+  const releaseTs = +new Date(releaseUpdatedAtRaw)
+  return !hasQueue && releaseTs < designTs
 })
 
 const showRunPrgButton = computed(() => {
   const product = design.value.product as any
   if (!product) return false
-  const releaseUpdatedAt = product.prgRelease?.updatedAt as string | number | undefined
-  const designUpdatedAt = design.value.updatedAt as string | number | undefined
-  if (!releaseUpdatedAt || !designUpdatedAt) return false
-  return !!product.prgRelease && releaseUpdatedAt > designUpdatedAt
+  //  "2026-02-20 02:40:46",
+  const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
+  //  "2026-02-20T02:40:41.590+00:00"
+  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
+  if (!releaseUpdatedAtRaw || !designUpdatedAtRaw) return false
+
+  const releaseTs = +new Date(releaseUpdatedAtRaw)
+  const designTs = +new Date(designUpdatedAtRaw)
+  return !!product.prgRelease && releaseTs > designTs
 })
 
 const showBuildIqButton = computed(() => {
@@ -238,12 +250,22 @@ const showBuildIqButton = computed(() => {
 
   const hasQueue = !!product.packagingLog?.rank
   const designStatus = design.value.designStatus
-  const productReleaseUpdatedAt = (product.release as { updatedAt?: any } | undefined)?.updatedAt ?? 0
-  const designUpdatedAt = (design.value.updatedAt ?? 0) as any
+  const productReleaseUpdatedAtRaw = (product.release as { updatedAt?: string | number } | undefined)?.updatedAt
+  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
+
+  // 没有设计更新时间时，不允许构建 IQ
+  if (!designUpdatedAtRaw) return false
+
+  const designTs = +new Date(designUpdatedAtRaw)
+  const releaseTs = productReleaseUpdatedAtRaw ? +new Date(productReleaseUpdatedAtRaw) : null
 
   return (
     !hasQueue &&
-    (designStatus === 'draft' || designUpdatedAt > productReleaseUpdatedAt)
+    (
+      designStatus === 'draft' ||
+      // 如果还没有 release 记录，认为需要构建；否则比较时间戳
+      releaseTs === null || designTs > releaseTs
+    )
   )
 })
 

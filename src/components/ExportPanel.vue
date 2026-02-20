@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :model-value="isDialogVisible" title="导出配置" class="export-dialog" @open="openDialog" @update:model-value="emit('update:isDialogVisible', $event)" :before-close="closeDialog">
+  <el-dialog :model-value="isDialogVisible" title="Export Configuration" class="export-dialog" @open="openDialog" @update:model-value="emit('update:isDialogVisible', $event)" :before-close="closeDialog">
     <div v-if="uploading" class="upload-progress">
       <div class="upload-header">
         <h3>Uploading...</h3>
@@ -8,7 +8,7 @@
             <el-tag type="primary" effect="dark" size="large">Progress: {{ currentProgress }}%</el-tag>
           </div>
           <div class="info-item">
-            <el-tag type="success" effect="dark" size="large">状态: {{ currentStatus }}</el-tag>
+            <el-tag type="success" effect="dark" size="large">Status: {{ currentStatus }}</el-tag>
           </div>
         </div>
       </div>
@@ -17,32 +17,32 @@
         <el-progress :percentage="currentProgress" :format="progressFormat" :stroke-width="20" />
         <div class="progress-details">
           <div class="current-progress">
-            <span class="progress-label">当前进度:</span>
+            <span class="progress-label">Current Progress:</span>
             <span class="progress-value">{{ currentProgress }}%</span>
           </div>
           <div class="upload-status">
-            <span class="status-label">状态:</span>
+            <span class="status-label">Status:</span>
             <span class="status-value">{{ currentStatus }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="isUploadTimeout" class="timeout-warning">
-        上传时间超过1分钟，可能存在网络问题
-        <el-button size="small" type="danger" @click="cancelUpload">取消上传</el-button>
+        Upload time has exceeded 1 minute, there may be network issues
+        <el-button size="small" type="danger" @click="cancelUpload">Cancel Upload</el-button>
       </div>
     </div>
     <div v-else class="export-preview">
       <div class="preview-header">
-        <span>预览</span>
+        <span>Preview</span>
         <div class="preview-actions">
           <el-button size="small" @click="copyConfig" class="copy-btn">
             <Icon icon="solar:copy-bold" />
-            复制
+            Copy
           </el-button>
           <el-button type="success" size="small" @click="uploadApp" class="upload-btn">
             <Icon icon="material-symbols:upload" />
-            上传
+            Upload
           </el-button>
         </div>
       </div>
@@ -50,10 +50,10 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="closeDialog">取消</el-button>
+        <el-button @click="closeDialog">Cancel</el-button>
         <el-button type="primary" @click="downloadConfig">
           <Icon icon="material-symbols:export-notes-rounded" />
-          确认导出
+          Confirm Export
         </el-button>
       </span>
     </template>
@@ -120,7 +120,7 @@ let currentProgress = 0
 let currentStatus = ''
 
 const progressFormat = (percentage) => {
-  return percentage === 100 ? '完成' : `${percentage}%`
+  return percentage === 100 ? 'Completed' : `${percentage}%`
 }
 
 // 更新进度和状态的辅助函数
@@ -148,7 +148,7 @@ const openDialog = () => {
 // 导出配置
 const downloadConfig = async () => {
   if (!baseStore.watchFaceName) {
-    messageStore.error('请设置应用名称')
+    messageStore.error('Please set the app name')
     return null
   }
   const config = baseStore.generateConfig()
@@ -189,11 +189,11 @@ const isOperationLocked = ref(false)
 // 定时轮训保存配置，只需要保存 name, kpayId, configJson 即可
 const saveConfig = async () => {
   if (router.currentRoute.value.path !== '/design') {
-    messageStore.error('不是设计页面')
+    messageStore.error('Not on the design page')
     return
   }
   if (!baseStore.watchFaceName) {
-    messageStore.error('请先设置应用名称')
+    messageStore.error('Please set the app name first')
     return
   }
 
@@ -218,7 +218,7 @@ const saveConfig = async () => {
     // }
     // return designRes.data.documentId
   } catch (error) {
-    console.error('自动保存失败', error)
+    console.error('Auto save failed', error)
     return ''
   }
 }
@@ -227,7 +227,7 @@ const saveConfig = async () => {
 const uploadApp = async () => {
   // 检查应用名称
   if (!baseStore.watchFaceName) {
-    messageStore.error('请设置应用名称')
+    messageStore.error('Please set the app name')
     return -1
   }
   // 生成配置
@@ -239,7 +239,7 @@ const uploadApp = async () => {
   // 开始上传，显示进度条
   uploading.value = true
   currentProgress = 0
-  currentStatus = '准备上传...'
+  currentStatus = 'Preparing upload...'
   isUploadTimeout.value = false
 
   // 创建全屏遮罩
@@ -256,7 +256,7 @@ const uploadApp = async () => {
 
   try {
     // 应用创建
-    currentStatus = '创建应用...'
+    currentStatus = 'Creating app...'
     currentProgress = 10
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -281,13 +281,13 @@ const uploadApp = async () => {
       return -1
     }
     // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
-    currentStatus = '处理背景图片配置...'
+    currentStatus = 'Processing background image configuration...'
     currentProgress = 20
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
     // 上传表盘截图 - 对画布进行实时截图
-    currentStatus = '上传表盘截图...'
+    currentStatus = 'Uploading watchface screenshot...'
     const screenshotUrl = await uploadScreenshot()
     currentProgress = 40
     if (loadingInstance) {
@@ -295,7 +295,7 @@ const uploadApp = async () => {
     }
 
     // 配置更新
-    currentStatus = '更新配置信息...'
+    currentStatus = 'Updating configuration...'
     currentProgress = 60
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -327,12 +327,12 @@ const uploadApp = async () => {
     baseStore.id = res.data.documentId
 
     // 更新WPay产品信息(必须在设计创建或更新之后)
-    currentStatus = '更新WPay产品信息...'
+    currentStatus = 'Updating WPay product information...'
     currentProgress = 80
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
-    currentStatus = '上传完成！'
+    currentStatus = 'Upload completed'
     currentProgress = 100
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -341,7 +341,7 @@ const uploadApp = async () => {
     // 延迟关闭进度条，让用户看到完成状态
     setTimeout(() => {
       uploading.value = false
-      messageStore.success('配置上传成功')
+      messageStore.success('Configuration uploaded successfully')
       closeDialog()
 
       // 清除超时定时器和遮罩
@@ -353,8 +353,8 @@ const uploadApp = async () => {
     }, 1000)
     return 0
   } catch (error) {
-    console.error('配置上传失败:', error)
-    currentStatus = '上传失败: ' + (error.message || '未知错误')
+    console.error('Configuration upload failed:', error)
+    currentStatus = 'Upload failed: ' + (error.message || 'Unknown error')
     currentProgress = 0
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -363,7 +363,7 @@ const uploadApp = async () => {
     // 延迟关闭进度条，让用户看到错误信息
     setTimeout(() => {
       uploading.value = false
-      messageStore.error(error.message || '配置上传失败，请稍后重试')
+      messageStore.error(error.message || 'Configuration upload failed, please try again later')
 
       // 清除超时定时器和遮罩
       clearTimeout(uploadTimeoutTimer)
@@ -378,7 +378,7 @@ const uploadApp = async () => {
 
 // 取消上传
 const cancelUpload = () => {
-  currentStatus = '已取消上传'
+  currentStatus = 'Upload canceled'
   currentProgress = 0
 
   // 关闭遮罩
@@ -404,10 +404,10 @@ const copyConfig = () => {
   navigator.clipboard
     .writeText(configStr)
     .then(() => {
-      messageStore.success('配置已复制到剪贴板')
+      messageStore.success('Configuration copied to clipboard')
     })
     .catch(() => {
-      messageStore.error('复制失败')
+      messageStore.error('Copy failed')
     })
 }
 

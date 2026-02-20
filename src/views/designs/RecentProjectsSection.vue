@@ -216,10 +216,9 @@ const handleCreateNewProject = () => {
 
 .empty-card-visual {
   position: relative;
-  width: 340px;
-  height: 340px;
-  max-width: 100%;
-  max-height: 100%;
+  width: 90%;
+  max-width: 380px;
+  aspect-ratio: 1 / 1; /* 始终保持 1:1 */
   margin-bottom: 6px;
 }
 
