@@ -51,15 +51,15 @@
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
           @open="emit('open', design)"
-          @copy="() => {}"
-          @edit="() => {}"
-          @delete="() => {}"
-          @build-prg="() => {}"
-          @run-prg="() => {}"
-          @submit="() => {}"
-          @download-package="() => {}"
-          @go-live="() => {}"
-          @copy-name="() => {}"
+          @copy="emit('copy', design)"
+          @edit="emit('edit', design)"
+          @delete="emit('delete', design)"
+          @build-prg="emit('build-prg', design)"
+          @run-prg="emit('run-prg', design)"
+          @submit="emit('submit', design)"
+          @download-package="emit('download-package', design)"
+          @go-live="emit('go-live', design)"
+          @copy-name="(name: string) => emit('copy-name', name)"
         />
       </el-col>
     </el-row>
@@ -93,6 +93,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'open', design: Design): void
+  (e: 'copy', design: Design): void
+  (e: 'edit', design: Design): void
+  (e: 'delete', design: Design): void
+  (e: 'build-prg', design: Design): void
+  (e: 'run-prg', design: Design): void
+  (e: 'submit', design: Design): void
+  (e: 'download-package', design: Design): void
+  (e: 'go-live', design: Design): void
+  (e: 'copy-name', name: string): void
 }>()
 
 const userStore = useUserStore()
@@ -201,6 +210,11 @@ const handleCreateNewProject = () => {
   margin-top: 16px;
 }
 
+/* 在最近项目区仅保留 DesignCard 底部操作区中的第一个按钮（✏️ Edit），隐藏其余按钮 */
+.design-grid :deep(.actions .el-button:nth-child(n + 2)) {
+  display: none;
+}
+
 .empty-card {
   height: 100%;
   min-height: 180px;
@@ -218,7 +232,7 @@ const handleCreateNewProject = () => {
   position: relative;
   width: 90%;
   max-width: 380px;
-  aspect-ratio: 1 / 1; /* 始终保持 1:1 */
+  aspect-ratio: 1 / 1;
   margin-bottom: 6px;
 }
 
