@@ -215,6 +215,11 @@ const handleCreateNewProject = () => {
   display: none;
 }
 
+/* 在最近项目区隐藏 DesignCard 头部右上角的操作图标（复制名称 / 编辑 / 删除） */
+.design-grid :deep(.header-actions) {
+  display: none;
+}
+
 .empty-card {
   height: 100%;
   min-height: 180px;
