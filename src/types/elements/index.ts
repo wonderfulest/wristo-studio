@@ -33,7 +33,7 @@ export type { TickElementConfig } from './tick'
 import type { BaseElementConfig as _Base } from './base'
 import type { TextElementConfig as _Text } from './text'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
-import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon, WeatherElementConfig as _Weather } from './data'
+import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc, GoalSegmentBarElementConfig as _GoalSegBar } from './goal'
@@ -51,6 +51,7 @@ export type AnyElementConfig =
   | _DataText
   | _Moon
   | _Weather
+  | _WindDirection
   | _Indicator
   | _Hand
   | _Shape
@@ -79,6 +80,7 @@ export interface ElementConfigMap {
   'data': _DataText
   'moon': _Moon
   'weather': _Weather
+  'windDirection': _WindDirection
   'indicator': _Indicator
   'bluetooth': _Indicator
   'alarms': _Indicator

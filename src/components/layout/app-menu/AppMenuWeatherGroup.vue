@@ -14,6 +14,10 @@
         <el-icon><Picture /></el-icon>
         <span>Moon Phase</span>
       </el-menu-item>
+      <el-menu-item index="weather/windDirection" @click="onAddElement('weather', 'windDirection')">
+        <el-icon><Picture /></el-icon>
+        <span>Wind Direction</span>
+      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>

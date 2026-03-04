@@ -119,7 +119,7 @@ export const useTick12Store = defineStore('tick12Element', {
           angle: prevAngle,
           imageUrl: config.imageUrl,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
         })
 

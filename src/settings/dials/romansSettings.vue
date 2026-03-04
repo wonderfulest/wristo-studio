@@ -6,7 +6,7 @@
       <!-- 刻度样式选择 -->
       <div class="setting-item">
         <label>数字样式</label>
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="romans"
@@ -31,7 +31,7 @@
 import { ref, defineEmits, defineExpose } from 'vue'
 import { useRomansStore } from '@/stores/elements/dials/RomansElement'
 import { ElMessage } from 'element-plus'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 
 const emit = defineEmits(['close'])
 

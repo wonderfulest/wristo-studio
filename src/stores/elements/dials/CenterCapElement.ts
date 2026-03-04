@@ -69,7 +69,7 @@ export const useCenterCapStore = defineStore('centerCapElement', {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         imageUrl: imageUrl,
         assetId: (options as any).assetId,
@@ -131,7 +131,7 @@ export const useCenterCapStore = defineStore('centerCapElement', {
           angle: element.angle,
           imageUrl: config.imageUrl,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
         })
 

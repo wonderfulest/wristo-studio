@@ -6,7 +6,7 @@
       <!-- 刻度样式选择 -->
       <div class="setting-item">
         <label>刻度样式</label>
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="tick60"
@@ -30,7 +30,7 @@
 import { ref, defineEmits, defineExpose } from 'vue'
 import { useTick60Store } from '@/stores/elements/dials/Tick60Element'
 import { ElMessage } from 'element-plus'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 const emit = defineEmits(['close'])
 
 const props = defineProps({

@@ -5,7 +5,7 @@
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
         <label>指针hand</label>
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="hour"
@@ -20,7 +20,7 @@
 <script setup>
 import { ref, defineProps } from 'vue'
 import { useHourHandStore } from '@/stores/elements/hands/hourHandElement'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 
 const props = defineProps({
   element: {

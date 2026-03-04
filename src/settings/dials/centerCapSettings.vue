@@ -6,7 +6,7 @@
       <!-- 资源选择 -->
       <div class="setting-item">
         <label>样式</label>
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="center_cap"
@@ -46,7 +46,7 @@ import { ref, computed, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCenterCapStore } from '@/stores/elements/dials/CenterCapElement'
 import { ElMessage } from 'element-plus'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 
 const emit = defineEmits(['close'])
 

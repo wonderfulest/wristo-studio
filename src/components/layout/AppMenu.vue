@@ -179,7 +179,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
         height: 100,
         type: 'image',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         originX: 'center',
         originY: 'center'

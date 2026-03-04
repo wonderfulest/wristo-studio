@@ -113,7 +113,7 @@ export const useRomansStore = defineStore('romansElement', {
           angle: prevAngle,
           imageUrl: config.imageUrl,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
         })
         const gw = group.width || 0

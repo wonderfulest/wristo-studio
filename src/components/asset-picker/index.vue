@@ -1,5 +1,5 @@
 <template>
-  <div class="analog-asset-picker">
+  <div class="asset-picker">
     <!-- 上传按钮 -->
     <div class="asset-item upload-item" @click="triggerUpload">
       <el-icon class="upload-icon"><Plus /></el-icon>
@@ -116,9 +116,14 @@ const hoverPreviewUrl = computed(() => {
 })
 
 /**
- * 获取素材预览URL（优先使用预览图 PNG），否则回退到原文件URL
+ * 获取素材展示URL
+ * - windDirection：优先原始 SVG，避免固定尺寸 preview PNG 影响比例观感
+ * - 其他类型：优先 previewUrl，兼顾加载性能
  */
 const getAssetUrl = (asset: AnalogAssetVO): string | undefined => {
+  if (props.assetType === 'windDirection') {
+    return asset.file?.url || asset.file?.previewUrl
+  }
   return asset.file?.previewUrl || asset.file?.url
 }
 
@@ -201,9 +206,7 @@ const handleUpload = async (event: Event) => {
     const res = await analogAssetApi.upload(file, props.assetType)
     
     if (res.data) {
-      // 添加到列表头部
       assets.value.unshift(res.data)
-      // 调用回调，直接使用返回的URL
       const url = getAssetUrl(res.data)
       if (url) {
         props.onUpload(url, res.data)
@@ -285,7 +288,7 @@ defineExpose({
 </script>
 
 <style scoped>
-.analog-asset-picker {
+.asset-picker {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

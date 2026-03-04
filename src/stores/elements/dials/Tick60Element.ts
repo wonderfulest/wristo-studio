@@ -117,7 +117,7 @@ export const useTick60Store = defineStore('tick60Element', {
           angle: prevAngle,
           imageUrl: config.imageUrl,
           selectable: true,
-          hasControls: true,
+          hasControls: false,
           hasBorders: true,
         })
 

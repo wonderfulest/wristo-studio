@@ -5,7 +5,7 @@
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
         <label>指针hand</label>
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="minute"
@@ -22,7 +22,7 @@ import { ref, defineEmits, defineExpose } from 'vue'
 import { useMinuteHandStore } from '@/stores/elements/hands/minuteHandElement'
 import HandPicker from '@/components/hand-picker/index.vue'
 import { ElMessage } from 'element-plus'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 
 const emit = defineEmits(['close'])
 

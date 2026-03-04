@@ -3,7 +3,7 @@ import type { PageQueryDTO } from './api'
 /**
  * 指针表盘素材类型枚举
  */
-export type AnalogAssetType = 'hour' | 'minute' | 'second' | 'tick12' | 'tick60' | 'romans'
+export type AnalogAssetType = 'hour' | 'minute' | 'second' | 'tick12' | 'tick60' | 'romans' | 'windDirection'
 
 /**
  * 文件VO

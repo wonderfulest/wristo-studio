@@ -154,7 +154,7 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
         originX: options.originX || 'center',
         originY: options.originY || 'center',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         // custom props kept on group for encode/update
         color,

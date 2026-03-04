@@ -51,3 +51,13 @@ export interface WeatherElementConfig extends BaseElementConfig {
   fontFamily?: string
   fill?: string
 }
+
+export interface WindDirectionElementConfig extends BaseElementConfig {
+  eleType: 'windDirection'
+  imageUrl?: string
+  width?: number
+  height?: number
+  windDegree?: number
+  assetId?: number
+  color?: string
+}

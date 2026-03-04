@@ -4,7 +4,7 @@
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
-        <AnalogAssetPicker
+        <AssetPicker
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="second"
@@ -19,7 +19,7 @@
 <script setup>
 import { ref, defineProps } from 'vue'
 import { useSecondHandStore } from '@/stores/elements/hands/secondHandElement'
-import AnalogAssetPicker from '@/components/analog-asset-picker/index.vue'
+import AssetPicker from '@/components/asset-picker/index.vue'
 
 const props = defineProps({
   element: {

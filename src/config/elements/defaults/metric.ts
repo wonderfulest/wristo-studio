@@ -1,5 +1,5 @@
 import type { IconElementConfig, DataElementConfig } from '@/types/elements'
-import type { MoonElementConfig, WeatherElementConfig } from '@/types/elements/data'
+import type { MoonElementConfig, WeatherElementConfig, WindDirectionElementConfig } from '@/types/elements/data'
 import { DEFAULT_TEXT_CONFIG, EDITOR_ELEMENT } from './base'
 
 const base = DEFAULT_TEXT_CONFIG
@@ -70,4 +70,17 @@ export const DEFAULT_MOON_CONFIG: MoonElementConfig & EDITOR_ELEMENT = {
   fill: '#FFFFFF',
   fontSize: 60,
   fontFamily: 'wristo-icon',
+}
+
+export const DEFAULT_WIND_DIRECTION_CONFIG: WindDirectionElementConfig & EDITOR_ELEMENT = {
+  icon: 'mdi:compass-outline',
+  label: 'Wind Direction',
+  eleType: 'windDirection',
+  id: '',
+  left: base.left,
+  top: base.top,
+  originX: 'center',
+  originY: 'center',
+  windDegree: 0,
+  color: '#FFFFFF',
 }
