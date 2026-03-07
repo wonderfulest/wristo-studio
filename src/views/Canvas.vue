@@ -23,6 +23,7 @@ import { Canvas, Point } from 'fabric'
 import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { initAligningGuidelines } from '@/lib/aligning_guidelines'
 import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import { applyFabricCustomProperties, discoverAndRegisterCanvasProps } from '@/utils/fabricProps'
@@ -36,6 +37,7 @@ import GuidelineManager from '@/components/GuidelineManager.vue'
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
 const layerStore = useLayerStore()
+const canvasStore = useCanvasStore()
 const WATCH_SIZE = computed(() => baseStore.WATCH_SIZE)
 const RULER_OFFSET = 40
 const MIN_ZOOM = 0.1
@@ -91,8 +93,13 @@ const backgroundColor = ref<string>(editorStore.backgroundColor)
 // 历史记录控制器（基于 useHistory）
 const history = useHistory(baseStore as unknown as MinimalBaseStore)
 
-const refreshElementSettings = (opt?: unknown) => {
-  emitter.emit('refresh-element-settings', opt)
+const syncSelectionIdsFromCanvas = (fabricCanvas?: Canvas) => {
+  if (!fabricCanvas) return
+  const ids = (fabricCanvas.getActiveObjects() as Array<{ id?: string | number }>)
+    .map((o) => o.id)
+    .filter((id): id is string | number => id !== undefined && id !== null && id !== '')
+    .map(String)
+  canvasStore.setActiveIds(ids)
 }
 
 onMounted(() => {
@@ -109,14 +116,14 @@ onMounted(() => {
         layerStore.removeLayer(String(target.id))
       }
       layerStore.clearSelected()
-      refreshElementSettings()
+      syncSelectionIdsFromCanvas(canvas as Canvas)
     },
     onClone: (_source, cloned) => {
       layerStore.addLayer(cloned as any)
       if (cloned.id) {
         layerStore.selectOne(String(cloned.id))
       }
-      refreshElementSettings()
+      syncSelectionIdsFromCanvas((cloned as any)?.canvas as Canvas | undefined)
     },
   })
 
@@ -156,25 +163,27 @@ onMounted(() => {
   // - 单选元素：保留自身控制点（由 controlManager & 元素 store 决定）
   // - 多选时的 ActiveSelection：禁用控制点（只用作框选，不允许整体缩放/旋转）
   canvas.on({
-    'selection:created': (opt) => {
+    'selection:created': () => {
       const active = canvas.getActiveObject() as any
       // 多选时禁用控制点
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
         active.setCoords?.()
       }
-      refreshElementSettings(opt)
+      syncSelectionIdsFromCanvas(canvas)
     },
-    'selection:updated': (opt) => {
+    'selection:updated': () => {
       const active = canvas.getActiveObject() as any
       // 多选时禁用控制点
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
         active.setCoords?.()
       }
-      refreshElementSettings(opt)
+      syncSelectionIdsFromCanvas(canvas)
     },
-    'selection:cleared': refreshElementSettings,
+    'selection:cleared': () => {
+      canvasStore.clearActiveIds()
+    },
   })
 
   // 安装 Fabric 控制点命中调试工具
@@ -182,6 +191,7 @@ onMounted(() => {
 
   // 先设置全局 canvas 引用
   baseStore.setCanvas(canvas)
+  syncSelectionIdsFromCanvas(canvas)
   ;(window as any).__debugCanvas = canvas
 
   // 初始化时如果 zoomLevel 非 1，确保立即应用 viewportTransform 与画布/容器尺寸

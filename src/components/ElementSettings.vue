@@ -6,12 +6,12 @@
     <div class="settings-header">
       <h3 class="settings-title">元素设置</h3>
       <div class="element-type">
-        <Icon :icon="getElementIcon(activeElements[0].eleType)" class="element-icon" />
+        <Icon :icon="getElementIcon(activeElements[0]?.eleType || '')" class="element-icon" />
         <span class="type-name">{{ getElementTypeName(activeElements[0]) }}</span>
       </div>
     </div>
     <component 
-      :is="getSettingsComponent(activeElements[0].eleType)" 
+      :is="getSettingsComponent(activeElements[0]?.eleType || '')" 
       :element="activeElements[0]" 
       @update="handleUpdate"
       ref="settingsComponent"
@@ -24,51 +24,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { debounce } from 'lodash-es'
-import emitter from '@/utils/eventBus'
+import { computed } from 'vue'
 import { elementConfigs } from '@/config/elements/elements'
 import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import GlobalSettings from '@/settings/GlobalSettings.vue'
 import GroupSettings from '@/settings/GroupSettings.vue'
 import { getSettingsComponent } from '@/settings'
 import type { FabricElement } from '@/types/element'
 
 const baseStore = useBaseStore()
-const settingsComponent = ref(null)
+const canvasStore = useCanvasStore()
 
-const activeElements = ref([] as FabricElement[])
-
-const updateElements = () => {
-  if (!baseStore.canvas) {
-    return
-  }
-  const activeObjects = baseStore.getActiveObjects()
-  activeElements.value = activeObjects
-}
-
-const debouncedUpdateElements = debounce(updateElements, 100)
-
-onMounted(() => {
-  // 初始加载
-  debouncedUpdateElements()
-
-  // 画布刷新事件
-  emitter.on('refresh-canvas', () => {
-    debouncedUpdateElements()
-  })
-
-  // 设置事件监听
-  emitter.on('refresh-element-settings', (payload) => {
-    console.log('[ElementSettings] refresh-element-settings received', payload)
-    debouncedUpdateElements()
-    console.log('[ElementSettings] activeElements after refresh', activeElements.value)
-  })
-})
-
-onUnmounted(() => {
-  emitter.off('refresh-canvas')
-  emitter.off('close-settings')
+// 通过 activeIds 从画布对象列表映射出当前选中的元素
+const activeElements = computed<FabricElement[]>(() => {
+  if (!baseStore.canvas) return []
+  const objects = baseStore.getObjects()
+  const idSet = new Set(canvasStore.activeIds)
+  return objects.filter((o) => o.id && idSet.has(String(o.id)))
 })
 
 
@@ -92,9 +65,7 @@ const getElementTypeName = (layer: any) => {
 }
 
 const handleUpdate = () => {
-  if (baseStore.canvas) {
-    baseStore.canvas.renderAll()
-  }
+  baseStore.canvas?.renderAll()
 }
 </script>
 
