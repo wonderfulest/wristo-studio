@@ -208,7 +208,6 @@ function commitManualGroupScale(group: FabricGroup): void {
   g.windHeight = nextH
   g.windSourceWidth = sourceW
   g.windSourceHeight = sourceH
-  group.set({ scaleX: 1, scaleY: 1 } as unknown as GroupProps)
   group.setCoords()
   group.canvas?.requestRenderAll()
 }

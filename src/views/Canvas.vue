@@ -152,10 +152,29 @@ onMounted(() => {
   // 可以多选
   canvas.selection = true
 
-  // 选择事件
+  // 选择事件：
+  // - 单选元素：保留自身控制点（由 controlManager & 元素 store 决定）
+  // - 多选时的 ActiveSelection：禁用控制点（只用作框选，不允许整体缩放/旋转）
   canvas.on({
-    'selection:created': refreshElementSettings,
-    'selection:updated': refreshElementSettings,
+    'selection:created': (opt) => {
+      console.log('selection:created', opt)
+      const active = canvas.getActiveObject() as any
+      // 多选时禁用控制点
+      if (active && active.type === 'activeselection') {
+        active.set({ hasControls: false })
+        active.setCoords?.()
+      }
+      refreshElementSettings(opt)
+    },
+    'selection:updated': (opt) => {
+      const active = canvas.getActiveObject() as any
+      // 多选时禁用控制点
+      if (active && active.type === 'activeselection') {
+        active.set({ hasControls: false })
+        active.setCoords?.()
+      }
+      refreshElementSettings(opt)
+    },
     'selection:cleared': refreshElementSettings,
   })
 
