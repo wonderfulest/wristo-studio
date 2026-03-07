@@ -22,10 +22,12 @@ import { onMounted, ref, onUnmounted, computed, nextTick } from 'vue'
 import { Canvas, Point } from 'fabric'
 import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
+import { useLayerStore } from '@/stores/layerStore'
 import { initAligningGuidelines } from '@/lib/aligning_guidelines'
 import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import { applyFabricCustomProperties, discoverAndRegisterCanvasProps } from '@/utils/fabricProps'
 import { installFabricControlDebugger } from '@/utils/fabricDebugger'
+import { applyControlManager, applyControlsToObject } from '@/utils/controlManager'
 import { useHistory } from '@/composables/useHistory'
 import type { MinimalBaseStore } from '@/types/history'
 import { useEditorStore } from '@/stores/editorStore'
@@ -33,6 +35,7 @@ import ZoomManager from '@/components/ZoomManager.vue'
 import GuidelineManager from '@/components/GuidelineManager.vue'
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
+const layerStore = useLayerStore()
 const WATCH_SIZE = computed(() => baseStore.WATCH_SIZE)
 const RULER_OFFSET = 40
 const MIN_ZOOM = 0.1
@@ -93,6 +96,30 @@ const refreshElementSettings = (opt?: unknown) => {
 }
 
 onMounted(() => {
+  // 全局控制点管理（Fabric v6 自定义 controls），在构建任何对象之前配置原型
+  applyControlManager({
+    size: 6,
+    stroke: '#334155',
+    fill: '#ffffff',
+    deleteFill: '#ef4444',
+    cloneFill: '#22c55e',
+    cloneOffset: 20,
+    onDelete: (target, canvas) => {
+      if (target.id) {
+        layerStore.removeLayer(String(target.id))
+      }
+      layerStore.clearSelected()
+      refreshElementSettings()
+    },
+    onClone: (_source, cloned) => {
+      layerStore.addLayer(cloned as any)
+      if (cloned.id) {
+        layerStore.selectOne(String(cloned.id))
+      }
+      refreshElementSettings()
+    },
+  })
+
   // 创建画布, 尺寸比手表大一些以显示边界
   const canvas = new Canvas(canvasRef.value as HTMLCanvasElement, {
     width: WATCH_SIZE.value,
@@ -151,13 +178,19 @@ onMounted(() => {
 
   // 首次扫描现有对象的自定义字段（如绑定字段），扩展序列化属性
   discoverAndRegisterCanvasProps((canvas.getObjects() as unknown[]))
-  // 之后每次新增对象时动态发现并注册
+  // 之后每次新增对象时：
+  // 1）应用统一控制点（圆形 + 缩放/旋转/克隆/删除）
+  // 2）动态发现并注册自定义序列化属性
   canvas.on('object:added', (e) => {
-    const target = (e as unknown as { target?: unknown }).target
+    const target = (e as unknown as { target?: unknown }).target as any
     if (target) {
+      // 为可管理对象挂载统一控制点
+      applyControlsToObject(target)
       discoverAndRegisterCanvasProps([target])
     } else {
-      discoverAndRegisterCanvasProps((canvas.getObjects() as unknown[]))
+      const objects = canvas.getObjects() as unknown[]
+      objects.forEach((obj) => applyControlsToObject(obj as any))
+      discoverAndRegisterCanvasProps(objects)
     }
   })
 
