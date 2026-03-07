@@ -4,7 +4,7 @@ import { Circle, FabricImage, type Canvas } from 'fabric'
 import _ from 'lodash'
 import { usePropertiesStore } from '@/stores/properties'
 import type { PropertiesMap } from '@/types/properties'
-import { encodeElement } from '@/utils/elementCodec'
+import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import type { FabricElement } from '@/types/element'
 import { useEditorStore } from '@/stores/editorStore'
 import { nanoid } from 'nanoid'
@@ -667,7 +667,7 @@ export const useBaseStore = defineStore('baseStore', {
           // 使用编码器系统编码元素（捕获异常并中止生成）
           let encodeConfig: import('@/types/elements').AnyElementConfig | null = null
           try {
-            encodeConfig = encodeElement(element) as import('@/types/elements').AnyElementConfig | null
+            encodeConfig = encodeElementByRegistry(element) as import('@/types/elements').AnyElementConfig | null
           } catch (err) {
             console.error('Failed to encode element with exception:', element, err)
             const message = (err as Error)?.message || 'Encode element failed'

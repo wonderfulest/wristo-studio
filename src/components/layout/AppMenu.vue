@@ -75,7 +75,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DataTypeOptions } from '@/config/settings'
 
-import { getAddElement } from '@/utils/elementCodec/registry'
+import { getAddElement } from '@/engine/registry/elementRegistry'
 import {
   Operation,
   Edit,

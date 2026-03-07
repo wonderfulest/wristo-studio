@@ -1,39 +1,22 @@
 <template>
   <div class="canvas-wrapper">
     <canvas ref="canvasRef"></canvas>
-    <ZoomManager
-      ref="zoomManagerRef"
-      :min-zoom="MIN_ZOOM"
-      :max-zoom="MAX_ZOOM"
-      :zoom-step="ZOOM_STEP"
-      :watch-size="WATCH_SIZE"
-      :canvas-offset="canvasOffset"
-    />
-    <GuidelineManager
-      :watch-size="WATCH_SIZE"
-      :ruler-offset="RULER_OFFSET"
-    />
   </div>
   
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, onUnmounted, computed, nextTick } from 'vue'
-import { Canvas, Point } from 'fabric'
-import emitter from '@/utils/eventBus'
+import { onMounted, ref, onUnmounted, computed, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { initAligningGuidelines } from '@/lib/aligning_guidelines'
-import { initCenteringGuidelines } from '@/lib/centering_guidelines'
-import { applyFabricCustomProperties, discoverAndRegisterCanvasProps } from '@/utils/fabricProps'
-import { installFabricControlDebugger } from '@/utils/fabricDebugger'
-import { applyControlManager, applyControlsToObject, DESIGNER_CONTROL_TYPES } from '@/utils/controlManager'
-import { useHistory } from '@/composables/useHistory'
-import type { MinimalBaseStore } from '@/types/history'
 import { useEditorStore } from '@/stores/editorStore'
-import ZoomManager from '@/components/ZoomManager.vue'
-import GuidelineManager from '@/components/GuidelineManager.vue'
+import { useHistoryStore } from '@/stores/historyStore'
+import { initCanvasManager, disposeCanvasManager } from '@/engine/managers/canvasManager'
+import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoomManager'
+import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
+import { createHistoryManager, type HistoryManagerHandle } from '@/engine/managers/historyManager'
+
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
 const layerStore = useLayerStore()
@@ -44,265 +27,72 @@ const MIN_ZOOM = 0.1
 const MAX_ZOOM = 3
 const ZOOM_STEP = 0.1
 const canvasOffset = ref<{ x: number; y: number }>({ x: 0, y: 0 })
-const isSpacePressed = ref<boolean>(false)
 const editorStore = useEditorStore()
-const zoomManagerRef = ref<InstanceType<typeof ZoomManager> | null>(null)
-// 应用全局 Fabric 自定义属性（默认集合）
-applyFabricCustomProperties()
+let zoomManager: ZoomManagerHandle | null = null
+let guidelineManager: GuidelineManagerHandle | null = null
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  const target = e.target as HTMLElement | null
-  if (target) {
-    const tag = target.tagName
-    const isEditable =
-      tag === 'INPUT' ||
-      tag === 'TEXTAREA' ||
-      tag === 'SELECT' ||
-      target.isContentEditable
-
-    // 如果当前在可编辑输入区域内，允许空格等按键正常输入
-    if (isEditable) {
-      return
-    }
-  }
-
-  if (e.code === 'Space' && !isSpacePressed.value) {
-    isSpacePressed.value = true
-    // 更新鼠标样式为抓手
-    const canvasWrapper = document.querySelector('.canvas-wrapper') as HTMLElement | null
-    if (canvasWrapper) {
-      canvasWrapper.style.cursor = 'grab'
-    }
-    e.preventDefault()
-  }
-}
-
-const handleKeyUp = (e: KeyboardEvent) => {
-  if (e.code === 'Space') {
-    isSpacePressed.value = false
-    // 恢复默认鼠标样式
-    const canvasWrapper = document.querySelector('.canvas-wrapper') as HTMLElement | null
-    if (canvasWrapper) {
-      canvasWrapper.style.cursor = 'default'
-    }
-  }
-}
-
-const backgroundColor = ref<string>(editorStore.backgroundColor)
-
-// 历史记录控制器（基于 useHistory）
-const history = useHistory(baseStore as unknown as MinimalBaseStore)
-
-const syncSelectionIdsFromCanvas = (fabricCanvas?: Canvas) => {
-  if (!fabricCanvas) return
-  const ids = (fabricCanvas.getActiveObjects() as Array<{ id?: string | number }>)
-    .map((o) => o.id)
-    .filter((id): id is string | number => id !== undefined && id !== null && id !== '')
-    .map(String)
-  canvasStore.setActiveIds(ids)
-}
+// 历史记录控制器（Pinia historyStore + Manager 封装）
+const historyStore = useHistoryStore()
+const historyManager: HistoryManagerHandle = createHistoryManager(historyStore)
 
 onMounted(() => {
-  // 全局控制点管理（Fabric v6 自定义 controls），在构建任何对象之前配置原型
-  applyControlManager({
-    size: 6,
-    stroke: '#334155',
-    fill: '#ffffff',
-    deleteFill: '#ef4444',
-    cloneFill: '#22c55e',
-    cloneOffset: 20,
-    onDelete: (target, canvas) => {
-      if (target.id) {
-        layerStore.removeLayer(String(target.id))
-      }
-      layerStore.clearSelected()
-      syncSelectionIdsFromCanvas(canvas as Canvas)
-    },
-    onClone: (_source, cloned) => {
-      layerStore.addLayer(cloned as any)
-      if (cloned.id) {
-        layerStore.selectOne(String(cloned.id))
-      }
-      syncSelectionIdsFromCanvas((cloned as any)?.canvas as Canvas | undefined)
-    },
+  if (!canvasRef.value) return
+  initCanvasManager(canvasRef.value, {
+    baseStore,
+    layerStore,
+    canvasStore,
+    historyStore,
+    editorStore,
+    watchSize: WATCH_SIZE.value,
+    zoomManager: null,
   })
 
-  // 创建画布, 尺寸比手表大一些以显示边界
-  const canvas = new Canvas(canvasRef.value as HTMLCanvasElement, {
-    width: WATCH_SIZE.value,
-    height: WATCH_SIZE.value,
-    centeredScaling: true,  // 确保缩放以中心点为基准
-    centeredRotation: true  // 确保旋转以中心点为基准
-  })
-  // 计算画布中心点
-  const centerPoint = {
-    x: 0,
-    y: 0
-  }
-  // 设置画布原点到中心
-  canvas.setViewportTransform([
-    1, 0, 
-    0, 1, 
-    centerPoint.x,
-    centerPoint.y
-  ])
-
-  // 设置画布中心点
-  canvas.absolutePan(new Point(-centerPoint.x, -centerPoint.y))
-
-  // 添加 passive 事件监听器
-  canvas.wrapperEl.addEventListener('wheel', () => {}, { passive: true })
-
-  // 对象间对齐辅助线
-  initAligningGuidelines(canvas)
-  initCenteringGuidelines(canvas)
-  // 可以多选
-  canvas.selection = true
-
-  // 选择事件：
-  // - 单选元素：保留自身控制点（由 controlManager & 元素 store 决定）
-  // - 多选时的 ActiveSelection：禁用控制点（只用作框选，不允许整体缩放/旋转）
-  canvas.on({
-    'selection:created': () => {
-      const active = canvas.getActiveObject() as any
-      // 多选时禁用控制点
-      if (active && active.type === 'activeselection') {
-        active.set({ hasControls: false })
-        active.setCoords?.()
-      }
-      syncSelectionIdsFromCanvas(canvas)
-    },
-    'selection:updated': () => {
-      const active = canvas.getActiveObject() as any
-      // 多选时禁用控制点
-      if (active && active.type === 'activeselection') {
-        active.set({ hasControls: false })
-        active.setCoords?.()
-      }
-      syncSelectionIdsFromCanvas(canvas)
-    },
-    'selection:cleared': () => {
-      canvasStore.clearActiveIds()
-    },
+  // 绑定缩放管理器
+  zoomManager = attachZoomManager({
+    baseStore,
+    editorStore,
+    getWatchSize: () => WATCH_SIZE.value,
+    getCanvasOffset: () => canvasOffset.value,
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+    zoomStep: ZOOM_STEP,
   })
 
-  // 安装 Fabric 控制点命中调试工具
-  installFabricControlDebugger(canvas as any)
-
-  // 先设置全局 canvas 引用
-  baseStore.setCanvas(canvas)
-  syncSelectionIdsFromCanvas(canvas)
-  ;(window as any).__debugCanvas = canvas
-
-  // 初始化时如果 zoomLevel 非 1，确保立即应用 viewportTransform 与画布/容器尺寸
-  nextTick(() => {
-    zoomManagerRef.value?.updateZoom()
+  // 绑定辅助线管理器
+  guidelineManager = attachGuidelineManager({
+    baseStore,
+    editorStore,
+    getWatchSize: () => WATCH_SIZE.value,
+    getRulerOffset: () => RULER_OFFSET,
   })
-
-  // 绑定到历史控制器并记录初始快照、注册事件
-  history.attachCanvas(canvas)
-  history.saveInitial()
-  history.registerCanvasEvents()
-
-  // 首次扫描现有对象的自定义字段（如绑定字段），扩展序列化属性
-  discoverAndRegisterCanvasProps((canvas.getObjects() as unknown[]))
-  // 之后每次新增/恢复对象时：
-  // 1）对全局对象（eleType === 'global'，如背景圆）强制禁用交互/控制点
-  // 2）对普通对象应用统一控制点（圆形 + 缩放/旋转/克隆/删除）
-  // 3）动态发现并注册自定义序列化属性
-  canvas.on('object:added', (e) => {
-    const target = (e as unknown as { target?: unknown }).target as any
-
-    const normalizeGlobalObject = (obj: any) => {
-      if (!obj || (obj as any).eleType !== 'global') return
-      obj.set({
-        selectable: false,
-        evented: false,
-        hasControls: false,
-        hasBorders: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockRotation: true,
-      })
-      obj.setCoords?.()
-    }
-
-    const shouldApplyDesignerControls = (obj: any): boolean => {
-      if (!obj) return false
-      const eleType = (obj as any).eleType as string | undefined
-      if (!eleType) return false
-      // 只有全局配置中的类型才使用统一的设计器控制点；
-      // 其它类型（如 icon/data/time）即使 hasControls 为 true 也不自动挂控制点
-      if (!DESIGNER_CONTROL_TYPES.includes(eleType)) return false
-      // 元素自身显式关闭控制点时尊重配置
-      return (obj as any).hasControls !== false
-    }
-
-    if (target) {
-      // 先处理全局对象（如背景圆），确保其在 undo/redo 后仍然不可交互
-      normalizeGlobalObject(target)
-      // 仅对需要设计器控制点的类型挂载统一控制点
-      if (shouldApplyDesignerControls(target)) {
-        applyControlsToObject(target)
-      }
-      discoverAndRegisterCanvasProps([target])
-    } else {
-      const objects = canvas.getObjects() as any[]
-      objects.forEach((obj) => {
-        normalizeGlobalObject(obj)
-        if (shouldApplyDesignerControls(obj)) {
-          applyControlsToObject(obj as any)
-        }
-      })
-      discoverAndRegisterCanvasProps(objects as unknown[])
-    }
-  })
-
-  // 监听全局撤销/重做事件（由 useKeyboardShortcuts 发出）
-  emitter.on('canvas-undo', () => {
-    history.undo()
-  })
-  emitter.on('canvas-redo', () => {
-    history.redo()
-  })
-
-  // 添加键盘事件监听
-  window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('keyup', handleKeyUp)
-
-  // 初始化容器样式
-  const containerInit = document.querySelector('.canvas-container') as HTMLElement | null
-  if (containerInit) {
-    containerInit.style.transform = 'translate(0px, 0px)'
-    containerInit.style.transition = 'transform 0s' // 移除过渡动画，使拖动更流畅
-    containerInit.style.backgroundColor = backgroundColor.value
-  }
-
 })
 
 onUnmounted(() => {
-
-  // 移除键盘事件监听
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('keyup', handleKeyUp)
-
-  // 解绑全局事件
-  emitter.off('canvas-undo')
-  emitter.off('canvas-redo')
+  disposeCanvasManager(historyStore)
+  zoomManager?.dispose()
+  zoomManager = null
+  guidelineManager?.dispose()
+  guidelineManager = null
 })
 
-// 在 Canvas.vue 的 script setup 中暴露缩放方法和值
+// watchSize 变化时通知辅助线管理器刷新尺寸
+watch(
+  () => WATCH_SIZE.value,
+  () => {
+    guidelineManager?.updateForWatchSizeChange()
+  },
+)
+
+// 在 Canvas.vue 的 script setup 中暴露缩放与历史方法
 defineExpose({
-  zoomIn: () => zoomManagerRef.value?.zoomIn?.(),
-  zoomOut: () => zoomManagerRef.value?.zoomOut?.(),
-  resetZoom: () => zoomManagerRef.value?.resetZoom?.(),
-  updateZoom: () => zoomManagerRef.value?.updateZoom?.(),
-  undo: () => history.undo(),
-  redo: () => history.redo(),
-  canUndo: () => history.canUndo(),
-  canRedo: () => history.canRedo()
+  zoomIn: () => zoomManager?.zoomIn(),
+  zoomOut: () => zoomManager?.zoomOut(),
+  resetZoom: () => zoomManager?.resetZoom(),
+  updateZoom: () => zoomManager?.updateZoom(),
+  undo: () => historyManager.undo(),
+  redo: () => historyManager.redo(),
+  canUndo: () => historyManager.canUndo(),
+  canRedo: () => historyManager.canRedo(),
 })
 </script>
 

@@ -20,8 +20,6 @@
         </el-icon>
       </div>
       
-      <!-- 时间模拟器 -->
-      <TimeSimulator v-if="baseStore.canvas != null && editorStore.showTimeSimulator" />
       <!-- 缩放控件 -->
       <div class="editor-controls">
         <ZoomControls :canvas-ref="canvasRef" />
@@ -56,19 +54,18 @@ import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
-import { decodeElement } from '@/utils/elementCodec'
-import { getAddElement } from '@/utils/elementCodec/registry'
-import CanvasRulers from '@/components/CanvasRulers.vue'
+import { decodeElementConfig, getAddElement } from '@/engine/registry/elementRegistry'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import ChangelogDialog from '@/components/dialogs/ChangelogDialog.vue'
 import appConfig from '@/config/appConfig.ts'
 import CanvasView from '@/views/Canvas.vue'
-import ElementSettings from '@/components/ElementSettings.vue'
-import SidePanel from '@/components/SidePanel.vue'
-import ExportPanel from '@/components/ExportPanel.vue'
-import TimeSimulator from '@/components/TimeSimulator.vue'
-import ZoomControls from '@/components/ZoomControls.vue'
-import HistoryControls from '@/components/HistoryControls.vue'
+import ElementSettings from '@/components/panels/ElementSettings.vue'
+import SidePanel from '@/components/panels/SidePanel.vue'
+import ExportPanel from '@/components/panels/ExportPanel.vue'
+import ZoomControls from '@/components/canvas/ZoomControls.vue'
+import HistoryControls from '@/components/canvas/HistoryControls.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
@@ -251,10 +248,11 @@ const setupAutoSave = () => {
 
 // 替换元素加载逻辑
 const loadElements = async (elements: AnyElementConfig[]) => {
+  const elementDataStore = useElementDataStore()
   for (const element of elements) {
     if (element.eleType == 'Line') continue
     console.log(`load element: ${JSON.stringify(element)}`)
-    const decodedElement = await decodeElement(element)
+    const decodedElement = decodeElementConfig(element)
     if (!decodedElement) {
       console.warn(`Unknown element type: ${element.eleType}`)
       messageStore.warning(`未知的元素类型:${element.eleType}`)
@@ -274,6 +272,10 @@ const loadElements = async (elements: AnyElementConfig[]) => {
         ...decodedElement,
         id: decodedElement.id ?? element.id ?? crypto.randomUUID(),
       } as BaseElementConfig
+
+      // 将业务配置写入 ElementDataStore，作为权威数据源之一
+      elementDataStore.upsertElement(config as any)
+
       await addElement(element.eleType, config)
     } catch (error) {
       console.error('加载元素失败:', element, error)

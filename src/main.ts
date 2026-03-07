@@ -14,11 +14,15 @@ import 'element-plus/theme-chalk/src/index.scss'
 import '@/assets/styles/element-variables.scss'
 
 import emitter from '@/utils/eventBus'
+import { loadPlugins } from '@/engine/plugins'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 
 const app = createApp(App)
+
+// 启动阶段加载所有元素插件（elements/**/*.plugin.ts）
+loadPlugins()
 
 app.use(ElementPlus)
 app.use(pinia)
