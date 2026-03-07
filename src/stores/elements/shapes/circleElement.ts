@@ -4,6 +4,7 @@ import { useLayerStore } from '../../layerStore'
 import { useBaseElementStore } from '../baseElement'
 import { nanoid } from 'nanoid'
 import { Circle } from 'fabric'
+import emitter from '@/utils/eventBus'
 
 interface CircleOptions {
   radius?: number | string
@@ -13,6 +14,57 @@ interface CircleOptions {
   opacity?: number | string
   left?: number | string
   top?: number | string
+}
+
+type CircleWithMeta = Circle & {
+  __circleScaleSyncAttached?: boolean
+}
+
+function attachCircleScaleSync(circle: Circle): void {
+  const c = circle as CircleWithMeta
+  if (c.__circleScaleSyncAttached) return
+  c.__circleScaleSyncAttached = true
+
+  circle.on('modified', () => {
+    const radius = Number(circle.radius ?? 0)
+    const sx = Number(circle.scaleX ?? 1)
+    const sy = Number(circle.scaleY ?? 1)
+
+    console.log('[Circle][modified] before commit scale', {
+      id: (circle as any).id,
+      radius,
+      scaleX: sx,
+      scaleY: sy,
+    })
+
+    if (!radius || radius <= 0) return
+    if (!Number.isFinite(sx) || !Number.isFinite(sy)) return
+    if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001) return
+
+    const uniformScale = (sx + sy) / 2 || 1
+    const nextRadius = Math.max(1, radius * uniformScale)
+
+    circle.set({
+      radius: nextRadius,
+      scaleX: 1,
+      scaleY: 1,
+    } as any)
+
+    circle.setCoords()
+    circle.canvas?.requestRenderAll()
+
+    console.log('[Circle][modified] after commit scale', {
+      id: (circle as any).id,
+      nextRadius,
+      radius: circle.radius,
+      scaleX: circle.scaleX,
+      scaleY: circle.scaleY,
+    })
+
+    // 通知右侧设置面板刷新当前元素配置（包括半径）
+    console.log('[Circle] emit refresh-element-settings', circle)
+    emitter.emit('refresh-element-settings', circle)
+  })
 }
 
 export const useCircleStore = defineStore('circleElement', {
@@ -54,9 +106,7 @@ export const useCircleStore = defineStore('circleElement', {
           originX: 'center',
           originY: 'center',
           selectable: true,
-          hasControls: false,
-          hasBorders: true,
-          lockScalingFlip: true,
+          hasControls: true,
           initialConfig: {
             radius,
             fill,
@@ -67,6 +117,8 @@ export const useCircleStore = defineStore('circleElement', {
         }
 
         const circle = new Circle(circleOptions)
+
+        attachCircleScaleSync(circle)
 
         this.baseStore.canvas.add(circle as any)
         this.layerStore.addLayer(circle as any)

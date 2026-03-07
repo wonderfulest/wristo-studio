@@ -422,8 +422,8 @@ export const useBaseStore = defineStore('baseStore', {
       const c = this.canvas
       if (!c) return
 
-      // 创建或更新表盘背景圆
-      this.watchFaceCircle = new Circle({
+      // 创建或更新表盘背景圆（使用 markRaw 避免被响应式代理）
+      this.watchFaceCircle = markRaw(new Circle({
         eleType: 'global',
         left: center,
         top: center,
@@ -442,7 +442,7 @@ export const useBaseStore = defineStore('baseStore', {
         lockRotation: true,
         hasBorders: false,
         hasControls: false
-      }) as unknown as AnyObject
+      })) as unknown as AnyObject
 
       // 确保背景圆添加到画布，并始终在最底层（global 最底层）
       if (!c.getObjects().includes(this.watchFaceCircle)) {

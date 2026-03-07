@@ -59,8 +59,10 @@ onMounted(() => {
   })
 
   // 设置事件监听
-  emitter.on('refresh-element-settings', () => {
+  emitter.on('refresh-element-settings', (payload) => {
+    console.log('[ElementSettings] refresh-element-settings received', payload)
     debouncedUpdateElements()
+    console.log('[ElementSettings] activeElements after refresh', activeElements.value)
   })
 })
 

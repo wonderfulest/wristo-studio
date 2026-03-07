@@ -15,6 +15,9 @@ type FabricLikeObject = FabricObject & {
   set: (props: Record<string, unknown>) => unknown
 }
 
+// 统一控制点适用的元素类型（按 eleType 区分），供全局复用
+export const DESIGNER_CONTROL_TYPES: string[] = ['rectangle', 'windDirection', 'circle', 'image']
+
 export interface ControlManagerOptions {
   size?: number
   stroke?: string

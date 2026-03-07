@@ -2,11 +2,11 @@
   <div class="settings-section">
     <el-form label-position="left" label-width="100px">
       <el-form-item label="半径">
-                <el-input-number 
-          v-model="element.radius" 
+        <el-input-number 
+          v-model="radius" 
           :min="10" 
           :max="227" 
-          @change="updateElement" 
+          @change="onRadiusChange" 
         />
       </el-form-item>
 
@@ -57,14 +57,39 @@ const props = defineProps({
 
 const circleStore = useCircleStore()
 
-// 监听颜色变化
-watch(() => props.element.fill, (newValue) => {
-  updateElement()
-}, { deep: true })
+// 本地半径状态，用于驱动表单显示
+const radius = ref(props.element.radius ?? 0)
 
-watch(() => props.element.stroke, (newValue) => {
+// 外部（例如通过控制点缩放）修改 element.radius 时，同步到本地 radius
+watch(
+  () => props.element.radius,
+  (newVal) => {
+    radius.value = Number(newVal ?? 0)
+  }
+)
+
+// 颜色变化仍然走统一更新逻辑
+watch(
+  () => props.element.fill,
+  () => {
+    updateElement()
+  },
+  { deep: true }
+)
+
+watch(
+  () => props.element.stroke,
+  () => {
+    updateElement()
+  },
+  { deep: true }
+)
+
+const onRadiusChange = () => {
+  // 把本地 radius 写回元素，再通过 store 统一更新
+  props.element.radius = radius.value
   updateElement()
-}, { deep: true })
+}
 
 const updateElement = () => {
   circleStore.updateElement(props.element, {

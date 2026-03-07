@@ -27,7 +27,7 @@ import { initAligningGuidelines } from '@/lib/aligning_guidelines'
 import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import { applyFabricCustomProperties, discoverAndRegisterCanvasProps } from '@/utils/fabricProps'
 import { installFabricControlDebugger } from '@/utils/fabricDebugger'
-import { applyControlManager, applyControlsToObject } from '@/utils/controlManager'
+import { applyControlManager, applyControlsToObject, DESIGNER_CONTROL_TYPES } from '@/utils/controlManager'
 import { useHistory } from '@/composables/useHistory'
 import type { MinimalBaseStore } from '@/types/history'
 import { useEditorStore } from '@/stores/editorStore'
@@ -196,19 +196,57 @@ onMounted(() => {
 
   // 首次扫描现有对象的自定义字段（如绑定字段），扩展序列化属性
   discoverAndRegisterCanvasProps((canvas.getObjects() as unknown[]))
-  // 之后每次新增对象时：
-  // 1）应用统一控制点（圆形 + 缩放/旋转/克隆/删除）
-  // 2）动态发现并注册自定义序列化属性
+  // 之后每次新增/恢复对象时：
+  // 1）对全局对象（eleType === 'global'，如背景圆）强制禁用交互/控制点
+  // 2）对普通对象应用统一控制点（圆形 + 缩放/旋转/克隆/删除）
+  // 3）动态发现并注册自定义序列化属性
   canvas.on('object:added', (e) => {
     const target = (e as unknown as { target?: unknown }).target as any
+
+    const normalizeGlobalObject = (obj: any) => {
+      if (!obj || (obj as any).eleType !== 'global') return
+      obj.set({
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
+      })
+      obj.setCoords?.()
+    }
+
+    const shouldApplyDesignerControls = (obj: any): boolean => {
+      if (!obj) return false
+      const eleType = (obj as any).eleType as string | undefined
+      if (!eleType) return false
+      // 只有全局配置中的类型才使用统一的设计器控制点；
+      // 其它类型（如 icon/data/time）即使 hasControls 为 true 也不自动挂控制点
+      if (!DESIGNER_CONTROL_TYPES.includes(eleType)) return false
+      // 元素自身显式关闭控制点时尊重配置
+      return (obj as any).hasControls !== false
+    }
+
     if (target) {
-      // 为可管理对象挂载统一控制点
-      applyControlsToObject(target)
+      // 先处理全局对象（如背景圆），确保其在 undo/redo 后仍然不可交互
+      normalizeGlobalObject(target)
+      // 仅对需要设计器控制点的类型挂载统一控制点
+      if (shouldApplyDesignerControls(target)) {
+        applyControlsToObject(target)
+      }
       discoverAndRegisterCanvasProps([target])
     } else {
-      const objects = canvas.getObjects() as unknown[]
-      objects.forEach((obj) => applyControlsToObject(obj as any))
-      discoverAndRegisterCanvasProps(objects)
+      const objects = canvas.getObjects() as any[]
+      objects.forEach((obj) => {
+        normalizeGlobalObject(obj)
+        if (shouldApplyDesignerControls(obj)) {
+          applyControlsToObject(obj as any)
+        }
+      })
+      discoverAndRegisterCanvasProps(objects as unknown[])
     }
   })
 
