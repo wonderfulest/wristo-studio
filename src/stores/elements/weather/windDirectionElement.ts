@@ -186,28 +186,25 @@ function commitManualGroupScale(group: FabricGroup): void {
   if (!Number.isFinite(groupScaleX) || !Number.isFinite(groupScaleY)) return
   if (Math.abs(groupScaleX - 1) < 0.0001 && Math.abs(groupScaleY - 1) < 0.0001) return
 
+  // 此处不再主动修改 group/image 的 scale，只记录当前缩放后的可视尺寸，
+  // 让最终视觉状态完全由 Fabric 自身的缩放结果决定
   const imageObj = group
     .getObjects()
     .find((c) => (c as unknown as { role?: string }).role === 'image') as unknown as FabricImage | undefined
 
-  const sourceW = Math.max(1, Number(g.windSourceWidth ?? (imageObj as unknown as { width?: number })?.width ?? 1))
-  const sourceH = Math.max(1, Number(g.windSourceHeight ?? (imageObj as unknown as { height?: number })?.height ?? 1))
-  const currentW = Math.max(1, Number(g.windWidth ?? sourceW))
-  const currentH = Math.max(1, Number(g.windHeight ?? sourceH))
-  const uniformScale = Math.max(0.01, Math.min(groupScaleX, groupScaleY))
-  const nextW = Math.max(1, currentW * uniformScale)
-  const nextH = Math.max(1, currentH * uniformScale)
-
-  if (imageObj) {
-    const { scale } = getProportionalSize(sourceW, sourceH, nextW, nextH, 60)
-    imageObj.set({ scaleX: scale, scaleY: scale } as unknown as ImageProps)
-    imageObj.setCoords()
-  }
+  const nextW = Math.max(1, Number((group as unknown as { getScaledWidth?: () => number }).getScaledWidth?.() ?? group.width ?? 1))
+  const nextH = Math.max(1, Number((group as unknown as { getScaledHeight?: () => number }).getScaledHeight?.() ?? group.height ?? 1))
 
   g.windWidth = nextW
   g.windHeight = nextH
-  g.windSourceWidth = sourceW
-  g.windSourceHeight = sourceH
+
+  if (imageObj) {
+    const sourceW = Math.max(1, Number((imageObj as unknown as { width?: number }).width ?? nextW))
+    const sourceH = Math.max(1, Number((imageObj as unknown as { height?: number }).height ?? nextH))
+    g.windSourceWidth = sourceW
+    g.windSourceHeight = sourceH
+  }
+
   group.setCoords()
   group.canvas?.requestRenderAll()
 }
@@ -216,6 +213,8 @@ function attachManualScaleSync(group: FabricGroup): void {
   const g = group as unknown as WindDirectionGroupLike
   if (g.__windScaleSyncAttached) return
   g.__windScaleSyncAttached = true
+  // 仅在缩放结束（modified）时将 group 的缩放吸收到内部 image，
+  // 避免在 scaling 过程中立刻重置 scale 导致控制点视觉上不动
   group.on('modified', () => {
     commitManualGroupScale(group)
   })

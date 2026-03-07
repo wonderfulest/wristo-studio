@@ -157,7 +157,6 @@ onMounted(() => {
   // - 多选时的 ActiveSelection：禁用控制点（只用作框选，不允许整体缩放/旋转）
   canvas.on({
     'selection:created': (opt) => {
-      console.log('selection:created', opt)
       const active = canvas.getActiveObject() as any
       // 多选时禁用控制点
       if (active && active.type === 'activeselection') {
