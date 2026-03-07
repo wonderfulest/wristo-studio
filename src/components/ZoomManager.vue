@@ -36,26 +36,24 @@ const updateZoom = () => {
 
   const currentZoom = editorStore.zoomLevel
 
-  const container = document.querySelector('.canvas-container') as HTMLElement | null
-  const targetSize = props.watchSize * currentZoom
-  if (container) {
-    container.style.width = `${targetSize}px`
-    container.style.height = `${targetSize}px`
-  }
+  const canvas = baseStore.canvas as Canvas
 
-  // 缩放依赖 viewportTransform（fabric zoom），这样所有元素/图标/选框都会一起缩放
-  ;(baseStore.canvas as Canvas).setViewportTransform([
+  // 统一使用 Fabric 的 viewportTransform 做缩放，不再通过外层 DOM/CSS 调整缩放比例。
+  // 这样对象几何、控件绘制和命中检测都共享同一套坐标系。
+  canvas.setViewportTransform([
     currentZoom, 0,
     0, currentZoom,
-    props.canvasOffset.x, props.canvasOffset.y
+    props.canvasOffset.x,
+    props.canvasOffset.y,
   ])
 
-  // 同步调整画布宽高，否则缩放后的内容会被固定大小的矩形画布裁剪
-  ;(baseStore.canvas as Canvas).setWidth(targetSize)
-  ;(baseStore.canvas as Canvas).setHeight(targetSize)
+  // 画布逻辑尺寸保持为 watchSize，避免宽高随着缩放一起变化导致 pointer 映射错位。
+  canvas.setWidth(props.watchSize)
+  canvas.setHeight(props.watchSize)
 
-  ;(baseStore.canvas as Canvas).calcOffset()
-  baseStore.canvas.requestRenderAll()
+  // 尺寸或视口变更后，需要重新计算偏移，确保 clientX/Y 正确映射到画布坐标。
+  canvas.calcOffset()
+  canvas.requestRenderAll()
 }
 
 const zoomIn = () => {

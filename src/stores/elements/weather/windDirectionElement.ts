@@ -154,19 +154,14 @@ function getProportionalSize(
   const rw = requestedWidth != null ? Math.max(1, Number(requestedWidth)) : undefined
   const rh = requestedHeight != null ? Math.max(1, Number(requestedHeight)) : undefined
 
-  let mode: 'both' | 'width-only' | 'height-only' | 'fallback-max'
   let scale: number
   if (rw != null && rh != null) {
-    mode = 'both'
     scale = Math.min(rw / ow, rh / oh)
   } else if (rw != null) {
-    mode = 'width-only'
     scale = rw / ow
   } else if (rh != null) {
-    mode = 'height-only'
     scale = rh / oh
   } else {
-    mode = 'fallback-max'
     scale = Math.max(1, fallbackMax) / Math.max(ow, oh)
   }
 
@@ -174,6 +169,57 @@ function getProportionalSize(
   const height = Math.max(1, oh * scale)
 
   return { width, height, scale }
+}
+
+type WindDirectionGroupLike = FabricGroup & {
+  windWidth?: number
+  windHeight?: number
+  windSourceWidth?: number
+  windSourceHeight?: number
+  __windScaleSyncAttached?: boolean
+}
+
+function commitManualGroupScale(group: FabricGroup): void {
+  const g = group as unknown as WindDirectionGroupLike
+  const groupScaleX = Number(group.scaleX ?? 1)
+  const groupScaleY = Number(group.scaleY ?? 1)
+  if (!Number.isFinite(groupScaleX) || !Number.isFinite(groupScaleY)) return
+  if (Math.abs(groupScaleX - 1) < 0.0001 && Math.abs(groupScaleY - 1) < 0.0001) return
+
+  const imageObj = group
+    .getObjects()
+    .find((c) => (c as unknown as { role?: string }).role === 'image') as unknown as FabricImage | undefined
+
+  const sourceW = Math.max(1, Number(g.windSourceWidth ?? (imageObj as unknown as { width?: number })?.width ?? 1))
+  const sourceH = Math.max(1, Number(g.windSourceHeight ?? (imageObj as unknown as { height?: number })?.height ?? 1))
+  const currentW = Math.max(1, Number(g.windWidth ?? sourceW))
+  const currentH = Math.max(1, Number(g.windHeight ?? sourceH))
+  const uniformScale = Math.max(0.01, Math.min(groupScaleX, groupScaleY))
+  const nextW = Math.max(1, currentW * uniformScale)
+  const nextH = Math.max(1, currentH * uniformScale)
+
+  if (imageObj) {
+    const { scale } = getProportionalSize(sourceW, sourceH, nextW, nextH, 60)
+    imageObj.set({ scaleX: scale, scaleY: scale } as unknown as ImageProps)
+    imageObj.setCoords()
+  }
+
+  g.windWidth = nextW
+  g.windHeight = nextH
+  g.windSourceWidth = sourceW
+  g.windSourceHeight = sourceH
+  group.set({ scaleX: 1, scaleY: 1 } as unknown as GroupProps)
+  group.setCoords()
+  group.canvas?.requestRenderAll()
+}
+
+function attachManualScaleSync(group: FabricGroup): void {
+  const g = group as unknown as WindDirectionGroupLike
+  if (g.__windScaleSyncAttached) return
+  g.__windScaleSyncAttached = true
+  group.on('modified', () => {
+    commitManualGroupScale(group)
+  })
 }
 
 export const useWindDirectionStore = defineStore('windDirectionElement', {
@@ -236,12 +282,17 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
         ;(group as unknown as { windDegree?: number }).windDegree = windDeg
         ;(group as unknown as { color?: string }).color = config.color
         ;(group as unknown as { assetId?: number }).assetId = resolvedAssetId
-        // 调试用：确保可以缩放
-        ;(group as any).lockScalingX = false
-        ;(group as any).lockScalingY = false
-        ;(group as any).hasBorders = true
-        ;(group as any).hasControls = true
-        ;(group as any).selectable = true
+        group.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true,
+          lockScalingX: false,
+          lockScalingY: false,
+          lockRotation: true,
+          objectCaching: false,
+        } as unknown as GroupProps)
+        attachManualScaleSync(group)
         canvas.add(group as unknown as FabricObject)
         this.layerStore.addLayer(group as unknown as MinimalFabricLike)
         canvas.setActiveObject(group as unknown as FabricObject)
@@ -328,6 +379,15 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>)
         .find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
       if (!obj) return
+      obj.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        lockScalingX: false,
+        lockScalingY: false,
+      } as unknown as GroupProps)
+      attachManualScaleSync(obj)
 
       const shouldLockPosition = config.left === undefined && config.top === undefined
       const prevPos = shouldLockPosition ? { left: (obj as any).left, top: (obj as any).top } : null
@@ -488,6 +548,7 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>)
         .find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
       if (!obj) return
+      attachManualScaleSync(obj)
       const imageObj = obj.getObjects().find((c) => (c as unknown as { role?: string }).role === 'image') as unknown as FabricImage | undefined
       const w = Math.max(1, Number(width))
       const h = Math.max(1, Number(height))

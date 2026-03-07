@@ -12,14 +12,6 @@
         />
       </el-form-item>
 
-      <el-form-item label="Width">
-        <el-input-number v-model="imgWidth" :min="1" :max="2000" @change="onSizeChange" />
-      </el-form-item>
-
-      <el-form-item label="Height">
-        <el-input-number v-model="imgHeight" :min="1" :max="2000" @change="onSizeChange" />
-      </el-form-item>
-
       <el-form-item label="Center X">
         <el-input-number v-model="centerX" :min="0" :max="9999" @change="onPositionChange" />
       </el-form-item>

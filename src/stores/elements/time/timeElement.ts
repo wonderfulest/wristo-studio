@@ -113,7 +113,11 @@ async function createBitmapTimeGroup(params: {
   group.fontSize = fontSize
   group.fill = options.fill ?? '#ffffff'
   ;(group as any).fontGap = spacing
-  group.hasControls = false
+  group.hasControls = true
+  group.evented = true
+  group.selectable = true
+  group.lockScalingX = false
+  group.lockScalingY = false
 
   return group as FabricElement
 }
@@ -146,7 +150,7 @@ export const useTimeStore = defineStore('timeStore', {
         case TimeFormatConstants.H:
           return hour[1]        // 小时个位
         case TimeFormatConstants.M10:
-          return minute[0]      // 分钟十位
+          return minute[0]      // 分钟十位f
         case TimeFormatConstants.M:
           return minute[1]      // 分钟个位
         default: {
@@ -193,6 +197,10 @@ export const useTimeStore = defineStore('timeStore', {
           fontRenderType: options.fontRenderType ?? 'truetype',
           bitmapFontId: options.bitmapFontId ?? null,
           hasControls: false,
+          evented: true,
+          selectable: true,
+          lockScalingX: false,
+          lockScalingY: false,
         }
         const element = new FabricText(text, timeOptions as TimeElementOptions)
         this.baseStore.canvas.add(element as FabricText)
@@ -219,6 +227,8 @@ export const useTimeStore = defineStore('timeStore', {
         // bitmap 模式：重建 Group 内的图片（用真实类型判断，避免 fontRenderType 被覆盖）
         if (isGroup && obj.bitmapFontId) {
           try {
+            const prevScaleX = Number(obj.scaleX ?? 1)
+            const prevScaleY = Number(obj.scaleY ?? 1)
             const group = await createBitmapTimeGroup({
               id: obj.id,
               text: txt,
@@ -236,6 +246,15 @@ export const useTimeStore = defineStore('timeStore', {
                 bitmapFontId: obj.bitmapFontId,
                 fontGap: (obj as any).fontGap,
               } as TimeElementConfig,
+            })
+            ;(group as any).set?.({
+              scaleX: Number.isFinite(prevScaleX) ? prevScaleX : 1,
+              scaleY: Number.isFinite(prevScaleY) ? prevScaleY : 1,
+              hasControls: false,
+              evented: true,
+              selectable: true,
+              lockScalingX: false,
+              lockScalingY: false,
             })
             const index = canvas.getObjects().indexOf(obj)
             canvas.remove(obj)
@@ -313,6 +332,10 @@ export const useTimeStore = defineStore('timeStore', {
             fontRenderType: 'truetype',
             bitmapFontId: preservedBitmapFontId,
             hasControls: false,
+            evented: true,
+            selectable: true,
+            lockScalingX: false,
+            lockScalingY: false,
           }
 
           const newText: any = new FabricText(text, timeOptions as TimeElementOptions)
@@ -321,6 +344,15 @@ export const useTimeStore = defineStore('timeStore', {
           newText.eleType = 'time'
           newText.fontRenderType = 'truetype'
           newText.bitmapFontId = preservedBitmapFontId
+          newText.set({
+            scaleX: Number(obj.scaleX ?? 1),
+            scaleY: Number(obj.scaleY ?? 1),
+            hasControls: false,
+            evented: true,
+            selectable: true,
+            lockScalingX: false,
+            lockScalingY: false,
+          })
 
           const index = canvas.getObjects().indexOf(obj)
           canvas.remove(obj)
@@ -370,6 +402,15 @@ export const useTimeStore = defineStore('timeStore', {
                 fontGap: (config as any).fontGap ?? (obj as any).fontGap,
                 topBase: 0,
               } as TimeElementConfig,
+            })
+            ;(group as any).set?.({
+              scaleX: Number(obj.scaleX ?? 1),
+              scaleY: Number(obj.scaleY ?? 1),
+              hasControls: false,
+              evented: true,
+              selectable: true,
+              lockScalingX: false,
+              lockScalingY: false,
             })
 
             const index = canvas.getObjects().indexOf(obj)
@@ -439,6 +480,15 @@ export const useTimeStore = defineStore('timeStore', {
                   fontGap: (config as any).fontGap ?? (obj as any).fontGap,
                   topBase: 0,
                 } as TimeElementConfig,
+              })
+              ;(group as any).set?.({
+                scaleX: Number(obj.scaleX ?? 1),
+                scaleY: Number(obj.scaleY ?? 1),
+                hasControls: false,
+                evented: true,
+                selectable: true,
+                lockScalingX: false,
+                lockScalingY: false,
               })
 
               const index = canvas.getObjects().indexOf(obj)

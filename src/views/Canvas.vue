@@ -25,6 +25,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { initAligningGuidelines } from '@/lib/aligning_guidelines'
 import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import { applyFabricCustomProperties, discoverAndRegisterCanvasProps } from '@/utils/fabricProps'
+import { installFabricControlDebugger } from '@/utils/fabricDebugger'
 import { useHistory } from '@/composables/useHistory'
 import type { MinimalBaseStore } from '@/types/history'
 import { useEditorStore } from '@/stores/editorStore'
@@ -131,15 +132,12 @@ onMounted(() => {
     'selection:cleared': refreshElementSettings,
   })
 
-  canvas.on('mouse:down', function (opt) {
-    if (opt.target) {
-      // 点击的是一个对象
-      refreshElementSettings(opt);
-    }
-  });
+  // 安装 Fabric 控制点命中调试工具
+  installFabricControlDebugger(canvas as any)
 
   // 先设置全局 canvas 引用
   baseStore.setCanvas(canvas)
+  ;(window as any).__debugCanvas = canvas
 
   // 初始化时如果 zoomLevel 非 1，确保立即应用 viewportTransform 与画布/容器尺寸
   nextTick(() => {
@@ -175,7 +173,6 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
 
-
   // 初始化容器样式
   const containerInit = document.querySelector('.canvas-container') as HTMLElement | null
   if (containerInit) {
@@ -183,6 +180,7 @@ onMounted(() => {
     containerInit.style.transition = 'transform 0s' // 移除过渡动画，使拖动更流畅
     containerInit.style.backgroundColor = backgroundColor.value
   }
+
 })
 
 onUnmounted(() => {

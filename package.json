@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev:demo": "vite demo --port 4173",
     "dev": "vite --mode development",
     "dev:prod": "vite --mode production",
     "build": "vite build --mode production",
@@ -17,7 +18,7 @@
     "@vueuse/core": "^13.0.0",
     "axios": "^1.7.9",
     "element-plus": "^2.9.0",
-    "fabric": "^6.5.3",
+    "fabric": "~6.7.0",
     "jszip": "^3.10.1",
     "lodash-es": "^4.17.21",
     "md-editor-v3": "5.8.5",

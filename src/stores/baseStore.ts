@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { Circle, FabricImage } from 'fabric'
+import { markRaw } from 'vue'
+import { Circle, FabricImage, type Canvas } from 'fabric'
 import _ from 'lodash'
 import { usePropertiesStore } from '@/stores/properties'
 import type { PropertiesMap } from '@/types/properties'
@@ -16,7 +17,7 @@ type AnyObject = Record<string, any>
 
 type Screenshot = string | null
 
-type CanvasLike = AnyObject | null
+type CanvasLike = Canvas | null
 
 export const useBaseStore = defineStore('baseStore', {
   // store
@@ -344,9 +345,9 @@ export const useBaseStore = defineStore('baseStore', {
     clearScreenshot(): void {
       this.screenshot = null
     },
-    // 设置画布
+    // 设置画布（使用 markRaw 避免被 Vue/Pinia 包装为 Proxy，保证 Fabric instanceof / hit test 正常）
     setCanvas(fabricCanvas: AnyObject): void {
-      this.canvas = fabricCanvas
+      this.canvas = markRaw(fabricCanvas as Canvas)
       // 禁用自动渲染，手动控制渲染时机
       this.canvas.renderOnAddRemove = false
 
@@ -433,7 +434,7 @@ export const useBaseStore = defineStore('baseStore', {
         fill: '#000000',
         backgroundColor: 'transparent',
         selectable: false,
-        evented: true,
+        evented: false, // 不参与命中，让事件穿透给下面元素
         lockMovementX: true,
         lockMovementY: true,
         lockScalingX: true,
@@ -448,11 +449,6 @@ export const useBaseStore = defineStore('baseStore', {
         c.add(this.watchFaceCircle)
       }
       c.moveObjectTo(this.watchFaceCircle, 0)
-
-      // 使用 global 圆作为画布蒙版，只显示圆内区域
-      c.set({
-        clipPath: this.watchFaceCircle
-      })
 
       // 如果已经有背景图片，按照当前圆的大小重新布局
       if (this.backgroundImage) {
@@ -498,7 +494,7 @@ export const useBaseStore = defineStore('baseStore', {
           strokeUniform: true,  // 确保边框均匀缩放
           strokeWidth: 1,
           selectable: false,
-          evented: true,
+          evented: false,
           hasBorders: false,
           hasControls: false,
           backgroundColor: 'transparent'

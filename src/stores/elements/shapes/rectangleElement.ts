@@ -61,8 +61,11 @@ export const useRectangleStore = defineStore('rectangleElement', {
           originX: 'center',
           originY: 'center',
           selectable: true,
-          hasControls: false,
+          // 启用 Fabric 默认控制点，允许通过控制点缩放矩形
+          hasControls: true,
           hasBorders: true,
+          lockScalingX: false,
+          lockScalingY: false,
           lockScalingFlip: true,
           initialConfig: {
             width,
@@ -81,7 +84,6 @@ export const useRectangleStore = defineStore('rectangleElement', {
         this.layerStore.addLayer(rectangle as any)
         this.baseStore.canvas.renderAll()
         this.baseStore.canvas.setActiveObject(rectangle as any)
-
         return rectangle
       } catch (error) {
         console.error('创建矩形元素失败:', error)
