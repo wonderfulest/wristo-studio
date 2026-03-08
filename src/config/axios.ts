@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { BizErrorCode } from '../constant/errorCode'
+import { BizErrorCode } from './errorCode'
 import type { ApiResponse } from '../types/api/api'
 import { useUserStore } from '../stores/user'
 

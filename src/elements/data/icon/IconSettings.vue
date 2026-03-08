@@ -64,7 +64,7 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 import { useBaseStore } from '@/stores/baseStore'
 const emit = defineEmits(['close'])
 

@@ -39,7 +39,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 
 const props = defineProps({
   // 旧通道：直接传入 FabricElement

@@ -79,7 +79,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 
 const props = defineProps<{
   // 旧通道：直接传入 FabricElement

@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 
 const ICON_FONT_UNICODES = [
   '0020','0021','0022','0023','0024','0025','0026','0027','0028','0029',

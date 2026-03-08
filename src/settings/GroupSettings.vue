@@ -51,7 +51,7 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import type { FabricElement } from '@/types/element'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
