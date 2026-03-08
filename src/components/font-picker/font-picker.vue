@@ -251,6 +251,8 @@ watch(
     } catch {}
   }
 )
+
+void [isMerchantUser, systemSections, openNumberGlyphEditor]
 </script>
 
 <style scoped>

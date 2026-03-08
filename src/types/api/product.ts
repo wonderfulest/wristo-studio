@@ -12,6 +12,8 @@ export interface ProductPaymentVo {
   currency: string
   paddleProductId: string
   paddlePriceId: string
+  /** 试用时长(小时)，与后端 DTO 字段对齐 */
+  trialLasts?: number
 }
 
 export interface ProductBase {

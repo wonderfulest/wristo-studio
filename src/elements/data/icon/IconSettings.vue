@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, defineExpose, computed } from 'vue'
+import { ref, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'

@@ -11,14 +11,14 @@ export type PropertyType =
 
 export interface PropertyOption {
   label: string
-  value: string
+  value: unknown
 }
 
 export interface PropertyItem {
   type: PropertyType
   title: string
   options?: PropertyOption[]
-  value: string
+  value: unknown
   prompt?: string
   errorMessage?: string
 }

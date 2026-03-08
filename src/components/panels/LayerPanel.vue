@@ -69,9 +69,9 @@ const batchUpdate = (): void => {
     return
   }
   requestAnimationFrame(() => {
-    // Fabric returns objects array
-    const all = (baseStore.canvas!.getObjects?.() as MinimalFabricLike[]) || []
-    const actives = (baseStore.canvas!.getActiveObjects?.() as MinimalFabricLike[]) || []
+    // Fabric returns objects array; cast via unknown 以绕过严格 FabricObject 类型约束
+    const all = (baseStore.canvas!.getObjects?.() as unknown as MinimalFabricLike[]) || []
+    const actives = (baseStore.canvas!.getActiveObjects?.() as unknown as MinimalFabricLike[]) || []
     // clone arrays to ensure Vue reactivity notices changes
     elements.value = [...all]
     activeElements.value = [...actives]
@@ -123,7 +123,7 @@ const selectLayer = async (layer: MinimalFabricLike): Promise<void> => {
   if (layer.eleType === 'global') {
     // open global settings if needed
   } else if (baseStore.canvas && layer) {
-    baseStore.canvas.setActiveObject?.(layer as unknown as object)
+    baseStore.canvas.setActiveObject?.(layer as any)
     baseStore.canvas.getActiveObject?.() as MinimalFabricLike | undefined
   }
   emitter.emit('refresh-element-settings', {})
@@ -158,7 +158,7 @@ const toggleLock = (layer: MinimalFabricLike): void => {
 // drag end reorders canvas stacking
 const handleDragEnd = (): void => {
   elements.value.forEach((element, index) => {
-    baseStore.canvas?.moveObjectTo?.(element as unknown as object, index)
+    baseStore.canvas?.moveObjectTo?.(element as any, index)
   })
   baseStore.canvas?.renderAll?.()
 }
@@ -180,7 +180,7 @@ const undo = (): void => {
   if (currentHistoryIndex.value >= 0) {
     const action = history.value[currentHistoryIndex.value]
     if (action.type === 'delete') {
-      baseStore.canvas?.add?.(action.element as unknown as object)
+      baseStore.canvas?.add?.(action.element as any)
       layerStore.addLayer(action.element)
     }
     currentHistoryIndex.value--
@@ -192,7 +192,7 @@ const deleteLayer = (layer: MinimalFabricLike): void => {
   if (layer.locked) return
   if (baseStore.canvas) {
     addToHistory({ type: 'delete', element: layer })
-    baseStore.canvas.remove?.(layer as unknown as object)
+    baseStore.canvas.remove?.(layer as any)
     if (layer.id) {
       layerStore.removeLayer(layer.id)
     }

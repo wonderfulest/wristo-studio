@@ -1,8 +1,8 @@
 // Central element type exports for codecs and stores
 import { FabricObject, TextProps } from 'fabric'
-import type { AnyElementConfig, ElementConfigMap } from './elements'
+import type { AnyElementConfig } from './elements'
 
-export type ElementType = keyof ElementConfigMap
+export type ElementType = string
 export type ElementConfig = AnyElementConfig
 
 // Represent runtime Fabric instances; allow optional custom properties

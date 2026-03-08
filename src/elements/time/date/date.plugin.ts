@@ -3,7 +3,7 @@ import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import { useDateStore } from '@/elements/time/date/dateElement'
 import type { DateElementConfig } from '@/types/elements'
-import DateSettings from '@/elements/time/date/DateSettings.vue'
+import DateSettings from '@/elements/time/date/dateSettings.vue'
 
 export default function registerDatePlugin() {
   registerElement('date' as ElementType, {

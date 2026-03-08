@@ -1,5 +1,5 @@
 import instance from '@/config/axios'
-import type { ApiResponse, PageResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/types/api/api'
 
 // ---- Types (front-end copy of backend DTO/VO) ----
 

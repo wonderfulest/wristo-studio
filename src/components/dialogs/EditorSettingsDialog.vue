@@ -155,7 +155,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import emitter from '@/utils/eventBus'
 import { useBaseStore } from '@/stores/baseStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useMessageStore } from '@/stores/message'

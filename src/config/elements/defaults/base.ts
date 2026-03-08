@@ -56,6 +56,7 @@ export const DEFAULT_HAND_CONFIG: HandElementConfig & EDITOR_ELEMENT = Object.as
   icon: '',
   label: '',
   eleType: 'hourHand',
+  assetId: null,
   imageUrl: '',
   rotationCenter: { x: DEFAULT_LEFT, y: DEFAULT_TOP },
   targetHeight: DEFAULT_HAND_HEIGHT,

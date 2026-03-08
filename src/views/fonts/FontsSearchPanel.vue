@@ -99,7 +99,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
 import { Search, Upload } from '@element-plus/icons-vue'
 
 defineProps<{

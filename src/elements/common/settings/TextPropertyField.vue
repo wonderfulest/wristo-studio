@@ -67,9 +67,10 @@ const handleChange = (val: string) => {
   emit('change', val)
 }
 
-const truncate = (text: string | undefined, max = 24): string => {
-  if (!text) return ''
-  return text.length > max ? `${text.slice(0, max)}…` : text
+const truncate = (text: unknown, max = 24): string => {
+  if (text === null || text === undefined) return ''
+  const s = String(text)
+  return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
 const openAppProperties = () => {

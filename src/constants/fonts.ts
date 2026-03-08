@@ -1,5 +1,6 @@
 export const FONT_TYPE_TEXT = 'text_font'
 export const FONT_TYPE_ICON = 'icon_font'
+export const FONT_TYPE_NUMBER = 'number_font'
 export const FONT_TYPE_TEXT_DE = 'text_font_de'
 export const FONT_TYPE_TEXT_FR = 'text_font_fr'
 export const FONT_TYPE_TEXT_ES = 'text_font_es'
@@ -12,6 +13,7 @@ export const FONT_TYPE_TEXT_KR = 'text_font_kr'
 export const FontTypes = {
   TEXT_FONT: FONT_TYPE_TEXT,
   ICON_FONT: FONT_TYPE_ICON,
+  NUMBER_FONT: FONT_TYPE_NUMBER,
   TEXT_FONT_DE: FONT_TYPE_TEXT_DE,
   TEXT_FONT_FR: FONT_TYPE_TEXT_FR,
   TEXT_FONT_ES: FONT_TYPE_TEXT_ES,

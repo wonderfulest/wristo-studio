@@ -157,8 +157,10 @@ export const useBaseStore = defineStore('baseStore', {
         }
         const match = Object.entries(properties)
           .find(([, colorProperty]) => {
-            return colorProperty.type === 'color' 
-              && colorProperty.value.toLowerCase().slice(-6) == val?.toString().toLowerCase().slice(-6)
+            if (colorProperty.type !== 'color') return false
+            const propVal = String(colorProperty.value ?? '')
+            const srcVal = String(val ?? '')
+            return propVal.toLowerCase().slice(-6) === srcVal.toLowerCase().slice(-6)
           })
         if (match) {
           encRec[target] = match[0]
@@ -316,9 +318,10 @@ export const useBaseStore = defineStore('baseStore', {
 
         // 获取截图数据（只截当前画布内容，不再使用任何备用图片）
         const dataURL = this.canvas.toDataURL({
+          multiplier: 1,
           format: 'png',
-          quality: 1
-        })
+          quality: 1,
+        } as any)
 
         // 保存截图数据到 state
         this.screenshot = dataURL
@@ -394,21 +397,21 @@ export const useBaseStore = defineStore('baseStore', {
           evented: false,
           // 记录元数据，便于导出配置
           wristoImageId: imageId ?? null,
-          wristoImageUrl: url,
-        })
-        if (!c.getObjects().includes(img)) {
-          c.add(img)
+          wristoImageUrl: url, 
+        }) as any
+        if (!c.getObjects().includes(img as any)) {
+          c.add(img as any)
         }
 
         // 调整层级：global 在最底层，其上一层为 background
-        if (this.watchFaceCircle && c.getObjects().includes(this.watchFaceCircle)) {
-          const globalIndex = c.getObjects().indexOf(this.watchFaceCircle)
+        if (this.watchFaceCircle && c.getObjects().includes(this.watchFaceCircle as any)) {
+          const globalIndex = c.getObjects().indexOf(this.watchFaceCircle as any)
           const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-          c.moveObjectTo(this.watchFaceCircle, 0)
-          c.moveObjectTo(img, targetIndex)
+          c.moveObjectTo(this.watchFaceCircle as any, 0)
+          c.moveObjectTo(img as any, targetIndex)
         } else {
           // 没有全局背景圆时，尽量把图片放在最底层
-          c.moveObjectTo(img, 0)
+          c.moveObjectTo(img as any, 0)
         }
 
         c.renderAll()
@@ -443,10 +446,9 @@ export const useBaseStore = defineStore('baseStore', {
         hasBorders: false,
         hasControls: false
       })) as unknown as AnyObject
-
-      // 确保背景圆添加到画布，并始终在最底层（global 最底层）
+      // 确保背景圆添加到画布，并始终在最底层（global as any 最底层）
       if (!c.getObjects().includes(this.watchFaceCircle)) {
-        c.add(this.watchFaceCircle)
+        c.add(this.watchFaceCircle) as any
       }
       c.moveObjectTo(this.watchFaceCircle, 0)
 
@@ -592,10 +594,9 @@ export const useBaseStore = defineStore('baseStore', {
           evented: false,
           hasControls: false,
           hasBorders: false,
-        })
-
+        }) as any
         if (!this.canvas.getObjects().includes(img)) {
-          this.canvas.add(img)
+          this.canvas.add(img) as any
         }
         this.canvas.moveObjectTo(img, 1)
 
@@ -630,7 +631,6 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: this.textCase,
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
-        elements: [] as import('@/types/elements').AnyElementConfig[],
         orderIds: [] as string[],
         backgroundImage: undefined,
         currentIconFontSlug: this.currentIconFontSlug,

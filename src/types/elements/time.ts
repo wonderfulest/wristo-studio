@@ -10,12 +10,12 @@ export interface TimeElementConfig extends TextElementConfig {
   // bitmap 字体字符间距（像素），仅在 fontRenderType === 'bitmap' 时使用
   fontGap?: number
   // 仅用于导出：文字 baseline 的纵坐标
-  topBase: number
+  topBase?: number
 }
 
 export interface DateElementConfig extends TextElementConfig {
   eleType: 'date'
   formatter: number
   // 仅用于导出：文字 baseline 的纵坐标
-  topBase: number
+  topBase?: number
 }
