@@ -5,16 +5,19 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
 import { FabricElement } from '@/types/element'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useGoalBarStore = defineStore('goalBarStore', {
   state: () => {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
+    const elementDataStore = useElementDataStore()
 
     return {
       goalBarElements: [] as any[],
       baseStore,
       layerStore,
+      elementDataStore,
     }
   },
 
@@ -81,6 +84,13 @@ export const useGoalBarStore = defineStore('goalBarStore', {
       this.layerStore.addLayer(group)
       this.baseStore.canvas?.renderAll()
       this.baseStore.canvas?.setActiveObject(group)
+
+      const encoded = this.encodeConfig(group as FabricElement)
+      this.elementDataStore.upsertElement({
+        id: String((group as any).id ?? encoded.id ?? nanoid()),
+        ...encoded,
+      } as any)
+
       return group
     },
 
@@ -161,6 +171,13 @@ export const useGoalBarStore = defineStore('goalBarStore', {
       }
       element.setCoords()
       this.baseStore.canvas?.renderAll()
+
+      // 更新 ElementDataStore 中的配置
+      const encoded = this.encodeConfig(element as FabricElement)
+      const id = String((element as any).id ?? encoded.id ?? '')
+      if (id) {
+        this.elementDataStore.patchElement(id, { id, ...encoded } as any)
+      }
     },
 
     encodeConfig(element: Partial<FabricElement>) : GoalBarElementConfig {

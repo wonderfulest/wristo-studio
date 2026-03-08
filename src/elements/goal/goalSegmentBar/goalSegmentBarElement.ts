@@ -5,6 +5,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { GoalSegmentBarElementConfig } from '@/types/elements/goal'
 import type { FabricElement } from '@/types/element'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 interface BuildSegmentsParams {
   left: number
@@ -108,9 +109,11 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
   state: () => {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
+    const elementDataStore = useElementDataStore()
     return {
       baseStore,
       layerStore,
+      elementDataStore,
     }
   },
 
@@ -177,6 +180,12 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
       this.layerStore.addLayer(group as unknown as any)
       this.baseStore.canvas.renderAll()
       this.baseStore.canvas.setActiveObject(group as unknown as any)
+
+      // 初次创建时写入业务配置
+      const encoded = this.encodeConfig(group as unknown as FabricElement)
+      const id = String((group as any).id ?? encoded.id ?? nanoid())
+      this.elementDataStore.upsertElement({ id, ...encoded } as any)
+
       return group as unknown as FabricElement
     },
 
@@ -259,6 +268,13 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
       element.setCoords()
       this.baseStore.canvas?.requestRenderAll?.()
       this.baseStore.canvas?.renderAll()
+
+      // 更新 ElementDataStore 中的配置
+      const encoded = this.encodeConfig(element as FabricElement)
+      const id = String((element as any).id ?? encoded.id ?? '')
+      if (id) {
+        this.elementDataStore.patchElement(id, { id, ...encoded } as any)
+      }
     },
 
     encodeConfig(element: Partial<FabricElement>): GoalSegmentBarElementConfig {

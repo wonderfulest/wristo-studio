@@ -50,33 +50,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { useGoalSegmentBarStore } from '@/stores/elements/goal/goalSegmentBarElement'
+import { useGoalSegmentBarStore } from '@/elements/goal/goalSegmentBar/goalSegmentBarElement'
 import type { FabricElement } from '@/types/element'
-import AlignXButtons from '@/settings/common/AlignXButtons.vue'
-import { originXOptions } from '@/config/settings'
-import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 
 const props = defineProps<{ element: FabricElement }>()
 const emit = defineEmits<{ (e: 'update'): void }>()
 
-const formRef = ref()
 const store = useGoalSegmentBarStore()
  
-
-const originXModel = computed<string>({
-  get: () => {
-    const v = (props.element as any).originX
-    return (v === 'left' || v === 'center' || v === 'right') ? v : 'center'
-  },
-  set: (val: string) => {
-    ;(props.element as any).originX = val as any
-  },
-})
-
 const updateElement = async () => {
-  await formRef.value?.validate?.()
   store.updateElement(props.element, {
     width: (props.element as any).designWidth ?? props.element.width,
     height: (props.element as any).designHeight ?? props.element.height,

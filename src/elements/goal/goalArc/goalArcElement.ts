@@ -4,11 +4,13 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Circle, Group } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { GoalArcElementConfig } from '@/types/elements/goal'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useGoalArcStore = defineStore('goalArcElement', {
   state: () => ({
     baseStore: useBaseStore(),
     layerStore: useLayerStore(),
+    elementDataStore: useElementDataStore(),
     elements: new Map<string, any>(),
     progressMap: new Map<string, number>(),
   }),
@@ -82,6 +84,13 @@ export const useGoalArcStore = defineStore('goalArcElement', {
 
       this.elements.set(id, group)
       this.progressMap.set(id, progress)
+
+      // 初次创建时写入业务配置
+      this.elementDataStore.upsertElement({
+        ...this.encodeConfig(group as any),
+      } as any)
+
+      return group
     },
 
     getProgressAngle(startAngle: number, endAngle: number, counterClockwise: boolean, progress: number) {
@@ -184,9 +193,12 @@ export const useGoalArcStore = defineStore('goalArcElement', {
         throw new Error('Invalid element')
       }
       return {
+        id: String(element.id),
         eleType: 'goalArc',
         left: Math.round(element.left),
         top: Math.round(element.top),
+        originX: element.originX,
+        originY: element.originY,
         startAngle: element.startAngle,
         endAngle: element.endAngle,
         radius: mainRing.radius,
@@ -197,7 +209,7 @@ export const useGoalArcStore = defineStore('goalArcElement', {
         bgColor: bgRing.stroke,
         counterClockwise: element.counterClockwise,
         goalProperty: element.goalProperty,
-        progress: this.progressMap.get(element.id),
+        progress: this.progressMap.get(element.id) ?? 0,
       }
     },
 

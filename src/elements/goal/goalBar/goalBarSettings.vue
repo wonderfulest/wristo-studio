@@ -2,7 +2,7 @@
   <div class="settings-section">
     <el-form 
       ref="formRef"
-      :model="element" 
+      :model="currentModel" 
       label-position="left" 
       label-width="100px"
       :rules="rules"
@@ -10,12 +10,12 @@
       validate-on-rule-change
     >
       <GoalPropertyField
-        v-model="element.goalProperty"
+        v-model="currentModel.goalProperty"
         @change="updateElement"
       />
       <el-form-item label="Width">
         <el-input-number 
-          v-model="element.width" 
+          v-model="currentModel.width" 
           :min="50" 
           :max="500" 
           @change="updateElement" 
@@ -24,7 +24,7 @@
       
       <el-form-item label="Height">
         <el-input-number 
-          v-model="element.height" 
+          v-model="currentModel.height" 
           :min="4" 
           :max="50" 
           @change="updateElement" 
@@ -33,7 +33,7 @@
 
       <el-form-item label="Border Radius">
         <el-input-number 
-          v-model="element.borderRadius" 
+          v-model="currentModel.borderRadius" 
           :min="0" 
           :max="25" 
           @change="updateElement" 
@@ -42,7 +42,7 @@
 
       <el-form-item label="Padding">
         <el-input-number 
-          v-model="element.padding" 
+          v-model="currentModel.padding" 
           :min="0" 
           :max="10" 
           @change="updateElement" 
@@ -52,14 +52,14 @@
       <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions"
-          v-model="element.originX"
+          v-model="currentModel.originX"
           @update:modelValue="() => updateElement()"
         />
       </el-form-item>
 
       <el-form-item label="Progress">
         <el-slider 
-          v-model="element.progress" 
+          v-model="currentModel.progress" 
           :min="0" 
           :max="1" 
           :step="0.01" 
@@ -69,21 +69,21 @@
 
       <el-form-item label="Active Color">
         <color-picker 
-          v-model="element.color" 
+          v-model="currentModel.color" 
           @change="handleMainColorChange" 
         />
       </el-form-item>
 
       <el-form-item label="Background Color">
         <color-picker 
-          v-model="element.bgColor" 
+          v-model="currentModel.bgColor" 
           @change="handleBgColorChange" 
         />
       </el-form-item>
 
       <el-form-item label="Progress Align">
         <el-select 
-          v-model="element.progressAlign" 
+          v-model="currentModel.progressAlign" 
           @change="updateElement"
         >
           <el-option label="Left" value="left" />
@@ -93,7 +93,7 @@
 
       <el-form-item label="Border Width">
         <el-input-number 
-          v-model="element.borderWidth" 
+          v-model="currentModel.borderWidth" 
           :min="0" 
           :max="10" 
           @change="updateElement" 
@@ -102,7 +102,7 @@
 
       <el-form-item label="Border Color">
         <color-picker 
-          v-model="element.borderColor" 
+          v-model="currentModel.borderColor" 
           @change="updateElement" 
         />
       </el-form-item>
@@ -110,29 +110,25 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, defineEmits, defineExpose, onMounted, nextTick } from 'vue'
-import { useGoalBarStore } from '@/stores/elements/goal/goalBarElement'
+<script setup lang="ts">
+import { ref, watch, defineEmits, defineExpose, onMounted, nextTick, computed } from 'vue'
+import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { DataTypeOptions, originXOptions } from '@/config/settings'
-import { usePropertiesStore } from '@/stores/properties'
 import { ElMessage } from 'element-plus'
-import AlignXButtons from '@/settings/common/AlignXButtons.vue'
-import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
+import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 
-const props = defineProps({
-  element: {
-    type: Object,
-    required: true
-  }
-})
+const props = defineProps<{
+  element?: any
+  config?: Record<string, any> | null
+  applyPatch?: (patch: Record<string, any>) => void
+}>()
 
-const formRef = ref(null)
-const goalBarStore = useGoalBarStore()
+const formRef = ref<any>(null)
 const metricOptions = DataTypeOptions
-const propertiesStore = usePropertiesStore()
 
 const rules = {
   goalProperty: [
@@ -140,30 +136,53 @@ const rules = {
   ]
 }
 
-const handleMainColorChange = async (val) => {
-  props.element.color = val
+const currentModel = computed<any>(() => {
+  return props.config ?? props.element ?? {}
+})
+
+const applyUpdate = async (patch: Record<string, any>) => {
+  try {
+    await formRef.value?.validate?.()
+  } catch (error) {
+    console.error('Form validation failed:', error)
+    return
+  }
+
+  if (props.applyPatch && props.config) {
+    props.applyPatch(patch)
+    return
+  }
+
+  if (props.element) {
+    elementManager.updateElement(props.element as any, patch)
+  }
+}
+
+const handleMainColorChange = async (val: string) => {
+  currentModel.value.color = val
   await updateElement()
 }
 
-const handleBgColorChange = async (val) => {
-  props.element.bgColor = val
+const handleBgColorChange = async (val: string) => {
+  currentModel.value.bgColor = val
   await updateElement()
 }
 const updateElement = async () => {
   try {
     await formRef.value.validate()
-    goalBarStore.updateElement(props.element, {
-      width: props.element.width,
-      height: props.element.height,
-      borderRadius: props.element.borderRadius,
-      padding: props.element.padding,
-      progressAlign: props.element.progressAlign,
-      progress: props.element.progress,
-      color: props.element.color,
-      bgColor: props.element.bgColor,
-      goalProperty: props.element.goalProperty,
-      borderWidth: props.element.borderWidth,
-      borderColor: props.element.borderColor
+    const model = currentModel.value as any
+    await applyUpdate({
+      width: model.width,
+      height: model.height,
+      borderRadius: model.borderRadius,
+      padding: model.padding,
+      progressAlign: model.progressAlign,
+      progress: model.progress,
+      color: model.color,
+      bgColor: model.bgColor,
+      goalProperty: model.goalProperty,
+      borderWidth: model.borderWidth,
+      borderColor: model.borderColor,
     })
   } catch (error) {
     console.error('Form validation failed:', error)
@@ -181,7 +200,7 @@ const handleClose = async () => {
 
 // 初次挂载时如果未选择 goalProperty，则触发校验以显示提示
 onMounted(() => {
-  if (!props.element.goalProperty) {
+  if (!currentModel.value.goalProperty) {
     nextTick(() => {
       formRef.value?.validateField?.('goalProperty')
     })
@@ -190,7 +209,7 @@ onMounted(() => {
 
 // 当 goalProperty 变化时，重新校验以实时显示/隐藏提示
 watch(
-  () => props.element.goalProperty,
+  () => currentModel.value.goalProperty,
   () => {
     formRef.value?.validateField?.('goalProperty')
   }

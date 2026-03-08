@@ -2,17 +2,17 @@
   <div class="settings-section">
     <h3>Goal Arc Settings</h3>
 
-    <el-form ref="formRef" :model="element" label-position="left" label-width="100px" :rules="rules">
-      <GoalPropertyField v-model="element.goalProperty" @change="updateElement" />
+    <el-form ref="formRef" :model="currentModel" label-position="left" label-width="100px" :rules="rules">
+      <GoalPropertyField v-model="currentModel.goalProperty" @change="updateElement" />
       <!-- 位置设置 -->
       <div class="setting-item">
         <label>Position</label>
         <PositionInputs 
-          :left="element.left"
-          :top="element.top"
-          @update:left="(v)=> element.left = v"
-          @update:top="(v)=> element.top = v"
-          @change="(p)=> updateElement({ left: Math.round(p.left), top: Math.round(p.top) })"
+          :left="currentModel.left"
+          :top="currentModel.top"
+          @update:left="(v)=> currentModel.left = v"
+          @update:top="(v)=> currentModel.top = v"
+          @change="(p)=> updatePosition(Math.round(p.left), Math.round(p.top))"
         />
       </div>
       <!-- 尺寸属性 -->
@@ -116,25 +116,33 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, computed, defineEmits, defineExpose, watchEffect } from 'vue'
+<script setup lang="ts">
+import { ref, computed, defineEmits, defineExpose, watchEffect } from 'vue'
+import * as elementManager from '@/engine/managers/elementManager'
 import { useBaseStore } from '@/stores/baseStore'
-import { useGoalArcStore } from '@/stores/elements/goal/goalArcElement'
+import { useGoalArcStore } from '@/elements/goal/goalArc/goalArcElement'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { DataTypeOptions } from '@/config/settings'
 import { ElTooltip } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import PositionInputs from '@/settings/common/PositionInputs.vue'
-import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
+import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 
 const props = defineProps({
   element: {
     type: Object,
-    required: true
-  }
+    required: false,
+  },
+  config: {
+    type: Object,
+    required: false,
+  },
+  applyPatch: {
+    type: Function,
+    required: false,
+  },
 })
 
 const baseStore = useBaseStore()
@@ -142,13 +150,17 @@ const goalArcStore = useGoalArcStore()
 
 const formRef = ref(null)
 
+const currentModel = computed<any>(() => {
+  return (props as any).config ?? props.element ?? {}
+})
+
 // 获取主圆环和背景圆环
 const mainRing = computed(() =>
-  props.element.getObjects().find((obj) => {
+  (props.element as any)?.getObjects()?.find((obj: any) => {
     return obj.id.endsWith('_main')
   })
 )
-const bgRing = computed(() => props.element.getObjects().find((obj) => obj.id.endsWith('_bg')))
+const bgRing = computed(() => (props.element as any)?.getObjects()?.find((obj: any) => obj.id.endsWith('_bg')))
 
 // 颜色本地状态，避免直接修改 fabric 对象属性导致不渲染
 const fgColor = ref('#FFFFFF')
@@ -180,9 +192,9 @@ watchEffect(() => {
     bgRadius.value = Number(bgRing.value.radius || 0)
     bgStrokeWidth.value = Number(bgRing.value.strokeWidth || 0)
   }
-  if (props.element) {
-    startAngleLocal.value = Number(props.element.startAngle || 0)
-    endAngleLocal.value = Number(props.element.endAngle || 0)
+  if (currentModel.value) {
+    startAngleLocal.value = Number((currentModel.value as any).startAngle || 0)
+    endAngleLocal.value = Number((currentModel.value as any).endAngle || 0)
   }
 })
 
@@ -205,25 +217,25 @@ const onMainRadiusChange = (val) => {
   if (!mainRing.value) return
   const n = Number(val)
   mainRing.value.radius = n
-  goalArcStore.updateElement(props.element, { radius: n })
+  applyUpdate({ radius: n })
 }
 const onBgRadiusChange = (val) => {
   if (!bgRing.value) return
   const n = Number(val)
   bgRing.value.radius = n
-  goalArcStore.updateElement(props.element, { bgRadius: n })
+  applyUpdate({ bgRadius: n })
 }
 const onMainStrokeWidthChange = (val) => {
   if (!mainRing.value) return
   const n = Number(val)
   mainRing.value.strokeWidth = n
-  goalArcStore.updateElement(props.element, { strokeWidth: n })
+  applyUpdate({ strokeWidth: n })
 }
 const onBgStrokeWidthChange = (val) => {
   if (!bgRing.value) return
   const n = Number(val)
   bgRing.value.strokeWidth = n
-  goalArcStore.updateElement(props.element, { bgStrokeWidth: n })
+  applyUpdate({ bgStrokeWidth: n })
 }
 
 // 变更处理：角度
@@ -238,58 +250,62 @@ const normalizeAngle = (v) => {
 const onStartAngleChange = (val) => {
   const n = normalizeAngle(val)
   startAngleLocal.value = n
-  props.element.startAngle = n
-  goalArcStore.updateElement(props.element, { startAngle: n })
+  ;(currentModel.value as any).startAngle = n
+  applyUpdate({ startAngle: n })
 }
 const onEndAngleChange = (val) => {
   const n = normalizeAngle(val)
   endAngleLocal.value = n
-  props.element.endAngle = n
-  goalArcStore.updateElement(props.element, { endAngle: n })
+  ;(currentModel.value as any).endAngle = n
+  applyUpdate({ endAngle: n })
 }
 
-// 更新元素
-const updateElement = async () => {
+const applyUpdate = async (patch: Record<string, any>) => {
   try {
     await formRef.value.validate()
     if (!mainRing.value || !bgRing.value) return
 
-    // 使用store中的方法更新元素
-    goalArcStore.updateElement(props.element, {
-      left: props.element.left,
-      top: props.element.top,
+    const basePatch = {
+      left: (currentModel.value as any).left,
+      top: (currentModel.value as any).top,
       radius: mainRing.value.radius,
       bgRadius: bgRing.value.radius,
       strokeWidth: mainRing.value.strokeWidth,
       bgStrokeWidth: bgRing.value.strokeWidth,
       color: fgColor.value,
       bgColor: bgColor.value,
-      startAngle: props.element.startAngle,
-      endAngle: props.element.endAngle,
-      counterClockwise: props.element.counterClockwise,
-      goalProperty: props.element.goalProperty,
-      progress: goalArcStore.progressMap.get(props.element.id)
-    })
+      startAngle: (currentModel.value as any).startAngle,
+      endAngle: (currentModel.value as any).endAngle,
+      counterClockwise: (currentModel.value as any).counterClockwise,
+      goalProperty: (currentModel.value as any).goalProperty,
+      progress: goalArcStore.progressMap.get((props.element as any)?.id),
+    }
 
+    const merged = { ...basePatch, ...patch }
+
+    if (props.applyPatch && props.config) {
+      props.applyPatch(merged)
+      return
+    }
+
+    if (props.element) {
+      elementManager.updateElement(props.element as any, merged)
+    }
   } catch (error) {
     console.error('Form validation failed:', error)
   }
 }
 
-const updateMetricType = () => {
-  if (!props.element || !baseStore.canvas) return
-  props.element.set('metricSymbol', metricSymbol.value)
-  baseStore.canvas.renderAll()
+// 更新位置
+const updatePosition = (left: number, top: number) => {
+  ;(currentModel.value as any).left = left
+  ;(currentModel.value as any).top = top
+  applyUpdate({ left, top })
 }
 
-// 更新位置
-const updatePosition = () => {
-  if (!props.element) return
-
-  goalArcStore.updateElement(props.element, {
-    left: props.element.left,
-    top: props.element.top
-  })
+// 更新整体（不额外传 patch）
+const updateElement = async () => {
+  await applyUpdate({})
 }
 
 // 更新进度

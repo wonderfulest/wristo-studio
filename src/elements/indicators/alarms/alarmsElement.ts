@@ -1,0 +1,113 @@
+import { defineStore } from 'pinia'
+import { useBaseStore } from '@/stores/baseStore'
+import { FabricText } from 'fabric'
+import { IndicatorElementConfig } from '@/types/elements'
+import { FabricElement } from '@/types/element'
+import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+
+export const useAlarmsStore = defineStore('alarmsElement', {
+  state: () => ({
+  }),
+
+  actions: {
+    addElement(config: IndicatorElementConfig) {
+      const baseStore = useBaseStore()
+      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
+      
+      if ((baseStore as any).currentIconFontSize == -1) {
+        (baseStore as any).currentIconFontSize = config.fontSize
+      } else {
+        config.fontSize = (baseStore as any).currentIconFontSize
+      }
+      if ((baseStore as any).currentIconFontSlug == '') {
+        (baseStore as any).currentIconFontSlug = config.fontFamily
+      } else {
+        config.fontFamily = (baseStore as any).currentIconFontSlug
+      }
+      
+      const alarmsIcon = new FabricText('\u0024', {
+        eleType: 'alarms',
+        left: config.left,
+        top: config.top,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
+        selectable: true,
+        hasControls: false,
+        hasBorders: true,
+        evented: true,
+        originX: config.originX,
+        originY: config.originY,
+      } as unknown as Record<string, unknown>)
+
+      alarmsIcon.set('text', '\u0024')
+      baseStore.canvas.add(alarmsIcon)
+      baseStore.canvas.setActiveObject(alarmsIcon)
+      baseStore.canvas.renderAll()
+      return alarmsIcon
+    },
+
+    updateElement(element: any, options: Partial<IndicatorElementConfig> = {}) {
+      if (!element) return
+
+      const baseStore = useBaseStore()
+
+      if (options.fill !== undefined) {
+        element.set('fill', options.fill)
+      }
+
+      if (options.fontFamily !== undefined) {
+        element.set('fontFamily', options.fontFamily)
+      }
+
+      if (options.fontSize !== undefined) {
+        if (baseStore.canvas && (baseStore as any).requestUpdateIconFontSize) {
+          void (baseStore as any).requestUpdateIconFontSize(element, options.fontSize)
+        } else {
+          element.set('fontSize', options.fontSize)
+        }
+      }
+
+      if (options.left !== undefined) {
+        element.set('left', options.left)
+      }
+
+      if (options.top !== undefined) {
+        element.set('top', options.top)
+      }
+
+      element.setCoords?.()
+      baseStore.canvas?.renderAll()
+    },
+
+    encodeConfig(element: FabricElement): IndicatorElementConfig {
+      const config: Partial<IndicatorElementConfig> = {
+        eleType: 'alarms',
+        id: element.id,
+        left: element.left,
+        top: element.top,
+        originX: element.originX,
+        originY: element.originY,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fill: element.fill as string,
+        topBase: encodeTopBaseForElement(element),
+      }
+      return config as IndicatorElementConfig
+    },
+
+    decodeConfig(config: IndicatorElementConfig): Partial<FabricElement> {
+      return {
+        eleType: 'alarms',
+        id: config.id,
+        left: config.left,
+        top: config.top,
+        originX: config.originX,
+        originY: config.originY,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fill: config.fill,
+      }
+    },
+  },
+})
