@@ -17,7 +17,8 @@ export interface GuidelineManagerHandle {
 type GuidelineObject = FabricObject & {
   guideline?: boolean
   keyGuideline?: boolean
-  type?: string
+  // 使用自定义字段标记方向，避免覆盖 Fabric 自身的 type 属性
+  guidelineOrientation?: 'horizontal' | 'vertical'
   left?: number
   top?: number
   x1?: number
@@ -56,7 +57,7 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
       hoverCursor: 'ns-resize',
       moveCursor: 'ns-resize',
       guideline: true,
-      type: 'horizontalGuideline',
+      guidelineOrientation: 'horizontal',
       perPixelTargetFind: true,
       targetFindTolerance: 5,
     })
@@ -87,7 +88,7 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
       hoverCursor: 'ew-resize',
       moveCursor: 'ew-resize',
       guideline: true,
-      type: 'verticalGuideline',
+      guidelineOrientation: 'vertical',
       perPixelTargetFind: true,
       targetFindTolerance: 5,
     })
@@ -112,14 +113,14 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
       canvas.getObjects().forEach((obj) => {
         const o = obj as GuidelineObject
         if (o.guideline) {
-          if (o.type === 'horizontalGuideline') {
+          if (o.guidelineOrientation === 'horizontal') {
             o.set({
               x1: -width,
               x2: width * 2,
               y1: o.top,
               y2: o.top,
             })
-          } else if (o.type === 'verticalGuideline') {
+          } else if (o.guidelineOrientation === 'vertical') {
             o.set({
               x1: o.left,
               x2: o.left,

@@ -2,41 +2,31 @@
   <div class="settings-section">
     <el-form 
       ref="formRef"
-      :model="element" 
+      :model="currentModel" 
       label-position="left" 
       label-width="100px"
     >
       <DataPropertyField
-        v-if="!element.goalProperty"
-        v-model="element.dataProperty"
+        v-if="!currentModel.goalProperty"
+        v-model="currentModel.dataProperty"
         @change="updateElement"
       />
       <GoalPropertyField
-        v-if="element.goalProperty"
-        v-model="element.goalProperty"
+        v-if="currentModel.goalProperty"
+        v-model="currentModel.goalProperty"
         @change="updateElement"
       />
-      <el-form-item label="Position">
-        <PositionInputs 
-          :left="element.left"
-          :top="element.top"
-          @update:left="(v)=> element.left = v"
-          @update:top="(v)=> element.top = v"
-          @change="updateElement"
-        />
-      </el-form-item>
-
       <el-form-item label="Alignment">
         <AlignXButtons 
           :options="originXOptions" 
-          v-model="element.originX"
+          v-model="currentModel.originX"
           @update:modelValue="updateElement"
         />
       </el-form-item>
 
       <el-form-item label="Font Size">
         <el-select 
-          v-model="element.fontSize" 
+          v-model="currentModel.fontSize" 
           @change="updateElement"
         >
           <el-option 
@@ -50,14 +40,14 @@
 
       <el-form-item label="Text Color">
         <color-picker 
-          v-model="element.fill" 
+          v-model="currentModel.fill" 
           @change="updateElement" 
         />
       </el-form-item>
 
       <el-form-item label="Font">
         <font-picker 
-          v-model="element.fontFamily" 
+          v-model="currentModel.fontFamily" 
           @change="updateElement" 
         />
       </el-form-item>
@@ -65,47 +55,64 @@
   </div>
 </template>
 
-<script setup>
-import { ref, defineProps, defineEmits, defineExpose } from 'vue'
-import { useLabelStore } from '@/stores/elements/data/labelElement'
+<script setup lang="ts">
+import { ref, defineProps, defineEmits, defineExpose, computed } from 'vue'
+import * as elementManager from '@/engine/managers/elementManager'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import PositionInputs from '@/settings/common/PositionInputs.vue'
-import AlignXButtons from '@/settings/common/AlignXButtons.vue'
-import { usePropertiesStore } from '@/stores/properties'
+import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import { ElMessage } from 'element-plus'
-import DataPropertyField from '@/settings/common/DataPropertyField.vue'
-import GoalPropertyField from '@/settings/common/GoalPropertyField.vue'
+import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
 
-const props = defineProps({
-  element: {
-    type: Object,
-    required: true
-  }
+const props = defineProps<{
+  element?: any
+  config?: Record<string, any> | null
+  applyPatch?: (patch: Record<string, any>) => void
+}>()
+
+const formRef = ref<any>(null)
+
+// 当前表单绑定的数据模型：优先使用业务 config，其次回退到 FabricElement
+const currentModel = computed<any>(() => {
+  return props.config ?? props.element ?? {}
 })
 
-const formRef = ref(null)
-const labelStore = useLabelStore()
-const propertiesStore = usePropertiesStore()
-
-const updateElement = async () => {
+// 统一更新：先校验，再通过 applyPatch 或 elementManager 下发补丁
+const applyUpdate = async (patch: Record<string, any>) => {
   try {
-    await formRef.value.validate()
-    labelStore.updateElement(props.element, {
-      dataProperty: props.element.dataProperty,
-      fontSize: props.element.fontSize,
-      fill: props.element.fill,
-      fontFamily: props.element.fontFamily,
-      originX: props.element.originX,
-      left: props.element.left,
-      top: props.element.top
-    })
+    await formRef.value?.validate?.()
   } catch (error) {
     console.error('Form validation failed:', error)
+    return
   }
+
+  if (props.applyPatch && props.config) {
+    props.applyPatch(patch)
+    return
+  }
+
+  if (props.element) {
+    elementManager.updateElement(props.element as any, patch)
+  }
+}
+
+// 保持原有的 updateElement 调用点，只是改为派发补丁
+const updateElement = async () => {
+  const model = currentModel.value as any
+  await applyUpdate({
+    dataProperty: model.dataProperty,
+    goalProperty: model.goalProperty,
+    fontSize: model.fontSize,
+    fill: model.fill,
+    fontFamily: model.fontFamily,
+    originX: model.originX,
+    left: model.left,
+    top: model.top,
+  })
 }
 
 // 添加关闭时的验证方法

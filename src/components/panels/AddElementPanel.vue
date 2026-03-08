@@ -87,6 +87,8 @@ const addElementByType = async (_category: string, elementType: string, config: 
   } catch (error) {
     console.error('❌ [AddElement] 添加元素失败:', error)
     messageStore.error('添加元素失败')
+    // 自动打开 Properties and App Settings 面板，方便用户先配置数据属性
+    emitter.emit('open-app-properties')
   }
 }
 </script>

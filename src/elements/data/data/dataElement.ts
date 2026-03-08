@@ -7,14 +7,17 @@ import type { DataElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
 import { usePropertiesStore } from '@/stores/properties'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useDataStore = defineStore('dataElement', {
   state: () => {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
+    const elementDataStore = useElementDataStore()
     return {
       baseStore,
       layerStore,
+      elementDataStore,
     }
   },
   actions: {
@@ -43,6 +46,25 @@ export const useDataStore = defineStore('dataElement', {
       this.layerStore.addLayer(element as any)
       this.baseStore.canvas?.setActiveObject(element as any)
       this.baseStore.canvas?.renderAll()
+
+      // 同步业务配置到 ElementDataStore，注意此时 dataProperty/goalProperty 可能还未配置，允许为 null
+      const elementDataStore = useElementDataStore()
+      elementDataStore.upsertElement({
+        eleType: 'data',
+        id: String(id),
+        left: Math.round((element as any).left ?? config.left ?? 0),
+        top: Math.round((element as any).top ?? config.top ?? 0),
+        originX: ((element as any).originX as any) ?? 'center',
+        originY: ((element as any).originY as any) ?? 'center',
+        fill: typeof (element as any).fill === 'string' ? ((element as any).fill as string) : '#ffffff',
+        fontSize: Number(((element as any).fontSize as any) ?? config.fontSize ?? 14),
+        fontFamily: String(((element as any).fontFamily as any) ?? config.fontFamily ?? 'roboto-condensed-regular'),
+        dataProperty: (element as any).dataProperty ?? null,
+        goalProperty: (element as any).goalProperty ?? null,
+        metricSymbol: String((element as any).metricSymbol ?? (config as any).metricSymbol ?? ''),
+        topBase: encodeTopBaseForElement(element as any),
+      } as any)
+
       return element as any
     },
 
@@ -77,6 +99,12 @@ export const useDataStore = defineStore('dataElement', {
 
       obj.setCoords()
       canvas.renderAll()
+
+      // 将最新配置写回 ElementDataStore，保证设置面板使用的 config 同步
+      const elementDataStore = useElementDataStore()
+      if (obj.id != null) {
+        elementDataStore.patchElement(String(obj.id), this.encodeConfig(obj as any))
+      }
     },
 
     encodeConfig(element: FabricElement): DataElementConfig {

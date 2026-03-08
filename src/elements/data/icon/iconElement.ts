@@ -8,16 +8,19 @@ import type { IconElementConfig } from '@/types/elements'
 import { usePropertiesStore } from '@/stores/properties'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useIconStore = defineStore('iconElement', {
   state: () => {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
     const propertiesStore = usePropertiesStore()
+    const elementDataStore = useElementDataStore()
     return {
       baseStore,
       layerStore,
-      propertiesStore
+      propertiesStore,
+      elementDataStore,
     }
   },
   actions: {
@@ -55,6 +58,27 @@ export const useIconStore = defineStore('iconElement', {
         this.layerStore.addLayer(element as unknown as MinimalFabricLike)
         this.baseStore.canvas?.setActiveObject(element as FabricText)
         this.baseStore.canvas?.renderAll()
+
+        // 同步业务配置到 ElementDataStore
+        const id = (element as any).id ?? config.id ?? nanoid()
+        this.elementDataStore.upsertElement({
+          id: String(id),
+          eleType: 'icon',
+          left: (element as any).left ?? config.left ?? 0,
+          top: (element as any).top ?? config.top ?? 0,
+          fill: (element as any).fill ?? config.fill ?? '#ffffff',
+          originX: ((element as any).originX as any) ?? config.originX ?? 'center',
+          originY: ((element as any).originY as any) ?? 'center',
+          fontFamily: (element as any).fontFamily ?? resolvedFontFamily,
+          fontSize: Number((element as any).fontSize ?? resolvedFontSize),
+          iconFont: (element as any).fontFamily ?? resolvedFontFamily,
+          iconSize: Number((element as any).fontSize ?? resolvedFontSize),
+          dataProperty: (element as any).dataProperty ?? config.dataProperty ?? null,
+          goalProperty: (element as any).goalProperty ?? config.goalProperty ?? null,
+          metricSymbol: (element as any).metricSymbol ?? config.metricSymbol ?? '',
+          topBase: encodeTopBaseForElement(element as unknown as FabricElement),
+        } as any)
+
         return element
       } catch (error) {
         console.error('Failed to create icon element:', error)
@@ -96,6 +120,12 @@ export const useIconStore = defineStore('iconElement', {
 
       obj.setCoords()
       canvas.renderAll()
+
+      // 写回 ElementDataStore，保持与 Fabric 同步
+      const objId = (obj as any).id
+      if (objId != null) {
+        this.elementDataStore.patchElement(String(objId), this.encodeConfig(obj as unknown as FabricElement))
+      }
     },
 
     encodeConfig(element: FabricElement): IconElementConfig {

@@ -8,11 +8,13 @@ import type { LabelElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
 import { usePropertiesStore } from '@/stores/properties'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useLabelStore = defineStore('labelElement', {
   state: () => {
     const baseStore = useBaseStore()
     const layerStore = useLayerStore()
+    const elementDataStore = useElementDataStore()
     return {
       baseStore,
       layerStore,
@@ -22,6 +24,7 @@ export const useLabelStore = defineStore('labelElement', {
         fontFamily: 'roboto-condensed-regular',
         text: 'Label',
       },
+      elementDataStore,
     }
   },
   actions: {
@@ -49,6 +52,10 @@ export const useLabelStore = defineStore('labelElement', {
       this.layerStore.addLayer(element as any)
       this.baseStore.canvas?.setActiveObject(element as any)
       this.baseStore.canvas?.renderAll()
+
+      // 同步业务配置到 ElementDataStore
+      this.elementDataStore.upsertElement(this.encodeConfig(element as any))
+
       return element as any
     },
 
@@ -84,6 +91,12 @@ export const useLabelStore = defineStore('labelElement', {
 
       text.setCoords()
       canvas.requestRenderAll?.()
+
+      // 写回 ElementDataStore，保持与 Fabric 同步
+      const textId = (text as any).id
+      if (textId != null) {
+        this.elementDataStore.patchElement(String(textId), this.encodeConfig(text as any))
+      }
     },
 
     encodeConfig(element: FabricElement): LabelElementConfig {
