@@ -6,6 +6,9 @@ import { useDesignStore } from '@/stores/designStore'
 
 type AnyObject = Record<string, any>
 
+/**
+ * 当前 `canvas` 实例、zoom、对齐线开关、当前选中 id 等**画布全局状态**。
+ */
 export const useCanvasStore = defineStore('canvas', {
   state: () => {
     const designStore = useDesignStore()

@@ -87,9 +87,6 @@ import { ref, computed, onMounted } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useBatteryStore } from '@/elements/status/battery/batteryElement'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { useCanvasStore } from '@/stores/canvasStore'
-
-const canvasStore = useCanvasStore()
 
 const props = defineProps({
   // 旧通道：直接传入 FabricElement
@@ -120,7 +117,8 @@ const currentModel = computed<any>(() => {
 
 // 确保单独的颜色字段存在（仅旧通道下需要，优先读取画布组的分散颜色字段）
 if (!props.applyPatch && props.element) {
-  const group = canvasStore.canvas?.getObjects().find((obj) => obj.id === (props.element as any).id)
+  const group = elementManager.getElementById((props.element as any).id) as any
+
   if ((props.element as any).levelColorLow == null) {
     ;(props.element as any).levelColorLow = (group as any)?.levelColorLow || batteryStore.defaultLevelColorLow
   }
@@ -132,15 +130,20 @@ if (!props.applyPatch && props.element) {
   }
 }
 
-// 从画布元素中获取实际属性值
+// 从画布元素中获取实际属性值（仅旧通道）：优先使用 ElementManager Registry + 结构化引用
 const initElementProperties = () => {
-  const group = canvasStore.canvas?.getObjects().find((obj) => obj.id === props.element.id)
-  if (!group || !group.getObjects) return
+  if (!props.element) return
 
-  const objects = group.getObjects()
-  const batteryBody = objects.find((obj) => obj.id.endsWith('_body'))
-  const batteryHead = objects.find((obj) => obj.id.endsWith('_head'))
-  const batteryLevel = objects.find((obj) => obj.id.endsWith('_level'))
+  const group = elementManager.getElementById((props.element as any).id) as any
+  if (!group) return
+
+  const batteryBody: any = (group as any)._body
+  const batteryHead: any = (group as any)._head
+  const batteryLevel: any = (group as any)._level
+
+  console.log('batteryBody', batteryBody)
+  console.log('batteryHead', batteryHead)
+  console.log('batteryLevel', batteryLevel)
 
   if (!batteryBody || !batteryHead || !batteryLevel) return
 
@@ -180,13 +183,16 @@ const initElementProperties = () => {
 
 // 组件挂载时初始化属性（仅旧通道需要）
 onMounted(() => {
+  console.log('batterySettings onMounted', props.element)
   if (!props.applyPatch) {
+    console.log('batterySettings initElementProperties')
     initElementProperties()
   }
 })
 
 // 更新元素
 const updateElement = () => {
+  console.log('batt updateElement', props.element)
   // 新通道：优先使用 applyPatch 更新业务配置
   if (props.applyPatch && props.config) {
     props.applyPatch({

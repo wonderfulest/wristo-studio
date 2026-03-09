@@ -4,6 +4,8 @@ import { useLayerStore } from '@/stores/layerStore'
 import { Group, Polygon } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { MoveBarElementConfig } from '@/types/elements/status'
+import { FabricElement } from '@/types/element'
+import * as elementManager from '@/engine/managers/elementManager'
 
 export const useMoveBarStore = defineStore('moveBarElement', {
   state: () => {
@@ -50,6 +52,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
         separator: separator,
       } as any)
 
+      const bars: any[] = []
       let barX = -width / 2
       for (let i = 1; i <= 5; i++) {
         const isActive = i <= level
@@ -66,8 +69,12 @@ export const useMoveBarStore = defineStore('moveBarElement', {
           hasControls: false,
         } as any)
         group.add(bar)
+        bars.push(bar)
         barX += currentBarWidth + separator
       }
+
+      // 绑定结构化引用：整个条形数组，便于后续无需遍历 getObjects
+      ;(group as any)._bars = bars
 
       group.setCoords()
       this.canvas?.add(group)
@@ -76,7 +83,9 @@ export const useMoveBarStore = defineStore('moveBarElement', {
       group.setCoords()
 
       this.layerStore.addLayer(group)
-      this.canvas?.renderAll()
+      // 注册到全局 ElementManager 的运行时 Registry 中
+      elementManager.registerElementInstance(group as FabricElement)
+      this.canvas?.requestRenderAll?.()
       this.canvas?.discardActiveObject()
       this.canvas?.setActiveObject(group)
       return group
@@ -107,29 +116,27 @@ export const useMoveBarStore = defineStore('moveBarElement', {
     },
 
     updateLevel(element: any, level: number) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
-      if (!group || !group.getObjects) return
-      const objects = group.getObjects()
+      if (!this.canvas) return
+
+      // 通过 ElementManager Registry 按 id 获取 Group
+      const group = elementManager.getElementById((element as any).id) as any
+      if (!group) return
+
+      const bars: any[] = (group as any)._bars
       const activeColor = (element as any).activeColor || (this as any).defaultColors.active
       const inactiveColor = (element as any).inactiveColor || (this as any).defaultColors.inactive
-      objects.forEach((obj: any) => {
-        if ((obj as any).id.startsWith(element.id + '_bar_')) {
-          const barIndex = parseInt((obj as any).id.split('_').pop() || '0')
-          obj.set('fill', barIndex <= level ? activeColor : inactiveColor)
-        }
+      if (!bars || !Array.isArray(bars)) return
+
+      bars.forEach((bar: any, index: number) => {
+        const barIndex = index + 1
+        bar.set('fill', barIndex <= level ? activeColor : inactiveColor)
       })
-      this.canvas.renderAll()
+
+      this.canvas.requestRenderAll?.()
     },
 
     encodeConfig(element: any): MoveBarElementConfig {
       if (!element) {
-        throw new Error('Invalid element')
-      }
-      const objects = element.getObjects?.()
-      const firstBar: any = objects?.find((obj: any) => (obj as any).id.endsWith('_bar_1'))
-      const secondBar: any = objects?.find((obj: any) => (obj as any).id.endsWith('_bar_2'))
-      if (!firstBar || !secondBar) {
         throw new Error('Invalid element')
       }
 
@@ -171,8 +178,10 @@ export const useMoveBarStore = defineStore('moveBarElement', {
 
     updateElement(element: any, config: any) {
       if (!this.canvas) return
-      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
-      if (!group || !group.getObjects) return
+
+      // 通过 Registry 获取 Group
+      const group: any = elementManager.getElementById((element as any).id) as any
+      if (!group) return
 
       const currentLeft = group.left
       const currentTop = group.top
@@ -190,7 +199,11 @@ export const useMoveBarStore = defineStore('moveBarElement', {
 
       group.set({ width: currentWidth, height: currentHeight, ...updateProps })
 
-      group.remove(...group.getObjects())
+      // 先移除并重建内部条形元素
+      const bars: any[] = (group as any)._bars
+      if (bars && Array.isArray(bars)) {
+        bars.forEach((bar: any) => group.remove(bar))
+      }
 
       const separator = config.separator || 6
       const level = config.level || group.level || 0
@@ -198,6 +211,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
       const inactiveColor = config.inactiveColor || config.bgColor || group.inactiveColor || (this as any).defaultColors.inactive
 
       const barWidths = this.getBarWidth(currentWidth, separator)
+      const nextBars: any[] = []
       let barX = -currentWidth / 2
       for (let i = 1; i <= 5; i++) {
         const isActive = i <= level
@@ -224,8 +238,12 @@ export const useMoveBarStore = defineStore('moveBarElement', {
         group.set('top', currentTop)
       }
       group.set({ left: config.left, top: config.top })
+
+      // 重新绑定结构化引用
+      ;(group as any)._bars = nextBars
+
       group.setCoords()
-      this.canvas.renderAll()
+      this.canvas.requestRenderAll?.()
     },
   },
 })

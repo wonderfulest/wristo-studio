@@ -1,13 +1,38 @@
+/**
+ * ElementManager
+ * 统一入口：基于 ElementRegistry 分发到各自元素 handler
+ * - 创建 / 销毁 Fabric 对象
+ * - 根据业务配置渲染 / 更新 group
+ * - 内部维护 `id -> FabricObject` 的 Map 或 Registry
+ */
 import type { ElementType, FabricElement } from '@/types/element'
 import { getElementHandler, encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig } from '@/types/elements'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 
-/**
- * ElementManager
- * 统一入口：基于 ElementRegistry 分发到各自元素 handler
- */
+// 运行时缓存：id -> FabricElement
+// 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
+const elementMap = new Map<string, FabricElement>()
+
+export function registerElementInstance(element: FabricElement | null | undefined) {
+  if (!element) return
+  const id = (element as any).id
+  if (id == null) return
+  elementMap.set(String(id), element)
+}
+
+export function unregisterElementInstance(target: string | FabricElement | null | undefined) {
+  if (!target) return
+  const id = typeof target === 'string' ? target : (target as any).id
+  if (id == null) return
+  elementMap.delete(String(id))
+}
+
+export function getElementById(id: string | number | null | undefined): FabricElement | undefined {
+  if (id == null) return undefined
+  return elementMap.get(String(id))
+}
 
 export function addElement(type: ElementType, config: AnyElementConfig) {
   const handler = getElementHandler(type)
@@ -15,7 +40,9 @@ export function addElement(type: ElementType, config: AnyElementConfig) {
     throw new Error(`[ElementManager] addElement: unknown type ${type}`)
   }
   // 标准化调用：由调用方保证 config.eleType 与 type 一致
-  return handler.add(config)
+  const element = handler.add(config) as FabricElement | null | undefined
+  registerElementInstance(element as any)
+  return element
 }
 
 export function updateElement(element: FabricElement, patch: any) {
@@ -43,6 +70,13 @@ export function removeElement(element: FabricElement) {
     canvas.remove(element as any)
   } catch (e) {
     console.warn('[ElementManager] removeElement: remove from canvas failed', { id: (element as any).id, e })
+  }
+
+  // 从运行时 Registry 中移除
+  try {
+    unregisterElementInstance(element)
+  } catch (e) {
+    console.warn('[ElementManager] removeElement: unregister element instance failed', { id: (element as any).id, e })
   }
 
   try {

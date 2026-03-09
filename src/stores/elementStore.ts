@@ -12,6 +12,9 @@ import type { TimeElementConfig } from '@/types/elements'
 import type { IconElementConfig } from '@/types/elements'
 import type { DataElementConfig } from '@/types/elements/data'
 
+/**
+ * 当前有哪些业务元素、选中哪个元素、元素列表用于图层面板等。
+ */
 export const useElementStore = defineStore('element', {
   state: () => ({
     baseStore: useBaseStore(),

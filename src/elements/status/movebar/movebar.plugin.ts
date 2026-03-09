@@ -4,12 +4,24 @@ import type { ElementType } from '@/types/element'
 import { useMoveBarStore } from '@/elements/status/movebar/movebarElement'
 import MoveBarSettings from '@/elements/status/movebar/movebarSettings.vue'
 import type { MoveBarElementConfig } from '@/types/elements/status'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 export default function registerMoveBarPlugin() {
   registerElement('moveBar' as ElementType, {
     add: (config) => {
       const store = useMoveBarStore()
-      return store.addElement(config as MoveBarElementConfig)
+      const element = store.addElement(config as MoveBarElementConfig)
+
+      // 使用 engine 内部逻辑生成一份规范化、完整的配置，并写入 ElementDataStore
+      try {
+        const fullConfig = store.encodeConfig(element as any)
+        const elementDataStore = useElementDataStore()
+        elementDataStore.upsertElement(fullConfig as any)
+      } catch (e) {
+        console.warn('[moveBar.plugin] failed to encode & upsert element config after add', e)
+      }
+
+      return element
     },
     update: (element, patch) => {
       const store = useMoveBarStore()

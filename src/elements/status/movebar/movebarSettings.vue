@@ -72,7 +72,6 @@
 <script setup lang="ts">
 import { ref, defineProps, computed } from 'vue'
 import { useMoveBarStore } from '@/elements/status/movebar/movebarElement'
-import { useBaseStore } from '@/stores/baseStore'
 import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
@@ -96,18 +95,11 @@ const props = defineProps({
 
 const formRef = ref(null)
 const moveBarStore = useMoveBarStore()
-const baseStore = useBaseStore()
 
 // 当前表单绑定的数据源：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
-
-// 获取画布上的实际元素（旧通道专用）
-const getFabricElement = () => {
-  if (!baseStore.canvas || !props.element) return null
-  return baseStore.canvas.getObjects().find(obj => (obj as any).id === (props.element as any).id)
-}
 
 // 更新元素
 const updateElement = () => {
@@ -127,14 +119,11 @@ const updateElement = () => {
     return
   }
 
-  // 旧通道：直接调用 store.updateElement
-  const fabricElement = getFabricElement()
-  if (!fabricElement || !props.element) return
+  // 旧通道：直接调用 store.updateElement，基于 props.element 当前字段
+  if (!props.element) return
 
   const updateConfig = {
     ...(props.element as any),
-    left: (fabricElement as any).left,
-    top: (fabricElement as any).top,
     width: (props.element as any).width,
     height: (props.element as any).height,
     separator: (props.element as any).separator,
@@ -142,6 +131,9 @@ const updateElement = () => {
     activeColor: (props.element as any).activeColor,
     inactiveColor: (props.element as any).inactiveColor,
     originX: (props.element as any).originX,
+    originY: (props.element as any).originY,
+    left: (props.element as any).left,
+    top: (props.element as any).top,
   }
 
   moveBarStore.updateElement(props.element as any, updateConfig)

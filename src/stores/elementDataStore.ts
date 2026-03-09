@@ -8,6 +8,9 @@ export type ElementConfigSnapshot = {
   config: AnyElementConfig
 }
 
+/**
+ * 每个元素 id 对应的**业务配置**（JSON），用于保存、回放、撤销。
+ */
 export const useElementDataStore = defineStore('elementData', {
   // Option Store 写法：集中定义 state / getters / actions
   state: () => ({

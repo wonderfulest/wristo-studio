@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid'
 import { decodeColor } from '@/utils/colorUtils'
 import type { BatteryElementConfig } from '@/types/elements/battery'
 import { FabricElement } from '@/types/element'
+import * as elementManager from '@/engine/managers/elementManager'
 
 export const useBatteryStore = defineStore('batteryElement', {
   state: () => {
@@ -101,10 +102,17 @@ export const useBatteryStore = defineStore('batteryElement', {
         } as any
       )
 
+      // 在 Group 上绑定结构化引用，避免后续反复遍历 getObjects
+      ;(group as any)._body = batteryBody
+      ;(group as any)._head = batteryHead
+      ;(group as any)._level = batteryLevel
+
       group.setCoords()
       this.canvas?.add(group)
+      // 将实例注册到全局 ElementManager 的运行时 Registry 中
+      elementManager.registerElementInstance(group as FabricElement)
       this.layerStore.addLayer(group)
-      this.canvas?.renderAll()
+      this.canvas?.requestRenderAll?.()
       this.canvas?.discardActiveObject()
       this.canvas?.setActiveObject(group)
       return group
@@ -126,31 +134,34 @@ export const useBatteryStore = defineStore('batteryElement', {
 
     updateLevel(element: any, level: number) {
       if (!this.canvas) return
-      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
-      if (!group || !group.getObjects) return
 
-      const objects = group.getObjects()
-      const batteryLevel: any = objects.find((obj: any) => (obj as any).id === element.id + '_level')
-      const batteryBody: any = objects.find((obj: any) => (obj as any).id === element.id + '_body')
-      if (!batteryLevel || !batteryBody) return
+      // 优先：直接按 id 从 ElementManager Registry 获取 Group
+      const groupFromRegistry = elementManager.getElementById((element as any).id) as any
+      const group: any = (groupFromRegistry ?? element) as any
+      if (!group) return
 
-      const padding = 5
-      const w: number = (batteryBody as any).width
-      batteryLevel.set({
+      const body: any = (group as any)._body
+      const levelRect: any = (group as any)._level
+      if (!body || !levelRect) return
+
+      const padding = Math.round(((group as any).padding ?? 4) as number)
+      const w: number = (body as any).width
+      levelRect.set({
         width: (w - padding * 2) * level,
-        fill: this.getLevelColor(level),
+        fill: this.getLevelColor(level, (group as any).levelColorLow, (group as any).levelColorMedium, (group as any).levelColorHigh),
       })
-      this.canvas.renderAll()
+      this.canvas.requestRenderAll?.()
     },
 
     encodeConfig(element: Partial<FabricElement>): BatteryElementConfig {
       if (!element) {
         throw new Error('Invalid element')
       }
-      const objects = element.getObjects()
-      const batteryBody: any = objects.find((obj: any) => (obj as any).id.endsWith('_body'))
-      const batteryHead: any = objects.find((obj: any) => (obj as any).id.endsWith('_head'))
-      const batteryLevel: any = objects.find((obj: any) => (obj as any).id.endsWith('_level'))
+      // 仅使用绑定在 Group 上的引用
+      const anyElement = element as any
+      const batteryBody: any = anyElement._body
+      const batteryHead: any = anyElement._head
+      const batteryLevel: any = anyElement._level
       if (!batteryBody || !batteryHead || !batteryLevel) {
         throw new Error('Invalid element')
       }
@@ -216,13 +227,15 @@ export const useBatteryStore = defineStore('batteryElement', {
 
     updateElement(element: any, config: any) {
       if (!this.canvas) return
-      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
-      if (!group || !group.getObjects) return
 
-      const objects = group.getObjects()
-      const batteryBody: any = objects.find((obj: any) => (obj as any).id.endsWith('_body'))
-      const batteryHead: any = objects.find((obj: any) => (obj as any).id.endsWith('_head'))
-      const batteryLevel: any = objects.find((obj: any) => (obj as any).id.endsWith('_level'))
+      // 始终按 id 从 Registry 查询 Group
+      const groupFromRegistry = elementManager.getElementById((element as any).id) as any
+      const group: any = groupFromRegistry as any
+      if (!group) return
+
+      const batteryBody: any = (group as any)._body
+      const batteryHead: any = (group as any)._head
+      const batteryLevel: any = (group as any)._level
       if (!batteryBody || !batteryHead || !batteryLevel) return
 
       batteryBody.set({
@@ -274,8 +287,13 @@ export const useBatteryStore = defineStore('batteryElement', {
       if (config.levelColorMedium !== undefined) (group as any).set('levelColorMedium', nextMedium)
       if (config.levelColorHigh !== undefined) (group as any).set('levelColorHigh', nextHigh)
 
+      // 确保结构化引用始终存在
+      ;(group as any)._body = batteryBody
+      ;(group as any)._head = batteryHead
+      ;(group as any)._level = batteryLevel
+
       group.setCoords()
-      this.canvas.renderAll()
+      this.canvas.requestRenderAll?.()
     },
   },
 })
