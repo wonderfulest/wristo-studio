@@ -1,16 +1,15 @@
 import { defineStore } from 'pinia'
-import { markRaw } from 'vue'
-import { Circle, FabricImage, type Canvas } from 'fabric'
 import _ from 'lodash'
+import type { Canvas } from 'fabric'
 import { usePropertiesStore } from '@/stores/properties'
 import type { PropertiesMap } from '@/types/properties'
-import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import type { FabricElement } from '@/types/element'
-import { useEditorStore } from '@/stores/editorStore'
-import { nanoid } from 'nanoid'
 import { designApi } from '@/api/wristo/design'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { hasIconFont } from '@/utils/elementUtils'
+import { ElMessage } from 'element-plus'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useDesignStore } from '@/stores/designStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { generateConfig as generateRuntimeConfig } from '@/engine/services/exportService'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -50,79 +49,30 @@ export const useBaseStore = defineStore('baseStore', {
       this.inCanvasWorkarea = flag
     },
     setIconFontSlug(slug: string): void {
-      this.currentIconFontSlug = slug
+      const iconFontStore = useIconFontStrategyStore()
+      iconFontStore.setIconFontSlug(slug)
+      this.currentIconFontSlug = iconFontStore.currentIconFontSlug
     },
     updateAllIconFont(slug: string): void {
-      if (!this.canvas) return
-      const objects: FabricElement[] = this.canvas.getObjects()
-      for (const obj of objects) {
-        if (hasIconFont(obj)) {
-          if ('fontFamily' in obj) {
-            obj.set('fontFamily', slug)
-          }
-        }
-      }
-      this.currentIconFontSlug = slug
-      this.canvas.renderAll()
+      const iconFontStore = useIconFontStrategyStore()
+      iconFontStore.updateAllIconFont(slug)
+      this.currentIconFontSlug = iconFontStore.currentIconFontSlug
     },
     setIconFontSize(size: number): void {
-      this.currentIconFontSize = size
+      const iconFontStore = useIconFontStrategyStore()
+      iconFontStore.setIconFontSize(size)
+      this.currentIconFontSize = iconFontStore.currentIconFontSize
     },
     updateAllIconFontSize(size: number): void {
-      if (!this.canvas) return
-      const objects: FabricElement[] = this.canvas.getObjects()
-      for (const obj of objects) {
-        if (hasIconFont(obj)) {
-          if ('fontSize' in obj) {
-            obj.set('fontSize', size)
-          }
-        }
-      }
-      this.currentIconFontSize = size
-      this.canvas.renderAll()
+      const iconFontStore = useIconFontStrategyStore()
+      iconFontStore.updateAllIconFontSize(size)
+      this.currentIconFontSize = iconFontStore.currentIconFontSize
     },
     async requestUpdateIconFontSize(element: AnyObject, newSize: number): Promise<boolean> {
-      // Initialize global size if not set
-      if (this.currentIconFontSize == null) {
-        if (element && 'fontSize' in element) {
-          element.set('fontSize', newSize)
-          this.currentIconFontSize = newSize
-          this.canvas?.renderAll()
-          return true
-        }
-        return false
-      }
-      // If same as current, just apply to the element
-      if (this.currentIconFontSize === newSize) {
-        if (element && 'fontSize' in element) {
-          element.set('fontSize', newSize)
-          this.canvas?.renderAll()
-          return true
-        }
-        return false
-      }
-      // Ask user to confirm updating all icons
-      try {
-        await ElMessageBox.confirm(
-          `当前表盘只允许一个图标字体大小。是否将所有图标元素大小统一为 ${newSize}px?`,
-          '统一图标字体大小',
-          {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-          }
-        )
-        // Confirmed: update all
-        this.updateAllIconFontSize(newSize)
-        return true
-      } catch {
-        // Canceled: revert element to current global size if element exists
-        if (element && 'fontSize' in element) {
-          element.set('fontSize', this.currentIconFontSize)
-          this.canvas?.renderAll()
-        }
-        return false
-      }
+      const iconFontStore = useIconFontStrategyStore()
+      const ok = await iconFontStore.requestUpdateIconFontSize(element, newSize)
+      this.currentIconFontSize = iconFontStore.currentIconFontSize
+      return ok
     },
     // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
     mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
@@ -169,12 +119,8 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 取消所有选中对象
     deactivateObject(): void {
-      if (!this.canvas) return
-      if (this.canvas.getActiveObjects().length > 0) {
-        for (const _ of this.canvas.getActiveObjects()) {
-          this.canvas.discardActiveObject()
-        }
-      }
+      const canvasStore = useCanvasStore()
+      canvasStore.deactivateObject()
     },
     // 设置标签长度类型并更新所有标签元素
     setLabelLengthType(value: number): void {
@@ -308,28 +254,23 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 捕获并保存表盘截图
     captureScreenshot(): Promise<string | null> {
-      if (!this.canvas) {
+      const canvasStore = useCanvasStore()
+      const canvas = canvasStore.canvas
+      if (!canvas) {
         console.error('没有可用的画布')
         return this.getFallbackScreenshot()
       }
       try {
-        // 确保画布内容是最新的
-        this.canvas.renderAll()
-
-        // 获取截图数据（只截当前画布内容，不再使用任何备用图片）
-        const dataURL = this.canvas.toDataURL({
+        canvas.renderAll()
+        const dataURL = canvas.toDataURL({
           multiplier: 1,
           format: 'png',
           quality: 1,
         } as any)
-
-        // 保存截图数据到 state
         this.screenshot = dataURL
-
         return Promise.resolve(dataURL)
       } catch (error) {
         console.error('截图捕获失败:', error)
-        // 截图失败时不再使用本地备用图片，直接返回 null
         this.screenshot = null
         return Promise.resolve(null)
       }
@@ -348,366 +289,107 @@ export const useBaseStore = defineStore('baseStore', {
     clearScreenshot(): void {
       this.screenshot = null
     },
-    // 设置画布（使用 markRaw 避免被 Vue/Pinia 包装为 Proxy，保证 Fabric instanceof / hit test 正常）
+    // 设置画布与背景相关逻辑，全部委托给 canvasStore
     setCanvas(fabricCanvas: AnyObject): void {
-      this.canvas = markRaw(fabricCanvas as Canvas)
-      // 禁用自动渲染，手动控制渲染时机
-      this.canvas.renderOnAddRemove = false
-
-      // 创建背景圆和背景图，并在其中设置裁剪路径
-      this.addBackground()
+      const canvasStore = useCanvasStore()
+      canvasStore.setCanvas(fabricCanvas)
+      this.canvas = canvasStore.canvas
+      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
     },
-    // 根据 URL 创建或移除画布背景图片，仅负责更新 this.backgroundImage 与画布
     setBackgroundImageFromUrl(url: string | null, imageId?: number | null): void {
-      console.log('setBackgroundColorFromUrl called with url:', url, 'imageId:', imageId)
-      if (!this.canvas) return
-
-      // 移除现有背景图
-      if (this.backgroundImage) {
-        try {
-          this.canvas.remove(this.backgroundImage)
-        } catch (e) {
-          console.warn('Failed to remove previous background image', e)
-        }
-        this.backgroundImage = null
-      }
-
-      if (!url) {
-        this.canvas.renderAll()
-        return
-      }
-
-      const center = this.$state.WATCH_SIZE / 2
-
-      // 使用 CORS 加载远程背景图，避免污染 canvas，保证可以调用 toDataURL 截图
-      FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: AnyObject) => {
-        if (!img || !this.canvas) return
-        const c = this.canvas
-        const scale = this.$state.WATCH_SIZE / Math.min(img.width, img.height)
-        this.backgroundImage = img
-        img.set({
-          eleType: 'background',
-          scaleX: scale,
-          scaleY: scale,
-          left: center,
-          top: center,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false,
-          // 记录元数据，便于导出配置
-          wristoImageId: imageId ?? null,
-          wristoImageUrl: url, 
-        }) as any
-        if (!c.getObjects().includes(img as any)) {
-          c.add(img as any)
-        }
-
-        // 调整层级：global 在最底层，其上一层为 background
-        if (this.watchFaceCircle && c.getObjects().includes(this.watchFaceCircle as any)) {
-          const globalIndex = c.getObjects().indexOf(this.watchFaceCircle as any)
-          const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-          c.moveObjectTo(this.watchFaceCircle as any, 0)
-          c.moveObjectTo(img as any, targetIndex)
-        } else {
-          // 没有全局背景圆时，尽量把图片放在最底层
-          c.moveObjectTo(img as any, 0)
-        }
-
-        c.renderAll()
-
-      })
+      const canvasStore = useCanvasStore()
+      canvasStore.setBackgroundImageFromUrl(url, imageId)
+      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
     },
-
-    // 添加背景（背景圆 + 当前背景图）
     addBackground(): void {
-      const center = this.$state.WATCH_SIZE / 2
-      const c = this.canvas
-      if (!c) return
-
-      // 创建或更新表盘背景圆（使用 markRaw 避免被响应式代理）
-      this.watchFaceCircle = markRaw(new Circle({
-        eleType: 'global',
-        left: center,
-        top: center,
-        originX: 'center',
-        originY: 'center',
-        radius: this.$state.WATCH_SIZE / 2,
-        // 固定使用黑色作为表盘背景色
-        fill: '#000000',
-        backgroundColor: 'transparent',
-        selectable: false,
-        evented: false, // 不参与命中，让事件穿透给下面元素
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockRotation: true,
-        hasBorders: false,
-        hasControls: false
-      })) as unknown as AnyObject
-      // 确保背景圆添加到画布，并始终在最底层（global as any 最底层）
-      if (!c.getObjects().includes(this.watchFaceCircle)) {
-        c.add(this.watchFaceCircle) as any
-      }
-      c.moveObjectTo(this.watchFaceCircle, 0)
-
-      // 如果已经有背景图片，按照当前圆的大小重新布局
-      if (this.backgroundImage) {
-        const img = this.backgroundImage
-        const scale = this.$state.WATCH_SIZE / Math.min(img.width, img.height)
-        img.set({
-          eleType: 'background',
-          scaleX: scale,
-          scaleY: scale,
-          left: center,
-          top: center,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false
-        })
-        if (!c.getObjects().includes(img)) {
-          c.add(img)
-        }
-        // 将背景图层放在 global 之上，其余元素之下
-        const globalIndex = c.getObjects().indexOf(this.watchFaceCircle)
-        const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-        c.moveObjectTo(img, targetIndex)
-      }
+      const canvasStore = useCanvasStore()
+      canvasStore.addBackground()
+      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
     },
-    // 更新背景元素大小和位置
     updateBackgroundElements(zoom?: number): void {
-      const editorStore = useEditorStore()
-      if (zoom && zoom != editorStore.zoomLevel) {
-        editorStore.updateSetting('zoomLevel', zoom)
-      }
-      zoom = editorStore.zoomLevel
-      const center = this.$state.WATCH_SIZE / 2
-      const radius = this.$state.WATCH_SIZE / 2
-
-      if (this.watchFaceCircle) {
-        this.watchFaceCircle.set({
-          left: center,
-          top: center,
-          originX: 'center',
-          originY: 'center',
-          radius: radius,
-          strokeUniform: true,  // 确保边框均匀缩放
-          strokeWidth: 1,
-          selectable: false,
-          evented: false,
-          hasBorders: false,
-          hasControls: false,
-          backgroundColor: 'transparent'
-        })
-        this.watchFaceCircle.setCoords()
-      }
-
-      if (this.backgroundImage) {
-        const scale = this.$state.WATCH_SIZE / Math.min(this.backgroundImage.width, this.backgroundImage.height)
-        this.backgroundImage.set({
-          left: center,
-          top: center,
-          originX: 'center',
-          originY: 'center',
-          scaleX: scale,
-          scaleY: scale,
-          strokeUniform: true,
-          selectable: false,
-          evented: false
-        })
-        this.backgroundImage.setCoords()
-      }
+      const canvasStore = useCanvasStore()
+      canvasStore.updateBackgroundElements(zoom)
+      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
     },
-    // 设置表盘名称
+    // 设置表盘名称（委托给 designStore）
     setWatchFaceName(name: string): void {
-      this.watchFaceName = name
+      const designStore = useDesignStore()
+      designStore.setWatchFaceName(name)
+      this.watchFaceName = designStore.watchFaceName
     },
-    // 创建或更新设计
+    // 创建或更新设计（委托给 designStore + exportService）
     async createDesign(): Promise<boolean> {
       if (this.id) {
         ElMessage.error('createDesign 设计已存在！')
         return false
       }
-      if (!this.watchFaceName) {
+      const designStore = useDesignStore()
+      if (!designStore.watchFaceName) {
         ElMessage.error('请先设置表盘名称！')
         return false
       }
+      const propertiesStore = usePropertiesStore()
+      const canvasStore = useCanvasStore()
+      const iconFontStore = useIconFontStrategyStore()
+      const config = generateRuntimeConfig({
+        canvas: canvasStore.canvas as any,
+        properties: propertiesStore.allProperties,
+        designId: this.id || '',
+        watchFaceName: designStore.watchFaceName,
+        textCase: this.textCase,
+        labelLengthType: this.labelLengthType,
+        showUnit: this.showUnit,
+        backgroundImage: canvasStore.backgroundImage,
+        currentIconFontSlug: iconFontStore.currentIconFontSlug,
+        currentIconFontSize: iconFontStore.currentIconFontSize,
+      })
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',
-        name: this.watchFaceName,
-        configJson: JSON.stringify(this.generateConfig())
+        name: designStore.watchFaceName,
+        configJson: JSON.stringify(config),
       })
-      
       this.id = res.data.documentId
+      designStore.id = this.id
       return res.code === 0
     },
     // 获取所有对象
     getObjects(): FabricElement[] {
-      return this.canvas ? (this.canvas.getObjects() as unknown as FabricElement[]) : []
+      const canvasStore = useCanvasStore()
+      return canvasStore.getObjects() as FabricElement[]
     },
     // 获取选中对象
     getActiveObjects(): FabricElement[] {
-      if (!this.canvas) {
-        return []
-      }
-      const activeObjects = this.canvas.getActiveObjects() as unknown as FabricElement[]
-      return activeObjects
+      const canvasStore = useCanvasStore()
+      return canvasStore.getActiveObjects() as FabricElement[]
     },
     // 切换主题
     toggleTheme(): void {
-      // 更新背景颜色
-      this.toggleThemeBackground()
-      this.canvas?.renderAll()
+      const canvasStore = useCanvasStore()
+      canvasStore.toggleTheme()
+      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
+      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
     },
-    // 切换主题背景
-    toggleThemeBackground(): void {
-      if (!this.canvas || !this.watchFaceCircle) {
-        console.warn('画布不存在')
-        return
-      }
-
-      const objects = this.canvas.getObjects()
-
-      const watchFace = objects.find((obj: AnyObject) => obj.eleType === 'global')
-      const oldBgImage = objects.find((obj: AnyObject) => obj.eleType === 'background')
-      // 先移除旧的背景图片
-      if (oldBgImage) {
-        this.canvas.remove(oldBgImage)
-      }
-
-      // 如果存在背景图片，重新布局
-      if (this.backgroundImage) {
-        const img = this.backgroundImage
-        const radius = this.WATCH_SIZE / 2
-        const scale = radius / Math.min(img.width, img.height)
-        const left = (this.WATCH_SIZE - img.width * scale) / 2
-        const top = (this.WATCH_SIZE - img.height * scale) / 2
-
-        img.set({
-          scaleX: scale,
-          scaleY: scale,
-          left,
-          top,
-          selectable: false,
-          evented: false,
-          hasControls: false,
-          hasBorders: false,
-        }) as any
-        if (!this.canvas.getObjects().includes(img)) {
-          this.canvas.add(img) as any
-        }
-        this.canvas.moveObjectTo(img, 1)
-
-        if (watchFace) {
-          this.canvas.moveObjectTo(watchFace, 0)
-        }
-        this.canvas.set({
-          clipPath: this.watchFaceCircle
-        })
-        this.canvas.renderAll()
-      }
-      // 如果没有背景图片，确保背景圆在最底层
-      else if (watchFace) {
-        this.canvas.moveObjectTo(watchFace, 0)
-        this.canvas.set({
-          clipPath: this.watchFaceCircle
-        })
-        this.canvas.renderAll()
-      }
-    },
-    // 生成配置
+    // 生成配置（委托给 exportService）
     generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
-      if (!this.canvas || !this.canvas.getObjects().length) {
-        return null
-      }
+      const canvasStore = useCanvasStore()
       const propertiesStore = usePropertiesStore()
-      const config: import('@/types/app/config').RuntimeDesignConfig = {
-        version: '1.0',
+      const iconFontStore = useIconFontStrategyStore()
+      const designStore = useDesignStore()
+      return generateRuntimeConfig({
+        canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
-        designId: this.id || '',
-        name: this.watchFaceName,
+        designId: this.id || designStore.id || '',
+        watchFaceName: designStore.watchFaceName || this.watchFaceName,
         textCase: this.textCase,
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
-        orderIds: [] as string[],
-        backgroundImage: undefined,
-        currentIconFontSlug: this.currentIconFontSlug,
-        currentIconFontSize: this.currentIconFontSize,
-      }
-
-      // 导出当前背景图元信息
-      if (this.backgroundImage) {
-        const anyImg: any = this.backgroundImage
-        const url: string =
-          anyImg.wristoImageUrl ||
-          (typeof anyImg.getSrc === 'function' ? anyImg.getSrc() : '') ||
-          ''
-        const id: number | null = anyImg.wristoImageId ?? null
-        if (url) {
-          ;(config as any).backgroundImage = { id, url }
-        }
-      }
-
-      const objects: FabricElement[] = this.canvas.getObjects() as FabricElement[]
-      // 元素在同类中的下标，用于配置
-      let imageId = 0,
-        timeId = 0,
-        dateId = 0,
-        subItemId = 0
-
-      try {
-        // 遍历每个元素
-        for (const element of objects) {
-          if (!element.eleType) continue
-          config.orderIds.push(element.id || 'tianchong-' + nanoid())
-          if (element.eleType === 'background') continue
-          if (element.eleType === 'global') continue
-          // 使用编码器系统编码元素（捕获异常并中止生成）
-          let encodeConfig: import('@/types/elements').AnyElementConfig | null = null
-          try {
-            encodeConfig = encodeElementByRegistry(element) as import('@/types/elements').AnyElementConfig | null
-          } catch (err) {
-            console.error('Failed to encode element with exception:', element, err)
-            const message = (err as Error)?.message || 'Encode element failed'
-            ElMessage.error(message)
-            return null
-          }
-          // 如果编码失败，直接终止
-          if (!encodeConfig) {
-            console.error('Failed to encode element:', element)
-            return null
-          }
-          // 颜色属性映射（提取为独立方法）
-          this.mapColorProperties(encodeConfig, propertiesStore.allProperties)
-
-          // 一个可变的记录对象，用来设置动态键，避免对联合类型直接用 string 索引
-          const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
-          const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
-          if (element.eleType === 'image') {
-            idCarrier.imageId = imageId++
-          }
-          if (element.eleType === 'time') {
-            idCarrier.timeId = timeId++
-          }
-          if (element.eleType === 'date') {
-            idCarrier.dateId = dateId++
-          }
-          // 刻度盘 获取subItemId
-          if (encodeConfig.eleType == 'romans' || encodeConfig.eleType == 'tick12' || encodeConfig.eleType == 'tick60') {
-            idCarrier.subItemId = subItemId++ // subItemId 用于标识子项配置
-          }
-
-          config.elements.push(encodeConfig)
-        }
-        return config
-      } catch (err) {
-        console.error('Generate config failed:', err)
-        const message = (err as Error)?.message || 'Failed to generate configuration'
-        ElMessage.error(message)
-        return null
-      }
+        backgroundImage: canvasStore.backgroundImage,
+        currentIconFontSlug: iconFontStore.currentIconFontSlug,
+        currentIconFontSize: iconFontStore.currentIconFontSize,
+      })
     },
   
   },
