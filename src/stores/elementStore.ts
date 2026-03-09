@@ -3,7 +3,7 @@ import { useBaseStore } from './baseStore'
 import { useLayerStore } from './layerStore'
 import { useCircleStore, type CircleOptions } from '@/elements/shapes/circle/circleElement'
 import { useWindDirectionStore } from '@/elements/weather/windDirection/windDirectionElement'
-import { useTimeStore } from '@/elements/time/time/timeElement'
+import { createTime, updateTime } from '@/elements/time/time/time.renderer'
 import { useIconStore } from '@/elements/data/icon/iconElement'
 import { useDataStore } from '@/elements/data/data/dataElement'
 import type { FabricElement } from '@/types/element'
@@ -21,7 +21,6 @@ export const useElementStore = defineStore('element', {
     layerStore: useLayerStore(),
     circleStore: useCircleStore(),
     windDirectionStore: useWindDirectionStore(),
-    timeStore: useTimeStore(),
     iconStore: useIconStore(),
     dataStore: useDataStore(),
   }),
@@ -35,7 +34,7 @@ export const useElementStore = defineStore('element', {
         case 'windDirection':
           return await this.windDirectionStore.addElement(config as WindDirectionElementConfig)
         case 'time':
-          return await this.timeStore.addElement(config as TimeElementConfig)
+          return await createTime(config as TimeElementConfig)
         case 'icon':
           return await this.iconStore.addElement(config as IconElementConfig)
         case 'data':
@@ -121,8 +120,8 @@ export const useElementStore = defineStore('element', {
     updateTimeById(id: string, config: Partial<TimeElementConfig> = {}) {
       const target = this.findObjectById(id)
       if (!target) return
-      // timeStore.updateElement 当前签名使用 TimeElementConfig，这里使用 Partial 并在内部补全
-      this.timeStore.updateElement(target as any, config as TimeElementConfig)
+      // 直接委托给 time.renderer 的 updateTime，内部负责补全配置并更新 ElementDataStore
+      void updateTime(target as any, config as TimeElementConfig)
     },
 
     // Icon：通过 id 更新图标元素

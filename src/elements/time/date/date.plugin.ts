@@ -1,29 +1,28 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useDateStore } from '@/elements/time/date/dateElement'
 import type { DateElementConfig } from '@/types/elements'
-import DateSettings from '@/elements/time/date/dateSettings.vue'
+import { createDate, updateDate } from '@/elements/time/date/date.renderer'
+import { encodeDate, decodeDate } from '@/elements/time/date/date.encoder'
+import DatePanel from '@/elements/time/date/date.panel.vue'
 
 export default function registerDatePlugin() {
   registerElement('date' as ElementType, {
+    // renderer
     add: (config) => {
-      const store = useDateStore()
-      return store.addElement(config as DateElementConfig)
+      return createDate(config as DateElementConfig)
     },
     update: (element, patch) => {
-      const store = useDateStore()
-      store.updateElement(element as any, patch as DateElementConfig)
+      updateDate(element as any, patch as DateElementConfig)
     },
+    // encoder
     encode: (element) => {
-      const store = useDateStore()
-      return store.encodeConfig(element as any)
+      return encodeDate(element as any) as any
     },
     decode: (config) => {
-      const store = useDateStore()
-      return store.decodeConfig(config as DateElementConfig)
+      return decodeDate(config as DateElementConfig) as any
     },
   })
 
-  registerSettings('date' as ElementType, DateSettings)
+  registerSettings('date' as ElementType, DatePanel)
 }

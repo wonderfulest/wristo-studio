@@ -47,7 +47,7 @@ import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { FabricElement } from '@/types/element'
-import { removeElement } from '@/engine/managers/elementManager'
+import { removeElement, getElementById } from '@/engine/managers/elementManager'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -193,7 +193,9 @@ const undo = (): void => {
 const deleteLayer = (layer: MinimalFabricLike): void => {
   if (layer.locked) return
   if (!baseStore.canvas) return
-  const fabricElement = layer as unknown as FabricElement
+  // 为了适配可能存在的引用不一致（例如 canvas 实例替换后 layer.element 失效），
+  // 优先通过 ElementManager Registry 按 id 查找真正的 FabricElement 实例
+  const fabricElement = (getElementById((layer as any).id) ?? (layer as unknown)) as FabricElement
   addToHistory({ type: 'delete', element: layer })
   removeElement(fabricElement)
   baseStore.canvas.discardActiveObject?.()

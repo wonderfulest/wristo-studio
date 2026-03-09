@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { usePropertiesStore } from '@/stores/properties'
 
 import { nanoid } from 'nanoid'
 import { FabricText, Rect } from 'fabric'

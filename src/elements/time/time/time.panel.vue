@@ -9,7 +9,7 @@
       </el-form-item>
       <el-form-item label="Font">
         <template v-if="fontRenderType === 'truetype'">
-          <font-picker 
+          <FontPicker 
             v-model="safeFontFamily" 
             :type="FontTypes.TEXT_FONT"
             @change="applyUpdate({ fontFamily: $event })" 
@@ -45,7 +45,7 @@
         />
       </el-form-item>
       <el-form-item label="Font Color">
-        <color-picker 
+        <ColorPicker 
           v-model="currentModel.fill" 
           @change="applyUpdate({ fill: $event })" 
         />
@@ -73,7 +73,6 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
-import * as elementManager from '@/engine/managers/elementManager'
 import { fontSizes, originXOptions, TimeFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -82,21 +81,18 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import { FontTypes } from '@/config/fonts'
 
 const props = defineProps<{
-  // 旧通道：直接传入 FabricElement
-  element?: any
-  // 新通道：业务配置 + 通用补丁函数
   config?: Record<string, any> | null
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 
 const fontStore = useFontStore()
 
-// 当前表单绑定的数据模型：优先使用业务 config，其次回退到 FabricElement
+// 只使用业务 config 作为当前模型
 const currentModel = computed<any>(() => {
-  return props.config ?? props.element ?? {}
+  return props.config ?? {}
 })
 
-// 字体渲染类型：truetype / bitmap，优先使用元素上已有配置，默认 truetype
+// 字体渲染类型：truetype / bitmap，默认 truetype
 const fontRenderType = computed({
   get() {
     const v = (currentModel.value as any).fontRenderType
@@ -104,16 +100,12 @@ const fontRenderType = computed({
   },
   set(v) {
     ;(currentModel.value as any).fontRenderType = v
-    // 从 bitmap 切回 truetype 时，如果没有字体，给一个默认字体，并同步到画布
     if (v === 'truetype') {
       if (!(currentModel.value as any).fontFamily) {
         ;(currentModel.value as any).fontFamily = 'roboto-condensed-regular'
       }
       applyUpdate({ fontRenderType: 'truetype', fontFamily: (currentModel.value as any).fontFamily })
     } else {
-      // 切到 bitmap 时：
-      // 1) 如果已经有 bitmapFontId，则立刻触发 truetype->bitmap 的重建；
-      // 2) 如果还没有 bitmapFontId，则先只切换模式，等待 BitmapFontPicker 选择后再重建。
       const existingBitmapId = (currentModel.value as any).bitmapFontId
       if (existingBitmapId) {
         applyUpdate({ fontRenderType: 'bitmap', bitmapFontId: existingBitmapId })
@@ -124,11 +116,10 @@ const fontRenderType = computed({
   },
 })
 
-// Alignment 的 originX 代理：提供默认值，避免向内部 el-select 传递 undefined
+// Alignment 的 originX 代理
 const originXProxy = computed<string>({
   get() {
     const v = (currentModel.value as any).originX
-    // AlignXButtons / el-select 期望一个字符串值，这里默认 center
     return (v as string) || 'center'
   },
   set(v: string) {
@@ -136,7 +127,7 @@ const originXProxy = computed<string>({
   },
 })
 
-// truetype 下使用的安全字体 family，避免传入 undefined
+// truetype 下使用的安全字体 family
 const safeFontFamily = computed({
   get() {
     return (currentModel.value as any).fontFamily || 'roboto-condensed-regular'
@@ -146,27 +137,17 @@ const safeFontFamily = computed({
   },
 })
 
-// 加载字体列表
 onMounted(async () => {
   if (fontStore.fonts.length === 0) {
     await fontStore.fetchFonts()
   }
-  // 如果有字体，预加载当前字体
   if (safeFontFamily.value) {
     await fontStore.loadFont(safeFontFamily.value)
   }
 })
 
-// 统一的更新方法：优先使用 applyPatch（更新 DataStore + Fabric），否则回退到 elementManager
-const applyUpdate = (config: Record<string, any>) => {
-  if (props.applyPatch && props.config) {
-    props.applyPatch(config)
-    return
-  }
-
-  if (props.element) {
-    elementManager.updateElement(props.element as any, config)
-  }
+const applyUpdate = (patch: Record<string, any>) => {
+  props.applyPatch?.(patch)
 }
 </script>
 
