@@ -1,32 +1,44 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
+import { nanoid } from 'nanoid'
 import type { IndicatorElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useLayerStore } from '@/stores/layerStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 
 export const useBluetoothStore = defineStore('bluetoothElement', {
-  state: () => ({
-  }),
+  state: () => {
+    const canvasStore = useCanvasStore()
+    const layerStore = useLayerStore()
+    const iconFontStrategyStore = useIconFontStrategyStore()
+    return {
+      canvas: canvasStore.canvas,
+      layerStore,
+      iconFontStrategyStore,
+    }
+  },
 
   actions: {
     addElement(config: IndicatorElementConfig) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
-      console.log('add bluetooth element', config, )
-      if ((baseStore as any).currentIconFontSize == -1) {
-        (baseStore as any).currentIconFontSize = config.fontSize
+      if (!this.canvas) throw new Error('Canvas is not initialized')
+      const id = nanoid()
+      const strategy = this.iconFontStrategyStore
+      if (strategy.currentIconFontSize === -1) {
+        strategy.setIconFontSize(config.fontSize)
       } else {
-        config.fontSize = (baseStore as any).currentIconFontSize
+        config.fontSize = strategy.currentIconFontSize
       }
-      if ((baseStore as any).currentIconFontSlug == '') {
-        (baseStore as any).currentIconFontSlug = config.fontFamily
+      if (!strategy.currentIconFontSlug) {
+        strategy.setIconFontSlug(config.fontFamily)
       } else {
-        config.fontFamily = (baseStore as any).currentIconFontSlug
+        config.fontFamily = strategy.currentIconFontSlug
       }
 
       const bluetoothIcon = new FabricText('\u0022', {
         eleType: 'bluetooth',
+        id,
         left: config.left,
         top: config.top,
         fontSize: config.fontSize,
@@ -39,18 +51,16 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
         originX: config.originX,
         originY: config.originY,
       } as Partial<import('fabric').TextProps & import('@/types/element').FabricElement>)
-
       bluetoothIcon.set('text', '\u0022')
-      baseStore.canvas.add(bluetoothIcon)
-      baseStore.canvas.setActiveObject(bluetoothIcon)
-      baseStore.canvas.renderAll()
+      this.canvas.add(bluetoothIcon)
+      this.layerStore.addLayer(bluetoothIcon as any)
+      this.canvas.setActiveObject(bluetoothIcon)
+      this.canvas.renderAll()
       return bluetoothIcon
     },
 
     updateElement(element: any, options: Partial<IndicatorElementConfig> = {}) {
       if (!element) return
-
-      const baseStore = useBaseStore()
 
       if (options.fill !== undefined) {
         element.set('fill', options.fill)
@@ -61,12 +71,7 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
       }
 
       if (options.fontSize !== undefined) {
-        // 复用 baseStore 统一的图标字体缩放逻辑
-        if (baseStore.canvas) {
-          void baseStore.requestUpdateIconFontSize?.(element, options.fontSize)
-        } else {
-          element.set('fontSize', options.fontSize)
-        }
+        void this.iconFontStrategyStore.requestUpdateIconFontSize(element, options.fontSize)
       }
 
       if (options.left !== undefined) {
@@ -78,12 +83,10 @@ export const useBluetoothStore = defineStore('bluetoothElement', {
       }
 
       element.setCoords?.()
-      baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
     },
 
     updateBluetoothStatus(status: boolean) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) return
       void status
     },
 

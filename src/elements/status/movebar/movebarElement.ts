@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Group, Polygon } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -7,10 +7,10 @@ import type { MoveBarElementConfig } from '@/types/elements/status'
 
 export const useMoveBarStore = defineStore('moveBarElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       defaultColors: {
         active: '#00FF00',
@@ -70,15 +70,15 @@ export const useMoveBarStore = defineStore('moveBarElement', {
       }
 
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
 
       group.set({ left: config.left, top: config.top })
       group.setCoords()
 
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.renderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.renderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
       return group
     },
 
@@ -119,7 +119,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
           obj.set('fill', barIndex <= level ? activeColor : inactiveColor)
         }
       })
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
     },
 
     encodeConfig(element: any): MoveBarElementConfig {
@@ -170,8 +170,8 @@ export const useMoveBarStore = defineStore('moveBarElement', {
     },
 
     updateElement(element: any, config: any) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
+      if (!this.canvas) return
+      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!group || !group.getObjects) return
 
       const currentLeft = group.left
@@ -225,7 +225,7 @@ export const useMoveBarStore = defineStore('moveBarElement', {
       }
       group.set({ left: config.left, top: config.top })
       group.setCoords()
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
     },
   },
 })

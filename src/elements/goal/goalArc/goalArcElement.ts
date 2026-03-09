@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Circle, Group } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -7,13 +7,18 @@ import type { GoalArcElementConfig } from '@/types/elements/goal'
 import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useGoalArcStore = defineStore('goalArcElement', {
-  state: () => ({
-    baseStore: useBaseStore(),
-    layerStore: useLayerStore(),
-    elementDataStore: useElementDataStore(),
-    elements: new Map<string, any>(),
-    progressMap: new Map<string, number>(),
-  }),
+  state: () =>  {
+    const canvasStore = useCanvasStore()
+    const layerStore = useLayerStore()
+    const elementDataStore = useElementDataStore()
+    return {
+      canvas: canvasStore.canvas,
+      layerStore,
+      elementDataStore,
+      elements: new Map<string, any>(),
+      progressMap: new Map<string, number>(),
+    }
+  },
 
   actions: {
     addElement(config: GoalArcElementConfig) {
@@ -76,11 +81,11 @@ export const useGoalArcStore = defineStore('goalArcElement', {
       } as any)
 
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.renderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.renderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
 
       this.elements.set(id, group)
       this.progressMap.set(id, progress)
@@ -110,8 +115,8 @@ export const useGoalArcStore = defineStore('goalArcElement', {
     },
 
     updateProgress(element: any, progress: number) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
+      if (!this.canvas) return
+      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!group || !group.getObjects) return
       const objects = group.getObjects()
       const mainRing: any = objects.find((obj: any) => (obj as any).id === element.id + '_main')
@@ -122,7 +127,7 @@ export const useGoalArcStore = defineStore('goalArcElement', {
       const progressAngle = this.getProgressAngle(startAngle, endAngle, counterClockwise, progress)
       mainRing.set('endAngle', progressAngle)
       mainRing.set('counterClockwise', counterClockwise)
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
       this.progressMap.set(element.id, progress)
     },
 
@@ -179,7 +184,7 @@ export const useGoalArcStore = defineStore('goalArcElement', {
       element.setCoords()
       mainRing.setCoords()
       bgRing.setCoords()
-      this.baseStore.canvas?.requestRenderAll()
+      this.canvas?.requestRenderAll()
 
       if (options.progress !== undefined) {
         this.progressMap.set(element.id, options.progress)

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import { FabricText } from 'fabric'
@@ -19,18 +19,18 @@ interface TextOptions {
 
 export const useAngledTextStore = defineStore('angledTextElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
 
   actions: {
     async addElement(options: TextOptions = {}) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add angled text element')
       }
 
@@ -51,11 +51,11 @@ export const useAngledTextStore = defineStore('angledTextElement', {
           angle: -45,
         } as any)
 
-        this.baseStore.canvas.add(element as any)
+        this.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
         this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(element as any)
+        this.canvas.renderAll()
+        this.canvas.setActiveObject(element as any)
 
         return element
       } catch (error) {

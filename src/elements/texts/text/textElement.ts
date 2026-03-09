@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import { FabricText } from 'fabric'
@@ -10,11 +10,11 @@ import { getDataValueByName } from '@/utils/dataSimulator'
 
 export const useTextStore = defineStore('textElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
@@ -22,7 +22,7 @@ export const useTextStore = defineStore('textElement', {
   actions: {
     async addElement(options: TextElementConfig) {
       console.log('Adding text element with options:', options)
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add text element')
       }
 
@@ -48,11 +48,11 @@ export const useTextStore = defineStore('textElement', {
           textTemplate: options.textTemplate,
         } as any)
 
-        this.baseStore.canvas.add(element as any)
+        this.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
         this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(element as any)
+        this.canvas.renderAll()
+        this.canvas.setActiveObject(element as any)
 
         return element
       } catch (error) {

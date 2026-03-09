@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import FabricRadialText from '@/lib/radialText'
@@ -8,18 +8,18 @@ import type { TextElementConfig } from '@/types/elements'
 
 export const useRadialTextStore = defineStore('radialTextElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
 
   actions: {
     async addElement(options: TextElementConfig ) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add radial text element')
       }
       console.log('[111 addElement radialText] options', options)
@@ -68,11 +68,11 @@ export const useRadialTextStore = defineStore('radialTextElement', {
           element.textProperty = options.textProperty
         }
 
-        this.baseStore.canvas.add(element as any)
+        this.canvas.add(element as any)
         ;(element as any).elementId = (element as any).id
         this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(element as any)
+        this.canvas.renderAll()
+        this.canvas.setActiveObject(element as any)
 
         return element
       } catch (error) {

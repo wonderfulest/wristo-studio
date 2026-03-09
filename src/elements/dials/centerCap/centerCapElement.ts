@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -10,10 +10,10 @@ import type { DialElementConfig } from '../romans/romansElement'
 
 export const useCenterCapStore = defineStore('centerCapElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       moveDx: 0,
       defaultColors: {
@@ -57,7 +57,7 @@ export const useCenterCapStore = defineStore('centerCapElement', {
       const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
       let group: any = img
 
-      const center = this.baseStore.WATCH_SIZE / 2
+      const center = this.canvas?.getWidth() / 2 || 0
 
       group.set({
         id,
@@ -78,47 +78,47 @@ export const useCenterCapStore = defineStore('centerCapElement', {
       const gw = group.width || 0
       const gh = group.height || 0
       const baseSize = Math.max(gw, gh) || 1
-      const targetSize = (options as any).targetSize || (this.baseStore.WATCH_SIZE * 0.15)
+      const targetSize = (options as any).targetSize || (this.canvas?.getWidth() * 0.15)
       const scale = targetSize / baseSize
 
       group.set({ scaleX: scale, scaleY: scale })
 
       group.on('moving', () => {
         // 固定在中心：一旦移动就拉回中心
-        const c = this.baseStore.WATCH_SIZE / 2
+        const c = this.canvas?.getWidth() / 2 || 0
         group.set({ left: c, top: c })
       })
       group.on('selected', () => {})
       group.on('deselected', () => {})
 
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.requestRenderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.requestRenderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
       return group
     },
 
     async updateElement(element: any, _config: DialElementConfig) {
       if (!element) throw new Error('Invalid element')
-      const center = this.baseStore.WATCH_SIZE / 2
+      const center = this.canvas?.getWidth() / 2 || 0
       element.set({ left: center, top: center })
       element.setCoords()
-      this.baseStore.canvas?.requestRenderAll()
+      this.canvas?.requestRenderAll()
     },
 
     async updateSVG(element: any, config: DialElementConfig & { targetSize?: number }) {
-      if (!this.baseStore.canvas) return
-      let group: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      if (!this.canvas) return
+      let group: any = this.canvas.getObjects().find((obj: any) => obj.id === element.id)
       if (!group) return
 
-      const center = this.baseStore.WATCH_SIZE / 2
+      const center = this.canvas?.getWidth() / 2 || 0
 
       if (config.imageUrl && config.imageUrl !== group.imageUrl) {
         const prevScaleX = group.scaleX
         const prevScaleY = group.scaleY
-        this.baseStore.canvas.remove(group)
+        this.canvas?.remove(group)
         const img: any = await FabricImage.fromURL(config.imageUrl, { crossOrigin: 'anonymous' } as any)
         group = img
         group.set({
@@ -143,7 +143,7 @@ export const useCenterCapStore = defineStore('centerCapElement', {
         const scale = targetSize / baseSize
         group.set({ scaleX: scale, scaleY: scale })
 
-        this.baseStore.canvas.add(group)
+        this.canvas?.add(group)
       }
 
       if (typeof (config as any).assetId === 'number') {
@@ -151,16 +151,16 @@ export const useCenterCapStore = defineStore('centerCapElement', {
       }
 
       group.on('moving', () => {
-        const c = this.baseStore.WATCH_SIZE / 2
+        const c = this.canvas?.getWidth() / 2 || 0
         group.set({ left: c, top: c })
       })
       group.on('selected', () => {})
       group.on('deselected', () => {})
 
       group.setCoords()
-      this.baseStore.canvas.requestRenderAll()
-      this.baseStore.canvas.discardActiveObject()
-      this.baseStore.canvas.setActiveObject(group)
+      this.canvas?.requestRenderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
     },
 
     encodeConfig(element: any) {

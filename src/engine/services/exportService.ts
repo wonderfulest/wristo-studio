@@ -59,8 +59,6 @@ export interface GenerateConfigOptions {
   labelLengthType: number
   showUnit: boolean
   backgroundImage?: any | null
-  currentIconFontSlug: string
-  currentIconFontSize: number
 }
 
 export function generateConfig(options: GenerateConfigOptions): RuntimeDesignConfig | null {
@@ -73,8 +71,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     labelLengthType,
     showUnit,
     backgroundImage,
-    currentIconFontSlug,
-    currentIconFontSize,
   } = options
 
   if (!canvas || !canvas.getObjects().length) {
@@ -92,8 +88,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     elements: [],
     orderIds: [],
     themeBackgroundImages: [],
-    currentIconFontSlug,
-    currentIconFontSize,
   }
 
   if (backgroundImage) {

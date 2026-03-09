@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { nanoid } from 'nanoid'
@@ -19,18 +19,18 @@ interface RectangleOptions {
 
 export const useRectangleStore = defineStore('rectangleElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
 
   actions: {
     async addElement(options: RectangleOptions = {}) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add rectangle element')
       }
 
@@ -135,13 +135,13 @@ export const useRectangleStore = defineStore('rectangleElement', {
             borderRadius: (rectangle as any).rx as number,
           } as any)
 
-          this.baseStore.canvas?.requestRenderAll?.()
+          this.canvas?.requestRenderAll?.()
         })
 
-        this.baseStore.canvas.add(rectangle as any)
+        this.canvas.add(rectangle as any)
         this.layerStore.addLayer(rectangle as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(rectangle as any)
+        this.canvas.renderAll()
+        this.canvas.setActiveObject(rectangle as any)
         return rectangle
       } catch (error) {
         console.error('创建矩形元素失败:', error)
@@ -208,7 +208,7 @@ export const useRectangleStore = defineStore('rectangleElement', {
 
       element.setCoords()
       element.dirty = true
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
 
       if (id != null) {
         console.debug('[RectangleElement] updateElement patchElement', {

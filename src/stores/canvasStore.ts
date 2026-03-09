@@ -2,17 +2,22 @@ import { defineStore } from 'pinia'
 import { markRaw } from 'vue'
 import { Circle, FabricImage, type Canvas } from 'fabric'
 import { useEditorStore } from '@/stores/editorStore'
+import { useDesignStore } from '@/stores/designStore'
 
 type AnyObject = Record<string, any>
 
 export const useCanvasStore = defineStore('canvas', {
-  state: () => ({
-    activeIds: [] as string[],
-    canvas: null as Canvas | null,
-    WATCH_SIZE: 454 as number,
-    watchFaceCircle: null as AnyObject | null,
-    backgroundImage: null as AnyObject | null,
-  }),
+  state: () => {
+    const designStore = useDesignStore()
+
+    return {
+      activeIds: [] as string[],
+      canvas: null as Canvas | null,
+      designStore,
+      watchFaceCircle: null as AnyObject | null,
+      backgroundImage: null as AnyObject | null,
+    }
+  },
 
   actions: {
     setActiveIds(ids: string[]) {
@@ -64,20 +69,17 @@ export const useCanvasStore = defineStore('canvas', {
         this.canvas.renderAll()
         return
       }
-
-      const center = this.WATCH_SIZE / 2
-
       FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: AnyObject) => {
         if (!img || !this.canvas) return
         const c = this.canvas
-        const scale = this.WATCH_SIZE / Math.min(img.width, img.height)
+        const scale = this.designStore.designSpec.width / Math.min(img.width, img.height)
         this.backgroundImage = img
         img.set({
           eleType: 'background',
           scaleX: scale,
           scaleY: scale,
-          left: center,
-          top: center,
+          left: this.designStore.designSpec.centerX,
+          top: this.designStore.designSpec.centerY,
           originX: 'center',
           originY: 'center',
           selectable: false,
@@ -104,18 +106,15 @@ export const useCanvasStore = defineStore('canvas', {
     },
 
     addBackground(): void {
-      const c = this.canvas
-      if (!c) return
-
-      const center = this.WATCH_SIZE / 2
+      if (!this.canvas) return
 
       this.watchFaceCircle = markRaw(new Circle({
         eleType: 'global',
-        left: center,
-        top: center,
+        left: this.designStore.designSpec.centerX,
+        top: this.designStore.designSpec.centerY,
         originX: 'center',
         originY: 'center',
-        radius: this.WATCH_SIZE / 2,
+        radius: this.designStore.designSpec.centerX,
         fill: '#000000',
         backgroundColor: 'transparent',
         selectable: false,
@@ -129,31 +128,31 @@ export const useCanvasStore = defineStore('canvas', {
         hasControls: false,
       })) as unknown as AnyObject
 
-      if (!c.getObjects().includes(this.watchFaceCircle as any)) {
-        c.add(this.watchFaceCircle as any)
+      if (!this.canvas.getObjects().includes(this.watchFaceCircle as any)) {
+        this.canvas.add(this.watchFaceCircle as any)
       }
-      c.moveObjectTo(this.watchFaceCircle as any, 0)
+      this.canvas.moveObjectTo(this.watchFaceCircle as any, 0)
 
       if (this.backgroundImage) {
         const img = this.backgroundImage
-        const scale = this.WATCH_SIZE / Math.min(img.width, img.height)
+        const scale = this.designStore.designSpec.width / Math.min(img.width, img.height)
         img.set({
           eleType: 'background',
           scaleX: scale,
           scaleY: scale,
-          left: center,
-          top: center,
+          left: this.designStore.designSpec.centerX,
+          top: this.designStore.designSpec.centerY,
           originX: 'center',
           originY: 'center',
           selectable: false,
           evented: false,
         })
-        if (!c.getObjects().includes(img as any)) {
-          c.add(img as any)
+        if (!this.canvas.getObjects().includes(img as any)) {
+          this.canvas.add(img as any)
         }
-        const globalIndex = c.getObjects().indexOf(this.watchFaceCircle as any)
+        const globalIndex = this.canvas.getObjects().indexOf(this.watchFaceCircle as any)
         const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-        c.moveObjectTo(img as any, targetIndex)
+        this.canvas.moveObjectTo(img as any, targetIndex)
       }
     },
 
@@ -162,16 +161,13 @@ export const useCanvasStore = defineStore('canvas', {
       if (zoom && zoom !== editorStore.zoomLevel) {
         editorStore.updateSetting('zoomLevel', zoom)
       }
-      const center = this.WATCH_SIZE / 2
-      const radius = this.WATCH_SIZE / 2
-
       if (this.watchFaceCircle) {
         this.watchFaceCircle.set({
-          left: center,
-          top: center,
+          left: this.designStore.designSpec.centerX,
+          top: this.designStore.designSpec.centerY,
           originX: 'center',
           originY: 'center',
-          radius,
+          radius: this.designStore.designSpec.centerX,
           strokeUniform: true,
           strokeWidth: 1,
           selectable: false,
@@ -184,10 +180,10 @@ export const useCanvasStore = defineStore('canvas', {
       }
 
       if (this.backgroundImage) {
-        const scale = this.WATCH_SIZE / Math.min(this.backgroundImage.width, this.backgroundImage.height)
+        const scale = this.designStore.designSpec.width / Math.min(this.backgroundImage.width, this.backgroundImage.height)
         this.backgroundImage.set({
-          left: center,
-          top: center,
+          left: this.designStore.designSpec.centerX,
+          top: this.designStore.designSpec.centerY,
           originX: 'center',
           originY: 'center',
           scaleX: scale,
@@ -216,10 +212,9 @@ export const useCanvasStore = defineStore('canvas', {
 
       if (this.backgroundImage) {
         const img = this.backgroundImage
-        const radius = this.WATCH_SIZE / 2
-        const scale = radius / Math.min(img.width, img.height)
-        const left = (this.WATCH_SIZE - img.width * scale) / 2
-        const top = (this.WATCH_SIZE - img.height * scale) / 2
+        const scale = this.designStore.designSpec.centerX / Math.min(img.width, img.height)
+        const left = this.designStore.designSpec.centerX - img.width * scale / 2
+        const top = this.designStore.designSpec.centerY  - img.height * scale / 2
 
         img.set({
           scaleX: scale,

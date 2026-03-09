@@ -9,6 +9,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
+
 import { useEditorStore } from '@/stores/editorStore'
 import emitter from '@/utils/eventBus'
 

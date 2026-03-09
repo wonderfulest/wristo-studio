@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import { Group as FabricGroup, type GroupProps, type FabricObject, Image as FabricImage, type ImageProps } from 'fabric'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
@@ -222,9 +222,9 @@ function attachManualScaleSync(group: FabricGroup): void {
 
 export const useWindDirectionStore = defineStore('windDirectionElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
-    return { baseStore, layerStore }
+    return { canvas: canvasStore.canvas, layerStore }
   },
 
   actions: {
@@ -259,7 +259,7 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
         imageUrl = await applySvgColor(imageUrl, config.color)
       }
 
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) throw new Error('Canvas not ready')
 
       const groupBaseOptions = {
@@ -372,7 +372,7 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
     },
 
     async updateElement(element: FabricElement, config: Partial<WindDirectionElementConfig>) {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>)
         .find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
@@ -541,7 +541,7 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
     },
 
     setImageSize(element: FabricElement, width: number, height: number): void {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>)
         .find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
@@ -578,7 +578,7 @@ export const useWindDirectionStore = defineStore('windDirectionElement', {
     },
 
     setWindDegree(element: FabricElement, degree: number): void {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>)
         .find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined

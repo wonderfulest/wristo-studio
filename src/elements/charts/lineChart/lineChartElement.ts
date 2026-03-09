@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Group, Line, Circle, Rect, Text } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -8,10 +8,10 @@ import { FabricElement } from '@/types/element'
 
 export const useLineChartStore = defineStore('lineChartElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       defaults: {
         width: 150,
@@ -54,8 +54,8 @@ export const useLineChartStore = defineStore('lineChartElement', {
       const id = nanoid()
       const width = config.width || this.defaults.width
       const height = config.height || this.defaults.height
-      const canvasWidth = this.baseStore.canvas?.getWidth?.() ?? this.baseStore.WATCH_SIZE
-      const canvasHeight = this.baseStore.canvas?.getHeight?.() ?? this.baseStore.WATCH_SIZE
+      const canvasWidth = this.canvas?.getWidth?.() ?? 454
+      const canvasHeight = this.canvas?.getHeight?.() ?? 454
       const left = config.left ?? canvasWidth / 2
       const top = config.top ?? canvasHeight / 2
       const group: any = new Group([], {
@@ -117,12 +117,12 @@ export const useLineChartStore = defineStore('lineChartElement', {
       // 重新设置位置，确保在子元素添加并计算尺寸后正确居中
       group.set({ left, top, originX: 'center', originY: 'center' })
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
 
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
+      this.canvas?.renderAll()
       return group
     },
 
@@ -209,8 +209,8 @@ export const useLineChartStore = defineStore('lineChartElement', {
     },
 
     updateElement(element: any, config: Partial<LineChartElementConfig> = {}) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
+      if (!this.canvas) return
+      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!group || !group.getObjects) return
 
       const current = { left: group.left, top: group.top, width: group.width, height: group.height }
@@ -232,7 +232,7 @@ export const useLineChartStore = defineStore('lineChartElement', {
 
       group.set(current)
       group.setCoords()
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
     },
 
     encodeConfig(element: any): any {

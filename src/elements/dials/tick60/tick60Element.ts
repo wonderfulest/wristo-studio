@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -7,14 +7,17 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from '../romans/romansElement'
+import { useDesignStore } from '@/stores/designStore'
 
 export const useTick60Store = defineStore('tick60Element', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
+    const designStore = useDesignStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
+      designStore,
       moveDx: 0,
       defaultColors: {
         color: '#FFFFFF',
@@ -74,37 +77,37 @@ export const useTick60Store = defineStore('tick60Element', {
       const gw = group.width || 0
       const gh = group.height || 0
       if (gw > 0 && gh > 0) {
-        const scale = this.baseStore.WATCH_SIZE / Math.max(gw, gh)
+        const scale = this.designStore.watchSize / Math.max(gw, gh)
         group.set({ scaleX: scale, scaleY: scale })
       } else {
-        group.scaleToWidth(this.baseStore.WATCH_SIZE)
+        group.scaleToWidth(this.designStore.watchSize)
       }
       group.on('moving', () => {})
       group.on('selected', () => {})
       group.on('deselected', () => {})
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.requestRenderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.requestRenderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
       return group
     },
     async updateElement(element: any, _config: DialElementConfig) {
       if (!element) throw new Error('Invalid element')
       element.setCoords()
-      this.baseStore.canvas?.requestRenderAll()
+      this.canvas?.requestRenderAll()
     },
     async updateSVG(element: any, config: DialElementConfig) {
-      if (!this.baseStore.canvas) return
-      let group: any = this.baseStore.canvas.getObjects().find((obj: any) => obj.id === element.id)
+      if (!this.canvas) return
+      let group: any = this.canvas.getObjects().find((obj: any) => obj.id === element.id)
       if (!group) return
       
       if (config.imageUrl && config.imageUrl !== group.imageUrl) {
         const prevLeft = group.left
         const prevTop = group.top
         const prevAngle = group.angle
-        this.baseStore.canvas.remove(group)
+        this.canvas.remove(group)
         const img: any = await FabricImage.fromURL(config.imageUrl, { crossOrigin: 'anonymous' } as any)
         group = img
         group.set({
@@ -124,13 +127,13 @@ export const useTick60Store = defineStore('tick60Element', {
         const gw = group.width || 0
         const gh = group.height || 0
         if (gw > 0 && gh > 0) {
-          const scale = this.baseStore.WATCH_SIZE / Math.max(gw, gh)
+          const scale = this.designStore.watchSize / Math.max(gw, gh)
           group.set({ scaleX: scale, scaleY: scale })
         } else {
-          group.scaleToWidth(this.baseStore.WATCH_SIZE)
+          group.scaleToWidth(this.designStore.watchSize)
         }
 
-        this.baseStore.canvas.add(group)
+        this.canvas.add(group)
       }
       if (typeof (config as any).assetId === 'number') {
         group.assetId = (config as any).assetId
@@ -141,9 +144,9 @@ export const useTick60Store = defineStore('tick60Element', {
       group.on('deselected', () => {})
       
       group.setCoords()
-      this.baseStore.canvas.requestRenderAll()
-      this.baseStore.canvas.discardActiveObject()
-      this.baseStore.canvas.setActiveObject(group)
+      this.canvas.requestRenderAll()
+      this.canvas.discardActiveObject()
+      this.canvas.setActiveObject(group)
     },
     encodeConfig(element: any) {
       if (!element) throw new Error('Invalid element')

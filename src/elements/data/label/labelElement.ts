@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 
 import { FabricText } from 'fabric'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { LabelElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
@@ -12,11 +12,11 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useLabelStore = defineStore('labelElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     const elementDataStore = useElementDataStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       defaults: {
         fontSize: 14,
@@ -48,10 +48,10 @@ export const useLabelStore = defineStore('labelElement', {
         hasBorders: true,
       } as any)
 
-      this.baseStore.canvas?.add(element as any)
+      this.canvas?.add(element as any)
       this.layerStore.addLayer(element as any)
-      this.baseStore.canvas?.setActiveObject(element as any)
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.setActiveObject(element as any)
+      this.canvas?.renderAll()
 
       // 同步业务配置到 ElementDataStore
       this.elementDataStore.upsertElement(this.encodeConfig(element as any))
@@ -60,9 +60,8 @@ export const useLabelStore = defineStore('labelElement', {
     },
 
     updateElement(element: FabricElement, config: Partial<LabelElementConfig> = {}) {
-      const canvas = this.baseStore.canvas
-      const text = canvas?.getObjects().find((obj: any) => obj.id === element.id)
-      if (!canvas || !text) return
+      const text = this.canvas?.getObjects().find((obj: any) => obj.id === element.id)
+      if (!this.canvas || !text) return
 
       const currentLeft = text.left
       const currentTop = text.top
@@ -90,7 +89,7 @@ export const useLabelStore = defineStore('labelElement', {
       if (config.top === undefined) text.set('top', currentTop)
 
       text.setCoords()
-      canvas.requestRenderAll?.()
+      this.canvas?.requestRenderAll?.()
 
       // 写回 ElementDataStore，保持与 Fabric 同步
       const textId = (text as any).id

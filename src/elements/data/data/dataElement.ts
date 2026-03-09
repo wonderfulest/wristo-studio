@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import { FabricText } from 'fabric'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { DataElementConfig } from '@/types/elements/data'
 import type { FabricElement } from '@/types/element'
@@ -11,11 +11,11 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useDataStore = defineStore('dataElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     const elementDataStore = useElementDataStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       elementDataStore,
     }
@@ -42,10 +42,10 @@ export const useDataStore = defineStore('dataElement', {
         hasBorders: true,
       } as any)
 
-      this.baseStore.canvas?.add(element as any)
+      this.canvas?.add(element as any)
       this.layerStore.addLayer(element as any)
-      this.baseStore.canvas?.setActiveObject(element as any)
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.setActiveObject(element as any)
+      this.canvas?.renderAll()
 
       // 同步业务配置到 ElementDataStore，注意此时 dataProperty/goalProperty 可能还未配置，允许为 null
       const elementDataStore = useElementDataStore()
@@ -69,7 +69,7 @@ export const useDataStore = defineStore('dataElement', {
     },
 
     updateElement(element: any, config: Partial<DataElementConfig> = {}) {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       const obj: any = canvas?.getObjects().find((o: any) => (o as any).id === element.id)
       if (!canvas || !obj) return
 

@@ -1,7 +1,7 @@
 <template>
   <div class="battery-properties">
     <!-- 基础尺寸配置 -->
-    <el-collapse>
+    <el-collapse v-model="activeNames">
       <el-collapse-item title="基础尺寸" name="size">
         <el-form label-position="left" label-width="100px">
           <el-form-item label="宽度">
@@ -106,6 +106,9 @@ const props = defineProps({
 })
 
 const batteryStore = useBatteryStore()
+
+// 默认全部面板展开
+const activeNames = ref(['size', 'body', 'head', 'level'])
 
 // 当前表单绑定的数据源：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {

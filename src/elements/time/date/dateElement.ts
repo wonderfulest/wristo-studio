@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import moment from 'moment'
@@ -14,11 +14,11 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useDateStore = defineStore('dateElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
@@ -43,7 +43,7 @@ export const useDateStore = defineStore('dateElement', {
     },
 
     async addElement(options: DateElementConfig): Promise<FabricText> {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add date element')
       }
 
@@ -89,15 +89,15 @@ export const useDateStore = defineStore('dateElement', {
 
             const newText = this.formatDate(new Date(), formatterValue)
             ;(element as any).set('text', newText)
-            this.baseStore.canvas?.renderAll()
+            this.canvas?.renderAll()
           } catch (error) {
             console.error('Error updating date element text:', error)
           }
         }
 
-        this.baseStore.canvas.add(element as any)
+        this.canvas.add(element as any)
         this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.setActiveObject(element as any)
+        this.canvas.setActiveObject(element as any)
 
         ;(element as any).updateTextCase = updateTextCase
 
@@ -116,7 +116,7 @@ export const useDateStore = defineStore('dateElement', {
 
         ;(element as any).textCaseUnwatch = unwatch
 
-        this.baseStore.canvas.renderAll()
+        this.canvas.renderAll()
 
         // 写入业务配置到 ElementDataStore
         elementDataStore.upsertElement({
@@ -141,8 +141,8 @@ export const useDateStore = defineStore('dateElement', {
     },
 
     updateElement(element: FabricElement, config: DateElementConfig) {
-      if (!this.baseStore.canvas) return
-      const obj: any = this.baseStore.canvas.getObjects().find((o: any) => o.id === element.id)
+      if (!this.canvas) return
+      const obj: any = this.canvas.getObjects().find((o: any) => o.id === element.id)
       if (!obj) return
 
       const currentLeft = obj.left
@@ -181,7 +181,7 @@ export const useDateStore = defineStore('dateElement', {
       }
 
       obj.setCoords()
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
 
       const elementDataStore = useElementDataStore()
       if (obj.id != null) {

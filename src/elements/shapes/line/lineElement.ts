@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { nanoid } from 'nanoid'
 import { Line, Circle } from 'fabric'
@@ -20,22 +20,22 @@ export type LineUpdateOptions = Partial<LineOptions>
 
 export const useLineStore = defineStore('lineElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
 
   actions: {
     async addElement(options: LineOptions) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('画布未初始化，无法添加直线元素')
       }
 
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
 
       const stroke = options.stroke
       const strokeWidth = Number(options.strokeWidth)
@@ -247,7 +247,7 @@ export const useLineStore = defineStore('lineElement', {
       }
 
       element.setCoords()
-      this.baseStore.canvas?.requestRenderAll()
+      this.canvas?.requestRenderAll()
     },
 
     /**
@@ -303,7 +303,7 @@ export const useLineStore = defineStore('lineElement', {
      * 来自图层面板的选中事件：高亮被选中直线的端点
      */
     handleSelectedFromLayer(layer: any) {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
 
       const objects = (canvas.getObjects ? canvas.getObjects() : []) as any[]

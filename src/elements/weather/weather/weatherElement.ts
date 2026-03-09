@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import { Group as FabricGroup, type GroupProps, type FabricObject, Image as FabricImage, type ImageProps } from 'fabric'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -70,9 +70,9 @@ async function recolorSvgToDataUrl(svgSourceUrl: string, color: string): Promise
 
 export const useWeatherStore = defineStore('weatherElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
-    return { baseStore, layerStore }
+    return { canvas: canvasStore.canvas, layerStore }
   },
   actions: {
     addElement(config: WeatherElementConfig): Promise<FabricElement> {
@@ -88,10 +88,10 @@ export const useWeatherStore = defineStore('weatherElement', {
         ;(group as unknown as { eleType?: string }).eleType = 'weather'
         if (config.fontFamily) (group as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
         if (config.fill) (group as unknown as { fill?: string }).fill = config.fill
-        this.baseStore.canvas?.add(group as unknown as FabricObject)
+        this.canvas?.add(group as unknown as FabricObject)
         this.layerStore.addLayer(group as unknown as MinimalFabricLike)
-        this.baseStore.canvas?.setActiveObject(group as unknown as FabricObject)
-        this.baseStore.canvas?.renderAll()
+        this.canvas?.setActiveObject(group as unknown as FabricObject)
+        this.canvas?.renderAll()
         return group as unknown as FabricElement
       }
 
@@ -180,7 +180,7 @@ export const useWeatherStore = defineStore('weatherElement', {
     },
 
     updateElement(element: FabricElement, config: Partial<WeatherElementConfig>) {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>).find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
       if (!obj) return
@@ -315,7 +315,7 @@ export const useWeatherStore = defineStore('weatherElement', {
     },
 
     setImageSize(element: FabricElement, width: number, height: number): void {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const obj = (canvas.getObjects() as Array<FabricObject & FabricElement>).find((o) => (o as unknown as FabricElement).id === element.id) as FabricGroup | undefined
       if (!obj) return

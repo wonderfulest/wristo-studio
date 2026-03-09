@@ -38,6 +38,7 @@ import { ref, watch, computed } from 'vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { useBaseStore } from '@/stores/baseStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { fontSizes } from '@/config/settings'
 import { FontTypes } from '@/config/fonts'
 
@@ -59,6 +60,7 @@ const props = defineProps({
 })
 
 const baseStore = useBaseStore()
+const iconFontStrategyStore = useIconFontStrategyStore()
 
 // 当前表单绑定的数据源：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
@@ -103,11 +105,6 @@ const updateFontFamily = async (newFontFamily: string) => {
   baseStore.canvas.renderAll()
 }
 
-// 初始化全局图标字体大小（若未设置） - 仅旧通道需要
-if (!props.applyPatch && baseStore.currentIconFontSize == null && props.element?.fontSize) {
-  baseStore.setIconFontSize(props.element.fontSize)
-}
-
 // 更新字体大小（集中处理，确保统一）
 const updateFontSize = async (newSize: number) => {
   if (props.applyPatch && props.config) {
@@ -116,8 +113,8 @@ const updateFontSize = async (newSize: number) => {
     return
   }
 
-  if (!props.element || !baseStore.canvas) return
-  await baseStore.requestUpdateIconFontSize(props.element, newSize)
+  if (!props.element) return
+  await iconFontStrategyStore.requestUpdateIconFontSize(props.element, newSize)
 }
 
 // 更新位置

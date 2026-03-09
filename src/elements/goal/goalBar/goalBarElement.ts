@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { Rect, Group } from 'fabric'
 import { nanoid } from 'nanoid'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
 import { FabricElement } from '@/types/element'
@@ -9,13 +9,13 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 
 export const useGoalBarStore = defineStore('goalBarStore', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     const elementDataStore = useElementDataStore()
 
     return {
       goalBarElements: [] as any[],
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       elementDataStore,
     }
@@ -23,7 +23,7 @@ export const useGoalBarStore = defineStore('goalBarStore', {
 
   actions: {
     async addElement(options: GoalBarElementConfig) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas not initialized, cannot add goal bar element')
       }
       const padding = Number(options.padding ?? 2)
@@ -80,10 +80,10 @@ export const useGoalBarStore = defineStore('goalBarStore', {
         goalProperty: options.goalProperty || '',
       } as any)
 
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.renderAll()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.renderAll()
+      this.canvas?.setActiveObject(group)
 
       const encoded = this.encodeConfig(group as FabricElement)
       this.elementDataStore.upsertElement({
@@ -170,7 +170,7 @@ export const useGoalBarStore = defineStore('goalBarStore', {
         element.goalProperty = options.goalProperty
       }
       element.setCoords()
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
 
       // 更新 ElementDataStore 中的配置
       const encoded = this.encodeConfig(element as FabricElement)

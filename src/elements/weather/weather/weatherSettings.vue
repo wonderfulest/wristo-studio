@@ -118,14 +118,16 @@ import type { WeatherConditionAssetsVO } from '@/types/api/weather'
 import { getIconAsset, getIconGlyphByCode, type DisplayType } from '@/api/wristo/iconGlyph'
 import WeatherBindingDialog from './WeatherBindingDialog.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
-
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 const props = defineProps<{ 
   element?: FabricElement
   config?: any
   applyPatch?: (patch: Record<string, any>) => void
 }>()
+const canvasStore = useCanvasStore()
 const weatherStore = useWeatherStore()
-
+const iconFontStrategyStore = useIconFontStrategyStore()
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
@@ -139,7 +141,7 @@ const selected = reactive<{ mip: string | null; amoled: string | null }>({ mip: 
 const bindingDialogVisible = ref(false)
 
 const initElementProperties = (): void => {
-  const canvas = weatherStore.baseStore.canvas
+  const canvas = canvasStore.canvas
   if (!canvas) return
   const group = (canvas.getObjects() as Array<{ id?: string } & Record<string, unknown>>).find(o => o.id === props.element?.id)
   if (!group) return
@@ -173,8 +175,7 @@ const loadBindingFontId = async () => {
 onMounted(() => {
   initElementProperties()
   if (!fontFamily.value) {
-    const base = weatherStore.baseStore as unknown as { currentIconFontSlug?: string | null }
-    fontFamily.value = base?.currentIconFontSlug || 'yoghurt-one'
+    fontFamily.value = iconFontStrategyStore.currentIconFontSlug || 'yoghurt-one'
   }
   // load current font's id for binding
   loadBindingFontId()

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { nanoid } from 'nanoid'
 import { FabricText, TextProps } from 'fabric'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
@@ -9,31 +9,35 @@ import { usePropertiesStore } from '@/stores/properties'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 
 export const useIconStore = defineStore('iconElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     const propertiesStore = usePropertiesStore()
     const elementDataStore = useElementDataStore()
+    const iconFontStrategyStore = useIconFontStrategyStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       propertiesStore,
       elementDataStore,
+      iconFontStrategyStore
     }
   },
   actions: {
     async addElement(config: IconElementConfig): Promise<FabricText> {
       console.log('addElement icon', config)
-      if (!this.baseStore?.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add icon element')
       }
       try {
         type IconProps = TextProps & IconElementConfig
         const metric = usePropertiesStore().getMetricByOptions(config)
-        const resolvedFontFamily = this.baseStore.currentIconFontSlug || config.iconFont
-        const resolvedFontSize = this.baseStore.currentIconFontSize === -1 ? Number(config.iconSize) : this.baseStore.currentIconFontSize
+        const strategy = this.iconFontStrategyStore
+        const resolvedFontFamily = strategy.currentIconFontSlug || config.iconFont
+        const resolvedFontSize = strategy.currentIconFontSize === -1 ? Number(config.iconSize) : strategy.currentIconFontSize
         console.log('resolvedFontFamily', resolvedFontFamily)
         console.log('resolvedFontSize', resolvedFontSize)
         const iconOptions: Partial<IconProps> = {
@@ -54,10 +58,10 @@ export const useIconStore = defineStore('iconElement', {
           hasBorders: true,
         }
         const element = new FabricText(metric.icon, iconOptions as TextProps & IconElementConfig)
-        this.baseStore.canvas?.add(element as FabricText)
+        this.canvas?.add(element as FabricText)
         this.layerStore.addLayer(element as unknown as MinimalFabricLike)
-        this.baseStore.canvas?.setActiveObject(element as FabricText)
-        this.baseStore.canvas?.renderAll()
+        this.canvas?.setActiveObject(element as FabricText)
+        this.canvas?.renderAll()
 
         // 同步业务配置到 ElementDataStore
         const id = (element as any).id ?? config.id ?? nanoid()
@@ -87,7 +91,7 @@ export const useIconStore = defineStore('iconElement', {
     },
 
     updateElement(element: FabricElement, config: Partial<IconElementConfig>) {
-      const canvas = this.baseStore.canvas
+      const canvas = this.canvas
       if (!canvas) return
       const objects = canvas.getObjects() as FabricText[]
       const obj = objects.find((o) => (o as unknown as FabricElement).id === element.id)

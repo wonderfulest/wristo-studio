@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { nanoid } from 'nanoid'
@@ -125,11 +125,11 @@ async function createBitmapTimeGroup(params: {
 
 export const useTimeStore = defineStore('timeStore', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     return {
       updateInterval: null as number | null,
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
@@ -160,7 +160,7 @@ export const useTimeStore = defineStore('timeStore', {
       }
     },
     async addElement(options: TimeElementConfig): Promise<FabricElement> {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add time element')
       }
       try {
@@ -176,11 +176,11 @@ export const useTimeStore = defineStore('timeStore', {
             options,
           })
           // 先移除画布上同 id 的旧 bitmap Group，避免同一个元素残留多份
-          removeBitmapTimeGroupsById(this.baseStore.canvas, String(id))
-          this.baseStore.canvas.add(group as any)
+          removeBitmapTimeGroupsById(this.canvas, String(id))
+          this.canvas.add(group as any)
           this.layerStore.addLayer(group as any)
-          this.baseStore.canvas.setActiveObject(group as any)
-          this.baseStore.canvas.renderAll()
+          this.canvas.setActiveObject(group as any)
+          this.canvas.renderAll()
 
           // 写入业务配置到 ElementDataStore
           elementDataStore.upsertElement({
@@ -222,10 +222,10 @@ export const useTimeStore = defineStore('timeStore', {
           lockScalingY: false,
         }
         const element = new FabricText(text, timeOptions as TimeElementOptions)
-        this.baseStore.canvas.add(element as FabricText)
+        this.canvas.add(element as FabricText)
         this.layerStore.addLayer(element as any)
-        this.baseStore.canvas.setActiveObject(element as FabricText)
-        this.baseStore.canvas.renderAll()
+        this.canvas.setActiveObject(element as FabricText)
+        this.canvas.renderAll()
 
         // 写入业务配置到 ElementDataStore
         elementDataStore.upsertElement({
@@ -250,8 +250,8 @@ export const useTimeStore = defineStore('timeStore', {
       }
     },
     async updateByTime(date: Date) {
-      if (!this.baseStore.canvas) return
-      const canvas: any = this.baseStore.canvas
+      if (!this.canvas) return
+      const canvas: any = this.canvas
 
       const objects = canvas.getObjects ? canvas.getObjects() : []
       let changed = false
@@ -330,11 +330,11 @@ export const useTimeStore = defineStore('timeStore', {
       }
     },
     async updateElement(element: FabricElement, config: TimeElementConfig) {
-      if (!this.baseStore.canvas) return
-      const obj: FabricElement = this.baseStore.canvas.getObjects().find((o: any) => o.id === element.id)
+      if (!this.canvas) return
+      const obj: FabricElement = this.canvas.getObjects().find((o: any) => o.id === element.id)
       if (!obj) return
 
-      const canvas: any = this.baseStore.canvas
+      const canvas: any = this.canvas
       const elementDataStore = useElementDataStore()
 
       const syncLayerElementRef = (id: string, newEl: any) => {

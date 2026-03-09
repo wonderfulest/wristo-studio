@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -7,13 +7,16 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 import type { DialElementConfig } from '../romans/romansElement'
+import { useDesignStore } from '@/stores/designStore'
 
 export const useTick12Store = defineStore('tick12Element', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
+    const designStore = useDesignStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
+      designStore,
       layerStore,
       moveDx: 0,
       defaultColors: {
@@ -66,38 +69,37 @@ export const useTick12Store = defineStore('tick12Element', {
         imageUrl: imageUrl,
         assetId: options.assetId,
       })
-      // Scale to fit within WATCH_SIZE x WATCH_SIZE while preserving aspect ratio and transparent margins
       const gw = svgGroup.width || 0
       const gh = svgGroup.height || 0
       if (gw > 0 && gh > 0) {
-        const scale = this.baseStore.WATCH_SIZE / Math.max(gw, gh)
+        const scale = this.designStore.designSpec.width / Math.max(gw, gh)
         svgGroup.set({ scaleX: scale, scaleY: scale })
       } else {
-        svgGroup.scaleToWidth(this.baseStore.WATCH_SIZE)
+        svgGroup.scaleToWidth(this.designStore.designSpec.width)
       }
       svgGroup.on('moving', () => {})
       svgGroup.on('selected', () => {})
       svgGroup.on('deselected', () => {})
       svgGroup.setCoords()
-      this.baseStore.canvas?.add(svgGroup)
+      this.canvas?.add(svgGroup)
       this.layerStore.addLayer(svgGroup)
-      this.baseStore.canvas?.requestRenderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(svgGroup)
+      this.canvas?.requestRenderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(svgGroup)
       return svgGroup
     },
     async updateElement(element: any, _config: DialElementConfig) {
       if (!element) throw new Error('Invalid element')
       element.setCoords()
-      this.baseStore.canvas?.requestRenderAll()
+      this.canvas?.requestRenderAll()
     },
     async updateSVG(element: any, config: DialElementConfig) {
       console.log('[Tick12.updateSVG] called', { elementId: element?.id, imageUrl: config?.imageUrl })
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         console.warn('[Tick12.updateSVG] canvas not ready')
         return
       }
-      const objects: any[] = this.baseStore.canvas.getObjects() as any[]
+      const objects: any[] = this.canvas.getObjects() as any[]
       let svgGroup: any = objects.find((obj: any) => obj.id === element.id)
       console.log('[Tick12.updateSVG] found group?', { found: !!svgGroup, objectsCount: objects.length })
       if (!svgGroup) return
@@ -106,7 +108,7 @@ export const useTick12Store = defineStore('tick12Element', {
         const prevLeft = svgGroup.left
         const prevTop = svgGroup.top
         const prevAngle = svgGroup.angle
-        this.baseStore.canvas.remove(svgGroup)
+        this.canvas.remove(svgGroup)
         const img: any = await FabricImage.fromURL(config.imageUrl, { crossOrigin: 'anonymous' } as any)
         svgGroup = img
         svgGroup.set({
@@ -123,17 +125,16 @@ export const useTick12Store = defineStore('tick12Element', {
           hasBorders: true,
         })
 
-        // Scale to fit within WATCH_SIZE x WATCH_SIZE while preserving aspect ratio and transparent margins
         const gw = svgGroup.width || 0
         const gh = svgGroup.height || 0
         if (gw > 0 && gh > 0) {
-          const scale = this.baseStore.WATCH_SIZE / Math.max(gw, gh)
+          const scale = this.designStore.designSpec.width / Math.max(gw, gh)
           svgGroup.set({ scaleX: scale, scaleY: scale })
         } else {
-          svgGroup.scaleToWidth(this.baseStore.WATCH_SIZE)
+          svgGroup.scaleToWidth(this.designStore.designSpec.width)
         }
 
-        this.baseStore.canvas.add(svgGroup)
+        this.canvas.add(svgGroup)
       } else {
         console.log('[Tick12.updateSVG] imageUrl unchanged, skipping replace')
       }
@@ -147,9 +148,9 @@ export const useTick12Store = defineStore('tick12Element', {
       svgGroup.on('deselected', () => {})
       
       svgGroup.setCoords()
-      this.baseStore.canvas.requestRenderAll()
-      this.baseStore.canvas.discardActiveObject()
-      this.baseStore.canvas.setActiveObject(svgGroup)
+      this.canvas.requestRenderAll()
+      this.canvas.discardActiveObject()
+      this.canvas.setActiveObject(svgGroup)
     },
     encodeConfig(element: any) {
       if (!element) throw new Error('Invalid element')

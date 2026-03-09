@@ -65,7 +65,7 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { FontTypes } from '@/config/fonts'
-import { useBaseStore } from '@/stores/baseStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 const emit = defineEmits(['close'])
 
 const props = defineProps<{
@@ -75,7 +75,7 @@ const props = defineProps<{
 }>()
 
 const formRef = ref<any>(null)
-const baseStore = useBaseStore()
+const iconFontStrategyStore = useIconFontStrategyStore()
 
 const rules = {
   dataProperty: [
@@ -122,15 +122,10 @@ const updateElement = async () => {
   })
 }
 
-// initialize global icon font size if missing
-if (baseStore.currentIconFontSize == null && (currentModel.value as any)?.fontSize) {
-  baseStore.setIconFontSize((currentModel.value as any).fontSize)
-}
-
 const handleFontSizeChange = async (newSize: number) => {
   const model = currentModel.value as any
   if (props.element) {
-    await baseStore.requestUpdateIconFontSize(props.element, newSize)
+    await iconFontStrategyStore.requestUpdateIconFontSize(props.element, newSize)
   }
   model.fontSize = newSize
   await updateElement()

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { Group, Rect } from 'fabric'
 import { nanoid } from 'nanoid'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import type { GoalSegmentBarElementConfig } from '@/types/elements/goal'
 import type { FabricElement } from '@/types/element'
@@ -107,11 +107,11 @@ function buildSegments(params: BuildSegmentsParams) {
 
 export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     const elementDataStore = useElementDataStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       elementDataStore,
     }
@@ -119,7 +119,7 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
 
   actions: {
     addElement(options: GoalSegmentBarElementConfig) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas not initialized, cannot add goal segment bar element')
       }
 
@@ -176,10 +176,10 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
       ;(group as any).width = width
       ;(group as any).height = height
 
-      this.baseStore.canvas.add(group as unknown as any)
+      this.canvas.add(group as unknown as any)
       this.layerStore.addLayer(group as unknown as any)
-      this.baseStore.canvas.renderAll()
-      this.baseStore.canvas.setActiveObject(group as unknown as any)
+      this.canvas.renderAll()
+      this.canvas.setActiveObject(group as unknown as any)
 
       // 初次创建时写入业务配置
       const encoded = this.encodeConfig(group as unknown as FabricElement)
@@ -266,8 +266,8 @@ export const useGoalSegmentBarStore = defineStore('goalSegmentBarStore', {
       ;(element as any)._onAfterObjectsChange?.('add')
       ;(element as any)._set?.('dirty', true)
       element.setCoords()
-      this.baseStore.canvas?.requestRenderAll?.()
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.requestRenderAll?.()
+      this.canvas?.renderAll()
 
       // 更新 ElementDataStore 中的配置
       const encoded = this.encodeConfig(element as FabricElement)

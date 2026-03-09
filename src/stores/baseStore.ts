@@ -7,8 +7,8 @@ import type { FabricElement } from '@/types/element'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useBackgroundStore } from '@/stores/backgroundStore'
 import { useDesignStore } from '@/stores/designStore'
-import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { generateConfig as generateRuntimeConfig } from '@/engine/services/exportService'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
@@ -26,7 +26,6 @@ export const useBaseStore = defineStore('baseStore', {
     id: '' as string, // 表盘ID
     watchFaceName: '' as string,
     appId: -1 as number,
-    WATCH_SIZE: 454 as number,
     textCase: 0 as number, // 文本大小写设置：0=默认, 1=全大写, 2=全小写, 3=驼峰
     labelLengthType: 1 as number, // 标签长度类型：1=短文本, 2=中等文本, 3=长文本
     showUnit: false as boolean, // 是否显示数据项单位
@@ -35,8 +34,6 @@ export const useBaseStore = defineStore('baseStore', {
     watchFaceCircle: null as AnyObject | null,
     // 当前背景图片对应的 Fabric.Image 实例
     backgroundImage: null as AnyObject | null,
-    currentIconFontSlug: '' as string,
-    currentIconFontSize: -1 as number,
     inCanvasWorkarea: false as boolean
   }),
 
@@ -47,32 +44,6 @@ export const useBaseStore = defineStore('baseStore', {
   actions: {
     setInCanvasWorkarea(flag: boolean): void {
       this.inCanvasWorkarea = flag
-    },
-    setIconFontSlug(slug: string): void {
-      const iconFontStore = useIconFontStrategyStore()
-      iconFontStore.setIconFontSlug(slug)
-      this.currentIconFontSlug = iconFontStore.currentIconFontSlug
-    },
-    updateAllIconFont(slug: string): void {
-      const iconFontStore = useIconFontStrategyStore()
-      iconFontStore.updateAllIconFont(slug)
-      this.currentIconFontSlug = iconFontStore.currentIconFontSlug
-    },
-    setIconFontSize(size: number): void {
-      const iconFontStore = useIconFontStrategyStore()
-      iconFontStore.setIconFontSize(size)
-      this.currentIconFontSize = iconFontStore.currentIconFontSize
-    },
-    updateAllIconFontSize(size: number): void {
-      const iconFontStore = useIconFontStrategyStore()
-      iconFontStore.updateAllIconFontSize(size)
-      this.currentIconFontSize = iconFontStore.currentIconFontSize
-    },
-    async requestUpdateIconFontSize(element: AnyObject, newSize: number): Promise<boolean> {
-      const iconFontStore = useIconFontStrategyStore()
-      const ok = await iconFontStore.requestUpdateIconFontSize(element, newSize)
-      this.currentIconFontSize = iconFontStore.currentIconFontSize
-      return ok
     },
     // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
     mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
@@ -294,25 +265,27 @@ export const useBaseStore = defineStore('baseStore', {
       const canvasStore = useCanvasStore()
       canvasStore.setCanvas(fabricCanvas)
       this.canvas = canvasStore.canvas
-      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
-      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
+      const backgroundStore = useBackgroundStore()
+      backgroundStore.syncFromCanvas()
+      this.watchFaceCircle = backgroundStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = backgroundStore.backgroundImage as AnyObject | null
     },
     setBackgroundImageFromUrl(url: string | null, imageId?: number | null): void {
-      const canvasStore = useCanvasStore()
-      canvasStore.setBackgroundImageFromUrl(url, imageId)
-      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
+      const backgroundStore = useBackgroundStore()
+      backgroundStore.setBackgroundImageFromUrl(url, imageId)
+      this.backgroundImage = backgroundStore.backgroundImage as AnyObject | null
     },
     addBackground(): void {
-      const canvasStore = useCanvasStore()
-      canvasStore.addBackground()
-      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
-      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
+      const backgroundStore = useBackgroundStore()
+      backgroundStore.addBackground()
+      this.watchFaceCircle = backgroundStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = backgroundStore.backgroundImage as AnyObject | null
     },
     updateBackgroundElements(zoom?: number): void {
-      const canvasStore = useCanvasStore()
-      canvasStore.updateBackgroundElements(zoom)
-      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
-      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
+      const backgroundStore = useBackgroundStore()
+      backgroundStore.updateBackgroundElements(zoom)
+      this.watchFaceCircle = backgroundStore.watchFaceCircle as AnyObject | null
+      this.backgroundImage = backgroundStore.backgroundImage as AnyObject | null
     },
     // 设置表盘名称（委托给 designStore）
     setWatchFaceName(name: string): void {
@@ -333,7 +306,6 @@ export const useBaseStore = defineStore('baseStore', {
       }
       const propertiesStore = usePropertiesStore()
       const canvasStore = useCanvasStore()
-      const iconFontStore = useIconFontStrategyStore()
       const config = generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -343,8 +315,6 @@ export const useBaseStore = defineStore('baseStore', {
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
         backgroundImage: canvasStore.backgroundImage,
-        currentIconFontSlug: iconFontStore.currentIconFontSlug,
-        currentIconFontSize: iconFontStore.currentIconFontSize,
       })
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',
@@ -367,16 +337,15 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 切换主题
     toggleTheme(): void {
-      const canvasStore = useCanvasStore()
-      canvasStore.toggleTheme()
-      this.backgroundImage = canvasStore.backgroundImage as AnyObject | null
-      this.watchFaceCircle = canvasStore.watchFaceCircle as AnyObject | null
+      const backgroundStore = useBackgroundStore()
+      backgroundStore.toggleTheme()
+      this.backgroundImage = backgroundStore.backgroundImage as AnyObject | null
+      this.watchFaceCircle = backgroundStore.watchFaceCircle as AnyObject | null
     },
     // 生成配置（委托给 exportService）
     generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
       const canvasStore = useCanvasStore()
       const propertiesStore = usePropertiesStore()
-      const iconFontStore = useIconFontStrategyStore()
       const designStore = useDesignStore()
       return generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
@@ -387,8 +356,6 @@ export const useBaseStore = defineStore('baseStore', {
         labelLengthType: this.labelLengthType,
         showUnit: this.showUnit,
         backgroundImage: canvasStore.backgroundImage,
-        currentIconFontSlug: iconFontStore.currentIconFontSlug,
-        currentIconFontSize: iconFontStore.currentIconFontSize,
       })
     },
   

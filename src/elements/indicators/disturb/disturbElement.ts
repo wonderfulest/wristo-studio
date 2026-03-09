@@ -1,30 +1,43 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
 import type { IndicatorElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { useLayerStore } from '@/stores/layerStore'
+import { nanoid } from 'nanoid'
 
 export const useDisturbStore = defineStore('disturbElement', {
-  state: () => ({}),
+  state: () => {
+    const canvasStore = useCanvasStore()
+    const layerStore = useLayerStore()
+    const iconFontStrategyStore = useIconFontStrategyStore()
+    return {
+      canvas: canvasStore.canvas,
+      layerStore,
+      iconFontStrategyStore,
+    }
+  },
 
   actions: {
     addElement(config: IndicatorElementConfig) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
+      if (!this.canvas) throw new Error('Canvas is not initialized')
 
-      if ((baseStore as any).currentIconFontSize == -1) {
-        (baseStore as any).currentIconFontSize = config.fontSize
+      const strategy = this.iconFontStrategyStore
+      if (strategy.currentIconFontSize === -1) {
+        strategy.setIconFontSize(config.fontSize)
       } else {
-        config.fontSize = (baseStore as any).currentIconFontSize
+        config.fontSize = strategy.currentIconFontSize
       }
-      if ((baseStore as any).currentIconFontSlug == '') {
-        (baseStore as any).currentIconFontSlug = config.fontFamily
+      if (!strategy.currentIconFontSlug) {
+        strategy.setIconFontSlug(config.fontFamily)
       } else {
-        config.fontFamily = (baseStore as any).currentIconFontSlug
+        config.fontFamily = strategy.currentIconFontSlug
       }
-      
+      const id = config.id ?? nanoid()
       const disturbIcon = new FabricText('\u0021', {
+        id,
         eleType: 'disturb',
         left: config.left,
         top: config.top,
@@ -40,16 +53,15 @@ export const useDisturbStore = defineStore('disturbElement', {
       } as any)
 
       disturbIcon.set('text', '\u0021')
-      baseStore.canvas?.add(disturbIcon as any)
-      baseStore.canvas?.setActiveObject(disturbIcon as any)
-      baseStore.canvas?.renderAll()
+      this.canvas?.add(disturbIcon as any)
+      this.layerStore.addLayer(disturbIcon as any)
+      this.canvas?.setActiveObject(disturbIcon as any)
+      this.canvas?.renderAll()
       return disturbIcon as any
     },
 
     updateElement(element: any, options: Partial<IndicatorElementConfig> = {}) {
       if (!element) return
-
-      const baseStore = useBaseStore()
 
       if (options.fill !== undefined) {
         element.set('fill', options.fill)
@@ -60,11 +72,7 @@ export const useDisturbStore = defineStore('disturbElement', {
       }
 
       if (options.fontSize !== undefined) {
-        if (baseStore.canvas && (baseStore as any).requestUpdateIconFontSize) {
-          void (baseStore as any).requestUpdateIconFontSize(element, options.fontSize)
-        } else {
-          element.set('fontSize', options.fontSize)
-        }
+        void this.iconFontStrategyStore.requestUpdateIconFontSize(element, options.fontSize)
       }
 
       if (options.left !== undefined) {
@@ -76,12 +84,10 @@ export const useDisturbStore = defineStore('disturbElement', {
       }
 
       element.setCoords?.()
-      baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
     },
 
     updateDisturbStatus(status: boolean) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
       void status
     },
 

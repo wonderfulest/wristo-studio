@@ -29,7 +29,7 @@
           <el-input-number
             v-model="localSize"
             :min="10"
-            :max="baseStore.WATCH_SIZE"
+            :max="designStore.watchSize"
             :step="2"
             @change="handleSizeChange"
             @keydown.enter.prevent
@@ -44,7 +44,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'  
+import { useDesignStore } from '@/stores/designStore'
 import { useCenterCapStore } from '@/elements/dials/centerCap/centerCapElement'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
@@ -66,7 +67,8 @@ const props = defineProps({
   },
 })
 
-const baseStore = useBaseStore()
+const canvasStore = useCanvasStore()
+const designStore = useDesignStore()
 const centerCapStore = useCenterCapStore()
 const formRef = ref(null)
 
@@ -82,7 +84,7 @@ const computeRenderedSize = (el) => {
 
 // 初始化尺寸（仅旧通道依赖 element 时才有意义）
 if (props.element) {
-  localSize.value = computeRenderedSize(props.element) || (baseStore.WATCH_SIZE * 0.15)
+  localSize.value = computeRenderedSize(props.element) || (designStore.watchSize * 0.15)
 }
 
 // 当 element 变化时，保持 localSize 同步
@@ -115,10 +117,10 @@ const handleSizeChange = (val: number) => {
 
   applyUpdate({ targetSize: val })
 
-  if (!props.applyPatch && baseStore.canvas) {
+  if (!props.applyPatch && canvasStore.canvas) {
     el.set({ scaleX: scale, scaleY: scale })
     el.setCoords?.()
-    baseStore.canvas.requestRenderAll()
+    canvasStore.canvas.requestRenderAll()
   }
 }
 

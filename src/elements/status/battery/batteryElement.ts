@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { Rect, Group } from 'fabric'
 import { nanoid } from 'nanoid'
@@ -9,10 +9,10 @@ import { FabricElement } from '@/types/element'
 
 export const useBatteryStore = defineStore('batteryElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
       defaultLevelColorLow: '#ff0000' as string,
       defaultLevelColorMedium: '#ffaa00' as string,
@@ -23,23 +23,23 @@ export const useBatteryStore = defineStore('batteryElement', {
   actions: {
     addElement(config: BatteryElementConfig) {
       const id = nanoid()
-      const width = config.width || 28
-      const height = config.height || 18
-      const headWidth = Math.round(config.headWidth || width * 0.08)
-      const headHeight = Math.round(config.headHeight || height * 0.5)
-      const padding = Math.round(config.padding || 2)
-      const level = config.level || 0.5
-      const headGap = Math.round(config.headGap || 1)
+      const width = config.width ?? 28
+      const height = config.height ?? 18
+      const headWidth = Math.round(config.headWidth ?? width * 0.08)
+      const headHeight = Math.round(config.headHeight ?? height * 0.5)
+      const padding = Math.round(config.padding ?? 2)
+      const level = config.level ?? 0.5
+      const headGap = Math.round(config.headGap ?? 1)
 
-      const bodyStrokeWidth = config.bodyStrokeWidth || 2
-      const bodyStroke = config.bodyStroke || '#ffffff'
-      const bodyFill = config.bodyFill || 'transparent'
-      const bodyRx = config.bodyRx || height * 0.1
-      const bodyRy = config.bodyRy || height * 0.1
+      const bodyStrokeWidth = config.bodyStrokeWidth ?? 2
+      const bodyStroke = config.bodyStroke ?? '#ffffff'
+      const bodyFill = config.bodyFill ?? 'transparent'
+      const bodyRx = config.bodyRx ?? height * 0.1
+      const bodyRy = config.bodyRy ?? height * 0.1
 
-      const headFill = config.headFill || bodyStroke
-      const headRx = Math.round(config.headRx || headWidth * 0.2)
-      const headRy = Math.round(config.headRy || headWidth * 0.2)
+      const headFill = config.headFill ?? bodyStroke
+      const headRx = Math.round(config.headRx ?? headWidth * 0.2)
+      const headRy = Math.round(config.headRy ?? headWidth * 0.2)
 
       const batteryBody: any = new Rect({
         width,
@@ -102,11 +102,11 @@ export const useBatteryStore = defineStore('batteryElement', {
       )
 
       group.setCoords()
-      this.baseStore.canvas?.add(group)
+      this.canvas?.add(group)
       this.layerStore.addLayer(group)
-      this.baseStore.canvas?.renderAll()
-      this.baseStore.canvas?.discardActiveObject()
-      this.baseStore.canvas?.setActiveObject(group)
+      this.canvas?.renderAll()
+      this.canvas?.discardActiveObject()
+      this.canvas?.setActiveObject(group)
       return group
     },
 
@@ -125,8 +125,8 @@ export const useBatteryStore = defineStore('batteryElement', {
     },
 
     updateLevel(element: any, level: number) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
+      if (!this.canvas) return
+      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!group || !group.getObjects) return
 
       const objects = group.getObjects()
@@ -140,7 +140,7 @@ export const useBatteryStore = defineStore('batteryElement', {
         width: (w - padding * 2) * level,
         fill: this.getLevelColor(level),
       })
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
     },
 
     encodeConfig(element: Partial<FabricElement>): BatteryElementConfig {
@@ -209,14 +209,14 @@ export const useBatteryStore = defineStore('batteryElement', {
         levelColorLow: config.levelColorLow ?? this.defaultLevelColorLow,
         levelColorMedium: config.levelColorMedium ?? this.defaultLevelColorMedium,
         levelColorHigh: config.levelColorHigh ?? this.defaultLevelColorHigh,
-        headGap: config.headGap || 2,
+        headGap: config.headGap ?? 2,
       } 
       return decoded
     },
 
     updateElement(element: any, config: any) {
-      if (!this.baseStore.canvas) return
-      const group: any = this.baseStore.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
+      if (!this.canvas) return
+      const group: any = this.canvas.getObjects().find((obj: any) => (obj as any).id === element.id)
       if (!group || !group.getObjects) return
 
       const objects = group.getObjects()
@@ -238,6 +238,8 @@ export const useBatteryStore = defineStore('batteryElement', {
         left: -config.width / 2,
       })
 
+      const nextHeadGap = config.headGap ?? 2
+
       batteryHead.set({
         width: config.headWidth,
         height: config.headHeight,
@@ -246,10 +248,10 @@ export const useBatteryStore = defineStore('batteryElement', {
         ry: config.headRy,
         originX: 'left',
         originY: 'center',
-        left: config.width / 2 + (config.headGap || 2),
+        left: config.width / 2 + nextHeadGap,
       })
 
-      const padding = config.padding || 4
+      const padding = config.padding ?? 4
       const nextLow = (config.levelColorLow ?? (group as any).levelColorLow ?? this.defaultLevelColorLow) as string
       const nextMedium = (config.levelColorMedium ?? (group as any).levelColorMedium ?? this.defaultLevelColorMedium) as string
       const nextHigh = (config.levelColorHigh ?? (group as any).levelColorHigh ?? this.defaultLevelColorHigh) as string
@@ -262,6 +264,10 @@ export const useBatteryStore = defineStore('batteryElement', {
         left: -config.width / 2 + padding,
       })
 
+      // 同步组上的 padding/headGap，便于 encodeConfig 与后续编辑保持一致
+      ;(group as any).set('padding', padding)
+      ;(group as any).set('headGap', nextHeadGap)
+
       if (config.left !== undefined) group.set('left', config.left)
       if (config.top !== undefined) group.set('top', config.top)
       if (config.levelColorLow !== undefined) (group as any).set('levelColorLow', nextLow)
@@ -269,7 +275,7 @@ export const useBatteryStore = defineStore('batteryElement', {
       if (config.levelColorHigh !== undefined) (group as any).set('levelColorHigh', nextHigh)
 
       group.setCoords()
-      this.baseStore.canvas.renderAll()
+      this.canvas.renderAll()
     },
   },
 })

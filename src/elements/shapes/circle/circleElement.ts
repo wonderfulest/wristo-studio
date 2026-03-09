@@ -1,11 +1,9 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { nanoid } from 'nanoid'
 import { Circle } from 'fabric'
-import { registerElement } from '@/engine/registry/elementRegistry'
-import type { ElementType } from '@/types/element'
 
 export interface CircleOptions {
   radius?: number | string
@@ -67,18 +65,18 @@ function attachCircleScaleSync(circle: Circle): void {
 
 export const useCircleStore = defineStore('circleElement', {
   state: () => {
-    const baseStore = useBaseStore()
+    const canvasStore = useCanvasStore()
     const layerStore = useLayerStore()
 
     return {
-      baseStore,
+      canvas: canvasStore.canvas,
       layerStore,
     }
   },
 
   actions: {
     async addElement(options: CircleOptions = {}) {
-      if (!this.baseStore.canvas) {
+      if (!this.canvas) {
         throw new Error('Canvas is not initialized, cannot add circle element')
       }
 
@@ -134,10 +132,10 @@ export const useCircleStore = defineStore('circleElement', {
           originY: circle.originY,
         } as any)
 
-        this.baseStore.canvas.add(circle as any)
+        this.canvas.add(circle as any)
         this.layerStore.addLayer(circle as any)
-        this.baseStore.canvas.renderAll()
-        this.baseStore.canvas.setActiveObject(circle as any)
+        this.canvas.renderAll()
+        this.canvas.setActiveObject(circle as any)
 
         return circle
       } catch (error) {
@@ -192,7 +190,7 @@ export const useCircleStore = defineStore('circleElement', {
 
       element.setCoords()
       element.dirty = true
-      this.baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
 
       if (id != null) {
         elementDataStore.patchElement(String(id), {

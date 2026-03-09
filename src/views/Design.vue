@@ -12,7 +12,7 @@
       <div class="canvas-container">
         <CanvasView ref="canvasRef" />
       </div>
-      <CanvasRulers :watch-size="baseStore.WATCH_SIZE" :ruler-offset="40" />
+      <CanvasRulers :watch-size="designStore.designSpec.width" :ruler-offset="40" />
       <!-- 编辑器设置按钮 -->
       <div class="editor-settings-btn" @click="openEditorSettings">
         <el-icon>
@@ -70,11 +70,13 @@ import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
+import { useDesignStore } from '@/stores/designStore'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
+const designStore = useDesignStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const exportStore = useExportStore()
@@ -179,9 +181,6 @@ const loadDesign = async (designUid: string) => {
       propertiesStore.loadProperties(config.properties)
     }
 
-    // 设置当前图标字体和大小
-    baseStore.currentIconFontSlug = config.currentIconFontSlug || ''
-    baseStore.currentIconFontSize = config.currentIconFontSize || -1
     // 设置文本大小写
     if (config.textCase !== undefined) {
       baseStore.textCase = config.textCase

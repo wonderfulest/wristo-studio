@@ -1,31 +1,43 @@
 import { defineStore } from 'pinia'
-import { useBaseStore } from '@/stores/baseStore'
 import { FabricText } from 'fabric'
 import { IndicatorElementConfig } from '@/types/elements'
 import { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { useLayerStore } from '@/stores/layerStore'
+import { nanoid } from 'nanoid'
 
 export const useAlarmsStore = defineStore('alarmsElement', {
-  state: () => ({
-  }),
+  state: () => {
+    const canvasStore = useCanvasStore()
+    const layerStore = useLayerStore()
+    const iconFontStrategyStore = useIconFontStrategyStore()
+    return {
+      canvas: canvasStore.canvas,
+      layerStore,
+      iconFontStrategyStore,
+    }
+  },
 
   actions: {
     addElement(config: IndicatorElementConfig) {
-      const baseStore = useBaseStore()
-      if (!baseStore.canvas) throw new Error('Canvas is not initialized')
-      
-      if ((baseStore as any).currentIconFontSize == -1) {
-        (baseStore as any).currentIconFontSize = config.fontSize
+      if (!this.canvas) throw new Error('Canvas is not initialized')
+
+      const strategy = this.iconFontStrategyStore
+      if (strategy.currentIconFontSize === -1) {
+        strategy.setIconFontSize(config.fontSize)
       } else {
-        config.fontSize = (baseStore as any).currentIconFontSize
+        config.fontSize = strategy.currentIconFontSize
       }
-      if ((baseStore as any).currentIconFontSlug == '') {
-        (baseStore as any).currentIconFontSlug = config.fontFamily
+      if (!strategy.currentIconFontSlug) {
+        strategy.setIconFontSlug(config.fontFamily)
       } else {
-        config.fontFamily = (baseStore as any).currentIconFontSlug
+        config.fontFamily = strategy.currentIconFontSlug
       }
-      
+      const id = config.id ?? nanoid()
       const alarmsIcon = new FabricText('\u0024', {
+        id,
         eleType: 'alarms',
         left: config.left,
         top: config.top,
@@ -41,16 +53,15 @@ export const useAlarmsStore = defineStore('alarmsElement', {
       } as unknown as Record<string, unknown>)
 
       alarmsIcon.set('text', '\u0024')
-      baseStore.canvas.add(alarmsIcon)
-      baseStore.canvas.setActiveObject(alarmsIcon)
-      baseStore.canvas.renderAll()
+      this.canvas.add(alarmsIcon)
+      this.layerStore.addLayer(alarmsIcon as any)
+      this.canvas.setActiveObject(alarmsIcon)
+      this.canvas.renderAll()
       return alarmsIcon
     },
 
     updateElement(element: any, options: Partial<IndicatorElementConfig> = {}) {
       if (!element) return
-
-      const baseStore = useBaseStore()
 
       if (options.fill !== undefined) {
         element.set('fill', options.fill)
@@ -61,11 +72,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
       }
 
       if (options.fontSize !== undefined) {
-        if (baseStore.canvas && (baseStore as any).requestUpdateIconFontSize) {
-          void (baseStore as any).requestUpdateIconFontSize(element, options.fontSize)
-        } else {
-          element.set('fontSize', options.fontSize)
-        }
+        void this.iconFontStrategyStore.requestUpdateIconFontSize(element, options.fontSize)
       }
 
       if (options.left !== undefined) {
@@ -77,7 +84,7 @@ export const useAlarmsStore = defineStore('alarmsElement', {
       }
 
       element.setCoords?.()
-      baseStore.canvas?.renderAll()
+      this.canvas?.renderAll()
     },
 
     encodeConfig(element: FabricElement): IndicatorElementConfig {

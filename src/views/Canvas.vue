@@ -16,12 +16,13 @@ import { initCanvasManager, disposeCanvasManager } from '@/engine/managers/canva
 import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoomManager'
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
 import { createHistoryManager, type HistoryManagerHandle } from '@/engine/managers/historyManager'
+import { useDesignStore } from '@/stores/designStore'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
+const designStore = useDesignStore()
 const layerStore = useLayerStore()
 const canvasStore = useCanvasStore()
-const WATCH_SIZE = computed(() => baseStore.WATCH_SIZE)
 const RULER_OFFSET = 40
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 3
@@ -31,6 +32,7 @@ const editorStore = useEditorStore()
 let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
 
+const watchSize = computed(() => designStore.designSpec.width)
 // 历史记录控制器（Pinia historyStore + Manager 封装）
 const historyStore = useHistoryStore()
 const historyManager: HistoryManagerHandle = createHistoryManager(historyStore)
@@ -43,7 +45,7 @@ onMounted(() => {
     canvasStore,
     historyStore,
     editorStore,
-    watchSize: WATCH_SIZE.value,
+    watchSize: watchSize.value,
     zoomManager: null,
   })
 
@@ -51,7 +53,7 @@ onMounted(() => {
   zoomManager = attachZoomManager({
     baseStore,
     editorStore,
-    getWatchSize: () => WATCH_SIZE.value,
+    getWatchSize: () => watchSize.value,
     getCanvasOffset: () => canvasOffset.value,
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
@@ -62,7 +64,7 @@ onMounted(() => {
   guidelineManager = attachGuidelineManager({
     baseStore,
     editorStore,
-    getWatchSize: () => WATCH_SIZE.value,
+    getWatchSize: () => watchSize.value,
     getRulerOffset: () => RULER_OFFSET,
   })
 })
@@ -77,7 +79,7 @@ onUnmounted(() => {
 
 // watchSize 变化时通知辅助线管理器刷新尺寸
 watch(
-  () => WATCH_SIZE.value,
+  () => watchSize.value,
   () => {
     guidelineManager?.updateForWatchSizeChange()
   },
