@@ -87,6 +87,9 @@ import { ref, computed, onMounted } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useBatteryStore } from '@/elements/status/battery/batteryElement'
 import ColorPicker from '@/components/color-picker/index.vue'
+import { useCanvasStore } from '@/stores/canvasStore'
+
+const canvasStore = useCanvasStore()
 
 const props = defineProps({
   // 旧通道：直接传入 FabricElement
@@ -117,7 +120,7 @@ const currentModel = computed<any>(() => {
 
 // 确保单独的颜色字段存在（仅旧通道下需要，优先读取画布组的分散颜色字段）
 if (!props.applyPatch && props.element) {
-  const group = batteryStore.baseStore.canvas.getObjects().find((obj) => obj.id === (props.element as any).id)
+  const group = canvasStore.canvas?.getObjects().find((obj) => obj.id === (props.element as any).id)
   if ((props.element as any).levelColorLow == null) {
     ;(props.element as any).levelColorLow = (group as any)?.levelColorLow || batteryStore.defaultLevelColorLow
   }
@@ -131,7 +134,7 @@ if (!props.applyPatch && props.element) {
 
 // 从画布元素中获取实际属性值
 const initElementProperties = () => {
-  const group = batteryStore.baseStore.canvas.getObjects().find((obj) => obj.id === props.element.id)
+  const group = canvasStore.canvas?.getObjects().find((obj) => obj.id === props.element.id)
   if (!group || !group.getObjects) return
 
   const objects = group.getObjects()

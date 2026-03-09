@@ -46,6 +46,8 @@ import { useBaseStore } from '@/stores/baseStore'
 import { elementConfigs } from '@/config/elements/elements'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
+import type { FabricElement } from '@/types/element'
+import { removeElement } from '@/engine/managers/elementManager'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -190,15 +192,13 @@ const undo = (): void => {
 
 const deleteLayer = (layer: MinimalFabricLike): void => {
   if (layer.locked) return
-  if (baseStore.canvas) {
-    addToHistory({ type: 'delete', element: layer })
-    baseStore.canvas.remove?.(layer as any)
-    if (layer.id) {
-      layerStore.removeLayer(layer.id)
-    }
-    debouncedUpdateElements()
-    baseStore.canvas.discardActiveObject?.()
-  }
+  if (!baseStore.canvas) return
+  const fabricElement = layer as unknown as FabricElement
+  addToHistory({ type: 'delete', element: layer })
+  removeElement(fabricElement)
+  baseStore.canvas.discardActiveObject?.()
+  baseStore.canvas.renderAll?.()
+  debouncedUpdateElements()
 }
 
 const handleKeyDown = (event: KeyboardEvent): void => {

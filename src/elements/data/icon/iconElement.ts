@@ -38,8 +38,6 @@ export const useIconStore = defineStore('iconElement', {
         const strategy = this.iconFontStrategyStore
         const resolvedFontFamily = strategy.currentIconFontSlug || config.iconFont
         const resolvedFontSize = strategy.currentIconFontSize === -1 ? Number(config.iconSize) : strategy.currentIconFontSize
-        console.log('resolvedFontFamily', resolvedFontFamily)
-        console.log('resolvedFontSize', resolvedFontSize)
         const iconOptions: Partial<IconProps> = {
           id: config.id || nanoid(),
           eleType: 'icon',
