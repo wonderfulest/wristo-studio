@@ -3,11 +3,11 @@ import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import { useIconStore } from '@/elements/data/icon/iconElement'
 import type { IconElementConfig } from '@/types/elements/data'
-import IconSettings from '@/elements/data/icon/iconSettings.vue'
+import iconSettings from '@/elements/data/icon/IconSettings.vue'
 
 export default function registerIconPlugin() {
   registerElement('icon' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useIconStore()
       return store.addElement(config as IconElementConfig)
     },
@@ -25,5 +25,5 @@ export default function registerIconPlugin() {
     },
   })
 
-  registerSettings('icon' as ElementType, IconSettings)
+  registerSettings('icon' as ElementType, iconSettings)
 }

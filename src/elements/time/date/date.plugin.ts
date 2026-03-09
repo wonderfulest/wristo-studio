@@ -7,7 +7,7 @@ import DateSettings from '@/elements/time/date/dateSettings.vue'
 
 export default function registerDatePlugin() {
   registerElement('date' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useDateStore()
       return store.addElement(config as DateElementConfig)
     },

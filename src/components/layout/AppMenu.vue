@@ -75,7 +75,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DataTypeOptions } from '@/config/settings'
 
-import { getAddElement } from '@/engine/registry/elementRegistry'
+import { getElementHandler } from '@/engine/registry/elementRegistry'
 import {
   Operation,
   Edit,
@@ -202,14 +202,13 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       console.warn('Failed to load font (continue adding element):', e)
     }
 
-    // Use registry to add element
+    // Use registry to add element via ElementHandler.add(config)
     if (elementType) {
-      const addElement = getAddElement(elementType)
-      if (addElement) {
-        
-        addElement(elementType, config)
-      } else {
-        console.warn(`No add element handler registered for type: ${elementType}`)
+      try {
+        const handler = getElementHandler(elementType)
+        await handler.add(config)
+      } catch (e) {
+        console.warn(`No add element handler registered for type: ${elementType}`, e)
       }
     }
 

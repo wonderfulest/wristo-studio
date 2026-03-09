@@ -7,7 +7,7 @@ import GoalSegmentBarSettings from '@/elements/goal/goalSegmentBar/goalSegmentBa
 
 export default function registerGoalSegmentBarPlugin() {
   registerElement('goalSegmentBar' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useGoalSegmentBarStore()
       return store.addElement(config as GoalSegmentBarElementConfig)
     },

@@ -7,7 +7,7 @@ import type { IndicatorElementConfig } from '@/types/elements'
 
 export default function registerAlarmsPlugin() {
   registerElement('alarms' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useAlarmsStore()
       return store.addElement(config as IndicatorElementConfig)
     },

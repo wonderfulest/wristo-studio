@@ -6,7 +6,7 @@ import CircleSettings from '@/elements/shapes/circle/circleSettings.vue'
 
 export default function registerCirclePlugin() {
   registerElement('circle' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useCircleStore()
       return store.addElement(config as CircleOptions)
     },

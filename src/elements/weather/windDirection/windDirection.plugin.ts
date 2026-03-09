@@ -7,7 +7,7 @@ import type { WindDirectionElementConfig } from '@/types/elements/data'
 
 export default function registerWindDirectionPlugin() {
   registerElement('windDirection' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useWindDirectionStore()
       return store.addElement(config as any)
     },

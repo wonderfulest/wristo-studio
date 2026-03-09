@@ -7,7 +7,7 @@ import DataSettings from '@/elements/data/data/dataSettings.vue'
 
 export default function registerDataPlugin() {
   registerElement('data' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useDataStore()
       return store.addElement(config as DataElementConfig)
     },

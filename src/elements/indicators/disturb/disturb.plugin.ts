@@ -7,7 +7,7 @@ import type { IndicatorElementConfig } from '@/types/elements'
 
 export default function registerDisturbPlugin() {
   registerElement('disturb' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useDisturbStore()
       return store.addElement(config as IndicatorElementConfig)
     },

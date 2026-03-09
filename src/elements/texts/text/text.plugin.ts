@@ -7,7 +7,7 @@ import type { TextElementConfig } from '@/types/elements'
 
 export default function registerTextPlugin() {
   registerElement('text' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useTextStore()
       return store.addElement(config as TextElementConfig)
     },

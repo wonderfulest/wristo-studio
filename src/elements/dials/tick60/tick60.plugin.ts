@@ -7,7 +7,7 @@ import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
 
 export default function registerTick60Plugin() {
   registerElement('tick60' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useTick60Store()
       return store.addElement(config as unknown as DialElementConfig)
     },

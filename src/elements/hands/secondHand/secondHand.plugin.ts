@@ -7,7 +7,7 @@ import type { HandElementConfig } from '@/types/elements'
 
 export default function registerSecondHandPlugin() {
   registerElement('secondHand' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useSecondHandStore()
       return store.addElement(config as HandElementConfig)
     },

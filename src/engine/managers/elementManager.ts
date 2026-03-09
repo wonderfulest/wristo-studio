@@ -9,12 +9,13 @@ import { useLayerStore } from '@/stores/layerStore'
  * 统一入口：基于 ElementRegistry 分发到各自元素 handler
  */
 
-export function addElement(type: ElementType, config: any) {
+export function addElement(type: ElementType, config: AnyElementConfig) {
   const handler = getElementHandler(type)
   if (!handler || !handler.add) {
     throw new Error(`[ElementManager] addElement: unknown type ${type}`)
   }
-  return handler.add(type, config)
+  // 标准化调用：由调用方保证 config.eleType 与 type 一致
+  return handler.add(config)
 }
 
 export function updateElement(element: FabricElement, patch: any) {

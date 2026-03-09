@@ -7,7 +7,7 @@ import type { TextElementConfig } from '@/types/elements'
 
 export default function registerRadialTextPlugin() {
   registerElement('radialText' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useRadialTextStore()
       return store.addElement(config as any)
     },

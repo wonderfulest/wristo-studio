@@ -7,7 +7,7 @@ import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
 
 export default function registerRomansPlugin() {
   registerElement('romans' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useRomansStore()
       return store.addElement(config as unknown as DialElementConfig)
     },

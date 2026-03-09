@@ -7,7 +7,7 @@ import LineSettings from '@/elements/shapes/line/lineSettings.vue'
 
 export default function registerLinePlugin() {
   registerElement('line' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useLineStore()
       return store.addElement(config as LineElementConfig as unknown as LineOptions)
     },

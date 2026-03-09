@@ -34,7 +34,7 @@
 import { ref } from 'vue'
 import { elementConfigs } from '@/config/elements/elements'
 import { useFontStore } from '@/stores/fontStore'
-import { getAddElement } from '@/engine/registry/elementRegistry'
+import { getElementHandler } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
@@ -61,27 +61,21 @@ const loadElementFont = async (config: AnyElementConfig) => {
   }
 }
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
-  
   try {
     // 加载字体
     await loadElementFont(config)
     
-    // 使用注册器添加元素
+    // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）
     if (elementType) {
-      const addElement = getAddElement(elementType)
-      if (addElement) {
-        await addElement(elementType, config)
-        
-        // 等待一小段时间确保元素已经被选中
-        setTimeout(() => {
-          emitter.emit('refresh-element-settings')
-        }, 30)
-        
+      try {
+        const handler = getElementHandler(elementType)
+        await handler.add(config)
+
         // 添加元素后通知父级切换到图层面板
         emit('switch-to-layer')
         isCollapsed.value = true
-      } else {
-        console.warn(`❌ [AddElement] No add element handler registered for type: ${elementType}`)
+      } catch (e) {
+        console.warn(`❌ [AddElement] No add element handler registered for type: ${elementType}`, e)
       }
     }
   } catch (error) {

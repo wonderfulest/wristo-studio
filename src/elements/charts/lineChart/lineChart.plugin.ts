@@ -7,7 +7,7 @@ import LineChartSettings from '@/elements/charts/lineChart/lineChartSettings.vue
 
 export default function registerLineChartPlugin() {
   registerElement('lineChart' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useLineChartStore()
       return store.addElement(config as LineChartElementConfig)
     },

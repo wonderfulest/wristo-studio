@@ -7,7 +7,7 @@ import type { TextElementConfig } from '@/types/elements'
 
 export default function registerScrollableTextPlugin() {
   registerElement('scrollableText' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useScrollableTextStore()
       return store.addElement(config as any)
     },

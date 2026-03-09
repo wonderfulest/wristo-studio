@@ -7,7 +7,7 @@ import GoalArcSettings from '@/elements/goal/goalArc/goalArcSettings.vue'
 
 export default function registerGoalArcPlugin() {
   registerElement('goalArc' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useGoalArcStore()
       return store.addElement(config as GoalArcElementConfig)
     },

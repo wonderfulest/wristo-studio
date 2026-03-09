@@ -7,7 +7,7 @@ import TimeSettings from '@/elements/time/time/timeSettings.vue'
 
 export default function registerTimePlugin() {
   registerElement('time' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useTimeStore()
       return store.addElement(config as TimeElementConfig)
     },

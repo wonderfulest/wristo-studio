@@ -7,7 +7,7 @@ import type { BatteryElementConfig } from '@/types/elements/battery'
 
 export default function registerBatteryPlugin() {
   registerElement('battery' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useBatteryStore()
       return store.addElement(config as BatteryElementConfig)
     },

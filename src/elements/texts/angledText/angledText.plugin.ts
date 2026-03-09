@@ -7,7 +7,7 @@ import type { TextElementConfig } from '@/types/elements'
 
 export default function registerAngledTextPlugin() {
   registerElement('angledText' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useAngledTextStore()
       // angledText addElement currently takes its own TextOptions; cast for now
       return store.addElement(config as any)

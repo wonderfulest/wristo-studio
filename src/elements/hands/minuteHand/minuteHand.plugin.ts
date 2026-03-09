@@ -7,7 +7,7 @@ import type { HandElementConfig } from '@/types/elements'
 
 export default function registerMinuteHandPlugin() {
   registerElement('minuteHand' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useMinuteHandStore()
       return store.addElement(config as HandElementConfig)
     },

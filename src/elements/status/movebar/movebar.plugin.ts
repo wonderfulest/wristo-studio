@@ -7,7 +7,7 @@ import type { MoveBarElementConfig } from '@/types/elements/status'
 
 export default function registerMoveBarPlugin() {
   registerElement('moveBar' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useMoveBarStore()
       return store.addElement(config as MoveBarElementConfig)
     },

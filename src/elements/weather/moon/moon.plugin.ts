@@ -7,7 +7,7 @@ import type { MoonElementConfig } from '@/types/elements/data'
 
 export default function registerMoonPlugin() {
   registerElement('moon' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useMoonStore()
       return store.addElement(config as MoonElementConfig)
     },

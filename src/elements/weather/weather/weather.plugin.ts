@@ -7,7 +7,7 @@ import type { WeatherElementConfig } from '@/types/elements/data'
 
 export default function registerWeatherPlugin() {
   registerElement('weather' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useWeatherStore()
       return store.addElement(config as WeatherElementConfig)
     },

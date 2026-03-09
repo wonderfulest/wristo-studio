@@ -7,7 +7,7 @@ import type { IndicatorElementConfig } from '@/types/elements'
 
 export default function registerBluetoothPlugin() {
   registerElement('bluetooth' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useBluetoothStore()
       return store.addElement(config as IndicatorElementConfig)
     },

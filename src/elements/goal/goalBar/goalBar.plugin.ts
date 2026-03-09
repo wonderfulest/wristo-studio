@@ -7,7 +7,7 @@ import GoalBarSettings from '@/elements/goal/goalBar/goalBarSettings.vue'
 
 export default function registerGoalBarPlugin() {
   registerElement('goalBar' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useGoalBarStore()
       return store.addElement(config as GoalBarElementConfig)
     },

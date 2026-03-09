@@ -54,7 +54,7 @@ import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
-import { decodeElementConfig, getAddElement } from '@/engine/registry/elementRegistry'
+import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
@@ -258,13 +258,6 @@ const loadElements = async (elements: AnyElementConfig[]) => {
       continue
     }
 
-    const addElement = getAddElement(element.eleType)
-    if (!addElement) {
-      console.warn(`Unknown element type: ${element.eleType}`)
-      messageStore.warning(`未知的元素类型:${element.eleType}`)
-      continue
-    }
-
     try {
       // 确保 id 存在，满足 BaseElementConfig 的类型要求
       const config = {
@@ -275,7 +268,9 @@ const loadElements = async (elements: AnyElementConfig[]) => {
       // 将业务配置写入 ElementDataStore，作为权威数据源之一
       elementDataStore.upsertElement(config as any)
 
-      await addElement(element.eleType, config)
+      // 新版 Registry：通过 ElementHandler.add(config) 创建元素，由调用方保证 eleType 一致
+      const handler = getElementHandler(element.eleType as string)
+      await handler.add(config as any)
     } catch (error) {
       console.error('加载元素失败:', element, error)
       const name = (element as any)?.name || element.eleType || '未知元素'

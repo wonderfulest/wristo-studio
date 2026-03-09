@@ -7,7 +7,7 @@ import type { IndicatorElementConfig } from '@/types/elements'
 
 export default function registerNotificationPlugin() {
   registerElement('notification' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useNotificationStore()
       return store.addElement(config as IndicatorElementConfig)
     },

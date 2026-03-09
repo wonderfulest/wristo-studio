@@ -7,7 +7,7 @@ import BarChartSettings from '@/elements/charts/barChart/barChartSettings.vue'
 
 export default function registerBarChartPlugin() {
   registerElement('barChart' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useBarChartStore()
       return store.addElement(config as BarChartElementConfig)
     },

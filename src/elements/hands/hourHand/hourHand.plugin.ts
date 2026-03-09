@@ -7,7 +7,7 @@ import type { HandElementConfig } from '@/types/elements'
 
 export default function registerHourHandPlugin() {
   registerElement('hourHand' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useHourHandStore()
       return store.addElement(config as HandElementConfig)
     },

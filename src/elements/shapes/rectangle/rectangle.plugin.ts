@@ -7,7 +7,7 @@ import type { RectangleElementConfig } from '@/types/elements'
 
 export default function registerRectanglePlugin() {
   registerElement('rectangle' as ElementType, {
-    add: (_type, config) => {
+    add: (config) => {
       const store = useRectangleStore()
       return store.addElement(config as RectangleElementConfig)
     },
