@@ -1,29 +1,28 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useDataStore } from '@/elements/data/data/dataElement'
 import type { DataElementConfig } from '@/types/elements/data'
-import DataSettings from '@/elements/data/data/dataSettings.vue'
+import { createData, updateData } from '@/elements/data/data/data.renderer'
+import { encodeData, decodeData } from '@/elements/data/data/data.encoder'
+import DataPanel from '@/elements/data/data/data.panel.vue'
 
 export default function registerDataPlugin() {
   registerElement('data' as ElementType, {
+    // renderer
     add: (config) => {
-      const store = useDataStore()
-      return store.addElement(config as DataElementConfig)
+      return createData(config as DataElementConfig)
     },
     update: (element, patch) => {
-      const store = useDataStore()
-      store.updateElement(element as any, patch as Partial<DataElementConfig>)
+      updateData(element as any, patch as Partial<DataElementConfig>)
     },
+    // encoder
     encode: (element) => {
-      const store = useDataStore()
-      return store.encodeConfig(element as any)
+      return encodeData(element as any) as any
     },
     decode: (config) => {
-      const store = useDataStore()
-      return store.decodeConfig(config as DataElementConfig)
+      return decodeData(config as DataElementConfig) as any
     },
   })
 
-  registerSettings('data' as ElementType, DataSettings)
+  registerSettings('data' as ElementType, DataPanel)
 }

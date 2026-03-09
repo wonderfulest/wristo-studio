@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useBluetoothStore } from '@/elements/indicators/bluetooth/bluetoothElement'
-import BluetoothSettings from '@/elements/indicators/bluetooth/bluetoothSettings.vue'
 import type { IndicatorElementConfig } from '@/types/elements'
+import { createBluetooth, updateBluetooth } from '@/elements/indicators/bluetooth/bluetooth.renderer'
+import { encodeBluetooth, decodeBluetooth } from '@/elements/indicators/bluetooth/bluetooth.encoder'
+import BluetoothPanel from '@/elements/indicators/bluetooth/bluetooth.panel.vue'
 
 export default function registerBluetoothPlugin() {
   registerElement('bluetooth' as ElementType, {
     add: (config) => {
-      const store = useBluetoothStore()
-      return store.addElement(config as IndicatorElementConfig)
+      return createBluetooth(config as IndicatorElementConfig)
     },
     update: (element, patch) => {
-      const store = useBluetoothStore()
-      store.updateElement(element as any, patch as Partial<IndicatorElementConfig>)
+      updateBluetooth(element as any, patch as Partial<IndicatorElementConfig>)
     },
     encode: (element) => {
-      const store = useBluetoothStore()
-      return store.encodeConfig(element as any)
+      return encodeBluetooth(element as any)
     },
     decode: (config) => {
-      const store = useBluetoothStore()
-      return store.decodeConfig(config as IndicatorElementConfig)
+      return decodeBluetooth(config as IndicatorElementConfig)
     },
   })
 
-  registerSettings('bluetooth' as ElementType, BluetoothSettings)
+  registerSettings('bluetooth' as ElementType, BluetoothPanel)
 }

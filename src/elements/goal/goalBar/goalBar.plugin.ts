@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useGoalBarStore } from '@/elements/goal/goalBar/goalBarElement'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
-import GoalBarSettings from '@/elements/goal/goalBar/goalBarSettings.vue'
+import { createGoalBar, updateGoalBar } from '@/elements/goal/goalBar/goalBar.renderer'
+import { encodeGoalBar, decodeGoalBar } from '@/elements/goal/goalBar/goalBar.encoder'
+import GoalBarPanel from '@/elements/goal/goalBar/goalBar.panel.vue'
 
 export default function registerGoalBarPlugin() {
   registerElement('goalBar' as ElementType, {
     add: (config) => {
-      const store = useGoalBarStore()
-      return store.addElement(config as GoalBarElementConfig)
+      return createGoalBar(config as GoalBarElementConfig)
     },
     update: (element, patch) => {
-      const store = useGoalBarStore()
-      store.updateElement(element as any, patch as Partial<GoalBarElementConfig>)
+      updateGoalBar(element as any, patch as Partial<GoalBarElementConfig>)
     },
     encode: (element) => {
-      const store = useGoalBarStore()
-      return store.encodeConfig(element as any)
+      return encodeGoalBar(element as any)
     },
     decode: (config) => {
-      const store = useGoalBarStore()
-      return store.decodeConfig(config as GoalBarElementConfig)
+      return decodeGoalBar(config as GoalBarElementConfig)
     },
   })
 
-  registerSettings('goalBar' as ElementType, GoalBarSettings)
+  registerSettings('goalBar' as ElementType, GoalBarPanel)
 }

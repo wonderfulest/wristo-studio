@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useIconStore } from '@/elements/data/icon/iconElement'
 import type { IconElementConfig } from '@/types/elements/data'
-import iconSettings from '@/elements/data/icon/IconSettings.vue'
+import { createIcon, updateIcon } from '@/elements/data/icon/icon.renderer'
+import { encodeIcon, decodeIcon } from '@/elements/data/icon/icon.encoder'
+import IconPanel from '@/elements/data/icon/icon.panel.vue'
 
 export default function registerIconPlugin() {
   registerElement('icon' as ElementType, {
     add: (config) => {
-      const store = useIconStore()
-      return store.addElement(config as IconElementConfig)
+      return createIcon(config as IconElementConfig)
     },
     update: (element, patch) => {
-      const store = useIconStore()
-      store.updateElement(element as any, patch as Partial<IconElementConfig>)
+      updateIcon(element as any, patch as Partial<IconElementConfig>)
     },
     encode: (element) => {
-      const store = useIconStore()
-      return store.encodeConfig(element as any)
+      return encodeIcon(element as any) as any
     },
     decode: (config) => {
-      const store = useIconStore()
-      return store.decodeConfig(config as IconElementConfig)
+      return decodeIcon(config as IconElementConfig) as any
     },
   })
 
-  registerSettings('icon' as ElementType, iconSettings)
+  registerSettings('icon' as ElementType, IconPanel)
 }

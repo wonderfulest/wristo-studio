@@ -10,8 +10,12 @@
           :selected-url="element.imageUrl"
           :selected-asset-id="element.assetId"
           asset-type="romans"
-          :on-select="(url, asset) => romansStore.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
-          :on-upload="(url, asset) => romansStore.updateSVG(element, { imageUrl: url, assetId: asset?.id })"
+          :on-select="(url, asset) =>
+            element && elementManager.updateElement(element as any, { imageUrl: url, assetId: asset?.id })
+          "
+          :on-upload="(url, asset) =>
+            element && elementManager.updateElement(element as any, { imageUrl: url, assetId: asset?.id })
+          "
         />
         <div class="tips">
           <p>小贴士：</p>
@@ -30,7 +34,6 @@
 <script setup lang="ts">
 import { ref, defineEmits, defineExpose } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useRomansStore } from '@/elements/dials/romans/romansElement'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
 
@@ -51,7 +54,6 @@ const props = defineProps({
   },
 })
 
-const romansStore = useRomansStore()
 const formRef = ref(null)
 
 // 最小化设置，无位置/尺寸/颜色控件

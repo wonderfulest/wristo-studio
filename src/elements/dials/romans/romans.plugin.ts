@@ -1,27 +1,24 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useRomansStore } from '@/elements/dials/romans/romansElement'
 import RomansSettings from '@/elements/dials/romans/romansSettings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
+import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
+import { createRomans, updateRomans } from '@/elements/dials/romans/romans.renderer'
+import { encodeRomans, decodeRomans } from '@/elements/dials/romans/romans.encoder'
 
 export default function registerRomansPlugin() {
   registerElement('romans' as ElementType, {
     add: (config) => {
-      const store = useRomansStore()
-      return store.addElement(config as unknown as DialElementConfig)
+      return createRomans(config as unknown as DialElementConfig) as any
     },
     update: (element, patch) => {
-      const store = useRomansStore()
-      store.updateElement(element as any, patch as any)
+      return updateRomans(element as any, patch as any)
     },
     encode: (element) => {
-      const store = useRomansStore()
-      return store.encodeConfig(element as any)
+      return encodeRomans(element as any) as any
     },
     decode: (config) => {
-      const store = useRomansStore()
-      return store.decodeConfig(config as any)
+      return decodeRomans(config as any) as any
     },
   })
 

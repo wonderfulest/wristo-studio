@@ -2,28 +2,25 @@ import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import type { LineElementConfig } from '@/types/elements'
-import { useLineStore, type LineOptions } from '@/elements/shapes/line/lineElement'
-import LineSettings from '@/elements/shapes/line/lineSettings.vue'
+import { createLine, updateLine } from '@/elements/shapes/line/line.renderer'
+import { encodeLine, decodeLine } from '@/elements/shapes/line/line.encoder'
+import LinePanel from '@/elements/shapes/line/line.panel.vue'
 
 export default function registerLinePlugin() {
   registerElement('line' as ElementType, {
     add: (config) => {
-      const store = useLineStore()
-      return store.addElement(config as LineElementConfig as unknown as LineOptions)
+      return createLine(config as LineElementConfig)
     },
     update: (element, patch) => {
-      const store = useLineStore()
-      store.updateElement(element as any, patch as Partial<LineOptions>)
+      updateLine(element as any, patch as Partial<LineElementConfig>)
     },
     encode: (element) => {
-      const store = useLineStore()
-      return store.encodeConfig(element as any)
+      return encodeLine(element as any) as any
     },
     decode: (config) => {
-      const store = useLineStore()
-      return store.decodeConfig(config as LineElementConfig)
+      return decodeLine(config as LineElementConfig) as any
     },
   })
 
-  registerSettings('line' as ElementType, LineSettings)
+  registerSettings('line' as ElementType, LinePanel)
 }

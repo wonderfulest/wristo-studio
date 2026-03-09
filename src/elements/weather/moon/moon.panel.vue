@@ -3,7 +3,13 @@
 
     <el-form label-position="left" label-width="120px">
       <el-form-item label="Asset">
-        <el-select v-model="element.imageUrl" placeholder="Select moon image" filterable @change="updateElement" style="width: 100%">
+        <el-select
+          v-model="element.imageUrl"
+          placeholder="Select moon image"
+          filterable
+          @change="() => applyUpdate({ imageUrl: element.imageUrl })"
+          style="width: 100%"
+        >
           <el-option
             v-for="opt in assetOptions"
             :key="opt.value"
@@ -18,7 +24,7 @@
       <el-form-item label="Height">
         <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
       </el-form-item>
-          <el-form-item label="Phase Index">
+      <el-form-item label="Phase Index">
         <el-slider v-model="phaseIndex" :min="0" :max="assetUrls.length - 1" :step="1" show-stops @change="onPhaseChange" />
       </el-form-item>
 
@@ -30,7 +36,6 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useMoonStore } from '@/elements/weather/moon/moonElement'
 import type { FabricElement } from '@/types/element'
 
 const props = defineProps<{ 
@@ -39,40 +44,8 @@ const props = defineProps<{
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 
-const moonStore = useMoonStore()
-
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
-})
-
-// 初始属性通过 initElementProperties 设置
-
-// 从画布元素中获取实际属性值
-const initElementProperties = (): void => {
-  const canvas = moonStore.baseStore.canvas
-  if (!canvas) return
-  const group = (canvas.getObjects() as Array<{ id?: string } & Record<string, unknown>>).find(o => o.id === props.element.id)
-  if (!group) return
-
-  const meta = group as unknown as { moonImageUrl?: string; moonImageWidth?: number; moonImageHeight?: number }
-  const imageUrl = meta.moonImageUrl
-  const width = meta.moonImageWidth
-  const height = meta.moonImageHeight
-
-  console.log('[MoonSettings] initElementProperties', { imageUrl, width, height })
-
-  const el = props.element as unknown as { imageUrl?: string; width?: number; height?: number }
-  if (typeof imageUrl === 'string') el.imageUrl = imageUrl
-  if (typeof width === 'number') el.width = width
-  if (typeof height === 'number') el.height = height
-}
-
-// 组件挂载时初始化属性
-onMounted(() => {
-  if (!props.applyPatch && props.element) {
-    initElementProperties()
-  }
-  syncPhaseIndex()
 })
 
 // load built asset urls for moon phases
@@ -108,6 +81,10 @@ watch(() => (currentModel.value as any).imageUrl, () => {
   syncPhaseIndex()
 })
 
+onMounted(() => {
+  syncPhaseIndex()
+})
+
 const onPhaseChange = (val: number): void => {
   const total = assetUrls.value.length
   const clamped = Math.max(0, Math.min(Number(val || 0), total - 1))
@@ -127,6 +104,8 @@ const applyUpdate = (patch: Record<string, any>): void => {
   }
 }
 
+const element = computed<any>(() => currentModel.value)
+
 // 保持 1:1 的尺寸归一化
 const normalizeSize = (v: number | undefined): number => {
   const n = Number.isFinite(v as number) ? Number(v) : 42
@@ -134,7 +113,7 @@ const normalizeSize = (v: number | undefined): number => {
 }
 
 const setSquare = (size: number): void => {
-  const el = props.element as unknown as { width?: number; height?: number }
+  const el = element.value as { width?: number; height?: number }
   el.width = size
   el.height = size
 }
@@ -143,20 +122,12 @@ const onWidthChange = (val: number): void => {
   const size = normalizeSize(val)
   setSquare(size)
   applyUpdate({ width: size, height: size })
-
-  if (!props.applyPatch && props.element) {
-    moonStore.setImageSize(props.element, size, size)
-  }
 }
 
 const onHeightChange = (val: number): void => {
   const size = normalizeSize(val)
   setSquare(size)
   applyUpdate({ width: size, height: size })
-
-  if (!props.applyPatch && props.element) {
-    moonStore.setImageSize(props.element, size, size)
-  }
 }
 </script>
 

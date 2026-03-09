@@ -1,27 +1,24 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useMoonStore } from '@/elements/weather/moon/moonElement'
-import MoonSettings from '@/elements/weather/moon/moonSettings.vue'
 import type { MoonElementConfig } from '@/types/elements/data'
+import { createMoon, updateMoon } from '@/elements/weather/moon/moon.renderer'
+import { encodeMoon, decodeMoon } from '@/elements/weather/moon/moon.encoder'
+import MoonSettings from '@/elements/weather/moon/moon.panel.vue'
 
 export default function registerMoonPlugin() {
   registerElement('moon' as ElementType, {
     add: (config) => {
-      const store = useMoonStore()
-      return store.addElement(config as MoonElementConfig)
+      return createMoon(config as MoonElementConfig)
     },
     update: (element, patch) => {
-      const store = useMoonStore()
-      store.updateElement(element as any, patch as Partial<MoonElementConfig>)
+      updateMoon(element as any, patch as Partial<MoonElementConfig>)
     },
     encode: (element) => {
-      const store = useMoonStore()
-      return store.encodeConfig(element as any)
+      return encodeMoon(element as any) as any
     },
     decode: (config) => {
-      const store = useMoonStore()
-      return store.decodeConfig(config as MoonElementConfig)
+      return decodeMoon(config as MoonElementConfig) as any
     },
   })
 

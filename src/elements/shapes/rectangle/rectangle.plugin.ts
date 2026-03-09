@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useRectangleStore } from '@/elements/shapes/rectangle/rectangleElement'
-import RectangleSettings from '@/elements/shapes/rectangle/rectangleSettings.vue'
 import type { RectangleElementConfig } from '@/types/elements'
+import { createRectangle, updateRectangle } from '@/elements/shapes/rectangle/rectangle.renderer'
+import { encodeRectangle, decodeRectangle } from '@/elements/shapes/rectangle/rectangle.encoder'
+import RectanglePanel from '@/elements/shapes/rectangle/rectangle.panel.vue'
 
 export default function registerRectanglePlugin() {
   registerElement('rectangle' as ElementType, {
     add: (config) => {
-      const store = useRectangleStore()
-      return store.addElement(config as RectangleElementConfig)
+      return createRectangle(config as RectangleElementConfig)
     },
     update: (element, patch) => {
-      const store = useRectangleStore()
-      store.updateElement(element as any, patch as Partial<RectangleElementConfig> as any)
+      updateRectangle(element as any, patch as Partial<RectangleElementConfig>)
     },
     encode: (element) => {
-      const store = useRectangleStore()
-      return store.encodeConfig(element as any)
+      return encodeRectangle(element as any) as any
     },
     decode: (config) => {
-      const store = useRectangleStore()
-      return store.decodeConfig(config as RectangleElementConfig)
+      return decodeRectangle(config as RectangleElementConfig) as any
     },
   })
 
-  registerSettings('rectangle' as ElementType, RectangleSettings)
+  registerSettings('rectangle' as ElementType, RectanglePanel)
 }

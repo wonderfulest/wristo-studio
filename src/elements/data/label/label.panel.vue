@@ -76,12 +76,10 @@ const props = defineProps<{
 
 const formRef = ref<any>(null)
 
-// 当前表单绑定的数据模型：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
 })
 
-// 统一更新：先校验，再通过 applyPatch 或 elementManager 下发补丁
 const applyUpdate = async (patch: Record<string, any>) => {
   try {
     await formRef.value?.validate?.()
@@ -100,7 +98,6 @@ const applyUpdate = async (patch: Record<string, any>) => {
   }
 }
 
-// 保持原有的 updateElement 调用点，只是改为派发补丁
 const updateElement = async () => {
   const model = currentModel.value as any
   await applyUpdate({
@@ -115,7 +112,6 @@ const updateElement = async () => {
   })
 }
 
-// 添加关闭时的验证方法
 const handleClose = async () => {
   try {
     await formRef.value.validate()
@@ -125,10 +121,9 @@ const handleClose = async () => {
   }
 }
 
-// 暴露方法给父组件
 defineExpose({
   formRef,
-  handleClose
+  handleClose,
 })
 </script>
 

@@ -61,10 +61,8 @@
           @change="(v: number) => applyUpdate({ opacity: v })"
         />
       </el-form-item>
-
     </el-form>
   </div>
-  
 </template>
 
 <script setup lang="ts">
@@ -73,20 +71,15 @@ import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 
 const props = defineProps<{
-  // 旧通道：直接传入 Fabric Line
   element?: any
-  // 新通道：业务配置 + 通用补丁函数
   config?: Record<string, any> | null
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 
-// 当前表单绑定的数据模型：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
 })
 
-// 统一更新：优先使用上层传下来的 applyPatch（会同时更新 DataStore + Fabric）
-// 若不存在，则回退到 elementManager.updateElement 旧通道，保持兼容
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {
     props.applyPatch(patch)

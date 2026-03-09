@@ -1,28 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useCircleStore, type CircleOptions } from '@/elements/shapes/circle/circleElement'
-import CircleSettings from '@/elements/shapes/circle/circleSettings.vue'
+import type { CircleElementConfig } from '@/types/elements'
+import { createCircle, updateCircle } from '@/elements/shapes/circle/circle.renderer'
+import { encodeCircle, decodeCircle } from '@/elements/shapes/circle/circle.encoder'
+import CirclePanel from '@/elements/shapes/circle/circle.panel.vue'
 
 export default function registerCirclePlugin() {
   registerElement('circle' as ElementType, {
     add: (config) => {
-      const store = useCircleStore()
-      return store.addElement(config as CircleOptions)
+      return createCircle(config as CircleElementConfig)
     },
     update: (element, patch) => {
-      const store = useCircleStore()
-      store.updateElement(element as any, patch as CircleOptions)
+      updateCircle(element as any, patch as Partial<CircleElementConfig>)
     },
     encode: (element) => {
-      const store = useCircleStore()
-      return store.encodeConfig(element as any) as any
+      return encodeCircle(element as any) as any
     },
     decode: (config) => {
-      const store = useCircleStore()
-      return store.decodeConfig(config as any)
+      return decodeCircle(config as CircleElementConfig) as any
     },
   })
 
-  registerSettings('circle' as ElementType, CircleSettings)
+  registerSettings('circle' as ElementType, CirclePanel)
 }
