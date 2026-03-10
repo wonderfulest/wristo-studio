@@ -1,7 +1,7 @@
-import type { FabricElement } from '@/types/element'
-import type { IndicatorElementConfig } from '@/types/elements'
 import { FabricText, type TextProps } from 'fabric'
 import { nanoid } from 'nanoid'
+import type { FabricElement } from '@/types/element'
+import type { IndicatorElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -9,7 +9,14 @@ import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
-export async function createBluetooth(config: IndicatorElementConfig): Promise<FabricElement> {
+// 目前 indicators 仅支持这四种文本类指示器
+export type IndicatorTextType = 'bluetooth' | 'alarms' | 'disturb' | 'notification'
+
+export async function createIndicatorText(
+  eleType: IndicatorTextType,
+  glyph: string,
+  config: IndicatorElementConfig,
+): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -17,10 +24,10 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
 
   const canvas = canvasStore.canvas
   if (!canvas) {
-    throw new Error('Canvas is not initialized, cannot add bluetooth element')
+    throw new Error('Canvas is not initialized, cannot add indicator element')
   }
 
-  type BluetoothProps = TextProps & IndicatorElementConfig
+  type IndicatorTextProps = TextProps & IndicatorElementConfig
 
   const strategy = iconFontStrategyStore
   if (strategy.currentIconFontSize === -1) {
@@ -36,9 +43,9 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
 
   const id = config.id || nanoid()
 
-  const bluetoothOptions: Partial<BluetoothProps> = {
+  const textOptions: Partial<IndicatorTextProps> = {
     id,
-    eleType: 'bluetooth',
+    eleType,
     left: config.left,
     top: config.top,
     originX: config.originX as any,
@@ -46,13 +53,13 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
     fill: config.fill,
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
-    metricSymbol: config.metricSymbol,
+    metricSymbol: (config as any).metricSymbol,
     selectable: true,
     hasControls: false,
     hasBorders: true,
   }
 
-  const element = new FabricText('\u0022', bluetoothOptions as TextProps & IndicatorElementConfig)
+  const element = new FabricText(glyph, textOptions as TextProps & IndicatorElementConfig)
 
   canvas.add(element as FabricText)
   layerStore.addLayer(element as unknown as MinimalFabricLike)
@@ -61,7 +68,7 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
 
   const encoded: IndicatorElementConfig = {
     id: (element as any).id ?? id,
-    eleType: 'bluetooth',
+    eleType,
     left: (element as any).left ?? config.left ?? 0,
     top: (element as any).top ?? config.top ?? 0,
     originX: ((element as any).originX as any) ?? config.originX ?? 'center',
@@ -69,7 +76,7 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
     fontFamily: (element as any).fontFamily ?? config.fontFamily,
     fontSize: Number((element as any).fontSize ?? config.fontSize),
     fill: ((element as any).fill as string) ?? (config.fill as string),
-    metricSymbol: (element as any).metricSymbol ?? config.metricSymbol,
+    metricSymbol: (element as any).metricSymbol,
     topBase: encodeTopBaseForElement(element as unknown as FabricElement),
   } as IndicatorElementConfig
 
@@ -78,10 +85,11 @@ export async function createBluetooth(config: IndicatorElementConfig): Promise<F
   return element as unknown as FabricElement
 }
 
-export function updateBluetooth(
+export async function updateIndicatorText(
+  eleType: IndicatorTextType,
   element: FabricElement,
   patch: Partial<IndicatorElementConfig> = {},
-): void {
+): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   const elementDataStore = useElementDataStore()
@@ -102,7 +110,7 @@ export function updateBluetooth(
     top: patch.top,
     originX: patch.originX,
     originY: patch.originY,
-    metricSymbol: patch.metricSymbol,
+    metricSymbol: (patch as any).metricSymbol,
   }
 
   Object.entries(updateProps).forEach(([key, value]) => {
@@ -125,7 +133,7 @@ export function updateBluetooth(
   if (objId != null) {
     const encoded: IndicatorElementConfig = {
       id: (obj as any).id as any,
-      eleType: 'bluetooth',
+      eleType,
       left: obj.left as number,
       top: obj.top as number,
       originX: obj.originX as any,

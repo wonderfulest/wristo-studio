@@ -93,7 +93,7 @@ const updateColor = (newColor: string) => {
 }
 
 // 更新字体
-const updateFontFamily = (newFontFamily: string) => {
+const updateFontFamily = async (newFontFamily: string) => {
   if (props.applyPatch && props.config) {
     props.applyPatch({ fontFamily: newFontFamily })
     fontFamily.value = newFontFamily

@@ -1,29 +1,27 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useDisturbStore } from '@/elements/indicators/disturb/disturbElement'
-import DisturbSettings from '@/elements/indicators/disturb/disturbSettings.vue'
+import DisturbPanel from '@/elements/indicators/disturb/disturb.panel.vue'
 import type { IndicatorElementConfig } from '@/types/elements'
+import { createIndicatorText, updateIndicatorText } from '@/elements/indicators/common/indicatorText.renderer'
+import { encodeIndicatorText, decodeIndicatorText } from '@/elements/indicators/common/indicatorText.encoder'
 
 export default function registerDisturbPlugin() {
   registerElement('disturb' as ElementType, {
     add: (config) => {
-      const store = useDisturbStore()
-      return store.addElement(config as IndicatorElementConfig)
+      // 固定 glyph '\u0021'，表示免打扰图标
+      return createIndicatorText('disturb', '\u0021', config as IndicatorElementConfig)
     },
     update: (element, patch) => {
-      const store = useDisturbStore()
-      store.updateElement(element as any, patch as Partial<IndicatorElementConfig>)
+      return updateIndicatorText('disturb', element as any, patch as Partial<IndicatorElementConfig>)
     },
     encode: (element) => {
-      const store = useDisturbStore()
-      return store.encodeConfig(element as any)
+      return encodeIndicatorText('disturb', element as any)
     },
     decode: (config) => {
-      const store = useDisturbStore()
-      return store.decodeConfig(config as IndicatorElementConfig)
+      return decodeIndicatorText('disturb', config as IndicatorElementConfig)
     },
   })
 
-  registerSettings('disturb' as ElementType, DisturbSettings)
+  registerSettings('disturb' as ElementType, DisturbPanel)
 }

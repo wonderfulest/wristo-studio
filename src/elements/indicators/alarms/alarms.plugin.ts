@@ -1,29 +1,27 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useAlarmsStore } from '@/elements/indicators/alarms/alarmsElement'
-import AlarmsSettings from '@/elements/indicators/alarms/alarmsSettings.vue'
+import AlarmsPanel from '@/elements/indicators/alarms/alarms.panel.vue'
 import type { IndicatorElementConfig } from '@/types/elements'
+import { createIndicatorText, updateIndicatorText } from '@/elements/indicators/common/indicatorText.renderer'
+import { encodeIndicatorText, decodeIndicatorText } from '@/elements/indicators/common/indicatorText.encoder'
 
 export default function registerAlarmsPlugin() {
   registerElement('alarms' as ElementType, {
     add: (config) => {
-      const store = useAlarmsStore()
-      return store.addElement(config as IndicatorElementConfig)
+      // 固定 glyph '\u0024'，表示闹钟图标
+      return createIndicatorText('alarms', '\u0024', config as IndicatorElementConfig)
     },
     update: (element, patch) => {
-      const store = useAlarmsStore()
-      store.updateElement(element as any, patch as Partial<IndicatorElementConfig>)
+      return updateIndicatorText('alarms', element as any, patch as Partial<IndicatorElementConfig>)
     },
     encode: (element) => {
-      const store = useAlarmsStore()
-      return store.encodeConfig(element as any)
+      return encodeIndicatorText('alarms', element as any)
     },
     decode: (config) => {
-      const store = useAlarmsStore()
-      return store.decodeConfig(config as IndicatorElementConfig)
+      return decodeIndicatorText('alarms', config as IndicatorElementConfig)
     },
   })
 
-  registerSettings('alarms' as ElementType, AlarmsSettings)
+  registerSettings('alarms' as ElementType, AlarmsPanel)
 }
