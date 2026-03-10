@@ -28,8 +28,18 @@ export const useLayerStore = defineStore('layerStore', {
   // actions
   actions: {
     addLayer(element: MinimalFabricLike): void {
+      console.debug('[LayerStore:addLayer] incoming element', {
+        raw: element,
+        id: (element as any)?.id,
+        eleType: (element as any)?.eleType,
+        type: typeof element,
+      })
       if (!element || !element.id || !element.eleType) {
-        console.error('无效的元素')
+        console.error('[LayerStore:addLayer] 无效的元素', {
+          hasElement: !!element,
+          id: (element as any)?.id,
+          eleType: (element as any)?.eleType,
+        })
         return
       }
       const layerElement: LayerElement = {

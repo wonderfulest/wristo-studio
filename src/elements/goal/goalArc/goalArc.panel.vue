@@ -4,17 +4,6 @@
 
     <el-form ref="formRef" :model="currentModel" label-position="left" label-width="100px" :rules="rules">
       <GoalPropertyField v-model="currentModel.goalProperty" @change="updateElement" />
-      <!-- 位置设置 -->
-      <div class="setting-item">
-        <label>Position</label>
-        <PositionInputs 
-          :left="currentModel.left"
-          :top="currentModel.top"
-          @update:left="(v)=> currentModel.left = v"
-          @update:top="(v)=> currentModel.top = v"
-          @change="(p)=> updatePosition(Math.round(p.left), Math.round(p.top))"
-        />
-      </div>
       <!-- 尺寸属性 -->
       <div class="setting-item">
         <div class="size-inputs">
@@ -58,7 +47,7 @@
         <!-- 添加方向选择 -->
         <div class="direction-group">
           <label>Direction</label>
-          <el-radio-group v-model="element.counterClockwise" @change="updateElement">
+          <el-radio-group v-model="currentModel.counterClockwise" @change="updateElement">
             <el-radio :label="false">Clockwise</el-radio>
             <el-radio :label="true">Counterclockwise</el-radio>
           </el-radio-group>
@@ -73,25 +62,13 @@
             <label>Foreground Color</label>
             <ColorPicker
               v-model="fgColor"
-              @change="
-                (val) => {
-                  goalArcStore.updateElement(element, {
-                    color: val
-                  })
-                }
-              " />
+              @change="onFgColorChange" />
           </div>
           <div class="input-group">
             <label>Background Color</label>
             <ColorPicker
               v-model="bgColor"
-              @change="
-                (val) => {
-                  goalArcStore.updateElement(element, {
-                    bgColor: val
-                  })
-                }
-              " />
+              @change="onBgColorChange" />
           </div>
         </div>
       </div>
@@ -101,16 +78,11 @@
         <label>Progress</label>
         <input
           type="range"
-          :value="goalArcStore.progressMap.get(element.id) * 100"
+          :value="Number((currentModel as any).progress || 0) * 100"
           min="0"
           max="100"
-          @input="
-            (e) => {
-              goalArcStore.progressMap.set(element.id, Number(e.target.value) / 100)
-              updateProgress()
-            }
-          " />
-        <span>{{ Math.round(goalArcStore.progressMap.get(element.id) * 100) }}%</span>
+          @input="onProgressInput" />
+        <span>{{ Math.round(Number((currentModel as any).progress || 0) * 100) }}%</span>
       </div>
     </el-form>
   </div>
@@ -119,13 +91,9 @@
 <script setup lang="ts">
 import { ref, computed, defineEmits, defineExpose, watchEffect } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useBaseStore } from '@/stores/baseStore'
-import { useGoalArcStore } from '@/elements/goal/goalArc/goalArcElement'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { ElTooltip } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 
 const emit = defineEmits(['close'])
@@ -144,9 +112,6 @@ const props = defineProps({
     required: false,
   },
 })
-
-const baseStore = useBaseStore()
-const goalArcStore = useGoalArcStore()
 
 const formRef = ref(null)
 
@@ -238,6 +203,18 @@ const onBgStrokeWidthChange = (val) => {
   applyUpdate({ bgStrokeWidth: n })
 }
 
+// 颜色变更：更新本地模型并走统一 applyUpdate
+const onFgColorChange = (val: string) => {
+  fgColor.value = val
+  ;(currentModel.value as any).color = val
+  void applyUpdate({ color: val })
+}
+const onBgColorChange = (val: string) => {
+  bgColor.value = val
+  ;(currentModel.value as any).bgColor = val
+  void applyUpdate({ bgColor: val })
+}
+
 // 变更处理：角度
 const normalizeAngle = (v) => {
   const n = Number(v)
@@ -278,7 +255,7 @@ const applyUpdate = async (patch: Record<string, any>) => {
       endAngle: (currentModel.value as any).endAngle,
       counterClockwise: (currentModel.value as any).counterClockwise,
       goalProperty: (currentModel.value as any).goalProperty,
-      progress: goalArcStore.progressMap.get((props.element as any)?.id),
+      progress: (currentModel.value as any).progress ?? 0,
     }
 
     const merged = { ...basePatch, ...patch }
@@ -308,18 +285,23 @@ const updateElement = async () => {
   await applyUpdate({})
 }
 
-// 更新进度
-const updateProgress = () => {
-  goalArcStore.updateProgress(props.element, goalArcStore.progressMap.get(props.element.id))
+// 更新进度（通过 elementManager + progress 字段）
+const onProgressInput = (e: Event) => {
+  const input = e.target as HTMLInputElement | null
+  if (!input) return
+  const raw = Number(input.value)
+  const progress = Number.isFinite(raw) ? raw / 100 : 0
+  ;(currentModel.value as any).progress = progress
+  void applyUpdate({ progress })
 }
 
 // 添加关闭时的验证方法
 const handleClose = async () => {
   try {
-    await formRef.value.validate()
+    await formRef.value?.validate()
     emit('close')
   } catch (error) {
-    ElMessage.warning('Please complete the required fields first')
+    // ignore validate error on close
   }
 }
 

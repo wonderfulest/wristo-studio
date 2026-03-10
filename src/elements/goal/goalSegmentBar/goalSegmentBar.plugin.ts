@@ -1,27 +1,35 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useGoalSegmentBarStore } from '@/elements/goal/goalSegmentBar/goalSegmentBarElement'
 import type { GoalSegmentBarElementConfig } from '@/types/elements/goal'
-import GoalSegmentBarSettings from '@/elements/goal/goalSegmentBar/goalSegmentBarSettings.vue'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import { createGoalSegmentBar, updateGoalSegmentBar } from '@/elements/goal/goalSegmentBar/goalSegmentBar.renderer'
+import { encodeGoalSegmentBar, decodeGoalSegmentBar } from '@/elements/goal/goalSegmentBar/goalSegmentBar.encoder'
+import GoalSegmentBarSettings from '@/elements/goal/goalSegmentBar/goalSegmentBar.panel.vue'
 
 export default function registerGoalSegmentBarPlugin() {
   registerElement('goalSegmentBar' as ElementType, {
     add: (config) => {
-      const store = useGoalSegmentBarStore()
-      return store.addElement(config as GoalSegmentBarElementConfig)
+      const element = createGoalSegmentBar(config as GoalSegmentBarElementConfig)
+
+      try {
+        const fullConfig = encodeGoalSegmentBar(element as any)
+        const elementDataStore = useElementDataStore()
+        elementDataStore.upsertElement(fullConfig as any)
+      } catch (e) {
+        console.warn('[goalSegmentBar.plugin] failed to encode & upsert element config after add', e)
+      }
+
+      return element
     },
     update: (element, patch) => {
-      const store = useGoalSegmentBarStore()
-      store.updateElement(element as any, patch as Partial<GoalSegmentBarElementConfig>)
+      return updateGoalSegmentBar(element as any, patch as Partial<GoalSegmentBarElementConfig>)
     },
     encode: (element) => {
-      const store = useGoalSegmentBarStore()
-      return store.encodeConfig(element as any)
+      return encodeGoalSegmentBar(element as any)
     },
     decode: (config) => {
-      const store = useGoalSegmentBarStore()
-      return store.decodeConfig(config as GoalSegmentBarElementConfig)
+      return decodeGoalSegmentBar(config as GoalSegmentBarElementConfig)
     },
   })
 
