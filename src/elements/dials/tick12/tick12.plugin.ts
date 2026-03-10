@@ -3,7 +3,7 @@ import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import { useTick12Store } from '@/elements/dials/tick12/tick12Element'
 import Tick12Settings from '@/elements/dials/tick12/tick12Settings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
+import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
 
 export default function registerTick12Plugin() {
   registerElement('tick12' as ElementType, {

@@ -3,7 +3,7 @@ import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import { useCenterCapStore } from '@/elements/dials/centerCap/centerCapElement'
 import CenterCapSettings from '@/elements/dials/centerCap/centerCapSettings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
+import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
 
 export default function registerCenterCapPlugin() {
   registerElement('centerCap' as ElementType, {

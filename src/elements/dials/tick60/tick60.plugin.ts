@@ -3,7 +3,7 @@ import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import { useTick60Store } from '@/elements/dials/tick60/tick60Element'
 import Tick60Settings from '@/elements/dials/tick60/tick60Settings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romansElement'
+import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
 
 export default function registerTick60Plugin() {
   registerElement('tick60' as ElementType, {

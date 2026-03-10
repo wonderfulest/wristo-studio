@@ -1,7 +1,7 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import RomansSettings from '@/elements/dials/romans/romansSettings.vue'
+import RomansPanel from '@/elements/dials/romans/romans.panel.vue'
 import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
 import { createRomans, updateRomans } from '@/elements/dials/romans/romans.renderer'
 import { encodeRomans, decodeRomans } from '@/elements/dials/romans/romans.encoder'
@@ -22,5 +22,5 @@ export default function registerRomansPlugin() {
     },
   })
 
-  registerSettings('romans' as ElementType, RomansSettings)
+  registerSettings('romans' as ElementType, RomansPanel)
 }

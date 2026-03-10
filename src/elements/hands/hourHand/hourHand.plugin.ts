@@ -4,7 +4,7 @@ import type { ElementType } from '@/types/element'
 import type { HandElementConfig } from '@/types/elements'
 import { createHand, updateHand } from '@/elements/hands/common/hand.renderer'
 import { encodeHand, decodeHand } from '@/elements/hands/common/hand.encoder'
-import HourHandSettings from '@/elements/hands/hourHand/hourHandSettings.vue'
+import HourHandPanel from '@/elements/hands/hourHand/hourHand.panel.vue'
 
 export default function registerHourHandPlugin() {
   registerElement('hourHand' as ElementType, {
@@ -23,5 +23,5 @@ export default function registerHourHandPlugin() {
     },
   })
 
-  registerSettings('hourHand' as ElementType, HourHandSettings)
+  registerSettings('hourHand' as ElementType, HourHandPanel)
 }

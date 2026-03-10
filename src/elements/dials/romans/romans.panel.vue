@@ -7,14 +7,14 @@
       <div class="setting-item">
         <label>数字样式</label>
         <AssetPicker
-          :selected-url="element.imageUrl"
-          :selected-asset-id="element.assetId"
+          :selected-url="element?.imageUrl"
+          :selected-asset-id="element?.assetId"
           asset-type="romans"
           :on-select="(url, asset) =>
-            element && elementManager.updateElement(element as any, { imageUrl: url, assetId: asset?.id })
+            element && applyUpdate({ imageUrl: url, assetId: asset?.id })
           "
           :on-upload="(url, asset) =>
-            element && elementManager.updateElement(element as any, { imageUrl: url, assetId: asset?.id })
+            element && applyUpdate({ imageUrl: url, assetId: asset?.id })
           "
         />
         <div class="tips">
@@ -32,29 +32,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, defineExpose } from 'vue'
+import { ref } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
 
 const emit = defineEmits(['close'])
 
-const props = defineProps({
-  element: {
-    type: Object,
-    required: false,
-  },
-  config: {
-    type: Object,
-    required: false,
-  },
-  applyPatch: {
-    type: Function,
-    required: false,
-  },
-})
+const props = defineProps<{
+  element?: any
+  config?: Record<string, any>
+  applyPatch?: (patch: Record<string, any>) => void
+}>()
 
-const formRef = ref(null)
+const formRef = ref<any>(null)
 
 // 最小化设置，无位置/尺寸/颜色控件
 
@@ -72,7 +63,7 @@ const applyUpdate = (patch: Record<string, any>) => {
 // 添加关闭时的验证方法
 const handleClose = async () => {
   try {
-    await formRef.value.validate()
+    await formRef.value?.validate?.()
     emit('close')
   } catch (error) {
     ElMessage.warning('请先完成必填项设置')

@@ -1,14 +1,13 @@
 <template>
   <div class="settings-section">
-    <h3>时针设置</h3>
+    <h3>秒针设置</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
-        <label>指针hand</label>
         <AssetPicker
           :selected-url="element?.imageUrl"
           :selected-asset-id="element?.assetId"
-          asset-type="hour"
+          asset-type="second"
           :on-select="handleAssetSelect"
           :on-upload="handleAssetUpload"
         />
@@ -20,7 +19,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useHourHandStore } from '@/elements/hands/hourHand/hourHandElement'
 import AssetPicker from '@/components/asset-picker/index.vue'
 
 const props = defineProps({
@@ -37,18 +35,7 @@ const props = defineProps({
     required: false,
   },
 })
-
-const hourHandStore = useHourHandStore()
 const formRef = ref(null)
-
-// 定义提示内容，使用 HTML 格式
-const tooltipContent = `
-  <div class="tooltip-content">
-    <p>1. 3点钟为0度，6点钟为90度，9点钟为180度，12点钟为270度</p>
-    <p>2. 顺时针方向增加角度</p>
-    <p>3. 角度范围0到359</p>
-  </div>
-`
 
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {
@@ -63,32 +50,12 @@ const applyUpdate = (patch: Record<string, any>) => {
 
 const handleAssetSelect = (url: string, asset: any) => {
   const sourceUrl = asset?.file?.url || url
-  if (props.applyPatch && props.config) {
-    applyUpdate({ imageUrl: sourceUrl, assetId: asset?.id })
-  } else if (props.element) {
-    hourHandStore.updateHandSVG(props.element as any, { imageUrl: sourceUrl, assetId: asset?.id } as any)
-  }
+  applyUpdate({ imageUrl: sourceUrl, assetId: asset?.id })
 }
 
 const handleAssetUpload = (url: string, asset: any) => {
   handleAssetSelect(url, asset)
 }
-
-// 添加关闭时的验证方法
-const handleClose = async () => {
-  try {
-    await formRef.value.validate()
-    emit('close')
-  } catch (error) {
-    ElMessage.warning('请先完成必填项设置')
-  }
-}
-
-// 暴露方法给父组件
-defineExpose({
-  formRef,
-  handleClose
-})
 </script>
 
 <style scoped>

@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
-import type { DialElementConfig } from '../romans/romansElement'
+import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
 
 export const useCenterCapStore = defineStore('centerCapElement', {
   state: () => {

@@ -1,29 +1,27 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useMinuteHandStore } from '@/elements/hands/minuteHand/minuteHandElement'
-import MinuteHandSettings from '@/elements/hands/minuteHand/minuteHandSettings.vue'
+import MinuteHandPanel from '@/elements/hands/minuteHand/minuteHand.panel.vue'
 import type { HandElementConfig } from '@/types/elements'
+import { createHand, updateHand } from '@/elements/hands/common/hand.renderer'
+import { encodeHand, decodeHand } from '@/elements/hands/common/hand.encoder'
 
 export default function registerMinuteHandPlugin() {
   registerElement('minuteHand' as ElementType, {
     add: (config) => {
-      const store = useMinuteHandStore()
-      return store.addElement(config as HandElementConfig)
+      return createHand({ ...(config as HandElementConfig), eleType: 'minuteHand' })
     },
     update: (element, patch) => {
-      const store = useMinuteHandStore()
-      store.updateHandSVG(element as any, patch as Partial<HandElementConfig> as HandElementConfig)
+      // 目前只关心素材和 assetId，其他字段仍由时间驱动逻辑控制
+      return updateHand(element as any, patch as Partial<HandElementConfig>)
     },
     encode: (element) => {
-      const store = useMinuteHandStore()
-      return store.encodeConfig(element as any)
+      return encodeHand(element as any)
     },
     decode: (config) => {
-      const store = useMinuteHandStore()
-      return store.decodeConfig(config as HandElementConfig)
+      return decodeHand({ ...(config as HandElementConfig), eleType: 'minuteHand' } as HandElementConfig)
     },
   })
 
-  registerSettings('minuteHand' as ElementType, MinuteHandSettings)
+  registerSettings('minuteHand' as ElementType, MinuteHandPanel)
 }
