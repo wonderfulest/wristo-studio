@@ -33,6 +33,7 @@ export const useCanvasStore = defineStore('canvas', {
 
     setCanvas(fabricCanvas: AnyObject): void {
       this.canvas = markRaw(fabricCanvas as Canvas)
+      ;(window as any).__wristoCanvas = this.canvas
       if (!this.canvas) return
       this.canvas.renderOnAddRemove = false
       this.addBackground()
@@ -102,6 +103,13 @@ export const useCanvasStore = defineStore('canvas', {
           c.moveObjectTo(img as any, targetIndex)
         } else {
           c.moveObjectTo(img as any, 0)
+        }
+
+        // 确保整个画布使用表盘圆进行裁剪
+        if (this.watchFaceCircle) {
+          c.set({
+            clipPath: this.watchFaceCircle as any,
+          })
         }
 
         c.renderAll()

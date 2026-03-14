@@ -20,9 +20,9 @@ export type TimeElementSchema = {
 export const timeSchema: TimeElementSchema = {
   type: 'time',
   name: 'Time',
-  icon: 'clock',
+  icon: 'mdi:clock-outline',
   defaultConfig: {
-    fontSize: 24,
+    fontSize: 96,
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',
     formatter: 0,

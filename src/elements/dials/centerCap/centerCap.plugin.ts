@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
-import type { ElementType } from '@/types/element'
-import { useCenterCapStore } from '@/elements/dials/centerCap/centerCapElement'
-import CenterCapSettings from '@/elements/dials/centerCap/centerCapSettings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
+import type { ElementConfig, ElementType } from '@/types/element'
+import CenterCapPanel from '@/elements/dials/centerCap/centerCap.panel.vue'
+import type { CenterCapElementConfig } from '@/elements/dials/centerCap/centerCap.encoder'
+import { createCenterCap, updateCenterCap } from '@/elements/dials/centerCap/centerCap.renderer'
+import { encodeCenterCap, decodeCenterCap } from '@/elements/dials/centerCap/centerCap.encoder'
 
 export default function registerCenterCapPlugin() {
   registerElement('centerCap' as ElementType, {
     add: (config) => {
-      const store = useCenterCapStore()
-      return store.addElement(config as unknown as DialElementConfig)
+      return createCenterCap(config as unknown as CenterCapElementConfig) as Promise<any>
     },
     update: (element, patch) => {
-      const store = useCenterCapStore()
-      store.updateElement(element as any, patch as any)
+      return updateCenterCap(element as any, patch as Partial<CenterCapElementConfig>)
     },
     encode: (element) => {
-      const store = useCenterCapStore()
-      return store.encodeConfig(element as any)
+      return encodeCenterCap(element as any) as unknown as ElementConfig
     },
     decode: (config) => {
-      const store = useCenterCapStore()
-      return store.decodeConfig(config as any)
+      return decodeCenterCap(config as any)
     },
   })
 
-  registerSettings('centerCap' as ElementType, CenterCapSettings)
+  registerSettings('centerCap' as ElementType, CenterCapPanel)
 }

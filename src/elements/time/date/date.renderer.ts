@@ -6,6 +6,7 @@ import type { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useBaseStore } from '@/stores/baseStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import * as elementManager from '@/engine/managers/elementManager'
@@ -28,12 +29,21 @@ function formatDate(date: Date, formatter: number, textCase: number | undefined)
 
 export function createDate(config: DateElementConfig): FabricElement {
   const baseStore = useBaseStore()
+  const propertiesStore = usePropertiesStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
   const canvas = baseStore.canvas
   if (!canvas) {
+    console.error('[date/createDate] Canvas is not initialized, cannot add date element', {
+      config,
+    })
     throw new Error('Canvas is not initialized, cannot add date element')
   }
+
+  console.log('[date/createDate] start', {
+    rawConfig: config,
+    canvasExists: !!canvas,
+  })
 
   const elementId = config.id || nanoid()
   const formatterValue = parseInt(String(config.formatter))
@@ -43,8 +53,14 @@ export function createDate(config: DateElementConfig): FabricElement {
     throw new Error('Invalid date formatter')
   }
 
-  const textCase = (baseStore as any).textCase as number | undefined
+  const textCase = (propertiesStore as any).textCase as number | undefined
   const text = formatDate(new Date(), formatterValue, textCase)
+  console.log('[date/createDate] computed text & id', {
+    elementId,
+    text,
+    formatter: formatterValue,
+    textCase,
+  })
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -68,14 +84,22 @@ export function createDate(config: DateElementConfig): FabricElement {
       const nextText = formatDate(
         now,
         option2 ? currentFormatter : (element as any).formatter,
-        (baseStore as any).textCase,
+        (propertiesStore as any).textCase,
       )
       element.set('text', nextText)
       canvas.requestRenderAll?.()
-    } catch (err) {
-      console.error('Error updating date element text:', err)
+    } catch (e) {
+      console.warn('[date/updateTextCase] failed', e)
     }
   }
+
+  const beforeObjects = canvas.getObjects?.() || []
+  console.log('[date/createDate] before add', {
+    elementId,
+    text,
+    count: beforeObjects.length,
+    ids: (beforeObjects as any[]).map((o) => (o as any).id),
+  })
 
   canvas.add(element)
   layerStore.addLayer(element)
@@ -84,10 +108,10 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   ;(element as any).updateTextCase = updateTextCase
 
-  const unwatch = (baseStore as any).$subscribe((mutation: any) => {
+  const unwatch = propertiesStore.$subscribe((mutation: any) => {
     if (
       mutation.type === 'direct' &&
-      mutation.storeId === 'baseStore' &&
+      mutation.storeId === 'propertiesStore' &&
       mutation.payload &&
       'textCase' in mutation.payload
     ) {
@@ -100,6 +124,14 @@ export function createDate(config: DateElementConfig): FabricElement {
   ;(element as any).textCaseUnwatch = unwatch
 
   canvas.requestRenderAll?.()
+
+  const afterObjects = canvas.getObjects?.() || []
+  console.log('[date/createDate] after add', {
+    elementId,
+    text,
+    count: afterObjects.length,
+    ids: (afterObjects as any[]).map((o) => (o as any).id),
+  })
 
   elementDataStore.upsertElement({
     id: String(elementId),
@@ -115,13 +147,19 @@ export function createDate(config: DateElementConfig): FabricElement {
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
+  console.log('[date/createDate] success, returning element', {
+    id: (element as any).id,
+    eleType: (element as any).eleType,
+    type: (element as any).type,
+  })
   return element as FabricElement
 }
 
-export function updateDate(element: FabricElement, patch: Partial<DateElementConfig>): void {
+export function updateDate(element: FabricElement, patch: Partial<DateElementConfig> = {}): void {
   const baseStore = useBaseStore()
+  const propertiesStore = usePropertiesStore()
   const canvas = baseStore.canvas
-  if (!canvas) return
+  const elementDataStore = useElementDataStore()
 
   const obj: any = elementManager.getElementById((element as any).id) ?? element
   if (!obj) return
@@ -146,11 +184,11 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     }
   })
 
-  if (patch.formatter !== undefined || obj.get('formatter') !== undefined) {
+  if (patch.formatter !== undefined) {
     const nextFormatter = parseInt(String(patch.formatter ?? obj.get('formatter')))
     const option = DateFormatOptions.find((o) => o.value === nextFormatter)
     if (option) {
-      const textCase = (baseStore as any).textCase as number | undefined
+      const textCase = (propertiesStore as any).textCase as number | undefined
       obj.set('text', formatDate(new Date(), nextFormatter, textCase))
     }
   }
@@ -164,8 +202,6 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
 
   obj.setCoords?.()
   canvas.requestRenderAll?.()
-
-  const elementDataStore = useElementDataStore()
   if (obj.id != null) {
     elementDataStore.patchElement(String(obj.id), {
       left: obj.left,

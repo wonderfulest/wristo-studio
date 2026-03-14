@@ -28,8 +28,6 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
   const canvas = canvasStore.canvas
   if (!canvas) throw new Error('Canvas is not initialized')
 
-  console.debug('[battery.renderer:createBattery] incoming config', config)
-
   const id = (config.id && String(config.id).trim().length > 0)
     ? String(config.id)
     : nanoid()
@@ -116,18 +114,10 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
   ;(group as any)._head = batteryHead
   ;(group as any)._level = batteryLevel
 
-  console.debug('[battery.renderer:createBattery] created group before add', {
-    id: (group as any)?.id,
-    eleType: (group as any)?.eleType,
-    type: typeof group,
-  })
-
   group.setCoords()
   canvas.add(group)
   elementManager.registerElementInstance(group as FabricElement)
-  console.debug('[battery.renderer:createBattery] after registerElementInstance')
   layerStore.addLayer(group as FabricElement)
-  console.debug('[battery.renderer:createBattery] after layerStore.addLayer')
   canvas.requestRenderAll?.()
   canvas.discardActiveObject()
   canvas.setActiveObject(group)

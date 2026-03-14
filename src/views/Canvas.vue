@@ -17,6 +17,7 @@ import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoo
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
 import { createHistoryManager, type HistoryManagerHandle } from '@/engine/managers/historyManager'
 import { useDesignStore } from '@/stores/designStore'
+import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -67,9 +68,14 @@ onMounted(() => {
     getWatchSize: () => watchSize.value,
     getRulerOffset: () => RULER_OFFSET,
   })
+
+  const engine = getDataSimulatorEngine()
+  engine.start({ intervalMs: 1000 })
+  ;(window as any).__dataSimulatorEngine = engine
 })
 
 onUnmounted(() => {
+  getDataSimulatorEngine().stop()
   disposeCanvasManager(historyStore)
   zoomManager?.dispose()
   zoomManager = null

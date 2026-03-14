@@ -20,9 +20,6 @@ export const useDesignStore = defineStore('design', {
       centerY: 227,
       shape: 'circle' as WatchShape,
     } as DesignSpec & { centerX: number; centerY: number },
-    textCase: 0 as number,
-    labelLengthType: 1 as number,
-    showUnit: false as boolean,
   }),
 
   actions: {

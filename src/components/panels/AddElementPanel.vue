@@ -32,17 +32,18 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { elementConfigs } from '@/config/elements/elements'
+import { elementConfigs } from '@/elements/schemaMap'
 import { useFontStore } from '@/stores/fontStore'
 import { getElementHandler } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
-
+import { useDesignStore } from '@/stores/designStore'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)
+const designStore = useDesignStore()
 const emit = defineEmits<{
   (e: 'switch-to-layer'): void
 }>()
@@ -62,24 +63,66 @@ const loadElementFont = async (config: AnyElementConfig) => {
 }
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
+    console.log('[AddElementPanel] addElementByType: start', {
+      category: _category,
+      elementType,
+      config,
+    })
     // 加载字体
     await loadElementFont(config)
     
+    // 基于 schema 默认配置，补齐位置与对齐：如果没有显式传 left/top/originX/originY，默认放在表盘中心
+    const designSpec = designStore?.designSpec as { centerX?: number; centerY?: number } | undefined
+    const centerX = designSpec?.centerX
+    const centerY = designSpec?.centerY
+    const normalizedConfig: AnyElementConfig = {
+      ...(config as AnyElementConfig),
+      left: (config as any).left ?? centerX ?? (config as any).left,
+      top: (config as any).top ?? centerY ?? (config as any).top,
+      originX: (config as any).originX ?? 'center',
+      originY: (config as any).originY ?? 'center',
+    }
+
+    console.log('[AddElementPanel] addElementByType: normalized config', {
+      elementType,
+      normalizedConfig,
+    })
+
     // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）
     if (elementType) {
       try {
         const handler = getElementHandler(elementType)
-        await handler.add(config)
+        console.log('[AddElementPanel] addElementByType: resolved handler', {
+          elementType,
+          hasHandler: !!handler,
+          hasAdd: !!handler?.add,
+        })
+        if (!handler || !handler.add) {
+          console.warn('[AddElementPanel] addElementByType: handler or handler.add is missing', {
+            elementType,
+            handler,
+          })
+        } else {
+          const result = await handler.add(normalizedConfig)
+          console.log('[AddElementPanel] addElementByType: handler.add finished', {
+            elementType,
+            result,
+          })
+        }
 
         // 添加元素后通知父级切换到图层面板
         emit('switch-to-layer')
         isCollapsed.value = true
       } catch (e) {
-        console.warn(`❌ [AddElement] No add element handler registered for type: ${elementType}`, e)
+        console.warn(`❌ [AddElement] addElementByType: handler.add threw error for type: ${elementType}`, e)
       }
     }
   } catch (error) {
-    console.error('❌ [AddElement] 添加元素失败:', error)
+    console.error('❌ [AddElement] 添加元素失败:', {
+      elementType,
+      config,
+      error,
+    })
     messageStore.error('添加元素失败')
     // 自动打开 Properties and App Settings 面板，方便用户先配置数据属性
     emitter.emit('open-app-properties')

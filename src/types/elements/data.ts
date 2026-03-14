@@ -43,13 +43,20 @@ export interface MoonElementConfig extends BaseElementConfig {
 
 export interface WeatherElementConfig extends BaseElementConfig {
   eleType: 'weather'
-  // image-based rendering
-  imageUrl?: string
+  weatherDisplayType?: 'mip' | 'amoled'
+  // AMOLED image-based rendering
+  amoledImageUrl?: string
   width?: number
   height?: number
-  // weather specific
+
+  // MIP font-based rendering
+  mipUnicode?: string
   fontFamily?: string
   fill?: string
+  fontSize?: number
+
+  // legacy
+  imageUrl?: string
 }
 
 export interface WindDirectionElementConfig extends BaseElementConfig {

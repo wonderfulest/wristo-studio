@@ -16,10 +16,10 @@ export type IconElementSchema = {
 export const iconSchema: IconElementSchema = {
   type: 'icon',
   name: 'Icon',
-  icon: 'star',
+  icon: 'mdi:image-outline',
   defaultConfig: {
-    fontSize: 24,
-    fontFamily: 'roboto-condensed-regular',
+    fontSize: 30,
+    fontFamily: 'wristo-icon',
     fill: '#ffffff',
   },
   resizable: false,

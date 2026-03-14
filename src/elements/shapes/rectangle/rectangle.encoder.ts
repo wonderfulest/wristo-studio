@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { RectangleElementConfig } from '@/types/elements'
+import { decodeColor, encodeColor } from '@/utils/colorUtils'
 
 export function encodeRectangle(element: FabricElement): RectangleElementConfig {
   if (!element) throw new Error('Invalid rectangle element')
@@ -13,8 +14,8 @@ export function encodeRectangle(element: FabricElement): RectangleElementConfig 
     top: Math.round(Number(rect.top ?? 0)),
     width: Number(rect.width ?? 0),
     height: Number(rect.height ?? 0),
-    fill: (rect.fill as string) ?? undefined,
-    stroke: (rect.stroke as string) ?? '#FFFFFF',
+    fill: encodeColor(rect.fill as any) as any,
+    stroke: encodeColor(rect.stroke as any) as any,
     strokeWidth: Number(rect.strokeWidth ?? 0),
     opacity: rect.opacity != null ? Number(rect.opacity) : undefined,
     borderRadius: Number((rect.rx ?? rect.ry ?? 0) as number),
@@ -33,8 +34,8 @@ export function decodeRectangle(config: RectangleElementConfig): Partial<FabricE
     top: config.top,
     width: config.width,
     height: config.height,
-    fill: config.fill,
-    stroke: config.stroke,
+    fill: decodeColor(config.fill as any),
+    stroke: decodeColor(config.stroke as any),
     strokeWidth: config.strokeWidth,
     opacity: config.opacity,
     rx: config.borderRadius,

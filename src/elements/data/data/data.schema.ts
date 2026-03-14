@@ -17,9 +17,9 @@ export type DataElementSchema = {
 export const dataSchema: DataElementSchema = {
   type: 'data',
   name: 'Data',
-  icon: 'database',
+  icon: 'mdi:database-outline',
   defaultConfig: {
-    fontSize: 24,
+    fontSize: 36,
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',
   },

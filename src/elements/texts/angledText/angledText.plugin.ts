@@ -1,40 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
-import type { ElementType } from '@/types/element'
-import { useAngledTextStore } from '@/elements/texts/angledText/angledTextElement'
-import AngledTextSettings from '@/elements/texts/angledText/angledTextSettings.vue'
+import type { ElementConfig, ElementType } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
+import { createAngledText, updateAngledText } from '@/elements/texts/angledText/angledText.renderer'
+import { encodeAngledText, decodeAngledText } from '@/elements/texts/angledText/angledText.encoder'
+import AngledTextPanel from '@/elements/texts/angledText/angledText.panel.vue'
 
 export default function registerAngledTextPlugin() {
   registerElement('angledText' as ElementType, {
     add: (config) => {
-      const store = useAngledTextStore()
-      // angledText addElement currently takes its own TextOptions; cast for now
-      return store.addElement(config as any)
+      return createAngledText(config as TextElementConfig) as any
     },
     update: (element, patch) => {
-      const anyEl = element as any
-      const cfg = patch as Partial<TextElementConfig> & { angle?: number; textTemplate?: string }
-      if (cfg.left != null) anyEl.set('left', cfg.left)
-      if (cfg.top != null) anyEl.set('top', cfg.top)
-      if (cfg.fontSize != null) anyEl.set('fontSize', cfg.fontSize)
-      if (cfg.fill != null) anyEl.set('fill', cfg.fill)
-      if (cfg.fontFamily != null) anyEl.set('fontFamily', cfg.fontFamily)
-      if (cfg.originX != null) anyEl.set('originX', cfg.originX)
-      if (cfg.textTemplate != null) anyEl.set('text', cfg.textTemplate)
-      if ((cfg as any).angle != null) anyEl.set('angle', (cfg as any).angle)
-      anyEl.setCoords?.()
-      anyEl.canvas?.renderAll()
+      return updateAngledText(element as any, patch as Partial<TextElementConfig>)
     },
     encode: (element) => {
-      const store = useAngledTextStore()
-      return store.encodeConfig(element as any) as any
+      return encodeAngledText(element as any) as unknown as ElementConfig
     },
     decode: (config) => {
-      const store = useAngledTextStore()
-      return store.decodeConfig(config as any)
+      return decodeAngledText(config as TextElementConfig)
     },
   })
 
-  registerSettings('angledText' as ElementType, AngledTextSettings)
+  registerSettings('angledText' as ElementType, AngledTextPanel)
 }

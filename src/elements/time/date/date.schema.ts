@@ -18,7 +18,7 @@ export type DateElementSchema = {
 export const dateSchema: DateElementSchema = {
   type: 'date',
   name: 'Date',
-  icon: 'calendar',
+  icon: 'mdi:calendar-outline',
   defaultConfig: {
     fontSize: 24,
     fontFamily: 'roboto-condensed-regular',

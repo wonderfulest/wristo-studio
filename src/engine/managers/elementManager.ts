@@ -8,8 +8,8 @@
 import type { ElementType, FabricElement } from '@/types/element'
 import { getElementHandler, encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig } from '@/types/elements'
-import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -47,46 +47,116 @@ export function addElement(type: ElementType, config: AnyElementConfig) {
 
 export function updateElement(element: FabricElement, patch: any) {
   if (!element) return
-  const type = (element as any).eleType as ElementType | undefined
+
+  const id = (element as any).id
+  let resolved: FabricElement = element
+  if (id != null) {
+    const fromMap = getElementById(id)
+    if (fromMap) {
+      resolved = fromMap
+    } else {
+      const canvasStore = useCanvasStore()
+      const canvas = canvasStore.canvas
+      const found = (canvas?.getObjects?.() || []).find(
+        (o: any) => o?.id != null && String(o.id) === String(id),
+      ) as FabricElement | undefined
+      if (found) {
+        resolved = found
+        registerElementInstance(found)
+      }
+    }
+  }
+
+  const type = (resolved as any).eleType as ElementType | undefined
   if (!type) {
-    console.warn('[ElementManager] updateElement: element has no eleType', { element, patch })
+    console.warn('[ElementManager] updateElement: element has no eleType', { element: resolved, patch })
     return
   }
   const handler = getElementHandler(type)
   if (!handler || !handler.update) {
-    console.warn('[ElementManager] updateElement: no update handler for type', { type, element, patch })
+    console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
     return
   }
-  handler.update(element, patch)
+  handler.update(resolved, patch)
+}
+
+export function updateElementById(id: string | number | null | undefined, patch: any) {
+  if (id == null) return
+  const resolved = getElementById(id)
+  if (resolved) {
+    updateElement(resolved, patch)
+    return
+  }
+  const canvasStore = useCanvasStore()
+  const canvas = canvasStore.canvas
+  const found = (canvas?.getObjects?.() || []).find(
+    (o: any) => o?.id != null && String(o.id) === String(id),
+  ) as FabricElement | undefined
+  if (!found) return
+  registerElementInstance(found)
+  updateElement(found, patch)
 }
 
 export function removeElement(element: FabricElement) {
-  const baseStore = useBaseStore()
+  const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
-  const canvas = baseStore.canvas
+  const canvas = canvasStore.canvas
   if (!canvas || !element) return
 
+  const id = (element as any).id
+  console.log('[ElementManager] removeElement: start', {
+    id,
+    eleType: (element as any)?.eleType,
+    type: (element as any)?.type,
+  })
+
+  // 为了兼容从 LayerPanel 传入的 Vue Proxy（不是画布上的真实 FabricObject 引用），
+  // 这里优先通过 canvas.getObjects() 按 id 找一次真正挂在画布上的对象。
+  const allObjects = (canvas.getObjects?.() || []) as any[]
+  const resolvedTarget =
+    (id != null
+      ? allObjects.find((o) => (o as any)?.id != null && String((o as any).id) === String(id))
+      : undefined) || (element as any)
+
+  console.log('[ElementManager] removeElement: resolved target on canvas', {
+    sameRef: resolvedTarget === element,
+    targetId: (resolvedTarget as any)?.id,
+    targetType: (resolvedTarget as any)?.type,
+    targetEleType: (resolvedTarget as any)?.eleType,
+  })
+
+  const beforeObjects = canvas.getObjects?.() || []
+  console.log('[ElementManager] removeElement: canvas objects before remove', {
+    count: beforeObjects.length,
+    ids: (beforeObjects as any[]).map((o) => (o as any).id),
+  })
+
   try {
-    canvas.remove(element as any)
+    canvas.remove(resolvedTarget as any)
   } catch (e) {
     console.warn('[ElementManager] removeElement: remove from canvas failed', { id: (element as any).id, e })
   }
 
   // 从运行时 Registry 中移除
   try {
-    unregisterElementInstance(element)
+    unregisterElementInstance(resolvedTarget as any)
   } catch (e) {
     console.warn('[ElementManager] removeElement: unregister element instance failed', { id: (element as any).id, e })
   }
 
   try {
-    const id = (element as any).id
     if (id != null) {
       layerStore.removeLayer(String(id))
     }
   } catch (e) {
     console.warn('[ElementManager] removeElement: remove layer failed', { id: (element as any).id, e })
   }
+
+  const afterObjects = canvas.getObjects?.() || []
+  console.log('[ElementManager] removeElement: canvas objects after remove', {
+    count: afterObjects.length,
+    ids: (afterObjects as any[]).map((o) => (o as any).id),
+  })
 }
 
 // =========================
@@ -103,8 +173,8 @@ export function nudgeSelection(
   direction: 'left' | 'right' | 'up' | 'down',
   step: number,
 ): void {
-  const baseStore = useBaseStore()
-  const canvas = baseStore.canvas
+  const canvasStore = useCanvasStore()
+  const canvas = canvasStore.canvas
   if (!canvas) return
 
   const dx = direction === 'left' ? -step : direction === 'right' ? step : 0
@@ -129,8 +199,8 @@ export function nudgeSelection(
  * 调整当前选中元素的字体大小（用于 Shift + +/-）。
  */
 export function changeSelectionFontSize(delta: number): void {
-  const baseStore = useBaseStore()
-  const canvas = baseStore.canvas
+  const canvasStore = useCanvasStore()
+  const canvas = canvasStore.canvas
   if (!canvas) return
 
   const actives = canvas.getActiveObjects() as any[]
@@ -152,8 +222,8 @@ export function changeSelectionFontSize(delta: number): void {
  * 复制当前选中元素。
  */
 export function copySelection(): void {
-  const baseStore = useBaseStore()
-  const canvas = baseStore.canvas
+  const canvasStore = useCanvasStore()
+  const canvas = canvasStore.canvas
   if (!canvas) return
 
   const actives = canvas.getActiveObjects() as FabricElement[]

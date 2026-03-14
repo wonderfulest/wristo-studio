@@ -5,6 +5,7 @@ import type { RectangleElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { applyControlsToObject } from '@/utils/controlManager'
 
 function attachRectangleScaleSync(rectangle: Rect): void {
   rectangle.on('modified', () => {
@@ -27,7 +28,9 @@ function attachRectangleScaleSync(rectangle: Rect): void {
         scaleY: 1,
       } as any)
       rectangle.setCoords()
+      console.log('rectangle modified', rectangle.width, rectangle.height)
     }
+
 
     const store = useElementDataStore()
     store.patchElement(String(idOnRect), {
@@ -69,6 +72,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
   const rectOptions: any = {
     id,
     eleType: 'rectangle',
+    designerControlMode: 'resize8',
     left: Number(config.left) || 0,
     top: Number(config.top) || 0,
     width,
@@ -102,6 +106,8 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
 
   attachRectangleScaleSync(rectangle)
 
+  applyControlsToObject(rectangle)
+
   elementDataStore.upsertElement({
     id: String(id),
     eleType: 'rectangle',
@@ -117,6 +123,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     originX: rectangle.originX,
     originY: rectangle.originY,
   } as any)
+  console.log('rectangle created', id, rectangle.width, rectangle.height)
 
   canvas.add(rectangle as any)
   layerStore.addLayer(rectangle as any)
@@ -137,6 +144,27 @@ export function updateRectangle(
 
   if (!canvas || !rect) return
 
+  console.log('updateRectangle', {
+    id: (rect as any)?.id,
+    eleType: (rect as any)?.eleType,
+    patch,
+  })
+
+  // 保护：若当前元素不是矩形，或 patch 看起来是天气的 AMOLED 配置，则忽略本次更新
+  const eleType = (rect as any)?.eleType
+  if (
+    eleType &&
+    eleType !== 'rectangle' &&
+    (patch as any) &&
+    ('weatherDisplayType' in (patch as any) || 'amoledImageUrl' in (patch as any))
+  ) {
+    console.warn('[RectangleRenderer] ignore non-rectangle patch', {
+      id: (rect as any)?.id,
+      eleType,
+      patch,
+    })
+    return
+  }
   if (patch.width !== undefined) {
     rect.set('width', Number(patch.width))
   }
@@ -187,6 +215,7 @@ export function updateRectangle(
     opacity: rect.opacity,
     borderRadius: rect.rx,
   }
+  console.log('rectangle updated', rect.width, rect.height)
 
   rect.setCoords()
   rect.dirty = true

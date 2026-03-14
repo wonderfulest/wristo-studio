@@ -54,6 +54,7 @@ import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
+import { useBackgroundStore } from '@/stores/backgroundStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
@@ -71,11 +72,13 @@ import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { useDesignStore } from '@/stores/designStore'
+import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
+const backgroundStore = useBackgroundStore()
 const designStore = useDesignStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
@@ -98,9 +101,8 @@ const backgroundColor = computed(() => editorStore.backgroundColor)
 
 // 根据配置中的 backgroundImage / themeBackgroundImages 应用背景图片到画布
 const applyBackgroundFromConfig = (config: Partial<DesignConfig> | null) => {
-  console.log('applyBackgroundFromConfig called with config:', config);
   if (!config) {
-    baseStore.setBackgroundImageFromUrl(null)
+    backgroundStore.setBackgroundImageFromUrl(null)
     return
   }
 
@@ -110,28 +112,23 @@ const applyBackgroundFromConfig = (config: Partial<DesignConfig> | null) => {
 
   const anyConfig = config || {}
   if (anyConfig.backgroundImage && typeof anyConfig.backgroundImage === 'object') {
-    console.log('applyBackgroundFromConfig backgroundImage:', anyConfig.backgroundImage);
     bgUrl = anyConfig.backgroundImage.url || null
     bgId = anyConfig.backgroundImage.id ?? null
   }
   if (!bgUrl && Array.isArray(anyConfig.themeBackgroundImages) && anyConfig.themeBackgroundImages.length > 0) {
     const first = anyConfig.themeBackgroundImages[0]
     if (typeof first === 'string') {
-      console.log('applyBackgroundFromConfig themeBackgroundImages[0] string')
       bgUrl = first
     } else if (first && typeof first === 'object') {
-      console.log('applyBackgroundFromConfig themeBackgroundImages[0] obj')
       bgUrl = first.url || null
       bgId = first.id ?? null
     }
   }
 
   if (bgUrl) {
-    console.log('applyBackgroundFromConfig setBackgroundImageFromUrl', bgUrl, bgId)
-    baseStore.setBackgroundImageFromUrl(bgUrl, bgId ?? null)
+    backgroundStore.setBackgroundImageFromUrl(bgUrl, bgId ?? null)
   } else {
-    console.log('applyBackgroundFromConfig setBackgroundImageFromUrl null')
-    baseStore.setBackgroundImageFromUrl(null)
+    backgroundStore.setBackgroundImageFromUrl(null)
   }
 }
 
@@ -166,9 +163,9 @@ const loadDesign = async (designUid: string) => {
       await waitCanvasReady()
       // 设置默认值
       baseStore.watchFaceName = designData.name
-      baseStore.textCase = 0
-      baseStore.labelLengthType = 0
-      baseStore.showUnit = false
+      propertiesStore.textCase = 0
+      propertiesStore.labelLengthType = 1
+      propertiesStore.showUnit = false
      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
@@ -181,26 +178,19 @@ const loadDesign = async (designUid: string) => {
       propertiesStore.loadProperties(config.properties)
     }
 
+    // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
+    propertiesStore.textCase = 0
+    propertiesStore.labelLengthType = 1
+    propertiesStore.showUnit = false
+
     // 设置文本大小写
     if (config.textCase !== undefined) {
-      baseStore.textCase = config.textCase
-      // 如果有设置文本大小写，则触发更新
-      setTimeout(() => {
-        baseStore.setTextCase(baseStore.textCase)
-      }, 500) // 等待画布加载完成
+      propertiesStore.textCase = config.textCase
     }
-2
-    // 设置标签长度类型
-    if (config.labelLengthType !== undefined) {
-      baseStore.labelLengthType = config.labelLengthType
-      // 如果有设置标签长度类型，则触发更新
-      setTimeout(() => {
-        baseStore.setLabelLengthType(baseStore.labelLengthType)
-      }, 600) // 在文本大小写设置后执行
-    }
+    // Label Length 仅支持 Short，统一保持默认值 1，不再从配置覆盖
     // 设置是否显示数据项单位
     if (config.showUnit !== undefined) {
-      baseStore.showUnit = config.showUnit
+      propertiesStore.showUnit = config.showUnit
     }
     // 等待画布初始化完成
     await waitCanvasReady()
@@ -223,6 +213,10 @@ const loadDesign = async (designUid: string) => {
     if (config.orderIds) {
       reorderCanvasByIds(config.orderIds)
     }
+
+    setTimeout(() => {
+      getDataSimulatorEngine().updateCanvas()
+    }, 0)
 
   } catch (error) {
     console.error('加载设计失败:', error)

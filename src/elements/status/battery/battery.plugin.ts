@@ -10,21 +10,12 @@ import BatteryPanel from '@/elements/status/battery/battery.panel.vue'
 export default function registerBatteryPlugin() {
   registerElement('battery' as ElementType, {
     add: (config) => {
-      console.debug('[battery.plugin:add] incoming config', config)
       const element = createBattery(config as BatteryElementConfig)
-
-      console.debug('[battery.plugin:add] created element', {
-        id: (element as any)?.id,
-        eleType: (element as any)?.eleType,
-        type: typeof element,
-      })
-
       // 使用 renderer/encoder 生成一份规范化、完整的配置，并写入 ElementDataStore
       try {
         const fullConfig = encodeBattery(element as any)
         const elementDataStore = useElementDataStore()
         elementDataStore.upsertElement(fullConfig as any)
-        console.debug('[battery.plugin:add] upserted element config', fullConfig)
       } catch (e) {
         console.warn('[battery.plugin] failed to encode & upsert element config after add', e)
       }

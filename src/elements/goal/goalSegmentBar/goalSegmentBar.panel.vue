@@ -7,11 +7,11 @@
       />
 
       <el-form-item label="Width">
-        <el-input-number v-model="currentModel.designWidth" :min="50" :max="600" @change="updateElement" />
+        <el-input-number v-model="currentModel.width" :min="50" :max="600" @change="updateElement" />
       </el-form-item>
 
       <el-form-item label="Height">
-        <el-input-number v-model="currentModel.designHeight" :min="4" :max="60" @change="updateElement" />
+        <el-input-number v-model="currentModel.height" :min="4" :max="60" @change="updateElement" />
       </el-form-item>
 
       <el-form-item label="Segments">

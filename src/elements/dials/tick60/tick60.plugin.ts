@@ -1,29 +1,26 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
-import type { ElementType } from '@/types/element'
-import { useTick60Store } from '@/elements/dials/tick60/tick60Element'
-import Tick60Settings from '@/elements/dials/tick60/tick60Settings.vue'
-import type { DialElementConfig } from '@/elements/dials/romans/romans.encoder'
+import type { ElementConfig, ElementType } from '@/types/element'
+import type { DialElementConfig } from '@/elements/dials/tick60/tick60.encoder'
+import { createTick60, updateTick60 } from '@/elements/dials/tick60/tick60.renderer'
+import { encodeTick60, decodeTick60 } from '@/elements/dials/tick60/tick60.encoder'
+import Tick60Panel from '@/elements/dials/tick60/tick60.panel.vue'
 
 export default function registerTick60Plugin() {
   registerElement('tick60' as ElementType, {
     add: (config) => {
-      const store = useTick60Store()
-      return store.addElement(config as unknown as DialElementConfig)
+      return createTick60(config as DialElementConfig) as Promise<any>
     },
     update: (element, patch) => {
-      const store = useTick60Store()
-      store.updateElement(element as any, patch as any)
+      return updateTick60(element as any, patch as Partial<DialElementConfig>)
     },
     encode: (element) => {
-      const store = useTick60Store()
-      return store.encodeConfig(element as any)
+      return encodeTick60(element as any) as unknown as ElementConfig
     },
     decode: (config) => {
-      const store = useTick60Store()
-      return store.decodeConfig(config as any)
+      return decodeTick60(config as DialElementConfig)
     },
   })
 
-  registerSettings('tick60' as ElementType, Tick60Settings)
+  registerSettings('tick60' as ElementType, Tick60Panel)
 }

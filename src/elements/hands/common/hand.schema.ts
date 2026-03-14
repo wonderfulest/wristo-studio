@@ -1,43 +1,62 @@
 import type { ElementType } from '@/types/element'
 import type { HandElementConfig } from '@/types/elements'
-import {
-  DEFAULT_HOUR_HAND_CONFIG,
-  DEFAULT_MINUTE_HAND_CONFIG,
-  DEFAULT_SECOND_HAND_CONFIG,
-} from '@/config/elements/defaults/hands'
 
 export type HandElementSchema = {
   type: ElementType
   name: string
   icon: string
-  defaultConfig: HandElementConfig
+  defaultConfig: Partial<HandElementConfig>
   resizable: boolean
   rotatable: boolean
 }
 
 export const hourHandSchema: HandElementSchema = {
   type: 'hourHand' as ElementType,
-  name: DEFAULT_HOUR_HAND_CONFIG.label,
-  icon: DEFAULT_HOUR_HAND_CONFIG.icon,
-  defaultConfig: DEFAULT_HOUR_HAND_CONFIG,
+  name: 'Hour',
+  icon: 'mdi:clock-time-three-outline',
+  defaultConfig: {
+    assetId: null,
+    imageUrl: null,
+    rotationCenter: { x: 227, y: 227 },
+    targetHeight: 180,
+    moveDy: 0,
+    angle: 0,
+    height: 180,
+  },
   resizable: false,
   rotatable: false,
 }
 
 export const minuteHandSchema: HandElementSchema = {
   type: 'minuteHand' as ElementType,
-  name: DEFAULT_MINUTE_HAND_CONFIG.label,
-  icon: DEFAULT_MINUTE_HAND_CONFIG.icon,
-  defaultConfig: DEFAULT_MINUTE_HAND_CONFIG,
+  name: 'Minute',
+  icon: 'mdi:clock-time-six-outline',
+  defaultConfig: {
+    assetId: null,
+    imageUrl: null,
+    rotationCenter: { x: 227, y: 227 },
+    targetHeight: 180,
+    moveDy: 0,
+    angle: 0,
+    height: 180,
+  },
   resizable: false,
   rotatable: false,
 }
 
 export const secondHandSchema: HandElementSchema = {
   type: 'secondHand' as ElementType,
-  name: DEFAULT_SECOND_HAND_CONFIG.label,
-  icon: DEFAULT_SECOND_HAND_CONFIG.icon,
-  defaultConfig: DEFAULT_SECOND_HAND_CONFIG,
+  name: 'Second',
+  icon: 'mdi:clock-time-nine-outline',
+  defaultConfig: {
+    assetId: null,
+    imageUrl: null,
+    rotationCenter: { x: 227, y: 227 },
+    targetHeight: 180,
+    moveDy: 0,
+    angle: 0,
+    height: 180,
+  },
   resizable: false,
   rotatable: false,
 }

@@ -12,6 +12,7 @@
     </div>
     <component 
       :is="resolveSettingsComponent(activeElements[0]?.eleType || '')" 
+      :key="activeElements[0]?.id"
       :element="activeElements[0]" 
       :config="activeConfig"
       :apply-patch="applyConfigPatch"
@@ -27,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { elementConfigs } from '@/config/elements/elements'
+import { elementConfigs } from '@/elements/schemaMap'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -97,15 +98,17 @@ const handleUpdate = () => {
 }
 
 // 通用配置更新：同时更新 ElementDataStore 与 FabricElement
-const applyConfigPatch = (patch: Partial<AnyElementConfig>) => {
+const applyConfigPatch = computed(() => {
   const el = activeElement.value as any
-  if (!el?.id) return
-  const id = String(el.id)
-  // 更新数据层
-  elementDataStore.patchElement(id, patch as AnyElementConfig)
-  // 更新画布元素
-  elementManager.updateElement(el, patch)
-}
+  if (!el?.id) return undefined
+  const lockedId = String(el.id)
+  return (patch: Partial<AnyElementConfig>) => {
+    // 更新数据层
+    elementDataStore.patchElement(lockedId, patch as AnyElementConfig)
+    // 更新画布元素（按 id resolve 真实对象）
+    elementManager.updateElementById(lockedId, patch)
+  }
+})
 </script>
 
 <style scoped>

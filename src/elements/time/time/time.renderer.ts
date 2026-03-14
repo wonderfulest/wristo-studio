@@ -152,14 +152,26 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
   const elementDataStore = useElementDataStore()
 
   if (!canvasStore.canvas) {
+    console.error('[time/createTime] Canvas is not initialized, cannot add time element', {
+      config,
+    })
     throw new Error('Canvas is not initialized, cannot add time element')
   }
 
   const canvas = canvasStore.canvas as any
 
   try {
+    console.log('[time/createTime] start', {
+      rawConfig: config,
+      canvasExists: !!canvas,
+    })
     const text = formatTime(new Date(), config.formatter)
     const id = config.id || nanoid()
+    console.log('[time/createTime] computed initial text & id', {
+      id,
+      text,
+      formatter: config.formatter,
+    })
 
     // bitmap 模式：创建由图片组成的 Group
     if (config.fontRenderType === 'bitmap' && config.bitmapFontId) {
@@ -168,12 +180,29 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
         text,
         options: config,
       })
+      console.log('[time/createTime] bitmap mode: group created', {
+        id,
+        text,
+        fontRenderType: config.fontRenderType,
+        bitmapFontId: config.bitmapFontId,
+      })
+      const beforeObjects = canvas.getObjects?.() || []
+      console.log('[time/createTime] bitmap mode: canvas objects before add', {
+        count: beforeObjects.length,
+        ids: (beforeObjects as any[]).map((o) => (o as any).id),
+      })
       // 先移除画布上同 id 的旧 bitmap Group，避免同一个元素残留多份
       removeBitmapTimeGroupsById(canvas, String(id))
       canvas.add(group as any)
       layerStore.addLayer(group as any)
       canvas.setActiveObject(group as any)
       canvas.renderAll()
+
+      const afterObjects = canvas.getObjects?.() || []
+      console.log('[time/createTime] bitmap mode: canvas objects after add', {
+        count: afterObjects.length,
+        ids: (afterObjects as any[]).map((o) => (o as any).id),
+      })
 
       elementDataStore.upsertElement({
         id: String(id),
@@ -215,10 +244,26 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
     }
 
     const element = new FabricText(text, timeOptions as TimeElementOptions)
+    const beforeObjects = canvas.getObjects?.() || []
+    console.log('[time/createTime] truetype mode: before add', {
+      id,
+      text,
+      options: timeOptions,
+      count: beforeObjects.length,
+      ids: (beforeObjects as any[]).map((o) => (o as any).id),
+    })
     canvas.add(element as FabricText)
     layerStore.addLayer(element as any)
     canvas.setActiveObject(element as FabricText)
     canvas.renderAll()
+
+    const afterObjects = canvas.getObjects?.() || []
+    console.log('[time/createTime] truetype mode: after add', {
+      id: (element as any).id,
+      text,
+      count: afterObjects.length,
+      ids: (afterObjects as any[]).map((o) => (o as any).id),
+    })
 
     elementDataStore.upsertElement({
       id: String(id),
@@ -236,9 +281,17 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
       fontGap: (config as any).fontGap,
     } as any)
 
+    console.log('[time/createTime] success, returning element', {
+      id: (element as any).id,
+      eleType: (element as any).eleType,
+      type: (element as any).type,
+    })
     return element as any
   } catch (error) {
-    console.error('Failed to create time element:', error)
+    console.error('[time/createTime] Failed to create time element:', {
+      config,
+      error,
+    })
     throw error
   }
 }

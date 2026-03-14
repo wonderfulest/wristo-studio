@@ -24,10 +24,16 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
   type IconProps = TextProps & IconElementConfig
   const metric = usePropertiesStore().getMetricByOptions(config)
   const strategy = iconFontStrategyStore
-  const resolvedFontFamily = strategy.currentIconFontSlug || config.iconFont
+  const resolvedFontFamily =
+    strategy.currentIconFontSlug ||
+    (config as any).iconFont ||
+    (config as any).fontFamily ||
+    'iconfont'
+
+  const fallbackSize = Number((config as any).iconSize ?? (config as any).fontSize ?? 24)
   const resolvedFontSize =
     strategy.currentIconFontSize === -1
-      ? Number(config.iconSize)
+      ? (Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 24)
       : strategy.currentIconFontSize
 
   const iconOptions: Partial<IconProps> = {
@@ -39,7 +45,7 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     originY: 'center',
     fill: config.fill,
     fontSize: resolvedFontSize,
-    fontFamily: resolvedFontFamily,
+    fontFamily: String(resolvedFontFamily || 'iconfont'),
     metricSymbol: config.metricSymbol,
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
@@ -48,7 +54,7 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     hasBorders: true,
   }
 
-  const element = new FabricText(metric.icon, iconOptions as TextProps & IconElementConfig)
+  const element = new FabricText(String((metric as any)?.icon ?? ''), iconOptions as TextProps & IconElementConfig)
 
   canvas.add(element as FabricText)
   layerStore.addLayer(element as unknown as MinimalFabricLike)

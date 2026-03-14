@@ -21,19 +21,15 @@
 
 </template>
 
-<script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+<script setup lang="ts">
+import { computed, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
+import { useBackgroundStore } from '@/stores/backgroundStore'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
-import ColorPicker from '@/components/color-picker/index.vue'
-import emitter from '@/utils/eventBus'
-import { ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus'
-import { uploadBase64Image, uploadImageFile } from '@/utils/image'
-import { usePropertiesStore } from '@/stores/properties'
 import ThemeRuleSettings from '@/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
-const propertiesStore = usePropertiesStore()
 const baseStore = useBaseStore()
+const backgroundStore = useBackgroundStore()
 
 const appId = computed(() => baseStore.appId)
 // 表盘名称
@@ -47,86 +43,6 @@ const updateWatchFaceName = () => {
   baseStore.watchFaceName = watchFaceName.value
 }
 
-// 文本大小写设置
-const textCase = computed({
-  get: () => baseStore.textCase,
-  set: (value) => {
-    baseStore.textCase = value
-  }
-})
-
-// 标签长度类型设置
-const labelLengthType = computed({
-  get: () => baseStore.labelLengthType,
-  set: (value) => {
-    baseStore.labelLengthType = value
-  }
-})
-
-// 是否显示数据项单位
-const showUnit = computed({
-  get: () => baseStore.showUnit,
-  set: (value) => {
-    baseStore.showUnit = value
-  }
-})
-
-// 更新文本大小写设置
-const updateTextCase = (value) => {
-  baseStore.setTextCase(value)
-  
-  // 打印当前画布上的所有元素类型，以便调试
-  if (baseStore.canvas) {
-    const objects = baseStore.canvas.getObjects()
-    const elementTypes = {}
-    
-    objects.forEach(obj => {
-      if (!elementTypes[obj.eleType]) {
-        elementTypes[obj.eleType] = 0
-      }
-      elementTypes[obj.eleType]++
-    })
-    
-  }
-}
-
-// 更新是否显示数据项单位
-const updateShowUnit = (value) => {
-  baseStore.showUnit = value
-  // 更新画布上的数据项单位
-  if (baseStore.canvas) {
-    const objects = baseStore.canvas.getObjects()
-    const elementTypes = {}
-    
-    for (const obj of objects) {
-      if (obj.eleType === 'data') {
-        const metric = propertiesStore.getMetricBySymbol({metricSymbol: obj.metricSymbol})
-        obj.set({
-          text: metric.defaultValue + (baseStore.showUnit ? metric.unit : ''),
-        })
-      }
-    }
-  }
-  baseStore.canvas.renderAll()
-}
-
-// 更新标签长度类型设置
-const updateLabelLengthType = (value) => {
-  baseStore.setLabelLengthType(value)
-  // 打印当前画布上的标签元素数量，以便调试
-  if (baseStore.canvas) {
-    const objects = baseStore.canvas.getObjects()
-    let labelCount = 0
-    
-    objects.forEach(obj => {
-      if (obj.eleType === 'label') {
-        labelCount++
-      }
-    })
-    
-  }
-}
-
 // 监听 store 中的值变化
 watch(
   () => baseStore.watchFaceName,
@@ -137,34 +53,14 @@ watch(
   }
 )
 
-watch(
-  () => baseStore.textCase,
-  (newValue) => {
-    if (newValue !== textCase.value) {
-      textCase.value = newValue
-    }
-  }
-)
-
-// 监听 WPay 相关设置的变化
-watch(
-  () => baseStore.wpay,
-  (newWpay) => {
-    if (newWpay !== wpay.value) {
-      wpay.value = newWpay
-    }
-  },
-  { deep: true }
-)
-
-// 背景图片：从 baseStore.backgroundImage 的元数据中读取 id 和 url
+// 背景图片：从 backgroundStore.backgroundImage 的元数据中读取 id 和 url
 const currentBackgroundImageId = computed(() => {
-  const raw = baseStore.backgroundImage
+  const raw = backgroundStore.backgroundImage as any
   return raw && raw.wristoImageId != null ? raw.wristoImageId : undefined
 })
 
 const currentBackgroundImageUrl = computed(() => {
-  const raw = baseStore.backgroundImage
+  const raw = backgroundStore.backgroundImage as any
   if (!raw) return ''
   return raw.wristoImageUrl || ''
 })
@@ -173,7 +69,7 @@ const currentBackgroundImageUrl = computed(() => {
 // 当 ID 被清空（例如用户点击清除按钮）时，需要同步清理画布背景
 const handleBackgroundImageIdChange = (id) => {
   if (!id) {
-    baseStore.setBackgroundImageFromUrl(null, null)
+    backgroundStore.setBackgroundImageFromUrl(null, null)
   }
 }
 
@@ -181,98 +77,12 @@ const handleBackgroundImageIdChange = (id) => {
 const handleBackgroundImageUploaded = (img) => {
   if (!img) return
   const url = img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
-  baseStore.setBackgroundImageFromUrl(url || null, img.id || null)
+  backgroundStore.setBackgroundImageFromUrl(url || null, img.id || null)
 }
 
 // 移除背景图片
 const removeBackgroundImage = () => {
-  baseStore.setBackgroundImageFromUrl(null)
-}
-
-// WPay ID
-const wpay = computed({
-  get: () => baseStore.wpay,
-  set: (value) => (baseStore.wpay = value)
-})
-
-// 更新 Garmin 图片 URL
-const updateWpayGarminImageUrl = async () => {
-  baseStore.wpay.garminImageUrl = wpay.value.garminImageUrl
-}
-
-// 更新 Garmin Store URL
-const updateWpayGarminStoreUrl = async () => {
-  baseStore.wpay.garminStoreUrl = wpay.value.garminStoreUrl
-}
-
-// 更新试用时长
-const updateWpayTrialLasts = async () => {
-  baseStore.wpay.trialLasts = wpay.value.trialLasts
-}
-
-// 更新价格
-const updateWpayPrice = async () => {
-  baseStore.wpay.price = wpay.value.price
-}
-
-// Garmin 图片上传
-const handleGarminImageChange = (file) => {
-  
-  if (!file || !file.raw) {
-    console.warn('Invalid file', file)
-    return
-  }
-
-  // 创建 loading 实例
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: 'Uploading image... ',
-    background: 'rgba(0, 0, 0, 0.7)'
-  })
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      // 上传 Garmin 图片
-      const garminImage = e.target.result
-      let imageUploadUrl = ''
-      if (garminImage && garminImage.startsWith('data:')) {
-        imageUploadUrl = await uploadBase64Image(garminImage, 'hero')
-      } else if (garminImage && garminImage.startsWith('blob:')) {
-        imageUploadUrl = await uploadImageFile(garminImage, 'hero')
-      } else if (garminImage && garminImage.startsWith('http')) {
-        imageUploadUrl = garminImage
-      }
-      
-      if (!imageUploadUrl) {
-        throw new Error('Failed to upload Garmin image')
-      }
-      // 更新 Garmin 图片 URL
-      baseStore.wpay.garminImageUrl = imageUploadUrl
-      // 更新 wristo api 中的 product 图片
-      ElMessage.success('Image uploaded successfully')
-    } catch (error) {
-      console.error('Failed to upload Garmin image:', error)
-      ElMessage.error('Failed to upload Garmin image')
-    } finally {
-      // 关闭 loading
-      loadingInstance.close()
-    }
-  }
-
-  reader.onerror = (error) => {
-    console.error('Failed to read image', error)
-    ElMessage.error('Failed to read image')
-    loadingInstance.close()
-  }
-
-  reader.readAsDataURL(file.raw)
-}
-
-// 移除 Garmin 图片
-const removeGarminImage = () => {
-  baseStore.wpay.garminImageUrl = ''
-  baseStore.toggleThemeBackground()
+  backgroundStore.setBackgroundImageFromUrl(null)
 }
 </script>
 

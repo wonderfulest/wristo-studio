@@ -9,7 +9,6 @@
           @change="(v: number) => applyUpdate({ radius: v })" 
         />
       </el-form-item>
-
       <el-form-item label="填充颜色">
         <color-picker 
           v-model="currentModel.fill" 

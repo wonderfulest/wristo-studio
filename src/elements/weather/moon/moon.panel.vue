@@ -18,18 +18,10 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="Width">
-        <el-input-number v-model="element.width" :min="1" :max="2000" @change="onWidthChange" />
-      </el-form-item>
-      <el-form-item label="Height">
-        <el-input-number v-model="element.height" :min="1" :max="2000" @change="onHeightChange" />
-      </el-form-item>
       <el-form-item label="Phase Index">
         <el-slider v-model="phaseIndex" :min="0" :max="assetUrls.length - 1" :step="1" show-stops @change="onPhaseChange" />
       </el-form-item>
-
     </el-form>
- 
   </div>
 </template>
 

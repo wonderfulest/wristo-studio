@@ -1,27 +1,24 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
-import { useWindDirectionStore } from '@/elements/weather/windDirection/windDirectionElement'
-import WindDirectionSettings from '@/elements/weather/windDirection/windDirectionSettings.vue'
 import type { WindDirectionElementConfig } from '@/types/elements/data'
+import { createWindDirection, updateWindDirection } from '@/elements/weather/windDirection/windDirection.renderer'
+import { encodeWindDirection, decodeWindDirection } from '@/elements/weather/windDirection/windDirection.encoder'
+import WindDirectionSettings from '@/elements/weather/windDirection/windDirection.panel.vue'
 
 export default function registerWindDirectionPlugin() {
   registerElement('windDirection' as ElementType, {
     add: (config) => {
-      const store = useWindDirectionStore()
-      return store.addElement(config as any)
+      return createWindDirection(config as WindDirectionElementConfig)
     },
     update: (element, patch) => {
-      const store = useWindDirectionStore()
-      store.updateElement(element as any, patch as Partial<WindDirectionElementConfig>)
+      updateWindDirection(element as any, patch as Partial<WindDirectionElementConfig>)
     },
     encode: (element) => {
-      const store = useWindDirectionStore()
-      return store.encodeConfig(element as any)
+      return encodeWindDirection(element as any) as any
     },
     decode: (config) => {
-      const store = useWindDirectionStore()
-      return store.decodeConfig(config as WindDirectionElementConfig)
+      return decodeWindDirection(config as WindDirectionElementConfig) as any
     },
   })
 

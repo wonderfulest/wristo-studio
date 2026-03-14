@@ -17,7 +17,7 @@ export type LabelElementSchema = {
 export const labelSchema: LabelElementSchema = {
   type: 'label',
   name: 'Label',
-  icon: 'tag',
+  icon: 'mdi:label-outline',
   defaultConfig: {
     fontSize: 14,
     fontFamily: 'roboto-condensed-regular',

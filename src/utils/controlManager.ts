@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 type FabricLikeObject = FabricObject & {
   id?: string
   eleType?: string
+  designerControlMode?: string
   left?: number
   top?: number
   locked?: boolean
@@ -130,12 +131,15 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
       id: nanoid(),
       left,
       top,
+      designerControlMode: source.designerControlMode,
       selectable: true,
       evented: true,
       hasControls: true,
       lockScalingX: false,
       lockScalingY: false,
     })
+
+    applyControlsToObject(cloned)
 
     canvas.discardActiveObject()
     canvas.add(cloned)
@@ -147,8 +151,10 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
   return true
 }
 
-function createControls(): Record<string, Control> {
-  return {
+type ControlSetMode = 'default' | 'resize8'
+
+function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
+  const base: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
       y: -0.5,
@@ -209,6 +215,44 @@ function createControls(): Record<string, Control> {
       render: renderDeleteControl,
     }),
   }
+
+  if (mode !== 'resize8') return base
+
+  return {
+    ...base,
+    mt: new Control({
+      x: 0,
+      y: -0.5,
+      cursorStyle: 'ns-resize',
+      actionHandler: controlsUtils.scalingY,
+      actionName: 'scaleY',
+      render: renderDefaultControl,
+    }),
+    mb: new Control({
+      x: 0,
+      y: 0.5,
+      cursorStyle: 'ns-resize',
+      actionHandler: controlsUtils.scalingY,
+      actionName: 'scaleY',
+      render: renderDefaultControl,
+    }),
+    ml: new Control({
+      x: -0.5,
+      y: 0,
+      cursorStyle: 'ew-resize',
+      actionHandler: controlsUtils.scalingX,
+      actionName: 'scaleX',
+      render: renderDefaultControl,
+    }),
+    mr: new Control({
+      x: 0.5,
+      y: 0,
+      cursorStyle: 'ew-resize',
+      actionHandler: controlsUtils.scalingX,
+      actionName: 'scaleX',
+      render: renderDefaultControl,
+    }),
+  }
 }
 
 export function applyControlsToObject(target: FabricObject | null | undefined): void {
@@ -216,7 +260,8 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   const t = target as unknown as FabricLikeObject
   if (!isManageableTarget(t)) return
 
-  ;(t as unknown as { controls?: Record<string, Control> }).controls = createControls()
+  const mode = (t as any).designerControlMode === 'resize8' ? 'resize8' : 'default'
+  ;(t as unknown as { controls?: Record<string, Control> }).controls = createControls(mode)
   t.set({
     cornerStyle: 'circle',
     cornerSize: runtimeOptions.size * 2,
@@ -245,5 +290,5 @@ export function applyControlManager(options: ControlManagerOptions = {}): void {
     borderColor: '#409EFF',
   }
 
-  ;(FabricObject.prototype as any).controls = createControls()
+  ;(FabricObject.prototype as any).controls = createControls('default')
 }

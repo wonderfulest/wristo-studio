@@ -43,7 +43,7 @@ import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
-import { elementConfigs } from '@/config/elements/elements'
+import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { FabricElement } from '@/types/element'
@@ -191,15 +191,65 @@ const undo = (): void => {
 }
 
 const deleteLayer = (layer: MinimalFabricLike): void => {
-  if (layer.locked) return
-  if (!baseStore.canvas) return
+  console.log('[LayerPanel] deleteLayer: start', {
+    rawLayer: layer,
+    id: (layer as any)?.id,
+    eleType: (layer as any)?.eleType,
+    locked: (layer as any)?.locked,
+  })
+  if (layer.locked) {
+    console.log('[LayerPanel] deleteLayer: aborted because layer is locked', {
+      id: (layer as any)?.id,
+    })
+    return
+  }
+  if (!baseStore.canvas) {
+    console.warn('[LayerPanel] deleteLayer: baseStore.canvas is null, cannot delete', {
+      id: (layer as any)?.id,
+    })
+    return
+  }
+
+  const canvas = baseStore.canvas
+  const beforeObjects = canvas.getObjects?.() || []
+  console.log('[LayerPanel] deleteLayer: canvas objects before delete', {
+    count: beforeObjects.length,
+    ids: (beforeObjects as any[]).map((o) => (o as any).id),
+  })
+
   // 为了适配可能存在的引用不一致（例如 canvas 实例替换后 layer.element 失效），
   // 优先通过 ElementManager Registry 按 id 查找真正的 FabricElement 实例
-  const fabricElement = (getElementById((layer as any).id) ?? (layer as unknown)) as FabricElement
+  const id = (layer as any).id
+  const fromRegistry = id != null ? getElementById(id as any) : undefined
+  if (!fromRegistry) {
+    console.warn('[LayerPanel] deleteLayer: getElementById returned null, will fallback to raw layer reference', {
+      id,
+      layer,
+    })
+  } else {
+    console.log('[LayerPanel] deleteLayer: resolved FabricElement from registry', {
+      id,
+      fromRegistry,
+    })
+  }
+
+  const fabricElement = (fromRegistry ?? (layer as unknown)) as FabricElement
   addToHistory({ type: 'delete', element: layer })
+  console.log('[LayerPanel] deleteLayer: calling ElementManager.removeElement', {
+    id: (fabricElement as any)?.id,
+    eleType: (fabricElement as any)?.eleType,
+    type: (fabricElement as any)?.type,
+  })
   removeElement(fabricElement)
-  baseStore.canvas.discardActiveObject?.()
-  baseStore.canvas.renderAll?.()
+
+  const afterObjects = canvas.getObjects?.() || []
+  console.log('[LayerPanel] deleteLayer: canvas objects after deleteElement call', {
+    count: afterObjects.length,
+    ids: (afterObjects as any[]).map((o) => (o as any).id),
+  })
+
+  canvas.discardActiveObject?.()
+  canvas.renderAll?.()
   debouncedUpdateElements()
 }
 
@@ -213,9 +263,20 @@ const handleKeyDown = (event: KeyboardEvent): void => {
   if (isInputActive) return
 
   if (event.key === 'Delete' || event.key === 'Backspace') {
+    console.log('[LayerPanel] handleKeyDown: delete key pressed', {
+      key: event.key,
+    })
     const activeObject = baseStore.canvas?.getActiveObject?.() as MinimalFabricLike | undefined
+    console.log('[LayerPanel] handleKeyDown: activeObject on canvas', {
+      activeObject,
+      id: (activeObject as any)?.id,
+      eleType: (activeObject as any)?.eleType,
+      type: (activeObject as any)?.type,
+    })
     if (activeObject) {
       deleteLayer(activeObject)
+    } else {
+      console.log('[LayerPanel] handleKeyDown: no activeObject, skip delete')
     }
   }
 

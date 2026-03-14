@@ -76,3 +76,16 @@ export const decodeColor = (color: string | number): string => {
   }
   return color
 }
+
+/**
+ * 将画布上的颜色值编码为配置用的颜色字段：
+ * - 'transparent' 统一编码为 -1
+ * - 其它字符串 / 数字原样返回
+ */
+export const encodeColor = (color: string | number | undefined | null): string | number | undefined => {
+  if (color == null) return undefined
+  if (typeof color === 'string') {
+    return color === 'transparent' ? -1 : color
+  }
+  return color
+}

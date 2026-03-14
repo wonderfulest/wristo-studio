@@ -5,6 +5,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import type { FabricElement } from '@/types/element'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { MoonElementConfig } from '@/types/elements/data'
+import { applyControlsToObject } from '@/utils/controlManager'
 
 function getDefaultMoonImage(): string {
   return 'https://cdn.wristo.io/moonphase/h-phase-16.png'
@@ -55,6 +56,8 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
   const addGroupToCanvas = (group: FabricGroup) => {
     ;(group as unknown as { id?: string }).id = id
     ;(group as unknown as { eleType?: string }).eleType = 'moon'
+    // 统一应用全局控制点样式
+    applyControlsToObject(group as unknown as FabricObject)
     canvas.add(group as unknown as FabricObject)
     layerStore.addLayer(group as unknown as MinimalFabricLike)
     canvas.setActiveObject(group as unknown as FabricObject)
@@ -77,7 +80,7 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: false,
+        hasControls: true,
         hasBorders: true,
         objectCaching: false,
       } as GroupProps)
@@ -129,7 +132,7 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
           originX: 'center',
           originY: 'center',
           selectable: true,
-          hasControls: false,
+          hasControls: true,
           hasBorders: true,
           objectCaching: false,
           visible: true,

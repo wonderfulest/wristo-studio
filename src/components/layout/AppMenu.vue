@@ -102,7 +102,7 @@ import {
   Mute,
   AlarmClock
 } from '@element-plus/icons-vue'
-import { elementConfigs } from '@/config/elements/elements'
+import { elementConfigs } from '@/elements/schemaMap'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
