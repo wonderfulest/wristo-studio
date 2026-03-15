@@ -10,6 +10,7 @@ import { getElementHandler, encodeElementByRegistry } from '@/engine/registry/el
 import type { AnyElementConfig } from '@/types/elements'
 import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { nanoid } from 'nanoid'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -249,9 +250,17 @@ export function copySelection(): void {
 export function pasteSelection(): void {
   if (!selectionClipboard.length) return
 
-  selectionClipboard.forEach((cfg) => {
+  const offset = 20
+  selectionClipboard.forEach((cfg, index) => {
     try {
-      addElement(cfg.eleType as ElementType, cfg)
+      const newId = nanoid()
+      const nextCfg: AnyElementConfig = {
+        ...(cfg as AnyElementConfig),
+        id: newId,
+        left: cfg.left != null ? Number(cfg.left) + offset * (index + 1) : cfg.left,
+        top: cfg.top != null ? Number(cfg.top) + offset * (index + 1) : cfg.top,
+      }
+      addElement(nextCfg.eleType as ElementType, nextCfg)
     } catch (e) {
       console.warn('[ElementManager] pasteSelection: failed to add element from clipboard', {
         cfg,
