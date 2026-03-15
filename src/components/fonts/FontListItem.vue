@@ -55,7 +55,7 @@ import { ElTag, ElMessageBox } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { removeMyFont } from '@/api/wristo/fonts'
-import { FontTypes } from '@/constants/fonts'
+import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
 
 const props = defineProps<{

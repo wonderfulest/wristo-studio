@@ -12,6 +12,89 @@ export interface SimulatedData {
   label?: string
 }
 
+type SimState = {
+  hr: number
+  steps: number
+  calories: number
+  floors: number
+  distanceKm: number
+  altitudeM: number
+  battery: number
+  notifications: number
+  alarms: number
+  humidity: number
+  windSpeed: number
+  windDeg: number
+  pm25: number
+  pm10: number
+  aqi: number
+  bodyBattery: number
+  stress: number
+}
+
+const simState: SimState = {
+  hr: 78,
+  steps: 8432,
+  calories: 1956,
+  floors: 12,
+  distanceKm: 5.2,
+  altitudeM: 328,
+  battery: 84,
+  notifications: 5,
+  alarms: 2,
+  humidity: 48,
+  windSpeed: 3.6,
+  windDeg: 135,
+  pm25: 18,
+  pm10: 32,
+  aqi: 32,
+  bodyBattery: 72,
+  stress: 21,
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+function randInt(min: number, max: number): number {
+  const a = Math.min(min, max)
+  const b = Math.max(min, max)
+  return Math.floor(a + Math.random() * (b - a + 1))
+}
+
+function formatInt(n: number): string {
+  return Number(n).toLocaleString('en-US')
+}
+
+function formatFloat(n: number, digits: number = 1): string {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return String(n)
+  return v.toFixed(digits)
+}
+
+export function tickSimulatedData(): void {
+  simState.steps = Math.max(0, simState.steps + randInt(0, 9))
+  simState.hr = clamp(simState.hr + randInt(-2, 3), 55, 165)
+  simState.calories = Math.max(0, simState.calories + randInt(0, 3))
+  simState.floors = Math.max(0, simState.floors + (Math.random() < 0.02 ? 1 : 0))
+  simState.distanceKm = Math.max(0, simState.steps / 1600)
+
+  simState.battery = clamp(simState.battery - (Math.random() < 0.01 ? 1 : 0), 0, 100)
+  simState.notifications = clamp(simState.notifications + (Math.random() < 0.05 ? 1 : 0), 0, 99)
+  simState.alarms = clamp(simState.alarms + (Math.random() < 0.01 ? 1 : 0), 0, 20)
+
+  simState.humidity = clamp(simState.humidity + randInt(-1, 1), 0, 100)
+  simState.windSpeed = clamp(simState.windSpeed + randInt(-1, 1) * 0.1, 0, 20)
+  simState.windDeg = (simState.windDeg + randInt(-5, 5) + 360) % 360
+
+  simState.pm25 = clamp(simState.pm25 + randInt(-1, 2), 0, 300)
+  simState.pm10 = clamp(simState.pm10 + randInt(-1, 2), 0, 500)
+  simState.aqi = clamp(simState.aqi + randInt(-2, 3), 0, 500)
+
+  simState.bodyBattery = clamp(simState.bodyBattery + randInt(-1, 1), 0, 100)
+  simState.stress = clamp(simState.stress + randInt(-2, 2), 0, 100)
+}
+
 /**
  * 根据数据名称返回一条模拟数据
  *
@@ -24,35 +107,35 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     // 心率
     case 'heart':
     case 'hr':
-      return { display: '78', numeric: 78, unit: 'bpm', label: 'HR' }
+      return { display: String(simState.hr), numeric: simState.hr, unit: 'bpm', label: 'HR' }
 
     // 告警数量
     case 'alarms':
-      return { display: '2', numeric: 2, unit: '', label: 'ALARMS' }
+      return { display: String(simState.alarms), numeric: simState.alarms, unit: '', label: 'ALARMS' }
 
     // 通知数量
     case 'notifications':
-      return { display: '5', numeric: 5, unit: '', label: 'NOTIF' }
+      return { display: String(simState.notifications), numeric: simState.notifications, unit: '', label: 'NOTIF' }
 
     // 步数
     case 'steps':
-      return { display: '8,432', numeric: 8432, unit: 'steps', label: 'STEPS' }
+      return { display: formatInt(simState.steps), numeric: simState.steps, unit: 'steps', label: 'STEPS' }
 
     // 卡路里
     case 'calories':
-      return { display: '1,956', numeric: 1956, unit: 'kcal', label: 'CAL' }
+      return { display: formatInt(simState.calories), numeric: simState.calories, unit: 'kcal', label: 'CAL' }
 
     // 楼层
     case 'floors':
-      return { display: '12', numeric: 12, unit: 'floors', label: 'FLOORS' }
+      return { display: String(simState.floors), numeric: simState.floors, unit: 'floors', label: 'FLOORS' }
 
     // 距离
     case 'distance':
-      return { display: '5.2', numeric: 5.2, unit: 'km', label: 'DIST' }
+      return { display: formatFloat(simState.distanceKm, 1), numeric: simState.distanceKm, unit: 'km', label: 'DIST' }
 
     // 海拔
     case 'altitude':
-      return { display: '328', numeric: 328, unit: 'm', label: 'ALT' }
+      return { display: String(simState.altitudeM), numeric: simState.altitudeM, unit: 'm', label: 'ALT' }
 
     // 静息心率
     case 'restingHeart':
@@ -60,7 +143,7 @@ export function getSimulatedDataByName(name: string): SimulatedData {
 
     // 电池
     case 'battery':
-      return { display: '84', numeric: 84, unit: '%', label: 'BAT' }
+      return { display: String(simState.battery), numeric: simState.battery, unit: '%', label: 'BAT' }
 
     // 呼吸率
     case 'respiration':
@@ -83,15 +166,15 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     // 湿度
     case 'humidity':
     case 'hum':
-      return { display: '48', numeric: 48, unit: '%', label: 'HUM' }
+      return { display: String(simState.humidity), numeric: simState.humidity, unit: '%', label: 'HUM' }
 
     // 风速 / 风向（角度）
     case 'windSpeed':
     case 'wind':
-      return { display: '3.6', numeric: 3.6, unit: 'm/s', label: 'WIND' }
+      return { display: formatFloat(simState.windSpeed, 1), numeric: simState.windSpeed, unit: 'm/s', label: 'WIND' }
     case 'windDeg':
     case 'wdeg':
-      return { display: '135', numeric: 135, unit: 'deg', label: 'WIND_DEG' }
+      return { display: String(simState.windDeg), numeric: simState.windDeg, unit: 'deg', label: 'WIND_DEG' }
 
     // 云量
     case 'clouds':
@@ -100,18 +183,18 @@ export function getSimulatedDataByName(name: string): SimulatedData {
 
     // AQI
     case 'aqi':
-      return { display: 'GOOD', numeric: 32, unit: '', label: 'AQI' }
+      return { display: String(simState.aqi), numeric: simState.aqi, unit: '', label: 'AQI' }
     case 'pm25':
-      return { display: '18', numeric: 18, unit: 'µg/m³', label: 'PM2_5' }
+      return { display: String(simState.pm25), numeric: simState.pm25, unit: 'µg/m³', label: 'PM2_5' }
     case 'pm10':
-      return { display: '32', numeric: 32, unit: 'µg/m³', label: 'PM10' }
+      return { display: String(simState.pm10), numeric: simState.pm10, unit: 'µg/m³', label: 'PM10' }
 
     // 身体电量 / 压力
     case 'bodyBattery':
     case 'bb':
-      return { display: '72', numeric: 72, unit: '%', label: 'BODY' }
+      return { display: String(simState.bodyBattery), numeric: simState.bodyBattery, unit: '%', label: 'BODY' }
     case 'stress':
-      return { display: '21', numeric: 21, unit: '', label: 'STRESS' }
+      return { display: String(simState.stress), numeric: simState.stress, unit: '', label: 'STRESS' }
 
     // 日出 / 日落
     case 'sunrise':

@@ -29,6 +29,41 @@
         <el-icon><CircleCheck /></el-icon>
         <span>Save</span>
       </el-menu-item>
+
+      <!-- Align / Distribute toolbar -->
+      <el-sub-menu index="align-toolbar">
+        <template #title>
+          <el-icon><Top /></el-icon>
+          <span>Align</span>
+        </template>
+
+        <el-menu-item index="align/left" @click="() => handleAlign('left')">
+          <span>Align Left</span>
+        </el-menu-item>
+        <el-menu-item index="align/center" @click="() => handleAlign('center')">
+          <span>Align Center</span>
+        </el-menu-item>
+        <el-menu-item index="align/right" @click="() => handleAlign('right')">
+          <span>Align Right</span>
+        </el-menu-item>
+        <el-menu-item index="align/top" @click="() => handleAlign('top')">
+          <span>Align Top</span>
+        </el-menu-item>
+        <el-menu-item index="align/middle" @click="() => handleAlign('middle')">
+          <span>Align Middle</span>
+        </el-menu-item>
+        <el-menu-item index="align/bottom" @click="() => handleAlign('bottom')">
+          <span>Align Bottom</span>
+        </el-menu-item>
+
+        <el-menu-item index="distribute/horizontal" @click="() => handleDistribute('horizontal')">
+          <span>Distribute Horizontally</span>
+        </el-menu-item>
+        <el-menu-item index="distribute/vertical" @click="() => handleDistribute('vertical')">
+          <span>Distribute Vertically</span>
+        </el-menu-item>
+      </el-sub-menu>
+
       <!-- Main menu divider -->
       <el-divider direction="vertical" class="menu-divider" />
       <!-- Time group and items -->
@@ -75,7 +110,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DataTypeOptions } from '@/config/settings'
 
-import { getAddElement } from '@/utils/elementCodec/registry'
+import { getElementHandler } from '@/engine/registry/elementRegistry'
 import {
   Operation,
   Edit,
@@ -102,7 +137,7 @@ import {
   Mute,
   AlarmClock
 } from '@element-plus/icons-vue'
-import { elementConfigs } from '@/config/elements/elements'
+import { elementConfigs } from '@/elements/schemaMap'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
@@ -117,6 +152,7 @@ import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
 import emitter from '@/utils/eventBus'
+import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
 
 const route = useRoute()
 const router = useRouter()
@@ -165,6 +201,15 @@ document.addEventListener('keydown', (e) => {
   }
 })
 
+// Align / Distribute handlers
+const handleAlign = (type) => {
+  alignSelection(type)
+}
+
+const handleDistribute = (axis) => {
+  distributeSelection(axis)
+}
+
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category, elementType, overrides = {}) => {
   
@@ -179,7 +224,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
         height: 100,
         type: 'image',
         selectable: true,
-        hasControls: true,
+        hasControls: false,
         hasBorders: true,
         originX: 'center',
         originY: 'center'
@@ -202,14 +247,13 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       console.warn('Failed to load font (continue adding element):', e)
     }
 
-    // Use registry to add element
+    // Use registry to add element via ElementHandler.add(config)
     if (elementType) {
-      const addElement = getAddElement(elementType)
-      if (addElement) {
-        
-        addElement(elementType, config)
-      } else {
-        console.warn(`No add element handler registered for type: ${elementType}`)
+      try {
+        const handler = getElementHandler(elementType)
+        await handler.add(config)
+      } catch (e) {
+        console.warn(`No add element handler registered for type: ${elementType}`, e)
       }
     }
 

@@ -258,17 +258,6 @@ const filterFonts = async () => {
   }
 }
 
-const groupByFamily = (fonts: FontItem[]) => {
-  const groups = new Map<string, FontItem[]>()
-  fonts.forEach((font) => {
-    if (!groups.has(font.family)) {
-      groups.set(font.family, [])
-    }
-    groups.get(font.family)!.push(font)
-  })
-  return Array.from(groups.entries()).map(([family, fonts]) => ({ family, fonts }))
-}
-
 const handleSelect = (font: FontItem) => {
   console.log('[FontSearch] handleSelect', {
     font,

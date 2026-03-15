@@ -37,10 +37,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
-import { useUserStore } from '@/stores/user'
-import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
 import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
-import type { FontItem } from '@/types/font-picker'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
@@ -58,17 +55,13 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
-const userStore = useUserStore()
 
 const bitmapType = BITMAP_FONT_TYPE
 
 const isOpen = ref<boolean>(false)
-// 旧的字体上传弹框暂时不用
-const dialogVisible = ref<boolean>(false)
 
 // bitmap font setting dialog state
 const bitmapDialogVisible = ref(false)
-const activeTab = ref<'digit' | 'symbol' | 'other' | 'custom'>('digit')
 const currentFontName = ref<string>('')
 const isTempRandFont = ref<boolean>(false)
 type BitmapRow = {
@@ -90,8 +83,6 @@ const bitmapFonts = computed<BitmapFontVO[]>(() => bitmapFontStore.fonts)
 const pageNum = computed(() => bitmapFontStore.pageNum)
 const pageSize = computed(() => bitmapFontStore.pageSize)
 const bitmapTotal = computed(() => bitmapFontStore.total)
-
-type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
 
 const digitRows = computed<DigitRowState[]>(() => rows.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
 const symbolRows = computed<DigitRowState[]>(() => symbolRowList.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
@@ -147,10 +138,6 @@ const openBitmapDialog = async (fontId?: number) => {
   await loadBitmapRows(id)
 }
 
-const closeBitmapDialog = () => {
-  bitmapDialogVisible.value = false
-}
-
 const confirmBitmapDialog = async () => {
   try {
     // 如果是自动创建的 rand_ 前缀名字，引导用户修改名字
@@ -182,16 +169,6 @@ const confirmBitmapDialog = async () => {
     bitmapFontStore.clearSession()
     // 并重新加载列表，确保 UI 展示的是最新的 bitmap 字体信息
     void bitmapFontStore.loadPage(1)
-  }
-}
-
-const toggleSection = (section: SectionName | string) => {
-  fontStore.toggleSection(section)
-}
-
-const onDesignerScroll = () => {
-  if (fontStore.expandedSections?.recent) {
-    fontStore.toggleSection('recent')
   }
 }
 
@@ -264,48 +241,6 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
   isTempRandFont.value = typeof font.fontName === 'string' && font.fontName.startsWith('rand_')
   // 直接使用当前点击的字体 id，避免依赖父组件异步更新后的 props.modelValue 造成一次延迟
   await openBitmapDialog(font.id)
-}
-
-const ensureFontBySlug = async (slug: string, family: string) => {
-  try {
-    if (document.fonts && (document as any).fonts.check && (document as any).fonts.check(`12px ${family}`)) return
-    let url = ''
-    try {
-      const by = await getFontBySlug(slug)
-      url = by?.data?.ttfFile?.url || ''
-    } catch {}
-    if (!url) {
-      try {
-        const sys = await getSystemFonts(undefined, userStore.userInfo?.id)
-        const hit = (sys.data || []).find((f: any) => f.slug === slug)
-        url = hit?.ttfFile?.url || ''
-      } catch {}
-    }
-    if (!url) return
-    const ttfUrl = url.startsWith('http') ? url : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
-    await fontStore.loadFont(slug, ttfUrl)
-  } catch {}
-}
-
-const selectFont = async (font: FontItem) => {
-  await ensureFontBySlug(font.value, font.family)
-  emit('update:modelValue', font.value)
-  emit('change', font.value)
-  try {
-    await increaseFontUsage(font.value, userStore.userInfo?.id)
-  } catch {}
-  fontStore.addRecentFont(font)
-  isOpen.value = false
-}
-
-const onFontUploaded = async (slug: string) => {
-  emit('update:modelValue', slug)
-  emit('change', slug)
-  isOpen.value = false
-}
-
-const addCustomFont = () => {
-  dialogVisible.value = true
 }
 
 const handleResetRowByIndex = async (index: string) => {

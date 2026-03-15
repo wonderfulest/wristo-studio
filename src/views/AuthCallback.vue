@@ -8,9 +8,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchSsoToken, SsoTokenResponseData } from '@/api/wristo/auth'
-import { getUserInfo } from '@/api/wristo/auth'
-import type { ApiResponse } from '../types/api/api'
+import { fetchSsoToken, getUserInfo } from '@/api/wristo/auth'
+import type { ApiResponse } from '@/types/api/api'
+import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 
 const loading = ref(true)

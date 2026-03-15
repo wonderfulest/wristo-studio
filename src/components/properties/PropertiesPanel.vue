@@ -6,6 +6,24 @@
         <!-- 左侧属性列表 -->
         <div class="properties-list">
           <el-form label-position="top">
+            <el-form-item label="Text Case">
+              <el-select v-model="textCase" style="width: 100%">
+                <el-option label="Default" :value="1" />
+                <el-option label="Uppercase" :value="1" />
+                <el-option label="Lowercase" :value="2" />
+                <el-option label="Capitalize" :value="3" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Label Length">
+              <el-input model-value="Short" disabled />
+            </el-form-item>
+
+            <el-form-item label="Show Unit">
+              <el-switch v-model="showUnit" />
+            </el-form-item>
+
+            <el-divider />
             <template v-for="(prop, key) in propertiesStore.allProperties" :key="key">
               <el-form-item :label="prop.title">
                 <div class="property-item">
@@ -97,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   Document,
   Histogram,
@@ -121,6 +139,7 @@ import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDi
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
+import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 
 const visible = ref(false)
 const colorPropertyDialog = ref(null)
@@ -129,6 +148,30 @@ const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
+
+const textCase = computed({
+  get: () => propertiesStore.textCase,
+  set: (value) => {
+    propertiesStore.textCase = Number(value)
+    getDataSimulatorEngine().updateCanvas()
+  },
+})
+
+const labelLengthType = computed({
+  get: () => propertiesStore.labelLengthType,
+  set: (value) => {
+    propertiesStore.labelLengthType = Number(value)
+    getDataSimulatorEngine().updateCanvas()
+  },
+})
+
+const showUnit = computed({
+  get: () => propertiesStore.showUnit,
+  set: (value) => {
+    propertiesStore.showUnit = Boolean(value)
+    getDataSimulatorEngine().updateCanvas()
+  },
+})
 
 // 监听打开 App Properties 事件
 onMounted(() => {

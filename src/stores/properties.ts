@@ -6,6 +6,9 @@ import { DataTypeOptions } from '@/config/settings'
 export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
+    textCase: 0 as number,
+    labelLengthType: 1 as number,
+    showUnit: false as boolean,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
       { label: 'Dark Gray', value: '0x555555' },
@@ -148,6 +151,9 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     // Clear all properties - call this when creating a new design
     clearProperties() {
       this.properties = {}
+      this.textCase = 0
+      this.labelLengthType = 1
+      this.showUnit = false
     },
 
     addProperty(propertyData: {

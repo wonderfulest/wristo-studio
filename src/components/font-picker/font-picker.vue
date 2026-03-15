@@ -52,8 +52,8 @@ import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
-import { FontTypes } from '@/constants/fonts'
-import { useBaseStore } from '@/stores/baseStore'
+import { FontTypes } from '@/config/fonts'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import RecentFontList from '@/components/font-picker/RecentFontList.vue'
 import DesignerFontList from '@/components/font-picker/DesignerFontList.vue'
 import FontImportDialog from '@/components/font-picker/FontImportDialog.vue'
@@ -83,7 +83,7 @@ const isMerchantUser = computed(() => {
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
 const userStore = useUserStore()
-const baseStore = useBaseStore()
+const iconFontStrategyStore = useIconFontStrategyStore()
 const numberGlyphDialogRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
@@ -155,7 +155,7 @@ const ensureFontBySlug = async (slug: string, family: string) => {
 const selectFont = async (font: FontItem) => {
   // If selecting icon font, enforce single set per watch face
   if (props.type === FontTypes.ICON_FONT) {
-    const current = baseStore.currentIconFontSlug
+    const current = iconFontStrategyStore.currentIconFontSlug
     if (current && current !== font.value) {
       try {
         await ElMessageBox.confirm(
@@ -167,9 +167,9 @@ const selectFont = async (font: FontItem) => {
         return
       }
       await ensureFontBySlug(font.value, font.family)
-      baseStore.updateAllIconFont(font.value)
+      iconFontStrategyStore.updateAllIconFont(font.value)
     } else if (!current) {
-      baseStore.setIconFontSlug(font.value)
+      iconFontStrategyStore.setIconFontSlug(font.value)
       await ensureFontBySlug(font.value, font.family)
     } else {
       await ensureFontBySlug(font.value, font.family)
@@ -187,7 +187,7 @@ const selectFont = async (font: FontItem) => {
 // 上传完成回调（来自子组件）
 const onFontUploaded = async (slug: string) => {
   if (props.type === FontTypes.ICON_FONT) {
-    const current = baseStore.currentIconFontSlug
+    const current = iconFontStrategyStore.currentIconFontSlug
     if (current && current !== slug) {
       try {
         await ElMessageBox.confirm(
@@ -198,9 +198,9 @@ const onFontUploaded = async (slug: string) => {
       } catch {
         return
       }
-      baseStore.updateAllIconFont(slug)
+      iconFontStrategyStore.updateAllIconFont(slug)
     } else if (!current) {
-      baseStore.setIconFontSlug(slug)
+      iconFontStrategyStore.setIconFontSlug(slug)
     }
   }
   emit('update:modelValue', slug)
@@ -251,6 +251,8 @@ watch(
     } catch {}
   }
 )
+
+void [isMerchantUser, systemSections, openNumberGlyphEditor]
 </script>
 
 <style scoped>

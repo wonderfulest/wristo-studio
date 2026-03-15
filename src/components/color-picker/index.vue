@@ -52,7 +52,8 @@ import { usePropertiesStore } from '@/stores/properties'
 
 const props = defineProps({
   modelValue: {
-    type: String,
+    // 兼容字符串和数字（有些元素用 -1 之类的数值占位）
+    type: [String, Number],
     default: '#FFFFFF'
   }
 })
@@ -137,7 +138,8 @@ const wrapperRef = ref(null)
 const pickerStyle = ref({})
 // 为每个实例生成唯一标识，用于互斥控制
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
-const hexColor = ref(props.modelValue)
+// 内部统一使用字符串表示颜色
+const hexColor = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
 
 // 获取当前使用的颜色
 const colorVariables = computed(() => baseStore.getAllColors())
@@ -158,6 +160,9 @@ const colorProperties = computed(() => {
 // Helper: convert hex string to RGB
 const hexToRgb = (hex) => {
   if (!hex) return null
+  if (typeof hex !== 'string') {
+    hex = String(hex)
+  }
   const h = hex.startsWith('#') ? hex.slice(1) : (hex.startsWith('0x') ? hex.slice(2) : hex)
   if (h.length !== 6) return null
   const r = parseInt(h.slice(0, 2), 16)
@@ -234,7 +239,8 @@ watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue !== hexColor.value) {
-      hexColor.value = newValue === 'transparent' ? '#222222' : newValue
+      const v = typeof newValue === 'string' ? newValue : String(newValue)
+      hexColor.value = v === 'transparent' ? '#222222' : v
     }
   }
 )

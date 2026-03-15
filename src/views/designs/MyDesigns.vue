@@ -127,7 +127,7 @@ import dayjs from 'dayjs'
 import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
-import DeviceDisplay from '@/components/DeviceDisplay.vue'
+import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
@@ -194,12 +194,6 @@ const showCreator = ref(false)  // 默认隐藏作者
 
 // 处理搜索
 const handleSearch = () => {
-  currentPage.value = 1
-  fetchDesigns()
-}
-
-// 处理状态变化
-const handleStatusChange = () => {
   currentPage.value = 1
   fetchDesigns()
 }

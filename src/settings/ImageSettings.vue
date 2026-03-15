@@ -30,8 +30,11 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { useBaseStore } from '@/stores/baseStore'
+
 import { FabricImage } from 'fabric'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useDesignStore } from '@/stores/designStore'
+import { ca } from 'element-plus/es/locales.mjs'
 
 const props = defineProps({
   element: {
@@ -40,8 +43,8 @@ const props = defineProps({
   }
 })
 
-const baseStore = useBaseStore()
-
+const canvasStore = useCanvasStore()
+const designStore = useDesignStore()
 // 响应式状态
 const imageUrl = ref('')
 const positionX = ref(Math.round(props.element?.left || 0))
@@ -69,18 +72,16 @@ const handleCustomUpload = async (options) => {
   const localUrl = URL.createObjectURL(file)
   imageUrl.value = localUrl
 
-  if (props.element && baseStore.canvas) {
+  if (props.element && canvasStore.canvas) {
     // Create a temporary image to get original dimensions
     const img = new Image()
     img.src = localUrl
     img.crossOrigin = 'anonymous'
 
     img.onload = () => {
-      // Get canvas dimensions
-      const canvasSize = baseStore.WATCH_SIZE
 
       // Calculate scale to fit canvas
-      const scale = Math.min(canvasSize / img.width, canvasSize / img.height)
+      const scale = Math.min(designStore.designSpec.width / img.width, designStore.designSpec.height / img.height)
 
       props.element.set({
         scaleX: scale,
@@ -89,10 +90,10 @@ const handleCustomUpload = async (options) => {
 
       props.element.setSrc(localUrl, () => {
         // Move image to second-to-last layer (above background circle)
-        baseStore.canvas.moveTo(props.element, 1)
+        canvasStore.canvas.moveTo(props.element, 1)
 
         // Render canvas
-        baseStore.canvas.renderAll()
+        canvasStore.canvas.renderAll()
       })
     }
   }
@@ -100,12 +101,12 @@ const handleCustomUpload = async (options) => {
 
 // 更新位置
 const updatePosition = () => {
-  if (!props.element || !baseStore.canvas) return
+  if (!props.element || !canvasStore.canvas) return
   props.element.set({
     left: positionX.value,
     top: positionY.value
   })
-  baseStore.canvas.renderAll()
+  canvasStore.canvas.renderAll()
 }
 
 // 监听画布上的对象变化

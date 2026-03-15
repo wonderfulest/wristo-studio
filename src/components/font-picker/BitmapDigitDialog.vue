@@ -38,7 +38,7 @@
             :show-file-list="false"
             :auto-upload="false"
             accept="image/*"
-            @change="(file) => handleFileChange(file, row.index)"
+            @change="(file: any) => handleFileChange(file, row.index)"
           >
             <template v-if="row.imageUrl">
               <img :src="row.imageUrl" class="bitmap-image" alt="digit preview" />
@@ -74,7 +74,7 @@
             :show-file-list="false"
             :auto-upload="false"
             accept="image/*"
-            @change="(file) => handleFileChange(file, row.index)"
+            @change="(file: any) => handleFileChange(file, row.index)"
           >
             <template v-if="row.imageUrl">
               <img :src="row.imageUrl" class="bitmap-image" alt="symbol preview" />

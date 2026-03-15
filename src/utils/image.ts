@@ -52,7 +52,7 @@ export const uploadBase64Image = async (base64Data: string, type: UploadType) =>
       const byteArray = new Uint8Array(byteNumbers)
       byteArrays.push(byteArray)
     }
-    const blob = new Blob(byteArrays, { type: 'image/png' })
+    const blob = new Blob(byteArrays as unknown as BlobPart[], { type: 'image/png' })
     const formData = new FormData()
     formData.append('file', blob, 'background.png')
     formData.append('type', type)
