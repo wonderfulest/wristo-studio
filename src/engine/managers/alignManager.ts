@@ -115,38 +115,48 @@ export function distributeSelection(axis: DistributeType): void {
     items.sort((a, b) => a.rect.left - b.rect.left)
     const first = items[0]
     const last = items[items.length - 1]
-    const totalWidth = last.rect.left + last.rect.width - first.rect.left
-    const innerCount = items.length - 1
-    const gap = (totalWidth - items.reduce((s, i) => s + i.rect.width, 0)) / innerCount
 
-    let cursor = first.rect.left
+    const firstLeft = first.rect.left
+    const lastRight = last.rect.left + last.rect.width
+    const totalSpan = lastRight - firstLeft
+    const totalWidth = items.reduce((s, i) => s + i.rect.width, 0)
+    const innerCount = items.length - 1
+    const gap = (totalSpan - totalWidth) / innerCount
+
+    // 从第一个元素的右边开始依次排布中间元素：prevRight + gap
+    let currentRight = first.rect.left + first.rect.width
     items.forEach(({ el, rect }, idx) => {
       if (idx === 0 || idx === items.length - 1) return // 保持两端不动
-      cursor += rect.width + gap
-      const targetLeft = cursor - rect.width
+      const targetLeft = currentRight + gap
       const dx = targetLeft - rect.left
       const currentLeft = Number((el as any).left ?? 0)
       ;(el as any).set?.({ left: currentLeft + dx })
       el.setCoords?.()
+      currentRight = targetLeft + rect.width
     })
   } else {
     // vertical：按 top 排序
     items.sort((a, b) => a.rect.top - b.rect.top)
     const first = items[0]
     const last = items[items.length - 1]
-    const totalHeight = last.rect.top + last.rect.height - first.rect.top
-    const innerCount = items.length - 1
-    const gap = (totalHeight - items.reduce((s, i) => s + i.rect.height, 0)) / innerCount
 
-    let cursor = first.rect.top
+    const firstTop = first.rect.top
+    const lastBottom = last.rect.top + last.rect.height
+    const totalSpan = lastBottom - firstTop
+    const totalHeight = items.reduce((s, i) => s + i.rect.height, 0)
+    const innerCount = items.length - 1
+    const gap = (totalSpan - totalHeight) / innerCount
+
+    // 从第一个元素的下边开始依次排布中间元素：prevBottom + gap
+    let currentBottom = first.rect.top + first.rect.height
     items.forEach(({ el, rect }, idx) => {
       if (idx === 0 || idx === items.length - 1) return
-      cursor += rect.height + gap
-      const targetTop = cursor - rect.height
+      const targetTop = currentBottom + gap
       const dy = targetTop - rect.top
       const currentTop = Number((el as any).top ?? 0)
       ;(el as any).set?.({ top: currentTop + dy })
       el.setCoords?.()
+      currentBottom = targetTop + rect.height
     })
   }
 
