@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useBackgroundStore } from '@/stores/backgroundStore'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
@@ -30,6 +30,10 @@ import ThemeRuleSettings from '@/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 const baseStore = useBaseStore()
 const backgroundStore = useBackgroundStore()
+
+onMounted(() => {
+  backgroundStore.syncFromCanvas()
+})
 
 const appId = computed(() => baseStore.appId)
 // 表盘名称

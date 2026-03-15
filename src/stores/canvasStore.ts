@@ -70,6 +70,21 @@ export const useCanvasStore = defineStore('canvas', {
       }
 
       if (!url) {
+        // 兜底清理：移除所有历史遗留的 background 图层
+        try {
+          const objs = (this.canvas.getObjects?.() || []) as AnyObject[]
+          for (const obj of objs) {
+            if (obj && (obj as any).eleType === 'background') {
+              try {
+                this.canvas.remove(obj as any)
+              } catch (e) {
+                console.warn('Failed to remove legacy background object', e)
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to cleanup legacy background objects', e)
+        }
         this.canvas.renderAll()
         return
       }
