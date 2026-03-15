@@ -233,15 +233,44 @@ export function copySelection(): void {
     return
   }
 
+  console.log('[ElementManager] copySelection: active objects', {
+    count: actives.length,
+    ids: actives.map((el) => (el as any)?.id),
+    eleTypes: actives.map((el) => (el as any)?.eleType),
+    rawPositions: actives.map((el) => ({
+      id: (el as any)?.id,
+      eleType: (el as any)?.eleType,
+      left: (el as any)?.left,
+      top: (el as any)?.top,
+      originX: (el as any)?.originX,
+      originY: (el as any)?.originY,
+      type: (el as any)?.type,
+    })),
+  })
+
   const encoded: AnyElementConfig[] = []
   actives.forEach((el) => {
     const cfg = encodeElementByRegistry(el)
     if (cfg) {
-      encoded.push(cfg as AnyElementConfig)
+      const resolvedEleType = (cfg as any).eleType ?? (cfg as any).type ?? (el as any).eleType
+      const next: AnyElementConfig = {
+        ...(cfg as AnyElementConfig),
+        eleType: resolvedEleType,
+      }
+      console.log('[ElementManager] copySelection: encoded element', {
+        id: (el as any)?.id,
+        eleType: (el as any)?.eleType,
+        cfg,
+        next,
+      })
+      encoded.push(next)
     }
   })
 
   selectionClipboard = encoded
+  console.log('[ElementManager] copySelection: clipboard set', {
+    clipboard: selectionClipboard,
+  })
 }
 
 /**
@@ -251,16 +280,41 @@ export function pasteSelection(): void {
   if (!selectionClipboard.length) return
 
   const offset = 20
-  selectionClipboard.forEach((cfg, index) => {
+  console.log('[ElementManager] pasteSelection: start', {
+    clipboard: selectionClipboard,
+    offset,
+  })
+  selectionClipboard.forEach((cfg) => {
     try {
+      const eleType = (cfg as any).eleType ?? (cfg as any).type
+      if (!eleType) {
+        console.warn('[ElementManager] pasteSelection: missing eleType/type in clipboard config', {
+          cfg,
+        })
+        return
+      }
+
       const newId = nanoid()
+
+      const baseLeft = cfg.left != null ? Number(cfg.left) : undefined
+      const baseTop = cfg.top != null ? Number(cfg.top) : undefined
+      const nextLeft = Number.isFinite(baseLeft as number) ? (baseLeft as number) + offset : cfg.left
+      const nextTop = Number.isFinite(baseTop as number) ? (baseTop as number) + offset : cfg.top
+
       const nextCfg: AnyElementConfig = {
         ...(cfg as AnyElementConfig),
         id: newId,
-        left: cfg.left != null ? Number(cfg.left) + offset * (index + 1) : cfg.left,
-        top: cfg.top != null ? Number(cfg.top) + offset * (index + 1) : cfg.top,
+        eleType,
+        // 多选粘贴时保持相对位置不变：所有元素使用同一份偏移即可
+        left: nextLeft as any,
+        top: nextTop as any,
       }
-      addElement(nextCfg.eleType as ElementType, nextCfg)
+      console.log('[ElementManager] pasteSelection: addElement with config', {
+        eleType,
+        cfg,
+        nextCfg,
+      })
+      addElement(eleType as ElementType, nextCfg)
     } catch (e) {
       console.warn('[ElementManager] pasteSelection: failed to add element from clipboard', {
         cfg,
