@@ -11,7 +11,7 @@ export type Tick60ElementSchema = {
 export const tick60Schema: Tick60ElementSchema = {
   type: 'tick60',
   name: 'Tick 60',
-  icon: 'hash',
+  icon: 'mdi:circle-slice-6',
   resizable: false,
   rotatable: false,
 }

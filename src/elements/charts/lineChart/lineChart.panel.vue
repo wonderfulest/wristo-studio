@@ -1,20 +1,23 @@
 <template>
   <div class="settings-section">
-    <el-form 
+    <el-form
       ref="formRef"
-      :model="currentModel" 
-      label-position="left" 
+      :model="currentModel"
+      label-position="left"
       label-width="100px"
     >
       <ChartPropertyField v-model="currentModel.chartProperty" @change="(v: string) => applyUpdate({ chartProperty: v })" />
 
       <el-form-item label="位置">
-        <PositionInputs 
+        <PositionInputs
           :left="currentModel.left"
           :top="currentModel.top"
-          @update:left="(v: number)=> applyUpdate({ left: v })"
-          @update:top="(v: number)=> applyUpdate({ top: v })"
-          @change="(p: { left: number; top: number })=>{ handlePositionChange('left', p.left); handlePositionChange('top', p.top) }"
+          @update:left="(v: number) => applyUpdate({ left: v })"
+          @update:top="(v: number) => applyUpdate({ top: v })"
+          @change="(p: { left: number; top: number }) => {
+            handlePositionChange('left', p.left)
+            handlePositionChange('top', p.top)
+          }"
         />
       </el-form-item>
 
@@ -28,29 +31,29 @@
       </el-form-item>
       
       <el-form-item label="高度">
-        <el-input-number 
-          v-model="currentModel.height" 
-          :min="20" 
-          :max="100" 
-          @change="updateElement" 
+        <el-input-number
+          v-model="currentModel.height"
+          :min="20"
+          :max="100"
+          @change="() => applyUpdate({ height: currentModel.height })"
         />
       </el-form-item>
 
       <el-form-item label="数据点数量">
-        <el-input-number 
-          v-model="currentModel.pointCount" 
-          :min="5" 
-          :max="500" 
-          @change="updateElement" 
+        <el-input-number
+          v-model="currentModel.pointCount"
+          :min="5"
+          :max="500"
+          @change="() => applyUpdate({ pointCount: currentModel.pointCount })"
         />
       </el-form-item>
 
       <el-form-item label="线条宽度">
-        <el-input-number 
-          v-model="currentModel.lineWidth" 
-          :min="1" 
-          :max="10" 
-          @change="() => applyUpdate({ pointRadius: currentModel.pointRadius })" 
+        <el-input-number
+          v-model="currentModel.lineWidth"
+          :min="1"
+          :max="10"
+          @change="() => applyUpdate({ lineWidth: currentModel.lineWidth })"
         />
       </el-form-item>
 
@@ -79,11 +82,11 @@
       </el-form-item>
 
       <el-form-item label="数据点半径" v-if="currentModel.showPoints">
-        <el-input-number 
-          v-model="currentModel.pointRadius" 
-          :min="1" 
-          :max="10" 
-          @change="updateElement" 
+        <el-input-number
+          v-model="currentModel.pointRadius"
+          :min="1"
+          :max="10"
+          @change="() => applyUpdate({ pointRadius: currentModel.pointRadius })"
         />
       </el-form-item>
 
@@ -123,11 +126,11 @@
       </el-form-item>
 
       <el-form-item label="Y轴网格数量" v-if="currentModel.showGrid">
-        <el-input-number 
-          v-model="currentModel.gridYCount" 
-          :min="1" 
-          :max="10" 
-          @change="updateElement" 
+        <el-input-number
+          v-model="currentModel.gridYCount"
+          :min="1"
+          :max="10"
+          @change="() => applyUpdate({ gridYCount: currentModel.gridYCount })"
         />
       </el-form-item>
 
@@ -252,12 +255,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useLineChartStore } from '@/elements/charts/lineChart/lineChartElement'
+import * as elementManager from '@/engine/managers/elementManager'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import ChartPropertyField from '@//elements/common/settings/ChartPropertyField.vue'
+import ChartPropertyField from '@/elements/common/settings/ChartPropertyField.vue'
 import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 
 const props = defineProps<{
@@ -267,10 +270,8 @@ const props = defineProps<{
 }>()
 
 const formRef = ref()
-const lineChartStore = useLineChartStore()
 const baseStore = useBaseStore()
 
-// 计算可用的字体大小（最大到96）
 const availableFontSizes = computed(() => {
   return fontSizes.filter((size) => size <= 96)
 })
@@ -279,88 +280,18 @@ const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
 })
 
-// 获取画布上的实际元素
 const getFabricElement = () => {
   if (!baseStore.canvas) return null
   if (!props.element) return null
   return baseStore.canvas.getObjects().find(obj => (obj as any).id === props.element.id)
 }
 
-// 颜色互斥：主色与背景色不能同时设置
 const handleMainColorChange = (val: string) => {
   applyUpdate({ color: val, bgColor: 'transparent' })
 }
 
 const handleBgColorChange = (val: string) => {
   applyUpdate({ bgColor: val, color: 'transparent' })
-}
-
-// 更新元素
-const updateElement = () => {
-  if (props.applyPatch && props.config) {
-    return
-  }
-  const fabricElement = getFabricElement()
-  if (!fabricElement) return
-
-  // 创建更新配置对象
-  const updateConfig = {
-    ...props.element,
-    // 确保使用画布上实际元素的位置
-    left: fabricElement.left,
-    top: fabricElement.top,
-    // 保持其他属性不变
-    width: props.element.width,
-    height: props.element.height,
-    pointCount: props.element.pointCount,
-    lineWidth: props.element.lineWidth,
-    smoothFactor: props.element.smoothFactor,
-    showPoints: props.element.showPoints,
-    pointColor: props.element.pointColor,
-    pointRadius: props.element.pointRadius,
-    color: props.element.color,
-    bgColor: props.element.bgColor,
-    fillMissing: props.element.fillMissing,
-    showGrid: props.element.showGrid,
-    gridColor: props.element.gridColor,
-    gridYCount: props.element.gridYCount,
-    gridXCount: props.element.gridXCount,
-    showAxis: props.element.showAxis,
-    axisColor: props.element.axisColor,
-    // X轴设置
-    showXLabels: props.element.showXLabels,
-    xLabelColor: props.element.xLabelColor,
-    xFont: props.element.xFont,
-    xFontSize: props.element.xFontSize,
-    xLabelHeight: props.element.xLabelHeight,
-    // Y轴设置
-    showYLabels: props.element.showYLabels,
-    yLabelColor: props.element.yLabelColor,
-    yFont: props.element.yFont,
-    yFontSize: props.element.yFontSize,
-    yLabelWidth: props.element.yLabelWidth,
-    // 其他设置
-    timeFormat: props.element.timeFormat,
-    chartProperty: props.element.chartProperty
-  }
-
-  lineChartStore.updateElement(props.element, updateConfig)
-}
-
-// 处理位置更新
-const handlePositionChange = (type: 'left' | 'top', value: number) => {
-  const fabricElement = getFabricElement()
-  if (!fabricElement) return
-
-  // 更新画布上元素的位置
-  fabricElement.set(type, value)
-  fabricElement.setCoords()
-  baseStore.canvas?.renderAll()
-
-  // 同步更新 store 中的位置
-  if (props.element) {
-    props.element[type] = value
-  }
 }
 
 const applyUpdate = (patch: Record<string, any>) => {
@@ -370,8 +301,20 @@ const applyUpdate = (patch: Record<string, any>) => {
   }
 
   if (props.element) {
-    Object.assign(props.element, patch)
-    updateElement()
+    elementManager.updateElement(props.element as any, patch)
+  }
+}
+
+const handlePositionChange = (type: 'left' | 'top', value: number) => {
+  const fabricElement = getFabricElement()
+  if (!fabricElement) return
+
+  fabricElement.set(type, value)
+  fabricElement.setCoords()
+  baseStore.canvas?.renderAll()
+
+  if (props.element) {
+    props.element[type] = value
   }
 }
 </script>
@@ -398,9 +341,6 @@ const applyUpdate = (patch: Record<string, any>) => {
 }
 
 .axis-section h4 {
-  margin: 0 0 16px 0;
-  color: #606266;
-  font-size: 14px;
-  font-weight: 500;
+  margin: 0 0 12px;
 }
 </style>

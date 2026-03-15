@@ -11,7 +11,7 @@ export type Tick12ElementSchema = {
 export const tick12Schema: Tick12ElementSchema = {
   type: 'tick12',
   name: 'Tick 12',
-  icon: 'hash',
+  icon: 'mdi:decagram-outline',
   resizable: false,
   rotatable: false,
 }

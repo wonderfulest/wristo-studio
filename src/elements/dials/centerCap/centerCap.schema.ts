@@ -15,7 +15,7 @@ export type CenterCapElementSchema = {
 export const centerCapSchema: CenterCapElementSchema = {
   type: 'centerCap' as ElementType,
   name: 'Center Cap',
-  icon: 'hash',
+  icon: 'mdi:circle-slice-8',
   defaultConfig: {
     imageUrl: null,
     assetId: null,

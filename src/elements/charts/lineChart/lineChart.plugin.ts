@@ -2,28 +2,25 @@ import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementType } from '@/types/element'
 import type { LineChartElementConfig } from '@/types/elements/charts'
-import { useLineChartStore } from '@/elements/charts/lineChart/lineChartElement'
-import LineChartSettings from '@/elements/charts/lineChart/lineChartSettings.vue'
+import { createLineChart, updateLineChart } from '@/elements/charts/lineChart/lineChart.renderer'
+import { encodeLineChart, decodeLineChart } from '@/elements/charts/lineChart/lineChart.encoder'
+import LineChartPanel from '@/elements/charts/lineChart/lineChart.panel.vue'
 
 export default function registerLineChartPlugin() {
   registerElement('lineChart' as ElementType, {
     add: (config) => {
-      const store = useLineChartStore()
-      return store.addElement(config as LineChartElementConfig)
+      return createLineChart(config as LineChartElementConfig)
     },
     update: (element, patch) => {
-      const store = useLineChartStore()
-      store.updateElement(element as any, patch as Partial<LineChartElementConfig>)
+      updateLineChart(element as any, patch as Partial<LineChartElementConfig>)
     },
     encode: (element) => {
-      const store = useLineChartStore()
-      return store.encodeConfig(element as any) as any
+      return encodeLineChart(element as any) as any
     },
     decode: (config) => {
-      const store = useLineChartStore()
-      return store.decodeConfig(config as any)
+      return decodeLineChart(config as any) as any
     },
   })
 
-  registerSettings('lineChart' as ElementType, LineChartSettings)
+  registerSettings('lineChart' as ElementType, LineChartPanel)
 }

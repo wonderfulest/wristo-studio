@@ -11,7 +11,7 @@ export type RomansElementSchema = {
 export const romansSchema: RomansElementSchema = {
   type: 'romans',
   name: 'Romans',
-  icon: 'hash',
+  icon: 'mdi:format-letter-case',
   resizable: false,
   rotatable: false,
 }

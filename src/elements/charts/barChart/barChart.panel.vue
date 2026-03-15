@@ -33,7 +33,7 @@
           v-model="currentModel.height" 
           :min="20" 
           :max="100" 
-          @change="updateElement" 
+          @change="() => applyUpdate({ height: currentModel.height })" 
         />
       </el-form-item>
 
@@ -42,7 +42,7 @@
           v-model="currentModel.pointCount" 
           :min="5" 
           :max="500" 
-          @change="updateElement" 
+          @change="() => applyUpdate({ pointCount: currentModel.pointCount })" 
         />
       </el-form-item>
 
@@ -100,7 +100,7 @@
           v-model="currentModel.gridYCount" 
           :min="1" 
           :max="10" 
-          @change="updateElement" 
+          @change="() => applyUpdate({ gridYCount: currentModel.gridYCount })" 
         />
       </el-form-item>
 
@@ -200,7 +200,7 @@
           :min="1" 
           :max="30" 
           :step="1"
-          @change="updateElement" 
+          @change="() => applyUpdate({ barWidth: currentModel.barWidth })" 
         />
       </el-form-item>
     </el-form>
@@ -209,7 +209,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { useBarChartStore } from '@/elements/charts/barChart/barChartElement'
+import * as elementManager from '@/engine/managers/elementManager'
 import { useBaseStore } from '@/stores/baseStore'
 import { fontSizes } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
@@ -225,7 +225,6 @@ const props = defineProps<{
 }>()
 
 const formRef = ref()
-const barChartStore = useBarChartStore()
 const baseStore = useBaseStore()
 
 const currentModel = computed<any>(() => {
@@ -238,12 +237,11 @@ const originXOptions = [
   { label: '右', value: 'right' },
 ]
 
-
 // 获取画布上的实际元素
 const getFabricElement = () => {
   if (!baseStore.canvas) return null
   if (!props.element) return null
-  return baseStore.canvas.getObjects().find(obj => (obj as any).id === props.element.id)
+  return baseStore.canvas.getObjects().find((obj) => (obj as any).id === props.element.id)
 }
 
 // 颜色互斥：主色与背景色不能同时设置
@@ -255,54 +253,6 @@ const handleBgColorChange = (val: string) => {
   applyUpdate({ bgColor: val, color: 'transparent' })
 }
 
-// 更新元素
-const updateElement = () => {
-  if (props.applyPatch && props.config) {
-    // 新通道下不直接操作 Fabric，由上层处理补丁
-    return
-  }
-  const fabricElement = getFabricElement()
-  if (!fabricElement) return
-
-  // 创建更新配置对象
-  const updateConfig = {
-    ...props.element,
-    // 确保使用画布上实际元素的位置
-    left: fabricElement.left,
-    top: fabricElement.top,
-    // 保持其他属性不变
-    width: props.element.width,
-    height: props.element.height,
-    pointCount: props.element.pointCount,
-    minY: props.element.minY,
-    maxY: props.element.maxY,
-    fillMissing: props.element.fillMissing,
-    color: props.element.color,
-    bgColor: props.element.bgColor,
-    originX: props.element.originX,
-    barWidth: props.element.barWidth,
-    chartProperty: props.element.chartProperty,
-    // 新增的图表显示属性
-    showGrid: props.element.showGrid,
-    gridColor: props.element.gridColor,
-    gridYCount: props.element.gridYCount,
-    showXAxis: props.element.showXAxis,
-    showYAxis: props.element.showYAxis,
-    xAxisColor: props.element.xAxisColor,
-    yAxisColor: props.element.yAxisColor,
-    showXLabels: props.element.showXLabels,
-    showYLabels: props.element.showYLabels,
-    xLabelColor: props.element.xLabelColor,
-    yLabelColor: props.element.yLabelColor,
-    xFont: props.element.xFont,
-    yFont: props.element.yFont,
-    xFontSize: props.element.xFontSize,
-    yFontSize: props.element.yFontSize
-  }
-
-  barChartStore.updateElement(props.element, updateConfig)
-}
-
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {
     props.applyPatch(patch)
@@ -310,8 +260,7 @@ const applyUpdate = (patch: Record<string, any>) => {
   }
 
   if (props.element) {
-    Object.assign(props.element, patch)
-    updateElement()
+    elementManager.updateElement(props.element as any, patch)
   }
 }
 
@@ -330,7 +279,7 @@ watch(
   () => (currentModel.value as any).chartProperty,
   () => {
     formRef.value?.validateField?.('chartProperty')
-  }
+  },
 )
 
 // 处理位置更新
@@ -338,12 +287,10 @@ const handlePositionChange = (type: 'left' | 'top', value: number) => {
   const fabricElement = getFabricElement()
   if (!fabricElement) return
 
-  // 更新画布上元素的位置
   fabricElement.set(type, value)
   fabricElement.setCoords()
   baseStore.canvas?.renderAll()
 
-  // 同步更新 store 中的位置
   if (props.element) {
     props.element[type] = value
   }

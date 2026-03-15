@@ -16,7 +16,7 @@ export type MoonElementSchema = {
 export const moonSchema: MoonElementSchema = {
   type: 'moon',
   name: 'Moon',
-  icon: 'moon',
+  icon: 'mdi:moon-waning-crescent',
   defaultConfig: {
     width: 42,
     height: 42,
