@@ -19,7 +19,7 @@ export const alarmsSchema: AlarmsElementSchema = {
   icon: 'mdi:alarm',
   defaultConfig: {
     fontSize: 24,
-    fontFamily: 'wristo-indicator',
+    fontFamily: 'wristo-icon',
     fill: '#ffffff',
   },
   resizable: false,

@@ -19,7 +19,7 @@ export const disturbSchema: DisturbElementSchema = {
   icon: 'mdi:do-not-disturb',
   defaultConfig: {
     fontSize: 24,
-    fontFamily: 'wristo-indicator',
+    fontFamily: 'wristo-icon',
     fill: '#ffffff',
   },
   resizable: false,

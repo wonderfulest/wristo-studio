@@ -19,7 +19,7 @@ export const notificationSchema: NotificationElementSchema = {
   icon: 'mdi:bell',
   defaultConfig: {
     fontSize: 24,
-    fontFamily: 'wristo-indicator',
+    fontFamily: 'wristo-icon',
     fill: '#ffffff',
   },
   resizable: false,

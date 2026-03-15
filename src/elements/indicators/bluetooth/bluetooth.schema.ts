@@ -19,7 +19,7 @@ export const bluetoothSchema: BluetoothElementSchema = {
   icon: 'mdi:bluetooth',
   defaultConfig: {
     fontSize: 24,
-    fontFamily: 'wristo-indicator',
+    fontFamily: 'wristo-icon',
     fill: '#ffffff',
   },
   resizable: false,
