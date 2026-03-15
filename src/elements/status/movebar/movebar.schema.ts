@@ -14,6 +14,7 @@ export type MoveBarElementSchema = {
   }
   resizable: boolean
   rotatable: boolean
+  disabled: boolean
 }
 
 export const moveBarSchema: MoveBarElementSchema = {
@@ -30,4 +31,5 @@ export const moveBarSchema: MoveBarElementSchema = {
   },
   resizable: true,
   rotatable: false,
+  disabled: true
 }

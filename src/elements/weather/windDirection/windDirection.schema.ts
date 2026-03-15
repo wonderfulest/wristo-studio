@@ -12,6 +12,7 @@ export type WindDirectionElementSchema = {
   }
   resizable: boolean
   rotatable: boolean
+  disabled: boolean
 }
 
 export const windDirectionSchema: WindDirectionElementSchema = {
@@ -26,4 +27,5 @@ export const windDirectionSchema: WindDirectionElementSchema = {
   },
   resizable: true,
   rotatable: true,
+  disabled: true,
 }

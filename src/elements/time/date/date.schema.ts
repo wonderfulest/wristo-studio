@@ -1,3 +1,4 @@
+import { DateFormatConstants } from '@/config/settings'
 import type { ElementType } from '@/types/element'
 
 // Date 元素的基础描述 Schema
@@ -23,7 +24,7 @@ export const dateSchema: DateElementSchema = {
     fontSize: 24,
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',
-    formatter: 0,
+    formatter: DateFormatConstants.MMM_D_DDD,
   },
   resizable: false,
   rotatable: false,

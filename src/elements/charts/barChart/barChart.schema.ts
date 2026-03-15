@@ -18,6 +18,7 @@ export type BarChartElementSchema = {
   }
   resizable: boolean
   rotatable: boolean
+  disabled: boolean
 }
 
 export const barChartSchema: BarChartElementSchema = {
@@ -38,4 +39,5 @@ export const barChartSchema: BarChartElementSchema = {
   },
   resizable: true,
   rotatable: false,
+  disabled: true
 }

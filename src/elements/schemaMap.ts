@@ -59,6 +59,7 @@ type AnySchema = {
   name: string
   icon: string
   defaultConfig?: Partial<AnyElementConfig>
+  disabled?: boolean
 }
 
 function buildConfigFromSchema(schema: AnySchema): AnyElementConfig & EDITOR_ELEMENT {
@@ -67,6 +68,7 @@ function buildConfigFromSchema(schema: AnySchema): AnyElementConfig & EDITOR_ELE
     icon: schema.icon,
     label: schema.name,
     eleType: schema.type as any,
+    disabled: schema.disabled ?? false,
   } as AnyElementConfig & EDITOR_ELEMENT
 }
 

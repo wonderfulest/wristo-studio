@@ -22,6 +22,7 @@ export type LineChartElementSchema = {
   }
   resizable: boolean
   rotatable: boolean
+  disabled: boolean
 }
 
 export const lineChartSchema: LineChartElementSchema = {
@@ -46,4 +47,5 @@ export const lineChartSchema: LineChartElementSchema = {
   },
   resizable: true,
   rotatable: false,
+  disabled: true
 }
