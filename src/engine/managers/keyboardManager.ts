@@ -1,11 +1,7 @@
 import Mousetrap from 'mousetrap'
 import emitter from '@/utils/eventBus'
-import {
-  nudgeSelection,
-  changeSelectionFontSize,
-  copySelection,
-  pasteSelection,
-} from '@/engine/managers/elementManager'
+import { nudgeSelection, changeSelectionFontSize } from '@/engine/managers/elementManager'
+import { copySelection, pasteSelection } from '@/engine/managers/clipboardManager'
 
 // 记录 Mousetrap 原始 stopCallback，便于还原
 let originalStop: ((e: KeyboardEvent, element: Element, combo: string) => boolean) | null = null
