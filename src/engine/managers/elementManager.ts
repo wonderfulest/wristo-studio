@@ -30,6 +30,25 @@ export function unregisterElementInstance(target: string | FabricElement | null 
   elementMap.delete(String(id))
 }
 
+// 安全计算对象在画布坐标系中的中心点，避免直接调用 Fabric 的 getCenterPoint 导致内部 getRelativeCenterPoint 报错
+function getObjectCenter(obj: any): { x: number; y: number } {
+  if (!obj) return { x: 0, y: 0 }
+
+  const left = Number(obj.left ?? 0)
+  const top = Number(obj.top ?? 0)
+
+  const width = Number(obj.width ?? 0)
+  const height = Number(obj.height ?? 0)
+
+  const scaleX = Number(obj.scaleX ?? 1)
+  const scaleY = Number(obj.scaleY ?? 1)
+
+  return {
+    x: left + (width * scaleX) / 2,
+    y: top + (height * scaleY) / 2
+  }
+}
+
 export function getElementById(id: string | number | null | undefined): FabricElement | undefined {
   if (id == null) return undefined
   return elementMap.get(String(id))
@@ -58,9 +77,7 @@ export function updateElement(element: FabricElement, patch: any) {
     } else {
       const canvasStore = useCanvasStore()
       const canvas = canvasStore.canvas
-      const found = (canvas?.getObjects?.() || []).find(
-        (o: any) => o?.id != null && String(o.id) === String(id),
-      ) as FabricElement | undefined
+      const found = (canvas?.getObjects?.() || []).find((o: any) => o?.id != null && String(o.id) === String(id)) as FabricElement | undefined
       if (found) {
         resolved = found
         registerElementInstance(found)
@@ -90,9 +107,7 @@ export function updateElementById(id: string | number | null | undefined, patch:
   }
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
-  const found = (canvas?.getObjects?.() || []).find(
-    (o: any) => o?.id != null && String(o.id) === String(id),
-  ) as FabricElement | undefined
+  const found = (canvas?.getObjects?.() || []).find((o: any) => o?.id != null && String(o.id) === String(id)) as FabricElement | undefined
   if (!found) return
   registerElementInstance(found)
   updateElement(found, patch)
@@ -105,32 +120,11 @@ export function removeElement(element: FabricElement) {
   if (!canvas || !element) return
 
   const id = (element as any).id
-  console.log('[ElementManager] removeElement: start', {
-    id,
-    eleType: (element as any)?.eleType,
-    type: (element as any)?.type,
-  })
 
   // 为了兼容从 LayerPanel 传入的 Vue Proxy（不是画布上的真实 FabricObject 引用），
   // 这里优先通过 canvas.getObjects() 按 id 找一次真正挂在画布上的对象。
   const allObjects = (canvas.getObjects?.() || []) as any[]
-  const resolvedTarget =
-    (id != null
-      ? allObjects.find((o) => (o as any)?.id != null && String((o as any).id) === String(id))
-      : undefined) || (element as any)
-
-  console.log('[ElementManager] removeElement: resolved target on canvas', {
-    sameRef: resolvedTarget === element,
-    targetId: (resolvedTarget as any)?.id,
-    targetType: (resolvedTarget as any)?.type,
-    targetEleType: (resolvedTarget as any)?.eleType,
-  })
-
-  const beforeObjects = canvas.getObjects?.() || []
-  console.log('[ElementManager] removeElement: canvas objects before remove', {
-    count: beforeObjects.length,
-    ids: (beforeObjects as any[]).map((o) => (o as any).id),
-  })
+  const resolvedTarget = (id != null ? allObjects.find((o) => (o as any)?.id != null && String((o as any).id) === String(id)) : undefined) || (element as any)
 
   try {
     canvas.remove(resolvedTarget as any)
@@ -152,28 +146,30 @@ export function removeElement(element: FabricElement) {
   } catch (e) {
     console.warn('[ElementManager] removeElement: remove layer failed', { id: (element as any).id, e })
   }
-
-  const afterObjects = canvas.getObjects?.() || []
-  console.log('[ElementManager] removeElement: canvas objects after remove', {
-    count: afterObjects.length,
-    ids: (afterObjects as any[]).map((o) => (o as any).id),
-  })
 }
 
 // =========================
 // Selection-level operations
 // =========================
 
-// 简单剪贴板：存储最近一次复制的元素配置
-let selectionClipboard: AnyElementConfig[] = []
+type ClipboardItem = {
+  eleType: ElementType
+  config: AnyElementConfig
+  offsetX: number
+  offsetY: number
+}
+
+// 剪贴板：存储最近一次复制的元素配置（基于 selection center 的相对偏移）
+let selectionClipboard: ClipboardItem[] = []
+// 记录复制时选区的中心点，便于粘贴时整体平移
+let clipboardSelectionCenter: { x: number; y: number } | null = null
+// 连续粘贴计数，用于实现 Figma 风格的递增偏移
+let pasteCount = 0
 
 /**
  * 轻推当前选中元素（方向键/Shift+方向键）。
  */
-export function nudgeSelection(
-  direction: 'left' | 'right' | 'up' | 'down',
-  step: number,
-): void {
+export function nudgeSelection(direction: 'left' | 'right' | 'up' | 'down', step: number): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   if (!canvas) return
@@ -230,97 +226,114 @@ export function copySelection(): void {
   const actives = canvas.getActiveObjects() as FabricElement[]
   if (!actives || actives.length === 0) {
     selectionClipboard = []
+    clipboardSelectionCenter = null
+    pasteCount = 0
     return
   }
 
-  console.log('[ElementManager] copySelection: active objects', {
-    count: actives.length,
-    ids: actives.map((el) => (el as any)?.id),
-    eleTypes: actives.map((el) => (el as any)?.eleType),
-    rawPositions: actives.map((el) => ({
-      id: (el as any)?.id,
-      eleType: (el as any)?.eleType,
-      left: (el as any)?.left,
-      top: (el as any)?.top,
-      originX: (el as any)?.originX,
-      originY: (el as any)?.originY,
-      type: (el as any)?.type,
-    })),
-  })
+  // 计算选区中心（使用各元素的 centerPoint 平均值）
+  const centers = actives.map((el) => getObjectCenter(el)).filter((c) => Number.isFinite(c.x) && Number.isFinite(c.y))
 
-  const encoded: AnyElementConfig[] = []
-  actives.forEach((el) => {
+  if (!centers.length) {
+    selectionClipboard = []
+    clipboardSelectionCenter = null
+    pasteCount = 0
+    return
+  }
+
+  const selectionCenter = {
+    x: centers.reduce((sum, c) => sum + c.x, 0) / centers.length,
+    y: centers.reduce((sum, c) => sum + c.y, 0) / centers.length
+  }
+
+  clipboardSelectionCenter = selectionCenter
+  pasteCount = 0
+
+  const encoded: ClipboardItem[] = []
+
+  actives.forEach((el, index) => {
+    const rect = el.getBoundingRect()
+
     const cfg = encodeElementByRegistry(el)
-    if (cfg) {
-      const resolvedEleType = (cfg as any).eleType ?? (cfg as any).type ?? (el as any).eleType
-      const next: AnyElementConfig = {
-        ...(cfg as AnyElementConfig),
-        eleType: resolvedEleType,
-      }
-      console.log('[ElementManager] copySelection: encoded element', {
-        id: (el as any)?.id,
-        eleType: (el as any)?.eleType,
+    if (!cfg) return
+
+    const eleType = (cfg as any).eleType ?? (cfg as any).type ?? ((el as any).eleType as ElementType | undefined)
+
+    if (!eleType) {
+      console.warn('[ElementManager] copySelection: element has no eleType', {
+        index,
         cfg,
-        next,
+        rawEleType: (el as any)?.eleType
       })
-      encoded.push(next)
+      return
     }
+
+    // 基于 boundingRect 计算真实中心
+    const rectCenterX = rect.left + rect.width / 2
+    const rectCenterY = rect.top + rect.height / 2
+
+    const item: ClipboardItem = {
+      eleType,
+      config: cfg as AnyElementConfig,
+
+      // 基于 rect center 计算 offset
+      offsetX: rectCenterX - selectionCenter.x,
+      offsetY: rectCenterY - selectionCenter.y
+    }
+
+    encoded.push(item)
   })
 
   selectionClipboard = encoded
-  console.log('[ElementManager] copySelection: clipboard set', {
-    clipboard: selectionClipboard,
-  })
 }
 
 /**
  * 粘贴先前复制的元素。
  */
 export function pasteSelection(): void {
-  if (!selectionClipboard.length) return
+  if (!selectionClipboard.length || !clipboardSelectionCenter) return
 
-  const offset = 20
-  console.log('[ElementManager] pasteSelection: start', {
-    clipboard: selectionClipboard,
-    offset,
-  })
-  selectionClipboard.forEach((cfg) => {
+  // Figma 风格：连续粘贴递增偏移
+  pasteCount += 1
+  const baseOffset = 30 * pasteCount
+
+  const pasteCenter = {
+    x: clipboardSelectionCenter.x + baseOffset,
+    y: clipboardSelectionCenter.y + baseOffset
+  }
+
+  selectionClipboard.forEach((item, index) => {
     try {
-      const eleType = (cfg as any).eleType ?? (cfg as any).type
+      const eleType = item.eleType
       if (!eleType) {
-        console.warn('[ElementManager] pasteSelection: missing eleType/type in clipboard config', {
-          cfg,
+        console.warn('[ElementManager] pasteSelection: missing eleType in clipboard item', {
+          index,
+          item
         })
         return
       }
 
       const newId = nanoid()
 
-      const baseLeft = cfg.left != null ? Number(cfg.left) : undefined
-      const baseTop = cfg.top != null ? Number(cfg.top) : undefined
-      const nextLeft = Number.isFinite(baseLeft as number) ? (baseLeft as number) + offset : cfg.left
-      const nextTop = Number.isFinite(baseTop as number) ? (baseTop as number) + offset : cfg.top
+      const centerX = pasteCenter.x + item.offsetX
+      const centerY = pasteCenter.y + item.offsetY
 
       const nextCfg: AnyElementConfig = {
-        ...(cfg as AnyElementConfig),
+        ...(item.config as AnyElementConfig),
         id: newId,
         eleType,
-        // 多选粘贴时保持相对位置不变：所有元素使用同一份偏移即可
-        left: nextLeft as any,
-        top: nextTop as any,
+        left: centerX,
+        top: centerY,
+        originX: 'center',
+        originY: 'center'
       }
-      console.log('[ElementManager] pasteSelection: addElement with config', {
-        eleType,
-        cfg,
-        nextCfg,
-      })
       addElement(eleType as ElementType, nextCfg)
     } catch (e) {
       console.warn('[ElementManager] pasteSelection: failed to add element from clipboard', {
-        cfg,
-        e,
+        index,
+        item,
+        e
       })
     }
   })
 }
-
