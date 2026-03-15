@@ -52,6 +52,7 @@ import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
+import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
 
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
@@ -248,12 +249,21 @@ const updateFontFamily = () => {
 }
 
 const updateOriginX = (originXVal: string) => {
-  for (const element of props.elements) {
-    element.set('originX', originXVal as 'left' | 'center' | 'right')
-    element.setCoords()
+  // 使用 AlignManager 做组内对齐，而不是修改每个元素的 originX
+  switch (originXVal) {
+    case 'left':
+      alignSelection('left')
+      break
+    case 'center':
+      alignSelection('center')
+      break
+    case 'right':
+      alignSelection('right')
+      break
+    default:
+      break
   }
   originX.value = originXVal
-  baseStore.canvas?.renderAll()
 }
 
 const showDataProperty = computed(() => {
