@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useBaseStore } from './baseStore'
+import { markRaw } from 'vue'
 import type { LayerElement } from '@/types/layer'
 import type { MinimalFabricLike } from '@/types/layer'
 import { debug } from '@/utils/logger'
@@ -42,15 +43,35 @@ export const useLayerStore = defineStore('layerStore', {
         })
         return
       }
+
+      if (element.eleType === 'global' || element.eleType === 'background') {
+        return
+      }
+
+      const id = String(element.id)
+      const existing = this.layers.find((l) => l.id === id)
+      if (existing) {
+        existing.eleType = element.eleType
+        existing.element = markRaw(element)
+        return
+      }
+
       const layerElement: LayerElement = {
-        id: element.id,
+        id,
         visible: true,
         locked: false,
         selectable: true,
         eleType: element.eleType,
-        element: element
+        element: markRaw(element),
       }
       this.layers.push(layerElement)
+    },
+
+    setLayers(nextLayers: LayerElement[]): void {
+      this.layers = nextLayers.map((l) => ({
+        ...l,
+        element: markRaw(l.element),
+      }))
     },
     removeLayer(layerId: string): void {
       const index = this.layers.findIndex((layer) => layer.id === layerId)
@@ -68,9 +89,7 @@ export const useLayerStore = defineStore('layerStore', {
         // sync to Fabric object
         if (element.element) {
           if (typeof element.element.set === 'function') {
-            element.element.set('visible', element.visible)
-            // also mirror to custom property for panel rendering if needed
-            element.element.set('visible', element.visible)
+            element.element.set({ visible: element.visible })
           } else {
             // fallback
             ;(element.element as unknown as { visible?: boolean }).visible = element.visible
