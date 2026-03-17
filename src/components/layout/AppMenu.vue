@@ -214,7 +214,7 @@ const handleDistribute = (axis) => {
 const handleAddElement = async (category, elementType, overrides = {}) => {
   
   try {
-    let config
+    let config 
     if (category === 'image') {
       // Default config for image element
       config = {
@@ -232,7 +232,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       // Apply overrides
       config = { ...config, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      config = { ...elementConfigs[category][elementType], ...overrides }
+      config = { left: 227, top: 227, ...elementConfigs[category][elementType], ...overrides }
     } else {
       messageStore.warning('Element type is not supported')
       return
@@ -251,6 +251,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
     if (elementType) {
       try {
         const handler = getElementHandler(elementType)
+        console.log('handler add element', config)
         await handler.add(config)
       } catch (e) {
         console.warn(`No add element handler registered for type: ${elementType}`, e)
