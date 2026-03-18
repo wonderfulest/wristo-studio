@@ -14,26 +14,27 @@ export type ElementConfigSnapshot = {
 export const useElementDataStore = defineStore('elementData', {
   // Option Store 写法：集中定义 state / getters / actions
   state: () => ({
-    // 使用 Map 存储，避免大数组扫描
-    elementMap: new Map<string, ElementConfigSnapshot>(),
+    // 使用普通对象按 id 存储配置，便于持久化
+    elementMap: {} as Record<string, ElementConfigSnapshot>,
   }),
 
   getters: {
     // 所有元素的快照列表
     elements(state): ElementConfigSnapshot[] {
-      return Array.from(state.elementMap.values())
+      return Object.values(state.elementMap)
     },
 
     // 按 id 获取配置，保持原有调用方式：store.getElementConfig(id)
     getElementConfig: (state) =>
       (id: string): AnyElementConfig | null => {
-        const snap = state.elementMap.get(String(id))
+        const snap = state.elementMap[String(id)]
         return (snap?.config as AnyElementConfig) ?? null
       },
   },
 
   actions: {
     upsertElement(config: AnyElementConfig) {
+      console.log('upsertElement', config)
       if (!config || !config.id || !config.eleType) return
       const id = String(config.id)
       const eleType = config.eleType as ElementType
@@ -42,12 +43,12 @@ export const useElementDataStore = defineStore('elementData', {
         eleType,
         config: { ...config, id, eleType },
       }
-      this.elementMap.set(id, snapshot)
+      this.elementMap[id] = snapshot
     },
 
     patchElement(id: string, patch: Partial<AnyElementConfig>) {
       const key = String(id)
-      const existing = this.elementMap.get(key)
+      const existing = this.elementMap[key]
       if (!existing) return
       const nextConfig: AnyElementConfig = {
         ...(existing.config as AnyElementConfig),
@@ -55,15 +56,19 @@ export const useElementDataStore = defineStore('elementData', {
         id: key,
         eleType: existing.eleType,
       }
-      this.elementMap.set(key, {
+      this.elementMap[key] = {
         id: key,
         eleType: existing.eleType,
         config: nextConfig,
-      })
+      }
+    },
+
+    clearAll() {
+      this.elementMap = {}
     },
 
     removeElement(id: string) {
-      this.elementMap.delete(String(id))
+      delete this.elementMap[String(id)]
     },
 
     loadFromFabricElements(elements: FabricElement[]) {
@@ -81,6 +86,11 @@ export const useElementDataStore = defineStore('elementData', {
         this.upsertElement(base)
       })
     },
+  },
+
+  persist: {
+    storage: sessionStorage,
+    key: 'elementData',
   },
 })
 

@@ -414,7 +414,7 @@ const uploadSingleFont = async (item: UploadQueueItem) => {
   if (usedExisting) {
     created = byName.data as DesignFontVO
   } else {
-    const uploadRes = await uploadFontFile(item.file, 'number_font')
+    const uploadRes = await uploadFontFile(item.file, 'text_font')
     created = uploadRes.data as DesignFontVO
   }
 

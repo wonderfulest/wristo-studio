@@ -28,9 +28,7 @@ function attachRectangleScaleSync(rectangle: Rect): void {
         scaleY: 1,
       } as any)
       rectangle.setCoords()
-      console.log('rectangle modified', rectangle.width, rectangle.height)
     }
-
 
     const store = useElementDataStore()
     store.patchElement(String(idOnRect), {
@@ -123,7 +121,6 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     originX: rectangle.originX,
     originY: rectangle.originY,
   } as any)
-  console.log('rectangle created', id, rectangle.width, rectangle.height)
 
   canvas.add(rectangle as any)
   layerStore.addLayer(rectangle as any)
@@ -143,12 +140,6 @@ export function updateRectangle(
   const elementDataStore = useElementDataStore()
 
   if (!canvas || !rect) return
-
-  console.log('updateRectangle', {
-    id: (rect as any)?.id,
-    eleType: (rect as any)?.eleType,
-    patch,
-  })
 
   // 保护：若当前元素不是矩形，或 patch 看起来是天气的 AMOLED 配置，则忽略本次更新
   const eleType = (rect as any)?.eleType
@@ -215,7 +206,6 @@ export function updateRectangle(
     opacity: rect.opacity,
     borderRadius: rect.rx,
   }
-  console.log('rectangle updated', rect.width, rect.height)
 
   rect.setCoords()
   rect.dirty = true

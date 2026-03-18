@@ -30,13 +30,15 @@ export interface ControlManagerOptions {
   onClone?: (source: FabricLikeObject, cloned: FabricLikeObject, canvas: Canvas) => void
 }
 
+const offset = 10
+
 const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone'>> = {
   size: 6,
   stroke: '#333333',
   fill: '#ffffff',
   deleteFill: '#ef4444',
   cloneFill: '#22c55e',
-  cloneOffset: 20,
+  cloneOffset: offset,
 }
 
 let runtimeOptions: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone'>> & Pick<ControlManagerOptions, 'onDelete' | 'onClone'> = {
@@ -187,20 +189,11 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       actionName: 'scale',
       render: renderDefaultControl,
     }),
-    mtr: new Control({
-      x: 0,
-      y: -0.5,
-      offsetY: -30,
-      cursorStyle: 'crosshair',
-      actionHandler: controlsUtils.rotationWithSnapping,
-      actionName: 'rotate',
-      render: renderDefaultControl,
-    }),
     cloneControl: new Control({
       x: 0.5,
       y: -0.5,
-      offsetX: 20,
-      offsetY: -20,
+      offsetX: offset,
+      offsetY: -offset,
       cursorStyle: 'copy',
       mouseUpHandler: cloneHandler,
       render: renderCloneControl,
@@ -208,8 +201,8 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     deleteControl: new Control({
       x: -0.5,
       y: -0.5,
-      offsetX: -20,
-      offsetY: -20,
+      offsetX: -offset,
+      offsetY: -offset,
       cursorStyle: 'pointer',
       mouseUpHandler: deleteHandler,
       render: renderDeleteControl,

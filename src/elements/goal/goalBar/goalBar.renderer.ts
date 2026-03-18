@@ -2,181 +2,305 @@ import { Rect, Group } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
+import type { MinimalFabricLike } from '@/types/layer'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import { encodeGoalBar } from '@/elements/goal/goalBar/goalBar.encoder'
+import { encodeGoalBar } from './goalBar.encoder'
+import { applyControlsToObject } from '@/utils/controlManager'
 
-function getProgressLeft(
-  background: any,
-  padding: number,
-  progressAlign: 'left' | 'right',
-  progress: number,
-) {
-  switch (progressAlign) {
-    case 'left':
-      return background.left - background.width / 2 + padding
-    case 'right': {
-      const rightEdge = background.left + background.width
-      const progressWidth = (background.width - padding * 2) * progress
-      return rightEdge - padding - progressWidth
-    }
-    default:
-      return background.left - background.width / 2 + padding
+/**
+ * ===============================
+ * 工具方法
+ * ===============================
+ */
+
+/**
+ * ✅ v6 标准：刷新 group 布局
+ */
+function refreshGroup(group: Group) {
+  ;(group as any)._onAfterObjectsChange?.()
+  group.setCoords()
+}
+
+/**
+ * ✅ Widget 工具：在 group 上挂载统一的 element 元数据
+ */
+function attachWidget(group: Group, payload: any) {
+  ;(group as any).__element = {
+    kind: 'widget',
+    ...payload,
   }
 }
 
-export async function createGoalBar(config: GoalBarElementConfig): Promise<FabricElement> {
-  const canvasStore = useCanvasStore()
+function getElement(group: Group): any {
+  return (group as any).__element
+}
+
+function getConfig(group: Group): any | undefined {
+  return getElement(group)?.config
+}
+
+function getChild(group: Group, key: string): any | undefined {
+  return getElement(group)?.children?.[key]
+}
+
+/**
+ * ✅ 正确的进度条定位（基于 origin=center）
+ */
+function getProgressLeft(
+  background: Rect,
+  padding: number,
+  align: 'left' | 'right',
+  progress: number,
+) {
+  const leftEdge = -background.width / 2
+  const rightEdge = background.width / 2
+
+  if (align === 'right') {
+    const progressWidth = (background.width - padding * 2) * progress
+    return rightEdge - padding - progressWidth
+  }
+
+  return leftEdge + padding
+}
+
+/**
+ * ===============================
+ * layout：集中布局逻辑
+ * ===============================
+ */
+function layoutGoalBar(group: Group) {
+  const config = getConfig(group)
+  const background = getChild(group, 'background') as Rect | undefined
+  const progress = getChild(group, 'progress') as Rect | undefined
+
+  if (!config || !background || !progress) return
+
+  const {
+    width,
+    height,
+    padding,
+    progress: progressValue,
+    progressAlign,
+    borderRadius,
+    color,
+    bgColor,
+    borderWidth,
+    borderColor,
+    goalProperty,
+  } = config
+
+  background.set({
+    width,
+    height,
+    rx: borderRadius,
+    ry: borderRadius,
+    fill: bgColor,
+  })
+
+  progress.set({
+    left: getProgressLeft(background, padding, progressAlign, progressValue),
+    width: (width - padding * 2) * progressValue,
+    height: height - padding * 2,
+    rx: Math.max(0, borderRadius - padding),
+    ry: Math.max(0, borderRadius - padding),
+    fill: color,
+  })
+
+  // 兼容旧的编码逻辑：把关键配置镜像回 group 上，供 encodeGoalBar 使用
+  Object.assign(group as any, {
+    width,
+    height,
+    padding,
+    progress: progressValue,
+    progressAlign,
+    borderRadius,
+    color,
+    bgColor,
+    borderWidth,
+    borderColor,
+    goalProperty,
+  })
+
+  refreshGroup(group)
+}
+
+/**
+ * ===============================
+ * 创建
+ * ===============================
+ */
+export async function createGoalBar(
+  config: GoalBarElementConfig,
+): Promise<FabricElement> {
+  const canvas = useCanvasStore().canvas
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
 
-  const canvas = canvasStore.canvas
-  if (!canvas) {
-    throw new Error('Canvas not initialized, cannot add goal bar element')
+  if (!canvas) throw new Error('Canvas not initialized')
+
+  const id = nanoid()
+  const finalConfig = {
+    id,
+    width: Number(config.width ?? 200),
+    height: Number(config.height ?? 10),
+    padding: Number(config.padding ?? 2),
+    progress: config.progress ?? 0,
+    progressAlign: config.progressAlign ?? 'left',
+    borderRadius: config.borderRadius ?? 5,
+    color: config.color ?? '#00FF00',
+    bgColor: config.bgColor ?? '#333',
+    borderWidth: config.borderWidth,
+    borderColor: config.borderColor,
+    goalProperty: config.goalProperty,
   }
 
-  const padding = Number(config.padding ?? 2)
-  const progressAlign = config.progressAlign || 'left'
-  const borderWidth = Number(config.borderWidth ?? 0)
-  const borderColor = config.borderColor || '#FFFFFF'
-
-  const background: any = new Rect({
-    id: `${nanoid()}_background`,
-    left: Number(config.left) || 0,
-    top: Number(config.top) || 0,
-    width: Number(config.width) || 200,
-    height: Number(config.height) || 10,
-    fill: config.bgColor || '#333333',
-    rx: Number(config.borderRadius) || 5,
-    ry: Number(config.borderRadius) || 5,
+  /**
+   * background（以 group 中心为坐标系）
+   */
+  const background = new Rect({
+    id: `${id}_background`,
+    left: 0,
+    top: 0,
     originX: 'center',
     originY: 'center',
-    stroke: borderColor,
-    strokeWidth: borderWidth,
   })
 
-  const progress: any = new Rect({
-    id: `${nanoid()}_progress`,
-    left: getProgressLeft(background, padding, progressAlign, config.progress || 0),
-    top: background.top,
-    width: (background.width - padding * 2) * (config.progress || 0),
-    height: background.height - padding * 2,
-    fill: config.color || '#00FF00',
-    rx: Math.max(0, background.rx - padding),
-    ry: Math.max(0, background.ry - padding),
-    originX: progressAlign,
+  /**
+   * progress
+   */
+  const progress = new Rect({
+    id: `${id}_progress`,
+    left: 0,
+    top: 0,
+    originX: 'left',
     originY: 'center',
   })
 
-  const group: any = new Group([background, progress], {
-    id: nanoid(),
+  /**
+   * group（注意：子元素全部用局部坐标）
+   */
+  const group = new Group([background, progress], {
+    id,
+    left: config.left || 0,
+    top: config.top || 0,
+    originX: 'center',
+    originY: 'center',
+
+    // 仍然保留 eleType 以兼容 layerStore
     eleType: 'goalBar',
-    left: Number(config.left) || 0,
-    top: Number(config.top) || 0,
-    selectable: true,
-    hasControls: false,
-    hasBorders: true,
-    originX: 'center',
-    originY: 'center',
-    progress: config.progress || 0,
-    color: config.color || '#00FF00',
-    bgColor: config.bgColor || '#333333',
-    borderRadius: Number(config.borderRadius) || 5,
-    padding,
-    progressAlign,
-    borderWidth,
-    borderColor,
-    goalProperty: config.goalProperty || '',
+    designerControlMode: 'resize8',
   } as any)
 
+  /**
+   * 🔥 核心：挂 widget 结构
+   */
+  attachWidget(group, {
+    type: 'goalBar',
+    config: finalConfig,
+    children: {
+      background,
+      progress,
+    },
+  })
+
+  /**
+   * 🔥 统一 layout
+   */
+  layoutGoalBar(group)
+
+  attachScaleHandler(group)
+
+  // 应用统一的自定义控制点（缩放 / 旋转 / 克隆 / 删除）
+  applyControlsToObject(group)
+
   canvas.add(group)
-  layerStore.addLayer(group)
-  canvas.renderAll()
+  layerStore.addLayer(group as unknown as MinimalFabricLike)
   canvas.setActiveObject(group)
+  canvas.requestRenderAll()
 
   const encoded = encodeGoalBar(group as FabricElement)
-  const id = String((group as any).id ?? encoded.id ?? nanoid())
-  // 以运行时 id 为主，避免 TS 关于重复 id 字段的告警
-  elementDataStore.upsertElement({ ...encoded, id } as any)
+  elementDataStore.upsertElement(encoded as any)
 
   return group as FabricElement
 }
 
-export function updateGoalBar(element: FabricElement, patch: Partial<GoalBarElementConfig> = {}): void {
-  if (!element || !(element as any).getObjects) return
-
-  const canvasStore = useCanvasStore()
+/**
+ * ===============================
+ * 更新（核心）
+ * ===============================
+ */
+export function updateGoalBar(
+  element: FabricElement,
+  patch: Partial<GoalBarElementConfig> = {},
+) {
+  const group = element as unknown as Group
+  const canvas = useCanvasStore().canvas
   const elementDataStore = useElementDataStore()
-  const canvas = canvasStore.canvas
+  const currentConfig = getConfig(group)
+  if (!currentConfig) return
 
-  const objects = (element as any).getObjects()
-  const background: any = objects.find((obj: any) => (obj as any).id.endsWith('_background'))
-  const progress: any = objects.find((obj: any) => (obj as any).id.endsWith('_progress'))
-  if (!background || !progress) return
-
-  const padding = patch.padding !== undefined ? Number(patch.padding) : ((element as any).padding || 2)
-  const progressAlign = patch.progressAlign || (element as any).progressAlign || 'left'
-
-  if (patch.borderWidth !== undefined || patch.borderColor !== undefined) {
-    const borderWidth = patch.borderWidth !== undefined ? Number(patch.borderWidth) : ((element as any).borderWidth || 0)
-    const borderColor = patch.borderColor || (element as any).borderColor || '#FFFFFF'
-    ;(element as any).borderWidth = borderWidth
-    ;(element as any).borderColor = borderColor
-    background.set({ stroke: borderColor, strokeWidth: borderWidth })
+  /**
+   * === 数据合并到 config ===
+   */
+  const nextConfig = {
+    ...currentConfig,
+    ...patch,
   }
 
-  if (patch.width !== undefined) {
-    background.set('width', patch.width)
-    progress.set('width', (patch.width - padding * 2) * (element as any).progress)
-  }
-  if (patch.height !== undefined) {
-    background.set('height', patch.height)
-    progress.set('height', patch.height - padding * 2)
-  }
-  if (patch.borderRadius !== undefined) {
-    background.set({ rx: patch.borderRadius, ry: patch.borderRadius })
-    progress.set({ rx: Math.max(0, (patch.borderRadius || 0) - padding), ry: Math.max(0, (patch.borderRadius || 0) - padding) })
+  const elementMeta = getElement(group)
+  if (elementMeta) {
+    elementMeta.config = nextConfig
   }
 
-  if (patch.padding !== undefined || patch.progressAlign !== undefined) {
-    ;(element as any).padding = padding
-    ;(element as any).progressAlign = progressAlign
-    progress.set({
-      left: getProgressLeft(background, padding, progressAlign as any, (element as any).progress),
-      width: (background.width - padding * 2) * (element as any).progress,
-      height: background.height - padding * 2,
-      rx: Math.max(0, background.rx - padding),
-      ry: Math.max(0, background.ry - padding),
-      originX: progressAlign,
-    })
-  }
+  /**
+   * 🔥 统一 layout
+   */
+  layoutGoalBar(group)
+  canvas?.requestRenderAll()
 
-  if (patch.color !== undefined) {
-    progress.set('fill', patch.color)
-    ;(element as any).color = patch.color
-  }
-  if (patch.bgColor !== undefined) {
-    background.set('fill', patch.bgColor)
-    ;(element as any).bgColor = patch.bgColor
-  }
-  if (patch.progress !== undefined) {
-    ;(element as any).progress = patch.progress
-    progress.set({
-      width: (background.width - padding * 2) * (patch.progress || 0),
-      left: getProgressLeft(background, padding, progressAlign as any, patch.progress || 0),
-    })
-  }
-  if (patch.goalProperty !== undefined) {
-    ;(element as any).goalProperty = patch.goalProperty
-  }
+  /**
+   * 数据同步
+   */
+  const encoded = encodeGoalBar(group as FabricElement)
+  elementDataStore.patchElement(group.id as string, encoded as any)
+}
 
-  ;(element as any).setCoords()
-  canvas?.renderAll()
+/**
+ * ===============================
+ * scale → width/height 转换
+ * ===============================
+ */
+function attachScaleHandler(group: Group) {
+  let committing = false
 
-  const encoded = encodeGoalBar(element as FabricElement)
-  const id = String((element as any).id ?? encoded.id ?? '')
-  if (id) {
-    elementDataStore.patchElement(id, { ...encoded, id } as any)
-  }
+  group.on('modified', () => {
+    if (committing) return
+
+    const sx = group.scaleX ?? 1
+    const sy = group.scaleY ?? 1
+
+    if (Math.abs(sx - 1) < 0.001 && Math.abs(sy - 1) < 0.001) return
+
+    committing = true
+
+    try {
+      const config = getConfig(group)
+      if (!config) return
+
+      const nextW = Math.max(1, config.width * sx)
+      const nextH = Math.max(1, config.height * sy)
+
+      // 清掉 scale
+      group.set({ scaleX: 1, scaleY: 1 })
+
+      updateGoalBar(group as any, {
+        width: Math.round(nextW),
+        height: Math.round(nextH),
+      })
+    } finally {
+      committing = false
+    }
+  })
 }

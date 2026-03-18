@@ -10,6 +10,7 @@ import { getElementHandler } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig } from '@/types/elements'
 import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -46,6 +47,7 @@ export function addElement(type: ElementType, config: AnyElementConfig) {
 }
 
 export function updateElement(element: FabricElement, patch: any) {
+  console.log('[ElementManager] updateElement start', element, patch)
   if (!element) return
 
   const id = (element as any).id
@@ -118,6 +120,11 @@ export function removeElement(element: FabricElement) {
   } catch (e) {
     console.warn('[ElementManager] removeElement: unregister element instance failed', { id: (element as any).id, e })
   }
+
+  // 从 elementDataStore 中移除
+  const elementDataStore = useElementDataStore()
+  elementDataStore.removeElement(String(id))
+  console.log('[ElementManager] removeElement: removed from elementDataStore', { id })
 
   try {
     if (id != null) {

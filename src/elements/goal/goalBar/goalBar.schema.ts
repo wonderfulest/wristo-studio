@@ -30,7 +30,7 @@ export const goalBarSchema: GoalBarElementSchema = {
     color: '#00FF00',
     bgColor: '#333333',
     borderRadius: 5,
-    progress: 0,
+    progress: 0.5,
     padding: 2,
     borderWidth: 0,
     borderColor: '#FFFFFF',

@@ -73,7 +73,8 @@ import type { FabricObject } from 'fabric'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { useDesignStore } from '@/stores/designStore'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
-
+ 
+const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
 const router = useRouter()
@@ -161,6 +162,8 @@ const loadDesign = async (designUid: string) => {
       
       // 等待画布初始化完成
       await waitCanvasReady()
+      // ✅ 先清空上一次设计的元素配置
+      elementDataStore.clearAll()
       // 设置默认值
       baseStore.watchFaceName = designData.name
       propertiesStore.textCase = 0
@@ -194,7 +197,8 @@ const loadDesign = async (designUid: string) => {
     }
     // 等待画布初始化完成
     await waitCanvasReady()
-
+    // ✅ 先清空上一次设计的元素配置
+    elementDataStore.clearAll() 
     // 应用背景图片到画布（封装为独立方法，兼容新旧配置字段）
     applyBackgroundFromConfig(config)
  

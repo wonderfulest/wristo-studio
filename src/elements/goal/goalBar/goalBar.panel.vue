@@ -5,9 +5,7 @@
       :model="currentModel" 
       label-position="left" 
       label-width="100px"
-      :rules="rules"
       status-icon
-      validate-on-rule-change
     >
       <GoalPropertyField
         v-model="currentModel.goalProperty"
@@ -16,18 +14,14 @@
       <el-form-item label="Width">
         <el-input-number 
           v-model="currentModel.width" 
-          :min="50" 
-          :max="500" 
-          @change="updateElement" 
+          disabled
         />
       </el-form-item>
       
       <el-form-item label="Height">
         <el-input-number 
           v-model="currentModel.height" 
-          :min="4" 
-          :max="50" 
-          @change="updateElement" 
+          disabled
         />
       </el-form-item>
 
@@ -63,7 +57,7 @@
           :min="0" 
           :max="1" 
           :step="0.01" 
-          @change="updateElement" 
+          @change="handleProgressChange" 
         />
       </el-form-item>
 
@@ -111,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, nextTick, computed } from 'vue'
+import { ref, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { originXOptions } from '@/config/settings'
@@ -136,18 +130,17 @@ const rules = {
 }
 
 const currentModel = computed<any>(() => {
+  console.log('[GoalBarPanel] currentModel', props.config, props.element)
   return props.config ?? props.element ?? {}
 })
 
 const applyUpdate = async (patch: Record<string, any>) => {
-  try {
-    await formRef.value?.validate?.()
-  } catch (error) {
-    console.error('Form validation failed:', error)
-    return
-  }
-
-  if (props.applyPatch && props.config) {
+  console.log('[GoalBarPanel] applyUpdate patch', patch, {
+    hasConfig: !!props.config,
+    hasApplyPatch: !!props.applyPatch,
+    hasElement: !!props.element,
+  })
+  if (props.applyPatch) {
     props.applyPatch(patch)
     return
   }
@@ -158,25 +151,35 @@ const applyUpdate = async (patch: Record<string, any>) => {
 }
 
 const handleMainColorChange = async (val: string) => {
-  currentModel.value.color = val
-  await updateElement()
+  await applyUpdate({ color: val })
 }
 
 const handleBgColorChange = async (val: string) => {
-  currentModel.value.bgColor = val
-  await updateElement()
+  await applyUpdate({ bgColor: val })
+}
+
+const handleProgressChange = async (val: number) => {
+  await applyUpdate({ progress: val })
 }
 const updateElement = async () => {
   try {
-    await formRef.value.validate()
+    console.log('[GoalBarPanel] applying update without form validate')
     const model = currentModel.value as any
-    await applyUpdate({
-      width: model.width,
-      height: model.height,
+    console.log('[GoalBarPanel] model before patch', {
+      progress: model.progress,
       borderRadius: model.borderRadius,
       padding: model.padding,
       progressAlign: model.progressAlign,
-      progress: model.progress,
+      color: model.color,
+      bgColor: model.bgColor,
+      borderWidth: model.borderWidth,
+      borderColor: model.borderColor,
+      goalProperty: model.goalProperty,
+    })
+    await applyUpdate({
+      borderRadius: model.borderRadius,
+      padding: model.padding,
+      progressAlign: model.progressAlign,
       color: model.color,
       bgColor: model.bgColor,
       goalProperty: model.goalProperty,
@@ -196,23 +199,6 @@ const handleClose = async () => {
     ElMessage.warning('Please complete the required fields first')
   }
 }
-
-// 初次挂载时如果未选择 goalProperty，则触发校验以显示提示
-onMounted(() => {
-  if (!currentModel.value.goalProperty) {
-    nextTick(() => {
-      formRef.value?.validateField?.('goalProperty')
-    })
-  }
-})
-
-// 当 goalProperty 变化时，重新校验以实时显示/隐藏提示
-watch(
-  () => currentModel.value.goalProperty,
-  () => {
-    formRef.value?.validateField?.('goalProperty')
-  }
-)
 
 // 暴露方法给父组件
 defineExpose({
