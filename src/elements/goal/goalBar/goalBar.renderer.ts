@@ -97,6 +97,8 @@ function layoutGoalBar(group: Group) {
     rx: borderRadius,
     ry: borderRadius,
     fill: bgColor,
+    stroke: borderColor,
+    strokeWidth: borderWidth ?? 0,
   })
 
   progress.set({
@@ -106,21 +108,6 @@ function layoutGoalBar(group: Group) {
     rx: Math.max(0, borderRadius - padding),
     ry: Math.max(0, borderRadius - padding),
     fill: color,
-  })
-
-  // 兼容旧的编码逻辑：把关键配置镜像回 group 上，供 encodeGoalBar 使用
-  Object.assign(group as any, {
-    width,
-    height,
-    padding,
-    progress: progressValue,
-    progressAlign,
-    borderRadius,
-    color,
-    bgColor,
-    borderWidth,
-    borderColor,
-    goalProperty,
   })
 
   refreshGroup(group)
@@ -165,6 +152,8 @@ export async function createGoalBar(
     top: 0,
     originX: 'center',
     originY: 'center',
+    strokeWidth: finalConfig.borderWidth ?? 0,
+    stroke: finalConfig.borderColor,
   })
 
   /**
@@ -176,6 +165,7 @@ export async function createGoalBar(
     top: 0,
     originX: 'left',
     originY: 'center',
+    strokeWidth: 0,
   })
 
   /**
