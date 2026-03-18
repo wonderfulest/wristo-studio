@@ -215,7 +215,7 @@ const fontType = computed(() => {
     case 'icon':
       return FontTypes.ICON_FONT
     case 'time':
-      return FontTypes.NUMBER_FONT
+      return FontTypes.TEXT_FONT
     case 'data':
       return FontTypes.TEXT_FONT
     case 'label':
