@@ -20,8 +20,8 @@ export const windDirectionSchema: WindDirectionElementSchema = {
   name: 'Wind',
   icon: 'mdi:compass-outline',
   defaultConfig: {
-    width: 60,
-    height: 60,
+    width: 30,
+    height: 30,
     windDegree: 0,
     color: '#FFFFFF',
   },
