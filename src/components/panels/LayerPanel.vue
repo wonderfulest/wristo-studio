@@ -229,11 +229,15 @@ const handleKeyDown = (event: KeyboardEvent): void => {
   if (isInputActive) return
 
   if (event.key === 'Delete' || event.key === 'Backspace') {
-    const activeObject = baseStore.canvas?.getActiveObject?.() as MinimalFabricLike | undefined
-    if (activeObject) {
-      deleteLayer(activeObject)
+    const canvas = baseStore.canvas
+    const actives = canvas?.getActiveObjects?.() as MinimalFabricLike[] | undefined
+    if (actives && actives.length > 0) {
+      actives.forEach((obj) => {
+        if (!obj) return
+        deleteLayer(obj)
+      })
     } else {
-      console.log('[LayerPanel] handleKeyDown: no activeObject, skip delete')
+      console.log('[LayerPanel] handleKeyDown: no active objects, skip delete')
     }
   }
 

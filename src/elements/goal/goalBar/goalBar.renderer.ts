@@ -88,7 +88,6 @@ function layoutGoalBar(group: Group) {
     bgColor,
     borderWidth,
     borderColor,
-    goalProperty,
   } = config
 
   background.set({
@@ -254,7 +253,10 @@ export function updateGoalBar(
    * 数据同步
    */
   const encoded = encodeGoalBar(group as FabricElement)
-  elementDataStore.patchElement(group.id as string, encoded as any)
+  const id = (group as any).id
+  if (id != null) {
+    elementDataStore.patchElement(String(id), encoded as any)
+  }
 }
 
 /**

@@ -9,11 +9,11 @@
         <div class="size-inputs">
           <div class="input-group">
             <label>Foreground Radius</label>
-            <el-input type="number" v-model="mainRadius" @change="onMainRadiusChange" />
+            <el-input type="number" v-model="mainRadius" disabled @change="onMainRadiusChange" />
           </div>
           <div class="input-group">
             <label>Background Radius</label>
-            <el-input type="number" v-model="bgRadius" @change="onBgRadiusChange" />
+            <el-input type="number" v-model="bgRadius" disabled @change="onBgRadiusChange" />
           </div>
           <div class="input-group">
             <label>Foreground Stroke Width</label>
@@ -141,26 +141,26 @@ const endAngleLocal = ref(0)
 
 // 初始化并在 element 变动时同步颜色
 watchEffect(() => {
-  if (mainRing.value && typeof mainRing.value.stroke === 'string') {
+  const model = currentModel.value as any
+  if (model && typeof model.color === 'string') {
+    fgColor.value = model.color
+  } else if (mainRing.value && typeof mainRing.value.stroke === 'string') {
     fgColor.value = mainRing.value.stroke
   }
-  if (bgRing.value && typeof bgRing.value.stroke === 'string') {
+
+  if (model && typeof model.bgColor === 'string') {
+    bgColor.value = model.bgColor
+  } else if (bgRing.value && typeof bgRing.value.stroke === 'string') {
     bgColor.value = bgRing.value.stroke
   }
 
-  // 同步数值到本地变量
-  if (mainRing.value) {
-    mainRadius.value = Number(mainRing.value.radius || 0)
-    mainStrokeWidth.value = Number(mainRing.value.strokeWidth || 0)
-  }
-  if (bgRing.value) {
-    bgRadius.value = Number(bgRing.value.radius || 0)
-    bgStrokeWidth.value = Number(bgRing.value.strokeWidth || 0)
-  }
-  if (currentModel.value) {
-    startAngleLocal.value = Number((currentModel.value as any).startAngle || 0)
-    endAngleLocal.value = Number((currentModel.value as any).endAngle || 0)
-  }
+  mainRadius.value = Number(model?.radius ?? mainRing.value?.radius ?? 0)
+  bgRadius.value = Number(model?.bgRadius ?? bgRing.value?.radius ?? mainRadius.value)
+  mainStrokeWidth.value = Number(model?.strokeWidth ?? mainRing.value?.strokeWidth ?? 0)
+  bgStrokeWidth.value = Number(model?.bgStrokeWidth ?? bgRing.value?.strokeWidth ?? mainStrokeWidth.value)
+
+  startAngleLocal.value = Number(model?.startAngle ?? 0)
+  endAngleLocal.value = Number(model?.endAngle ?? 0)
 })
 
 // 定义提示内容，使用 HTML 格式
@@ -179,28 +179,25 @@ const rules = {
 
 // 变更处理：半径与描边
 const onMainRadiusChange = (val: number | string) => {
-  if (!mainRing.value) return
   const n = Number(val)
-  mainRing.value.radius = n
-  applyUpdate({ radius: n })
+  mainRadius.value = n
+  void applyUpdate({ radius: n })
 }
 const onBgRadiusChange = (val: number | string) => {
-  if (!bgRing.value) return
   const n = Number(val)
-  bgRing.value.radius = n
-  applyUpdate({ bgRadius: n })
+  bgRadius.value = n
+  void applyUpdate({ bgRadius: n })
 }
+
 const onMainStrokeWidthChange = (val: number | string) => {
-  if (!mainRing.value) return
   const n = Number(val)
-  mainRing.value.strokeWidth = n
-  applyUpdate({ strokeWidth: n })
+  mainStrokeWidth.value = n
+  void applyUpdate({ strokeWidth: n })
 }
 const onBgStrokeWidthChange = (val: number | string) => {
-  if (!bgRing.value) return
   const n = Number(val)
-  bgRing.value.strokeWidth = n
-  applyUpdate({ bgStrokeWidth: n })
+  bgStrokeWidth.value = n
+  void applyUpdate({ bgStrokeWidth: n })
 }
 
 // 颜色变更：更新本地模型并走统一 applyUpdate
@@ -228,45 +225,24 @@ const onStartAngleChange = (val: number | string) => {
   const n = normalizeAngle(val)
   startAngleLocal.value = n
   ;(currentModel.value as any).startAngle = n
-  applyUpdate({ startAngle: n })
+  void applyUpdate({ startAngle: n })
 }
 const onEndAngleChange = (val: number | string) => {
   const n = normalizeAngle(val)
   endAngleLocal.value = n
   ;(currentModel.value as any).endAngle = n
-  applyUpdate({ endAngle: n })
+  void applyUpdate({ endAngle: n })
 }
 
 const applyUpdate = async (patch: Record<string, any>) => {
   try {
-    await formRef.value?.validate?.()
-    if (!mainRing.value || !bgRing.value) return
-
-    const basePatch = {
-      left: (currentModel.value as any).left,
-      top: (currentModel.value as any).top,
-      radius: mainRing.value.radius,
-      bgRadius: bgRing.value.radius,
-      strokeWidth: mainRing.value.strokeWidth,
-      bgStrokeWidth: bgRing.value.strokeWidth,
-      color: fgColor.value,
-      bgColor: bgColor.value,
-      startAngle: (currentModel.value as any).startAngle,
-      endAngle: (currentModel.value as any).endAngle,
-      counterClockwise: (currentModel.value as any).counterClockwise,
-      goalProperty: (currentModel.value as any).goalProperty,
-      progress: (currentModel.value as any).progress ?? 0,
-    }
-
-    const merged = { ...basePatch, ...patch }
-
     if (props.applyPatch && props.config) {
-      props.applyPatch(merged)
+      props.applyPatch(patch)
       return
     }
 
     if (props.element) {
-      elementManager.updateElement(props.element as any, merged)
+      elementManager.updateElement(props.element as any, patch)
     }
   } catch (error) {
     console.error('Form validation failed:', error)
@@ -275,7 +251,11 @@ const applyUpdate = async (patch: Record<string, any>) => {
 
 // 更新整体（不额外传 patch）
 const updateElement = async () => {
-  await applyUpdate({})
+  const model = currentModel.value as any
+  await applyUpdate({
+    counterClockwise: model.counterClockwise,
+    goalProperty: model.goalProperty,
+  })
 }
 
 // 更新进度（通过 elementManager + progress 字段）

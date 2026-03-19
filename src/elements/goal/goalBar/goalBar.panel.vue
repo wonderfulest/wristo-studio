@@ -123,12 +123,6 @@ const props = defineProps<{
 
 const formRef = ref<any>(null)
 
-const rules = {
-  goalProperty: [
-    { required: true, message: 'Please select a goal property, if none, please add it in Actions -> Add Property -> Goal.', trigger: 'change' }
-  ]
-}
-
 const currentModel = computed<any>(() => {
   console.log('[GoalBarPanel] currentModel', props.config, props.element)
   return props.config ?? props.element ?? {}

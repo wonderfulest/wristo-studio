@@ -3,7 +3,63 @@ import type { FabricElement } from '@/types/element'
 import type { GoalArcElementConfig } from '@/types/elements/goal'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { ensureGoalElementId, clampProgress } from '@/elements/goal/goal.common'
+import { encodeGoalArc } from '@/elements/goal/goalArc/goalArc.encoder'
+import { applyControlsToObject } from '@/utils/controlManager'
+
+function refreshGroup(group: Group) {
+  ;(group as any)._onAfterObjectsChange?.()
+  group.setCoords()
+}
+
+function attachWidget(group: Group, payload: any) {
+  ;(group as any).__element = {
+    kind: 'widget',
+    ...payload,
+  }
+}
+
+function getElement(group: Group): any {
+  return (group as any).__element
+}
+
+function getConfig(group: Group): any | undefined {
+  return getElement(group)?.config
+}
+
+function getChild(group: Group, key: string): any | undefined {
+  return getElement(group)?.children?.[key]
+}
+
+function ensureWidget(group: Group): { config: GoalArcElementConfig; bgRing: any; mainRing: any } | null {
+  const existingConfig = getConfig(group) as GoalArcElementConfig | undefined
+  const existingBg: any = getChild(group, 'bgRing')
+  const existingMain: any = getChild(group, 'mainRing')
+  if (existingConfig && existingBg && existingMain) {
+    return { config: existingConfig, bgRing: existingBg, mainRing: existingMain }
+  }
+
+  const objects: any[] = (group as any).getObjects?.() ?? []
+  const mainRing: any = objects.find((obj: any) => String(obj?.id ?? '').endsWith('_main'))
+  const bgRing: any = objects.find((obj: any) => String(obj?.id ?? '').endsWith('_bg'))
+  if (!mainRing || !bgRing) return null
+
+  try {
+    const encoded = encodeGoalArc(group as any)
+    attachWidget(group, {
+      type: 'goalArc',
+      config: encoded,
+      children: {
+        bgRing,
+        mainRing,
+      },
+    })
+    return { config: encoded, bgRing, mainRing }
+  } catch {
+    return null
+  }
+}
 
 function getProgressAngle(startAngle: number, endAngle: number, counterClockwise: boolean, progress: number) {
   // 规范到 0-359 区间
@@ -27,30 +83,34 @@ function getProgressAngle(startAngle: number, endAngle: number, counterClockwise
 export function createGoalArc(config: GoalArcElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
+  const elementDataStore = useElementDataStore()
   const canvas = canvasStore.canvas
   if (!canvas) {
     throw new Error('Canvas is not initialized')
   }
 
   const id = ensureGoalElementId(config.id as any)
-  const startAngle = Number(config.startAngle)
-  const endAngle = Number(config.endAngle)
-  const radius = Number(config.radius)
-  const bgRadius = Number(config.bgRadius || radius)
-  const strokeWidth = Number(config.strokeWidth)
-  const bgStrokeWidth = Number(config.bgStrokeWidth || strokeWidth)
-  const color = config.color
-  const bgColor = config.bgColor
-  const counterClockwise = !!config.counterClockwise
-  const progress = clampProgress(config.progress ?? 0)
+  const finalConfig: GoalArcElementConfig = {
+    ...config,
+    id,
+    eleType: 'goalArc',
+    left: Number(config.left ?? 0),
+    top: Number(config.top ?? 0),
+    startAngle: Number(config.startAngle ?? 0),
+    endAngle: Number(config.endAngle ?? 359),
+    radius: Number(config.radius ?? 50),
+    bgRadius: Number(config.bgRadius ?? config.radius ?? 50),
+    strokeWidth: Number(config.strokeWidth ?? 2),
+    bgStrokeWidth: Number(config.bgStrokeWidth ?? config.strokeWidth ?? 2),
+    color: config.color ?? '#FFFFFF',
+    bgColor: config.bgColor ?? '#555555',
+    counterClockwise: Boolean(config.counterClockwise ?? false),
+    goalProperty: String(config.goalProperty ?? ''),
+    progress: clampProgress(config.progress ?? 0),
+  }
 
   const bgRing: any = new Circle({
-    radius: bgRadius,
     fill: 'transparent',
-    stroke: bgColor,
-    strokeWidth: bgStrokeWidth,
-    startAngle: startAngle,
-    endAngle: endAngle,
     id: id + '_bg',
     originX: 'center',
     originY: 'center',
@@ -58,38 +118,47 @@ export function createGoalArc(config: GoalArcElementConfig): FabricElement {
   })
 
   const mainRing: any = new Circle({
-    radius: radius,
     fill: 'transparent',
-    stroke: color,
-    strokeWidth: strokeWidth,
-    startAngle: startAngle,
-    endAngle: getProgressAngle(startAngle, endAngle, counterClockwise, progress),
     id: id + '_main',
     originX: 'center',
     originY: 'center',
-    counterClockwise: counterClockwise,
+    counterClockwise: finalConfig.counterClockwise,
   })
 
-  const size = Math.max((radius + strokeWidth / 2) * 2, (bgRadius + bgStrokeWidth / 2) * 2)
-
   const group: any = new Group([bgRing, mainRing], {
-    left: config.left,
-    top: config.top,
-    width: size,
-    height: size,
     id,
     eleType: 'goalArc',
     selectable: true,
-    hasControls: false,
+    evented: true,
+    hasControls: true,
     hasBorders: true,
+    designerControlMode: 'resize8',
+    lockScalingX: false,
+    lockScalingY: false,
     originX: 'center',
     originY: 'center',
-    goalProperty: config.goalProperty,
-    startAngle: startAngle,
-    endAngle: endAngle,
-    counterClockwise: counterClockwise,
-    progress: progress,
+    left: finalConfig.left,
+    top: finalConfig.top,
+    goalProperty: finalConfig.goalProperty,
+    startAngle: finalConfig.startAngle,
+    endAngle: finalConfig.endAngle,
+    counterClockwise: finalConfig.counterClockwise,
+    progress: finalConfig.progress,
   } as any)
+
+  attachWidget(group, {
+    type: 'goalArc',
+    config: finalConfig,
+    children: {
+      bgRing,
+      mainRing,
+    },
+  })
+
+  layoutGoalArc(group)
+  attachScaleHandler(group)
+
+  applyControlsToObject(group)
 
   group.setCoords()
   canvas.add(group)
@@ -98,65 +167,131 @@ export function createGoalArc(config: GoalArcElementConfig): FabricElement {
   canvas.discardActiveObject?.()
   canvas.setActiveObject(group)
 
+  try {
+    const encoded = encodeGoalArc(group as FabricElement)
+    elementDataStore.upsertElement(encoded as any)
+  } catch {
+    // ignore
+  }
+
   return group as FabricElement
 }
 
-export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElementConfig> = {}): void {
-  const anyElement: any = element as any
-  if (!anyElement || !anyElement.getObjects) return
+function layoutGoalArc(group: Group) {
+  const ensured = ensureWidget(group)
+  if (!ensured) return
+  const { config, bgRing, mainRing } = ensured
 
-  const objects = anyElement.getObjects()
-  const mainRing: any = objects.find((obj: any) => (obj as any).id === anyElement.id + '_main')
-  const bgRing: any = objects.find((obj: any) => (obj as any).id === anyElement.id + '_bg')
-  if (!mainRing || !bgRing) return
+  const startAngle = Number(config.startAngle)
+  const endAngle = Number(config.endAngle)
+  const counterClockwise = Boolean(config.counterClockwise)
+  const progress = clampProgress(config.progress ?? 0)
+  const progressAngle = getProgressAngle(startAngle, endAngle, counterClockwise, progress)
 
-  // 当前进度：优先 patch.progress，其次 group.progress
-  const nextProgress = clampProgress(patch.progress ?? anyElement.progress ?? 0)
+  bgRing.set({
+    radius: Number(config.bgRadius ?? config.radius),
+    strokeWidth: Number(config.bgStrokeWidth ?? config.strokeWidth),
+    stroke: config.bgColor,
+    startAngle,
+    endAngle,
+    counterClockwise: false,
+  })
 
-  const bgRingOptions: any = {
-    radius: patch.bgRadius ?? bgRing.radius,
-    strokeWidth: patch.bgStrokeWidth ?? bgRing.strokeWidth,
-    stroke: patch.bgColor ?? bgRing.stroke,
-    startAngle: patch.startAngle ?? bgRing.startAngle,
-    endAngle: patch.endAngle ?? bgRing.endAngle,
-    counterClockwise: patch.counterClockwise !== undefined ? patch.counterClockwise : bgRing.counterClockwise,
-  }
-  bgRing.set(bgRingOptions)
-
-  const startAngle = patch.startAngle ?? anyElement.startAngle
-  const endAngle = patch.endAngle ?? anyElement.endAngle
-  const counterClockwise = patch.counterClockwise !== undefined ? patch.counterClockwise : anyElement.counterClockwise
-  const progressAngle = getProgressAngle(startAngle, endAngle, counterClockwise, nextProgress)
-
-  const mainRingOptions: any = {
-    radius: patch.radius ?? mainRing.radius,
-    strokeWidth: patch.strokeWidth ?? mainRing.strokeWidth,
-    stroke: patch.color ?? mainRing.stroke,
+  mainRing.set({
+    radius: Number(config.radius),
+    strokeWidth: Number(config.strokeWidth),
+    stroke: config.color,
     startAngle,
     endAngle: progressAngle,
     counterClockwise,
-  }
-  mainRing.set(mainRingOptions)
+  })
 
-  const groupOptions: any = {
-    left: patch.left ?? anyElement.left,
-    top: patch.top ?? anyElement.top,
+  group.set({
+    left: config.left,
+    top: config.top,
     startAngle,
     endAngle,
     counterClockwise,
-    goalProperty: patch.goalProperty ?? anyElement.goalProperty,
-    progress: nextProgress,
+    goalProperty: config.goalProperty,
+    progress,
+  } as any)
+
+  refreshGroup(group)
+}
+
+export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElementConfig> = {}): void {
+  const group = element as unknown as Group
+  const canvas = useCanvasStore().canvas
+  const elementDataStore = useElementDataStore()
+
+  const ensured = ensureWidget(group)
+  const currentConfig = ensured?.config
+  if (!currentConfig) return
+
+  console.log(`updateGoalArc patch.left: ${patch.left}, patch.top: ${patch.top}; currentConfig.left: ${currentConfig.left}, currentConfig.top: ${currentConfig.top}; group.left: ${(group as any).left}, group.top: ${(group as any).top}` )
+  const nextConfig: GoalArcElementConfig = {
+    ...currentConfig,
+    ...patch,
+    id: currentConfig.id,
+    eleType: 'goalArc',
+    // 始终以当前 group 的实际位置为准：优先 patch，其次 group，最后才是旧 config
+    left: Number(patch.left ?? (group as any).left ?? currentConfig.left ?? 0),
+    top: Number(patch.top ?? (group as any).top ?? currentConfig.top ?? 0),
+    progress: clampProgress(patch.progress ?? currentConfig.progress ?? 0),
   }
-  anyElement.set(groupOptions)
 
-  const size = Math.max((mainRing.radius + mainRing.strokeWidth / 2) * 2, (bgRing.radius + bgRing.strokeWidth / 2) * 2)
-  anyElement.set({ width: size, height: size })
+  console.log('updateGoalArc nextConfig', nextConfig)
 
-  anyElement.setCoords?.()
-  mainRing.setCoords?.()
-  bgRing.setCoords?.()
+  const elementMeta = getElement(group)
+  if (elementMeta) {
+    elementMeta.config = nextConfig
+  }
 
-  const canvasStore = useCanvasStore()
-  const canvas = canvasStore.canvas
+  layoutGoalArc(group)
   canvas?.requestRenderAll?.()
+
+  try {
+    const encoded = encodeGoalArc(group as any)
+    elementDataStore.patchElement(String((group as any).id), encoded as any)
+  } catch {
+    // ignore
+  }
+}
+
+function attachScaleHandler(group: Group) {
+  let committing = false
+
+  group.on('modified', () => {
+    if (committing) return
+
+    const sx = Number((group as any).scaleX ?? 1)
+    const sy = Number((group as any).scaleY ?? 1)
+    if (!Number.isFinite(sx) || !Number.isFinite(sy)) return
+
+    const s = Math.max(0.0001, Math.max(Math.abs(sx), Math.abs(sy)))
+    if (Math.abs(s - 1) < 0.001) return
+
+    committing = true
+    try {
+      const ensured = ensureWidget(group)
+      const config = ensured?.config
+      if (!config) return
+
+      const nextRadius = Math.max(1, Number(config.radius) * s)
+      const nextBgRadius = Math.max(1, Number(config.bgRadius ?? config.radius) * s)
+      const nextStrokeWidth = Math.max(0, Number(config.strokeWidth) * s)
+      const nextBgStrokeWidth = Math.max(0, Number(config.bgStrokeWidth ?? config.strokeWidth) * s)
+
+      group.set({ scaleX: 1, scaleY: 1 } as any)
+
+      updateGoalArc(group as any, {
+        radius: Math.round(nextRadius),
+        bgRadius: Math.round(nextBgRadius),
+        strokeWidth: Math.round(nextStrokeWidth),
+        bgStrokeWidth: Math.round(nextBgStrokeWidth),
+      })
+    } finally {
+      committing = false
+    }
+  })
 }
