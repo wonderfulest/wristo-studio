@@ -32,9 +32,8 @@ import { elementConfigs } from '@/elements/schemaMap'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import GlobalSettings from '@/settings/GlobalSettings.vue'
-import GroupSettings from '@/settings/GroupSettings.vue'
-import { getSettingsComponent as getLegacySettingsComponent } from '@/settings'
+import GlobalSettings from '@/components/panels/settings/GlobalSettings.vue'
+import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
@@ -85,12 +84,10 @@ const getElementTypeName = (layer: any) => {
   return layer.eleType
 }
 
-// 通过 settingsRegistry 优先解析 Settings 组件，找不到再走原有 '@/settings' 兜底
+// 通过 settingsRegistry 解析 Settings 组件（所有 Settings 均已迁移到 panels/settings 下）
 const resolveSettingsComponent = (type: string) => {
   const eleType = type as ElementType
-  const fromRegistry = eleType ? getRegistrySettingsComponent(eleType) : null
-  if (fromRegistry) return fromRegistry
-  return getLegacySettingsComponent(type)
+  return eleType ? getRegistrySettingsComponent(eleType) : null
 }
 
 const handleUpdate = () => {

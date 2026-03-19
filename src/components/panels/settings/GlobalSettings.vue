@@ -16,9 +16,8 @@
       />
     </div>
     <!-- Theme Rule Settings -->
-    <ThemeRuleSettings v-if="appId > 0"/>
+    <ThemeRuleSettings v-if="appId > 0" />
   </div>
-
 </template>
 
 <script setup lang="ts">
@@ -26,8 +25,9 @@ import { computed, onMounted, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 import { useBackgroundStore } from '@/stores/backgroundStore'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
-import ThemeRuleSettings from '@/settings/ThemeRuleSettings.vue'
+import ThemeRuleSettings from '@/components/panels/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
+
 const baseStore = useBaseStore()
 const backgroundStore = useBackgroundStore()
 
@@ -36,28 +36,25 @@ onMounted(() => {
 })
 
 const appId = computed(() => baseStore.appId)
-// 表盘名称
+
 const watchFaceName = computed({
   get: () => baseStore.watchFaceName,
-  set: (value) => (baseStore.watchFaceName = value)
+  set: (value) => (baseStore.watchFaceName = value),
 })
 
-// 更新表盘名称
 const updateWatchFaceName = () => {
   baseStore.watchFaceName = watchFaceName.value
 }
 
-// 监听 store 中的值变化
 watch(
   () => baseStore.watchFaceName,
   (newName) => {
     if (newName !== watchFaceName.value) {
       watchFaceName.value = newName
     }
-  }
+  },
 )
 
-// 背景图片：从 backgroundStore.backgroundImage 的元数据中读取 id 和 url
 const currentBackgroundImageId = computed(() => {
   const raw = backgroundStore.backgroundImage as any
   return raw && raw.wristoImageId != null ? raw.wristoImageId : undefined
@@ -69,18 +66,16 @@ const currentBackgroundImageUrl = computed(() => {
   return raw.wristoImageUrl || ''
 })
 
-// ImageUpload 回调：接收背景图 ID 变化
-// 当 ID 被清空（例如用户点击清除按钮）时，需要同步清理画布背景
 const handleBackgroundImageIdChange = (id: any) => {
   if (!id) {
     backgroundStore.setBackgroundImageFromUrl(null, null)
   }
 }
 
-// ImageUpload 回调：上传成功后更新当前背景图，并刷新画布
 const handleBackgroundImageUploaded = (img: any) => {
   if (!img) return
-  const url = img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
+  const url =
+    img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
   backgroundStore.setBackgroundImageFromUrl(url || null, img.id || null)
 }
 </script>

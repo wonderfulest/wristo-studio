@@ -68,7 +68,7 @@ import { ElMessage } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { getThemeRuleDetail, upsertThemeRule, activateThemeRule } from '@/api/wristo/themes'
 import { getEnumOptions } from '@/api/common'
-import ThemeConfigSettings from '@/settings/ThemeConfigSettings.vue'
+import ThemeConfigSettings from '@/components/panels/settings/ThemeConfigSettings.vue'
 
 const baseStore = useBaseStore()
 

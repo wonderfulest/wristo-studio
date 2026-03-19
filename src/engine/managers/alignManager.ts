@@ -111,52 +111,46 @@ export function distributeSelection(axis: DistributeType): void {
 
   const items = getRects(actives)
   if (axis === 'horizontal') {
-    // 按 left 排序
-    items.sort((a, b) => a.rect.left - b.rect.left)
+    // 按水平中心点排序
+    items.sort((a, b) => (a.rect.left + a.rect.width / 2) - (b.rect.left + b.rect.width / 2))
     const first = items[0]
     const last = items[items.length - 1]
 
-    const firstLeft = first.rect.left
-    const lastRight = last.rect.left + last.rect.width
-    const totalSpan = lastRight - firstLeft
-    const totalWidth = items.reduce((s, i) => s + i.rect.width, 0)
+    const firstCenter = first.rect.left + first.rect.width / 2
+    const lastCenter = last.rect.left + last.rect.width / 2
     const innerCount = items.length - 1
-    const gap = (totalSpan - totalWidth) / innerCount
+    const gap = (lastCenter - firstCenter) / innerCount
 
-    // 从第一个元素的右边开始依次排布中间元素：prevRight + gap
-    let currentRight = first.rect.left + first.rect.width
+    // 从第一个元素的中心开始，按照等间距分布中间元素
     items.forEach(({ el, rect }, idx) => {
       if (idx === 0 || idx === items.length - 1) return // 保持两端不动
-      const targetLeft = currentRight + gap
-      const dx = targetLeft - rect.left
+      const currentCenter = rect.left + rect.width / 2
+      const targetCenter = firstCenter + gap * idx
+      const dx = targetCenter - currentCenter
       const currentLeft = Number((el as any).left ?? 0)
       ;(el as any).set?.({ left: currentLeft + dx })
       el.setCoords?.()
-      currentRight = targetLeft + rect.width
     })
   } else {
-    // vertical：按 top 排序
-    items.sort((a, b) => a.rect.top - b.rect.top)
+    // vertical：按垂直中心点排序
+    items.sort((a, b) => (a.rect.top + a.rect.height / 2) - (b.rect.top + b.rect.height / 2))
     const first = items[0]
     const last = items[items.length - 1]
 
-    const firstTop = first.rect.top
-    const lastBottom = last.rect.top + last.rect.height
-    const totalSpan = lastBottom - firstTop
-    const totalHeight = items.reduce((s, i) => s + i.rect.height, 0)
+    const firstCenter = first.rect.top + first.rect.height / 2
+    const lastCenter = last.rect.top + last.rect.height / 2
     const innerCount = items.length - 1
-    const gap = (totalSpan - totalHeight) / innerCount
+    const gap = (lastCenter - firstCenter) / innerCount
 
-    // 从第一个元素的下边开始依次排布中间元素：prevBottom + gap
-    let currentBottom = first.rect.top + first.rect.height
+    // 从第一个元素的中心开始，按照等间距分布中间元素
     items.forEach(({ el, rect }, idx) => {
       if (idx === 0 || idx === items.length - 1) return
-      const targetTop = currentBottom + gap
-      const dy = targetTop - rect.top
+      const currentCenter = rect.top + rect.height / 2
+      const targetCenter = firstCenter + gap * idx
+      const dy = targetCenter - currentCenter
       const currentTop = Number((el as any).top ?? 0)
       ;(el as any).set?.({ top: currentTop + dy })
       el.setCoords?.()
-      currentBottom = targetTop + rect.height
     })
   }
 
