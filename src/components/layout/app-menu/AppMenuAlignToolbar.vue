@@ -1,53 +1,55 @@
 <template>
   <el-sub-menu index="align-toolbar">
     <template #title>
-      <Icon name="mdi:align-horizontal-center" />
+      <el-icon><Icon icon="mdi:align-horizontal-center" /></el-icon>
       <span>Align</span>
     </template>
 
     <el-menu-item index="align/left" @click="() => onAlign('left')">
-      <Icon name="mdi:align-horizontal-left" />
+      <el-icon><Icon icon="mdi:align-horizontal-left" /></el-icon>
       <span>Align Left</span>
     </el-menu-item>
 
     <el-menu-item index="align/center" @click="() => onAlign('center')">
-      <Icon name="mdi:align-horizontal-center" />
+      <el-icon><Icon icon="mdi:align-horizontal-center" /></el-icon>
       <span>Align Center</span>
     </el-menu-item>
 
     <el-menu-item index="align/right" @click="() => onAlign('right')">
-      <Icon name="mdi:align-horizontal-right" />
+      <el-icon><Icon icon="mdi:align-horizontal-right" /></el-icon>
       <span>Align Right</span>
     </el-menu-item>
 
     <el-menu-item index="align/top" @click="() => onAlign('top')">
-      <Icon name="mdi:align-vertical-top" />
+      <el-icon><Icon icon="mdi:align-vertical-top" /></el-icon>
       <span>Align Top</span>
     </el-menu-item>
 
     <el-menu-item index="align/middle" @click="() => onAlign('middle')">
-      <Icon name="mdi:align-vertical-center" />
+      <el-icon><Icon icon="mdi:align-vertical-center" /></el-icon>
       <span>Align Middle</span>
     </el-menu-item>
 
     <el-menu-item index="align/bottom" @click="() => onAlign('bottom')">
-      <Icon name="mdi:align-vertical-bottom" />
+      <el-icon><Icon icon="mdi:align-vertical-bottom" /></el-icon>
       <span>Align Bottom</span>
     </el-menu-item>
 
     <el-menu-item index="distribute/horizontal" @click="() => onDistribute('horizontal')">
-      <Icon name="mdi:align-horizontal-distribute" />
+      <el-icon><Icon icon="mdi:align-horizontal-distribute" /></el-icon>
       <span>Distribute Horizontally</span>
     </el-menu-item>
 
     <el-menu-item index="distribute/vertical" @click="() => onDistribute('vertical')">
-      <Icon name="mdi:align-vertical-distribute" />
+      <el-icon><Icon icon="mdi:align-vertical-distribute" /></el-icon>
       <span>Distribute Vertically</span>
     </el-menu-item>
   </el-sub-menu>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
+
 const props = defineProps<{
   onAlign: (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void
   onDistribute: (axis: 'horizontal' | 'vertical') => void

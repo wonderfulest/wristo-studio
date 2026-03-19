@@ -123,6 +123,7 @@ import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'
 import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
+import AppMenuAlignToolbar from '@/components/layout/app-menu/AppMenuAlignToolbar.vue'
 import emitter from '@/utils/eventBus'
 import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
 
