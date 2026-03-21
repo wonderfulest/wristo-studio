@@ -9,6 +9,8 @@ export type WindDirectionElementSchema = {
     height: number
     windDegree: number
     color: string
+    imageUrl: string
+    imageSvg: string
   }
   resizable: boolean
   rotatable: boolean
@@ -24,6 +26,8 @@ export const windDirectionSchema: WindDirectionElementSchema = {
     height: 30,
     windDegree: 0,
     color: '#FFFFFF',
+    imageUrl: 'https://cdn.wristo.io/analog-assets/prod/windDirection-8bdeee7e-preview.png',
+    imageSvg: 'https://cdn.wristo.io/analog-assets/prod/windDirection-8bdeee7e.svg',
   },
   resizable: true,
   rotatable: true,

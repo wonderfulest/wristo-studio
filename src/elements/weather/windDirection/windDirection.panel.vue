@@ -59,8 +59,6 @@ const canvasStore = useCanvasStore()
 
 const imageUrl = ref<string>('')
 const assetId = ref<number | undefined>(undefined)
-const imgWidth = ref<number>(60)
-const imgHeight = ref<number>(120)
 const centerX = ref<number>(0)
 const centerY = ref<number>(0)
 const windDegree = ref<number>(0)
@@ -90,17 +88,13 @@ const initFromCanvas = (): void => {
   const obj = objects.find((o) => o.id === props.element?.id)
   if (!obj) return
 
-  const url = (obj as Record<string, unknown>).windImageUrl
-  const w = (obj as Record<string, unknown>).windWidth ?? (obj as Record<string, unknown>).width
-  const h = (obj as Record<string, unknown>).windHeight ?? (obj as Record<string, unknown>).height
+  const url = (obj as Record<string, unknown>).imageUrl ?? (obj as Record<string, unknown>).imageSvg ?? (obj as Record<string, unknown>).src
   const deg = (obj as Record<string, unknown>).windDegree ?? (obj as Record<string, unknown>).angle
   const aid = (obj as Record<string, unknown>).assetId
   const c = (obj as Record<string, unknown>).color
 
   if (typeof url === 'string') imageUrl.value = url
   if (typeof aid === 'number') assetId.value = aid
-  if (typeof w === 'number') imgWidth.value = w
-  if (typeof h === 'number') imgHeight.value = h
   if (typeof (obj as Record<string, unknown>).left === 'number') centerX.value = (obj as Record<string, unknown>).left as number
   if (typeof (obj as Record<string, unknown>).top === 'number') centerY.value = (obj as Record<string, unknown>).top as number
   if (typeof deg === 'number') windDegree.value = ((deg % 360) + 360) % 360
@@ -123,22 +117,26 @@ const applyUpdate = (patch: Record<string, any>) => {
 }
 
 const handleAssetSelect = (url: string, asset: AnalogAssetVO): void => {
-  const sourceUrl = asset.file?.url || url
-  imageUrl.value = sourceUrl
+  const svgUrl = asset.file?.url || url
+  const previewUrl = asset.file?.previewUrl || url
+  imageUrl.value = previewUrl
   assetId.value = asset.id
   applyUpdate({
-    imageUrl: sourceUrl,
+    imageUrl: previewUrl,
+    imageSvg: svgUrl,
     assetId: asset.id,
     color: color.value,
   })
 }
 
 const handleAssetUpload = (url: string, asset: AnalogAssetVO): void => {
-  const sourceUrl = asset.file?.url || url
-  imageUrl.value = sourceUrl
+  const svgUrl = asset.file?.url || url
+  const previewUrl = asset.file?.previewUrl || url
+  imageUrl.value = previewUrl
   assetId.value = asset.id
   applyUpdate({
-    imageUrl: sourceUrl,
+    imageUrl: previewUrl,
+    imageSvg: svgUrl,
     assetId: asset.id,
     color: color.value,
   })

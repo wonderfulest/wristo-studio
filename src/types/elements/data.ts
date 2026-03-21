@@ -62,6 +62,7 @@ export interface WeatherElementConfig extends BaseElementConfig {
 export interface WindDirectionElementConfig extends BaseElementConfig {
   eleType: 'windDirection'
   imageUrl?: string
+  imageSvg?: string
   width?: number
   height?: number
   windDegree?: number
