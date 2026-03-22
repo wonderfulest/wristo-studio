@@ -28,6 +28,7 @@ export function syncLayersFromCanvas(): void {
   }
 
   const objects = (canvas.getObjects?.() || []) as any[]
+  const backgroundObj = objects.find((o) => o?.eleType === 'background')
   const userObjects = objects.filter((o) => o?.id != null && o?.eleType && !isFixedLayer(o))
 
   const nextLayers: LayerElement[] = userObjects.map((obj) => {
@@ -41,6 +42,18 @@ export function syncLayersFromCanvas(): void {
       element: obj as MinimalFabricLike,
     }
   })
+
+  if (backgroundObj) {
+    const bgId = String(backgroundObj.id ?? 'background')
+    nextLayers.unshift({
+      id: bgId,
+      visible: backgroundObj.visible ?? true,
+      locked: false,
+      selectable: true,
+      eleType: String(backgroundObj.eleType ?? 'background'),
+      element: backgroundObj as MinimalFabricLike,
+    })
+  }
 
   layerStore.setLayers(nextLayers)
 }
@@ -68,13 +81,19 @@ export function applyOrder(idsInOrder: string[]): void {
   const objects = (canvas.getObjects?.() || []) as any[]
   const fixedCount = objects.filter((o) => isFixedLayer(o)).length
 
-  idsInOrder
+  const movableIds = idsInOrder
     .map(String)
-    .forEach((id, idx) => {
+    .filter((id) => {
       const obj = resolveCanvasObjectById(id)
-      if (!obj) return
-      canvas.moveObjectTo?.(obj as any, fixedCount + idx)
+      if (!obj) return false
+      return !isFixedLayer(obj)
     })
+
+  movableIds.forEach((id, idx) => {
+    const obj = resolveCanvasObjectById(id)
+    if (!obj) return
+    canvas.moveObjectTo?.(obj as any, fixedCount + idx)
+  })
 
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()

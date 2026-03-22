@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { markRaw } from 'vue'
-import { Circle, FabricImage, type Canvas } from 'fabric'
-import { useEditorStore } from '@/stores/editorStore'
+import { Circle, type Canvas } from 'fabric'
 import { useDesignStore } from '@/stores/designStore'
+import { createBackground } from '@/elements/decoration/background/background.renderer'
+import type { BackgroundElementConfig } from '@/types/elements/background'
 
 type AnyObject = Record<string, any>
 
@@ -18,7 +19,6 @@ export const useCanvasStore = defineStore('canvas', {
       canvas: null as Canvas | null,
       designStore,
       watchFaceCircle: null as AnyObject | null,
-      backgroundImage: null as AnyObject | null,
     }
   },
 
@@ -36,7 +36,7 @@ export const useCanvasStore = defineStore('canvas', {
       ;(window as any).__wristoCanvas = this.canvas
       if (!this.canvas) return
       this.canvas.renderOnAddRemove = false
-      this.addBackground()
+      void this.ensureFixedLayers()
     },
 
     getObjects(): AnyObject[] {
@@ -57,226 +57,119 @@ export const useCanvasStore = defineStore('canvas', {
       }
     },
 
-    setBackgroundImageFromUrl(url: string | null, imageId?: number | null): void {
+    async ensureFixedLayers(): Promise<void> {
       if (!this.canvas) return
 
-      if (this.backgroundImage) {
-        try {
-          this.canvas.remove(this.backgroundImage as any)
-        } catch (e) {
-          console.warn('Failed to remove previous background image', e)
-        }
-        this.backgroundImage = null
-      }
+      this.ensureGlobalLayer()
+      await this.ensureBackgroundLayer()
+      this.enforceFixedLayerOrder()
+      this.applyGlobalClipPath()
 
-      if (!url) {
-        // 兜底清理：移除所有历史遗留的 background 图层
-        try {
-          const objs = (this.canvas.getObjects?.() || []) as AnyObject[]
-          for (const obj of objs) {
-            if (obj && (obj as any).eleType === 'background') {
-              try {
-                this.canvas.remove(obj as any)
-              } catch (e) {
-                console.warn('Failed to remove legacy background object', e)
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to cleanup legacy background objects', e)
-        }
-        this.canvas.renderAll()
-        return
-      }
-      FabricImage.fromURL(url, { crossOrigin: 'anonymous' }).then((img: AnyObject) => {
-        if (!img || !this.canvas) return
-        const c = this.canvas
-        const scale = this.designStore.designSpec.width / Math.min(img.width, img.height)
-        this.backgroundImage = img
-        img.set({
-          eleType: 'background',
-          scaleX: scale,
-          scaleY: scale,
-          left: this.designStore.designSpec.centerX,
-          top: this.designStore.designSpec.centerY,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false,
-          wristoImageId: imageId ?? null,
-          wristoImageUrl: url,
-        }) as any
-
-        if (!c.getObjects().includes(img as any)) {
-          c.add(img as any)
-        }
-
-        if (this.watchFaceCircle && c.getObjects().includes(this.watchFaceCircle as any)) {
-          const globalIndex = c.getObjects().indexOf(this.watchFaceCircle as any)
-          const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-          c.moveObjectTo(this.watchFaceCircle as any, 0)
-          c.moveObjectTo(img as any, targetIndex)
-        } else {
-          c.moveObjectTo(img as any, 0)
-        }
-
-        // 确保整个画布使用表盘圆进行裁剪
-        if (this.watchFaceCircle) {
-          c.set({
-            clipPath: this.watchFaceCircle as any,
-          })
-        }
-
-        c.renderAll()
-      })
+      this.canvas.requestRenderAll?.()
     },
 
-    addBackground(): void {
+    ensureGlobalLayer(): void {
       if (!this.canvas) return
-
-      this.watchFaceCircle = markRaw(new Circle({
-        eleType: 'global',
-        left: this.designStore.designSpec.centerX,
-        top: this.designStore.designSpec.centerY,
-        originX: 'center',
-        originY: 'center',
-        radius: this.designStore.designSpec.centerX,
-        fill: '#000000',
-        backgroundColor: 'transparent',
-        selectable: false,
-        evented: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockRotation: true,
-        hasBorders: false,
-        hasControls: false,
-      })) as unknown as AnyObject
-
-      if (!this.canvas.getObjects().includes(this.watchFaceCircle as any)) {
-        this.canvas.add(this.watchFaceCircle as any)
-      }
-      this.canvas.moveObjectTo(this.watchFaceCircle as any, 0)
-
-      if (this.backgroundImage) {
-        const img = this.backgroundImage
-        const scale = this.designStore.designSpec.width / Math.min(img.width, img.height)
-        img.set({
-          eleType: 'background',
-          scaleX: scale,
-          scaleY: scale,
-          left: this.designStore.designSpec.centerX,
-          top: this.designStore.designSpec.centerY,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false,
-        })
-        if (!this.canvas.getObjects().includes(img as any)) {
-          this.canvas.add(img as any)
-        }
-        const globalIndex = this.canvas.getObjects().indexOf(this.watchFaceCircle as any)
-        const targetIndex = globalIndex >= 0 ? globalIndex + 1 : 1
-        this.canvas.moveObjectTo(img as any, targetIndex)
-      }
-    },
-
-    updateBackgroundElements(zoom?: number): void {
-      const editorStore = useEditorStore()
-      if (zoom && zoom !== editorStore.zoomLevel) {
-        editorStore.updateSetting('zoomLevel', zoom)
-      }
-      if (this.watchFaceCircle) {
-        this.watchFaceCircle.set({
+      const c = this.canvas
+      const existing = (c.getObjects?.() || []).find((o: AnyObject) => o && o.eleType === 'global') as AnyObject | undefined
+      if (existing) {
+        this.watchFaceCircle = markRaw(existing)
+      } else {
+        this.watchFaceCircle = markRaw(new Circle({
+          id: 'global',
+          eleType: 'global',
           left: this.designStore.designSpec.centerX,
           top: this.designStore.designSpec.centerY,
           originX: 'center',
           originY: 'center',
           radius: this.designStore.designSpec.centerX,
-          strokeUniform: true,
-          strokeWidth: 1,
+          fill: '#000000',
+          backgroundColor: 'transparent',
           selectable: false,
           evented: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
           hasBorders: false,
           hasControls: false,
-          backgroundColor: 'transparent',
-        })
-        this.watchFaceCircle.setCoords()
+        })) as unknown as AnyObject
+
+        c.add(this.watchFaceCircle as any)
       }
 
-      if (this.backgroundImage) {
-        const scale = this.designStore.designSpec.width / Math.min(this.backgroundImage.width, this.backgroundImage.height)
-        this.backgroundImage.set({
-          left: this.designStore.designSpec.centerX,
-          top: this.designStore.designSpec.centerY,
-          originX: 'center',
-          originY: 'center',
-          scaleX: scale,
-          scaleY: scale,
-          strokeUniform: true,
-          selectable: false,
-          evented: false,
-        })
-        this.backgroundImage.setCoords()
+      try {
+        c.moveObjectTo(this.watchFaceCircle as any, 0)
+      } catch {
+        // ignore
       }
     },
 
-    toggleThemeBackground(): void {
-      if (!this.canvas || !this.watchFaceCircle) {
-        console.warn('画布不存在')
-        return
+    async ensureBackgroundLayer(): Promise<void> {
+      if (!this.canvas) return
+      const c = this.canvas
+      const existing = (c.getObjects?.() || []).find((o: AnyObject) => o && o.eleType === 'background') as AnyObject | undefined
+      if (existing) return
+
+      const config: BackgroundElementConfig = {
+        id: '',
+        eleType: 'background',
+        left: Number(this.designStore.designSpec.centerX ?? 0),
+        top: Number(this.designStore.designSpec.centerY ?? 0),
+        originX: 'center' as any,
+        originY: 'center' as any,
+        imageUrl: '',
+        imageId: null,
       }
 
-      const objects = this.canvas.getObjects() as AnyObject[]
+      await createBackground(config)
 
-      const watchFace = objects.find((obj: AnyObject) => obj.eleType === 'global')
-      const oldBgImage = objects.find((obj: AnyObject) => obj.eleType === 'background')
-      if (oldBgImage) {
-        this.canvas.remove(oldBgImage as any)
+      // 固定层默认不选中
+      try {
+        c.discardActiveObject?.()
+      } catch {
+        // ignore
       }
+    },
 
-      if (this.backgroundImage) {
-        const img = this.backgroundImage
-        const scale = this.designStore.designSpec.centerX / Math.min(img.width, img.height)
-        const left = this.designStore.designSpec.centerX - img.width * scale / 2
-        const top = this.designStore.designSpec.centerY  - img.height * scale / 2
+    enforceFixedLayerOrder(): void {
+      if (!this.canvas) return
+      const c = this.canvas
+      const globalObj = (c.getObjects?.() || []).find((o: AnyObject) => o && o.eleType === 'global')
+      const bgObj = (c.getObjects?.() || []).find((o: AnyObject) => o && o.eleType === 'background')
 
-        img.set({
-          scaleX: scale,
-          scaleY: scale,
-          left,
-          top,
-          selectable: false,
-          evented: false,
-          hasControls: false,
-          hasBorders: false,
-        }) as any
-
-        if (!this.canvas.getObjects().includes(img as any)) {
-          this.canvas.add(img as any)
+      if (globalObj) {
+        try {
+          c.moveObjectTo(globalObj as any, 0)
+        } catch {
+          // ignore
         }
-        this.canvas.moveObjectTo(img as any, 1)
-
-        if (watchFace) {
-          this.canvas.moveObjectTo(watchFace as any, 0)
+      }
+      if (bgObj) {
+        try {
+          c.moveObjectTo(bgObj as any, globalObj ? 1 : 0)
+        } catch {
+          // ignore
         }
+      }
+    },
+
+    applyGlobalClipPath(): void {
+      if (!this.canvas || !this.watchFaceCircle) return
+      try {
         this.canvas.set({
           clipPath: this.watchFaceCircle as any,
         })
-        this.canvas.renderAll()
-      } else if (watchFace) {
-        this.canvas.moveObjectTo(watchFace as any, 0)
-        this.canvas.set({
-          clipPath: this.watchFaceCircle as any,
-        })
-        this.canvas.renderAll()
+      } catch {
+        // ignore
       }
     },
 
     toggleTheme(): void {
-      this.toggleThemeBackground()
-      this.canvas?.renderAll()
+      this.enforceFixedLayerOrder()
+      this.applyGlobalClipPath()
+      this.canvas?.requestRenderAll?.()
     },
   },
 })

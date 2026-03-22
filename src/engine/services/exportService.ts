@@ -1,4 +1,3 @@
-import { nanoid } from 'nanoid'
 import { ElMessage } from 'element-plus'
 import type { Canvas } from 'fabric'
 import type { PropertiesMap } from '@/types/properties'
@@ -58,7 +57,6 @@ export interface GenerateConfigOptions {
   textCase: number
   labelLengthType: number
   showUnit: boolean
-  backgroundImage?: any | null
 }
 
 export function generateConfig(options: GenerateConfigOptions): RuntimeDesignConfig | null {
@@ -70,7 +68,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     textCase,
     labelLengthType,
     showUnit,
-    backgroundImage,
   } = options
 
   if (!canvas || !canvas.getObjects().length) {
@@ -87,19 +84,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     showUnit,
     elements: [],
     orderIds: [],
-    themeBackgroundImages: [],
-  }
-
-  if (backgroundImage) {
-    const anyImg: any = backgroundImage
-    const url: string =
-      anyImg.wristoImageUrl ||
-      (typeof anyImg.getSrc === 'function' ? anyImg.getSrc() : '') ||
-      ''
-    const id: number | null = anyImg.wristoImageId ?? null
-    if (url) {
-      ;(config as any).backgroundImage = { id, url }
-    }
   }
 
   const objects: FabricElement[] = canvas.getObjects() as FabricElement[]
@@ -108,12 +92,38 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     dateId = 0,
     subItemId = 0
 
+  // 背景元素：始终放在 elements[0]
+  const bgObj = objects.find((o) => (o as any)?.eleType === 'background')
+  if (bgObj) {
+    try {
+      const encoded = encodeElementByRegistry(bgObj) as AnyElementConfig | null
+      if (encoded) {
+        mapColorProperties(encoded, properties)
+        config.elements.unshift(encoded)
+      }
+    } catch (err) {
+      console.error('Failed to encode background element with exception:', bgObj, err)
+      const message = (err as Error)?.message || 'Encode background element failed'
+      ElMessage.error(message)
+      return null
+    }
+  }
+
   try {
     for (const element of objects) {
       if (!(element as any).eleType) continue
-      config.orderIds.push((element as any).id || 'tianchong-' + nanoid())
-      if ((element as any).eleType === 'background') continue
-      if ((element as any).eleType === 'global') continue
+
+      const eleType = String((element as any).eleType)
+      // 背景已在 elements[0] 处理，这里跳过避免重复
+      if (eleType === 'background' || eleType === 'global') {
+        continue
+      }
+
+      const elementId = (element as any).id
+      if (elementId != null && elementId !== '') {
+        config.orderIds.push(String(elementId))
+      }
+
       let encodeConfig: AnyElementConfig | null = null
       try {
         encodeConfig = encodeElementByRegistry(element) as AnyElementConfig | null

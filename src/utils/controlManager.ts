@@ -48,7 +48,7 @@ let runtimeOptions: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone'>
 function isManageableTarget(target: FabricLikeObject | undefined): target is FabricLikeObject {
   if (!target) return false
   if (target.guideline || target.keyGuideline) return false
-  if (target.eleType === 'global') return false
+  if (target.eleType === 'global' || target.eleType === 'background') return false
   if (target.locked) return false
   if (target.selectable === false || target.evented === false) return false
   if (target.hasControls === false) return false

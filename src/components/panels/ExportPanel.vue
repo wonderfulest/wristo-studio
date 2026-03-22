@@ -301,6 +301,11 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
+    const bgElement = (configJson && Array.isArray(configJson.elements))
+      ? configJson.elements.find((e) => e && (e.eleType === 'background' || e.type === 'background'))
+      : null
+    const backgroundImage = bgElement && bgElement.imageUrl ? { url: bgElement.imageUrl } : null
+
     const data = {
       uid: baseStore.id,
       name: baseStore.watchFaceName,
@@ -308,7 +313,7 @@ const uploadApp = async () => {
       designStatus: 'draft',
       configJson: configJson,
       // 直接使用配置中的 backgroundImage 元信息
-      backgroundImage: (configJson && configJson.backgroundImage) || null,
+      backgroundImage: backgroundImage,
     }
     if (screenshotUrl) { // 屏幕截图成功时，上传
       data.coverImage = {

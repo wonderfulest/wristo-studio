@@ -5,7 +5,6 @@ import * as path from 'path'
 // 获取环境变量
 const env = process.env.NODE_ENV
 
-
 // 自定义插件：在生产环境中移除 console.log
 const removeConsolePlugin = {
   name: 'remove-console',

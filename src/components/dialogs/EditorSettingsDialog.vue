@@ -155,11 +155,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useBackgroundStore } from '@/stores/backgroundStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useMessageStore } from '@/stores/message'
 
-const backgroundStore = useBackgroundStore()
 const editorStore = useEditorStore()
 const messageStore = useMessageStore()
 const dialogVisible = ref<boolean>(false)
@@ -270,9 +268,6 @@ const saveSettings = () => {
       showKeyGuidelines: showKeyGuidelines.value,
       keyGuidelineDivisions: keyGuidelineDivisions.value,
     })
-
-    // 更新画布背景元素
-    backgroundStore.updateBackgroundElements()
     
     messageStore.success('Settings saved')
     dialogVisible.value = false

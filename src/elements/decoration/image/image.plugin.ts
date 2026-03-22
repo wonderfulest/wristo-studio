@@ -1,10 +1,10 @@
 import { registerElement } from '@/engine/registry/elementRegistry'
 import { registerSettings } from '@/engine/registry/settingsRegistry'
 import type { ElementConfig, ElementType } from '@/types/element'
-import ImagePanel from '@/elements/common/image/image.panel.vue'
+import ImagePanel from '@/elements/decoration/image/image.panel.vue'
 import type { ImageElementConfig } from '@/types/elements/image'
-import { createImage, updateImage } from '@/elements/common/image/image.renderer'
-import { encodeImage, decodeImage } from '@/elements/common/image/image.encoder'
+import { createImage, updateImage } from '@/elements/decoration/image/image.renderer'
+import { encodeImage, decodeImage } from '@/elements/decoration/image/image.encoder'
 
 export default function registerImagePlugin() {
   registerElement('image' as ElementType, {

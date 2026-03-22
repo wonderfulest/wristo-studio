@@ -6,49 +6,42 @@
     <div class="settings-header">
       <h3 class="settings-title">元素设置</h3>
       <div class="element-type">
-        <Icon :icon="getElementIcon(activeElements[0]?.eleType || '')" class="element-icon" />
-        <span class="type-name">{{ getElementTypeName(activeElements[0]) }}</span>
+        <Icon :icon="getElementIcon(activeElement?.eleType || '')" class="element-icon" />
+        <span class="type-name">{{ getElementTypeName(activeElement) }}</span>
       </div>
     </div>
     <component 
-      :is="resolveSettingsComponent(activeElements[0]?.eleType || '')" 
-      :key="activeElements[0]?.id"
-      :element="activeElements[0]" 
+      :is="resolveSettingsComponent(activeElement?.eleType || '')" 
+      :key="activeElement?.id"
+      :element="activeElement" 
       :config="activeConfig"
       :apply-patch="applyConfigPatch"
       @update="handleUpdate"
       ref="settingsComponent"
     />
   </div>
-  <!-- 没有选中任何元素，显示全局配置 -->
-  <div class="settings-panel" v-if="activeElements.length == 0">
-    <GlobalSettings />
-  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { elementConfigs } from '@/elements/schemaMap'
-import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import GlobalSettings from '@/components/panels/settings/GlobalSettings.vue'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 
-const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 
 // 通过 activeIds 从画布对象列表映射出当前选中的元素
 const activeElements = computed<FabricElement[]>(() => {
-  if (!baseStore.canvas) return []
-  const objects = baseStore.getObjects()
+  if (!canvasStore.canvas) return []
+  const objects = canvasStore.canvas.getObjects()
   const idSet = new Set(canvasStore.activeIds)
-  return objects.filter((o) => o.id && idSet.has(String(o.id)))
+  return objects.filter((o) => (o as any).id && idSet.has(String((o as any).id)))
 })
 
 // 当前单选元素（仅当 activeElements.length === 1 时使用）
@@ -63,7 +56,6 @@ const activeConfig = computed<AnyElementConfig | null>(() => {
   if (!id) return null
   return elementDataStore.getElementConfig(String(id))
 })
-
 
 // 获取元素图标
 const getElementIcon = (type: string) => {
@@ -91,7 +83,7 @@ const resolveSettingsComponent = (type: string) => {
 }
 
 const handleUpdate = () => {
-  baseStore.canvas?.renderAll()
+  canvasStore.canvas?.renderAll()
 }
 
 // 通用配置更新：同时更新 ElementDataStore 与 FabricElement

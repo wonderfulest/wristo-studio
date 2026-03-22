@@ -54,7 +54,6 @@ import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
-import { useBackgroundStore } from '@/stores/backgroundStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
@@ -79,7 +78,6 @@ const propertiesStore = usePropertiesStore()
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
-const backgroundStore = useBackgroundStore()
 const designStore = useDesignStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
@@ -100,37 +98,36 @@ useKeyboardShortcuts()
 // 添加背景色计算属性
 const backgroundColor = computed(() => editorStore.backgroundColor)
 
-// 根据配置中的 backgroundImage / themeBackgroundImages 应用背景图片到画布
-const applyBackgroundFromConfig = (config: Partial<DesignConfig> | null) => {
-  if (!config) {
-    backgroundStore.setBackgroundImageFromUrl(null)
-    return
+const ensureBackgroundElement = (config: Partial<DesignConfig> | null): void => {
+  if (!config) return
+  const anyConfig: any = config || {}
+  const list = (anyConfig.elements || []) as any[]
+  const hasBg = list.some((e) => String(e?.eleType ?? e?.type ?? '') === 'background')
+  if (hasBg) return
+
+  const legacyBg = anyConfig.backgroundImage
+  if (!legacyBg || typeof legacyBg !== 'object') return
+
+  const bgUrl = legacyBg.url || ''
+  const bgId = legacyBg.id ?? null
+  if (!bgUrl) return
+
+  const designSpec = designStore.designSpec as any
+  const cx = Number(designSpec?.centerX ?? 0)
+  const cy = Number(designSpec?.centerY ?? 0)
+
+  const bgConfig = {
+    id: crypto.randomUUID(),
+    eleType: 'background',
+    left: cx,
+    top: cy,
+    originX: 'center',
+    originY: 'center',
+    imageUrl: bgUrl,
+    imageId: bgId,
   }
 
-  // 加载背景图片：优先使用新字段 backgroundImage，其次兼容旧的 themeBackgroundImages[0]
-  let bgUrl = null
-  let bgId = null
-
-  const anyConfig = config || {}
-  if (anyConfig.backgroundImage && typeof anyConfig.backgroundImage === 'object') {
-    bgUrl = anyConfig.backgroundImage.url || null
-    bgId = anyConfig.backgroundImage.id ?? null
-  }
-  if (!bgUrl && Array.isArray(anyConfig.themeBackgroundImages) && anyConfig.themeBackgroundImages.length > 0) {
-    const first = anyConfig.themeBackgroundImages[0]
-    if (typeof first === 'string') {
-      bgUrl = first
-    } else if (first && typeof first === 'object') {
-      bgUrl = first.url || null
-      bgId = first.id ?? null
-    }
-  }
-
-  if (bgUrl) {
-    backgroundStore.setBackgroundImageFromUrl(bgUrl, bgId ?? null)
-  } else {
-    backgroundStore.setBackgroundImageFromUrl(null)
-  }
+  anyConfig.elements = [bgConfig, ...list]
 }
 
 // 加载设计配置
@@ -199,8 +196,9 @@ const loadDesign = async (designUid: string) => {
     await waitCanvasReady()
     // ✅ 先清空上一次设计的元素配置
     elementDataStore.clearAll() 
-    // 应用背景图片到画布（封装为独立方法，兼容新旧配置字段）
-    applyBackgroundFromConfig(config)
+
+    // 兼容旧字段：backgroundImage -> background 元素
+    ensureBackgroundElement(config)
  
     // 加载元素到画布
     if (config && config.elements) {
@@ -249,7 +247,6 @@ const loadElements = async (elements: AnyElementConfig[]) => {
   const elementDataStore = useElementDataStore()
   for (const element of elements) {
     if (element.eleType == 'Line') continue
-    console.log(`load element: ${JSON.stringify(element)}`)
     const decodedElement = decodeElementConfig(element)
     if (!decodedElement) {
       console.warn(`Unknown element type: ${element.eleType}`)
@@ -288,14 +285,34 @@ const loadElements = async (elements: AnyElementConfig[]) => {
 const reorderCanvasByIds = (orderedIds: string[]) => {
   const c = baseStore.canvas
   if (!c) return
-  const objects = c.getObjects() as (FabricObject & { id?: string })[];
+  const objects = c.getObjects() as (FabricObject & { id?: string })[]
+
+  const globalObj = objects.find((o) => String((o as any).eleType ?? '') === 'global')
+  console.log('globalObj', globalObj)
+  const backgroundObj = objects.find((o) => String((o as any).eleType ?? '') === 'background')
+
+  const isFixed = (obj: any): boolean => {
+    const t = String(obj?.eleType ?? '')
+    return t === 'global' || t === 'background'
+  }
+
+  const fixedCount = objects.filter((o) => isFixed(o)).length
+
+  // orderIds 只包含用户元素；移动时要加上 fixedCount，避免把 fixed layer 挤到上层
   orderedIds.forEach((id, index) => {
-    const obj = objects.find((o: FabricObject & { id?: string }) => o.id === id);
-    if (obj) {
-      
-      c.moveObjectTo(obj, index);
-    }
-  });
+    const obj = objects.find((o: FabricObject & { id?: string }) => o.id === id)
+    if (!obj) return
+    if (isFixed(obj)) return
+    c.moveObjectTo(obj, fixedCount + index)
+  })
+
+  // 再次强制 fixed layer 位于底部（moveObjectTo 会影响其他对象的 index）
+  if (globalObj) {
+    c.moveObjectTo(globalObj, 0)
+  }
+  if (backgroundObj) {
+    c.moveObjectTo(backgroundObj, globalObj ? 1 : 0)
+  }
 };
 
 

@@ -2,7 +2,16 @@
   <div class="layer-panel">
     <div class="layer-list">
       <h2 class="section-title">Layers</h2>
-      <draggable :list="layers" class="layers-list" :animation="150" @end="handleDragEnd" item-key="id" handle=".layer-content">
+      <draggable
+        :list="layers"
+        class="layers-list"
+        :animation="150"
+        @end="handleDragEnd"
+        item-key="id"
+        handle=".layer-content"
+        :filter="'.no-drag'"
+        :prevent-on-filter="false"
+      >
         <template #item="{ element: layer }">
           <div
             :class="{
@@ -12,7 +21,7 @@
             :style="getLayerBackgroundColor(layer)"
             @click="selectLayer(layer)">
             <div v-if="layer.eleType" class="layer-item">
-              <div class="layer-content">
+              <div class="layer-content" :class="{ 'no-drag': isFixedLayer(layer) }">
                 <span class="layer-icon">
                   <Icon :icon="getElementIcon(layer.eleType)" />
                 </span>
@@ -25,7 +34,7 @@
                 <button class="layer-btn" @click.stop="toggleLock(layer)">
                   <Icon :icon="layer.locked ? 'material-symbols:lock' : 'material-symbols:lock-open'" />
                 </button>
-                <button class="layer-btn" @click.stop="deleteLayer(layer)">
+                <button v-if="!isFixedLayer(layer)" class="layer-btn" @click.stop="deleteLayer(layer)">
                   <Icon icon="material-symbols:delete" />
                 </button>
               </div>
@@ -43,6 +52,7 @@ import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -52,10 +62,14 @@ import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
-
-// no store-based selection syncing; rely on Fabric object's `active` flag
+const canvasStore = useCanvasStore()
 
 const layers = computed(() => layerStore.layers)
+
+const isFixedLayer = (layer: any): boolean => {
+  const t = String(layer?.eleType ?? '')
+  return t === 'global' || t === 'background'
+}
 
 // kept for internal operations but selection highlight uses store
 const activeElements = ref<MinimalFabricLike[]>([])
@@ -116,21 +130,28 @@ const setupElementListeners = (): void => {
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: any): Promise<void> => {
   // do not allow selecting locked layers from panel
-  if ((layer as { locked?: boolean }).locked) {
+  if ((layer as { locked?: boolean }).locked && String(layer?.eleType ?? '') !== 'background') {
     return
   }
-  baseStore.canvas?.discardActiveObject?.()
-  if (layer.eleType === 'global') {
-    // open global settings if needed
-  } else if (baseStore.canvas && layer) {
+  if (String(layer?.eleType ?? '') === 'global') {
+    return
+  }
+  const canvas = baseStore.canvas
+  if (canvas && layer) {
     const obj = getElementById(layer.id) ?? layer.element
     if (obj) {
-      baseStore.canvas.setActiveObject?.(obj as any)
-      baseStore.canvas.getActiveObject?.() as MinimalFabricLike | undefined
+      canvas.setActiveObject?.(obj as any)
+      canvas.renderAll?.()
+      requestAnimationFrame(() => {
+        const actives = (canvas.getActiveObjects?.() as unknown as MinimalFabricLike[]) || []
+        const ids = actives
+          .map((o) => o.id)
+          .filter((id): id is string | undefined => id !== undefined && id !== null && id !== '')
+          .map(String)
+        canvasStore.setActiveIds(ids)
+      })
     }
   }
-  emitter.emit('refresh-element-settings', {})
-  baseStore.canvas?.renderAll?.()
   debouncedUpdateElements()
 }
 
@@ -139,7 +160,7 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
   const layer = layers.value.find((l) => l.id === layerId)
   if (!layer) return false
-  if ((layer as any).locked) return false
+  if ((layer as any).locked && String(layer?.eleType ?? '') !== 'background') return false
   const result = selectedIds.value.includes(layerId)
   return result
 }
@@ -153,6 +174,7 @@ const toggleVisibility = (layer: any): void => {
 
 const toggleLock = (layer: any): void => {
   if (!layer?.id) return
+  if (isFixedLayer(layer)) return
   layerStore.toggleLayerLock(String(layer.id))
   // After store syncs Fabric object, refresh list so class/background/icon update
   debouncedUpdateElements()
@@ -160,6 +182,7 @@ const toggleLock = (layer: any): void => {
 
 // drag end reorders canvas stacking
 const handleDragEnd = (): void => {
+  // keep fixed layer(s) unmoved
   const ids = layers.value.map((l) => String(l.id))
   applyOrder(ids)
   baseStore.canvas?.renderAll?.()
@@ -191,6 +214,9 @@ const undo = (): void => {
 }
 
 const deleteLayer = (layer: any): void => {
+  if (isFixedLayer(layer)) {
+    return
+  }
   if (layer.locked) {
     return
   }
@@ -401,6 +427,10 @@ onUnmounted((): void => {
   align-items: center;
   gap: 6px;
   cursor: move; /* 指示可拖动 */
+}
+
+.layer-content.no-drag {
+  cursor: default;
 }
 
 .layer-icon {

@@ -34,7 +34,6 @@ export const useElementDataStore = defineStore('elementData', {
 
   actions: {
     upsertElement(config: AnyElementConfig) {
-      console.log('upsertElement', config)
       if (!config || !config.id || !config.eleType) return
       const id = String(config.id)
       const eleType = config.eleType as ElementType

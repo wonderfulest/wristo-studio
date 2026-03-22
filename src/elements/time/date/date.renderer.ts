@@ -34,33 +34,19 @@ export function createDate(config: DateElementConfig): FabricElement {
   const elementDataStore = useElementDataStore()
   const canvas = baseStore.canvas
   if (!canvas) {
-    console.error('[date/createDate] Canvas is not initialized, cannot add date element', {
-      config,
-    })
     throw new Error('Canvas is not initialized, cannot add date element')
   }
 
-  console.log('[date/createDate] start', {
-    rawConfig: config,
-    canvasExists: !!canvas,
-  })
 
   const elementId = config.id || nanoid()
   const formatterValue = parseInt(String(config.formatter))
   const formatterOption = DateFormatOptions.find((o) => o.value === formatterValue)
   if (!formatterOption) {
-    console.error('Invalid date formatter:', config.formatter)
     throw new Error('Invalid date formatter')
   }
 
   const textCase = (propertiesStore as any).textCase as number | undefined
   const text = formatDate(new Date(), formatterValue, textCase)
-  console.log('[date/createDate] computed text & id', {
-    elementId,
-    text,
-    formatter: formatterValue,
-    textCase,
-  })
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -93,14 +79,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     }
   }
 
-  const beforeObjects = canvas.getObjects?.() || []
-  console.log('[date/createDate] before add', {
-    elementId,
-    text,
-    count: beforeObjects.length,
-    ids: (beforeObjects as any[]).map((o) => (o as any).id),
-  })
-
+  
   canvas.add(element)
   layerStore.addLayer(element)
   elementManager.registerElementInstance(element as FabricElement)
@@ -125,14 +104,6 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   canvas.requestRenderAll?.()
 
-  const afterObjects = canvas.getObjects?.() || []
-  console.log('[date/createDate] after add', {
-    elementId,
-    text,
-    count: afterObjects.length,
-    ids: (afterObjects as any[]).map((o) => (o as any).id),
-  })
-
   elementDataStore.upsertElement({
     id: String(elementId),
     eleType: 'date',
@@ -147,11 +118,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
-  console.log('[date/createDate] success, returning element', {
-    id: (element as any).id,
-    eleType: (element as any).eleType,
-    type: (element as any).type,
-  })
+
   return element as FabricElement
 }
 

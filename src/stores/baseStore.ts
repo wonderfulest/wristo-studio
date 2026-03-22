@@ -7,9 +7,10 @@ import type { FabricElement } from '@/types/element'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { useBackgroundStore } from '@/stores/backgroundStore'
 import { useDesignStore } from '@/stores/designStore'
 import { generateConfig as generateRuntimeConfig } from '@/engine/services/exportService'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import * as elementManager from '@/engine/managers/elementManager'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -27,7 +28,6 @@ export const useBaseStore = defineStore('baseStore', {
     watchFaceName: '' as string,
     appId: -1 as number,
     screenshot: null as Screenshot, // 存储表盘截图数据
-    // 添加背景元素的引用（保留字段以兼容旧逻辑，但具体数据由 backgroundStore 负责）
     watchFaceCircle: null as AnyObject | null,
     inCanvasWorkarea: false as boolean
   }),
@@ -130,8 +130,47 @@ export const useBaseStore = defineStore('baseStore', {
       const canvasStore = useCanvasStore()
       canvasStore.setCanvas(fabricCanvas)
       this.canvas = canvasStore.canvas
-      const backgroundStore = useBackgroundStore()
-      backgroundStore.syncFromCanvas()
+    },
+
+    async setBackgroundImageFromUrl(url: string | null, imageId?: number | null): Promise<void> {
+      const canvasStore = useCanvasStore()
+      const elementDataStore = useElementDataStore()
+      await canvasStore.ensureFixedLayers()
+      const canvas = canvasStore.canvas
+      if (!canvas) return
+
+      const bgObj = (canvas.getObjects?.() || []).find((o: any) => o && o.eleType === 'background') as any
+      if (!bgObj) return
+      const id = String(bgObj.id ?? '')
+      if (!id) return
+
+      const patch = {
+        imageUrl: url ?? '',
+        imageId: imageId ?? null,
+      }
+
+      // 单一数据源：先写入 elementDataStore
+      const existingConfig = elementDataStore.getElementConfig(id)
+      if (existingConfig) {
+        elementDataStore.patchElement(id, patch as any)
+      } else {
+        elementDataStore.upsertElement({
+          id,
+          eleType: 'background',
+          left: Number(bgObj.left ?? 0),
+          top: Number(bgObj.top ?? 0),
+          originX: bgObj.originX,
+          originY: bgObj.originY,
+          ...patch,
+        } as any)
+      }
+
+      // 再驱动 renderer 更新画布
+      elementManager.updateElementById(id, patch)
+
+      canvasStore.enforceFixedLayerOrder()
+      canvasStore.applyGlobalClipPath()
+      canvas.requestRenderAll?.()
     },
     // 设置表盘名称（委托给 designStore）
     setWatchFaceName(name: string): void {
@@ -160,7 +199,6 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: propertiesStore.textCase,
         labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
-        backgroundImage: canvasStore.backgroundImage,
       })
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',
@@ -183,8 +221,8 @@ export const useBaseStore = defineStore('baseStore', {
     },
     // 切换主题
     toggleTheme(): void {
-      const backgroundStore = useBackgroundStore()
-      backgroundStore.toggleTheme()
+      const canvasStore = useCanvasStore()
+      canvasStore.toggleTheme()
     },
     // 生成配置（委托给 exportService）
     generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
@@ -199,9 +237,7 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: propertiesStore.textCase,
         labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
-        backgroundImage: canvasStore.backgroundImage,
       })
     },
-  
   },
 })

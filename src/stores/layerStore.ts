@@ -3,7 +3,6 @@ import { useBaseStore } from './baseStore'
 import { markRaw } from 'vue'
 import type { LayerElement } from '@/types/layer'
 import type { MinimalFabricLike } from '@/types/layer'
-import { debug } from '@/utils/logger'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -11,13 +10,11 @@ export const useLayerStore = defineStore('layerStore', {
     const baseStore = useBaseStore()
     return {
       baseStore,
-      layers: [] as LayerElement[],
-      // currently selected layer ids, synced with canvas selection
-      selectedLayerIds: [] as string[]
+      layers: [] as LayerElement[], // all layers
+      selectedLayerIds: [] as string[] // currently selected layer ids, synced with canvas selection
     }
   },
 
-  // getters
   getters: {
     allLayers: (state): LayerElement[] => {
       return state.layers
@@ -26,15 +23,9 @@ export const useLayerStore = defineStore('layerStore', {
       return (id: string): boolean => state.selectedLayerIds.includes(id)
     }
   },
-  // actions
+
   actions: {
     addLayer(element: MinimalFabricLike): void {
-      console.debug('[LayerStore:addLayer] incoming element', {
-        raw: element,
-        id: (element as any)?.id,
-        eleType: (element as any)?.eleType,
-        type: typeof element,
-      })
       if (!element || !element.id || !element.eleType) {
         console.error('[LayerStore:addLayer] 无效的元素', {
           hasElement: !!element,
@@ -43,11 +34,6 @@ export const useLayerStore = defineStore('layerStore', {
         })
         return
       }
-
-      if (element.eleType === 'global' || element.eleType === 'background') {
-        return
-      }
-
       const id = String(element.id)
       const existing = this.layers.find((l) => l.id === id)
       if (existing) {
@@ -73,16 +59,16 @@ export const useLayerStore = defineStore('layerStore', {
         element: markRaw(l.element),
       }))
     },
+
     removeLayer(layerId: string): void {
       const index = this.layers.findIndex((layer) => layer.id === layerId)
       if (index > -1) {
         this.layers.splice(index, 1)
       }
-      // also remove from selection
       this.selectedLayerIds = this.selectedLayerIds.filter((id) => id !== layerId)
     },
+
     toggleLayerVisibility(layerId: string): void {
-      debug('LayerStore', 'toggleLayerVisibility: start', { layerId })
       const element = this.layers.find((l) => l.id === layerId)
       if (element) {
         element.visible = !element.visible
@@ -96,16 +82,12 @@ export const useLayerStore = defineStore('layerStore', {
           }
         }
         this.baseStore.canvas?.renderAll?.()
-        debug('LayerStore', 'toggleLayerVisibility: done', {
-          layerId,
-          visible: element.visible
-        })
       }
     },
     toggleLayerLock(layerId: string): void {
-      debug('LayerStore', 'toggleLayerLock: start', { layerId })
       const layer = this.layers.find((l) => l.id === layerId)
       if (layer) {
+      
         layer.locked = !layer.locked
         layer.selectable = !layer.locked
         // sync to Fabric object to actually disable selection / events
@@ -129,11 +111,6 @@ export const useLayerStore = defineStore('layerStore', {
           this.selectedLayerIds = this.selectedLayerIds.filter((id) => id !== layerId)
         }
         this.baseStore.canvas?.renderAll?.()
-        debug('LayerStore', 'toggleLayerLock: done', {
-          layerId,
-          locked: layer.locked,
-          selectable: layer.selectable
-        })
       }
     },
     // selection management
@@ -153,5 +130,9 @@ export const useLayerStore = defineStore('layerStore', {
     clearSelected(): void {
       this.selectedLayerIds = []
     }
+  },
+  persist: {
+    storage: localStorage,
+    pick: ['layers', 'selectedLayerIds']
   }
 })

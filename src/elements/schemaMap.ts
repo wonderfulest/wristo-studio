@@ -29,7 +29,10 @@ import { circleSchema } from '@/elements/shapes/circle/circle.schema'
 import { lineSchema } from '@/elements/shapes/line/line.schema'
 
 // common
-import { imageSchema } from '@/elements/common/image/image.schema'
+import { imageSchema } from '@/elements/decoration/image/image.schema'
+
+// decoration
+import { backgroundSchema } from '@/elements/decoration/background/background.schema'
 
 // texts
 import { textSchema } from '@/elements/texts/text/text.schema'
@@ -76,6 +79,10 @@ function buildConfigFromSchema(schema: AnySchema): AnyElementConfig & EDITOR_ELE
 }
 
 export const elementConfigs: ElementConfigs = {
+  decoration: {
+    background: buildConfigFromSchema(backgroundSchema as AnySchema),
+    image: buildConfigFromSchema(imageSchema as AnySchema),
+  },
   time: {
     time: buildConfigFromSchema(timeSchema as AnySchema),
     date: buildConfigFromSchema(dateSchema as AnySchema),
@@ -122,7 +129,6 @@ export const elementConfigs: ElementConfigs = {
     rectangle: buildConfigFromSchema(rectangleSchema as AnySchema),
     circle: buildConfigFromSchema(circleSchema as AnySchema),
     line: buildConfigFromSchema(lineSchema as AnySchema),
-    image: buildConfigFromSchema(imageSchema as AnySchema),
   },
   goal: {
     goalBar: buildConfigFromSchema(goalBarSchema as AnySchema),

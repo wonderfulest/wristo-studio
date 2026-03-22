@@ -11,5 +11,4 @@ export interface RuntimeDesignConfig {
   showUnit: boolean
   elements: AnyElementConfig[]
   orderIds: string[]
-  themeBackgroundImages: unknown[]
 }
