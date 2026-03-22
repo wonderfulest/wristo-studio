@@ -16,6 +16,9 @@ export type { IconElementConfig, DataElementConfig } from './data'
 // indicators
 export type { IndicatorElementConfig } from './indicator'
 
+// common
+export type { ImageElementConfig } from './image'
+
 // goal related
 export type { GoalElementConfig, GoalBarElementConfig, GoalArcElementConfig, GoalSegmentBarElementConfig } from './goal'
 
@@ -42,6 +45,7 @@ import type { MoveBarElementConfig as _MoveBar } from './status'
 import type { BatteryElementConfig as _Battery } from './battery'
 import type { HandElementConfig as _Hand } from './hand'
 import type { TickElementConfig as _Tick } from './tick'
+import type { ImageElementConfig as _Image } from './image'
 
 export type AnyElementConfig =
   | _Time
@@ -52,6 +56,7 @@ export type AnyElementConfig =
   | _Moon
   | _Weather
   | _WindDirection
+  | _Image
   | _Indicator
   | _Hand
   | _Shape
@@ -81,6 +86,7 @@ export interface ElementConfigMap {
   'moon': _Moon
   'weather': _Weather
   'windDirection': _WindDirection
+  'image': _Image
   'indicator': _Indicator
   'bluetooth': _Indicator
   'alarms': _Indicator

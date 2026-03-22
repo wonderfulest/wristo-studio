@@ -7,7 +7,7 @@
       <input 
         ref="uploadInput" 
         type="file" 
-        accept=".svg" 
+        :accept="uploadAccept" 
         style="display: none" 
         @change="handleUpload" 
       />
@@ -115,6 +115,19 @@ const hoverPreviewUrl = computed(() => {
   return getAssetUrl(hoverPreviewAsset.value)
 })
 
+const uploadAccept = computed(() => {
+  if (props.assetType === 'image') return '.svg,.png,.jpg,.jpeg,.webp'
+  return '.svg'
+})
+
+const isAllowedUploadFile = (file: File): boolean => {
+  if (props.assetType === 'image') {
+    if (file.type?.startsWith('image/')) return true
+    return /\.(svg|png|jpe?g|webp)$/i.test(file.name)
+  }
+  return /\.svg$/i.test(file.name)
+}
+
 /**
  * 获取素材展示URL
  * - windDirection：优先原始 SVG，避免固定尺寸 preview PNG 影响比例观感
@@ -196,8 +209,8 @@ const handleUpload = async (event: Event) => {
   const file = input.files?.[0]
   if (!file) return
 
-  if (!file.name.endsWith('.svg')) {
-    ElMessage.warning('请上传 SVG 格式文件')
+  if (!isAllowedUploadFile(file)) {
+    ElMessage.warning(props.assetType === 'image' ? '请上传图片文件（SVG/PNG/JPG/WEBP）' : '请上传 SVG 格式文件')
     return
   }
 

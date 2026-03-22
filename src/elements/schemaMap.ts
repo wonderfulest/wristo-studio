@@ -28,6 +28,9 @@ import { rectangleSchema } from '@/elements/shapes/rectangle/rectangle.schema'
 import { circleSchema } from '@/elements/shapes/circle/circle.schema'
 import { lineSchema } from '@/elements/shapes/line/line.schema'
 
+// common
+import { imageSchema } from '@/elements/common/image/image.schema'
+
 // texts
 import { textSchema } from '@/elements/texts/text/text.schema'
 import { scrollableTextSchema } from '@/elements/texts/scrollableText/scrollableText.schema'
@@ -119,6 +122,7 @@ export const elementConfigs: ElementConfigs = {
     rectangle: buildConfigFromSchema(rectangleSchema as AnySchema),
     circle: buildConfigFromSchema(circleSchema as AnySchema),
     line: buildConfigFromSchema(lineSchema as AnySchema),
+    image: buildConfigFromSchema(imageSchema as AnySchema),
   },
   goal: {
     goalBar: buildConfigFromSchema(goalBarSchema as AnySchema),
