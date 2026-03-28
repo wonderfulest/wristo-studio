@@ -72,7 +72,7 @@
   <EditorSettingsDialog ref="editorSettingsDialog" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
@@ -83,39 +83,12 @@ import { usePropertiesStore } from '@/stores/properties'
 import { DataTypeOptions } from '@/config/settings'
 
 import { getElementHandler } from '@/engine/registry/elementRegistry'
-import {
-  Operation,
-  Edit,
-  View,
-  DataLine,
-  Aim,
-  TrendCharts,
-  Stamp,
-  QuestionFilled,
-  Box,
-  Upload,
-  Setting,
-  Clock,
-  Mouse,
-  ChatLineSquare,
-  Star, // use existing icon as a placeholder
-  Connection,
-  Bell,
-  Monitor,
-  Minus,
-  CircleCheck,
-  Compass,
-  Top,
-  Mute,
-  AlarmClock
-} from '@element-plus/icons-vue'
 import { elementConfigs } from '@/elements/schemaMap'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
-import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
 import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
 import AppMenuDataFieldGroup from '@/components/layout/app-menu/AppMenuDataFieldGroup.vue'
 import AppMenuActions from '@/components/layout/app-menu/AppMenuActions.vue'
@@ -124,8 +97,8 @@ import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
 import AppMenuAlignToolbar from '@/components/layout/app-menu/AppMenuAlignToolbar.vue'
-import emitter from '@/utils/eventBus'
 import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
+import type { AlignType, DistributeType } from '@/engine/managers/alignManager'
 
 const route = useRoute()
 const router = useRouter()
@@ -144,10 +117,10 @@ const watchFaceName = computed(() => {
 
 // Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
-const feedbackDialog = ref(null)
-const propertiesPanel = ref(null)
-const editDesignDialog = ref(null)
-let editorSettingsDialog
+const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
+const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
+const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
+const editorSettingsDialog = ref<InstanceType<typeof EditorSettingsDialog> | null>(null)
 
 // Listen for keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -155,11 +128,11 @@ document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === ';') {
     e.preventDefault()
     console.log('[AppMenu] Cmd/Ctrl+; pressed, try open EditorSettingsDialog', editorSettingsDialog)
-    if (!editorSettingsDialog || typeof editorSettingsDialog.openDialog !== 'function') {
+    if (!editorSettingsDialog.value || typeof editorSettingsDialog.value.openDialog !== 'function') {
       console.warn('[AppMenu] EditorSettingsDialog is not ready or openDialog missing', editorSettingsDialog)
       return
     }
-    editorSettingsDialog.openDialog()
+    editorSettingsDialog.value.openDialog()
   }
 
   // Cmd/Ctrl + . 打开 Edit Design（应用设置）
@@ -175,16 +148,50 @@ document.addEventListener('keydown', (e) => {
 })
 
 // Align / Distribute handlers
-const handleAlign = (type) => {
+const handleAlign = (type: AlignType) => {
   alignSelection(type)
 }
 
-const handleDistribute = (axis) => {
+const handleDistribute = (axis: DistributeType) => {
   distributeSelection(axis)
 }
 
+const ensureNextChartProperty = (metricSymbol?: string) => {
+  const allProps = propertiesStore.allProperties
+  let maxIndex = 0
+  Object.keys(allProps || {}).forEach((key) => {
+    const match = key.match(/^chart_(\d+)$/)
+    if (match) {
+      const num = Number(match[1]) || 0
+      if (num > maxIndex) maxIndex = num
+    }
+  })
+  const nextIndex = maxIndex + 1
+  const propertyKey = `chart_${nextIndex}`
+  const title = `Chart ${nextIndex}`
+
+  const chartOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':CHART_TYPE_'))
+  let defaultOption = chartOptions[0] || DataTypeOptions[0]
+  if (metricSymbol) {
+    const found = chartOptions.find((opt) => opt.metricSymbol === metricSymbol)
+    if (found) defaultOption = found
+  }
+
+  if (!allProps[propertyKey]) {
+    propertiesStore.addProperty({
+      key: propertyKey,
+      type: 'chart',
+      title,
+      options: chartOptions,
+      defaultValue: defaultOption?.value,
+    })
+  }
+
+  return propertyKey
+}
+
 // Add element (similar to AddElementPanel implementation)
-const handleAddElement = async (category, elementType, overrides = {}) => {
+const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
   
   try {
     let config 
@@ -205,7 +212,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
       // Apply overrides
       config = { ...config, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      config = { left: 227, top: 227, ...elementConfigs[category][elementType], ...overrides }
+      config = { ...elementConfigs[category][elementType], left: 227, top: 227, ...overrides }
     } else {
       messageStore.warning('Element type is not supported')
       return
@@ -213,18 +220,37 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
 
     // Preload fonts if necessary
     try {
-      if (config?.fontFamily) {
-        await fontStore.loadFont(config.fontFamily)
+      const anyConfig = config as any
+      if (anyConfig?.fontFamily) {
+        await fontStore.loadFont(anyConfig.fontFamily)
       }
     } catch (e) {
       console.warn('Failed to load font (continue adding element):', e)
+    }
+
+    if (category === 'chart' && (elementType === 'barChart' || elementType === 'lineChart')) {
+      const resolvedOverrides: any = { ...overrides }
+      const requested = String(resolvedOverrides.chartProperty ?? '').trim()
+      const requestedMetricSymbol = requested.startsWith(':CHART_TYPE_') ? requested : ''
+      const metricSymbolForCreation = requestedMetricSymbol || ':CHART_TYPE_7DAYS_STEPS'
+
+      const keyCandidate = requestedMetricSymbol ? '' : (requested || String((config as any).chartProperty ?? '').trim())
+      const item = keyCandidate ? (propertiesStore.allProperties as any)[keyCandidate] : null
+
+      if (!keyCandidate || !item || item.type !== 'chart') {
+        const nextKey = ensureNextChartProperty(metricSymbolForCreation)
+        delete resolvedOverrides.chartProperty
+        config = { ...config, ...resolvedOverrides, chartProperty: nextKey }
+
+      } else {
+        config = { ...config, ...resolvedOverrides }
+      }
     }
 
     // Use registry to add element via ElementHandler.add(config)
     if (elementType) {
       try {
         const handler = getElementHandler(elementType)
-        console.log('handler add element', config)
         await handler.add(config)
       } catch (e) {
         console.warn(`No add element handler registered for type: ${elementType}`, e)
@@ -232,7 +258,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
     }
 
     messageStore.success(`Element added: ${config.label || elementType}`)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to add element:', error)
     messageStore.error('Failed to add element')
   }
@@ -240,7 +266,7 @@ const handleAddElement = async (category, elementType, overrides = {}) => {
 
 // Quick add: create a new data property (DataN / data_N) and add paired icon + data elements
 // metricSymbol: optional, used to choose default data option (Heart Rate, Steps, etc.)
-const handleAddDataField = async (metricSymbol) => {
+const handleAddDataField = async (metricSymbol?: string) => {
   try {
     // Find next available index based on existing data_* properties
     const allProps = propertiesStore.allProperties
@@ -341,7 +367,7 @@ const handleAddGoalProgressBarField = async () => {
       })
     }
 
-    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalBar) || {}
+    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalBar) || {}) as any
     const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
     const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
     const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
@@ -414,7 +440,7 @@ const handleAddGoalArcField = async () => {
       })
     }
 
-    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalArc) || {}
+    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalArc) || {}) as any
     const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
     const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
 
@@ -485,7 +511,7 @@ const handleAddGoalSegmentField = async () => {
       })
     }
 
-    const baseGoalConfig = (elementConfigs.goal && elementConfigs.goal.goalSegmentBar) || {}
+    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalSegmentBar) || {}) as any
     const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
     const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
     const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
@@ -529,7 +555,8 @@ const handleAddGoalSegmentField = async () => {
 const handleEditDesign = () => {
   const designId = route.query.id
   console.log('[AppMenu] handleEditDesign called, designId =', designId)
-  if (designId) {
+  const id = Array.isArray(designId) ? designId[0] : designId
+  if (typeof id === 'string' && id) {
     if (!editDesignDialog || !editDesignDialog.value) {
       console.warn('[AppMenu] editDesignDialog ref is not ready', editDesignDialog)
       return
@@ -538,14 +565,14 @@ const handleEditDesign = () => {
       console.warn('[AppMenu] editDesignDialog.show is not a function', editDesignDialog.value)
       return
     }
-    editDesignDialog.value.show(designId)
+    editDesignDialog.value.show(id)
   } else {
     messageStore.warning('Please save the design first')
   }
 }
 
 // Handle menu selection
-const handleSelect = (key) => {
+const handleSelect = (key: string) => {
   if (key === 'help/shortcuts') {
     shortcutsDialogVisible.value = true
   } else if (key === 'actions/properties') {
@@ -597,7 +624,7 @@ const handleSave =async () => {
         path: '/designs'
       })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload failed:', error)
     messageStore.error('Upload failed: ' + (error.message || 'Unknown error'))
   }

@@ -7,57 +7,16 @@ export interface BaseChartConfig extends BaseElementConfig {
 }
 
 export interface BarChartElementConfig extends BaseChartConfig {
-  color?: string
-  bgColor?: string
-  pointCount?: number
-  fillMissing?: boolean
-  minY?: number
-  maxY?: number
-  barWidth?: number
   chartProperty?: string
-  showGrid?: boolean
-  gridColor?: string
-  gridYCount?: number
-  showXAxis?: boolean
-  showYAxis?: boolean
-  xAxisColor?: string
-  yAxisColor?: string
-  showXLabels?: boolean
-  showYLabels?: boolean
-  xLabelColor?: string
-  yLabelColor?: string
-  xFont?: string
-  yFont?: string
-  xFontSize?: number
-  yFontSize?: number
+  barWidth?: number
+  colors?: [string, string, string, string, string] | string[]
 }
 
 export interface LineChartElementConfig extends BaseChartConfig {
+  chartProperty?: string
   color?: string
-  bgColor?: string
-  pointCount?: number
-  fillMissing?: boolean
   lineWidth?: number
-  smoothFactor?: number
   showPoints?: boolean
   pointColor?: string
   pointRadius?: number
-  showGrid?: boolean
-  gridColor?: string
-  gridYCount?: number
-  gridXCount?: number
-  showAxis?: boolean
-  axisColor?: string
-  showXLabels?: boolean
-  showYLabels?: boolean
-  xLabelColor?: string
-  yLabelColor?: string
-  xFont?: string
-  yFont?: string
-  xFontSize?: number
-  yFontSize?: number
-  timeFormat?: string
-  yLabelWidth?: number
-  xLabelHeight?: number
-  chartProperty?: string
 }

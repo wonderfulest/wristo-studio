@@ -47,7 +47,6 @@ export function addElement(type: ElementType, config: AnyElementConfig) {
 }
 
 export function updateElement(element: FabricElement, patch: any) {
-  console.log('[ElementManager] updateElement start', element, patch)
   if (!element) return
 
   const id = (element as any).id

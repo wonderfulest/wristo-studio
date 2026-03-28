@@ -2,8 +2,9 @@
   <div class="color-picker-wrapper" @click.stop ref="wrapperRef">
     <div class="color-input" @click="togglePicker">
       <input
-        :value="modelValue === 'transparent' ? 'transparent' : modelValue"
-        readonly
+        v-model="inputValue"
+        @keydown.enter.prevent="handleInputConfirm"
+        @blur="handleInputConfirm"
         :class="{ 'transparent-input': modelValue === 'transparent' }"
         :style="{
           backgroundColor: modelValue === 'transparent' ? 'transparent' : modelValue,
@@ -140,6 +141,7 @@ const pickerStyle = ref({})
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
 // 内部统一使用字符串表示颜色
 const hexColor = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
+const inputValue = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
 
 // 获取当前使用的颜色
 const colorVariables = computed(() => baseStore.getAllColors())
@@ -191,6 +193,7 @@ const toggleColorList = () => {
 // 选择颜色
 const selectColor = (color) => {
   hexColor.value = color.hex
+  inputValue.value = color.hex
   emit('update:modelValue', color.hex)
   emit('change', color.hex)
 }
@@ -241,9 +244,74 @@ watch(
     if (newValue !== hexColor.value) {
       const v = typeof newValue === 'string' ? newValue : String(newValue)
       hexColor.value = v === 'transparent' ? '#222222' : v
+      // 同步输入框显示
+      if (v === 'transparent') {
+        inputValue.value = 'transparent'
+      } else if (typeof v === 'string' && v.startsWith('0x') && v.length === 8) {
+        inputValue.value = `#${v.slice(2)}`
+      } else {
+        inputValue.value = v
+      }
     }
   }
 )
+
+// 规范化用户在输入框里输入的颜色字符串
+const normalizeInputToHex = (raw) => {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (!s) return null
+
+  if (s.toLowerCase() === 'transparent') return 'transparent'
+
+  // 支持 0xrrggbb / #rrggbb / rrggbb
+  if (/^0x[0-9A-Fa-f]{6}$/.test(s)) {
+    return `#${s.slice(2)}`
+  }
+  if (/^#[0-9A-Fa-f]{6}$/.test(s)) {
+    return s.toLowerCase()
+  }
+  if (/^[0-9A-Fa-f]{6}$/.test(s)) {
+    return `#${s}`.toLowerCase()
+  }
+  return null
+}
+
+const handleInputConfirm = () => {
+  const normalized = normalizeInputToHex(inputValue.value)
+  if (!normalized) return
+
+  // 透明色单独处理
+  if (normalized === 'transparent') {
+    hexColor.value = 'transparent'
+    emit('update:modelValue', 'transparent')
+    emit('change', 'transparent')
+    inputValue.value = 'transparent'
+    return
+  }
+
+  // 在预设矩阵中查找完全匹配
+  const fromMatrix = colorMatrix.find((c) => c.toLowerCase() === normalized.toLowerCase())
+  if (fromMatrix) {
+    selectColor({ hex: fromMatrix, value: fromMatrix })
+    inputValue.value = fromMatrix
+    return
+  }
+
+  // 在当前属性颜色中查找完全匹配
+  const fromProps = colorProperties.value.find((cp) => cp.hex.toLowerCase() === normalized.toLowerCase())
+  if (fromProps) {
+    selectColor(fromProps)
+    inputValue.value = fromProps.hex
+    return
+  }
+
+  // 若未命中任何选项，仍然按该 hex 作为当前颜色
+  hexColor.value = normalized
+  emit('update:modelValue', normalized)
+  emit('change', normalized)
+  inputValue.value = normalized
+}
 
 const togglePicker = () => {
   // 切换打开/关闭；当打开时，广播给其他实例进行关闭

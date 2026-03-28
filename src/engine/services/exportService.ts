@@ -18,6 +18,7 @@ function mapColorProperties(encodeConfig: AnyElementConfig, properties: Properti
     { source: 'fill', target: 'fillProperty' },
     { source: 'activeColor', target: 'activeColorProperty' },
     { source: 'inactiveColor', target: 'inactiveColorProperty' },
+    { source: 'pointColor', target: 'pointColorProperty' },
     { source: 'gridColor', target: 'gridColorProperty' },
     { source: 'xAxisColor', target: 'xAxisColorProperty' },
     { source: 'yAxisColor', target: 'yAxisColorProperty' },

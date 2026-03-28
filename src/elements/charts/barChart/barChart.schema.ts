@@ -5,16 +5,13 @@ export type BarChartElementSchema = {
   name: string
   icon: string
   defaultConfig: {
-    fill: string
     width: number
     height: number
     originX: 'left'
     originY: 'top'
-    fontSize: number
-    bgColor: string
-    fillMissing: boolean
-    xFont: string
-    yFont: string
+    chartProperty: string
+    barWidth: number
+    colors: [string, string, string, string, string]
   }
   resizable: boolean
   rotatable: boolean
@@ -26,18 +23,15 @@ export const barChartSchema: BarChartElementSchema = {
   name: 'Bar Chart',
   icon: 'mdi:chart-bar',
   defaultConfig: {
-    fill: '#FFFFFF',
     width: 200,
     height: 80,
     originX: 'left',
     originY: 'top',
-    fontSize: 12,
-    bgColor: 'transparent',
-    fillMissing: true,
-    xFont: 'roboto-condensed-regular',
-    yFont: 'roboto-condensed-regular',
+    chartProperty: 'steps',
+    barWidth: 20,
+    colors: ['#FF0000', '#FF5500', '#FFAA00', '#00FF00', '#00AA00'],
   },
   resizable: true,
   rotatable: false,
-  disabled: true
+  disabled: false
 }

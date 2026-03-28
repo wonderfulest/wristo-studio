@@ -9,16 +9,12 @@ export type LineChartElementSchema = {
     height: number
     originX: 'center'
     originY: 'center'
-    fill: string
-    pointCount: number
-    bgColor: string
-    fillMissing: boolean
-    showXLabels: boolean
-    showYLabels: boolean
-    xLabelColor: string
-    yLabelColor: string
-    xFont: string
-    yFont: string
+    chartProperty: string
+    color: string
+    lineWidth: number
+    showPoints: boolean
+    pointColor: string
+    pointRadius: number
   }
   resizable: boolean
   rotatable: boolean
@@ -34,18 +30,14 @@ export const lineChartSchema: LineChartElementSchema = {
     height: 80,
     originX: 'center',
     originY: 'center',
-    fill: '#FFFFFF',
-    pointCount: 7,
-    bgColor: 'transparent',
-    fillMissing: true,
-    showXLabels: false,
-    showYLabels: false,
-    xLabelColor: '#aaaaaa',
-    yLabelColor: '#aaaaaa',
-    xFont: 'RobotoCondensed-Regular',
-    yFont: 'RobotoCondensed-Regular',
+    chartProperty: 'steps',
+    color: '#FFFFFF',
+    lineWidth: 2,
+    showPoints: false,
+    pointColor: '#FFFFFF',
+    pointRadius: 2,
   },
   resizable: true,
   rotatable: false,
-  disabled: true
+  disabled: false
 }

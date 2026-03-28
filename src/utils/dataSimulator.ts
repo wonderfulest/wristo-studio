@@ -251,3 +251,116 @@ export function getSimulatedDataByName(name: string): SimulatedData {
 export function getDataValueByName(name: string): string {
   return getSimulatedDataByName(name).display
 }
+
+export type SimulatedBarChartSeries = {
+  data: number[]
+  goal: number
+  pointCount: number
+}
+
+function normalizeChartKey(key: string): string {
+  return String(key ?? '').trim()
+}
+
+function buildSeries(pointCount: number, maxValue: number, seed: number): number[] {
+  const list: number[] = []
+  const safeCount = Math.max(1, Math.floor(pointCount))
+  const safeMax = Math.max(1, Number(maxValue) || 1)
+  for (let i = 0; i < safeCount; i++) {
+    const phase = (i / safeCount) * Math.PI * 2
+    const base = (Math.sin(phase + seed) + 1) / 2
+    const noise = (Math.random() - 0.5) * 0.25
+    const v = clamp((base + noise) * safeMax, 0, safeMax * 1.35)
+    list.push(v)
+  }
+  return list.slice(0, safeCount)
+}
+
+export function getSimulatedBarChartSeries(chartProperty: string): SimulatedBarChartSeries {
+  const key = normalizeChartKey(chartProperty)
+
+  if (key.startsWith(':CHART_TYPE_')) {
+    const pointCount = 8
+    if (key.includes('STEPS')) {
+      const goal = 10000
+      const data = buildSeries(pointCount, goal * 1.2, simState.steps / 1000)
+      return { data, goal, pointCount }
+    }
+    if (key.includes('ACTIVE_MINUTES')) {
+      const goal = 60
+      const data = buildSeries(pointCount, goal * 1.2, simState.calories / 500)
+      return { data, goal, pointCount }
+    }
+    if (key.includes('FLOORS')) {
+      const goal = 20
+      const data = buildSeries(pointCount, goal * 1.2, simState.floors / 5)
+      return { data, goal, pointCount }
+    }
+    if (key.includes('CALORIES')) {
+      const goal = 2500
+      const data = buildSeries(pointCount, goal * 1.2, simState.calories / 500)
+      return { data, goal, pointCount }
+    }
+    if (key.includes('DISTANCE')) {
+      const goal = 10
+      const data = buildSeries(pointCount, goal * 1.2, simState.distanceKm)
+      return { data, goal, pointCount }
+    }
+    if (key.includes('PUSH')) {
+      const goal = 10
+      const data = buildSeries(pointCount, goal * 1.2, simState.distanceKm)
+      return { data, goal, pointCount }
+    }
+    {
+      const goal = 100
+      const data = buildSeries(pointCount, goal * 1.2, Math.random() * 10)
+      return { data, goal, pointCount }
+    }
+  }
+
+  switch (key) {
+    case 'steps': {
+      const goal = 10000
+      const pointCount = 24
+      const data = buildSeries(pointCount, goal * 1.2, simState.steps / 1000)
+      return { data, goal, pointCount }
+    }
+    case 'hr':
+    case 'heart': {
+      const goal = 150
+      const pointCount = 60
+      const data = buildSeries(pointCount, goal * 1.2, simState.hr / 10)
+      return { data, goal, pointCount }
+    }
+    case 'battery': {
+      const goal = 100
+      const pointCount = 10
+      const data = buildSeries(pointCount, goal * 1.2, simState.battery / 10)
+      return { data, goal, pointCount }
+    }
+    case 'calories': {
+      const goal = 2500
+      const pointCount = 12
+      const data = buildSeries(pointCount, goal * 1.2, simState.calories / 500)
+      return { data, goal, pointCount }
+    }
+    case 'floors': {
+      const goal = 20
+      const pointCount = 10
+      const data = buildSeries(pointCount, goal * 1.2, simState.floors / 5)
+      return { data, goal, pointCount }
+    }
+    case 'distance': {
+      const goal = 10
+      const pointCount = 12
+      const data = buildSeries(pointCount, goal * 1.2, simState.distanceKm)
+      return { data, goal, pointCount }
+    }
+    default: {
+      const goal = 100
+      const pointCount = 24
+      const data = buildSeries(pointCount, goal * 1.2, Math.random() * 10)
+      return { data, goal, pointCount }
+    }
+  }
+}

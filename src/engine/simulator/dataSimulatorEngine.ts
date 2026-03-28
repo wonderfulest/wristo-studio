@@ -2,7 +2,19 @@ import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DateFormatOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
-import { getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
+import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
+import * as elementManager from '@/engine/managers/elementManager'
+
+function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
+  const key = String(chartProperty ?? '').trim()
+  if (!key) return ''
+  const item = (propertiesStore as any).allProperties?.[key]
+  if (!item || item.type !== 'chart') return ''
+  const options = Array.isArray(item.options) ? item.options : []
+  const selected = options.find((opt: any) => opt && opt.value === item.value)
+  const metricSymbol = String(selected?.metricSymbol ?? '')
+  return metricSymbol
+}
 
 export type DataSimulatorEngineOptions = {
   intervalMs?: number
@@ -235,6 +247,31 @@ export class DataSimulatorEngine {
           obj.set?.('text', nextText)
           changed = true
         }
+        return
+      }
+
+      if (eleType === 'barChart') {
+        const chartProperty = String((obj as any).chartProperty ?? '')
+        const metricSymbol = resolveChartMetricSymbol(propertiesStore, chartProperty)
+        const series = getSimulatedBarChartSeries(metricSymbol || chartProperty)
+        elementManager.updateElement(obj as any, {
+          __simData: series.data,
+          __simGoal: series.goal,
+          __simPointCount: series.pointCount,
+        })
+        changed = true
+        return
+      }
+
+      if (eleType === 'lineChart') {
+        const chartProperty = String((obj as any).chartProperty ?? '')
+        const metricSymbol = resolveChartMetricSymbol(propertiesStore, chartProperty)
+        const series = getSimulatedBarChartSeries(metricSymbol || chartProperty)
+        elementManager.updateElement(obj as any, {
+          __simData: series.data,
+          __simPointCount: series.pointCount,
+        })
+        changed = true
         return
       }
     })

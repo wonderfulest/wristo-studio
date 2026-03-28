@@ -1,154 +1,77 @@
-import { Group, Line, Rect, Text } from 'fabric'
+import { Group, Rect } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { BarChartElementConfig } from '@/types/elements/charts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 
-function createGrid(group: any, width: number, height: number, gridYCount: number, gridColor: string) {
-  const stepY = height / (gridYCount + 1)
-  for (let i = 1; i <= gridYCount; i++) {
-    const y = -height / 2 + i * stepY
-    const line: any = new Line([-width / 2, y, width / 2, y], {
-      stroke: gridColor,
-      strokeWidth: 1,
-      selectable: false,
-      hasControls: false,
-    })
-    group.add(line)
-  }
+function resolveColors(colors: BarChartElementConfig['colors'] | undefined): [string, string, string, string, string] {
+  const fallback: [string, string, string, string, string] = ['#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#0a7f2e']
+  if (!colors) return fallback
+  const list = Array.isArray(colors) ? colors : fallback
+  const c0 = String(list[0] ?? fallback[0])
+  const c1 = String(list[1] ?? fallback[1])
+  const c2 = String(list[2] ?? fallback[2])
+  const c3 = String(list[3] ?? fallback[3])
+  const c4 = String(list[4] ?? fallback[4])
+  return [c0, c1, c2, c3, c4]
 }
 
-function createXAxis(group: any, width: number, height: number, xAxisColor: string) {
-  const line: any = new Line([-width / 2, height / 2, width / 2, height / 2], {
-    stroke: xAxisColor,
-    strokeWidth: 1,
+function pickColorByThreshold(value: number, goal: number, colors: [string, string, string, string, string]): string {
+  const safeGoal = Math.max(1, Number(goal) || 1)
+  const t0 = 0
+  const t1 = safeGoal * 0.5
+  const t2 = safeGoal * 0.8
+  const t3 = safeGoal
+  const t4 = safeGoal * 1.2
+  if (value <= t0) return colors[0]
+  if (value <= t1) return colors[1]
+  if (value <= t2) return colors[2]
+  if (value <= t3) return colors[3]
+  if (value <= t4) return colors[4]
+  return colors[4]
+}
+
+function createBaseRect(group: any, width: number, height: number) {
+  const rect: any = new Rect({
+    width,
+    height,
+    fill: 'transparent',
+    left: -width / 2,
+    top: -height / 2,
     selectable: false,
     hasControls: false,
+    evented: false,
   })
-  group.add(line)
+  group.add(rect)
 }
 
-function createYAxis(group: any, width: number, height: number, yAxisColor: string) {
-  const line: any = new Line([-width / 2, -height / 2, -width / 2, height / 2], {
-    stroke: yAxisColor,
-    strokeWidth: 1,
-    selectable: false,
-    hasControls: false,
-  })
-  group.add(line)
-}
-
-function createXLabels(
-  group: any,
-  width: number,
-  height: number,
-  xLabelColor: string,
-  xFont: string | undefined,
-  xFontSize: number,
-) {
-  const stepX = width / 4
-  for (let i = 0; i <= 4; i++) {
-    const x = -width / 2 + i * stepX
-    const text: any = new Text(`${i}`, {
-      left: x,
-      top: height / 2 + 5,
-      fontFamily: xFont as any,
-      fontSize: xFontSize,
-      fill: xLabelColor,
-      selectable: false,
-      hasControls: false,
-    })
-    group.add(text)
-  }
-}
-
-function createYLabels(
-  group: any,
-  width: number,
-  height: number,
-  yLabelColor: string,
-  yFont: string | undefined,
-  yFontSize: number,
-  gridYCount: number,
-) {
-  const stepY = height / (gridYCount + 1)
-  for (let i = 0; i <= gridYCount + 1; i++) {
-    const y = -height / 2 + i * stepY
-    const value = Math.round((1 - i / (gridYCount + 1)) * 100)
-    const text: any = new Text(`${value}`, {
-      left: -width / 2 - yFontSize,
-      top: y - 6,
-      fontFamily: yFont as any,
-      fontSize: yFontSize,
-      fill: yLabelColor,
-      selectable: false,
-      hasControls: false,
-    })
-    group.add(text)
-  }
-}
-
-function generateSampleData(count: number) {
-  const data: Array<number | null> = []
-  for (let i = 0; i < count; i++) {
-    if (Math.random() > 0.1) {
-      data.push(Math.random() * 100)
-    } else {
-      data.push(null)
-    }
-  }
-  return data
-}
-
-function createBars(
-  group: any,
-  width: number,
-  height: number,
-  pointCount: number,
-  color: string,
-  fillMissing: boolean,
-  defaultBarWidth: number,
-) {
+function createBars(group: any, width: number, height: number, data: number[], goal: number, barWidth: number, colors: [string, string, string, string, string]) {
+  const pointCount = data.length
+  if (pointCount <= 0) return
   const stepX = width / pointCount
-  const data = generateSampleData(pointCount)
-  const barWidth = group.barWidth || defaultBarWidth
 
-  const validData = data.filter((v: number | null) => v !== null) as number[]
-  const minY = Math.min(...validData) - 5
-  const maxY = Math.max(...validData) + 5
-  const rangeY = maxY - minY
+  const maxValue = Math.max(goal * 1.2, ...data.map((v) => Number(v) || 0), 1)
 
   for (let i = 0; i < pointCount; i++) {
-    const value = i < data.length ? data[i] : null
-    const xPos = -width / 2 + i * stepX
+    const raw = Number(data[i] ?? 0)
+    const value = Number.isFinite(raw) ? raw : 0
+    const xPos = -width / 2 + i * stepX + stepX / 2
+    const scaled = Math.max(0, Math.min(1, value / maxValue))
+    const barH = scaled * height
+    const barTop = height / 2 - barH
 
-    if (value !== null) {
-      const scaledY = ((value - minY) * (height - 2)) / rangeY
-      const yTop = -height / 2 + (height - scaledY)
-
-      const bar: any = new Rect({
-        left: xPos - barWidth / 2,
-        top: yTop,
-        width: barWidth,
-        height: height / 2 - yTop,
-        fill: color,
-        selectable: false,
-        hasControls: false,
-      })
-      group.add(bar)
-    } else if (fillMissing) {
-      const missingBar: any = new Rect({
-        left: xPos - barWidth / 2,
-        top: -height / 2,
-        width: barWidth,
-        height: height,
-        fill: '#666666',
-        selectable: false,
-        hasControls: false,
-      })
-      group.add(missingBar)
-    }
+    const bar: any = new Rect({
+      left: xPos - barWidth / 2,
+      top: barTop,
+      width: barWidth,
+      height: barH,
+      fill: pickColorByThreshold(value, goal, colors),
+      selectable: false,
+      hasControls: false,
+      evented: false,
+    })
+    group.add(bar)
   }
 }
 
@@ -160,32 +83,11 @@ export async function createBarChart(config: BarChartElementConfig): Promise<Fab
     throw new Error('Canvas is not initialized, cannot add barChart element')
   }
 
-  const id = nanoid()
+  const id = String((config as any)?.id ?? '') || nanoid()
   const width = config.width || 150
   const height = config.height || 50
-  const pointCount = config.pointCount || 8
-  const fillMissing = config.fillMissing !== undefined ? config.fillMissing : true
-  const color = config.color || '#ffffff'
-  const bgColor = config.bgColor || '#000000'
-  const showGrid = config.showGrid !== undefined ? config.showGrid : false
-  const gridColor = config.gridColor || '#555555'
-  const gridYCount = config.gridYCount || 3
-  const showXAxis = config.showXAxis !== undefined ? config.showXAxis : false
-  const showYAxis = config.showYAxis !== undefined ? config.showYAxis : false
-  const xAxisColor = config.xAxisColor || '#aaaaaa'
-  const yAxisColor = config.yAxisColor || '#aaaaaa'
-  const showXLabels = config.showXLabels !== undefined ? config.showXLabels : false
-  const showYLabels = config.showYLabels !== undefined ? config.showYLabels : false
-  const xLabelColor = config.xLabelColor || '#ffffff'
-  const yLabelColor = config.yLabelColor || '#ffffff'
-  const xFont = config.xFont
-  const yFont = config.yFont
-  const xFontSize = config.xFontSize || 12
-  const yFontSize = config.yFontSize || 12
-  const defaultBarWidth = 1
-
-  const safePointCount = Math.max(1, pointCount)
-  const barWidth = (width / safePointCount) * (2 / 3)
+  const colors = resolveColors(config.colors)
+  const barWidth = Math.max(1, Number(config.barWidth ?? 6))
 
   const group: any = new Group([], {
     left: config.left,
@@ -196,61 +98,15 @@ export async function createBarChart(config: BarChartElementConfig): Promise<Fab
     originY: config.originY ?? 'center',
     width,
     height,
-    color,
-    bgColor,
-    pointCount,
-    fillMissing,
-    minY: config.minY,
-    maxY: config.maxY,
-    barWidth: barWidth,
     chartProperty: config.chartProperty,
-    showGrid,
-    gridColor,
-    gridYCount,
-    showXAxis,
-    showYAxis,
-    xAxisColor,
-    yAxisColor,
-    showXLabels,
-    showYLabels,
-    xLabelColor,
-    yLabelColor,
-    xFont,
-    yFont,
-    xFontSize,
-    yFontSize,
+    barWidth,
+    colors,
     selectable: true,
     hasControls: false,
     hasBorders: true,
   } as any)
 
-  const bgRect: any = new Rect({
-    width,
-    height,
-    fill: bgColor,
-    left: -width / 2,
-    top: -height / 2,
-  })
-  group.add(bgRect)
-
-  if (showGrid) {
-    createGrid(group, width, height, gridYCount, gridColor)
-  }
-  if (showXAxis) {
-    createXAxis(group, width, height, xAxisColor)
-  }
-  if (showYAxis) {
-    createYAxis(group, width, height, yAxisColor)
-  }
-  if (showXLabels) {
-    createXLabels(group, width, height, xLabelColor, xFont as any, xFontSize)
-  }
-
-  createBars(group, width, height, pointCount, color, fillMissing, defaultBarWidth)
-
-  if (showYLabels) {
-    createYLabels(group, width, height, yLabelColor, yFont as any, yFontSize, gridYCount)
-  }
+  createBaseRect(group, width, height)
 
   group.setCoords()
   canvas.add(group)
@@ -286,31 +142,15 @@ export function updateBarChart(
   const currentHeight = group.height
 
   const updateProps: any = {
-    color: patch.color,
-    bgColor: patch.bgColor,
-    pointCount: patch.pointCount,
-    fillMissing: patch.fillMissing,
-    minY: patch.minY,
-    maxY: patch.maxY,
+    left: (patch as any).left,
+    top: (patch as any).top,
+    width: (patch as any).width,
+    height: (patch as any).height,
     originX: patch.originX,
     originY: patch.originY,
     barWidth: patch.barWidth,
     chartProperty: patch.chartProperty,
-    showGrid: patch.showGrid,
-    gridColor: patch.gridColor,
-    gridYCount: patch.gridYCount,
-    showXAxis: patch.showXAxis,
-    showYAxis: patch.showYAxis,
-    xAxisColor: patch.xAxisColor,
-    yAxisColor: patch.yAxisColor,
-    showXLabels: patch.showXLabels,
-    showYLabels: patch.showYLabels,
-    xLabelColor: patch.xLabelColor,
-    yLabelColor: patch.yLabelColor,
-    xFont: patch.xFont,
-    yFont: patch.yFont,
-    xFontSize: patch.xFontSize,
-    yFontSize: patch.yFontSize,
+    colors: (patch as any).colors,
   }
 
   Object.keys(updateProps).forEach((key) => {
@@ -320,64 +160,37 @@ export function updateBarChart(
     }
   })
 
+  if ((patch as any).__simData !== undefined) {
+    ;(group as any).__simData = (patch as any).__simData
+  }
+  if ((patch as any).__simGoal !== undefined) {
+    ;(group as any).__simGoal = (patch as any).__simGoal
+  }
+  if ((patch as any).__simPointCount !== undefined) {
+    ;(group as any).__simPointCount = (patch as any).__simPointCount
+  }
+
+  const nextWidth = Number((patch as any).width ?? group.width ?? currentWidth)
+  const nextHeight = Number((patch as any).height ?? group.height ?? currentHeight)
+  const width = Number.isFinite(nextWidth) && nextWidth > 0 ? nextWidth : currentWidth
+  const height = Number.isFinite(nextHeight) && nextHeight > 0 ? nextHeight : currentHeight
+
   group.remove(...group.getObjects())
+  const injectedData = (patch as any).__simData ?? (group as any).__simData
+  const data = (Array.isArray(injectedData) ? injectedData : []) as number[]
+  const goal = Number((patch as any).__simGoal ?? (group as any).__simGoal ?? 100)
+  const colors = resolveColors((patch as any).colors ?? group.colors)
+  const barWidth = Math.max(1, Number(patch.barWidth ?? group.barWidth ?? 6))
 
-  const width = currentWidth
-  const height = currentHeight
-  const pointCount = patch.pointCount || group.pointCount || 240
-  const color = patch.color || group.color || '#ffffff'
-  const bgColor = patch.bgColor || group.bgColor || '#000000'
-  const fillMissing =
-    patch.fillMissing !== undefined
-      ? patch.fillMissing
-      : group.fillMissing !== undefined
-        ? group.fillMissing
-        : true
-
-  const bgRect: any = new Rect({
-    width,
-    height,
-    fill: bgColor,
-    left: -width / 2,
-    top: -height / 2,
-    selectable: false,
-    hasControls: false,
-  })
-  group.add(bgRect)
-
-  if (group.showGrid) {
-    createGrid(group, width, height, group.gridYCount, group.gridColor)
-  }
-  if (group.showXAxis) {
-    createXAxis(group, width, height, group.xAxisColor)
-  }
-  if (group.showYAxis) {
-    createYAxis(group, width, height, group.yAxisColor)
-  }
-  if (group.showXLabels) {
-    createXLabels(group, width, height, group.xLabelColor, group.xFont, group.xFontSize)
-  }
-
-  createBars(group, width, height, pointCount, color, fillMissing, 1)
-
-  if (group.showYLabels) {
-    createYLabels(
-      group,
-      width,
-      height,
-      group.yLabelColor,
-      group.yFont,
-      group.yFontSize,
-      group.gridYCount,
-    )
-  }
+  createBaseRect(group, width, height)
+  createBars(group, width, height, data, goal, barWidth, colors)
 
   group.set({
-    left: currentLeft,
-    top: currentTop,
-    width: currentWidth,
-    height: currentHeight,
+    left: Number((patch as any).left ?? currentLeft),
+    top: Number((patch as any).top ?? currentTop),
+    width,
+    height,
   })
   group.setCoords()
-  canvas.renderAll()
+  canvas.requestRenderAll?.()
 }

@@ -57,35 +57,7 @@
           label="Default Value"
           prop="value"
         >
-          <el-select 
-            v-model="formData.value" 
-            placeholder="Select color value"
-            style="width: 100%"
-            filterable
-            allow-create
-            :default-first-option="true"
-            @create="handleCreateColor"
-          >
-            <el-option
-              v-for="option in formData.options"
-              :key="option.value"
-              :label="option.label + ' (' + option.value + ')'"
-              :value="option.value"
-            >
-              <div class="color-option">
-                <div 
-                  class="color-preview" 
-                  :style="{ 
-                    backgroundColor: option.value === '-1' ? 'transparent' : `#${option.value.replace('0x', '')}`,
-                    border: option.value === '-1' ? '1px dashed var(--el-border-color)' : 'none'
-                  }"
-                >
-                  <div v-if="option.value === '-1'" class="transparent-pattern"></div>
-                </div>
-                <span class="color-label">{{ option.label }} ({{ option.value }})</span>
-              </div>
-            </el-option>
-          </el-select>
+          <ColorPicker v-model="defaultColorHex" @change="handleDefaultColorChange" />
         </el-form-item>
         <el-collapse v-model="activeOptions" class="options-collapse">
           <el-collapse-item title="Color Options" name="options">
@@ -190,12 +162,15 @@ import { usePropertiesStore } from '@/stores/properties'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import ColorPicker from '@/components/color-picker/index.vue'
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const activeOptions = ref([])
 const propertiesStore = usePropertiesStore()
 const isEdit = ref(false)
+
+const defaultColorHex = ref('#ffffff')
 
 const formData = reactive({
   title: '',
@@ -223,6 +198,43 @@ const isValidColorValue = (value) => {
   return /^0x[0-9A-Fa-f]{6}$/.test(value)
 }
 
+const garminToHex = (value) => {
+  if (value === '-1') return 'transparent'
+  if (!value) return '#ffffff'
+  const v = typeof value === 'string' ? value : String(value)
+  if (v.startsWith('0x') && v.length === 8) {
+    return `#${v.slice(2)}`
+  }
+  if (v.startsWith('#') && v.length === 7) {
+    return v
+  }
+  return '#ffffff'
+}
+
+const hexToGarmin = (hex) => {
+  if (hex === 'transparent') return '-1'
+  if (!hex) return '0xffffff'
+  const h = typeof hex === 'string' ? hex : String(hex)
+  const normalized = h.startsWith('#') ? h.slice(1) : (h.startsWith('0x') ? h.slice(2) : h)
+  if (!/^[0-9A-Fa-f]{6}$/.test(normalized)) return '0xffffff'
+  return `0x${normalized.toLowerCase()}`
+}
+
+const ensureOptionExists = (garminValue) => {
+  if (!formData.options.some((opt) => opt.value === garminValue)) {
+    formData.options.push({
+      label: garminValue === '-1' ? 'Transparent' : `Custom (${garminValue})`,
+      value: garminValue,
+    })
+  }
+}
+
+const handleDefaultColorChange = (hex) => {
+  const garminValue = hexToGarmin(hex)
+  ensureOptionExists(garminValue)
+  formData.value = garminValue
+}
+
 const initFormData = (data = null) => {
   isEdit.value = !!data
   if (data) {
@@ -246,6 +258,8 @@ const initFormData = (data = null) => {
       errorMessage: ''
     })
   }
+
+  defaultColorHex.value = garminToHex(formData.value)
 }
 
 const addOption = () => {
@@ -269,34 +283,6 @@ const moveOption = (index, direction) => {
     formData.options[index] = formData.options[index + 1]
     formData.options[index + 1] = temp
   }
-}
-
-const handleCreateColor = (value) => {
-  // Remove '#' if present
-  const colorValue = value.startsWith('#') ? value.substring(1) : value
-  
-  // Validate hex color format
-  if (!/^[0-9A-Fa-f]{6}$/.test(colorValue)) {
-    ElMessage.error('Please enter a valid hex color (e.g. FF0000 or #FF0000)')
-    return
-  }
-
-  // Convert to Garmin format (0xRRGGBB)
-  const garminColor = `0x${colorValue.toLowerCase()}`
-  
-  // Add the new color option
-  const newOption = {
-    label: `Custom (${garminColor})`,
-    value: garminColor
-  }
-  
-  // Add to options if not exists
-  if (!formData.options.some(opt => opt.value === garminColor)) {
-    formData.options.push(newOption)
-  }
-  
-  // Set the value
-  formData.value = garminColor
 }
 
 const emit = defineEmits(['confirm'])

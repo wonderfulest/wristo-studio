@@ -34,16 +34,19 @@
 import { ref } from 'vue'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useFontStore } from '@/stores/fontStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { getElementHandler } from '@/engine/registry/elementRegistry'
 import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
+import { DataTypeOptions } from '@/config/settings'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)
 const designStore = useDesignStore()
+const propertiesStore = usePropertiesStore()
 const emit = defineEmits<{
   (e: 'switch-to-layer'): void
 }>()
@@ -61,6 +64,51 @@ const loadElementFont = async (config: AnyElementConfig) => {
     await fontStore.loadFont((config as IconElementConfig).iconFont)
   }
 }
+
+const ensureNextChartProperty = (metricSymbol: string) => {
+  const allProps = propertiesStore.allProperties
+  let maxIndex = 0
+  Object.keys(allProps || {}).forEach((key) => {
+    const match = key.match(/^chart_(\d+)$/)
+    if (match) {
+      const num = Number(match[1]) || 0
+      if (num > maxIndex) maxIndex = num
+    }
+  })
+  const nextIndex = maxIndex + 1
+  const propertyKey = `chart_${nextIndex}`
+  const title = `Chart ${nextIndex}`
+
+  const chartOptions = DataTypeOptions.filter((opt) => String((opt as any).metricSymbol || '').startsWith(':CHART_TYPE_'))
+  let defaultOption: any = chartOptions[0] || DataTypeOptions[0]
+  if (metricSymbol) {
+    const found = chartOptions.find((opt: any) => (opt as any).metricSymbol === metricSymbol)
+    if (found) defaultOption = found
+  }
+
+  if (!allProps[propertyKey]) {
+    propertiesStore.addProperty({
+      key: propertyKey,
+      type: 'chart',
+      title,
+      options: chartOptions as any,
+      defaultValue: defaultOption?.value,
+    })
+  }
+
+  return propertyKey
+}
+
+const ensureChartPropertyForChartElement = (normalizedConfig: AnyElementConfig, metricSymbol: string) => {
+  const curKey = String((normalizedConfig as any).chartProperty ?? '').trim()
+  const item = curKey ? (propertiesStore.allProperties as any)[curKey] : null
+  if (!curKey || !item || item.type !== 'chart') {
+    ;(normalizedConfig as any).chartProperty = ensureNextChartProperty(metricSymbol)
+    return true
+  }
+  return false
+}
+
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
     console.log('[AddElementPanel] addElementByType: start', {
@@ -81,6 +129,11 @@ const addElementByType = async (_category: string, elementType: string, config: 
       top: (config as any).top ?? centerY ?? (config as any).top,
       originX: (config as any).originX ?? 'center',
       originY: (config as any).originY ?? 'center',
+    }
+
+    if (elementType === 'barChart' || elementType === 'lineChart') {
+      const metricSymbol = ':CHART_TYPE_7DAYS_STEPS'
+      ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
     }
 
     console.log('[AddElementPanel] addElementByType: normalized config', {

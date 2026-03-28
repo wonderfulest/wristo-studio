@@ -1,4 +1,4 @@
-import { Group, Line, Circle, Rect, Text } from 'fabric'
+import { Group, Line, Circle, Rect } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { LineChartElementConfig } from '@/types/elements/charts'
@@ -10,106 +10,10 @@ const DEFAULTS = {
   width: 150,
   height: 50,
   color: '#ffffff',
-  bgColor: '#000000',
-  pointCount: 7,
-  fillMissing: true,
   lineWidth: 2,
-  smoothFactor: 0.2,
   showPoints: false,
   pointColor: '#ffffff',
   pointRadius: 2,
-  showGrid: false,
-  gridColor: '#555555',
-  gridYCount: 3,
-  gridXCount: 4,
-  showAxis: false,
-  axisColor: '#aaaaaa',
-  showXLabels: false,
-  showYLabels: false,
-  xLabelColor: '#ffffff',
-  yLabelColor: '#ffffff',
-  xFont: undefined as string | undefined,
-  yFont: undefined as string | undefined,
-  xFontSize: 12,
-  yFontSize: 12,
-  timeFormat: 'HH:mm',
-  yLabelWidth: 20,
-  xLabelHeight: 16,
-}
-
-function createGrid(group: any) {
-  const { width, height, gridYCount, gridXCount, gridColor } = group
-  const stepY = height / (gridYCount + 1)
-  for (let i = 1; i <= gridYCount; i++) {
-    const y = -height / 2 + i * stepY
-    const line: any = new Line([-width / 2, y, width / 2, y], {
-      stroke: gridColor,
-      strokeWidth: 1,
-      selectable: false,
-    })
-    group.add(line)
-  }
-  const stepX = width / (gridXCount + 1)
-  for (let j = 1; j <= gridXCount; j++) {
-    const x = -width / 2 + j * stepX
-    const line: any = new Line([x, -height / 2, x, height / 2], {
-      stroke: gridColor,
-      strokeWidth: 1,
-      selectable: false,
-    })
-    group.add(line)
-  }
-}
-
-function createAxis(group: any) {
-  const { width, height, axisColor } = group
-  const xAxis: any = new Line([-width / 2, height / 2, width / 2, height / 2], {
-    stroke: axisColor,
-    strokeWidth: 1,
-    selectable: false,
-  })
-  const yAxis: any = new Line([-width / 2, -height / 2, -width / 2, height / 2], {
-    stroke: axisColor,
-    strokeWidth: 1,
-    selectable: false,
-  })
-  group.add(xAxis)
-  group.add(yAxis)
-}
-
-function createXLabels(group: any) {
-  const { width, height, xLabelColor, xFont, xFontSize } = group
-  const stepX = width / 4
-  for (let i = 0; i <= 4; i++) {
-    const x = -width / 2 + i * stepX
-    const text: any = new Text(`${i}`, {
-      left: x,
-      top: height / 2 + 5,
-      fontFamily: xFont as any,
-      fontSize: xFontSize,
-      fill: xLabelColor,
-      selectable: false,
-    })
-    group.add(text)
-  }
-}
-
-function createYLabels(group: any) {
-  const { width, height, yLabelColor, yFont, yFontSize, gridYCount } = group
-  const stepY = height / (gridYCount + 1)
-  for (let i = 0; i <= gridYCount + 1; i++) {
-    const y = -height / 2 + i * stepY
-    const value = Math.round((1 - i / (gridYCount + 1)) * 100)
-    const text: any = new Text(`${value}`, {
-      left: -width / 2 - yFontSize,
-      top: y - 6,
-      fontFamily: yFont as any,
-      fontSize: yFontSize,
-      fill: yLabelColor,
-      selectable: false,
-    })
-    group.add(text)
-  }
 }
 
 function generateSampleData(count: number) {
@@ -120,15 +24,45 @@ function generateSampleData(count: number) {
   return data
 }
 
+function resolveSeries(group: any): Array<number | null> {
+  const injected = (group as any).__simData
+  if (Array.isArray(injected) && injected.length) {
+    return injected.map((v: any) => {
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    })
+  }
+  return generateSampleData(8)
+}
+
+function createBaseRect(group: any) {
+  const { width, height } = group
+  const rect: any = new Rect({
+    left: -width / 2,
+    top: -height / 2,
+    width,
+    height,
+    fill: 'transparent',
+    selectable: true,
+    hasControls: false,
+    evented: false,
+
+  })
+  group.add(rect)
+}
+
 function createPolyline(group: any) {
   const { width, height, color, lineWidth, showPoints, pointColor, pointRadius } = group
-  const data = generateSampleData(group.pointCount)
+  const data = resolveSeries(group)
   const valid = data.filter((v: number | null) => v !== null) as number[]
+  if (!valid.length) {
+    return
+  }
   const minY = Math.min(...valid) - 5
   const maxY = Math.max(...valid) + 5
   const rangeY = maxY - minY || 1
 
-  const count = Math.max(2, group.pointCount)
+  const count = Math.max(2, data.length)
   const stepX = width / (count - 1)
   let prev: { x: number; y: number } | null = null
 
@@ -142,7 +76,7 @@ function createPolyline(group: any) {
       const seg: any = new Line([prev.x, prev.y, x, y], {
         stroke: color,
         strokeWidth: lineWidth,
-        selectable: false,
+        selectable: true,
       })
       group.add(seg)
     }
@@ -152,7 +86,7 @@ function createPolyline(group: any) {
         top: y - pointRadius,
         radius: pointRadius,
         fill: pointColor,
-        selectable: false,
+        selectable: true,
       })
       group.add(dot)
     }
@@ -168,7 +102,7 @@ export async function createLineChart(config: LineChartElementConfig): Promise<F
     throw new Error('Canvas is not initialized, cannot add lineChart element')
   }
 
-  const id = nanoid()
+  const id = String((config as any)?.id ?? '') || nanoid()
   const width = config.width || DEFAULTS.width
   const height = config.height || DEFAULTS.height
   const left = config.left ?? canvas.getWidth?.() ?? 227
@@ -183,50 +117,19 @@ export async function createLineChart(config: LineChartElementConfig): Promise<F
     originY: config.originY ?? 'center',
     width,
     height,
+    chartProperty: config.chartProperty,
     color: config.color ?? DEFAULTS.color,
-    bgColor: config.bgColor ?? DEFAULTS.bgColor,
-    pointCount: config.pointCount ?? DEFAULTS.pointCount,
-    fillMissing: config.fillMissing ?? DEFAULTS.fillMissing,
     lineWidth: config.lineWidth ?? DEFAULTS.lineWidth,
-    smoothFactor: config.smoothFactor ?? DEFAULTS.smoothFactor,
     showPoints: config.showPoints ?? DEFAULTS.showPoints,
     pointColor: config.pointColor ?? DEFAULTS.pointColor,
     pointRadius: config.pointRadius ?? DEFAULTS.pointRadius,
-    showGrid: config.showGrid ?? DEFAULTS.showGrid,
-    gridColor: config.gridColor ?? DEFAULTS.gridColor,
-    gridYCount: config.gridYCount ?? DEFAULTS.gridYCount,
-    gridXCount: config.gridXCount ?? DEFAULTS.gridXCount,
-    showAxis: config.showAxis ?? DEFAULTS.showAxis,
-    axisColor: config.axisColor ?? DEFAULTS.axisColor,
-    showXLabels: config.showXLabels ?? DEFAULTS.showXLabels,
-    showYLabels: config.showYLabels ?? DEFAULTS.showYLabels,
-    xLabelColor: config.xLabelColor ?? DEFAULTS.xLabelColor,
-    yLabelColor: config.yLabelColor ?? DEFAULTS.yLabelColor,
-    xFont: config.xFont ?? DEFAULTS.xFont,
-    yFont: config.yFont ?? DEFAULTS.yFont,
-    xFontSize: config.xFontSize ?? DEFAULTS.xFontSize,
-    yFontSize: config.yFontSize ?? DEFAULTS.yFontSize,
-    timeFormat: config.timeFormat ?? DEFAULTS.timeFormat,
-    yLabelWidth: config.yLabelWidth ?? DEFAULTS.yLabelWidth,
-    xLabelHeight: config.xLabelHeight ?? DEFAULTS.xLabelHeight,
-    chartProperty: config.chartProperty,
+    selectable: true,
+    hasControls: false,
+    hasBorders: true,
   } as any)
 
-  const bg: any = new Rect({
-    left: -width / 2,
-    top: -height / 2,
-    width,
-    height,
-    fill: group.bgColor,
-    selectable: false,
-  })
-  group.add(bg)
-
-  if (group.showGrid) createGrid(group)
-  if (group.showAxis) createAxis(group)
-  if (group.showXLabels) createXLabels(group)
+  createBaseRect(group)
   createPolyline(group)
-  if (group.showYLabels) createYLabels(group)
 
   group.set({ left, top, originX: 'center', originY: 'center' })
   group.setCoords()
@@ -256,23 +159,14 @@ export function updateLineChart(
     if (v !== undefined) group.set(k as any, v as any)
   })
 
+  if ((patch as any).__simData !== undefined) {
+    ;(group as any).__simData = (patch as any).__simData
+  }
+
   group.remove(...group.getObjects())
 
-  const bg: any = new Rect({
-    left: -group.width / 2,
-    top: -group.height / 2,
-    width: group.width,
-    height: group.height,
-    fill: group.bgColor,
-    selectable: false,
-  })
-  group.add(bg)
-
-  if (group.showGrid) createGrid(group)
-  if (group.showAxis) createAxis(group)
-  if (group.showXLabels) createXLabels(group)
+  createBaseRect(group)
   createPolyline(group)
-  if (group.showYLabels) createYLabels(group)
 
   group.set(current)
   group.setCoords()
