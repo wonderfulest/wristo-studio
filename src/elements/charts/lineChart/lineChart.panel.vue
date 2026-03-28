@@ -12,7 +12,7 @@
         <el-input-number 
           v-model="formModel.width" 
           :min="50" 
-          :max="300" 
+          :max="454" 
           @change="() => applyUpdate({ width: formModel.width })" 
         />
       </el-form-item>
@@ -21,7 +21,7 @@
         <el-input-number
           v-model="formModel.height"
           :min="20"
-          :max="100"
+          :max="227"
           @change="() => applyUpdate({ height: formModel.height })"
         />
       </el-form-item>

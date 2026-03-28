@@ -4,17 +4,7 @@ import type { FabricElement } from '@/types/element'
 import type { LineChartElementConfig } from '@/types/elements/charts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
-
-const DEFAULTS = {
-  // provide explicit width/height so renderer can fall back safely
-  width: 150,
-  height: 50,
-  color: '#ffffff',
-  lineWidth: 2,
-  showPoints: false,
-  pointColor: '#ffffff',
-  pointRadius: 2,
-}
+import { lineChartSchema } from './lineChart.schema'
 
 function generateSampleData(count: number) {
   const data: Array<number | null> = []
@@ -103,8 +93,9 @@ export async function createLineChart(config: LineChartElementConfig): Promise<F
   }
 
   const id = String((config as any)?.id ?? '') || nanoid()
-  const width = config.width || DEFAULTS.width
-  const height = config.height || DEFAULTS.height
+  const schemaDefaults = lineChartSchema.defaultConfig
+  const width = config.width || schemaDefaults.width
+  const height = config.height || schemaDefaults.height
   const left = config.left ?? canvas.getWidth?.() ?? 227
   const top = config.top ?? canvas.getHeight?.() ?? 227
 
@@ -118,11 +109,11 @@ export async function createLineChart(config: LineChartElementConfig): Promise<F
     width,
     height,
     chartProperty: config.chartProperty,
-    color: config.color ?? DEFAULTS.color,
-    lineWidth: config.lineWidth ?? DEFAULTS.lineWidth,
-    showPoints: config.showPoints ?? DEFAULTS.showPoints,
-    pointColor: config.pointColor ?? DEFAULTS.pointColor,
-    pointRadius: config.pointRadius ?? DEFAULTS.pointRadius,
+    color: config.color ?? schemaDefaults.color,
+    lineWidth: config.lineWidth ?? schemaDefaults.lineWidth,
+    showPoints: config.showPoints ?? schemaDefaults.showPoints,
+    pointColor: config.pointColor ?? schemaDefaults.pointColor,
+    pointRadius: config.pointRadius ?? schemaDefaults.pointRadius,
     selectable: true,
     hasControls: false,
     hasBorders: true,
@@ -152,7 +143,11 @@ export function updateLineChart(
   const group: any = canvas.getObjects().find((obj: any) => (obj as any).id === (element as any).id)
   if (!group || !group.getObjects) return
 
-  const current = { left: group.left, top: group.top, width: group.width, height: group.height }
+  const currentLeft = group.left
+  const currentTop = group.top
+  const currentWidth = group.width
+  const currentHeight = group.height
+
   Object.keys(patch).forEach((key) => {
     const k = key as keyof LineChartElementConfig
     const v = patch[k]
@@ -165,10 +160,23 @@ export function updateLineChart(
 
   group.remove(...group.getObjects())
 
+  const nextWidth = Number((patch as any).width ?? group.width ?? currentWidth)
+  const nextHeight = Number((patch as any).height ?? group.height ?? currentHeight)
+  const width = Number.isFinite(nextWidth) && nextWidth > 0 ? nextWidth : currentWidth
+  const height = Number.isFinite(nextHeight) && nextHeight > 0 ? nextHeight : currentHeight
+
+  // createBaseRect / createPolyline 都依赖 group.width/height
+  group.set({ width, height })
+
   createBaseRect(group)
   createPolyline(group)
 
-  group.set(current)
+  group.set({
+    left: Number((patch as any).left ?? currentLeft),
+    top: Number((patch as any).top ?? currentTop),
+    width,
+    height,
+  })
   group.setCoords()
   canvas.renderAll()
 }

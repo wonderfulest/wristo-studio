@@ -4,9 +4,10 @@ import type { FabricElement } from '@/types/element'
 import type { BarChartElementConfig } from '@/types/elements/charts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { barChartSchema } from './barChart.schema'
 
 function resolveColors(colors: BarChartElementConfig['colors'] | undefined): [string, string, string, string, string] {
-  const fallback: [string, string, string, string, string] = ['#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#0a7f2e']
+  const fallback: [string, string, string, string, string] = barChartSchema.defaultConfig.colors
   if (!colors) return fallback
   const list = Array.isArray(colors) ? colors : fallback
   const c0 = String(list[0] ?? fallback[0])
@@ -32,14 +33,17 @@ function pickColorByThreshold(value: number, goal: number, colors: [string, stri
   return colors[4]
 }
 
-function createBaseRect(group: any, width: number, height: number) {
+function createBaseRect(group: any) {
+  const width = Number(group.width) || 0
+  const height = Number(group.height) || 0
   const rect: any = new Rect({
     width,
     height,
     fill: 'transparent',
     left: -width / 2,
     top: -height / 2,
-    selectable: false,
+    // 作为命中区域，允许选中，但不单独有控制点
+    selectable: true,
     hasControls: false,
     evented: false,
   })
@@ -59,7 +63,8 @@ function createBars(group: any, width: number, height: number, data: number[], g
     const xPos = -width / 2 + i * stepX + stepX / 2
     const scaled = Math.max(0, Math.min(1, value / maxValue))
     const barH = scaled * height
-    const barTop = height / 2 - barH
+    // 柱子完全落在基准矩形内部：从底部 (-height/2 + height) 向上生长
+    const barTop = -height / 2 + (height - barH)
 
     const bar: any = new Rect({
       left: xPos - barWidth / 2,
@@ -84,14 +89,18 @@ export async function createBarChart(config: BarChartElementConfig): Promise<Fab
   }
 
   const id = String((config as any)?.id ?? '') || nanoid()
-  const width = config.width || 150
-  const height = config.height || 50
+  const schemaDefaults = barChartSchema.defaultConfig
+  const width = config.width || schemaDefaults.width
+  const height = config.height || schemaDefaults.height
   const colors = resolveColors(config.colors)
-  const barWidth = Math.max(1, Number(config.barWidth ?? 6))
+  const barWidth = Math.max(1, Number(config.barWidth ?? schemaDefaults.barWidth))
+
+  const left = config.left ?? canvas.getWidth?.() ?? 227
+  const top = config.top ?? canvas.getHeight?.() ?? 227
 
   const group: any = new Group([], {
-    left: config.left,
-    top: config.top,
+    left,
+    top,
     id,
     eleType: 'barChart',
     originX: config.originX ?? 'center',
@@ -106,16 +115,10 @@ export async function createBarChart(config: BarChartElementConfig): Promise<Fab
     hasBorders: true,
   } as any)
 
-  createBaseRect(group, width, height)
-
+  createBaseRect(group)
+  group.set({ left, top })
   group.setCoords()
   canvas.add(group)
-
-  group.set({
-    left: config.left,
-    top: config.top,
-  })
-  group.setCoords()
 
   layerStore.addLayer(group as any)
   canvas.renderAll()
@@ -182,7 +185,7 @@ export function updateBarChart(
   const colors = resolveColors((patch as any).colors ?? group.colors)
   const barWidth = Math.max(1, Number(patch.barWidth ?? group.barWidth ?? 6))
 
-  createBaseRect(group, width, height)
+  createBaseRect(group)
   createBars(group, width, height, data, goal, barWidth, colors)
 
   group.set({
