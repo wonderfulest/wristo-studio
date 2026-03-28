@@ -40,7 +40,7 @@
         <el-input-number 
           v-model="formModel.barWidth" 
           :min="1" 
-          :max="30" 
+          :max="60" 
           :step="1"
           @change="() => applyUpdate({ barWidth: formModel.barWidth })" 
         />
