@@ -56,6 +56,10 @@
         <el-form-item 
           label="Default Value"
           prop="value"
+          :rules="[
+            { required: true, message: 'Default value is required', trigger: 'change' },
+            { validator: validateDefaultValue, trigger: 'change' }
+          ]"
         >
           <ColorPicker v-model="defaultColorHex" @change="handleDefaultColorChange" />
         </el-form-item>
@@ -155,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePropertiesStore } from '@/stores/properties'
@@ -171,6 +175,7 @@ const propertiesStore = usePropertiesStore()
 const isEdit = ref(false)
 
 const defaultColorHex = ref('#ffffff')
+const suppressDefaultChange = ref(false)
 
 const formData = reactive({
   title: '',
@@ -198,6 +203,22 @@ const isValidColorValue = (value) => {
   return /^0x[0-9A-Fa-f]{6}$/.test(value)
 }
 
+const isValueInOptions = (garminValue) => {
+  return formData.options.some((opt) => String(opt.value || '').toUpperCase() === String(garminValue || '').toUpperCase())
+}
+
+const validateDefaultValue = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('Default value is required'))
+    return
+  }
+  if (!isValueInOptions(value)) {
+    callback(new Error('Default value must exist in Color Options'))
+    return
+  }
+  callback()
+}
+
 const garminToHex = (value) => {
   if (value === '-1') return 'transparent'
   if (!value) return '#ffffff'
@@ -220,18 +241,19 @@ const hexToGarmin = (hex) => {
   return `0x${normalized.toLowerCase()}`
 }
 
-const ensureOptionExists = (garminValue) => {
-  if (!formData.options.some((opt) => opt.value === garminValue)) {
-    formData.options.push({
-      label: garminValue === '-1' ? 'Transparent' : `Custom (${garminValue})`,
-      value: garminValue,
-    })
-  }
-}
+const handleDefaultColorChange = async (hex) => {
+  if (suppressDefaultChange.value) return
 
-const handleDefaultColorChange = (hex) => {
   const garminValue = hexToGarmin(hex)
-  ensureOptionExists(garminValue)
+  if (!isValueInOptions(garminValue)) {
+    ElMessage.warning('必须选择 Color Options 中已有的颜色')
+    suppressDefaultChange.value = true
+    defaultColorHex.value = garminToHex(formData.value)
+    await nextTick()
+    suppressDefaultChange.value = false
+    return
+  }
+
   formData.value = garminValue
 }
 
@@ -257,6 +279,10 @@ const initFormData = (data = null) => {
       prompt: '',
       errorMessage: ''
     })
+  }
+
+  if (!isValueInOptions(formData.value)) {
+    formData.value = formData.options[0]?.value || '0xffffff'
   }
 
   defaultColorHex.value = garminToHex(formData.value)

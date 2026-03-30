@@ -68,8 +68,11 @@ const currentModel = computed<any>(() => {
 
 const buildPatchFromModel = (model: any) => {
   return {
-    width: model.designWidth ?? model.width,
-    height: model.designHeight ?? model.height,
+    // 与 GoalSegmentBarElementConfig / renderer 保持一致的字段集合
+    left: model.left,
+    top: model.top,
+    width: model.width,
+    height: model.height,
     borderRadius: model.borderRadius,
     segments: model.segments,
     gap: model.gap,

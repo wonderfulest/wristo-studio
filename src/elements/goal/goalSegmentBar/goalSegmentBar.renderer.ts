@@ -189,6 +189,7 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
   const color = options.color ?? element.color
   const bgColor = options.bgColor ?? element.bgColor
   const progress = options.progress !== undefined ? clampProgress(options.progress) : clampProgress(element.progress)
+  const goalProperty = options.goalProperty !== undefined ? String(options.goalProperty) : element.goalProperty
 
   // update group properties
   element.set({ left, top })
@@ -203,6 +204,7 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
   element.gap = gap
   element.borderRadius = borderRadius
   element.progress = progress
+  element.goalProperty = goalProperty
 
   // rebuild children
   const { bgRects, activeRects } = buildSegments({
