@@ -17,19 +17,19 @@
     <template v-else>
       <el-row :gutter="16" class="score-summary">
         <el-col :span="8">
-          <el-statistic title="Total" :value="Number(formatNum(score.total, 4))" />
+          <el-statistic title="Total" :value="formatNum(score.total, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Scale" :value="Number(formatNum(items.scale.score, 4))" />
+          <el-statistic title="Scale" :value="formatNum(items.scale.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Lifecycle" :value="Number(formatNum(items.lifecycle.score, 4))" />
+          <el-statistic title="Lifecycle" :value="formatNum(items.lifecycle.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Active Rate" :value="Number(formatNum(items.activeRate.score, 4))" />
+          <el-statistic title="Active Rate" :value="formatNum(items.activeRate.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Effective Rate" :value="Number(formatNum(items.effectiveRate.score, 4))" />
+          <el-statistic title="Effective Rate" :value="formatNum(items.effectiveRate.score, 4)" />
         </el-col>
       </el-row>
 
