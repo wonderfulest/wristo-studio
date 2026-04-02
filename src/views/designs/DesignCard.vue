@@ -20,6 +20,7 @@
         </div>
         <!-- 状态和操作按钮第二行 -->
         <div class="status-actions-row">
+          
           <div class="header-actions">
             <el-button-group>
               <!-- 复制设计名称 -->
@@ -65,7 +66,22 @@
         </div>
       </div>
       <div class="meta">
-        <span v-if="isMerchantUser">App ID: {{ design.product?.appId }}</span>
+       
+        <div v-if="isMerchantUser">
+           <span>App ID: {{ design.product?.appId }}</span> 
+           <div v-if="(isMerchantUser || isAdminUser) && design.product?.appId" class="app-ops-entry">
+            <div class="score-pill" :class="{ 'is-loading': appScoreLoading }">
+              <span class="score-label">Total</span>
+              <span class="score-value">{{ appScoreTotalText }}</span>
+            </div>
+            <el-tooltip content="Open operations" placement="top">
+              <button class="ops-icon-btn" type="button" @click.stop="goToOperations">
+                <Icon icon="material-symbols:trending-up-rounded" />
+              </button>
+            </el-tooltip>
+          </div>
+        </div>
+        
         <span v-if="isMerchantUser">Design: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
         <div v-if="isMerchantUser" class="last-go-live-row">
@@ -157,10 +173,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
+import { getAppMeter } from '@/api/meter'
 import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 
 interface LoadingStates {
   submit: Set<number>
@@ -212,6 +231,59 @@ const creatorName = computed(() => props.creatorName)
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
+
+const router = useRouter()
+
+const appId = computed(() => {
+  const id = (design.value.product as any)?.appId
+  return typeof id === 'number' && Number.isFinite(id) ? id : null
+})
+
+const appScoreLoading = ref(false)
+const appScoreTotal = ref<number | null>(null)
+
+const appScoreTotalText = computed(() => {
+  if (appScoreLoading.value && appScoreTotal.value === null) return '...'
+  if (appScoreTotal.value === null) return '-'
+  return appScoreTotal.value.toFixed(4)
+})
+
+const scoreCache = (globalThis as any).__wristoStudioMeterScoreCache || new Map<number, number | null>();
+(globalThis as any).__wristoStudioMeterScoreCache = scoreCache
+
+const fetchAppScoreTotal = async () => {
+  if (!appId.value) {
+    appScoreTotal.value = null
+    return
+  }
+
+  if (scoreCache.has(appId.value)) {
+    appScoreTotal.value = scoreCache.get(appId.value) ?? null
+    return
+  }
+
+  appScoreLoading.value = true
+  try {
+    const res = await getAppMeter(appId.value)
+    const rawTotal = (res.data as any)?.score?.total
+    const n = Number(rawTotal)
+    const total = Number.isFinite(n) ? n : null
+    appScoreTotal.value = total
+    scoreCache.set(appId.value, total)
+  } catch {
+    appScoreTotal.value = null
+    scoreCache.set(appId.value, null)
+  } finally {
+    appScoreLoading.value = false
+  }
+}
+
+const goToOperations = () => {
+  if (!appId.value) return
+  router.push({ name: 'MeterAppDetail', params: { appId: String(appId.value) } })
+}
+
+watch(appId, fetchAppScoreTotal, { immediate: true })
 
 const showBuildPrgButton = computed(() => {
   const product = design.value.product as any
@@ -349,6 +421,80 @@ const lastUpdatedText = computed(() => {
   gap: 8px;
   grid-column: 2;
   grid-row: 1; /* 位于右上角 */
+}
+
+.app-ops-entry {
+  margin-left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .score-pill {
+    background: rgba(17, 24, 39, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+.score-pill.is-loading {
+  opacity: 0.85;
+}
+
+.score-label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.score-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ops-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--el-text-color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ops-icon-btn {
+    background: rgba(17, 24, 39, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+.ops-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.ops-icon-btn :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 
 .status-dot {
