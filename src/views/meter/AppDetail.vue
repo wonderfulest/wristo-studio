@@ -12,11 +12,11 @@
           style="width: 180px"
           clearable
         />
-        <el-button type="primary" :loading="loading" :disabled="!appId" @click="fetchAll">Refresh</el-button>
+        <el-button type="primary" :loading="loading" :disabled="!currentAppId" @click="fetchAll">Refresh</el-button>
       </div>
     </div>
 
-    <el-empty v-if="!appId" description="Missing App ID" />
+    <el-empty v-if="!currentAppId" description="Missing App ID" />
 
     <template v-else>
       <AppBasicInfoCard :loading="productLoading" :product="productDetail" :image-url="productImageUrl" />
@@ -26,7 +26,7 @@
       <AppMetricsCard
         :loading="loading"
         :meter="meter"
-        :app-id="appId"
+        :app-id="currentAppId"
         :date="date"
         :selected-app-name="selectedAppName"
       />
@@ -67,10 +67,14 @@ import { getProduct } from '@/api/products'
 import type { AppMeterVO, DeviceOverviewVO, DeviceActiveVO, DeviceDetailVO } from '@/types/meter'
 import type { Product } from '@/types/api/product'
 
+const props = defineProps<{
+  appId?: number | string | null
+}>()
+
 const route = useRoute()
 const router = useRouter()
 
-const appId = ref<number | null>(null)
+const currentAppId = ref<number | null>(null)
 const date = ref('')
 
 const loading = ref(false)
@@ -107,11 +111,24 @@ const productImageUrl = computed(() => {
   )
 })
 
+const resolveAppId = (value: number | string | null | undefined) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const id = Number(value)
+    return Number.isFinite(id) ? id : null
+  }
+  return null
+}
+
+const isEmbedded = computed(() => props.appId !== undefined)
+
 const fetchDeviceOverview = async () => {
-  if (!appId.value) return
+  if (!currentAppId.value) return
   deviceOverviewLoading.value = true
   try {
-    const res = await getDeviceOverview(String(appId.value))
+    const res = await getDeviceOverview(String(currentAppId.value))
     deviceOverview.value = res.data || null
   } catch {
     deviceOverview.value = null
@@ -134,10 +151,10 @@ const refreshDeviceList = async (type: 'active' | 'lost' | 'all') => {
 }
 
 const fetchActiveDevices = async () => {
-  if (!appId.value) return
+  if (!currentAppId.value) return
   activeDevicesLoading.value = true
   try {
-    const res = await getActiveDevices(String(appId.value))
+    const res = await getActiveDevices(String(currentAppId.value))
     activeDevices.value = res.data || []
   } catch {
     activeDevices.value = []
@@ -147,10 +164,10 @@ const fetchActiveDevices = async () => {
 }
 
 const fetchLostDevices = async () => {
-  if (!appId.value) return
+  if (!currentAppId.value) return
   lostDevicesLoading.value = true
   try {
-    const res = await getLostDevices(String(appId.value))
+    const res = await getLostDevices(String(currentAppId.value))
     lostDevices.value = res.data || []
   } catch {
     lostDevices.value = []
@@ -160,10 +177,10 @@ const fetchLostDevices = async () => {
 }
 
 const fetchAllDevices = async () => {
-  if (!appId.value) return
+  if (!currentAppId.value) return
   allDevicesLoading.value = true
   try {
-    const res = await getAllDevices(String(appId.value))
+    const res = await getAllDevices(String(currentAppId.value))
     allDevices.value = res.data || []
   } catch {
     allDevices.value = []
@@ -173,12 +190,12 @@ const fetchAllDevices = async () => {
 }
 
 const openDeviceDetail = async (token: string) => {
-  if (!appId.value) return
+  if (!currentAppId.value) return
   deviceDetailVisible.value = true
   deviceDetailLoading.value = true
   deviceDetail.value = null
   try {
-    const res = await getDeviceDetail(String(appId.value), token)
+    const res = await getDeviceDetail(String(currentAppId.value), token)
     deviceDetail.value = res.data || null
   } catch {
     ElMessage.error('Failed to load device detail')
@@ -188,14 +205,14 @@ const openDeviceDetail = async (token: string) => {
 }
 
 const fetchAppName = async () => {
-  if (!appId.value) {
+  if (!currentAppId.value) {
     selectedAppName.value = ''
     productDetail.value = null
     return
   }
   productLoading.value = true
   try {
-    const res = await getProduct(appId.value)
+    const res = await getProduct(currentAppId.value)
     if (res.code === 0 && res.data) {
       productDetail.value = res.data
       selectedAppName.value = (res.data as any).name || ''
@@ -208,6 +225,7 @@ const fetchAppName = async () => {
 }
 
 const syncQuery = async () => {
+  if (isEmbedded.value) return
   const nextQuery: Record<string, any> = { ...route.query }
   if (date.value) nextQuery.date = date.value
   else delete nextQuery.date
@@ -215,14 +233,14 @@ const syncQuery = async () => {
 }
 
 const fetchMeter = async () => {
-  if (!appId.value) {
+  if (!currentAppId.value) {
     meter.value = null
     return
   }
 
   loading.value = true
   try {
-    const res = await getAppMeter(appId.value, date.value || undefined)
+    const res = await getAppMeter(currentAppId.value, date.value || undefined)
     meter.value = res.data || null
   } catch {
     meter.value = null
@@ -244,20 +262,45 @@ watch(date, async () => {
   await fetchAll()
 })
 
+watch(
+  () => props.appId,
+  async (value) => {
+    if (!isEmbedded.value) return
+    currentAppId.value = resolveAppId(value)
+    date.value = ''
+    deviceList.value = null
+    deviceDetailVisible.value = false
+    deviceDetail.value = null
+
+    if (!inited.value) return
+
+    if (currentAppId.value) await fetchAll()
+    else {
+      meter.value = null
+      productDetail.value = null
+      selectedAppName.value = ''
+      deviceOverview.value = null
+      activeDevices.value = []
+      lostDevices.value = []
+      allDevices.value = []
+    }
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
-  const pAppId = route.params.appId
-  const qDate = route.query.date
+  if (!isEmbedded.value) {
+    const pAppId = route.params.appId
+    const qDate = route.query.date
 
-  if (typeof pAppId === 'string' && pAppId.trim()) {
-    const id = Number(pAppId)
-    appId.value = Number.isFinite(id) ? id : null
+    currentAppId.value = resolveAppId(typeof pAppId === 'string' ? pAppId : null)
+
+    if (typeof qDate === 'string') {
+      date.value = qDate
+    }
   }
 
-  if (typeof qDate === 'string') {
-    date.value = qDate
-  }
-
-  if (appId.value) {
+  if (currentAppId.value) {
     await fetchAll()
   }
 

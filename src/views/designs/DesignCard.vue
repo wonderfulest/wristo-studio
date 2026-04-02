@@ -71,7 +71,7 @@
            <span>App ID: {{ design.product?.appId }}</span> 
            <div v-if="(isMerchantUser || isAdminUser) && design.product?.appId" class="app-ops-entry">
             <div class="score-pill" :class="{ 'is-loading': appScoreLoading }">
-              <span class="score-label">Total</span>
+              <span class="score-label">Score</span>
               <span class="score-value">{{ appScoreTotalText }}</span>
             </div>
             <el-tooltip content="Open operations" placement="top">
@@ -170,16 +170,26 @@
       </div>
     </div>
   </el-card>
+
+  <el-drawer
+    v-model="operationsDrawerVisible"
+    title="App Operations"
+    direction="rtl"
+    size="min(1100px, 92vw)"
+    destroy-on-close
+  >
+    <AppDetail v-if="operationsDrawerVisible && appId" :app-id="appId" />
+  </el-drawer>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
 import { getAppMeter } from '@/api/meter'
 import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
+import AppDetail from '@/views/meter/AppDetail.vue'
 
 interface LoadingStates {
   submit: Set<number>
@@ -232,8 +242,6 @@ const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 
-const router = useRouter()
-
 const appId = computed(() => {
   const id = (design.value.product as any)?.appId
   return typeof id === 'number' && Number.isFinite(id) ? id : null
@@ -241,6 +249,7 @@ const appId = computed(() => {
 
 const appScoreLoading = ref(false)
 const appScoreTotal = ref<number | null>(null)
+const operationsDrawerVisible = ref(false)
 
 const appScoreTotalText = computed(() => {
   if (appScoreLoading.value && appScoreTotal.value === null) return '...'
@@ -280,7 +289,7 @@ const fetchAppScoreTotal = async () => {
 
 const goToOperations = () => {
   if (!appId.value) return
-  router.push({ name: 'MeterAppDetail', params: { appId: String(appId.value) } })
+  operationsDrawerVisible.value = true
 }
 
 watch(appId, fetchAppScoreTotal, { immediate: true })
