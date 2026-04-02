@@ -2,12 +2,15 @@ import type { UserBase } from './user'
 import type { Image } from './image'
 import type { Category } from './api/category'
 import type { Bundle } from './api/bundle'
+import type { AppMeterScoreVO } from '@/types/meter'
 
 export interface Product {
   appId: number
   designId: string
   name: string
   description: string
+  price?: number
+  rawImageUrl?: string
   garminImageUrl: string
   garminStoreUrl: string
   garminAppUuid: string
@@ -19,10 +22,16 @@ export interface Product {
   bannerImages: Image[]
   user: UserBase
   trialLasts: number
+  download?: number
+  purchase?: number
   createdAt: number
   updatedAt: number
   isActive: number
   isDeleted: number
+  status?: number
+  bannerImageUrl?: string
+  lastGoLive?: number
+  score?: AppMeterScoreVO | null
   bundles?: Bundle[] | null
 }
 

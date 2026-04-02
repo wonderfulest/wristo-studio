@@ -2,6 +2,7 @@ import type { Category } from './category'
 import type { Image } from './image'
 import type { UserBase } from './user'
 import type { Bundle } from './bundle'
+import type { AppMeterScoreVO } from '@/types/meter'
 
 export interface ProductPaymentVo {
   paymentMethod: string
@@ -88,6 +89,8 @@ export interface Product {
   garminStoreUrl: string
   garminAppUuid: string
   trialLasts: number
+  download?: number
+  purchase?: number
   categories: Category[]
   heroImages: Image[]
   bannerImageUrl: string
@@ -108,6 +111,7 @@ export interface Product {
   prgRelease?: ProductReleasePrgVo
   bundles: Bundle[]
   lastGoLive: number
+  score: number
 }
 
 export interface GenerateDescriptionDto {

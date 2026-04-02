@@ -31,6 +31,17 @@
         </div>
 
         <div class="product-main">
+          <div class="product-summary">
+            <div class="summary-item">
+              <div class="summary-label">Downloads</div>
+              <div class="summary-value">{{ formatCountDisplay(product.download) }}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Orders</div>
+              <div class="summary-value">{{ formatCountDisplay(product.purchase) }}</div>
+            </div>
+          </div>
+
           <el-descriptions :column="2" border class="stats-detail">
             <el-descriptions-item label="App ID">{{ product.appId ?? '-' }}</el-descriptions-item>
             <el-descriptions-item label="Price">{{ formatPriceDisplay((product as any).price) }}</el-descriptions-item>
@@ -80,6 +91,12 @@ const formatTrialDisplay = (v?: number | null) => {
   if (Number.isInteger(n)) return `${n} h`
   return `${n.toFixed(2)} h`
 }
+
+const formatCountDisplay = (v?: number | null) => {
+  const n = Number(v ?? 0)
+  if (!Number.isFinite(n)) return '-'
+  return n.toLocaleString()
+}
 </script>
 
 <style scoped>
@@ -105,5 +122,14 @@ const formatTrialDisplay = (v?: number | null) => {
   font-size: 14px;
 }
 .product-main { flex: 1; min-width: 320px; }
+.product-summary { display: grid; grid-template-columns: repeat(2, minmax(140px, 180px)); gap: 12px; margin-bottom: 16px; }
+.summary-item {
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  background: var(--el-fill-color-blank);
+  padding: 14px 16px;
+}
+.summary-label { font-size: 12px; color: var(--el-text-color-secondary); margin-bottom: 6px; }
+.summary-value { font-size: 24px; line-height: 1.1; font-weight: 700; color: var(--el-text-color-primary); }
 .product-name { font-size: 20px; font-weight: 700; color: #111827; line-height: 1.3; margin-top: 10px; }
 </style>

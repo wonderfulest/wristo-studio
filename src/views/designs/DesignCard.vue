@@ -70,7 +70,7 @@
         <div v-if="isMerchantUser">
            <span>App ID: {{ design.product?.appId }}</span> 
            <div v-if="(isMerchantUser || isAdminUser) && design.product?.appId" class="app-ops-entry">
-            <div class="score-pill" :class="{ 'is-loading': appScoreLoading }">
+            <div class="score-pill">
               <span class="score-label">Score</span>
               <span class="score-value">{{ appScoreTotalText }}</span>
             </div>
@@ -183,10 +183,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
-import { getAppMeter } from '@/api/meter'
 import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
@@ -247,52 +246,22 @@ const appId = computed(() => {
   return typeof id === 'number' && Number.isFinite(id) ? id : null
 })
 
-const appScoreLoading = ref(false)
-const appScoreTotal = ref<number | null>(null)
 const operationsDrawerVisible = ref(false)
+const appScoreTotal = computed(() => {
+  const rawTotal = design.value.product?.score
+  const total = Number(rawTotal)
+  return Number.isFinite(total) ? total : null
+})
 
 const appScoreTotalText = computed(() => {
-  if (appScoreLoading.value && appScoreTotal.value === null) return '...'
   if (appScoreTotal.value === null) return '-'
   return appScoreTotal.value.toFixed(4)
 })
-
-const scoreCache = (globalThis as any).__wristoStudioMeterScoreCache || new Map<number, number | null>();
-(globalThis as any).__wristoStudioMeterScoreCache = scoreCache
-
-const fetchAppScoreTotal = async () => {
-  if (!appId.value) {
-    appScoreTotal.value = null
-    return
-  }
-
-  if (scoreCache.has(appId.value)) {
-    appScoreTotal.value = scoreCache.get(appId.value) ?? null
-    return
-  }
-
-  appScoreLoading.value = true
-  try {
-    const res = await getAppMeter(appId.value)
-    const rawTotal = (res.data as any)?.score?.total
-    const n = Number(rawTotal)
-    const total = Number.isFinite(n) ? n : null
-    appScoreTotal.value = total
-    scoreCache.set(appId.value, total)
-  } catch {
-    appScoreTotal.value = null
-    scoreCache.set(appId.value, null)
-  } finally {
-    appScoreLoading.value = false
-  }
-}
 
 const goToOperations = () => {
   if (!appId.value) return
   operationsDrawerVisible.value = true
 }
-
-watch(appId, fetchAppScoreTotal, { immediate: true })
 
 const showBuildPrgButton = computed(() => {
   const product = design.value.product as any
