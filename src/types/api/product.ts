@@ -2,7 +2,6 @@ import type { Category } from './category'
 import type { Image } from './image'
 import type { UserBase } from './user'
 import type { Bundle } from './bundle'
-import type { AppMeterScoreVO } from '@/types/meter'
 
 export interface ProductPaymentVo {
   paymentMethod: string
