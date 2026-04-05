@@ -44,6 +44,7 @@ import { ref, reactive, watch, computed, onMounted, nextTick } from 'vue'
 import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -56,6 +57,7 @@ import { alignSelection } from '@/engine/managers/alignManager'
 
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+const elementDataStore = useElementDataStore()
 
 const props = defineProps<{
   elements: FabricElement[]
@@ -108,16 +110,22 @@ const updateDataProperty = () => {
         dataElement.value.set('dataProperty', dataProperty.value)
         dataElement.value.set('goalProperty', null)
         dataElement.value.set('text', metric.defaultValue)
+        const dataId = String((dataElement.value as any).id)
+        if (dataId) elementDataStore.patchElement(dataId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
         iconElement.value.set('dataProperty', dataProperty.value)
         iconElement.value.set('goalProperty', null)
         iconElement.value.set('text', metric.icon)
+        const iconId = String((iconElement.value as any).id)
+        if (iconId) elementDataStore.patchElement(iconId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.icon } as any)
       }
       if (labelElement.value) {
         labelElement.value.set('dataProperty', dataProperty.value)
         labelElement.value.set('goalProperty', null)
         labelElement.value.set('text', metric.enLabel.short)
+        const labelId = String((labelElement.value as any).id)
+        if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.enLabel.short } as any)
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('dataProperty')
@@ -138,25 +146,37 @@ const updateGoalProperty = () => {
         dataElement.value.set('goalProperty', goalProperty.value)
         dataElement.value.set('dataProperty', null)
         dataElement.value.set('text', metric.defaultValue)
+        const dataId = String((dataElement.value as any).id)
+        if (dataId) elementDataStore.patchElement(dataId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
         iconElement.value.set('goalProperty', goalProperty.value)
         iconElement.value.set('dataProperty', null)
         iconElement.value.set('text', metric.icon)
+        const iconId = String((iconElement.value as any).id)
+        if (iconId) elementDataStore.patchElement(iconId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.icon } as any)
       }
       if (labelElement.value) {
         labelElement.value.set('goalProperty', goalProperty.value)
         labelElement.value.set('dataProperty', null)
         labelElement.value.set('text', metric.enLabel.short)
+        const labelId = String((labelElement.value as any).id)
+        if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.enLabel.short } as any)
       }
       if (goalBarElement.value) {
         goalBarElement.value.set('goalProperty', goalProperty.value)
+        const goalBarId = String((goalBarElement.value as any).id)
+        if (goalBarId) elementDataStore.patchElement(goalBarId, { goalProperty: goalProperty.value } as any)
       }
       if (goalArcElement.value) {
         goalArcElement.value.set('goalProperty', goalProperty.value)
+        const goalArcId = String((goalArcElement.value as any).id)
+        if (goalArcId) elementDataStore.patchElement(goalArcId, { goalProperty: goalProperty.value } as any)
       }
       if (goalSegmentBarElement.value) {
         goalSegmentBarElement.value.set('goalProperty', goalProperty.value)
+        const goalSegBarId = String((goalSegmentBarElement.value as any).id)
+        if (goalSegBarId) elementDataStore.patchElement(goalSegBarId, { goalProperty: goalProperty.value } as any)
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('goalProperty')

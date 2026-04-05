@@ -50,6 +50,84 @@ function mapColorProperties(encodeConfig: AnyElementConfig, properties: Properti
   }
 }
 
+/**
+ * 校验数据属性和目标属性：每个属性必须被至少一个元素绑定
+ */
+function validateDataGoalBindings(
+  objects: FabricElement[],
+  properties: PropertiesMap,
+): string[] {
+  const errors: string[] = []
+  const elements = objects.filter((o) => {
+    const t = (o as any).eleType
+    return t && t !== 'background' && t !== 'global'
+  })
+
+  for (const [key, prop] of Object.entries(properties)) {
+    if (prop.type === 'data') {
+      const bound = elements.some((o) => (o as any).dataProperty === key)
+      if (!bound) {
+        errors.push(`数据属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+      }
+    }
+    if (prop.type === 'goal') {
+      const bound = elements.some((o) => (o as any).goalProperty === key)
+      if (!bound) {
+        errors.push(`目标属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+      }
+    }
+    if (prop.type === 'chart') {
+      const bound = elements.some((o) => (o as any).chartProperty === key)
+      if (!bound) {
+        errors.push(`图表属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+      }
+    }
+    if (prop.type === 'text') {
+      const bound = elements.some((o) => (o as any).textProperty === key)
+      if (!bound) {
+        errors.push(`文本属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+      }
+    }
+  }
+
+  return errors
+}
+
+/**
+ * 校验颜色属性：每个颜色属性的值必须在至少一个元素的颜色设置中被引用
+ * 需在 mapColorProperties 执行之后调用，检查编码后元素上的 *Property 目标字段
+ */
+function validateColorBindings(
+  encodedElements: AnyElementConfig[],
+  properties: PropertiesMap,
+): string[] {
+  const errors: string[] = []
+
+  const colorTargets = [
+    'colorProperty', 'bgColorProperty', 'strokeProperty', 'borderColorProperty',
+    'bodyStrokeProperty', 'headFillProperty', 'bodyFillProperty', 'fillProperty',
+    'activeColorProperty', 'inactiveColorProperty', 'pointColorProperty',
+    'gridColorProperty', 'xAxisColorProperty', 'yAxisColorProperty',
+    'xLabelColorProperty', 'yLabelColorProperty', 'levelColorHighProperty',
+    'levelColorMediumProperty', 'levelColorLowProperty',
+  ]
+
+  for (const [key, prop] of Object.entries(properties)) {
+    if (prop.type !== 'color') continue
+
+    const bound = encodedElements.some((enc) => {
+      const rec = enc as unknown as Record<string, unknown>
+      return colorTargets.some((target) => rec[target] === key)
+    })
+
+    if (!bound) {
+      errors.push(`颜色属性 "${prop.title}" (${key}) 的颜色值未在任何元素的颜色设置中使用`)
+    }
+  }
+
+  return errors
+}
+
 export interface GenerateConfigOptions {
   canvas: Canvas | null
   properties: PropertiesMap
@@ -88,6 +166,15 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   }
 
   const objects: FabricElement[] = canvas.getObjects() as FabricElement[]
+
+  // ── 导出前校验：数据属性 / 目标属性必须绑定到元素 ──
+  const bindingErrors = validateDataGoalBindings(objects, properties)
+  if (bindingErrors.length > 0) {
+    ElMessage.error(bindingErrors.join('；'))
+    console.error('Export validation failed:', bindingErrors)
+    return null
+  }
+
   let imageId = 0,
     timeId = 0,
     dateId = 0,
@@ -162,6 +249,15 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
       config.elements.push(encodeConfig)
     }
+
+    // ── 导出前校验：颜色属性的值必须在元素的颜色设置中被引用 ──
+    const colorErrors = validateColorBindings(config.elements, properties)
+    if (colorErrors.length > 0) {
+      ElMessage.error(colorErrors.join('；'))
+      console.error('Export validation failed:', colorErrors)
+      return null
+    }
+
     return config
   } catch (err) {
     console.error('Generate config failed:', err)
