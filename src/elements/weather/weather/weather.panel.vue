@@ -357,16 +357,16 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
   if (dt === 'amoled' && hasImageUrl(c)) {
     const url = c?.asset?.imageUrl as string | undefined
     if (!url) return
-    const el = props.element as unknown as { amoledImageUrl?: string; width?: number; height?: number }
+    const el = props.element as unknown as { amoledImageUrl?: string }
     el.amoledImageUrl = url
     console.log('[WeatherPanel] onSelect AMOLED', {
       id: (props.element as any)?.id,
       condition: c?.condition,
       url,
-      width: el.width,
-      height: el.height,
     })
-    applyUpdate({ weatherDisplayType: 'amoled', amoledImageUrl: url, width: el.width, height: el.height })
+    // 不传 width/height，让 renderer 从 group 上的 amoledWidth/amoledHeight 取值，
+    // 避免被 MIP 模式下 Fabric 自动调整的 group.width/height（受 fontSize 影响）污染。
+    applyUpdate({ weatherDisplayType: 'amoled', amoledImageUrl: url })
   }
 }
 </script>

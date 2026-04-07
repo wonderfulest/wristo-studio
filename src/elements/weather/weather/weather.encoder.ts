@@ -9,8 +9,10 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
   const fontFamily = anyEl.fontFamily
   const fill = anyEl.fill || '#ffffff'
   const fontSize = anyEl.fontSize != null ? Number(anyEl.fontSize) : undefined
-  const width = anyEl.width != null ? parseInt(String(anyEl.width)) : undefined
-  const height = anyEl.height != null ? parseInt(String(anyEl.height)) : undefined
+  const widthSource = anyEl.amoledWidth != null ? anyEl.amoledWidth : anyEl.width
+  const heightSource = anyEl.amoledHeight != null ? anyEl.amoledHeight : anyEl.height
+  const width = widthSource != null ? parseInt(String(widthSource)) : undefined
+  const height = heightSource != null ? parseInt(String(heightSource)) : undefined
 
   return {
     eleType: 'weather',

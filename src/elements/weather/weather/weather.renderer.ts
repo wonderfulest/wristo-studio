@@ -67,6 +67,8 @@ type WeatherGroupLike = FabricGroup & {
   width?: number
   height?: number
   weatherImageUrl?: string
+  amoledWidth?: number
+  amoledHeight?: number
 }
 
 function attachManualScaleSync(group: FabricGroup): void {
@@ -82,8 +84,8 @@ function attachManualScaleSync(group: FabricGroup): void {
     const sy = Number((group as any).scaleY ?? 1)
     if (sx === 1 && sy === 1) return
 
-    const baseW = Math.max(1, Number(g.width ?? 1))
-    const baseH = Math.max(1, Number(g.height ?? 1))
+    const baseW = Math.max(1, Number(g.amoledWidth ?? g.width ?? 1))
+    const baseH = Math.max(1, Number(g.amoledHeight ?? g.height ?? 1))
     const nextW = Math.max(1, Math.round(baseW * sx))
     const nextH = Math.max(1, Math.round(baseH * sy))
 
@@ -103,8 +105,8 @@ function attachManualScaleSync(group: FabricGroup): void {
       group.add(imageObj as unknown as FabricObject)
     }
 
-    g.width = nextW
-    g.height = nextH
+    g.amoledWidth = nextW
+    g.amoledHeight = nextH
     group.setCoords?.()
     group.canvas?.requestRenderAll?.()
   })
@@ -188,6 +190,8 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
       g.fontSize = fontSize
       g.width = imgW
       g.height = imgH
+      g.amoledWidth = imgW
+      g.amoledHeight = imgH
 
       if (dt === 'amoled') attachManualScaleSync(group)
       const el = addGroupToCanvas(group)
@@ -230,16 +234,9 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
       g.fontFamily = fontFamily
       g.fill = fill
       g.fontSize = fontSize
-      // 记录当前字形包围盒作为逻辑宽高，便于后续切换到 AMOLED 时复用尺寸
-      try {
-        const gw = (text as any).getScaledWidth?.() ?? (text as any).width ?? fontSize
-        const gh = (text as any).getScaledHeight?.() ?? (text as any).height ?? fontSize
-        g.width = Math.max(1, Math.round(Number(gw)))
-        g.height = Math.max(1, Math.round(Number(gh)))
-      } catch {
-        g.width = imgW
-        g.height = imgH
-      }
+      // 注意：这里不再用字形包围盒覆盖 g.width/g.height，
+      // 让 width/height 继续表示 AMOLED 的逻辑尺寸（默认 imgW/imgH 或之前的缩放结果），
+      // 避免从 MIP 切到 AMOLED 时受 fontSize 影响。
 
       const el = addGroupToCanvas(group)
       resolve(el)
@@ -301,6 +298,8 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
         g.fontSize = fontSize
         g.width = imgW
         g.height = imgH
+        g.amoledWidth = imgW
+        g.amoledHeight = imgH
 
         attachManualScaleSync(group)
         const el = addGroupToCanvas(group)
@@ -351,10 +350,12 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
   const ensureAmoledImage = (url: string | undefined) => {
     const resolved = url ? normalizeUrl(String(url)) : undefined
     const finalUrl = resolved || getDefaultWeatherImage()
-    const newW = (config as any).width ?? g.width
-    const newH = (config as any).height ?? g.height
-    const targetW = Math.max(1, Number(newW ?? 60))
-    const targetH = Math.max(1, Number(newH ?? targetW))
+    const incomingW = (config as any).width
+    const incomingH = (config as any).height
+    const baseW = incomingW != null ? Number(incomingW) : Number(g.amoledWidth ?? 60)
+    const baseH = incomingH != null ? Number(incomingH) : Number(g.amoledHeight ?? baseW)
+    const targetW = Math.max(1, baseW)
+    const targetH = Math.max(1, baseH)
 
     const applySize = (img: FabricImage) => {
       const origW = (img as any).width ?? 1
@@ -366,6 +367,8 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
         scaleY: side / Math.max(1, origH),
       } as unknown as ImageProps)
       ;(img as any).role = 'image'
+      g.amoledWidth = side
+      g.amoledHeight = side
       g.width = side
       g.height = side
     }
