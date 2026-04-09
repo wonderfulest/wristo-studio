@@ -246,7 +246,6 @@ const setupAutoSave = () => {
 const loadElements = async (elements: AnyElementConfig[]) => {
   const elementDataStore = useElementDataStore()
   for (const element of elements) {
-    if (element.eleType == 'Line') continue
     const decodedElement = decodeElementConfig(element)
     if (!decodedElement) {
       console.warn(`Unknown element type: ${element.eleType}`)

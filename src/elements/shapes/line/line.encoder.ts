@@ -1,44 +1,57 @@
 import type { FabricElement } from '@/types/element'
 import type { LineElementConfig } from '@/types/elements'
+import { rectToPoints, pointsToRect } from './line.renderer'
 
 export function encodeLine(element: FabricElement): LineElementConfig {
   if (!element) throw new Error('Invalid line element')
 
-  const line = element as any
+  const rect = element as any
+  const pts = rectToPoints(rect)
 
   const config: LineElementConfig = {
     eleType: 'line',
-    id: String(line.id ?? ''),
-    left: Math.round(Number(line.left ?? 0)),
-    top: Math.round(Number(line.top ?? 0)),
-    x1: Number(line.x1 ?? 0),
-    y1: Number(line.y1 ?? 0),
-    x2: Number(line.x2 ?? 0),
-    y2: Number(line.y2 ?? 0),
-    stroke: (line.stroke as string) ?? '#FFFFFF',
-    strokeWidth: Number(line.strokeWidth ?? 0),
-    opacity: line.opacity != null ? Number(line.opacity) : undefined,
-    originX: (line.originX as any) ?? 'center',
-    originY: (line.originY as any) ?? 'center',
+    id: String(rect.id ?? ''),
+    left: Math.round(Number(rect.left ?? 0)),
+    top: Math.round(Number(rect.top ?? 0)),
+    x1: pts.x1,
+    y1: pts.y1,
+    x2: pts.x2,
+    y2: pts.y2,
+    stroke: (rect.fill as string) ?? '#FFFFFF',
+    strokeWidth: Math.round(Number(rect.height ?? 2)),
+    opacity: rect.opacity != null ? Number(rect.opacity) : undefined,
+    originX: (rect.originX as any) ?? 'center',
+    originY: (rect.originY as any) ?? 'center',
+  }
+
+  if (rect.strokeDashArray) {
+    ;(config as any).strokeDashArray = rect.strokeDashArray
   }
 
   return config
 }
 
 export function decodeLine(config: LineElementConfig): Partial<FabricElement> {
+  const strokeWidth = Math.max(1, Number(config.strokeWidth) || 2)
+  const x1 = config.x1 ?? 50
+  const y1 = config.y1 ?? 50
+  const x2 = config.x2 ?? 200
+  const y2 = config.y2 ?? 50
+  const { left, top, width, height, angle } = pointsToRect(x1, y1, x2, y2, strokeWidth)
+
   return {
     eleType: 'line',
     id: config.id,
-    left: config.left,
-    top: config.top,
-    x1: config.x1,
-    y1: config.y1,
-    x2: config.x2,
-    y2: config.y2,
-    stroke: config.stroke,
-    strokeWidth: config.strokeWidth,
+    left,
+    top,
+    width,
+    height,
+    angle,
+    fill: config.stroke,
+    strokeWidth: 0,
+    originX: 'center' as any,
+    originY: 'center' as any,
     opacity: config.opacity,
-    originX: config.originX as any,
-    originY: config.originY as any,
+    strokeDashArray: (config as any).strokeDashArray ?? null,
   } as Partial<FabricElement>
 }
