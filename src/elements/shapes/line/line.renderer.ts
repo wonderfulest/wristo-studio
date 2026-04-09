@@ -79,7 +79,7 @@ function createEndpointControl(side: 'left' | 'right'): Control {
       const size = 8
       ctx.save()
       ctx.translate(left, top)
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
       ctx.strokeStyle = (fabricObject as any).fill || '#000000'
       ctx.lineWidth = 2
       ctx.beginPath()
