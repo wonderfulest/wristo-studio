@@ -39,7 +39,7 @@ function createEndpointControl(side: 'left' | 'right'): Control {
     x: xSign,
     y: 0,
     cursorStyle: 'crosshair',
-    actionHandler: function(eventData, transform, x, y) {
+    actionHandler: function(_, transform, x, y) {
       const rect = transform.target as any
       const canvas = rect.canvas
       const rad = (rect.angle * Math.PI) / 180
