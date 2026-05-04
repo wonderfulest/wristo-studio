@@ -13,6 +13,25 @@ import type {
 import type { Image } from '@/types/image'
 
 /**
+ * 规范化字符串：清理各种特殊空白字符
+ * - 将特殊空白符（不间断空格、全角空格等）替换为普通空格
+ * - 删除零宽字符（零宽空格、BOM等）
+ * - 压缩多空格为单空格
+ * - 去除首尾空格
+ */
+function normalizeWhitespace(str: string | undefined | null): string | undefined | null {
+  if (str == null) return str
+  return str
+    // 所有奇怪空白 → 普通空格 (U+00A0, U+1680, U+2000-U+200A, U+202F, U+205F, U+3000)
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    // 零宽字符删除 (U+200B-U+200D, U+FEFF)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // 多空格压缩
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * 设计相关API接口
  */
 export const designApi = {
@@ -82,7 +101,13 @@ export const designApi = {
    * @returns 创建结果
    */
   createDesign(data: CreateDesignParams): Promise<ApiResponse<Design>> {
-    return instance.post(`/dsn/design/create`, data)
+    // 清理 name 和 description 中的特殊空白字符
+    const cleanedData = {
+      ...data,
+      name: normalizeWhitespace(data.name),
+      description: normalizeWhitespace(data.description),
+    }
+    return instance.post(`/dsn/design/create`, cleanedData)
   },
   /**
    * 删除设计
@@ -117,7 +142,13 @@ export const designApi = {
    * @returns 更新结果
    */
   updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<Design>> {
-    return instance.post(`/dsn/design/update`, data)
+    // 清理 name 和 description 中的特殊空白字符
+    const cleanedData = {
+      ...data,
+      name: normalizeWhitespace(data.name),
+      description: normalizeWhitespace(data.description),
+    }
+    return instance.post(`/dsn/design/update`, cleanedData)
   },
   /**
    * 提交设计
@@ -125,7 +156,13 @@ export const designApi = {
    * @returns 提交结果
    */
   submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
-    return instance.post(`/dsn/design/submit`, data)
+    // 清理 name 和 description 中的特殊空白字符
+    const cleanedData = {
+      ...data,
+      name: normalizeWhitespace(data.name),
+      description: normalizeWhitespace(data.description),
+    }
+    return instance.post(`/dsn/design/submit`, cleanedData)
   },
 
   /**

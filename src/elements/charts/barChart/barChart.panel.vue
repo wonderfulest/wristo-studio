@@ -95,9 +95,7 @@ watch(
 )
 
 const originXOptions = [
-  { label: '左', value: 'left' },
-  { label: '中', value: 'center' },
-  { label: '右', value: 'right' },
+  { label: '居中', value: 'center' },
 ]
 
 const handleColorRangeChange = (index: number, val: string) => {

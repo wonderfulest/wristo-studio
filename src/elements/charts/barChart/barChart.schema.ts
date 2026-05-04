@@ -7,7 +7,7 @@ export type BarChartElementSchema = {
   defaultConfig: {
     width: number
     height: number
-    originX: 'left'
+    originX: 'center'
     originY: 'top'
     chartProperty: string
     barWidth: number
@@ -25,7 +25,7 @@ export const barChartSchema: BarChartElementSchema = {
   defaultConfig: {
     width: 200,
     height: 80,
-    originX: 'left',
+    originX: 'center',
     originY: 'top',
     chartProperty: 'steps',
     barWidth: 20,
