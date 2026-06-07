@@ -7,7 +7,7 @@
     <img
       class="device-frame-image"
       :class="{ 'device-frame-image-loading': !frameStyle }"
-      :src="devicePng"
+      :src="deviceFrameUrl"
       :alt="deviceAlt"
       :style="frameStyle || undefined"
       draggable="false"
@@ -41,7 +41,7 @@ let detailRequestSeq = 0
 
 const currentDevice = computed(() => userStore.userInfo?.device ?? null)
 const resolvedDevice = computed(() => detailDevice.value ?? currentDevice.value)
-const devicePng = computed(() => resolvedDevice.value?.devicePng || '')
+const deviceFrameUrl = computed(() => resolvedDevice.value?.deviceTransparentPng || '')
 const deviceAlt = computed(() => resolvedDevice.value?.displayName || 'Garmin device frame')
 const displayLocation = computed(() => resolvedDevice.value?.simulator?.display?.location ?? null)
 
@@ -59,7 +59,7 @@ const validLocation = computed(() => {
 })
 
 const shouldRender = computed(() => {
-  return Boolean(editorStore.showDeviceFrame && devicePng.value && validLocation.value && !imageFailed.value)
+  return Boolean(editorStore.showDeviceFrame && deviceFrameUrl.value && validLocation.value && !imageFailed.value)
 })
 
 const frameStyle = computed(() => {
@@ -82,7 +82,7 @@ const frameStyle = computed(() => {
   }
 })
 
-watch(devicePng, () => {
+watch(deviceFrameUrl, () => {
   naturalSize.value = { width: 0, height: 0 }
   imageFailed.value = false
 })
@@ -92,7 +92,7 @@ watch(
   async (deviceId) => {
     const requestSeq = ++detailRequestSeq
     detailDevice.value = null
-    if (!deviceId || validLocation.value) return
+    if (!deviceId || (validLocation.value && currentDevice.value?.deviceTransparentPng)) return
 
     try {
       const deviceDetail = await getDeviceDetailByDeviceId(deviceId)
@@ -124,7 +124,7 @@ const handleImageError = () => {
   naturalSize.value = { width: 0, height: 0 }
   imageFailed.value = true
   if (import.meta.env.DEV) {
-    console.warn('[DeviceFrameOverlay] Failed to load device frame image', devicePng.value)
+    console.warn('[DeviceFrameOverlay] Failed to load device frame image', deviceFrameUrl.value)
   }
 }
 </script>

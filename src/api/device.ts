@@ -18,6 +18,7 @@ export interface GarminDeviceVO extends GarminDeviceBaseVO {
   deviceId: string
   imageUrl: string | null
   devicePng: string | null
+  deviceTransparentPng: string | null
   resolutionHeight: number | null
   resolutionWidth: number | null
   description?: string
