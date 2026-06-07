@@ -199,7 +199,7 @@ defineExpose({
 }
 
 .canvas-container {
-  background: var(--studio-canvas-shell);
+  background: transparent;
   border-radius: 4px;
   position: relative;
   margin: 50px;

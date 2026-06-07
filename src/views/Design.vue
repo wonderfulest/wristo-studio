@@ -505,10 +505,8 @@ const openEditorSettings = () => {
 
 .canvas-container {
   position: relative;
-  background: var(--studio-canvas-shell);
+  background: transparent;
   margin: 40px 0 0 40px;
-  border-radius: var(--studio-radius-lg);
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.26), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .ruler-corner {

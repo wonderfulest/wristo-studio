@@ -229,7 +229,7 @@ export function initCanvasManager(
   if (containerInit) {
     containerInit.style.transform = 'translate(0px, 0px)'
     containerInit.style.transition = 'transform 0s'
-    containerInit.style.backgroundColor = 'var(--studio-canvas-shell)'
+    containerInit.style.backgroundColor = 'transparent'
   }
 
   fabricCanvas = canvas
