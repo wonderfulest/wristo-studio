@@ -1,6 +1,7 @@
 <template>
-  <div class="canvas-wrapper">
+  <div class="canvas-wrapper" :style="{ '--canvas-margin': `${CANVAS_MARGIN}px` }">
     <canvas ref="canvasRef"></canvas>
+    <DeviceFrameOverlay :canvas-offset="CANVAS_MARGIN" />
   </div>
   
 </template>
@@ -19,6 +20,7 @@ import { createHistoryManager, type HistoryManagerHandle } from '@/engine/manage
 import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
+import DeviceFrameOverlay from '@/components/canvas/DeviceFrameOverlay.vue'
 import {
   scaleElementConfig,
   scaleFabricCanvasForDesignSize,
@@ -32,6 +34,7 @@ const layerStore = useLayerStore()
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const RULER_OFFSET = 40
+const CANVAS_MARGIN = 50
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 3
 const ZOOM_STEP = 0.1
@@ -206,7 +209,16 @@ defineExpose({
   overflow: visible;
   transform: translate(0px, 0px);
   will-change: transform;
-  z-index: 0;
+  z-index: 1;
+}
+
+.canvas-wrapper :deep(.canvas-container) {
+  margin: var(--canvas-margin);
+  background: transparent;
+  border-radius: 4px;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
 }
 
 .zoom-level {

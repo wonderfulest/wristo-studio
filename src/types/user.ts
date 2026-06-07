@@ -23,8 +23,23 @@ export interface GarminDeviceVO {
   resolutionWidth: number | null
   screenRotationSupport: boolean | null
   createdAt: string | null
-  simulator?: any
+  simulator?: GarminSimulatorConfig | null
   compiler?: any
+}
+
+export interface GarminSimulatorLocation {
+  x?: number | null
+  y?: number | null
+  width?: number | null
+  height?: number | null
+}
+
+export interface GarminSimulatorConfig {
+  display?: {
+    location?: GarminSimulatorLocation | null
+    shape?: string | null
+  } | null
+  image?: string | null
 }
 
 export interface UserProfileVO {

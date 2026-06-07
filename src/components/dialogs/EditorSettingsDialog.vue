@@ -68,6 +68,18 @@
       </div>
 
       <div class="setting-item">
+        <div class="setting-label">Device Frame</div>
+        <div class="setting-control">
+          <el-switch
+            v-model="showDeviceFrame"
+            @change="handleDeviceFrameChange"
+            active-text="Show"
+            inactive-text="Hide"
+          />
+        </div>
+      </div>
+
+      <div class="setting-item">
         <div class="setting-label">Ruler Guides</div>
         <div class="setting-control">
           <el-switch
@@ -183,6 +195,8 @@ const showTimeSimulator = ref<boolean>(editorStore.showTimeSimulator)
 const showZoomControls = ref<boolean>(editorStore.showZoomControls)
 // 撤销/回退控制显示状态
 const showHistoryControls = ref<boolean>(editorStore.showHistoryControls)
+// 设备边框显示状态
+const showDeviceFrame = ref<boolean>(editorStore.showDeviceFrame)
 // Ruler guides
 const showRulerGuides = ref<boolean>(editorStore.showRulerGuides)
 // Ruler guides style
@@ -227,6 +241,12 @@ const handleZoomControlsChange = (value: boolean) => {
 // 处理撤销/回退控制显示状态变化
 const handleHistoryControlsChange = (value: boolean) => {
   showHistoryControls.value = value
+}
+
+// 处理设备边框显示状态变化
+const handleDeviceFrameChange = (value: boolean) => {
+  showDeviceFrame.value = value
+  editorStore.updateSetting('showDeviceFrame', value)
 }
 
 // 处理标尺辅助线显示
@@ -279,6 +299,7 @@ const saveSettings = () => {
       showTimeSimulator: showTimeSimulator.value,
       showZoomControls: showZoomControls.value,
       showHistoryControls: showHistoryControls.value,
+      showDeviceFrame: showDeviceFrame.value,
       showRulerGuides: showRulerGuides.value,
       rulerGuidesColor: rulerGuidesColor.value,
       rulerGuidesMajor: Number(rulerGuidesMajor.value),
@@ -303,6 +324,7 @@ const openDialog = () => {
   showTimeSimulator.value = editorStore.showTimeSimulator
   showZoomControls.value = editorStore.showZoomControls
   showHistoryControls.value = editorStore.showHistoryControls
+  showDeviceFrame.value = editorStore.showDeviceFrame
   // 同步 ruler guides
   showRulerGuides.value = editorStore.showRulerGuides
   rulerGuidesColor.value = editorStore.rulerGuidesColor

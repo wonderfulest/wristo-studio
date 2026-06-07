@@ -68,7 +68,7 @@ import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, Check, Warning, Search } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { getDeviceList, getDeviceDetail, type GarminDeviceBaseVO, type GarminDeviceVO } from '@/api/device'
+import { getDeviceList, getDeviceDetailByDeviceId, type GarminDeviceBaseVO, type GarminDeviceVO } from '@/api/device'
 import { useUserStore } from '@/stores/user'
 import { getUserInfo, updateMyInfo } from '@/api/wristo/auth'
 import { useI18n } from '@/i18n'
@@ -190,8 +190,11 @@ const confirmSelection = async () => {
   confirmLoading.value = true
   try {
     const selected = selectedDevice.value
-    // Get device details
-    const deviceDetail = await getDeviceDetail(selected.id)
+    if (!selected.deviceId) {
+      throw new Error('Selected Garmin device is missing deviceId')
+    }
+    // Get device details by Garmin deviceId so simulator.display.location is populated.
+    const deviceDetail = await getDeviceDetailByDeviceId(selected.deviceId)
     const displayDeviceDetail = {
       ...deviceDetail,
       displayName: selected.displayName
@@ -209,9 +212,10 @@ const confirmSelection = async () => {
           device: res.data.device
             ? {
                 ...res.data.device,
+                ...displayDeviceDetail,
                 displayName: selected.displayName
               }
-            : res.data.device
+            : displayDeviceDetail
         })
       }
     } catch (e) {

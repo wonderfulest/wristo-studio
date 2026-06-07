@@ -9,6 +9,7 @@ export const useEditorStore = defineStore('editor', {
     showTimeSimulator: false,
     showZoomControls: false,
     showHistoryControls: false,
+    showDeviceFrame: false,
     showRulerGuides: false,
     rulerGuidesColor: '#ffffff',
     rulerGuidesMajor: 0.3,
@@ -49,6 +50,7 @@ export const useEditorStore = defineStore('editor', {
       if (settings.showTimeSimulator !== undefined) this.$state.showTimeSimulator = settings.showTimeSimulator
       if (settings.showZoomControls !== undefined) this.$state.showZoomControls = settings.showZoomControls
       if (settings.showHistoryControls !== undefined) this.$state.showHistoryControls = settings.showHistoryControls
+      if (settings.showDeviceFrame !== undefined) this.$state.showDeviceFrame = settings.showDeviceFrame
       if (settings.showRulerGuides !== undefined) this.$state.showRulerGuides = settings.showRulerGuides
       if (settings.rulerGuidesColor !== undefined) this.$state.rulerGuidesColor = settings.rulerGuidesColor
       if (settings.rulerGuidesMajor !== undefined) this.$state.rulerGuidesMajor = settings.rulerGuidesMajor
@@ -66,6 +68,7 @@ export const useEditorStore = defineStore('editor', {
       this.$state.showTimeSimulator = false
       this.$state.showZoomControls = false
       this.$state.showHistoryControls = false
+      this.$state.showDeviceFrame = false
       this.$state.showRulerGuides = false
       this.$state.rulerGuidesColor = '#ffffff'
       this.$state.rulerGuidesMajor = 0.3

@@ -156,6 +156,11 @@ const compareLayerType = (a: LayerElement, b: LayerElement): number => {
   return String(a.eleType).localeCompare(String(b.eleType))
 }
 
+const isFixedLayer = (layer: any): boolean => {
+  const t = String(layer?.eleType ?? '')
+  return t === 'global' || t === 'background'
+}
+
 const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
   const fixedLayers = sourceLayers.filter((layer) => isFixedLayer(layer))
   const movableLayers = sourceLayers.filter((layer) => !isFixedLayer(layer))
@@ -225,11 +230,6 @@ watch(
   },
   { deep: true, immediate: true }
 )
-
-const isFixedLayer = (layer: any): boolean => {
-  const t = String(layer?.eleType ?? '')
-  return t === 'global' || t === 'background'
-}
 
 // kept for internal operations but selection highlight uses store
 const activeElements = ref<MinimalFabricLike[]>([])
