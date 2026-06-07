@@ -2,10 +2,10 @@
   <div class="moon-properties">
 
     <el-form label-position="left" label-width="120px">
-      <el-form-item label="Asset">
+      <el-form-item :label="t('elementSettings.asset')">
         <el-select
           v-model="element.imageUrl"
-          placeholder="Select moon image"
+          :placeholder="t('elementSettings.selectMoonImage')"
           filterable
           @change="() => applyUpdate({ imageUrl: element.imageUrl })"
           style="width: 100%"
@@ -18,7 +18,7 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="Phase Index">
+      <el-form-item :label="t('elementSettings.phaseIndex')">
         <el-slider v-model="phaseIndex" :min="0" :max="assetUrls.length - 1" :step="1" show-stops @change="onPhaseChange" />
       </el-form-item>
     </el-form>
@@ -29,12 +29,14 @@
 import { onMounted, computed, ref, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement } from '@/types/element'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{ 
   element?: FabricElement
   config?: any
   applyPatch?: (patch: Record<string, any>) => void
 }>()
+const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}

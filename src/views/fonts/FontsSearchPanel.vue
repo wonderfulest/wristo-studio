@@ -157,9 +157,9 @@ const onWidthClassChange = (val?: number) => {
 
 <style scoped>
 .search-panel {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -184,7 +184,7 @@ const onWidthClassChange = (val?: number) => {
 .preview-prefix {
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .filters-form { margin-top: 12px; }

@@ -1,13 +1,13 @@
 <template>
   <div class="weather-properties">
     <el-form label-position="left" label-width="120px">
-      <el-form-item label="Weather Font">
+      <el-form-item :label="t('elementSettings.weatherFont')">
         <font-picker v-model="fontFamily" :type="FontTypes.ICON_FONT" @change="onFontChange" />
       </el-form-item>
-      <el-form-item v-if="activeTab === 'mip'" label="Font Color">
+      <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontColor')">
         <ColorPicker v-model="fill" @change="onColorChange" />
       </el-form-item>
-      <el-form-item v-if="activeTab === 'mip'" label="Font Size">
+      <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontSize')">
         <el-select v-model="fontSize" @change="onFontSizeChange">
           <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
         </el-select>
@@ -15,7 +15,7 @@
     </el-form>
 
     <div class="tabs-extra">
-      <el-button size="small" style="background-color: #409EFF; color: #fff;" @click="onRefreshTab">Refresh</el-button>
+      <el-button size="small" style="background-color: #0f6b68; color: #fff;" @click="onRefreshTab">{{ t('elementSettings.refresh') }}</el-button>
     </div>
     <div class="weather-tabs-wrapper">
       <el-tabs v-model="activeTab" class="weather-tabs">
@@ -31,23 +31,23 @@
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
               <template v-if="c.asset">
-                <el-tooltip content="Change binding" placement="top">
+                <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
                   <div class="asset clickable-link">
                     <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
                     <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
-                    <div v-else class="no-preview">No preview</div>
+                    <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
                   </div>
                 </el-tooltip>
               </template>
               <template v-else>
-                <el-tooltip content="Bind asset (upload SVG)" placement="top">
+                <el-tooltip :content="t('elementSettings.bindAsset')" placement="top">
                   <el-upload
                     :show-file-list="false"
                     accept=".svg"
                     :before-upload="beforeUploadSVG"
                     :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
                   >
-                    <div class="no-preview clickable-link">Bind asset</div>
+                    <div class="no-preview clickable-link">{{ t('elementSettings.bindAsset') }}</div>
                   </el-upload>
                 </el-tooltip>
               </template>
@@ -67,23 +67,23 @@
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
               <template v-if="c.asset">
-                <el-tooltip content="Change binding" placement="top">
+                <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
                   <div class="asset clickable-link" @click.stop="openChangeBindingDialog('amoled', c)">
                     <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
                     <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
-                    <div v-else class="no-preview">No preview</div>
+                    <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
                   </div>
                 </el-tooltip>
               </template>
               <template v-else>
-                <el-tooltip content="Bind asset (upload SVG)" placement="top">
+                <el-tooltip :content="t('elementSettings.bindAsset')" placement="top">
                   <el-upload
                     :show-file-list="false"
                     accept=".svg"
                     :before-upload="beforeUploadSVG"
                     :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
                   >
-                    <div class="no-preview clickable-link">Bind asset</div>
+                    <div class="no-preview clickable-link">{{ t('elementSettings.bindAsset') }}</div>
                   </el-upload>
                 </el-tooltip>
               </template>
@@ -119,12 +119,14 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { fontSizes } from '@/config/settings'
+import { useI18n } from '@/i18n'
 const props = defineProps<{ 
   element?: FabricElement
   config?: any
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 const canvasStore = useCanvasStore()
+const { t } = useI18n()
 const iconFontStrategyStore = useIconFontStrategyStore()
 
 const fontFamily = ref<string>('')
@@ -386,9 +388,9 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
 .asset .svg :deep(svg) { width: 72px; height: 72px; }
 .no-preview { font-size: 12px; color: #909399; }
 /* hyperlink-like clickable styling */
-.clickable-link { cursor: pointer; color: #409eff; }
+.clickable-link { cursor: pointer; color: #0f6b68; }
 .clickable-link:hover { text-decoration: underline; }
 /* selected condition style */
-.condition-item.selected { border-width: 2px; border-color: #409eff; box-shadow: 0 0 0 1px rgba(64,158,255,0.3) inset; }
+.condition-item.selected { border-width: 2px; border-color: #0f6b68; box-shadow: 0 0 0 1px rgba(15, 107, 104, 0.3) inset; }
 .pager { display: flex; justify-content: center; padding: 8px 0; }
 </style>

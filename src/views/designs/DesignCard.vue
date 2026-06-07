@@ -24,7 +24,7 @@
           <div class="header-actions">
             <el-button-group>
               <!-- 复制设计名称 -->
-              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('copy-name', design.name)" title="Copy Design Name">
+              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('copy-name', design.name)" :title="t('card.copyDesignName')">
                 <el-icon>
                   <DocumentCopy />
                 </el-icon>
@@ -68,13 +68,13 @@
       <div class="meta">
        
         <div v-if="isMerchantUser">
-           <span>App ID: {{ design.product?.appId }}</span> 
+           <span>{{ t('card.appId') }}: {{ design.product?.appId }}</span> 
            <div v-if="(isMerchantUser || isAdminUser) && design.product?.appId" class="app-ops-entry">
             <div class="score-pill">
-              <span class="score-label">Score</span>
+              <span class="score-label">{{ t('card.score') }}</span>
               <span class="score-value">{{ appScoreTotalText }}</span>
             </div>
-            <el-tooltip content="Open operations" placement="top">
+            <el-tooltip :content="t('card.openOperations')" placement="top">
               <button class="ops-icon-btn" type="button" @click.stop="goToOperations">
                 <Icon icon="material-symbols:trending-up-rounded" />
               </button>
@@ -82,18 +82,18 @@
           </div>
         </div>
         
-        <span v-if="isMerchantUser">Design: {{ design.designUid }}</span>
+        <span v-if="isMerchantUser">{{ t('card.design') }}: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
         <div v-if="isMerchantUser" class="last-go-live-row">
-          <span>Last Updated: {{ lastUpdatedText }}</span>
+          <span>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
         </div>
         <div v-if="isMerchantUser && hasDownloadablePackage" class="last-go-live-row">
-          <span>Last Package: {{ lastPackageTimeText }}</span>
+          <span>{{ t('card.lastPackage') }}: {{ lastPackageTimeText }}</span>
         </div>
         <div v-if="isMerchantUser" class="last-go-live-row">
-          <span>Last Go Live: {{ lastGoLiveText }}</span>
-          <el-tooltip v-if="hasNewRelease" content="New version available to upload" placement="top">
-            <span class="new-release-indicator" role="img" aria-label="New version available to upload">
+          <span>{{ t('card.lastGoLive') }}: {{ lastGoLiveText }}</span>
+          <el-tooltip v-if="hasNewRelease" :content="t('card.newRelease')" placement="top">
+            <span class="new-release-indicator" role="img" :aria-label="t('card.newRelease')">
               <span class="dot"></span>
             </span>
           </el-tooltip>
@@ -107,18 +107,18 @@
             v-if="isMerchantUser && (design.product?.packagingLog && design.product.packagingLog.rank !== null)"
             class="package-info-item"
           >
-            <strong>IQ build in queue:</strong>
+            <strong>{{ t('card.iqBuildQueue') }}:</strong>
             <span
               class="package-rank"
               v-if="design.product.packagingLog!.rank! > 0"
             >
-              Position #{{ design.product.packagingLog!.rank }}
+              {{ t('card.position', { rank: design.product.packagingLog!.rank! }) }}
             </span>
             <span
               class="package-rank packaging-progress"
               v-else
             >
-              Packaging<span class="ellipsis">...</span>
+              {{ t('card.packaging') }}<span class="ellipsis">...</span>
             </span>
           </div>
           <!-- 所有用户都可以看到，PRG build in queue -->
@@ -126,36 +126,44 @@
             v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== null"
             class="package-info-item"
           >
-            <strong>PRG build in queue:</strong>
+            <strong>{{ t('card.prgBuildQueue') }}:</strong>
             <span
               class="package-rank"
               v-if="design.product.prgPackagingLog!.rank! > 0"
             >
-              Position #{{ design.product.prgPackagingLog!.rank }}
+              {{ t('card.position', { rank: design.product.prgPackagingLog!.rank! }) }}
             </span>
             <span
               class="package-rank packaging-progress"
               v-else
             >
-              Packaging<span class="ellipsis">...</span>
+              {{ t('card.packaging') }}<span class="ellipsis">...</span>
             </span>
           </div>
         </div>
       </div>
       <div class="actions">
-        <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">✏️ Edit</el-button>
+        <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">
+          <el-icon><Edit /></el-icon>
+          {{ t('card.edit') }}
+        </el-button>
         <el-button
           type="default"
           size="small"
           @click="emit('copy', design)"
           :loading="loadingStates.copy.has(design.id)"
         >
-          📄 Duplicate
+          <el-icon><DocumentCopy /></el-icon>
+          {{ t('card.duplicate') }}
         </el-button>
         <el-button v-if="showBuildPrgButton" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
-          🛠 Build PRG
+          <el-icon><Box /></el-icon>
+          {{ t('card.buildPrg') }}
         </el-button>
-        <el-button v-if="showRunPrgButton" type="default" size="small" @click="emit('run-prg', design)">⬇ PRG</el-button>
+        <el-button v-if="showRunPrgButton" type="default" size="small" @click="emit('run-prg', design)">
+          <el-icon><Download /></el-icon>
+          PRG
+        </el-button>
         <el-button
           v-if="showBuildIqButton"
           type="info"
@@ -163,17 +171,24 @@
           @click="emit('submit', design)"
           :loading="loadingStates.submit.has(design.id)"
           :disabled="!!design.product?.packagingLog?.rank">
-          📦 Build IQ
+          <el-icon><Box /></el-icon>
+          {{ t('card.buildIq') }}
         </el-button>
-        <el-button v-if="showDownloadIqButton" type="info" size="small" @click="emit('download-package', design)">⬇ IQ</el-button>
-        <el-button v-if="showPublishButton" type="info" size="small" @click="emit('go-live', design)">🚀 Publish</el-button>
+        <el-button v-if="showDownloadIqButton" type="info" size="small" @click="emit('download-package', design)">
+          <el-icon><Download /></el-icon>
+          IQ
+        </el-button>
+        <el-button v-if="showPublishButton" type="info" size="small" @click="emit('go-live', design)">
+          <el-icon><Upload /></el-icon>
+          {{ t('card.publish') }}
+        </el-button>
       </div>
     </div>
   </el-card>
 
   <el-drawer
     v-model="operationsDrawerVisible"
-    title="App Operations"
+    :title="t('card.appOperations')"
     direction="rtl"
     size="min(1100px, 92vw)"
     destroy-on-close
@@ -186,9 +201,10 @@
 import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
-import { Edit, Delete, DocumentCopy } from '@element-plus/icons-vue'
+import { Box, Delete, DocumentCopy, Download, Edit, Upload } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
+import { useI18n } from '@/i18n'
 
 interface LoadingStates {
   submit: Set<number>
@@ -226,6 +242,8 @@ const emit = defineEmits<{
   (e: 'go-live', design: Design): void
   (e: 'copy-name', name: string): void
 }>()
+
+const { t } = useI18n()
 
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
@@ -330,36 +348,42 @@ const showPublishButton = computed(() => {
 
 const lastPackageTimeText = computed(() => {
   const updatedAt = (design.value.product as any)?.release?.updatedAt as string | number | undefined
-  if (!updatedAt) return 'Unknown'
+  if (!updatedAt) return t('common.unknown')
   return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
 })
 
 const lastUpdatedText = computed(() => {
   const updatedAt = design.value.updatedAt as string | number | undefined
-  if (!updatedAt) return 'Unknown'
+  if (!updatedAt) return t('common.unknown')
   return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
 })
 </script>
 
 <style scoped>
 .design-card {
-  border-radius: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   height: 100%;
   overflow: hidden;
+  background: var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
+  color: var(--studio-text);
 }
 
 .design-card :deep(.el-card__body) {
-  padding: 8px;
+  padding: 10px;
 }
 
 .design-card :deep(.el-card__header) {
-  padding: 6px 8px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .design-card:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+  border-color: var(--studio-primary);
+  box-shadow: var(--studio-shadow-md);
 }
 
 .card-header {
@@ -381,9 +405,9 @@ const lastUpdatedText = computed(() => {
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--studio-text);
   line-height: 1.2;
   flex: 1 1 auto;
   min-width: 0; /* 允许在 flex 容器中收缩以便省略号生效 */
@@ -414,11 +438,16 @@ const lastUpdatedText = computed(() => {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+:global(html[data-studio-theme='dark']) .score-pill {
+  background: rgba(17, 24, 39, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -434,28 +463,33 @@ const lastUpdatedText = computed(() => {
 
 .score-label {
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--studio-text-subtle);
 }
 
 .score-value {
   font-size: 12px;
   font-weight: 700;
-  color: var(--el-text-color-primary);
+  color: var(--studio-text);
   font-variant-numeric: tabular-nums;
 }
 
 .ops-icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--el-text-color-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--studio-radius-md);
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface);
+  color: var(--studio-text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+:global(html[data-studio-theme='dark']) .ops-icon-btn {
+  background: rgba(17, 24, 39, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -467,7 +501,9 @@ const lastUpdatedText = computed(() => {
 
 .ops-icon-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .ops-icon-btn :deep(svg) {
@@ -489,8 +525,8 @@ const lastUpdatedText = computed(() => {
 .design-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+  gap: 10px;
+  padding: 0;
 }
 
 .design-background {
@@ -498,7 +534,9 @@ const lastUpdatedText = computed(() => {
   width: 100%;
   padding-bottom: 100%;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface-soft);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
 .background-image {
@@ -512,12 +550,15 @@ const lastUpdatedText = computed(() => {
 
 .placeholder-circle {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 50%;
+  left: 50%;
+  width: 72%;
+  height: 72%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: #000;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
 .creator-badge {
@@ -525,11 +566,15 @@ const lastUpdatedText = computed(() => {
   top: 0px;
   right: 4px;
   background-color: rgba(0, 0, 0, 0.6);
-  color: white;
+  color: var(--color-white);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   backdrop-filter: blur(3px);
+}
+
+:global(html[data-studio-theme='dark']) .creator-badge {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -543,10 +588,11 @@ const lastUpdatedText = computed(() => {
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  color: var(--el-text-color-secondary);
-  border-top: 1px solid var(--el-border-color-lighter);
+  color: var(--studio-text-subtle);
+  border-top: 1px solid var(--studio-border);
   margin-top: 8px;
   padding-top: 8px;
+  line-height: 1.45;
 }
 
 .last-go-live-row {
@@ -588,7 +634,7 @@ const lastUpdatedText = computed(() => {
   display: inline-block;
   width: 10px;
   height: 10px;
-  background-color: #ff4d4f;
+  background-color: var(--el-color-danger);
   border-radius: 50%;
   box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
 }
@@ -598,7 +644,7 @@ const lastUpdatedText = computed(() => {
 }
 
 .package-rank {
-  color: #ff4d4f;
+  color: var(--el-color-danger);
 }
 
 .packaging-progress .ellipsis {
@@ -626,19 +672,19 @@ const lastUpdatedText = computed(() => {
 
 .actions {
   display: flex;
-  gap: 3px;
+  gap: 6px;
   flex-wrap: wrap;
-  padding: 3px;
+  padding: 0;
   justify-content: center;
 }
 
 .actions .el-button {
-  font-size: 10px;
-  padding: 4px 6px;
+  font-size: 11px;
+  padding: 0 8px;
   margin: 0;
   flex: 0 0 auto;
-  min-width: 56px;
-  height: 26px;
+  min-width: 60px;
+  min-height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -649,12 +695,12 @@ const lastUpdatedText = computed(() => {
 .design-info .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-start;
 }
 
 .design-info .actions .el-button {
-  flex: 0 0 calc((100% - 16px) / 3);
+  flex: 0 0 calc((100% - 12px) / 3);
   box-sizing: border-box;
 }
 
@@ -669,13 +715,14 @@ const lastUpdatedText = computed(() => {
 }
 
 .header-actions .el-button {
-  height: 28px;
+  width: 30px;
+  height: 30px;
   font-size: 14px;
+  border-radius: var(--studio-radius-md);
 }
 
 .header-actions .el-button:hover {
-  background-color: var(--el-fill-color-light);
-  border-radius: 4px;
+  background-color: var(--studio-primary-soft);
 }
 
 .header-actions .el-button.el-button--primary.is-link {

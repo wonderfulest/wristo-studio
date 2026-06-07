@@ -16,7 +16,7 @@
         v-model="currentModel.goalProperty"
         @change="updateElement"
       />
-      <el-form-item label="Alignment">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions" 
           v-model="currentModel.originX"
@@ -24,7 +24,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="Font Size">
+      <el-form-item :label="t('elementSettings.fontSize')">
         <el-select 
           v-model="currentModel.fontSize" 
           @change="updateElement"
@@ -38,14 +38,14 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="Text Color">
+      <el-form-item :label="t('elementSettings.textColor')">
         <color-picker 
           v-model="currentModel.fill" 
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="Font">
+      <el-form-item :label="t('elementSettings.font')">
         <font-picker 
           v-model="currentModel.fontFamily" 
           @change="updateElement" 
@@ -65,8 +65,10 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import { useI18n } from '@/i18n'
 
 const emit = defineEmits(['close'])
+const { t } = useI18n()
 
 const props = defineProps<{
   element?: any

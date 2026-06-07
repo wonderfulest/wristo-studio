@@ -8,7 +8,7 @@
         :class="{ 'transparent-input': modelValue === 'transparent' }"
         :style="{
           backgroundColor: modelValue === 'transparent' ? 'transparent' : modelValue,
-          color: modelValue === 'transparent' ? '#666' : textColor
+          color: modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor
         }" />
     </div>
     <div v-if="isOpen" class="color-picker" :style="pickerStyle">
@@ -368,17 +368,20 @@ const togglePicker = () => {
   width: 100%;
   height: 32px;
   padding: 4px 8px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
-  color: #666;
+  color: var(--studio-text-muted);
+  background-color: var(--studio-surface);
 }
 
 .color-input input.transparent-input {
   background-image:
-    linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%),
-    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
   background-size: 8px 8px;
   background-position:
     0 0,
@@ -396,7 +399,7 @@ const togglePicker = () => {
 }
 
 .color-input input:hover {
-  border-color: #409eff;
+  border-color: var(--studio-primary);
 }
 
 .color-picker {
@@ -406,29 +409,29 @@ const togglePicker = () => {
   margin-top: 4px;
   z-index: 1000;
   width: 300px;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--studio-surface-raised);
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   padding: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--studio-shadow-md);
 }
 
 .tabs {
   display: flex;
   margin-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .tab {
   padding: 6px 12px;
   cursor: pointer;
-  color: #666;
+  color: var(--studio-text-muted);
   font-size: 13px;
 }
 
 .tab.active {
-  color: #333;
-  border-bottom: 2px solid #409eff;
+  color: var(--studio-text);
+  border-bottom: 2px solid var(--studio-primary);
 }
 
 .color-matrix {
@@ -442,15 +445,17 @@ const togglePicker = () => {
   aspect-ratio: 1;
   border-radius: 2px;
   cursor: pointer;
-  border: 1px solid #eee;
+  border: 1px solid var(--studio-border);
   transition: transform 0.2s;
   position: relative;
 }
 
 .color-cell[style*='transparent'] {
   background-image:
-    linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%),
-    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
   background-size: 8px 8px;
   background-position:
     0 0,
@@ -473,7 +478,7 @@ const togglePicker = () => {
 .color-cell:hover {
   transform: scale(1.1);
   z-index: 1;
-  border-color: #409eff;
+  border-color: var(--studio-primary);
 }
 
 .color-info {
@@ -487,7 +492,7 @@ const togglePicker = () => {
   height: 32px;
   border-radius: 4px;
   margin-right: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--studio-border);
 }
 
 .color-inputs {
@@ -503,8 +508,8 @@ const togglePicker = () => {
 
 .save-variable-btn {
   padding: 4px 8px;
-  background-color: #409eff;
-  color: white;
+  background-color: var(--studio-primary);
+  color: var(--color-white);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -513,13 +518,13 @@ const togglePicker = () => {
 }
 
 .save-variable-btn:hover {
-  background-color: #66b1ff;
+  background-color: var(--studio-primary-hover);
 }
 
 .recent-colors {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--studio-border);
 }
 
 .recent-colors-header {
@@ -531,22 +536,22 @@ const togglePicker = () => {
 
 .recent-colors-title {
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .toggle-list-btn {
   padding: 2px 8px;
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-muted);
   background-color: transparent;
-  border: 1px solid #ddd;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   cursor: pointer;
 }
 
 .toggle-list-btn:hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: var(--studio-primary);
+  color: var(--studio-primary);
 }
 
 .color-variables-list {
@@ -564,7 +569,7 @@ const togglePicker = () => {
 }
 
 .color-variable-item:hover {
-  background-color: #f5f7fa;
+  background-color: var(--studio-surface-soft);
 }
 
 .color-preview-small {
@@ -572,7 +577,7 @@ const togglePicker = () => {
   height: 20px;
   border-radius: 4px;
   margin-right: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--studio-border);
 }
 
 .color-variable-info {
@@ -587,7 +592,7 @@ const togglePicker = () => {
   padding: 2px 6px;
   background: none;
   border: none;
-  color: #909399;
+  color: var(--studio-text-subtle);
   cursor: pointer;
   font-size: 16px;
   display: flex;
@@ -597,43 +602,43 @@ const togglePicker = () => {
 
 .delete-btn:hover {
   color: #f56c6c;
-  background: #fef0f0;
+  background: rgba(248, 113, 113, 0.14);
 }
 
 .color-hex {
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .color-name {
   font-size: 12px;
-  color: #409eff;
+  color: var(--studio-primary);
   cursor: text;
   padding: 2px 4px;
   border-radius: 4px;
 }
 
 .color-name:hover {
-  background-color: #f0f7ff;
+  background-color: var(--studio-primary-soft);
 }
 
 .color-name.editing {
-  background-color: #fff;
+  background-color: var(--studio-surface);
 }
 
 .name-input {
   width: 100%;
-  border: 1px solid #409eff;
+  border: 1px solid var(--studio-primary);
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 12px;
-  color: #409eff;
+  color: var(--studio-primary);
   outline: none;
   background: transparent;
 }
 
 .name-input:focus {
-  border-color: #66b1ff;
+  border-color: var(--studio-primary-hover);
 }
 
 .recent-colors-grid {
@@ -646,14 +651,14 @@ const togglePicker = () => {
   aspect-ratio: 1;
   border-radius: 2px;
   cursor: pointer;
-  border: 1px solid #eee;
+  border: 1px solid var(--studio-border);
   transition: transform 0.2s;
 }
 
 .recent-color:hover {
   transform: scale(1.1);
   z-index: 1;
-  border-color: #409eff;
+  border-color: var(--studio-primary);
 }
 
 input[type='number']::-webkit-inner-spin-button,

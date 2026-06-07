@@ -17,14 +17,14 @@
         v-model="currentModel.goalProperty"
         @change="updateElement"
       />
-      <el-form-item label="Alignment">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions" 
           v-model="currentModel.originX"
           @update:modelValue="updateElement"
         />
       </el-form-item>
-      <el-form-item label="Font Size">
+      <el-form-item :label="t('elementSettings.fontSize')">
         <el-select 
           v-model="currentModel.fontSize" 
           @change="handleFontSizeChange"
@@ -37,13 +37,13 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="Text Color">
+      <el-form-item :label="t('elementSettings.textColor')">
         <color-picker 
           v-model="currentModel.fill" 
           @change="updateElement" 
         />
       </el-form-item>
-      <el-form-item label="Font">
+      <el-form-item :label="t('elementSettings.font')">
         <font-picker 
           v-model="currentModel.fontFamily"
           :type="FontTypes.ICON_FONT"
@@ -66,6 +66,7 @@ import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { FontTypes } from '@/config/fonts'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { useI18n } from '@/i18n'
 
 const emit = defineEmits(['close'])
 
@@ -77,6 +78,7 @@ const props = defineProps<{
 
 const formRef = ref<any>(null)
 const iconFontStrategyStore = useIconFontStrategyStore()
+const { t } = useI18n()
 
 const rules = {
   dataProperty: [

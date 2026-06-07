@@ -187,28 +187,29 @@ const addElementByType = async (_category: string, elementType: string, config: 
 .add-element-panel {
   height: 100%;
   overflow: auto;
+  background: var(--studio-surface);
 }
 
 .panel-content {
-  padding: 10px;
+  padding: 14px;
 }
 
 .element-section {
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .section-header h2 {
   margin: 0;
   font-size: 14px;
-  color: #333;
-  font-weight: 600;
+  color: var(--studio-text);
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -223,7 +224,7 @@ h4 {
 .header-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, #ddd, transparent);
+  background: linear-gradient(to right, var(--studio-border), transparent);
 }
 
 .element-grid {
@@ -238,20 +239,22 @@ button {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 72px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
+  min-height: 78px;
+  padding: 10px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   position: relative;
 }
 
 button:hover {
-  background: #f5f5f5;
+  background: #ffffff;
+  border-color: var(--studio-primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .element-icon {
@@ -263,14 +266,15 @@ button:hover {
   justify-content: center;
   font-size: 20px;
   margin-bottom: 6px;
-  color: #409eff;
+  color: var(--studio-primary);
 }
 
 .element-label {
   font-size: 11px;
-  color: #333;
+  color: var(--studio-text);
   text-align: center;
   line-height: 1.2;
+  font-weight: 700;
   /* 允许折行，但保持在按钮中水平居中 */
   word-break: break-word;
 }
@@ -287,14 +291,14 @@ button:hover {
 }
 
 button.disabled {
-  background: #f5f5f5;
-  border-color: #ddd;
+  background: #eef2f6;
+  border-color: var(--studio-border);
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.58;
 }
 
 button.disabled:hover {
-  background: #f5f5f5;
+  background: #eef2f6;
   transform: none;
   box-shadow: none;
 }

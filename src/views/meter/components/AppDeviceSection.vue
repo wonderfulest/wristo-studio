@@ -223,9 +223,9 @@ const formatRelativeTime = (ts: number) => {
 .overview-cards .el-statistic { background: var(--el-bg-color-page); border-radius: 12px; padding: 20px; }
 .clickable-stat { cursor: pointer; transition: box-shadow 0.2s; }
 .clickable-stat:hover { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12); }
-.suffix-text { font-size: 12px; color: #6b7280; }
+.suffix-text { font-size: 12px; color: var(--studio-text-muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 .time-cell { line-height: 1.4; }
-.time-cell__relative { font-size: 12px; color: #909399; }
+.time-cell__relative { font-size: 12px; color: var(--studio-text-subtle); }
 .detail-content { padding: 8px; }
 </style>

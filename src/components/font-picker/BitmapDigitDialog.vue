@@ -192,14 +192,14 @@ const handleClose = () => {
   display: flex;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .bitmap-row-index {
   width: 32px;
   text-align: center;
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .bitmap-row-preview {
@@ -208,7 +208,7 @@ const handleClose = () => {
 }
 
 .bitmap-row-preview.empty {
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
 }
 
 .bitmap-upload {
@@ -226,7 +226,7 @@ const handleClose = () => {
   width: 64px;
   text-align: right;
   font-size: 12px;
-  color: #999;
+  color: var(--studio-text-subtle);
   padding-right: 8px;
 }
 
@@ -238,9 +238,9 @@ const handleClose = () => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid #dcdfe6;
-  background: white;
-  color: #409EFF;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface);
+  color: var(--studio-primary);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -261,7 +261,7 @@ const handleClose = () => {
 
 .bitmap-tutorial-link {
   font-size: 12px;
-  color: #409eff;
+  color: var(--studio-primary);
   text-decoration: none;
 }
 

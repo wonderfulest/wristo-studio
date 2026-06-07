@@ -31,16 +31,21 @@ const showMenu = computed(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--studio-bg);
+  color: var(--studio-text);
 }
 
 .app-main {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
 }
 
 .app-content {
   flex: 1;
   overflow-y: auto;
+  min-width: 0;
+  background: var(--studio-bg);
 }
 </style> 

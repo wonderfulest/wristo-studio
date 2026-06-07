@@ -86,8 +86,8 @@ const formatMinutes = (v?: number | null) => {
 <style scoped>
 .section-card { margin-bottom: 24px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.header-meta { color: #909399; font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.app-name { color: #606266; font-weight: 600; }
+.header-meta { color: var(--studio-text-subtle); font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.app-name { color: var(--studio-text-muted); font-weight: 600; }
 .meta-split { opacity: 0.7; }
 .stats-cards { margin-bottom: 20px; }
 .stats-cards .el-statistic { background: var(--el-bg-color-page); border-radius: 12px; padding: 16px; }

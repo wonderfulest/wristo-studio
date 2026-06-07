@@ -138,12 +138,12 @@ watch(
 }
 
 .font-item:hover {
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
 }
 
 .font-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
 }
 
 .font-main {
@@ -161,7 +161,7 @@ watch(
 
 .font-name {
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .font-tags {
@@ -174,7 +174,7 @@ watch(
 .end-tip {
   padding: 8px 12px;
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
   text-align: center;
 }
 </style>

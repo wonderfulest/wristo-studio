@@ -2,7 +2,7 @@
   <div class="side-panel">
     <!-- 添加元素按钮，仅在图层面板时显示 -->
     <div v-if="!isAddElementMode" class="add-element-button">
-      <el-button class="op-btn" round type="primary" @click="switchToAddElement">Add Element</el-button>
+      <el-button class="op-btn" round type="primary" @click="switchToAddElement">{{ t('panel.addElement') }}</el-button>
     </div>
 
     <!-- 面板容器 -->
@@ -13,7 +13,7 @@
 
     <!-- 取消按钮，仅在添加元素面板时显示 -->
     <div v-if="isAddElementMode" class="cancel-button">
-      <el-button round type="info" @click="switchToLayer" class="op-btn">Cancel</el-button>
+      <el-button round type="info" @click="switchToLayer" class="op-btn">{{ t('common.cancel') }}</el-button>
     </div>
   </div>
 </template>
@@ -22,6 +22,9 @@
 import { ref } from 'vue'
 import AddElementPanel from './AddElementPanel.vue'
 import LayerPanel from './LayerPanel.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const isAddElementMode = ref(false)
 
@@ -45,27 +48,33 @@ defineExpose({
   flex-direction: column;
   height: 100%;
   position: relative;
+  background: var(--studio-surface);
 }
 
 .add-element-button {
-  padding: 16px;
+  padding: 14px;
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .panel-container {
   flex: 1;
   overflow: auto;
+  min-height: 0;
 }
 
 .cancel-button {
-  padding: 16px;
-  border-top: 1px solid var(--el-border-color);
+  padding: 14px;
+  border-top: 1px solid var(--studio-border);
+  background: var(--studio-surface);
 }
 
 :deep(.el-button) {
   width: 100%;
 }
 .op-btn {
-  font-size: 20px;
-  height: 48px;
+  font-size: 14px;
+  height: 44px;
+  border-radius: var(--studio-radius-md);
+  font-weight: 750;
 }
 </style>

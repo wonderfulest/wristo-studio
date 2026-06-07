@@ -2,7 +2,7 @@
   <div class="wind-direction-properties">
     <el-form label-position="left" label-width="120px">
 
-      <el-form-item label="风向图标">
+      <el-form-item :label="t('elementSettings.windIcon')">
         <AssetPicker
           :selected-url="imageUrl"
           :selected-asset-id="assetId"
@@ -12,15 +12,15 @@
         />
       </el-form-item>
 
-      <el-form-item label="Center X">
+      <el-form-item :label="t('elementSettings.centerX')">
         <el-input-number v-model="centerX" :min="0" :max="9999" @change="onPositionChange" />
       </el-form-item>
 
-      <el-form-item label="Center Y">
+      <el-form-item :label="t('elementSettings.centerY')">
         <el-input-number v-model="centerY" :min="0" :max="9999" @change="onPositionChange" />
       </el-form-item>
 
-      <el-form-item label="Wind Degree">
+      <el-form-item :label="t('elementSettings.windDegree')">
         <div class="wind-degree-row">
           <el-slider
             v-model="windDegree"
@@ -34,7 +34,7 @@
         </div>
       </el-form-item>
 
-      <el-form-item label="Direction">
+      <el-form-item :label="t('elementSettings.direction')">
         <span class="wind-label">{{ windDirectionLabel }}</span>
       </el-form-item>
 
@@ -49,6 +49,7 @@ import type { FabricElement } from '@/types/element'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{ 
   element?: FabricElement
@@ -56,6 +57,7 @@ const props = defineProps<{
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 const canvasStore = useCanvasStore()
+const { t } = useI18n()
 
 const imageUrl = ref<string>('')
 const assetId = ref<number | undefined>(undefined)

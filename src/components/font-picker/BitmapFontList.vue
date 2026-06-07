@@ -154,7 +154,7 @@ const onScroll = (e: Event) => {
 <style scoped>
 .bitmap-font-list {
   margin-top: 8px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid var(--studio-border);
   padding-top: 8px;
   max-height: 660px;
   overflow-y: auto;
@@ -171,12 +171,12 @@ const onScroll = (e: Event) => {
 }
 
 .bitmap-font-item:hover {
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
 }
 
 .bitmap-font-item.active {
-  background: #ecf5ff;
-  box-shadow: 0 0 0 1px #409eff inset;
+  background: var(--studio-primary-soft);
+  box-shadow: 0 0 0 1px var(--studio-primary) inset;
 }
 
 .info {
@@ -187,7 +187,7 @@ const onScroll = (e: Event) => {
 .name {
   font-size: 13px;
   font-weight: 500;
-  color: #303133;
+  color: var(--studio-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,7 +198,7 @@ const onScroll = (e: Event) => {
   display: flex;
   gap: 6px;
   font-size: 11px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .glyph-preview {
@@ -215,7 +215,7 @@ const onScroll = (e: Event) => {
   align-items: center;
   justify-content: center;
   border-radius: 3px;
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
   overflow: hidden;
 }
 
@@ -227,7 +227,7 @@ const onScroll = (e: Event) => {
 
 .glyph-placeholder {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--studio-text-subtle);
 }
 
 .tag {
@@ -235,17 +235,17 @@ const onScroll = (e: Event) => {
   align-items: center;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #f4f4f5;
+  background: var(--studio-surface-soft);
 }
 
 .tag.default {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
 }
 
 .tag.version {
-  background: #f0f9eb;
-  color: #67c23a;
+  background: var(--el-color-success-light-9);
+  color: var(--color-success);
 }
 
 .actions {
@@ -255,14 +255,14 @@ const onScroll = (e: Event) => {
 .bitmap-font-empty {
   padding: 12px 4px;
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
   text-align: center;
 }
 
 .bitmap-font-pager {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid var(--studio-border);
   display: flex;
   justify-content: center;
 }

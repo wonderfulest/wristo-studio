@@ -2,69 +2,69 @@
   <div class="battery-properties">
     <!-- 基础尺寸配置 -->
     <el-collapse v-model="activeNames">
-      <el-collapse-item title="基础尺寸" name="size">
+      <el-collapse-item :title="t('elementSettings.basicSize')" name="size">
         <el-form label-position="left" label-width="100px">
-          <el-form-item label="宽度">
+          <el-form-item :label="t('elementSettings.width')">
             <el-input-number v-model="currentModel.width" :min="20" :max="500" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="高度">
+          <el-form-item :label="t('elementSettings.height')">
             <el-input-number v-model="currentModel.height" :min="10" :max="300" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="内边距">
+          <el-form-item :label="t('elementSettings.padding')">
             <el-input-number v-model="currentModel.padding" :min="0" :max="20" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="头部间距">
+          <el-form-item :label="t('elementSettings.headGap')">
             <el-input-number v-model="currentModel.headGap" :min="0" :max="20" @change="updateElement" />
           </el-form-item>
         </el-form>
       </el-collapse-item>
 
       <!-- 电池主体样式 -->
-      <el-collapse-item title="电池主体样式" name="body">
+      <el-collapse-item :title="t('elementSettings.bodyStyle')" name="body">
         <el-form label-position="left" label-width="100px">
-          <el-form-item label="边框颜色">
+          <el-form-item :label="t('elementSettings.borderColor')">
             <color-picker v-model="currentModel.bodyStroke" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="填充颜色">
+          <el-form-item :label="t('elementSettings.fillColor')">
             <color-picker v-model="currentModel.bodyFill" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="边框宽度">
+          <el-form-item :label="t('elementSettings.borderWidth')">
             <el-input-number v-model="currentModel.bodyStrokeWidth" :min="0" :max="10" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="圆角半径X">
+          <el-form-item :label="t('elementSettings.borderRadiusX')">
             <el-input-number v-model="currentModel.bodyRx" :min="0" :max="50" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="圆角半径Y">
+          <el-form-item :label="t('elementSettings.borderRadiusY')">
             <el-input-number v-model="currentModel.bodyRy" :min="0" :max="50" @change="updateElement" />
           </el-form-item>
         </el-form>
       </el-collapse-item>
 
       <!-- 电池头部样式 -->
-      <el-collapse-item title="电池头部样式" name="head">
+      <el-collapse-item :title="t('elementSettings.headStyle')" name="head">
         <el-form label-position="left" label-width="100px">
-          <el-form-item label="宽度">
+          <el-form-item :label="t('elementSettings.width')">
             <el-input-number v-model="currentModel.headWidth" :min="2" :max="50" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="高度">
+          <el-form-item :label="t('elementSettings.height')">
             <el-input-number v-model="currentModel.headHeight" :min="2" :max="100" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="填充颜色">
+          <el-form-item :label="t('elementSettings.fillColor')">
             <color-picker v-model="currentModel.headFill" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="圆角半径X">
+          <el-form-item :label="t('elementSettings.borderRadiusX')">
             <el-input-number v-model="currentModel.headRx" :min="0" :max="20" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="圆角半径Y">
+          <el-form-item :label="t('elementSettings.borderRadiusY')">
             <el-input-number v-model="currentModel.headRy" :min="0" :max="20" @change="updateElement" />
           </el-form-item>
         </el-form>
       </el-collapse-item>
 
       <!-- 电量显示样式 -->
-      <el-collapse-item title="电量显示样式" name="level">
+      <el-collapse-item :title="t('elementSettings.levelStyle')" name="level">
         <el-form label-position="left" label-width="100px">
-          <el-form-item label="电量">
+          <el-form-item :label="t('elementSettings.level')">
             <el-slider
               v-model="currentModel.level"
               :min="0"
@@ -74,13 +74,13 @@
               @change="updateElement"
             />
           </el-form-item>
-          <el-form-item label="低电量颜色（<20%）">
+          <el-form-item :label="t('elementSettings.lowBatteryColor')">
             <color-picker v-model="currentModel.levelColorLow" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="中等电量颜色（20%-50%）">
+          <el-form-item :label="t('elementSettings.mediumBatteryColor')">
             <color-picker v-model="currentModel.levelColorMedium" @change="updateElement" />
           </el-form-item>
-          <el-form-item label="高电量颜色（>50%）">
+          <el-form-item :label="t('elementSettings.highBatteryColor')">
             <color-picker v-model="currentModel.levelColorHigh" @change="updateElement" />
           </el-form-item>
         </el-form>
@@ -94,6 +94,7 @@ import { ref, computed, onMounted } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM } from '@/elements/status/battery/battery.encoder'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   element: {
@@ -111,6 +112,7 @@ const props = defineProps({
 })
 
 const activeNames = ref(['size', 'body', 'head', 'level'])
+const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}

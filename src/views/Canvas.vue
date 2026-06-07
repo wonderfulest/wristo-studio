@@ -17,13 +17,20 @@ import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoo
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
 import { createHistoryManager, type HistoryManagerHandle } from '@/engine/managers/historyManager'
 import { useDesignStore } from '@/stores/designStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
+import {
+  scaleElementConfig,
+  scaleFabricCanvasForDesignSize,
+  type DesignSize,
+} from '@/utils/designScale'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
 const designStore = useDesignStore()
 const layerStore = useLayerStore()
 const canvasStore = useCanvasStore()
+const elementDataStore = useElementDataStore()
 const RULER_OFFSET = 40
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 3
@@ -34,6 +41,8 @@ let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
 
 const watchSize = computed(() => designStore.designSpec.width)
+const watchWidth = computed(() => designStore.designSpec.width)
+const watchHeight = computed(() => designStore.designSpec.height)
 // 历史记录控制器（Pinia historyStore + Manager 封装）
 const historyStore = useHistoryStore()
 const historyManager: HistoryManagerHandle = createHistoryManager(historyStore)
@@ -45,8 +54,9 @@ onMounted(() => {
     layerStore,
     canvasStore,
     historyStore,
-    editorStore,
     watchSize: watchSize.value,
+    watchWidth: watchWidth.value,
+    watchHeight: watchHeight.value,
     zoomManager: null,
   })
 
@@ -55,6 +65,8 @@ onMounted(() => {
     baseStore,
     editorStore,
     getWatchSize: () => watchSize.value,
+    getWatchWidth: () => watchWidth.value,
+    getWatchHeight: () => watchHeight.value,
     getCanvasOffset: () => canvasOffset.value,
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
@@ -83,10 +95,52 @@ onUnmounted(() => {
   guidelineManager = null
 })
 
-// watchSize 变化时通知辅助线管理器刷新尺寸
+const updateFixedLayersForCanvasSize = () => {
+  const width = watchWidth.value
+  const height = watchHeight.value
+  const circle = canvasStore.watchFaceCircle as any
+
+  if (circle?.set) {
+    circle.set({
+      left: width / 2,
+      top: height / 2,
+      radius: Math.min(width, height) / 2,
+    })
+    circle.setCoords?.()
+    canvasStore.applyGlobalClipPath()
+  }
+
+  baseStore.canvas?.requestRenderAll?.()
+}
+
+const syncElementDataForCanvasSize = (from: DesignSize, to: DesignSize) => {
+  for (const snapshot of elementDataStore.elements) {
+    const eleType = String(snapshot.eleType ?? '')
+    if (eleType === 'global') continue
+    elementDataStore.patchElement(
+      snapshot.id,
+      scaleElementConfig(snapshot.config, from, to) as any,
+    )
+  }
+}
+
+// watchSize 变化时通知辅助线和 Fabric 画布刷新尺寸
 watch(
-  () => watchSize.value,
-  () => {
+  () => [watchWidth.value, watchHeight.value],
+  ([nextWidth, nextHeight], [prevWidth, prevHeight]) => {
+    const from = {
+      width: Number(prevWidth || nextWidth),
+      height: Number(prevHeight || nextHeight),
+    }
+    const to = {
+      width: Number(nextWidth),
+      height: Number(nextHeight),
+    }
+
+    scaleFabricCanvasForDesignSize(baseStore.canvas as any, from, to)
+    syncElementDataForCanvasSize(from, to)
+    updateFixedLayersForCanvasSize()
+    zoomManager?.updateZoom()
     guidelineManager?.updateForWatchSizeChange()
   },
 )
@@ -132,20 +186,20 @@ defineExpose({
 
 .guideline-btn {
   padding: 8px 16px;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .guideline-btn:hover {
-  background: #f5f5f5;
+  background: var(--studio-surface-soft);
 }
 
 .canvas-container {
-  background: white;
+  background: var(--studio-canvas-shell);
   border-radius: 4px;
   position: relative;
   margin: 50px;
@@ -159,7 +213,7 @@ defineExpose({
   min-width: 50px;
   text-align: center;
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 </style>

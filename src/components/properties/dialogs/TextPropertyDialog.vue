@@ -1,7 +1,7 @@
 <template>
-  <el-dialog v-model="dialogVisible" title="Text Property" width="500px" @close="handleClose">
+  <el-dialog v-model="dialogVisible" :title="t('property.textProperty')" width="500px" @close="handleClose">
     <el-form ref="formRef" :model="formData" label-position="top">
-      <el-form-item label="Title" prop="title" :rules="[{ required: true, message: 'Title is required', trigger: 'blur' }]"></el-form-item>
+      <el-form-item :label="t('property.title')" prop="title" :rules="[{ required: true, message: t('property.titleRequired'), trigger: 'blur' }]"></el-form-item>
       <el-input v-model="formData.title" />
 
       <PropertyKeyField
@@ -13,19 +13,19 @@
 
       <DefaultTextField v-model="formData.value" />
 
-      <el-form-item label="Prompt (optional)">
+      <el-form-item :label="t('property.promptOptional')">
         <el-input v-model="formData.prompt" />
       </el-form-item>
 
-      <el-form-item label="Error Message (optional)">
+      <el-form-item :label="t('property.errorMessageOptional')">
         <el-input v-model="formData.errorMessage" />
       </el-form-item>
     </el-form>
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleClose">Cancel</el-button>
-        <el-button type="primary" @click="handleConfirm">Confirm</el-button>
+        <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleConfirm">{{ t('common.confirm') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -38,7 +38,9 @@ import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vu
 import DefaultTextField from '@/components/properties/common/DefaultTextField.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
+import { useI18n } from '@/i18n'
 
+const { t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
@@ -96,17 +98,17 @@ const handleConfirm = async () => {
     })
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error('Please check the form for errors')
+    ElMessage.error(t('property.formError'))
   }
 }
 
 const handleClose = () => {
   ElMessageBox.confirm(
-    'Are you sure to close this dialog? All changes will be lost.',
-    'Warning',
+    t('property.closeConfirm'),
+    t('property.warning'),
     {
-      confirmButtonText: 'Yes',
-      cancelButtonText: 'No',
+      confirmButtonText: t('common.yes'),
+      cancelButtonText: t('common.no'),
       type: 'warning',
     }
   )

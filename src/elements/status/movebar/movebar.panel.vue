@@ -6,7 +6,7 @@
       label-position="left" 
       label-width="100px"
     >
-      <el-form-item label="宽度">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number 
           v-model="currentModel.width" 
           :min="50" 
@@ -15,7 +15,7 @@
         />
       </el-form-item>
       
-      <el-form-item label="高度">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number 
           v-model="currentModel.height" 
           :min="4" 
@@ -24,7 +24,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="箭头间距">
+      <el-form-item :label="t('elementSettings.arrowGap')">
         <el-input-number 
           v-model="currentModel.separator" 
           :min="0" 
@@ -33,7 +33,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="活动级别">
+      <el-form-item :label="t('elementSettings.activityLevel')">
         <el-slider 
           v-model="currentModel.level" 
           :min="0" 
@@ -44,21 +44,21 @@
         />
       </el-form-item>
 
-      <el-form-item label="活动颜色">
+      <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker 
           v-model="currentModel.activeColor" 
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="非活动颜色">
+      <el-form-item :label="t('elementSettings.inactiveColor')">
         <color-picker 
           v-model="currentModel.inactiveColor" 
           @change="updateElement" 
         />
       </el-form-item>
 
-      <el-form-item label="对齐方式">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions"
           v-model="currentModel.originX"
@@ -76,6 +76,7 @@ import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import * as elementManager from '@/engine/managers/elementManager'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{ 
   element?: FabricElement
@@ -86,6 +87,7 @@ const props = defineProps<{
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
+const { t } = useI18n()
 
 const updateElement = () => {
   const patch = {

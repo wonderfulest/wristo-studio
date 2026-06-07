@@ -1,7 +1,7 @@
 <template>
   <div class="auth-callback">
-    <p v-if="loading">Signing in, please wait...</p>
-    <p v-else-if="error">Login failed: {{ error }}</p>
+    <p v-if="loading">{{ t('auth.signingIn') }}</p>
+    <p v-else-if="error">{{ t('auth.loginFailed', { reason: error }) }}</p>
   </div>
 </template>
 
@@ -12,22 +12,23 @@ import { fetchSsoToken, getUserInfo } from '@/api/wristo/auth'
 import type { ApiResponse } from '@/types/api/api'
 import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from '@/i18n'
 
 const loading = ref(true)
 const error = ref('')
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
 
-const clientId = 'dashboard'
-const clientSecret = 'xxx'
+const clientId = 'studio'
 const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
 
 onMounted(async () => {
   
   const code = route.query.code as string
   if (!code) {
-    error.value = 'Failed to get code parameter'
+    error.value = t('auth.missingCode')
     loading.value = false
     return
   }
@@ -35,7 +36,6 @@ onMounted(async () => {
     const res: ApiResponse<SsoTokenResponseData> = await fetchSsoToken({
       code,
       clientId,
-      clientSecret,
       redirectUri
     })
     
@@ -66,7 +66,7 @@ onMounted(async () => {
         router.replace('/')
       }, 100)
     } else {
-      error.value = res.msg || 'Login failed'
+      error.value = res.msg || t('auth.requestFailed')
       const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
       const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
       setTimeout(() => {
@@ -74,7 +74,7 @@ onMounted(async () => {
       }, 5000)
     }
   } catch (e: any) {
-    error.value = e?.response?.data?.msg || e.message || 'Request failed'
+    error.value = e?.response?.data?.msg || e.message || t('auth.requestFailed')
     const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
     const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
     setTimeout(() => {

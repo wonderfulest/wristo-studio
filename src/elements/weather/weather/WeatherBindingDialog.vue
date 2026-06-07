@@ -1,20 +1,20 @@
 <template>
-  <el-dialog v-model="visible" title="Change Binding" width="720px">
+  <el-dialog v-model="visible" :title="t('elementSettings.changeBinding')" width="720px">
     <el-table :data="assets" v-loading="loading" height="420">
-      <el-table-column label="Preview" width="96">
+      <el-table-column :label="t('elementSettings.preview')" width="96">
         <template #default="{ row }">
           <img :src="row.previewUrl || row.imageUrl" alt="preview" style="width:48px;height:48px;object-fit:contain" />
         </template>
       </el-table-column>
       <el-table-column prop="id" label="ID" width="120" />
-      <el-table-column prop="format" label="Format" width="120" />
-      <el-table-column prop="displayType" label="Display" width="120">
+      <el-table-column prop="format" :label="t('elementSettings.format')" width="120" />
+      <el-table-column prop="displayType" :label="t('elementSettings.display')" width="120">
         <template #default="{ row }">
           {{ row.displayType || '-' }}
         </template>
       </el-table-column>
-      <el-table-column prop="author" label="Author" />
-      <el-table-column label="Action" width="140" fixed="right">
+      <el-table-column prop="author" :label="t('elementSettings.author')" />
+      <el-table-column :label="t('elementSettings.action')" width="140" fixed="right">
         <template #default="{ row }">
           <el-button
             type="primary"
@@ -22,7 +22,7 @@
             :loading="loading"
             @click="handleConfirm(row.id)"
           >
-            Choose
+            {{ t('elementSettings.choose') }}
           </el-button>
         </template>
       </el-table-column>
@@ -49,6 +49,7 @@ import {
   type IconAssetVO,
   type DisplayType,
 } from '@/api/wristo/iconGlyph'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   modelValue: boolean
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'bound'): void
 }>()
+const { t } = useI18n()
 
 const visible = computed({
   get: () => props.modelValue,

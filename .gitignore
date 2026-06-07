@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local test and browser automation artifacts
+.playwright-cli/
+test-results/
+playwright-report/
+playwright/.cache/

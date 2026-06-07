@@ -45,13 +45,13 @@ defineEmits<{
 
 <style scoped>
 .font-section {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .section-header {
   padding: 4px 12px;
   font-size: 13px;
-  color: #333;
+  color: var(--studio-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -74,10 +74,10 @@ defineEmits<{
 
 .family-name {
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
   padding: 8px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #eee;
+  background: var(--studio-surface-soft);
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .font-item {
@@ -89,17 +89,17 @@ defineEmits<{
 }
 
 .font-item:hover {
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
 }
 
 .font-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
 }
 
 .preview-text {
   font-size: 18px;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .preview-text-icon {
@@ -111,12 +111,12 @@ defineEmits<{
 
 .font-name {
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .no-fonts {
   padding: 12px;
-  color: #999;
+  color: var(--studio-text-subtle);
   font-size: 13px;
   text-align: center;
 }

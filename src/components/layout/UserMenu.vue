@@ -1,7 +1,36 @@
 <template>
   <div class="user-menu" v-if="userStore.isAuthenticated">
+    <div v-if="pendingCount > 0" class="ticket-reminder">
+      <button class="ticket-reminder-button" type="button" @click.stop="goTickets">
+        <Icon icon="material-symbols:confirmation-number-outline" />
+        <span class="ticket-reminder-label">{{ t('nav.tickets') }}</span>
+        <span class="ticket-reminder-count">{{ pendingCount }}</span>
+      </button>
+
+      <div v-if="ticketNudgeVisible" class="ticket-nudge" role="status">
+        <div class="ticket-nudge-copy">
+          <strong>{{ t('dialog.ticketReminder') }}</strong>
+          <span>{{ t('dialog.ticketReminderBody', { count: pendingCount }) }}</span>
+        </div>
+        <div class="ticket-nudge-actions">
+          <button class="ticket-nudge-link" type="button" @click.stop="goTickets">
+            {{ t('dialog.viewTickets') }}
+          </button>
+          <button
+            class="ticket-nudge-close"
+            type="button"
+            :aria-label="t('common.cancel')"
+            @click.stop="ticketNudgeVisible = false"
+          >
+            <Icon icon="material-symbols:close" />
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="user-avatar" @click.stop="toggleDropdown">
-      <div class="avatar-circle" :style="{ backgroundColor: avatarColor }">
+      <img v-if="userAvatar" :src="userAvatar" class="avatar-image" alt="user avatar" />
+      <div v-else class="avatar-circle" :style="{ backgroundColor: avatarColor }">
         {{ userInitials }}
       </div>
       <span v-if="showAvatarDot" class="avatar-dot" />
@@ -19,54 +48,35 @@
     <div class="dropdown-menu" v-if="showDropdown">
       <div class="dropdown-item" @click="go('/profile')">
         <Icon icon="material-symbols:account-circle" />
-        User Profile
+        {{ t('nav.userProfile') }}
       </div>
       <div class="dropdown-item" @click="go('/devices')">
         <Icon icon="material-symbols:extension" />
-        Devices
+        {{ t('nav.devices') }}
       </div>
       <div class="dropdown-item" @click="go('/fonts')">
         <Icon icon="material-symbols:font-download-outline" />
-        Font Preview
+        {{ t('nav.fontPreview') }}
       </div>
       <div class="dropdown-item" @click="go('/FAQ')">
         <Icon icon="material-symbols:help-outline" />
-        Help Center
+        {{ t('nav.helpCenter') }}
       </div>
       <div class="dropdown-item" @click="openSettings">
         <Icon icon="material-symbols:settings-outline" />
-        Settings
+        {{ t('nav.settings') }}
       </div>
       <div class="dropdown-item" @click="goTickets">
         <Icon icon="material-symbols:confirmation-number-outline" />
-        <span>Tickets</span>
+        <span>{{ t('nav.tickets') }}</span>
         <span v-if="pendingCount > 0" class="menu-badge">{{ pendingCount }}</span>
       </div>
       <div class="dropdown-divider"></div>
       <div class="dropdown-item" @click="handleLogout">
         <Icon icon="material-symbols:logout" />
-        Logout
+        {{ t('nav.logout') }}
       </div>
     </div>
-
-    <el-dialog
-      v-model="ticketsAlertVisible"
-      title="Ticket Reminder"
-      width="400px"
-      :close-on-click-modal="false"
-      :close-on-press-escape="false"
-      :show-close="false"
-    >
-      <div>
-        You have {{ pendingCount }} pending ticket(s) to process.
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="cancelTicketsAlert">Cancel</el-button>
-          <el-button type="primary" @click="confirmTicketsAlert">View Tickets</el-button>
-        </span>
-      </template>
-    </el-dialog>
 
     <DesignerDefaultConfigDialog ref="designerConfigDialogRef" />
   </div>
@@ -78,18 +88,21 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
+import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const showDropdown = ref(false)
 const usernameRef = ref<HTMLElement | null>(null)
 const isUsernameTruncated = ref(false)
 const designerConfigDialogRef = ref<InstanceType<typeof DesignerDefaultConfigDialog> | null>(null)
 
-const ticketsAlertVisible = ref(false)
+const ticketNudgeVisible = ref(false)
 const pendingCount = ref<number>(0)
 const showAvatarDot = computed(() => pendingCount.value > 0)
+const userAvatar = computed(() => userStore.userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')
 
 const userInitials = computed(() => {
   const username = userStore.userInfo?.username || ''
@@ -136,22 +149,13 @@ const go = (path: string) => {
 
 const goTickets = () => {
   showDropdown.value = false
+  ticketNudgeVisible.value = false
   router.push('/tickets')
 }
 
 const openSettings = () => {
   showDropdown.value = false
   designerConfigDialogRef.value?.show()
-}
-
-const cancelTicketsAlert = () => {
-  ticketsAlertVisible.value = false
-}
-
-const confirmTicketsAlert = () => {
-  ticketsAlertVisible.value = false
-  showDropdown.value = false
-  router.push('/tickets')
 }
 
 const fetchPendingTickets = async () => {
@@ -162,7 +166,7 @@ const fetchPendingTickets = async () => {
     const cnt = res.data
     if (typeof cnt === 'number' && cnt > 0) {
       pendingCount.value = cnt
-      ticketsAlertVisible.value = true
+      ticketNudgeVisible.value = true
     }
   } catch (_e) {
     // silent
@@ -181,6 +185,7 @@ onMounted(() => {
     const target = e.target as HTMLElement
     if (!target.closest('.user-menu')) {
       showDropdown.value = false
+      ticketNudgeVisible.value = false
     }
   }
   window.addEventListener('click', closeDropdown)
@@ -197,9 +202,143 @@ onMounted(() => {
 <style scoped>
 .user-menu {
   position: relative;
-  height: 60px;
+  height: 56px;
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.ticket-reminder {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ticket-reminder-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  border: 1px solid var(--studio-primary-border);
+  border-radius: var(--studio-radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.ticket-reminder-button:hover {
+  background: var(--studio-primary-soft-hover);
+  border-color: #7fc4b8;
+}
+
+.ticket-reminder-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ticket-reminder-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  color: #fff;
+  background: #ff4d4f;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.ticket-nudge {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1001;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  color: var(--studio-text);
+  background: #fff;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  box-shadow: var(--studio-shadow-lg);
+}
+
+.ticket-nudge-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ticket-nudge-copy strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.ticket-nudge-copy span {
+  color: var(--studio-text-muted);
+}
+
+.ticket-nudge-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.ticket-nudge-link,
+.ticket-nudge-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ticket-nudge-link {
+  min-height: 32px;
+  padding: 0 10px;
+  color: #fff;
+  background: var(--studio-primary);
+  border-radius: var(--studio-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ticket-nudge-link:hover {
+  background: var(--studio-primary-hover);
+}
+
+.ticket-nudge-close {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--studio-text-muted);
+  border-radius: var(--studio-radius-md);
+}
+
+.ticket-nudge-close:hover {
+  color: var(--studio-text);
+  background: var(--studio-surface-soft);
+}
+
+.ticket-nudge-close svg {
+  width: 18px;
+  height: 18px;
 }
 
 .user-avatar {
@@ -207,14 +346,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  min-height: 40px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--studio-radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .user-avatar:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--studio-surface-soft);
+  border-color: var(--studio-border);
 }
 
 .avatar-circle {
@@ -231,7 +373,18 @@ onMounted(() => {
   transition: transform 0.2s ease;
 }
 
-.user-avatar:hover .avatar-circle {
+.avatar-image {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.user-avatar:hover .avatar-circle,
+.user-avatar:hover .avatar-image {
   transform: scale(1.05);
 }
 
@@ -252,8 +405,8 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  color: #333;
-  font-weight: 500;
+  color: var(--studio-text);
+  font-weight: 650;
 }
 
 .dropdown-menu {
@@ -261,36 +414,99 @@ onMounted(() => {
   top: calc(100% + 4px);
   right: 0;
   background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  box-shadow: var(--studio-shadow-md);
   min-width: 180px;
-  padding: 6px;
+  padding: 8px;
   z-index: 1000;
   transform-origin: top right;
   animation: dropdown-fade 0.2s ease;
+}
+
+@media (max-width: 720px) {
+  .user-menu {
+    flex: 0 0 auto;
+    height: 48px;
+    gap: 4px;
+  }
+
+  .ticket-reminder-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+    position: relative;
+  }
+
+  .ticket-reminder-label {
+    display: none;
+  }
+
+  .ticket-reminder-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  .ticket-nudge {
+    right: -52px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ticket-nudge-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .user-avatar {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .username {
+    display: none;
+  }
+
+  .avatar-dot {
+    top: 4px;
+    left: 28px;
+  }
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
-  color: #333;
+  min-height: 38px;
+  padding: 9px 12px;
+  color: var(--studio-text-muted);
   font-size: 14px;
+  font-weight: 650;
   transition: all 0.2s ease;
-  border-radius: 6px;
+  border-radius: var(--studio-radius-md);
   cursor: pointer;
 }
 
 .dropdown-item:hover {
-  background-color: rgba(33, 150, 243, 0.08);
-  color: #2196F3;
+  background-color: var(--studio-primary-soft);
+  color: var(--studio-primary);
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: #f0f0f0;
-  margin: 6px;
+  background-color: var(--studio-border);
+  margin: 8px 6px;
 }
 
 .menu-badge {

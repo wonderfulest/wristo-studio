@@ -8,14 +8,26 @@
   >
     <div class="settings-container">
       <div class="setting-item">
-        <div class="setting-label">Canvas Background</div>
+        <div class="setting-label">Light Canvas Background</div>
         <div class="setting-control">
           <el-color-picker
-            v-model="backgroundColor"
+            v-model="lightCanvasBackgroundColor"
             show-alpha
-            @change="handleBackgroundColorChange"
+            @change="handleLightCanvasBackgroundColorChange"
           />
-          <div class="color-value">{{ backgroundColor }}</div>
+          <div class="color-value">{{ lightCanvasBackgroundColor }}</div>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">Dark Canvas Background</div>
+        <div class="setting-control">
+          <el-color-picker
+            v-model="darkCanvasBackgroundColor"
+            show-alpha
+            @change="handleDarkCanvasBackgroundColorChange"
+          />
+          <div class="color-value">{{ darkCanvasBackgroundColor }}</div>
         </div>
       </div>
       
@@ -162,8 +174,9 @@ const editorStore = useEditorStore()
 const messageStore = useMessageStore()
 const dialogVisible = ref<boolean>(false)
 
-// 背景色
-const backgroundColor = ref<string>(editorStore.backgroundColor)
+// 设计区背景色
+const lightCanvasBackgroundColor = ref<string>(editorStore.lightCanvasBackgroundColor)
+const darkCanvasBackgroundColor = ref<string>(editorStore.darkCanvasBackgroundColor)
 // 时间模拟器显示状态
 const showTimeSimulator = ref<boolean>(editorStore.showTimeSimulator)
 // 缩放控制显示状态
@@ -183,9 +196,13 @@ const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelin
 // Manual guides (Shift/Cmd click)
 const enableManualGuides = ref<boolean>(editorStore.enableManualGuides)
 
-// 处理背景色变化
-const handleBackgroundColorChange = (color: string) => {
-  backgroundColor.value = color
+// 处理设计区背景色变化
+const handleLightCanvasBackgroundColorChange = (color: string) => {
+  lightCanvasBackgroundColor.value = color
+}
+
+const handleDarkCanvasBackgroundColorChange = (color: string) => {
+  darkCanvasBackgroundColor.value = color
 }
 
 // 处理时间模拟器显示状态变化
@@ -257,7 +274,8 @@ const saveSettings = () => {
   try {
     // 更新 store 中的设置
     editorStore.updateSettings({
-      backgroundColor: backgroundColor.value,
+      lightCanvasBackgroundColor: lightCanvasBackgroundColor.value,
+      darkCanvasBackgroundColor: darkCanvasBackgroundColor.value,
       showTimeSimulator: showTimeSimulator.value,
       showZoomControls: showZoomControls.value,
       showHistoryControls: showHistoryControls.value,
@@ -280,7 +298,8 @@ const saveSettings = () => {
 // 打开对话框
 const openDialog = () => {
   // 初始化值
-  backgroundColor.value = editorStore.backgroundColor
+  lightCanvasBackgroundColor.value = editorStore.lightCanvasBackgroundColor
+  darkCanvasBackgroundColor.value = editorStore.darkCanvasBackgroundColor
   showTimeSimulator.value = editorStore.showTimeSimulator
   showZoomControls.value = editorStore.showZoomControls
   showHistoryControls.value = editorStore.showHistoryControls
@@ -319,7 +338,7 @@ defineExpose({
 .setting-label {
   width: 120px;
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .setting-control {
@@ -331,7 +350,7 @@ defineExpose({
 
 .color-value {
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
   font-family: monospace;
 }
 

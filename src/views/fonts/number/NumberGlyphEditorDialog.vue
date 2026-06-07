@@ -299,7 +299,7 @@ defineExpose({ open, close })
 
 .glyph-tip {
   font-size: 13px;
-  color: #606266;
+  color: var(--studio-text-muted);
   margin-bottom: 12px;
 }
 
@@ -340,8 +340,8 @@ defineExpose({ open, close })
   width: 100%;
   aspect-ratio: 2 / 3;
   border-radius: 8px;
-  border: 1px dashed #dcdfe6;
-  background-color: #fafafa;
+  border: 1px dashed var(--studio-border);
+  background-color: var(--studio-surface-soft);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -395,18 +395,18 @@ defineExpose({ open, close })
   padding: 8px 10px;
   max-width: 90%;
   border-radius: 4px;
-  background: rgba(255,255,255,0.9);
+  background: var(--studio-overlay-surface);
   text-align: center;
 }
 
 .glyph-file {
   font-size: 12px;
-  color: #606266;
+  color: var(--studio-text-muted);
   word-break: break-all;
 }
 
 .glyph-file--empty {
-  color: #c0c4cc;
+  color: var(--studio-text-subtle);
   font-style: italic;
 }
 

@@ -8,6 +8,14 @@
 <script setup>
 import Message from '@/components/Message.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
+import { useLocaleStore } from '@/stores/locale'
+import { useThemeStore } from '@/stores/theme'
+
+const localeStore = useLocaleStore()
+localeStore.syncDocumentLang()
+
+const themeStore = useThemeStore()
+themeStore.syncDocumentTheme()
 </script>
 
 <style>

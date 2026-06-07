@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <el-form :model="currentModel" label-position="left" label-width="100px">
-      <el-form-item label="宽度">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number
           v-model.number="currentModel.width"
           :min="10"
@@ -10,7 +10,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="高度">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number
           v-model.number="currentModel.height"
           :min="10"
@@ -19,7 +19,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="圆角">
+      <el-form-item :label="t('elementSettings.borderRadius')">
         <el-input-number
           v-model.number="borderRadiusProxy"
           :min="0"
@@ -28,21 +28,21 @@
         />
       </el-form-item>
 
-      <el-form-item label="填充颜色">
+      <el-form-item :label="t('elementSettings.fillColor')">
         <color-picker
           v-model="currentModel.fill"
           @change="(v: string) => applyUpdate({ fill: v })"
         />
       </el-form-item>
 
-      <el-form-item label="边框颜色">
+      <el-form-item :label="t('elementSettings.borderColor')">
         <color-picker
           v-model="currentModel.stroke"
           @change="(v: string) => applyUpdate({ stroke: v })"
         />
       </el-form-item>
 
-      <el-form-item label="边框宽度">
+      <el-form-item :label="t('elementSettings.borderWidth')">
         <el-input-number
           v-model.number="currentModel.strokeWidth"
           :min="0"
@@ -51,7 +51,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="不透明度">
+      <el-form-item :label="t('elementSettings.opacity')">
         <el-slider
           v-model.number="currentModel.opacity"
           :min="0"
@@ -68,6 +68,7 @@
 import { computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   element?: any
@@ -78,6 +79,7 @@ const props = defineProps<{
 const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
 })
+const { t } = useI18n()
 
 const borderRadiusProxy = computed<number>({
   get() {

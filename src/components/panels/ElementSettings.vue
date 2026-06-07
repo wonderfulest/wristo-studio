@@ -4,7 +4,7 @@
   <!-- 单个元素设置 -->
   <div class="settings-panel" v-if="activeElements.length == 1">
     <div class="settings-header">
-      <h3 class="settings-title">元素设置</h3>
+      <h3 class="settings-title">{{ t('elementSettings.title') }}</h3>
       <div class="element-type">
         <Icon :icon="getElementIcon(activeElement?.eleType || '')" class="element-icon" />
         <span class="type-name">{{ getElementTypeName(activeElement) }}</span>
@@ -30,11 +30,13 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
+import { useI18n } from '@/i18n'
 import type { FabricElement, ElementType } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
+const { t } = useI18n()
 
 // 通过 activeIds 从画布对象列表映射出当前选中的元素
 const activeElements = computed<FabricElement[]>(() => {
@@ -67,7 +69,7 @@ const getElementIcon = (type: string) => {
       }
     }
   }
-  return '📄' // 默认图标
+  return 'material-symbols:draft-outline' // 默认图标
 }
 
 // 获取元素类型名称
@@ -102,20 +104,22 @@ const applyConfigPatch = computed(() => {
 
 <style scoped>
 .settings-panel {
-  background: white;
-  border-radius: 8px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
   padding: 16px;
-  margin-top: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 0;
+  box-shadow: var(--studio-shadow-sm);
   width: 100%;
 }
 
 .settings-title {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 16px;
-  color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  color: var(--studio-text);
+  font-weight: 800;
+  border-bottom: 1px solid var(--studio-border);
+  padding-bottom: 10px;
 }
 
 .settings-content {
@@ -136,19 +140,22 @@ const applyConfigPatch = computed(() => {
 .setting-item label {
   display: block;
   margin-bottom: 4px;
-  color: #666;
+  color: var(--studio-text-muted);
   font-size: 14px;
+  font-weight: 650;
 }
 
 input[type='number'],
 input[type='color'],
 select {
   width: 100%;
-  padding: 6px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   font-size: 14px;
-  background-color: white;
+  background-color: var(--studio-surface);
+  color: var(--studio-text);
   cursor: pointer;
 }
 
@@ -159,17 +166,18 @@ select {
 
 .align-buttons button {
   padding: 6px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface);
+  color: var(--studio-text-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .align-buttons button.active {
-  background: #1890ff;
+  background: var(--studio-primary);
   color: white;
-  border-color: #1890ff;
+  border-color: var(--studio-primary);
 }
 
 .position-inputs {
@@ -189,16 +197,24 @@ select {
 }
 
 .settings-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .element-type {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  min-height: 42px;
+  padding: 8px 10px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+}
+
+.element-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--studio-primary);
 }
 
 .type-icon {
@@ -207,25 +223,27 @@ select {
 
 .type-name {
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
+  font-weight: 700;
 }
 
 .section-title {
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
   margin: 16px 0 8px;
   padding-bottom: 4px;
-  border-bottom: 1px dashed #eee;
+  border-bottom: 1px dashed var(--studio-border);
+  font-weight: 750;
 }
 
 select:hover {
-  border-color: #1890ff;
+  border-color: var(--studio-primary);
 }
 
 select:focus {
   outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: var(--studio-primary);
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.18);
 }
 
 .position-group {
@@ -234,7 +252,7 @@ select:focus {
 
 .position-label {
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-subtle);
   margin-bottom: 4px;
 }
 </style>

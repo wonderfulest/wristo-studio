@@ -163,7 +163,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
   margin-bottom: 8px;
   padding: 6px 8px;
   border-radius: 6px;
-  background-color: #f5f7fa;
+  background-color: var(--studio-surface-soft);
 }
 
 .naming-preview-row {
@@ -175,7 +175,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 }
 
 .naming-preview-label {
-  color: #606266;
+  color: var(--studio-text-muted);
   white-space: nowrap;
 }
 
@@ -188,7 +188,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 
 .naming-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--studio-text-muted);
   margin-right: 4px;
 }
 
@@ -202,7 +202,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 
 .naming-sep {
   padding: 0 2px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .naming-required {
@@ -212,7 +212,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 
 .naming-preview-value {
   font-family: monospace;
-  color: #303133;
+  color: var(--studio-text);
 }
 
 .naming-preview-input {
@@ -222,7 +222,7 @@ defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
 .naming-tip {
   margin-top: 2px;
   font-size: 11px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .naming-tip-line:not(:last-child) {

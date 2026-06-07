@@ -1,55 +1,88 @@
 :root {
   --font-size: 16px;
 
+  /* Studio design tokens */
+  --studio-bg: #f4f7f6;
+  --studio-bg-deep: #171b22;
+  --studio-surface: #ffffff;
+  --studio-surface-soft: #eef5f3;
+  --studio-surface-raised: rgba(255, 255, 255, 0.96);
+  --studio-canvas-shell: #ffffff;
+  --studio-overlay-surface: rgba(255, 255, 255, 0.96);
+  --studio-ruler-bg: #eef2f1;
+  --studio-ruler-line: #9aa6a3;
+  --studio-ruler-text: #334155;
+  --studio-border: rgba(17, 24, 39, 0.1);
+  --studio-border-strong: rgba(15, 107, 104, 0.32);
+  --studio-text: #111827;
+  --studio-text-muted: #667085;
+  --studio-text-subtle: #98a2b3;
+  --studio-primary: #0f6b68;
+  --studio-primary-hover: #064e4b;
+  --studio-primary-active: #043f3d;
+  --studio-primary-soft: #dff5f1;
+  --studio-primary-soft-hover: #ccebe5;
+  --studio-primary-border: #b9ded7;
+  --studio-focus-ring: rgba(15, 107, 104, 0.22);
+  --studio-accent: #f59e0b;
+  --studio-warning: #f59e0b;
+  --studio-danger: #dc2626;
+  --studio-shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --studio-shadow-md: 0 14px 34px rgba(17, 24, 39, 0.1);
+  --studio-shadow-lg: 0 24px 70px rgba(17, 24, 39, 0.14);
+  --studio-radius-sm: 6px;
+  --studio-radius-md: 8px;
+  --studio-radius-lg: 12px;
+
   /* 主题基础色 */
-  --color-primary: #3a76fb;
-  --color-primary-light-1: #f5faff; /* 主色浅色版本-1 */
-  --color-primary-light-3: #639ffb;
-  --color-primary-light-5: #8cb8ff;
-  --color-primary-light-7: #b5d4ff;
-  --color-primary-light-8: #dce8ff;
-  --color-primary-light-9: #f5faff;
-  --color-primary-dark-2: #2657d4; /* 主色深色版本 */
+  --color-primary: var(--studio-primary);
+  --color-primary-light-1: #f4fbf9; /* 主色浅色版本-1 */
+  --color-primary-light-3: #4d9a95;
+  --color-primary-light-5: #84bdb7;
+  --color-primary-light-7: #b9ded7;
+  --color-primary-light-8: #ccebe5;
+  --color-primary-light-9: #f4fbf9;
+  --color-primary-dark-2: var(--studio-primary-hover); /* 主色深色版本 */
 
   /* 功能色 */
-  --color-success: #21bd70;
-  --color-warning: #f09f00;
-  --color-danger: #ff4d4f;
-  --color-error: #ff4d4f;
-  --color-info: #909399;
+  --color-success: #16a34a;
+  --color-warning: var(--studio-warning);
+  --color-danger: var(--studio-danger);
+  --color-error: var(--studio-danger);
+  --color-info: var(--studio-text-subtle);
 
   /* 中性色 */
   --color-white: #ffffff;
   --color-black: #000000;
-  --bg-color: #fff;
-  --bg-color-page: #fff;
+  --bg-color: var(--studio-surface);
+  --bg-color-page: var(--studio-bg);
   --bg-color-overlay: #ffffff;
 
   /* 边框颜色 */
-  --border-color: #dce8ff;
-  --border-color-light: var(--color-primary-light-8);
-  --border-color-lighter: #f5faff;
-  --border-color-extra-light: #f5faff;
+  --border-color: var(--studio-border);
+  --border-color-light: #dce9e6;
+  --border-color-lighter: #e8f1ef;
+  --border-color-extra-light: #f4fbf9;
 
   /* 填充色 */
-  --fill-color: #f5faff;
-  --fill-color-light: #f5faff;
-  --fill-color-lighter: #f5faff;
-  --fill-color-extra-light: #f5faff;
-  --fill-color-dark: #dce8ff;
-  --fill-color-darker: #b5d4ff;
+  --fill-color: var(--studio-surface-soft);
+  --fill-color-light: #f4fbf9;
+  --fill-color-lighter: #fbfdfc;
+  --fill-color-extra-light: #ffffff;
+  --fill-color-dark: #dce9e6;
+  --fill-color-darker: #b9ded7;
 
   /* 文本颜色 */
-  --text-color-primary: #222934;
-  --text-color-regular: #616e81;
-  --text-color-secondary: #909399;
-  --text-color-placeholder: #b4bcc9;
+  --text-color-primary: var(--studio-text);
+  --text-color-regular: var(--studio-text-muted);
+  --text-color-secondary: var(--studio-text-subtle);
+  --text-color-placeholder: #a4adbc;
   --text-color-disabled: #c0c4cc;
 
-  font-family: Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: light;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -57,3 +90,209 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-studio-theme='dark'] {
+  --studio-bg: #111827;
+  --studio-bg-deep: #090d14;
+  --studio-surface: #18212f;
+  --studio-surface-soft: #202b3a;
+  --studio-surface-raised: rgba(24, 33, 47, 0.96);
+  --studio-canvas-shell: #101722;
+  --studio-overlay-surface: rgba(24, 33, 47, 0.94);
+  --studio-ruler-bg: #151f2d;
+  --studio-ruler-line: #64748b;
+  --studio-ruler-text: #d8e0ec;
+  --studio-border: rgba(226, 232, 240, 0.13);
+  --studio-border-strong: rgba(45, 212, 191, 0.38);
+  --studio-text: #f8fafc;
+  --studio-text-muted: #cbd5e1;
+  --studio-text-subtle: #94a3b8;
+  --studio-primary: #2dd4bf;
+  --studio-primary-hover: #5eead4;
+  --studio-primary-active: #99f6e4;
+  --studio-primary-soft: rgba(45, 212, 191, 0.13);
+  --studio-primary-soft-hover: rgba(45, 212, 191, 0.2);
+  --studio-primary-border: rgba(45, 212, 191, 0.34);
+  --studio-focus-ring: rgba(45, 212, 191, 0.28);
+  --studio-accent: #fbbf24;
+  --studio-warning: #fbbf24;
+  --studio-danger: #f87171;
+  --studio-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --studio-shadow-md: 0 14px 34px rgba(0, 0, 0, 0.34);
+  --studio-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.42);
+
+  --color-primary: var(--studio-primary);
+  --color-primary-light-1: rgba(45, 212, 191, 0.16);
+  --color-primary-light-3: #5eead4;
+  --color-primary-light-5: #99f6e4;
+  --color-primary-light-7: rgba(153, 246, 228, 0.68);
+  --color-primary-light-8: rgba(153, 246, 228, 0.42);
+  --color-primary-light-9: rgba(45, 212, 191, 0.12);
+  --color-primary-dark-2: #14b8a6;
+
+  --color-success: #4ade80;
+  --color-warning: var(--studio-warning);
+  --color-danger: var(--studio-danger);
+  --color-error: var(--studio-danger);
+  --color-info: var(--studio-text-subtle);
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --bg-color: var(--studio-surface);
+  --bg-color-page: var(--studio-bg);
+  --bg-color-overlay: #1f2937;
+
+  --el-bg-color: var(--studio-surface);
+  --el-bg-color-page: var(--studio-bg);
+  --el-bg-color-overlay: var(--studio-surface-raised);
+  --el-text-color-primary: var(--studio-text);
+  --el-text-color-regular: var(--studio-text-muted);
+  --el-text-color-secondary: var(--studio-text-subtle);
+  --el-text-color-placeholder: #64748b;
+  --el-text-color-disabled: #475569;
+  --el-border-color: var(--studio-border);
+  --el-border-color-light: rgba(226, 232, 240, 0.16);
+  --el-border-color-lighter: rgba(226, 232, 240, 0.1);
+  --el-border-color-extra-light: rgba(226, 232, 240, 0.06);
+  --el-fill-color: var(--studio-surface-soft);
+  --el-fill-color-light: #1f2937;
+  --el-fill-color-lighter: #111827;
+  --el-fill-color-extra-light: #0f172a;
+  --el-fill-color-blank: var(--studio-surface);
+  --el-mask-color: rgba(2, 6, 23, 0.72);
+
+  --border-color: var(--studio-border);
+  --border-color-light: rgba(226, 232, 240, 0.16);
+  --border-color-lighter: rgba(226, 232, 240, 0.1);
+  --border-color-extra-light: rgba(226, 232, 240, 0.06);
+
+  --fill-color: var(--studio-surface-soft);
+  --fill-color-light: #1f2937;
+  --fill-color-lighter: #111827;
+  --fill-color-extra-light: #0f172a;
+  --fill-color-dark: #334155;
+  --fill-color-darker: #475569;
+
+  --text-color-primary: var(--studio-text);
+  --text-color-regular: var(--studio-text-muted);
+  --text-color-secondary: var(--studio-text-subtle);
+  --text-color-placeholder: #64748b;
+  --text-color-disabled: #475569;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--studio-bg);
+  color: var(--studio-text);
+}
+
+body {
+  min-width: 320px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+[role='button'],
+.el-button,
+.el-menu-item,
+.el-sub-menu__title {
+  touch-action: manipulation;
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(15, 107, 104, 0.55);
+  outline-offset: 2px;
+}
+
+.el-button {
+  --el-button-border-color: var(--studio-border);
+  --el-button-hover-border-color: var(--studio-primary);
+  --el-button-hover-bg-color: var(--studio-primary-soft);
+  --el-button-hover-text-color: var(--studio-primary);
+  min-height: 36px;
+  border-radius: var(--studio-radius-md);
+  font-weight: 600;
+}
+
+.el-button > span:has(> .el-icon),
+.el-button > span:has(> .iconify),
+.el-button > span:has(> .iconfont) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--studio-primary);
+  --el-button-border-color: var(--studio-primary);
+  --el-button-hover-bg-color: var(--studio-primary-hover);
+  --el-button-hover-border-color: var(--studio-primary-hover);
+  --el-button-active-bg-color: var(--studio-primary-active);
+  --el-button-active-border-color: var(--studio-primary-active);
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  border-radius: var(--studio-radius-md);
+  box-shadow: 0 0 0 1px var(--studio-border) inset;
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--studio-border-strong) inset;
+}
+
+.el-dialog {
+  border-radius: var(--studio-radius-lg);
+  box-shadow: var(--studio-shadow-lg);
+  background: var(--studio-surface);
+  color: var(--studio-text);
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--studio-border);
+  margin-right: 0;
+  padding: 18px 24px 14px;
+}
+
+.el-dialog__body {
+  padding: 22px 24px;
+}
+
+.el-dialog__footer {
+  border-top: 1px solid var(--studio-border);
+  padding: 14px 24px 18px;
+}
+
+:root[data-studio-theme='dark'] .el-overlay {
+  background-color: rgba(2, 6, 23, 0.72);
+}
+
+:root[data-studio-theme='dark'] .el-popper,
+:root[data-studio-theme='dark'] .el-select__popper,
+:root[data-studio-theme='dark'] .el-picker__popper,
+:root[data-studio-theme='dark'] .el-message-box {
+  background: var(--studio-surface-raised);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+:root[data-studio-theme='dark'] .el-table,
+:root[data-studio-theme='dark'] .el-table tr,
+:root[data-studio-theme='dark'] .el-table th.el-table__cell,
+:root[data-studio-theme='dark'] .el-table td.el-table__cell {
+  background-color: var(--studio-surface);
+  color: var(--studio-text);
+  border-color: var(--studio-border);
+}
+
+:root[data-studio-theme='dark'] .el-table__body tr:hover > td.el-table__cell {
+  background-color: var(--studio-surface-soft);
+}

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h2>Recent Projects</h2>
+      <h2>{{ t('project.recentProjects') }}</h2>
     </div>
     <!-- <el-input
       v-model="searchQuery"
@@ -24,7 +24,7 @@
               <span class="empty-card-plus">+</span>
             </div>
           </div>
-          <div class="empty-card-text">New Project</div>
+          <div class="empty-card-text">{{ t('project.newProject') }}</div>
         </div>
       </el-col>
       <el-col
@@ -74,6 +74,9 @@ import type { Design } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import dayjs from 'dayjs'
 import emitter from '@/utils/eventBus'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 // 是否为商家用户（拥有 ROLE_MERCHANT 角色）
 const isMerchantUser = computed(() => {
@@ -141,14 +144,14 @@ const getDesignImageUrl = (design: Design) => {
 
 const getStatusText = (status: Design['designStatus']) => {
   const statusMap: Record<string, string> = {
-    draft: 'Draft',
-    submitted: 'Pending',
-    approved: 'Approved',
-    rejected: 'Rejected',
-    packaged: 'Packaged',
-    published: 'Published',
+    draft: t('status.draft'),
+    submitted: t('status.submitted'),
+    approved: t('status.approved'),
+    rejected: t('status.rejected'),
+    packaged: t('status.packaged'),
+    published: t('status.published'),
   }
-  return statusMap[status] || 'Unknown'
+  return statusMap[status] || t('status.unknown')
 }
 
 const getStatusColor = (status: Design['designStatus']) => {
@@ -158,18 +161,18 @@ const getStatusColor = (status: Design['designStatus']) => {
     approved: '#67C23A',
     rejected: '#F56C6C',
     packaged: '#E6A23C',
-    published: '#409EFF',
+    published: '#0f6b68',
   }
   return statusMap[status] || '#909399'
 }
 
 const formatDateNullable = (date: string | number | null | undefined) => {
-  if (!date) return 'Never'
+  if (!date) return t('common.never')
   return dayjs(date).format('YYYY-MM-DD HH:mm')
 }
 
 const getCreatorName = (design: Design) => {
-  return design.user?.username || 'Unknown User'
+  return design.user?.username || t('common.unknownUser')
 }
 
 const hasDownloadablePackage = (design: Design): boolean => {
@@ -199,6 +202,7 @@ const handleCreateNewProject = () => {
   margin: 0;
   font-size: 24px;
   font-weight: 800;
+  color: var(--studio-text);
 }
 
 .search-input {
@@ -210,7 +214,7 @@ const handleCreateNewProject = () => {
   margin-top: 16px;
 }
 
-/* 在最近项目区仅保留 DesignCard 底部操作区中的第一个按钮（✏️ Edit），隐藏其余按钮 */
+/* 在最近项目区仅保留 DesignCard 底部操作区中的第一个按钮，隐藏其余按钮 */
 .design-grid :deep(.actions .el-button:nth-child(n + 2)) {
   display: none;
 }
@@ -223,14 +227,15 @@ const handleCreateNewProject = () => {
 .empty-card {
   height: 100%;
   min-height: 180px;
-  border-radius: 12px;
-  border: 2px dashed #d3d7de;
+  border-radius: var(--studio-radius-lg);
+  border: 1.5px dashed var(--studio-border-strong);
+  background: var(--studio-surface-raised);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .empty-card-visual {
@@ -248,8 +253,9 @@ const handleCreateNewProject = () => {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #000;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,19 +264,20 @@ const handleCreateNewProject = () => {
 .empty-card-plus {
   font-size: 108px;
   line-height: 1;
-  color: #fff;
-  font-weight: 700;
+  color: var(--studio-primary);
+  font-weight: 500;
 }
 
 .empty-card-text {
   font-size: 18px;
-  color: #111827;
-  font-weight: 600;
+  color: var(--studio-text);
+  font-weight: 750;
 }
 
 .empty-card:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
+  transform: translateY(-2px);
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  box-shadow: var(--studio-shadow-md);
 }
 </style>

@@ -20,7 +20,7 @@
         <div class="settings-section">
           <!-- 背景图设置 -->
           <div class="setting-item">
-            <label>Background Image</label>
+            <label>{{ t('elementSettings.backgroundImage') }}</label>
             <ImageUpload
               :model-value="currentConfigMap[val].imageId"
               :preview-url="currentConfigMap[val].imageUrl"
@@ -32,7 +32,7 @@
 
           <!-- 颜色变量列表 -->
           <div class="setting-item" v-if="false">
-            <label>Color Variables</label>
+            <label>{{ t('elementSettings.colorVariables') }}</label>
             <div class="color-var-list" v-if="colorVariables.length">
               <div
                 v-for="item in colorVariables"
@@ -53,7 +53,7 @@
 
           <!-- 颜色变量 JSON 只读展示 -->
           <div class="setting-item" v-if="false">
-            <label class="color-json-label">Color Variables (JSON)</label>
+            <label class="color-json-label">{{ t('elementSettings.colorVariablesJson') }}</label>
             <el-input
               :value="colorJson"
               type="textarea"
@@ -68,7 +68,7 @@
               v-model="currentConfigMap[val].isDefault"
               :active-value="1"
               :inactive-value="0"
-              active-text="Default"
+              :active-text="t('property.default')"
               @change="(v) => handleDefaultToggle(val, v)"
             />
           </div>
@@ -81,7 +81,7 @@
               :loading="savingMap[val]"
               @click="saveConfig(val)"
             >
-              Save
+              {{ t('common.save') }}
             </el-button>
             <el-button
               v-if="currentConfigMap[val].id"
@@ -114,6 +114,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   appId: {
@@ -138,6 +139,7 @@ const deletingMap = ref({})
 // 颜色变量来源于全局属性 store（与 PropertiesPanel 一致）
 const propertiesStore = usePropertiesStore()
 const baseStore = useBaseStore()
+const { t } = useI18n()
 
 const colorVariables = computed(() => {
   const result = []
@@ -480,7 +482,7 @@ watch(
 
 .color-var-name {
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .color-var-picker {

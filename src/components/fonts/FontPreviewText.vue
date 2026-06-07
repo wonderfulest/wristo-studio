@@ -84,7 +84,7 @@ watch(
 
 <style scoped>
 .preview-text {
-  color: #191919;
+  color: var(--studio-text);
   font-size: 28px;
 }
 </style>

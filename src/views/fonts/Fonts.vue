@@ -190,12 +190,13 @@ onMounted(() => {
 .fonts-preview {
   padding: 12px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--studio-text);
 }
 
 .search-panel {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -220,7 +221,7 @@ onMounted(() => {
 .preview-prefix {
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 .filters-form { margin-top: 12px; }
 .filters-form :deep(.el-form-item) { margin-right: 16px; margin-bottom: 8px; }
@@ -238,9 +239,9 @@ onMounted(() => {
 }
 
 .font-card {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 6px 12px;
   display: flex;
   flex-direction: column;
@@ -248,9 +249,9 @@ onMounted(() => {
 }
 
 .fonts-grid :deep(.font-main) {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 6px 12px;
 }
 
@@ -264,7 +265,7 @@ onMounted(() => {
 .font-name {
   font-size: 12px;
   font-weight: 600;
-  color: #333;
+  color: var(--studio-text);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -273,7 +274,7 @@ onMounted(() => {
 .preview-oneline {
   font-size: 32px;
   min-height: 32px;
-  color: #444;
+  color: var(--studio-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,9 +284,9 @@ onMounted(() => {
 
 /* 上传区域样式 */
 .upload-section {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 20px;
   margin-bottom: 20px;
 }
@@ -298,13 +299,13 @@ onMounted(() => {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .upload-description {
   margin: 0;
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .font-upload-area {
@@ -314,9 +315,9 @@ onMounted(() => {
 .font-upload-area :deep(.el-upload-dragger) {
   width: 100%;
   height: 120px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
-  background: #fafafa;
+  border: 2px dashed var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,8 +325,8 @@ onMounted(() => {
 }
 
 .font-upload-area :deep(.el-upload-dragger:hover) {
-  border-color: #409eff;
-  background: #f0f9ff;
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
 }
 
 .upload-content {
@@ -336,25 +337,25 @@ onMounted(() => {
 
 .upload-icon {
   font-size: 32px;
-  color: #999;
+  color: var(--studio-text-subtle);
 }
 
 .upload-text span {
   display: block;
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
   margin-bottom: 4px;
 }
 
 .upload-tip {
   margin: 0;
   font-size: 12px;
-  color: #999;
+  color: var(--studio-text-subtle);
 }
 
 /* 上传队列样式 */
 .upload-queue {
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--studio-border);
   padding-top: 16px;
 }
 
@@ -365,7 +366,7 @@ onMounted(() => {
   margin-bottom: 12px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .queue-list {
@@ -376,7 +377,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--studio-border);
   border-radius: 6px;
   margin-bottom: 8px;
   transition: all 0.3s;
@@ -387,18 +388,18 @@ onMounted(() => {
 }
 
 .queue-item.processing {
-  border-color: #409eff;
-  background: #f0f9ff;
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
 }
 
 .queue-item.completed {
-  border-color: #67c23a;
-  background: #f0f9ff;
+  border-color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
 }
 
 .queue-item.error {
-  border-color: #f56c6c;
-  background: #fef0f0;
+  border-color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
 }
 
 .item-info {
@@ -409,7 +410,7 @@ onMounted(() => {
 .item-name {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--studio-text);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -418,7 +419,7 @@ onMounted(() => {
 
 .item-details {
   font-size: 12px;
-  color: #666;
+  color: var(--studio-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -429,20 +430,20 @@ onMounted(() => {
 }
 
 .status-pending {
-  color: #999;
+  color: var(--studio-text-subtle);
 }
 
 .status-processing {
-  color: #409eff;
+  color: var(--studio-primary);
   animation: spin 1s linear infinite;
 }
 
 .status-completed {
-  color: #67c23a;
+  color: var(--el-color-success);
 }
 
 .status-error {
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 @keyframes spin {

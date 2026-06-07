@@ -5,6 +5,8 @@ export interface ZoomManagerDeps {
   editorStore: any
   // 获取当前画布逻辑尺寸（watchSize）
   getWatchSize: () => number
+  getWatchWidth?: () => number
+  getWatchHeight?: () => number
   // 获取当前 viewport 偏移
   getCanvasOffset: () => { x: number; y: number }
   minZoom: number
@@ -26,7 +28,7 @@ export interface ZoomManagerHandle {
  * - 根据 editorStore.zoomLevel 与 watchSize 更新 Fabric viewportTransform
  */
 export function attachZoomManager(deps: ZoomManagerDeps): ZoomManagerHandle {
-  const { baseStore, editorStore, getWatchSize, getCanvasOffset, minZoom, maxZoom, zoomStep } = deps
+  const { baseStore, editorStore, getWatchSize, getWatchWidth, getWatchHeight, getCanvasOffset, minZoom, maxZoom, zoomStep } = deps
 
   let wheelHandler: ((e: WheelEvent) => void) | null = null
 
@@ -35,7 +37,8 @@ export function attachZoomManager(deps: ZoomManagerDeps): ZoomManagerHandle {
 
     const currentZoom = editorStore.zoomLevel
     const canvas = baseStore.canvas as Canvas
-    const watchSize = getWatchSize()
+    const watchWidth = getWatchWidth?.() ?? getWatchSize()
+    const watchHeight = getWatchHeight?.() ?? getWatchSize()
     const offset = getCanvasOffset()
 
     canvas.setViewportTransform([
@@ -48,9 +51,8 @@ export function attachZoomManager(deps: ZoomManagerDeps): ZoomManagerHandle {
     ])
 
     // 逻辑尺寸跟随缩放一起放大，避免在高缩放时背景圆被右侧/下方边界裁切
-    const scaledSize = watchSize * currentZoom
-    canvas.setWidth(scaledSize)
-    canvas.setHeight(scaledSize)
+    canvas.setWidth(watchWidth * currentZoom)
+    canvas.setHeight(watchHeight * currentZoom)
 
     canvas.calcOffset()
     canvas.requestRenderAll()

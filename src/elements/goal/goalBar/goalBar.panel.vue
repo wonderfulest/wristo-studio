@@ -11,21 +11,21 @@
         v-model="currentModel.goalProperty"
         @change="updateElement"
       />
-      <el-form-item label="Width">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number 
           v-model="currentModel.width" 
           disabled
         />
       </el-form-item>
       
-      <el-form-item label="Height">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number 
           v-model="currentModel.height" 
           disabled
         />
       </el-form-item>
 
-      <el-form-item label="Border Radius">
+      <el-form-item :label="t('elementSettings.borderRadius')">
         <el-input-number 
           v-model="currentModel.borderRadius" 
           :min="0" 
@@ -34,7 +34,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="Padding">
+      <el-form-item :label="t('elementSettings.padding')">
         <el-input-number 
           v-model="currentModel.padding" 
           :min="0" 
@@ -43,7 +43,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="Alignment">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions"
           v-model="currentModel.originX"
@@ -51,7 +51,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="Progress">
+      <el-form-item :label="t('elementSettings.progress')">
         <el-slider 
           v-model="currentModel.progress" 
           :min="0" 
@@ -61,31 +61,31 @@
         />
       </el-form-item>
 
-      <el-form-item label="Active Color">
+      <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker 
           v-model="currentModel.color" 
           @change="handleMainColorChange" 
         />
       </el-form-item>
 
-      <el-form-item label="Background Color">
+      <el-form-item :label="t('elementSettings.backgroundColor')">
         <color-picker 
           v-model="currentModel.bgColor" 
           @change="handleBgColorChange" 
         />
       </el-form-item>
 
-      <el-form-item label="Progress Align">
+      <el-form-item :label="t('elementSettings.progressAlign')">
         <el-select 
           v-model="currentModel.progressAlign" 
           @change="updateElement"
         >
-          <el-option label="Left" value="left" />
-          <el-option label="Right" value="right" />
+          <el-option :label="t('elementSettings.left')" value="left" />
+          <el-option :label="t('elementSettings.right')" value="right" />
         </el-select>
       </el-form-item>
 
-      <el-form-item label="Border Width">
+      <el-form-item :label="t('elementSettings.borderWidth')">
         <el-input-number 
           v-model="currentModel.borderWidth" 
           :min="0" 
@@ -94,7 +94,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="Border Color">
+      <el-form-item :label="t('elementSettings.borderColor')">
         <color-picker 
           v-model="currentModel.borderColor" 
           @change="updateElement" 
@@ -112,8 +112,10 @@ import { originXOptions } from '@/config/settings'
 import { ElMessage } from 'element-plus'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import { useI18n } from '@/i18n'
 
 const emit = defineEmits(['close'])
+const { t } = useI18n()
 
 const props = defineProps<{
   element?: any

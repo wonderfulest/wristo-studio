@@ -323,13 +323,13 @@ defineExpose({
 }
 
 .asset-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  border-color: #0f6b68;
+  box-shadow: 0 2px 8px rgba(15, 107, 104, 0.2);
 }
 
 .asset-item.active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
   border-width: 2px;
 }
 
@@ -351,7 +351,7 @@ defineExpose({
 }
 
 .upload-item:hover {
-  background-color: #ecf5ff;
+  background-color: var(--studio-primary-soft);
 }
 
 .upload-icon {
@@ -361,7 +361,7 @@ defineExpose({
 }
 
 .upload-item:hover .upload-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 .upload-item span,
@@ -378,7 +378,7 @@ defineExpose({
 }
 
 .action-item:hover {
-  background-color: #ecf5ff;
+  background-color: var(--studio-primary-soft);
 }
 
 .action-icon {
@@ -388,11 +388,11 @@ defineExpose({
 }
 
 .action-item:hover .action-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 .action-item:hover span {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 .loading-item {
@@ -433,7 +433,7 @@ defineExpose({
 
 .loading-icon {
   font-size: 20px;
-  color: #409eff;
+  color: #0f6b68;
   animation: spin 1s linear infinite;
 }
 

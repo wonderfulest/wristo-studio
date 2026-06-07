@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="Select Property"
+    :title="t('property.selectProperty')"
     width="800px"
     :close-on-click-modal="false"
     :destroy-on-close="true"
@@ -14,18 +14,18 @@
     >
       <!-- 基本信息部分 -->
       <div class="form-section">
-        <h3 class="section-title">Basic Information</h3>
+        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
         <el-form-item 
-          label="Title" 
+          :label="t('property.title')" 
           prop="title"
           :rules="[
-            { required: true, message: 'Please input title', trigger: 'blur' },
-            { min: 2, max: 50, message: 'Length should be 2 to 50', trigger: 'blur' }
+            { required: true, message: t('property.inputTitle'), trigger: 'blur' },
+            { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
           ]"
         >
-          <el-input v-model="formData.title" placeholder="Select Property" />
+          <el-input v-model="formData.title" :placeholder="t('property.selectProperty')" />
           <div class="field-help">
-            The title to display in Garmin Connect Mobile/Garmin Express when displaying the list of settings/value of the setting.
+            {{ t('property.titleHelp') }}
           </div>
         </el-form-item>
 
@@ -36,10 +36,10 @@
           placeholder="data_1"
         />
 
-        <el-form-item label="Type">
+        <el-form-item :label="t('property.type')">
           <el-input v-model="formData.type" disabled placeholder="data" />
           <div class="field-help">
-            The display type of the setting.
+            {{ t('property.typeHelp') }}
           </div>
         </el-form-item>
       </div>
@@ -47,15 +47,15 @@
       <!-- 选项部分 -->
       <div class="form-section">
         <div class="section-header">
-          <h3 class="section-title">Data Options</h3>
+          <h3 class="section-title">{{ t('property.dataOptions') }}</h3>
         </div>
         <el-form-item 
-          label="Default Value"
+          :label="t('property.defaultValue')"
           prop="value"
         >
           <el-select 
             v-model="formData.value" 
-            placeholder="Select data type"
+            :placeholder="t('property.selectDataType')"
             style="width: 100%"
             @change="handleValueChange"
           >
@@ -73,11 +73,11 @@
           </el-select>
         </el-form-item>
         <el-collapse v-model="activeOptions" class="options-collapse">
-          <el-collapse-item title="Data Options" name="options">
+          <el-collapse-item :title="t('property.dataOptions')" name="options">
             <el-form-item 
               prop="options"
               :rules="[
-                { required: true, message: 'At least one option is required', trigger: 'change' }
+                { required: true, message: t('property.atLeastOneOption'), trigger: 'change' }
               ]"
             >
               <div class="options-list">
@@ -90,17 +90,17 @@
                     </div>
                   </div>
                   <div class="option-actions">
-                    <el-tooltip content="Move Up" placement="top" :disabled="index === 0">
+                    <el-tooltip :content="t('common.moveUp')" placement="top" :disabled="index === 0">
                       <el-button type="primary" link :disabled="index === 0" @click="moveOption(index, 'up')">
                         <el-icon><ArrowUp /></el-icon>
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip content="Move Down" placement="top" :disabled="index === formData.options.length - 1">
+                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === formData.options.length - 1">
                       <el-button type="primary" link :disabled="index === formData.options.length - 1" @click="moveOption(index, 'down')">
                         <el-icon><ArrowDown /></el-icon>
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip content="Delete" placement="top">
+                    <el-tooltip :content="t('common.delete')" placement="top">
                       <el-button type="danger" link @click="deleteOption(index)">
                         <el-icon><Delete /></el-icon>
                       </el-button>
@@ -115,28 +115,28 @@
 
       <!-- 提示信息部分 -->
       <div class="form-section">
-        <h3 class="section-title">Messages</h3>
-        <el-form-item label="Prompt">
+        <h3 class="section-title">{{ t('property.messages') }}</h3>
+        <el-form-item :label="t('property.prompt')">
           <el-input 
             type="textarea" 
             v-model="formData.prompt" 
             :rows="2" 
-            placeholder="The message to display when prompting the user to set the value."
+            :placeholder="t('property.promptPlaceholder')"
           />
           <div class="field-help">
-            The message to display when prompting the user to set the value.
+            {{ t('property.promptPlaceholder') }}
           </div>
         </el-form-item>
 
-        <el-form-item label="Error Message">
+        <el-form-item :label="t('property.errorMessage')">
           <el-input 
             type="textarea" 
             v-model="formData.errorMessage" 
             :rows="2" 
-            placeholder="An error message to display if the value isn't valid."
+            :placeholder="t('property.errorPlaceholder')"
           />
           <div class="field-help">
-            An error message to display if the value a user enters isn't valid based on the type, min, max and maxLength values.
+            {{ t('property.errorHelp') }}
           </div>
         </el-form-item>
       </div>
@@ -144,8 +144,8 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">Cancel</el-button>
-        <el-button type="primary" @click="handleConfirm">Confirm</el-button>
+        <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleConfirm">{{ t('common.confirm') }}</el-button>
       </div>
     </template>
   </el-dialog>
@@ -157,9 +157,11 @@ import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
+import { useI18n } from '@/i18n'
 import { DataTypeOptions } from '@/config/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 
+const { t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
@@ -228,17 +230,17 @@ const handleConfirm = async () => {
     })
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error('Please check the form for errors')
+    ElMessage.error(t('property.formError'))
   }
 }
 
 const handleClose = () => {
   ElMessageBox.confirm(
-    'Are you sure to close this dialog? All changes will be lost.',
-    'Warning',
+    t('property.closeConfirm'),
+    t('property.warning'),
     {
-      confirmButtonText: 'Yes',
-      cancelButtonText: 'No',
+      confirmButtonText: t('common.yes'),
+      cancelButtonText: t('common.no'),
       type: 'warning',
     }
   ).then(() => {

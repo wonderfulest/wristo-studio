@@ -6,35 +6,35 @@
         @change="updateElement"
       />
 
-      <el-form-item label="Width">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number v-model="currentModel.width" :min="50" :max="600" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Height">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number v-model="currentModel.height" :min="4" :max="60" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Segments">
+      <el-form-item :label="t('elementSettings.segments')">
         <el-input-number v-model="currentModel.segments" :min="1" :max="50" :step="1" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Gap">
+      <el-form-item :label="t('elementSettings.gap')">
         <el-input-number v-model="currentModel.gap" :min="0" :max="20" :step="1" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Border Radius">
+      <el-form-item :label="t('elementSettings.borderRadius')">
         <el-input-number v-model="currentModel.borderRadius" :min="0" :max="30" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Progress">
+      <el-form-item :label="t('elementSettings.progress')">
         <el-slider v-model="currentModel.progress" :min="0" :max="1" :step="0.01" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Active Color">
+      <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker v-model="currentModel.color" @change="handleActiveColorChange" />
       </el-form-item>
 
-      <el-form-item label="Background Color">
+      <el-form-item :label="t('elementSettings.backgroundColor')">
         <color-picker v-model="currentModel.bgColor" @change="handleBgColorChange" />
       </el-form-item>
     </el-form>
@@ -46,6 +46,7 @@ import { computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   element: {
@@ -61,6 +62,7 @@ const props = defineProps({
     required: false,
   },
 })
+const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
   return (props as any).config ?? props.element ?? {}

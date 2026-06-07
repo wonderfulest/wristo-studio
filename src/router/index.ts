@@ -114,7 +114,7 @@ const router = createRouter({
 })
 
 // 导航守卫
-router.beforeEach(async (to, _, next) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
   // 检查路由是否需要认证
   const requiresAuth = to.matched.some((record) => (record.meta as any).requiresAuth)
@@ -126,12 +126,8 @@ router.beforeEach(async (to, _, next) => {
     setTimeout(() => {
       window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
     }, 1000)
-    // 阻止导航，不调用next()
     return false
   }
-
-  // 如果用户已登录且访问登录页，重定向到首页
-  next()
 })
 
 export default router

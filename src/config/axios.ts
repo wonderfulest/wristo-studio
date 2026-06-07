@@ -3,9 +3,11 @@ import { ElMessage } from 'element-plus'
 import { BizErrorCode } from './errorCode'
 import type { ApiResponse } from '../types/api/api'
 import { useUserStore } from '../stores/user'
+import { redirectToSsoLogin } from '@/utils/ssoRedirect'
 
 const instance = axios.create({
   baseURL: '/wristo-api', // 走 vite 代理
+  withCredentials: true,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
@@ -34,13 +36,13 @@ instance.interceptors.response.use(
     }
   },
   error => {
-    if (error.response?.status === 403) {
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
+      const userStore = useUserStore()
+      userStore.token = ''
+      userStore.userInfo = null
       ElMessage.error('登录已过期，请重新登录')
-      setTimeout(() => {
-        const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
-        const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
-        window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`  
-      }, 30000)
+      redirectToSsoLogin('studio', 1000)
     } else {
       ElMessage.error('网络错误，请稍后重试')
     }

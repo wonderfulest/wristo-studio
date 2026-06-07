@@ -315,17 +315,18 @@ onUnmounted(() => {
 
 .font-preview {
   padding: 8px 12px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   cursor: pointer;
-  background: white;
+  background: var(--studio-surface);
+  color: var(--studio-text);
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
 .font-preview:hover {
-  border-color: #409eff;
+  border-color: var(--studio-primary);
 }
 
 .font-panel {
@@ -334,21 +335,21 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: white;
-  border: 1px solid #dcdfe6;
+  background: var(--studio-surface-raised);
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--studio-shadow-md);
   z-index: 1000;
 }
 
 .font-name {
   font-size: 13px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .preview-text {
   font-size: 18px;
-  color: #333;
+  color: var(--studio-text);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -367,14 +368,14 @@ onUnmounted(() => {
   padding: 12px;
   border: none;
   background: none;
-  color: #409eff;
+  color: var(--studio-primary);
   font-size: 14px;
   cursor: pointer;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--studio-border);
 }
 
 .add-font-btn:hover {
-  background: #f5f7fa;
+  background: var(--studio-surface-soft);
 }
 
 .icon-lib-tip {
@@ -382,10 +383,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  border-top: 1px solid var(--studio-border);
+  border-bottom: 1px solid var(--studio-border);
   font-size: 13px;
-  color: #606266;
+  color: var(--studio-text-muted);
 }
 
 /* solid divider between sections (thicker with subtle pattern) */
@@ -396,12 +397,12 @@ onUnmounted(() => {
   margin: 12px 0; /* more spacing */
   background: repeating-linear-gradient(
     135deg,
-    #e5e7eb 0px,
-    #e5e7eb 8px,
-    #f3f4f6 8px,
-    #f3f4f6 16px
+    var(--studio-border) 0px,
+    var(--studio-border) 8px,
+    var(--studio-surface-soft) 8px,
+    var(--studio-surface-soft) 16px
   );
-  box-shadow: inset 0 0 0 1px #e5e7eb; /* crisp border */
+  box-shadow: inset 0 0 0 1px var(--studio-border); /* crisp border */
 }
 
 ::-webkit-scrollbar {
@@ -410,17 +411,17 @@ onUnmounted(() => {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--studio-surface-soft);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--studio-border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--studio-primary-border);
 }
 
 .font-upload {
@@ -456,7 +457,7 @@ onUnmounted(() => {
 
 .upload-icon {
   font-size: 48px;
-  color: #409EFF;
+  color: var(--studio-primary);
 }
 
 .upload-text {
@@ -466,11 +467,11 @@ onUnmounted(() => {
 .upload-tip {
   margin-top: 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--studio-text-subtle);
 }
 
 .font-info {
-  background: #f8f9fa;
+  background: var(--studio-surface-soft);
   border-radius: 8px;
   padding: 16px;
 }
@@ -484,7 +485,7 @@ onUnmounted(() => {
 
 .file-name {
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
   font-weight: 500;
 }
 
@@ -500,12 +501,12 @@ onUnmounted(() => {
 
 .preview-label {
   font-size: 14px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .font-preview {
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   padding: 16px;
 }
@@ -520,74 +521,17 @@ onUnmounted(() => {
 
 .preview-numbers {
   font-size: 24px;
-  color: #409EFF;
+  color: var(--studio-primary);
 }
 
 .preview-letters {
   font-size: 20px;
-  color: #333;
+  color: var(--studio-text);
 }
 
 .preview-chinese {
   font-size: 18px;
-  color: #666;
-}
-
-/* 深色模式支持 */
-@media (prefers-color-scheme: dark) {
-  .form-item label {
-    color: #e0e0e0;
-  }
-
-  .form-tip {
-    color: #888;
-  }
-
-  .font-preview {
-    border-color: #444;
-    background: #2a2a2a;
-    color: #e0e0e0;
-  }
-
-  .font-info {
-    background: #2a2a2a;
-  }
-
-  .file-name {
-    color: #e0e0e0;
-  }
-
-  .preview-label {
-    color: #e0e0e0;
-  }
-
-  .font-preview {
-    background: #1a1a1a;
-    border-color: #444;
-  }
-
-  .preview-letters {
-    color: #e0e0e0;
-  }
-
-  .preview-chinese {
-    color: #bbb;
-  }
-
-  .upload-tip {
-    color: #888;
-  }
-
-  .section-divider {
-    background: repeating-linear-gradient(
-      135deg,
-      #343434 0px,
-      #343434 8px,
-      #2a2a2a 8px,
-      #2a2a2a 16px
-    );
-    box-shadow: inset 0 0 0 1px #3a3a3a;
-  }
+  color: var(--studio-text-muted);
 }
 
 </style>

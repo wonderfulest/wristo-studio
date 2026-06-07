@@ -1,7 +1,7 @@
 <template>
   <div class="image-properties">
     <el-form label-position="left" label-width="120px">
-      <el-form-item label="素材">
+      <el-form-item :label="t('elementSettings.asset')">
         <AssetPicker
           :selected-url="imageUrl"
           :selected-asset-id="assetId"
@@ -11,11 +11,11 @@
         />
       </el-form-item>
 
-      <el-form-item label="宽度">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number v-model="displayWidth" :min="1" :max="9999" disabled />
       </el-form-item>
 
-      <el-form-item label="高度">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number v-model="displayHeight" :min="1" :max="9999" disabled />
       </el-form-item>
     </el-form>
@@ -29,6 +29,7 @@ import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   element?: FabricElement
@@ -37,6 +38,7 @@ const props = defineProps<{
 }>()
 
 const canvasStore = useCanvasStore()
+const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}

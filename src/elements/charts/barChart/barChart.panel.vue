@@ -10,7 +10,7 @@
     >
       <ChartPropertyField v-model="formModel.chartProperty" @change="(v: any) => applyUpdate({ chartProperty: v })" />
 
-        <el-form-item label="宽度">
+        <el-form-item :label="t('elementSettings.width')">
         <el-input-number 
           v-model="formModel.width" 
           :min="60" 
@@ -19,7 +19,7 @@
         />
       </el-form-item>
       
-      <el-form-item label="高度">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number 
           v-model="formModel.height" 
           :min="20" 
@@ -28,7 +28,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="对齐方式">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions" 
           v-model="formModel.originX"
@@ -36,7 +36,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="柱形宽度">
+      <el-form-item :label="t('elementSettings.barWidth')">
         <el-input-number 
           v-model="formModel.barWidth" 
           :min="1" 
@@ -46,7 +46,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="区间颜色(5段)">
+      <el-form-item :label="t('elementSettings.rangeColors')">
         <div style="display:flex; gap: 8px; flex-wrap: wrap;">
           <color-picker
             v-for="idx in 5"
@@ -66,6 +66,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import ChartPropertyField from '@/elements/common/settings/ChartPropertyField.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   element?: any
@@ -74,6 +75,7 @@ const props = defineProps<{
 }>()
 
 const formRef = ref()
+const { t } = useI18n()
 
 const formModel = ref<any>({})
 

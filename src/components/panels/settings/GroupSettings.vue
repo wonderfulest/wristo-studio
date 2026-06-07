@@ -1,6 +1,6 @@
 <template>
   <div class="settings-group">
-    <h3>Data Group Settings</h3>
+    <h3>{{ t('elementSettings.dataGroupTitle') }}</h3>
     <el-form ref="formRef" :model="formModel" label-position="left" label-width="120px">
       <DataPropertyField
         v-if="showDataProperty"
@@ -14,7 +14,7 @@
         @change="updateGoalProperty"
       />
 
-      <el-form-item v-if="isSameTypeLayer && !isTimeGroup" label="Alignment" required>
+      <el-form-item v-if="isSameTypeLayer && !isTimeGroup" :label="t('elementSettings.alignment')" required>
         <AlignXButtons
           :options="originXOptions"
           v-model="originX"
@@ -22,17 +22,17 @@
         />
       </el-form-item>
 
-      <el-form-item v-if="isSameTypeLayer" label="Font Size" required>
+      <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.fontSize')" required>
         <el-select v-model.number="fontSize" @change="updateFontSize">
           <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
         </el-select>
       </el-form-item>
 
-      <el-form-item v-if="isUpdateColor" label="Text Color" required>
+      <el-form-item v-if="isUpdateColor" :label="t('elementSettings.textColor')" required>
         <color-picker v-model="textColor" @change="updateTextColor" />
       </el-form-item>
 
-      <el-form-item v-if="isSameTypeLayer" label="Font" required>
+      <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.font')" required>
         <font-picker v-model="fontFamily" :type="fontType" @change="updateFontFamily" />
       </el-form-item>
     </el-form>
@@ -54,8 +54,10 @@ import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
 import { alignSelection } from '@/engine/managers/alignManager'
+import { useI18n } from '@/i18n'
 
 const baseStore = useBaseStore()
+const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
 const elementDataStore = useElementDataStore()
 
@@ -300,7 +302,7 @@ const showGoalProperty = computed(() => {
 <style scoped>
 @import '@/assets/styles/settings.css';
 .example-text {
-  color: #555;
+  color: var(--studio-text-muted);
   margin-left: 1em;
 }
 

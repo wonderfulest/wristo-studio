@@ -2,29 +2,29 @@
   <el-sub-menu index="indicator">
     <template #title>
       <el-icon><Connection /></el-icon>
-      <span>Indicator</span>
+      <span>{{ t('editor.indicator') }}</span>
     </template>
     <div class="menu-group">
-      <div class="menu-group-title">Status Indicators</div>
+      <div class="menu-group-title">{{ t('editor.statusIndicators') }}</div>
       <el-menu-item index="indicator/battery" @click="onAddElement('status', 'battery')">
         <el-icon><Star /></el-icon>
-        <span>Battery Level</span>
+        <span>{{ t('editor.batteryLevel') }}</span>
       </el-menu-item>
       <el-menu-item index="indicator/bluetooth" @click="onAddElement('indicator', 'bluetooth')">
         <el-icon><Connection /></el-icon>
-        <span>Bluetooth</span>
+        <span>{{ t('editor.bluetooth') }}</span>
       </el-menu-item>
       <el-menu-item index="indicator/notification" @click="onAddElement('indicator', 'notification')">
         <el-icon><Bell /></el-icon>
-        <span>Notifications</span>
+        <span>{{ t('editor.notifications') }}</span>
       </el-menu-item>
       <el-menu-item index="indicator/disturb" @click="onAddElement('indicator', 'disturb')">
         <el-icon><Bell /></el-icon>
-        <span>Do Not Disturb</span>
+        <span>{{ t('editor.doNotDisturb') }}</span>
       </el-menu-item>
       <el-menu-item index="indicator/alarms" @click="onAddElement('indicator', 'alarms')">
         <el-icon><Timer /></el-icon>
-        <span>Alarms</span>
+        <span>{{ t('editor.alarms') }}</span>
       </el-menu-item>
     </div>
   </el-sub-menu>
@@ -32,6 +32,9 @@
 
 <script setup>
 import { Connection, Star, Bell, Timer } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['add-element'])
 

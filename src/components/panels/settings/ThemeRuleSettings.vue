@@ -1,10 +1,10 @@
 <template>
   <div class="setting-item">
-    <label>Theme Rule</label>
+    <label>{{ t('elementSettings.themeRule') }}</label>
     <div class="theme-rule-row">
       <el-select
         v-model="selectedRuleType"
-        placeholder="Select rule type"
+        :placeholder="t('elementSettings.selectRuleType')"
         class="rule-type-select"
         :loading="loadingTypes || loadingRule"
         @change="handleRuleTypeChange"
@@ -19,8 +19,8 @@
 
       <el-switch
         v-model="active"
-        active-text="Enabled"
-        inactive-text="Disabled"
+        :active-text="t('elementSettings.enabled')"
+        :inactive-text="t('elementSettings.disabled')"
         @change="handleActiveChange"
       />
     </div>
@@ -55,9 +55,9 @@
         :disabled="!selectedRuleType"
         @click="saveRule"
       >
-        Save Theme Rule
+        {{ t('elementSettings.saveThemeRule') }}
       </el-button>
-      <span v-if="lastSavedAt" class="last-saved">Last saved: {{ lastSavedAt }}</span>
+      <span v-if="lastSavedAt" class="last-saved">{{ t('elementSettings.lastSaved', { time: lastSavedAt }) }}</span>
     </div>
   </div>
 </template>
@@ -69,8 +69,10 @@ import { useBaseStore } from '@/stores/baseStore'
 import { getThemeRuleDetail, upsertThemeRule, activateThemeRule } from '@/api/wristo/themes'
 import { getEnumOptions } from '@/api/common'
 import ThemeConfigSettings from '@/components/panels/settings/ThemeConfigSettings.vue'
+import { useI18n } from '@/i18n'
 
 const baseStore = useBaseStore()
+const { t } = useI18n()
 
 const ruleTypeOptions = ref([])
 const selectedRuleType = ref('')
@@ -96,7 +98,7 @@ const fetchRuleTypes = async () => {
     }))
   } catch (e) {
     console.error('Failed to fetch rule types', e)
-    ElMessage.error('Failed to load theme rule types')
+    ElMessage.error(t('elementSettings.loadThemeRuleTypesFailed'))
   } finally {
     loadingTypes.value = false
   }
@@ -216,6 +218,6 @@ onMounted(async () => {
 
 .last-saved {
   font-size: 11px;
-  color: #999;
+  color: var(--studio-text-subtle);
 }
 </style>

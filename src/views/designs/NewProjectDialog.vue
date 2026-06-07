@@ -1,20 +1,22 @@
 <template>
   <el-dialog
     v-model="internalVisible"
-    title="New Project"
+    :title="t('project.newProject')"
     width="400px"
     :close-on-click-modal="false"
+    append-to-body
+    :z-index="4000"
   >
     <div class="dialog-body">
-      <div class="field-label">Project Name</div>
+      <div class="field-label">{{ t('project.projectName') }}</div>
       <el-input
         v-model="localName"
-        placeholder="Enter project name"
+        :placeholder="t('project.enterProjectName')"
         maxlength="50"
         show-word-limit
       />
 
-      <div class="field-label size-label">Size</div>
+      <div class="field-label size-label">{{ t('project.size') }}</div>
       <el-input
         value="454 x 454 pixels"
         disabled
@@ -22,8 +24,8 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">Cancel</el-button>
-        <el-button type="primary" @click="handleOk">OK</el-button>
+        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleOk">{{ t('common.ok') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -31,6 +33,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -86,7 +91,7 @@ const handleOk = () => {
 
 .field-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--studio-text-muted);
   margin-bottom: 4px;
 }
 

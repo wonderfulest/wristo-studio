@@ -193,28 +193,28 @@ const getAssetImage = (item: IconGlyphAssetVO): string => {
 
 <style scoped>
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
-.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eef2ff; color: #4f46e5; margin-right: 8px; }
-.badge.custom { background: #ecfdf5; color: #059669; }
-.meta { font-size: 12px; color: #606266; margin-right: 12px; }
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--studio-primary-soft); color: var(--studio-primary); margin-right: 8px; }
+.badge.custom { background: var(--el-color-success-light-9); color: var(--el-color-success); }
+.meta { font-size: 12px; color: var(--studio-text-muted); margin-right: 12px; }
 .assets-grid { min-height: 220px; }
-.loading { display: flex; gap: 8px; align-items: center; color: #909399; padding: 16px; }
-.empty { color: #909399; padding: 24px 0; text-align: center; }
+.loading { display: flex; gap: 8px; align-items: center; color: var(--studio-text-subtle); padding: 16px; }
+.empty { color: var(--studio-text-subtle); padding: 24px 0; text-align: center; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px; padding: 8px 0; }
-.grid-item { position: relative; border: 1px solid #eee; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #fafafa; }
+.grid-item { position: relative; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--studio-surface-soft); }
 .grid-item .preview { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; }
 .grid-item img { width: 48px; height: 48px; object-fit: contain; transition: opacity .2s ease, filter .2s ease; pointer-events: none; }
 .grid-item .overlay { position: absolute; inset: 0; border-radius: 6px; background: transparent; display: flex; align-items: stretch; justify-content: flex-end; opacity: 0; transition: opacity .2s ease; z-index: 2; }
 .grid-item:hover .overlay { opacity: 1; }
 .grid-item:hover .preview img { opacity: .06; filter: grayscale(100%) brightness(.6); }
 .overlay-actions { width: 42%; min-width: 96px; height: 100%; display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; padding: 8px; background: rgba(0,0,0,0.88); border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
-.overlay-actions .action { display: block; width: 100%; text-align: center; color: #0b2a4a; background: rgba(230,240,255,.95); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 6px 10px; border-radius: 6px; }
-.overlay-actions .action:hover { background: #409eff; color: #fff; }
-.overlay-actions .action.delete { background: rgba(245,108,108,.96); color: #fff; }
-.overlay-actions .action.delete:hover { background: #f44336; color: #fff; }
-.grid-meta { font-weight: 900; font-size: 12px; color: #909399; }
+.overlay-actions .action { display: block; width: 100%; text-align: center; color: var(--studio-primary); background: var(--studio-primary-soft); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 6px 10px; border-radius: 6px; }
+.overlay-actions .action:hover { background: var(--studio-primary); color: var(--color-white); }
+.overlay-actions .action.delete { background: var(--el-color-danger); color: var(--color-white); }
+.overlay-actions .action.delete:hover { background: var(--el-color-danger); color: var(--color-white); }
+.grid-meta { font-weight: 900; font-size: 12px; color: var(--studio-text-subtle); }
 .meta-codes { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.symbol-code { font-weight: 700; color: #303133; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: normal; word-break: break-all; text-align: center; max-width: 100%; }
-.symbol-unicode { font-size: 12px; color: #909399; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.symbol-code { font-weight: 700; color: var(--studio-text); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: normal; word-break: break-all; text-align: center; max-width: 100%; }
+.symbol-unicode { font-size: 12px; color: var(--studio-text-subtle); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 .pager { display: flex; justify-content: center; padding: 8px 0; }
 </style>
 

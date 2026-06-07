@@ -27,7 +27,7 @@
       />
       <el-menu-item index="actions/save" @click="handleSave">
         <el-icon><CircleCheck /></el-icon>
-        <span>Save</span>
+        <span>{{ t('common.save') }}</span>
       </el-menu-item>
 
       <!-- Align / Distribute toolbar -->
@@ -81,6 +81,7 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DataTypeOptions } from '@/config/settings'
+import { CircleCheck } from '@element-plus/icons-vue'
 
 import { getElementHandler } from '@/engine/registry/elementRegistry'
 import { elementConfigs } from '@/elements/schemaMap'
@@ -99,6 +100,7 @@ import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGrou
 import AppMenuAlignToolbar from '@/components/layout/app-menu/AppMenuAlignToolbar.vue'
 import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
 import type { AlignType, DistributeType } from '@/engine/managers/alignManager'
+import { useI18n } from '@/i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,6 +109,7 @@ const exportStore = useExportStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
+const { t } = useI18n()
 const activeMenu = computed(() => {
   return route.path
 })
@@ -214,7 +217,7 @@ const handleAddElement = async (category: string, elementType: string, overrides
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
       config = { ...elementConfigs[category][elementType], left: 227, top: 227, ...overrides }
     } else {
-      messageStore.warning('Element type is not supported')
+      messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
 
@@ -257,10 +260,10 @@ const handleAddElement = async (category: string, elementType: string, overrides
       }
     }
 
-    messageStore.success(`Element added: ${config.label || elementType}`)
+    messageStore.success(t('editor.elementAdded', { name: config.label || elementType }))
   } catch (error: any) {
     console.error('Failed to add element:', error)
-    messageStore.error('Failed to add element')
+    messageStore.error(t('editor.addElementFailed'))
   }
 }
 
@@ -329,7 +332,7 @@ const handleAddDataField = async (metricSymbol?: string) => {
     })
   } catch (e) {
     console.error('Failed to add data field (icon + data):', e)
-    messageStore.error('Failed to add data field')
+    messageStore.error(t('editor.addDataFieldFailed'))
   }
 }
 
@@ -406,7 +409,7 @@ const handleAddGoalProgressBarField = async () => {
     })
   } catch (e) {
     console.error('Failed to add goal progress bar (goal + icon + data):', e)
-    messageStore.error('Failed to add goal field')
+    messageStore.error(t('editor.addGoalFieldFailed'))
   }
 }
 
@@ -477,7 +480,7 @@ const handleAddGoalArcField = async () => {
     })
   } catch (e) {
     console.error('Failed to add goal arc (goal + icon + data):', e)
-    messageStore.error('Failed to add goal field')
+    messageStore.error(t('editor.addGoalFieldFailed'))
   }
 }
 
@@ -547,7 +550,7 @@ const handleAddGoalSegmentField = async () => {
     })
   } catch (e) {
     console.error('Failed to add goal segment bar (goal + icon + data):', e)
-    messageStore.error('Failed to add goal field')
+    messageStore.error(t('editor.addGoalFieldFailed'))
   }
 }
 
@@ -567,7 +570,7 @@ const handleEditDesign = () => {
     }
     editDesignDialog.value.show(id)
   } else {
-    messageStore.warning('Please save the design first')
+    messageStore.warning(t('editor.saveDesignFirst'))
   }
 }
 
@@ -585,7 +588,7 @@ const handleSelect = (key: string) => {
 
 // Build
 const handleBuild = async () => {
-  messageStore.warning('Not supported yet')
+  messageStore.warning(t('editor.notSupportedYet'))
 }
 
 // Screenshot
@@ -606,10 +609,10 @@ const handleScreenshot = async () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    messageStore.success('Screenshot saved')
+    messageStore.success(t('editor.screenshotSaved'))
   } catch (error) {
     console.error('Failed to save screenshot:', error)
-    messageStore.error('Failed to save screenshot')
+    messageStore.error(t('editor.screenshotFailed'))
   }
 }
 
@@ -626,7 +629,7 @@ const handleSave =async () => {
     }
   } catch (error: any) {
     console.error('Upload failed:', error)
-    messageStore.error('Upload failed: ' + (error.message || 'Unknown error'))
+    messageStore.error(t('editor.uploadFailedWithReason', { reason: error.message || t('common.unknown') }))
   }
 }
 
@@ -637,148 +640,114 @@ const showFeedbackDialog = () => {
 // Handle edit success
 const handleEditSuccess = () => {
   // Add any follow-up logic here, e.g. refresh data
-  messageStore.success('Design updated successfully')
+  messageStore.success(t('editor.designUpdated'))
 }
 </script>
 
 <style scoped>
 .app-menu {
-  background-color: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-light);
-  height: 40px;
+  height: 48px;
+  position: sticky;
+  top: 56px;
+  z-index: 900;
+  flex: 0 0 48px;
+  display: flex;
+  align-items: center;
+  background: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-border);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
-
 .menu-list {
-  border-bottom: none;
-  justify-content: flex-start !important; /* 强制靠左对齐 */
+  width: 100%;
+  min-width: max-content;
+  height: 48px;
+  align-items: center;
+  padding: 0 12px;
+  background: transparent;
+  border-bottom: 0;
+}
+
+.menu-list :deep(.el-sub-menu__title),
+.menu-list :deep(.el-menu-item) {
+  height: 36px;
+  min-width: 44px;
+  margin: 0 3px;
+  padding: 0 11px;
+  border-radius: var(--studio-radius-md);
+  color: var(--studio-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 36px;
+  border: 1px solid transparent;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.menu-list :deep(.el-sub-menu__title:hover),
+.menu-list :deep(.el-menu-item:hover),
+.menu-list :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary-border);
+}
+
+.menu-list :deep(.el-icon) {
+  margin-right: 6px;
+  color: inherit;
 }
 
 .menu-divider {
-  height: 20px;
-  margin: 10px 12px;
-  border-left: 2px solid var(--el-border-color-lighter);
-}
-.menu-sub-divider {
-  height: 2px;
-  border-left: 1px solid var(--el-border-color-lighter);
+  height: 24px;
+  margin: 0 8px;
+  border-left-color: var(--studio-border);
 }
 
-:deep(.el-menu-item) {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 40px;
-  padding: 0 16px;
-}
-
-:deep(.el-sub-menu__title) {
-  height: 40px;
-  line-height: 40px;
-}
-
-:deep(.el-icon) {
-  margin-right: 4px;
-}
-
-/* 子菜单样式 */
-:deep(.el-sub-menu .el-menu-item) {
-  height: 40px;
-  line-height: 40px;
-  min-width: 160px;
-}
-
-
-/* 确保菜单项不会被压缩 */
-:deep(.el-menu--horizontal) {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  height: 40px;
-  line-height: 40px;
-}
-
-/* 隐藏滚动条但保持功能 */
-:deep(.el-menu--horizontal::-webkit-scrollbar) {
-  display: none;
-}
-
-/* 确保分隔线在菜单中垂直居中 */
-:deep(.el-divider--vertical) {
-  display: inline-flex;
-  align-self: center;
-}
-
-/* 添加新的分组样式 */
 :deep(.menu-group) {
-  background-color: var(--el-fill-color-lighter);
-  margin: 4px 0;
-  padding: 8px 0;
+  padding: 8px 6px;
 }
 
 :deep(.menu-group-title) {
-  padding: 8px 16px;
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 8px 6px;
+  color: var(--studio-text-subtle);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
-:deep(.el-sub-menu .el-menu-item) {
-  height: 36px;
-  line-height: 36px;
-  padding: 0 16px;
+:global(.el-menu--popup) {
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  box-shadow: var(--studio-shadow-md);
 }
 
-:deep(.el-menu-item .el-icon) {
-  margin-right: 8px;
-}
-
-.shortcuts-content {
-  padding: 20px;
-}
-
-.shortcuts-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.shortcuts-table th,
-.shortcuts-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.shortcuts-table th {
+:global(.el-menu--popup .el-menu-item) {
+  height: 38px;
+  margin: 2px 0;
+  border-radius: var(--studio-radius-md);
+  color: var(--studio-text-muted);
+  font-size: 13px;
   font-weight: 600;
-  background-color: var(--el-fill-color-light);
 }
 
-kbd {
-  display: inline-block;
-  padding: 3px 6px;
-  margin: 0 4px;
-  font-family: monospace;
-  font-size: 12px;
-  line-height: 1;
-  color: var(--el-text-color-primary);
-  background-color: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  box-shadow: 0 2px 0 var(--el-border-color);
+:global(.el-menu--popup .el-menu-item:hover) {
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
 }
 
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  kbd {
-    background-color: var(--el-fill-color-dark);
-    border-color: var(--el-border-color-darker);
-    box-shadow: 0 2px 0 var(--el-border-color-darker);
-  }
-}
-
-.shortcut-hint {
+:global(.shortcut-hint) {
   margin-left: auto;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
+  padding-left: 16px;
+  color: var(--studio-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
 }
 </style>

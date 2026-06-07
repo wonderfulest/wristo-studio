@@ -4,7 +4,8 @@ import type { EditorState } from '@/types/editor'
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
     zoomLevel: 1,
-    backgroundColor: '#aaaaaa',
+    lightCanvasBackgroundColor: '#d9dee7',
+    darkCanvasBackgroundColor: '#151922',
     showTimeSimulator: false,
     showZoomControls: false,
     showHistoryControls: false,
@@ -18,8 +19,8 @@ export const useEditorStore = defineStore('editor', {
   }),
 
   getters: {
-    // 获取背景色
-    getBackgroundColor: (state): string => state.backgroundColor,
+    // 获取默认亮色背景色
+    getBackgroundColor: (state): string => state.lightCanvasBackgroundColor,
     // 获取时间模拟器显示状态
     getShowTimeSimulator: (state): boolean => state.showTimeSimulator,
     // 获取缩放控制显示状态
@@ -43,7 +44,8 @@ export const useEditorStore = defineStore('editor', {
     // 批量更新设置
     updateSettings(settings: Partial<EditorState>): void {
       if (settings.zoomLevel !== undefined) this.$state.zoomLevel = settings.zoomLevel
-      if (settings.backgroundColor !== undefined) this.$state.backgroundColor = settings.backgroundColor
+      if (settings.lightCanvasBackgroundColor !== undefined) this.$state.lightCanvasBackgroundColor = settings.lightCanvasBackgroundColor
+      if (settings.darkCanvasBackgroundColor !== undefined) this.$state.darkCanvasBackgroundColor = settings.darkCanvasBackgroundColor
       if (settings.showTimeSimulator !== undefined) this.$state.showTimeSimulator = settings.showTimeSimulator
       if (settings.showZoomControls !== undefined) this.$state.showZoomControls = settings.showZoomControls
       if (settings.showHistoryControls !== undefined) this.$state.showHistoryControls = settings.showHistoryControls
@@ -59,7 +61,8 @@ export const useEditorStore = defineStore('editor', {
     // 重置所有设置
     resetSettings(): void {
       this.$state.zoomLevel = 1
-      this.$state.backgroundColor = 'rgba(0, 0, 0, 0.8)'
+      this.$state.lightCanvasBackgroundColor = '#d9dee7'
+      this.$state.darkCanvasBackgroundColor = '#151922'
       this.$state.showTimeSimulator = false
       this.$state.showZoomControls = false
       this.$state.showHistoryControls = false

@@ -201,12 +201,12 @@ function clearSelect() {
 
 <style scoped>
 .upload-wrap { display: flex; align-items: center; gap: 12px; }
-.hint { font-size: 12px; color: #606266; }
+.hint { font-size: 12px; color: var(--studio-text-muted); }
 .symbol-quick { margin-top: 8px; }
-.symbol-quick .label { font-size: 12px; color: #909399; margin-bottom: 6px; }
+.symbol-quick .label { font-size: 12px; color: var(--studio-text-subtle); margin-bottom: 6px; }
 .symbol-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.symbol-card { border: 1px solid #ebeef5; border-radius: 6px; padding: 8px 10px; background: #f9fafc; cursor: pointer; }
-.symbol-card.active { border-color: #409eff; box-shadow: 0 0 0 1px #409eff inset; }
-.symbol-code { font-weight: 600; color: #303133; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-.symbol-label { font-size: 12px; color: #909399; margin-top: 4px; }
+.symbol-card { border: 1px solid var(--studio-border); border-radius: var(--studio-radius-sm); padding: 8px 10px; background: var(--studio-surface-soft); cursor: pointer; color: var(--studio-text); }
+.symbol-card.active { border-color: var(--studio-primary); box-shadow: 0 0 0 1px var(--studio-primary) inset; background: var(--studio-primary-soft); }
+.symbol-code { font-weight: 600; color: var(--studio-text); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.symbol-label { font-size: 12px; color: var(--studio-text-subtle); margin-top: 4px; }
 </style>

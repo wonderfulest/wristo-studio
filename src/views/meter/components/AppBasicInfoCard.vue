@@ -118,7 +118,7 @@ const formatCountDisplay = (v?: number | null) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #909399;
+  color: var(--studio-text-subtle);
   font-size: 14px;
 }
 .product-main { flex: 1; min-width: 320px; }
@@ -131,5 +131,5 @@ const formatCountDisplay = (v?: number | null) => {
 }
 .summary-label { font-size: 12px; color: var(--el-text-color-secondary); margin-bottom: 6px; }
 .summary-value { font-size: 24px; line-height: 1.1; font-weight: 700; color: var(--el-text-color-primary); }
-.product-name { font-size: 20px; font-weight: 700; color: #111827; line-height: 1.3; margin-top: 10px; }
+.product-name { font-size: 20px; font-weight: 700; color: var(--studio-text); line-height: 1.3; margin-top: 10px; }
 </style>

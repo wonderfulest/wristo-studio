@@ -2,7 +2,7 @@
   <el-sub-menu index="shape">
     <template #title>
       <el-icon><Stamp /></el-icon>
-      <span>Shape</span>
+      <span>{{ t('editor.shape') }}</span>
     </template>
     <div class="menu-group">
       <el-menu-item
@@ -17,7 +17,7 @@
         })"
       >
         <el-icon><Minus /></el-icon>
-        <span>Rectangle</span>
+        <span>{{ t('editor.rectangle') }}</span>
       </el-menu-item>
       <el-menu-item
         index="basic/circle"
@@ -29,7 +29,7 @@
         })"
       >
         <el-icon><CircleCheck /></el-icon>
-        <span>Circle</span>
+        <span>{{ t('editor.circle') }}</span>
       </el-menu-item>
       <el-menu-item
         index="basic/line"
@@ -42,11 +42,11 @@
         })"
       >
         <el-icon><Minus /></el-icon>
-        <span>Line</span>
+        <span>{{ t('editor.line') }}</span>
       </el-menu-item>
       <el-menu-item index="basic/image" @click="onAddElement('image')">
         <el-icon><Picture /></el-icon>
-        <span>Image</span>
+        <span>{{ t('editor.image') }}</span>
       </el-menu-item>
     </div>
   </el-sub-menu>
@@ -54,6 +54,9 @@
 
 <script setup>
 import { Stamp, Minus, CircleCheck, Edit, Calendar, Picture } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['add-element'])
 

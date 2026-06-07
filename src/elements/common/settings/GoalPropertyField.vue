@@ -1,7 +1,7 @@
 <template>
   <el-form-item
     class="goal-field"
-    :label="label"
+    :label="resolvedLabel"
     :prop="propName"
     :required="required"
     :show-message="true"
@@ -9,7 +9,7 @@
   >
     <el-select
       v-model="localValue"
-      :placeholder="placeholder"
+      :placeholder="resolvedPlaceholder"
       clearable
       filterable
       @change="handleChange"
@@ -22,8 +22,8 @@
       />
       <template #footer>
         <div class="select-footer">
-          <span class="footer-text">Can’t find what you need?</span>
-          <el-button size="small" type="primary" link @click="openAppProperties">Add Property</el-button>
+          <span class="footer-text">{{ t('elementSettings.propertyNotFound') }}</span>
+          <el-button size="small" type="primary" link @click="openAppProperties">{{ t('elementSettings.addProperty') }}</el-button>
         </div>
       </template>
     </el-select>
@@ -34,6 +34,7 @@
 import { computed } from 'vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
+import { useI18n } from '@/i18n'
 
 const props = withDefaults(defineProps<{
   modelValue?: string | null
@@ -42,8 +43,8 @@ const props = withDefaults(defineProps<{
   required?: boolean
   propName?: string
 }>(), {
-  label: 'Goal Property',
-  placeholder: 'Select goal property',
+  label: '',
+  placeholder: '',
   required: true,
   propName: 'goalProperty',
 })
@@ -54,7 +55,10 @@ const emit = defineEmits<{
 }>()
 
 const propertiesStore = usePropertiesStore()
+const { t } = useI18n()
 const goalOptions = computed(() => Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'goal'))
+const resolvedLabel = computed(() => props.label || t('property.goalSelect'))
+const resolvedPlaceholder = computed(() => props.placeholder || t('property.selectGoalType'))
 
 const getTypeLabel = (key: string): string => {
   const item = propertiesStore.allProperties[key]

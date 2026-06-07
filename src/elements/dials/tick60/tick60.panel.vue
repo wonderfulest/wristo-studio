@@ -1,10 +1,10 @@
 <template>
   <div class="settings-section">
-    <h3>表盘刻度设置（60刻度）</h3>
+    <h3>{{ t('elementSettings.tick60Settings') }}</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
-        <label>刻度样式</label>
+        <label>{{ t('elementSettings.tickStyle') }}</label>
         <AssetPicker
           :selected-url="element?.imageUrl"
           :selected-asset-id="element?.assetId"
@@ -13,11 +13,11 @@
           :on-upload="handleAssetUpload"
         />
         <div class="tips">
-          <p>小贴士：</p>
+          <p>{{ t('elementSettings.svgTipTitle') }}</p>
           <ul>
-            <li>仅支持上传 SVG 格式文件</li>
-            <li>刻度颜色应为黑色，背景为白色或透明</li>
-            <li>建议使用正方形尺寸的 SVG 文件</li>
+            <li>{{ t('elementSettings.svgOnlyTip') }}</li>
+            <li>{{ t('elementSettings.svgBlackTip') }}</li>
+            <li>{{ t('elementSettings.svgSquareTip') }}</li>
           </ul>
         </div>
       </div>
@@ -30,6 +30,9 @@ import { ref } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['close'])
 

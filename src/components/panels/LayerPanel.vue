@@ -1,11 +1,12 @@
 <template>
   <div class="layer-panel">
     <div class="layer-list">
-      <h2 class="section-title">Layers</h2>
+      <h2 class="section-title">{{ t('panel.layers') }}</h2>
       <draggable
         :list="layers"
         class="layers-list"
         :animation="150"
+        @start="handleDragStart"
         @end="handleDragEnd"
         item-key="id"
         handle=".layer-content"
@@ -14,9 +15,13 @@
       >
         <template #item="{ element: layer }">
           <div
+            class="layer-row"
             :class="{
               'layer-selected': isActived(layer.id),
-              'layer-locked': layer.locked
+              'layer-locked': layer.locked,
+              'layer-grouped': getLayerGroupMeta(layer).isGrouped,
+              'layer-group-first': getLayerGroupMeta(layer).isFirst,
+              'layer-group-last': getLayerGroupMeta(layer).isLast
             }"
             :style="getLayerBackgroundColor(layer)"
             @click="selectLayer(layer)">
@@ -25,7 +30,12 @@
                 <span class="layer-icon">
                   <Icon :icon="getElementIcon(layer.eleType)" />
                 </span>
-                <span class="layer-name">{{ layer.eleType }}</span>
+                <span class="layer-text">
+                  <span class="layer-name">{{ layer.eleType }}</span>
+                  <span v-if="getLayerGroupMeta(layer).isGrouped" class="layer-group-name">
+                    {{ getLayerGroupMeta(layer).label }}
+                  </span>
+                </span>
               </div>
               <div class="layer-actions">
                 <button class="layer-btn" @click.stop="toggleVisibility(layer)">
@@ -59,12 +69,162 @@ import type { MinimalFabricLike } from '@/types/layer'
 import type { FabricElement } from '@/types/element'
 import { removeElement, getElementById } from '@/engine/managers/elementManager'
 import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager'
+import { useI18n } from '@/i18n'
+import type { LayerElement } from '@/types/layer'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
+const { t } = useI18n()
 
-const layers = computed(() => layerStore.layers)
+const panelLayers = ref<LayerElement[]>([])
+const isDraggingLayers = ref(false)
+const layers = computed(() => panelLayers.value)
+
+const ELEMENT_TYPE_ORDER = [
+  'global',
+  'background',
+  'image',
+  'circle',
+  'rectangle',
+  'line',
+  'time',
+  'date',
+  'label',
+  'data',
+  'icon',
+  'weather',
+  'moon',
+  'windDirection',
+  'battery',
+  'movebar',
+  'alarms',
+  'bluetooth',
+  'disturb',
+  'notification',
+  'goalArc',
+  'goalBar',
+  'goalSegmentBar',
+  'barChart',
+  'lineChart',
+  'tick12',
+  'tick60',
+  'romans',
+  'centerCap',
+  'hourHand',
+  'minuteHand',
+  'secondHand',
+  'text',
+  'angledText',
+  'radialText',
+  'scrollableText',
+]
+
+const typeRank = new Map(ELEMENT_TYPE_ORDER.map((type, index) => [type, index]))
+
+type LayerGroupMeta = {
+  key: string
+  label: string
+  isGrouped: boolean
+  isFirst: boolean
+  isLast: boolean
+}
+
+const getLayerObject = (layer: LayerElement | any): any => layer?.element ?? layer
+
+const resolveLayerGroupKey = (layer: LayerElement | any): string => {
+  const obj = getLayerObject(layer)
+  const raw =
+    obj?.groupId ??
+    obj?.groupKey ??
+    obj?.groupName ??
+    obj?.parentId ??
+    obj?.dataProperty ??
+    obj?.goalProperty ??
+    ''
+  return raw == null ? '' : String(raw)
+}
+
+const getTypeSortValue = (layer: LayerElement | any): number => {
+  const eleType = String(layer?.eleType ?? '')
+  return typeRank.get(eleType) ?? ELEMENT_TYPE_ORDER.length
+}
+
+const compareLayerType = (a: LayerElement, b: LayerElement): number => {
+  const rankDiff = getTypeSortValue(a) - getTypeSortValue(b)
+  if (rankDiff !== 0) return rankDiff
+  return String(a.eleType).localeCompare(String(b.eleType))
+}
+
+const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
+  const fixedLayers = sourceLayers.filter((layer) => isFixedLayer(layer))
+  const movableLayers = sourceLayers.filter((layer) => !isFixedLayer(layer))
+  const groupCounts = new Map<string, number>()
+
+  movableLayers.forEach((layer) => {
+    const key = resolveLayerGroupKey(layer)
+    if (!key) return
+    groupCounts.set(key, (groupCounts.get(key) ?? 0) + 1)
+  })
+
+  const groupedKeys = new Set(
+    [...groupCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([key]) => key)
+  )
+  const groups = new Map<string, { firstIndex: number; items: LayerElement[] }>()
+  const singleLayers: Array<{ layer: LayerElement; originalIndex: number }> = []
+
+  movableLayers.forEach((layer, originalIndex) => {
+    const key = resolveLayerGroupKey(layer)
+    if (key && groupedKeys.has(key)) {
+      const group = groups.get(key) ?? { firstIndex: originalIndex, items: [] }
+      group.items.push(layer)
+      groups.set(key, group)
+      return
+    }
+    singleLayers.push({ layer, originalIndex })
+  })
+
+  const sortedGroups = [...groups.values()]
+    .sort((a, b) => a.firstIndex - b.firstIndex)
+    .flatMap((group) => [...group.items].sort(compareLayerType))
+
+  const sortedSingles = singleLayers
+    .sort((a, b) => compareLayerType(a.layer, b.layer) || a.originalIndex - b.originalIndex)
+    .map((item) => item.layer)
+
+  return [...fixedLayers, ...sortedGroups, ...sortedSingles]
+}
+
+const getLayerGroupMeta = (layer: LayerElement | any): LayerGroupMeta => {
+  const key = resolveLayerGroupKey(layer)
+  if (!key) {
+    return { key: '', label: '', isGrouped: false, isFirst: false, isLast: false }
+  }
+  const groupLayers = layers.value.filter((item) => resolveLayerGroupKey(item) === key)
+  const isGrouped = groupLayers.length > 1
+  if (!isGrouped) {
+    return { key, label: key, isGrouped: false, isFirst: false, isLast: false }
+  }
+  const index = groupLayers.findIndex((item) => item.id === layer.id)
+  return {
+    key,
+    label: key,
+    isGrouped,
+    isFirst: index === 0,
+    isLast: index === groupLayers.length - 1,
+  }
+}
+
+watch(
+  () => layerStore.layers,
+  (nextLayers) => {
+    if (isDraggingLayers.value) return
+    panelLayers.value = sortLayersForPanel(nextLayers)
+  },
+  { deep: true, immediate: true }
+)
 
 const isFixedLayer = (layer: any): boolean => {
   const t = String(layer?.eleType ?? '')
@@ -181,7 +341,12 @@ const toggleLock = (layer: any): void => {
 }
 
 // drag end reorders canvas stacking
+const handleDragStart = (): void => {
+  isDraggingLayers.value = true
+}
+
 const handleDragEnd = (): void => {
+  isDraggingLayers.value = false
   // keep fixed layer(s) unmoved
   const ids = layers.value.map((l) => String(l.id))
   applyOrder(ids)
@@ -287,7 +452,7 @@ const getElementIcon = (eleType: string): string => {
 const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {
   // locked layers: force gray background
   if (layer.locked) {
-    return { backgroundColor: '#555555' }
+    return { backgroundColor: '#e8ecf2' }
   }
   const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar' || layer.eleType === 'goalSegmentBar'
   const id = layer.element?.dataProperty || layer.element?.goalProperty
@@ -383,50 +548,126 @@ onUnmounted((): void => {
 .layer-panel {
   height: 100%;
   overflow: auto;
+  background: var(--studio-surface);
 }
 
 .layer-list {
-  padding: 8px;
+  padding: 14px;
 }
 
 .section-title {
-  margin: 0 0 8px;
-  color: #333;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #f0f0f0;
+  margin: 0 0 14px;
+  color: var(--studio-text);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--studio-border);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .layers-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+}
+
+.layer-row {
+  position: relative;
+  border-radius: var(--studio-radius-md);
 }
 
 .layer-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px;
-  border: 1px solid #eee;
-  border-radius: 3px;
+  min-height: 44px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.layer-grouped {
+  padding-left: 8px;
+}
+
+.layer-grouped::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--studio-primary);
+  opacity: 0.85;
+}
+
+.layer-grouped .layer-item {
+  min-height: 42px;
+  border-left-color: rgba(15, 107, 104, 0.42);
+  background: linear-gradient(90deg, rgba(15, 107, 104, 0.08), var(--studio-surface-soft) 34px);
+}
+
+.layer-group-first:not(.layer-group-last) {
+  margin-bottom: -3px;
+}
+
+.layer-group-first:not(.layer-group-last) .layer-item {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.layer-grouped:not(.layer-group-first):not(.layer-group-last) {
+  margin-top: -3px;
+  margin-bottom: -3px;
+}
+
+.layer-grouped:not(.layer-group-first):not(.layer-group-last) .layer-item {
+  border-radius: 4px;
+}
+
+.layer-group-last:not(.layer-group-first) {
+  margin-top: -3px;
+}
+
+.layer-group-last:not(.layer-group-first) .layer-item {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
 }
 
 .layer-item:hover {
-  background: #f5f5f5;
+  background: #ffffff;
+  border-color: var(--studio-border-strong);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .layer-selected {
-  border: 2px solid #1890ff;
-  background: #e6f7ff;
+  border-radius: var(--studio-radius-md);
+  box-shadow: 0 0 0 2px var(--studio-focus-ring);
+}
+
+.layer-selected .layer-item {
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
 }
 
 .layer-content {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: move; /* 指示可拖动 */
+  min-width: 0;
+  flex: 1;
+}
+
+.layer-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .layer-content.no-drag {
@@ -434,33 +675,62 @@ onUnmounted((): void => {
 }
 
 .layer-icon {
-  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--studio-radius-sm);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--studio-primary);
+  font-size: 17px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
 }
 
 .layer-name {
   font-size: 12px;
-  color: #333;
+  color: var(--studio-text);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-group-name {
+  max-width: 148px;
+  overflow: hidden;
+  color: var(--studio-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .layer-actions {
   display: flex;
-  gap: 2px;
+  gap: 3px;
+  flex: 0 0 auto;
 }
 
 .layer-btn {
-  padding: 2px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   font-size: 16px;
   border: none;
-  background: none;
+  border-radius: var(--studio-radius-sm);
+  background: transparent;
+  color: var(--studio-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .layer-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(15, 107, 104, 0.1);
+  color: var(--studio-primary);
 }
 
 .layer-locked {
@@ -469,19 +739,19 @@ onUnmounted((): void => {
 
 /* 锁定状态置灰样式 */
 .layer-locked .layer-item {
-  background: #555555;
-  border-color: #555555;
+  background: #e8ecf2;
+  border-color: #d5dbe5;
   filter: grayscale(100%);
 }
 
 .layer-locked .layer-name,
 .layer-locked .layer-icon,
 .layer-locked .layer-btn {
-  color: #9aa0a6;
+  color: #7b8494;
 }
 
 .layer-locked .layer-item:hover {
-  background: #555555;
+  background: #e8ecf2;
 }
 
 .layer-locked .layer-btn:hover {

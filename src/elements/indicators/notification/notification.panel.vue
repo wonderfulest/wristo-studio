@@ -1,24 +1,24 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
-      <label>Color</label>
+      <label>{{ t('elementSettings.fontColor') }}</label>
       <ColorPicker v-model="color" @update:modelValue="updateColor" />
     </div>
 
     <div class="setting-item">
-      <label>Font</label>
+      <label>{{ t('elementSettings.font') }}</label>
       <FontPicker v-model="fontFamily" :type="FontTypes.ICON_FONT" @update:modelValue="updateFontFamily" />
     </div>
 
     <div class="setting-item">
-      <label>Font Size</label>
-      <el-select v-model="fontSize" placeholder="选择大小" @change="updateFontSize">
+      <label>{{ t('elementSettings.fontSize') }}</label>
+      <el-select v-model="fontSize" :placeholder="t('elementSettings.selectSize')" @change="updateFontSize">
         <el-option v-for="size in availableFontSizes" :key="size" :label="size + 'px'" :value="size" />
       </el-select>
     </div>
 
     <div class="setting-item">
-      <label>Position</label>
+      <label>{{ t('elementSettings.position') }}</label>
       <div class="position-inputs">
         <div>
           <span>X:</span>
@@ -41,6 +41,9 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { fontSizes } from '@/config/settings'
 import { FontTypes } from '@/config/fonts'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 旧通道：直接传入 FabricElement

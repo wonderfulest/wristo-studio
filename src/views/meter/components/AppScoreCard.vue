@@ -118,11 +118,11 @@ const formulaText = computed(() => {
 .section-card { margin-bottom: 24px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .header-head { display: inline-flex; align-items: center; gap: 8px; }
-.header-meta { color: #606266; font-size: 12px; }
+.header-meta { color: var(--studio-text-muted); font-size: 12px; }
 .toggle-link { font-size: 12px; }
 .score-summary :deep(.el-statistic) { background: var(--el-bg-color-page); border-radius: 12px; padding: 16px; }
 .formula { margin-top: 12px; }
-.formula__title { font-size: 13px; color: #606266; margin-bottom: 6px; font-weight: 600; }
+.formula__title { font-size: 13px; color: var(--studio-text-muted); margin-bottom: 6px; font-weight: 600; }
 .formula__code {
   margin: 0;
   padding: 10px 12px;

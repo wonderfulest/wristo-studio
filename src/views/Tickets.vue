@@ -4,7 +4,7 @@
       <div class="filters">
         <el-select
           v-model="statusesSelected"
-          placeholder="Status"
+          :placeholder="t('ticket.status')"
           clearable
           multiple
           filterable
@@ -14,7 +14,7 @@
         </el-select>
         <el-select
           v-model="prioritiesSelected"
-          placeholder="Priority"
+          :placeholder="t('ticket.priority')"
           clearable
           multiple
           filterable
@@ -25,21 +25,21 @@
         <el-date-picker
           v-model="dateRange"
           type="datetimerange"
-          start-placeholder="Begin at"
-          end-placeholder="End at"
+          :start-placeholder="t('ticket.beginAt')"
+          :end-placeholder="t('ticket.endAt')"
           value-format="YYYY-MM-DD HH:mm:ss"
         />
-        <el-select v-model="orderBy" placeholder="Sort" clearable style="width: 180px" @change="onSortChange">
-          <el-option label="Created desc" value="id:desc" />
-          <el-option label="Created asc" value="id:asc" />
+        <el-select v-model="orderBy" :placeholder="t('common.sort')" clearable style="width: 180px" @change="onSortChange">
+          <el-option :label="t('common.createdDesc')" value="id:desc" />
+          <el-option :label="t('common.createdAsc')" value="id:asc" />
         </el-select>
-        <el-button type="primary" @click="loadData">Search</el-button>
+        <el-button type="primary" @click="loadData">{{ t('common.search') }}</el-button>
       </div>
     </div>
 
     <el-table :data="list" border v-loading="loading" size="small" style="width: 100%">
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column label="Title" min-width="240">
+      <el-table-column :label="t('ticket.title')" min-width="240">
         <template #default="{ row }">
           <div class="title-cell">
             <div class="title-text">{{ row.title }}</div>
@@ -57,17 +57,17 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="Priority" width="120">
+      <el-table-column :label="t('ticket.priority')" width="120">
         <template #default="{ row }">
           <el-tag effect="light" size="small">{{ row.priority ? formatEnumLabel(row.priority) : '-' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="Status" width="120">
+      <el-table-column :label="t('ticket.status')" width="120">
         <template #default="{ row }">
           <el-tag effect="light" size="small">{{ row.status ? formatEnumLabel(row.status) : '-' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="Product" min-width="320">
+      <el-table-column :label="t('ticket.product')" min-width="320">
         <template #default="{ row }">
           <div class="product-info">
             <el-image
@@ -89,7 +89,7 @@
                   rel="noopener noreferrer"
                 >{{ row.product?.name }}</a>
                 <span v-else>{{ row.product?.name || '-' }}</span>
-                <el-tooltip content="Edit Product" placement="top">
+                <el-tooltip :content="t('ticket.editProduct')" placement="top">
                   <el-button
                     class="edit-icon-btn"
                     :disabled="!row.product?.designId"
@@ -104,28 +104,28 @@
               </div>
               <div class="product-details">
                 <span>appId: {{ row.product?.appId ?? '-' }}</span>
-                <span>Design ID: {{ row.product?.designId ?? '-' }}</span>
+                <span>{{ t('ticket.designId') }}: {{ row.product?.designId ?? '-' }}</span>
               </div>
             </div>
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="dueDate" label="Due Date" width="150">
+      <el-table-column prop="dueDate" :label="t('ticket.dueDate')" width="150">
         <template #default="{ row }">{{ row.dueDate || '-' }}</template>
       </el-table-column>
-      <el-table-column label="Latest Comment" min-width="260">
+      <el-table-column :label="t('ticket.latestComment')" min-width="260">
         <template #default="{ row }">
           <div class="latest-comment" :title="getLatestComment(row) || '-'">
             {{ getLatestComment(row) || '-' }}
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="createdAt" label="Created At" width="150" />
-      <el-table-column label="Actions" width="140" align="center">
+      <el-table-column prop="createdAt" :label="t('project.createdTime')" width="150" />
+      <el-table-column :label="t('common.actions')" width="140" align="center">
         <template #default="{ row }">
-          <el-button type="primary" link @click="openComments(row)">Comments</el-button>
+          <el-button type="primary" link @click="openComments(row)">{{ t('ticket.comments') }}</el-button>
           <el-divider direction="vertical" />
-          <el-button type="primary" link @click="openProcess(row)">Process</el-button>
+          <el-button type="primary" link @click="openProcess(row)">{{ t('ticket.process') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -145,13 +145,13 @@
   </div>
   
   <!-- Comments Dialog -->
-  <el-dialog v-model="commentsDialogVisible" title="Comments" width="600px">
+  <el-dialog v-model="commentsDialogVisible" :title="t('ticket.comments')" width="600px">
     <div v-loading="commentsLoading">
-      <div v-if="comments.length === 0" style="color:#888;">No comments</div>
-      <div v-else class="comment-list" style="display:flex; flex-direction:column; gap:12px;">
-        <div v-for="c in comments" :key="c.id" class="comment-item" style="padding:8px 0; border-bottom:1px solid #f0f0f0;">
-          <div style="white-space:pre-wrap; line-height:1.5;">{{ c.content }}</div>
-          <div style="color:#999; font-size:12px; margin-top:4px;">By {{ c.user?.username || c.userId }} · {{ c.createdAt }}</div>
+      <div v-if="comments.length === 0" class="empty-comments">{{ t('ticket.noComments') }}</div>
+      <div v-else class="comment-list">
+        <div v-for="c in comments" :key="c.id" class="comment-item">
+          <div class="comment-content">{{ c.content }}</div>
+          <div class="comment-meta">{{ t('ticket.by') }} {{ c.user?.username || c.userId }} · {{ c.createdAt }}</div>
         </div>
       </div>
     </div>
@@ -160,28 +160,28 @@
         <el-input
           v-model="newComment"
           type="textarea"
-          placeholder="Write a comment"
+          :placeholder="t('ticket.writeComment')"
           :rows="3"
         />
         <div style="text-align:right;">
-          <el-button @click="commentsDialogVisible = false">Cancel</el-button>
-          <el-button type="primary" :loading="submittingComment" @click="submitComment">Submit</el-button>
+          <el-button @click="commentsDialogVisible = false">{{ t('common.cancel') }}</el-button>
+          <el-button type="primary" :loading="submittingComment" @click="submitComment">{{ t('common.submit') }}</el-button>
         </div>
       </div>
     </template>
   </el-dialog>
 
-  <el-dialog v-model="processDialogVisible" title="Process Ticket" width="420px">
-    <div style="display:flex; gap:12px; align-items:center;">
-      <span style="width:80px; color:#666;">Status</span>
-      <el-select v-model="newStatus" placeholder="Select status" style="flex:1;">
+  <el-dialog v-model="processDialogVisible" :title="t('ticket.processTicket')" width="420px">
+    <div class="process-row">
+      <span class="process-label">{{ t('ticket.status') }}</span>
+      <el-select v-model="newStatus" :placeholder="t('ticket.selectStatus')" style="flex:1;">
         <el-option v-for="s in processStatuses" :key="s" :label="formatEnumLabel(s)" :value="s" />
       </el-select>
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="processDialogVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="processing" @click="submitProcess">Confirm</el-button>
+        <el-button @click="processDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="processing" @click="submitProcess">{{ t('common.confirm') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -195,8 +195,10 @@ import type { TicketVO } from '@/types/api/ticket'
 import type { TicketComment } from '@/types/api/ticket'
 import { useUserStore } from '@/stores/user'
 import { Edit } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
 
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const list = ref<TicketVO[]>([])
 const total = ref<number>(0)
@@ -204,7 +206,7 @@ const pageNum = ref<number>(1)
 const pageSize = ref<number>(20)
 const orderBy = ref<string | undefined>('id:desc')
 const status = ref<string>('')
-const statusesSelected = ref<string[]>(['open', 'resolved'])
+const statusesSelected = ref<string[]>(['open'])
 const priority = ref<string>('')
 const prioritiesSelected = ref<string[]>([])
 const dateRange = ref<[string, string] | ''>('')
@@ -253,7 +255,7 @@ async function loadData(): Promise<void> {
     list.value = data?.list ?? []
     total.value = data?.total ?? 0
   } catch (e) {
-    ElMessage.error('Failed to load tickets')
+    ElMessage.error(t('ticket.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -328,7 +330,7 @@ async function loadComments(): Promise<void> {
     const resp = await ticketsApi.comments(id)
     comments.value = resp.data ?? []
   } catch (e) {
-    ElMessage.error('Failed to load comments')
+    ElMessage.error(t('ticket.loadCommentsFailed'))
   } finally {
     commentsLoading.value = false
   }
@@ -339,7 +341,7 @@ async function submitComment(): Promise<void> {
   if (!id) return
   const content = newComment.value.trim()
   if (!content) {
-    ElMessage.warning('Please enter comment content')
+    ElMessage.warning(t('ticket.enterComment'))
     return
   }
   submittingComment.value = true
@@ -349,9 +351,9 @@ async function submitComment(): Promise<void> {
     await ticketsApi.comment(id, { userId, content })
     newComment.value = ''
     await loadComments()
-    ElMessage.success('Comment added')
+    ElMessage.success(t('ticket.commentAdded'))
   } catch (e) {
-    ElMessage.error('Failed to add comment')
+    ElMessage.error(t('ticket.addCommentFailed'))
   } finally {
     submittingComment.value = false
   }
@@ -367,7 +369,7 @@ async function submitProcess(): Promise<void> {
   const id = currentTicketId.value
   if (!id) return
   if (!newStatus.value) {
-    ElMessage.warning('Please select status')
+    ElMessage.warning(t('ticket.statusRequired'))
     return
   }
   processing.value = true
@@ -375,12 +377,12 @@ async function submitProcess(): Promise<void> {
     const operatorId = userStore.userInfo?.id
     if (!operatorId) throw new Error('No user')
     await ticketsApi.updateStatus(id, { status: newStatus.value, operatorId })
-    ElMessage.success('Status updated')
+    ElMessage.success(t('ticket.statusUpdated'))
     processDialogVisible.value = false
     // refresh list
     loadData()
   } catch (e) {
-    ElMessage.error('Failed to update status')
+    ElMessage.error(t('ticket.updateStatusFailed'))
   } finally {
     processing.value = false
   }
@@ -388,23 +390,30 @@ async function submitProcess(): Promise<void> {
 </script>
 
 <style scoped>
-.page { padding: 24px; }
+.page { padding: 24px; color: var(--studio-text); }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .pagination { margin-top: 16px; text-align: right; }
 .product-info { display: flex; gap: 12px; align-items: center; }
 .product-thumb { border-radius: 6px; overflow: hidden; }
 .product-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.product-name { font-weight: 600; color: #333; }
+.product-name { font-weight: 600; color: var(--studio-text); }
 .product-name { display: inline-flex; align-items: center; gap: 6px; }
 .edit-icon-btn :deep(.el-icon) { font-size: 14px; }
-.product-name a { color: #409EFF; text-decoration: none; }
+.product-name a { color: var(--studio-primary); text-decoration: none; }
 .product-name a:hover { text-decoration: underline; }
-.product-details { display: flex; gap: 12px; color: #666; font-size: 12px; }
+.product-details { display: flex; gap: 12px; color: var(--studio-text-muted); font-size: 12px; }
 .tags-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
 .tag-item { margin: 0; }
 .title-cell { display: flex; flex-direction: column; gap: 4px; }
-.title-text { font-weight: 600; color: #333; }
-.desc-text { color: #666; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.latest-comment { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666; }
+.title-text { font-weight: 600; color: var(--studio-text); }
+.desc-text { color: var(--studio-text-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.latest-comment { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--studio-text-muted); }
+.empty-comments { color: var(--studio-text-subtle); }
+.comment-list { display: flex; flex-direction: column; gap: 12px; }
+.comment-item { padding: 8px 0; border-bottom: 1px solid var(--studio-border); }
+.comment-content { white-space: pre-wrap; line-height: 1.5; color: var(--studio-text); }
+.comment-meta { color: var(--studio-text-subtle); font-size: 12px; margin-top: 4px; }
+.process-row { display: flex; gap: 12px; align-items: center; }
+.process-label { width: 80px; color: var(--studio-text-muted); }
 </style>

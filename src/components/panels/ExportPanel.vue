@@ -1,14 +1,14 @@
 <template>
-  <el-dialog :model-value="isDialogVisible" title="Export Configuration" class="export-dialog" @open="openDialog" @update:model-value="emit('update:isDialogVisible', $event)" :before-close="closeDialog">
+  <el-dialog :model-value="isDialogVisible" :title="t('export.title')" class="export-dialog" @open="openDialog" @update:model-value="emit('update:isDialogVisible', $event)" :before-close="closeDialog">
     <div v-if="uploading" class="upload-progress">
       <div class="upload-header">
-        <h3>Uploading...</h3>
+        <h3>{{ t('common.uploading') }}</h3>
         <div class="upload-info">
           <div class="info-item">
-            <el-tag type="primary" effect="dark" size="large">Progress: {{ currentProgress }}%</el-tag>
+            <el-tag type="primary" effect="dark" size="large">{{ t('export.progress') }}: {{ currentProgress }}%</el-tag>
           </div>
           <div class="info-item">
-            <el-tag type="success" effect="dark" size="large">Status: {{ currentStatus }}</el-tag>
+            <el-tag type="success" effect="dark" size="large">{{ t('export.status') }}: {{ currentStatus }}</el-tag>
           </div>
         </div>
       </div>
@@ -17,32 +17,32 @@
         <el-progress :percentage="currentProgress" :format="progressFormat" :stroke-width="20" />
         <div class="progress-details">
           <div class="current-progress">
-            <span class="progress-label">Current Progress:</span>
+            <span class="progress-label">{{ t('export.currentProgress') }}</span>
             <span class="progress-value">{{ currentProgress }}%</span>
           </div>
           <div class="upload-status">
-            <span class="status-label">Status:</span>
+            <span class="status-label">{{ t('export.status') }}:</span>
             <span class="status-value">{{ currentStatus }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="isUploadTimeout" class="timeout-warning">
-        Upload time has exceeded 1 minute, there may be network issues
-        <el-button size="small" type="danger" @click="cancelUpload">Cancel Upload</el-button>
+        {{ t('export.uploadTimeout') }}
+        <el-button size="small" type="danger" @click="cancelUpload">{{ t('export.cancelUpload') }}</el-button>
       </div>
     </div>
     <div v-else class="export-preview">
       <div class="preview-header">
-        <span>Preview</span>
+        <span>{{ t('export.preview') }}</span>
         <div class="preview-actions">
           <el-button size="small" @click="copyConfig" class="copy-btn">
             <Icon icon="solar:copy-bold" />
-            Copy
+            {{ t('common.copy') }}
           </el-button>
           <el-button type="success" size="small" @click="uploadApp" class="upload-btn">
             <Icon icon="material-symbols:upload" />
-            Upload
+            {{ t('common.upload') }}
           </el-button>
         </div>
       </div>
@@ -50,10 +50,10 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="closeDialog">Cancel</el-button>
+        <el-button @click="closeDialog">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="downloadConfig">
           <Icon icon="material-symbols:export-notes-rounded" />
-          Confirm Export
+          {{ t('common.confirmExport') }}
         </el-button>
       </span>
     </template>
@@ -81,11 +81,14 @@ import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
 import { useRouter } from 'vue-router'
 import { usePropertiesStore } from '@/stores/properties'
+import { useHistoryStore } from '@/stores/historyStore'
+import { useI18n } from '@/i18n'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
 const propertiesStore = usePropertiesStore()
+const { t } = useI18n()
 // 定义属性
 const props = defineProps({
   isDialogVisible: {
@@ -97,6 +100,7 @@ const props = defineProps({
 const emit = defineEmits(['update:isDialogVisible'])
 
 const baseStore = useBaseStore()
+const historyStore = useHistoryStore()
 
 const closeDialog = () => {
   // 使用 emit 通知父组件更新 isDialogVisible
@@ -148,7 +152,7 @@ const openDialog = () => {
 // 导出配置
 const downloadConfig = async () => {
   if (!baseStore.watchFaceName) {
-    messageStore.error('Please set the app name')
+    messageStore.error(t('export.setAppName'))
     return null
   }
   const config = baseStore.generateConfig()
@@ -189,11 +193,11 @@ const isOperationLocked = ref(false)
 // 定时轮训保存配置，只需要保存 name, kpayId, configJson 即可
 const saveConfig = async () => {
   if (router.currentRoute.value.path !== '/design') {
-    messageStore.error('Not on the design page')
+    messageStore.error(t('export.notDesignPage'))
     return
   }
   if (!baseStore.watchFaceName) {
-    messageStore.error('Please set the app name first')
+    messageStore.error(t('export.setAppNameFirst'))
     return
   }
 
@@ -227,7 +231,7 @@ const saveConfig = async () => {
 const uploadApp = async () => {
   // 检查应用名称
   if (!baseStore.watchFaceName) {
-    messageStore.error('Please set the app name')
+    messageStore.error(t('export.setAppName'))
     return -1
   }
   // 生成配置
@@ -239,7 +243,7 @@ const uploadApp = async () => {
   // 开始上传，显示进度条
   uploading.value = true
   currentProgress = 0
-  currentStatus = 'Preparing upload...'
+  currentStatus = t('export.preparingUpload')
   isUploadTimeout.value = false
 
   // 创建全屏遮罩
@@ -265,12 +269,12 @@ const uploadApp = async () => {
     const configJson = baseStore.generateConfig()
     if (!configJson) {
       // Failed to generate configuration, abort upload
-      currentStatus = 'Failed to generate configuration'
+      currentStatus = t('export.generateConfigFailed')
       currentProgress = 0
       if (loadingInstance) {
         loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
       }
-      messageStore.error('Failed to generate configuration. Upload aborted')
+      messageStore.error(t('export.generateConfigAborted'))
       // 关闭上传状态与遮罩
       uploading.value = false
       clearTimeout(uploadTimeoutTimer)
@@ -281,13 +285,13 @@ const uploadApp = async () => {
       return -1
     }
     // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
-    currentStatus = 'Processing background image configuration...'
+    currentStatus = t('export.processingBackground')
     currentProgress = 20
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
     // 上传表盘截图 - 对画布进行实时截图
-    currentStatus = 'Uploading watchface screenshot...'
+    currentStatus = t('export.uploadingScreenshot')
     const screenshotUrl = await uploadScreenshot()
     currentProgress = 40
     if (loadingInstance) {
@@ -295,7 +299,7 @@ const uploadApp = async () => {
     }
 
     // 配置更新
-    currentStatus = 'Updating configuration...'
+    currentStatus = t('export.updatingConfig')
     currentProgress = 60
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -317,7 +321,9 @@ const uploadApp = async () => {
     }
     if (screenshotUrl) { // 屏幕截图成功时，上传
       data.coverImage = {
-        url: screenshotUrl
+        url: screenshotUrl,
+        type: 'screenshot',
+        usageType: 'screenshot'
       }
     }
 
@@ -330,14 +336,15 @@ const uploadApp = async () => {
     
     // 更新 baseStore.id
     baseStore.id = res.data.documentId
+    historyStore.saveInitial()
 
     // 更新WPay产品信息(必须在设计创建或更新之后)
-    currentStatus = 'Updating WPay product information...'
+    currentStatus = t('export.updatingProduct')
     currentProgress = 80
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
-    currentStatus = 'Upload completed'
+    currentStatus = t('export.uploadCompleted')
     currentProgress = 100
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -346,7 +353,7 @@ const uploadApp = async () => {
     // 延迟关闭进度条，让用户看到完成状态
     setTimeout(() => {
       uploading.value = false
-      messageStore.success('Configuration uploaded successfully')
+      messageStore.success(t('export.uploadedSuccessfully'))
       closeDialog()
 
       // 清除超时定时器和遮罩
@@ -359,7 +366,7 @@ const uploadApp = async () => {
     return 0
   } catch (error) {
     console.error('Configuration upload failed:', error)
-    currentStatus = 'Upload failed: ' + (error.message || 'Unknown error')
+    currentStatus = t('editor.uploadFailedWithReason', { reason: error.message || t('common.unknown') })
     currentProgress = 0
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -368,7 +375,7 @@ const uploadApp = async () => {
     // 延迟关闭进度条，让用户看到错误信息
     setTimeout(() => {
       uploading.value = false
-      messageStore.error(error.message || 'Configuration upload failed, please try again later')
+      messageStore.error(error.message || t('export.uploadFailed'))
 
       // 清除超时定时器和遮罩
       clearTimeout(uploadTimeoutTimer)
@@ -377,13 +384,13 @@ const uploadApp = async () => {
         loadingInstance = null
       }
     }, 2000)
-    return 0
+    return -1
   }
 }
 
 // 取消上传
 const cancelUpload = () => {
-  currentStatus = 'Upload canceled'
+  currentStatus = t('export.uploadCanceled')
   currentProgress = 0
 
   // 关闭遮罩
@@ -409,10 +416,10 @@ const copyConfig = () => {
   navigator.clipboard
     .writeText(configStr)
     .then(() => {
-      messageStore.success('Configuration copied to clipboard')
+      messageStore.success(t('export.copied'))
     })
     .catch(() => {
-      messageStore.error('Copy failed')
+      messageStore.error(t('export.copyFailed'))
     })
 }
 
@@ -544,10 +551,10 @@ defineExpose({
 .status-value {
   font-size: 15px;
   color: #303133;
-  background-color: #ecf5ff;
+  background-color: var(--studio-primary-soft);
   padding: 2px 8px;
   border-radius: 3px;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid #0f6b68;
 }
 
 .current-progress {
@@ -564,11 +571,11 @@ defineExpose({
 .progress-value {
   font-size: 15px;
   font-weight: bold;
-  color: #409eff;
-  background-color: #ecf5ff;
+  color: #0f6b68;
+  background-color: var(--studio-primary-soft);
   padding: 2px 8px;
   border-radius: 3px;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid #0f6b68;
 }
 
 .timeout-warning {

@@ -2,7 +2,8 @@
 
 export interface EditorState {
   zoomLevel: number
-  backgroundColor: string
+  lightCanvasBackgroundColor: string
+  darkCanvasBackgroundColor: string
   showTimeSimulator: boolean
   showZoomControls: boolean
   showHistoryControls: boolean

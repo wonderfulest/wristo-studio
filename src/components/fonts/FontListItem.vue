@@ -165,7 +165,7 @@ const onEditIcon = () => {
 
 .font-name {
   font-size: 12px;
-  color: #909399;
+  color: var(--studio-text-subtle);
 }
 
 .font-tags {
@@ -183,7 +183,7 @@ const onEditIcon = () => {
 .font-delete {
   border: none;
   background: transparent;
-  color: #f56c6c;
+  color: var(--studio-danger);
   font-size: 12px;
   cursor: pointer;
 }
@@ -191,7 +191,7 @@ const onEditIcon = () => {
 .font-edit {
   border: none;
   background: transparent;
-  color: #409eff;
+  color: var(--studio-primary);
   font-size: 12px;
   cursor: pointer;
 }

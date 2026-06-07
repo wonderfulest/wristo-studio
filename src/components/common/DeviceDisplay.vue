@@ -4,7 +4,7 @@
     <div v-if="currentDevice" class="device-info selected-state" @click="handleSelectDevice">
       <div class="device-avatar">
         <img v-if="currentDevice.imageUrl" :src="currentDevice.imageUrl" :alt="currentDevice.displayName" />
-        <div v-else class="device-fallback">⌚️</div>
+        <Icon v-else class="device-fallback-icon" icon="material-symbols:watch-rounded" />
       </div>
       <div class="device-name">{{ currentDevice.displayName }}</div>
     </div>
@@ -12,9 +12,9 @@
     <!-- No Device -->
     <div v-else class="device-info no-device" @click="handleSelectDevice">
       <div class="device-avatar">
-        <div class="device-fallback">📱</div>
+        <Icon class="device-fallback-icon" icon="material-symbols:watch-off-rounded" />
       </div>
-      <div class="device-name">Select Device</div>
+      <div class="device-name">{{ t('device.selectDevice') }}</div>
     </div>
   </div>
   
@@ -27,10 +27,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores/user'
 import type { GarminDeviceVO } from '@/types/user'
 import DeviceSelector from './DeviceSelector.vue'
 import type { GarminDeviceVO as ApiGarminDeviceVO } from '@/api/device'
+import { useI18n } from '@/i18n'
 
 interface Props {
   isMobile?: boolean
@@ -51,6 +53,7 @@ const emit = defineEmits<Emits>()
 
 const userStore = useUserStore()
 const showSelector = ref(false)
+const { t } = useI18n()
 
 // 当前设备仅来源于 userStore
 const currentDevice = computed(() => {
@@ -91,11 +94,12 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  min-height: 40px;
+  padding: 5px 11px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  box-shadow: none;
   transition: all 0.2s ease;
 }
 
@@ -104,18 +108,19 @@ defineExpose({
 }
 
 .device-info:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  border-color: var(--studio-border-strong);
+  background: var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .device-avatar {
   width: 24px;
   height: 24px;
   aspect-ratio: 1 / 1;
-  border-radius: 6px;
+  border-radius: var(--studio-radius-sm);
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--studio-canvas-shell);
+  border: 1px solid var(--studio-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,17 +134,18 @@ defineExpose({
   object-fit: contain;
   padding: 2px;
   display: block;
-  background: #fff;
+  background: var(--studio-canvas-shell);
 }
 
-.device-fallback {
-  font-size: 12px;
-  line-height: 1;
+.device-fallback-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--studio-text-muted);
 }
 
 .device-name {
   font-size: 0.85rem;
-  color: #1f2937;
+  color: var(--studio-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -150,40 +156,40 @@ defineExpose({
 /* No Device State */
 .device-info.no-device {
   cursor: pointer;
-  border-color: #d1d5db;
-  background: #f9fafb;
+  border-color: var(--studio-border);
+  background: var(--studio-surface-soft);
   transition: all 0.2s ease;
 }
 
 .device-info.no-device:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .device-info.no-device .device-name {
-  color: #6b7280;
+  color: var(--studio-text-muted);
   font-weight: 400;
 }
 
 .device-info.no-device:hover .device-name {
-  color: #3b82f6;
+  color: var(--studio-primary);
   font-weight: 500;
 }
 
 /* Mobile Device Display */
 .device-display-container.mobile {
   padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--studio-border);
   margin-bottom: 16px;
 }
 
 .device-display-container.mobile .device-info {
   gap: 12px;
   padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--studio-surface-soft);
+  border-radius: var(--studio-radius-md);
+  border: 1px solid var(--studio-border);
 }
 
 .device-display-container.mobile .device-avatar {
@@ -197,8 +203,9 @@ defineExpose({
   padding: 3px;
 }
 
-.device-display-container.mobile .device-fallback {
-  font-size: 16px;
+.device-display-container.mobile .device-fallback-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .device-display-container.mobile .device-name {
@@ -210,10 +217,10 @@ defineExpose({
 
 /* Mobile No Device State */
 .device-display-container.mobile .device-info.no-device {
-  background: #f3f4f6;
+  background: var(--studio-surface-soft);
 }
 
 .device-display-container.mobile .device-info.no-device:hover {
-  background: #e5f3ff;
+  background: var(--studio-primary-soft);
 }
 </style>

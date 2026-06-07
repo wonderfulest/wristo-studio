@@ -406,14 +406,14 @@ defineExpose({
 
 :deep(.edit-design-dialog .el-dialog__header) {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid var(--studio-border);
+  background: var(--studio-surface-raised);
 }
 
 :deep(.edit-design-dialog .el-dialog__title) {
   font-size: 18px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--studio-text);
   letter-spacing: -0.022em;
 }
 
@@ -424,8 +424,8 @@ defineExpose({
 
 :deep(.edit-design-dialog .el-dialog__footer) {
   padding: 16px 24px 20px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-top: 1px solid var(--studio-border);
+  background: var(--studio-surface-raised);
 }
 
 /* Dialog Content */
@@ -433,7 +433,7 @@ defineExpose({
   height: calc(94vh - 140px);
   overflow-y: auto;
   padding: 12px 12px 12px;
-  background: #ffffff;
+  background: var(--studio-surface);
 }
 
 /* Form Sections */
@@ -448,7 +448,7 @@ defineExpose({
 .section-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--studio-text);
   margin-bottom: 12px;
   letter-spacing: -0.022em;
 }
@@ -487,7 +487,7 @@ defineExpose({
 .field-label {
   font-size: 13px;
   font-weight: 500;
-  color: #424245;
+  color: var(--studio-text-muted);
   margin-bottom: 4px;
   letter-spacing: -0.016em;
 }
@@ -495,41 +495,41 @@ defineExpose({
 /* Apple-style Inputs */
 :deep(.apple-input .el-input__wrapper) {
   border-radius: 8px;
-  border: 1px solid #d2d2d7;
+  border: 1px solid var(--studio-border);
   box-shadow: none;
   transition: all 0.2s ease;
   padding: 8px 10px;
 }
 
 :deep(.apple-input .el-input__wrapper:hover) {
-  border-color: #007aff;
+  border-color: var(--studio-primary);
 }
 
 :deep(.apple-input .el-input__wrapper.is-focus) {
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  border-color: var(--studio-primary);
+  box-shadow: 0 0 0 3px var(--studio-focus-ring);
 }
 
 :deep(.apple-select .el-select__wrapper) {
   border-radius: 8px;
-  border: 1px solid #d2d2d7;
+  border: 1px solid var(--studio-border);
   box-shadow: none;
   transition: all 0.2s ease;
   padding: 8px 10px;
 }
 
 :deep(.apple-select .el-select__wrapper:hover) {
-  border-color: #007aff;
+  border-color: var(--studio-primary);
 }
 
 :deep(.apple-select .el-select__wrapper.is-focused) {
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  border-color: var(--studio-primary);
+  box-shadow: 0 0 0 3px var(--studio-focus-ring);
 }
 
 :deep(.apple-textarea .el-textarea__inner) {
   border-radius: 8px;
-  border: 1px solid #d2d2d7;
+  border: 1px solid var(--studio-border);
   box-shadow: none;
   transition: all 0.2s ease;
   padding: 8px 10px;
@@ -538,29 +538,29 @@ defineExpose({
 }
 
 :deep(.apple-textarea .el-textarea__inner:hover) {
-  border-color: #007aff;
+  border-color: var(--studio-primary);
 }
 
 :deep(.apple-textarea .el-textarea__inner:focus) {
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  border-color: var(--studio-primary);
+  box-shadow: 0 0 0 3px var(--studio-focus-ring);
 }
 
 :deep(.apple-number-input .el-input__wrapper) {
   border-radius: 8px;
-  border: 1px solid #d2d2d7;
+  border: 1px solid var(--studio-border);
   box-shadow: none;
   transition: all 0.2s ease;
   padding: 8px 10px;
 }
 
 :deep(.apple-number-input .el-input__wrapper:hover) {
-  border-color: #007aff;
+  border-color: var(--studio-primary);
 }
 
 :deep(.apple-number-input .el-input__wrapper.is-focus) {
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  border-color: var(--studio-primary);
+  box-shadow: 0 0 0 3px var(--studio-focus-ring);
 }
 
 /* Radio Group */
@@ -570,13 +570,13 @@ defineExpose({
 }
 
 :deep(.apple-radio .el-radio__input.is-checked .el-radio__inner) {
-  background-color: #007aff;
-  border-color: #007aff;
+  background-color: var(--studio-primary);
+  border-color: var(--studio-primary);
 }
 
 :deep(.apple-radio .el-radio__label) {
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--studio-text);
 }
 
 /* Buttons */
@@ -589,31 +589,31 @@ defineExpose({
 }
 
 :deep(.apple-button.secondary) {
-  background: #f2f2f7;
-  border: 1px solid #d2d2d7;
-  color: #1d1d1f;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
+  color: var(--studio-text);
 }
 
 :deep(.apple-button.secondary:hover) {
-  background: #e8e8ed;
-  border-color: #c7c7cc;
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary-border);
 }
 
 :deep(.apple-button.primary) {
-  background: #007aff;
-  border: 1px solid #007aff;
-  color: white;
+  background: var(--studio-primary);
+  border: 1px solid var(--studio-primary);
+  color: var(--color-white);
 }
 
 :deep(.apple-button.primary:hover) {
-  background: #0056cc;
-  border-color: #0056cc;
+  background: var(--studio-primary-hover);
+  border-color: var(--studio-primary-hover);
 }
 
 :deep(.apple-button.primary:disabled) {
-  background: #c7c7cc;
-  border-color: #c7c7cc;
-  color: #8e8e93;
+  background: var(--el-fill-color);
+  border-color: var(--studio-border);
+  color: var(--studio-text-subtle);
 }
 
 /* Config Section */
@@ -631,10 +631,10 @@ defineExpose({
 
 .config-editor {
   flex: 1;
-  border: 1px solid #d2d2d7;
-  border-radius: 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
   overflow: hidden;
-  background: #fafafa;
+  background: var(--studio-surface-soft);
   min-height: 800px;
   max-height: calc(94vh - 800px);
   display: flex;
@@ -644,7 +644,7 @@ defineExpose({
 .config-content {
   flex: 1;
   overflow: auto;
-  background: white;
+  background: var(--studio-surface);
   margin: 1px;
   border-radius: 11px;
 }
@@ -671,7 +671,8 @@ defineExpose({
   font-size: 13px;
   line-height: 1.5;
   resize: none;
-  background: white;
+  background: var(--studio-surface);
+  color: var(--studio-text);
 }
 
 :deep(.json-editor-input .el-textarea__inner:focus) {
@@ -684,15 +685,15 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: #fff2f0;
-  border-top: 1px solid #ffccc7;
-  color: #cf1322;
+  background: var(--el-color-danger-light-9);
+  border-top: 1px solid var(--el-color-danger-light-5);
+  color: var(--el-color-danger);
   font-size: 13px;
   font-weight: 500;
 }
 
 .error-icon {
-  color: #cf1322;
+  color: var(--el-color-danger);
 }
 
 /* Dialog Footer */

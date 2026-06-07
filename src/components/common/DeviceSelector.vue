@@ -1,8 +1,9 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="Select Your Device"
+    :title="t('device.selectYourDevice')"
     width="min(880px, 95vw)"
+    append-to-body
     :before-close="handleClose"
     :z-index="3000"
     class="device-selector-dialog"
@@ -12,7 +13,7 @@
       <div v-if="!loading" class="search-row">
         <el-input
           v-model="query"
-          placeholder="Search device name"
+          :placeholder="t('device.searchDeviceName')"
           size="large"
           clearable
           :prefix-icon="Search"
@@ -22,28 +23,28 @@
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
         <el-icon class="is-loading"><Loading /></el-icon>
-        <span>Loading devices...</span>
+        <span>{{ t('device.loadingDevices') }}</span>
       </div>
       
       <!-- Device List -->
       <div v-else-if="filteredDevices.length > 0" class="device-list">
         <div
           v-for="device in filteredDevices"
-          :key="device.id"
+          :key="device.displayKey"
           class="device-item"
-          :class="{ selected: selectedDeviceId === device.id }"
+          :class="{ selected: selectedDeviceKey === device.displayKey }"
           @click="selectDevice(device)"
         >
           <div class="device-avatar">
             <img v-if="device.imageUrl" :src="device.imageUrl" :alt="device.displayName" />
-            <div v-else class="device-fallback">⌚️</div>
+            <Icon v-else class="device-fallback" icon="material-symbols:watch-rounded" />
           </div>
           <div class="device-info">
             <div class="device-name">{{ device.displayName }}</div>
             <div v-if="device.deviceFamily" class="device-family">{{ device.deviceFamily }}</div>
           </div>
           <div class="device-check">
-            <el-icon v-if="selectedDeviceId === device.id" class="check-icon"><Check /></el-icon>
+            <el-icon v-if="selectedDeviceKey === device.displayKey" class="check-icon"><Check /></el-icon>
           </div>
         </div>
       </div>
@@ -51,12 +52,12 @@
       <!-- Empty State -->
       <div v-else class="empty-state">
         <el-icon class="empty-icon"><Warning /></el-icon>
-        <p>No devices available</p>
+        <p>{{ t('device.noDevices') }}</p>
       </div>
 
       <!-- Auto Confirm Banner -->
       <div v-if="countdown !== null" class="auto-confirm-banner">
-        <span>Auto-selecting in {{ countdown }}s…</span>
+        <span>{{ t('device.autoSelecting', { seconds: countdown }) }}</span>
       </div>
     </div>
   </el-dialog>
@@ -66,9 +67,11 @@
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, Check, Warning, Search } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { getDeviceList, getDeviceDetail, type GarminDeviceBaseVO, type GarminDeviceVO } from '@/api/device'
 import { useUserStore } from '@/stores/user'
 import { getUserInfo, updateMyInfo } from '@/api/wristo/auth'
+import { useI18n } from '@/i18n'
 
 interface Props {
   modelValue: boolean
@@ -83,22 +86,34 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const visible = ref(false)
 const loading = ref(false)
 const confirmLoading = ref(false)
 const deviceList = ref<GarminDeviceBaseVO[]>([])
-const selectedDeviceId = ref<number | null>(null)
+const selectedDevice = ref<DisplayGarminDeviceBaseVO | null>(null)
+const selectedDeviceKey = computed(() => selectedDevice.value?.displayKey || null)
 const query = ref('')
 const countdown = ref<number | null>(null)
 let countdownTimer: number | null = null
 
+interface DisplayGarminDeviceBaseVO extends GarminDeviceBaseVO {
+  displayKey: string
+  originalDisplayName: string
+}
+
+const displayDevices = computed(() => {
+  return deviceList.value.flatMap(expandDeviceDisplayNames)
+})
+
 // Filtered list by fuzzy query
 const filteredDevices = computed(() => {
   const q = query.value.trim().toLowerCase()
-  if (!q) return deviceList.value
-  return deviceList.value.filter((d) => {
+  if (!q) return displayDevices.value
+  return displayDevices.value.filter((d) => {
     const name = (d.displayName || '').toLowerCase()
+    const originalName = (d.originalDisplayName || '').toLowerCase()
     const family = (d.deviceFamily || '').toLowerCase()
     // simple fuzzy: all query chars appear in order in name, or substring match on name/family
     const inOrder = (() => {
@@ -109,7 +124,7 @@ const filteredDevices = computed(() => {
       }
       return false
     })()
-    return name.includes(q) || family.includes(q) || inOrder
+    return name.includes(q) || originalName.includes(q) || family.includes(q) || inOrder
   })
 })
 
@@ -142,7 +157,7 @@ watch(visible, (newValue) => {
   emit('update:modelValue', newValue)
   if (!newValue) {
     // Reset state when dialog closes
-    selectedDeviceId.value = null
+    selectedDevice.value = null
     stopCountdown()
     countdown.value = null
   }
@@ -163,35 +178,48 @@ const loadDeviceList = async () => {
 }
 
 // Select device
-const selectDevice = (device: GarminDeviceBaseVO) => {
-  selectedDeviceId.value = device.id
+const selectDevice = (device: DisplayGarminDeviceBaseVO) => {
+  selectedDevice.value = device
   startCountdown()
 }
 
 // Confirm selection
 const confirmSelection = async () => {
-  if (!selectedDeviceId.value) return
+  if (!selectedDevice.value) return
 
   confirmLoading.value = true
   try {
+    const selected = selectedDevice.value
     // Get device details
-    const deviceDetail = await getDeviceDetail(selectedDeviceId.value)
+    const deviceDetail = await getDeviceDetail(selected.id)
+    const displayDeviceDetail = {
+      ...deviceDetail,
+      displayName: selected.displayName
+    }
 
     // 调用后端接口更新当前用户设备
-    await updateMyInfo({ deviceId: deviceDetail.deviceId })
+    await updateMyInfo({ deviceId: displayDeviceDetail.deviceId })
 
     // 重新拉取用户信息并更新到 userStore
     try {
       const res = await getUserInfo()
       if (res?.data) {
-        userStore.setUserInfo(res.data)
+        userStore.setUserInfo({
+          ...res.data,
+          device: res.data.device
+            ? {
+                ...res.data.device,
+                displayName: selected.displayName
+              }
+            : res.data.device
+        })
       }
     } catch (e) {
       console.error('Failed to refresh user info after device update:', e)
     }
 
     // Emit selection event
-    emit('device-selected', deviceDetail)
+    emit('device-selected', displayDeviceDetail)
 
     // Close dialog
     handleClose()
@@ -233,6 +261,37 @@ function stopCountdown() {
   }
 }
 
+function expandDeviceDisplayNames(device: GarminDeviceBaseVO): DisplayGarminDeviceBaseVO[] {
+  const displayNames = splitDeviceDisplayName(device.displayName)
+  return displayNames.map((displayName, index) => ({
+    ...device,
+    displayName,
+    originalDisplayName: device.displayName,
+    displayKey: `${device.id}:${index}:${displayName}`
+  }))
+}
+
+function splitDeviceDisplayName(displayName: string): string[] {
+  const parts = displayName.split('/').map((part) => part.trim()).filter(Boolean)
+  if (parts.length <= 1) return [displayName]
+
+  const prefix = inferDeviceDisplayPrefix(parts[0])
+  return parts.map((part, index) => {
+    if (index === 0 || !prefix || part.startsWith(prefix)) return part
+    return `${prefix} ${part}`
+  })
+}
+
+function inferDeviceDisplayPrefix(firstPart: string): string {
+  const closingParenIndex = firstPart.lastIndexOf(')')
+  if (closingParenIndex >= 0 && closingParenIndex < firstPart.length - 1) {
+    return firstPart.slice(0, closingParenIndex + 1).trim()
+  }
+
+  const familyMatch = firstPart.match(/^(MARQ|Forerunner|fēnix|fenix|epix|Venu|vívoactive|vivoactive|Instinct|Approach|Descent|Enduro|tactix|quatix|D2)\b/i)
+  return familyMatch?.[0] || ''
+}
+
 onBeforeUnmount(() => {
   stopCountdown()
 })
@@ -263,7 +322,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 32px 0;
-  color: #6b7280;
+  color: var(--studio-text-muted);
   gap: 12px;
 }
 
@@ -286,21 +345,21 @@ onBeforeUnmount(() => {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .device-item:hover {
-  border-color: #94a3b8;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  border-color: var(--studio-border-strong);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .device-item.selected {
-  border-color: #3b82f6;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.18);
-  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  border-color: var(--studio-primary);
+  box-shadow: 0 3px 10px rgba(15, 107, 104, 0.18);
+  background: var(--studio-primary-soft);
 }
 
 .device-avatar {
@@ -308,8 +367,8 @@ onBeforeUnmount(() => {
   height: 40px;
   border-radius: 10px;
   overflow: hidden;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--studio-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,7 +383,9 @@ onBeforeUnmount(() => {
 }
 
 .device-fallback {
-  font-size: 18px;
+  width: 22px;
+  height: 22px;
+  color: var(--studio-text-muted);
 }
 
 .device-info {
@@ -332,17 +393,24 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .device-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--studio-text);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .device-family {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--studio-text-muted);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .device-check {
@@ -353,7 +421,7 @@ onBeforeUnmount(() => {
 }
 
 .check-icon {
-  color: #3b82f6;
+  color: var(--studio-primary);
 }
 
 .empty-state {
@@ -362,7 +430,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 32px 0;
-  color: #6b7280;
+  color: var(--studio-text-muted);
   gap: 8px;
 }
 
@@ -374,8 +442,8 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
   font-size: 12px;
   text-align: center;
 }

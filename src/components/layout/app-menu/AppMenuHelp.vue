@@ -2,18 +2,18 @@
   <el-sub-menu index="help">
     <template #title>
       <el-icon><QuestionFilled /></el-icon>
-      <span>Help</span>
+      <span>{{ t('editor.help') }}</span>
     </template>
     <el-menu-item index="help/shortcuts" @click="onOpenShortcuts">
       <template #title>
         <el-icon><Mouse /></el-icon>
-        <span>Keyboard/Mouse Usage</span>
+        <span>{{ t('editor.keyboardMouseUsage') }}</span>
       </template>
     </el-menu-item>
     <el-menu-item index="help/feedback" @click="onOpenFeedback">
       <template #title>
         <el-icon><ChatLineSquare /></el-icon>
-        <span>Send Feedback</span>
+        <span>{{ t('editor.sendFeedback') }}</span>
       </template>
     </el-menu-item>
   </el-sub-menu>
@@ -21,6 +21,9 @@
 
 <script setup>
 import { QuestionFilled, Mouse, ChatLineSquare } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   onOpenShortcuts: {

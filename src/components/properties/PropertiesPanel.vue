@@ -1,25 +1,25 @@
 <template>
-  <el-drawer v-model="visible" title="Properties and App Settings" direction="rtl" size="800px">
+  <el-drawer v-model="visible" :title="t('property.drawerTitle')" direction="rtl" size="800px">
     <div class="properties-container">
       <!-- 使用 flex 布局实现左右排列 -->
       <div class="properties-layout">
         <!-- 左侧属性列表 -->
         <div class="properties-list">
           <el-form label-position="top">
-            <el-form-item label="Text Case">
+            <el-form-item :label="t('property.textCase')">
               <el-select v-model="textCase" style="width: 100%">
-                <el-option label="Default" :value="1" />
-                <el-option label="Uppercase" :value="1" />
-                <el-option label="Lowercase" :value="2" />
-                <el-option label="Capitalize" :value="3" />
+                <el-option :label="t('property.default')" :value="1" />
+                <el-option :label="t('property.uppercase')" :value="1" />
+                <el-option :label="t('property.lowercase')" :value="2" />
+                <el-option :label="t('property.capitalize')" :value="3" />
               </el-select>
             </el-form-item>
 
-            <el-form-item label="Label Length">
+            <el-form-item :label="t('property.labelLength')">
               <el-input model-value="Short" disabled />
             </el-form-item>
 
-            <el-form-item label="Show Unit">
+            <el-form-item :label="t('property.showUnit')">
               <el-switch v-model="showUnit" />
             </el-form-item>
 
@@ -69,37 +69,37 @@
 
         <!-- 右侧添加属性按钮组 -->
         <div class="add-property">
-          <h3>Add property</h3>
+          <h3>{{ t('property.addProperty') }}</h3>
           <el-button-group class="property-types" direction="vertical">
             <el-button type="text" @click="addProperty('color')">
               <el-icon>
                 <Brush />
               </el-icon>
-              Color Select
+              {{ t('property.colorSelect') }}
             </el-button>
             <el-button type="text" @click="addProperty('goal')">
               <el-icon>
                 <Histogram />
               </el-icon>
-              Goal Select
+              {{ t('property.goalSelect') }}
             </el-button>
             <el-button type="text" @click="addProperty('data')">
               <el-icon>
                 <DataLine />
               </el-icon>
-              Data Select
+              {{ t('property.dataSelect') }}
             </el-button>
             <el-button type="text" @click="addProperty('chart')">
               <el-icon>
                 <TrendCharts />
               </el-icon>
-              Chart Select
+              {{ t('property.chartSelect') }}
             </el-button>
             <el-button type="text" @click="addProperty('text')">
               <el-icon>
                 <Document />
               </el-icon>
-              Text String
+              {{ t('property.textString') }}
             </el-button>
           </el-button-group>
         </div>
@@ -140,6 +140,7 @@ import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDial
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
+import { useI18n } from '@/i18n'
 
 const visible = ref(false)
 const colorPropertyDialog = ref(null)
@@ -148,6 +149,7 @@ const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
+const { t } = useI18n()
 
 const textCase = computed({
   get: () => propertiesStore.textCase,

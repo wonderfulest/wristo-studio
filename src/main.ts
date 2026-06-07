@@ -11,6 +11,7 @@ import '@/assets/iconfont/iconfont.css'
 
 import ElementPlus from 'element-plus'
 import 'element-plus/theme-chalk/src/index.scss'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import '@/assets/styles/element-variables.scss'
 
 import emitter from '@/utils/eventBus'

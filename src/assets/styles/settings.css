@@ -2,15 +2,16 @@
 .settings-section {
   padding: 16px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--studio-surface);
+  color: var(--studio-text);
 }
 
 .section-title {
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
   margin: 24px 0 16px;
   padding-bottom: 8px;
-  border-bottom: 1px dashed #eee;
+  border-bottom: 1px dashed var(--studio-border);
 }
 
 .section-title:first-child {
@@ -28,7 +29,7 @@
 .setting-item label {
   display: block;
   margin-bottom: 8px;
-  color: #606266;
+  color: var(--studio-text-muted);
   font-size: 14px;
   font-weight: 500;
 }
@@ -40,23 +41,31 @@
   width: 100%;
   height: 32px;
   padding: 0 12px;
-  color: #606266;
+  color: var(--studio-text);
   font-size: 14px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
   transition: border-color 0.2s;
+}
+
+.setting-item select option {
+  color: var(--studio-text);
+  background: var(--studio-surface);
 }
 
 .setting-item select:hover,
 .setting-item input[type='text']:hover,
 .setting-item input[type='number']:hover {
-  border-color: #c0c4cc;
+  border-color: var(--studio-border-strong);
 }
 
 .setting-item select:focus,
 .setting-item input[type='text']:focus,
 .setting-item input[type='number']:focus {
-  border-color: #409eff;
+  border-color: var(--studio-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 0 0 2px var(--studio-focus-ring);
 }
 
 /* 输入组样式 */
@@ -68,8 +77,8 @@
 
 .input-group label {
   font-size: 12px;
-  color: #666;
   margin-bottom: 2px;
+  color: var(--studio-text-subtle);
 }
 
 /* 网格布局组 */
@@ -87,8 +96,9 @@ input[type='color'] {
   height: 40px;
   padding: 2px;
   width: 100%;
-  border: 1px solid #ddd;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
+  background: var(--studio-surface);
 }
 
 input[type='range'] {
@@ -107,9 +117,10 @@ input[type='range'] {
   flex: 1;
   height: 32px;
   min-width: 0;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
-  background: white;
+  background: var(--studio-surface);
+  color: var(--studio-text-muted);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -118,14 +129,14 @@ input[type='range'] {
 }
 
 .align-buttons button:hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: var(--studio-primary);
+  color: var(--studio-primary);
 }
 
 .align-buttons button.active {
-  background: #409eff;
-  border-color: #409eff;
-  color: white;
+  background: var(--studio-primary);
+  border-color: var(--studio-primary);
+  color: var(--color-white);
 }
 
 /* 滚动条样式 */
@@ -135,17 +146,17 @@ input[type='range'] {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--studio-surface-soft);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--studio-border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--studio-primary-border);
 }
 
 /* =====================
@@ -160,15 +171,52 @@ input[type='range'] {
   width: 100%;
   height: 32px;
   padding: 4px 8px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--studio-border);
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
   color: transparent;
+  background: var(--studio-surface);
+}
+
+.settings-section .el-form-item__label,
+.settings-section .el-switch__label,
+.settings-section .el-checkbox,
+.settings-section .el-radio,
+.settings-section .el-input__inner,
+.settings-section .el-textarea__inner,
+.settings-section .el-select__placeholder,
+.settings-section .el-input-number .el-input__inner {
+  color: var(--studio-text-muted);
+}
+
+.settings-section .el-input__wrapper,
+.settings-section .el-textarea__inner,
+.settings-section .el-select__wrapper,
+.settings-section .el-input-number__decrease,
+.settings-section .el-input-number__increase {
+  background: var(--studio-surface);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+.settings-section .el-input__wrapper,
+.settings-section .el-select__wrapper {
+  box-shadow: 0 0 0 1px var(--studio-border) inset;
+}
+
+.settings-section .el-input__wrapper:hover,
+.settings-section .el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--studio-border-strong) inset;
+}
+
+.settings-section .el-input-number__decrease,
+.settings-section .el-input-number__increase {
+  border-color: var(--studio-border);
 }
 
 .color-input input:hover {
-  border-color: #409eff;
+  border-color: var(--studio-primary);
 }
 
 .color-input .color-picker {
@@ -227,4 +275,3 @@ input[type='range'] {
   margin: 0;
   color: var(--el-color-danger);
 }
-

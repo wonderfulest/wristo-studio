@@ -1,13 +1,13 @@
 <template>
   <div class="settings-section">
     <el-form :model="currentModel" label-position="left" label-width="100px">
-      <el-form-item label="Font Type">
+      <el-form-item :label="t('elementSettings.fontType')">
         <el-radio-group v-model="fontRenderType">
-          <el-radio label="truetype">truetype font</el-radio>
-          <el-radio label="bitmap">bitmap font</el-radio>
+          <el-radio label="truetype">{{ t('elementSettings.trueTypeFont') }}</el-radio>
+          <el-radio label="bitmap">{{ t('elementSettings.bitmapFont') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item label="Font">
+      <el-form-item :label="t('elementSettings.font')">
         <template v-if="fontRenderType === 'truetype'">
           <FontPicker 
             v-model="safeFontFamily" 
@@ -22,7 +22,7 @@
           />
         </template>
       </el-form-item>
-      <el-form-item label="Font Size">
+      <el-form-item :label="t('elementSettings.fontSize')">
         <el-select
           v-model.number="currentModel.fontSize"
           @change="(v: number) => applyUpdate({ fontSize: v })"
@@ -30,7 +30,7 @@
           <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="fontRenderType === 'bitmap'" label="Font Gap">
+      <el-form-item v-if="fontRenderType === 'bitmap'" :label="t('elementSettings.fontGap')">
         <el-input-number
           v-model.number="currentModel.fontGap"
           :min="0"
@@ -38,19 +38,19 @@
           @change="(v: number) => applyUpdate({ fontGap: v })"
         />
       </el-form-item>
-      <el-form-item label="Alignment">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons 
           :options="originXOptions"
           v-model="originXProxy"
         />
       </el-form-item>
-      <el-form-item label="Font Color">
+      <el-form-item :label="t('elementSettings.fontColor')">
         <ColorPicker 
           v-model="currentModel.fill" 
           @change="applyUpdate({ fill: $event })" 
         />
       </el-form-item>
-      <el-form-item label="Time Format">
+      <el-form-item :label="t('elementSettings.timeFormat')">
         <el-select 
           v-model.number="currentModel.formatter" 
           @change="(v: number) => applyUpdate({ formatter: v })"
@@ -79,6 +79,7 @@ import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import { FontTypes } from '@/config/fonts'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   config?: Record<string, any> | null
@@ -86,6 +87,7 @@ const props = defineProps<{
 }>()
 
 const fontStore = useFontStore()
+const { t } = useI18n()
 
 // 只使用业务 config 作为当前模型
 const currentModel = computed<any>(() => {

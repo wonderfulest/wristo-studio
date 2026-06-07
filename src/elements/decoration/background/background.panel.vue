@@ -1,9 +1,9 @@
 <template>
   <div class="settings-section">
-    <h3>背景设置</h3>
+    <h3>{{ t('editor.image') }} {{ t('nav.settings') }}</h3>
 
     <div class="setting-item">
-      <label>Background Image</label>
+      <label>{{ t('elementSettings.backgroundImage') }}</label>
       <ImageUpload
         :model-value="currentImageId"
         :preview-url="currentImageUrl"
@@ -25,8 +25,10 @@ import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useBaseStore } from '@/stores/baseStore'
 import ThemeRuleSettings from '@/components/panels/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
+import { useI18n } from '@/i18n'
 
 const baseStore = useBaseStore()
+const { t } = useI18n()
 
 const props = defineProps<{
   element?: FabricElement

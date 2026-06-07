@@ -255,7 +255,7 @@ function cropSvgToContentBBox(svgText: string): string | null {
 <style scoped>
 .edit-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .editor-side { display: flex; flex-direction: column; gap: 12px; }
-.preview-side { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 8px; padding: 12px; }
-.preview-box { background: #fff; min-height: 340px; display: flex; align-items: center; justify-content: center; }
+.preview-side { background: var(--studio-surface-soft); border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 12px; }
+.preview-box { background: var(--studio-canvas-shell); border: 1px solid var(--studio-border); min-height: 340px; display: flex; align-items: center; justify-content: center; }
 .edit-actions { display: flex; gap: 8px; }
 </style>

@@ -3,23 +3,23 @@
     <div class="setting-item">
       <TextPropertyField
         v-model="textProperty"
-        label="文本变量"
-        placeholder="选择字符串属性"
+        :label="t('elementSettings.textVariable')"
+        :placeholder="t('elementSettings.selectTextProperty')"
         @change="applyTextProperty"
       />
       <div v-if="selectedTextProperty" class="text-property-preview">
         <div class="text-property-meta">
-          <span class="label">变量名：</span>
+          <span class="label">{{ t('elementSettings.variableName') }}</span>
           <span class="value">{{ selectedTextProperty.title }}</span>
         </div>
         <div class="text-property-meta">
-          <span class="label">默认内容：</span>
+          <span class="label">{{ t('elementSettings.defaultContent') }}</span>
         </div>
         <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
       </div>
     </div>
     <div class="setting-item">
-      <label>位置</label>
+      <label>{{ t('elementSettings.position') }}</label>
       <PositionInputs 
         :left="positionX" 
         :top="positionY" 
@@ -29,7 +29,7 @@
       />
     </div>
     <div class="setting-item">
-      <label>对齐方式</label>
+      <label>{{ t('elementSettings.alignment') }}</label>
       <AlignXButtons 
         :options="originXOptions"
         v-model="originX"
@@ -37,17 +37,17 @@
       />
     </div>
     <div class="setting-item">
-      <label>字体大小</label>
+      <label>{{ t('elementSettings.fontSize') }}</label>
       <select v-model.number="fontSize" @change="updateFontSize">
         <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
       </select>
     </div>
     <div class="setting-item">
-      <label>字体颜色</label>
+      <label>{{ t('elementSettings.fontColor') }}</label>
       <ColorPicker v-model="textColor" @change="updateTextColor" />
     </div>
     <div class="setting-item">
-      <label>字体</label>
+      <label>{{ t('elementSettings.font') }}</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
   </div>
@@ -64,6 +64,9 @@ import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/elements/common/settings/TextPropertyField.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 旧通道：直接传入 Fabric Text

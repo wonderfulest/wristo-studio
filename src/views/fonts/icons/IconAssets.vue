@@ -193,7 +193,7 @@ const onEdited = () => {
 </script>
 
 <style scoped>
-.icon-assets-container { padding: 20px; }
+.icon-assets-container { padding: 20px; color: var(--studio-text); }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .ops { display: flex; gap: 8px; }
@@ -212,15 +212,15 @@ const onEdited = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
   padding: 16px 12px;
   transition: box-shadow .2s ease, transform .2s ease;
 }
 
 .asset-card:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: var(--studio-shadow-md);
   transform: translateY(-2px);
 }
 
@@ -238,9 +238,9 @@ const onEdited = () => {
   width: 56px;
   height: 56px;
   border-radius: 10px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.02);
+  background: var(--studio-canvas-shell);
+  border: 1px solid var(--studio-border);
+  box-shadow: inset 0 0 0 1px var(--studio-border);
 }
 
 .thumb-empty {
@@ -249,8 +249,8 @@ const onEdited = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  color: #909399;
+  background: var(--studio-surface-soft);
+  color: var(--studio-text-subtle);
   border-radius: 8px;
 }
 
@@ -280,22 +280,22 @@ const onEdited = () => {
 .asset-card:hover .thumb-img,
 .thumb:hover .thumb-img {
   animation: edge-blink 1s linear infinite;
-  box-shadow: 0 0 0 2px #66ccff, 0 0 12px rgba(102, 204, 255, 0.6);
+  box-shadow: 0 0 0 2px var(--studio-primary-border), 0 0 12px rgba(15, 107, 104, 0.28);
 }
 
 @keyframes edge-blink {
   0%, 100% {
-    box-shadow: 0 0 0 2px #66ccff, 0 0 8px rgba(102, 204, 255, 0.45);
+    box-shadow: 0 0 0 2px var(--studio-primary-border), 0 0 8px rgba(15, 107, 104, 0.22);
   }
   50% {
-    box-shadow: 0 0 0 2px #3aa9ff, 0 0 16px rgba(58, 169, 255, 0.85);
+    box-shadow: 0 0 0 2px var(--studio-primary), 0 0 16px rgba(15, 107, 104, 0.42);
   }
 }
 
 .meta { text-align: center; width: 100%; }
-.name { font-size: 14px; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sub { font-size: 12px; color: #909399; margin-top: 4px; }
+.name { font-size: 14px; color: var(--studio-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub { font-size: 12px; color: var(--studio-text-subtle); margin-top: 4px; }
 
 /* editor styles in EditSvgDialog */
-.empty { color: #909399; padding: 24px 0; text-align: center; }
+.empty { color: var(--studio-text-subtle); padding: 24px 0; text-align: center; }
 </style>

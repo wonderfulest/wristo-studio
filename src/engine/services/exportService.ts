@@ -5,6 +5,8 @@ import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
 import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import type { FabricElement } from '@/types/element'
+import { useDesignStore } from '@/stores/designStore'
+import { normalizeConfigToStandardSize } from '@/utils/designScale'
 
 function mapColorProperties(encodeConfig: AnyElementConfig, properties: PropertiesMap): void {
   const colorMappings: Array<{ source: string; target: string }> = [
@@ -258,7 +260,11 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       return null
     }
 
-    return config
+    const designStore = useDesignStore()
+    return normalizeConfigToStandardSize(config, {
+      width: Number(designStore.designSpec.width || 454),
+      height: Number(designStore.designSpec.height || 454),
+    })
   } catch (err) {
     console.error('Generate config failed:', err)
     const message = (err as Error)?.message || 'Failed to generate configuration'

@@ -15,6 +15,7 @@ export const useHistoryStore = defineStore('history', () => {
   const undoStack: Ref<Snapshot[]> = ref([])
   const redoStack: Ref<Snapshot[]> = ref([])
   const isRestoring: Ref<boolean> = ref(false)
+  const savedSnapshot: Ref<Snapshot | null> = ref(null)
   let canvas: Canvas | null = null
   let baseStore: MinimalBaseStore | null = null
   let handlers: {
@@ -29,6 +30,17 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       const nowFabric = JSON.stringify(canvas.toJSON())
       return nowFabric === snap.fabricJSON
+    } catch {
+      return false
+    }
+  }
+
+  const currentConfigSnapshotEqual = (snap: Snapshot): boolean => {
+    if (!baseStore || !snap.configJSON) return false
+    try {
+      const cfg = baseStore.generateConfig()
+      if (cfg == null) return false
+      return JSON.stringify(cfg) === snap.configJSON
     } catch {
       return false
     }
@@ -77,6 +89,7 @@ export const useHistoryStore = defineStore('history', () => {
     const snap: Snapshot = { fabricJSON, configJSON }
     undoStack.value = [snap]
     redoStack.value = []
+    savedSnapshot.value = snap
   }
 
   const attachCanvas = (c: Canvas, base: MinimalBaseStore) => {
@@ -152,9 +165,17 @@ export const useHistoryStore = defineStore('history', () => {
 
   const canUndo = () => undoStack.value.length > 1
   const canRedo = () => redoStack.value.length > 0
+  const hasUnsavedChanges = () => {
+    if (!savedSnapshot.value) return false
+    if (savedSnapshot.value.configJSON) {
+      return !currentConfigSnapshotEqual(savedSnapshot.value)
+    }
+    return !currentSnapshotEqual(savedSnapshot.value)
+  }
   const clear = () => {
     undoStack.value = []
     redoStack.value = []
+    savedSnapshot.value = null
   }
 
   const dispose = () => {
@@ -173,6 +194,7 @@ export const useHistoryStore = defineStore('history', () => {
     redo,
     canUndo,
     canRedo,
+    hasUnsavedChanges,
     clear,
     dispose,
   }

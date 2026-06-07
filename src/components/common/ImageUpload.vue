@@ -293,15 +293,15 @@ const clear = () => {
   width: auto;
   height: 120px;
   aspect-ratio: v-bind(aspectRatioCss);
-  border: 1px dashed #dcdfe6;
-  border-radius: 8px;
-  background: #fafafa;
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
   position: relative;
   overflow: hidden;
   cursor: pointer;
 }
 .box.is-drag-over {
-  border-color: #19b36b;
+  border-color: var(--el-color-success);
   background: rgba(25, 179, 107, 0.08);
 }
 .placeholder {
@@ -311,7 +311,7 @@ const clear = () => {
   align-items: center;
   justify-content: center;
   font-size: 36px;
-  color: #c0c4cc;
+  color: var(--studio-text-subtle);
   user-select: none;
 }
 .img { width: 100%; height: 100%; }

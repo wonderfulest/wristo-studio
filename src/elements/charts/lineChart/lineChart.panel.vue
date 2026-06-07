@@ -8,7 +8,7 @@
     >
       <ChartPropertyField v-model="formModel.chartProperty" @change="(v: string) => applyUpdate({ chartProperty: v })" />
 
-      <el-form-item label="宽度">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number 
           v-model="formModel.width" 
           :min="50" 
@@ -17,7 +17,7 @@
         />
       </el-form-item>
       
-      <el-form-item label="高度">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number
           v-model="formModel.height"
           :min="20"
@@ -26,7 +26,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="线条宽度">
+      <el-form-item :label="t('elementSettings.lineWidth')">
         <el-input-number
           v-model="formModel.lineWidth"
           :min="1"
@@ -35,21 +35,21 @@
         />
       </el-form-item>
 
-      <el-form-item label="显示数据点">
+      <el-form-item :label="t('elementSettings.showPoints')">
         <el-switch 
           v-model="formModel.showPoints" 
           @change="(v: boolean) => applyUpdate({ showPoints: v })" 
         />
       </el-form-item>
 
-      <el-form-item label="数据点颜色" v-if="formModel.showPoints">
+      <el-form-item :label="t('elementSettings.pointColor')" v-if="formModel.showPoints">
         <color-picker 
           v-model="formModel.pointColor" 
           @change="(v: string) => applyUpdate({ pointColor: v })" 
         />
       </el-form-item>
 
-      <el-form-item label="数据点半径" v-if="formModel.showPoints">
+      <el-form-item :label="t('elementSettings.pointRadius')" v-if="formModel.showPoints">
         <el-input-number
           v-model="formModel.pointRadius"
           :min="1"
@@ -58,7 +58,7 @@
         />
       </el-form-item>
 
-      <el-form-item label="线条颜色">
+      <el-form-item :label="t('elementSettings.lineColor')">
         <color-picker 
           v-model="formModel.color" 
           @change="(v: string) => applyUpdate({ color: v })" 
@@ -73,6 +73,7 @@ import { ref, onMounted, nextTick, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import ChartPropertyField from '@/elements/common/settings/ChartPropertyField.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   element?: any
@@ -81,6 +82,7 @@ const props = defineProps<{
 }>()
 
 const formRef = ref()
+const { t } = useI18n()
 const formModel = ref<any>({})
 
 const syncFromProps = () => {

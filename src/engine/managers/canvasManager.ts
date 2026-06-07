@@ -18,8 +18,9 @@ export interface CanvasManagerDeps {
   layerStore: any
   canvasStore: any
   historyStore: any
-  editorStore: any
   watchSize: number
+  watchWidth?: number
+  watchHeight?: number
   zoomManager?: { updateZoom?: () => void } | null
 }
 
@@ -41,8 +42,10 @@ export function initCanvasManager(
   canvasElement: HTMLCanvasElement,
   deps: CanvasManagerDeps,
 ): FabricCanvas {
-  const { baseStore, layerStore, canvasStore, historyStore, editorStore, watchSize, zoomManager } =
+  const { baseStore, layerStore, canvasStore, historyStore, watchSize, watchWidth, watchHeight, zoomManager } =
     deps
+  const canvasWidth = watchWidth ?? watchSize
+  const canvasHeight = watchHeight ?? watchSize
 
   // 应用全局 Fabric 自定义属性
   applyFabricCustomProperties()
@@ -72,8 +75,8 @@ export function initCanvasManager(
   })
 
   const canvas = new Canvas(canvasElement, {
-    width: watchSize,
-    height: watchSize,
+    width: canvasWidth,
+    height: canvasHeight,
     centeredScaling: true,
     centeredRotation: true,
   }) as FabricCanvas
@@ -226,7 +229,7 @@ export function initCanvasManager(
   if (containerInit) {
     containerInit.style.transform = 'translate(0px, 0px)'
     containerInit.style.transition = 'transform 0s'
-    containerInit.style.backgroundColor = editorStore.backgroundColor
+    containerInit.style.backgroundColor = 'var(--studio-canvas-shell)'
   }
 
   fabricCanvas = canvas

@@ -71,9 +71,11 @@ async function setFabricImageSource(
 function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundElementConfig>): void {
   const canvasStore = useCanvasStore()
   const designSpec = (canvasStore.designStore?.designSpec || {}) as any
-  const targetSize = Number(designSpec.width ?? (designSpec.centerX != null ? designSpec.centerX * 2 : undefined) ?? 454)
-  const cx = Number(designSpec.centerX ?? targetSize / 2)
-  const cy = Number(designSpec.centerY ?? targetSize / 2)
+  const targetWidth = Number(designSpec.width ?? (designSpec.centerX != null ? designSpec.centerX * 2 : undefined) ?? 454)
+  const targetHeight = Number(designSpec.height ?? (designSpec.centerY != null ? designSpec.centerY * 2 : undefined) ?? targetWidth)
+  const targetSize = Math.min(targetWidth, targetHeight)
+  const cx = Number(designSpec.centerX ?? targetWidth / 2)
+  const cy = Number(designSpec.centerY ?? targetHeight / 2)
 
   const rawW = Number((imgObj as any).width ?? 1)
   const rawH = Number((imgObj as any).height ?? 1)

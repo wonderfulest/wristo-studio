@@ -144,12 +144,12 @@ const handleUpload = async (event) => {
 }
 
 .hand-preview:hover {
-  border-color: #409eff;
+  border-color: #0f6b68;
 }
 
 .hand-preview.active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .hand-preview img {
@@ -170,8 +170,8 @@ const handleUpload = async (event) => {
 }
 
 .upload-preview:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .upload-icon {
@@ -181,7 +181,7 @@ const handleUpload = async (event) => {
 }
 
 .upload-preview:hover .upload-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 .more-preview {
@@ -190,8 +190,8 @@ const handleUpload = async (event) => {
 }
 
 .more-preview:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .more-icon {
@@ -201,6 +201,6 @@ const handleUpload = async (event) => {
 }
 
 .more-preview:hover .more-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 </style> 

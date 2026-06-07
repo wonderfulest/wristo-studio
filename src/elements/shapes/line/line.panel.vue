@@ -1,13 +1,13 @@
 <template>
   <div class="settings-section">
     <el-form :model="currentModel" label-position="left" label-width="100px">
-      <el-form-item label="Line Color">
+      <el-form-item :label="t('elementSettings.lineColor')">
         <color-picker 
           v-model="strokeProxy"
           show-alpha
         />
       </el-form-item>
-      <el-form-item label="Line Width">
+      <el-form-item :label="t('elementSettings.lineWidth')">
         <el-input-number 
           :model-value="strokeWidthProxy"
           :min="1" 
@@ -26,6 +26,7 @@ import { computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import ColorPicker from '@/components/color-picker/index.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   element?: any
@@ -34,6 +35,7 @@ const props = defineProps<{
 }>()
 
 const elementDataStore = useElementDataStore()
+const { t } = useI18n()
 
 // 优先使用 store 中的数据（响应式），其次使用传入的 element
 // store.elements 是 ElementConfigSnapshot[]，实际数据在 .config 中

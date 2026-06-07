@@ -1,23 +1,26 @@
 <template>
   <div class="menu-group">
-    <div class="menu-group-title">Goal</div>
+    <div class="menu-group-title">{{ t('editor.goal') }}</div>
     <el-menu-item index="goal/progress-bar" @click="onAddProgressBar">
       <el-icon><Operation /></el-icon>
-      <span>Progress Bar</span>
+      <span>{{ t('editor.progressBar') }}</span>
     </el-menu-item>
     <el-menu-item index="goal/progress-arc" @click="onAddProgressArc">
       <el-icon><Operation /></el-icon>
-      <span>Progress Arc</span>
+      <span>{{ t('editor.progressArc') }}</span>
     </el-menu-item>
     <el-menu-item index="goal/progress-segments" @click="onAddProgressSegments">
       <el-icon><Operation /></el-icon>
-      <span>Progress Segments</span>
+      <span>{{ t('editor.progressSegments') }}</span>
     </el-menu-item>
   </div>
 </template>
 
 <script setup>
 import { Operation } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   onAddProgressBar: {

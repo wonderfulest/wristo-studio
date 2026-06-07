@@ -1,11 +1,11 @@
 <template>
   <div class="settings-section">
-    <h3>中心盖设置</h3>
+    <h3>{{ t('elementSettings.centerCapSettings') }}</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <!-- 资源选择 -->
       <div class="setting-item">
-        <label>样式</label>
+        <label>{{ t('elementSettings.style') }}</label>
         <AssetPicker
           :selected-url="element?.imageUrl"
           :selected-asset-id="element?.assetId"
@@ -18,10 +18,10 @@
           "
         />
         <div class="tips">
-          <p>小贴士：</p>
+          <p>{{ t('elementSettings.svgTipTitle') }}</p>
           <ul>
-            <li>建议使用正方形 SVG 资源，方便保持宽高一致</li>
-            <li>中心盖会自动固定在表盘正中央</li>
+            <li>{{ t('elementSettings.centerCapSquareTip') }}</li>
+            <li>{{ t('elementSettings.centerCapFixedTip') }}</li>
           </ul>
         </div>
       </div>
@@ -35,6 +35,9 @@ import { ref } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['close'])
 

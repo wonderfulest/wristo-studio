@@ -1,12 +1,12 @@
 <template>
   <div class="pending-go-live">
     <div class="header">
-      <h2>Pending Go Live</h2>
+      <h2>{{ t('project.pendingGoLive') }}</h2>
     </div>
 
     <el-card shadow="never">
       <el-table :data="pendingStore.items" v-loading="pendingStore.loading" style="width: 100%">
-        <el-table-column label="Image" width="90">
+        <el-table-column :label="t('pending.image')" width="90">
           <template #default="{ row }">
             <el-image
               v-if="row.garminImageUrl"
@@ -17,29 +17,29 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="Name" min-width="120" />
-        <el-table-column prop="designId" label="Design" min-width="200" />
-        <el-table-column prop="appId" label="App ID" width="80" />
-        <el-table-column label="Last Go Live" min-width="180">
+        <el-table-column prop="name" :label="t('pending.name')" min-width="120" />
+        <el-table-column prop="designId" :label="t('pending.design')" min-width="200" />
+        <el-table-column prop="appId" :label="t('pending.appId')" width="80" />
+        <el-table-column :label="t('pending.lastGoLive')" min-width="180">
           <template #default="{ row }">
             <span>{{ formatDateNullable(row.lastGoLive) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Store" min-width="140">
+        <el-table-column :label="t('pending.store')" min-width="140">
           <template #default="{ row }">
-            <a v-if="row.garminStoreUrl" :href="row.garminStoreUrl" target="_blank" rel="noopener noreferrer">Garmin Store</a>
+            <a v-if="row.garminStoreUrl" :href="row.garminStoreUrl" target="_blank" rel="noopener noreferrer">{{ t('pending.garminStore') }}</a>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="Release" min-width="360">
+        <el-table-column :label="t('pending.release')" min-width="360">
           <template #default="{ row }">
             <span>{{ row.release?.releaseNote ?? '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="200" fixed="right">
+        <el-table-column :label="t('pending.actions')" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" :disabled="!row.release?.packageUrl" @click="download(row)">Download</el-button>
-            <el-button type="success" size="small" @click="goLive(row)">Go Live</el-button>
+            <el-button type="primary" size="small" :disabled="!row.release?.packageUrl" @click="download(row)">{{ t('pending.download') }}</el-button>
+            <el-button type="success" size="small" @click="goLive(row)">{{ t('pending.goLive') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -60,14 +60,16 @@ import type { Design } from '@/types/api/design'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import type { ApiResponse } from '@/types/api/api'
+import { useI18n } from '@/i18n'
 
 const messageStore = useMessageStore()
 const pendingStore = usePendingGoLiveStore()
+const { t } = useI18n()
 type GoLiveDialogRef = { show: (design: Design) => void }
 const goLiveDialog = ref<GoLiveDialogRef | null>(null)
 
 const formatDateNullable = (date: number | undefined): string => {
-  if (!date) return 'Never'
+  if (!date) return t('common.never')
   return dayjs(date).format('YYYY-MM-DD HH:mm')
 }
 
@@ -81,14 +83,14 @@ const goLive = async (row: Product): Promise<void> => {
     const res = await designApi.getDesignByUid(row.designId) as ApiResponse<Design>
     const design = res.data as Design
     if (!design) {
-      messageStore.error('Failed to load design')
+      messageStore.error(t('project.loadDesignFailed'))
       return
     }
     if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
       goLiveDialog.value.show(design)
     }
   } catch (e) {
-    messageStore.error('Failed to load design')
+    messageStore.error(t('project.loadDesignFailed'))
   }
 }
 
@@ -97,7 +99,7 @@ const download = (row: Product): void => {
   if (url) {
     window.open(url, '_blank', 'noopener,noreferrer')
   } else {
-    messageStore.error('No package available')
+    messageStore.error(t('pending.noPackage'))
   }
 }
 

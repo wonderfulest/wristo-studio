@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h2>Sample Projects</h2>
+      <h2>{{ t('project.sampleProjects') }}</h2>
     </div>
     <el-row :gutter="24" class="design-grid">
       <el-col
@@ -34,6 +34,9 @@
 import { computed } from 'vue'
 import type { Design } from '@/types/api/design'
 import { designApi } from '@/api/wristo/design'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   designs: Design[]
@@ -57,6 +60,9 @@ const getDesignImageUrl = (design: Design) => {
 
 .page-header h2 {
   margin: 0 0 4px;
+  color: var(--studio-text);
+  font-size: 24px;
+  font-weight: 800;
 }
 
 .design-grid {
@@ -69,24 +75,27 @@ const getDesignImageUrl = (design: Design) => {
   flex-direction: column;
   align-items: center;
   padding: 12px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .sample-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: var(--studio-primary);
+  box-shadow: var(--studio-shadow-md);
 }
 
 .thumb-wrapper {
   width: 100%;
   padding-top: 100%;
   position: relative;
-  border-radius: 16px;
+  border-radius: var(--studio-radius-lg);
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--studio-surface-soft);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
 .thumb-image {
@@ -101,8 +110,9 @@ const getDesignImageUrl = (design: Design) => {
 .sample-name {
   margin-top: 8px;
   font-size: 13px;
-  color: #303133;
+  color: var(--studio-text);
   text-align: center;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

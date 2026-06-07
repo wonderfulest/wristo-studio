@@ -262,7 +262,7 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
     transparentCorners: false,
     cornerColor: runtimeOptions.fill,
     cornerStrokeColor: runtimeOptions.stroke,
-    borderColor: '#409EFF',
+    borderColor: '#0f6b68',
   })
 }
 
@@ -280,7 +280,7 @@ export function applyControlManager(options: ControlManagerOptions = {}): void {
     transparentCorners: false,
     cornerColor: runtimeOptions.fill,
     cornerStrokeColor: runtimeOptions.stroke,
-    borderColor: '#409EFF',
+    borderColor: '#0f6b68',
   }
 
   ;(FabricObject.prototype as any).controls = createControls('default')

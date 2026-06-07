@@ -3,8 +3,8 @@
     <div class="setting-item">
       <TextPropertyField
         v-model="textProperty"
-        label="Text Variable"
-        placeholder="Select text property"
+        :label="t('elementSettings.textVariable')"
+        :placeholder="t('elementSettings.selectTextProperty')"
         @change="applyTextProperty"
       />
       <div v-if="selectedTextProperty" class="text-property-preview">
@@ -12,7 +12,7 @@
       </div>
     </div>
     <div class="setting-item">
-      <label>Position</label>
+      <label>{{ t('elementSettings.position') }}</label>
       <PositionInputs
         :left="scrollAreaLeft"
         :top="scrollAreaTop"
@@ -22,17 +22,17 @@
       />
     </div>
     <div class="setting-item">
-      <label>Font Size</label>
+      <label>{{ t('elementSettings.fontSize') }}</label>
       <select v-model.number="fontSize" @change="updateFontSize">
         <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
       </select>
     </div>
     <div class="setting-item">
-      <label>Font Color</label>
+      <label>{{ t('elementSettings.fontColor') }}</label>
       <ColorPicker v-model="textColor" @change="updateTextColor" />
     </div>
     <div class="setting-item">
-      <label>Font Family</label>
+      <label>{{ t('elementSettings.fontFamily') }}</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
   </div>
@@ -50,6 +50,9 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/elements/common/settings/TextPropertyField.vue'
 import { showScrollRegion, startScrollableAnimation } from '@/elements/texts/scrollableText/scrollableText.renderer'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 旧通道：直接传入 Fabric Text

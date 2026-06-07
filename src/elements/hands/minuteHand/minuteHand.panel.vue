@@ -1,10 +1,10 @@
 <template>
   <div class="settings-section">
-    <h3>分针设置</h3>
+    <h3>{{ t('editor.minuteHand') }} {{ t('nav.settings') }}</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
-        <label>指针hand</label>
+        <label>{{ t('elementSettings.hand') }}</label>
         <AssetPicker
           :selected-url="element?.imageUrl"
           :selected-asset-id="element?.assetId"
@@ -22,6 +22,9 @@ import { ref } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['close'])
 
@@ -106,7 +109,7 @@ defineExpose({
 }
 
 .help-icon:hover {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 /* 调整提示框hand */
@@ -155,12 +158,12 @@ defineExpose({
 }
 
 .hand-preview:hover {
-  border-color: #409eff;
+  border-color: #0f6b68;
 }
 
 .hand-preview.active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .hand-preview img {
@@ -200,8 +203,8 @@ defineExpose({
 }
 
 .upload-preview:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .upload-icon {
@@ -211,6 +214,6 @@ defineExpose({
 }
 
 .upload-preview:hover .upload-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 </style>

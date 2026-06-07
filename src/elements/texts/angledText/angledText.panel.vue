@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <div class="setting-item">
-      <label>位置</label>
+      <label>{{ t('elementSettings.position') }}</label>
       <PositionInputs
         :left="positionX"
         :top="positionY"
@@ -11,7 +11,7 @@
       />
     </div>
     <div class="setting-item">
-      <label>对齐方式</label>
+      <label>{{ t('elementSettings.alignment') }}</label>
       <AlignXButtons
         :options="originXOptions"
         v-model="originX"
@@ -19,25 +19,25 @@
       />
     </div>
     <div class="setting-item">
-      <label>字体大小</label>
+      <label>{{ t('elementSettings.fontSize') }}</label>
       <select v-model.number="fontSize" @change="updateFontSize">
         <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
       </select>
     </div>
     <div class="setting-item">
-      <label>字体颜色</label>
+      <label>{{ t('elementSettings.fontColor') }}</label>
       <ColorPicker v-model="textColor" @change="updateTextColor" />
     </div>
     <div class="setting-item">
-      <label>字体</label>
+      <label>{{ t('elementSettings.font') }}</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
     <div class="setting-item">
-      <label>文本内容</label>
+      <label>{{ t('elementSettings.textContent') }}</label>
       <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
     </div>
     <div class="setting-item">
-      <label>角度</label>
+      <label>{{ t('elementSettings.angle') }}</label>
       <input type="number" v-model.number="angle" @change="updateAngle" />
     </div>
   </div>
@@ -53,6 +53,9 @@ import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 旧通道：直接传入 Fabric 文本对象

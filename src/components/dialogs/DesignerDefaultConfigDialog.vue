@@ -154,7 +154,7 @@ defineExpose({ show })
   gap: 12px;
 }
 .currency-label {
-  color: #666;
+  color: var(--studio-text-muted);
   font-weight: 600;
 }
 
@@ -216,11 +216,10 @@ defineExpose({ show })
   }
   .designer-config-dialog :deep(.sidebar) {
     border-left: none;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--studio-border);
     padding-left: 0;
     padding-top: 12px;
   }
 }
  
 </style>
-

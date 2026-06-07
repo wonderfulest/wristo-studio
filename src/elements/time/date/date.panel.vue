@@ -1,7 +1,7 @@
 <template>
   <div class="settings-section">
     <el-form :model="currentModel" label-position="left" label-width="100px">
-      <el-form-item label="Font Size">
+      <el-form-item :label="t('elementSettings.fontSize')">
         <el-select
           v-model.number="currentModel.fontSize"
           @change="(v: number) => applyUpdate({ fontSize: v })"
@@ -10,28 +10,28 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="Font Color">
+      <el-form-item :label="t('elementSettings.fontColor')">
         <ColorPicker
           v-model="currentModel.fill"
           @change="applyUpdate({ fill: $event })"
         />
       </el-form-item>
 
-      <el-form-item label="Font">
+      <el-form-item :label="t('elementSettings.font')">
         <FontPicker
           v-model="currentModel.fontFamily"
           @change="applyUpdate({ fontFamily: $event })"
         />
       </el-form-item>
 
-      <el-form-item label="Alignment">
+      <el-form-item :label="t('elementSettings.alignment')">
         <AlignXButtons
           :options="originXOptions"
           v-model="originXProxy"
         />
       </el-form-item>
 
-      <el-form-item label="Date Format">
+      <el-form-item :label="t('elementSettings.dateFormat')">
         <el-select
           v-model.number="currentModel.formatter"
           @change="(v: number) => applyUpdate({ formatter: v })"
@@ -58,6 +58,7 @@ import { fontSizes, originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   config?: Record<string, any> | null
@@ -65,6 +66,7 @@ const props = defineProps<{
 }>()
 
 const fontStore = useFontStore()
+const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
   return props.config ?? {}

@@ -21,9 +21,9 @@
       </div>
       
       <!-- 缩放控件 -->
+      <HistoryControls class="history-controls-anchor" :canvas-ref="canvasRef" />
       <div class="editor-controls">
         <ZoomControls :canvas-ref="canvasRef" />
-        <HistoryControls :canvas-ref="canvasRef" />
       </div>
     </div>
     <!-- 右侧设置面板 -->
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
@@ -52,10 +52,12 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
+import { useThemeStore } from '@/stores/theme'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import ChangelogDialog from '@/components/dialogs/ChangelogDialog.vue'
@@ -71,6 +73,7 @@ import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { useDesignStore } from '@/stores/designStore'
+import { useUserStore } from '@/stores/user'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
  
 const elementDataStore = useElementDataStore()
@@ -79,14 +82,17 @@ const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
 const designStore = useDesignStore()
+const userStore = useUserStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const exportStore = useExportStore()
+const historyStore = useHistoryStore()
 const { waitCanvasReady } = useCanvas()
 const canvasRef = ref<InstanceType<typeof CanvasView> | null>(null)
 const exportPanelRef = ref<InstanceType<typeof ExportPanel> | null>(null)
 const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
+const themeStore = useThemeStore()
 let saveTimer: number | null = null
 
 const changelogDialog = ref<InstanceType<typeof ChangelogDialog> | null>(null)
@@ -96,7 +102,11 @@ const editorSettingsDialog = ref<InstanceType<typeof EditorSettingsDialog> | nul
 useKeyboardShortcuts()
 
 // 添加背景色计算属性
-const backgroundColor = computed(() => editorStore.backgroundColor)
+const backgroundColor = computed(() =>
+  themeStore.currentTheme === 'dark'
+    ? editorStore.darkCanvasBackgroundColor
+    : editorStore.lightCanvasBackgroundColor,
+)
 
 const ensureBackgroundElement = (config: Partial<DesignConfig> | null): void => {
   if (!config) return
@@ -129,6 +139,26 @@ const ensureBackgroundElement = (config: Partial<DesignConfig> | null): void => 
 
   anyConfig.elements = [bgConfig, ...list]
 }
+
+const syncDesignSizeFromSelectedDevice = (): void => {
+  const device = userStore.userInfo?.device
+  const width = Number(device?.resolutionWidth ?? 0)
+  const height = Number(device?.resolutionHeight ?? 0)
+  if (!width || !height) return
+  if (designStore.designSpec.width === width && designStore.designSpec.height === height) return
+  designStore.setDesignSize(width, height)
+  canvasRef.value?.updateZoom()
+}
+
+watch(
+  () => [
+    userStore.userInfo?.device?.deviceId,
+    userStore.userInfo?.device?.resolutionWidth,
+    userStore.userInfo?.device?.resolutionHeight,
+  ],
+  () => syncDesignSizeFromSelectedDevice(),
+  { immediate: true },
+)
 
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
@@ -169,6 +199,7 @@ const loadDesign = async (designUid: string) => {
      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
+      historyStore.saveInitial()
 
       return
     }
@@ -220,6 +251,7 @@ const loadDesign = async (designUid: string) => {
     setTimeout(() => {
       getDataSimulatorEngine().updateCanvas()
     }, 0)
+    historyStore.saveInitial()
 
   } catch (error) {
     console.error('加载设计失败:', error)
@@ -387,10 +419,12 @@ const openEditorSettings = () => {
 </style>
 <style scoped>
 .left-panel {
-  width: 300px;
+  width: 312px;
   flex-shrink: 0;
-  border-right: 1px solid #e0e0e0;
-  background-color: #fff;
+  border-right: 1px solid var(--studio-border);
+  background-color: var(--studio-surface);
+  box-shadow: 1px 0 0 rgba(15, 23, 42, 0.02);
+  z-index: 2;
 }
 
 .design-container {
@@ -403,11 +437,13 @@ const openEditorSettings = () => {
   display: flex;
   width: 100%;
   height: 100%;
+  min-height: 0;
+  background: var(--studio-bg);
 }
 
 .left-panel {
   flex-shrink: 0;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid var(--studio-border);
 }
 
 .center-area {
@@ -417,27 +453,33 @@ const openEditorSettings = () => {
   align-items: center;
   overflow: hidden;
   background-color: v-bind(backgroundColor);
-  padding: 20px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding: 28px;
   position: relative;
+  min-width: 0;
 }
 
 .right-panel {
-  width: 500px;
-  /* 增加宽度 */
+  width: 460px;
   flex-shrink: 0;
-  background: white;
-  border-left: 1px solid #e0e0e0;
+  background: var(--studio-surface);
+  border-left: 1px solid var(--studio-border);
   overflow-y: auto;
-  padding: 16px;
-  padding-bottom: 76px;
-  /* 原有的16px + 额外的60px空间 */
+  padding: 18px;
+  padding-bottom: 84px;
+  box-shadow: -1px 0 0 rgba(15, 23, 42, 0.02);
+  z-index: 2;
 }
 
 .canvas-container {
   position: relative;
-  background: white;
+  background: var(--studio-canvas-shell);
   margin: 40px 0 0 40px;
-  /* 标尺和画布之间的距离 40px */
+  border-radius: var(--studio-radius-lg);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.26), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .ruler-corner {
@@ -446,9 +488,9 @@ const openEditorSettings = () => {
   left: 0px;
   width: 40px;
   height: 40px;
-  background: #f0f0f0;
-  border-right: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--studio-ruler-bg);
+  border-right: 1px solid var(--studio-border);
+  border-bottom: 1px solid var(--studio-border);
   z-index: 2;
 }
 
@@ -458,8 +500,8 @@ const openEditorSettings = () => {
   left: 40px;
   right: 0px;
   height: 40px;
-  background: #f0f0f0;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--studio-ruler-bg);
+  border-bottom: 1px solid var(--studio-border);
   z-index: 1;
 }
 
@@ -469,44 +511,75 @@ const openEditorSettings = () => {
   left: 0px;
   bottom: 0px;
   width: 40px;
-  background: #f0f0f0;
-  border-right: 1px solid #e0e0e0;
+  background: var(--studio-ruler-bg);
+  border-right: 1px solid var(--studio-border);
   z-index: 1;
 }
 
 .editor-settings-btn {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-overlay-surface);
+  border: 1px solid var(--studio-border);
+  box-shadow: var(--studio-shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  z-index: 10;
 }
 
 .editor-settings-btn:hover {
-  transform: rotate(30deg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: var(--studio-shadow-lg);
 }
 
 .editor-settings-btn .el-icon {
   font-size: 20px;
-  color: #666;
+  color: var(--studio-text-muted);
 }
 
 .editor-controls {
   position: absolute;
-  top: 60px;
-  right: 20px;
-  background: #f0f0f0;
-  border-radius: 5px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  top: 56px;
+  right: 56px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 10;
+}
+
+.history-controls-anchor {
+  position: absolute;
+  top: 56px;
+  left: 56px;
+  z-index: 10;
+}
+
+@media (max-width: 1180px) {
+  .left-panel {
+    width: 280px;
+  }
+
+  .right-panel {
+    width: 390px;
+  }
+}
+
+@media (max-width: 920px) {
+  .left-panel,
+  .right-panel {
+    width: 260px;
+  }
+
+  .center-area {
+    padding: 18px;
+  }
 }
 
 </style>

@@ -11,6 +11,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useBaseStore } from '@/stores/baseStore'
 
 import { useEditorStore } from '@/stores/editorStore'
+import { useThemeStore } from '@/stores/theme'
 import emitter from '@/utils/eventBus'
 
 const props = defineProps<{
@@ -28,6 +29,7 @@ let guideAlphaMinor = 0.16
 
 // Use editorStore as single source of truth for ruler guides
 const editorStore = useEditorStore()
+const themeStore = useThemeStore()
 const applyGuidesFromStore = () => {
   showGuides = Boolean(editorStore.showRulerGuides)
   guideColor = editorStore.rulerGuidesColor
@@ -36,11 +38,21 @@ const applyGuidesFromStore = () => {
   update()
 }
 
+const getThemeColor = (name: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
 const drawHorizontal = (ctx: CanvasRenderingContext2D, width: number, zoom: number, canvasLeft: number, offset: number) => {
+  const rulerBg = getThemeColor('--studio-ruler-bg', '#f0f0f0')
+  const rulerLine = getThemeColor('--studio-ruler-line', '#999')
+  const rulerText = getThemeColor('--studio-ruler-text', '#333')
+
   ctx.clearRect(0, 0, width, offset)
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = rulerBg
   ctx.fillRect(0, 0, width, offset)
-  ctx.strokeStyle = '#999'
+  ctx.strokeStyle = rulerLine
   ctx.beginPath()
 
   const startX = -canvasLeft / zoom
@@ -51,7 +63,7 @@ const drawHorizontal = (ctx: CanvasRenderingContext2D, width: number, zoom: numb
     if (i % 100 === 0) {
       ctx.moveTo(x, offset)
       ctx.lineTo(x, 20)
-      ctx.fillStyle = '#333'
+      ctx.fillStyle = rulerText
       ctx.font = '12px Arial'
       ctx.fillText(String(i), x + 2, 15)
     } else {
@@ -63,10 +75,14 @@ const drawHorizontal = (ctx: CanvasRenderingContext2D, width: number, zoom: numb
 }
 
 const drawVertical = (ctx: CanvasRenderingContext2D, height: number, zoom: number, canvasTop: number, offset: number) => {
+  const rulerBg = getThemeColor('--studio-ruler-bg', '#f0f0f0')
+  const rulerLine = getThemeColor('--studio-ruler-line', '#999')
+  const rulerText = getThemeColor('--studio-ruler-text', '#333')
+
   ctx.clearRect(0, 0, offset, height)
-  ctx.fillStyle = '#f0f0f0'
+  ctx.fillStyle = rulerBg
   ctx.fillRect(0, 0, offset, height)
-  ctx.strokeStyle = '#999'
+  ctx.strokeStyle = rulerLine
   ctx.beginPath()
 
   const startY = -canvasTop / zoom
@@ -78,7 +94,7 @@ const drawVertical = (ctx: CanvasRenderingContext2D, height: number, zoom: numbe
       ctx.moveTo(offset, y)
       ctx.lineTo(20, y)
       ctx.save()
-      ctx.fillStyle = '#333'
+      ctx.fillStyle = rulerText
       ctx.font = '12px Arial'
       ctx.translate(15, y + 2)
       ctx.rotate(-Math.PI / 2)
@@ -222,6 +238,7 @@ watch(() => editorStore.showRulerGuides, applyGuidesFromStore)
 watch(() => editorStore.rulerGuidesColor, applyGuidesFromStore)
 watch(() => editorStore.rulerGuidesMajor, applyGuidesFromStore)
 watch(() => editorStore.rulerGuidesMinor, applyGuidesFromStore)
+watch(() => themeStore.currentTheme, () => update())
 </script>
 
 <style scoped>

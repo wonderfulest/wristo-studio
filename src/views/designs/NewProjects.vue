@@ -33,11 +33,13 @@ import RecentProjectsSection from '@/views/designs/RecentProjectsSection.vue'
 import SampleProjectsSection from '@/views/designs/SampleProjectsSection.vue'
 import NewProjectDialog from '@/views/designs/NewProjectDialog.vue'
 import emitter from '@/utils/eventBus'
+import { useI18n } from '@/i18n'
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 const router = useRouter()
 const baseStore = useBaseStore()
+const { t } = useI18n()
 
 const designs = ref<Design[]>([])
 const recentDesigns = ref<Design[]>([])
@@ -81,7 +83,7 @@ const handleConfirmDialog = async (inputName: string) => {
     if (currentTemplate.value) {
       const copyRes = await designApi.createDesignByCopy({ uid: currentTemplate.value.designUid }) as ApiResponse<Design>
       if (!copyRes || !copyRes.data) {
-        messageStore.error(copyRes?.msg || 'Failed to copy template')
+        messageStore.error(copyRes?.msg || t('project.copyTemplateFailed'))
         return
       }
 
@@ -97,7 +99,7 @@ const handleConfirmDialog = async (inputName: string) => {
 
       const detailRes = await designApi.getDesignByUid(newDesignUid) as ApiResponse<Design>
       if (!detailRes || detailRes.code !== 0 || !detailRes.data) {
-        messageStore.error(detailRes?.msg || 'Failed to load new design')
+        messageStore.error(detailRes?.msg || t('project.loadNewDesignFailed'))
         return
       }
 
@@ -118,7 +120,7 @@ const handleConfirmDialog = async (inputName: string) => {
     } as any) as ApiResponse<Design>
 
     if (!createRes || !createRes.data) {
-      messageStore.error(createRes?.msg || 'Failed to create project')
+      messageStore.error(createRes?.msg || t('project.createProjectFailed'))
       return
     }
 
@@ -130,7 +132,7 @@ const handleConfirmDialog = async (inputName: string) => {
     dialogVisible.value = false
   } catch (error: any) {
     console.error('[NewProjects] handleConfirmDialog error:', error)
-    messageStore.error('Failed to open design')
+    messageStore.error(t('project.openDesignFailed'))
   }
 }
 
@@ -139,7 +141,7 @@ const handleOpenRecentDesign = async (design: Design) => {
   try {
     const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
     if (!res || res.code !== 0 || !res.data) {
-      messageStore.error(res?.msg || 'Failed to load design')
+      messageStore.error(res?.msg || t('project.loadDesignFailed'))
       return
     }
     const designData = res.data
@@ -148,7 +150,7 @@ const handleOpenRecentDesign = async (design: Design) => {
     router.push('/design?id=' + designData.designUid)
   } catch (error: any) {
     console.error('[NewProjects] handleOpenRecentDesign error:', error)
-    messageStore.error('Failed to open design')
+    messageStore.error(t('project.openDesignFailed'))
   }
 }
 
@@ -169,11 +171,11 @@ const fetchDesigns = async () => {
       const all = response.data
       designs.value = all
     } else {
-      messageStore.error(response.msg || 'Failed to get sample projects')
+      messageStore.error(response.msg || t('project.getSamplesFailed'))
     }
   } catch (error: any) {
     console.error('[NewProjects] fetchDesigns error:', error)
-    messageStore.error('Failed to get sample projects')
+    messageStore.error(t('project.getSamplesFailed'))
   }
 }
 
@@ -196,11 +198,11 @@ const fetchRecentDesigns = async () => {
     if (response.code === 0 && response.data) {
       recentDesigns.value = response.data.list
     } else {
-      messageStore.error(response.msg || 'Failed to get recent projects')
+      messageStore.error(response.msg || t('project.getRecentFailed'))
     }
   } catch (error: any) {
     console.error('[NewProjects] fetchRecentDesigns error:', error)
-    messageStore.error('Failed to get recent projects')
+    messageStore.error(t('project.getRecentFailed'))
   }
 }
 
@@ -244,7 +246,13 @@ onDeactivated(() => {
 
 <style scoped>
 .new-projects {
-  padding: 16px 0;
+  padding: 18px 0 40px;
+  color: var(--studio-text);
+}
+
+.new-projects :deep(.el-divider--horizontal) {
+  margin: 30px 0;
+  border-top-color: var(--studio-border);
 }
 
 .page-header {
@@ -257,7 +265,7 @@ onDeactivated(() => {
 
 .subtitle {
   margin: 0;
-  color: #909399;
+  color: var(--studio-text-subtle);
   font-size: 13px;
 }
 
@@ -281,15 +289,16 @@ onDeactivated(() => {
   flex-direction: column;
   align-items: center;
   padding: 12px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  box-shadow: var(--studio-shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sample-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--studio-shadow-md);
 }
 
 .thumb-wrapper {
@@ -298,7 +307,7 @@ onDeactivated(() => {
   position: relative;
   border-radius: 16px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--studio-surface-soft);
 }
 
 .thumb-image {
@@ -313,7 +322,7 @@ onDeactivated(() => {
 .sample-name {
   margin-top: 8px;
   font-size: 13px;
-  color: #303133;
+  color: var(--studio-text);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;

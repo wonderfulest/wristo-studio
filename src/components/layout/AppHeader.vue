@@ -2,64 +2,94 @@
   <header class="app-header">
     <div class="header-left">
       <div class="brand">
-        <img src="@/assets/favicon.svg" alt="Wristo Studio" class="logo">
+        <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="Wristo Studio" class="logo">
         <h1 class="brand-title">Wristo Studio</h1>
       </div>
       <nav class="header-nav">
         <a @click="showDesignerConfirm" class="nav-link">
           <Icon icon="material-symbols:edit-square" />
-          New Project
+          {{ t('nav.newProject') }}
         </a>
-        <el-dialog v-model="designerDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and open New Projects?</span>
+        <el-dialog
+          v-model="designerDialogVisible"
+          :title="t('dialog.confirm')"
+          width="30%"
+          append-to-body
+          :z-index="4000"
+        >
+          <span>{{ t('dialog.closeAndOpenNewProjects') }}</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="designerDialogVisible = false">Cancel</el-button>
-              <el-button type="primary" @click="confirmNewDesign">Confirm</el-button>
+              <el-button @click="designerDialogVisible = false">{{ t('common.cancel') }}</el-button>
+              <el-button type="primary" @click="confirmNewDesign">{{ t('common.confirm') }}</el-button>
             </span>
           </template>
         </el-dialog>
         <a @click="showDesignsListConfirm" class="nav-link">
           <Icon icon="material-symbols:list" />
-          Workspace
+          {{ t('nav.workspace') }}
         </a>
         <!-- <a @click="showFontsConfirm" class="nav-link">
           <Icon icon="material-symbols:font-download-outline" />
           Font Preview
         </a> -->
-        <el-dialog v-model="designsListDialogVisible" title="Confirm" width="30%">
-          <span>Save current project and open the workspace?</span>
+        <el-dialog
+          v-model="designsListDialogVisible"
+          :title="t('dialog.confirm')"
+          width="30%"
+          append-to-body
+          :z-index="4000"
+        >
+          <span>{{ t('dialog.saveAndOpenWorkspace') }}</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="designsListDialogVisible = false">Cancel</el-button>
-              <el-button type="primary" @click="confirmOpenDesignsList">Confirm</el-button>
+              <el-button @click="designsListDialogVisible = false">{{ t('common.cancel') }}</el-button>
+              <el-button type="primary" @click="confirmOpenDesignsList">{{ t('common.confirm') }}</el-button>
             </span>
           </template>
         </el-dialog>
-        <el-dialog v-model="fontsDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and open the font preview?</span>
+        <el-dialog
+          v-model="fontsDialogVisible"
+          :title="t('dialog.confirm')"
+          width="30%"
+          append-to-body
+          :z-index="4000"
+        >
+          <span>{{ t('dialog.closeAndOpenFontPreview') }}</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="fontsDialogVisible = false">Cancel</el-button>
-              <el-button type="primary" @click="confirmOpenFonts">Confirm</el-button>
+              <el-button @click="fontsDialogVisible = false">{{ t('common.cancel') }}</el-button>
+              <el-button type="primary" @click="confirmOpenFonts">{{ t('common.confirm') }}</el-button>
             </span>
           </template>
         </el-dialog>
-        <el-dialog v-model="devicesDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and open the devices?</span>
+        <el-dialog
+          v-model="devicesDialogVisible"
+          :title="t('dialog.confirm')"
+          width="30%"
+          append-to-body
+          :z-index="4000"
+        >
+          <span>{{ t('dialog.closeAndOpenDevices') }}</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="devicesDialogVisible = false">Cancel</el-button>
-              <el-button type="primary" @click="confirmOpenDevices">Confirm</el-button>
+              <el-button @click="devicesDialogVisible = false">{{ t('common.cancel') }}</el-button>
+              <el-button type="primary" @click="confirmOpenDevices">{{ t('common.confirm') }}</el-button>
             </span>
           </template>
         </el-dialog>
-        <el-dialog v-model="ticketsDialogVisible" title="Confirm" width="30%">
-          <span>Close current work and open the tickets?</span>
+        <el-dialog
+          v-model="ticketsDialogVisible"
+          :title="t('dialog.confirm')"
+          width="30%"
+          append-to-body
+          :z-index="4000"
+        >
+          <span>{{ t('dialog.closeAndOpenTickets') }}</span>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="ticketsDialogVisible = false">Cancel</el-button>
-              <el-button type="primary" @click="confirmOpenTickets">Confirm</el-button>
+              <el-button @click="ticketsDialogVisible = false">{{ t('common.cancel') }}</el-button>
+              <el-button type="primary" @click="confirmOpenTickets">{{ t('common.confirm') }}</el-button>
             </span>
           </template>
         </el-dialog>
@@ -70,17 +100,18 @@
       <el-input 
         type="text" 
         v-model="watchFaceName" 
-        placeholder="Watch face name" 
+        :placeholder="t('header.watchFaceName')"
         :input-style="{ border: 'none', background: 'transparent' }" 
       />
     </div>
 
-    <DeviceDisplay 
-      class="current-device-display"
+    <DeviceDisplay
       @select-device="handleDeviceSelect"
       @device-selected="onDeviceSelected"
     />
 
+    <ThemeSwitcher />
+    <LanguageSwitcher />
     <UserMenu />
   </header>
   <CreateDesignDialog ref="createDesignDialogRef" />
@@ -91,12 +122,16 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 import emitter from '@/utils/eventBus'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   // 其他需要保留的 props
@@ -108,8 +143,10 @@ const router = useRouter()
 const route = useRoute()
 const baseStore = useBaseStore()
 const exportStore = useExportStore()
+const historyStore = useHistoryStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const designerDialogVisible = ref(false)
 const designsListDialogVisible = ref(false)
@@ -151,6 +188,11 @@ const showDesignerConfirm = () => {
 
 const showDesignsListConfirm = () => {
   if (baseStore.inCanvasWorkarea) {
+    if (!historyStore.hasUnsavedChanges()) {
+      baseStore.$reset()
+      router.push('/designs')
+      return
+    }
     designsListDialogVisible.value = true
   } else {
     baseStore.$reset()
@@ -191,7 +233,7 @@ const confirmOpenDesignsList = async () => {
     router.push('/designs')
   } catch (error) {
     console.error('[AppHeader] confirmOpenDesignsList save failed:', error)
-    messageStore.error('Failed to save project')
+    messageStore.error(t('project.failedToSave'))
   }
 }
 
@@ -219,72 +261,87 @@ const confirmOpenTickets = () => {
 
 <style scoped>
 .app-header {
-  height: 48px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  height: 56px;
+  background: var(--studio-surface-raised);
+  border-bottom: 1px solid var(--studio-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  position: relative;
-  z-index: 100;
+  gap: 14px;
+  padding: 0 20px;
+  box-shadow: var(--studio-shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  flex: 0 0 56px;
+  min-width: 0;
+  backdrop-filter: saturate(160%) blur(14px);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 22px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: max-content;
 }
 
 .logo {
-  width: 32px;
-  height: 32px;
-  transition: transform 0.3s ease;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(15, 107, 104, 0.14);
+  transition: transform 0.2s ease;
 }
 
 .logo:hover {
-  transform: rotate(360deg);
+  transform: translateY(-1px);
 }
 
 .brand-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--studio-text);
   margin: 0;
-  background: linear-gradient(120deg, #409EFF, #2c3e50);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: 0;
 }
 
 .header-nav {
   display: flex;
-  gap: 20px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  color: #666;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px;
+  color: var(--studio-text-muted);
   font-size: 14px;
+  font-weight: 650;
   text-decoration: none;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--studio-radius-md);
   transition: all 0.2s ease;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
-  color: #2196F3;
-  background-color: rgba(33, 150, 243, 0.08);
+  color: var(--studio-primary);
+  background-color: var(--studio-primary-soft);
+  border-color: var(--studio-primary-border);
 }
 
 .nav-link :deep(svg) {
@@ -295,22 +352,27 @@ const confirmOpenTickets = () => {
 .app-info {
   display: flex;
   gap: 16px;
-  max-width: 400px;
+  max-width: 260px;
+  flex: 0 1 260px;
+  min-width: 140px;
 }
 
 .app-info :deep(.el-input) {
-  width: 180px;
+  width: 100%;
 }
 
 .app-info :deep(.el-input__wrapper) {
-  box-shadow: none !important;
-  padding: 0 8px;
+  background: var(--studio-surface-soft);
+  border-radius: var(--studio-radius-md);
+  box-shadow: 0 0 0 1px var(--studio-border) inset !important;
+  padding: 0 12px;
 }
 
 .app-info :deep(.el-input__inner) {
   height: 36px;
   font-size: 14px;
-  color: #333;
+  color: var(--studio-text);
+  font-weight: 650;
 }
 
 .app-info :deep(.el-input__inner::placeholder) {
@@ -337,9 +399,9 @@ const confirmOpenTickets = () => {
 }
 
 .action-btn:hover {
-  color: #2196F3;
-  border-color: #2196F3;
-  background: rgba(33, 150, 243, 0.04);
+  color: #0f6b68;
+  border-color: #0f6b68;
+  background: rgba(15, 107, 104, 0.04);
 }
 
 .user-menu {
@@ -418,13 +480,79 @@ const confirmOpenTickets = () => {
 }
 
 .dropdown-item:hover {
-  background-color: rgba(33, 150, 243, 0.08);
-  color: #2196F3;
+  background-color: rgba(15, 107, 104, 0.08);
+  color: #0f6b68;
 }
 
 .dropdown-item :deep(svg) {
   width: 18px;
   height: 18px;
+}
+
+@media (max-width: 720px) {
+  .app-header {
+    gap: 8px;
+    padding: 0 12px;
+    overflow: hidden;
+    height: 56px;
+  }
+
+  .header-left {
+    gap: 10px;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .brand {
+    gap: 0;
+    flex: 0 0 auto;
+  }
+
+  .brand-title {
+    display: none;
+  }
+
+  .header-nav {
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .nav-link {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+    flex: 0 0 44px;
+  }
+
+  .nav-link :deep(svg) {
+    width: 20px;
+    height: 20px;
+  }
+
+  .nav-link {
+    font-size: 0;
+  }
+
+  :deep(.device-display-container) {
+    flex: 0 0 auto;
+  }
+
+  :deep(.device-info) {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+  }
+
+  :deep(.device-name) {
+    display: none;
+  }
+
+  .app-info {
+    display: none;
+  }
 }
 
 .dropdown-divider {
@@ -444,72 +572,106 @@ const confirmOpenTickets = () => {
   }
 }
 
+:global(html[data-studio-theme='dark']) .action-btn {
+  background: var(--studio-surface-soft);
+  border-color: var(--studio-border);
+  color: var(--studio-text);
+}
+
+:global(html[data-studio-theme='dark']) .action-btn:hover {
+  background: var(--studio-primary-soft);
+}
+
+:global(html[data-studio-theme='dark']) .user-avatar:hover {
+  background-color: var(--studio-surface-soft);
+}
+
+:global(html[data-studio-theme='dark']) .username {
+  color: var(--studio-text);
+}
+
+:global(html[data-studio-theme='dark']) .dropdown-menu {
+  background-color: var(--studio-surface);
+  box-shadow: var(--studio-shadow-md);
+}
+
+:global(html[data-studio-theme='dark']) .dropdown-item {
+  color: var(--studio-text);
+}
+
+:global(html[data-studio-theme='dark']) .dropdown-item:hover {
+  background-color: var(--studio-primary-soft);
+  color: var(--studio-primary);
+}
+
+:global(html[data-studio-theme='dark']) .dropdown-divider {
+  background-color: var(--studio-border);
+}
+
 /* 深色模式支持 */
 @media (prefers-color-scheme: dark) {
   .app-header {
-    background: #1a1a1a;
-    border-bottom-color: #333;
+    background: var(--studio-surface-raised);
+    border-bottom-color: var(--studio-border);
   }
 
   .brand-title {
-    background: linear-gradient(120deg, #409EFF, #ffffff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--studio-text);
   }
 
   .nav-link {
-    color: #e0e0e0;
+    color: var(--studio-text-muted);
   }
 
   .nav-link:hover {
-    background-color: rgba(33, 150, 243, 0.15);
+    background-color: var(--studio-primary-soft);
   }
 
   .app-info :deep(.el-input__inner) {
-    color: #e0e0e0;
+    color: var(--studio-text);
     background: transparent;
   }
 
   .action-btn {
-    background: #2a2a2a;
-    border-color: #404040;
-    color: #e0e0e0;
+    background: var(--studio-surface-soft);
+    border-color: var(--studio-border);
+    color: var(--studio-text);
   }
 
   .action-btn:hover {
-    background: rgba(33, 150, 243, 0.15);
+    background: var(--studio-primary-soft);
   }
 
   .username {
-    color: #e0e0e0;
+    color: var(--studio-text);
   }
 
   .dropdown-menu {
-    background-color: #2a2a2a;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    background-color: var(--studio-surface);
+    box-shadow: var(--studio-shadow-md);
   }
 
   .dropdown-item {
-    color: #e0e0e0;
+    color: var(--studio-text);
   }
 
   .dropdown-item:hover {
-    background-color: rgba(33, 150, 243, 0.15);
+    background-color: var(--studio-primary-soft);
   }
 
   .dropdown-divider {
-    background-color: #404040;
+    background-color: var(--studio-border);
   }
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .app-header {
-    padding: 0 16px;
+    padding: 0 12px;
   }
 
   .header-left {
-    gap: 20px;
+    gap: 10px;
   }
 
   .header-left h1 {
@@ -517,7 +679,7 @@ const confirmOpenTickets = () => {
   }
 
   .nav-link {
-    padding: 6px 12px;
+    padding: 0 10px;
   }
 
   .app-info :deep(.el-input) {
@@ -528,4 +690,10 @@ const confirmOpenTickets = () => {
     max-width: 80px;
   }
 }
-</style> 
+
+@media (max-width: 720px) {
+  .nav-link {
+    padding: 0;
+  }
+}
+</style>

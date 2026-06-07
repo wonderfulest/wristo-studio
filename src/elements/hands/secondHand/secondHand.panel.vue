@@ -1,6 +1,6 @@
 <template>
   <div class="settings-section">
-    <h3>秒针设置</h3>
+    <h3>{{ t('editor.secondHand') }} {{ t('nav.settings') }}</h3>
 
     <el-form ref="formRef" :model="element" label-position="left" label-width="100px">
       <div class="setting-item">
@@ -19,6 +19,9 @@
 <script setup lang="ts">
 import * as elementManager from '@/engine/managers/elementManager'
 import AssetPicker from '@/components/asset-picker/index.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   element: {
@@ -81,7 +84,7 @@ const handleAssetUpload = (url: string, asset: any) => {
 }
 
 .help-icon:hover {
-  color: #409eff;
+  color: #0f6b68;
 }
 
 /* 调整提示框hand */
@@ -130,12 +133,12 @@ const handleAssetUpload = (url: string, asset: any) => {
 }
 
 .hand-preview:hover {
-  border-color: #409eff;
+  border-color: #0f6b68;
 }
 
 .hand-preview.active {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .hand-preview img {
@@ -175,8 +178,8 @@ const handleAssetUpload = (url: string, asset: any) => {
 }
 
 .upload-preview:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
 }
 
 .upload-icon {
@@ -186,6 +189,6 @@ const handleAssetUpload = (url: string, asset: any) => {
 }
 
 .upload-preview:hover .upload-icon {
-  color: #409eff;
+  color: #0f6b68;
 }
 </style>

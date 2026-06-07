@@ -8,6 +8,8 @@ export interface GarminDeviceBaseVO {
   deviceId?: string
   imageUrl?: string
   deviceFamily?: string
+  resolutionWidth?: number | null
+  resolutionHeight?: number | null
 }
 
 // Device detail info

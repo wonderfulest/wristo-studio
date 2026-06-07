@@ -1,113 +1,167 @@
 <template>
-  <div class="profile-gradient-bg">
-    <div class="profile-avatar-block">
-      <img
-        :src="editMode ? form.avatar : (userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')"
-        class="profile-avatar"
-        :class="{ 'avatar-editing': editMode }"
-        alt="avatar"
-        @dblclick="onAvatarDblClick"
-      />
-      <input
-        v-if="editMode"
-        ref="avatarInputRef"
-        type="file"
-        accept="image/*"
-        style="display: none"
-        @change="onAvatarFileChange"
-      />
-    </div>
-    <div class="profile-nickname-row">
-      <span class="profile-nickname">{{ userInfo?.username }}</span>
-      <span class="profile-edit-btn" @click="startEdit">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="11" fill="#fff"/><path d="M15.13 3.29a2.5 2.5 0 0 1 3.54 3.54l-9.6 9.6a1 1 0 0 1-.41.25l-3.5 1a1 1 0 0 1-1.24-1.24l1-3.5a1 1 0 0 1 .25-.41l9.6-9.6ZM16.54 7.12l-2.66-2.66" stroke="#a259c9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-    </div>
-    <div class="profile-card">
-      <div class="profile-title">USER PROFILE</div>
-      <div class="profile-form">
-        <div class="form-item">
-          <span class="form-icon"><svg width="22" height="22" fill="none"><circle cx="11" cy="11" r="11" fill="#f3e9fa"/><path d="M11 12.5c2.5 0 4.5 1 4.5 2.5v1H6.5v-1c0-1.5 2-2.5 4.5-2.5Z" stroke="#a259c9" stroke-width="1.2"/><circle cx="11" cy="9" r="2.5" stroke="#a259c9" stroke-width="1.2"/></svg></span>
-          <div class="form-content">
-            <label>User Name</label>
-            <el-input v-model="form.username" placeholder="Enter User Name" class="form-input" v-if="editMode" />
-            <span v-else>{{ userInfo?.username }}</span>
+  <main class="profile-page">
+    <section class="profile-shell" aria-labelledby="profile-title">
+      <div class="profile-hero">
+        <div class="profile-identity-card">
+          <div class="avatar-wrap">
+            <img
+              :src="editMode ? form.avatar : (userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')"
+              class="profile-avatar"
+              :class="{ 'avatar-editing': editMode }"
+              :alt="t('profile.userAvatar')"
+              @dblclick="onAvatarDblClick"
+            />
+            <button
+              v-if="editMode"
+              class="avatar-action"
+              type="button"
+              :aria-label="t('profile.uploadAvatar')"
+              @click="onAvatarDblClick"
+            >
+              <Icon icon="material-symbols:photo-camera-rounded" />
+            </button>
+            <input
+              v-if="editMode"
+              ref="avatarInputRef"
+              type="file"
+              accept="image/*"
+              class="sr-only"
+              @change="onAvatarFileChange"
+            />
           </div>
-        </div>
-        <div class="form-item">
-          <span class="form-icon"><svg width="22" height="22" fill="none"><circle cx="11" cy="11" r="11" fill="#f3e9fa"/><path d="M8 10h6M8 13h4" stroke="#a259c9" stroke-width="1.2"/><rect x="7" y="7" width="8" height="8" rx="4" stroke="#a259c9" stroke-width="1.2"/></svg></span>
-          <div class="form-content">
-            <label>Nickname</label>
-            <el-input v-model="form.nickname" placeholder="Enter your nickname" class="form-input" v-if="editMode" />
-            <span v-else>{{ userInfo?.nickname }}</span>
+
+          <div class="identity-copy">
+            <p class="eyebrow">{{ t('profile.studioAccount') }}</p>
+            <h1 id="profile-title">{{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}</h1>
+            <p>{{ userInfo?.email || t('profile.noEmail') }}</p>
           </div>
-        </div>
-        <div class="form-item">
-          <span class="form-icon"><svg width="22" height="22" fill="none"><circle cx="11" cy="11" r="11" fill="#f3e9fa"/><path d="M6.5 9.5l4.5 3 4.5-3" stroke="#a259c9" stroke-width="1.2"/></svg></span>
-          <div class="form-content">
-            <label>Email</label>
-            <el-input v-model="form.email" placeholder="Enter Email" class="form-input" v-if="editMode" />
-            <span v-else>{{ userInfo?.email }}</span>
+
+          <div class="profile-actions">
+            <el-button v-if="!editMode" type="primary" class="primary-action" @click="startEdit">
+              <Icon icon="material-symbols:edit-rounded" />
+              {{ t('profile.editProfile') }}
+            </el-button>
+            <template v-else>
+              <el-button class="secondary-action" @click="cancelEdit">{{ t('common.cancel') }}</el-button>
+              <el-button
+                type="primary"
+                class="primary-action"
+                :loading="isSaving"
+                :disabled="isSaving"
+                @click="handleSave"
+              >
+                {{ t('profile.saveChanges') }}
+              </el-button>
+            </template>
           </div>
         </div>
 
-        <!-- Device Information -->
-        <div v-if="userInfo?.device" class="form-item device-item">
-          <span class="form-icon device-icon">
-            <svg width="22" height="22" fill="none">
-              <circle cx="11" cy="11" r="11" fill="#f3e9fa"/>
-              <path d="M8 6h6c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z" stroke="#a259c9" stroke-width="1.2" fill="none"/>
-              <circle cx="11" cy="11" r="1.5" fill="#a259c9"/>
-            </svg>
-          </span>
-          <div class="form-content">
-            <label>Current Device</label>
-            <div class="device-display">
-              <div class="device-avatar">
-                <img v-if="userInfo.device?.imageUrl" :src="userInfo.device.imageUrl" :alt="userInfo.device.displayName" />
-                <div v-else class="device-fallback">⌚️</div>
-              </div>
-              <div class="device-info">
-                <div class="device-name">{{ userInfo.device?.displayName }}</div>
-                <div v-if="userInfo.device?.deviceFamily" class="device-family">{{ userInfo.device?.deviceFamily }}</div>
+        <aside class="device-panel" :aria-label="t('profile.currentDevice')">
+          <div class="panel-heading">
+            <span class="panel-icon"><Icon icon="material-symbols:watch-rounded" /></span>
+            <div>
+              <span>{{ t('profile.currentDevice') }}</span>
+              <strong>{{ userInfo?.device ? t('profile.connected') : t('profile.notConnected') }}</strong>
+            </div>
+          </div>
+
+          <div v-if="userInfo?.device" class="device-display">
+            <div class="device-avatar">
+              <img
+                v-if="userInfo.device?.imageUrl"
+                :src="userInfo.device.imageUrl"
+                :alt="userInfo.device.displayName"
+              />
+              <Icon v-else icon="material-symbols:watch-rounded" />
+            </div>
+            <div class="device-info">
+              <div class="device-name">{{ userInfo.device?.displayName }}</div>
+              <div v-if="userInfo.device?.deviceFamily" class="device-family">
+                {{ userInfo.device?.deviceFamily }}
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-else class="form-item device-item no-device">
-          <span class="form-icon device-icon">
-            <svg width="22" height="22" fill="none">
-              <circle cx="11" cy="11" r="11" fill="#f3e9fa"/>
-              <path d="M8 6h6c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z" stroke="#a259c9" stroke-width="1.2" fill="none"/>
-              <path d="M8 8l6 6M14 8l-6 6" stroke="#a259c9" stroke-width="1.2"/>
-            </svg>
-          </span>
-          <div class="form-content">
-            <label>Current Device</label>
-            <div class="no-device-text">
-              <span>No device connected</span>
-              <small>Connect your Garmin device to get personalized recommendations</small>
+          <div v-else class="empty-device">
+            <Icon icon="material-symbols:watch-off-rounded" />
+            <div>
+              <strong>{{ t('profile.noDeviceConnected') }}</strong>
+              <span>{{ t('profile.connectDeviceHint') }}</span>
             </div>
           </div>
-        </div>
-
+        </aside>
       </div>
-      <el-button v-if="editMode" class="save-btn" type="primary" @click="handleSave">SAVE</el-button>
-    </div>
-  </div>
+
+      <section class="profile-card" :aria-label="t('profile.details')">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">{{ t('profile.details') }}</p>
+            <h2>{{ t('profile.information') }}</h2>
+          </div>
+          <span class="status-chip">
+            <Icon icon="material-symbols:verified-user-rounded" />
+            {{ t('profile.authenticated') }}
+          </span>
+        </div>
+
+        <div class="profile-form">
+          <div class="form-item">
+            <span class="form-icon"><Icon icon="material-symbols:person-rounded" /></span>
+            <div class="form-content">
+              <label for="profile-username">{{ t('profile.userName') }}</label>
+              <el-input
+                v-if="editMode"
+                id="profile-username"
+                v-model="form.username"
+                :placeholder="t('profile.enterUserName')"
+                class="form-input"
+              />
+              <span v-else>{{ userInfo?.username || '-' }}</span>
+            </div>
+          </div>
+
+          <div class="form-item">
+            <span class="form-icon"><Icon icon="material-symbols:badge-rounded" /></span>
+            <div class="form-content">
+              <label for="profile-nickname">{{ t('profile.nickname') }}</label>
+              <el-input
+                v-if="editMode"
+                id="profile-nickname"
+                v-model="form.nickname"
+                :placeholder="t('profile.enterNickname')"
+                class="form-input"
+              />
+              <span v-else>{{ userInfo?.nickname || '-' }}</span>
+            </div>
+          </div>
+
+          <div class="form-item">
+            <span class="form-icon"><Icon icon="material-symbols:mail-rounded" /></span>
+            <div class="form-content">
+              <label>{{ t('profile.email') }}</label>
+              <span>{{ userInfo?.email || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { updateMyInfo } from '@/api/wristo/auth'
+import { useI18n } from '@/i18n'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
+const { t } = useI18n()
 
 const editMode = ref(false)
+const isSaving = ref(false)
 
 const form = ref({
   username: userInfo.value?.username || '',
@@ -131,7 +185,7 @@ const onAvatarFileChange = async (e: Event) => {
   const file = files[0]
   const isImage = file.type.startsWith('image/')
   if (!isImage) {
-    ElMessage.error('Please upload an image file!')
+    ElMessage.error(t('profile.uploadImageOnly'))
     return
   }
   const reader = new FileReader()
@@ -151,12 +205,23 @@ const startEdit = () => {
   editMode.value = true
 }
 
+const cancelEdit = () => {
+  form.value = {
+    username: userInfo.value?.username || '',
+    nickname: userInfo.value?.nickname || '',
+    avatar: userInfo.value?.avatar || '',
+    email: userInfo.value?.email || '',
+  }
+  editMode.value = false
+}
+
 const handleSave = async () => {
   if (!userInfo.value) {
     editMode.value = false
     return
   }
 
+  isSaving.value = true
   try {
     await updateMyInfo({
       username: form.value.username,
@@ -172,11 +237,13 @@ const handleSave = async () => {
       email: form.value.email,
     })
 
-    ElMessage.success('Saved successfully')
+    ElMessage.success(t('common.savedSuccessfully'))
     editMode.value = false
   } catch (error) {
     console.error('Failed to update user profile', error)
-    ElMessage.error('Failed to save, please try again')
+    ElMessage.error(t('common.saveFailed'))
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -196,152 +263,460 @@ watch(
 </script>
 
 <style scoped>
-/* 直接复用你提供的样式，略去与设备相关的块 */
-.profile-gradient-bg {
-  width: 100%;
+.profile-page {
   min-height: 100vh;
+  background: var(--studio-bg);
+  color: var(--studio-text);
+  padding: 40px 16px 56px;
+}
+
+.profile-shell {
+  width: min(680px, 100%);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-top: 32px;
-  padding-bottom: 32px;
+  gap: 32px;
 }
-.profile-avatar-block {
+
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  align-items: stretch;
+}
+
+.profile-identity-card,
+.device-panel,
+.profile-card {
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: 14px;
+  box-shadow: var(--studio-shadow-sm);
+  overflow: hidden;
+}
+
+.profile-identity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 0 0 8px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.avatar-wrap {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 12px;
+  width: 100px;
+  height: 100px;
 }
+
 .profile-avatar {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #fff;
-  box-shadow: 0 4px 18px 0 rgba(52,124,255,0.13);
-  background: #e9e9e9;
+  border: 0;
+  box-shadow: 0 0 0 3px var(--studio-surface), 0 2px 16px rgba(0, 0, 0, 0.12);
+  background: var(--studio-surface);
 }
+
 .avatar-editing {
-  animation: avatar-blink 1s steps(1, start) infinite;
   cursor: pointer;
+  outline: 3px solid var(--studio-focus-ring);
+  outline-offset: 4px;
 }
-@keyframes avatar-blink {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.5); }
-}
-.profile-nickname-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-.profile-nickname {
-  font-size: 2.6rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-.profile-edit-btn {
-  width: 32px;
-  height: 32px;
+
+.avatar-action {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 44px;
+  height: 44px;
+  border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--studio-primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 10px 22px rgba(15, 107, 104, 0.24);
   cursor: pointer;
-  border: 2px solid #f3e9fa;
-  transition: background 0.18s, box-shadow 0.18s;
+  transition: transform 0.18s ease, background 0.18s ease;
 }
-.profile-edit-btn:hover {
-  background: #f3e9fa;
-  box-shadow: 0 2px 8px 0 rgba(162,89,201,0.10);
+
+.avatar-action:hover,
+.avatar-action:focus-visible {
+  background: var(--studio-primary-hover);
+  transform: translateY(-1px);
 }
-.profile-card {
-  width: 100%;
-  max-width: 400px;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 6px 32px 0 rgba(52,124,255,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.04);
-  margin-top: 0;
-  padding: 32px 24px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+
+.avatar-action svg {
+  width: 22px;
+  height: 22px;
 }
-.profile-title {
-  font-size: 1.18rem;
-  font-weight: 700;
-  color: #222;
-  letter-spacing: 0.04em;
-  margin-bottom: 18px;
+
+.identity-copy {
+  min-width: 0;
   text-align: center;
 }
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--studio-text-subtle);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.identity-copy h1,
+.section-header h2 {
+  margin: 0;
+  color: var(--studio-text);
+  line-height: 1.15;
+}
+
+.identity-copy h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.identity-copy p:last-child {
+  margin: 10px 0 0;
+  color: var(--studio-text-subtle);
+  font-size: 0.9375rem;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--studio-primary);
+  border-color: var(--studio-primary);
+  box-shadow: 0 10px 20px rgba(15, 107, 104, 0.18);
+}
+
+.profile-card {
+  margin-top: 0;
+  padding: 0;
+}
+
+.device-panel {
+  padding: 18px;
+}
+
+.panel-heading,
+.section-header,
+.device-display,
+.empty-device {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.panel-heading {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.panel-icon,
+.form-icon,
+.status-chip {
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+}
+
+.panel-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.panel-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.panel-heading span:not(.panel-icon) {
+  display: block;
+  color: var(--studio-text-subtle);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.panel-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--studio-text);
+  font-size: 1.1rem;
+}
+
+.device-display {
+  align-items: center;
+  padding: 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--studio-surface-soft);
+}
+
+.device-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.device-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.device-avatar svg,
+.empty-device > svg {
+  width: 34px;
+  height: 34px;
+  color: var(--studio-primary);
+}
+
+.device-info {
+  min-width: 0;
+}
+
+.device-name {
+  color: var(--studio-text);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.device-family {
+  margin-top: 4px;
+  color: var(--studio-text-muted);
+  font-size: 0.92rem;
+}
+
+.empty-device {
+  align-items: flex-start;
+  padding: 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--studio-surface-soft);
+}
+
+.empty-device strong,
+.empty-device span {
+  display: block;
+}
+
+.empty-device strong {
+  color: var(--studio-text);
+  margin-bottom: 4px;
+}
+
+.empty-device span {
+  color: var(--studio-text-muted);
+  line-height: 1.5;
+}
+
+.section-header {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0;
+  padding: 0 4px 8px;
+  background: var(--studio-bg);
+}
+
+.section-header h2 {
+  color: var(--studio-text-subtle);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .profile-form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 0;
 }
+
 .form-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  background: #f8f8fa;
-  border-radius: 24px;
-  padding: 10px 16px;
+  gap: 12px;
+  min-height: 50px;
+  background: var(--studio-surface);
+  border: 0;
+  border-bottom: 1px solid var(--studio-border);
+  border-radius: 0;
+  padding: 13px 18px;
 }
+
+.form-item:last-child {
+  border-bottom: 0;
+}
+
 .form-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3e9fa;
-  border-radius: 50%;
+  border-radius: 8px;
+  flex: 0 0 auto;
 }
+
+.form-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .form-content {
+  min-width: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
+
 .form-content label {
-  font-size: 0.98rem;
-  color: #a259c9;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-.form-input {
-  border-radius: 18px;
-  border: 1.5px solid #eee;
-  font-size: 1.08rem;
-  padding: 8px 14px;
-}
-.save-btn {
-  width: 100%;
-  margin-top: 28px;
-  border-radius: 24px;
-  font-size: 1.13rem;
+  color: var(--studio-text-muted);
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 14px 0;
-  background: linear-gradient(90deg, #a259c9 0%, #6a82fb 100%);
-  border: none;
-  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.save-btn:focus,
-.save-btn:hover {
-  background: linear-gradient(90deg, #6a82fb 0%, #a259c9 100%);
+
+.form-content span {
+  color: var(--studio-text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
-@media (max-width: 600px) {
-  .profile-card {
-    max-width: 98vw;
-    padding: 18px 4vw 18px 4vw;
+
+.form-input {
+  width: 100%;
+}
+
+.form-input :deep(.el-input__wrapper) {
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
+}
+
+@media (max-width: 980px) {
+  .profile-hero,
+  .profile-form {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-identity-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .profile-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 20px 14px 32px;
+  }
+
+  .profile-identity-card,
+  .device-panel,
+  .profile-card {
+    padding: 20px;
+  }
+
+  .profile-identity-card {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .avatar-wrap,
   .profile-avatar {
-    width: 90px;
-    height: 90px;
+    width: 104px;
+    height: 104px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .profile-actions,
+  .profile-actions :deep(.el-button) {
+    width: 100%;
+  }
+
+  .profile-actions :deep(.el-button + .el-button) {
+    margin-left: 0;
   }
 }
 </style>
