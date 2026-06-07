@@ -509,6 +509,41 @@ onMounted(() => {
   margin: 8px 6px;
 }
 
+:global(html[data-studio-theme='dark']) .ticket-nudge,
+:global(html[data-studio-theme='dark']) .dropdown-menu {
+  background-color: var(--studio-surface-raised);
+  border-color: var(--studio-border);
+  box-shadow: var(--studio-shadow-md);
+}
+
+:global(html[data-studio-theme='dark']) .ticket-nudge-copy strong,
+:global(html[data-studio-theme='dark']) .dropdown-item {
+  color: var(--studio-text);
+}
+
+:global(html[data-studio-theme='dark']) .ticket-nudge-copy span {
+  color: var(--studio-text-muted);
+}
+
+:global(html[data-studio-theme='dark']) .ticket-nudge-close {
+  color: var(--studio-text-muted);
+}
+
+:global(html[data-studio-theme='dark']) .ticket-nudge-close:hover,
+:global(html[data-studio-theme='dark']) .dropdown-item:hover {
+  background-color: var(--studio-primary-soft);
+  color: var(--studio-primary);
+}
+
+:global(html[data-studio-theme='dark']) .avatar-image,
+:global(html[data-studio-theme='dark']) .avatar-dot {
+  border-color: var(--studio-surface-raised);
+}
+
+:global(html[data-studio-theme='dark']) .dropdown-divider {
+  background-color: var(--studio-border);
+}
+
 .menu-badge {
   margin-left: auto;
   background-color: #ff4d4f;

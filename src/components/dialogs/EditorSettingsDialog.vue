@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    title="Editor Settings"
+    :title="t('editor.editorSettings')"
     v-model="dialogVisible"
     width="800px"
     :close-on-click-modal="false"
@@ -8,7 +8,7 @@
   >
     <div class="settings-container">
       <div class="setting-item">
-        <div class="setting-label">Light Canvas Background</div>
+        <div class="setting-label">{{ t('editorSettings.lightCanvasBackground') }}</div>
         <div class="setting-control">
           <el-color-picker
             v-model="lightCanvasBackgroundColor"
@@ -20,7 +20,7 @@
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Dark Canvas Background</div>
+        <div class="setting-label">{{ t('editorSettings.darkCanvasBackground') }}</div>
         <div class="setting-control">
           <el-color-picker
             v-model="darkCanvasBackgroundColor"
@@ -32,78 +32,78 @@
       </div>
       
       <div class="setting-item">
-        <div class="setting-label">Time Simulator</div>
+        <div class="setting-label">{{ t('editorSettings.timeSimulator') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showTimeSimulator"
             @change="handleTimeSimulatorChange"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Zoom Controls</div>
+        <div class="setting-label">{{ t('editorSettings.zoomControls') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showZoomControls"
             @change="handleZoomControlsChange"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">History Controls</div>
+        <div class="setting-label">{{ t('editorSettings.historyControls') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showHistoryControls"
             @change="handleHistoryControlsChange"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Device Frame</div>
+        <div class="setting-label">{{ t('editorSettings.deviceFrame') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showDeviceFrame"
             @change="handleDeviceFrameChange"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Ruler Guides</div>
+        <div class="setting-label">{{ t('editorSettings.rulerGuides') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showRulerGuides"
             @change="handleRulerGuidesChange"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Key Guidelines</div>
+        <div class="setting-label">{{ t('editorSettings.keyGuidelines') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="showKeyGuidelines"
             @change="handleKeyGuidelinesToggle"
-            active-text="Show"
-            inactive-text="Hide"
+            :active-text="t('editorSettings.show')"
+            :inactive-text="t('editorSettings.hide')"
           />
           <el-select
             v-model="keyGuidelineDivisions"
             :disabled="!showKeyGuidelines"
-            placeholder="Divisions"
+            :placeholder="t('editorSettings.divisions')"
             style="width: 140px;"
             @change="handleKeyGuidelinesDivisionsChange"
           >
@@ -118,19 +118,19 @@
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Manual Guides</div>
+        <div class="setting-label">{{ t('editorSettings.manualGuides') }}</div>
         <div class="setting-control">
           <el-switch
             v-model="enableManualGuides"
             @change="handleManualGuidesToggle"
-            active-text="Enable Shift/Cmd Guides"
-            inactive-text="Disable"
+            :active-text="t('editorSettings.enableShiftCmdGuides')"
+            :inactive-text="t('editorSettings.disable')"
           />
         </div>
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Grid Color</div>
+        <div class="setting-label">{{ t('editorSettings.gridColor') }}</div>
         <div class="setting-control">
           <el-color-picker
             v-model="rulerGuidesColor"
@@ -141,7 +141,7 @@
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Major Opacity</div>
+        <div class="setting-label">{{ t('editorSettings.majorOpacity') }}</div>
         <div class="setting-control">
           <el-input-number
             v-model="rulerGuidesMajor"
@@ -154,7 +154,7 @@
       </div>
 
       <div class="setting-item">
-        <div class="setting-label">Minor Opacity</div>
+        <div class="setting-label">{{ t('editorSettings.minorOpacity') }}</div>
         <div class="setting-control">
           <el-input-number
             v-model="rulerGuidesMinor"
@@ -168,9 +168,9 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="saveSettings">
-          Confirm
+          {{ t('common.confirm') }}
         </el-button>
       </span>
     </template>
@@ -181,9 +181,11 @@
 import { ref } from 'vue'
 import { useEditorStore } from '@/stores/editorStore'
 import { useMessageStore } from '@/stores/message'
+import { useI18n } from '@/i18n'
 
 const editorStore = useEditorStore()
 const messageStore = useMessageStore()
+const { t } = useI18n()
 const dialogVisible = ref<boolean>(false)
 
 // 设计区背景色
@@ -308,11 +310,11 @@ const saveSettings = () => {
       keyGuidelineDivisions: keyGuidelineDivisions.value,
     })
     
-    messageStore.success('Settings saved')
+    messageStore.success(t('editorSettings.settingsSaved'))
     dialogVisible.value = false
   } catch (error) {
     console.error('Failed to save settings:', error)
-    messageStore.error('Failed to save settings')
+    messageStore.error(t('editorSettings.saveSettingsFailed'))
   }
 }
 

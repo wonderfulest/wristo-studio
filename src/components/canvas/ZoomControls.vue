@@ -7,12 +7,21 @@
     }"
   >
     <div class="zoom-controls-header">
-      <div class="panel-title">
-        <Icon icon="material-symbols:dashboard-outline-rounded" width="18" height="18" />
-        <span>{{ t('canvas.panelTitle') }}</span>
-      </div>
-      <div class="panel-summary" v-if="isCollapsed">
-        {{ designStore.designSpec.width }} x {{ designStore.designSpec.height }} · {{ Math.round(editorStore.zoomLevel * 100) }}%
+      <div class="panel-heading">
+        <div class="panel-title" v-if="!isCollapsed">
+          <Icon icon="material-symbols:dashboard-outline-rounded" width="18" height="18" />
+          <span>{{ t('canvas.panelTitle') }}</span>
+        </div>
+        <div class="collapsed-device-summary" v-if="isCollapsed">
+          <div class="collapsed-device-thumb" :class="{ empty: !deviceImageUrl }">
+            <img v-if="deviceImageUrl" :src="deviceImageUrl" :alt="currentDeviceName" />
+            <Icon v-else icon="material-symbols:watch-outline-rounded" width="17" height="17" />
+          </div>
+          <div class="collapsed-device-text">
+            <div class="collapsed-device-name">{{ currentDeviceName }}</div>
+            <div class="collapsed-device-meta">{{ deviceResolutionLabel }} · {{ zoomPercentLabel }}</div>
+          </div>
+        </div>
       </div>
       <el-button
         circle
@@ -91,11 +100,13 @@ const userStore = useUserStore()
 const isCollapsed = ref(false)
 const currentDevice = computed(() => userStore.userInfo?.device || null)
 const currentDeviceName = computed(() => currentDevice.value?.displayName || t('canvas.noDeviceSelected'))
+const deviceImageUrl = computed(() => currentDevice.value?.imageUrl || currentDevice.value?.devicePng || '')
 const deviceResolutionLabel = computed(() => {
   const width = Number(currentDevice.value?.resolutionWidth || designStore.designSpec.width)
   const height = Number(currentDevice.value?.resolutionHeight || designStore.designSpec.height)
   return `${width} x ${height}`
 })
+const zoomPercentLabel = computed(() => `${Math.round(editorStore.zoomLevel * 100)}%`)
 
 // 监听 store 中的显示状态
 watch(
@@ -158,6 +169,12 @@ const toggleCollapse = () => {
   gap: 8px;
 }
 
+.panel-heading {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .panel-title {
   display: flex;
   align-items: center;
@@ -168,9 +185,56 @@ const toggleCollapse = () => {
   font-weight: 750;
 }
 
-.panel-summary {
+.collapsed-device-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.collapsed-device-thumb {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface);
+  overflow: hidden;
+}
+
+.collapsed-device-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.collapsed-device-thumb.empty {
   color: var(--studio-text-muted);
+}
+
+.collapsed-device-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.collapsed-device-name {
+  min-width: 0;
+  color: var(--studio-text);
   font-size: 12px;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsed-device-meta {
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

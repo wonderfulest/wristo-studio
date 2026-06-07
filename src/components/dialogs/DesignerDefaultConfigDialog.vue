@@ -4,6 +4,9 @@
     title="Designer Settings"
     :close-on-click-modal="false"
     :width="'90%'"
+    append-to-body
+    :modal="false"
+    modal-penetrable
     class="designer-config-dialog"
   >
     <el-form :model="form" label-width="100px">
