@@ -75,6 +75,11 @@ import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { useDesignStore } from '@/stores/designStore'
 import { useUserStore } from '@/stores/user'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
+import {
+  scaleElementConfig,
+  STANDARD_DESIGN_SIZE,
+  type DesignSize,
+} from '@/utils/designScale'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -160,6 +165,30 @@ watch(
   { immediate: true },
 )
 
+const getCurrentDesignSize = (): DesignSize => ({
+  width: Number(designStore.designSpec.width || STANDARD_DESIGN_SIZE),
+  height: Number(designStore.designSpec.height || STANDARD_DESIGN_SIZE),
+})
+
+const scaleElementsFromStoredSize = (elements: AnyElementConfig[]): AnyElementConfig[] => {
+  const currentSize = getCurrentDesignSize()
+  const storedSize = {
+    width: STANDARD_DESIGN_SIZE,
+    height: STANDARD_DESIGN_SIZE,
+  }
+
+  if (
+    currentSize.width === storedSize.width &&
+    currentSize.height === storedSize.height
+  ) {
+    return elements
+  }
+
+  return elements.map((element) =>
+    scaleElementConfig(element, storedSize, currentSize),
+  )
+}
+
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
   try {
@@ -234,7 +263,7 @@ const loadDesign = async (designUid: string) => {
     // 加载元素到画布
     if (config && config.elements) {
       // config.elements 是 API DesignElement[]，此处通过解码器转换为内部 AnyElementConfig
-      await loadElements(config.elements as any)
+      await loadElements(scaleElementsFromStoredSize(config.elements as any))
     }
     
     // 更新画布缩放

@@ -14,6 +14,8 @@ const Y_FIELDS = new Set(['top', 'y', 'y1', 'y2', 'topBase', 'scrollAreaTop'])
 const WIDTH_FIELDS = new Set(['width', 'scrollAreaWidth', 'headWidth', 'barWidth'])
 const HEIGHT_FIELDS = new Set(['height', 'headHeight'])
 const SCALAR_FIELDS = new Set([
+  'size',
+  'iconSize',
   'fontSize',
   'fontGap',
   'radius',
