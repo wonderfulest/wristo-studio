@@ -1,5 +1,6 @@
 import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
+import { normalizeFontSizeToOption } from '@/config/elements/options/typography'
 
 // 统一的元素处理器：负责元素的增删改查编解码
 export type ElementHandler = {
@@ -17,6 +18,17 @@ export type ElementHandler = {
 }
 
 const elementRegistry = new Map<ElementType, ElementHandler>()
+
+export const normalizeFontSizeFields = <T extends Record<string, unknown>>(config: T): T => {
+  const next: Record<string, unknown> = { ...config }
+  if ('fontSize' in next) {
+    next.fontSize = normalizeFontSizeToOption(next.fontSize)
+  }
+  if ('iconSize' in next && 'fontSize' in next) {
+    next.iconSize = next.fontSize
+  }
+  return next as T
+}
 
 // 注册元素处理器
 export const registerElement = (elementType: ElementType, handler: ElementHandler) => {
@@ -43,7 +55,8 @@ export const encodeElementByRegistry = (
   const encoder = handler?.encode
   if (!encoder) return null
 
-  return encoder(element)
+  const encoded = encoder(element)
+  return encoded ? normalizeFontSizeFields(encoded as unknown as Record<string, unknown>) as unknown as AnyElementConfig : null
 }
 
 // 统一解码入口：根据配置中的 eleType 调用对应 handler.decode，将解码结果合并回配置
@@ -59,9 +72,12 @@ export const decodeElementConfig = (
   const decoder = handler.decode
   if (!decoder) {
     // 未提供专门的 decoder，则直接返回原始配置
-    return config
+    return normalizeFontSizeFields(config as unknown as Record<string, unknown>) as unknown as AnyElementConfig
   }
 
   const partial = decoder(config)
-  return { ...config, ...(partial as object) }
+  return normalizeFontSizeFields({
+    ...config,
+    ...(partial as object),
+  } as Record<string, unknown>) as unknown as AnyElementConfig
 }
