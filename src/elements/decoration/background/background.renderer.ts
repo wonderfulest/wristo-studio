@@ -88,6 +88,9 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const targetW = Math.max(1, Number(config.width ?? fallbackSize))
   const targetH = Math.max(1, Number(config.height ?? fallbackSize))
   const isDefault = isDefaultBackgroundUrl((imgObj as any).wristoImageUrl ?? config.imageUrl)
+  const hasManualLockState = Boolean((imgObj as any).wristoLayerLockOverridden)
+  const locked = hasManualLockState ? Boolean((imgObj as any).locked) : isDefault
+  const selectable = !locked
 
   imgObj.set({
     left: cx,
@@ -96,17 +99,17 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
     originY: 'center',
     scaleX: targetW / rawW,
     scaleY: targetH / rawH,
-    selectable: !isDefault,
-    evented: !isDefault,
+    selectable,
+    evented: selectable,
     hasControls: false,
-    hasBorders: !isDefault,
-    locked: isDefault,
+    hasBorders: selectable,
+    locked,
     lockMovementX: true,
     lockMovementY: true,
     lockScalingX: true,
     lockScalingY: true,
     lockRotation: true,
-    hoverCursor: isDefault ? 'default' : 'pointer',
+    hoverCursor: selectable ? 'pointer' : 'default',
   } as any)
 
   if (config.left != null) imgObj.set('left', Number(config.left) as never)

@@ -6,7 +6,14 @@ import type { AnyElementConfig } from '@/types/elements'
 import { encodeElementByRegistry, normalizeFontSizeFields } from '@/engine/registry/elementRegistry'
 import type { FabricElement } from '@/types/element'
 import { useDesignStore } from '@/stores/designStore'
+import { useLocaleStore } from '@/stores/locale'
+import { translate } from '@/i18n'
 import { normalizeConfigToStandardSize } from '@/utils/designScale'
+
+const t = (key: string, params?: Record<string, string | number>): string => {
+  const localeStore = useLocaleStore()
+  return translate(key, localeStore.currentLocale, params)
+}
 
 function mapColorProperties(encodeConfig: AnyElementConfig, properties: PropertiesMap): void {
   const colorMappings: Array<{ source: string; target: string }> = [
@@ -69,25 +76,25 @@ function validateDataGoalBindings(
     if (prop.type === 'data') {
       const bound = elements.some((o) => (o as any).dataProperty === key)
       if (!bound) {
-        errors.push(`数据属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+        errors.push(t('export.validation.unboundDataProperty', { title: prop.title, key }))
       }
     }
     if (prop.type === 'goal') {
       const bound = elements.some((o) => (o as any).goalProperty === key)
       if (!bound) {
-        errors.push(`目标属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+        errors.push(t('export.validation.unboundGoalProperty', { title: prop.title, key }))
       }
     }
     if (prop.type === 'chart') {
       const bound = elements.some((o) => (o as any).chartProperty === key)
       if (!bound) {
-        errors.push(`图表属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+        errors.push(t('export.validation.unboundChartProperty', { title: prop.title, key }))
       }
     }
     if (prop.type === 'text') {
       const bound = elements.some((o) => (o as any).textProperty === key)
       if (!bound) {
-        errors.push(`文本属性 "${prop.title}" (${key}) 未绑定到任何元素`)
+        errors.push(t('export.validation.unboundTextProperty', { title: prop.title, key }))
       }
     }
   }
@@ -123,7 +130,7 @@ function validateColorBindings(
     })
 
     if (!bound) {
-      errors.push(`颜色属性 "${prop.title}" (${key}) 的颜色值未在任何元素的颜色设置中使用`)
+      errors.push(t('export.validation.unusedColorProperty', { title: prop.title, key }))
     }
   }
 
@@ -138,6 +145,7 @@ export interface GenerateConfigOptions {
   textCase: number
   labelLengthType: number
   showUnit: boolean
+  validateBindings?: boolean
 }
 
 export function generateConfig(options: GenerateConfigOptions): RuntimeDesignConfig | null {
@@ -149,6 +157,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     textCase,
     labelLengthType,
     showUnit,
+    validateBindings = true,
   } = options
 
   if (!canvas || !canvas.getObjects().length) {
@@ -170,11 +179,13 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   const objects: FabricElement[] = canvas.getObjects() as FabricElement[]
 
   // ── 导出前校验：数据属性 / 目标属性必须绑定到元素 ──
-  const bindingErrors = validateDataGoalBindings(objects, properties)
-  if (bindingErrors.length > 0) {
-    ElMessage.error(bindingErrors.join('；'))
-    console.error('Export validation failed:', bindingErrors)
-    return null
+  if (validateBindings) {
+    const bindingErrors = validateDataGoalBindings(objects, properties)
+    if (bindingErrors.length > 0) {
+      ElMessage.error(bindingErrors.join(t('common.listSeparator')))
+      console.error('Export validation failed:', bindingErrors)
+      return null
+    }
   }
 
   let imageId = 0,
@@ -253,11 +264,13 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     }
 
     // ── 导出前校验：颜色属性的值必须在元素的颜色设置中被引用 ──
-    const colorErrors = validateColorBindings(config.elements, properties)
-    if (colorErrors.length > 0) {
-      ElMessage.error(colorErrors.join('；'))
-      console.error('Export validation failed:', colorErrors)
-      return null
+    if (validateBindings) {
+      const colorErrors = validateColorBindings(config.elements, properties)
+      if (colorErrors.length > 0) {
+        ElMessage.error(colorErrors.join(t('common.listSeparator')))
+        console.error('Export validation failed:', colorErrors)
+        return null
+      }
     }
 
     const designStore = useDesignStore()

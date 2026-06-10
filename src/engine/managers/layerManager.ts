@@ -46,11 +46,12 @@ export function syncLayersFromCanvas(): void {
 
   if (backgroundObj) {
     const bgId = String(backgroundObj.id ?? 'background')
-    const selectable = !isDefaultBackgroundElement(backgroundObj)
+    const locked = Boolean(backgroundObj.locked ?? isDefaultBackgroundElement(backgroundObj))
+    const selectable = Boolean(backgroundObj.selectable ?? !locked)
     nextLayers.unshift({
       id: bgId,
       visible: backgroundObj.visible ?? true,
-      locked: isDefaultBackgroundElement(backgroundObj),
+      locked,
       selectable,
       eleType: String(backgroundObj.eleType ?? 'background'),
       element: backgroundObj as MinimalFabricLike,

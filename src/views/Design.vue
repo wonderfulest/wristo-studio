@@ -181,6 +181,7 @@ const scaleElementsFromStoredSize = (elements: AnyElementConfig[]): AnyElementCo
 
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
+  baseStore.setDesignLoading(true)
   try {
     const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
     if (!response.data) {
@@ -275,6 +276,8 @@ const loadDesign = async (designUid: string) => {
   } catch (error) {
     console.error('加载设计失败:', error)
     messageStore.error('加载设计失败')
+  } finally {
+    baseStore.setDesignLoading(false)
   }
 }
 

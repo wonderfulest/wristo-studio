@@ -119,7 +119,8 @@ export const useBaseStore = defineStore('baseStore', {
     appId: -1 as number,
     screenshot: null as Screenshot, // 存储表盘截图数据
     watchFaceCircle: null as AnyObject | null,
-    inCanvasWorkarea: false as boolean
+    inCanvasWorkarea: false as boolean,
+    designLoading: false as boolean,
   }),
 
   getters: {
@@ -127,6 +128,9 @@ export const useBaseStore = defineStore('baseStore', {
 
   // actions
   actions: {
+    setDesignLoading(flag: boolean): void {
+      this.designLoading = flag
+    },
     setInCanvasWorkarea(flag: boolean): void {
       this.inCanvasWorkarea = flag
     },
@@ -351,6 +355,7 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: propertiesStore.textCase,
         labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
+        validateBindings: !this.designLoading,
       })
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',

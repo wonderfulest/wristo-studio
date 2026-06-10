@@ -92,6 +92,9 @@ export const useLayerStore = defineStore('layerStore', {
         layer.selectable = !layer.locked
         // sync to Fabric object to actually disable selection / events
         if (layer.element) {
+          if (String(layer.eleType ?? '') === 'background') {
+            ;(layer.element as unknown as { wristoLayerLockOverridden?: boolean }).wristoLayerLockOverridden = true
+          }
           if (typeof layer.element.set === 'function') {
             layer.element.set({
               selectable: layer.selectable,

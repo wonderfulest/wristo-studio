@@ -71,7 +71,6 @@ import { removeElement, getElementById } from '@/engine/managers/elementManager'
 import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager'
 import { useI18n } from '@/i18n'
 import type { LayerElement } from '@/types/layer'
-import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -291,7 +290,7 @@ const setupElementListeners = (): void => {
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: any): Promise<void> => {
   // do not allow selecting locked layers from panel
-  if ((layer as { locked?: boolean }).locked && String(layer?.eleType ?? '') !== 'background') {
+  if ((layer as { locked?: boolean }).locked) {
     return
   }
   if (String(layer?.eleType ?? '') === 'global') {
@@ -301,13 +300,6 @@ const selectLayer = async (layer: any): Promise<void> => {
   if (canvas && layer) {
     const obj = getElementById(layer.id) ?? layer.element
     if (obj) {
-      if (isDefaultBackgroundElement(obj)) {
-        canvas.discardActiveObject?.()
-        canvas.renderAll?.()
-        canvasStore.clearActiveIds()
-        debouncedUpdateElements()
-        return
-      }
       canvas.setActiveObject?.(obj as any)
       canvas.renderAll?.()
       requestAnimationFrame(() => {
@@ -328,7 +320,7 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
   const layer = layers.value.find((l) => l.id === layerId)
   if (!layer) return false
-  if ((layer as any).locked && String(layer?.eleType ?? '') !== 'background') return false
+  if ((layer as any).locked) return false
   const result = selectedIds.value.includes(layerId)
   return result
 }
@@ -342,7 +334,7 @@ const toggleVisibility = (layer: any): void => {
 
 const toggleLock = (layer: any): void => {
   if (!layer?.id) return
-  if (isFixedLayer(layer)) return
+  if (String(layer?.eleType ?? '') === 'global') return
   layerStore.toggleLayerLock(String(layer.id))
   // After store syncs Fabric object, refresh list so class/background/icon update
   debouncedUpdateElements()
