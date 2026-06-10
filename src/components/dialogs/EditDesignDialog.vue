@@ -228,7 +228,7 @@ const loadDesign = async (designUid: string) => {
           payment: {
             paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
             price: designData.product?.payment?.price || 1.99,
-            trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
+            trialLasts: designData.product?.trialLasts ?? 0.25 // 默认 0.25小时
           }
         })
       } else {
@@ -243,7 +243,7 @@ const loadDesign = async (designUid: string) => {
           payment: {
             paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
             price: designData.product?.payment?.price || 1.99,
-            trialLasts: designData.product?.trialLasts || 0.25 // 默认 0.25小时
+            trialLasts: designData.product?.trialLasts ?? 0.25 // 默认 0.25小时
           }
         })
       }
@@ -350,7 +350,7 @@ const handlePaymentMethodChange = (value: string) => {
     form.payment.trialLasts = 0
   } else {
     form.payment.price = form.payment.price || 1.99
-    form.payment.trialLasts = form.payment.trialLasts || 1
+    form.payment.trialLasts = form.payment.trialLasts || 0.25
   }
 }
 

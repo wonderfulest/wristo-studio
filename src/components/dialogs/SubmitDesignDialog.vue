@@ -119,7 +119,7 @@ const form = reactive({
   paymentMethod: 'wpay',
   kpayId: '',
   price: 1.99,
-  trialLasts: 1, // default 1 hour
+  trialLasts: 0.25, // default 0.25 hours
   categoryIds: [] as number[],
   bundleIds: [] as number[]
 })
@@ -218,10 +218,10 @@ const handlePaymentMethodChange = (value: string) => {
     form.trialLasts = 0
   } else if (value === 'kpay') {
     form.price = form.price || 1.99
-    form.trialLasts = form.trialLasts || 1 // 1 hour
+    form.trialLasts = form.trialLasts || 0.25
   } else if (value === 'wpay') {
     form.price = form.price || 1.99
-    form.trialLasts = form.trialLasts || 1 // 1 hour
+    form.trialLasts = form.trialLasts || 0.25
   }
 }
 
@@ -245,7 +245,7 @@ const show = async (design: Design) => {
         paymentMethod: 'none',
         kpayId: '',
         price: 1.99,
-        trialLasts: 1,
+        trialLasts: 0.25,
         categoryIds: [],
         bundleIds: []
       })
@@ -271,7 +271,7 @@ const show = async (design: Design) => {
         } else {
           // Paid modes: use provided price / trialLasts with sensible defaults
           form.price = payment.price ?? 1.99
-          form.trialLasts = payment.trialLasts ?? 1
+          form.trialLasts = payment.trialLasts ?? 0.25
         }
       }
       // Load category and bundle options

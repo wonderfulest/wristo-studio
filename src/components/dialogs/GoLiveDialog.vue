@@ -258,7 +258,7 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = design.product.rawImageUrl || ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
-    form.trialLasts = design.product.trialLasts || 0
+    form.trialLasts = design.product.trialLasts ?? 0.25
     form.price = (design.product.payment?.price ?? 2.39)
     // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
     const backendProductImages = (design.product as any).productImages as
@@ -293,7 +293,7 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = ''
     form.bannerImageUrl = ''
     form.garminStoreUrl = ''
-    form.trialLasts = 0
+    form.trialLasts = 0.25
     form.price = 0.00
   }
 }
