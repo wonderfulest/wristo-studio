@@ -40,6 +40,7 @@ import type { AnyElementConfig, IconElementConfig } from '@/types/elements'
 import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
 
 const fontStore = useFontStore()
@@ -47,6 +48,7 @@ const messageStore = useMessageStore()
 const isCollapsed = ref(false)
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
+const historyStore = useHistoryStore()
 const emit = defineEmits<{
   (e: 'switch-to-layer'): void
 }>()
@@ -111,11 +113,6 @@ const ensureChartPropertyForChartElement = (normalizedConfig: AnyElementConfig, 
 
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
-    console.log('[AddElementPanel] addElementByType: start', {
-      category: _category,
-      elementType,
-      config,
-    })
     // 加载字体
     await loadElementFont(config)
     
@@ -136,31 +133,19 @@ const addElementByType = async (_category: string, elementType: string, config: 
       ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
     }
 
-    console.log('[AddElementPanel] addElementByType: normalized config', {
-      elementType,
-      normalizedConfig,
-    })
-
     // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）
     if (elementType) {
       try {
         const handler = getElementHandler(elementType)
-        console.log('[AddElementPanel] addElementByType: resolved handler', {
-          elementType,
-          hasHandler: !!handler,
-          hasAdd: !!handler?.add,
-        })
         if (!handler || !handler.add) {
           console.warn('[AddElementPanel] addElementByType: handler or handler.add is missing', {
             elementType,
             handler,
           })
         } else {
-          const result = await handler.add(normalizedConfig)
-          console.log('[AddElementPanel] addElementByType: handler.add finished', {
-            elementType,
-            result,
-          })
+          const result = await historyStore.runWithoutRecording(() => handler.add(normalizedConfig))
+          historyStore.saveState(`add:${elementType}`, { coalesceIfSameFabric: true })
+          void result
         }
 
         // 添加元素后通知父级切换到图层面板

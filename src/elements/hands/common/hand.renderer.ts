@@ -7,6 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useDesignStore } from '@/stores/designStore'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
+import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 
 function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
   if (eleType === 'minuteHand') return 'minute'
@@ -15,7 +16,7 @@ function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
 }
 
 function getHourHandAngle(time?: Date): number {
-  const now = time || new Date()
+  const now = time || getSimulatedNow()
   const hours = now.getHours() % 12
   const minutes = now.getMinutes()
   const seconds = now.getSeconds()
@@ -24,7 +25,7 @@ function getHourHandAngle(time?: Date): number {
 }
 
 function getMinuteHandAngle(time?: Date): number {
-  const now = time || new Date()
+  const now = time || getSimulatedNow()
   const minutes = now.getMinutes()
   const seconds = now.getSeconds()
   const ms = now.getMilliseconds()
@@ -32,7 +33,7 @@ function getMinuteHandAngle(time?: Date): number {
 }
 
 function getSecondHandAngle(time?: Date): number {
-  const now = time || new Date()
+  const now = time || getSimulatedNow()
   const seconds = now.getSeconds()
   const ms = now.getMilliseconds()
   return (seconds + ms / 1000) * 6
@@ -68,7 +69,7 @@ function ensureTimer(eleType: ElementType) {
     const elements = objects.filter((obj: any) => obj.eleType === targetType)
     if (!elements.length) return
 
-    const angle = getAngleByType(targetType, new Date())
+    const angle = getAngleByType(targetType, getSimulatedNow())
     elements.forEach((el: any) => rotateHand(el, angle))
     canvas.requestRenderAll?.()
   }

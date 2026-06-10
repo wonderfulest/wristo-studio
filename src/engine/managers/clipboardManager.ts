@@ -4,6 +4,7 @@ import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import { addElement } from '@/engine/managers/elementManager'
+import { useHistoryStore } from '@/stores/historyStore'
 
 // Selection-level clipboard state
 
@@ -129,39 +130,45 @@ export function pasteSelection(): void {
     y: clipboardSelectionCenter.y + baseOffset,
   }
 
-  selectionClipboard.forEach((item, index) => {
-    try {
-      const eleType = item.eleType
-      if (!eleType) {
-        console.warn('[ClipboardManager] pasteSelection: missing eleType in clipboard item', {
-          index,
-          item,
-        })
-        return
+  void (async () => {
+    const historyStore = useHistoryStore()
+    await historyStore.runWithoutRecording(async () => {
+      for (const [index, item] of selectionClipboard.entries()) {
+        try {
+          const eleType = item.eleType
+          if (!eleType) {
+            console.warn('[ClipboardManager] pasteSelection: missing eleType in clipboard item', {
+              index,
+              item,
+            })
+            continue
+          }
+
+          const newId = nanoid()
+
+          const centerX = pasteCenter.x + item.offsetX
+          const centerY = pasteCenter.y + item.offsetY
+
+          const nextCfg: AnyElementConfig = {
+            ...(item.config as AnyElementConfig),
+            id: newId,
+            eleType,
+            left: centerX,
+            top: centerY,
+            originX: 'center',
+            originY: 'center',
+          }
+
+          await addElement(eleType as ElementType, nextCfg)
+        } catch (e) {
+          console.warn('[ClipboardManager] pasteSelection: failed to add element from clipboard', {
+            index,
+            item,
+            e,
+          })
+        }
       }
-
-      const newId = nanoid()
-
-      const centerX = pasteCenter.x + item.offsetX
-      const centerY = pasteCenter.y + item.offsetY
-
-      const nextCfg: AnyElementConfig = {
-        ...(item.config as AnyElementConfig),
-        id: newId,
-        eleType,
-        left: centerX,
-        top: centerY,
-        originX: 'center',
-        originY: 'center',
-      }
-
-      addElement(eleType as ElementType, nextCfg)
-    } catch (e) {
-      console.warn('[ClipboardManager] pasteSelection: failed to add element from clipboard', {
-        index,
-        item,
-        e,
-      })
-    }
-  })
+    })
+    historyStore.saveState('paste:selection')
+  })()
 }

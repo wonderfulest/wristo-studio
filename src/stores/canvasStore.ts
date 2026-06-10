@@ -3,6 +3,7 @@ import { markRaw } from 'vue'
 import { Circle, type Canvas } from 'fabric'
 import { useDesignStore } from '@/stores/designStore'
 import { createBackground } from '@/elements/decoration/background/background.renderer'
+import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import type { BackgroundElementConfig } from '@/types/elements/background'
 
 type AnyObject = Record<string, any>
@@ -60,6 +61,7 @@ export const useCanvasStore = defineStore('canvas', {
     async ensureFixedLayers(): Promise<void> {
       if (!this.canvas) return
 
+      this.canvas.set({ backgroundColor: 'transparent' } as any)
       this.ensureGlobalLayer()
       await this.ensureBackgroundLayer()
       this.enforceFixedLayerOrder()
@@ -72,28 +74,36 @@ export const useCanvasStore = defineStore('canvas', {
       if (!this.canvas) return
       const c = this.canvas
       const existing = (c.getObjects?.() || []).find((o: AnyObject) => o && o.eleType === 'global') as AnyObject | undefined
+      const globalLayerProps = {
+        left: this.designStore.designSpec.centerX,
+        top: this.designStore.designSpec.centerY,
+        originX: 'center' as const,
+        originY: 'center' as const,
+        radius: Math.min(
+          Number(this.designStore.designSpec.width ?? this.designStore.designSpec.centerX * 2),
+          Number(this.designStore.designSpec.height ?? this.designStore.designSpec.centerY * 2),
+        ) / 2,
+        fill: '#000000',
+        backgroundColor: 'transparent',
+        selectable: false,
+        evented: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
+        hasBorders: false,
+        hasControls: false,
+      }
       if (existing) {
         this.watchFaceCircle = markRaw(existing)
+        this.watchFaceCircle.set?.(globalLayerProps)
+        this.watchFaceCircle.setCoords?.()
       } else {
         this.watchFaceCircle = markRaw(new Circle({
           id: 'global',
           eleType: 'global',
-          left: this.designStore.designSpec.centerX,
-          top: this.designStore.designSpec.centerY,
-          originX: 'center',
-          originY: 'center',
-          radius: this.designStore.designSpec.centerX,
-          fill: '#000000',
-          backgroundColor: 'transparent',
-          selectable: false,
-          evented: false,
-          lockMovementX: true,
-          lockMovementY: true,
-          lockScalingX: true,
-          lockScalingY: true,
-          lockRotation: true,
-          hasBorders: false,
-          hasControls: false,
+          ...globalLayerProps,
         })) as unknown as AnyObject
 
         c.add(this.watchFaceCircle as any)
@@ -119,7 +129,7 @@ export const useCanvasStore = defineStore('canvas', {
         top: Number(this.designStore.designSpec.centerY ?? 0),
         originX: 'center' as any,
         originY: 'center' as any,
-        imageUrl: '',
+        imageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
         imageId: null,
       }
 

@@ -111,8 +111,10 @@ function deleteHandler(_eventData: unknown, transform: { target?: FabricLikeObje
 
   const canvas = target.canvas
   runtimeOptions.onDelete?.(target, canvas)
-  canvas.discardActiveObject()
-  canvas.remove(target)
+  if (canvas.getObjects().includes(target)) {
+    canvas.discardActiveObject()
+    canvas.remove(target)
+  }
   canvas.requestRenderAll()
   return true
 }

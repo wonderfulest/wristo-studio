@@ -2,47 +2,38 @@
   <div class="design-layout">
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
-    <!-- 左侧面板 -->
-    <div class="left-panel">
-      <SidePanel />
-    </div>
-    <!-- 中间画布区域 -->
-    <div class="center-area">
-      <!-- 画布 -->
-      <div class="canvas-container">
-        <CanvasView ref="canvasRef" />
+    <div class="editor-workspace">
+      <!-- 左侧面板 -->
+      <div class="left-panel">
+        <SidePanel />
       </div>
-      <CanvasRulers :watch-size="designStore.designSpec.width" :ruler-offset="40" />
-      <!-- 编辑器设置按钮 -->
-      <div class="editor-settings-btn" @click="openEditorSettings">
-        <el-icon>
-          <Setting />
-        </el-icon>
+      <!-- 中间画布区域 -->
+      <div class="center-area">
+        <!-- 画布 -->
+        <div class="canvas-container">
+          <CanvasView ref="canvasRef" />
+        </div>
+        <CanvasRulers :watch-size="designStore.designSpec.width" :ruler-offset="40" />
+        <!-- 缩放控件 -->
+        <HistoryControls class="history-controls-anchor" :canvas-ref="canvasRef" />
+        <TimeSimulatorPanel v-if="editorStore.showTimeSimulator" />
       </div>
-      
-      <!-- 缩放控件 -->
-      <HistoryControls class="history-controls-anchor" :canvas-ref="canvasRef" />
-      <div class="editor-controls">
-        <ZoomControls :canvas-ref="canvasRef" />
+      <!-- 右侧设置面板 -->
+      <div class="right-panel">
+        <ElementSettings v-if="baseStore.canvas != null" />
       </div>
     </div>
-    <!-- 右侧设置面板 -->
-    <div class="right-panel">
-      <ElementSettings v-if="baseStore.canvas != null" />
-    </div>
+    <EditorSettingsDialog :canvas-ref="canvasRef" />
     <!-- 导出面板 -->
     <ExportPanel ref="exportPanelRef" :isDialogVisible="isDialogVisible"
       @update:isDialogVisible="isDialogVisible = $event" />
 
-    <!-- 添加设置对话框 -->
-    <EditorSettingsDialog ref="editorSettingsDialog" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Setting } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import emitter from '@/utils/eventBus'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
@@ -66,8 +57,8 @@ import CanvasView from '@/views/Canvas.vue'
 import ElementSettings from '@/components/panels/ElementSettings.vue'
 import SidePanel from '@/components/panels/SidePanel.vue'
 import ExportPanel from '@/components/panels/ExportPanel.vue'
-import ZoomControls from '@/components/canvas/ZoomControls.vue'
 import HistoryControls from '@/components/canvas/HistoryControls.vue'
+import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { FabricObject } from 'fabric'
@@ -101,7 +92,6 @@ const themeStore = useThemeStore()
 let saveTimer: number | null = null
 
 const changelogDialog = ref<InstanceType<typeof ChangelogDialog> | null>(null)
-const editorSettingsDialog = ref<InstanceType<typeof EditorSettingsDialog> | null>(null)
 
 // 启用键盘快捷键
 useKeyboardShortcuts()
@@ -377,6 +367,11 @@ const reorderCanvasByIds = (orderedIds: string[]) => {
 
 
 onMounted(() => {
+  editorStore.updateSettings({
+    showZoomControls: true,
+    showHistoryControls: true,
+  })
+
   changelogDialog.value?.checkShowChangelog()
 
   // 检查URL参数中是否有设计ID
@@ -423,10 +418,6 @@ onBeforeUnmount(() => {
 defineExpose({
   exportPanelRef
 })
-
-const openEditorSettings = () => {
-  editorSettingsDialog.value?.openDialog()
-}
 </script>
 
 <style scoped>
@@ -442,13 +433,18 @@ const openEditorSettings = () => {
   position: absolute;
   z-index: 1;
 }
+.center-area .canvas-container .lower-canvas {
+  background-color: transparent;
+}
 .center-area .canvas-container .upper-canvas {
   z-index: 2;
+  background-color: transparent;
 }
 </style>
 <style scoped>
 .left-panel {
-  width: 312px;
+  --studio-left-panel-width: 312px;
+  width: var(--studio-left-panel-width);
   flex-shrink: 0;
   border-right: 1px solid var(--studio-border);
   background-color: var(--studio-surface);
@@ -464,10 +460,18 @@ const openEditorSettings = () => {
 
 .design-layout {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 0;
   background: var(--studio-bg);
+}
+
+.editor-workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  width: 100%;
 }
 
 .left-panel {
@@ -543,44 +547,6 @@ const openEditorSettings = () => {
   z-index: 1;
 }
 
-.editor-settings-btn {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--studio-radius-lg);
-  background: var(--studio-overlay-surface);
-  border: 1px solid var(--studio-border);
-  box-shadow: var(--studio-shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-  z-index: 10;
-}
-
-.editor-settings-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--studio-shadow-lg);
-}
-
-.editor-settings-btn .el-icon {
-  font-size: 20px;
-  color: var(--studio-text-muted);
-}
-
-.editor-controls {
-  position: absolute;
-  top: 56px;
-  right: 56px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  z-index: 10;
-}
-
 .history-controls-anchor {
   position: absolute;
   top: 56px;
@@ -590,7 +556,7 @@ const openEditorSettings = () => {
 
 @media (max-width: 1180px) {
   .left-panel {
-    width: 280px;
+    --studio-left-panel-width: 280px;
   }
 
   .right-panel {
@@ -599,7 +565,11 @@ const openEditorSettings = () => {
 }
 
 @media (max-width: 920px) {
-  .left-panel,
+  .left-panel {
+    --studio-left-panel-width: 260px;
+    width: var(--studio-left-panel-width);
+  }
+
   .right-panel {
     width: 260px;
   }

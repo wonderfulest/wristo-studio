@@ -94,10 +94,9 @@
 
       <section class="profile-card" :aria-label="t('profile.details')">
         <div class="section-header">
-          <div>
-            <p class="eyebrow">{{ t('profile.details') }}</p>
-            <h2>{{ t('profile.information') }}</h2>
-          </div>
+          <span class="section-title-icon" aria-hidden="true">
+            <Icon icon="material-symbols:manage-accounts-rounded" />
+          </span>
           <span class="status-chip">
             <Icon icon="material-symbols:verified-user-rounded" />
             {{ t('profile.authenticated') }}
@@ -550,18 +549,27 @@ watch(
 
 .section-header {
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0;
-  padding: 0 4px 8px;
+  align-items: center;
+  min-height: 70px;
+  margin-bottom: 12px;
+  padding: 14px 4px 18px;
   background: var(--studio-bg);
 }
 
-.section-header h2 {
-  color: var(--studio-text-subtle);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.section-title-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+}
+
+.section-title-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .status-chip {

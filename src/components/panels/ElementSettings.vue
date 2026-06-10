@@ -4,7 +4,6 @@
   <!-- 单个元素设置 -->
   <div class="settings-panel" v-if="activeElements.length == 1">
     <div class="settings-header">
-      <h3 class="settings-title">{{ t('elementSettings.title') }}</h3>
       <div class="element-type">
         <Icon :icon="getElementIcon(activeElement?.eleType || '')" class="element-icon" />
         <span class="type-name">{{ getElementTypeName(activeElement) }}</span>
@@ -27,16 +26,16 @@ import { computed } from 'vue'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useI18n } from '@/i18n'
 import type { FabricElement, ElementType } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
-const { t } = useI18n()
+const historyStore = useHistoryStore()
 
 // 通过 activeIds 从画布对象列表映射出当前选中的元素
 const activeElements = computed<FabricElement[]>(() => {
@@ -97,19 +96,21 @@ const applyConfigPatch = computed(() => {
     // 更新数据层
     elementDataStore.patchElement(lockedId, patch as AnyElementConfig)
     // 更新画布元素（按 id resolve 真实对象）
-    elementManager.updateElementById(lockedId, patch)
+    void Promise.resolve(elementManager.updateElementById(lockedId, patch)).then(() => {
+      historyStore.saveState(`settings:${lockedId}`)
+    })
   }
 })
 </script>
 
 <style scoped>
 .settings-panel {
-  background: var(--studio-surface);
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-lg);
-  padding: 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   margin-top: 0;
-  box-shadow: var(--studio-shadow-sm);
+  box-shadow: none;
   width: 100%;
 }
 
@@ -197,18 +198,18 @@ select {
 }
 
 .settings-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .element-type {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 42px;
-  padding: 8px 10px;
-  background: var(--studio-surface-soft);
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-md);
+  min-height: 28px;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .element-icon {

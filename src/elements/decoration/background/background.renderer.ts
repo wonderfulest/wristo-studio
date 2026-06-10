@@ -4,15 +4,12 @@ import type { FabricElement } from '@/types/element'
 import type { BackgroundElementConfig } from '@/types/elements/background'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import {
+  DEFAULT_BACKGROUND_IMAGE_URL,
+  isDefaultBackgroundUrl,
+  resolveBackgroundUrl,
+} from './background.constants'
 import _ from 'lodash'
-
-function normalizeUrl(u: string): string {
-  if (!u) return ''
-  if (/^https?:\/\//.test(u) || u.startsWith('data:')) return u
-  if (u.startsWith('@/')) return new URL(u, import.meta.url).href
-  if (u.startsWith('/src/assets/')) return new URL(u.replace('/src/', '@/'), import.meta.url).href
-  return u
-}
 
 function getImageNaturalSize(img: HTMLImageElement): { width: number; height: number } {
   const w = Number((img as any).naturalWidth ?? img.width ?? 0)
@@ -22,8 +19,16 @@ function getImageNaturalSize(img: HTMLImageElement): { width: number; height: nu
 
 function createPlaceholderImageElement(): HTMLImageElement {
   const img = new Image()
-  img.src = ''
+  img.src = DEFAULT_BACKGROUND_IMAGE_URL
   return img
+}
+
+function setActiveBackgroundIfSelectable(canvas: any, bg: FabricImage): void {
+  if (isDefaultBackgroundUrl((bg as any).wristoImageUrl)) {
+    canvas.discardActiveObject?.()
+    return
+  }
+  canvas.setActiveObject(bg as unknown as FabricObject)
 }
 
 async function setFabricImageSource(
@@ -81,6 +86,7 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const rawH = Number((imgObj as any).height ?? 1)
   const base = Math.min(rawW, rawH) || 1
   const scale = targetSize / base
+  const isDefault = isDefaultBackgroundUrl((imgObj as any).wristoImageUrl ?? config.imageUrl)
 
   imgObj.set({
     left: cx,
@@ -89,16 +95,17 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
     originY: 'center',
     scaleX: scale,
     scaleY: scale,
-    selectable: false,
-    evented: true,
+    selectable: !isDefault,
+    evented: !isDefault,
     hasControls: false,
-    hasBorders: false,
+    hasBorders: !isDefault,
+    locked: isDefault,
     lockMovementX: true,
     lockMovementY: true,
     lockScalingX: true,
     lockScalingY: true,
     lockRotation: true,
-    hoverCursor: 'default',
+    hoverCursor: isDefault ? 'default' : 'pointer',
   } as any)
 
   if (config.left != null) imgObj.set('left', Number(config.left) as never)
@@ -133,7 +140,10 @@ export async function createBackground(config: BackgroundElementConfig): Promise
     | (FabricImage & FabricElement)
     | undefined
   if (existing) {
-    console.log('[Background] already exists, applying patch instead of creating new', { existing, config })
+    applyBackgroundLayout(existing, {
+      ...config,
+      imageUrl: config.imageUrl ?? (existing as any).wristoImageUrl,
+    })
     if (config.id != null && String(config.id) !== '' && String((existing as any).id ?? '') !== String(config.id)) {
       try {
         existing.set({ id: String(config.id) } as any)
@@ -141,19 +151,19 @@ export async function createBackground(config: BackgroundElementConfig): Promise
         ;(existing as any).id = String(config.id)
       }
     }
-    if (_.isEmpty(config.imageUrl)) {
-      canvas.setActiveObject(existing as unknown as FabricObject)
+    if (_.isEmpty(config.imageUrl) && (existing as any).wristoImageUrl) {
+      setActiveBackgroundIfSelectable(canvas, existing)
       canvas.requestRenderAll?.()
       return existing as any
     }
     await updateBackground(existing as any, config)
-    canvas.setActiveObject(existing as unknown as FabricObject)
+    setActiveBackgroundIfSelectable(canvas, existing)
     canvas.requestRenderAll?.()
     return existing as any
   }
 
   const id = config.id || nanoid()
-  const url = normalizeUrl(String(config.imageUrl || ''))
+  const url = resolveBackgroundUrl(config.imageUrl)
 
   const img = url
     ? await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
@@ -183,7 +193,7 @@ export async function createBackground(config: BackgroundElementConfig): Promise
     canvas.set({ clipPath: canvasStore.watchFaceCircle as any })
   }
   layerStore.addLayer(img as any)
-  canvas.setActiveObject(img as unknown as FabricObject)
+  setActiveBackgroundIfSelectable(canvas, img)
   canvas.requestRenderAll?.()
   return img as unknown as FabricElement
 }
@@ -217,21 +227,20 @@ export async function updateBackground(
   if (patch.top !== undefined) bg.set('top', Number(patch.top) as never)
 
   const nextUrlRaw = patch.imageUrl ?? (bg as any).wristoImageUrl
-  const nextUrl = normalizeUrl(String(nextUrlRaw || ''))
+  const nextUrl = resolveBackgroundUrl(nextUrlRaw)
 
   const isExplicitClear = patch.imageUrl === '' || patch.imageUrl === null
   const shouldReload = Boolean(nextUrl && nextUrl !== (bg as any).wristoImageUrl)
 
   if (isExplicitClear) {
     try {
-      console.log('[Background] clearing image source')
-      await setFabricImageSource(bg, '', { crossOrigin: 'anonymous' })
+      await setFabricImageSource(bg, DEFAULT_BACKGROUND_IMAGE_URL, { crossOrigin: 'anonymous' })
     } catch (e) {
       console.warn('[Background] clear failed', e)
     }
 
-    bg.set({ width: 1, height: 1, objectCaching: false } as any)
-    ;(bg as any).wristoImageUrl = ''
+    bg.set({ width: 100, height: 100, objectCaching: false } as any)
+    ;(bg as any).wristoImageUrl = DEFAULT_BACKGROUND_IMAGE_URL
     ;(bg as any).wristoImageId = null
   } else if (shouldReload) {
     try {

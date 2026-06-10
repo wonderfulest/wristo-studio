@@ -6,38 +6,22 @@
       @select="handleSelect"
       class="menu-list"
     >
-      <!-- Actions group and items -->
-      <AppMenuActions
-        :on-build="handleBuild"
-        :on-save="handleSave"
-        :on-screenshot="handleScreenshot"
-        :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
-        :on-open-editor-settings="() => {
-          console.log('[AppMenu] onOpenEditorSettings called', editorSettingsDialog)
-          if (!editorSettingsDialog) {
-            console.warn('[AppMenu] editorSettingsDialog ref is not ready', editorSettingsDialog)
-            return
-          }
-          if (typeof editorSettingsDialog.openDialog !== 'function') {
-            console.warn('[AppMenu] editorSettingsDialog.openDialog is not a function', editorSettingsDialog)
-            return
-          }
-          editorSettingsDialog.openDialog()
-        }"
-      />
-      <el-menu-item index="actions/save" @click="handleSave">
-        <el-icon><CircleCheck /></el-icon>
-        <span>{{ t('common.save') }}</span>
-      </el-menu-item>
+      <div class="menu-leading-zone">
+        <!-- Actions group and items -->
+        <AppMenuActions
+          :on-build="handleBuild"
+          :on-save="handleSave"
+          :on-screenshot="handleScreenshot"
+          :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
+        />
+        <el-menu-item index="actions/save" @click="handleSave">
+          <el-icon><CircleCheck /></el-icon>
+          <span>{{ t('common.save') }}</span>
+        </el-menu-item>
 
-      <!-- Align / Distribute toolbar -->
-      <AppMenuAlignToolbar
-        :on-align="handleAlign"
-        :on-distribute="handleDistribute"
-      />
-
-      <!-- Main menu divider -->
-      <el-divider direction="vertical" class="menu-divider" />
+        <!-- Main menu divider -->
+        <el-divider direction="vertical" class="menu-divider" />
+      </div>
       <!-- Time group and items -->
       <AppMenuTimeGroup @add-element="handleAddElement" />
       <!-- Health data group -->
@@ -69,17 +53,17 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" @success="handleEditSuccess" />
-  <EditorSettingsDialog ref="editorSettingsDialog" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import { DataTypeOptions } from '@/config/settings'
 import { CircleCheck } from '@element-plus/icons-vue'
 
@@ -89,7 +73,6 @@ import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
-import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
 import AppMenuDataFieldGroup from '@/components/layout/app-menu/AppMenuDataFieldGroup.vue'
 import AppMenuActions from '@/components/layout/app-menu/AppMenuActions.vue'
@@ -97,9 +80,6 @@ import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'
 import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
-import AppMenuAlignToolbar from '@/components/layout/app-menu/AppMenuAlignToolbar.vue'
-import { alignSelection, distributeSelection } from '@/engine/managers/alignManager'
-import type { AlignType, DistributeType } from '@/engine/managers/alignManager'
 import { useI18n } from '@/i18n'
 
 const route = useRoute()
@@ -109,6 +89,7 @@ const exportStore = useExportStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
+const designStore = useDesignStore()
 const { t } = useI18n()
 const activeMenu = computed(() => {
   return route.path
@@ -123,21 +104,8 @@ const shortcutsDialogVisible = ref(false)
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
-const editorSettingsDialog = ref<InstanceType<typeof EditorSettingsDialog> | null>(null)
 
-// Listen for keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  // Cmd/Ctrl + ; 打开 Editor Settings 弹窗
-  if ((e.metaKey || e.ctrlKey) && e.key === ';') {
-    e.preventDefault()
-    console.log('[AppMenu] Cmd/Ctrl+; pressed, try open EditorSettingsDialog', editorSettingsDialog)
-    if (!editorSettingsDialog.value || typeof editorSettingsDialog.value.openDialog !== 'function') {
-      console.warn('[AppMenu] EditorSettingsDialog is not ready or openDialog missing', editorSettingsDialog)
-      return
-    }
-    editorSettingsDialog.value.openDialog()
-  }
-
+const handleMenuKeydown = (e: KeyboardEvent) => {
   // Cmd/Ctrl + . 打开 Edit Design（应用设置）
   if ((e.metaKey || e.ctrlKey) && e.key === '.') {
     e.preventDefault()
@@ -148,16 +116,15 @@ document.addEventListener('keydown', (e) => {
       console.warn('[AppMenu] handleEditDesign failed', err)
     }
   }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleMenuKeydown)
 })
 
-// Align / Distribute handlers
-const handleAlign = (type: AlignType) => {
-  alignSelection(type)
-}
-
-const handleDistribute = (axis: DistributeType) => {
-  distributeSelection(axis)
-}
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleMenuKeydown)
+})
 
 const ensureNextChartProperty = (metricSymbol?: string) => {
   const allProps = propertiesStore.allProperties
@@ -193,33 +160,77 @@ const ensureNextChartProperty = (metricSymbol?: string) => {
   return propertyKey
 }
 
+const STANDARD_DESIGN_SIZE = 454
+const STANDARD_DESIGN_CENTER = STANDARD_DESIGN_SIZE / 2
+
+const getCurrentDesignMetrics = () => {
+  const width = Number(designStore.designSpec?.width || designStore.watchSize || STANDARD_DESIGN_SIZE)
+  const height = Number(designStore.designSpec?.height || width || STANDARD_DESIGN_SIZE)
+  return {
+    width,
+    height,
+    centerX: Number(designStore.designSpec?.centerX ?? Math.round(width / 2)),
+    centerY: Number(designStore.designSpec?.centerY ?? Math.round(height / 2)),
+  }
+}
+
+const scaleStandardX = (value: unknown) => {
+  const { width, centerX } = getCurrentDesignMetrics()
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return centerX
+  return Math.round((numericValue / STANDARD_DESIGN_SIZE) * width)
+}
+
+const scaleStandardY = (value: unknown) => {
+  const { height, centerY } = getCurrentDesignMetrics()
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return centerY
+  return Math.round((numericValue / STANDARD_DESIGN_SIZE) * height)
+}
+
+const normalizeShortcutElementConfig = (config: Record<string, any>) => {
+  const { centerX, centerY } = getCurrentDesignMetrics()
+  const normalized = { ...config }
+  const hasLinePoints = ['x1', 'y1', 'x2', 'y2'].some((key) => normalized[key] != null)
+
+  if (hasLinePoints) {
+    normalized.x1 = scaleStandardX(normalized.x1 ?? STANDARD_DESIGN_CENTER - 25)
+    normalized.y1 = scaleStandardY(normalized.y1 ?? STANDARD_DESIGN_CENTER)
+    normalized.x2 = scaleStandardX(normalized.x2 ?? STANDARD_DESIGN_CENTER + 25)
+    normalized.y2 = scaleStandardY(normalized.y2 ?? STANDARD_DESIGN_CENTER)
+  } else {
+    normalized.left = normalized.left != null ? scaleStandardX(normalized.left) : centerX
+    normalized.top = normalized.top != null ? scaleStandardY(normalized.top) : centerY
+  }
+
+  normalized.originX = normalized.originX ?? 'center'
+  normalized.originY = normalized.originY ?? 'center'
+  return normalized
+}
+
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
   
   try {
+    const resolvedElementType = elementType || (category === 'image' ? 'image' : '')
     let config 
     if (category === 'image') {
-      // Default config for image element
       config = {
-        left: 227,
-        top: 227,
-        width: 100,
-        height: 100,
-        type: 'image',
-        selectable: true,
-        hasControls: false,
-        hasBorders: true,
-        originX: 'center',
-        originY: 'center'
+        ...(elementConfigs.decoration?.image || {
+          width: 100,
+          height: 100,
+          eleType: 'image',
+          label: 'Image',
+        }),
+        ...overrides,
       }
-      // Apply overrides
-      config = { ...config, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      config = { ...elementConfigs[category][elementType], left: 227, top: 227, ...overrides }
+      config = { ...elementConfigs[category][elementType], ...overrides }
     } else {
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
+    config = normalizeShortcutElementConfig(config)
 
     // Preload fonts if necessary
     try {
@@ -231,7 +242,7 @@ const handleAddElement = async (category: string, elementType: string, overrides
       console.warn('Failed to load font (continue adding element):', e)
     }
 
-    if (category === 'chart' && (elementType === 'barChart' || elementType === 'lineChart')) {
+    if (category === 'chart' && (resolvedElementType === 'barChart' || resolvedElementType === 'lineChart')) {
       const resolvedOverrides: any = { ...overrides }
       const requested = String(resolvedOverrides.chartProperty ?? '').trim()
       const requestedMetricSymbol = requested.startsWith(':CHART_TYPE_') ? requested : ''
@@ -242,25 +253,21 @@ const handleAddElement = async (category: string, elementType: string, overrides
 
       if (!keyCandidate || !item || item.type !== 'chart') {
         const nextKey = ensureNextChartProperty(metricSymbolForCreation)
-        delete resolvedOverrides.chartProperty
-        config = { ...config, ...resolvedOverrides, chartProperty: nextKey }
-
-      } else {
-        config = { ...config, ...resolvedOverrides }
+        config = { ...config, chartProperty: nextKey }
       }
     }
 
     // Use registry to add element via ElementHandler.add(config)
-    if (elementType) {
+    if (resolvedElementType) {
       try {
-        const handler = getElementHandler(elementType)
-        await handler.add(config)
+        const handler = getElementHandler(resolvedElementType)
+        await handler.add(config as any)
       } catch (e) {
-        console.warn(`No add element handler registered for type: ${elementType}`, e)
+        console.warn(`No add element handler registered for type: ${resolvedElementType}`, e)
       }
     }
 
-    messageStore.success(t('editor.elementAdded', { name: config.label || elementType }))
+    messageStore.success(t('editor.elementAdded', { name: config.label || resolvedElementType }))
   } catch (error: any) {
     console.error('Failed to add element:', error)
     messageStore.error(t('editor.addElementFailed'))
@@ -666,9 +673,19 @@ const handleEditSuccess = () => {
   min-width: max-content;
   height: 48px;
   align-items: center;
-  padding: 0 12px;
+  padding: 0;
   background: transparent;
   border-bottom: 0;
+}
+
+.menu-leading-zone {
+  --studio-left-panel-width: 312px;
+  flex: 0 0 var(--studio-left-panel-width);
+  width: var(--studio-left-panel-width);
+  min-width: var(--studio-left-panel-width);
+  height: 48px;
+  display: flex;
+  align-items: center;
 }
 
 .menu-list :deep(.el-sub-menu__title),
@@ -701,8 +718,25 @@ const handleEditSuccess = () => {
 
 .menu-divider {
   height: 24px;
-  margin: 0 8px;
+  margin: 0 0 0 auto;
   border-left-color: var(--studio-border);
+}
+
+.menu-leading-zone + :deep(.el-sub-menu),
+.menu-leading-zone + :deep(.el-menu-item) {
+  margin-left: 6px;
+}
+
+@media (max-width: 1180px) {
+  .menu-leading-zone {
+    --studio-left-panel-width: 280px;
+  }
+}
+
+@media (max-width: 920px) {
+  .menu-leading-zone {
+    --studio-left-panel-width: 260px;
+  }
 }
 
 :deep(.menu-group) {

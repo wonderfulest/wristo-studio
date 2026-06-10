@@ -83,6 +83,9 @@ export function useHistory(base: MinimalBaseStore): HistoryController {
   }
 
   const attachCanvas = (c: Canvas) => {
+    if (canvas && canvas !== c) {
+      detachCanvasEvents()
+    }
     canvas = c
   }
 
@@ -105,6 +108,36 @@ export function useHistory(base: MinimalBaseStore): HistoryController {
     eventsAttached = false
   }
 
+  const restoreSnapshot = (snap: Snapshot, label: string) => {
+    if (!canvas) return
+    const targetCanvas = canvas
+    isRestoring.value = true
+    // 防止还原阶段触发 saveState
+    detachCanvasEvents()
+    targetCanvas
+      .loadFromJSON(snap.fabricJSON)
+      .then(() => {
+        targetCanvas.requestRenderAll()
+        // 使用小延迟等待 Fabric 内部事件完全结算后再恢复监听
+        window.setTimeout(() => {
+          if (canvas === targetCanvas) {
+            registerCanvasEvents()
+          }
+          window.setTimeout(() => {
+            isRestoring.value = false
+            console.debug(`[History] ${label} completed`)
+          }, 0)
+        }, RESTORE_SETTLE_MS)
+      })
+      .catch((e) => {
+        console.warn(`[History] ${label} failed`, e)
+        if (canvas === targetCanvas) {
+          registerCanvasEvents()
+        }
+        isRestoring.value = false
+      })
+  }
+
   const undo = () => {
     if (!canvas) return
     if (undoStack.value.length <= 1) return
@@ -115,21 +148,7 @@ export function useHistory(base: MinimalBaseStore): HistoryController {
       undo: undoStack.value.length,
       redo: redoStack.value.length,
     })
-    isRestoring.value = true
-    // 防止还原阶段触发 saveState
-    detachCanvasEvents()
-    // 还原画布
-    canvas?.loadFromJSON(prev.fabricJSON, () => {
-      canvas?.requestRenderAll()
-      // 使用小延迟等待 Fabric 内部事件完全结算后再恢复监听
-      window.setTimeout(() => {
-        registerCanvasEvents()
-        window.setTimeout(() => {
-          isRestoring.value = false
-          console.debug('[History] undo completed')
-        }, 0)
-      }, RESTORE_SETTLE_MS)
-    })
+    restoreSnapshot(prev, 'undo')
   }
 
   const redo = () => {
@@ -141,20 +160,7 @@ export function useHistory(base: MinimalBaseStore): HistoryController {
       undo: undoStack.value.length,
       redo: redoStack.value.length,
     })
-    isRestoring.value = true
-    // 防止还原阶段触发 saveState
-    detachCanvasEvents()
-    // 还原画布
-    canvas?.loadFromJSON(next.fabricJSON, () => {
-      canvas?.requestRenderAll()
-      window.setTimeout(() => {
-        registerCanvasEvents()
-        window.setTimeout(() => {
-          isRestoring.value = false
-          console.debug('[History] redo completed')
-        }, 0)
-      }, RESTORE_SETTLE_MS)
-    })
+    restoreSnapshot(next, 'redo')
   }
 
   const canUndo = () => undoStack.value.length > 1

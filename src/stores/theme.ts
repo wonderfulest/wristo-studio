@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 export const SUPPORTED_THEMES = ['light', 'dark'] as const
 export type StudioTheme = typeof SUPPORTED_THEMES[number]
 
-export const DEFAULT_THEME: StudioTheme = 'light'
+export const DEFAULT_THEME: StudioTheme = 'dark'
 
 export function normalizeTheme(value: unknown): StudioTheme {
   const theme = String(value || '').toLowerCase()

@@ -4,6 +4,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { DateFormatOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
 import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
 import * as elementManager from '@/engine/managers/elementManager'
+import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -153,7 +154,7 @@ export class DataSimulatorEngine {
     const objects = (canvas.getObjects?.() || []) as any[]
     if (!objects.length) return
 
-    const now = new Date()
+    const now = getSimulatedNow()
     let changed = false
 
     objects.forEach((obj) => {

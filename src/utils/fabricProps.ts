@@ -18,6 +18,16 @@ const DEFAULT_FABRIC_PROPS = [
   'scrollAreaLeft',
   'scrollAreaTop',
   'scrollAreaBackground',
+  // 时间/日期与 bitmap 字体字段
+  'formatter',
+  'fontRenderType',
+  'bitmapFontId',
+  'fontGap',
+  // 背景/图片运行时元数据
+  'wristoImageUrl',
+  'wristoImageId',
+  'imageUrl',
+  'imageId',
 ] as const
 
 const registry = new Set<string>(DEFAULT_FABRIC_PROPS)

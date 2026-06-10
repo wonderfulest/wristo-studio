@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
+import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
@@ -161,7 +162,7 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
   const canvas = canvasStore.canvas as any
 
   try {
-    const text = formatTime(new Date(), config.formatter)
+    const text = formatTime(getSimulatedNow(), config.formatter)
     const id = config.id || nanoid()
     // bitmap 模式：创建由图片组成的 Group
     if (config.fontRenderType === 'bitmap' && config.bitmapFontId) {
@@ -284,7 +285,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
   if (config.fontRenderType === 'truetype' && isGroup) {
     try {
       const formatter = config.formatter ?? (obj as any).formatter ?? 0
-      const text = formatTime(new Date(), Number(formatter))
+      const text = formatTime(getSimulatedNow(), Number(formatter))
       const preservedBitmapFontId = (obj as any).bitmapFontId ?? config.bitmapFontId ?? null
 
       const timeOptions: Partial<TimeElementOptions> = {
@@ -350,7 +351,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
         }
         if (lockId) bitmapUpdateLocks.add(lockId)
         const formatter = config.formatter ?? (obj as any).formatter ?? 0
-        const text = formatTime(new Date(), Number(formatter))
+        const text = formatTime(getSimulatedNow(), Number(formatter))
         const group = await createBitmapTimeGroup({
           id: String(obj.id || element.id || nanoid()),
           text,
@@ -426,7 +427,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
           }
           if (lockId) bitmapUpdateLocks.add(lockId)
           const formatter = config.formatter ?? (obj as any).formatter ?? 0
-          const text = formatTime(new Date(), Number(formatter))
+          const text = formatTime(getSimulatedNow(), Number(formatter))
           const group = await createBitmapTimeGroup({
             id: String(obj.id || element.id || nanoid()),
             text,
@@ -518,4 +519,3 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
     patchConfigFromObject(obj)
   }
 }
-

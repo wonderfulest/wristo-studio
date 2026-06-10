@@ -47,11 +47,6 @@ const dialogVisible = ref(false)
 const projectName = ref('')
 const currentTemplate = ref<Design | null>(null)
 
-const hasBoundDevice = () => {
-  const deviceId = (userStore.userInfo as any)?.device?.deviceId
-  return !!deviceId
-}
-
 const generateRandomProjectName = () => {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   let suffix = ''
@@ -65,9 +60,6 @@ const generateRandomProjectName = () => {
 // 打开弹框，准备从模板创建新项目
 const handleOpenFromTemplate = (design: Design) => {
   currentTemplate.value = design
-  if (!hasBoundDevice()) {
-    return
-  }
   projectName.value = generateRandomProjectName()
   dialogVisible.value = true
 }
@@ -208,9 +200,6 @@ const fetchRecentDesigns = async () => {
 
 // 监听来自全局的“打开新项目弹框”事件，支持在 /designs/new-projects 页面重复触发
 const openDialogHandler = () => {
-  if (!hasBoundDevice()) {
-    return
-  }
   projectName.value = generateRandomProjectName()
   dialogVisible.value = true
 }
@@ -221,18 +210,14 @@ onMounted(() => {
   fetchDesigns()
   fetchRecentDesigns()
   // 进入 New Projects 页面时立即弹出新项目名称对话框
-  if (hasBoundDevice()) {
-    projectName.value = generateRandomProjectName()
-    dialogVisible.value = true
-  }
+  projectName.value = generateRandomProjectName()
+  dialogVisible.value = true
 })
 
 // 被 keep-alive 缓存后，每次重新激活也要弹一次
 onActivated(() => {
-  if (hasBoundDevice()) {
-    projectName.value = generateRandomProjectName()
-    dialogVisible.value = true
-  }
+  projectName.value = generateRandomProjectName()
+  dialogVisible.value = true
 })
 
 onBeforeUnmount(() => {

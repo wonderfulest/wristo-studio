@@ -26,6 +26,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import ThemeRuleSettings from '@/components/panels/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useI18n } from '@/i18n'
+import { DEFAULT_BACKGROUND_IMAGE_URL } from './background.constants'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
@@ -59,12 +60,14 @@ const applyUpdate = (patch: Record<string, any>) => {
 
 const currentImageId = computed(() => {
   const raw = currentModel.value as any
+  if ((raw.imageUrl ?? raw.wristoImageUrl) === DEFAULT_BACKGROUND_IMAGE_URL) return undefined
   return raw.imageId ?? raw.wristoImageId ?? undefined
 })
 
 const currentImageUrl = computed(() => {
   const raw = currentModel.value as any
-  return raw.imageUrl ?? raw.wristoImageUrl ?? ''
+  const url = raw.imageUrl ?? raw.wristoImageUrl ?? ''
+  return url === DEFAULT_BACKGROUND_IMAGE_URL ? '' : url
 })
 
 const handleImageIdChange = (id: any) => {

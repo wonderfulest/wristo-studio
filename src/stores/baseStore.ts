@@ -10,6 +10,9 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useDesignStore } from '@/stores/designStore'
 import { generateConfig as generateRuntimeConfig } from '@/engine/services/exportService'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useEditorStore } from '@/stores/editorStore'
+import { useUserStore } from '@/stores/user'
+import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO } from '@/api/device'
 import * as elementManager from '@/engine/managers/elementManager'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
@@ -18,6 +21,36 @@ type AnyObject = Record<string, any>
 type Screenshot = string | null
 
 type CanvasLike = Canvas | null
+
+type DeviceDisplayLocation = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`))
+    image.src = src
+  })
+}
+
+const getValidDisplayLocation = (device: GarminDeviceDetailVO | null | undefined): DeviceDisplayLocation | null => {
+  const location = device?.simulator?.display?.location
+  const x = Number(location?.x)
+  const y = Number(location?.y)
+  const width = Number(location?.width)
+  const height = Number(location?.height)
+
+  if (![x, y, width, height].every(Number.isFinite)) return null
+  if (width <= 0 || height <= 0) return null
+
+  return { x, y, width, height }
+}
 
 export const useBaseStore = defineStore('baseStore', {
   // store
@@ -89,7 +122,7 @@ export const useBaseStore = defineStore('baseStore', {
       canvasStore.deactivateObject()
     },
     // 捕获并保存表盘截图
-    captureScreenshot(): Promise<string | null> {
+    async captureScreenshot(): Promise<string | null> {
       const canvasStore = useCanvasStore()
       const canvas = canvasStore.canvas
       if (!canvas) {
@@ -98,17 +131,81 @@ export const useBaseStore = defineStore('baseStore', {
       }
       try {
         canvas.renderAll()
-        const dataURL = canvas.toDataURL({
+        const canvasDataURL = canvas.toDataURL({
           multiplier: 1,
           format: 'png',
           quality: 1,
         } as any)
+        const dataURL = await this.captureScreenshotWithDeviceFrame(canvasDataURL)
         this.screenshot = dataURL
-        return Promise.resolve(dataURL)
+        return dataURL
       } catch (error) {
         console.error('截图捕获失败:', error)
         this.screenshot = null
-        return Promise.resolve(null)
+        return null
+      }
+    },
+    async captureScreenshotWithDeviceFrame(canvasDataURL: string): Promise<string> {
+      const editorStore = useEditorStore()
+      if (!editorStore.showDeviceFrame) return canvasDataURL
+
+      const userStore = useUserStore()
+      const currentDevice = userStore.userInfo?.device
+      if (!currentDevice?.deviceId) return canvasDataURL
+
+      let device = currentDevice as GarminDeviceDetailVO
+      if (!device.deviceTransparentPng || !getValidDisplayLocation(device)) {
+        try {
+          const detailDevice = await getDeviceDetailByDeviceId(currentDevice.deviceId)
+          device = {
+            ...currentDevice,
+            ...detailDevice,
+            displayName: currentDevice.displayName || detailDevice.displayName,
+          }
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.warn('[baseStore] Failed to load device detail for framed screenshot', currentDevice.deviceId, error)
+          }
+          return canvasDataURL
+        }
+      }
+
+      const frameUrl = device.deviceTransparentPng
+      const location = getValidDisplayLocation(device)
+      if (!frameUrl || !location) return canvasDataURL
+
+      try {
+        const [faceImage, frameImage] = await Promise.all([
+          loadImage(canvasDataURL),
+          loadImage(frameUrl),
+        ])
+        const designStore = useDesignStore()
+        const designWidth = Number(designStore.designSpec.width || location.width)
+        const designHeight = Number(designStore.designSpec.height || location.height)
+        const scaleX = designWidth / location.width
+        const scaleY = designHeight / location.height
+        const outputWidth = Math.ceil(frameImage.naturalWidth * scaleX)
+        const outputHeight = Math.ceil(frameImage.naturalHeight * scaleY)
+        const outputCanvas = document.createElement('canvas')
+        outputCanvas.width = outputWidth
+        outputCanvas.height = outputHeight
+        const context = outputCanvas.getContext('2d')
+        if (!context) return canvasDataURL
+
+        context.drawImage(
+          faceImage,
+          Math.round(location.x * scaleX),
+          Math.round(location.y * scaleY),
+          Math.round(designWidth),
+          Math.round(designHeight),
+        )
+        context.drawImage(frameImage, 0, 0, outputWidth, outputHeight)
+        return outputCanvas.toDataURL('image/png')
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn('[baseStore] Failed to compose framed screenshot', error)
+        }
+        return canvasDataURL
       }
     },
     // 获取备用截图

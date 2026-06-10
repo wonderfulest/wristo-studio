@@ -1,4 +1,5 @@
 import type { ElementType } from '@/types/element'
+import { DEFAULT_BACKGROUND_IMAGE_URL } from './background.constants'
 
 export type BackgroundElementSchema = {
   type: ElementType
@@ -16,7 +17,7 @@ export const backgroundSchema: BackgroundElementSchema = {
   name: 'Background',
   icon: 'mdi:image-area',
   defaultConfig: {
-    imageUrl: '',
+    imageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
     imageId: null,
   },
   disabled: false,

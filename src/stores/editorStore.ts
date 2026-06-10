@@ -7,8 +7,8 @@ export const useEditorStore = defineStore('editor', {
     lightCanvasBackgroundColor: '#d9dee7',
     darkCanvasBackgroundColor: '#151922',
     showTimeSimulator: false,
-    showZoomControls: false,
-    showHistoryControls: false,
+    showZoomControls: true,
+    showHistoryControls: true,
     showDeviceFrame: false,
     showRulerGuides: false,
     rulerGuidesColor: '#ffffff',
@@ -16,7 +16,6 @@ export const useEditorStore = defineStore('editor', {
     rulerGuidesMinor: 0.16,
     showKeyGuidelines: false,
     keyGuidelineDivisions: 4,
-    enableManualGuides: false,
   }),
 
   getters: {
@@ -57,7 +56,6 @@ export const useEditorStore = defineStore('editor', {
       if (settings.rulerGuidesMinor !== undefined) this.$state.rulerGuidesMinor = settings.rulerGuidesMinor
       if (settings.showKeyGuidelines !== undefined) this.$state.showKeyGuidelines = settings.showKeyGuidelines
       if (settings.keyGuidelineDivisions !== undefined) this.$state.keyGuidelineDivisions = settings.keyGuidelineDivisions
-      if (settings.enableManualGuides !== undefined) this.$state.enableManualGuides = settings.enableManualGuides
     },
 
     // 重置所有设置
@@ -66,8 +64,8 @@ export const useEditorStore = defineStore('editor', {
       this.$state.lightCanvasBackgroundColor = '#d9dee7'
       this.$state.darkCanvasBackgroundColor = '#151922'
       this.$state.showTimeSimulator = false
-      this.$state.showZoomControls = false
-      this.$state.showHistoryControls = false
+      this.$state.showZoomControls = true
+      this.$state.showHistoryControls = true
       this.$state.showDeviceFrame = false
       this.$state.showRulerGuides = false
       this.$state.rulerGuidesColor = '#ffffff'
@@ -75,7 +73,6 @@ export const useEditorStore = defineStore('editor', {
       this.$state.rulerGuidesMinor = 0.16
       this.$state.showKeyGuidelines = false
       this.$state.keyGuidelineDivisions = 4
-      this.$state.enableManualGuides = false
     },
   }
 })

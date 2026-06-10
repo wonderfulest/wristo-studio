@@ -32,12 +32,6 @@
       <span>{{ t('editor.appProperties') }}</span>
       <span class="shortcut-hint">⌘ + ,</span>
     </el-menu-item>
-    <!-- Editor Settings -->
-    <el-menu-item index="actions/editorSettings" @click="onOpenEditorSettings">
-      <el-icon><Setting /></el-icon>
-      <span>{{ t('editor.editorSettings') }}</span>
-      <span class="shortcut-hint">⌘ + ;</span>
-    </el-menu-item>
   </el-sub-menu>
 </template>
 
@@ -64,10 +58,6 @@ const props = defineProps({
     type: Function,
     required: true,
   },
-  onOpenEditorSettings: {
-    type: Function,
-    required: true,
-  },
 })
 
 const onBuild = () => {
@@ -84,14 +74,5 @@ const onScreenshot = () => {
 
 const onOpenProperties = () => {
   props.onOpenProperties && props.onOpenProperties()
-}
-
-const onOpenEditorSettings = () => {
-  console.log('[AppMenuActions] Editor Settings menu clicked')
-  if (typeof props.onOpenEditorSettings !== 'function') {
-    console.warn('[AppMenuActions] onOpenEditorSettings prop is not a function', props.onOpenEditorSettings)
-    return
-  }
-  props.onOpenEditorSettings()
 }
 </script>

@@ -125,7 +125,7 @@ export function attachKeyboardShortcuts({ isInEditor }: KeyboardManagerDeps): vo
     }
   })
 
-  Mousetrap.bind(['shift+command+z', 'shift+ctrl+z'], (e?: KeyboardEvent) => {
+  Mousetrap.bind(['shift+command+z', 'shift+ctrl+z', 'command+y', 'ctrl+y'], (e?: KeyboardEvent) => {
     if (isInEditor()) {
       ;(emitter as any).emit('canvas-redo')
       e?.preventDefault?.()
@@ -170,6 +170,8 @@ export function detachKeyboardShortcuts(): void {
     'ctrl+z',
     'shift+command+z',
     'shift+ctrl+z',
+    'command+y',
+    'ctrl+y',
     'command+,',
     'ctrl+,',
     'command+.',

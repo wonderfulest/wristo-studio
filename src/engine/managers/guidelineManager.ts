@@ -34,7 +34,6 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
   let showKeyGuidelines = false
   let keyGuidelines: Line[] = []
   let keyDivisions = 4
-  let removeCanvasMouseDown: (() => void) | null = null
   let unsubscribeEditor: (() => void) | null = null
 
   const createHorizontalGuideline = (y: number) => {
@@ -187,39 +186,9 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
     ;(baseStore.canvas as Canvas).requestRenderAll()
   }
 
-  const attachCanvasMouseDown = () => {
-    if (!baseStore.canvas) return
-    const canvas = baseStore.canvas as Canvas
-
-    const handler = (opt: unknown) => {
-      const e = (opt as { e?: MouseEvent }).e
-      if (!e) return
-      if (!editorStore.enableManualGuides) return
-      const pointer = canvas.getPointer(e as MouseEvent)
-      const hasCmd = e.metaKey || e.ctrlKey
-      const hasShift = e.shiftKey
-      const hasCtrl = e.ctrlKey
-
-      if (hasCmd && hasShift) {
-        createHorizontalGuideline(pointer.y)
-      } else if (hasCmd && hasCtrl) {
-        createVerticalGuideline(pointer.x)
-      }
-    }
-
-    canvas.on('mouse:down', handler)
-    removeCanvasMouseDown = () => {
-      canvas.off('mouse:down', handler)
-    }
-  }
-
   // 初始化状态
   showKeyGuidelines = Boolean(editorStore.showKeyGuidelines)
   keyDivisions = Number(editorStore.keyGuidelineDivisions) || 4
-
-  if (baseStore.canvas) {
-    attachCanvasMouseDown()
-  }
 
   if (showKeyGuidelines) {
     createKeyGuidelines()
@@ -260,10 +229,6 @@ export function attachGuidelineManager(deps: GuidelineManagerDeps): GuidelineMan
   }
 
   const dispose = () => {
-    if (removeCanvasMouseDown) {
-      removeCanvasMouseDown()
-      removeCanvasMouseDown = null
-    }
     window.removeEventListener('resize', updateGuidelineSize)
 
     if (baseStore.canvas) {

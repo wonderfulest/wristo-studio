@@ -11,7 +11,10 @@ import {
   applyFabricCustomProperties,
   discoverAndRegisterCanvasProps,
 } from '@/utils/fabricProps'
+import * as elementManager from '@/engine/managers/elementManager'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import type { Canvas as FabricCanvas } from 'fabric'
+import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 
 export interface CanvasManagerDeps {
   baseStore: any
@@ -38,6 +41,15 @@ function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | nu
   canvasStore.setActiveIds(ids)
 }
 
+function rejectDefaultBackgroundSelection(canvasStore: any, canvas: FabricCanvas): boolean {
+  const activeObjects = canvas.getActiveObjects?.() as any[]
+  if (!activeObjects?.some((obj) => isDefaultBackgroundElement(obj))) return false
+  canvas.discardActiveObject?.()
+  canvas.requestRenderAll?.()
+  canvasStore.clearActiveIds()
+  return true
+}
+
 export function initCanvasManager(
   canvasElement: HTMLCanvasElement,
   deps: CanvasManagerDeps,
@@ -59,24 +71,39 @@ export function initCanvasManager(
     cloneFill: '#22c55e',
     cloneOffset: 20,
     onDelete: (target, canvas) => {
-      if ((target as any).id) {
-        layerStore.removeLayer(String((target as any).id))
-      }
+      elementManager.removeElement(target as any)
       layerStore.clearSelected()
       syncSelectionIdsFromCanvas(canvasStore, canvas as FabricCanvas)
     },
     onClone: (_source, cloned) => {
+      const elementDataStore = useElementDataStore()
+      const sourceId = (_source as any).id != null ? String((_source as any).id) : ''
+      const clonedId = (cloned as any).id != null ? String((cloned as any).id) : ''
+      const sourceConfig = sourceId ? elementDataStore.getElementConfig(sourceId) : null
+      if (clonedId) {
+        elementDataStore.upsertElement({
+          ...(sourceConfig || {}),
+          id: clonedId,
+          eleType: (cloned as any).eleType || (sourceConfig as any)?.eleType,
+          left: (cloned as any).left,
+          top: (cloned as any).top,
+          originX: (cloned as any).originX,
+          originY: (cloned as any).originY,
+        } as any)
+      }
       layerStore.addLayer(cloned as any)
       if ((cloned as any).id) {
         layerStore.selectOne(String((cloned as any).id))
       }
       syncSelectionIdsFromCanvas(canvasStore, (cloned as any)?.canvas as FabricCanvas | undefined)
+      historyStore.saveState('clone:control', { coalesceIfSameFabric: true })
     },
   })
 
   const canvas = new Canvas(canvasElement, {
     width: canvasWidth,
     height: canvasHeight,
+    backgroundColor: 'transparent',
     centeredScaling: true,
     centeredRotation: true,
   }) as FabricCanvas
@@ -102,6 +129,7 @@ export function initCanvasManager(
   // 选择事件同步到 canvasStore
   canvas.on({
     'selection:created': () => {
+      if (rejectDefaultBackgroundSelection(canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
@@ -110,6 +138,7 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:updated': () => {
+      if (rejectDefaultBackgroundSelection(canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
@@ -218,10 +247,10 @@ export function initCanvasManager(
 
   // 监听撤销/重做事件
   emitter.on('canvas-undo', () => {
-    historyStore.undo()
+    void historyStore.undo()
   })
   emitter.on('canvas-redo', () => {
-    historyStore.redo()
+    void historyStore.redo()
   })
 
   // 初始化容器样式

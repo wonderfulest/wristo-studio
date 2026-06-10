@@ -1,266 +1,354 @@
 <template>
-  <el-dialog
-    :title="t('editor.editorSettings')"
-    v-model="dialogVisible"
-    width="800px"
-    :close-on-click-modal="false"
-    :close-on-press-escape="true"
-  >
-    <div class="settings-container">
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.lightCanvasBackground') }}</div>
-        <div class="setting-control">
-          <el-color-picker
-            v-model="lightCanvasBackgroundColor"
-            show-alpha
-            @change="handleLightCanvasBackgroundColorChange"
-          />
-          <div class="color-value">{{ lightCanvasBackgroundColor }}</div>
-        </div>
+  <section class="editor-settings-bar" :aria-label="t('editor.editorSettings')">
+    <div class="bar-group left-group">
+      <div class="bar-cell device-cell" :title="deviceCodeLabel">
+        <Icon icon="material-symbols:watch-outline-rounded" width="17" height="17" />
+        <span>{{ deviceCodeLabel }}</span>
       </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.darkCanvasBackground') }}</div>
-        <div class="setting-control">
-          <el-color-picker
-            v-model="darkCanvasBackgroundColor"
-            show-alpha
-            @change="handleDarkCanvasBackgroundColorChange"
-          />
-          <div class="color-value">{{ darkCanvasBackgroundColor }}</div>
-        </div>
-      </div>
-      
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.timeSimulator') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showTimeSimulator"
-            @change="handleTimeSimulatorChange"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-        </div>
+      <div class="bar-cell selected-cell" :title="selectedElementLabel">
+        <Icon icon="material-symbols:ads-click-rounded" width="17" height="17" />
+        <span>{{ selectedElementLabel }}</span>
       </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.zoomControls') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showZoomControls"
-            @change="handleZoomControlsChange"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-        </div>
+      <div class="bar-cell canvas-size-cell" :title="canvasSizeLabel">
+        <Icon icon="material-symbols:crop-square-rounded" width="17" height="17" />
+        <span>{{ canvasSizeLabel }}</span>
       </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.historyControls') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showHistoryControls"
-            @change="handleHistoryControlsChange"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-        </div>
+      <div class="bar-cell zoom-cell">
+        <el-button circle class="icon-button" @click="handleZoomOut" :title="t('canvas.zoomOut')">
+          <Icon icon="material-symbols:remove-rounded" width="18" height="18" />
+        </el-button>
+        <span class="zoom-level">{{ zoomPercentLabel }}</span>
+        <el-button circle class="icon-button" @click="handleZoomIn" :title="t('canvas.zoomIn')">
+          <Icon icon="material-symbols:add-rounded" width="18" height="18" />
+        </el-button>
+        <el-button circle class="icon-button" @click="handleResetZoom" :title="t('canvas.resetZoom')">
+          <Icon icon="material-symbols:refresh-rounded" width="18" height="18" />
+        </el-button>
       </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.deviceFrame') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showDeviceFrame"
-            @change="handleDeviceFrameChange"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-        </div>
+      <div v-if="themeStore.currentTheme === 'light'" class="bar-cell canvas-bg-cell">
+        <span class="cell-label">{{ t('editorSettings.lightCanvasBackground') }}</span>
+        <el-color-picker
+          v-model="lightCanvasBackgroundColor"
+          size="small"
+          show-alpha
+          @change="handleLightCanvasBackgroundColorChange"
+        />
       </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.rulerGuides') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showRulerGuides"
-            @change="handleRulerGuidesChange"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-        </div>
-      </div>
+    </div>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.keyGuidelines') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="showKeyGuidelines"
-            @change="handleKeyGuidelinesToggle"
-            :active-text="t('editorSettings.show')"
-            :inactive-text="t('editorSettings.hide')"
-          />
-          <el-select
-            v-model="keyGuidelineDivisions"
-            :disabled="!showKeyGuidelines"
-            :placeholder="t('editorSettings.divisions')"
-            style="width: 140px;"
-            @change="handleKeyGuidelinesDivisionsChange"
-          >
-            <el-option :label="'2'" :value="2" />
-            <el-option :label="'3'" :value="3" />
-            <el-option :label="'4'" :value="4" />
-            <el-option :label="'5'" :value="5" />
-            <el-option :label="'6'" :value="6" />
-            <el-option :label="'8'" :value="8" />
-          </el-select>
-        </div>
-      </div>
+    <div class="bar-group center-group">
+      <label class="bar-cell check-cell time-simulator-cell">
+        <el-checkbox
+          v-model="showTimeSimulator"
+          @change="handleTimeSimulatorChange"
+        />
+        <span>{{ t('editorSettings.timeSimulator') }}</span>
+      </label>
 
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.manualGuides') }}</div>
-        <div class="setting-control">
-          <el-switch
-            v-model="enableManualGuides"
-            @change="handleManualGuidesToggle"
-            :active-text="t('editorSettings.enableShiftCmdGuides')"
-            :inactive-text="t('editorSettings.disable')"
-          />
-        </div>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.gridColor') }}</div>
-        <div class="setting-control">
-          <el-color-picker
-            v-model="rulerGuidesColor"
-            @change="applyRulerGuidesStyle"
-          />
-          <div class="color-value">{{ rulerGuidesColor }}</div>
-        </div>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.majorOpacity') }}</div>
-        <div class="setting-control">
-          <el-input-number
-            v-model="rulerGuidesMajor"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            @change="applyRulerGuidesStyle"
-          />
-        </div>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-label">{{ t('editorSettings.minorOpacity') }}</div>
-        <div class="setting-control">
-          <el-input-number
-            v-model="rulerGuidesMinor"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            @change="applyRulerGuidesStyle"
-          />
-        </div>
+      <div v-if="canQuickAlign" class="bar-cell quick-align-cell">
+        <el-button
+          v-for="option in quickAlignOptions"
+          :key="option.type"
+          circle
+          class="icon-button quick-align-button"
+          :title="t(option.labelKey)"
+          @click="handleQuickAlign(option.type)"
+        >
+          <Icon :icon="option.icon" width="17" height="17" />
+        </el-button>
       </div>
     </div>
-    <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="saveSettings">
-          {{ t('common.confirm') }}
-        </el-button>
-      </span>
-    </template>
-  </el-dialog>
+
+    <div class="bar-group right-group">
+      <div class="bar-cell key-guides-cell">
+        <label class="check-cell compact-check">
+          <el-checkbox
+            v-model="showKeyGuidelines"
+            @change="handleKeyGuidelinesToggle"
+          />
+          <span>{{ t('editorSettings.keyGuidelines') }}</span>
+        </label>
+        <el-select
+          v-model="keyGuidelineDivisions"
+          :disabled="!showKeyGuidelines"
+          size="small"
+          class="divisions-select"
+          :placeholder="t('editorSettings.divisions')"
+          @change="handleKeyGuidelinesDivisionsChange"
+        >
+          <el-option :label="'2'" :value="2" />
+          <el-option :label="'3'" :value="3" />
+          <el-option :label="'4'" :value="4" />
+          <el-option :label="'5'" :value="5" />
+          <el-option :label="'6'" :value="6" />
+          <el-option :label="'8'" :value="8" />
+        </el-select>
+      </div>
+
+      <el-button
+        circle
+        class="bar-cell icon-button toggle-button device-frame-toggle"
+        :class="{ active: showDeviceFrame }"
+        @click="toggleDeviceFrame"
+        :title="t('editorSettings.deviceFrame')"
+      >
+        <Icon icon="material-symbols:watch-outline-rounded" width="18" height="18" />
+      </el-button>
+
+      <el-button
+        circle
+        class="bar-cell icon-button toggle-button ruler-toggle"
+        :class="{ active: showRulerGuides }"
+        @click="toggleRulerGuides"
+        :title="t('editorSettings.rulerGuides')"
+      >
+        <Icon icon="material-symbols:grid-4x4-rounded" width="18" height="18" />
+      </el-button>
+
+      <div class="bar-cell grid-color-cell">
+        <span class="cell-label">{{ t('editorSettings.gridColor') }}</span>
+        <el-color-picker
+          v-model="rulerGuidesColor"
+          size="small"
+          @change="applyRulerGuidesStyle"
+        />
+      </div>
+
+      <div v-if="themeStore.currentTheme === 'dark'" class="bar-cell canvas-bg-cell">
+        <span class="cell-label">{{ t('editorSettings.darkCanvasBackground') }}</span>
+        <el-color-picker
+          v-model="darkCanvasBackgroundColor"
+          size="small"
+          show-alpha
+          @change="handleDarkCanvasBackgroundColorChange"
+        />
+      </div>
+
+      <el-popover
+        v-model:visible="opacityPopoverVisible"
+        placement="top-end"
+        trigger="click"
+        :width="280"
+        popper-class="editor-opacity-popover"
+      >
+        <template #reference>
+          <button
+            type="button"
+            class="bar-cell opacity-trigger"
+            :class="{ active: opacityPopoverVisible }"
+            :title="t('editorSettings.opacity')"
+          >
+            <span class="cell-label">{{ t('editorSettings.opacity') }}</span>
+            <span class="opacity-summary">{{ rulerGuidesMajor.toFixed(2) }} / {{ rulerGuidesMinor.toFixed(2) }}</span>
+          </button>
+        </template>
+
+        <div class="opacity-popover-content">
+          <div class="opacity-popover-header">
+            <span>{{ t('editorSettings.opacity') }}</span>
+            <el-button
+              circle
+              size="small"
+              class="opacity-close-button"
+              :title="t('common.confirm')"
+              @click="opacityPopoverVisible = false"
+            >
+              <Icon icon="material-symbols:close-rounded" width="16" height="16" />
+            </el-button>
+          </div>
+
+          <div class="opacity-row">
+            <div class="opacity-row-label">
+              <span>{{ t('editorSettings.majorOpacity') }}</span>
+              <span>{{ rulerGuidesMajor.toFixed(2) }}</span>
+            </div>
+            <el-slider
+              v-model="rulerGuidesMajor"
+              :min="0"
+              :max="1"
+              :step="0.01"
+              @input="applyRulerGuidesStyle"
+              @change="applyRulerGuidesStyle"
+            />
+          </div>
+
+          <div class="opacity-row">
+            <div class="opacity-row-label">
+              <span>{{ t('editorSettings.minorOpacity') }}</span>
+              <span>{{ rulerGuidesMinor.toFixed(2) }}</span>
+            </div>
+            <el-slider
+              v-model="rulerGuidesMinor"
+              :min="0"
+              :max="1"
+              :step="0.01"
+              @input="applyRulerGuidesStyle"
+              @change="applyRulerGuidesStyle"
+            />
+          </div>
+        </div>
+      </el-popover>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Icon } from '@iconify/vue'
+import { elementConfigs } from '@/elements/schemaMap'
+import { useBaseStore } from '@/stores/baseStore'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useDesignStore } from '@/stores/designStore'
 import { useEditorStore } from '@/stores/editorStore'
-import { useMessageStore } from '@/stores/message'
+import { useThemeStore } from '@/stores/theme'
+import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
+import { clearAllGuidelines } from '@/utils/guidelineUtil'
+import type { FabricElement } from '@/types/element'
+import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
 
+const props = defineProps<{
+  canvasRef?: {
+    zoomIn?: () => void
+    zoomOut?: () => void
+    resetZoom?: () => void
+  } | null
+}>()
+
+const baseStore = useBaseStore()
+const canvasStore = useCanvasStore()
+const designStore = useDesignStore()
 const editorStore = useEditorStore()
-const messageStore = useMessageStore()
+const themeStore = useThemeStore()
+const userStore = useUserStore()
 const { t } = useI18n()
-const dialogVisible = ref<boolean>(false)
 
-// 设计区背景色
 const lightCanvasBackgroundColor = ref<string>(editorStore.lightCanvasBackgroundColor)
 const darkCanvasBackgroundColor = ref<string>(editorStore.darkCanvasBackgroundColor)
-// 时间模拟器显示状态
 const showTimeSimulator = ref<boolean>(editorStore.showTimeSimulator)
-// 缩放控制显示状态
-const showZoomControls = ref<boolean>(editorStore.showZoomControls)
-// 撤销/回退控制显示状态
-const showHistoryControls = ref<boolean>(editorStore.showHistoryControls)
-// 设备边框显示状态
 const showDeviceFrame = ref<boolean>(editorStore.showDeviceFrame)
-// Ruler guides
 const showRulerGuides = ref<boolean>(editorStore.showRulerGuides)
-// Ruler guides style
 const rulerGuidesColor = ref<string>(editorStore.rulerGuidesColor)
 const rulerGuidesMajor = ref<number>(editorStore.rulerGuidesMajor)
 const rulerGuidesMinor = ref<number>(editorStore.rulerGuidesMinor)
-
-// Key guidelines
+const opacityPopoverVisible = ref<boolean>(false)
 const showKeyGuidelines = ref<boolean>(editorStore.showKeyGuidelines)
 const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelineDivisions)
-// Manual guides (Shift/Cmd click)
-const enableManualGuides = ref<boolean>(editorStore.enableManualGuides)
 
-// 处理设计区背景色变化
+const quickAlignOptions: Array<{ type: AlignType; icon: string; labelKey: string }> = [
+  { type: 'left', icon: 'mdi:align-horizontal-left', labelKey: 'editor.alignLeft' },
+  { type: 'center', icon: 'mdi:align-horizontal-center', labelKey: 'editor.alignCenter' },
+  { type: 'right', icon: 'mdi:align-horizontal-right', labelKey: 'editor.alignRight' },
+  { type: 'top', icon: 'mdi:align-vertical-top', labelKey: 'editor.alignTop' },
+  { type: 'middle', icon: 'mdi:align-vertical-center', labelKey: 'editor.alignMiddle' },
+  { type: 'bottom', icon: 'mdi:align-vertical-bottom', labelKey: 'editor.alignBottom' },
+]
+
+const canvasSizeLabel = computed(() => {
+  const width = Number(designStore.designSpec.width || 0)
+  const height = Number(designStore.designSpec.height || 0)
+  return `${width} x ${height}`
+})
+
+const zoomPercentLabel = computed(() => `${Math.round(editorStore.zoomLevel * 100)}%`)
+
+const selectedElements = computed<FabricElement[]>(() => {
+  if (!canvasStore.canvas) return []
+  const idSet = new Set(canvasStore.activeIds)
+  return canvasStore.canvas
+    .getObjects()
+    .filter((object) => {
+      const id = (object as FabricElement).id
+      return id && idSet.has(String(id))
+    }) as FabricElement[]
+})
+
+const currentDeviceCode = computed(() => {
+  const device = userStore.userInfo?.device
+  return device?.deviceId || device?.partNumber || device?.hardwarePartNumber || device?.displayName || ''
+})
+
+const deviceCodeLabel = computed(() => currentDeviceCode.value || '-')
+
+const getElementName = (element: FabricElement | null): string => {
+  const elementType = element?.eleType
+  if (!elementType) return ''
+  for (const category of Object.values(elementConfigs)) {
+    const config = category[elementType]
+    if (config?.label) return String(config.label)
+  }
+  return elementType
+}
+
+const selectedElementLabel = computed(() => {
+  if (selectedElements.value.length === 1) {
+    return getElementName(selectedElements.value[0])
+  }
+  if (selectedElements.value.length > 1) {
+    return `${selectedElements.value.length} Elements`
+  }
+  return '-'
+})
+
+const canQuickAlign = computed(() => selectedElements.value.length > 1)
+
 const handleLightCanvasBackgroundColorChange = (color: string) => {
   lightCanvasBackgroundColor.value = color
+  editorStore.updateSetting('lightCanvasBackgroundColor', color)
 }
 
 const handleDarkCanvasBackgroundColorChange = (color: string) => {
   darkCanvasBackgroundColor.value = color
+  editorStore.updateSetting('darkCanvasBackgroundColor', color)
 }
 
-// 处理时间模拟器显示状态变化
 const handleTimeSimulatorChange = (value: boolean) => {
-  showTimeSimulator.value = value
+  showTimeSimulator.value = Boolean(value)
+  editorStore.updateSetting('showTimeSimulator', showTimeSimulator.value)
 }
 
-// 处理缩放控制显示状态变化
-const handleZoomControlsChange = (value: boolean) => {
-  showZoomControls.value = value
-  // persist to store so other components can react
-  editorStore.updateSetting('showZoomControls', value)
-  // 如果设置为隐藏，则触发收起状态
-  if (!value) {
-    const zoomControls = document.querySelector('.zoom-controls')
-    if (zoomControls) {
-      zoomControls.classList.add('zoom-controls-collapsed')
-    }
-  }
+const handleQuickAlign = (type: AlignType) => {
+  if (!canQuickAlign.value) return
+  alignSelection(type)
 }
 
-// 处理撤销/回退控制显示状态变化
-const handleHistoryControlsChange = (value: boolean) => {
-  showHistoryControls.value = value
-}
-
-// 处理设备边框显示状态变化
 const handleDeviceFrameChange = (value: boolean) => {
-  showDeviceFrame.value = value
-  editorStore.updateSetting('showDeviceFrame', value)
+  showDeviceFrame.value = Boolean(value)
+  editorStore.updateSetting('showDeviceFrame', showDeviceFrame.value)
 }
 
-// 处理标尺辅助线显示
+const toggleDeviceFrame = () => {
+  handleDeviceFrameChange(!showDeviceFrame.value)
+}
+
 const handleRulerGuidesChange = (value: boolean) => {
-  showRulerGuides.value = value
-  // use editorStore for state, CanvasRulers watches store
-  editorStore.updateSetting('showRulerGuides', value)
+  showRulerGuides.value = Boolean(value)
+  editorStore.updateSetting('showRulerGuides', showRulerGuides.value)
 }
 
-// 应用标尺网格样式
+const toggleRulerGuides = () => {
+  handleRulerGuidesChange(!showRulerGuides.value)
+}
+
+const handleZoomIn = () => {
+  props.canvasRef?.zoomIn?.()
+}
+
+const handleZoomOut = () => {
+  props.canvasRef?.zoomOut?.()
+}
+
+const handleResetZoom = () => {
+  props.canvasRef?.resetZoom?.()
+  clearAllGuidelines(baseStore.canvas as any)
+}
+
 const applyRulerGuidesStyle = () => {
-  // persist style in store; CanvasRulers reacts via watchers
   editorStore.updateSettings({
     rulerGuidesColor: rulerGuidesColor.value,
     rulerGuidesMajor: Number(rulerGuidesMajor.value),
@@ -268,12 +356,10 @@ const applyRulerGuidesStyle = () => {
   })
 }
 
-// Key guidelines handlers
 const handleKeyGuidelinesToggle = (value: boolean) => {
-  showKeyGuidelines.value = value
-  // use editorStore for state; GuidelineManager watches store
-  editorStore.updateSetting('showKeyGuidelines', value)
-  if (value) {
+  showKeyGuidelines.value = Boolean(value)
+  editorStore.updateSetting('showKeyGuidelines', showKeyGuidelines.value)
+  if (showKeyGuidelines.value) {
     editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
   }
 }
@@ -285,106 +371,289 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
 }
 
-// Manual guides toggle
-const handleManualGuidesToggle = (value: boolean) => {
-  enableManualGuides.value = value
-  editorStore.updateSetting('enableManualGuides', value)
-}
-
-// 保存设置
-const saveSettings = () => {
-  try {
-    // 更新 store 中的设置
-    editorStore.updateSettings({
-      lightCanvasBackgroundColor: lightCanvasBackgroundColor.value,
-      darkCanvasBackgroundColor: darkCanvasBackgroundColor.value,
-      showTimeSimulator: showTimeSimulator.value,
-      showZoomControls: showZoomControls.value,
-      showHistoryControls: showHistoryControls.value,
-      showDeviceFrame: showDeviceFrame.value,
-      showRulerGuides: showRulerGuides.value,
-      rulerGuidesColor: rulerGuidesColor.value,
-      rulerGuidesMajor: Number(rulerGuidesMajor.value),
-      rulerGuidesMinor: Number(rulerGuidesMinor.value),
-      showKeyGuidelines: showKeyGuidelines.value,
-      keyGuidelineDivisions: keyGuidelineDivisions.value,
-    })
-    
-    messageStore.success(t('editorSettings.settingsSaved'))
-    dialogVisible.value = false
-  } catch (error) {
-    console.error('Failed to save settings:', error)
-    messageStore.error(t('editorSettings.saveSettingsFailed'))
-  }
-}
-
-// 打开对话框
-const openDialog = () => {
-  // 初始化值
-  lightCanvasBackgroundColor.value = editorStore.lightCanvasBackgroundColor
-  darkCanvasBackgroundColor.value = editorStore.darkCanvasBackgroundColor
-  showTimeSimulator.value = editorStore.showTimeSimulator
-  showZoomControls.value = editorStore.showZoomControls
-  showHistoryControls.value = editorStore.showHistoryControls
-  showDeviceFrame.value = editorStore.showDeviceFrame
-  // 同步 ruler guides
-  showRulerGuides.value = editorStore.showRulerGuides
-  rulerGuidesColor.value = editorStore.rulerGuidesColor
-  rulerGuidesMajor.value = editorStore.rulerGuidesMajor
-  rulerGuidesMinor.value = editorStore.rulerGuidesMinor
-  // no emitter; CanvasRulers initializes and watches store
-  // 同步关键辅助线配置
-  showKeyGuidelines.value = editorStore.showKeyGuidelines
-  keyGuidelineDivisions.value = editorStore.keyGuidelineDivisions
-  enableManualGuides.value = editorStore.enableManualGuides
-  // GuidelineManager reacts to store for toggle
-  // GuidelineManager will react to store for divisions
-  dialogVisible.value = true
-}
-
-// 暴露方法
-defineExpose({
-  openDialog
-})
 </script>
 
 <style scoped>
-.settings-container {
-  padding: 20px;
-}
-
-.setting-item {
-  margin-bottom: 24px;
+.editor-settings-bar {
+  flex-shrink: 0;
+  width: 100%;
+  height: 34px;
   display: flex;
   align-items: center;
-}
-
-.setting-label {
-  width: 120px;
-  font-size: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-top: 1px solid var(--studio-border);
+  background: var(--studio-surface);
   color: var(--studio-text);
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.02);
+  white-space: nowrap;
 }
 
-.setting-control {
-  flex: 1;
+.bar-group {
+  height: 34px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
-.color-value {
-  font-size: 14px;
-  color: var(--studio-text-muted);
-  font-family: monospace;
+.left-group {
+  justify-content: flex-start;
 }
 
-.dialog-footer {
-  display: flex;
+.center-group {
+  flex: 1 1 420px;
+  justify-content: center;
+  gap: 24px;
+  padding: 0 32px;
+  border-left: 1px solid var(--studio-border);
+  border-right: 1px solid var(--studio-border);
+  box-sizing: border-box;
+}
+
+.right-group {
   justify-content: flex-end;
-  gap: 12px;
 }
 
-.el-switch {
-  margin-right: 8px;
+.bar-cell {
+  height: 34px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-right: 1px solid var(--studio-border);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.bar-group .bar-cell:last-child {
+  border-right: 0;
+}
+
+.device-cell,
+.selected-cell {
+  justify-content: flex-start;
+  color: var(--studio-text);
+  font-weight: 750;
+}
+
+.device-cell {
+  width: 154px;
+}
+
+.selected-cell {
+  width: 132px;
+}
+
+.device-cell span,
+.selected-cell span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.canvas-size-cell {
+  width: 108px;
+  justify-content: flex-start;
+  color: var(--studio-text-muted);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-bg-cell {
+  width: 166px;
+}
+
+.cell-label {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.check-cell {
+  cursor: pointer;
+}
+
+.compact-check {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: auto;
+  padding: 0;
+  border-right: 0;
+}
+
+.key-guides-cell {
+  width: 210px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.divisions-select {
+  width: 72px;
+}
+
+.grid-color-cell {
+  width: 118px;
+}
+
+.opacity-trigger {
+  width: 138px;
+  appearance: none;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.opacity-trigger:hover,
+.opacity-trigger.active {
+  background: var(--studio-primary-soft);
+}
+
+.opacity-summary {
+  margin-left: auto;
+  color: var(--studio-text-muted);
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.editor-opacity-popover) {
+  padding: 12px;
+}
+
+:global(.editor-opacity-popover .opacity-popover-content) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+:global(.editor-opacity-popover .opacity-popover-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--studio-text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+:global(.editor-opacity-popover .opacity-close-button) {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-color: transparent;
+}
+
+:global(.editor-opacity-popover .opacity-row) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+:global(.editor-opacity-popover .opacity-row-label) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.editor-opacity-popover .el-slider) {
+  --el-slider-main-bg-color: var(--studio-primary);
+}
+
+.zoom-cell {
+  width: 146px;
+  justify-content: center;
+  gap: 4px;
+}
+
+.zoom-level {
+  width: 42px;
+  color: var(--studio-text-muted);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-simulator-cell {
+  width: 142px;
+  justify-content: center;
+}
+
+.quick-align-cell {
+  width: 206px;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 6px;
+}
+
+.icon-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--studio-text-muted);
+}
+
+.bar-cell.icon-button {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 1px solid var(--studio-border);
+}
+
+.icon-button:hover,
+.toggle-button.active {
+  color: var(--studio-primary);
+  border-color: var(--studio-primary-border);
+  background: var(--studio-primary-soft);
+}
+
+.quick-align-button {
+  flex: 0 0 auto;
+}
+
+.toggle-button.active {
+  box-shadow: inset 0 0 0 1px var(--studio-primary-border);
+}
+
+.editor-settings-bar :deep(.el-checkbox) {
+  height: 16px;
+  margin-right: 0;
+}
+
+.editor-settings-bar :deep(.el-checkbox__label) {
+  display: none;
+}
+
+.editor-settings-bar :deep(.el-checkbox__inner) {
+  width: 14px;
+  height: 14px;
+}
+
+.editor-settings-bar :deep(.el-color-picker__trigger) {
+  width: 24px;
+  height: 24px;
+  padding: 2px;
+}
+
+.editor-settings-bar :deep(.el-input__wrapper),
+.editor-settings-bar :deep(.el-select__wrapper) {
+  min-height: 24px;
 }
 </style>

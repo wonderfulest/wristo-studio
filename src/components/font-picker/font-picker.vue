@@ -1,5 +1,5 @@
 <template>
-  <div class="font-picker">
+  <div ref="pickerRef" class="font-picker">
     <!-- Current selected font preview -->
     <div class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
@@ -7,38 +7,40 @@
     </div>
 
     <!-- Font selection panel -->
-    <div v-if="isOpen" class="font-panel">
-      <!-- Add custom font button -->
-      <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
-      <!-- Icon library guidance (only for icon fonts) -->
-      <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
-        <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
+    <Teleport to="body">
+      <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle">
+        <!-- Add custom font button -->
+        <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
+        <!-- Icon library guidance (only for icon fonts) -->
+        <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
+          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
+        </div>
+        <!-- Number font library guidance (only for number fonts) -->
+        <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
+          <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
+            Custom your number fonts
+          </button>
+        </div> -->
+        <!-- Search (extracted component) -->
+        <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
+        <!-- Recent fonts -->
+        <RecentFontList
+            :fonts="recentFonts"
+            :model-value="modelValue"
+            :expanded="expandedSections['recent']"
+            :type="type"
+            @select="selectFont"
+            @toggle="() => toggleSection('recent')"
+        />
+        <!-- Designer available fonts (paginated by usage) -->
+        <DesignerFontList
+            :model-value="modelValue"
+            :type="type"
+            @select="selectFont"
+            @scroll="onDesignerScroll"
+        />
       </div>
-      <!-- Number font library guidance (only for number fonts) -->
-      <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
-        <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
-          Custom your number fonts
-        </button>
-      </div> -->
-      <!-- Search (extracted component) -->
-      <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
-      <!-- Recent fonts -->
-      <RecentFontList
-          :fonts="recentFonts"
-          :model-value="modelValue"
-          :expanded="expandedSections['recent']"
-          :type="type"
-          @select="selectFont"
-          @toggle="() => toggleSection('recent')"
-      />
-      <!-- Designer available fonts (paginated by usage) -->
-      <DesignerFontList
-          :model-value="modelValue"
-          :type="type"
-          @select="selectFont"
-          @scroll="onDesignerScroll"
-      />
-    </div>
+    </Teleport>
     <!-- Add font dialog -->
     <FontImportDialog v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
@@ -47,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
@@ -90,6 +92,9 @@ type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | '
 
 const isOpen = ref<boolean>(false)
 const dialogVisible = ref<boolean>(false)
+const pickerRef = ref<HTMLElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
+const panelStyle = ref<Record<string, string>>({})
 
 // parsed font info moved to child component
 
@@ -110,8 +115,32 @@ const selectedFontFamily = computed(() => {
 })
 
 // 切换面板显示
-const togglePanel = () => {
+const updatePanelPosition = () => {
+  const picker = pickerRef.value
+  if (!picker) return
+
+  const rect = picker.getBoundingClientRect()
+  const viewportPadding = 16
+  const desiredWidth = Math.min(560, window.innerWidth - viewportPadding * 2)
+  const left = Math.min(
+    Math.max(viewportPadding, rect.right - desiredWidth),
+    window.innerWidth - desiredWidth - viewportPadding,
+  )
+
+  panelStyle.value = {
+    top: `${rect.bottom + 4}px`,
+    left: `${left}px`,
+    width: `${desiredWidth}px`,
+    maxWidth: `calc(100vw - ${viewportPadding * 2}px)`,
+  }
+}
+
+const togglePanel = async () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    await nextTick()
+    updatePanelPosition()
+  }
 }
 
 // 切换分组展开/收起
@@ -182,6 +211,7 @@ const selectFont = async (font: FontItem) => {
   emit('change', font.value)
   try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
   fontStore.addRecentFont(font)
+  isOpen.value = false
 }
 
 // 上传完成回调（来自子组件）
@@ -215,7 +245,7 @@ const addCustomFont = () => {
 // 监听点击外部关闭面板
 const handleOutsideClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target?.closest?.('.font-picker')) {
+  if (!pickerRef.value?.contains(target) && !panelRef.value?.contains(target)) {
     isOpen.value = false
   }
 }
@@ -232,10 +262,14 @@ onMounted(async () => {
     } catch {}
   }
   document.addEventListener('click', handleOutsideClick)
+  window.addEventListener('resize', updatePanelPosition)
+  window.addEventListener('scroll', updatePanelPosition, true)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
+  window.removeEventListener('resize', updatePanelPosition)
+  window.removeEventListener('scroll', updatePanelPosition, true)
 })
 
 // When type changes, refresh system and recent fonts for the new type
@@ -278,16 +312,12 @@ void [isMerchantUser, systemSections, openNumberGlyphEditor]
 }
 
 .font-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
+  position: fixed;
   background: var(--studio-surface-raised);
   border: 1px solid var(--studio-border);
   border-radius: 4px;
   box-shadow: var(--studio-shadow-md);
-  z-index: 1000;
+  z-index: 10000;
 }
 
 .font-name {

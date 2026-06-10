@@ -10,6 +10,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import * as elementManager from '@/engine/managers/elementManager'
+import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined): string {
   const option = DateFormatOptions.find((o) => o.value === formatter)
@@ -46,7 +47,7 @@ export function createDate(config: DateElementConfig): FabricElement {
   }
 
   const textCase = (propertiesStore as any).textCase as number | undefined
-  const text = formatDate(new Date(), formatterValue, textCase)
+  const text = formatDate(getSimulatedNow(), formatterValue, textCase)
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -66,7 +67,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     try {
       const currentFormatter = parseInt(String((element as any).formatter))
       const option2 = DateFormatOptions.find((o) => o.value === currentFormatter)
-      const now = new Date()
+      const now = getSimulatedNow()
       const nextText = formatDate(
         now,
         option2 ? currentFormatter : (element as any).formatter,
@@ -156,7 +157,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     const option = DateFormatOptions.find((o) => o.value === nextFormatter)
     if (option) {
       const textCase = (propertiesStore as any).textCase as number | undefined
-      obj.set('text', formatDate(new Date(), nextFormatter, textCase))
+      obj.set('text', formatDate(getSimulatedNow(), nextFormatter, textCase))
     }
   }
 

@@ -5,7 +5,7 @@
     width="min(880px, 95vw)"
     append-to-body
     :before-close="handleClose"
-    :z-index="3000"
+    :z-index="resolvedZIndex"
     class="device-selector-dialog"
   >
     <div class="device-selector-content">
@@ -75,6 +75,8 @@ import { useI18n } from '@/i18n'
 
 interface Props {
   modelValue: boolean
+  autoOpenWhenMissing?: boolean
+  zIndex?: number
 }
 
 interface Emits {
@@ -87,6 +89,7 @@ const emit = defineEmits<Emits>()
 
 const userStore = useUserStore()
 const { t } = useI18n()
+const resolvedZIndex = computed(() => props.zIndex ?? 3000)
 
 const visible = ref(false)
 const loading = ref(false)
@@ -141,6 +144,7 @@ watch(
 
 // 当用户还没有绑定设备时，组件挂载后自动弹出设备选择对话框（同时只会有一个实例显示）
 onMounted(() => {
+  if (props.autoOpenWhenMissing === false) return
   // 已经是可见状态时不再重复触发
   if (visible.value) return
 

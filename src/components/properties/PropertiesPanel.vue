@@ -138,6 +138,7 @@ import DataPropertyDialog from '@/components/properties/dialogs/DataPropertyDial
 import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDialog.vue'
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
+import { useHistoryStore } from '@/stores/historyStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
@@ -149,13 +150,19 @@ const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
+const historyStore = useHistoryStore()
 const { t } = useI18n()
+
+const commitHistory = (reason) => {
+  historyStore.saveState(`properties:${reason}`)
+}
 
 const textCase = computed({
   get: () => propertiesStore.textCase,
   set: (value) => {
     propertiesStore.textCase = Number(value)
     getDataSimulatorEngine().updateCanvas()
+    commitHistory('text-case')
   },
 })
 
@@ -164,6 +171,7 @@ const labelLengthType = computed({
   set: (value) => {
     propertiesStore.labelLengthType = Number(value)
     getDataSimulatorEngine().updateCanvas()
+    commitHistory('label-length')
   },
 })
 
@@ -172,6 +180,7 @@ const showUnit = computed({
   set: (value) => {
     propertiesStore.showUnit = Boolean(value)
     getDataSimulatorEngine().updateCanvas()
+    commitHistory('show-unit')
   },
 })
 
@@ -244,6 +253,7 @@ const deleteProperty = async (key) => {
     )
 
     propertiesStore.deleteProperty(key)
+    commitHistory('delete-property')
     ElMessage({
       type: 'success',
       message: 'Property deleted successfully',
@@ -256,6 +266,7 @@ const deleteProperty = async (key) => {
 // 处理属性确认
 const handlePropertyConfirm = (propertyData) => {
   propertiesStore.addProperty(propertyData)
+  commitHistory('upsert-property')
 }
 
 // 获取目标选项

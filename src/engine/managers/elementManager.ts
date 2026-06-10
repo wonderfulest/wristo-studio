@@ -11,6 +11,7 @@ import type { AnyElementConfig } from '@/types/elements'
 import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useHistoryStore } from '@/stores/historyStore'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -21,6 +22,11 @@ export function registerElementInstance(element: FabricElement | null | undefine
   const id = (element as any).id
   if (id == null) return
   elementMap.set(String(id), element)
+}
+
+export function syncElementInstancesFromCanvas(elements: FabricElement[]) {
+  elementMap.clear()
+  elements.forEach((element) => registerElementInstance(element))
 }
 
 export function unregisterElementInstance(target: string | FabricElement | null | undefined) {
@@ -35,18 +41,18 @@ export function getElementById(id: string | number | null | undefined): FabricEl
   return elementMap.get(String(id))
 }
 
-export function addElement(type: ElementType, config: AnyElementConfig) {
+export async function addElement(type: ElementType, config: AnyElementConfig): Promise<FabricElement | null | undefined> {
   const handler = getElementHandler(type)
   if (!handler || !handler.add) {
     throw new Error(`[ElementManager] addElement: unknown type ${type}`)
   }
   // 标准化调用：由调用方保证 config.eleType 与 type 一致
-  const element = handler.add(config) as FabricElement | null | undefined
+  const element = await handler.add(config) as FabricElement | null | undefined
   registerElementInstance(element as any)
   return element
 }
 
-export function updateElement(element: FabricElement, patch: any) {
+export async function updateElement(element: FabricElement, patch: any): Promise<void> {
   if (!element) return
 
   const id = (element as any).id
@@ -76,14 +82,14 @@ export function updateElement(element: FabricElement, patch: any) {
     console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
     return
   }
-  handler.update(resolved, patch)
+  await handler.update(resolved, patch)
 }
 
-export function updateElementById(id: string | number | null | undefined, patch: any) {
+export async function updateElementById(id: string | number | null | undefined, patch: any): Promise<void> {
   if (id == null) return
   const resolved = getElementById(id)
   if (resolved) {
-    updateElement(resolved, patch)
+    await updateElement(resolved, patch)
     return
   }
   const canvasStore = useCanvasStore()
@@ -91,7 +97,7 @@ export function updateElementById(id: string | number | null | undefined, patch:
   const found = (canvas?.getObjects?.() || []).find((o: any) => o?.id != null && String(o.id) === String(id)) as FabricElement | undefined
   if (!found) return
   registerElementInstance(found)
-  updateElement(found, patch)
+  await updateElement(found, patch)
 }
 
 export function removeElement(element: FabricElement) {
@@ -123,7 +129,6 @@ export function removeElement(element: FabricElement) {
   // 从 elementDataStore 中移除
   const elementDataStore = useElementDataStore()
   elementDataStore.removeElement(String(id))
-  console.log('[ElementManager] removeElement: removed from elementDataStore', { id })
 
   try {
     if (id != null) {
@@ -132,6 +137,8 @@ export function removeElement(element: FabricElement) {
   } catch (e) {
     console.warn('[ElementManager] removeElement: remove layer failed', { id: (element as any).id, e })
   }
+
+  useHistoryStore().saveState('remove:element', { coalesceIfSameFabric: true })
 }
 
 /**
@@ -153,11 +160,17 @@ export function nudgeSelection(direction: 'left' | 'right' | 'up' | 'down', step
     if (!obj) return
     const left = Number(obj.left ?? 0)
     const top = Number(obj.top ?? 0)
-    obj.set({ left: left + dx, top: top + dy })
+    const nextLeft = left + dx
+    const nextTop = top + dy
+    obj.set({ left: nextLeft, top: nextTop })
     obj.setCoords?.()
+    if (obj.id != null) {
+      useElementDataStore().patchElement(String(obj.id), { left: nextLeft, top: nextTop } as any)
+    }
   })
 
   canvas.requestRenderAll?.()
+  useHistoryStore().saveState(`nudge:${direction}`)
 }
 
 /**
@@ -178,7 +191,11 @@ export function changeSelectionFontSize(delta: number): void {
     const next = Math.max(1, current + delta)
     ;(obj as any).set?.('fontSize', next)
     obj.setCoords?.()
+    if ((obj as any).id != null) {
+      useElementDataStore().patchElement(String((obj as any).id), { fontSize: next } as any)
+    }
   })
 
   canvas.requestRenderAll?.()
+  useHistoryStore().saveState(`font-size:${delta > 0 ? 'increase' : 'decrease'}`)
 }

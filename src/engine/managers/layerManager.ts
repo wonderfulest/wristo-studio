@@ -2,6 +2,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { getElementById } from '@/engine/managers/elementManager'
 import type { LayerElement, MinimalFabricLike } from '@/types/layer'
+import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 
 function isFixedLayer(obj: any): boolean {
   const t = String(obj?.eleType ?? '')
@@ -45,11 +46,12 @@ export function syncLayersFromCanvas(): void {
 
   if (backgroundObj) {
     const bgId = String(backgroundObj.id ?? 'background')
+    const selectable = !isDefaultBackgroundElement(backgroundObj)
     nextLayers.unshift({
       id: bgId,
       visible: backgroundObj.visible ?? true,
-      locked: false,
-      selectable: true,
+      locked: isDefaultBackgroundElement(backgroundObj),
+      selectable,
       eleType: String(backgroundObj.eleType ?? 'background'),
       element: backgroundObj as MinimalFabricLike,
     })

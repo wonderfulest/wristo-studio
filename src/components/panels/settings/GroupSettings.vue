@@ -45,6 +45,7 @@ import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import { fontSizes, originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -60,6 +61,7 @@ const baseStore = useBaseStore()
 const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
 const elementDataStore = useElementDataStore()
+const historyStore = useHistoryStore()
 
 const props = defineProps<{
   elements: FabricElement[]
@@ -89,6 +91,10 @@ const formModel = reactive({
   dataProperty: '',
   goalProperty: '',
 })
+
+const commitHistory = (reason: string) => {
+  historyStore.saveState(`group:${reason}`)
+}
 
 watch(dataProperty, (val) => {
   formModel.dataProperty = val
@@ -131,6 +137,7 @@ const updateDataProperty = () => {
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('dataProperty')
+      commitHistory('data-property')
     })
   }
 }
@@ -182,6 +189,7 @@ const updateGoalProperty = () => {
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('goalProperty')
+      commitHistory('goal-property')
     })
   }
 }
@@ -237,22 +245,34 @@ const fontType = computed(() => {
 const updateFontSize = () => {
   for (const element of props.elements) {
     element.set('fontSize', fontSize.value)
+    if ((element as any).id) {
+      elementDataStore.patchElement(String((element as any).id), { fontSize: fontSize.value } as any)
+    }
   }
   baseStore.canvas?.renderAll()
+  commitHistory('font-size')
 }
 
 const updateTextColor = () => {
   for (const element of props.elements) {
     element.set('fill', textColor.value)
+    if ((element as any).id) {
+      elementDataStore.patchElement(String((element as any).id), { fill: textColor.value } as any)
+    }
   }
   baseStore.canvas?.renderAll()
+  commitHistory('text-color')
 }
 
 const updateFontFamily = () => {
   for (const element of props.elements) {
     element.set('fontFamily', fontFamily.value)
+    if ((element as any).id) {
+      elementDataStore.patchElement(String((element as any).id), { fontFamily: fontFamily.value } as any)
+    }
   }
   baseStore.canvas?.renderAll()
+  commitHistory('font-family')
 }
 
 const updateOriginX = (originXVal: string) => {

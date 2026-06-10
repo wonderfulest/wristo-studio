@@ -20,11 +20,11 @@ export function createHistoryManager(
   store: ReturnType<typeof useHistoryStore> = useHistoryStore(),
 ): HistoryManagerHandle {
   const undo = () => {
-    store.undo()
+    void store.undo()
   }
 
   const redo = () => {
-    store.redo()
+    void store.redo()
   }
 
   const canUndo = () => store.canUndo()

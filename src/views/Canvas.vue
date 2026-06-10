@@ -1,5 +1,6 @@
 <template>
   <div class="canvas-wrapper" :style="{ '--canvas-margin': `${CANVAS_MARGIN}px` }">
+    <div class="watch-face-backdrop" :style="watchFaceBackdropStyle"></div>
     <canvas ref="canvasRef"></canvas>
     <DeviceFrameOverlay :canvas-offset="CANVAS_MARGIN" />
   </div>
@@ -46,6 +47,16 @@ let guidelineManager: GuidelineManagerHandle | null = null
 const watchSize = computed(() => designStore.designSpec.width)
 const watchWidth = computed(() => designStore.designSpec.width)
 const watchHeight = computed(() => designStore.designSpec.height)
+const watchFaceBackdropStyle = computed(() => {
+  const zoom = Number(editorStore.zoomLevel || 1)
+  return {
+    left: `${CANVAS_MARGIN}px`,
+    top: `${CANVAS_MARGIN}px`,
+    width: `${Number(watchWidth.value || 0) * zoom}px`,
+    height: `${Number(watchHeight.value || 0) * zoom}px`,
+    borderRadius: watchWidth.value === watchHeight.value ? '50%' : '0',
+  }
+})
 // 历史记录控制器（Pinia historyStore + Manager 封装）
 const historyStore = useHistoryStore()
 const historyManager: HistoryManagerHandle = createHistoryManager(historyStore)
@@ -91,6 +102,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   getDataSimulatorEngine().stop()
+  historyManager.dispose()
   disposeCanvasManager()
   zoomManager?.dispose()
   zoomManager = null
@@ -201,6 +213,13 @@ defineExpose({
   background: var(--studio-surface-soft);
 }
 
+.watch-face-backdrop {
+  position: absolute;
+  background: #000000;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .canvas-container {
   background: transparent;
   border-radius: 4px;
@@ -218,7 +237,11 @@ defineExpose({
   border-radius: 4px;
   position: relative;
   overflow: visible;
-  z-index: 1;
+  z-index: 2;
+}
+
+.canvas-wrapper :deep(.lower-canvas) {
+  background-color: transparent;
 }
 
 .zoom-level {

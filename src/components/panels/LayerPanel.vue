@@ -71,6 +71,7 @@ import { removeElement, getElementById } from '@/engine/managers/elementManager'
 import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager'
 import { useI18n } from '@/i18n'
 import type { LayerElement } from '@/types/layer'
+import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -300,6 +301,13 @@ const selectLayer = async (layer: any): Promise<void> => {
   if (canvas && layer) {
     const obj = getElementById(layer.id) ?? layer.element
     if (obj) {
+      if (isDefaultBackgroundElement(obj)) {
+        canvas.discardActiveObject?.()
+        canvas.renderAll?.()
+        canvasStore.clearActiveIds()
+        debouncedUpdateElements()
+        return
+      }
       canvas.setActiveObject?.(obj as any)
       canvas.renderAll?.()
       requestAnimationFrame(() => {
