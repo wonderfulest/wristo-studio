@@ -289,8 +289,9 @@ const setupElementListeners = (): void => {
 
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: any): Promise<void> => {
+  const isBackgroundLayer = String(layer?.eleType ?? '') === 'background'
   // do not allow selecting locked layers from panel
-  if ((layer as { locked?: boolean }).locked) {
+  if ((layer as { locked?: boolean }).locked && !isBackgroundLayer) {
     return
   }
   if (String(layer?.eleType ?? '') === 'global') {
@@ -300,7 +301,17 @@ const selectLayer = async (layer: any): Promise<void> => {
   if (canvas && layer) {
     const obj = getElementById(layer.id) ?? layer.element
     if (obj) {
+      if (isBackgroundLayer) {
+        canvas.discardActiveObject?.()
+        canvasStore.setActiveIds([String(layer.id)])
+        layerStore.selectOne(String(layer.id))
+        activeElements.value = [obj as MinimalFabricLike]
+        selectedIds.value = [String(layer.id)]
+        canvas.renderAll?.()
+        return
+      }
       canvas.setActiveObject?.(obj as any)
+      layerStore.selectOne(String(layer.id))
       canvas.renderAll?.()
       requestAnimationFrame(() => {
         const actives = (canvas.getActiveObjects?.() as unknown as MinimalFabricLike[]) || []
@@ -320,8 +331,11 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
   const layer = layers.value.find((l) => l.id === layerId)
   if (!layer) return false
-  if ((layer as any).locked) return false
-  const result = selectedIds.value.includes(layerId)
+  if ((layer as any).locked && String((layer as any).eleType ?? '') !== 'background') return false
+  const result =
+    selectedIds.value.includes(layerId) ||
+    canvasStore.activeIds.includes(layerId) ||
+    layerStore.isSelected(layerId)
   return result
 }
 

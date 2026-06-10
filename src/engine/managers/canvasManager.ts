@@ -41,12 +41,21 @@ function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | nu
   canvasStore.setActiveIds(ids)
 }
 
-function rejectDefaultBackgroundSelection(canvasStore: any, canvas: FabricCanvas): boolean {
-  const activeObjects = canvas.getActiveObjects?.() as any[]
-  if (!activeObjects?.some((obj) => isDefaultBackgroundElement(obj))) return false
+function clearCanvasSelection(layerStore: any, canvasStore: any, canvas: FabricCanvas): void {
   canvas.discardActiveObject?.()
   canvas.requestRenderAll?.()
   canvasStore.clearActiveIds()
+  layerStore.clearSelected()
+}
+
+function isBackgroundElement(obj: unknown): boolean {
+  return String((obj as { eleType?: unknown } | null | undefined)?.eleType ?? '') === 'background'
+}
+
+function rejectBackgroundSelection(layerStore: any, canvasStore: any, canvas: FabricCanvas): boolean {
+  const activeObjects = canvas.getActiveObjects?.() as any[]
+  if (!activeObjects?.some((obj) => isBackgroundElement(obj) || isDefaultBackgroundElement(obj))) return false
+  clearCanvasSelection(layerStore, canvasStore, canvas)
   return true
 }
 
@@ -128,8 +137,13 @@ export function initCanvasManager(
 
   // 选择事件同步到 canvasStore
   canvas.on({
+    'mouse:down': (event) => {
+      const target = (event as unknown as { target?: unknown }).target
+      if (target && !isBackgroundElement(target) && !isDefaultBackgroundElement(target)) return
+      clearCanvasSelection(layerStore, canvasStore, canvas)
+    },
     'selection:created': () => {
-      if (rejectDefaultBackgroundSelection(canvasStore, canvas)) return
+      if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
@@ -138,7 +152,7 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:updated': () => {
-      if (rejectDefaultBackgroundSelection(canvasStore, canvas)) return
+      if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
       if (active && active.type === 'activeselection') {
         active.set({ hasControls: false })
@@ -148,6 +162,7 @@ export function initCanvasManager(
     },
     'selection:cleared': () => {
       canvasStore.clearActiveIds()
+      layerStore.clearSelected()
     },
   })
 

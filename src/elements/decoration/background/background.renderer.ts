@@ -23,12 +23,8 @@ function createPlaceholderImageElement(): HTMLImageElement {
   return img
 }
 
-function setActiveBackgroundIfSelectable(canvas: any, bg: FabricImage): void {
-  if (isDefaultBackgroundUrl((bg as any).wristoImageUrl)) {
-    canvas.discardActiveObject?.()
-    return
-  }
-  canvas.setActiveObject(bg as unknown as FabricObject)
+function clearActiveBackground(canvas: any): void {
+  canvas.discardActiveObject?.()
 }
 
 async function setFabricImageSource(
@@ -88,7 +84,6 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const isDefault = isDefaultBackgroundUrl((imgObj as any).wristoImageUrl ?? config.imageUrl)
   const hasManualLockState = Boolean((imgObj as any).wristoLayerLockOverridden)
   const locked = hasManualLockState ? Boolean((imgObj as any).locked) : isDefault
-  const selectable = !locked
   const originX = (config.originX as any) ?? (imgObj as any).originX ?? 'center'
   const originY = (config.originY as any) ?? (imgObj as any).originY ?? 'center'
 
@@ -99,17 +94,17 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
     originY,
     scaleX: targetW / rawW,
     scaleY: targetH / rawH,
-    selectable,
-    evented: selectable,
+    selectable: false,
+    evented: false,
     hasControls: false,
-    hasBorders: selectable,
+    hasBorders: false,
     locked,
     lockMovementX: true,
     lockMovementY: true,
     lockScalingX: true,
     lockScalingY: true,
     lockRotation: true,
-    hoverCursor: selectable ? 'pointer' : 'default',
+    hoverCursor: 'default',
   } as any)
 
   if (config.left != null) imgObj.set('left', Number(config.left) as never)
@@ -156,12 +151,12 @@ export async function createBackground(config: BackgroundElementConfig): Promise
       }
     }
     if (_.isEmpty(config.imageUrl) && (existing as any).wristoImageUrl) {
-      setActiveBackgroundIfSelectable(canvas, existing)
+      clearActiveBackground(canvas)
       canvas.requestRenderAll?.()
       return existing as any
     }
     await updateBackground(existing as any, config)
-    setActiveBackgroundIfSelectable(canvas, existing)
+    clearActiveBackground(canvas)
     canvas.requestRenderAll?.()
     return existing as any
   }
@@ -197,7 +192,7 @@ export async function createBackground(config: BackgroundElementConfig): Promise
     canvas.set({ clipPath: canvasStore.watchFaceCircle as any })
   }
   layerStore.addLayer(img as any)
-  setActiveBackgroundIfSelectable(canvas, img)
+  clearActiveBackground(canvas)
   canvas.requestRenderAll?.()
   return img as unknown as FabricElement
 }

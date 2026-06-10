@@ -1,5 +1,9 @@
 <template>
-  <div class="canvas-wrapper" :style="{ '--canvas-margin': `${CANVAS_MARGIN}px` }">
+  <div
+    class="canvas-wrapper"
+    :style="{ '--canvas-margin': `${CANVAS_MARGIN}px` }"
+    @pointerdown="handleWrapperPointerDown"
+  >
     <div class="watch-face-backdrop" :style="watchFaceBackdropStyle"></div>
     <canvas ref="canvasRef"></canvas>
     <DeviceFrameOverlay :canvas-offset="CANVAS_MARGIN" />
@@ -126,6 +130,28 @@ const updateFixedLayersForCanvasSize = () => {
   }
 
   baseStore.canvas?.requestRenderAll?.()
+}
+
+const clearCanvasSelection = () => {
+  const canvas = baseStore.canvas
+  if (!canvas) return
+  if (!canvas.getActiveObjects?.().length) {
+    canvasStore.clearActiveIds()
+    layerStore.clearSelected()
+    return
+  }
+
+  canvas.discardActiveObject?.()
+  canvas.requestRenderAll?.()
+  canvasStore.clearActiveIds()
+  layerStore.clearSelected()
+}
+
+const handleWrapperPointerDown = (event: PointerEvent) => {
+  const target = event.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('.canvas-container')) return
+  clearCanvasSelection()
 }
 
 const syncElementDataForCanvasSize = (from: DesignSize, to: DesignSize) => {
