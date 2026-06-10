@@ -36,7 +36,7 @@ const SCALAR_FIELDS = new Set([
   'headRy',
   'headGap',
 ])
-const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image', 'background'])
+const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image'])
 
 function safeRatio(next: number, prev: number): number {
   if (!Number.isFinite(next) || !Number.isFinite(prev) || prev === 0) return 1
@@ -152,12 +152,11 @@ function scaleKnownObjectFields(obj: any, from: DesignSize, to: DesignSize): boo
 function scaleBackgroundObject(obj: any, from: DesignSize, to: DesignSize): void {
   const ratioX = safeRatio(to.width, from.width)
   const ratioY = safeRatio(to.height, from.height)
-  const ratioScalar = Math.min(ratioX, ratioY)
 
   scaleObjectNumber(obj, 'left', ratioX)
   scaleObjectNumber(obj, 'top', ratioY)
-  scaleObjectNumber(obj, 'scaleX', ratioScalar)
-  scaleObjectNumber(obj, 'scaleY', ratioScalar)
+  scaleObjectNumber(obj, 'scaleX', ratioX)
+  scaleObjectNumber(obj, 'scaleY', ratioY)
 
   if (obj?.__element?.config) {
     obj.__element.config = scaleElementConfig(obj.__element.config, from, to)

@@ -160,23 +160,46 @@ const getCurrentDesignSize = (): DesignSize => ({
   height: Number(designStore.designSpec.height || STANDARD_DESIGN_SIZE),
 })
 
+const isNear = (a: unknown, b: number, tolerance = 2): boolean => {
+  const n = Number(a)
+  return Number.isFinite(n) && Math.abs(n - b) <= tolerance
+}
+
+const isElementAlreadyAtCurrentSize = (element: AnyElementConfig, currentSize: DesignSize): boolean => {
+  const anyElement = element as any
+  const eleType = String(anyElement?.eleType ?? anyElement?.type ?? '')
+  if (eleType !== 'background') return false
+
+  const matchesCurrentSize =
+    isNear(anyElement.width, currentSize.width) &&
+    isNear(anyElement.height, currentSize.height)
+  const matchesCurrentCenter =
+    isNear(anyElement.left, currentSize.width / 2) &&
+    isNear(anyElement.top, currentSize.height / 2)
+
+  return matchesCurrentSize || matchesCurrentCenter
+}
+
 const scaleElementsFromStoredSize = (elements: AnyElementConfig[]): AnyElementConfig[] => {
   const currentSize = getCurrentDesignSize()
-  const storedSize = {
+  const standardSize = {
     width: STANDARD_DESIGN_SIZE,
     height: STANDARD_DESIGN_SIZE,
   }
 
   if (
-    currentSize.width === storedSize.width &&
-    currentSize.height === storedSize.height
+    currentSize.width === standardSize.width &&
+    currentSize.height === standardSize.height
   ) {
     return elements
   }
 
-  return elements.map((element) =>
-    scaleElementConfig(element, storedSize, currentSize),
-  )
+  return elements.map((element) => {
+    if (isElementAlreadyAtCurrentSize(element, currentSize)) {
+      return element
+    }
+    return scaleElementConfig(element, standardSize, currentSize)
+  })
 }
 
 // 加载设计配置
@@ -288,7 +311,7 @@ const setupAutoSave = () => {
     saveTimer = window.setInterval(() => {
       try {
         
-        exportStore.saveConfig()
+        exportStore.saveConfig({ validateBindings: false })
       } catch (error) {
         console.error('自动保存失败:', error)
       }
@@ -489,10 +512,6 @@ defineExpose({
   align-items: center;
   overflow: hidden;
   background-color: v-bind(backgroundColor);
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 24px 24px;
   padding: 28px;
   position: relative;
   min-width: 0;

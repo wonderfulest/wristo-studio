@@ -2,7 +2,7 @@ import type { Canvas } from 'fabric'
 
 export interface MinimalBaseStore {
   canvas: Canvas | null
-  generateConfig: () => unknown
+  generateConfig: (options?: { validateBindings?: boolean }) => unknown
 }
 
 export interface HistoryController {

@@ -3,7 +3,7 @@ import { ref, type Ref } from 'vue'
 
 export interface ExportPanelRef {
   uploadApp?: () => Promise<any>
-  saveConfig?: () => Promise<any>
+  saveConfig?: (options?: { validateBindings?: boolean }) => Promise<any>
   downloadConfig?: () => Promise<any>
 }
 
@@ -11,7 +11,7 @@ export interface ExportStoreApi {
   exportPanelRef: Ref<ExportPanelRef | null>
   setExportPanelRef: (ref: ExportPanelRef | null) => void
   uploadApp: () => Promise<any>
-  saveConfig: () => Promise<any>
+  saveConfig: (options?: { validateBindings?: boolean }) => Promise<any>
   downloadConfig: () => Promise<any>
 }
 
@@ -35,9 +35,9 @@ export const useExportStore = defineStore('export', (): ExportStoreApi => {
   }
 
   // 保存配置
-  const saveConfig = async () => {
+  const saveConfig = async (options: { validateBindings?: boolean } = {}) => {
     if (exportPanelRef.value && typeof exportPanelRef.value.saveConfig === 'function') {
-      return await exportPanelRef.value.saveConfig()
+      return await exportPanelRef.value.saveConfig(options)
     } else {
       console.error('ExportPanel组件引用未设置或saveConfig方法不存在')
       throw new Error('保存配置功能不可用')

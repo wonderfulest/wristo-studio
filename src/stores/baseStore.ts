@@ -22,6 +22,10 @@ type Screenshot = string | null
 
 type CanvasLike = Canvas | null
 
+type GenerateConfigStoreOptions = {
+  validateBindings?: boolean
+}
+
 type DeviceDisplayLocation = {
   x: number
   y: number
@@ -355,7 +359,7 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: propertiesStore.textCase,
         labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
-        validateBindings: !this.designLoading,
+        validateBindings: true,
       })
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',
@@ -382,7 +386,7 @@ export const useBaseStore = defineStore('baseStore', {
       canvasStore.toggleTheme()
     },
     // 生成配置（委托给 exportService）
-    generateConfig(): import('@/types/app/config').RuntimeDesignConfig | null {
+    generateConfig(options: GenerateConfigStoreOptions = {}): import('@/types/app/config').RuntimeDesignConfig | null {
       const canvasStore = useCanvasStore()
       const propertiesStore = usePropertiesStore()
       const designStore = useDesignStore()
@@ -394,6 +398,7 @@ export const useBaseStore = defineStore('baseStore', {
         textCase: propertiesStore.textCase,
         labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
+        validateBindings: options.validateBindings ?? false,
       })
     },
   },

@@ -1,5 +1,6 @@
 <template>
   <div class="rulers">
+    <div class="ruler-corner" aria-hidden="true"></div>
     <canvas class="ruler-horizontal" ref="hRef"></canvas>
     <canvas class="ruler-vertical" ref="vRef"></canvas>
     <canvas class="ruler-extensions" ref="extRef"></canvas>
@@ -249,6 +250,18 @@ watch(() => themeStore.currentTheme, () => update())
   right: 0;
   bottom: 0;
   z-index: 10;
+  pointer-events: none;
+}
+.ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--studio-ruler-bg);
+  border-right: 1px solid var(--studio-border);
+  border-bottom: 1px solid var(--studio-border);
+  z-index: 11;
   pointer-events: none;
 }
 .ruler-horizontal {

@@ -78,25 +78,25 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const designSpec = (canvasStore.designStore?.designSpec || {}) as any
   const targetWidth = Number(designSpec.width ?? (designSpec.centerX != null ? designSpec.centerX * 2 : undefined) ?? 454)
   const targetHeight = Number(designSpec.height ?? (designSpec.centerY != null ? designSpec.centerY * 2 : undefined) ?? targetWidth)
-  const targetSize = Math.min(targetWidth, targetHeight)
   const cx = Number(designSpec.centerX ?? targetWidth / 2)
   const cy = Number(designSpec.centerY ?? targetHeight / 2)
 
   const rawW = Math.max(1, Number((imgObj as any).width ?? 1))
   const rawH = Math.max(1, Number((imgObj as any).height ?? 1))
-  const fallbackSize = targetSize
-  const targetW = Math.max(1, Number(config.width ?? fallbackSize))
-  const targetH = Math.max(1, Number(config.height ?? fallbackSize))
+  const targetW = Math.max(1, Number(config.width ?? targetWidth))
+  const targetH = Math.max(1, Number(config.height ?? targetHeight))
   const isDefault = isDefaultBackgroundUrl((imgObj as any).wristoImageUrl ?? config.imageUrl)
   const hasManualLockState = Boolean((imgObj as any).wristoLayerLockOverridden)
   const locked = hasManualLockState ? Boolean((imgObj as any).locked) : isDefault
   const selectable = !locked
+  const originX = (config.originX as any) ?? (imgObj as any).originX ?? 'center'
+  const originY = (config.originY as any) ?? (imgObj as any).originY ?? 'center'
 
   imgObj.set({
     left: cx,
     top: cy,
-    originX: 'center',
-    originY: 'center',
+    originX,
+    originY,
     scaleX: targetW / rawW,
     scaleY: targetH / rawH,
     selectable,

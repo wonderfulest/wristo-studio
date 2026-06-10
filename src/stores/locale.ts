@@ -1,9 +1,24 @@
 import { defineStore } from 'pinia'
 
-export const SUPPORTED_LOCALES = ['en', 'zh'] as const
+export const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'pl', 'ja', 'ko', 'zh', 'zh-tw'] as const
 export type SupportedLocale = typeof SUPPORTED_LOCALES[number]
 
 export const DEFAULT_LOCALE: SupportedLocale = 'en'
+
+const DOCUMENT_LANG_BY_LOCALE: Record<SupportedLocale, string> = {
+  en: 'en',
+  zh: 'zh-CN',
+  'zh-tw': 'zh-TW',
+  ja: 'ja',
+  ko: 'ko',
+  de: 'de',
+  fr: 'fr',
+  es: 'es',
+  it: 'it',
+  pt: 'pt',
+  nl: 'nl',
+  pl: 'pl',
+}
 
 export function normalizeLocale(value: unknown): SupportedLocale {
   const locale = String(value || '').toLowerCase()
@@ -23,7 +38,7 @@ export const useLocaleStore = defineStore('studio-locale', {
     },
     syncDocumentLang() {
       if (typeof document !== 'undefined') {
-        document.documentElement.lang = this.currentLocale === 'zh' ? 'zh-CN' : 'en'
+        document.documentElement.lang = DOCUMENT_LANG_BY_LOCALE[this.currentLocale]
       }
     },
   },

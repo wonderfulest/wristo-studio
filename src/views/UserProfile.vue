@@ -31,15 +31,20 @@
           </div>
 
           <div class="identity-copy">
-            <p class="eyebrow">{{ t('profile.studioAccount') }}</p>
             <h1 id="profile-title">{{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}</h1>
             <p>{{ userInfo?.email || t('profile.noEmail') }}</p>
           </div>
 
           <div class="profile-actions">
-            <el-button v-if="!editMode" type="primary" class="primary-action" @click="startEdit">
+            <el-button
+              v-if="!editMode"
+              type="primary"
+              class="primary-action edit-icon-action"
+              :aria-label="t('common.edit')"
+              :title="t('common.edit')"
+              @click="startEdit"
+            >
               <Icon icon="material-symbols:edit-rounded" />
-              {{ t('profile.editProfile') }}
             </el-button>
             <template v-else>
               <el-button class="secondary-action" @click="cancelEdit">{{ t('common.cancel') }}</el-button>
@@ -308,13 +313,13 @@ watch(
 
 .avatar-wrap {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 128px;
+  height: 128px;
 }
 
 .profile-avatar {
-  width: 100px;
-  height: 100px;
+  width: 128px;
+  height: 128px;
   border-radius: 50%;
   object-fit: cover;
   border: 0;
@@ -330,8 +335,8 @@ watch(
 
 .avatar-action {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  right: 8px;
+  bottom: 8px;
   width: 44px;
   height: 44px;
   border: 0;
@@ -362,15 +367,6 @@ watch(
   text-align: center;
 }
 
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--studio-text-subtle);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .identity-copy h1,
 .section-header h2 {
   margin: 0;
@@ -399,7 +395,7 @@ watch(
 
 .primary-action,
 .secondary-action {
-  min-height: 44px;
+  min-height: 36px;
   border-radius: 8px;
   font-weight: 700;
 }
@@ -407,10 +403,29 @@ watch(
 .primary-action {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--studio-primary);
   border-color: var(--studio-primary);
-  box-shadow: 0 10px 20px rgba(15, 107, 104, 0.18);
+  padding: 0 14px;
+  box-shadow: 0 8px 16px rgba(15, 107, 104, 0.16);
+}
+
+.primary-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.edit-icon-action {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.edit-icon-action svg {
+  width: 18px;
+  height: 18px;
 }
 
 .profile-card {
@@ -550,10 +565,11 @@ watch(
 .section-header {
   justify-content: space-between;
   align-items: center;
-  min-height: 70px;
-  margin-bottom: 12px;
-  padding: 14px 4px 18px;
+  min-height: 72px;
+  margin-bottom: 0;
+  padding: 14px 18px 18px;
   background: var(--studio-bg);
+  border-bottom: 1px solid var(--studio-border);
 }
 
 .section-title-icon {
@@ -709,8 +725,8 @@ watch(
 
   .avatar-wrap,
   .profile-avatar {
-    width: 104px;
-    height: 104px;
+    width: 116px;
+    height: 116px;
   }
 
   .section-header {
@@ -721,6 +737,11 @@ watch(
   .profile-actions,
   .profile-actions :deep(.el-button) {
     width: 100%;
+  }
+
+  .profile-actions .edit-icon-action {
+    width: 36px;
+    min-width: 36px;
   }
 
   .profile-actions :deep(.el-button + .el-button) {

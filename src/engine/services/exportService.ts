@@ -157,7 +157,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     textCase,
     labelLengthType,
     showUnit,
-    validateBindings = true,
+    validateBindings = false,
   } = options
 
   if (!canvas || !canvas.getObjects().length) {

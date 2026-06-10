@@ -25,12 +25,7 @@
 
     <div class="speed-control">
       <span>{{ t('timeSimulator.speed') }}</span>
-      <el-select
-        v-model="speedMultiplier"
-        size="small"
-        class="speed-select"
-        @change="handleSpeedChange"
-      >
+      <el-select v-model="speedMultiplier" size="small" class="speed-select" @change="handleSpeedChange">
         <el-option label="0x" :value="0" />
         <el-option label="1x" :value="1" />
         <el-option label="60x" :value="60" />
@@ -51,17 +46,16 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from '@/i18n'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
-import {
-  advanceSimulatedTime,
-  getSimulatedClockSnapshot,
-  resetSimulatedClock,
-  setSimulatedSpeed,
-} from '@/engine/simulator/simulatedClock'
+import { advanceSimulatedTime, getSimulatedClockSnapshot, resetSimulatedClock, setSimulatedSpeed } from '@/engine/simulator/simulatedClock'
 
 const { t } = useI18n()
 const currentTime = ref<Date>(getSimulatedClockSnapshot().currentTime)
 const speedMultiplier = ref<number>(getSimulatedClockSnapshot().speedMultiplier)
 let timer: number | null = null
+
+const pad2 = (value: number) => String(value).padStart(2, '0')
+
+const formatTimeLabel = (date: Date) => `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 
 const syncFromClock = () => {
   const snapshot = getSimulatedClockSnapshot()
@@ -89,16 +83,7 @@ const resetClock = () => {
   refreshCanvas()
 }
 
-const timeLabel = computed(() =>
-  new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(currentTime.value),
-)
+const timeLabel = computed(() => formatTimeLabel(currentTime.value))
 
 onMounted(() => {
   timer = window.setInterval(syncFromClock, 500)

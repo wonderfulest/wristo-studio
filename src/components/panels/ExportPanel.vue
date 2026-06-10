@@ -83,6 +83,7 @@ import { useRouter } from 'vue-router'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useI18n } from '@/i18n'
+import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -134,6 +135,17 @@ const updateProgress = (status, progress) => {
   if (loadingInstance) {
     loadingInstance.setText(`${status} (${progress}%)`)
   }
+}
+
+const getBackgroundImagePayload = (configJson) => {
+  const bgElement = (configJson && Array.isArray(configJson.elements))
+    ? configJson.elements.find((e) => e && (e.eleType === 'background' || e.type === 'background'))
+    : null
+  const imageUrl = bgElement?.imageUrl
+  if (!imageUrl || isDefaultBackgroundUrl(imageUrl)) {
+    return null
+  }
+  return { url: imageUrl }
 }
 
 const openDialog = () => {
@@ -191,7 +203,7 @@ const uploadScreenshot = async () => {
 const isOperationLocked = ref(false)
 
 // 定时轮训保存配置，只需要保存 name, kpayId, configJson 即可
-const saveConfig = async () => {
+const saveConfig = async (options = {}) => {
   if (router.currentRoute.value.path !== '/design') {
     messageStore.error(t('export.notDesignPage'))
     return
@@ -202,9 +214,14 @@ const saveConfig = async () => {
   }
 
   try {
+    const config = baseStore.generateConfig({
+      validateBindings: options.validateBindings ?? true,
+    })
+    if (!config) return ''
+
     const data = {
       name: baseStore.watchFaceName,
-      configJson: JSON.stringify(baseStore.generateConfig()),
+      configJson: JSON.stringify(config),
       // userId: user.value.id
     }
     if (baseStore.id) {
@@ -235,7 +252,7 @@ const uploadApp = async () => {
     return -1
   }
   // 生成配置
-  const config = baseStore.generateConfig()
+  const config = baseStore.generateConfig({ validateBindings: true })
   if (!config) {
     return -1
   }
@@ -266,24 +283,7 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    const configJson = baseStore.generateConfig()
-    if (!configJson) {
-      // Failed to generate configuration, abort upload
-      currentStatus = t('export.generateConfigFailed')
-      currentProgress = 0
-      if (loadingInstance) {
-        loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
-      }
-      messageStore.error(t('export.generateConfigAborted'))
-      // 关闭上传状态与遮罩
-      uploading.value = false
-      clearTimeout(uploadTimeoutTimer)
-      if (loadingInstance) {
-        loadingInstance.close()
-        loadingInstance = null
-      }
-      return -1
-    }
+    const configJson = config
     // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
     currentStatus = t('export.processingBackground')
     currentProgress = 20
@@ -305,10 +305,7 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    const bgElement = (configJson && Array.isArray(configJson.elements))
-      ? configJson.elements.find((e) => e && (e.eleType === 'background' || e.type === 'background'))
-      : null
-    const backgroundImage = bgElement && bgElement.imageUrl ? { url: bgElement.imageUrl } : null
+    const backgroundImage = getBackgroundImagePayload(configJson)
 
     const data = {
       uid: baseStore.id,
