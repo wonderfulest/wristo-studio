@@ -51,15 +51,7 @@
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
           @open="emit('open', design)"
-          @copy="emit('copy', design)"
-          @edit="emit('edit', design)"
           @delete="emit('delete', design)"
-          @build-prg="emit('build-prg', design)"
-          @run-prg="emit('run-prg', design)"
-          @submit="emit('submit', design)"
-          @download-package="emit('download-package', design)"
-          @go-live="emit('go-live', design)"
-          @copy-name="(name: string) => emit('copy-name', name)"
         />
       </el-col>
     </el-row>
@@ -96,15 +88,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'open', design: Design): void
-  (e: 'copy', design: Design): void
-  (e: 'edit', design: Design): void
   (e: 'delete', design: Design): void
-  (e: 'build-prg', design: Design): void
-  (e: 'run-prg', design: Design): void
-  (e: 'submit', design: Design): void
-  (e: 'download-package', design: Design): void
-  (e: 'go-live', design: Design): void
-  (e: 'copy-name', name: string): void
 }>()
 
 const userStore = useUserStore()
@@ -219,8 +203,8 @@ const handleCreateNewProject = () => {
   display: none;
 }
 
-/* 在最近项目区隐藏 DesignCard 头部右上角的操作图标（复制名称 / 编辑 / 删除） */
-.design-grid :deep(.header-actions) {
+/* 在最近项目区仅显示右上角删除按钮 */
+.design-grid :deep(.header-actions .el-button:not(.delete-action)) {
   display: none;
 }
 

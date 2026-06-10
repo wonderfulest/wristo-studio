@@ -3,6 +3,7 @@
     <RecentProjectsSection
       :designs="recentDesigns"
       @open="handleOpenRecentDesign"
+      @delete="confirmDeleteRecentDesign"
     />
 
     <el-divider />
@@ -17,6 +18,22 @@
       :initial-name="projectName"
       @confirm="handleConfirmDialog"
     />
+
+    <el-dialog v-model="deleteDialogVisible" :title="t('project.confirmDelete')" width="30%">
+      <span>{{ t('project.deleteBody') }}</span>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="deleteDialogVisible = false">{{ t('common.cancel') }}</el-button>
+          <el-button
+            type="danger"
+            @click="deleteRecentDesign"
+            :loading="deletingDesignId === designToDelete?.id"
+          >
+            {{ t('project.confirmDeleteButton') }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -46,6 +63,9 @@ const recentDesigns = ref<Design[]>([])
 const dialogVisible = ref(false)
 const projectName = ref('')
 const currentTemplate = ref<Design | null>(null)
+const deleteDialogVisible = ref(false)
+const designToDelete = ref<Design | null>(null)
+const deletingDesignId = ref<number | null>(null)
 
 const generateRandomProjectName = () => {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -143,6 +163,34 @@ const handleOpenRecentDesign = async (design: Design) => {
   } catch (error: any) {
     console.error('[NewProjects] handleOpenRecentDesign error:', error)
     messageStore.error(t('project.openDesignFailed'))
+  }
+}
+
+const confirmDeleteRecentDesign = (design: Design) => {
+  designToDelete.value = design
+  deleteDialogVisible.value = true
+}
+
+const deleteRecentDesign = async () => {
+  const design = designToDelete.value
+  if (!design || deletingDesignId.value === design.id) return
+
+  try {
+    deletingDesignId.value = design.id
+    const response = await designApi.deleteDesign(design.designUid)
+    if (response.code === 0) {
+      messageStore.success(t('project.deleteSuccessful'))
+      deleteDialogVisible.value = false
+      designToDelete.value = null
+      await fetchRecentDesigns()
+    } else {
+      messageStore.error(response.msg || t('project.deleteFailed'))
+    }
+  } catch (error: any) {
+    console.error('[NewProjects] deleteRecentDesign error:', error)
+    messageStore.error(t('project.deleteFailed'))
+  } finally {
+    deletingDesignId.value = null
   }
 }
 

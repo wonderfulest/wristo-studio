@@ -38,10 +38,12 @@
               <!-- 删除（仅管理员和自己的应用可见） -->
               <el-button
                 v-if="isAdminUser || design.user.id === currentUserId"
+                class="delete-action"
                 type="danger"
                 size="small"
                 link
                 @click="emit('delete', design)"
+                :title="t('common.delete')"
               >
                 <el-icon>
                   <Delete />

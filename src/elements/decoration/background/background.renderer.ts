@@ -82,10 +82,11 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const cx = Number(designSpec.centerX ?? targetWidth / 2)
   const cy = Number(designSpec.centerY ?? targetHeight / 2)
 
-  const rawW = Number((imgObj as any).width ?? 1)
-  const rawH = Number((imgObj as any).height ?? 1)
-  const base = Math.min(rawW, rawH) || 1
-  const scale = targetSize / base
+  const rawW = Math.max(1, Number((imgObj as any).width ?? 1))
+  const rawH = Math.max(1, Number((imgObj as any).height ?? 1))
+  const fallbackSize = targetSize
+  const targetW = Math.max(1, Number(config.width ?? fallbackSize))
+  const targetH = Math.max(1, Number(config.height ?? fallbackSize))
   const isDefault = isDefaultBackgroundUrl((imgObj as any).wristoImageUrl ?? config.imageUrl)
 
   imgObj.set({
@@ -93,8 +94,8 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
     top: cy,
     originX: 'center',
     originY: 'center',
-    scaleX: scale,
-    scaleY: scale,
+    scaleX: targetW / rawW,
+    scaleY: targetH / rawH,
     selectable: !isDefault,
     evented: !isDefault,
     hasControls: false,

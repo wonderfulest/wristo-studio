@@ -29,6 +29,10 @@ type DeviceDisplayLocation = {
   height: number
 }
 
+type ViewportTransform = [number, number, number, number, number, number]
+
+const IDENTITY_VIEWPORT_TRANSFORM: ViewportTransform = [1, 0, 0, 1, 0, 0]
+
 const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -38,6 +42,9 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
     image.src = src
   })
 }
+
+const waitForNextFrame = (): Promise<void> =>
+  new Promise((resolve) => requestAnimationFrame(() => resolve()))
 
 const getValidDisplayLocation = (device: GarminDeviceDetailVO | null | undefined): DeviceDisplayLocation | null => {
   const location = device?.simulator?.display?.location
@@ -50,6 +57,56 @@ const getValidDisplayLocation = (device: GarminDeviceDetailVO | null | undefined
   if (width <= 0 || height <= 0) return null
 
   return { x, y, width, height }
+}
+
+const fillWatchFaceBackdrop = (context: CanvasRenderingContext2D, width: number, height: number): void => {
+  context.save()
+  context.fillStyle = '#000000'
+  if (width === height) {
+    context.beginPath()
+    context.arc(width / 2, height / 2, Math.min(width, height) / 2, 0, Math.PI * 2)
+    context.fill()
+  } else {
+    context.fillRect(0, 0, width, height)
+  }
+  context.restore()
+}
+
+const captureDesignCanvasDataURL = async (canvas: AnyObject, width: number, height: number): Promise<string> => {
+  const viewportTransform = canvas.viewportTransform ? ([...canvas.viewportTransform] as ViewportTransform) : null
+
+  try {
+    if (document.fonts?.ready) {
+      await document.fonts.ready
+    }
+    await waitForNextFrame()
+    canvas.setViewportTransform([...IDENTITY_VIEWPORT_TRANSFORM] as ViewportTransform)
+    canvas.renderAll()
+    await waitForNextFrame()
+    const fabricDataURL = canvas.toDataURL({
+      left: 0,
+      top: 0,
+      width,
+      height,
+      multiplier: 1,
+      format: 'png',
+      quality: 1,
+    } as any)
+    const fabricImage = await loadImage(fabricDataURL)
+    const outputCanvas = document.createElement('canvas')
+    outputCanvas.width = Math.max(1, Math.round(width))
+    outputCanvas.height = Math.max(1, Math.round(height))
+    const context = outputCanvas.getContext('2d')
+    if (!context) return fabricDataURL
+    fillWatchFaceBackdrop(context, outputCanvas.width, outputCanvas.height)
+    context.drawImage(fabricImage, 0, 0, outputCanvas.width, outputCanvas.height)
+    return outputCanvas.toDataURL('image/png')
+  } finally {
+    if (viewportTransform) {
+      canvas.setViewportTransform(viewportTransform)
+    }
+    canvas.renderAll()
+  }
 }
 
 export const useBaseStore = defineStore('baseStore', {
@@ -130,12 +187,10 @@ export const useBaseStore = defineStore('baseStore', {
         return this.getFallbackScreenshot()
       }
       try {
-        canvas.renderAll()
-        const canvasDataURL = canvas.toDataURL({
-          multiplier: 1,
-          format: 'png',
-          quality: 1,
-        } as any)
+        const designStore = useDesignStore()
+        const designWidth = Number(designStore.designSpec.width || canvas.getWidth?.() || 0)
+        const designHeight = Number(designStore.designSpec.height || canvas.getHeight?.() || 0)
+        const canvasDataURL = await captureDesignCanvasDataURL(canvas, designWidth, designHeight)
         const dataURL = await this.captureScreenshotWithDeviceFrame(canvasDataURL)
         this.screenshot = dataURL
         return dataURL
@@ -192,6 +247,7 @@ export const useBaseStore = defineStore('baseStore', {
         const context = outputCanvas.getContext('2d')
         if (!context) return canvasDataURL
 
+        context.drawImage(frameImage, 0, 0, outputWidth, outputHeight)
         context.drawImage(
           faceImage,
           Math.round(location.x * scaleX),
@@ -199,7 +255,6 @@ export const useBaseStore = defineStore('baseStore', {
           Math.round(designWidth),
           Math.round(designHeight),
         )
-        context.drawImage(frameImage, 0, 0, outputWidth, outputHeight)
         return outputCanvas.toDataURL('image/png')
       } catch (error) {
         if (import.meta.env.DEV) {

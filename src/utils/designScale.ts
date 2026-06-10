@@ -36,6 +36,7 @@ const SCALAR_FIELDS = new Set([
   'headRy',
   'headGap',
 ])
+const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image', 'background'])
 
 function safeRatio(next: number, prev: number): number {
   if (!Number.isFinite(next) || !Number.isFinite(prev) || prev === 0) return 1
@@ -61,6 +62,7 @@ export function scaleElementConfig(
   const ratioY = safeRatio(to.height, from.height)
   const ratioScalar = Math.min(ratioX, ratioY)
   const next = { ...(config as unknown as Record<string, unknown>) }
+  const shouldKeepUniformSize = UNIFORM_SIZE_ELEMENT_TYPES.has(String(next.eleType ?? ''))
 
   for (const key of Object.keys(next)) {
     if (X_FIELDS.has(key)) {
@@ -68,9 +70,9 @@ export function scaleElementConfig(
     } else if (Y_FIELDS.has(key)) {
       next[key] = scaleNumeric(next[key], ratioY)
     } else if (WIDTH_FIELDS.has(key)) {
-      next[key] = scaleNumeric(next[key], ratioX)
+      next[key] = scaleNumeric(next[key], shouldKeepUniformSize ? ratioScalar : ratioX)
     } else if (HEIGHT_FIELDS.has(key)) {
-      next[key] = scaleNumeric(next[key], ratioY)
+      next[key] = scaleNumeric(next[key], shouldKeepUniformSize ? ratioScalar : ratioY)
     } else if (SCALAR_FIELDS.has(key)) {
       next[key] = scaleNumeric(next[key], ratioScalar)
     }
@@ -81,6 +83,21 @@ export function scaleElementConfig(
   }
 
   return next as unknown as AnyElementConfig
+}
+
+function scaleImageObject(obj: any, from: DesignSize, to: DesignSize): void {
+  const ratioX = safeRatio(to.width, from.width)
+  const ratioY = safeRatio(to.height, from.height)
+  const ratioScalar = Math.min(ratioX, ratioY)
+
+  scaleObjectNumber(obj, 'left', ratioX)
+  scaleObjectNumber(obj, 'top', ratioY)
+  scaleObjectNumber(obj, 'scaleX', ratioScalar)
+  scaleObjectNumber(obj, 'scaleY', ratioScalar)
+
+  if (obj?.__element?.config) {
+    obj.__element.config = scaleElementConfig(obj.__element.config, from, to)
+  }
 }
 
 export function normalizeConfigToStandardSize(
@@ -163,6 +180,12 @@ export function scaleFabricCanvasForDesignSize(
 
     if (obj.eleType === 'background') {
       scaleBackgroundObject(obj, from, to)
+      obj.setCoords?.()
+      continue
+    }
+
+    if (obj.eleType === 'image') {
+      scaleImageObject(obj, from, to)
       obj.setCoords?.()
       continue
     }
