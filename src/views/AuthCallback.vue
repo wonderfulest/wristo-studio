@@ -13,6 +13,7 @@ import type { ApiResponse } from '@/types/api/api'
 import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
+import { getSsoRedirectUri, redirectToSsoLogin } from '@/utils/ssoRedirect'
 
 const loading = ref(true)
 const error = ref('')
@@ -22,7 +23,7 @@ const userStore = useUserStore()
 const { t } = useI18n()
 
 const clientId = 'studio'
-const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
+const redirectUri = getSsoRedirectUri()
 
 onMounted(async () => {
   
@@ -67,19 +68,11 @@ onMounted(async () => {
       }, 100)
     } else {
       error.value = res.msg || t('auth.requestFailed')
-      const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
-      const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
-      setTimeout(() => {
-        window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
-      }, 5000)
+      redirectToSsoLogin('studio', 5000)
     }
   } catch (e: any) {
     error.value = e?.response?.data?.msg || e.message || t('auth.requestFailed')
-    const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
-    const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
-    setTimeout(() => {
-      window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
-    }, 12200)
+    redirectToSsoLogin('studio', 12200)
   } finally {
     loading.value = false
   }

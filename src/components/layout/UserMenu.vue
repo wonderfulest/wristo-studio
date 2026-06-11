@@ -89,6 +89,7 @@ import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import { useI18n } from '@/i18n'
+import { redirectToSsoLogin } from '@/utils/ssoRedirect'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -137,9 +138,7 @@ const toggleDropdown = () => {
 
 const handleLogout = () => {
   userStore.logout()
-  const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL as string
-  const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI as string
-  window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
+  redirectToSsoLogin('studio')
 }
 
 const go = (path: string) => {
