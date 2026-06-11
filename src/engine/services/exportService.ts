@@ -9,6 +9,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { useLocaleStore } from '@/stores/locale'
 import { translate } from '@/i18n'
 import { normalizeConfigToStandardSize } from '@/utils/designScale'
+import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -193,9 +194,9 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     dateId = 0,
     subItemId = 0
 
-  // 背景元素：始终放在 elements[0]
+  // 用户上传的背景元素放在 elements[0]；系统默认黑色 SVG 仅用于画布显示，不导出。
   const bgObj = objects.find((o) => (o as any)?.eleType === 'background')
-  if (bgObj) {
+  if (bgObj && !isDefaultBackgroundElement(bgObj)) {
     try {
       const encoded = encodeElementByRegistry(bgObj) as AnyElementConfig | null
       if (encoded) {

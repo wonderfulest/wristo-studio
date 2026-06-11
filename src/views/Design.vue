@@ -71,6 +71,7 @@ import {
   STANDARD_DESIGN_SIZE,
   type DesignSize,
 } from '@/utils/designScale'
+import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -111,15 +112,15 @@ const ensureBackgroundElement = (config: Partial<DesignConfig> | null): void => 
   if (hasBg) return
 
   const legacyBg = anyConfig.backgroundImage
-  if (!legacyBg || typeof legacyBg !== 'object') return
-
-  const bgUrl = legacyBg.url || ''
-  const bgId = legacyBg.id ?? null
-  if (!bgUrl) return
+  const hasLegacyBg = legacyBg && typeof legacyBg === 'object' && legacyBg.url
+  const bgUrl = hasLegacyBg ? legacyBg.url : DEFAULT_BACKGROUND_IMAGE_URL
+  const bgId = hasLegacyBg ? (legacyBg.id ?? null) : null
 
   const designSpec = designStore.designSpec as any
-  const cx = Number(designSpec?.centerX ?? 0)
-  const cy = Number(designSpec?.centerY ?? 0)
+  const width = Number(designSpec?.width ?? STANDARD_DESIGN_SIZE)
+  const height = Number(designSpec?.height ?? width)
+  const cx = Number(designSpec?.centerX ?? width / 2)
+  const cy = Number(designSpec?.centerY ?? height / 2)
 
   const bgConfig = {
     id: crypto.randomUUID(),
@@ -130,6 +131,8 @@ const ensureBackgroundElement = (config: Partial<DesignConfig> | null): void => 
     originY: 'center',
     imageUrl: bgUrl,
     imageId: bgId,
+    width,
+    height,
   }
 
   anyConfig.elements = [bgConfig, ...list]
