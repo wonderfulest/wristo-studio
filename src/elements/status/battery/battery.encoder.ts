@@ -5,18 +5,60 @@ export const DEFAULT_LEVEL_COLOR_LOW = '#ff0000'
 export const DEFAULT_LEVEL_COLOR_MEDIUM = '#ffaa00'
 export const DEFAULT_LEVEL_COLOR_HIGH = '#00ff00'
 
+type BatteryParts = {
+  body: any
+  head: any
+  level: any
+}
+
+export function resolveBatteryParts(element: Partial<FabricElement>): BatteryParts | null {
+  if (!element) return null
+
+  const anyElement = element as any
+  let body: any = anyElement._body
+  let head: any = anyElement._head
+  let level: any = anyElement._level
+
+  if (!body || !head || !level) {
+    const objects: any[] = typeof anyElement.getObjects === 'function'
+      ? anyElement.getObjects()
+      : Array.isArray(anyElement._objects)
+        ? anyElement._objects
+        : []
+
+    body ||= objects.find((obj) => String(obj?.id ?? '').endsWith('_body'))
+    head ||= objects.find((obj) => String(obj?.id ?? '').endsWith('_head'))
+    level ||= objects.find((obj) => String(obj?.id ?? '').endsWith('_level'))
+
+    if ((!body || !head || !level) && objects.length >= 3) {
+      body ||= objects[0]
+      head ||= objects[1]
+      level ||= objects[2]
+    }
+  }
+
+  if (!body || !head || !level) return null
+
+  anyElement._body = body
+  anyElement._head = head
+  anyElement._level = level
+
+  return { body, head, level }
+}
+
 export function encodeBattery(element: Partial<FabricElement>): BatteryElementConfig {
   if (!element) {
     throw new Error('Invalid element')
   }
 
   const anyElement = element as any
-  const batteryBody: any = anyElement._body
-  const batteryHead: any = anyElement._head
-  const batteryLevel: any = anyElement._level
-  if (!batteryBody || !batteryHead || !batteryLevel) {
+  const parts = resolveBatteryParts(element)
+  if (!parts) {
     throw new Error('Invalid element')
   }
+  const batteryBody = parts.body
+  const batteryHead = parts.head
+  const batteryLevel = parts.level
 
   const safePadding = Math.round(((anyElement.padding ?? 4) as number))
 

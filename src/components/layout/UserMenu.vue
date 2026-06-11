@@ -137,8 +137,8 @@ const toggleDropdown = () => {
 
 const handleLogout = () => {
   userStore.logout()
-  const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL as string
-  const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI as string
+  const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL as string
+  const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI as string
   window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
 }
 

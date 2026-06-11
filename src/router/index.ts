@@ -121,8 +121,8 @@ router.beforeEach(async (to) => {
 
   // 如果路由需要认证且用户未登录，重定向到登录页面
   if (requiresAuth && !userStore.isAuthenticated) {
-    const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL as string
-    const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI as string
+    const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL as string
+    const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI as string
     setTimeout(() => {
       window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
     }, 1000)

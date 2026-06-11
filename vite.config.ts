@@ -1,6 +1,8 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import * as path from 'path'
+
+const joinUrl = (baseUrl: string | undefined, childPath: string) => `${(baseUrl || '').replace(/\/$/, '')}/${childPath}`
 
 // 获取环境变量
 const env = process.env.NODE_ENV
@@ -19,44 +21,54 @@ const removeConsolePlugin = {
   }
 }
 
-export default defineConfig({
-  plugins: [
-    vue(),
-    // removeConsolePlugin
-  ],
-  base: '/', // Ensure base URL is set to root
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      vue: 'vue/dist/vue.esm-bundler.js'
-    }
-  },
-  server: {
-    host: true,
-    port: 3004,
-    strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:1338',
-        // target: 'https://api.garminface.com',
-        changeOrigin: true,
-        // rewrite: (path) => path.replace(/^\/api/, '')  // 如果后端不需要 /api 前缀，可以启用这行
-      },
-      '/wristo-api': {
-        target: 'http://127.0.0.1:8088',
-        // target: 'https://api.wristo.io',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/wristo-api/, '/api')
+export default defineConfig(({ mode }) => {
+  const envDir = path.resolve(__dirname, '..')
+  const rootEnv = loadEnv(mode, envDir, '')
+
+  return {
+    envDir,
+    define: {
+      'import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_SSO_REDIRECT_URI || ''),
+      'import.meta.env.VITE_WRISTO_SSO_LOGIN_URL': JSON.stringify(joinUrl(rootEnv.VITE_WRISTO_SSO_URL, 'login')),
+    },
+    plugins: [
+      vue(),
+      // removeConsolePlugin
+    ],
+    base: '/', // Ensure base URL is set to root
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        vue: 'vue/dist/vue.esm-bundler.js'
       }
     },
-  },
-  assetsInclude: ['**/*.woff2'],
-  build: {
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        // drop_console: true,
-        drop_debugger: true
+    server: {
+      host: true,
+      port: 3004,
+      strictPort: true,
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:1338',
+          // target: 'https://api.garminface.com',
+          changeOrigin: true,
+          // rewrite: (path) => path.replace(/^\/api/, '')  // 如果后端不需要 /api 前缀，可以启用这行
+        },
+        '/wristo-api': {
+          target: 'http://127.0.0.1:8088',
+          // target: 'https://api.wristo.io',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/wristo-api/, '/api')
+        }
+      },
+    },
+    assetsInclude: ['**/*.woff2'],
+    build: {
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          // drop_console: true,
+          drop_debugger: true
+        }
       }
     }
   }

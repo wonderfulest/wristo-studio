@@ -93,7 +93,7 @@
 import { ref, computed, onMounted } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM } from '@/elements/status/battery/battery.encoder'
+import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, resolveBatteryParts } from '@/elements/status/battery/battery.encoder'
 import { useI18n } from '@/i18n'
 
 const props = defineProps({
@@ -138,11 +138,11 @@ const initElementProperties = () => {
   const group = elementManager.getElementById((props.element as any).id) as any
   if (!group) return
 
-  const batteryBody: any = (group as any)._body
-  const batteryHead: any = (group as any)._head
-  const batteryLevel: any = (group as any)._level
-
-  if (!batteryBody || !batteryHead || !batteryLevel) return
+  const parts = resolveBatteryParts(group)
+  if (!parts) return
+  const batteryBody = parts.body
+  const batteryHead = parts.head
+  const batteryLevel = parts.level
 
   ;(props.element as any).width = Math.round((batteryBody as any).width)
   ;(props.element as any).height = Math.round((batteryBody as any).height)

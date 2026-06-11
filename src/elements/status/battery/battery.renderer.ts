@@ -6,7 +6,7 @@ import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import * as elementManager from '@/engine/managers/elementManager'
-import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, encodeBattery } from '@/elements/status/battery/battery.encoder'
+import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, encodeBattery, resolveBatteryParts } from '@/elements/status/battery/battery.encoder'
 
 function getLevelColor(
   level: number,
@@ -141,10 +141,11 @@ export function updateBattery(element: FabricElement, patch: Partial<BatteryElem
   const group: any = groupFromRegistry as any
   if (!group) return
 
-  const batteryBody: any = (group as any)._body
-  const batteryHead: any = (group as any)._head
-  const batteryLevel: any = (group as any)._level
-  if (!batteryBody || !batteryHead || !batteryLevel) return
+  const parts = resolveBatteryParts(group)
+  if (!parts) return
+  const batteryBody = parts.body
+  const batteryHead = parts.head
+  const batteryLevel = parts.level
 
   const width = next.width ?? baseConfig.width ?? 28
   const height = next.height ?? baseConfig.height ?? 18

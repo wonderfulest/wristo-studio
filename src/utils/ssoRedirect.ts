@@ -14,8 +14,8 @@ export function redirectToSsoLogin(client: string, delay = 0) {
 
   clearLocalAuthState()
 
-  const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
-  const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
+  const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
+  const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
 
   window.setTimeout(() => {
     const loginUrl = new URL(ssoBaseUrl, window.location.origin)

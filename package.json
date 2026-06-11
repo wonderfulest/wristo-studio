@@ -6,9 +6,9 @@
   "scripts": {
     "dev:demo": "vite demo --port 4173",
     "dev": "vite --mode development",
-    "dev:prod": "vite --mode production",
+    "dev:prod": "vite --mode prod",
     "typecheck": "vue-tsc --noEmit",
-    "build": "vue-tsc --noEmit && vite build --mode production",
+    "build": "vue-tsc --noEmit && vite build --mode prod",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "format": "prettier --write ."

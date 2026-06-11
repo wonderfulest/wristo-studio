@@ -22,7 +22,7 @@ const userStore = useUserStore()
 const { t } = useI18n()
 
 const clientId = 'studio'
-const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
+const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
 
 onMounted(async () => {
   
@@ -67,16 +67,16 @@ onMounted(async () => {
       }, 100)
     } else {
       error.value = res.msg || t('auth.requestFailed')
-      const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
-      const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
+      const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
+      const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
       setTimeout(() => {
         window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
       }, 5000)
     }
   } catch (e: any) {
     error.value = e?.response?.data?.msg || e.message || t('auth.requestFailed')
-    const ssoBaseUrl = import.meta.env.VITE_SSO_LOGIN_URL
-    const redirectUri = import.meta.env.VITE_SSO_REDIRECT_URI
+    const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
+    const redirectUri = import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI
     setTimeout(() => {
       window.location.href = `${ssoBaseUrl}?client=studio&redirect_uri=${encodeURIComponent(redirectUri)}`
     }, 12200)
