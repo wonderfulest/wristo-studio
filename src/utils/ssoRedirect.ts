@@ -14,9 +14,19 @@ export function getSsoRedirectUri() {
   return new URL('/auth/callback', window.location.origin).toString()
 }
 
+function getSsoLoginBaseUrl() {
+  const configuredLoginUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
+  if (configuredLoginUrl && !configuredLoginUrl.startsWith('/')) {
+    return configuredLoginUrl
+  }
+  if (window.location.hostname.endsWith('wristo.io')) {
+    return 'https://sso.wristo.io/login'
+  }
+  return configuredLoginUrl || '/login'
+}
+
 export function buildSsoLoginUrl(client: string) {
-  const ssoBaseUrl = import.meta.env.VITE_WRISTO_SSO_LOGIN_URL
-  const loginUrl = new URL(ssoBaseUrl, window.location.origin)
+  const loginUrl = new URL(getSsoLoginBaseUrl(), window.location.origin)
   loginUrl.searchParams.set('client', client)
   loginUrl.searchParams.set('redirect_uri', getSsoRedirectUri())
   return loginUrl.toString()
