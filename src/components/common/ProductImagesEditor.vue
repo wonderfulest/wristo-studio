@@ -33,7 +33,7 @@
         <div class="image-wrapper upload-card">
           <div class="upload-placeholder">
             <el-icon class="upload-icon"><Plus /></el-icon>
-            <span>Upload</span>
+            <span>{{ t('image.productUpload') }}</span>
           </div>
         </div>
       </el-upload>
@@ -48,6 +48,9 @@ import type { UploadFile } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/image'
 import { IMAGE_ASPECT_CODE, IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 export interface ProductImageItem {
   id: number
@@ -123,7 +126,7 @@ const ensureProductAspectValid = async (file: File) => {
     const diff = Math.abs(actual - expected) / expected
     if (diff > 0.01) {
       const actualRatio = `${Math.round(actual * 100) / 100}:1`
-      ElMessage.error(`Image aspect ratio should be close to ${ratio}, current is approximately ${actualRatio}`)
+      ElMessage.error(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
       return false
     }
     return true
@@ -137,15 +140,15 @@ const beforeUpload = (file: File) => {
   const isLe2M = file.size <= 2 * 1024 * 1024
 
   if (!isImage) {
-    ElMessage.error('Please upload image files only!')
+    ElMessage.error(t('image.productOnly'))
     return false
   }
   if (!isLe2M) {
-    ElMessage.error('Product image size cannot exceed 2MB!')
+    ElMessage.error(t('image.productSizeLimit'))
     return false
   }
   if (props.modelValue.length >= max) {
-    ElMessage.error(`You can upload up to ${max} product images`)
+    ElMessage.error(t('image.productMax', { max }))
     return false
   }
   return true
@@ -163,7 +166,7 @@ const handleChange = async (file: UploadFile) => {
 
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: 'Uploading product image...',
+    text: t('image.productUploading'),
     background: 'rgba(0, 0, 0, 0.7)'
   })
 
@@ -173,16 +176,16 @@ const handleChange = async (file: UploadFile) => {
     const image = res.data
 
     if (!image || typeof image.id !== 'number' || !image.url) {
-      throw new Error('Invalid image response')
+      throw new Error(t('image.invalidResponse'))
     }
 
     const next = [...props.modelValue, { id: image.id, imageUrl: image.url }]
     emit('update:modelValue', next.slice(0, max))
 
-    ElMessage.success('Product image uploaded successfully')
+    ElMessage.success(t('image.productUploaded'))
   } catch (error) {
     console.error('Failed to upload product image:', error)
-    ElMessage.error('Failed to upload product image')
+    ElMessage.error(t('image.productUploadFailed'))
   } finally {
     loadingInstance.close()
   }

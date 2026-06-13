@@ -19,7 +19,7 @@ export const imageSchema: ImageElementSchema = {
   name: 'Image',
   icon: 'mdi:image',
   defaultConfig: {
-    imageUrl: 'https://cdn.wristo.io/moonphase/h-phase-16.png',
+    imageUrl: '',
     width: 60,
     height: 60,
   },

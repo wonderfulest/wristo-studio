@@ -5,20 +5,20 @@
       <input
         type="text"
         v-model="searchQuery"
-        placeholder="Search fonts ..."
+        :placeholder="t('font.searchFontsPlaceholder')"
         class="search-input"
         @input="onInput"
       />
       <div class="filters">
         <label class="filter-item">
           <input type="checkbox" v-model="monospaceChecked" @change="onFilterChange" />
-          Monospace
+          {{ t('font.monospace') }}
         </label>
         <label class="filter-item">
           <input type="checkbox" v-model="italicChecked" @change="onFilterChange" />
-          Italic
+          {{ t('font.italic') }}
         </label>
-        <RouterLink class="open-library-anchor" to="/fonts" target="_blank" rel="noopener">Open Fonts Library</RouterLink>
+        <RouterLink class="open-library-anchor" to="/fonts" target="_blank" rel="noopener">{{ t('font.openFontsLibrary') }}</RouterLink>
       </div>
     </div>
 
@@ -42,6 +42,7 @@
                 :font-family="font.value"
                 :type="props.type"
                 :is-monospace="(font as any).isMonospace === true"
+                :is-system="(font as any).isSystem === true"
               />
             </div>
         </div>
@@ -66,6 +67,7 @@
               :font-family="font.value"
               :type="props.type"
               :is-monospace="(font as any).isMonospace === true"
+              :is-system="(font as any).isSystem === true"
             />
           </div>
         </div>
@@ -76,12 +78,12 @@
         <el-icon class="is-loading">
           <Loading />
         </el-icon>
-        Searching...
+        {{ t('font.searching') }}
       </div>
 
       <!-- No result hint -->
       <div v-if="!isSearching && filteredFonts.length === 0 && remoteSearchResults.length === 0" class="no-results">
-        No matching fonts
+        {{ t('font.noMatchingFonts') }}
       </div>
     </template>
   </div>
@@ -96,10 +98,13 @@ import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import { DesignFontVO } from '@/types/font'
 import FontListItem from '@/components/fonts/FontListItem.vue'
+import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{
   modelValue: string
   type?: string
+  canUsePremiumAssets?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -108,6 +113,7 @@ const emit = defineEmits<{
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
+const { t } = useI18n()
 
 const searchQuery = ref<string>('')
 const filteredFonts = ref<FontItem[]>([])
@@ -179,7 +185,7 @@ const filterFonts = async () => {
     italicChecked: italicChecked.value,
   })
   // local filter
-  const local = fontStore.searchFonts(searchQuery.value)
+  const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true)
   filteredFonts.value = applyLocalStyleFilters(local)
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
@@ -201,6 +207,7 @@ const filterFonts = async () => {
       pageSize: 20,
       name: searchQuery.value,
       type: props.type,
+      isSystem: props.canUsePremiumAssets === true ? undefined : 1,
       isMonospace: monospaceChecked.value ? 1 : undefined,
       italic: italicChecked.value ? 1 : undefined,
     })
@@ -211,7 +218,7 @@ const filterFonts = async () => {
     })
     
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
-    const serverList = list.filter((font: DesignFontVO) => {
+    const serverList = filterAssetsByStudioAccess(list, props.canUsePremiumAssets === true).filter((font: DesignFontVO) => {
       const val = font.slug
       return !!val && !localValues.has(val)
     })
@@ -235,7 +242,8 @@ const filterFonts = async () => {
       const value = font.slug || family
       const isMonospace = (font?.isMonospace === 1)
       const italic = (font?.italic === 1)
-      return { label, value, family, isMonospace, italic } as FontItem
+      const isSystem = font?.isSystem === 1
+      return { label, value, family, isMonospace, italic, isSystem } as FontItem
     })
     console.log('[FontSearch] remoteFonts mapped', {
       remoteFontsCount: remoteFonts.length,
@@ -247,7 +255,7 @@ const filterFonts = async () => {
     })
   } catch (error) {
     console.error('[FontSearch] Remote font search error:', error)
-    messageStore.error('Remote search failed')
+    messageStore.error(t('font.remoteSearchFailed'))
   } finally {
     console.log('[FontSearch] filterFonts finally', {
       isSearching: isSearching.value,

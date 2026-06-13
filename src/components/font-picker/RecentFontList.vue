@@ -2,13 +2,13 @@
   <div class="font-section">
     <div class="section-header" @click="$emit('toggle')">
       <span class="arrow" :class="{ expanded: expanded }">›</span>
-      RECENT
+      {{ t('font.recent') }}
     </div>
     <div v-if="expanded" class="section-content">
-      <div v-if="!fonts.length" class="no-fonts">No recent fonts</div>
+      <div v-if="!visibleFonts.length" class="no-fonts">{{ t('font.noRecentFonts') }}</div>
       <div v-else class="font-family-group">
         <div
-          v-for="font in fonts"
+          v-for="font in visibleFonts"
           :key="font.value"
           class="font-item"
           :class="{ active: modelValue === font.value }"
@@ -27,20 +27,28 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
+import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useI18n } from '@/i18n'
 
-defineProps<{
+const { t } = useI18n()
+
+const props = defineProps<{
   fonts: FontItem[]
   modelValue: string
   expanded: boolean
   type?: string
+  canUsePremiumAssets?: boolean
 }>()
 
 defineEmits<{
   (e: 'select', font: FontItem): void
   (e: 'toggle'): void
 }>()
+
+const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true))
 </script>
 
 <style scoped>

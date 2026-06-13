@@ -1,7 +1,7 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    title="Submit Design" 
+    :title="t('submitDesign.title')" 
     width="50%" 
     :top="'10vh'"
     class="submit-design-dialog"
@@ -13,19 +13,19 @@
       label-width="180px" 
       class="submit-form"
     >
-      <el-form-item label="Design Name">
+      <el-form-item :label="t('submitDesign.designName')">
         <el-input v-model="form.name" disabled />
       </el-form-item>
       
-      <el-form-item label="Payment Method" prop="paymentMethod">
+      <el-form-item :label="t('submitDesign.paymentMethod')" prop="paymentMethod">
         <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
-          <el-radio label="free">Free</el-radio>
+          <el-radio label="free">{{ t('payment.free') }}</el-radio>
           <el-radio label="wpay">WPay</el-radio>
         </el-radio-group>
       </el-form-item>
       
       <el-form-item 
-        label="Price" 
+        :label="t('submitDesign.price')" 
         prop="price"
         v-if="form.paymentMethod !== 'free'"
       >
@@ -35,14 +35,14 @@
           :max="999.99" 
           :precision="2"
           :step="0.01"
-          placeholder="Enter price"
+          :placeholder="t('submitDesign.enterPrice')"
           style="width: 100%"
         />
-        <div class="form-tip">Please enter the price (USD)</div>
+        <div class="form-tip">{{ t('submitDesign.priceTip') }}</div>
       </el-form-item>
       
       <el-form-item 
-        label="Trial Duration" 
+        :label="t('submitDesign.trialDuration')" 
         prop="trialLasts"
         v-if="form.paymentMethod !== 'free'"
       >
@@ -52,18 +52,18 @@
           :max="720" 
           :precision="2"
           :step="0.25"
-          placeholder="Enter trial hours"
+          :placeholder="t('submitDesign.enterTrialHours')"
           style="width: 100%"
         />
-        <div class="form-tip">Please enter trial hours (0-720 hours, supports decimals)</div>
+        <div class="form-tip">{{ t('submitDesign.trialTip') }}</div>
       </el-form-item>
       
-      <el-form-item label="Description">
+      <el-form-item :label="t('submitDesign.description')">
         <el-input 
           v-model="form.description" 
           type="textarea" 
           :rows="3" 
-          placeholder="Enter design description"
+          :placeholder="t('submitDesign.enterDescription')"
         />
       </el-form-item>
       <CategorySelector
@@ -80,13 +80,13 @@
     
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">Cancel</el-button>
+        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
         >
-          Submit
+          {{ t('common.submit') }}
         </el-button>
       </span>
     </template>
@@ -105,12 +105,16 @@ import { productsApi } from '@/api/wristo/products'
 import type { Bundle } from '@/types/api/bundle'
 import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { useI18n } from '@/i18n'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
 const formRef = ref()
 
 const messageStore = useMessageStore()
+const membershipGate = useStudioMembershipGate()
+const { t } = useI18n()
 
 const form = reactive({
   designUid: '',
@@ -126,50 +130,50 @@ const form = reactive({
 
 const rules = computed(() => ({
   paymentMethod: [
-    { required: true, message: 'Please select a payment method', trigger: 'change' }
+    { required: true, message: t('submitDesign.selectPaymentMethod'), trigger: 'change' }
   ],
   kpayId: [
     { 
       required: form.paymentMethod === 'kpay', 
-      message: 'KPay product ID is required when using KPay payment', 
+      message: t('submitDesign.kpayRequired'), 
       trigger: 'blur' 
     }
   ],
   price: [
     { 
       required: form.paymentMethod !== 'free', 
-      message: 'Please enter the price', 
+      message: t('submitDesign.enterPriceRequired'), 
       trigger: 'blur' 
     },
     { 
       type: 'number', 
       min: 1.99, 
       max: 99.99, 
-      message: 'Price must be between 1.99 and 99.99', 
+      message: t('submitDesign.priceRange'), 
       trigger: 'blur' 
     }
   ],
   trialLasts: [
     { 
       required: form.paymentMethod !== 'free', 
-      message: 'Please enter trial duration', 
+      message: t('submitDesign.enterTrialRequired'), 
       trigger: 'blur' 
     },
     { 
       type: 'number', 
       min: 0, 
       max: 720, 
-      message: 'Trial duration must be between 0 and 720 hours', 
+      message: t('submitDesign.trialRange'), 
       trigger: 'blur' 
     }
   ],
   categoryIds: [
-    { required: true, type: 'array', message: 'Please select at least one category', trigger: 'change' },
+    { required: true, type: 'array', message: t('category.selectAtLeastOne'), trigger: 'change' },
     { 
       validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
         const len = Array.isArray(value) ? value.length : 0
-        if (len === 0) return callback(new Error('Please select at least one category'))
-        if (len > 3) return callback(new Error('You can select up to 3 categories'))
+        if (len === 0) return callback(new Error(t('category.selectAtLeastOne')))
+        if (len > 3) return callback(new Error(t('category.selectUpToThree')))
         callback()
       },
       trigger: 'change'
@@ -278,11 +282,11 @@ const show = async (design: Design) => {
       await Promise.all([loadCategories(), loadBundles()])
       dialogVisible.value = true
     } else {
-      messageStore.error(response.msg || 'Failed to get design details')
+      messageStore.error(response.msg || t('submitDesign.loadDetailsFailed'))
     }
   } catch (error) {
     console.error('Failed to get design details:', error)
-    messageStore.error('Failed to get design details')
+    messageStore.error(t('submitDesign.loadDetailsFailed'))
   } finally {
     loading.value = false
   }
@@ -290,6 +294,7 @@ const show = async (design: Design) => {
 
 // Confirm submit
 const handleConfirm = async () => {
+  if (!membershipGate.requirePublish()) return
   if (!formRef.value) return
   
   try {
@@ -319,15 +324,15 @@ const handleConfirm = async () => {
     const response = await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
-      messageStore.success('Submitted successfully')
+      messageStore.success(t('submitDesign.submittedSuccessfully'))
       emit('success')
       dialogVisible.value = false
     } else {
-      messageStore.error(response.msg || 'Submit failed')
+      messageStore.error(response.msg || t('submitDesign.submitFailed'))
     }
   } catch (error) {
     console.error('Submit failed:', error)
-    messageStore.error('Submit failed')
+    messageStore.error(t('submitDesign.submitFailed'))
   } finally {
     loading.value = false
   }

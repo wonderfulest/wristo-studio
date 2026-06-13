@@ -40,6 +40,7 @@
           :design="design"
           :is-merchant-user="isMerchantUser"
           :is-admin-user="isAdminUser"
+          :can-delete-design="canDeleteDesign"
           :show-creator="false"
           :loading-states="loadingStatesPlain"
           :current-user-id="userStore.userInfo?.id ?? null"
@@ -80,6 +81,12 @@ const isMerchantUser = computed(() => {
 const isAdminUser = computed(() => {
   const roles = userStore.userInfo?.roles || []
   return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
+})
+
+const canDeleteDesign = computed(() => {
+  if (userStore.hasFullStudioAccess) return true
+  const level = userStore.studioMembership?.level || 'free'
+  return level !== 'free'
 })
 
 const props = defineProps<{
@@ -209,6 +216,8 @@ const handleCreateNewProject = () => {
 }
 
 .empty-card {
+  --project-watchface-size: 82%;
+
   height: 100%;
   min-height: 180px;
   border-radius: var(--studio-radius-lg);
@@ -224,18 +233,18 @@ const handleCreateNewProject = () => {
 
 .empty-card-visual {
   position: relative;
-  width: 90%;
-  max-width: 380px;
+  width: 100%;
   aspect-ratio: 1 / 1;
   margin-bottom: 6px;
 }
 
 .empty-card-circle {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 50%;
+  left: 50%;
+  width: var(--project-watchface-size);
+  height: var(--project-watchface-size);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: var(--studio-surface-soft);
   border: 1px solid var(--studio-border);

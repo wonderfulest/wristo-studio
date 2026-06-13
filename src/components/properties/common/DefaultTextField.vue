@@ -5,7 +5,7 @@
   >
     <template #label>
       <span class="default-text-label">
-        Default Text
+        {{ t('property.defaultText') }}
         <el-tooltip
           placement="top"
           effect="light"
@@ -16,7 +16,7 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              For template syntax and examples, please visit https://www.wristo.io/tpl.
+              {{ t('property.templateSyntaxTip') }}
             </a>
           </template>
           <el-icon class="default-text-help-icon">
@@ -34,6 +34,9 @@ import { computed } from 'vue'
 import { ElTooltip } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: {
@@ -53,9 +56,9 @@ const modelValueLocal = computed({
   },
 })
 
-const rules = [
-  { required: true, message: 'Default text is required', trigger: 'blur' },
-]
+const rules = computed(() => [
+  { required: true, message: t('property.defaultTextRequired'), trigger: 'blur' },
+])
 </script>
 
 <style scoped>

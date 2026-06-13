@@ -216,7 +216,7 @@ const handleConfirm = async () => {
     await formRef.value.validate()
     const selectedOption = formData.options.find(opt => opt.value === formData.value)
     if (!selectedOption) {
-      ElMessage.error('Please select a valid option')
+      ElMessage.error(t('property.selectValidOption'))
       return
     }
     emit('confirm', {

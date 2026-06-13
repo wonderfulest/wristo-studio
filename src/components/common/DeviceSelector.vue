@@ -175,7 +175,7 @@ const loadDeviceList = async () => {
     deviceList.value = devices
   } catch (error) {
     console.error('Failed to load device list:', error)
-    ElMessage.error('Failed to load devices')
+    ElMessage.error(t('device.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -232,10 +232,10 @@ const confirmSelection = async () => {
     // Close dialog
     handleClose()
 
-    ElMessage.success('Device selected successfully')
+    ElMessage.success(t('device.selectedSuccessfully'))
   } catch (error) {
     console.error('Failed to get device details:', error)
-    ElMessage.error('Failed to get device details')
+    ElMessage.error(t('device.getDetailsFailed'))
   } finally {
     confirmLoading.value = false
   }

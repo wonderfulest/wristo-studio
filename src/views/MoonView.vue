@@ -1,10 +1,10 @@
 <template>
   <div class="moon-preview">
-    <h3 class="title">Moon Phase Preview (phase: 0 → 1, 0/1 New Moon, 0.5 Full Moon)</h3>
+    <h3 class="title">{{ t('moon.previewTitle') }}</h3>
     <canvas ref="canvasRef" class="canvas" width="400" height="220"></canvas>
     <div class="controls">
       <label class="label">
-        Phase:
+        {{ t('moon.phase') }}:
         <input
           class="range"
           type="range"
@@ -15,7 +15,7 @@
         />
       </label>
       <span class="phase-val">{{ phase.toFixed(3) }}</span>
-      <button class="btn" @click="setNow">Set from Today</button>
+      <button class="btn" @click="setNow">{{ t('moon.setFromToday') }}</button>
     </div>
   </div>
 </template>
@@ -23,6 +23,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import type { MoonDrawOptions } from '@/types/moon'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const phase = ref<number>(0.25)
@@ -165,4 +168,3 @@ watch(phase, () => {
   font-variant-numeric: tabular-nums;
 }
 </style>
-

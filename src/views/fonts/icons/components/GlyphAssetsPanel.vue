@@ -8,36 +8,36 @@
       >
         <div class="tab-toolbar">
           <div class="info">
-            <span class="badge" :class="{ custom: glyph.isDefault === 0 }">{{ glyph.isDefault === 1 ? 'Default' : 'Custom' }}</span>
-            <span class="meta">Style: {{ glyph.style || '-' }}</span>
-            <span class="meta">Version: {{ glyph.version ?? '-' }}</span>
+            <span class="badge" :class="{ custom: glyph.isDefault === 0 }">{{ glyph.isDefault === 1 ? t('icon.default') : t('icon.custom') }}</span>
+            <span class="meta">{{ t('icon.style') }}: {{ glyph.style || '-' }}</span>
+            <span class="meta">{{ t('font.version') }} {{ glyph.version ?? '-' }}</span>
           </div>
           <div class="actions" v-if="glyph.isDefault === 0"> 
-            <el-button size="small" @click="emit('import', glyph)">Import From Font</el-button>
-            <el-button type="primary" size="small" @click="emit('submitGlyph')">Submit Font</el-button>
+            <el-button size="small" @click="emit('import', glyph)">{{ t('icon.importFromFont') }}</el-button>
+            <el-button type="primary" size="small" @click="emit('submitGlyph')">{{ t('icon.submitFont') }}</el-button>
           </div>
         </div>
 
         <div class="assets-grid">
           <div v-if="loading" class="loading">
             <el-icon class="is-loading"><Loading /></el-icon>
-            Loading icons...
+            {{ t('icon.loadingIcons') }}
           </div>
           <template v-else>
             <div v-if="displayAssets.length === 0" class="empty">
-              No icons
-              <el-button type="primary" text @click="emit('openBind', { glyphId: glyph.id })">Bind Assets</el-button>
+              {{ t('icon.noIcons') }}
+              <el-button v-if="canManage" type="primary" text @click="emit('openBind', { glyphId: glyph.id })">{{ t('icon.bindAssets') }}</el-button>
             </div>
             <div v-else class="grid">
               <div v-for="item in displayAssets" :key="item.id" class="grid-item">
                 <template v-if="getAssetImage(item)">
-                  <div class="overlay overlay-actions">
-                    <span v-if="glyph.isDefault === 0 && displayType === 'mip'" class="action" @click="emit('edit', item)">Edit</span>
+                  <div v-if="canManage" class="overlay overlay-actions">
+                    <span v-if="glyph.isDefault === 0 && displayType === 'mip'" class="action" @click="emit('edit', item)">{{ t('common.edit') }}</span>
                     <!-- v-if="glyph.isDefault === 0" -->
                     <span
                       class="action"
                       @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })"
-                    >Rebind</span>
+                    >{{ t('icon.rebind') }}</span>
                     <span
                       v-if="glyph.isDefault === 0 && displayType === 'amoled'"
                       class="action delete"
@@ -49,14 +49,14 @@
                         }
                         emit('unbind', { glyphId: glyph.id, assetId })
                       }"
-                    >Unbind</span>
+                    >{{ t('icon.unbind') }}</span>
                   </div>
                   <div class="preview">
                     <img :src="getAssetImage(item)" alt="icon" />
                   </div>
                 </template>
                 <template v-else>
-                  <el-button type="primary" circle plain @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })">
+                  <el-button v-if="canManage" type="primary" circle plain @click="emit('openBind', { glyphId: glyph.id, iconId: item.icon?.id ?? undefined })">
                     <el-icon><Plus /></el-icon>
                   </el-button>
                 </template>
@@ -88,6 +88,9 @@ import { Loading, Plus } from '@element-plus/icons-vue'
 import type { IconGlyphVO, IconGlyphAssetVO, DisplayType } from '@/api/wristo/iconGlyph'
 import { getEnumOptions } from '@/api/common'
 import type { EnumOption } from '@/api/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   glyph: IconGlyphVO
@@ -97,7 +100,10 @@ const props = defineProps<{
   pageSize: number
   total: number
   displayType?: DisplayType
+  canManage?: boolean
 }>()
+
+const canManage = computed(() => props.canManage === true)
 
 const emit = defineEmits<{
   (e: 'edit', item: IconGlyphAssetVO): void

@@ -105,6 +105,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/UserProfile.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: 'pricing',
+        name: 'Pricing',
+        component: () => import('@/views/Pricing.vue'),
+        meta: { requiresAuth: true, hideForMerchant: true },
+      },
     ],
   },
 ]
@@ -124,6 +130,10 @@ router.beforeEach(async (to) => {
   if (requiresAuth && !userStore.isAuthenticated) {
     redirectToSsoLogin('studio', 1000)
     return false
+  }
+
+  if ((to.meta as any).hideForMerchant && userStore.isMerchantUser) {
+    return '/designs/new-projects'
   }
 })
 

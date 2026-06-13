@@ -1,26 +1,30 @@
 <template>
   <div class="icon-assets-container">
     <div class="header">
-      <h2>Icon 素材</h2>
+      <h2>{{ t('icon.assetsTitle') }}</h2>
       <div class="tools">
-        <el-select v-model="active" placeholder="状态" clearable style="width: 140px" @change="handleSearch">
-          <el-option label="全部" :value="undefined" />
-          <el-option label="启用" :value="1" />
-          <el-option label="禁用" :value="0" />
+        <el-select v-model="active" :placeholder="t('common.status')" clearable style="width: 140px" @change="handleSearch">
+          <el-option :label="t('icon.statusAll')" :value="undefined" />
+          <el-option :label="t('icon.statusEnabled')" :value="1" />
+          <el-option :label="t('icon.statusDisabled')" :value="0" />
         </el-select>
-        <el-select v-model="iconUnicode" filterable clearable placeholder="按 Icon 选择" style="width: 260px" @change="handleSearch">
+        <el-select v-model="iconUnicode" filterable clearable :placeholder="t('icon.selectByIcon')" style="width: 260px" @change="handleSearch">
           <el-option v-for="opt in iconOptions" :key="opt.id" :label="`${opt.symbolCode} — ${opt.iconUnicode}`" :value="opt.iconUnicode" />
         </el-select>
-        <el-select v-model="sortOrder" placeholder="排序" style="width: 200px" @change="handleSearch">
-          <el-option label="ID倒序" value="id:desc" />
-          <el-option label="ID升序" value="id:asc" />
+        <el-select v-model="sortOrder" :placeholder="t('common.sort')" style="width: 200px" @change="handleSearch">
+          <el-option :label="t('icon.sortIdDesc')" value="id:desc" />
+          <el-option :label="t('icon.sortIdAsc')" value="id:asc" />
         </el-select>
-        <el-select v-model="displayType" placeholder="显示类型" clearable style="width: 160px" @change="handleSearch" :loading="loadingEnums">
+        <el-select v-model="displayType" :placeholder="t('icon.displayType')" clearable style="width: 160px" @change="handleSearch" :loading="loadingEnums">
           <el-option v-for="opt in displayTypeOptions" :key="String(opt.value)" :label="opt.name || String(opt.value)" :value="opt.value as any" />
         </el-select>
-        <HeaderUploadSvg v-model:iconUnicode="iconUnicode" @uploaded="fetchPage" />
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="fetchPage">刷新</el-button>
+        <HeaderUploadSvg
+          v-if="canUsePremiumAssets"
+          v-model:iconUnicode="iconUnicode"
+          @uploaded="fetchPage"
+        />
+        <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
+        <el-button @click="fetchPage">{{ t('common.refresh') }}</el-button>
       </div>
     </div>
 
@@ -39,11 +43,11 @@
           <div class="sub">{{ iconLabelMap[row.iconId] || '-' }}</div>
         </div>
         <div class="overlay">
-          <el-button size="small" text type="primary" @click="openUrl(row.imageUrl || row.previewUrl)" :disabled="!(row.imageUrl || row.previewUrl)">打开</el-button>
-          <el-button size="small" text type="primary" @click="openEdit(row)">编辑 SVG</el-button>
+          <el-button size="small" text type="primary" @click="openUrl(row.imageUrl || row.previewUrl)" :disabled="!(row.imageUrl || row.previewUrl)">{{ t('icon.openAsset') }}</el-button>
+          <el-button v-if="canUsePremiumAssets" size="small" text type="primary" @click="openEdit(row)">{{ t('icon.editSvg') }}</el-button>
         </div>
       </div>
-      <div v-if="!loading && assets.length === 0" class="empty">暂无数据</div>
+      <div v-if="!loading && assets.length === 0" class="empty">{{ t('icon.noAssets') }}</div>
     </div>
 
     <div class="pagination">
@@ -65,10 +69,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
 import { pageIconAssets, listIconLibrary, type IconAssetVO, type IconLibraryVO, type DisplayType } from '@/api/wristo/iconGlyph'
 import { getEnumOptions, type EnumOption } from '@/api/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
 const assets = ref<IconAssetVO[]>([])
 const loading = ref(false)
@@ -113,7 +125,7 @@ const fetchPage = async () => {
     assets.value = (data?.list ?? []) as IconAssetVO[]
     total.value = data?.total ?? 0
   } catch (e) {
-    ElMessage.error('获取Icon素材列表失败')
+    ElMessage.error(t('icon.loadAssetsFailed'))
   } finally {
     loading.value = false
   }
@@ -182,6 +194,10 @@ watch(iconUnicode, () => {
 })
 
 const openEdit = (row: IconAssetVO) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
   editingId.value = row.id
   editVisible.value = true
 }

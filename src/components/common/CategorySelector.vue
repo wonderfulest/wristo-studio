@@ -1,11 +1,11 @@
 <template>
   <div class="category-selector">
-    <el-form-item label="Categories" prop="categoryIds">
+    <el-form-item :label="t('category.categories')" prop="categoryIds">
       <el-select
         v-model="localCategoryIds"
         multiple
         filterable
-        placeholder="Select categories"
+        :placeholder="t('category.selectCategories')"
         :loading="loadingCategories"
         style="width: 100%"
         @change="onCategoriesChange"
@@ -18,7 +18,7 @@
         />
       </el-select>
       <div class="form-tip">
-        Select one or more categories for your app, will be show on wristo store
+        {{ t('category.tip') }}
       </div>
     </el-form-item>
   </div>
@@ -28,6 +28,9 @@
 import { computed } from 'vue'
 import type { Category } from '@/types/api/category'
 import { ElMessage } from 'element-plus'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   categoryIds: number[]
@@ -58,7 +61,7 @@ const filteredCategories = computed(() => (props.categories || []).filter(c => c
 const onCategoriesChange = (val: number[]) => {
   const limit = props.categoryLimit ?? 3
   if (Array.isArray(val) && val.length > limit) {
-    ElMessage.warning(`分类最多选择${limit}个`)
+    ElMessage.warning(t('category.limit', { limit }))
     emit('update:categoryIds', val.slice(0, limit))
   }
 }

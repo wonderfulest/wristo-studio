@@ -61,10 +61,12 @@ import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import type { ApiResponse } from '@/types/api/api'
 import { useI18n } from '@/i18n'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 
 const messageStore = useMessageStore()
 const pendingStore = usePendingGoLiveStore()
 const { t } = useI18n()
+const membershipGate = useStudioMembershipGate()
 type GoLiveDialogRef = { show: (design: Design) => void }
 const goLiveDialog = ref<GoLiveDialogRef | null>(null)
 
@@ -78,6 +80,7 @@ onMounted(() => {
 })
 
 const goLive = async (row: Product): Promise<void> => {
+  if (!membershipGate.requirePublish()) return
   try {
     // 获取完整 design 对象（包含 user, product, payment, release, cover, category, bundle）
     const res = await designApi.getDesignByUid(row.designId) as ApiResponse<Design>
@@ -95,6 +98,7 @@ const goLive = async (row: Product): Promise<void> => {
 }
 
 const download = (row: Product): void => {
+  if (!membershipGate.requireExport()) return
   const url = row.release?.packageUrl
   if (url) {
     window.open(url, '_blank', 'noopener,noreferrer')

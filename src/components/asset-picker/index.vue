@@ -3,7 +3,7 @@
     <!-- 上传按钮 -->
     <div class="asset-item upload-item" @click="triggerUpload">
       <el-icon class="upload-icon"><Plus /></el-icon>
-      <span>上传素材</span>
+      <span>{{ t('asset.upload') }}</span>
       <input 
         ref="uploadInput" 
         type="file" 
@@ -31,7 +31,7 @@
         v-if="!asset.isSystem && !(selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset))"
         class="delete-icon"
         @click.stop="handleRemove(asset)"
-        :title="'删除素材'"
+        :title="t('asset.deleteAsset')"
       >
         <Delete />
       </el-icon>
@@ -49,19 +49,19 @@
     <!-- 加载中 -->
     <div v-if="loading" class="asset-item loading-item">
       <el-icon class="loading-icon"><Loading /></el-icon>
-      <span>加载中...</span>
+      <span>{{ t('asset.loading') }}</span>
     </div>
 
     <!-- 加载更多 / 收起 -->
     <div v-if="hasMore && !loading" class="asset-item action-item" @click="loadMore">
       <el-icon class="action-icon"><ArrowDown /></el-icon>
-      <span>加载更多</span>
+      <span>{{ t('asset.loadMore') }}</span>
     </div>
 
     <!-- 刷新按钮 -->
     <div class="asset-item action-item" @click="refresh">
       <el-icon class="action-icon"><Refresh /></el-icon>
-      <span>刷新</span>
+      <span>{{ t('common.refresh') }}</span>
     </div>
   </div>
 </template>
@@ -72,6 +72,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown, Refresh, Loading, Star, Delete } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   /** 当前选中的URL */
@@ -173,7 +176,7 @@ const loadAssets = async (reset = false) => {
     }
   } catch (error) {
     console.error('加载素材失败:', error)
-    ElMessage.error('加载素材失败')
+    ElMessage.error(t('asset.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -210,7 +213,7 @@ const handleUpload = async (event: Event) => {
   if (!file) return
 
   if (!isAllowedUploadFile(file)) {
-    ElMessage.warning(props.assetType === 'image' ? '请上传图片文件（SVG/PNG/JPG/WEBP）' : '请上传 SVG 格式文件')
+    ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
     return
   }
 
@@ -224,11 +227,11 @@ const handleUpload = async (event: Event) => {
       if (url) {
         props.onUpload(url, res.data)
       }
-      ElMessage.success('上传成功')
+      ElMessage.success(t('asset.uploadSuccess'))
     }
   } catch (error) {
     console.error('上传失败:', error)
-    ElMessage.error('上传失败')
+    ElMessage.error(t('asset.uploadFailed'))
   } finally {
     loading.value = false
     input.value = ''
@@ -261,10 +264,10 @@ const handleMouseLeave = () => {
  */
 const handleRemove = async (asset: AnalogAssetVO) => {
   try {
-    await ElMessageBox.confirm('确认删除该素材？此操作不可撤销。', '提示', {
+    await ElMessageBox.confirm(t('asset.deleteConfirm'), t('common.tip'), {
       type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel')
     })
   } catch {
     return
@@ -276,13 +279,13 @@ const handleRemove = async (asset: AnalogAssetVO) => {
     if (res.data) {
       const idx = assets.value.findIndex(a => a.id === asset.id)
       if (idx !== -1) assets.value.splice(idx, 1)
-      ElMessage.success('删除成功')
+      ElMessage.success(t('common.deleteSuccess'))
     } else {
-      ElMessage.error('删除失败')
+      ElMessage.error(t('asset.deleteFailed'))
     }
   } catch (e) {
     console.error('删除素材失败:', e)
-    ElMessage.error('删除失败')
+    ElMessage.error(t('asset.deleteFailed'))
   } finally {
     deletingId.value = null
   }

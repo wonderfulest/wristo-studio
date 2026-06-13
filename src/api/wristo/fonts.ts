@@ -59,6 +59,7 @@ export const getDesignerUsageFontsPage = (
     pageNum: number
     pageSize: number
     type: string
+    isSystem?: number
   }
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
   return instance.post('/dsn/fonts/usage/page?populate=ttf', params)

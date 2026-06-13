@@ -20,8 +20,8 @@
           @removed="onFontRemoved"
         />
       </div>
-      <div v-if="loading" class="loading">Loading...</div>
-      <div v-else-if="!hasMore && fonts.length" class="end-tip">No more fonts</div>
+      <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
+      <div v-else-if="!hasMore && fonts.length" class="end-tip">{{ t('common.noMore') }}</div>
     </div>
   </div>
 </template>
@@ -30,13 +30,18 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import type { DesignFontVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
-import { getDesignerUsageFontsPage } from '@/api/wristo/fonts'
+import { getDesignerUsageFontsPage, searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
+import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: string
   type: string
+  canUsePremiumAssets?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -57,18 +62,27 @@ const loadPage = async () => {
   if (loading.value || (!hasMore.value && pageNum.value !== 1)) return
   loading.value = true
   try {
-    const resp: ApiResponse<PageResponse<DesignFontVO>> = await getDesignerUsageFontsPage({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-      type: props.type
-    })
+    const resp: ApiResponse<PageResponse<DesignFontVO>> =
+      props.canUsePremiumAssets === true
+        ? await getDesignerUsageFontsPage({
+            pageNum: pageNum.value,
+            pageSize: pageSize.value,
+            type: props.type,
+          })
+        : await searchFonts({
+            pageNum: pageNum.value,
+            pageSize: pageSize.value,
+            type: props.type,
+            isSystem: 1,
+          })
     if (resp.code === 0 && resp.data) {
       const { list, total: t } = resp.data
       total.value = t
+      const visibleList = filterAssetsByStudioAccess(list || [], props.canUsePremiumAssets === true)
       if (pageNum.value === 1) {
-        fonts.value = list || []
+        fonts.value = visibleList
       } else {
-        fonts.value = fonts.value.concat(list || [])
+        fonts.value = fonts.value.concat(visibleList)
       }
     }
   } finally {
@@ -93,7 +107,8 @@ const handleSelect = (font: DesignFontVO) => {
     value: font.slug,
     family: font.family || font.fullName || font.slug,
     isMonospace: font.isMonospace === 1,
-    italic: font.italic === 1
+    italic: font.italic === 1,
+    isSystem: font.isSystem === 1,
   }
   emit('select', item)
 }
@@ -107,7 +122,7 @@ onMounted(() => {
 })
 
 watch(
-  () => props.type,
+  () => [props.type, props.canUsePremiumAssets],
   () => {
     // reset when type changes
     pageNum.value = 1

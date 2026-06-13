@@ -10,6 +10,9 @@ import { applyControlsToObject } from '@/utils/controlManager'
 import { encodeImage } from './image.encoder'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 
+const EMPTY_IMAGE_PLACEHOLDER =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+
 function loadHtmlImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -52,6 +55,11 @@ async function resolveImageSource(input: {
   return { imageUrl }
 }
 
+function resolveRenderableImageUrl(imageUrl: string | null | undefined): string {
+  const trimmed = String(imageUrl ?? '').trim()
+  return trimmed ? normalizeUrl(trimmed) : EMPTY_IMAGE_PLACEHOLDER
+}
+
 function attachImageScaleSync(image: FabricImage): void {
   let committing = false
 
@@ -81,8 +89,8 @@ export async function createImage(config: ImageElementConfig): Promise<FabricEle
   const id = config.id || nanoid()
 
   const resolved = await resolveImageSource({ imageUrl: config.imageUrl, assetId: config.assetId })
-  const urlRaw = resolved.imageUrl || 'https://cdn.wristo.io/moonphase/h-phase-16.png'
-  const imageUrl = normalizeUrl(String(urlRaw))
+  const businessImageUrl = resolved.imageUrl ? normalizeUrl(String(resolved.imageUrl)) : ''
+  const imageUrl = resolveRenderableImageUrl(businessImageUrl)
 
   const imgEl = await loadHtmlImage(imageUrl)
   const rawW = Math.max(1, Number((imgEl as any).naturalWidth ?? imgEl.width ?? 1))
@@ -117,7 +125,7 @@ export async function createImage(config: ImageElementConfig): Promise<FabricEle
     scaleY: sy,
   } as unknown as ImageProps) as unknown as FabricImage & FabricElement
 
-  ;(image as any).imageUrl = imageUrl
+  ;(image as any).imageUrl = businessImageUrl
   ;(image as any).assetId = config.assetId
 
   attachImageScaleSync(image)
@@ -161,8 +169,9 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
     imageUrl: patch.imageUrl ?? (obj as any).imageUrl,
     assetId: typeof nextAssetId === 'number' ? nextAssetId : undefined,
   })
-  const nextUrl = resolved.imageUrl
+  const nextUrl = resolved.imageUrl ? normalizeUrl(String(resolved.imageUrl)) : ''
 
+  const shouldClear = patch.imageUrl === '' || patch.imageUrl === null || (patch.assetId === null && patch.imageUrl === undefined)
   const shouldReload = Boolean(nextUrl && nextUrl !== (obj as any).imageUrl)
 
   if (shouldReload && nextUrl) {
@@ -183,6 +192,21 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
       ;(obj as any).imageUrl = nextUrl
     } catch (e) {
       console.warn('[Image] reload failed', e)
+    }
+  } else if (shouldClear) {
+    try {
+      const imgEl = await loadHtmlImage(EMPTY_IMAGE_PLACEHOLDER)
+      ;(obj as any).setElement?.(imgEl)
+      obj.set({
+        width: 1,
+        height: 1,
+        scaleX: targetW,
+        scaleY: targetH,
+      } as unknown as ImageProps)
+      ;(obj as any).imageUrl = ''
+      ;(obj as any).assetId = undefined
+    } catch (e) {
+      console.warn('[Image] clear failed', e)
     }
   } else if (patch.width !== undefined || patch.height !== undefined) {
     const rawW = Math.max(1, Number((obj as any).width ?? 1))

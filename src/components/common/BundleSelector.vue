@@ -1,11 +1,11 @@
 <template>
   <div class="bundle-selector">
-    <el-form-item label="Bundles">
+    <el-form-item :label="t('bundle.bundles')">
       <el-select
         v-model="localBundleIds"
         multiple
         filterable
-        placeholder="Select bundles"
+        :placeholder="t('bundle.selectBundles')"
         :loading="loadingBundles"
         :disabled="true"
         style="width: 100%"
@@ -18,7 +18,7 @@
         />
       </el-select>
       <div class="form-tip">
-        Select one or more bundles for your app
+        {{ t('bundle.tip') }}
       </div>
     </el-form-item>
   </div>
@@ -27,6 +27,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   bundleIds: number[]

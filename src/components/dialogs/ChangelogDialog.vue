@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="System Changelog"
+    :title="t('changelog.title')"
     width="1024px"
     :show-close="true"
     destroy-on-close
@@ -22,9 +22,9 @@
     </div>
     <template #footer>
       <div class="dialog-footer">
-        <el-checkbox v-model="dontShowAgain">Do not show this version update reminder again</el-checkbox>
+        <el-checkbox v-model="dontShowAgain">{{ t('changelog.doNotShowAgain') }}</el-checkbox>
         <el-button type="primary" @click="handleClose" class="dialog-btn">
-          OK
+          {{ t('common.ok') }}
         </el-button>
       </div>
     </template>
@@ -35,8 +35,10 @@
 import { ref, onMounted } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import appConfig from '@/config/appConfig'
+import { useI18n } from '@/i18n'
 
 const config = appConfig
+const { t } = useI18n()
 const dialogVisible = ref(false)
 const dontShowAgain = ref(false)
 

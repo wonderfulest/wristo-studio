@@ -32,13 +32,13 @@
           size="small"
           @click.stop="() => emit('edit', font)"
         >
-          Edit
+          {{ t('common.edit') }}
         </el-button>
       </div>
     </div>
 
     <div v-if="!fonts.length" class="bitmap-font-empty">
-      No bitmap fonts yet.
+      {{ t('font.noBitmapFonts') }}
     </div>
   </div>
 </template>
@@ -48,6 +48,9 @@ import { ref, watch, computed } from 'vue'
 import type { BitmapFontVO, BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   fonts: BitmapFontVO[]

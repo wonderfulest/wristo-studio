@@ -220,6 +220,9 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       if (eleType === 'background' || eleType === 'global') {
         continue
       }
+      if (eleType === 'image' && !String((element as any).imageUrl ?? '').trim()) {
+        continue
+      }
 
       const elementId = (element as any).id
       if (elementId != null && elementId !== '') {

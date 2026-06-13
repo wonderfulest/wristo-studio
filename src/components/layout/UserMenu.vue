@@ -1,6 +1,6 @@
 <template>
   <div class="user-menu" v-if="userStore.isAuthenticated">
-    <div v-if="pendingCount > 0" class="ticket-reminder">
+    <div v-if="showMerchantEntrypoints && pendingCount > 0" class="ticket-reminder">
       <button class="ticket-reminder-button" type="button" @click.stop="goTickets">
         <Icon icon="material-symbols:confirmation-number-outline" />
         <span class="ticket-reminder-label">{{ t('nav.tickets') }}</span>
@@ -50,23 +50,27 @@
         <Icon icon="material-symbols:account-circle" />
         {{ t('nav.userProfile') }}
       </div>
-      <div class="dropdown-item" @click="go('/devices')">
+      <div v-if="!userStore.isMerchantUser" class="dropdown-item" @click="go('/pricing')">
+        <Icon icon="material-symbols:workspace-premium" />
+        {{ t('nav.membership') }}
+      </div>
+      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/devices')">
         <Icon icon="material-symbols:extension" />
         {{ t('nav.devices') }}
       </div>
-      <div class="dropdown-item" @click="go('/fonts')">
+      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/fonts')">
         <Icon icon="material-symbols:font-download-outline" />
         {{ t('nav.fontPreview') }}
       </div>
-      <div class="dropdown-item" @click="go('/FAQ')">
+      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/FAQ')">
         <Icon icon="material-symbols:help-outline" />
         {{ t('nav.helpCenter') }}
       </div>
-      <div class="dropdown-item" @click="openSettings">
+      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="openSettings">
         <Icon icon="material-symbols:settings-outline" />
         {{ t('nav.settings') }}
       </div>
-      <div class="dropdown-item" @click="goTickets">
+      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="goTickets">
         <Icon icon="material-symbols:confirmation-number-outline" />
         <span>{{ t('nav.tickets') }}</span>
         <span v-if="pendingCount > 0" class="menu-badge">{{ pendingCount }}</span>
@@ -102,7 +106,8 @@ const designerConfigDialogRef = ref<InstanceType<typeof DesignerDefaultConfigDia
 
 const ticketNudgeVisible = ref(false)
 const pendingCount = ref<number>(0)
-const showAvatarDot = computed(() => pendingCount.value > 0)
+const showMerchantEntrypoints = computed(() => userStore.isMerchantUser)
+const showAvatarDot = computed(() => showMerchantEntrypoints.value && pendingCount.value > 0)
 const userAvatar = computed(() => userStore.userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')
 
 const userInitials = computed(() => {
@@ -159,6 +164,11 @@ const openSettings = () => {
 
 const fetchPendingTickets = async () => {
   try {
+    if (!showMerchantEntrypoints.value) {
+      pendingCount.value = 0
+      ticketNudgeVisible.value = false
+      return
+    }
     const assigneeId = userStore.userInfo?.id
     if (!assigneeId) return
     const res = await ticketsApi.count(assigneeId, 'open')

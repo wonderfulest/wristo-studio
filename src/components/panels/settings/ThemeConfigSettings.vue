@@ -90,7 +90,7 @@
               :loading="deletingMap[val]"
               @click="deleteConfig(val)"
             >
-              Delete
+              {{ t('common.delete') }}
             </el-button>
           </div>
         </div>
@@ -342,7 +342,7 @@ const handleDefaultToggle = async (val, value) => {
   }
 
   if (!cfg.id) {
-    ElMessage.error('请先保存该配置，再设置为默认')
+    ElMessage.error(t('elementSettings.saveConfigBeforeDefault'))
     currentConfigMap.value[val].isDefault = 0
     return
   }
@@ -354,17 +354,17 @@ const handleDefaultToggle = async (val, value) => {
       if (!currentConfigMap.value[k]) return
       currentConfigMap.value[k].isDefault = k === val ? 1 : 0
     })
-    ElMessage.success('已设置为默认配置')
+    ElMessage.success(t('elementSettings.defaultConfigSet'))
   } catch (e) {
     console.error('Failed to set default theme config', e)
-    ElMessage.error('设置默认配置失败')
+    ElMessage.error(t('elementSettings.defaultConfigFailed'))
     currentConfigMap.value[val].isDefault = 0
   }
 }
 
 const saveConfig = async (val) => {
   if (!props.appId || !keyName.value) {
-    ElMessage.error('Missing appId or key for theme config')
+    ElMessage.error(t('elementSettings.missingThemeConfigKey'))
     return
   }
   ensureConfigEntry(val)
@@ -386,16 +386,16 @@ const saveConfig = async (val) => {
       const { data } = await updateThemeConfig(cfg.id, payload)
       const updated = data?.data || data
       currentConfigMap.value[val].id = updated.id
-      ElMessage.success('Config updated')
+      ElMessage.success(t('elementSettings.configUpdated'))
     } else {
       const { data } = await createThemeConfig(payload)
       const created = data?.data || data
       currentConfigMap.value[val].id = created.id
-      ElMessage.success('Config created')
+      ElMessage.success(t('elementSettings.configCreated'))
     }
   } catch (e) {
     console.error('Failed to save theme config', e)
-    ElMessage.error('Failed to save theme config')
+    ElMessage.error(t('elementSettings.saveThemeConfigFailed'))
   } finally {
     savingMap.value[val] = false
   }
@@ -414,10 +414,10 @@ const deleteConfig = async (val) => {
       imageUrl: '',
       colorJson: '',
     }
-    ElMessage.success('Config deleted')
+    ElMessage.success(t('elementSettings.configDeleted'))
   } catch (e) {
     console.error('Failed to delete theme config', e)
-    ElMessage.error('Failed to delete theme config')
+    ElMessage.error(t('elementSettings.deleteThemeConfigFailed'))
   } finally {
     deletingMap.value[val] = false
   }

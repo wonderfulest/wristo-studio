@@ -77,8 +77,34 @@ const generateRandomProjectName = () => {
   return `App ${suffix}`
 }
 
+const showUpgradePrompt = () => {
+  messageStore.warning(t('membership.freeCreateLimitReached'))
+}
+
+const canCreateProject = () => {
+  if (userStore.canCreateDesign) {
+    return true
+  }
+  showUpgradePrompt()
+  router.push('/pricing')
+  return false
+}
+
+const openNewProjectDialog = (options: { interactive?: boolean } = {}) => {
+  if (!userStore.canCreateDesign) {
+    if (options.interactive) {
+      canCreateProject()
+    }
+    return
+  }
+  currentTemplate.value = null
+  projectName.value = generateRandomProjectName()
+  dialogVisible.value = true
+}
+
 // 打开弹框，准备从模板创建新项目
 const handleOpenFromTemplate = (design: Design) => {
+  if (!canCreateProject()) return
   currentTemplate.value = design
   projectName.value = generateRandomProjectName()
   dialogVisible.value = true
@@ -88,6 +114,7 @@ const handleOpenFromTemplate = (design: Design) => {
 // - 如果选择了 sample（currentTemplate 有值），复制模板并打开画布
 // - 如果没有选择 sample，创建一个全新的应用并打开画布
 const handleConfirmDialog = async (inputName: string) => {
+  if (!canCreateProject()) return
   const name = (inputName || projectName.value).trim() || generateRandomProjectName()
 
   try {
@@ -122,6 +149,7 @@ const handleConfirmDialog = async (inputName: string) => {
       router.push('/design?id=' + designData.designUid)
       dialogVisible.value = false
       currentTemplate.value = null
+      await userStore.refreshUserInfo()
       return
     }
 
@@ -142,9 +170,10 @@ const handleConfirmDialog = async (inputName: string) => {
 
     router.push('/design?id=' + newDesign.designUid)
     dialogVisible.value = false
+    await userStore.refreshUserInfo()
   } catch (error: any) {
     console.error('[NewProjects] handleConfirmDialog error:', error)
-    messageStore.error(t('project.openDesignFailed'))
+    messageStore.error(error?.response?.data?.msg || t('project.openDesignFailed'))
   }
 }
 
@@ -183,6 +212,7 @@ const deleteRecentDesign = async () => {
       deleteDialogVisible.value = false
       designToDelete.value = null
       await fetchRecentDesigns()
+      await userStore.refreshUserInfo()
     } else {
       messageStore.error(response.msg || t('project.deleteFailed'))
     }
@@ -248,8 +278,7 @@ const fetchRecentDesigns = async () => {
 
 // 监听来自全局的“打开新项目弹框”事件，支持在 /designs/new-projects 页面重复触发
 const openDialogHandler = () => {
-  projectName.value = generateRandomProjectName()
-  dialogVisible.value = true
+  openNewProjectDialog({ interactive: true })
 }
 
 emitter.on('open-new-project-dialog', openDialogHandler)
@@ -257,15 +286,13 @@ emitter.on('open-new-project-dialog', openDialogHandler)
 onMounted(() => {
   fetchDesigns()
   fetchRecentDesigns()
-  // 进入 New Projects 页面时立即弹出新项目名称对话框
-  projectName.value = generateRandomProjectName()
-  dialogVisible.value = true
+  // 进入 New Projects 页面时立即弹出新项目名称对话框；超出创作数量限制时静默停留在列表页
+  openNewProjectDialog()
 })
 
 // 被 keep-alive 缓存后，每次重新激活也要弹一次
 onActivated(() => {
-  projectName.value = generateRandomProjectName()
-  dialogVisible.value = true
+  openNewProjectDialog()
 })
 
 onBeforeUnmount(() => {

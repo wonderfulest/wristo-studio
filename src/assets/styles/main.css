@@ -238,6 +238,21 @@ button,
   --el-button-active-border-color: var(--studio-primary-active);
 }
 
+:root[data-studio-theme='dark'] .el-button--primary {
+  --el-button-text-color: #042f2e;
+  --el-button-hover-text-color: #042f2e;
+  --el-button-active-text-color: #042f2e;
+  --el-button-disabled-text-color: rgba(4, 47, 46, 0.72);
+}
+
+:root[data-studio-theme='dark'] .el-button--primary.is-link,
+:root[data-studio-theme='dark'] .el-button--primary.is-text {
+  --el-button-text-color: var(--studio-primary);
+  --el-button-hover-text-color: var(--studio-primary-hover);
+  --el-button-active-text-color: var(--studio-primary-active);
+  --el-button-disabled-text-color: var(--studio-text-subtle);
+}
+
 .el-input__wrapper,
 .el-select__wrapper {
   border-radius: var(--studio-radius-md);

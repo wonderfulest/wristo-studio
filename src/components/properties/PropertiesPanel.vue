@@ -243,11 +243,11 @@ const editProperty = (key, prop) => {
 const deleteProperty = async (key) => {
   try {
     await ElMessageBox.confirm(
-      'Are you sure to delete this property?',
-      'Warning',
+      t('property.deleteConfirm'),
+      t('property.warning'),
       {
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
       }
     )
@@ -256,7 +256,7 @@ const deleteProperty = async (key) => {
     commitHistory('delete-property')
     ElMessage({
       type: 'success',
-      message: 'Property deleted successfully',
+      message: t('property.deleteSuccess'),
     })
   } catch (err) {
     // 用户取消删除，不做任何操作

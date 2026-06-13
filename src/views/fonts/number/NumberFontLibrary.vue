@@ -5,7 +5,7 @@
       <div class="search-inputs">
         <el-input
           v-model="searchQuery"
-          placeholder="Search number fonts..."
+          :placeholder="t('font.searchNumberFonts')"
           class="search-input"
           clearable
           @input="handleSearch"
@@ -14,7 +14,7 @@
             <el-icon><Search /></el-icon>
           </template>
           <template #append>
-            <el-button :icon="Search" @click="handleSearch">Search</el-button>
+            <el-button :icon="Search" @click="handleSearch">{{ t('common.search') }}</el-button>
           </template>
         </el-input>
 
@@ -36,31 +36,33 @@
       <div class="search-toolbar flex items-center justify-between">
         <div class="toolbar-actions">
           <el-button
+            v-if="canUsePremiumAssets"
             size="small"
             @click="showUploadArea = !showUploadArea"
             :type="showUploadArea ? 'primary' : 'default'"
           >
             <el-icon><Upload /></el-icon>
-            Upload Number Fonts
+            {{ t('font.uploadNumberFonts') }}
           </el-button>
-          <el-button size="small" style="margin-left: 12px;" @click="handleResetFilters">Reset</el-button>
+          <el-button size="small" style="margin-left: 12px;" @click="handleResetFilters">{{ t('common.reset') }}</el-button>
           <el-button
+            v-if="canUsePremiumAssets"
             size="small"
             type="primary"
             style="margin-left: 12px;"
             @click="openGlyphEditor"
           >
-            Edit Number Glyphs (0-9 & :)
+            {{ t('font.editNumberGlyphs') }}
           </el-button>
         </div>
       </div>
     </div>
 
     <!-- Upload area -->
-    <div v-show="showUploadArea" class="upload-section">
+    <div v-show="showUploadArea && canUsePremiumAssets" class="upload-section">
       <div class="upload-header">
-        <h3>Upload Custom Number Fonts</h3>
-        <p class="upload-description">Upload TTF or OTF font files for number-only fonts.</p>
+        <h3>{{ t('font.uploadCustomNumberFonts') }}</h3>
+        <p class="upload-description">{{ t('font.uploadNumberFontsDescription') }}</p>
       </div>
 
       <el-upload
@@ -77,8 +79,8 @@
             <Upload />
           </el-icon>
           <div class="upload-text">
-            <span>Click to select or drag and drop font files</span>
-            <p class="upload-tip">TTF / OTF files supported</p>
+            <span>{{ t('font.clickDragFontFiles') }}</span>
+            <p class="upload-tip">{{ t('font.supportedTtfOtf') }}</p>
           </div>
         </div>
       </el-upload>
@@ -86,9 +88,9 @@
       <!-- Upload processing queue -->
       <div v-if="uploadQueue.length > 0" class="upload-queue">
         <div class="queue-header">
-          <span>Processing {{ uploadQueue.length }} font{{ uploadQueue.length > 1 ? 's' : '' }}</span>
+          <span>{{ t('font.processingFonts', { count: uploadQueue.length }) }}</span>
           <el-button size="small" type="text" @click="clearQueue" :disabled="isProcessing">
-            Clear All
+            {{ t('common.clearAll') }}
           </el-button>
         </div>
 
@@ -147,7 +149,7 @@
             :loading="isProcessing"
             :disabled="uploadQueue.every(item => item.status === 'completed')"
           >
-            {{ isProcessing ? 'Processing...' : 'Upload All Fonts' }}
+            {{ isProcessing ? t('common.processing') : t('font.uploadAllFonts') }}
           </el-button>
         </div>
       </div>
@@ -190,8 +192,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { Search, Upload, Close, Check, Warning, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { searchFonts, uploadFontFile, getFontByName, increaseFontUsage } from '@/api/wristo/fonts'
@@ -199,6 +203,10 @@ import type { DesignFontVO } from '@/types/font'
 import type { ParsedFontInfo } from '@/types/font-parse'
 import opentype, { Font, FontNames } from 'opentype.js'
 import NumberGlyphEditorDialog from '@/views/fonts/number/NumberGlyphEditorDialog.vue'
+import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])
 const currentPage = ref(1)
@@ -212,6 +220,9 @@ const uploadQueue = ref<UploadQueueItem[]>([])
 const isProcessing = ref(false)
 
 const fontStore = useFontStore()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 const glyphEditorRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
 
 interface UploadQueueItem {
@@ -222,6 +233,10 @@ interface UploadQueueItem {
 }
 
 const openGlyphEditor = () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   glyphEditorRef.value?.open()
 }
 
@@ -231,10 +246,11 @@ const loadFonts = async () => {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       name: searchQuery.value || undefined,
-      type: 'text_font'
+      type: 'text_font',
+      isSystem: canUsePremiumAssets.value ? undefined : 1,
     })
-    const list = data?.list ?? []
-    total.value = data?.total ?? 0
+    const list = filterAssetsByStudioAccess(data?.list ?? [], canUsePremiumAssets.value)
+    total.value = data?.total ?? list.length
     // preload fonts using slug as family via fontStore
     await Promise.all(
       list.map((f: DesignFontVO) =>
@@ -244,7 +260,7 @@ const loadFonts = async () => {
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
   } catch (error) {
     console.error('Failed to load number fonts:', error)
-    ElMessage.error('Failed to load number fonts')
+    ElMessage.error(t('font.loadNumberListFailed'))
   }
 }
 
@@ -274,6 +290,10 @@ const handleResetFilters = () => {
 }
 
 const handleFontFilesChange = async (file: any) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   if (!file?.raw) return
 
   const lower = (file.name || '').toLowerCase()
@@ -281,13 +301,13 @@ const handleFontFilesChange = async (file: any) => {
   const isOTF = lower.endsWith('.otf')
 
   if (!isTTF && !isOTF) {
-    ElMessage.error('Please upload TTF/OTF files only')
+    ElMessage.error(t('font.uploadTtfOtfOnly'))
     return
   }
 
   const exists = uploadQueue.value.some(item => item.file.name === file.name)
   if (exists) {
-    ElMessage.warning(`Font "${file.name}" is already in the queue`)
+    ElMessage.warning(t('font.duplicateQueue', { name: file.name }))
     return
   }
 
@@ -302,7 +322,7 @@ const handleFontFilesChange = async (file: any) => {
     queueItem.parsedInfo = parsedInfo
   } catch (error) {
     console.error('Failed to parse font:', error)
-    queueItem.error = 'Failed to parse font file'
+    queueItem.error = t('font.parseFailed')
   }
 }
 
@@ -360,6 +380,10 @@ const clearQueue = () => {
 }
 
 const processQueue = async () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   if (isProcessing.value) return
 
   isProcessing.value = true
@@ -377,7 +401,7 @@ const processQueue = async () => {
       successCount++
     } catch (error: any) {
       item.status = 'error'
-      item.error = error?.response?.data?.message || 'Upload failed'
+      item.error = error?.response?.data?.message || t('font.uploadFailed')
       errorCount++
       console.error('Font upload error:', error)
     }
@@ -388,11 +412,11 @@ const processQueue = async () => {
   isProcessing.value = false
 
   if (successCount > 0 && errorCount === 0) {
-    ElMessage.success(`Successfully uploaded ${successCount} font${successCount > 1 ? 's' : ''}`)
+    ElMessage.success(t('font.uploadSuccessCount', { count: successCount }))
   } else if (successCount > 0 && errorCount > 0) {
-    ElMessage.warning(`Uploaded ${successCount} font${successCount > 1 ? 's' : ''}, ${errorCount} failed`)
+    ElMessage.warning(t('font.uploadPartialCount', { success: successCount, failed: errorCount }))
   } else if (errorCount > 0) {
-    ElMessage.error(`Failed to upload ${errorCount} font${errorCount > 1 ? 's' : ''}`)
+    ElMessage.error(t('font.uploadFailedCount', { count: errorCount }))
   }
 
   if (successCount > 0) {
@@ -401,8 +425,11 @@ const processQueue = async () => {
 }
 
 const uploadSingleFont = async (item: UploadQueueItem) => {
+  if (!canUsePremiumAssets.value) {
+    throw new Error(t('font.uploadRequiresPremium'))
+  }
   if (!item.parsedInfo) {
-    throw new Error('Font parsing failed')
+    throw new Error(t('font.parseFailed'))
   }
 
   const fontName = item.parsedInfo.fullName || item.parsedInfo.family || item.file.name.replace(/\.(ttf|otf)$/i, '')

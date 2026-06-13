@@ -37,7 +37,7 @@
               </el-button>
               <!-- 删除（仅管理员和自己的应用可见） -->
               <el-button
-                v-if="isAdminUser || design.user.id === currentUserId"
+                v-if="canDeleteDesign && (isAdminUser || design.user.id === currentUserId)"
                 class="delete-action"
                 type="danger"
                 size="small"
@@ -220,6 +220,7 @@ const props = defineProps<{
   design: Design
   isMerchantUser: boolean
   isAdminUser: boolean
+  canDeleteDesign: boolean
   showCreator: boolean
   loadingStates: LoadingStates
   currentUserId: number | null
@@ -250,6 +251,7 @@ const { t } = useI18n()
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
 const isAdminUser = computed(() => props.isAdminUser)
+const canDeleteDesign = computed(() => props.canDeleteDesign)
 const showCreator = computed(() => props.showCreator)
 const loadingStates = computed(() => props.loadingStates)
 const currentUserId = computed(() => props.currentUserId)
@@ -552,15 +554,8 @@ const lastUpdatedText = computed(() => {
 
 .placeholder-circle {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 72%;
-  height: 72%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: var(--studio-surface);
-  border: 1px solid var(--studio-border);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  inset: 0;
+  background: var(--studio-surface-soft);
 }
 
 .creator-badge {

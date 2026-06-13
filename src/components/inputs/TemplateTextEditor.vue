@@ -12,25 +12,25 @@
         style="height: 400px"
       />
       <div class="used-vars" v-if="usedVariables.length > 0">
-        <div class="section-title">Used Variables</div>
+        <div class="section-title">{{ t('templateEditor.usedVariables') }}</div>
         <div class="chips">
           <span v-for="v in usedVariables" :key="v" class="chip">{{ v }}</span>
         </div>
       </div>
     </div>
     <div class="sidebar" v-if="showSidebar">
-      <div class="section-title">Variables</div>
-      <el-input v-model="search" placeholder="Search variable" class="mb-2" />
+      <div class="section-title">{{ t('templateEditor.variables') }}</div>
+      <el-input v-model="search" :placeholder="t('templateEditor.searchVariable')" class="mb-2" />
       <div class="var-list">
         <div v-for="v in filteredVariables" :key="v.id" class="var-item">
           <div class="var-key">{{ v.variableKey }}</div>
           <div class="var-actions">
-            <el-button size="small" @click="insertVariable(v.variableKey)">Insert</el-button>
+            <el-button size="small" @click="insertVariable(v.variableKey)">{{ t('templateEditor.insert') }}</el-button>
           </div>
         </div>
       </div>
-      <div class="section-title mt-3">Preview Context</div>
-      <el-button size="small" @click="loadPreview" :loading="loadingPreview">Load Preview</el-button>
+      <div class="section-title mt-3">{{ t('templateEditor.previewContext') }}</div>
+      <el-button size="small" @click="loadPreview" :loading="loadingPreview">{{ t('templateEditor.loadPreview') }}</el-button>
       <div class="preview" v-if="preview && Object.keys(preview).length">
         <div v-for="(val, key) in preview" :key="String(key)" class="preview-row">
           <span class="k">{{ key }}</span>
@@ -47,6 +47,7 @@ import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import { templateVariablesApi } from '@/api/wristo/templateVariables'
 import type { TemplateVariableVO } from '@/types/api/template-variable'
+import { useI18n } from '@/i18n'
 // minimal markdown-it types to avoid any
 type MarkdownItToken = { type: string; attrGet: (name: string) => string | null; attrSet: (name: string, value: string) => void; content?: string }
 type MarkdownItRenderer = { rules: Record<string, ((tokens: MarkdownItToken[], idx: number, options: unknown, env: unknown, self: { renderToken: (tokens: MarkdownItToken[], idx: number, options: unknown) => string }) => string) | undefined> }
@@ -66,8 +67,10 @@ interface Props {
   showSidebar?: boolean
 }
 
+const { t } = useI18n()
+
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Enter template... You can insert variables from the right panel.',
+  placeholder: '',
   prefix: '[[${',
   suffix: '}]]',
   showSidebar: true,
@@ -77,6 +80,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string | null): void }>()
 
 const localValue = ref<string>(props.modelValue ?? '')
 const editorRef = ref<MdEditorExpose | null>(null)
+const placeholder = computed(() => props.placeholder || t('templateEditor.placeholder'))
 watch(() => props.modelValue, (v) => { localValue.value = v ?? '' })
 watch(localValue, (v) => {
   const out: string | null = v === '' ? null : v

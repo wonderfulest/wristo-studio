@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import * as path from 'path'
 
 const joinUrl = (baseUrl: string | undefined, childPath: string) => `${(baseUrl || '').replace(/\/$/, '')}/${childPath}`
+const envValue = (rootEnv: Record<string, string>, ...keys: string[]) => keys.map((key) => rootEnv[key]).find(Boolean) || ''
 
 // 获取环境变量
 const env = process.env.NODE_ENV
@@ -30,6 +31,13 @@ export default defineConfig(({ mode }) => {
     define: {
       'import.meta.env.VITE_WRISTO_SSO_REDIRECT_URI': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_SSO_REDIRECT_URI || ''),
       'import.meta.env.VITE_WRISTO_SSO_LOGIN_URL': JSON.stringify(joinUrl(rootEnv.VITE_WRISTO_SSO_URL, 'login')),
+      'import.meta.env.VITE_WRISTO_PADDLE_ENVIRONMENT': JSON.stringify(envValue(rootEnv, 'VITE_WRISTO_STUDIO_PADDLE_ENVIRONMENT', 'VITE_WRISTO_STORE_PADDLE_ENVIRONMENT')),
+      'import.meta.env.VITE_WRISTO_PADDLE_CLIENT_TOKEN': JSON.stringify(envValue(rootEnv, 'VITE_WRISTO_STUDIO_PADDLE_CLIENT_TOKEN', 'VITE_WRISTO_STORE_PADDLE_CLIENT_TOKEN')),
+      'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_MONTHLY': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_MONTHLY || ''),
+      'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_QUARTERLY': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_QUARTERLY || ''),
+      'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL || ''),
+      'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL || ''),
+      'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D || ''),
     },
     plugins: [
       vue(),

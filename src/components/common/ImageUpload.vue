@@ -23,7 +23,7 @@
 
         <div v-if="ratioTip" class="ratio-tip" :title="ratioTip">{{ ratioTip }}</div>
 
-        <div v-if="uploading" class="mask">Uploading...</div>
+        <div v-if="uploading" class="mask">{{ t('image.uploading') }}</div>
         <el-button
           v-if="previewUrl"
           class="clear"
@@ -45,6 +45,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { uploadImage } from '@/api/image'
 import { IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const extractRatio = (it) => {
   const candidates = [it?.props?.ratio, it?.ratio, it?.category, it?.description, it?.name, it?.value]
@@ -97,7 +100,7 @@ const ensureAspectCodeValid = async () => {
   await initAspectRatioMap()
   const ok = validAspectCodes.value.includes(code)
   if (!ok) {
-    ElMessage.error(`Invalid aspectCode: ${code}`)
+    ElMessage.error(t('image.invalidAspectCode', { code }))
   }
   return ok
 }
@@ -148,7 +151,7 @@ const ensureImageAspectValid = async (file) => {
     const diff = Math.abs(actual - expected) / expected
     if (diff > 0.01) {
       const actualRatio = `${Math.round(actual * 100) / 100}:1`
-      ElMessage.error(`Image aspect ratio should be close to ${ratio}, current is approximately ${actualRatio}`)
+      ElMessage.error(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
       return false
     }
     return true
@@ -215,13 +218,13 @@ watch(
 const beforeUpload = (file) => {
   const isImage = file.type.startsWith('image/')
   if (!isImage) {
-    ElMessage.error('Only image files are allowed')
+    ElMessage.error(t('image.onlyImages'))
     return false
   }
   const max = props.maxSizeMB || 10
   const sizeOk = file.size / 1024 / 1024 <= max
   if (!sizeOk) {
-    ElMessage.error(`Image size must not exceed ${max}MB`)
+    ElMessage.error(t('image.sizeLimit', { max }))
     return false
   }
   return true
@@ -246,9 +249,9 @@ const uploadRawFile = async (raw) => {
     emit('update:modelValue', img.id)
     preview.value = img.previewUrl || (img.formats && img.formats.thumbnail && img.formats.thumbnail.url) || img.url || ''
     emit('uploaded', img)
-    ElMessage.success('Image uploaded successfully')
+    ElMessage.success(t('image.uploadSuccess'))
   } catch (e) {
-    ElMessage.error(e && e.msg ? e.msg : 'Upload failed')
+    ElMessage.error(e && e.msg ? e.msg : t('image.uploadFailed'))
   } finally {
     uploading.value = false
   }

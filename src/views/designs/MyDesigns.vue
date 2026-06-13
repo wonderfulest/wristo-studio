@@ -40,6 +40,7 @@
           :design="design"
           :is-merchant-user="isMerchantUser"
           :is-admin-user="isAdminUser"
+          :can-delete-design="canDeleteDesign"
           :show-creator="showCreator"
           :loading-states="loadingStatesPlain"
           :current-user-id="userStore.userInfo?.id ?? null"
@@ -134,6 +135,7 @@ import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -143,6 +145,7 @@ const messageStore = useMessageStore()
 const baseStore = useBaseStore()
 const userStore = useUserStore()
 const { t } = useI18n()
+const membershipGate = useStudioMembershipGate()
 
 interface LoadingStates {
   submit: Set<number>
@@ -189,6 +192,12 @@ const isMerchantUser = computed(() => {
 const isAdminUser = computed(() => {
   const roles = userStore.userInfo?.roles || []
   return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
+})
+
+const canDeleteDesign = computed(() => {
+  if (userStore.hasFullStudioAccess) return true
+  const level = userStore.studioMembership?.level || 'free'
+  return level !== 'free'
 })
 
 // 添加作者显示控制
@@ -332,6 +341,11 @@ const editDesign = (design: Design) => {
 // 复制设计
 const copyDesign = async (design: Design) => {
   if (loadingStates.value.copy.has(design.id)) return
+  if (!userStore.canCreateDesign) {
+    messageStore.warning(t('membership.freeCreateLimitReached'))
+    router.push('/pricing')
+    return
+  }
   
   try {
     loadingStates.value.copy.add(design.id)
@@ -343,12 +357,13 @@ const copyDesign = async (design: Design) => {
     if (createResponse.code === 0 && createResponse.data) {
       messageStore.success(t('project.copySuccessful'))
       await fetchDesigns()
+      await userStore.refreshUserInfo()
     } else {
       messageStore.error(createResponse.msg || t('project.copyFailed'))
     }
   } catch (error) {
     console.error('复制失败:', error)
-    messageStore.error(t('project.copyFailed'))
+    messageStore.error((error as any)?.response?.data?.msg || t('project.copyFailed'))
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
@@ -381,6 +396,7 @@ const confirmDeleteDesign = async () => {
       messageStore.success(t('project.deleteSuccessful'))
       deleteDialogVisible.value = false
       await fetchDesigns()
+      await userStore.refreshUserInfo()
     } else {
       messageStore.error(response.msg || t('project.deleteFailed'))
     }
@@ -394,6 +410,7 @@ const confirmDeleteDesign = async () => {
 
 // 提交设计
 const submitDesign = async (design: Design) => {
+  if (!membershipGate.requirePublish()) return
   if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
     submitDesignDialog.value.show(design)
   }
@@ -401,6 +418,7 @@ const submitDesign = async (design: Design) => {
 
 // 提交 PRG 打包任务
 const buildPrg = async (design: Design) => {
+  if (!membershipGate.requireExport()) return
   if (loadingStates.value.prgBuild.has(design.id)) return
 
   // 获取当前设备 ID：优先使用用户资料中的设备，其次尝试本地已选设备
@@ -433,6 +451,7 @@ const buildPrg = async (design: Design) => {
 
 // 下载安装包
 const downloadPackage = (design: Design) => {
+  if (!membershipGate.requireExport()) return
   if (design.product?.release?.packageUrl) {
     window.open(design.product.release.packageUrl, '_blank')
   } else {
@@ -442,6 +461,7 @@ const downloadPackage = (design: Design) => {
 
 // 运行 PRG：跳转下载 prgUrl
 const runPrg = (design: Design) => {
+  if (!membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
     window.open(url, '_blank')
@@ -500,6 +520,7 @@ const handleEditSuccess = () => {
 
 // Go live 方法
 const goLive = async (design: Design) => {
+  if (!membershipGate.requirePublish()) return
   try {
     const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
     const fullDesign = res.data as Design

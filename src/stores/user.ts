@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { logout as logoutApi, updateMyInfo } from '@/api/wristo/auth'
+import { getUserInfo, logout as logoutApi, updateMyInfo } from '@/api/wristo/auth'
 import { type UserInfo, type GarminDeviceVO } from '@/types/user'
 
 export const useUserStore = defineStore('user', {
@@ -18,6 +18,25 @@ export const useUserStore = defineStore('user', {
         isAuthenticated: hasToken && hasUserInfo
       })
       return hasToken && hasUserInfo
+    },
+    studioMembership: (state) => state.userInfo?.studioMembership || null,
+    hasFullStudioAccess: (state) => {
+      const roles = state.userInfo?.roles || []
+      return roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')
+    },
+    canUsePremiumStudioAssets: (state) => {
+      const roles = state.userInfo?.roles || []
+      const hasFullStudioAccess = roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')
+      return hasFullStudioAccess || state.userInfo?.studioMembership?.canUsePremiumAssets === true
+    },
+    canCreateDesign: (state) => {
+      const roles = state.userInfo?.roles || []
+      const hasFullStudioAccess = roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')
+      return hasFullStudioAccess || state.userInfo?.studioMembership?.canCreateDesign !== false
+    },
+    isMerchantUser: (state) => {
+      const roles = state.userInfo?.roles || []
+      return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
     }
   },
   actions: {
@@ -37,6 +56,13 @@ export const useUserStore = defineStore('user', {
     },
     setToken(token: string) {
       this.token = token
+    },
+    async refreshUserInfo() {
+      const response = await getUserInfo()
+      if (response.code === 0 && response.data) {
+        this.userInfo = response.data
+      }
+      return response
     },
     async updateDevice(device: GarminDeviceVO) {
       try {

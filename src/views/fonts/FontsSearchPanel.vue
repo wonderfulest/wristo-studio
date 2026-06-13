@@ -3,7 +3,7 @@
     <div class="search-inputs">
       <el-input
         :model-value="searchQuery"
-        placeholder="Search fonts 1..."
+        :placeholder="t('font.searchFonts')"
         class="search-input"
         clearable
         @input="onSearchInput"
@@ -12,13 +12,13 @@
           <el-icon><Search /></el-icon>
         </template>
         <template #append>
-          <el-button :icon="Search" @click="emit('search')">Search</el-button>
+          <el-button :icon="Search" @click="emit('search')">{{ t('common.search') }}</el-button>
         </template>
       </el-input>
 
       <el-input
         :model-value="previewText"
-        placeholder="Enter preview text..."
+        :placeholder="t('font.enterPreviewText')"
         class="preview-input"
         clearable
         @input="onPreviewTextInput"
@@ -33,35 +33,35 @@
     <el-form :inline="true" class="filters-form" label-position="left" size="small">
       <el-form-item>
         <template #label>
-          Monospace: {{ isMonospace ? 'On' : 'Off' }}
+          {{ t('font.monospace') }}: {{ isMonospace ? t('common.on') : t('common.off') }}
         </template>
         <el-switch
           :model-value="isMonospace"
-          active-text="On"
-          inactive-text="Off"
+          :active-text="t('common.on')"
+          :inactive-text="t('common.off')"
           inline-prompt
           @change="onIsMonospaceChange"
         />
       </el-form-item>
       <el-form-item>
         <template #label>
-          Italic: {{ italic ? 'On' : 'Off' }}
+          {{ t('font.italic') }}: {{ italic ? t('common.on') : t('common.off') }}
         </template>
         <el-switch
           :model-value="italic"
-          active-text="On"
-          inactive-text="Off"
+          :active-text="t('common.on')"
+          :inactive-text="t('common.off')"
           inline-prompt
           @change="onItalicChange"
         />
       </el-form-item>
       <el-form-item>
         <template #label>
-          Weight: {{ weightClass ?? 'Any' }}
+          {{ t('font.weight') }}: {{ weightClass ?? t('common.any') }}
         </template>
         <el-select
           :model-value="weightClass"
-          placeholder="Any"
+          :placeholder="t('common.any')"
           class="w-40"
           clearable
           @change="onWeightClassChange"
@@ -71,11 +71,11 @@
       </el-form-item>
       <el-form-item>
         <template #label>
-          Width: {{ widthClass ?? 'Any' }}
+          {{ t('font.width') }}: {{ widthClass ?? t('common.any') }}
         </template>
         <el-select
           :model-value="widthClass"
-          placeholder="Any"
+          :placeholder="t('common.any')"
           class="w-40"
           clearable
           @change="onWidthClassChange"
@@ -88,11 +88,11 @@
     <!-- Toolbar: total + reset -->
     <div class="search-toolbar flex items-center justify-between">
       <div class="toolbar-actions">
-        <el-button size="small" @click="emit('openUploadDialog')">
+        <el-button v-if="canUploadFonts" size="small" @click="emit('openUploadDialog')">
           <el-icon><Upload /></el-icon>
-          Upload Fonts
+          {{ t('font.uploadFonts') }}
         </el-button>
-        <el-button size="small" style="margin-left: 12px;" @click="emit('resetFilters')">Reset Filters</el-button>
+        <el-button size="small" style="margin-left: 12px;" @click="emit('resetFilters')">{{ t('common.resetFilters') }}</el-button>
       </div>
     </div>
   </div>
@@ -100,6 +100,9 @@
 
 <script setup lang="ts">
 import { Search, Upload } from '@element-plus/icons-vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 defineProps<{
   searchQuery: string
@@ -108,6 +111,7 @@ defineProps<{
   italic: boolean
   weightClass?: number
   widthClass?: number
+  canUploadFonts?: boolean
 }>()
 
 const emit = defineEmits<{

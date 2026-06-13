@@ -10,10 +10,10 @@
     <Teleport to="body">
       <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle">
         <!-- Add custom font button -->
-        <button class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">Add Custom Font</button>
+        <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
         <!-- Icon library guidance (only for icon fonts) -->
         <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
-          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">Manage your icon fonts in Icon Library</RouterLink>
+          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">{{ t('font.manageIconFonts') }}</RouterLink>
         </div>
         <!-- Number font library guidance (only for number fonts) -->
         <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
@@ -22,13 +22,19 @@
           </button>
         </div> -->
         <!-- Search (extracted component) -->
-        <FontSearch :model-value="modelValue" :type="type" @select="selectFont" />
+        <FontSearch
+          :model-value="modelValue"
+          :type="type"
+          :can-use-premium-assets="canUsePremiumAssets"
+          @select="selectFont"
+        />
         <!-- Recent fonts -->
         <RecentFontList
             :fonts="recentFonts"
             :model-value="modelValue"
             :expanded="expandedSections['recent']"
             :type="type"
+            :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
             @toggle="() => toggleSection('recent')"
         />
@@ -36,13 +42,14 @@
         <DesignerFontList
             :model-value="modelValue"
             :type="type"
+            :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
             @scroll="onDesignerScroll"
         />
       </div>
     </Teleport>
     <!-- Add font dialog -->
-    <FontImportDialog v-model:visible="dialogVisible" @selected="onFontUploaded" />
+    <FontImportDialog v-if="canUsePremiumAssets" v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
     <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
   </div>
@@ -56,6 +63,8 @@ import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { canUseAsset } from '@/utils/studioAssetAccess'
 import RecentFontList from '@/components/font-picker/RecentFontList.vue'
 import DesignerFontList from '@/components/font-picker/DesignerFontList.vue'
 import FontImportDialog from '@/components/font-picker/FontImportDialog.vue'
@@ -63,6 +72,7 @@ import NumberGlyphEditorDialog from '@/views/fonts/number/NumberGlyphEditorDialo
 import FontSearch from '@/components/font-picker/FontSearch.vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import type { FontItem } from '@/types/font-picker'
+import { useI18n } from '@/i18n'
 
 const props = defineProps({
   modelValue: {
@@ -76,16 +86,13 @@ const props = defineProps({
     default: FontTypes.TEXT_FONT
   }
 })
-// 是否为商家用户（拥有 ROLE_MERCHANT 角色）
-const isMerchantUser = computed(() => {
-  const roles = userStore.userInfo?.roles || []
-  return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
-})
 
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
 const userStore = useUserStore()
 const iconFontStrategyStore = useIconFontStrategyStore()
+const membershipGate = useStudioMembershipGate()
+const { t } = useI18n()
 const numberGlyphDialogRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
 
 type SectionName = 'recent' | 'condensed' | 'sans-serif' | 'fixed' | 'serif' | 'lcd' | 'icon' | 'custom'
@@ -113,6 +120,7 @@ const selectedFontFamily = computed(() => {
   }
   return slug
 })
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
 // 切换面板显示
 const updatePanelPosition = () => {
@@ -182,15 +190,20 @@ const ensureFontBySlug = async (slug: string, family: string) => {
 
 // 选择字体
 const selectFont = async (font: FontItem) => {
+  if (!canUseAsset(font, canUsePremiumAssets.value)) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
+
   // If selecting icon font, enforce single set per watch face
   if (props.type === FontTypes.ICON_FONT) {
     const current = iconFontStrategyStore.currentIconFontSlug
     if (current && current !== font.value) {
       try {
         await ElMessageBox.confirm(
-          'Only one icon font set can be used per watch face. Switching will update all existing icon elements to use this font. Continue?',
-          'Switch Icon Font',
-          { type: 'warning', confirmButtonText: 'Switch', cancelButtonText: 'Cancel' }
+          t('font.switchIconFontConfirm'),
+          t('font.switchIconFontTitle'),
+          { type: 'warning', confirmButtonText: t('font.switch'), cancelButtonText: t('common.cancel') }
         )
       } catch {
         return
@@ -216,14 +229,19 @@ const selectFont = async (font: FontItem) => {
 
 // 上传完成回调（来自子组件）
 const onFontUploaded = async (slug: string) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
+
   if (props.type === FontTypes.ICON_FONT) {
     const current = iconFontStrategyStore.currentIconFontSlug
     if (current && current !== slug) {
       try {
         await ElMessageBox.confirm(
-          'Only one icon font set can be used per watch face. Switching will update all existing icon elements to use this font. Continue?',
-          'Switch Icon Font',
-          { type: 'warning', confirmButtonText: 'Switch', cancelButtonText: 'Cancel' }
+          t('font.switchIconFontConfirm'),
+          t('font.switchIconFontTitle'),
+          { type: 'warning', confirmButtonText: t('font.switch'), cancelButtonText: t('common.cancel') }
         )
       } catch {
         return
@@ -239,6 +257,10 @@ const onFontUploaded = async (slug: string) => {
 }
 
 const addCustomFont = () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   dialogVisible.value = true
 }
 
@@ -286,7 +308,7 @@ watch(
   }
 )
 
-void [isMerchantUser, systemSections, openNumberGlyphEditor]
+void [systemSections, openNumberGlyphEditor]
 </script>
 
 <style scoped>

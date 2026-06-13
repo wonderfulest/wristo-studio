@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visibleRef"
-    title="Bitmap Font Setting"
+    :title="t('font.bitmapFontSetting')"
     width="640px"
     append-to-body
     @close="handleClose"
@@ -13,14 +13,14 @@
         rel="noopener noreferrer"
         class="bitmap-tutorial-link"
       >
-        Watch tutorial (YouTube)
+        {{ t('font.watchTutorialYoutube') }}
       </a>
     </div>
     <el-tabs v-model="activeTab">
-      <el-tab-pane label="DIGIT" name="digit" />
-      <el-tab-pane label="SYMBOL" name="symbol" />
-      <el-tab-pane label="OTHER" name="other" disabled />
-      <el-tab-pane label="CUSTOM" name="custom" disabled />
+      <el-tab-pane :label="t('font.digit')" name="digit" />
+      <el-tab-pane :label="t('font.symbol')" name="symbol" />
+      <el-tab-pane :label="t('font.other')" name="other" disabled />
+      <el-tab-pane :label="t('font.custom')" name="custom" disabled />
     </el-tabs>
 
     <!-- DIGIT 0-9 -->
@@ -55,7 +55,7 @@
           :disabled="!row.imageUrl"
           @click="emit('reset-row', row.index)"
         >
-          Reset
+          {{ t('common.reset') }}
         </el-button>
       </div>
     </div>
@@ -91,15 +91,15 @@
           :disabled="!row.imageUrl"
           @click="emit('reset-row', row.index)"
         >
-          Reset
+          {{ t('common.reset') }}
         </el-button>
       </div>
     </div>
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="onCancel">Cancel</el-button>
-        <el-button type="primary" @click="onOk">OK</el-button>
+        <el-button @click="onCancel">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="onOk">{{ t('common.ok') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -107,6 +107,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 export interface DigitRowState {
   // 字符值，例如 '0'-'9' 或 ':'

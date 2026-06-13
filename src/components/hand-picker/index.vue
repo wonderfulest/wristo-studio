@@ -2,7 +2,7 @@
   <div class="image-selector">
     <div class="hand-preview upload-preview" @click="triggerUpload">
       <el-icon class="upload-icon"><Plus /></el-icon>
-      <span>上传指针</span>
+      <span>{{ t('asset.uploadHand') }}</span>
       <input
         ref="uploadInput"
         type="file"
@@ -22,11 +22,11 @@
     </template>
     <div v-if="showMore" class="hand-preview more-preview" @click="toggleExpand">
       <el-icon class="more-icon"><ArrowDown /></el-icon>
-      <span>更多</span>
+      <span>{{ t('common.more') }}</span>
     </div>
     <div v-else class="hand-preview more-preview" @click="toggleExpand">
       <el-icon class="more-icon"><ArrowUp /></el-icon>
-      <span>收起</span>
+      <span>{{ t('common.collapse') }}</span>
     </div>
   </div>
 </template>
@@ -36,6 +36,9 @@ import { ref, defineEmits, defineProps, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadHandSVG } from '@/utils/image'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   selectedUrl: {
@@ -90,7 +93,7 @@ const handleUpload = async (event) => {
 
   // 检查文件类型
   if (!file.name.endsWith('.svg')) {
-    ElMessage.warning('请上传SVG格式的指针文件')
+    ElMessage.warning(t('asset.uploadHandSvgOnly'))
     return
   }
 
@@ -110,10 +113,10 @@ const handleUpload = async (event) => {
     // 调用上传回调
     props.onUpload(imageUpload.url, file.name)
 
-    ElMessage.success('指针上传成功')
+    ElMessage.success(t('asset.handUploadSuccess'))
   } catch (error) {
     console.error('上传指针失败:', error)
-    ElMessage.error('上传指针失败')
+    ElMessage.error(t('asset.handUploadFailed'))
   } finally {
     // 清空文件输入
     event.target.value = ''

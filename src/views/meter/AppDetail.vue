@@ -1,22 +1,22 @@
 <template>
   <div class="meter-app-detail-page">
     <div class="header">
-      <h2>App Operations</h2>
+      <h2>{{ t('meter.operations') }}</h2>
       <div class="filters">
         <el-date-picker
           v-model="date"
           type="date"
-          placeholder="Select date (optional)"
+          :placeholder="t('meter.selectDateOptional')"
           format="YYYYMMDD"
           value-format="YYYYMMDD"
           style="width: 180px"
           clearable
         />
-        <el-button type="primary" :loading="loading" :disabled="!currentAppId" @click="fetchAll">Refresh</el-button>
+        <el-button type="primary" :loading="loading" :disabled="!currentAppId" @click="fetchAll">{{ t('common.refresh') }}</el-button>
       </div>
     </div>
 
-    <el-empty v-if="!currentAppId" description="Missing App ID" />
+    <el-empty v-if="!currentAppId" :description="t('meter.missingAppId')" />
 
     <template v-else>
       <AppBasicInfoCard :loading="productLoading" :product="productDetail" :image-url="productImageUrl" />
@@ -66,6 +66,9 @@ import { getAppMeter, getDeviceOverview, getActiveDevices, getLostDevices, getAl
 import { getProduct } from '@/api/products'
 import type { AppMeterVO, DeviceOverviewVO, DeviceActiveVO, DeviceDetailVO } from '@/types/meter'
 import type { Product } from '@/types/api/product'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   appId?: number | string | null
@@ -198,7 +201,7 @@ const openDeviceDetail = async (token: string) => {
     const res = await getDeviceDetail(String(currentAppId.value), token)
     deviceDetail.value = res.data || null
   } catch {
-    ElMessage.error('Failed to load device detail')
+    ElMessage.error(t('meter.loadDeviceDetailFailed'))
   } finally {
     deviceDetailLoading.value = false
   }
@@ -244,7 +247,7 @@ const fetchMeter = async () => {
     meter.value = res.data || null
   } catch {
     meter.value = null
-    ElMessage.error('Failed to load app metrics')
+    ElMessage.error(t('meter.loadMetricsFailed'))
   } finally {
     loading.value = false
   }

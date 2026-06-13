@@ -1,7 +1,7 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    title="Edit Design" 
+    :title="t('editDesign.title')" 
     width="70%" 
     :top="'3vh'"
     class="edit-design-dialog"
@@ -10,37 +10,37 @@
     <div class="dialog-content">
       <!-- Header Section -->
       <div class="form-section">
-        <div class="section-title">Basic Information</div>
+        <div class="section-title">{{ t('property.basicInformation') }}</div>
         <div class="form-grid">
           <div class="form-field">
-            <label class="field-label">Name</label>
+            <label class="field-label">{{ t('createDesign.name') }}</label>
             <el-input 
               v-model="form.name" 
-              placeholder="Enter design name"
+              :placeholder="t('createDesign.enterName')"
               class="apple-input"
             />
           </div>
           <div class="form-field">
-            <label class="field-label">Status</label>
+            <label class="field-label">{{ t('common.status') }}</label>
             <el-select 
               v-model="form.designStatus" 
-              placeholder="Select status"
+              :placeholder="t('editDesign.selectStatus')"
               class="apple-select"
             >
-              <el-option label="Draft" value="draft" />
-              <el-option label="Submitted" value="submitted" />
-              <el-option label="Approved" value="approved" />
-              <el-option label="Rejected" value="rejected" />
+              <el-option :label="t('status.draft')" value="draft" />
+              <el-option :label="t('editDesign.statusSubmitted')" value="submitted" />
+              <el-option :label="t('status.approved')" value="approved" />
+              <el-option :label="t('status.rejected')" value="rejected" />
             </el-select>
           </div>
         </div>
         <div class="form-field full-width">
-          <label class="field-label">Description</label>
+          <label class="field-label">{{ t('submitDesign.description') }}</label>
           <el-input 
             v-model="form.description" 
             type="textarea" 
             :rows="2"
-            placeholder="Enter design description"
+            :placeholder="t('createDesign.enterDescription')"
             class="apple-textarea"
           />
         </div>
@@ -48,21 +48,21 @@
 
       <!-- Payment Section -->
       <div class="form-section">
-        <div class="section-title">Payment Settings</div>
+        <div class="section-title">{{ t('editDesign.paymentSettings') }}</div>
         <div class="payment-grid">
           <div class="form-field">
-            <label class="field-label">Payment Method</label>
+            <label class="field-label">{{ t('submitDesign.paymentMethod') }}</label>
             <el-radio-group 
               v-model="form.payment.paymentMethod" 
               class="apple-radio-group"
               @change="handlePaymentMethodChange"
             >
               <el-radio label="wpay" class="apple-radio">WPay</el-radio>
-              <el-radio label="none" class="apple-radio">Free</el-radio>
+              <el-radio label="none" class="apple-radio">{{ t('payment.free') }}</el-radio>
             </el-radio-group>
           </div>
           <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
-            <label class="field-label">Price (CNY)</label>
+            <label class="field-label">{{ t('editDesign.priceCny') }}</label>
             <el-input-number
               v-model.number="form.payment.price"
               :min="0"
@@ -74,7 +74,7 @@
             />
           </div>
           <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
-            <label class="field-label">Trial Hours</label>
+            <label class="field-label">{{ t('editDesign.trialHours') }}</label>
             <el-input-number
               v-model.number="form.payment.trialLasts"
               :min="0"
@@ -91,7 +91,7 @@
       <!-- Configuration Section -->
       <div class="form-section config-section">
         <div class="section-header">
-          <div class="section-title">Configuration</div>
+          <div class="section-title">{{ t('editDesign.configuration') }}</div>
           <div class="config-actions">
             <el-button 
               size="small" 
@@ -99,7 +99,7 @@
               class="apple-button secondary"
             >
               <el-icon><DocumentCopy /></el-icon>
-              Copy
+              {{ t('common.copy') }}
             </el-button>
             <el-button 
               size="small" 
@@ -108,7 +108,7 @@
               class="apple-button primary"
             >
               <el-icon><Edit /></el-icon>
-              {{ isEditing ? 'Preview' : 'Edit' }}
+              {{ isEditing ? t('editDesign.preview') : t('common.edit') }}
             </el-button>
           </div>
         </div>
@@ -153,7 +153,7 @@
           @click="handleCancel"
           class="apple-button secondary"
         >
-          Cancel
+          {{ t('common.cancel') }}
         </el-button>
         <el-button 
           type="primary" 
@@ -161,7 +161,7 @@
           :disabled="!!jsonEditError"
           class="apple-button primary"
         >
-          Save Changes
+          {{ t('profile.saveChanges') }}
         </el-button>
       </div>
     </template>
@@ -181,10 +181,12 @@ import 'vue-json-pretty/lib/styles.css'
 import { DocumentCopy, Edit, WarningFilled } from '@element-plus/icons-vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
+import { useI18n } from '@/i18n'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const route = useRoute()
 const baseStore = useBaseStore()
+const { t } = useI18n()
 const form = reactive({
   id: null,
   name: '',
@@ -251,12 +253,12 @@ const loadDesign = async (designUid: string) => {
       // 初始化编辑文本
       jsonEditText.value = JSON.stringify(form.configJson, null, 2)
     } else {
-      ElMessage.error(response.msg || '加载设计失败')
+      ElMessage.error(response.msg || t('editDesign.loadFailed'))
       handleCancel()
     }
   } catch (error) {
     console.error('加载设计失败:', error)
-    ElMessage.error('加载设计失败')
+    ElMessage.error(t('editDesign.loadFailed'))
     handleCancel()
   }
 }
@@ -276,7 +278,7 @@ const toggleEditMode = () => {
       jsonEditError.value = ''
       jsonEditStatus.value = ''
     } catch (error) {
-      ElMessage.error('JSON 格式无效，请修正后再切换到预览模式')
+      ElMessage.error(t('editDesign.invalidJsonBeforePreview'))
     }
   }
 }
@@ -288,7 +290,7 @@ const validateJson = (value: string) => {
     jsonEditError.value = ''
     jsonEditStatus.value = 'success'
   } catch (error) {
-    jsonEditError.value = `JSON 格式错误: ${error}`
+    jsonEditError.value = t('editDesign.invalidJsonDetail', { error: String(error) })
     jsonEditStatus.value = 'error'
   }
 }
@@ -316,12 +318,12 @@ const handleConfirm = async () => {
       emit('success', res.data)
       dialogVisible.value = false
     } else {
-      messageStore.error(res.msg || '更新设计失败')
+      messageStore.error(res.msg || t('editDesign.updateFailed'))
     }
 
   } catch (error) {
     console.error('更新设计失败:', error)
-    messageStore.error(error as string || '更新设计失败')
+    messageStore.error(error as string || t('editDesign.updateFailed'))
   }
 }
 
@@ -336,10 +338,10 @@ const copyConfig = () => {
   navigator.clipboard
     .writeText(configStr)
     .then(() => {
-      messageStore.success('配置已复制到剪贴板')
+      messageStore.success(t('editDesign.configCopied'))
     })
     .catch(() => {
-      messageStore.error('复制失败')
+      messageStore.error(t('common.copyFailed'))
     })
 }
 

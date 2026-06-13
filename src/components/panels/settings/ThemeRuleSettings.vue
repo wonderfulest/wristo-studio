@@ -157,17 +157,17 @@ const handleActiveChange = () => {
   // 主动调用后端开关接口，单独控制规则是否生效
   activateThemeRule({ appId: Number(appId.value), isActive: !!active.value }).catch((e) => {
     console.error('Failed to activate theme rule', e)
-    ElMessage.error('Failed to update rule activation state')
+    ElMessage.error(t('elementSettings.updateRuleActivationFailed'))
   })
 }
 
 const saveRule = async () => {
   if (!appId.value) {
-    ElMessage.error('Missing appId for theme rule')
+    ElMessage.error(t('elementSettings.missingThemeRuleAppId'))
     return
   }
   if (!selectedRuleType.value) {
-    ElMessage.warning('Please select a rule type')
+    ElMessage.warning(t('elementSettings.selectThemeRuleType'))
     return
   }
 
@@ -182,10 +182,10 @@ const saveRule = async () => {
     const { data: body } = await upsertThemeRule(payload)
     const rule = body?.data
     lastSavedAt.value = rule?.updatedAt || new Date().toISOString()
-    ElMessage.success('Theme rule saved')
+    ElMessage.success(t('elementSettings.themeRuleSaved'))
   } catch (e) {
     console.error('Failed to save theme rule', e)
-    ElMessage.error('Failed to save theme rule')
+    ElMessage.error(t('elementSettings.saveThemeRuleFailed'))
   } finally {
     saving.value = false
   }

@@ -1,6 +1,6 @@
 <template>
   <el-form-item 
-    label="Property Key" 
+    :label="t('property.key')" 
     prop="propertyKey"
     :rules="rules"
   >
@@ -10,9 +10,9 @@
       :disabled="isEdit"
     />
     <div class="field-help">
-      The key of the property that this setting will manage. Letter, under score, and number only, no space and special characters allow. To access this property value in your design, use
+      {{ t('property.keyHelpPrefix') }}
       <code class="code-text">(prop.{{ modelValueLocal || defaultPreviewKey }})</code>
-      in the expression.
+      {{ t('property.keyHelpSuffix') }}
     </div>
   </el-form-item>
 </template>
@@ -20,6 +20,9 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: {
@@ -53,21 +56,21 @@ const modelValueLocal = computed({
 
 const defaultPreviewKey = computed(() => props.defaultKey || 'propertykey')
 
-const rules = [
-  { required: true, message: 'Please input property key', trigger: 'blur' },
+const rules = computed(() => [
+  { required: true, message: t('property.keyRequired'), trigger: 'blur' },
   {
     pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
-    message: 'Only letters, numbers and underscore allowed, must start with letter',
+    message: t('property.keyPattern'),
     trigger: 'blur',
   },
-]
+])
 
 watch(
   () => modelValueLocal.value,
   (val) => {
     if (!val) return
     if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(val)) {
-      ElMessage.warning('Only letters, numbers and underscore allowed, and must start with a letter')
+      ElMessage.warning(t('property.keyPatternDetailed'))
     }
   }
 )
