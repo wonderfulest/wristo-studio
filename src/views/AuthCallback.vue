@@ -13,7 +13,12 @@ import type { ApiResponse } from '@/types/api/api'
 import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
-import { getSsoRedirectUri, redirectToSsoLogin } from '@/utils/ssoRedirect'
+import {
+  clearPendingStudioPath,
+  getPendingStudioPath,
+  getSsoRedirectUri,
+  redirectToSsoLogin,
+} from '@/utils/ssoRedirect'
 
 const loading = ref(true)
 const error = ref('')
@@ -63,8 +68,9 @@ onMounted(async () => {
       
       // 延迟跳转，确保数据保存完成
       setTimeout(() => {
-        
-        router.replace('/')
+        const pendingPath = getPendingStudioPath()
+        clearPendingStudioPath()
+        router.replace(pendingPath || '/')
       }, 100)
     } else {
       error.value = res.msg || t('auth.requestFailed')

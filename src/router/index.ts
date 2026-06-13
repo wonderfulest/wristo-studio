@@ -49,6 +49,11 @@ const routes: RouteRecordRaw[] = [
             name: 'new-projects',
             component: () => import('@/views/designs/NewProjects.vue'),
           },
+          {
+            path: 'copy',
+            name: 'copy-design-entry',
+            component: () => import('@/views/designs/CopyDesignEntry.vue'),
+          },
         ],
       },
       {
@@ -128,7 +133,7 @@ router.beforeEach(async (to) => {
 
   // 如果路由需要认证且用户未登录，重定向到登录页面
   if (requiresAuth && !userStore.isAuthenticated) {
-    redirectToSsoLogin('studio', 1000)
+    redirectToSsoLogin('studio', 1000, to.fullPath)
     return false
   }
 

@@ -4,6 +4,7 @@ let isRedirectingToSso = false
 
 const STUDIO_LOCALE_KEY = 'wristo-studio-locale'
 const SHARED_LOCALE_KEY = 'wristo-locale'
+const PENDING_STUDIO_PATH_KEY = 'wristo-studio-pending-path'
 const SSO_SUPPORTED_LOCALES = ['en', 'zh', 'de', 'es', 'fr', 'it'] as const
 type SsoLocale = typeof SSO_SUPPORTED_LOCALES[number]
 
@@ -80,12 +81,26 @@ export function buildSsoLoginUrl(client: string) {
   return loginUrl.toString()
 }
 
-export function redirectToSsoLogin(client: string, delay = 0) {
+export function getPendingStudioPath() {
+  return sessionStorage.getItem(PENDING_STUDIO_PATH_KEY)
+}
+
+export function clearPendingStudioPath() {
+  sessionStorage.removeItem(PENDING_STUDIO_PATH_KEY)
+}
+
+function rememberPendingStudioPath(path?: string) {
+  if (!path || !path.startsWith('/') || path.startsWith('/auth/callback')) return
+  sessionStorage.setItem(PENDING_STUDIO_PATH_KEY, path)
+}
+
+export function redirectToSsoLogin(client: string, delay = 0, pendingPath?: string) {
   if (isRedirectingToSso) {
     return
   }
   isRedirectingToSso = true
 
+  rememberPendingStudioPath(pendingPath || `${window.location.pathname}${window.location.search}${window.location.hash}`)
   clearLocalAuthState()
 
   window.setTimeout(() => {
