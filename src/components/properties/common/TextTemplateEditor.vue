@@ -9,7 +9,7 @@
       @input="onInput"
     />
     <div class="variables">
-      <span class="variables-label">Variables:</span>
+      <span class="variables-label">{{ t('templateEditor.variables') }}:</span>
       <el-button
         v-for="variable in variables"
         :key="variable.name"
@@ -26,6 +26,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: string

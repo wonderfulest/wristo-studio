@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visibleRef" title="Add Custom Font" width="500px" :close-on-click-modal="false" append-to-body>
+  <el-dialog v-model="visibleRef" :title="t('font.addCustomFont')" width="500px" :close-on-click-modal="false" append-to-body>
     <div class="font-form">
       <el-upload
         class="font-upload-area"
@@ -14,7 +14,7 @@
             <Upload />
           </el-icon>
           <div class="upload-text">
-            <span>Click to select or drag and drop font file</span>
+            <span>{{ t('font.clickDragFontFile') }}</span>
             <p class="upload-tip">TTF / OTF</p>
           </div>
         </div>
@@ -31,7 +31,7 @@
         </div>
 
         <div class="preview-section">
-          <div class="preview-label">Preview:</div>
+          <div class="preview-label">{{ t('font.preview') }}</div>
           <div class="font-preview" :style="{ fontFamily: previewFontFamily }">
             <div class="preview-text">
               <span class="preview-numbers">0123456789,:°F Sunny</span>
@@ -41,7 +41,7 @@
         </div>
 
         <div class="preview-section">
-          <div class="preview-label">Font type:</div>
+          <div class="preview-label">{{ t('font.fontType') }}</div>
           <el-radio-group v-model="selectedFontType" :disabled="loadingFontTypes || !fontTypeOptions.length">
             <el-radio-button
               v-for="opt in fontTypeOptions"
@@ -54,25 +54,25 @@
         </div>
 
         <div class="preview-section" v-if="parsedInfo">
-          <div class="preview-label">Font details:</div>
+          <div class="preview-label">{{ t('font.fontDetails') }}</div>
           <ul class="font-details">
-            <li v-if="parsedInfo.fullName"><strong>Full name:</strong> {{ parsedInfo.fullName }}</li>
-            <li v-if="parsedInfo.family"><strong>Family:</strong> {{ parsedInfo.family }}</li>
-            <li v-if="parsedInfo.subfamily"><strong>Subfamily:</strong> {{ parsedInfo.subfamily }}</li>
-            <li v-if="parsedInfo.version"><strong>Version:</strong> {{ parsedInfo.version }}</li>
-            <li v-if="parsedInfo.copyright"><strong>Copyright:</strong> {{ parsedInfo.copyright }}</li>
-            <li><strong>Glyphs:</strong> {{ parsedInfo.glyphCount }}</li>
-            <li v-if="parsedInfo.languageCodes?.length"><strong>Languages:</strong> {{ parsedInfo.languageCodes.join(', ') }}</li>
-            <li v-if="parsedInfo.unitsPerEm"><strong>Units per EM:</strong> {{ parsedInfo.unitsPerEm }}</li>
-            <li v-if="parsedInfo.isMonospace !== undefined"><strong>Monospace:</strong> {{ parsedInfo.isMonospace ? 'Yes' : 'No' }}</li>
-            <li v-if="parsedInfo.italic !== undefined"><strong>Italic:</strong> {{ parsedInfo.italic ? 'Yes' : 'No' }}</li>
-            <li v-if="parsedInfo.weightClass"><strong>Weight class:</strong> {{ parsedInfo.weightClass }}</li>
-            <li v-if="parsedInfo.widthClass"><strong>Width class:</strong> {{ parsedInfo.widthClass }}</li>
-            <li v-if="parsedInfo.ascent !== undefined"><strong>Ascent:</strong> {{ parsedInfo.ascent }}</li>
-            <li v-if="parsedInfo.descent !== undefined"><strong>Descent:</strong> {{ parsedInfo.descent }}</li>
-            <li v-if="parsedInfo.lineGap !== undefined"><strong>Line gap:</strong> {{ parsedInfo.lineGap }}</li>
-            <li v-if="parsedInfo.capHeight !== undefined"><strong>Cap height:</strong> {{ parsedInfo.capHeight }}</li>
-            <li v-if="parsedInfo.xHeight !== undefined"><strong>x-height:</strong> {{ parsedInfo.xHeight }}</li>
+            <li v-if="parsedInfo.fullName"><strong>{{ t('font.fullName') }}</strong> {{ parsedInfo.fullName }}</li>
+            <li v-if="parsedInfo.family"><strong>{{ t('font.family') }}</strong> {{ parsedInfo.family }}</li>
+            <li v-if="parsedInfo.subfamily"><strong>{{ t('font.subfamily') }}</strong> {{ parsedInfo.subfamily }}</li>
+            <li v-if="parsedInfo.version"><strong>{{ t('font.version') }}</strong> {{ parsedInfo.version }}</li>
+            <li v-if="parsedInfo.copyright"><strong>{{ t('font.copyright') }}</strong> {{ parsedInfo.copyright }}</li>
+            <li><strong>{{ t('font.glyphs') }}</strong> {{ parsedInfo.glyphCount }}</li>
+            <li v-if="parsedInfo.languageCodes?.length"><strong>{{ t('font.languages') }}</strong> {{ parsedInfo.languageCodes.join(', ') }}</li>
+            <li v-if="parsedInfo.unitsPerEm"><strong>{{ t('font.unitsPerEm') }}</strong> {{ parsedInfo.unitsPerEm }}</li>
+            <li v-if="parsedInfo.isMonospace !== undefined"><strong>{{ t('font.monospace') }}:</strong> {{ parsedInfo.isMonospace ? t('font.yes') : t('font.no') }}</li>
+            <li v-if="parsedInfo.italic !== undefined"><strong>{{ t('font.italic') }}:</strong> {{ parsedInfo.italic ? t('font.yes') : t('font.no') }}</li>
+            <li v-if="parsedInfo.weightClass"><strong>{{ t('font.weightClass') }}</strong> {{ parsedInfo.weightClass }}</li>
+            <li v-if="parsedInfo.widthClass"><strong>{{ t('font.widthClass') }}</strong> {{ parsedInfo.widthClass }}</li>
+            <li v-if="parsedInfo.ascent !== undefined"><strong>{{ t('font.ascent') }}</strong> {{ parsedInfo.ascent }}</li>
+            <li v-if="parsedInfo.descent !== undefined"><strong>{{ t('font.descent') }}</strong> {{ parsedInfo.descent }}</li>
+            <li v-if="parsedInfo.lineGap !== undefined"><strong>{{ t('font.lineGap') }}</strong> {{ parsedInfo.lineGap }}</li>
+            <li v-if="parsedInfo.capHeight !== undefined"><strong>{{ t('font.capHeight') }}</strong> {{ parsedInfo.capHeight }}</li>
+            <li v-if="parsedInfo.xHeight !== undefined"><strong>{{ t('font.xHeight') }}</strong> {{ parsedInfo.xHeight }}</li>
           </ul>
         </div>
       </div>
@@ -80,9 +80,9 @@
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="cancelUpload">Cancel</el-button>
+        <el-button @click="cancelUpload">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="confirmUpload" :loading="uploading" :disabled="!selectedFile">
-          Confirm Upload
+          {{ t('font.confirmUpload') }}
         </el-button>
       </span>
     </template>
@@ -97,9 +97,13 @@ import opentype, { Font, FontNames } from 'opentype.js'
 import type { ParsedFontInfo } from '@/types/font-parse'
 import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { uploadFontFile, getFontByName, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
 import type { DesignFontVO } from '@/types/font'
 import { getEnumOptions, type EnumOption } from '@/api/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean
@@ -110,12 +114,33 @@ const emit = defineEmits<{
 }>()
 
 const visibleRef = ref(props.visible)
-watch(() => props.visible, v => visibleRef.value = v)
-watch(visibleRef, v => emit('update:visible', v))
-
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUploadFonts = computed(() => userStore.canUsePremiumStudioAssets)
+
+const blockPremiumUpload = () => {
+  visibleRef.value = false
+  emit('update:visible', false)
+  membershipGate.requirePremium('font.uploadRequiresPremium')
+  return false
+}
+
+watch(() => props.visible, v => {
+  if (v && !canUploadFonts.value) {
+    blockPremiumUpload()
+    return
+  }
+  visibleRef.value = v
+})
+watch(visibleRef, v => {
+  if (v && !canUploadFonts.value) {
+    blockPremiumUpload()
+    return
+  }
+  emit('update:visible', v)
+})
 
 const uploading = ref<boolean>(false)
 const selectedFile = ref<any | null>(null)
@@ -150,12 +175,16 @@ onMounted(async () => {
 })
 
 const handleFontFileChange = async (file: any) => {
+  if (!canUploadFonts.value) {
+    blockPremiumUpload()
+    return
+  }
   if (!file) return
   const lower = (file.name || '').toLowerCase()
   const isTTF = lower.endsWith('.ttf')
   const isOTF = lower.endsWith('.otf')
   if (!isTTF && !isOTF) {
-    messageStore.error('Please upload TTF/OTF file')
+    messageStore.error(t('font.uploadTtfOtfFile'))
     return
   }
   try {
@@ -214,7 +243,7 @@ const handleFontFileChange = async (file: any) => {
 
     selectedFile.value = file
   } catch (error) {
-    messageStore.error('Failed to load font file')
+    messageStore.error(t('font.loadFileFailed'))
     console.error('Font load error:', error)
   }
 }
@@ -231,12 +260,16 @@ const cancelUpload = () => {
 }
 
 const confirmUpload = async () => {
+  if (!canUploadFonts.value) {
+    blockPremiumUpload()
+    return
+  }
   if (!selectedFile.value || !fontForm.value.name) {
-    messageStore.error('Please select a font file')
+    messageStore.error(t('font.selectFile'))
     return
   }
   if (!selectedFontType.value) {
-    messageStore.error('Please select a font type')
+    messageStore.error(t('font.selectType'))
     return
   }
   uploading.value = true
@@ -270,11 +303,11 @@ const confirmUpload = async () => {
 
     try { await increaseFontUsage(created.slug, userStore.userInfo?.id) } catch {}
 
-    messageStore.success(usedExisting ? 'Font already exists. Loaded into system.' : 'Font uploaded successfully, pending review')
+    messageStore.success(usedExisting ? t('font.existsLoaded') : t('font.uploadedPendingReview'))
     emit('selected', created.slug)
     visibleRef.value = false
   } catch (error: any) {
-    messageStore.error(error?.response?.data?.message || 'Font upload failed')
+    messageStore.error(error?.response?.data?.message || t('font.uploadFailed'))
     console.error('Font upload error:', error)
   } finally {
     uploading.value = false

@@ -2,19 +2,19 @@
   <el-card class="section-card" shadow="never" v-loading="loading">
     <template #header>
       <div class="card-header">
-        <span>App Info</span>
+        <span>{{ t('meter.appInfo') }}</span>
         <el-button
           v-if="product?.garminStoreUrl"
           type="primary"
           link
           @click="openStoreUrl(product.garminStoreUrl)"
         >
-          Open Garmin Store
+          {{ t('meter.openGarminStore') }}
         </el-button>
       </div>
     </template>
 
-    <el-empty v-if="!product" description="No app info" />
+    <el-empty v-if="!product" :description="t('meter.noAppInfo')" />
 
     <template v-else>
       <div class="product-overview">
@@ -26,33 +26,33 @@
             class="product-cover__image"
             preview-teleported
           />
-          <div v-else class="product-cover__placeholder">No image</div>
+          <div v-else class="product-cover__placeholder">{{ t('meter.noImage') }}</div>
           <div class="product-name">{{ product.name || '-' }}</div>
         </div>
 
         <div class="product-main">
           <div class="product-summary">
             <div class="summary-item">
-              <div class="summary-label">Downloads</div>
+              <div class="summary-label">{{ t('meter.downloads') }}</div>
               <div class="summary-value">{{ formatCountDisplay(product.download) }}</div>
             </div>
             <div class="summary-item">
-              <div class="summary-label">Orders</div>
+              <div class="summary-label">{{ t('meter.orders') }}</div>
               <div class="summary-value">{{ formatCountDisplay(product.purchase) }}</div>
             </div>
           </div>
 
           <el-descriptions :column="2" border class="stats-detail">
-            <el-descriptions-item label="App ID">{{ product.appId ?? '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Price">{{ formatPriceDisplay((product as any).price) }}</el-descriptions-item>
-            <el-descriptions-item label="Trial">{{ formatTrialDisplay((product as any).trialLasts) }}</el-descriptions-item>
-            <el-descriptions-item label="Design ID">
+            <el-descriptions-item :label="t('card.appId')">{{ product.appId ?? '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="t('meter.price')">{{ formatPriceDisplay((product as any).price) }}</el-descriptions-item>
+            <el-descriptions-item :label="t('meter.trial')">{{ formatTrialDisplay((product as any).trialLasts) }}</el-descriptions-item>
+            <el-descriptions-item :label="t('ticket.designId')">
               <span class="mono">{{ (product as any).designId || '-' }}</span>
             </el-descriptions-item>
             <el-descriptions-item label="Garmin UUID">
               <span class="mono">{{ (product as any).garminAppUuid || '-' }}</span>
             </el-descriptions-item>
-            <el-descriptions-item label="Last Go Live">{{ formatDateDisplay((product as any).lastGoLive) }}</el-descriptions-item>
+            <el-descriptions-item :label="t('card.lastGoLive')">{{ formatDateDisplay((product as any).lastGoLive) }}</el-descriptions-item>
           </el-descriptions>
         </div>
       </div>
@@ -63,6 +63,9 @@
 <script setup lang="ts">
 import { formatDateTime } from '@/utils/date'
 import type { Product } from '@/types/api/product'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 defineProps<{
   loading: boolean
@@ -87,7 +90,7 @@ const formatPriceDisplay = (v?: number | null) => {
 
 const formatTrialDisplay = (v?: number | null) => {
   const n = Number(v ?? 0)
-  if (!Number.isFinite(n) || n <= 0) return 'No trial'
+  if (!Number.isFinite(n) || n <= 0) return t('meter.noTrial')
   if (Number.isInteger(n)) return `${n} h`
   return `${n.toFixed(2)} h`
 }

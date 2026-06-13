@@ -8,9 +8,10 @@
     <!-- Bitmap font selection panel -->
     <div v-if="isOpen" class="font-panel">
       <!-- Add bitmap font button -->
-      <button class="add-font-btn" type="button" @click.stop.prevent="openNewBitmapFont">Add Bitmap Font</button>
+      <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="openNewBitmapFont">{{ t('font.addBitmapFont') }}</button>
       <!-- Bitmap font list -->
       <BitmapFontList
+        v-if="canUsePremiumAssets"
         :fonts="bitmapFonts"
         :active-id="props.modelValue"
         :page-num="pageNum"
@@ -37,10 +38,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
+import { useI18n } from '@/i18n'
 
 const BITMAP_FONT_TYPE = 'bitmap_font'
 
@@ -55,6 +59,9 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const { t } = useI18n()
 
 const bitmapType = BITMAP_FONT_TYPE
 
@@ -83,19 +90,24 @@ const bitmapFonts = computed<BitmapFontVO[]>(() => bitmapFontStore.fonts)
 const pageNum = computed(() => bitmapFontStore.pageNum)
 const pageSize = computed(() => bitmapFontStore.pageSize)
 const bitmapTotal = computed(() => bitmapFontStore.total)
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
 const digitRows = computed<DigitRowState[]>(() => rows.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
 const symbolRows = computed<DigitRowState[]>(() => symbolRowList.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
 // bitmap 字体的显示名称：优先使用当前字体名，其次从列表中查找，最后才 fallback 到占位
 const selectedFontLabel = computed(() => {
   const id = props.modelValue
-  if (!id) return 'Select Bitmap Font'
+  if (!id) return t('font.selectBitmapFont')
   if (currentFontName.value) return currentFontName.value
   const hit = bitmapFonts.value.find(f => f.id === id)
   return hit?.fontName || `Bitmap Font #${id}`
 })
 
 const togglePanel = () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   isOpen.value = !isOpen.value
   if (isOpen.value && bitmapFonts.value.length === 0) {
     bitmapFontStore.loadFromSession()
@@ -107,6 +119,10 @@ const togglePanel = () => {
 
 // 新建 bitmap 字体并打开编辑弹框
 const openNewBitmapFont = async () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   bitmapDialogVisible.value = true
   try {
     const randName = `rand_${Math.random().toString(36).slice(2, 8)}`
@@ -132,6 +148,10 @@ const openNewBitmapFont = async () => {
 
 // 打开已有 bitmap 字体的编辑弹框（由 Edit 触发）
 const openBitmapDialog = async (fontId?: number) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   const id = fontId ?? props.modelValue
   if (!id) return
   bitmapDialogVisible.value = true
@@ -139,15 +159,20 @@ const openBitmapDialog = async (fontId?: number) => {
 }
 
 const confirmBitmapDialog = async () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    bitmapDialogVisible.value = false
+    return
+  }
   try {
     // 如果是自动创建的 rand_ 前缀名字，引导用户修改名字
     if (props.modelValue && isTempRandFont.value) {
       const { value } = await ElMessageBox.prompt(
-        'Please rename this bitmap font',
-        'Rename Bitmap Font',
+        t('font.renameBitmapPrompt'),
+        t('font.renameBitmapTitle'),
         {
           inputValue: currentFontName.value || '',
-          inputPlaceholder: 'Enter font name',
+          inputPlaceholder: t('font.enterFontName'),
         },
       )
       const newName = String(value || '').trim()
@@ -226,6 +251,10 @@ const handleBitmapPageChange = async (page: number) => {
 }
 
 const handleSelectBitmapFont = async (font: BitmapFontVO) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   if (!font?.id) return
   emit('update:modelValue', font.id)
   emit('change', font.id)
@@ -234,6 +263,10 @@ const handleSelectBitmapFont = async (font: BitmapFontVO) => {
 }
 
 const handleEditBitmapFont = async (font: BitmapFontVO) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   if (!font?.id) return
   emit('update:modelValue', font.id)
   emit('change', font.id)
@@ -244,6 +277,10 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
 }
 
 const handleResetRowByIndex = async (index: string) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   // 先在 digit 中找
   let row = rows.value.find(r => r.index === index)
   if (!row) {
@@ -264,6 +301,10 @@ const handleResetRowByIndex = async (index: string) => {
 }
 
 const handleUploadRow = async (payload: { index: string; file: File; previewUrl: string }) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   if (!props.modelValue) return
   try {
     const isSymbol = payload.index === ':'

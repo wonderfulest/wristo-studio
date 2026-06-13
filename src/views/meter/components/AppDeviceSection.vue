@@ -3,8 +3,8 @@
     <el-card class="section-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>Devices</span>
-          <el-button type="primary" link :loading="overviewLoading" @click="emit('refresh-overview')">Refresh</el-button>
+          <span>{{ t('meter.devices') }}</span>
+          <el-button type="primary" link :loading="overviewLoading" @click="emit('refresh-overview')">{{ t('common.refresh') }}</el-button>
         </div>
       </template>
 
@@ -14,60 +14,60 @@
         <el-row :gutter="16" class="overview-cards">
           <el-col :span="6">
             <el-statistic
-              title="Active"
+              :title="t('meter.active')"
               :value="overview.active"
               class="clickable-stat"
               @click="emit('show-list', 'active')"
             >
-              <template #suffix><span class="suffix-text">devices</span></template>
+              <template #suffix><span class="suffix-text">{{ t('meter.deviceUnit') }}</span></template>
             </el-statistic>
           </el-col>
           <el-col :span="6">
             <el-statistic
-              title="Lost"
+              :title="t('meter.lost')"
               :value="overview.lost"
               class="clickable-stat"
               @click="emit('show-list', 'lost')"
             >
-              <template #suffix><span class="suffix-text">devices</span></template>
+              <template #suffix><span class="suffix-text">{{ t('meter.deviceUnit') }}</span></template>
             </el-statistic>
           </el-col>
           <el-col :span="6">
             <el-statistic
-              title="Total"
+              :title="t('meter.total')"
               :value="overview.total"
               class="clickable-stat"
               @click="emit('show-list', 'all')"
             >
-              <template #suffix><span class="suffix-text">devices</span></template>
+              <template #suffix><span class="suffix-text">{{ t('meter.deviceUnit') }}</span></template>
             </el-statistic>
           </el-col>
           <el-col :span="6">
-            <el-statistic title="Avg Lifecycle" :value="Number((overview.avgLifecycleMinutes ?? 0).toFixed(2))">
-              <template #suffix><span class="suffix-text">min</span></template>
+            <el-statistic :title="t('meter.avgLifecycle')" :value="Number((overview.avgLifecycleMinutes ?? 0).toFixed(2))">
+              <template #suffix><span class="suffix-text">{{ t('meter.minuteUnit') }}</span></template>
             </el-statistic>
           </el-col>
         </el-row>
       </template>
 
-      <el-empty v-else description="No device data" />
+      <el-empty v-else :description="t('meter.noDeviceData')" />
     </el-card>
 
     <el-card v-if="deviceList === 'active'" class="section-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>Active Devices (last 30 minutes)</span>
-          <el-button type="primary" link :loading="activeLoading" @click="emit('refresh-list', 'active')">Refresh</el-button>
+          <span>{{ t('meter.activeDevicesLast30') }}</span>
+          <el-button type="primary" link :loading="activeLoading" @click="emit('refresh-list', 'active')">{{ t('common.refresh') }}</el-button>
         </div>
       </template>
       <el-table :data="activeDevices" v-loading="activeLoading" style="width: 100%" max-height="400">
         <el-table-column type="index" label="#" width="60" />
-        <el-table-column prop="token" label="Device Token" min-width="300">
+        <el-table-column prop="token" :label="t('meter.deviceToken')" min-width="300">
           <template #default="{ row }">
             <span class="mono">{{ row.token }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="lastOnlineTime" label="Last Online" min-width="220">
+        <el-table-column prop="lastOnlineTime" :label="t('meter.lastOnline')" min-width="220">
           <template #default="{ row }">
             <div class="time-cell">
               <div>{{ formatTs(row.lastOnlineTime) }}</div>
@@ -75,9 +75,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Action" width="120">
+        <el-table-column :label="t('common.actions')" width="120">
           <template #default="{ row }">
-            <el-button type="primary" link @click="emit('open-detail', row.token)">Detail</el-button>
+            <el-button type="primary" link @click="emit('open-detail', row.token)">{{ t('common.detail') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -86,18 +86,18 @@
     <el-card v-if="deviceList === 'lost'" class="section-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>Lost Devices</span>
-          <el-button type="primary" link :loading="lostLoading" @click="emit('refresh-list', 'lost')">Refresh</el-button>
+          <span>{{ t('meter.lostDevices') }}</span>
+          <el-button type="primary" link :loading="lostLoading" @click="emit('refresh-list', 'lost')">{{ t('common.refresh') }}</el-button>
         </div>
       </template>
       <el-table :data="lostDevices" v-loading="lostLoading" style="width: 100%" max-height="400">
         <el-table-column type="index" label="#" width="60" />
-        <el-table-column prop="token" label="Device Token" min-width="300">
+        <el-table-column prop="token" :label="t('meter.deviceToken')" min-width="300">
           <template #default="{ row }">
             <span class="mono">{{ row.token }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="lastOnlineTime" label="Last Online" min-width="220">
+        <el-table-column prop="lastOnlineTime" :label="t('meter.lastOnline')" min-width="220">
           <template #default="{ row }">
             <div class="time-cell">
               <div>{{ formatTs(row.lastOnlineTime) }}</div>
@@ -105,9 +105,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Action" width="120">
+        <el-table-column :label="t('common.actions')" width="120">
           <template #default="{ row }">
-            <el-button type="primary" link @click="emit('open-detail', row.token)">Detail</el-button>
+            <el-button type="primary" link @click="emit('open-detail', row.token)">{{ t('common.detail') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -116,18 +116,18 @@
     <el-card v-if="deviceList === 'all'" class="section-card" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>All Devices</span>
-          <el-button type="primary" link :loading="allLoading" @click="emit('refresh-list', 'all')">Refresh</el-button>
+          <span>{{ t('meter.allDevices') }}</span>
+          <el-button type="primary" link :loading="allLoading" @click="emit('refresh-list', 'all')">{{ t('common.refresh') }}</el-button>
         </div>
       </template>
       <el-table :data="allDevices" v-loading="allLoading" style="width: 100%" max-height="400">
         <el-table-column type="index" label="#" width="60" />
-        <el-table-column prop="token" label="Device Token" min-width="300">
+        <el-table-column prop="token" :label="t('meter.deviceToken')" min-width="300">
           <template #default="{ row }">
             <span class="mono">{{ row.token }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="lastOnlineTime" label="Last Online" min-width="220">
+        <el-table-column prop="lastOnlineTime" :label="t('meter.lastOnline')" min-width="220">
           <template #default="{ row }">
             <div class="time-cell">
               <div>{{ formatTs(row.lastOnlineTime) }}</div>
@@ -135,9 +135,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Action" width="120">
+        <el-table-column :label="t('common.actions')" width="120">
           <template #default="{ row }">
-            <el-button type="primary" link @click="emit('open-detail', row.token)">Detail</el-button>
+            <el-button type="primary" link @click="emit('open-detail', row.token)">{{ t('common.detail') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -145,19 +145,19 @@
 
     <el-drawer
       :model-value="detailVisible"
-      title="Device Detail"
+      :title="t('meter.deviceDetail')"
       size="420px"
       @update:modelValue="emit('update:detailVisible', $event)"
     >
       <div v-if="detail" class="detail-content">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="App ID">{{ detail.appId }}</el-descriptions-item>
-          <el-descriptions-item label="Token">
+          <el-descriptions-item :label="t('card.appId')">{{ detail.appId }}</el-descriptions-item>
+          <el-descriptions-item :label="t('meter.token')">
             <span class="mono">{{ detail.token }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="First Seen">{{ formatTs(detail.firstTime) }}</el-descriptions-item>
-          <el-descriptions-item label="Last Seen">{{ formatTs(detail.lastTime) }}</el-descriptions-item>
-          <el-descriptions-item label="Lifecycle">{{ (detail.lifecycleMinutes ?? 0).toFixed(2) }} min</el-descriptions-item>
+          <el-descriptions-item :label="t('meter.firstSeen')">{{ formatTs(detail.firstTime) }}</el-descriptions-item>
+          <el-descriptions-item :label="t('meter.lastSeen')">{{ formatTs(detail.lastTime) }}</el-descriptions-item>
+          <el-descriptions-item :label="t('meter.lifecycle')">{{ (detail.lifecycleMinutes ?? 0).toFixed(2) }} {{ t('meter.minuteUnit') }}</el-descriptions-item>
         </el-descriptions>
       </div>
       <div v-else-if="detailLoading" v-loading="true" style="height: 200px" />
@@ -168,6 +168,9 @@
 <script setup lang="ts">
 import { formatDateTime } from '@/utils/date'
 import type { DeviceActiveVO, DeviceDetailVO, DeviceOverviewVO } from '@/types/meter'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 defineProps<{
   overviewLoading: boolean
@@ -205,14 +208,14 @@ const formatTs = (ts: number) => {
 const formatRelativeTime = (ts: number) => {
   if (!ts) return '-'
   const diff = Date.now() - ts
-  if (diff < 0) return 'Just now'
+  if (diff < 0) return t('meter.justNow')
   const minute = 60 * 1000
   const hour = 60 * minute
   const day = 24 * hour
-  if (diff < minute) return 'Just now'
-  if (diff < hour) return `${Math.floor(diff / minute)} minutes ago`
-  if (diff < day) return `${Math.floor(diff / hour)} hours ago`
-  return `${Math.floor(diff / day)} days ago`
+  if (diff < minute) return t('meter.justNow')
+  if (diff < hour) return t('meter.minutesAgo', { count: Math.floor(diff / minute) })
+  if (diff < day) return t('meter.hoursAgo', { count: Math.floor(diff / hour) })
+  return t('meter.daysAgo', { count: Math.floor(diff / day) })
 }
 </script>
 

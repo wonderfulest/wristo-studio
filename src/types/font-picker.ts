@@ -7,6 +7,7 @@ export type FontItem = {
   // Optional metadata for precise filtering
   isMonospace?: boolean
   italic?: boolean
+  isSystem?: boolean
 }
 
 export type Section = {

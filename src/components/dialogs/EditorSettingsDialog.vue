@@ -29,16 +29,6 @@
         </el-button>
       </div>
 
-      <div v-if="themeStore.currentTheme === 'light'" class="bar-cell canvas-bg-cell">
-        <span class="cell-label">{{ t('editorSettings.lightCanvasBackground') }}</span>
-        <el-color-picker
-          v-model="lightCanvasBackgroundColor"
-          size="small"
-          show-alpha
-          @change="handleLightCanvasBackgroundColorChange"
-        />
-      </div>
-
     </div>
 
     <div class="bar-group center-group">
@@ -116,6 +106,16 @@
           v-model="rulerGuidesColor"
           size="small"
           @change="applyRulerGuidesStyle"
+        />
+      </div>
+
+      <div v-if="themeStore.currentTheme === 'light'" class="bar-cell canvas-bg-cell">
+        <span class="cell-label">{{ t('editorSettings.lightCanvasBackground') }}</span>
+        <el-color-picker
+          v-model="lightCanvasBackgroundColor"
+          size="small"
+          show-alpha
+          @change="handleLightCanvasBackgroundColorChange"
         />
       </div>
 

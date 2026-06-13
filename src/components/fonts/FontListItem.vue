@@ -3,7 +3,7 @@
     <div class="font-header" v-if="label || hasTags || (fontId != null && !isSystem)">
       <div class="font-name" v-if="label">{{ label }}</div>
       <div class="font-tags" v-if="hasTags">
-        <el-tooltip v-if="isSystem" content="System Font" placement="top">
+        <el-tooltip v-if="isSystem" :content="t('font.systemFont')" placement="top">
           <el-tag size="small" type="info" class="system-icon-tag">
             <i class="iconfont icon-system"></i>
           </el-tag>
@@ -15,7 +15,7 @@
           <el-icon><CollectionTag /></el-icon>
         </el-tag> -->
       </div>
-      <div class="font-actions" v-if="!isSystem">
+      <div class="font-actions" v-if="!isSystem && canManageFont">
         <button
           v-if="isIcon"
           type="button"
@@ -43,7 +43,7 @@
   </div>
   <div v-else class="font-main">
     <div class="font-header">
-      <div class="font-name">Loading...</div>
+      <div class="font-name">{{ t('font.loading') }}</div>
     </div>
   </div>
 </template>
@@ -54,9 +54,14 @@ import { useRouter } from 'vue-router'
 import { ElTag, ElMessageBox } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { removeMyFont } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   label?: string
@@ -76,10 +81,13 @@ const isReady = ref(false)
 
 const router = useRouter()
 const fontStore = useFontStore()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
 
 const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
 
 const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily)
+const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
 
 const loadFont = async (slug: string | undefined, url?: string) => {
   if (!slug) {
@@ -109,12 +117,16 @@ watch(
 )
 
 const onDelete = async () => {
+  if (!canManageFont.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   if (props.fontId == null) return
   try {
     await ElMessageBox({
-      title: 'Delete Font',
+      title: t('font.deleteFont'),
       message: h('div', null, [
-        h('p', null, 'Are you sure you want to delete this font?'),
+        h('p', null, t('font.deleteFontConfirm')),
         h(FontPreviewText, {
           fontFamily: props.fontFamily,
           type: props.type,
@@ -123,8 +135,8 @@ const onDelete = async () => {
       ]),
       type: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel'),
     })
 
     const resp = await removeMyFont(props.fontId)
@@ -138,6 +150,10 @@ const onDelete = async () => {
 }
 
 const onEditIcon = () => {
+  if (!canManageFont.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   // Use glyphCode to open the corresponding tab in IconLibrary.
   // For icon fonts, the glyphCode is encoded in the font family name.
   router.push({

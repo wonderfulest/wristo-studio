@@ -1,36 +1,36 @@
 <template>
-  <el-dialog v-model="visible" title="Bind Assets to Glyph" width="860px">
+  <el-dialog v-model="visible" :title="t('icon.bindAssetsToGlyph')" width="860px">
     <div class="bind-toolbar">
       <div class="left">
         <el-input
           :model-value="keyword"
-          placeholder="Search assets..."
+          :placeholder="t('icon.searchAssets')"
           clearable
           @clear="$emit('search')"
           @update:model-value="$emit('update:keyword', $event)"
           @keyup.enter="$emit('search')"
           style="max-width: 280px"
         />
-        <el-button :loading="loading" @click="$emit('search')">Search</el-button>
+        <el-button :loading="loading" @click="$emit('search')">{{ t('common.search') }}</el-button>
       </div>
     </div>
     <el-table :data="assets" v-loading="loading" height="420">
-      <el-table-column label="Preview" width="96">
+      <el-table-column :label="t('icon.preview')" width="96">
         <template #default="{ row }">
           <img :src="getAssetPreview(row)" alt="preview" style="width:48px;height:48px;object-fit:contain" />
         </template>
       </el-table-column>
       <el-table-column prop="id" label="ID" width="120" />
-      <el-table-column prop="format" label="Format" width="120" />
-      <el-table-column prop="displayType" label="Display" width="120">
+      <el-table-column prop="format" :label="t('elementSettings.format')" width="120" />
+      <el-table-column prop="displayType" :label="t('icon.display')" width="120">
         <template #default="{ row }">
           {{ row.displayType || '-' }}
         </template>
       </el-table-column>
-      <el-table-column prop="author" label="Author" />
-      <el-table-column label="Action" width="140" fixed="right">
+      <el-table-column prop="author" :label="t('elementSettings.author')" />
+      <el-table-column :label="t('common.actions')" width="140" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" size="small" :loading="binding" @click="$emit('bind', row.id)">Choose</el-button>
+          <el-button type="primary" size="small" :loading="binding" @click="$emit('bind', row.id)">{{ t('common.choose') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -45,7 +45,7 @@
       />
     </div>
     <template #footer>
-      <el-button @click="visible = false">Cancel</el-button>
+      <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -53,6 +53,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { IconAssetVO } from '@/api/wristo/iconGlyph'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean

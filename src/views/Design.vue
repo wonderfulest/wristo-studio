@@ -72,12 +72,14 @@ import {
   type DesignSize,
 } from '@/utils/designScale'
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
+import { useI18n } from '@/i18n'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
+const { t } = useI18n()
 const designStore = useDesignStore()
 const userStore = useUserStore()
 const messageStore = useMessageStore()
@@ -211,7 +213,7 @@ const loadDesign = async (designUid: string) => {
   try {
     const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
     if (!response.data) {
-      messageStore.error('Design not found')
+      messageStore.error(t('design.notFound'))
       router.push('/designs')
       return
     }

@@ -1,18 +1,18 @@
 <template>
-  <el-dialog v-model="visibleInner" title="编辑 SVG" width="70%" :close-on-click-modal="false" @closed="onClosed">
+  <el-dialog v-model="visibleInner" :title="t('icon.svgEditorTitle')" width="70%" :close-on-click-modal="false" @closed="onClosed">
     <div class="edit-wrap">
       <div class="editor-side">
         <el-input
           v-model="editSvgContent"
           type="textarea"
           :rows="18"
-          placeholder="粘贴或编辑 SVG 内容"
+          :placeholder="t('icon.svgPlaceholder')"
         />
         <div class="edit-actions">
-          <el-button @click="autoCropAndCenter" :disabled="!editSvgContent">自动裁剪居中</el-button>
-          <el-button @click="processDuotone" :disabled="!editSvgContent">双色（前景黑）</el-button>
-          <el-button type="primary" :loading="saving" @click="save">保存</el-button>
-          <el-button @click="visibleInner = false">取消</el-button>
+          <el-button @click="autoCropAndCenter" :disabled="!editSvgContent">{{ t('icon.autoCropCenter') }}</el-button>
+          <el-button @click="processDuotone" :disabled="!editSvgContent">{{ t('icon.duotone') }}</el-button>
+          <el-button type="primary" :loading="saving" @click="save">{{ t('common.save') }}</el-button>
+          <el-button @click="visibleInner = false">{{ t('common.cancel') }}</el-button>
         </div>
       </div>
       <div class="preview-side">
@@ -25,7 +25,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { getIconAssetDetail, cropIconSvg } from '@/api/icon-asset'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
 
 interface Props {
   modelValue: boolean
@@ -53,7 +60,7 @@ const processDuotone = () => {
     const doc = parser.parseFromString(src, 'image/svg+xml')
     const svg = doc.documentElement as unknown as SVGSVGElement
     if (!svg || svg.tagName.toLowerCase() !== 'svg') {
-      ElMessage.error('无效的 SVG')
+      ElMessage.error(t('icon.invalidSvg'))
       return
     }
 
@@ -122,16 +129,30 @@ const processDuotone = () => {
     const serializer = new XMLSerializer()
     const out = serializer.serializeToString(root)
     editSvgContent.value = out
-    ElMessage.success('已转换为双色（前景黑）')
+    ElMessage.success(t('icon.duotoneSuccess'))
   } catch (e) {
-    ElMessage.error('处理失败')
+    ElMessage.error(t('icon.processFailed'))
   }
 }
 
 watch(() => props.modelValue, v => {
+  if (v && !userStore.canUsePremiumStudioAssets) {
+    visibleInner.value = false
+    emit('update:modelValue', false)
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
   visibleInner.value = v
 })
-watch(visibleInner, v => emit('update:modelValue', v))
+watch(visibleInner, v => {
+  if (v && !userStore.canUsePremiumStudioAssets) {
+    visibleInner.value = false
+    emit('update:modelValue', false)
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
+  emit('update:modelValue', v)
+})
 
 watch(() => props.assetId, async (id) => {
   if (!visibleInner.value || !id) return
@@ -153,7 +174,7 @@ async function loadDetail(id: number) {
       editSvgContent.value = data.svgContent
     }
   } catch (e) {
-    ElMessage.error('获取SVG内容失败')
+    ElMessage.error(t('icon.loadSvgFailed'))
   }
 }
 
@@ -162,15 +183,19 @@ function onClosed() {
 }
 
 async function save() {
+  if (!userStore.canUsePremiumStudioAssets) {
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
   if (!props.assetId) return
   saving.value = true
   try {
     await cropIconSvg({ id: props.assetId, svgContent: editSvgContent.value })
-    ElMessage.success('保存成功')
+    ElMessage.success(t('icon.saveSuccess'))
     visibleInner.value = false
     emit('saved')
   } catch (e) {
-    ElMessage.error('保存失败')
+    ElMessage.error(t('icon.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -183,12 +208,12 @@ const autoCropAndCenter = () => {
     const cropped = cropSvgToContentBBox(src)
     if (cropped) {
       editSvgContent.value = cropped
-      ElMessage.success('已裁剪并居中')
+      ElMessage.success(t('icon.cropCenterSuccess'))
     } else {
-      ElMessage.warning('无法计算边界')
+      ElMessage.warning(t('icon.boundsUnavailable'))
     }
   } catch (e) {
-    ElMessage.error('处理失败')
+    ElMessage.error(t('icon.processFailed'))
   }
 }
 

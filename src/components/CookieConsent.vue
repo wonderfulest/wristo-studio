@@ -2,19 +2,22 @@
   <div v-if="!accepted" class="cookie-consent">
     <div class="cookie-content">
       <p>
-        This site uses cookies and other tracking technologies to assist with navigation, 
-        analyse your use of our products, assist with our promotional and marketing efforts, 
-        and provide content from third parties. By continuing to use the site, you agree to 
-        the use of cookies.
+        {{ t('cookie.message') }}
       </p>
-      <button @click="acceptCookies" class="accept-button">Accept</button>
+      <el-button type="primary" class="accept-button" @click="acceptCookies">{{ t('common.accept') }}</el-button>
     </div>
   </div>
 </template>
 
 <script>
+import { useI18n } from '@/i18n'
+
 export default {
   name: 'CookieConsent',
+  setup() {
+    const { t } = useI18n()
+    return { t }
+  },
   data() {
     return {
       accepted: false
@@ -60,16 +63,8 @@ export default {
 }
 
 .accept-button {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 4px;
-  cursor: pointer;
+  flex: 0 0 auto;
+  min-width: 96px;
   white-space: nowrap;
-}
-
-.accept-button:hover {
-  background-color: #45a049;
 }
 </style> 

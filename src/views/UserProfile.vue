@@ -1,11 +1,11 @@
 <template>
-  <main class="profile-page">
+  <main class="profile-page" v-loading="isRefreshingProfile" :element-loading-text="t('common.loading')">
     <section class="profile-shell" aria-labelledby="profile-title">
       <div class="profile-hero">
         <div class="profile-identity-card">
           <div class="avatar-wrap">
             <img
-              :src="editMode ? form.avatar : (userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')"
+              :src="avatarImageSrc"
               class="profile-avatar"
               :class="{ 'avatar-editing': editMode }"
               :alt="t('profile.userAvatar')"
@@ -31,7 +31,18 @@
           </div>
 
           <div class="identity-copy">
-            <h1 id="profile-title">{{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}</h1>
+            <div class="identity-heading">
+              <h1 id="profile-title">{{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}</h1>
+              <span
+                v-if="isPremiumMember"
+                class="premium-badge"
+                :title="t('membership.premiumBadge')"
+                :aria-label="t('membership.premiumBadge')"
+              >
+                <Icon icon="material-symbols:workspace-premium-rounded" />
+                <span>{{ t('membership.premiumBadge') }}</span>
+              </span>
+            </div>
             <p>{{ userInfo?.email || t('profile.noEmail') }}</p>
           </div>
 
@@ -97,6 +108,63 @@
         </aside>
       </div>
 
+      <section v-if="!userStore.isMerchantUser" class="profile-card membership-panel" :aria-label="t('membership.title')">
+        <div class="section-header">
+          <span class="section-title-icon" aria-hidden="true">
+            <Icon icon="material-symbols:workspace-premium" />
+          </span>
+          <span class="status-chip membership-chip">
+            {{ membershipLabel }}
+          </span>
+        </div>
+
+        <div class="membership-summary">
+          <div>
+            <span>{{ t('membership.appsUsed') }}</span>
+            <strong>{{ membershipUsageText }}</strong>
+          </div>
+          <div>
+            <span>{{ t('membership.createAccess') }}</span>
+            <strong>{{ canCreateDesign ? t('membership.available') : t('membership.limitReached') }}</strong>
+          </div>
+          <div>
+            <span>{{ t('membership.renewOrEndAt') }}</span>
+            <strong>{{ membershipEndText }}</strong>
+          </div>
+          <div>
+            <span>{{ t('membership.adFree') }}</span>
+            <strong>{{ studioMembership?.adFree ? t('common.yes') : t('common.no') }}</strong>
+          </div>
+        </div>
+
+        <div class="membership-actions">
+          <p>{{ membershipHint }}</p>
+          <el-button type="primary" class="primary-action" @click="goPricing">
+            <Icon icon="material-symbols:arrow-forward-rounded" />
+            {{ t('membership.viewPlans') }}
+          </el-button>
+          <el-button
+            v-if="canCancelSubscription"
+            class="secondary-action subscription-cancel-action"
+            :loading="billingLoading"
+            @click="cancelMembership"
+          >
+            <Icon icon="material-symbols:event-busy-rounded" />
+            {{ t('membership.cancelSubscription') }}
+          </el-button>
+          <el-button
+            v-if="canResumeSubscription"
+            type="primary"
+            class="primary-action subscription-resume-action"
+            :loading="billingLoading"
+            @click="resumeMembership"
+          >
+            <Icon icon="material-symbols:restart-alt-rounded" />
+            {{ t('membership.resumeSubscription') }}
+          </el-button>
+        </div>
+      </section>
+
       <section class="profile-card" :aria-label="t('profile.details')">
         <div class="section-header">
           <span class="section-title-icon" aria-hidden="true">
@@ -153,19 +221,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { updateMyInfo } from '@/api/wristo/auth'
+import { uploadImage } from '@/api/image'
+import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useI18n } from '@/i18n'
+import { membershipApi } from '@/api/wristo/membership'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
 const { t } = useI18n()
+const router = useRouter()
+
+const DEFAULT_AVATAR_URL = 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png'
+const AVATAR_CANVAS_SIZE = 512
+const AVATAR_UPLOAD_TYPE = 'image/jpeg'
+const AVATAR_START_QUALITY = 0.84
+const AVATAR_TARGET_BYTES = 512 * 1024
 
 const editMode = ref(false)
 const isSaving = ref(false)
+const isRefreshingProfile = ref(false)
+const billingLoading = ref(false)
+const pendingAvatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
 
 const form = ref({
   username: userInfo.value?.username || '',
@@ -174,7 +257,203 @@ const form = ref({
   email: userInfo.value?.email || '',
 })
 
+const studioMembership = computed(() => userStore.studioMembership)
+const canCreateDesign = computed(() => userStore.canCreateDesign)
+const membershipLabel = computed(() => {
+  const level = studioMembership.value?.level || 'free'
+  return t(`membership.level.${level}`)
+})
+const membershipUsageText = computed(() => {
+  const count = studioMembership.value?.designCount ?? 0
+  const max = studioMembership.value?.maxDesigns
+  return max == null ? t('membership.unlimitedUsage', { count }) : t('membership.limitedUsage', { count, max })
+})
+const membershipHint = computed(() => {
+  if (isScheduledCancellation.value) {
+    return t('membership.cancelScheduledHint', { date: membershipEndText.value })
+  }
+  return canCreateDesign.value ? t('membership.profileHint') : t('membership.freeCreateLimitReached')
+})
+const isActiveMembership = computed(() => {
+  const status = studioMembership.value?.status
+  return status == null || status === '1' || status === '5'
+})
+const isPremiumMember = computed(() => {
+  const membership = studioMembership.value
+  if (!membership || membership.level === 'free') {
+    return false
+  }
+  const status = membership.status
+  return status == null || status === '1' || status === '5'
+})
+const isScheduledCancellation = computed(() => {
+  return studioMembership.value?.cancelScheduled === true
+    || studioMembership.value?.scheduledChangeAction?.toLowerCase() === 'cancel'
+})
+const canManagePaddleSubscription = computed(() => Boolean(studioMembership.value?.paddleSubId))
+const canCancelSubscription = computed(() => {
+  return canManagePaddleSubscription.value && isActiveMembership.value && !isScheduledCancellation.value
+})
+const canResumeSubscription = computed(() => {
+  return canManagePaddleSubscription.value && (isScheduledCancellation.value || !isActiveMembership.value)
+})
+const membershipEndText = computed(() => {
+  const value = studioMembership.value?.scheduledChangeEffectiveAt
+    || studioMembership.value?.renewAt
+    || studioMembership.value?.endTime
+  return value ? new Date(value).toLocaleDateString() : t('common.never')
+})
+
+const goPricing = () => {
+  router.push('/pricing')
+}
+
+const cancelMembership = async () => {
+  try {
+    await ElMessageBox.confirm(t('membership.cancelConfirm'), t('common.tip'), {
+      confirmButtonText: t('membership.cancelSubscription'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  billingLoading.value = true
+  try {
+    const response = await membershipApi.cancelCurrent()
+    if (userStore.userInfo) {
+      userStore.userInfo = { ...userStore.userInfo, studioMembership: response.data }
+    }
+    ElMessage.success(t('membership.cancelSubmitted'))
+  } catch (error) {
+    console.error('cancel Studio membership failed', error)
+    ElMessage.error(t('membership.cancelFailed'))
+  } finally {
+    billingLoading.value = false
+  }
+}
+
+const resumeMembership = async () => {
+  try {
+    await ElMessageBox.confirm(t('membership.resumeConfirm'), t('common.tip'), {
+      confirmButtonText: t('membership.resumeSubscription'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  billingLoading.value = true
+  try {
+    const response = await membershipApi.resumeCurrent()
+    if (userStore.userInfo) {
+      userStore.userInfo = { ...userStore.userInfo, studioMembership: response.data }
+    }
+    ElMessage.success(t('membership.resumeSubmitted'))
+  } catch (error) {
+    console.error('resume Studio membership failed', error)
+    ElMessage.error(t('membership.resumeFailed'))
+  } finally {
+    billingLoading.value = false
+  }
+}
+
+const refreshProfileOnOpen = async () => {
+  isRefreshingProfile.value = true
+  try {
+    const response = await userStore.refreshUserInfo()
+    if (response.code !== 0 || !response.data) {
+      throw new Error('Profile user info response was empty')
+    }
+  } catch (error) {
+    console.error('Failed to refresh user profile on open', error)
+    ElMessage.error(t('common.loadFailed'))
+  } finally {
+    isRefreshingProfile.value = false
+  }
+}
+
 const avatarInputRef = ref<HTMLInputElement | null>(null)
+const avatarImageSrc = computed(() => {
+  const src = editMode.value ? form.value.avatar : userInfo.value?.avatar
+  return src || DEFAULT_AVATAR_URL
+})
+
+const revokeAvatarPreviewUrl = () => {
+  if (avatarPreviewUrl.value) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+    avatarPreviewUrl.value = ''
+  }
+}
+
+const resetPendingAvatar = () => {
+  pendingAvatarFile.value = null
+  revokeAvatarPreviewUrl()
+}
+
+const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const image = new Image()
+  image.onload = () => resolve(image)
+  image.onerror = () => reject(new Error('Failed to load avatar image'))
+  image.src = url
+})
+
+const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number) => new Promise<Blob>((resolve, reject) => {
+  canvas.toBlob((blob) => {
+    if (blob) {
+      resolve(blob)
+      return
+    }
+    reject(new Error('Failed to encode avatar image'))
+  }, type, quality)
+})
+
+const avatarFileName = (name: string) => {
+  const baseName = name.replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '')
+  return `${baseName || 'avatar'}.jpg`
+}
+
+const compressAvatarFile = async (file: File): Promise<File> => {
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    const image = await loadImage(objectUrl)
+    const naturalWidth = image.naturalWidth || image.width
+    const naturalHeight = image.naturalHeight || image.height
+    if (!naturalWidth || !naturalHeight) {
+      throw new Error('Invalid avatar image size')
+    }
+
+    const sourceSize = Math.min(naturalWidth, naturalHeight)
+    const sourceX = Math.floor((naturalWidth - sourceSize) / 2)
+    const sourceY = Math.floor((naturalHeight - sourceSize) / 2)
+    const targetSize = Math.min(AVATAR_CANVAS_SIZE, sourceSize)
+    const canvas = document.createElement('canvas')
+    canvas.width = targetSize
+    canvas.height = targetSize
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Canvas is not available')
+    }
+
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, targetSize, targetSize)
+    ctx.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, targetSize, targetSize)
+
+    let quality = AVATAR_START_QUALITY
+    let blob = await canvasToBlob(canvas, AVATAR_UPLOAD_TYPE, quality)
+    while (blob.size > AVATAR_TARGET_BYTES && quality > 0.62) {
+      quality -= 0.08
+      blob = await canvasToBlob(canvas, AVATAR_UPLOAD_TYPE, quality)
+    }
+
+    return new File([blob], avatarFileName(file.name), {
+      type: AVATAR_UPLOAD_TYPE,
+      lastModified: Date.now(),
+    })
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
 
 const onAvatarDblClick = () => {
   if (editMode.value && avatarInputRef.value) {
@@ -184,22 +463,34 @@ const onAvatarDblClick = () => {
 }
 
 const onAvatarFileChange = async (e: Event) => {
-  const files = (e.target as HTMLInputElement).files
+  const input = e.target as HTMLInputElement
+  const files = input.files
   if (!files || files.length === 0) return
   const file = files[0]
   const isImage = file.type.startsWith('image/')
+  input.value = ''
   if (!isImage) {
     ElMessage.error(t('profile.uploadImageOnly'))
     return
   }
-  const reader = new FileReader()
-  reader.onload = () => {
-    form.value.avatar = reader.result as string
+
+  try {
+    const compressedFile = await compressAvatarFile(file)
+    if (!editMode.value) {
+      return
+    }
+    pendingAvatarFile.value = compressedFile
+    revokeAvatarPreviewUrl()
+    avatarPreviewUrl.value = URL.createObjectURL(compressedFile)
+    form.value.avatar = avatarPreviewUrl.value
+  } catch (error) {
+    console.error('Failed to compress avatar image', error)
+    ElMessage.error(t('common.uploadFailed'))
   }
-  reader.readAsDataURL(file)
 }
 
 const startEdit = () => {
+  resetPendingAvatar()
   form.value = {
     username: userInfo.value?.username || '',
     nickname: userInfo.value?.nickname || '',
@@ -210,6 +501,7 @@ const startEdit = () => {
 }
 
 const cancelEdit = () => {
+  resetPendingAvatar()
   form.value = {
     username: userInfo.value?.username || '',
     nickname: userInfo.value?.nickname || '',
@@ -225,23 +517,49 @@ const handleSave = async () => {
     return
   }
 
+  const username = form.value.username.trim()
+  const nickname = form.value.nickname.trim()
+  if (!username) {
+    ElMessage.error(t('profile.enterUserName'))
+    return
+  }
+
   isSaving.value = true
   try {
+    let avatarUrl = userInfo.value.avatar || ''
+    if (pendingAvatarFile.value) {
+      const uploadResponse = await uploadImage(pendingAvatarFile.value, IMAGE_ASPECT_CODE.AVATAR)
+      avatarUrl = uploadResponse.data?.url || ''
+      if (!avatarUrl) {
+        throw new Error('Avatar upload did not return a URL')
+      }
+    } else if (form.value.avatar && !form.value.avatar.startsWith('blob:') && !form.value.avatar.startsWith('data:')) {
+      avatarUrl = form.value.avatar
+    }
+
     await updateMyInfo({
-      username: form.value.username,
-      nickname: form.value.nickname,
-      avatar: form.value.avatar,
+      username,
+      nickname,
+      avatar: avatarUrl,
     })
 
-    userStore.setUserInfo({
+    const fallbackUserInfo = {
       ...userInfo.value,
-      username: form.value.username,
-      nickname: form.value.nickname,
-      avatar: form.value.avatar,
+      username,
+      nickname,
+      avatar: avatarUrl,
       email: form.value.email,
-    })
+    }
+
+    try {
+      await userStore.refreshUserInfo()
+    } catch (refreshError) {
+      console.warn('Failed to refresh user profile after save', refreshError)
+      userStore.setUserInfo(fallbackUserInfo)
+    }
 
     ElMessage.success(t('common.savedSuccessfully'))
+    resetPendingAvatar()
     editMode.value = false
   } catch (error) {
     console.error('Failed to update user profile', error)
@@ -255,6 +573,7 @@ watch(
   () => userStore.userInfo,
   (val) => {
     if (!editMode.value) {
+      resetPendingAvatar()
       form.value = {
         username: val?.username || '',
         nickname: val?.nickname || '',
@@ -264,6 +583,14 @@ watch(
     }
   }
 )
+
+onMounted(() => {
+  refreshProfileOnOpen()
+})
+
+onBeforeUnmount(() => {
+  revokeAvatarPreviewUrl()
+})
 </script>
 
 <style scoped>
@@ -367,6 +694,15 @@ watch(
   text-align: center;
 }
 
+.identity-heading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .identity-copy h1,
 .section-header h2 {
   margin: 0;
@@ -378,6 +714,34 @@ watch(
   font-size: 1.75rem;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(217, 119, 6, 0.32);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.08));
+  color: #9a5f00;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.premium-badge svg {
+  width: 16px;
+  height: 16px;
+  color: var(--studio-warning);
+}
+
+:global(:root[data-studio-theme='dark']) .premium-badge {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(245, 158, 11, 0.12));
+  color: #fde68a;
 }
 
 .identity-copy p:last-child {
@@ -415,6 +779,12 @@ watch(
   height: 16px;
 }
 
+.secondary-action svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
 .edit-icon-action {
   width: 36px;
   min-width: 36px;
@@ -431,6 +801,146 @@ watch(
 .profile-card {
   margin-top: 0;
   padding: 0;
+}
+
+.membership-panel {
+  padding: 0;
+}
+
+.membership-panel .section-header {
+  margin-bottom: 0;
+}
+
+.membership-chip {
+  margin-left: auto;
+  font-weight: 800;
+}
+
+.membership-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 22px 22px 0;
+}
+
+.membership-summary > div {
+  min-height: 84px;
+  padding: 16px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface-soft);
+}
+
+.membership-summary span {
+  display: block;
+  color: var(--studio-text-subtle);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.membership-summary strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--studio-text);
+  font-size: 1.25rem;
+}
+
+.membership-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 22px;
+}
+
+.membership-actions p {
+  flex: 1 1 180px;
+  margin: 0;
+  color: var(--studio-text-subtle);
+  line-height: 1.5;
+}
+
+.membership-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.subscription-cancel-action {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--studio-border);
+  --el-button-text-color: var(--studio-text-subtle);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--studio-surface-soft) 58%, transparent);
+  --el-button-hover-border-color: var(--studio-border);
+  --el-button-hover-text-color: var(--studio-text-muted);
+  --el-button-active-bg-color: var(--studio-surface-soft);
+  --el-button-active-border-color: var(--studio-border);
+  --el-button-active-text-color: var(--studio-text-muted);
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--studio-text-subtle);
+  background: transparent;
+  border-color: var(--studio-border);
+  box-shadow: none;
+}
+
+.subscription-cancel-action svg {
+  color: currentColor;
+  opacity: 0.68;
+}
+
+.subscription-cancel-action:hover,
+.subscription-cancel-action:focus {
+  color: var(--studio-text-muted);
+  background: color-mix(in srgb, var(--studio-surface-soft) 58%, transparent);
+  border-color: var(--studio-border);
+}
+
+.subscription-resume-action {
+  --el-button-bg-color: var(--studio-primary);
+  --el-button-border-color: var(--studio-primary);
+  --el-button-hover-bg-color: var(--studio-primary-hover);
+  --el-button-hover-border-color: var(--studio-primary-hover);
+  --el-button-active-bg-color: var(--studio-primary-active);
+  --el-button-active-border-color: var(--studio-primary-active);
+  min-height: 42px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, var(--studio-primary), var(--studio-primary-hover));
+  border-color: var(--studio-primary);
+  box-shadow: 0 12px 24px rgba(15, 107, 104, 0.24);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.subscription-resume-action:hover,
+.subscription-resume-action:focus {
+  background: linear-gradient(135deg, var(--studio-primary-hover), var(--studio-primary));
+  border-color: var(--studio-primary-hover);
+  box-shadow: 0 16px 30px rgba(15, 107, 104, 0.3);
+  transform: translateY(-1px);
+}
+
+.subscription-resume-action:active {
+  box-shadow: 0 8px 16px rgba(15, 107, 104, 0.22);
+  transform: translateY(0);
+}
+
+:global(:root[data-studio-theme='dark']) .subscription-cancel-action {
+  --el-button-bg-color: rgba(15, 23, 42, 0.18);
+  --el-button-border-color: rgba(148, 163, 184, 0.18);
+  --el-button-text-color: rgba(148, 163, 184, 0.78);
+  --el-button-hover-bg-color: rgba(30, 41, 59, 0.52);
+  --el-button-hover-border-color: rgba(148, 163, 184, 0.28);
+  --el-button-hover-text-color: var(--studio-text-muted);
+  color: rgba(148, 163, 184, 0.78);
+  background: rgba(15, 23, 42, 0.18);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+:global(:root[data-studio-theme='dark']) .subscription-resume-action {
+  box-shadow: 0 12px 24px rgba(45, 212, 191, 0.18);
+}
+
+:global(:root[data-studio-theme='dark']) .subscription-resume-action:hover,
+:global(:root[data-studio-theme='dark']) .subscription-resume-action:focus {
+  box-shadow: 0 16px 30px rgba(45, 212, 191, 0.24);
 }
 
 .device-panel {
@@ -713,8 +1223,7 @@ watch(
   }
 
   .profile-identity-card,
-  .device-panel,
-  .profile-card {
+  .device-panel {
     padding: 20px;
   }
 
@@ -731,7 +1240,32 @@ watch(
 
   .section-header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
+  }
+
+  .membership-summary {
+    grid-template-columns: 1fr;
+    padding: 20px 20px 0;
+  }
+
+  .membership-chip {
+    margin-left: 0;
+  }
+
+  .membership-actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px 20px 20px;
+  }
+
+  .membership-actions p {
+    flex-basis: auto;
+  }
+
+  .membership-actions :deep(.el-button) {
+    width: 100%;
+    justify-content: center;
   }
 
   .profile-actions,

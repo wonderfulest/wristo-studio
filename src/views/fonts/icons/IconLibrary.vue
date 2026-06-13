@@ -1,15 +1,15 @@
 <template>
   <div class="icon-library">
     <div class="header">
-      <h2>Icon Library</h2>
-      <el-button type="primary" @click="goToIconAssets">Go to Icon Assets</el-button>
+      <h2>{{ t('icon.libraryTitle') }}</h2>
+      <el-button type="primary" @click="goToIconAssets">{{ t('icon.goToAssets') }}</el-button>
     </div>
 
     <div class="content-card">
       <el-tabs
         v-model="activeTab"
         type="card"
-        addable
+        :addable="canUsePremiumAssets"
         @tab-change="onTabChange"
         @tab-add="onAddGlyph"
       >
@@ -22,14 +22,14 @@
             <span>{{ tabLabel(glyph) }}</span>
             <el-tooltip
               v-if="glyph.isDefault === 1"
-              content="System Icon"
+              :content="t('icon.systemIcon')"
               placement="top"
             >
               <i class="icon-tag iconfont icon-system"></i>
             </el-tooltip>
             <el-tooltip
-              v-if="glyph.isDefault === 0"
-              content="Rename Icon Font"
+              v-if="glyph.isDefault === 0 && canUsePremiumAssets"
+              :content="t('icon.renameIconFont')"
               placement="top"
             >
               <el-icon class="glyph-edit-icon" @click.stop="openRenameDialog(glyph)">
@@ -54,6 +54,7 @@
             @import="openImportDialog"
             @submitGlyph="handleSubmitGlyph"
             @displayTypeChange="onDisplayTypeChange"
+            :can-manage="canUsePremiumAssets"
           />
         </el-tab-pane>
       </el-tabs>
@@ -77,11 +78,11 @@
       @confirm="onCreateConfirm"
     />
 
-    <el-dialog v-model="renameVisible" title="Rename Icon Font" width="460px">
+    <el-dialog v-model="renameVisible" :title="t('icon.renameIconFont')" width="460px">
       <FontNamingBar ref="renameNamingRef" type="icon"/>
       <template #footer>
-        <el-button @click="renameVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="renaming" @click="handleRenameConfirm">Save</el-button>
+        <el-button @click="renameVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="renaming" @click="handleRenameConfirm">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
@@ -117,16 +118,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import BindAssetsDialog from './components/BindAssetsDialog.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
 import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
+import { useI18n } from '@/i18n'
 import {
   pageIconGlyphs,
   pageIconGlyphAssets,
@@ -147,6 +151,12 @@ import {
 import { autoIconFontBuild } from '@/api/wristo/fonts'
 
 const route = useRoute()
+const { t } = useI18n()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
+
+const requireIconPremium = () => membershipGate.requirePremium('icon.premiumRequired')
 
 const goToIconAssets = () => {
   window.open('/icon-assets', '_blank')
@@ -189,13 +199,14 @@ const fetchGlyphs = async () => {
       pageNum: glyphPage.value,
       pageSize: glyphPageSize.value,
       // active: 1,
-      // isDefault: undefined,
+      isDefault: canUsePremiumAssets.value ? undefined : 1,
       orderBy: 'id:asc',
     })
-    const list = (data?.list ?? []) as IconGlyphVO[]
+    const rawList = (data?.list ?? []) as IconGlyphVO[]
+    const list = canUsePremiumAssets.value ? rawList : rawList.filter(g => g.isDefault === 1)
     console.log('glyphs list', list)
     glyphs.value = list
-    glyphTotal.value = data?.total ?? 0
+    glyphTotal.value = data?.total ?? list.length
     // set active tab
     const qGlyphCode = route.query.glyphCode as string | undefined
     const qGlyphId = route.query.glyphId as string | undefined
@@ -266,15 +277,19 @@ const onAssetPageChange = async (page: number) => {
 }
 
 const handleUnbind = async (glyphId: number, assetId: number) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!glyphId || !assetId) return
   try {
     await ElMessageBox.confirm(
-      'Are you sure you want to unbind this asset from the font?',
-      'Unbind Asset',
+      t('icon.unbindConfirmBody'),
+      t('icon.unbindConfirmTitle'),
       {
         type: 'warning',
-        confirmButtonText: 'Unbind',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('icon.unbind'),
+        cancelButtonText: t('common.cancel'),
       }
     )
   } catch {
@@ -282,7 +297,7 @@ const handleUnbind = async (glyphId: number, assetId: number) => {
   }
   try {
     await unbindAssetFromGlyph(glyphId, assetId)
-    ElMessage.success('Unbound successfully')
+    ElMessage.success(t('icon.unboundSuccessfully'))
     const active = glyphs.value.find(g => g.glyphCode === activeTab.value)
     if (active && active.id === glyphId) {
       await fetchAssets(glyphId)
@@ -302,10 +317,14 @@ const onDisplayTypeChange = async (_v: DisplayType) => {
 
 const tabLabel = (g: IconGlyphVO) => {
   // Keep label simple; system/default glyphs are indicated via tooltip+tag in the tab label slot
-  return g.glyphCode || 'Font'
+  return g.glyphCode || t('font.nameLabel')
 }
 
 const openRenameDialog = async (glyph: IconGlyphVO) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!glyph || glyph.isDefault === 1) return
   renameGlyphId.value = glyph.id
   renameVisible.value = true
@@ -325,12 +344,16 @@ const openRenameDialog = async (glyph: IconGlyphVO) => {
 }
 
 const handleRenameConfirm = async () => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!renameGlyphId.value) return
 
   const naming = renameNamingRef.value as any
   const namingPreview = naming?.namingPreview ?? ''
   if (!namingPreview) {
-    ElMessage.error('Please enter a valid font name before saving.')
+    ElMessage.error(t('font.enterValidName'))
     return
   }
 
@@ -347,7 +370,7 @@ const handleRenameConfirm = async () => {
   try {
     renaming.value = true
     await editIconGlyph(dto)
-    ElMessage.success('Icon font name updated.')
+    ElMessage.success(t('icon.nameUpdated'))
     renameVisible.value = false
     await fetchGlyphs()
   } finally {
@@ -356,20 +379,24 @@ const handleRenameConfirm = async () => {
 }
 
 const handleSubmitGlyph = async () => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   try {
     await ElMessageBox.confirm(
-      'After submitting, the system will build an icon font from the current glyph and make it available in your fonts list.',
-      'Build Icon Font',
+      t('icon.buildFontBody'),
+      t('icon.buildFontTitle'),
       {
         type: 'info',
-        confirmButtonText: 'Build',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: t('icon.build'),
+        cancelButtonText: t('common.cancel'),
       }
     )
 
     const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
     if (!glyph || !glyph.glyphCode) {
-      ElMessage.error('Missing glyphCode for current glyph, cannot build icon font.')
+      ElMessage.error(t('icon.missingGlyphCode'))
       return
     }
 
@@ -379,10 +406,10 @@ const handleSubmitGlyph = async () => {
       const url = data.ttfFile.url
       // 自动在新标签页打开 TTF 链接，方便用户下载或预览
       window.open(url, '_blank')
-      ElMessage.success('Icon font built successfully. The TTF file has been opened in a new tab.')
+      ElMessage.success(t('icon.builtOpened'))
       // 可选：后续根据需要，触发字体列表刷新
     } else {
-      ElMessage.warning('Build request sent, but no TTF file URL was returned.')
+      ElMessage.warning(t('icon.buildNoUrl'))
     }
   } catch {
     // user canceled or request failed silently handled elsewhere
@@ -398,6 +425,10 @@ onMounted(async () => {
 const editVisible = ref(false)
 const editAssetId = ref<number | null>(null)
 const handleEdit = (item: IconGlyphAssetVO) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   editAssetId.value = item.asset?.id ?? null
   editVisible.value = true
 }
@@ -411,8 +442,18 @@ const onEditSaved = async () => {
 const createVisible = ref(false)
 const creating = ref(false)
 const createForm = ref<IconGlyphCreateDTO>({ glyphCode: '', style: '', isDefault: 0, isActive: 1 })
-const onAddGlyph = () => { createVisible.value = true }
+const onAddGlyph = () => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
+  createVisible.value = true
+}
 const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!payload.glyphCode) return
   try {
     creating.value = true
@@ -445,6 +486,10 @@ const bindAssets = ref<IconAssetVO[]>([])
 const bindLoading = ref(false)
 
 const openBindDialog = async (glyphId: number, iconId?: number) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   bindGlyphId.value = glyphId
   bindIconId.value = iconId ?? null
   bindVisible.value = true
@@ -477,6 +522,10 @@ const onBindPageChange = async (page: number) => {
 }
 
 const handleBindSingle = async (assetId: number) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!bindGlyphId.value || !assetId) return
   try {
     binding.value = true
@@ -498,6 +547,10 @@ const importFromGlyphId = ref<number | null>(null)
 const importableGlyphs = ref<IconGlyphVO[]>([])
 
 const openImportDialog = (g: IconGlyphVO) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   importTargetGlyphId.value = g.id
   // prepare candidate list: non-default glyphs excluding self
   importableGlyphs.value = glyphs.value.filter(x => x.id !== g.id)
@@ -506,6 +559,10 @@ const openImportDialog = (g: IconGlyphVO) => {
 }
 
 const handleImport = async () => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
   if (!importFromGlyphId.value || !importTargetGlyphId.value) return
   try {
     importing.value = true

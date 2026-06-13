@@ -1,42 +1,43 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    title="Go Live" 
+    :title="t('goLive.title')" 
     width="60%" 
     :top="'5vh'"
     class="go-live-dialog"
   >
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
-      <el-form-item label="App ID">
+      <el-form-item :label="t('card.appId')">
         <el-input v-model="form.appId" disabled>
           <template #append>
-            <el-button @click="copyAppId" :icon="CopyDocument">Copy</el-button>
+            <el-button @click="copyAppId" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item label="Design Name">
+      <el-form-item :label="t('submitDesign.designName')">
         <el-input v-model="form.name" disabled>
           <template #append>
-            <el-button @click="copyDesignName" :icon="CopyDocument">Copy</el-button>
+            <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item label="Description">
+      <el-form-item :label="t('submitDesign.description')">
         <el-input v-model="form.description" type="textarea" :rows="10" />
-        <el-button size="small" type="primary" style="margin-right: 8px;" @click="refreshDescription">Refresh</el-button>
+        <el-button size="small" type="primary" style="margin-right: 8px;" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
         <div class="form-tip">
-          Please keep this description consistent with the one in the Garmin Connect IQ store; inconsistencies may cause the review to fail.
+          {{ t('goLive.descriptionConsistencyTip') }}
         </div>
         <div class="form-tip">
-          You can edit the description template in Settings (top-right user menu). <el-link type="primary" @click="openSettings" style="font-size: 12px;">Open Settings</el-link>
+          {{ t('goLive.descriptionTemplateTip') }}
+          <el-link type="primary" @click="openSettings" style="font-size: 12px;">{{ t('nav.settings') }}</el-link>
         </div>
       </el-form-item>
-      <el-form-item label="Hero Image">
+      <el-form-item :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
             <div class="upload-title-row">
-              <div class="upload-title">Crop Image</div>
-              <el-tooltip content="This image will be displayed in the Garmin Connect IQ store" placement="top">
+              <div class="upload-title">{{ t('goLive.cropImage') }}</div>
+              <el-tooltip :content="t('goLive.cropImageTip')" placement="top">
                 <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
@@ -50,8 +51,8 @@
 
           <div class="image-upload-container">
             <div class="upload-title-row">
-              <div class="upload-title">Raw Image</div>
-              <el-tooltip content="This is the original raw image for preservation" placement="top">
+              <div class="upload-title">{{ t('goLive.rawImage') }}</div>
+              <el-tooltip :content="t('goLive.rawImageTip')" placement="top">
                 <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
@@ -64,10 +65,10 @@
           </div>
         </div>
       </el-form-item>
-      <el-form-item label="Homepage Banner">
+      <el-form-item :label="t('goLive.homepageBanner')">
         <div class="image-upload-container">
           <el-tooltip
-            content="Include a mobile-optimized image to promote your app. The image (in JPG, GIF, or PNG format) should be 1440 × 720 pixels and no larger than 2048 KB."
+            :content="t('goLive.bannerTip')"
             placement="top"
           >
             <el-icon class="tip-icon"><QuestionFilled /></el-icon>
@@ -85,32 +86,32 @@
               <img v-if="form.bannerImageUrl" :src="form.bannerImageUrl" class="uploaded-image" />
               <div v-else class="upload-placeholder">
                 <el-icon class="upload-icon"><Plus /></el-icon>
-                <span>Click to upload banner</span>
+                <span>{{ t('goLive.clickUploadBanner') }}</span>
               </div>
             </div>
           </el-upload>
           <div class="upload-actions" v-if="form.bannerImageUrl">
             <el-button size="small" type="danger" @click="removeBannerImage">
-              Remove Image
+              {{ t('goLive.removeImage') }}
             </el-button>
           </div>
         </div>
       </el-form-item>
 
       <!-- Product images -->
-      <el-form-item label="Product Images">
+      <el-form-item :label="t('goLive.productImages')">
         <ProductImagesEditor v-model="form.productImages" :max="5" />
       </el-form-item>
 
       <!-- Garmin Store URL -->
-      <el-form-item label="Garmin Store URL" prop="garminStoreUrl" required>
+      <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
         <el-input 
           v-model="form.garminStoreUrl" 
-          placeholder="Enter Garmin Connect IQ store URL"
+          :placeholder="t('goLive.enterGarminStoreUrl')"
           clearable
         />
         <div class="form-tip">
-          The URL where users can find your app in the Garmin Connect IQ store
+          {{ t('goLive.garminStoreUrlTip') }}
         </div>
       </el-form-item>
 
@@ -125,7 +126,7 @@
         :bundles="bundles"
         :loadingBundles="loadingBundles"
       />
-      <el-form-item label="Trial Duration (hours)">
+      <el-form-item :label="t('goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
           :disabled="true"
@@ -135,10 +136,10 @@
           :step="0.25"
         />
         <div class="form-tip-margin">
-          How long the trial period lasts (0 = no trial)
+          {{ t('goLive.trialDurationTip') }}
         </div>
       </el-form-item>
-      <el-form-item label="Price (USD)">
+      <el-form-item :label="t('goLive.priceUsd')">
         <el-input-number 
           v-model="form.price" 
           :disabled="true"
@@ -148,19 +149,19 @@
           :step="0.01"
         />
         <div class="form-tip-margin">
-          Price in USD for the app
+          {{ t('goLive.priceTip') }}
         </div>
       </el-form-item>
     </el-form>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">Cancel</el-button>
+        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
         >
-          Submit
+          {{ t('common.submit') }}
         </el-button>
       </span>
     </template>
@@ -189,6 +190,8 @@ import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { useI18n } from '@/i18n'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -196,10 +199,11 @@ const currentDesign = ref<Design | null>(null)
 const formRef = ref<FormInstance | null>(null)
 type DesignerConfigDialogRef = { show: () => void | Promise<void> }
 const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
+const { t } = useI18n()
 
 const rules: FormRules = {
   garminStoreUrl: [
-    { required: true, message: 'Garmin Store URL is required', trigger: ['blur', 'change'] },
+    { required: true, message: t('goLive.garminStoreUrlRequired'), trigger: ['blur', 'change'] },
   ],
 }
 
@@ -237,6 +241,7 @@ const form = reactive({
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
 const emit = defineEmits(['success', 'cancel'])
 
 // 加载设计数据
@@ -300,6 +305,7 @@ const loadDesign = (design: Design) => {
 
 // 提交表单
 const handleConfirm = async () => {
+  if (!membershipGate.requirePublish()) return
   if (!currentDesign.value) return
 
   const valid = await formRef.value?.validate?.().catch(() => false)
@@ -307,17 +313,17 @@ const handleConfirm = async () => {
   
   // 验证必填字段
   if (!form.garminImageUrl.trim()) {
-    messageStore.error('Please enter Garmin image URL')
+    messageStore.error(t('goLive.enterGarminImageUrl'))
     return
   }
   
   if (!form.garminStoreUrl.trim()) {
-    messageStore.error('Please enter Garmin store URL')
+    messageStore.error(t('goLive.enterGarminStoreUrlRequired'))
     return
   }
   
   if (!currentDesign.value.product.appId) {
-    messageStore.error('Product appId is required')
+    messageStore.error(t('goLive.productAppIdRequired'))
     return
   }
   try {
@@ -344,7 +350,7 @@ const handleConfirm = async () => {
         .filter((id) => typeof id === 'number' && id > 0)
     }
     await productsApi.goLive(data)
-    messageStore.success('Product information updated successfully')
+    messageStore.success(t('goLive.productUpdated'))
     emit('success')
     dialogVisible.value = false
   } finally {
@@ -360,18 +366,18 @@ const handleCancel = () => {
 const copyAppId = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(String(form.appId))
-    ElMessage.success('Copied')
+    ElMessage.success(t('common.copied'))
   } catch {
-    ElMessage.error('Copy failed')
+    ElMessage.error(t('common.copyFailed'))
   }
 }
 
 const copyDesignName = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(String(form.name || ''))
-    ElMessage.success('Copied')
+    ElMessage.success(t('common.copied'))
   } catch {
-    ElMessage.error('Copy failed')
+    ElMessage.error(t('common.copyFailed'))
   }
 }
 // Hero / Raw image uploaded handlers from ImageUpload
@@ -427,11 +433,11 @@ const beforeBannerUpload = (file: File) => {
   const isImage = file.type.startsWith('image/')
   const isLe2M = file.size <= 2 * 1024 * 1024
   if (!isImage) {
-    ElMessage.error('Please upload image files only!')
+    ElMessage.error(t('goLive.uploadImageOnly'))
     return false
   }
   if (!isLe2M) {
-    ElMessage.error('Banner image size cannot exceed 2MB!')
+    ElMessage.error(t('goLive.bannerSizeLimit'))
     return false
   }
   return true
@@ -447,13 +453,13 @@ const handleBannerChange = async (file: UploadFile) => {
 
   const sizeOk = file.raw.size <= 2 * 1024 * 1024
   if (!sizeOk) {
-    ElMessage.error('Banner image size cannot exceed 2MB!')
+    ElMessage.error(t('goLive.bannerSizeLimit'))
     return
   }
 
   const loadingInstance = ElLoading.service({
     lock: true,
-    text: 'Uploading banner...',
+    text: t('goLive.uploadingBanner'),
     background: 'rgba(0, 0, 0, 0.7)'
   })
 
@@ -464,7 +470,7 @@ const handleBannerChange = async (file: UploadFile) => {
       const img = new Image()
       img.onload = async () => {
         if (img.width !== 1440 || img.height !== 720) {
-          ElMessage.error('Banner image must be 1440 × 720 pixels')
+          ElMessage.error(t('goLive.bannerDimensionRequired'))
           loadingInstance.close()
           return
         }
@@ -475,26 +481,26 @@ const handleBannerChange = async (file: UploadFile) => {
           uploadedUrl = ''
         }
         if (!uploadedUrl) {
-          throw new Error('Failed to upload banner')
+          throw new Error(t('goLive.uploadBannerFailed'))
         }
         form.bannerImageUrl = uploadedUrl
-        ElMessage.success('Banner uploaded successfully')
+        ElMessage.success(t('goLive.bannerUploaded'))
         loadingInstance.close()
       }
       img.onerror = () => {
-        ElMessage.error('Failed to read banner image')
+        ElMessage.error(t('goLive.readBannerImageFailed'))
         loadingInstance.close()
       }
       img.src = dataUrl
     } catch (err) {
       console.error('Failed to upload banner:', err)
-      ElMessage.error('Failed to upload banner')
+      ElMessage.error(t('goLive.uploadBannerFailed'))
       loadingInstance.close()
     }
   }
   reader.onerror = (error) => {
     console.error('Error reading banner file', error)
-    ElMessage.error('Failed to read banner file')
+    ElMessage.error(t('goLive.readBannerFileFailed'))
     loadingInstance.close()
   }
   reader.readAsDataURL(file.raw)
@@ -508,7 +514,7 @@ const refreshDescription = async () => {
   if (!currentDesign.value) return
   const uid = userStore.userInfo?.id
   if (!uid) {
-    ElMessage.error('User not logged in')
+    ElMessage.error(t('auth.userNotLoggedIn'))
     return
   }
   const pid = currentDesign.value.product.id
@@ -516,10 +522,10 @@ const refreshDescription = async () => {
     const res = await productsApi.generateDescription({ userId: uid, productId: pid }) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
-      ElMessage.success('Description updated')
+      ElMessage.success(t('goLive.descriptionUpdated'))
     }
   } catch (e) {
-    ElMessage.error('Failed to generate description')
+    ElMessage.error(t('goLive.generateDescriptionFailed'))
   }
 }
 

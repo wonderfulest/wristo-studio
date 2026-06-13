@@ -13,7 +13,7 @@
     </div>
     <div v-if="isOpen" class="color-picker" :style="pickerStyle">
       <div class="tabs">
-        <div class="tab" :class="{ active: true }">Solid</div>
+        <div class="tab" :class="{ active: true }">{{ t('colorPicker.solid') }}</div>
       </div>
       <!-- 颜色矩阵 -->
       <div class="color-matrix">
@@ -23,9 +23,9 @@
       <!-- 当前使用的颜色 -->
       <div v-if="colorProperties.length > 0" class="recent-colors">
         <div class="recent-colors-header">
-          <div class="recent-colors-title">Current Colors</div>
+          <div class="recent-colors-title">{{ t('colorPicker.currentColors') }}</div>
           <button class="toggle-list-btn" @click="toggleColorList">
-            {{ showColorList ? 'Collapse' : 'Expand' }}
+            {{ showColorList ? t('common.collapse') : t('common.expand') }}
           </button>
         </div>
         <div v-if="!showColorList" class="recent-colors-grid">
@@ -50,6 +50,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: {

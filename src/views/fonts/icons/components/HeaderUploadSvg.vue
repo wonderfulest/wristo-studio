@@ -1,9 +1,9 @@
 <template>
   <div class="upload-wrap">
-    <div class="hint">上传后的素材可在下方自定义字体时进行绑定</div>
-    <el-button type="success" :loading="uploading" @click="dialogVisible = true">上传SVG</el-button>
+    <div class="hint">{{ t('icon.uploadHint') }}</div>
+    <el-button v-if="canUsePremiumAssets" type="success" :loading="uploading" @click="dialogVisible = true">{{ t('icon.uploadSvg') }}</el-button>
 
-    <el-dialog v-model="dialogVisible" title="上传 SVG" width="860px" :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="t('icon.uploadSvgTitle')" width="860px" :close-on-click-modal="false">
       <el-upload
         drag
         :show-file-list="false"
@@ -14,15 +14,15 @@
         :disabled="uploading"
       >
         <div class="el-upload__text">
-          <div>将 SVG 拖拽到此处，或点击选择，支持多文件</div>
-          <div>1. 支持选择上传的图标，只能同时上传一种类型的图标</div>
-          <div>2. 如果不选择，则上传文件名需要与 icon 的 Symbol Code 保持一致，比如 heart_rate.svg，可以同时上传多种类型的图标</div>
+          <div>{{ t('icon.dragSvgTip') }}</div>
+          <div>{{ t('icon.singleTypeTip') }}</div>
+          <div>{{ t('icon.filenameMatchTip') }}</div>
         </div>
         <template #tip>
           <div class="el-upload__tip">
             <div class="upload-extra">
               <div class="row">
-                <span class="label"><span style="color:#f56c6c">*</span> 显示类型（必选）：</span>
+                <span class="label"><span style="color:#f56c6c">*</span> {{ t('icon.displayTypeRequired') }}</span>
                 <el-radio-group v-model="displayType">
                   <el-radio v-for="opt in displayTypeOptions" :key="opt.value" :label="opt.value">{{ opt.name || opt.value }}</el-radio>
                 </el-radio-group>
@@ -30,10 +30,10 @@
             </div>
             <div class="symbol-quick">
               <div class="symbol-selected">
-                <span>已选择图标类型：</span>
+                <span>{{ t('icon.selectedIconType') }}</span>
                 <span class="code" v-if="selectedSymbolCode">{{ selectedSymbolCode }}</span>
-                <span v-else>未选择</span>
-                <el-button v-if="selectedSymbolCode" link type="primary" @click="clearSelect" :disabled="uploading">清除选择</el-button>
+                <span v-else>{{ t('icon.notSelected') }}</span>
+                <el-button v-if="selectedSymbolCode" link type="primary" @click="clearSelect" :disabled="uploading">{{ t('icon.clearSelection') }}</el-button>
               </div>
               <div class="symbol-grid">
                 <div
@@ -54,7 +54,7 @@
       </el-upload>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="dialogVisible = false" :disabled="uploading">关闭</el-button>
+          <el-button @click="dialogVisible = false" :disabled="uploading">{{ t('common.close') }}</el-button>
         </span>
       </template>
     </el-dialog>
@@ -62,10 +62,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { uploadIconSvg, listIconLibrary, type IconLibraryVO, type DisplayType } from '@/api/wristo/iconGlyph'
 import { getEnumOptions, type EnumOption } from '@/api/common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
 const props = defineProps<{ iconUnicode?: string }>()
 const emit = defineEmits<{
@@ -82,6 +90,11 @@ const displayType = ref<DisplayType | undefined>(undefined)
 const displayTypeOptions = ref<EnumOption[]>([])
 
 watch(dialogVisible, async (v) => {
+  if (v && !canUsePremiumAssets.value) {
+    dialogVisible.value = false
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
   if (v && iconList.value.length === 0) {
     try {
       const resp = await listIconLibrary()
@@ -133,19 +146,27 @@ watch(
 )
 
 const beforeUpload = (file: File) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('icon.premiumRequired')
+    return false
+  }
   const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
   if (!isSvg) {
-    ElMessage.error('请上传 SVG 文件')
+    ElMessage.error(t('icon.uploadSvgOnly'))
     return false
   }
   return true
 }
 
 const doUpload = async (options: { file: File }) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
   const file = options.file
   if (!beforeUpload(file)) return
   if (!displayType.value) {
-    ElMessage.error('请选择显示类型')
+    ElMessage.error(t('icon.selectDisplayType'))
     return
   }
   uploading.value = true
@@ -161,15 +182,15 @@ const doUpload = async (options: { file: File }) => {
       unicode = foundByName?.iconUnicode || ''
     }
     if (!unicode) {
-      ElMessage.error('未能确定上传图标的 unicode，请在上方选择图标类型，或确保文件名与 Symbol Code 一致')
+      ElMessage.error(t('icon.resolveUnicodeFailed'))
       return
     }
 
     await uploadIconSvg(file, unicode, displayType.value)
-    ElMessage.success(`${file.name} 上传成功`)
+    ElMessage.success(t('icon.uploadSuccess', { name: file.name }))
     emit('uploaded')
   } catch (e) {
-    ElMessage.error(`${file.name} 上传失败`)
+    ElMessage.error(t('icon.uploadFailed', { name: file.name }))
   } finally {
     uploading.value = false
   }

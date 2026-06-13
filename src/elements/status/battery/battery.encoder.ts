@@ -60,7 +60,7 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
   const batteryHead = parts.head
   const batteryLevel = parts.level
 
-  const safePadding = Math.round(((anyElement.padding ?? 4) as number))
+  const safePadding = Math.round(((anyElement.padding ?? 2) as number))
 
   const config: BatteryElementConfig = {
     id: String(anyElement.id ?? ''),

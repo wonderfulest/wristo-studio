@@ -2,34 +2,34 @@
   <el-card class="section-card" shadow="never">
     <template #header>
       <div class="card-header">
-        <span>Score</span>
+        <span>{{ t('meter.score') }}</span>
         <div v-if="score" class="header-head">
-          <span class="header-meta">Total: {{ formatNum(score.total, 4) }}</span>
+          <span class="header-meta">{{ t('meter.total') }}: {{ formatNum(score.total, 4) }}</span>
           <el-link type="primary" class="toggle-link" @click="expanded = !expanded">
-            {{ expanded ? 'Collapse' : 'Expand' }}
+            {{ expanded ? t('meter.collapse') : t('meter.expand') }}
           </el-link>
         </div>
       </div>
     </template>
 
-    <el-empty v-if="!score" description="No score data" />
+    <el-empty v-if="!score" :description="t('meter.noScoreData')" />
 
     <template v-else>
       <el-row :gutter="16" class="score-summary">
         <el-col :span="8">
-          <el-statistic title="Total" :value="formatNum(score.total, 4)" />
+          <el-statistic :title="t('meter.total')" :value="formatNum(score.total, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Scale" :value="formatNum(items.scale.score, 4)" />
+          <el-statistic :title="t('meter.scale')" :value="formatNum(items.scale.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Lifecycle" :value="formatNum(items.lifecycle.score, 4)" />
+          <el-statistic :title="t('meter.lifecycle')" :value="formatNum(items.lifecycle.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Active Rate" :value="formatNum(items.activeRate.score, 4)" />
+          <el-statistic :title="t('meter.activeRate')" :value="formatNum(items.activeRate.score, 4)" />
         </el-col>
         <el-col :span="4">
-          <el-statistic title="Effective Rate" :value="formatNum(items.effectiveRate.score, 4)" />
+          <el-statistic :title="t('meter.effectiveRate')" :value="formatNum(items.effectiveRate.score, 4)" />
         </el-col>
       </el-row>
 
@@ -40,14 +40,14 @@
         border
         style="width: 100%; margin-top: 12px"
       >
-        <el-table-column prop="name" label="Dimension" width="160" />
-        <el-table-column prop="score" label="score" width="140" />
-        <el-table-column prop="weight" label="weight" width="140" />
-        <el-table-column prop="weighted" label="weight*score" min-width="160" />
+        <el-table-column prop="name" :label="t('meter.dimension')" width="160" />
+        <el-table-column prop="score" :label="t('meter.scoreColumn')" width="140" />
+        <el-table-column prop="weight" :label="t('meter.weightColumn')" width="140" />
+        <el-table-column prop="weighted" :label="t('meter.weightedScore')" min-width="160" />
       </el-table>
 
       <div v-if="expanded" class="formula">
-        <div class="formula__title">Formula</div>
+        <div class="formula__title">{{ t('meter.formula') }}</div>
         <pre class="formula__code">{{ formulaText }}</pre>
       </div>
     </template>
@@ -57,8 +57,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { AppMeterScoreVO } from '@/types/meter'
+import { useI18n } from '@/i18n'
 
 const props = defineProps<{ score: AppMeterScoreVO | null }>()
+const { t } = useI18n()
 
 const expanded = ref(false)
 
@@ -108,7 +110,7 @@ const formulaText = computed(() => {
   const right = `= ${formatNum(it.scale.weight)}*${formatNum(it.scale.score)} + ${formatNum(it.lifecycle.weight)}*${formatNum(it.lifecycle.score)} + ${formatNum(it.activeRate.weight)}*${formatNum(it.activeRate.score)} + ${formatNum(it.effectiveRate.weight)}*${formatNum(it.effectiveRate.score)}`
 
   const sum = it.scale.weighted + it.lifecycle.weighted + it.activeRate.weighted + it.effectiveRate.weighted
-  const result = `= ${formatNum(sum)} (backend total: ${formatNum((s as any).total)})`
+  const result = `= ${formatNum(sum)} (${t('meter.backendTotal')}: ${formatNum((s as any).total)})`
 
   return [left, right, result].join('\n')
 })

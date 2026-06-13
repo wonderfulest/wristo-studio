@@ -760,6 +760,7 @@ const handleEditSuccess = () => {
   padding: 8px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface-raised);
   box-shadow: var(--studio-shadow-md);
 }
 
@@ -775,6 +776,107 @@ const handleEditSuccess = () => {
 :global(.el-menu--popup .el-menu-item:hover) {
   color: var(--studio-primary);
   background: var(--studio-primary-soft);
+}
+
+:global(.app-menu-datafield-dropdown) {
+  width: clamp(480px, 52vw, 660px);
+  max-width: calc(100vw - 24px);
+}
+
+:global(.app-menu-datafield-dropdown .el-menu--popup) {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px;
+}
+
+:global(.app-menu-datafield-dropdown .menu-group) {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: color-mix(in srgb, var(--studio-surface-soft) 58%, transparent);
+}
+
+:global(.app-menu-datafield-dropdown .menu-group-title) {
+  gap: 7px;
+  margin: 0 2px 8px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--studio-border);
+  color: var(--studio-text);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+:global(.app-menu-datafield-dropdown .menu-group-title .el-icon) {
+  width: 18px;
+  height: 18px;
+  margin-right: 0;
+  color: var(--studio-primary);
+}
+
+:global(.app-menu-datafield-dropdown .el-menu-item) {
+  height: 44px !important;
+  min-width: 0;
+  margin: 3px 0;
+  padding: 0 9px !important;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+
+:global(.app-menu-datafield-dropdown .el-menu-item .el-icon) {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  margin-right: 0;
+  border-radius: var(--studio-radius-sm);
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+}
+
+:global(.app-menu-datafield-dropdown .el-menu-item span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.app-menu-datafield-dropdown .el-menu-item:hover),
+:global(.app-menu-datafield-dropdown .el-menu-item:focus) {
+  border-color: var(--studio-primary-border);
+  color: var(--studio-primary);
+  background: var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+:global(.app-menu-datafield-dropdown .el-menu-item:hover .el-icon),
+:global(.app-menu-datafield-dropdown .el-menu-item:focus .el-icon) {
+  color: var(--studio-surface);
+  background: var(--studio-primary);
+}
+
+@media (max-width: 900px) {
+  :global(.app-menu-datafield-dropdown) {
+    width: min(520px, calc(100vw - 24px));
+  }
+
+  :global(.app-menu-datafield-dropdown .el-menu--popup) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  :global(.app-menu-datafield-dropdown .el-menu--popup) {
+    grid-template-columns: 1fr;
+  }
 }
 
 :global(.shortcut-hint) {

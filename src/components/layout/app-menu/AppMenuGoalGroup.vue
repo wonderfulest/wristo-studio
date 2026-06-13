@@ -1,6 +1,9 @@
 <template>
-  <div class="menu-group">
-    <div class="menu-group-title">{{ t('editor.goal') }}</div>
+  <div class="menu-group menu-group--goal">
+    <div class="menu-group-title">
+      <el-icon><Operation /></el-icon>
+      <span>{{ t('editor.goal') }}</span>
+    </div>
     <el-menu-item index="goal/progress-bar" @click="onAddProgressBar">
       <el-icon><Operation /></el-icon>
       <span>{{ t('editor.progressBar') }}</span>

@@ -1,30 +1,29 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="Edit Number Glyphs (0-9 & :)"
+    :title="t('font.editNumberGlyphs')"
     width="840px"
   >
     <div class="glyph-dialog-body">
       <FontNamingBar ref="namingRef" type="number" />
       <p class="glyph-tip">
-        Please upload 11 SVG files for digits 0-9 and colon (:). All glyphs should be monospaced and
-        visually aligned for best results.
+        {{ t('font.glyphTip') }}
       </p>
       <p class="glyph-tip">
-        For detailed guidelines and examples, please see the tutorial in our
+        {{ t('font.glyphWikiTip') }}
         <a
           href="https://wiki.wristo.io/02-design/07-tutorials-and-cases/02-large-monospaced-digits.html"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Design Wiki
+          {{ t('font.designWiki') }}
         </a>.
       </p>
 
       <div class="batch-toggle-row">
         <el-switch
           v-model="showBatchUpload"
-          active-text="Enable batch upload"
+          :active-text="t('font.enableBatchUpload')"
         />
       </div>
 
@@ -42,8 +41,10 @@
         :on-change="handleBatchFileChange"
       >
         <div class="upload-content">
-          <p class="upload-main">Drag multiple SVG files here to auto-fill glyphs</p>
-          <p class="upload-sub">Filename should be like <code>0.svg</code> / <code>1.svg</code> / <code>0030.svg</code> / <code>0031.svg</code></p>
+          <p class="upload-main">{{ t('font.dragGlyphSvgs') }}</p>
+          <p class="upload-sub">
+            {{ t('font.glyphFilenameHint', { example1: '0.svg', example2: '1.svg', example3: '0030.svg', example4: '0031.svg' }) }}
+          </p>
         </div>
       </el-upload>
 
@@ -86,14 +87,14 @@
     </div>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="visible = false">Cancel</el-button>
+        <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
         <!-- :disabled="!canSave || saving" -->
         <el-button
           type="primary"
           :loading="saving"
           @click="handleSave"
         >
-          Save
+          {{ t('common.save') }}
         </el-button>
       </span>
     </template>
@@ -105,7 +106,14 @@ import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import JSZip from 'jszip'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { autoNumberFontBuild } from '@/api/wristo/fonts'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
 
 const visible = ref(false)
 const glyphChars = ['0','1','2','3','4','5','6','7','8','9',':'] as const
@@ -152,7 +160,7 @@ const canSave = computed(() => glyphChars.every(ch => !!glyphFiles.value[ch]))
 const beforeGlyphUpload = (file: File) => {
   const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
   if (!isSvg) {
-    ElMessage.error('Please upload SVG files only')
+    ElMessage.error(t('font.svgOnly'))
     return false
   }
   return true
@@ -179,6 +187,10 @@ const inferGlyphFromFilename = (name: string): GlyphChar | null => {
 }
 
 const handleGlyphFileChange = (ch: GlyphChar, file: any) => {
+  if (!userStore.canUsePremiumStudioAssets) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   const raw = file?.raw as File | undefined
   if (!raw) return
   if (!beforeGlyphUpload(raw)) return
@@ -191,6 +203,10 @@ const handleGlyphFileChange = (ch: GlyphChar, file: any) => {
 }
 
 const handleBatchFileChange = (file: any) => {
+  if (!userStore.canUsePremiumStudioAssets) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
   const raw = file?.raw as File | undefined
   if (!raw) return
   if (!beforeGlyphUpload(raw)) return
@@ -210,8 +226,12 @@ const handleBatchFileChange = (file: any) => {
 }
 
 const handleSave = async () => {
+  if (!userStore.canUsePremiumStudioAssets) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   if (!canSave.value || saving.value) {
-    ElMessage.error('Please upload all glyph files before saving')
+    ElMessage.error(t('font.uploadAllGlyphs'))
     return
   }
   saving.value = true
@@ -237,7 +257,7 @@ const handleSave = async () => {
     }
 
     if (!namingPreview || !namingPreview.trim()) {
-      ElMessage.error('Please enter a valid font name before saving')
+      ElMessage.error(t('font.enterValidName'))
       saving.value = false
       return
     }
@@ -264,7 +284,7 @@ const handleSave = async () => {
       document.body.removeChild(a)
     }
 
-    ElMessage.success('Number glyph font built')
+    ElMessage.success(t('font.numberGlyphBuilt'))
     // 构建完成后清空本地状态并关闭弹窗
     for (const ch of glyphChars) {
       const prev = glyphPreviews.value[ch]
@@ -275,13 +295,17 @@ const handleSave = async () => {
     visible.value = false
   } catch (e) {
     console.error(e)
-    ElMessage.error('Failed to upload number glyph font')
+    ElMessage.error(t('font.numberGlyphUploadFailed'))
   } finally {
     saving.value = false
   }
 }
 
 const open = () => {
+  if (!userStore.canUsePremiumStudioAssets) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
   visible.value = true
 }
 

@@ -84,12 +84,14 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useI18n } from '@/i18n'
 import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
 const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
+const membershipGate = useStudioMembershipGate()
 // 定义属性
 const props = defineProps({
   isDialogVisible: {
@@ -163,6 +165,7 @@ const openDialog = () => {
 
 // 导出配置
 const downloadConfig = async () => {
+  if (!membershipGate.requireExport()) return
   if (!baseStore.watchFaceName) {
     messageStore.error(t('export.setAppName'))
     return null

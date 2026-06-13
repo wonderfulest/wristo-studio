@@ -50,6 +50,7 @@ export interface DesignFontSearchDTO {
   orderBy?: string
   name?: string
   type?: string
+  isSystem?: number // 0/1
   isMonospace?: number // 0/1
   italic?: number // 0/1
   weight?: number

@@ -192,9 +192,9 @@ const formData = reactive({
 // 表单验证规则
 const validateOptions = (rule, value, callback) => {
   if (!value || value.length === 0) {
-    callback(new Error('At least one option is required'))
+    callback(new Error(t('property.atLeastOneOption')))
   } else if (!value.every(option => option.label && propertiesStore.isValidColorValue(option.value))) {
-    callback(new Error('All options must have valid label and color value'))
+    callback(new Error(t('property.validLabelColorRequired')))
   } else {
     callback()
   }
@@ -211,11 +211,11 @@ const isValueInOptions = (garminValue) => {
 
 const validateDefaultValue = (rule, value, callback) => {
   if (!value) {
-    callback(new Error('Default value is required'))
+    callback(new Error(t('property.defaultValueRequired')))
     return
   }
   if (!isValueInOptions(value)) {
-    callback(new Error('Default value must exist in Color Options'))
+    callback(new Error(t('property.defaultValueInColorOptions')))
     return
   }
   callback()
@@ -248,7 +248,7 @@ const handleDefaultColorChange = async (hex) => {
 
   const garminValue = hexToGarmin(hex)
   if (!isValueInOptions(garminValue)) {
-    ElMessage.warning('必须选择 Color Options 中已有的颜色')
+    ElMessage.warning(t('property.chooseColorFromOptions'))
     suppressDefaultChange.value = true
     defaultColorHex.value = garminToHex(formData.value)
     await nextTick()

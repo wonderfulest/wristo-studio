@@ -3,13 +3,13 @@
     <div class="naming-preview-row">
       <span class="naming-preview-label">
         <span class="naming-required">*</span>
-        Font Name
+        {{ t('font.nameLabel') }}
       </span>
       <el-input
         class="naming-preview-input"
         size="small"
         :model-value="namingPreview"
-        placeholder="click to name this font"
+        :placeholder="t('font.namePlaceholder')"
         readonly
         @focus="editing = true"
         @click="editing = true"
@@ -21,7 +21,7 @@
         v-model="seriesPart"
         size="small"
         class="naming-input"
-        placeholder="series (e.g. aura)"
+        :placeholder="t('font.seriesPlaceholder')"
         @keyup.enter="finishEditing"
       />
       <span class="naming-sep">-</span>
@@ -30,7 +30,7 @@
         v-model="usePart"
         size="small"
         class="naming-input naming-input--use"
-        placeholder="number"
+        :placeholder="type"
         disabled
       />
       <span class="naming-sep">-</span>
@@ -38,7 +38,7 @@
         v-model="stylePart"
         size="small"
         class="naming-input"
-        placeholder="style"
+        :placeholder="t('font.stylePlaceholder')"
         filterable
         allow-create
         @change="finishEditing"
@@ -55,7 +55,7 @@
         v-model="variantPart"
         size="small"
         class="naming-input"
-        placeholder="variant"
+        :placeholder="t('font.variantPlaceholder')"
         filterable
         allow-create
         @change="finishEditing"
@@ -70,11 +70,11 @@
     </div>
 
     <div class="naming-tip">
-      <div class="naming-tip-line">命名格式：<code>{series}-{use}-{style}-{variant}</code></div>
-      <div class="naming-tip-line">use 固定为 <code>number</code>，style 如 <code>mono/round/sharp/segment</code>，variant 如 <code>regular/outline/bold/light</code></div>
-      <div class="naming-tip-line">示例：<code>aura-number-mono-regular</code>，<code>neon-number-segment-bold</code></div>
+      <div class="naming-tip-line">{{ t('font.namingFormat', { format: '{series}-{use}-{style}-{variant}' }) }}</div>
+      <div class="naming-tip-line">{{ t('font.namingUseHint', { use: type, styles: 'mono/round/sharp/segment', variants: 'regular/outline/bold/light' }) }}</div>
+      <div class="naming-tip-line">{{ t('font.namingExamples', { example1: 'aura-number-mono-regular', example2: 'neon-number-segment-bold' }) }}</div>
       <div class="naming-tip-line">
-        更完整的命名规范和术语说明，请参考
+        {{ t('font.namingGlossary') }}
         <a
           href="https://wiki.wristo.io/02-design/02-design-guideline/04-font-name-glossary.html"
           target="_blank"
@@ -91,6 +91,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   type: 'number' | 'text' | 'icon'
@@ -140,7 +143,7 @@ const makeNoDigitStartWatcher = (part: typeof seriesPart, label: string) => {
     const startsWithDigit = /^[0-9]/.test(lower)
     const hasInvalidChar = /[^a-z0-9_-]/.test(lower)
     if (startsWithDigit || hasInvalidChar) {
-      ElMessage.error(`${label} 只能使用小写字母、数字、下划线和中划线，且不能以数字开头。`)
+      ElMessage.error(t('font.namePartInvalid', { label }))
       part.value = oldVal
     }
   })

@@ -1,3 +1,5 @@
+import type { StudioMembership } from '@/types/api/membership'
+
 export interface UserBase {
   id: number
   username: string
@@ -73,6 +75,7 @@ export interface UserInfo {
   lastLoginIp: string | null
   isDeleted: string
   subscription?: any
+  studioMembership?: StudioMembership | null
   activatedApps?: number[]
   roles?: Array<{ id: number; roleName: string; roleCode: string; description: string; status: number }>
   userProfile?: UserProfileVO

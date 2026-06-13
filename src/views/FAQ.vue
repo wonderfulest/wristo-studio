@@ -77,14 +77,14 @@
                     <li>{{ t('faq.q5.namingA1') }}</li>
                     <li>{{ t('faq.q5.namingA2') }}</li>
                     <ul class="list-circle ml-8 mt-2">
-                      <li>FontForge（开源免费）
+                      <li>{{ t('faq.q5.toolFontForge') }}
                         <div class="bg-gray-100 p-2 mt-1 rounded text-sm font-mono">
                           fontforge -lang=ff -c 'Open($1); Print($fontname)' 字体文件路径
                         </div>
                       </li>
-                      <li>FontCreator（Windows系统）</li>
-                      <li>TransType（跨平台）</li>
-                      <li>FontLab（专业字体编辑软件）</li>
+                      <li>{{ t('faq.q5.toolFontCreator') }}</li>
+                      <li>{{ t('faq.q5.toolTransType') }}</li>
+                      <li>{{ t('faq.q5.toolFontLab') }}</li>
                     </ul>
                     <li class="mt-2">{{ t('faq.q5.namingExample') }}</li>
                   </ul>

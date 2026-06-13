@@ -1,11 +1,18 @@
 <template>
-  <el-sub-menu index="datafield">
+  <el-sub-menu
+    index="datafield"
+    popper-class="app-menu-dropdown app-menu-datafield-dropdown"
+    :popper-offset="8"
+  >
     <template #title>
       <el-icon><DataLine /></el-icon>
       <span>{{ t('editor.dataField') }}</span>
     </template>
-    <div class="menu-group">
-      <div class="menu-group-title">{{ t('editor.dataField') }}</div>
+    <div class="menu-group menu-group--data-field">
+      <div class="menu-group-title">
+        <el-icon><DataLine /></el-icon>
+        <span>{{ t('editor.dataField') }}</span>
+      </div>
       <el-menu-item
         index="health/heart-rate"
         @click="onAddDataField(':FIELD_TYPE_HEART_RATE')"
@@ -47,8 +54,11 @@
       :on-add-progress-arc="onAddGoalArc"
       :on-add-progress-segments="onAddGoalSegment"
     />
-    <div class="menu-group">
-      <div class="menu-group-title"><el-icon><TrendCharts /></el-icon>{{ t('editor.chart') }}</div>
+    <div class="menu-group menu-group--chart">
+      <div class="menu-group-title">
+        <el-icon><TrendCharts /></el-icon>
+        <span>{{ t('editor.chart') }}</span>
+      </div>
       <el-menu-item index="chart/bar" @click="onAddElement('chart', 'barChart')">
         <el-icon><TrendCharts /></el-icon>
         <span>{{ t('editor.barChart') }}</span>

@@ -16,6 +16,7 @@ export interface FontOption {
   // Optional metadata for precise local filtering
   isMonospace?: boolean
   italic?: boolean
+  isSystem?: boolean
 }
 
 interface FontSectionsState {
@@ -292,6 +293,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
               family,
               isMonospace: (f as any)?.isMonospace === 1,
               italic: (f as any)?.italic === 1,
+              isSystem: true,
             }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
@@ -323,6 +325,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             src: f.ttfFile?.url,
             isMonospace: (f as any)?.isMonospace === 1,
             italic: (f as any)?.italic === 1,
+            isSystem: (f as any)?.isSystem === 1,
           }))
           // 去重并只保留 5 个
           const seen = new Set<string>()
@@ -443,6 +446,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         }
 
         // 确保存在 custom 分组
+        font = { ...font, isSystem: font.isSystem === true }
         if (!this.builtinFonts.custom) this.builtinFonts.custom = []
         const existingIndex = this.builtinFonts.custom.findIndex((f) => f.value === font.value)
         if (existingIndex !== -1) {

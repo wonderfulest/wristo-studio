@@ -179,7 +179,7 @@ export function updateBattery(element: FabricElement, patch: Partial<BatteryElem
     left: width / 2 + nextHeadGap,
   })
 
-  const padding = next.padding ?? 4
+  const padding = next.padding ?? 2
   const nextLow = (next.levelColorLow ?? (group as any).levelColorLow ?? DEFAULT_LEVEL_COLOR_LOW) as string
   const nextMedium = (next.levelColorMedium ?? (group as any).levelColorMedium ?? DEFAULT_LEVEL_COLOR_MEDIUM) as string
   const nextHigh = (next.levelColorHigh ?? (group as any).levelColorHigh ?? DEFAULT_LEVEL_COLOR_HIGH) as string

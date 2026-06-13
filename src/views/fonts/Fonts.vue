@@ -8,10 +8,11 @@
       v-model:italic="italic"
       v-model:weight-class="weightClass"
       v-model:width-class="widthClass"
+      :can-upload-fonts="canUsePremiumAssets"
       @search="handleSearch"
       @filterChange="handleFilterChange"
       @resetFilters="handleResetFilters"
-      @openUploadDialog="uploadDialogVisible = true"
+      @openUploadDialog="openUploadDialog"
       @previewTextChange="handlePreviewTextChange"
     />
 
@@ -55,6 +56,7 @@
 
     <!-- Font upload dialog -->
     <FontImportDialog
+      v-if="canUsePremiumAssets"
       v-model:visible="uploadDialogVisible"
       @selected="handleFontUploaded"
     />
@@ -62,8 +64,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
+import { useUserStore } from '@/stores/user'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { ElMessage } from 'element-plus'
 import { searchFonts } from '@/api/wristo/fonts'
 import type { DesignFontVO } from '@/types/font'
@@ -71,6 +75,10 @@ import FontImportDialog from '@/components/font-picker/FontImportDialog.vue'
 import FontsSearchPanel from './FontsSearchPanel.vue'
 import { getEnumOptions, type EnumOption } from '@/api/common'
 import FontListItem from '@/components/fonts/FontListItem.vue'
+import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 // 状态
 const fonts = ref<(DesignFontVO & { previewFamily?: string })[]>([])
@@ -82,6 +90,9 @@ const activeFontType = ref<string>('text_font')
 const searchQuery = ref('')
 const previewText = ref('')
 const fontStore = useFontStore()
+const userStore = useUserStore()
+const membershipGate = useStudioMembershipGate()
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
 // 上传对话框
 const uploadDialogVisible = ref(false)
@@ -102,13 +113,14 @@ const loadFonts = async () => {
       pageSize: pageSize.value,
       name: searchQuery.value || undefined,
       type: activeFontType.value || undefined,
+      isSystem: canUsePremiumAssets.value ? undefined : 1,
       isMonospace: isMonospace.value ? 1 : undefined,
       italic: italic.value ? 1 : undefined,
       weightClass: weightClass.value,
       widthClass: widthClass.value,
     })
-    const list = data?.list ?? []
-    total.value = data?.total ?? 0
+    const list = filterAssetsByStudioAccess(data?.list ?? [], canUsePremiumAssets.value)
+    total.value = data?.total ?? list.length
     // 预注册本页字体，使用 slug 作为 font-family
     await Promise.all(
       list.map((f: DesignFontVO) =>
@@ -118,7 +130,7 @@ const loadFonts = async () => {
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
   } catch (error) {
     console.error('加载字体失败:', error)
-    ElMessage.error('加载字体列表失败')
+    ElMessage.error(t('font.loadListFailed'))
   }
 }
 
@@ -167,6 +179,14 @@ const handleResetFilters = () => {
   widthClass.value = undefined
   currentPage.value = 1
   loadFonts()
+}
+
+const openUploadDialog = () => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
+  uploadDialogVisible.value = true
 }
 
 const handleFontUploaded = () => {

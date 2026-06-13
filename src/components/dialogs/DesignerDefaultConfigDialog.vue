@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="Designer Settings"
+    :title="t('designerSettings.title')"
     :close-on-click-modal="false"
     :width="'90%'"
     append-to-body
@@ -10,36 +10,36 @@
     class="designer-config-dialog"
   >
     <el-form :model="form" label-width="100px">
-      <el-form-item label="Payment Method">
-        <el-select v-model="form.defaultPaymentMethod" placeholder="Select method">
-          <el-option label="None" value="none" />
+      <el-form-item :label="t('designerSettings.paymentMethod')">
+        <el-select v-model="form.defaultPaymentMethod" :placeholder="t('designerSettings.selectMethod')">
+          <el-option :label="t('designerSettings.none')" value="none" />
           <el-option label="WPay" value="wpay" />
         </el-select>
       </el-form-item>
-      <el-form-item label="Default Price">
+      <el-form-item :label="t('designerSettings.defaultPrice')">
         <div class="price-row">
           <el-input-number v-model="form.defaultPrice" :min="0" :precision="2" :step="1" />
           <span class="currency-label">{{ form.defaultCurrency || 'USD' }}</span>
         </div>
       </el-form-item>
-      <el-form-item label="Description Template">
+      <el-form-item :label="t('designerSettings.descriptionTemplate')">
         <TemplateTextEditor
           v-model="form.descriptionTemplate"
           :user-id="userStore.userInfo?.id || 0"
-          placeholder="Write description template. Use variables from the right."
+          :placeholder="t('designerSettings.descriptionPlaceholder')"
         />
       </el-form-item>
-      <el-form-item label="Auto Publish">
+      <el-form-item :label="t('designerSettings.autoPublish')">
         <el-switch v-model="autoPublish" disabled/>
       </el-form-item>
-      <el-form-item label="Active">
+      <el-form-item :label="t('designerSettings.active')">
         <el-switch v-model="active" disabled/>
       </el-form-item>
     </el-form>
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="visible = false">Cancel</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">Save</el-button>
+        <el-button @click="visible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">{{ t('common.save') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -51,6 +51,7 @@ import { useUserStore } from '@/stores/user'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO, DesignerDefaultConfigUpdateDTO, DesignerDefaultConfigCreateDTO } from '@/types/api/designer-default-config'
 import TemplateTextEditor from '@/components/inputs/TemplateTextEditor.vue'
+import { useI18n } from '@/i18n'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -71,6 +72,7 @@ const autoPublish = ref(true)
 const active = ref(true)
 
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const load = async () => {
   const uid = userStore.userInfo?.id

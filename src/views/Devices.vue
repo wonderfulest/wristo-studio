@@ -43,7 +43,7 @@
           <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="Transparent PNG" width="140">
+      <el-table-column :label="t('device.transparentPng')" width="140">
         <template #default="{ row }">
           <el-image v-if="row.deviceTransparentPng" :src="row.deviceTransparentPng" style="width: 48px; height: 48px" fit="contain" />
           <span v-else>-</span>

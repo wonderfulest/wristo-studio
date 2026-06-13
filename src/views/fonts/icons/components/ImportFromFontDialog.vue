@@ -1,8 +1,8 @@
 <template>
-  <el-dialog v-model="model" title="Import Assets From Font" width="460px">
+  <el-dialog v-model="model" :title="t('icon.importFromFont')" width="460px">
     <el-form label-width="96px">
-      <el-form-item label="From Font">
-        <el-select v-model="localSelected" placeholder="Select a font" filterable style="width: 100%">
+      <el-form-item :label="t('icon.fromFont')">
+        <el-select v-model="localSelected" :placeholder="t('icon.selectFont')" filterable style="width: 100%">
           <el-option
             v-for="g in glyphs"
             :key="g.id"
@@ -13,8 +13,8 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">Cancel</el-button>
-      <el-button type="primary" :disabled="!localSelected" :loading="!!loading" @click="onConfirm">Import</el-button>
+      <el-button @click="emit('update:modelValue', false)">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :disabled="!localSelected" :loading="!!loading" @click="onConfirm">{{ t('common.import') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -22,6 +22,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { IconGlyphVO } from '@/api/wristo/iconGlyph'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -46,8 +49,8 @@ watch(() => props.selectedId, (v) => { localSelected.value = v ?? null }, { imme
 watch(localSelected, (v) => emit('update:selectedId', v ?? null))
 
 const tabLabel = (g: IconGlyphVO) => {
-  const tag = g.isDefault === 1 ? 'Default' : 'Custom'
-  return `${g.glyphCode || 'Font'} · ${tag}`
+  const tag = g.isDefault === 1 ? t('icon.default') : t('icon.custom')
+  return `${g.glyphCode || t('font.nameLabel')} · ${tag}`
 }
 
 const loading = computed(() => props.loading)
