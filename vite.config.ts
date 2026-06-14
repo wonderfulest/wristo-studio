@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL || ''),
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL || ''),
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D || ''),
+      'import.meta.env.VITE_WRISTO_STORE_URL': JSON.stringify(rootEnv.VITE_WRISTO_STORE_URL || 'https://wristo.io'),
     },
     plugins: [
       vue(),
