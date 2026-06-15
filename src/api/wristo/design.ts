@@ -6,6 +6,7 @@ import type {
 import type { 
   Design, 
   DesignPageParams,
+  DesignDetailParams,
   CreateDesignParams,
   UpdateDesignParamsV2,
   DesignSubmitDTO,
@@ -57,8 +58,13 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 设计详情
    */
-  getDesignByUid(designUid: string): Promise<ApiResponse<Design>> {
-    return instance.get(`/dsn/design/uid/${designUid}?populate=user,product,payment,release,cover,image,category,bundle,configJson,package_log`)
+  getDesignByUid(designUid: string, params: DesignDetailParams = {}): Promise<ApiResponse<Design>> {
+    return instance.get(`/dsn/design/uid/${designUid}`, {
+      params: {
+        populate: 'user,product,payment,release,cover,image,category,bundle,configJson,package_log',
+        ...params,
+      },
+    })
   },
 
   /**

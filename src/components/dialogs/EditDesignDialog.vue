@@ -180,6 +180,12 @@ const baseStore = useBaseStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 const currentDesign = ref<Design | null>(null)
+
+const getCurrentDeviceParams = () => {
+  const deviceId = userStore.userInfo?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
+
 const form = reactive({
   id: null,
   name: '',
@@ -311,7 +317,7 @@ const packageRows = computed(() => {
 // 加载设计数据
 const loadDesign = async (designUid: string) => {
   try {
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
     if (response.code === 0 && response.data) {
       const designData = response.data
       currentDesign.value = designData

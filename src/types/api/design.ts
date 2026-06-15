@@ -136,3 +136,8 @@ export interface DesignPageParams {
   name?: string
   device?: string
 } 
+
+export interface DesignDetailParams {
+  populate?: string
+  device?: string
+}

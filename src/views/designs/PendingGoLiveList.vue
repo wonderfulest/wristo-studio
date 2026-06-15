@@ -62,13 +62,20 @@ import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import type { ApiResponse } from '@/types/api/api'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { useUserStore } from '@/stores/user'
 
 const messageStore = useMessageStore()
 const pendingStore = usePendingGoLiveStore()
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
+const userStore = useUserStore()
 type GoLiveDialogRef = { show: (design: Design) => void }
 const goLiveDialog = ref<GoLiveDialogRef | null>(null)
+
+const getCurrentDeviceParams = () => {
+  const deviceId = userStore.userInfo?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
 
 const formatDateNullable = (date: number | undefined): string => {
   if (!date) return t('common.never')
@@ -83,7 +90,7 @@ const goLive = async (row: Product): Promise<void> => {
   if (!membershipGate.requirePublish()) return
   try {
     // 获取完整 design 对象（包含 user, product, payment, release, cover, category, bundle）
-    const res = await designApi.getDesignByUid(row.designId) as ApiResponse<Design>
+    const res = await designApi.getDesignByUid(row.designId, getCurrentDeviceParams()) as ApiResponse<Design>
     const design = res.data as Design
     if (!design) {
       messageStore.error(t('project.loadDesignFailed'))

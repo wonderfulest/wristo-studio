@@ -58,6 +58,11 @@ const router = useRouter()
 const baseStore = useBaseStore()
 const { t } = useI18n()
 
+const getCurrentDeviceParams = () => {
+  const deviceId = (userStore.userInfo as any)?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
+
 const designs = ref<Design[]>([])
 const recentDesigns = ref<Design[]>([])
 const dialogVisible = ref(false)
@@ -137,7 +142,7 @@ const handleConfirmDialog = async (inputName: string) => {
         } as any)
       }
 
-      const detailRes = await designApi.getDesignByUid(newDesignUid) as ApiResponse<Design>
+      const detailRes = await designApi.getDesignByUid(newDesignUid, getCurrentDeviceParams()) as ApiResponse<Design>
       if (!detailRes || detailRes.code !== 0 || !detailRes.data) {
         messageStore.error(detailRes?.msg || t('project.loadNewDesignFailed'))
         return
@@ -181,7 +186,7 @@ const handleConfirmDialog = async (inputName: string) => {
 // 打开最近项目到画布（不复制）
 const handleOpenRecentDesign = async (design: Design) => {
   try {
-    const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
+    const res = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
     if (!res || res.code !== 0 || !res.data) {
       messageStore.error(res?.msg || t('project.loadDesignFailed'))
       return

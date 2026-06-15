@@ -150,6 +150,11 @@ const syncDesignSizeFromSelectedDevice = (): void => {
   canvasRef.value?.updateZoom()
 }
 
+const getCurrentDeviceParams = () => {
+  const deviceId = userStore.userInfo?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
+
 watch(
   () => [
     userStore.userInfo?.device?.deviceId,
@@ -211,7 +216,7 @@ const scaleElementsFromStoredSize = (elements: AnyElementConfig[]): AnyElementCo
 const loadDesign = async (designUid: string) => {
   baseStore.setDesignLoading(true)
   try {
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid)
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
     if (!response.data) {
       messageStore.error(t('design.notFound'))
       router.push('/designs')

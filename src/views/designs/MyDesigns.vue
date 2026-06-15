@@ -257,6 +257,11 @@ const getDesignImageUrl = (design: Design) => {
   return designApi.getDesignImageUrl(design, true) || ''
 }
 
+const getCurrentDeviceParams = () => {
+  const deviceId = (userStore.userInfo as any)?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
+
 // 获取设计列表
 const fetchDesigns = async () => {
   try {
@@ -318,7 +323,7 @@ const handleSizeChange = (val: number) => {
 // 打开画布编辑器
 const openCanvas = async (design: Design) => {
   try {
-    const response = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
+    const response = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
     const designData = response.data || {} as Design
 
     baseStore.watchFaceName = designData.name
@@ -518,7 +523,7 @@ onUnmounted(() => {
 const goLive = async (design: Design) => {
   if (!membershipGate.requirePublish()) return
   try {
-    const res = await designApi.getDesignByUid(design.designUid) as ApiResponse<Design>
+    const res = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
     const fullDesign = res.data as Design
     if (!fullDesign) {
       messageStore.error(t('project.loadDesignFailed'))

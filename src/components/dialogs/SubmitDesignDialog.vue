@@ -106,6 +106,7 @@ import type { Bundle } from '@/types/api/bundle'
 import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 
 const dialogVisible = ref(false)
@@ -114,7 +115,13 @@ const formRef = ref()
 
 const messageStore = useMessageStore()
 const membershipGate = useStudioMembershipGate()
+const userStore = useUserStore()
 const { t } = useI18n()
+
+const getCurrentDeviceParams = () => {
+  const deviceId = userStore.userInfo?.device?.deviceId
+  return deviceId ? { device: deviceId } : undefined
+}
 
 const form = reactive({
   designUid: '',
@@ -235,7 +242,7 @@ const show = async (design: Design) => {
     loading.value = true
     
     // First, fetch design details
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid)
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
     
     if (response.code === 0 && response.data) {
       const designDetail = response.data
