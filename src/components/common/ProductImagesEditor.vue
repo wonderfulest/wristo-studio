@@ -42,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { ElMessage, ElLoading } from 'element-plus'
+import { h, ref } from 'vue'
+import { ElMessage, ElLoading, ElMessageBox } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/image'
@@ -72,6 +72,23 @@ const max = props.max ?? 5
 const enumStore = useEnumStore()
 
 const aspectRatioMap = ref<Record<string, string>>({})
+
+const showAspectRatioAlert = async (message: string) => {
+  await ElMessageBox.alert(
+    h('div', { class: 'image-aspect-alert' }, [
+      h('p', message),
+      h('p', t('image.aspectRatioFixHint')),
+    ]),
+    t('common.tip'),
+    {
+      type: 'warning',
+      confirmButtonText: t('common.ok'),
+      showClose: false,
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+    }
+  )
+}
 
 const initAspectRatioMap = async () => {
   if (Object.keys(aspectRatioMap.value).length > 0) return
@@ -126,7 +143,7 @@ const ensureProductAspectValid = async (file: File) => {
     const diff = Math.abs(actual - expected) / expected
     if (diff > 0.01) {
       const actualRatio = `${Math.round(actual * 100) / 100}:1`
-      ElMessage.error(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
+      await showAspectRatioAlert(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
       return false
     }
     return true

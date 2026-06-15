@@ -135,21 +135,24 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import { membershipApi } from '@/api/wristo/membership'
 import type { StudioMembershipPlan } from '@/types/api/membership'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const { locale, t } = useI18n()
 const plansSectionRef = ref<HTMLElement | null>(null)
 const backendPlans = ref<StudioMembershipPlan[]>([])
 const loadingPlanCode = ref<string | null>(null)
 const selectedPlanCode = ref<string | null>(null)
+let paddleReadyPromise: Promise<void> | null = null
+let paddleInitialized = false
 
 interface PlanCard {
   code: string
@@ -470,17 +473,77 @@ const formatPrice = (plan: StudioMembershipPlan) => {
   return formatRecurringPrice(amount, plan.currencyCode, getRecurringPeriodKey(String(plan.level)))
 }
 
+const getPaddleClientToken = () => normalizeText(import.meta.env.VITE_WRISTO_PADDLE_CLIENT_TOKEN)
+const getPaddleEnvironment = () => normalizeText(import.meta.env.VITE_WRISTO_PADDLE_ENVIRONMENT)
+
 const loadPlans = async () => {
   const response = await membershipApi.getStudioPlans()
   backendPlans.value = response.data || []
 }
 
-const getStoreMembershipUrl = (planCode: string) => {
-  const storeUrl = normalizeText(import.meta.env.VITE_WRISTO_STORE_URL) || 'https://wristo.io'
-  const target = new URL('/studio/membership', storeUrl)
-  target.searchParams.set('plan', planCode)
-  target.searchParams.set('returnTo', 'studio')
-  return target.toString()
+const loadPaddle = () => {
+  if (paddleReadyPromise) return paddleReadyPromise
+
+  paddleReadyPromise = new Promise<void>((resolve, reject) => {
+    const token = getPaddleClientToken()
+    if (!token) {
+      reject(new Error('Paddle client token is missing'))
+      return
+    }
+
+    const win = window as any
+    if (win.Paddle) {
+      initializePaddle(win, token)
+      resolve()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js'
+    script.async = true
+    script.onload = () => {
+      initializePaddle(win, token)
+      resolve()
+    }
+    script.onerror = () => reject(new Error('Paddle failed to load'))
+    document.body.appendChild(script)
+  })
+
+  return paddleReadyPromise
+}
+
+const initializePaddle = (win: any, token: string) => {
+  if (paddleInitialized) return
+  const environment = getPaddleEnvironment()
+  if (environment && win.Paddle?.Environment?.set) {
+    win.Paddle.Environment.set(environment)
+  }
+  win.Paddle.Initialize({
+    token,
+    eventCallback: handlePaddleEvent,
+  })
+  paddleInitialized = true
+}
+
+const handlePaddleEvent = async (event: any) => {
+  if (event.name === 'checkout.completed') {
+    const transactionId = event.data?.transaction_id || event.data?.transactionId || event.data?.id
+    try {
+      if (transactionId) {
+        await membershipApi.reconcileCheckout({ transaction_id: transactionId })
+      }
+      await userStore.refreshUserInfo()
+      ElMessage.success(t('membership.checkoutCompleted'))
+    } catch (error) {
+      await userStore.refreshUserInfo()
+      ElMessage.warning(t('membership.checkoutRefreshPending'))
+    } finally {
+      loadingPlanCode.value = null
+    }
+  }
+  if (event.name === 'checkout.closed' || event.name === 'checkout.error') {
+    loadingPlanCode.value = null
+  }
 }
 
 const handleCheckout = async (plan: (typeof plans.value)[number]) => {
@@ -491,8 +554,49 @@ const handleCheckout = async (plan: (typeof plans.value)[number]) => {
     return
   }
   selectedPlanCode.value = plan.code
+  if (!plan.paddlePriceId) {
+    await ElMessageBox.alert(t('membership.checkoutNotConfigured'), t('common.tip'))
+    return
+  }
+  if (!getPaddleClientToken()) {
+    await ElMessageBox.alert(t('membership.checkoutClientNotConfigured'), t('common.tip'))
+    return
+  }
+  if (!userStore.userInfo?.email) {
+    ElMessage.warning(t('membership.emailRequired'))
+    return
+  }
   loadingPlanCode.value = plan.code
-  window.location.href = getStoreMembershipUrl(plan.code)
+  try {
+    await loadPaddle()
+    const win = window as any
+    if (!win.Paddle?.Checkout?.open) {
+      throw new Error('Paddle checkout is unavailable')
+    }
+    win.Paddle.Checkout.open({
+      settings: {
+        displayMode: 'overlay',
+      },
+      items: [
+        {
+          priceId: plan.paddlePriceId,
+          quantity: 1,
+        },
+      ],
+      customer: { email: userStore.userInfo.email },
+      customData: {
+        isSubscription: plan.code !== 'premium_30d',
+        scene: 'studio',
+        source: 'studio',
+        userId: userStore.userInfo.id,
+        email: userStore.userInfo.email,
+        planCode: plan.planCode,
+      },
+    })
+  } catch (error) {
+    loadingPlanCode.value = null
+    ElMessageBox.alert(t('membership.checkoutLoadFailed'), t('common.tip'))
+  }
 }
 
 onMounted(async () => {
@@ -500,6 +604,10 @@ onMounted(async () => {
     loadPlans(),
     userStore.refreshUserInfo(),
   ])
+  const queryPlan = route.query.plan
+  if (typeof queryPlan === 'string' && queryPlan) {
+    selectedPlanCode.value = queryPlan
+  }
   ensureSelectedPlan()
 })
 </script>

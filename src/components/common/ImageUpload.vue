@@ -41,8 +41,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, h, onMounted, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { uploadImage } from '@/api/image'
 import { IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
 import { useI18n } from '@/i18n'
@@ -91,6 +91,23 @@ const aspectEnumCodes = ref([])
 const enumStore = useEnumStore()
 
 const validAspectCodes = computed(() => aspectEnumCodes.value)
+
+const showAspectRatioAlert = async (message) => {
+  await ElMessageBox.alert(
+    h('div', { class: 'image-aspect-alert' }, [
+      h('p', message),
+      h('p', t('image.aspectRatioFixHint')),
+    ]),
+    t('common.tip'),
+    {
+      type: 'warning',
+      confirmButtonText: t('common.ok'),
+      showClose: false,
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+    }
+  )
+}
 
 const ensureAspectCodeValid = async () => {
   const code = props.aspectCode
@@ -151,7 +168,7 @@ const ensureImageAspectValid = async (file) => {
     const diff = Math.abs(actual - expected) / expected
     if (diff > 0.01) {
       const actualRatio = `${Math.round(actual * 100) / 100}:1`
-      ElMessage.error(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
+      await showAspectRatioAlert(t('image.aspectRatio', { expected: ratio, actual: actualRatio }))
       return false
     }
     return true

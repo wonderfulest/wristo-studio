@@ -50,7 +50,7 @@
         <Icon icon="material-symbols:account-circle" />
         {{ t('nav.userProfile') }}
       </div>
-      <div v-if="!userStore.isMerchantUser" class="dropdown-item" @click="openStoreMembership">
+      <div v-if="!userStore.isMerchantUser" class="dropdown-item" @click="openMembership">
         <Icon icon="material-symbols:workspace-premium" />
         {{ t('nav.membership') }}
       </div>
@@ -151,10 +151,9 @@ const go = (path: string) => {
   router.push(path)
 }
 
-const openStoreMembership = () => {
+const openMembership = () => {
   showDropdown.value = false
-  const storeUrl = String(import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/$/, '')
-  window.location.href = `${storeUrl}/studio/membership?returnTo=studio`
+  router.push('/pricing')
 }
 
 const goTickets = () => {
