@@ -1,27 +1,31 @@
 <template>
-  <el-sub-menu index="help">
+  <el-sub-menu
+    index="help"
+    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-help-dropdown"
+    :popper-offset="8"
+  >
     <template #title>
       <el-icon><QuestionFilled /></el-icon>
       <span>{{ t('editor.help') }}</span>
     </template>
-    <el-menu-item index="help/shortcuts" @click="onOpenShortcuts">
-      <template #title>
+    <div class="menu-group menu-group--help">
+      <div class="menu-group-title">
+        <el-icon><QuestionFilled /></el-icon>
+        <span>{{ t('editor.help') }}</span>
+      </div>
+      <el-menu-item index="help/shortcuts" @click="onOpenShortcuts">
         <el-icon><Mouse /></el-icon>
         <span>{{ t('editor.keyboardMouseUsage') }}</span>
-      </template>
-    </el-menu-item>
-    <el-menu-item index="help/academy" @click="onOpenAcademy">
-      <template #title>
+      </el-menu-item>
+      <el-menu-item index="help/academy" @click="onOpenAcademy">
         <el-icon><Document /></el-icon>
         <span>{{ t('editor.creatorAcademy') }}</span>
-      </template>
-    </el-menu-item>
-    <el-menu-item index="help/feedback" @click="onOpenFeedback">
-      <template #title>
+      </el-menu-item>
+      <el-menu-item index="help/feedback" @click="onOpenFeedback">
         <el-icon><ChatLineSquare /></el-icon>
         <span>{{ t('editor.sendFeedback') }}</span>
-      </template>
-    </el-menu-item>
+      </el-menu-item>
+    </div>
   </el-sub-menu>
 </template>
 

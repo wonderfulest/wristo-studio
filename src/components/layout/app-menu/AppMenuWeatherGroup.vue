@@ -1,21 +1,28 @@
 <template>
-  <el-sub-menu index="weather">
+  <el-sub-menu
+    index="weather"
+    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-weather-dropdown"
+    :popper-offset="8"
+  >
     <template #title>
-      <el-icon><Picture /></el-icon>
+      <el-icon><Cloudy /></el-icon>
       <span>{{ t('editor.weather') }}</span>
     </template>
-    <div class="menu-group">
-      <div class="menu-group-title">{{ t('editor.weather') }}</div>
+    <div class="menu-group menu-group--weather">
+      <div class="menu-group-title">
+        <el-icon><Cloudy /></el-icon>
+        <span>{{ t('editor.weather') }}</span>
+      </div>
       <el-menu-item index="weather/weather" @click="onAddElement('weather', 'weather')">
-        <el-icon><Picture /></el-icon>
+        <el-icon><Sunny /></el-icon>
         <span>{{ t('editor.weather') }}</span>
       </el-menu-item>
       <el-menu-item index="weather/moon" @click="onAddElement('weather', 'moon')">
-        <el-icon><Picture /></el-icon>
+        <el-icon><MoonNight /></el-icon>
         <span>{{ t('editor.moonPhase') }}</span>
       </el-menu-item>
       <el-menu-item index="weather/windDirection" @click="onAddElement('weather', 'windDirection')">
-        <el-icon><Picture /></el-icon>
+        <el-icon><Compass /></el-icon>
         <span>{{ t('editor.windDirection') }}</span>
       </el-menu-item>
     </div>
@@ -23,7 +30,7 @@
 </template>
 
 <script setup>
-import { Picture } from '@element-plus/icons-vue'
+import { Cloudy, Compass, MoonNight, Sunny } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

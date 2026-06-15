@@ -1,12 +1,19 @@
 <template>
-  <el-sub-menu index="time">
+  <el-sub-menu
+    index="time"
+    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-time-dropdown"
+    :popper-offset="8"
+  >
     <template #title>
       <el-icon><Timer /></el-icon>
       <span>{{ t('editor.time') }}</span>
     </template>
     <!-- Time subgroup -->
-    <div class="menu-group">
-      <div class="menu-group-title">{{ t('editor.time') }}</div>
+    <div class="menu-group menu-group--time">
+      <div class="menu-group-title">
+        <el-icon><Timer /></el-icon>
+        <span>{{ t('editor.time') }}</span>
+      </div>
       <el-menu-item
         index="time/hour-minute"
         @click="onAddElement('time', 'time', { formatter: TimeFormatConstants.HH_MM, fontSize: 96 })"
@@ -31,8 +38,11 @@
     </div>
 
     <!-- Date subgroup -->
-    <div class="menu-group">
-      <div class="menu-group-title">{{ t('editor.date') }}</div>
+    <div class="menu-group menu-group--date">
+      <div class="menu-group-title">
+        <el-icon><Calendar /></el-icon>
+        <span>{{ t('editor.date') }}</span>
+      </div>
       <el-menu-item
         index="time/month-day-with-weekday"
         @click="onAddElement('time', 'date', { formatter: DateFormatConstants.MMM_D_DDD, fontSize: 36 })"
@@ -57,8 +67,11 @@
     </div>
 
     <!-- Analog subgroup -->
-    <div class="menu-group">
-      <div class="menu-group-title">{{ t('editor.analog') }}</div>
+    <div class="menu-group menu-group--analog">
+      <div class="menu-group-title">
+        <el-icon><Watch /></el-icon>
+        <span>{{ t('editor.analog') }}</span>
+      </div>
       <el-menu-item index="time/hour-hand" @click="onAddElement('hands', 'hourHand')">
         <el-icon><Watch /></el-icon>
         <span>{{ t('editor.hourHand') }}</span>

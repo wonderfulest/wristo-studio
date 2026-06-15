@@ -1,10 +1,18 @@
 <template>
-  <el-sub-menu index="shape">
+  <el-sub-menu
+    index="shape"
+    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-shape-dropdown"
+    :popper-offset="8"
+  >
     <template #title>
       <el-icon><Stamp /></el-icon>
       <span>{{ t('editor.shape') }}</span>
     </template>
-    <div class="menu-group">
+    <div class="menu-group menu-group--shape">
+      <div class="menu-group-title">
+        <el-icon><Stamp /></el-icon>
+        <span>{{ t('editor.shape') }}</span>
+      </div>
       <el-menu-item
         index="basic/rectangle"
         @click="onAddElement('shape', 'rectangle', {
@@ -16,7 +24,7 @@
           height: 50,
         })"
       >
-        <el-icon><Minus /></el-icon>
+        <el-icon><Crop /></el-icon>
         <span>{{ t('editor.rectangle') }}</span>
       </el-menu-item>
       <el-menu-item
@@ -53,7 +61,7 @@
 </template>
 
 <script setup>
-import { Stamp, Minus, CircleCheck, Edit, Calendar, Picture } from '@element-plus/icons-vue'
+import { Stamp, Minus, CircleCheck, Crop, Picture } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

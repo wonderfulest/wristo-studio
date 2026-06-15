@@ -1,7 +1,7 @@
 <template>
   <el-sub-menu
     index="datafield"
-    popper-class="app-menu-dropdown app-menu-datafield-dropdown"
+    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-datafield-dropdown"
     :popper-offset="8"
   >
     <template #title>
