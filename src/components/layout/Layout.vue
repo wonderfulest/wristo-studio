@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <AppHeader />
+    <AppHeader v-if="!isAcademyPage" />
     <AppMenu v-if="showMenu" />
     <main class="app-main">
       <div class="app-content">
@@ -19,6 +19,8 @@ import { computed } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
+
+const isAcademyPage = computed(() => route.path === '/academy')
 
 // 添加一个计算属性来控制菜单的显示
 const showMenu = computed(() => {

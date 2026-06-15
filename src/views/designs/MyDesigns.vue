@@ -342,7 +342,8 @@ const editDesign = (design: Design) => {
 const copyDesign = async (design: Design) => {
   if (loadingStates.value.copy.has(design.id)) return
   if (!userStore.canCreateDesign) {
-    messageStore.warning(t('membership.freeCreateLimitReached'))
+    const max = userStore.studioMembership?.maxDesigns
+    messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
     router.push('/pricing')
     return
   }

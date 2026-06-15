@@ -10,6 +10,12 @@
         <span>{{ t('editor.keyboardMouseUsage') }}</span>
       </template>
     </el-menu-item>
+    <el-menu-item index="help/academy" @click="onOpenAcademy">
+      <template #title>
+        <el-icon><Document /></el-icon>
+        <span>{{ t('editor.creatorAcademy') }}</span>
+      </template>
+    </el-menu-item>
     <el-menu-item index="help/feedback" @click="onOpenFeedback">
       <template #title>
         <el-icon><ChatLineSquare /></el-icon>
@@ -20,7 +26,7 @@
 </template>
 
 <script setup>
-import { QuestionFilled, Mouse, ChatLineSquare } from '@element-plus/icons-vue'
+import { QuestionFilled, Mouse, ChatLineSquare, Document } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -34,6 +40,10 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  onOpenAcademy: {
+    type: Function,
+    required: true,
+  },
 })
 
 const onOpenShortcuts = () => {
@@ -42,5 +52,9 @@ const onOpenShortcuts = () => {
 
 const onOpenFeedback = () => {
   props.onOpenFeedback && props.onOpenFeedback()
+}
+
+const onOpenAcademy = () => {
+  props.onOpenAcademy && props.onOpenAcademy()
 }
 </script>

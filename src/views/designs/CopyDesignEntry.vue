@@ -43,7 +43,8 @@ const getErrorMessage = (error: any): string | undefined => {
 }
 
 const goToPricingForCreateLimit = async () => {
-  messageStore.warning(t('membership.freeCreateLimitReached'))
+  const max = userStore.studioMembership?.maxDesigns
+  messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
   await router.replace('/pricing')
 }
 

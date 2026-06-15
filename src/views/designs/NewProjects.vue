@@ -78,7 +78,8 @@ const generateRandomProjectName = () => {
 }
 
 const showUpgradePrompt = () => {
-  messageStore.warning(t('membership.freeCreateLimitReached'))
+  const max = userStore.studioMembership?.maxDesigns
+  messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
 }
 
 const canCreateProject = () => {

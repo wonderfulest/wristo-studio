@@ -266,7 +266,7 @@ const fallbackPlans: PlanCard[] = [
     priceSuffixKey: 'membership.priceSuffix.oneTime',
     termKey: 'membership.term.premium_30d',
     noteKey: 'membership.oneTimeNote',
-    featureKeys: ['membership.feature.thirtyDayAccess', 'membership.feature.noWristoAds', 'membership.feature.experimentWindow'],
+    featureKeys: ['membership.feature.thirtyDayAccess', 'membership.feature.upTo10Apps', 'membership.feature.noWristoAds', 'membership.feature.experimentWindow'],
     paddlePriceId: '',
   },
 ]
@@ -394,7 +394,9 @@ const usagePercent = computed(() => {
   return `${Math.min(100, Math.round((count / max) * 100))}%`
 })
 const membershipHint = computed(() => {
-  return canCreateDesign.value ? t('membership.profileHint') : t('membership.freeCreateLimitReached')
+  const max = studioMembership.value?.maxDesigns
+  if (canCreateDesign.value) return t('membership.profileHint')
+  return max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max })
 })
 const selectedPlan = computed(() => {
   const selected = plans.value.find((plan) => plan.code === selectedPlanCode.value)

@@ -29,6 +29,10 @@
           <Icon icon="material-symbols:list" />
           {{ t('nav.workspace') }}
         </a>
+        <a @click="openAcademy" class="nav-link">
+          <Icon icon="material-symbols:school-outline" />
+          {{ t('editor.creatorAcademy') }}
+        </a>
         <!-- <a @click="showFontsConfirm" class="nav-link">
           <Icon icon="material-symbols:font-download-outline" />
           Font Preview
@@ -253,6 +257,10 @@ const confirmOpenTickets = () => {
   ticketsDialogVisible.value = false
   baseStore.$reset()
   router.push('/tickets')
+}
+
+const openAcademy = () => {
+  window.open('/academy', '_blank', 'noopener')
 }
 
 

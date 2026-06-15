@@ -17,6 +17,19 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/academy',
+    component: Layout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'CreatorAcademy',
+        component: () => import('@/views/CreatorAcademy.vue'),
+        meta: { requiresAuth: false },
+      },
+    ],
+  },
+  {
     path: '/',
     name: 'Home',
     component: Layout,

@@ -209,7 +209,7 @@ onMounted(() => {
 <style scoped>
 .fonts-preview {
   padding: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--studio-font-ui);
   color: var(--studio-text);
 }
 

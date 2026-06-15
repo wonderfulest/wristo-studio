@@ -272,7 +272,9 @@ const membershipHint = computed(() => {
   if (isScheduledCancellation.value) {
     return t('membership.cancelScheduledHint', { date: membershipEndText.value })
   }
-  return canCreateDesign.value ? t('membership.profileHint') : t('membership.freeCreateLimitReached')
+  const max = studioMembership.value?.maxDesigns
+  if (canCreateDesign.value) return t('membership.profileHint')
+  return max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max })
 })
 const isActiveMembership = computed(() => {
   const status = studioMembership.value?.status

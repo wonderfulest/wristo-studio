@@ -43,6 +43,7 @@
 
       <AppMenuHelp
         :on-open-shortcuts="() => shortcutsDialogVisible = true"
+        :on-open-academy="handleOpenCreatorAcademy"
         :on-open-feedback="showFeedbackDialog"
       />
     </el-menu>
@@ -642,6 +643,10 @@ const handleSave =async () => {
 
 const showFeedbackDialog = () => {
   feedbackDialog.value?.showDialog()
+}
+
+const handleOpenCreatorAcademy = () => {
+  window.open('/academy', '_blank', 'noopener')
 }
 
 // Handle edit success
