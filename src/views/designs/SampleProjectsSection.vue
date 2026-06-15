@@ -55,7 +55,7 @@ const getDesignImageUrl = (design: Design) => {
 
 <style scoped>
 .page-header {
-  margin: 24px 0 8px;
+  margin: 0 0 6px;
 }
 
 .page-header h2 {
@@ -66,7 +66,8 @@ const getDesignImageUrl = (design: Design) => {
 }
 
 .design-grid {
-  margin-top: 16px;
+  margin-top: 10px;
+  row-gap: 18px;
 }
 
 .sample-card {

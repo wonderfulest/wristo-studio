@@ -307,12 +307,12 @@ onDeactivated(() => {
 
 <style scoped>
 .new-projects {
-  padding: 18px 0 40px;
+  padding: 12px 0 32px;
   color: var(--studio-text);
 }
 
 .new-projects :deep(.el-divider--horizontal) {
-  margin: 30px 0;
+  margin: 20px 0 16px;
   border-top-color: var(--studio-border);
 }
 
