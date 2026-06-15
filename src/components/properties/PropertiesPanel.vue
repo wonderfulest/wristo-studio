@@ -1,108 +1,139 @@
 <template>
-  <el-drawer v-model="visible" :title="t('property.drawerTitle')" direction="rtl" size="800px">
+  <el-drawer v-model="visible" direction="rtl" size="min(860px, 100vw)" class="properties-drawer">
+    <template #header>
+      <div class="drawer-settings-heading">
+        <h3>{{ t('property.drawerTitle') }}</h3>
+        <p>({{ t('property.settingsHint') }})</p>
+      </div>
+    </template>
     <div class="properties-container">
-      <!-- 使用 flex 布局实现左右排列 -->
       <div class="properties-layout">
-        <!-- 左侧属性列表 -->
-        <div class="properties-list">
-          <el-form label-position="top">
-            <el-form-item :label="t('property.textCase')">
-              <el-select v-model="textCase" style="width: 100%">
-                <el-option :label="t('property.default')" :value="1" />
-                <el-option :label="t('property.uppercase')" :value="1" />
-                <el-option :label="t('property.lowercase')" :value="2" />
-                <el-option :label="t('property.capitalize')" :value="3" />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item :label="t('property.labelLength')">
-              <el-input model-value="Short" disabled />
-            </el-form-item>
-
-            <el-form-item :label="t('property.showUnit')">
-              <el-switch v-model="showUnit" />
-            </el-form-item>
-
-            <el-divider />
-            <template v-for="(prop, key) in propertiesStore.allProperties" :key="key">
-              <el-form-item :label="prop.title">
-                <div class="property-item">
-                  <div v-if="prop.type === 'color'" class="color-value-preview">
-                    <div class="color-preview" :style="{
-                      'border-width': prop.value === '-1' ? '1px' : '0px',
-                      'border': prop.value === '-1' ? 'var(--el-border-color)' : 'transparent',
-                      backgroundColor: prop.value === '-1' ? 'transparent' : `#${prop.value.replace('0x', '')}`
-                    }">
-                      <div v-if="prop.value === '-1'" class="transparent-pattern"></div>
-                    </div>
-                    <span class="color-value-text">{{ prop.value }}</span>
-                  </div>
-                  <div v-else-if="prop.type === 'goal'" class="goal-value-preview">
-                    <span class="goal-label">{{ getGoalOption(prop)?.label }}</span>
-                  </div>
-                  <div v-else-if="prop.type === 'chart'" class="chart-value-preview">
-                    <span class="chart-label">{{ getChartOption(prop)?.label }}</span>
-                  </div>
-                  <div v-else-if="prop.type === 'data'" class="data-value-preview">
-                    <span class="data-label">{{ getDataOption(prop)?.label }}</span>
-                  </div>
-                  <div v-else-if="prop.type === 'text'" class="text-value-preview">
-                    <span class="text-label">{{ prop.value }}</span>
-                  </div>
-                  <div class="property-actions">
-                    <el-button type="primary" link @click="editProperty(key, prop)">
-                      <el-icon>
-                        <Edit />
-                      </el-icon>
-                    </el-button>
-                    <el-button type="danger" link @click="deleteProperty(key)">
-                      <el-icon>
-                        <Delete />
-                      </el-icon>
-                    </el-button>
-                  </div>
-                </div>
+        <section class="properties-main" :aria-label="t('property.drawerTitle')">
+          <div class="settings-stack">
+            <el-form label-position="top" class="app-settings-form">
+              <el-form-item :label="t('property.textCase')">
+                <el-select v-model="textCase" style="width: 100%">
+                  <el-option :label="t('property.default')" :value="0" />
+                  <el-option :label="t('property.uppercase')" :value="1" />
+                  <el-option :label="t('property.lowercase')" :value="2" />
+                  <el-option :label="t('property.capitalize')" :value="3" />
+                </el-select>
               </el-form-item>
-            </template>
-          </el-form>
-        </div>
 
-        <!-- 右侧添加属性按钮组 -->
-        <div class="add-property">
-          <h3>{{ t('property.addProperty') }}</h3>
-          <el-button-group class="property-types" direction="vertical">
-            <el-button type="text" @click="addProperty('color')">
-              <el-icon>
-                <Brush />
-              </el-icon>
-              {{ t('property.colorSelect') }}
-            </el-button>
-            <el-button type="text" @click="addProperty('goal')">
-              <el-icon>
-                <Histogram />
-              </el-icon>
-              {{ t('property.goalSelect') }}
-            </el-button>
-            <el-button type="text" @click="addProperty('data')">
-              <el-icon>
-                <DataLine />
-              </el-icon>
-              {{ t('property.dataSelect') }}
-            </el-button>
-            <el-button type="text" @click="addProperty('chart')">
-              <el-icon>
-                <TrendCharts />
-              </el-icon>
-              {{ t('property.chartSelect') }}
-            </el-button>
-            <el-button type="text" @click="addProperty('text')">
-              <el-icon>
-                <Document />
-              </el-icon>
-              {{ t('property.textString') }}
-            </el-button>
-          </el-button-group>
-        </div>
+              <el-form-item :label="t('property.labelLength')">
+                <el-segmented v-model="labelLengthType" :options="labelLengthOptions" block />
+              </el-form-item>
+
+              <div class="switch-row">
+                <div>
+                  <span>{{ t('property.showUnit') }}</span>
+                  <small>{{ t('property.showUnitHint') }}</small>
+                </div>
+                <el-switch v-model="showUnit" />
+              </div>
+            </el-form>
+
+            <div class="properties-toolbar">
+              <el-tag size="small" round>{{ t('property.propertyCount', { count: propertyCount }) }}</el-tag>
+            </div>
+
+            <el-empty
+              v-if="propertyCount === 0"
+              class="property-empty"
+              :description="t('property.emptyProperties')"
+            />
+
+            <div v-else class="property-groups">
+              <section
+                v-for="group in groupedProperties"
+                :key="group.type"
+                class="property-group"
+                :aria-label="group.label"
+              >
+                <div class="group-title">
+                  <el-icon>
+                    <component :is="group.icon" />
+                  </el-icon>
+                  <span>{{ group.label }}</span>
+                  <em>{{ group.items.length }}</em>
+                </div>
+
+                <div class="property-list">
+                  <article v-for="item in group.items" :key="item.key" class="property-row">
+                    <div class="property-value">
+                      <div class="property-title-line">
+                        <strong>{{ item.prop.title }}</strong>
+                        <code>{{ item.key }}</code>
+                      </div>
+                      <div class="property-preview">
+                        <template v-if="item.prop.type === 'color'">
+                          <span
+                            class="color-preview"
+                            :style="{
+                              border: item.prop.value === '-1' ? '1px solid var(--el-border-color)' : '0',
+                              backgroundColor: item.prop.value === '-1' ? 'transparent' : `#${String(item.prop.value).replace('0x', '')}`
+                            }"
+                          >
+                            <span v-if="item.prop.value === '-1'" class="transparent-pattern"></span>
+                          </span>
+                          <span class="mono-value">{{ item.prop.value }}</span>
+                        </template>
+                        <template v-else>
+                          <span>{{ getPropertyPreview(item.prop) }}</span>
+                        </template>
+                      </div>
+                    </div>
+                    <div class="property-actions">
+                      <el-tooltip :content="t('common.edit')" placement="top">
+                        <el-button
+                          :aria-label="t('common.edit')"
+                          circle
+                          @click="editProperty(item.key, item.prop)"
+                        >
+                          <el-icon><Edit /></el-icon>
+                        </el-button>
+                      </el-tooltip>
+                      <el-tooltip :content="t('common.delete')" placement="top">
+                        <el-button
+                          :aria-label="t('common.delete')"
+                          type="danger"
+                          circle
+                          plain
+                          @click="deleteProperty(item.key)"
+                        >
+                          <el-icon><Delete /></el-icon>
+                        </el-button>
+                      </el-tooltip>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <aside class="properties-side" :aria-label="t('property.addProperty')">
+          <section class="add-property">
+            <div class="section-header compact">
+              <div>
+                <h3>{{ t('property.addProperty') }}</h3>
+              </div>
+            </div>
+            <div class="property-types">
+              <el-button
+                v-for="item in addPropertyTypes"
+                :key="item.type"
+                class="property-type-button"
+                @click="addProperty(item.type)"
+              >
+                <el-icon>
+                  <component :is="item.icon" />
+                </el-icon>
+                <span>{{ item.label }}</span>
+              </el-button>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
     <!-- 添加对话框组件 -->
@@ -119,13 +150,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   Document,
   Histogram,
-  Calendar,
-  Check,
-  Select,
   Brush,
-  Watch,
-  Key,
-  User,
   Edit,
   Delete,
   DataLine,
@@ -152,6 +177,44 @@ const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
 const { t } = useI18n()
+
+const typeOrder = ['color', 'data', 'goal', 'chart', 'text']
+
+const typeMeta = computed(() => ({
+  color: { label: t('property.colorSelect'), icon: Brush },
+  data: { label: t('property.dataSelect'), icon: DataLine },
+  goal: { label: t('property.goalSelect'), icon: Histogram },
+  chart: { label: t('property.chartSelect'), icon: TrendCharts },
+  text: { label: t('property.textString'), icon: Document },
+}))
+
+const addPropertyTypes = computed(() => typeOrder.map((type) => ({
+  type,
+  ...typeMeta.value[type],
+})))
+
+const propertyEntries = computed(() =>
+  Object.entries(propertiesStore.allProperties).map(([key, prop]) => ({ key, prop }))
+)
+
+const propertyCount = computed(() => propertyEntries.value.length)
+
+const groupedProperties = computed(() =>
+  typeOrder
+    .map((type) => ({
+      type,
+      label: typeMeta.value[type].label,
+      icon: typeMeta.value[type].icon,
+      items: propertyEntries.value.filter((item) => item.prop.type === type),
+    }))
+    .filter((group) => group.items.length > 0)
+)
+
+const labelLengthOptions = computed(() => [
+  { label: t('property.labelLengthShort'), value: 1 },
+  { label: t('property.labelLengthMedium'), value: 2 },
+  { label: t('property.labelLengthLong'), value: 3 },
+])
 
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
@@ -284,6 +347,14 @@ const getChartOption = (prop) => {
   return prop.options?.find(option => option.value === prop.value)
 }
 
+const getPropertyPreview = (prop) => {
+  if (prop.type === 'goal') return getGoalOption(prop)?.label || prop.value || '-'
+  if (prop.type === 'chart') return getChartOption(prop)?.label || prop.value || '-'
+  if (prop.type === 'data') return getDataOption(prop)?.label || prop.value || '-'
+  if (prop.type === 'text') return prop.value || '-'
+  return prop.value || '-'
+}
+
 // 暴露方法给父组件
 defineExpose({
   show: () => {
@@ -294,65 +365,279 @@ defineExpose({
 
 <style scoped>
 .properties-container {
-  padding: 20px;
+  box-sizing: border-box;
+  padding: 12px 22px 20px;
   height: 100%;
+  background: var(--el-bg-color);
 }
 
-/* 新增的左右布局样式 */
+:deep(.properties-drawer .el-drawer__header) {
+  margin-bottom: 0;
+}
+
 .properties-layout {
   display: flex;
-  gap: 20px;
+  align-items: flex-start;
+  gap: 0;
   height: 100%;
 }
 
-.properties-list {
+.properties-main {
   flex: 1;
   min-width: 0;
-  /* 防止flex子项溢出 */
-  padding-right: 20px;
-  border-right: 1px solid var(--el-border-color-lighter);
+  height: 100%;
+  overflow: auto;
+  padding: 0 22px 0 0;
 }
 
-.add-property {
-  width: 250px;
-  /* 固定右侧宽度 */
+.properties-side {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 260px;
+  gap: 14px;
+  height: 100%;
+  overflow: auto;
+  margin-left: 22px;
+  padding-left: 22px;
+  border-left: 1px solid var(--el-border-color-lighter);
 }
 
-.add-property h3 {
-  margin-bottom: 16px;
+.properties-main {
+  box-sizing: border-box;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section-header h3 {
+  margin: 0;
   color: var(--el-text-color-primary);
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.section-header p {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.section-header.compact {
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.drawer-settings-heading h3 {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.drawer-settings-heading p {
+  margin: 6px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.properties-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .property-types {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.property-type-button {
   width: 100%;
+  min-height: 40px;
+  margin-left: 0;
+  padding: 8px 10px;
+  border-color: var(--el-border-color-lighter);
+  color: var(--el-text-color-primary);
+  background: transparent;
+  text-align: left;
+}
+
+.property-type-button + .property-type-button {
+  margin-left: 0;
+}
+
+.property-type-button :deep(> span) {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  column-gap: 9px;
+  width: 100%;
+}
+
+.property-type-button :deep(.el-icon) {
+  width: 18px;
+  margin: 0;
+  color: var(--el-text-color-secondary);
+}
+
+.property-type-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-type-button:hover {
+  border-color: var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+.property-type-button:hover :deep(.el-icon) {
+  color: var(--el-color-primary);
+}
+
+.property-empty {
+  min-height: 220px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.property-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.property-group {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.property-types .el-button {
-  justify-content: flex-start;
-  padding: 8px 16px;
-  width: 100%;
-}
-
-.property-types .el-button .el-icon {
-  margin-right: 8px;
-}
-
-/* 添加新的样式 */
-.color-option {
+.group-title {
   display: flex;
   align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.group-title em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+  font-style: normal;
+  font-size: 11px;
+}
+
+.property-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.property-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 8px;
-  width: 100%;
+  min-height: 64px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.property-row:hover {
+  border-color: var(--el-border-color);
+  background: var(--el-fill-color-extra-light);
+}
+
+.property-value {
+  min-width: 0;
+}
+
+.property-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.property-title-line strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-title-line code {
+  flex-shrink: 0;
+  max-width: 160px;
+  overflow: hidden;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 6px;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.property-preview > span:not(.color-preview) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .color-preview {
-  width: 24px;
-  height: 24px;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
   border-radius: 4px;
   flex-shrink: 0;
   position: relative;
@@ -373,108 +658,104 @@ defineExpose({
   background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
 }
 
-.color-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.color-label {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.color-value {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  font-family: monospace;
-}
-
-.property-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+.mono-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .property-actions {
   display: flex;
-  gap: 4px;
-  padding-top: 2px;
-  /* 微调按钮位置以对齐 */
+  flex-shrink: 0;
+  gap: 8px;
 }
 
 .property-actions .el-button {
-  padding: 4px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin-left: 0;
 }
 
-:deep(.el-select-dropdown__item) {
-  padding: 0;
+.app-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 420px;
 }
 
-:deep(.el-select-dropdown__item.selected) {
-  background-color: var(--el-fill-color-light);
+.app-settings-form :deep(.el-form-item) {
+  margin-bottom: 14px;
 }
 
-:deep(.el-select-dropdown__item:hover) {
-  background-color: var(--el-fill-color);
+.app-settings-form :deep(.el-form-item__label) {
+  padding-bottom: 6px;
+  color: var(--el-text-color-regular);
+  font-weight: 600;
 }
 
-.color-value-preview {
+.switch-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 0 2px;
 }
 
-.color-value-text {
-  font-family: monospace;
+.switch-row span {
+  display: block;
+  color: var(--el-text-color-primary);
   font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.switch-row small {
+  display: block;
+  margin-top: 3px;
   color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
-.goal-value-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.app-settings-form :deep(.el-segmented) {
+  width: 100%;
+  border-radius: var(--el-border-radius-base);
 }
 
-.goal-icon {
-  font-size: 16px;
-  width: 24px;
-  text-align: center;
+.app-settings-form :deep(.el-segmented__group) {
+  border-radius: var(--el-border-radius-base);
 }
 
-.goal-label {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
+.app-settings-form :deep(.el-segmented__item-selected) {
+  border-radius: var(--el-border-radius-base);
 }
 
-.chart-value-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.app-settings-form :deep(.el-segmented__item) {
+  min-height: 34px;
 }
 
-.chart-label {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-}
+@media (max-width: 760px) {
+  .properties-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
 
-.data-value-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
+  .properties-side {
+    flex: none;
+    width: 100%;
+    height: auto;
+    margin-left: 0;
+    padding-top: 16px;
+    padding-left: 0;
+    border-top: 1px solid var(--el-border-color-lighter);
+    border-left: 0;
+    overflow: visible;
+  }
 
-.data-label {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
+  .properties-main {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
 }
 </style>

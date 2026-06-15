@@ -10,6 +10,7 @@
     <el-select
       v-model="localValue"
       :placeholder="resolvedPlaceholder"
+      popper-class="property-select-popper"
       clearable
       filterable
       @change="handleChange"
@@ -19,7 +20,13 @@
         :key="key"
         :label="`${prop.title} — ${getTypeLabel(key)}`"
         :value="key"
-      />
+      >
+        <PropertySelectOption
+          :title="prop.title"
+          :detail="getTypeLabel(key)"
+          :property-key="key"
+        />
+      </el-option>
       <template #footer>
         <div class="select-footer">
           <span class="footer-text">{{ t('elementSettings.propertyNotFound') }}</span>
@@ -35,6 +42,7 @@ import { computed } from 'vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
+import PropertySelectOption from './PropertySelectOption.vue'
 
 const props = withDefaults(defineProps<{
   modelValue?: string | null

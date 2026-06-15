@@ -1,6 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
+    class="property-dialog"
     :title="t('property.selectProperty')"
     width="800px"
     :close-on-click-modal="false"
@@ -275,7 +276,8 @@ defineExpose({
 
 <style scoped>
 .metric-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 8px;
@@ -289,8 +291,12 @@ defineExpose({
 }
 
 .metric-label {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   color: var(--el-text-color-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-symbol {

@@ -1,6 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
+    class="property-dialog"
     :title="t('property.selectProperty')"
     width="800px"
     :close-on-click-modal="false"

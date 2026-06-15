@@ -53,7 +53,7 @@
   <ShortcutsDialog v-model="shortcutsDialogVisible" />
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
-  <EditDesignDialog ref="editDesignDialog" @success="handleEditSuccess" />
+  <EditDesignDialog ref="editDesignDialog" />
 </template>
 
 <script setup lang="ts">
@@ -107,10 +107,10 @@ const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
 
 const handleMenuKeydown = (e: KeyboardEvent) => {
-  // Cmd/Ctrl + . 打开 Edit Design（应用设置）
+  // Cmd/Ctrl + . 打开设计详情
   if ((e.metaKey || e.ctrlKey) && e.key === '.') {
     e.preventDefault()
-    console.log('[AppMenu] Cmd/Ctrl+. pressed, call handleEditDesign')
+    console.log('[AppMenu] Cmd/Ctrl+. pressed, open design details')
     try {
       handleEditDesign()
     } catch (err) {
@@ -562,7 +562,7 @@ const handleAddGoalSegmentField = async () => {
   }
 }
 
-// 打开应用设置（Edit Design），供菜单项和快捷键复用
+// 打开设计详情，供菜单项和快捷键复用
 const handleEditDesign = () => {
   const designId = route.query.id
   console.log('[AppMenu] handleEditDesign called, designId =', designId)
@@ -589,7 +589,7 @@ const handleSelect = (key: string) => {
   } else if (key === 'actions/properties') {
     propertiesPanel.value?.show()
   } else if (key === 'actions/viewJsonConfig') {
-    // 复用 Edit Design 打开逻辑
+    // 复用设计详情打开逻辑
     handleEditDesign()
   }
 }
@@ -649,11 +649,6 @@ const handleOpenCreatorAcademy = () => {
   window.open('/academy', '_blank', 'noopener')
 }
 
-// Handle edit success
-const handleEditSuccess = () => {
-  // Add any follow-up logic here, e.g. refresh data
-  messageStore.success(t('editor.designUpdated'))
-}
 </script>
 
 <style scoped>

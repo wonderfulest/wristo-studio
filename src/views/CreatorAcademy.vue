@@ -5,7 +5,10 @@
         <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" class="academy-logo">
         <span>Wristo Studio</span>
       </button>
-      <el-button type="primary" @click="startProject">{{ copy.startProject }}</el-button>
+      <div class="academy-topbar-actions">
+        <LanguageSwitcher :locales="academyLocales" />
+        <el-button type="primary" @click="startProject">{{ copy.startProject }}</el-button>
+      </div>
     </header>
 
     <main class="academy-shell">
@@ -19,7 +22,7 @@
         </div>
       </section>
 
-      <section class="outcomes" aria-label="学习成果">
+      <section class="outcomes" :aria-label="copy.outcomesLabel">
         <article v-for="outcome in copy.outcomes" :key="outcome.title" class="outcome-item">
           <strong>{{ outcome.title }}</strong>
           <span>{{ outcome.body }}</span>
@@ -27,7 +30,7 @@
       </section>
 
       <section id="academy-lessons" class="academy-grid">
-        <aside class="lesson-list" aria-label="课程列表">
+        <aside class="lesson-list" :aria-label="copy.lessonsLabel">
           <button
             v-for="lesson in copy.lessons"
             :key="lesson.id"
@@ -49,6 +52,17 @@
           <h2>{{ activeLesson.title }}</h2>
           <p class="lesson-goal">{{ activeLesson.goal }}</p>
 
+          <div v-if="activeLesson.video" class="lesson-video">
+            <iframe
+              :src="activeLesson.video.src"
+              :title="activeLesson.video.title"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          </div>
+
           <section v-for="section in activeLesson.sections" :key="section.heading" class="lesson-section">
             <h3>{{ section.heading }}</h3>
             <p v-if="section.body">{{ section.body }}</p>
@@ -63,8 +77,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useI18n } from '@/i18n'
+import type { SupportedLocale } from '@/stores/locale'
 
 type LessonSection = {
   heading: string
@@ -72,10 +89,16 @@ type LessonSection = {
   items?: string[]
 }
 
+type LessonVideo = {
+  src: string
+  title: string
+}
+
 type Lesson = {
   id: number
   title: string
   goal: string
+  video?: LessonVideo
   sections: LessonSection[]
 }
 
@@ -87,13 +110,18 @@ type AcademyCopy = {
   viewLessons: string
   workspace: string
   lessonLabel: string
+  outcomesLabel: string
+  lessonsLabel: string
   outcomes: Array<{ title: string; body: string }>
   lessons: Lesson[]
 }
 
 const route = useRoute()
 const router = useRouter()
-const academyCopy: AcademyCopy = {
+const { locale } = useI18n()
+const academyLocales = ['zh', 'en'] satisfies SupportedLocale[]
+
+const zhAcademyCopy: AcademyCopy = {
   eyebrow: '创作者学院',
   title: 'Wristo Studio 使用教程',
   description: '面向设计师的 Studio 操作课程，按真实制作流程学习如何新建项目、编辑画布、添加元素、绑定数据、预览设备并导出表盘。',
@@ -101,6 +129,8 @@ const academyCopy: AcademyCopy = {
   viewLessons: '查看课程',
   workspace: '工作台',
   lessonLabel: '课程',
+  outcomesLabel: '学习成果',
+  lessonsLabel: '课程列表',
   outcomes: [
     { title: '熟悉 Studio 工作区', body: '了解项目列表、创建设计、画布、顶部工具栏、属性面板和保存流程。' },
     { title: '掌握表盘制作操作', body: '学习添加时间、文字、图形、图片、字体、图标和 Garmin 数据字段。' },
@@ -111,10 +141,14 @@ const academyCopy: AcademyCopy = {
       id: 1,
       title: '进入 Studio 并创建项目',
       goal: '完成登录、进入工作台、创建第一个 Garmin 表盘项目。',
+      video: {
+        src: 'https://www.youtube.com/embed/aW_UG6qbVXw?si=pAPM8E_Gn-X2flt5',
+        title: 'Create your first Garmin watch face project in Wristo Studio',
+      },
       sections: [
-        { heading: '进入工作台', items: ['打开 Wristo Studio。', '登录 Wristo 账号。', '进入项目列表或新项目入口。', '确认当前账号可以保存和导出项目。'] },
-        { heading: '创建项目', items: ['点击新建项目。', '选择空白项目或可用模板。', '填写项目名称。', '选择第一个目标 Garmin 设备或屏幕尺寸。'] },
-        { heading: '第一次保存', items: ['进入画布后先保存一次项目。', '确认项目出现在工作台列表中。', '后续每完成一个阶段都保存，避免丢失设计进度。'] },
+        { heading: '进入工作台', items: ['打开 Wristo Studio。', '登录 Wristo 账号。', '进入项目列表或新项目入口。'] },
+        { heading: '创建项目', items: ['点击新建项目。', '选择空白项目或可用模板。', '填写项目名称。', '选择目标 Garmin 设备或屏幕尺寸。', '添加时间元素。'] },
+        { heading: '第一次保存', items: ['进入画布后先保存一次项目。', '确认项目出现在工作台列表中。'] },
       ],
     },
     {
@@ -200,7 +234,121 @@ const academyCopy: AcademyCopy = {
   ],
 }
 
-const copy = computed(() => academyCopy)
+const enAcademyCopy: AcademyCopy = {
+  eyebrow: 'Creator Academy',
+  title: 'Wristo Studio Tutorial',
+  description: 'Studio lessons for designers. Learn the real production flow: create a project, edit the canvas, add elements, bind data, preview devices, and export a watch face.',
+  startProject: 'Open Studio',
+  viewLessons: 'View Lessons',
+  workspace: 'Workspace',
+  lessonLabel: 'Lesson',
+  outcomesLabel: 'Learning outcomes',
+  lessonsLabel: 'Lesson list',
+  outcomes: [
+    { title: 'Understand the Studio workspace', body: 'Learn the project list, design creation, canvas, top toolbar, properties panel, and save flow.' },
+    { title: 'Build watch face layouts', body: 'Learn how to add time, text, shapes, images, fonts, icons, and Garmin data fields.' },
+    { title: 'Finish a deliverable project', body: 'Check device previews, handle multiple sizes, save versions, export files, and prepare store assets.' },
+  ],
+  lessons: [
+    {
+      id: 1,
+      title: 'Enter Studio and create a project',
+      goal: 'Log in, open the workspace, and create your first Garmin watch face project.',
+      video: {
+        src: 'https://www.youtube.com/embed/aW_UG6qbVXw?si=pAPM8E_Gn-X2flt5',
+        title: 'Create your first Garmin watch face project in Wristo Studio',
+      },
+      sections: [
+        { heading: 'Open the workspace', items: ['Open Wristo Studio.', 'Sign in to your Wristo account.', 'Go to the project list or the new project entry.'] },
+        { heading: 'Create a project', items: ['Click New Project.', 'Choose a blank project or an available template.', 'Enter the project name.', 'Select the target Garmin device or screen size.', 'Add a time element.'] },
+        { heading: 'Save for the first time', items: ['Save the project once after entering the canvas.', 'Confirm that the project appears in the workspace list.'] },
+      ],
+    },
+    {
+      id: 2,
+      title: 'Learn the editor interface',
+      goal: 'Understand what each editor area does and where to add, select, and adjust elements.',
+      sections: [
+        { heading: 'Main areas', items: ['Top bar: open the workspace, academy, device switching, and account actions.', 'Tool menu: save, screenshot, add time, data, shapes, weather, and help.', 'Canvas: preview the watch face on the current device.', 'Properties panel: adjust position, size, color, font, and data for the selected element.'] },
+        { heading: 'Common actions', items: ['Click a canvas element to select it.', 'Drag an element to move it.', 'Use the properties panel for precise adjustments.', 'Use the save button to submit the current design.'] },
+        { heading: 'Recommended habits', items: ['Select an element first, then check what can be adjusted in the side or properties area.', 'Do not add too many elements at once. Finish the basic structure first.', 'Save and preview after every major adjustment.'] },
+      ],
+    },
+    {
+      id: 3,
+      title: 'Set the device and canvas',
+      goal: 'Choose a target device and build an editable watch face canvas for that screen.',
+      sections: [
+        { heading: 'Choose a device', items: ['Select the primary Garmin model from the device selector.', 'Finish the design on one main device first instead of adapting every device immediately.', 'Pay attention to differences between round, square, and differently sized screens.'] },
+        { heading: 'Understand the canvas', items: ['The canvas shows the watch face area for the current device.', 'Content near the screen edge is easy to crop or hard to read.', 'Place key information in stable, readable positions first.'] },
+        { heading: 'Check boundaries', items: ['Keep time, text, and icons away from the edge.', 'For round screens, check corners and the outer ring carefully.', 'After switching devices, check element positions again.'] },
+      ],
+    },
+    {
+      id: 4,
+      title: 'Add time, text, and basic shapes',
+      goal: 'Add the most common watch face elements and build a first readable layout.',
+      sections: [
+        { heading: 'Add time', items: ['Add a time element from the time menu.', 'Choose a suitable time format.', 'Adjust time position, size, color, and font.', 'Make sure time is the easiest information to read.'] },
+        { heading: 'Add text', items: ['Add date, labels, or short explanatory text.', 'Keep text short to avoid crowding on small screens.', 'Use size and color to create hierarchy instead of making all text equally prominent.'] },
+        { heading: 'Add basic shapes', items: ['Use shapes or lines for grouping, decoration, and information support.', 'Adjust fill, stroke, opacity, and layer order.', 'Avoid shapes covering time or critical data.'] },
+      ],
+    },
+    {
+      id: 5,
+      title: 'Use fonts, icons, and images',
+      goal: 'Use visual assets in Studio while keeping the watch face style consistent.',
+      sections: [
+        { heading: 'Use fonts', items: ['Open the font feature and choose an available font.', 'Prioritize clear, stable fonts for time digits.', 'Avoid mixing too many fonts in one watch face.', 'Test times such as 00:00, 01:11, 10:24, 12:58, and 23:59.'] },
+        { heading: 'Use icons', items: ['Choose icons that match the meaning of the data.', 'Keep icon size, stroke weight, and style consistent.', 'Icons should help users recognize information, not only decorate the screen.'] },
+        { heading: 'Use images', items: ['Upload or choose backgrounds, textures, and decorative images.', 'Images should not cover time or key data.', 'Check whether images are still clear at watch size.', 'Confirm that the asset license allows publishing.'] },
+      ],
+    },
+    {
+      id: 6,
+      title: 'Bind Garmin data fields',
+      goal: 'Add dynamic data such as steps, heart rate, battery, and weather, then check different display states.',
+      sections: [
+        { heading: 'Add data fields', items: ['Choose battery, steps, heart rate, or other information from the data field menu.', 'Place data fields where they do not interfere with time.', 'Add short labels or clear icons for the data.', 'Keep alignment and spacing consistent within the same data group.'] },
+        { heading: 'Common data', items: ['Battery: suitable for edges or status areas.', 'Steps: numbers can become long, so reserve enough width.', 'Heart rate: consider missing or disconnected states.', 'Weather: check whether icons, temperature, and text become crowded.'] },
+        { heading: 'State testing', items: ['Test low and full battery.', 'Test steps 0, 8,532, and 18,240.', 'Test heart rate --, 72, and 148.', 'Check whether the layout jumps when data changes.'] },
+      ],
+    },
+    {
+      id: 7,
+      title: 'Adjust layers, alignment, and details',
+      goal: 'Use Studio editing tools to organize hierarchy and make the watch face look orderly.',
+      sections: [
+        { heading: 'Layer relationships', items: ['Keep the background at the bottom.', 'Do not let decorative elements cover time or data.', 'If an element cannot be selected, check whether another element is covering it.', 'Adjust front and back order when needed.'] },
+        { heading: 'Alignment and spacing', items: ['Use consistent alignment for similar data.', 'Keep fixed spacing between icons and text.', 'Make margins follow a consistent rule.', 'Avoid adjusting everything by eye. Prefer numeric values and alignment tools.'] },
+        { heading: 'Detail checks', items: ['Is color contrast sufficient?', 'Is small text still readable?', 'Does the background interfere with numbers?', 'Are corner radius, line weight, and opacity consistent across elements?'] },
+      ],
+    },
+    {
+      id: 8,
+      title: 'Preview devices, save, and export',
+      goal: 'Use Studio to check real states before export and confirm the current version is deliverable.',
+      sections: [
+        { heading: 'Device preview', items: ['Check the overall result on the main device.', 'Switch to nearby device sizes to check cropping.', 'Check edge areas on round and square devices.', 'Take screenshots to record the current version.'] },
+        { heading: 'Save the project', items: ['Save before exporting.', 'Save before and after major revisions for easier rollback.', 'Confirm that the project name and device selection are correct.', 'After saving, return to the workspace and confirm the project can still open.'] },
+        { heading: 'Export preparation', items: ['Remove unused assets or test elements.', 'Confirm fonts and images can be published.', 'Check that time, date, data fields, and background all come from the latest version.', 'After export, open the file or preview image again to catch obvious issues.'] },
+      ],
+    },
+    {
+      id: 9,
+      title: 'Prepare store assets and future updates',
+      goal: 'Organize the finished Studio design into a publishable and maintainable watch face project.',
+      sections: [
+        { heading: 'Store assets', items: ['Prepare clear preview images.', 'Enter a short, easy-to-understand watch face name.', 'Describe the usage scenarios clearly.', 'Choose tags that match the design style and data features.'] },
+        { heading: 'Delivery checks', items: ['Confirm the supported device list.', 'Record fonts, images, and special assets used by the design.', 'Keep the Studio source project for future edits.', 'Keep exported files consistent with preview images.'] },
+        { heading: 'Future updates', items: ['Prioritize readability and cropping issues from user feedback.', 'Before adding new devices, duplicate and test the main design first.', 'Save and export again after every update.', 'Do not publish large changes before checking the real device result.'] },
+      ],
+    },
+  ],
+}
+
+const academyCopy = computed(() => (locale.value === 'zh' || locale.value === 'zh-tw' ? zhAcademyCopy : enAcademyCopy))
+const copy = computed(() => academyCopy.value)
 const activeLesson = computed(() => {
   const lessonParam = Number(route.query.lesson || 1)
   return copy.value.lessons.find((lesson) => lesson.id === lessonParam) || copy.value.lessons[0]
@@ -218,7 +366,7 @@ const scrollToLessons = () => {
   document.getElementById('academy-lessons')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-onMounted(() => {
+watchEffect(() => {
   document.title = `${copy.value.eyebrow} - Wristo Studio`
 })
 </script>
@@ -260,6 +408,12 @@ onMounted(() => {
 
 .academy-brand:hover {
   color: var(--studio-primary);
+}
+
+.academy-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .academy-logo {
@@ -426,6 +580,24 @@ onMounted(() => {
   line-height: 1.65;
 }
 
+.lesson-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 28px;
+  overflow: hidden;
+  background: #000000;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+}
+
+.lesson-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .lesson-section {
   padding: 20px 0;
   border-top: 1px solid var(--studio-border);
@@ -454,6 +626,10 @@ onMounted(() => {
 @media (max-width: 900px) {
   .academy-topbar {
     padding: 0 16px;
+  }
+
+  .academy-topbar-actions {
+    gap: 6px;
   }
 
   .academy-grid,

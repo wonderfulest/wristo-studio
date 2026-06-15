@@ -266,7 +266,9 @@ const loadDesign = async (designUid: string) => {
     if (config.textCase !== undefined) {
       propertiesStore.textCase = config.textCase
     }
-    // Label Length 仅支持 Short，统一保持默认值 1，不再从配置覆盖
+    if (config.labelLengthType !== undefined) {
+      propertiesStore.labelLengthType = config.labelLengthType
+    }
     // 设置是否显示数据项单位
     if (config.showUnit !== undefined) {
       propertiesStore.showUnit = config.showUnit

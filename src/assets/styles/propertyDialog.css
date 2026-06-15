@@ -1,72 +1,157 @@
 /* 属性对话框共享样式 */
+.property-dialog {
+  --property-dialog-radius: 12px;
+  --property-dialog-border: rgba(148, 163, 184, 0.22);
+  --property-dialog-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+  border: 1px solid var(--property-dialog-border);
+  border-radius: var(--property-dialog-radius);
+  box-shadow: var(--property-dialog-shadow);
+}
+
+.property-dialog .el-dialog__header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  background:
+    linear-gradient(180deg, rgba(64, 158, 255, 0.08), rgba(64, 158, 255, 0)),
+    var(--el-fill-color-blank);
+}
+
+.property-dialog .el-dialog__title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--el-text-color-primary);
+}
+
+.property-dialog .el-dialog__headerbtn {
+  top: 14px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.property-dialog .el-dialog__headerbtn:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.property-dialog .el-dialog__body {
+  padding: 0;
+  background: var(--el-fill-color-blank);
+}
+
+.property-dialog .el-dialog__footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-blank);
+}
+
 .property-form {
-  max-height: 60vh;
+  max-height: min(68vh, 720px);
   overflow-y: auto;
-  padding: 0 20px;
+  padding: 8px 18px 16px;
+  scroll-padding: 12px;
 }
 
 .form-section {
-  margin-bottom: 24px;
-  padding: 16px;
-  background-color: var(--el-fill-color-blank);
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  margin-bottom: 0;
+  padding: 18px 0 20px;
+  background-color: transparent;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.form-section:last-child {
+  border-bottom: none;
 }
 
 .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--el-text-color-primary);
+}
+
+.section-title::before {
+  width: 4px;
+  height: 16px;
+  content: '';
+  background: var(--el-color-primary);
+  border-radius: 999px;
 }
 
 .field-help {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-top: 4px;
-  line-height: 1.4;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 .code-text {
-  background-color: var(--el-fill-color-light);
-  padding: 2px 4px;
-  border-radius: 4px;
+  background-color: var(--el-color-primary-light-9);
+  padding: 2px 6px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 6px;
   color: var(--el-color-primary);
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
 }
 
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
 }
 
 .option-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--el-fill-color-light);
-  border-radius: 6px;
-  transition: all 0.3s;
-  padding: 8px 0;
+  min-height: 48px;
+  padding: 8px;
+  background-color: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .option-item:hover {
-  background-color: var(--el-fill-color);
+  background-color: var(--el-fill-color-lighter);
+  border-color: var(--el-border-color);
+  box-shadow: none;
 }
 
 .option-content {
   flex: 1;
+  min-width: 0;
 }
 
 .option-actions {
   display: flex;
-  gap: 4px;
-  padding-right: 12px;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding-left: 8px;
 }
 
 .option-actions .el-button {
-  padding: 4px;
+  margin-left: 0;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.option-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .option-actions .el-button .el-icon {
@@ -75,9 +160,9 @@
 
 /* 颜色选项特定样式 */
 .color-preview {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   border: 1px solid var(--el-border-color-lighter);
   position: relative;
   overflow: hidden;
@@ -110,9 +195,11 @@
 
 /* 目标选项特定样式 */
 .goal-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .goal-icon {
@@ -122,8 +209,12 @@
 }
 
 .goal-label {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   color: var(--el-text-color-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .goal-metric {
@@ -132,16 +223,32 @@
 }
 
 .option-info {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(112px, auto);
   align-items: center;
-  gap: 12px;
-  padding: 0 12px;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.option-info .metric-label,
+.option-info .goal-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option-info .metric-symbol,
+.option-info .goal-metric {
+  justify-self: end;
+  white-space: nowrap;
 }
 
 /* 表单元素样式 */
 .option-inputs {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(150px, 0.8fr);
+  gap: 10px;
   align-items: flex-start;
 }
 
@@ -149,15 +256,38 @@
   flex: 1;
 }
 
-.is-invalid :deep(.el-input__wrapper) {
+.is-invalid .el-input__wrapper {
   box-shadow: 0 0 0 1px var(--el-color-danger) inset;
 }
 
-:deep(.el-form-item__label) {
-  font-weight: 500;
+.property-dialog .el-form-item {
+  margin-bottom: 18px;
 }
 
-:deep(.el-input.is-disabled .el-input__wrapper) {
+.property-dialog .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.property-dialog .el-form-item__label {
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--el-text-color-primary);
+}
+
+.property-dialog .el-input__wrapper,
+.property-dialog .el-select__wrapper,
+.property-dialog .el-textarea__inner {
+  min-height: 40px;
+  border-radius: 8px;
+  transition: box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.property-dialog .el-textarea__inner {
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+
+.property-dialog .el-input.is-disabled .el-input__wrapper {
   background-color: var(--el-fill-color-lighter);
 }
 
@@ -180,8 +310,109 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
 }
 
 .options-collapse {
   margin-top: 16px;
-} 
+  overflow: hidden;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.options-collapse .el-collapse-item__header {
+  min-height: 44px;
+  padding: 0 14px;
+  font-weight: 600;
+  background: var(--el-fill-color-lighter);
+}
+
+.options-collapse .el-collapse-item__content {
+  padding: 14px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-footer .el-button {
+  margin-left: 0;
+  min-width: 96px;
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.dialog-footer .el-button + .el-button {
+  margin-left: 0;
+}
+
+:root[data-studio-theme='dark'] .property-dialog {
+  --property-dialog-border: rgba(148, 163, 184, 0.26);
+  --property-dialog-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-studio-theme='dark'] .property-dialog .el-dialog__body {
+  background: var(--el-fill-color-blank);
+}
+
+@media (max-width: 720px) {
+  .property-dialog {
+    width: calc(100vw - 24px) !important;
+    margin-top: 6vh;
+  }
+
+  .property-dialog .el-dialog__header,
+  .property-form,
+  .property-dialog .el-dialog__footer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .property-form {
+    max-height: 70vh;
+    padding-top: 8px;
+    padding-bottom: 18px;
+  }
+
+  .form-section {
+    padding: 16px 0 18px;
+  }
+
+  .section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .option-item,
+  .option-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .option-item {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option-actions {
+    justify-content: flex-end;
+    padding-left: 0;
+  }
+
+  .dialog-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dialog-footer .el-button {
+    width: 100%;
+    margin-left: 0;
+  }
+}

@@ -2,7 +2,7 @@
   <div class="language-switcher" role="navigation" :aria-label="t('language.selector')">
     <button class="language-button" type="button" :aria-expanded="isOpen" @click="isOpen = !isOpen">
       <Icon icon="solar:global-line-duotone" />
-      <span>{{ t(`language.${locale}`) }}</span>
+      <span>{{ t(`language.${displayLocale}`) }}</span>
       <el-icon :class="{ rotated: isOpen }"><ArrowDown /></el-icon>
     </button>
     <div class="language-options" :class="{ open: isOpen }">
@@ -10,7 +10,7 @@
         v-for="item in supportedLocales"
         :key="item"
         class="language-option"
-        :class="{ active: item === locale }"
+        :class="{ active: item === displayLocale }"
         type="button"
         @click="switchLanguage(item)"
       >
@@ -21,16 +21,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from '@/i18n'
 import { SUPPORTED_LOCALES, useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
+const props = withDefaults(defineProps<{
+  locales?: readonly SupportedLocale[]
+}>(), {
+  locales: () => SUPPORTED_LOCALES,
+})
+
 const { locale, t } = useI18n()
 const localeStore = useLocaleStore()
 const isOpen = ref(false)
-const supportedLocales = SUPPORTED_LOCALES
+const supportedLocales = computed(() => props.locales)
+const displayLocale = computed(() => supportedLocales.value.includes(locale.value) ? locale.value : 'en')
 
 function switchLanguage(targetLocale: SupportedLocale) {
   localeStore.setLocale(targetLocale)

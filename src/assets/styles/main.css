@@ -270,6 +270,22 @@ button,
   box-shadow: 0 0 0 1px var(--studio-border-strong) inset;
 }
 
+.property-select-popper .el-select-dropdown__item {
+  height: auto;
+  min-height: 50px;
+  padding: 6px 10px;
+  line-height: normal;
+}
+
+.property-select-popper .el-select-dropdown__item.is-hovering,
+.property-select-popper .el-select-dropdown__item:hover {
+  background: var(--el-fill-color-light);
+}
+
+.property-select-popper .el-select-dropdown__item.selected .property-select-title {
+  color: var(--el-color-primary);
+}
+
 .el-dialog {
   border-radius: var(--studio-radius-lg);
   box-shadow: var(--studio-shadow-lg);

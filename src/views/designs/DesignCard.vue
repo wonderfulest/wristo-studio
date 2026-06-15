@@ -29,10 +29,10 @@
                   <DocumentCopy />
                 </el-icon>
               </el-button>
-              <!-- 编辑 -->
-              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('edit', design)">
+              <!-- 查看详情 -->
+              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('edit', design)" :title="t('editor.view')">
                 <el-icon>
-                  <Edit />
+                  <View />
                 </el-icon>
               </el-button>
               <!-- 删除（仅管理员和自己的应用可见） -->
@@ -203,7 +203,7 @@
 import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
-import { Box, Delete, DocumentCopy, Download, Edit, Upload } from '@element-plus/icons-vue'
+import { Box, Delete, DocumentCopy, Download, Edit, Upload, View } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'

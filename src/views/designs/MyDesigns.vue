@@ -95,8 +95,8 @@
       </template>
     </el-dialog>
 
-    <!-- 编辑对话框 -->
-    <EditDesignDialog ref="editDesignDialog" @success="handleEditSuccess" />
+    <!-- 设计详情对话框 -->
+    <EditDesignDialog ref="editDesignDialog" />
     
     <!-- 提交设计对话框 -->
     <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
@@ -331,7 +331,7 @@ const openCanvas = async (design: Design) => {
   }
 }
 
-// 编辑设计信息
+// 查看设计详情
 const editDesign = (design: Design) => {
   if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
     editDesignDialog.value.show(design.designUid)
@@ -513,11 +513,6 @@ onUnmounted(() => {
   // 清理事件监听
   window.removeEventListener('refresh-list', handleRefresh)
 })
-
-// 添加编辑成功处理方法
-const handleEditSuccess = () => {
-  fetchDesigns() // 刷新设计列表
-}
 
 // Go live 方法
 const goLive = async (design: Design) => {

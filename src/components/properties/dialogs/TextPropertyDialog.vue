@@ -1,39 +1,67 @@
 <template>
-  <el-dialog v-model="dialogVisible" :title="t('property.textProperty')" width="500px" @close="handleClose">
-    <el-form ref="formRef" :model="formData" label-position="top">
-      <el-form-item :label="t('property.title')" prop="title" :rules="[{ required: true, message: t('property.titleRequired'), trigger: 'blur' }]"></el-form-item>
-      <el-input v-model="formData.title" />
+  <el-dialog
+    v-model="dialogVisible"
+    class="property-dialog"
+    :title="t('property.textProperty')"
+    width="640px"
+    :close-on-click-modal="false"
+    :destroy-on-close="true"
+    @close="handleClose"
+  >
+    <el-form ref="formRef" :model="formData" label-position="top" class="property-form">
+      <div class="form-section">
+        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
+        <el-form-item
+          :label="t('property.title')"
+          prop="title"
+          :rules="[{ required: true, message: t('property.titleRequired'), trigger: 'blur' }]"
+        >
+          <el-input v-model="formData.title" :placeholder="t('property.textProperty')" />
+        </el-form-item>
 
-      <PropertyKeyField
-        v-model="formData.propertyKey"
-        :is-edit="isEdit"
-        default-key="text_1"
-        placeholder="text_1"
-      />
+        <PropertyKeyField
+          v-model="formData.propertyKey"
+          :is-edit="isEdit"
+          default-key="text_1"
+          placeholder="text_1"
+        />
 
-      <DefaultTextField v-model="formData.value" />
+        <DefaultTextField v-model="formData.value" />
+      </div>
 
-      <el-form-item :label="t('property.promptOptional')">
-        <el-input v-model="formData.prompt" />
-      </el-form-item>
+      <div class="form-section">
+        <h3 class="section-title">{{ t('property.messages') }}</h3>
+        <el-form-item :label="t('property.promptOptional')">
+          <el-input
+            v-model="formData.prompt"
+            type="textarea"
+            :rows="2"
+            :placeholder="t('property.promptPlaceholder')"
+          />
+        </el-form-item>
 
-      <el-form-item :label="t('property.errorMessageOptional')">
-        <el-input v-model="formData.errorMessage" />
-      </el-form-item>
+        <el-form-item :label="t('property.errorMessageOptional')">
+          <el-input
+            v-model="formData.errorMessage"
+            type="textarea"
+            :rows="2"
+            :placeholder="t('property.errorPlaceholder')"
+          />
+        </el-form-item>
+      </div>
     </el-form>
 
     <template #footer>
-      <span class="dialog-footer">
+      <div class="dialog-footer">
         <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleConfirm">{{ t('common.confirm') }}</el-button>
-      </span>
+      </div>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue'
-import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import DefaultTextField from '@/components/properties/common/DefaultTextField.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
