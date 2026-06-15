@@ -682,6 +682,7 @@ const updateInlineCheckout = async (plan: PlanCard) => {
     return
   }
 
+  const hasOpenInlineCheckout = Boolean(inlineCheckoutPlan.value)
   inlineCheckoutPlan.value = plan
   resetCheckoutTotals()
   await nextTick()
@@ -695,7 +696,7 @@ const updateInlineCheckout = async (plan: PlanCard) => {
     if (!checkout) {
       throw new Error('Paddle checkout is unavailable')
     }
-    if (checkout.updateCheckout) {
+    if (hasOpenInlineCheckout && checkout.updateCheckout) {
       await checkout.updateCheckout(buildCheckoutRequest(plan))
       return
     }
