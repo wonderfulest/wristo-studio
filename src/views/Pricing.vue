@@ -100,6 +100,51 @@
       </div>
     </section>
 
+    <section v-if="inlineCheckoutPlan" ref="checkoutSectionRef" class="inline-checkout-section">
+      <div class="section-heading">
+        <p>{{ t('membership.inlineEyebrow') }}</p>
+        <h2>{{ t('membership.inlineTitle') }}</h2>
+      </div>
+      <div class="checkout-grid">
+        <div class="checkout-frame-panel">
+          <div class="studio-membership-checkout-frame"></div>
+        </div>
+        <aside class="checkout-summary-panel">
+          <div class="summary-header">
+            <span>{{ t('membership.checkoutSummary') }}</span>
+            <strong>{{ t(inlineCheckoutPlan.nameKey) }}</strong>
+          </div>
+          <div class="summary-total">
+            <span>{{ t('membership.totalToday') }}</span>
+            <strong>{{ checkoutTotals.total || inlineCheckoutPlan.price }}</strong>
+          </div>
+          <dl class="summary-lines">
+            <div>
+              <dt>{{ t('membership.billingFrequency') }}</dt>
+              <dd>{{ inlineCheckoutPlan.price }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('membership.subtotal') }}</dt>
+              <dd>{{ checkoutTotals.subtotal || inlineCheckoutPlan.price }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('membership.tax') }}</dt>
+              <dd>{{ checkoutTotals.tax || t('membership.taxCalculated') }}</dd>
+            </div>
+          </dl>
+          <ul>
+            <li v-for="featureKey in inlineCheckoutPlan.featureKeys" :key="featureKey">
+              <Icon icon="material-symbols:check-rounded" />
+              <span>{{ t(featureKey) }}</span>
+            </li>
+          </ul>
+          <p class="summary-note">
+            {{ t('membership.inlineFooterNote') }}
+          </p>
+        </aside>
+      </div>
+    </section>
+
     <section class="details-grid">
       <article class="fit-panel">
         <div class="section-heading compact">
@@ -134,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -148,9 +193,16 @@ const route = useRoute()
 const userStore = useUserStore()
 const { locale, t } = useI18n()
 const plansSectionRef = ref<HTMLElement | null>(null)
+const checkoutSectionRef = ref<HTMLElement | null>(null)
 const backendPlans = ref<StudioMembershipPlan[]>([])
 const loadingPlanCode = ref<string | null>(null)
 const selectedPlanCode = ref<string | null>(null)
+const inlineCheckoutPlan = ref<PlanCard | null>(null)
+const checkoutTotals = ref({
+  subtotal: '',
+  tax: '',
+  total: '',
+})
 let paddleReadyPromise: Promise<void> | null = null
 let paddleInitialized = false
 
@@ -443,11 +495,22 @@ const scrollToPlans = () => {
   plansSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+const scrollToCheckout = () => {
+  checkoutSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const formatCurrency = (amount: number, currencyCode?: string | null) => {
   return new Intl.NumberFormat(locale.value, {
     style: 'currency',
     currency: currencyCode || 'USD',
   }).format(amount)
+}
+
+const formatPaddleTotal = (value?: string | number | null, currencyCode?: string | null) => {
+  if (value == null || value === '') return ''
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return String(value)
+  return formatCurrency(numericValue, currencyCode)
 }
 
 const formatRecurringPrice = (amount: number, currencyCode: string | null | undefined, periodKey?: string) => {
@@ -520,12 +583,30 @@ const initializePaddle = (win: any, token: string) => {
   }
   win.Paddle.Initialize({
     token,
+    checkout: {
+      settings: {
+        displayMode: 'inline',
+        frameTarget: 'studio-membership-checkout-frame',
+        frameInitialHeight: 520,
+        frameStyle: 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
+      },
+    },
     eventCallback: handlePaddleEvent,
   })
   paddleInitialized = true
 }
 
 const handlePaddleEvent = async (event: any) => {
+  if (event.name === 'checkout.loaded' || event.name === 'checkout.updated') {
+    const totals = event.data?.totals
+    const currencyCode = totals?.currency_code || totals?.currencyCode || event.data?.currency_code || event.data?.currencyCode
+    checkoutTotals.value = {
+      subtotal: formatPaddleTotal(totals?.subtotal, currencyCode),
+      tax: formatPaddleTotal(totals?.tax, currencyCode),
+      total: formatPaddleTotal(totals?.total, currencyCode),
+    }
+    loadingPlanCode.value = null
+  }
   if (event.name === 'checkout.completed') {
     const transactionId = event.data?.transaction_id || event.data?.transactionId || event.data?.id
     try {
@@ -566,6 +647,14 @@ const handleCheckout = async (plan: (typeof plans.value)[number]) => {
     ElMessage.warning(t('membership.emailRequired'))
     return
   }
+  inlineCheckoutPlan.value = plan
+  checkoutTotals.value = {
+    subtotal: '',
+    tax: '',
+    total: '',
+  }
+  await nextTick()
+  scrollToCheckout()
   loadingPlanCode.value = plan.code
   try {
     await loadPaddle()
@@ -575,7 +664,7 @@ const handleCheckout = async (plan: (typeof plans.value)[number]) => {
     }
     win.Paddle.Checkout.open({
       settings: {
-        displayMode: 'overlay',
+        displayMode: 'inline',
       },
       items: [
         {
@@ -625,6 +714,7 @@ onMounted(async () => {
 .pricing-hero,
 .value-grid,
 .plans-section,
+.inline-checkout-section,
 .details-grid {
   width: min(1120px, 100%);
   margin-inline: auto;
@@ -829,6 +919,11 @@ onMounted(async () => {
   margin-bottom: 32px;
 }
 
+.inline-checkout-section {
+  scroll-margin-top: 24px;
+  margin-bottom: 32px;
+}
+
 .section-heading {
   margin-bottom: 16px;
 }
@@ -969,6 +1064,116 @@ onMounted(async () => {
   min-height: 44px;
 }
 
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.checkout-frame-panel,
+.checkout-summary-panel {
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface-raised);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.checkout-frame-panel {
+  min-height: 560px;
+  padding: 18px;
+}
+
+.studio-membership-checkout-frame {
+  width: 100%;
+  min-height: 520px;
+}
+
+.checkout-summary-panel {
+  padding: 24px;
+}
+
+.summary-header,
+.summary-total,
+.summary-lines div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summary-header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--studio-border);
+}
+
+.summary-header span,
+.summary-lines dt,
+.summary-total span {
+  color: var(--studio-text-muted);
+}
+
+.summary-header strong {
+  text-align: right;
+  font-size: 1.1rem;
+}
+
+.summary-total {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--studio-primary-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-primary-soft);
+}
+
+.summary-total strong {
+  color: var(--studio-primary);
+  font-size: 1.35rem;
+}
+
+.summary-lines {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.summary-lines dt,
+.summary-lines dd {
+  margin: 0;
+}
+
+.summary-lines dd {
+  text-align: right;
+  font-weight: 750;
+}
+
+.checkout-summary-panel ul {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+}
+
+.checkout-summary-panel li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.45;
+}
+
+.checkout-summary-panel li svg {
+  color: var(--studio-primary);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.summary-note {
+  margin: 20px 0 0;
+  color: var(--studio-text-muted);
+  line-height: 1.6;
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -1037,6 +1242,7 @@ onMounted(async () => {
 
 @media (max-width: 980px) {
   .pricing-hero,
+  .checkout-grid,
   .details-grid {
     grid-template-columns: 1fr;
   }
@@ -1056,6 +1262,8 @@ onMounted(async () => {
   .usage-panel,
   .value-card,
   .plan-card,
+  .checkout-frame-panel,
+  .checkout-summary-panel,
   .fit-panel,
   .faq-panel {
     padding: 18px;
