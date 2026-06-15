@@ -205,6 +205,7 @@ const checkoutTotals = ref({
 })
 let paddleReadyPromise: Promise<void> | null = null
 let paddleInitialized = false
+const checkoutTotalsUpdateEvents = new Set(['checkout.loaded', 'checkout.updated', 'checkout.items.updated'])
 
 interface PlanCard {
   code: string
@@ -468,9 +469,12 @@ const isPlanActionDisabled = (plan: PlanCard) => {
   return plan.code === 'free' || plan.code === currentLevel.value || (hasActivePaidMembership.value && plan.code !== 'free')
 }
 
-const selectPlan = (plan: PlanCard) => {
+const selectPlan = async (plan: PlanCard) => {
   if (isPlanActionDisabled(plan)) return
   selectedPlanCode.value = plan.code
+  if (inlineCheckoutPlan.value) {
+    await updateInlineCheckout(plan)
+  }
 }
 
 const ensureSelectedPlan = () => {
@@ -597,7 +601,7 @@ const initializePaddle = (win: any, token: string) => {
 }
 
 const handlePaddleEvent = async (event: any) => {
-  if (event.name === 'checkout.loaded' || event.name === 'checkout.updated') {
+  if (checkoutTotalsUpdateEvents.has(event.name)) {
     const totals = event.data?.totals
     const currencyCode = totals?.currency_code || totals?.currencyCode || event.data?.currency_code || event.data?.currencyCode
     checkoutTotals.value = {
@@ -627,14 +631,44 @@ const handlePaddleEvent = async (event: any) => {
   }
 }
 
-const handleCheckout = async (plan: (typeof plans.value)[number]) => {
-  if (isPlanActionDisabled(plan)) {
-    if (hasActivePaidMembership.value && plan.code !== 'free' && plan.code !== currentLevel.value) {
-      ElMessage.info(t('membership.alreadySubscribed'))
-    }
-    return
+const buildCheckoutRequest = (plan: PlanCard) => ({
+  items: [
+    {
+      priceId: plan.paddlePriceId,
+      quantity: 1,
+    },
+  ],
+  customer: { email: userStore.userInfo?.email },
+  customData: {
+    isSubscription: plan.code !== 'premium_30d',
+    scene: 'studio',
+    source: 'studio',
+    userId: userStore.userInfo?.id,
+    email: userStore.userInfo?.email,
+    planCode: plan.planCode,
+  },
+})
+
+const buildInlineCheckoutOpenRequest = (plan: PlanCard) => ({
+  settings: {
+    displayMode: 'inline',
+  },
+  ...buildCheckoutRequest(plan),
+})
+
+const resetCheckoutTotals = () => {
+  checkoutTotals.value = {
+    subtotal: '',
+    tax: '',
+    total: '',
   }
-  selectedPlanCode.value = plan.code
+}
+
+const openInlineCheckout = (checkout: any, plan: PlanCard) => {
+  checkout.open(buildInlineCheckoutOpenRequest(plan))
+}
+
+const updateInlineCheckout = async (plan: PlanCard) => {
   if (!plan.paddlePriceId) {
     await ElMessageBox.alert(t('membership.checkoutNotConfigured'), t('common.tip'))
     return
@@ -647,45 +681,46 @@ const handleCheckout = async (plan: (typeof plans.value)[number]) => {
     ElMessage.warning(t('membership.emailRequired'))
     return
   }
+
   inlineCheckoutPlan.value = plan
-  checkoutTotals.value = {
-    subtotal: '',
-    tax: '',
-    total: '',
-  }
+  resetCheckoutTotals()
   await nextTick()
   scrollToCheckout()
   loadingPlanCode.value = plan.code
+
   try {
     await loadPaddle()
     const win = window as any
-    if (!win.Paddle?.Checkout?.open) {
+    const checkout = win.Paddle?.Checkout
+    if (!checkout) {
       throw new Error('Paddle checkout is unavailable')
     }
-    win.Paddle.Checkout.open({
-      settings: {
-        displayMode: 'inline',
-      },
-      items: [
-        {
-          priceId: plan.paddlePriceId,
-          quantity: 1,
-        },
-      ],
-      customer: { email: userStore.userInfo.email },
-      customData: {
-        isSubscription: plan.code !== 'premium_30d',
-        scene: 'studio',
-        source: 'studio',
-        userId: userStore.userInfo.id,
-        email: userStore.userInfo.email,
-        planCode: plan.planCode,
-      },
-    })
+    if (checkout.updateCheckout) {
+      await checkout.updateCheckout(buildCheckoutRequest(plan))
+      return
+    }
+    if (checkout.close) {
+      checkout.close()
+    }
+    if (!checkout.open) {
+      throw new Error('Paddle checkout is unavailable')
+    }
+    await openInlineCheckout(checkout, plan)
   } catch (error) {
     loadingPlanCode.value = null
     ElMessageBox.alert(t('membership.checkoutLoadFailed'), t('common.tip'))
   }
+}
+
+const handleCheckout = async (plan: (typeof plans.value)[number]) => {
+  if (isPlanActionDisabled(plan)) {
+    if (hasActivePaidMembership.value && plan.code !== 'free' && plan.code !== currentLevel.value) {
+      ElMessage.info(t('membership.alreadySubscribed'))
+    }
+    return
+  }
+  selectedPlanCode.value = plan.code
+  await updateInlineCheckout(plan)
 }
 
 onMounted(async () => {
