@@ -120,6 +120,16 @@
                 <Icon icon="material-symbols:article-outline-rounded" />
               </button>
             </el-tooltip>
+            <a
+              v-if="row.buildLogPath"
+              class="build-log-path"
+              :href="row.buildLogPath"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click.stop
+            >
+              {{ row.buildLogPath }}
+            </a>
           </div>
         </div>
       </div>
@@ -369,6 +379,7 @@ const packageRows = computed(() => {
     isPackaging: boolean
     logId?: number
     canViewBuildLog: boolean
+    buildLogPath?: string | null
   }> = []
 
   const canOpenLog = (log?: ProductPackagingLogVo) => {
@@ -387,6 +398,7 @@ const packageRows = computed(() => {
       isPackaging: prgLog?.rank === 0,
       logId: prgLog?.id,
       canViewBuildLog: canOpenLog(prgLog),
+      buildLogPath: prgLog?.lastBuildLogPath,
     })
   }
 
@@ -402,6 +414,7 @@ const packageRows = computed(() => {
       isPackaging: iqLog?.rank === 0,
       logId: iqLog?.id,
       canViewBuildLog: canOpenLog(iqLog),
+      buildLogPath: iqLog?.lastBuildLogPath,
     })
   }
 
@@ -489,6 +502,21 @@ const openBuildLog = (logId?: number) => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.build-log-path {
+  display: block;
+  margin-top: 4px;
+  color: var(--studio-primary);
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.build-log-path:hover {
+  color: var(--studio-primary-hover);
 }
 
 .score-pill {
