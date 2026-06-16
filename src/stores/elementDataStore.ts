@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
+import { normalizeFontSizePatch } from '@/utils/fontSize'
 
 export type ElementConfigSnapshot = {
   id: string
@@ -40,7 +41,7 @@ export const useElementDataStore = defineStore('elementData', {
       const snapshot: ElementConfigSnapshot = {
         id,
         eleType,
-        config: { ...config, id, eleType },
+        config: normalizeFontSizePatch({ ...config, id, eleType } as AnyElementConfig),
       }
       this.elementMap[id] = snapshot
     },
@@ -51,7 +52,7 @@ export const useElementDataStore = defineStore('elementData', {
       if (!existing) return
       const nextConfig: AnyElementConfig = {
         ...(existing.config as AnyElementConfig),
-        ...(patch as AnyElementConfig),
+        ...(normalizeFontSizePatch(patch) as AnyElementConfig),
         id: key,
         eleType: existing.eleType,
       }
@@ -92,4 +93,3 @@ export const useElementDataStore = defineStore('elementData', {
     key: 'elementData',
   },
 })
-

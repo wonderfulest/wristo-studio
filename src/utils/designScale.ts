@@ -1,6 +1,7 @@
 import type { Canvas } from 'fabric'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
+import { normalizeFontSizeToOption } from '@/utils/fontSize'
 
 export const STANDARD_DESIGN_SIZE = 454
 
@@ -53,6 +54,11 @@ function roundScaledNumber(value: unknown): unknown {
   return Number(value.toFixed(3))
 }
 
+function normalizeScaledFontSize(value: unknown): unknown {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return value
+  return normalizeFontSizeToOption(value)
+}
+
 export function scaleElementConfig(
   config: AnyElementConfig,
   from: DesignSize,
@@ -80,6 +86,12 @@ export function scaleElementConfig(
 
   for (const key of Object.keys(next)) {
     next[key] = roundScaledNumber(next[key])
+  }
+  if ('fontSize' in next) {
+    next.fontSize = normalizeScaledFontSize(next.fontSize)
+  }
+  if ('iconSize' in next && 'fontSize' in next) {
+    next.iconSize = next.fontSize
   }
 
   return next as unknown as AnyElementConfig
@@ -125,7 +137,10 @@ export function normalizeConfigToStandardSize(
 function scaleObjectNumber(obj: any, key: string, ratio: number): boolean {
   const value = obj?.[key]
   if (typeof value !== 'number' || !Number.isFinite(value)) return false
-  obj.set?.(key, value * ratio)
+  const nextValue = key === 'fontSize'
+    ? normalizeScaledFontSize(value * ratio)
+    : value * ratio
+  obj.set?.(key, nextValue)
   return true
 }
 

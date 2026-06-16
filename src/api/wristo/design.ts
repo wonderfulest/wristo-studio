@@ -12,6 +12,7 @@ import type {
   DesignSubmitDTO,
 } from '@/types/api/design'
 import type { Image } from '@/types/image'
+import type { ProductPackagingBuildLogVo } from '@/types/api/product'
 
 /**
  * 规范化字符串：清理各种特殊空白字符
@@ -178,6 +179,10 @@ export const designApi = {
    */
   submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
     return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
+  },
+
+  getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {
+    return instance.get(`/mch/product-packaging-logs/${logId}/build-log`)
   }
 }
 

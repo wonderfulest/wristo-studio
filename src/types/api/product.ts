@@ -26,6 +26,7 @@ export interface ProductPackagingLogVo {
   id: number
   packagingStatus: string
   errorMessage: string
+  lastBuildLogPath?: string | null
   createdAt: number
   updatedAt: number
   version: number
@@ -42,6 +43,12 @@ export interface ProductPackagingLogVo {
   product: ProductBase
   /** all prg packaging logs for same app, including running and finished */
   prgProductPackagingLogs?: ProductPackagingLogVo[]
+}
+
+export interface ProductPackagingBuildLogVo {
+  id: number
+  path: string
+  content: string
 }
 
 export interface ProductReleaseVo {

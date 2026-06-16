@@ -24,6 +24,13 @@
         <Icon icon="material-symbols:search" />
         {{ t('common.search') }}
       </el-button>
+      <el-segmented
+        v-if="isAdminUser"
+        v-model="designScope"
+        :options="designScopeOptions"
+        class="scope-filter"
+        @change="handleDesignScopeChange"
+      />
       <div class="display-options">
         <el-switch
           v-model="showCreator"
@@ -188,11 +195,7 @@ const isMerchantUser = computed(() => {
   return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
 })
 
-// Whether the current user is an admin (has ROLE_ADMIN)
-const isAdminUser = computed(() => {
-  const roles = userStore.userInfo?.roles || []
-  return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
-})
+const isAdminUser = computed(() => userStore.isAdminUser)
 
 const canDeleteDesign = computed(() => {
   if (userStore.hasFullStudioAccess) return true
@@ -202,6 +205,11 @@ const canDeleteDesign = computed(() => {
 
 // 添加作者显示控制
 const showCreator = ref(false)  // 默认隐藏作者
+const designScope = ref<'mine' | 'all'>('mine')
+const designScopeOptions = computed(() => [
+  { label: t('project.scopeMine'), value: 'mine' },
+  { label: t('project.scopeAll'), value: 'all' }
+])
 
 // 处理搜索
 const handleSearch = () => {
@@ -212,6 +220,14 @@ const handleSearch = () => {
 // 处理排序变化
 const handleSortChange = () => {
   currentPage.value = 1
+  fetchDesigns()
+}
+
+const handleDesignScopeChange = () => {
+  currentPage.value = 1
+  if (designScope.value === 'all') {
+    showCreator.value = true
+  }
   fetchDesigns()
 }
 
@@ -271,6 +287,7 @@ const fetchDesigns = async () => {
       // status: selectedStatus.value,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
+      scope: isAdminUser.value ? designScope.value : 'mine',
       populate: 'user,product,payment,release,cover,category,bundle,package_log'
     }
 
@@ -286,7 +303,7 @@ const fetchDesigns = async () => {
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
-      if (currentPage.value === 1 && response.data.list.length === 0) {
+      if (designScope.value === 'mine' && currentPage.value === 1 && response.data.list.length === 0) {
         noDesignDialogVisible.value = true
       }
       
@@ -630,6 +647,17 @@ const handleGoLiveSuccess = () => {
   width: 180px;
 }
 
+.scope-filter {
+  min-height: 40px;
+  flex: 0 0 auto;
+}
+
+.search-bar :deep(.scope-filter .el-segmented__item) {
+  min-width: 72px;
+  padding: 0 12px;
+  font-weight: 650;
+}
+
 .display-options {
   display: flex;
   align-items: center;
@@ -665,7 +693,8 @@ const handleGoLiveSuccess = () => {
 
   .name-filter,
   .sort-field-filter,
-  .sort-order-filter {
+  .sort-order-filter,
+  .scope-filter {
     width: 100%;
   }
 

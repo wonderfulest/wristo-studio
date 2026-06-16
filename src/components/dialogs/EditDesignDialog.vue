@@ -60,7 +60,24 @@
           <div v-if="packageRows.length" class="package-list">
             <div v-for="row in packageRows" :key="row.key" class="package-row">
               <span>{{ row.label }}</span>
-              <strong>{{ row.value }}</strong>
+              <strong>
+                <span>{{ row.value }}</span>
+                <el-tooltip
+                  v-if="row.canViewBuildLog"
+                  :content="t('editDesign.viewBuildLog')"
+                  placement="top"
+                >
+                  <el-button
+                    class="package-log-button"
+                    text
+                    type="primary"
+                    size="small"
+                    @click="openBuildLog(row.logId)"
+                  >
+                    <el-icon><Link /></el-icon>
+                  </el-button>
+                </el-tooltip>
+              </strong>
             </div>
           </div>
           <div v-else class="package-empty">{{ t('pending.noPackage') }}</div>
@@ -162,13 +179,13 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, Payment } from '@/types/api/design'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
-import { Box, DocumentCopy, Picture } from '@element-plus/icons-vue'
+import { Box, DocumentCopy, Link, Picture } from '@element-plus/icons-vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { useUserStore } from '@/stores/user'
@@ -176,6 +193,7 @@ import { useI18n } from '@/i18n'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const route = useRoute()
+const router = useRouter()
 const baseStore = useBaseStore()
 const userStore = useUserStore()
 const { t } = useI18n()
@@ -289,7 +307,13 @@ const packageRows = computed(() => {
   const product = currentDesign.value?.product
   if (!product) return []
 
-  const rows: Array<{ key: string; label: string; value: string }> = []
+  const rows: Array<{
+    key: string
+    label: string
+    value: string
+    logId?: number
+    canViewBuildLog: boolean
+  }> = []
   const prgRank = product.prgPackagingLog?.rank
   const iqRank = product.packagingLog?.rank
 
@@ -298,7 +322,9 @@ const packageRows = computed(() => {
     label: 'PRG',
     value: prgRank !== null && prgRank !== undefined
       ? queueText(prgRank)
-      : releaseText(product.prgRelease?.updatedAt)
+      : releaseText(product.prgRelease?.updatedAt),
+    logId: product.prgPackagingLog?.id,
+    canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id && product.prgPackagingLog?.lastBuildLogPath)
   })
 
   if (isMerchantUser.value) {
@@ -307,12 +333,23 @@ const packageRows = computed(() => {
       label: 'IQ',
       value: iqRank !== null && iqRank !== undefined
         ? queueText(iqRank)
-        : releaseText(product.release?.updatedAt)
+        : releaseText(product.release?.updatedAt),
+      logId: product.packagingLog?.id,
+      canViewBuildLog: !!(product.packagingLog?.id && product.packagingLog?.lastBuildLogPath)
     })
   }
 
   return rows.filter((row) => row.value)
 })
+
+const openBuildLog = (logId?: number) => {
+  if (!logId) return
+  const target = router.resolve({
+    name: 'PackagingBuildLog',
+    params: { id: String(logId) },
+  })
+  window.open(target.href, '_blank', 'noopener,noreferrer')
+}
 
 // 加载设计数据
 const loadDesign = async (designUid: string) => {
@@ -583,6 +620,19 @@ defineExpose({
   font-weight: 600;
   min-width: 0;
   word-break: break-word;
+}
+
+.package-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.package-log-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex: 0 0 auto;
 }
 
 .package-title {

@@ -134,6 +134,7 @@ export interface DesignPageParams {
   userId?: number
   status?: string
   name?: string
+  scope?: 'mine' | 'all'
   device?: string
 } 
 

@@ -1,6 +1,6 @@
 import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
-import { normalizeFontSizeToOption } from '@/config/elements/options/typography'
+import { normalizeFontSizeFields } from '@/utils/fontSize'
 
 // 统一的元素处理器：负责元素的增删改查编解码
 export type ElementHandler = {
@@ -18,17 +18,6 @@ export type ElementHandler = {
 }
 
 const elementRegistry = new Map<ElementType, ElementHandler>()
-
-export const normalizeFontSizeFields = <T extends Record<string, unknown>>(config: T): T => {
-  const next: Record<string, unknown> = { ...config }
-  if ('fontSize' in next) {
-    next.fontSize = normalizeFontSizeToOption(next.fontSize)
-  }
-  if ('iconSize' in next && 'fontSize' in next) {
-    next.iconSize = next.fontSize
-  }
-  return next as T
-}
 
 // 注册元素处理器
 export const registerElement = (elementType: ElementType, handler: ElementHandler) => {

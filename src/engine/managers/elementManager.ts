@@ -12,6 +12,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
+import { getFontSizeByStep } from '@/utils/fontSize'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -188,7 +189,8 @@ export function changeSelectionFontSize(delta: number): void {
     if (!obj) return
     const current = Number((obj as any).fontSize ?? 0)
     if (!Number.isFinite(current)) return
-    const next = Math.max(1, current + delta)
+    const next = getFontSizeByStep(current, delta)
+    if (next === current) return
     ;(obj as any).set?.('fontSize', next)
     obj.setCoords?.()
     if ((obj as any).id != null) {

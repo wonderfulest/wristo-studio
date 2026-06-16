@@ -129,6 +129,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Pricing.vue'),
         meta: { requiresAuth: true, hideForMerchant: true },
       },
+      {
+        path: 'packaging-logs/:id/build-log',
+        name: 'PackagingBuildLog',
+        component: () => import('@/views/PackagingBuildLog.vue'),
+        meta: { requiresAuth: true, requiresMerchant: true },
+      },
     ],
   },
 ]
@@ -151,6 +157,10 @@ router.beforeEach(async (to) => {
   }
 
   if ((to.meta as any).hideForMerchant && userStore.isMerchantUser) {
+    return '/designs/new-projects'
+  }
+
+  if ((to.meta as any).requiresMerchant && !userStore.isMerchantUser) {
     return '/designs/new-projects'
   }
 })

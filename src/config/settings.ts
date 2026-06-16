@@ -1,6 +1,7 @@
 // Barrel exports for options; migrated from inline definitions to modular files
 export type { OptionFormat, DataTypeOption, HandOption, HorizontalAlign, LayoutOption } from '@/types/settings'
-export { fontSizes, getFontSizeByStep } from './elements/options/typography'
+export { fontSizes } from './elements/options/typography'
+export { getFontSizeByStep } from '@/utils/fontSize'
 export { originXOptions } from './elements/options/align'
 export { TimeFormatConstants, TimeFormatOptions } from './elements/options/timeFormats'
 export { DateFormatConstants, DateFormatOptions } from './elements/options/dateFormats'

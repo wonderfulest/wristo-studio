@@ -37,6 +37,10 @@ export const useUserStore = defineStore('user', {
     isMerchantUser: (state) => {
       const roles = state.userInfo?.roles || []
       return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')
+    },
+    isAdminUser: (state) => {
+      const roles = state.userInfo?.roles || []
+      return roles.some((role) => role.roleCode === 'ROLE_ADMIN')
     }
   },
   actions: {
