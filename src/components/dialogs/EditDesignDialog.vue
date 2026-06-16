@@ -34,9 +34,14 @@
         </div>
 
         <div class="info-panel">
+          <div class="panel-title">{{ t('property.basicInformation') }}</div>
           <div class="info-row">
-            <span>{{ t('card.design') }}</span>
-            <strong>{{ currentDesign?.designUid || '-' }}</strong>
+            <span>{{ t('createDesign.name') }}</span>
+            <strong>{{ form.name || '-' }}</strong>
+          </div>
+          <div class="info-row">
+            <span>{{ t('common.status') }}</span>
+            <strong><span :class="['status-chip', statusBadgeClass]">{{ statusLabel }}</span></strong>
           </div>
           <div class="info-row">
             <span>{{ t('project.device') }}</span>
@@ -45,10 +50,6 @@
           <div class="info-row">
             <span>{{ t('card.lastUpdated') }}</span>
             <strong>{{ lastUpdatedText }}</strong>
-          </div>
-          <div class="info-row">
-            <span>{{ t('card.lastPackage') }}</span>
-            <strong>{{ lastPackageText }}</strong>
           </div>
         </div>
 
@@ -61,9 +62,19 @@
             <div v-for="row in packageRows" :key="row.key" class="package-card">
               <div class="package-card-main">
                 <span class="package-type-badge">{{ row.label }}</span>
-                <div class="package-card-copy">
-                  <strong>{{ row.value }}</strong>
-                  <span>{{ row.meta }}</span>
+                <div class="package-detail-list">
+                  <div class="package-detail-row">
+                    <span>{{ t('editDesign.packageDate') }}</span>
+                    <strong>{{ row.packageDate }}</strong>
+                  </div>
+                  <div class="package-detail-row">
+                    <span>{{ t('editDesign.packageVersion') }}</span>
+                    <strong>{{ row.version }}</strong>
+                  </div>
+                  <div class="package-detail-row">
+                    <span>{{ t('editDesign.packageSize') }}</span>
+                    <strong>{{ row.size }}</strong>
+                  </div>
                 </div>
               </div>
               <div class="package-card-actions">
@@ -102,7 +113,7 @@
           <article v-for="link in scanLinks" :key="link.key" class="scan-link-card">
             <div class="scan-link-copy">
               <span>{{ link.label }}</span>
-              <strong>{{ link.title }}</strong>
+              <strong v-if="link.title">{{ link.title }}</strong>
               <a :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.url }}</a>
             </div>
             <img class="scan-link-qr" :src="link.qrUrl" :alt="link.qrAlt" loading="lazy" />
@@ -110,21 +121,7 @@
         </div>
       </div>
 
-      <!-- Header Section -->
-      <div class="form-section">
-        <div class="section-title">{{ t('property.basicInformation') }}</div>
-        <div class="form-grid">
-          <div class="form-field">
-            <label class="field-label">{{ t('createDesign.name') }}</label>
-            <div class="readonly-field readonly-text-field">{{ form.name || '-' }}</div>
-          </div>
-          <div class="form-field">
-            <label class="field-label">{{ t('common.status') }}</label>
-            <div class="readonly-field status-readonly-field">
-              <span :class="['status-chip', statusBadgeClass]">{{ statusLabel }}</span>
-            </div>
-          </div>
-        </div>
+      <div v-if="form.description" class="form-section">
         <div class="form-field full-width">
           <label class="field-label">{{ t('submitDesign.description') }}</label>
           <div class="readonly-field readonly-description">
@@ -294,11 +291,6 @@ const deviceSummary = computed(() => {
 
 const lastUpdatedText = computed(() => formatDateTime(currentDesign.value?.updatedAt))
 
-const lastPackageText = computed(() => {
-  const product = currentDesign.value?.product
-  return formatDateTime(product?.prgRelease?.updatedAt || product?.release?.updatedAt)
-})
-
 const statusLabel = computed(() => {
   const status = form.designStatus
   if (status === 'submitted') return t('editDesign.statusSubmitted')
@@ -350,8 +342,9 @@ const packageRows = computed(() => {
   const rows: Array<{
     key: string
     label: string
-    value: string
-    meta: string
+    packageDate: string
+    version: string
+    size: string
     downloadUrl?: string
     fileType: PackageFileType
     logId?: number
@@ -365,13 +358,11 @@ const packageRows = computed(() => {
     rows.push({
       key: 'prg-release',
       label: 'PRG',
-      value: prgRank !== null && prgRank !== undefined
+      packageDate: prgRank !== null && prgRank !== undefined
         ? queueText(prgRank)
         : releaseText(product.prgRelease?.updatedAt),
-      meta: [
-        product.prgRelease?.releaseVersion ? `v${product.prgRelease.releaseVersion}` : '',
-        formatPackageSize(product.prgRelease?.packageSize),
-      ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
+      version: product.prgRelease?.releaseVersion ? `v${product.prgRelease.releaseVersion}` : '-',
+      size: formatPackageSize(product.prgRelease?.packageSize) || '-',
       downloadUrl: prgUrl || undefined,
       fileType: 'prg',
       logId: product.prgPackagingLog?.id,
@@ -384,13 +375,11 @@ const packageRows = computed(() => {
     rows.push({
       key: 'iq-release',
       label: 'IQ',
-      value: iqRank !== null && iqRank !== undefined
+      packageDate: iqRank !== null && iqRank !== undefined
         ? queueText(iqRank)
         : releaseText(product.release?.updatedAt),
-      meta: [
-        product.release?.releaseVersion ? `v${product.release.releaseVersion}` : '',
-        formatPackageSize(product.release?.packageSize),
-      ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
+      version: product.release?.releaseVersion ? `v${product.release.releaseVersion}` : '-',
+      size: formatPackageSize(product.release?.packageSize) || '-',
       downloadUrl: iqUrl || undefined,
       fileType: 'iq',
       logId: product.packagingLog?.id,
@@ -398,7 +387,7 @@ const packageRows = computed(() => {
     })
   }
 
-  return rows.filter((row) => row.value)
+  return rows.filter((row) => row.packageDate)
 })
 
 const wristoAppUrl = computed(() => {
@@ -419,7 +408,7 @@ const scanLinks = computed(() => {
     {
       key: 'garmin',
       label: t('editDesign.garminStoreLink'),
-      title: product?.garminAppUuid || product?.name || form.name || 'Garmin Connect IQ',
+      title: '',
       url: product?.garminStoreUrl || '',
       qrAlt: t('editDesign.garminQrAlt'),
     },
@@ -623,7 +612,7 @@ defineExpose({
 
 .overview-section {
   display: grid;
-  grid-template-columns: minmax(220px, 0.75fr) minmax(240px, 1fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(220px, 0.78fr) minmax(260px, 1fr) minmax(320px, 1.18fr);
   gap: 12px;
   margin-bottom: 18px;
   align-items: stretch;
@@ -683,8 +672,23 @@ defineExpose({
   padding: 14px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 10px;
+}
+
+.info-panel {
+  justify-content: center;
+}
+
+.package-panel {
+  justify-content: flex-start;
+}
+
+.panel-title {
+  color: var(--studio-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 2px;
 }
 
 .info-row {
@@ -729,16 +733,18 @@ defineExpose({
 .package-card {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px;
   border: 1px solid var(--studio-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--studio-surface-soft);
 }
 
 .package-card-main {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -758,30 +764,39 @@ defineExpose({
   letter-spacing: 0.04em;
 }
 
-.package-card-copy {
+.package-detail-list {
+  flex: 1 1 auto;
   min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
-.package-card-copy strong {
-  display: block;
+.package-detail-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.package-detail-row span {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.package-detail-row strong {
+  min-width: 0;
   color: var(--studio-text);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
-}
-
-.package-card-copy span {
-  display: block;
-  margin-top: 3px;
-  color: var(--studio-text-muted);
-  font-size: 12px;
-  line-height: 1.4;
   word-break: break-word;
 }
 
 .package-card-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 0 150px;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
@@ -790,6 +805,7 @@ defineExpose({
 
 .package-action-button {
   min-height: 32px;
+  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -878,7 +894,7 @@ defineExpose({
 
 .scan-link-copy a {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--studio-primary);
   font-size: 12px;
   font-weight: 600;
