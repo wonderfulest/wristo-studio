@@ -288,7 +288,7 @@ const fetchDesigns = async () => {
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
       scope: isAdminUser.value ? designScope.value : 'mine',
-      populate: 'user,product,payment,release,cover,category,bundle,package_log'
+      populate: 'user,product,release,cover,package_log'
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId

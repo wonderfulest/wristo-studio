@@ -126,7 +126,16 @@
         :bundles="bundles"
         :loadingBundles="loadingBundles"
       />
-      <el-form-item :label="t('goLive.trialDurationHours')">
+      <el-form-item :label="t('submitDesign.paymentMethod')">
+        <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
+          <el-radio label="free">{{ t('payment.free') }}</el-radio>
+          <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
+        </el-radio-group>
+        <span v-if="!canPublishPaid" class="merchant-required-tip">
+          {{ t('submitDesign.paidMerchantOnly') }}
+        </span>
+      </el-form-item>
+      <el-form-item v-if="form.paymentMethod !== 'free'" :label="t('goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
           :disabled="true"
@@ -139,7 +148,7 @@
           {{ t('goLive.trialDurationTip') }}
         </div>
       </el-form-item>
-      <el-form-item :label="t('goLive.priceUsd')">
+      <el-form-item v-if="form.paymentMethod !== 'free'" :label="t('goLive.priceUsd')">
         <el-input-number 
           v-model="form.price" 
           :disabled="true"
@@ -170,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import { getAllSeries } from '@/api/wristo/categories'
 import type { Category } from '@/types/api/category'
 import type { Bundle } from '@/types/api/bundle'
@@ -190,7 +199,6 @@ import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
-import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { useI18n } from '@/i18n'
 
 const dialogVisible = ref(false)
@@ -230,6 +238,7 @@ const form = reactive({
   garminStoreUrl: '',
   categoryIds: [] as number[],
   bundleIds: [] as number[],
+  paymentMethod: 'free',
   trialLasts: 0.25,
   price: 2.39,
   // Hero / raw image ids from ImageUpload (for future use if needed)
@@ -241,8 +250,24 @@ const form = reactive({
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
-const membershipGate = useStudioMembershipGate()
 const emit = defineEmits(['success', 'cancel'])
+const canPublishPaid = computed(() => userStore.isMerchantUser)
+
+const handlePaymentMethodChange = (value: string) => {
+  if (value !== 'free' && !canPublishPaid.value) {
+    form.paymentMethod = 'free'
+    form.price = 0
+    form.trialLasts = 0
+    return
+  }
+  if (value === 'free') {
+    form.price = 0
+    form.trialLasts = 0
+    return
+  }
+  form.price = form.price || 2.39
+  form.trialLasts = form.trialLasts || 0.25
+}
 
 // 加载设计数据
 const loadDesign = (design: Design) => {
@@ -263,8 +288,11 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = design.product.rawImageUrl || ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
-    form.trialLasts = design.product.trialLasts ?? 0.25
-    form.price = (design.product.payment?.price ?? 2.39)
+    form.paymentMethod = canPublishPaid.value && design.product.payment?.paymentMethod !== 'free'
+      ? (design.product.payment?.paymentMethod || 'wpay')
+      : 'free'
+    form.trialLasts = form.paymentMethod === 'free' ? 0 : (design.product.trialLasts ?? 0.25)
+    form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.39)
     // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
     const backendProductImages = (design.product as any).productImages as
       | {
@@ -298,6 +326,7 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = ''
     form.bannerImageUrl = ''
     form.garminStoreUrl = ''
+    form.paymentMethod = 'free'
     form.trialLasts = 0.25
     form.price = 0.00
   }
@@ -305,7 +334,6 @@ const loadDesign = (design: Design) => {
 
 // 提交表单
 const handleConfirm = async () => {
-  if (!membershipGate.requirePublish()) return
   if (!currentDesign.value) return
 
   const valid = await formRef.value?.validate?.().catch(() => false)
@@ -326,6 +354,10 @@ const handleConfirm = async () => {
     messageStore.error(t('goLive.productAppIdRequired'))
     return
   }
+  if (form.paymentMethod !== 'free' && !canPublishPaid.value) {
+    messageStore.warning(t('submitDesign.paidMerchantOnly'))
+    return
+  }
   try {
     loading.value = true
     const data: any = {
@@ -336,9 +368,9 @@ const handleConfirm = async () => {
       appId: currentDesign.value.product.appId,
       garminStoreUrl: form.garminStoreUrl.trim(),
       payment: {
-        paymentMethod: 'wpay',
-        price: form.price,
-        trialLasts: form.trialLasts
+        paymentMethod: form.paymentMethod,
+        price: form.paymentMethod === 'free' ? 0 : form.price,
+        trialLasts: form.paymentMethod === 'free' ? 0 : form.trialLasts
       },
       categoryIds: form.categoryIds,
       bundleIds: form.bundleIds
@@ -661,6 +693,14 @@ defineExpose({
 .upload-actions {
   display: flex;
   gap: 8px;
+}
+
+.merchant-required-tip {
+  display: inline-flex;
+  margin-left: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  vertical-align: middle;
 }
 
 /* Keep the two image uploaders side-by-side without wrapping */

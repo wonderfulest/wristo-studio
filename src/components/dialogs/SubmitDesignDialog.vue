@@ -20,8 +20,11 @@
       <el-form-item :label="t('submitDesign.paymentMethod')" prop="paymentMethod">
         <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
           <el-radio label="free">{{ t('payment.free') }}</el-radio>
-          <el-radio label="wpay">WPay</el-radio>
+          <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
         </el-radio-group>
+        <span v-if="!canPublishPaid" class="merchant-required-tip">
+          {{ t('submitDesign.paidMerchantOnly') }}
+        </span>
       </el-form-item>
       
       <el-form-item 
@@ -105,7 +108,6 @@ import { productsApi } from '@/api/wristo/products'
 import type { Bundle } from '@/types/api/bundle'
 import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
-import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 
@@ -114,9 +116,9 @@ const loading = ref(false)
 const formRef = ref()
 
 const messageStore = useMessageStore()
-const membershipGate = useStudioMembershipGate()
 const userStore = useUserStore()
 const { t } = useI18n()
+const canPublishPaid = computed(() => userStore.isMerchantUser)
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -127,7 +129,7 @@ const form = reactive({
   designUid: '',
   name: '',
   description: '',
-  paymentMethod: 'wpay',
+  paymentMethod: 'free',
   kpayId: '',
   price: 1.99,
   trialLasts: 0.25, // default 0.25 hours
@@ -224,6 +226,12 @@ const loadBundles = async () => {
 
 // Handle payment method change
 const handlePaymentMethodChange = (value: string) => {
+  if (value !== 'free' && !canPublishPaid.value) {
+    form.paymentMethod = 'free'
+    form.price = 0
+    form.trialLasts = 0
+    return
+  }
   if (value === 'free') {
     form.price = 0
     form.trialLasts = 0
@@ -253,7 +261,7 @@ const show = async (design: Design) => {
         designUid: designDetail.designUid,
         name: designDetail.name,
         description: designDetail.description || '',
-        paymentMethod: 'none',
+        paymentMethod: 'free',
         kpayId: '',
         price: 1.99,
         trialLasts: 0.25,
@@ -274,8 +282,8 @@ const show = async (design: Design) => {
       // If product contains payment info, prefill
       if (product?.payment) {
         const payment = product.payment
-        form.paymentMethod = payment.paymentMethod
-        if (payment.paymentMethod === 'free') {
+        form.paymentMethod = payment.paymentMethod === 'free' || !canPublishPaid.value ? 'free' : payment.paymentMethod
+        if (form.paymentMethod === 'free') {
           // Free mode: price and trial last should be 0
           form.price = 0
           form.trialLasts = 0
@@ -301,11 +309,14 @@ const show = async (design: Design) => {
 
 // Confirm submit
 const handleConfirm = async () => {
-  if (!membershipGate.requirePublish()) return
   if (!formRef.value) return
   
   try {
     await formRef.value.validate()
+    if (form.paymentMethod !== 'free' && !canPublishPaid.value) {
+      messageStore.warning(t('submitDesign.paidMerchantOnly'))
+      return
+    }
     
     loading.value = true
     
@@ -367,6 +378,14 @@ defineExpose({
   color: var(--el-text-color-secondary);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.merchant-required-tip {
+  display: inline-flex;
+  margin-left: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  vertical-align: middle;
 }
 
 .dialog-footer {

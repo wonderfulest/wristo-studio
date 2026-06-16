@@ -100,47 +100,26 @@
             </span>
           </el-tooltip>
         </div>
-        <div
-          class="package-info"
-          v-if="design.product?.packagingLog?.rank !== null || design.product?.prgPackagingLog?.rank !== null"
-        >
-          <!-- 只有商户用户可以看到，IQ build in queue -->
+        <div class="package-info" v-if="packageRows.length">
           <div
-            v-if="isMerchantUser && (design.product?.packagingLog && design.product.packagingLog.rank !== null)"
+            v-for="row in packageRows"
+            :key="row.key"
             class="package-info-item"
+            :class="`package-${row.tone}`"
           >
-            <strong>{{ t('card.iqBuildQueue') }}:</strong>
-            <span
-              class="package-rank"
-              v-if="design.product.packagingLog!.rank! > 0"
-            >
-              {{ t('card.position', { rank: design.product.packagingLog!.rank! }) }}
+            <strong>{{ row.label }}:</strong>
+            <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">
+              {{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span>
             </span>
-            <span
-              class="package-rank packaging-progress"
-              v-else
+            <el-tooltip
+              v-if="row.canViewBuildLog"
+              :content="t('editDesign.viewBuildLog')"
+              placement="top"
             >
-              {{ t('card.packaging') }}<span class="ellipsis">...</span>
-            </span>
-          </div>
-          <!-- 所有用户都可以看到，PRG build in queue -->
-          <div
-            v-if="design.product?.prgPackagingLog && design.product.prgPackagingLog.rank !== null"
-            class="package-info-item"
-          >
-            <strong>{{ t('card.prgBuildQueue') }}:</strong>
-            <span
-              class="package-rank"
-              v-if="design.product.prgPackagingLog!.rank! > 0"
-            >
-              {{ t('card.position', { rank: design.product.prgPackagingLog!.rank! }) }}
-            </span>
-            <span
-              class="package-rank packaging-progress"
-              v-else
-            >
-              {{ t('card.packaging') }}<span class="ellipsis">...</span>
-            </span>
+              <button class="build-log-btn" type="button" @click.stop="openBuildLog(row.logId)">
+                <Icon icon="material-symbols:article-outline-rounded" />
+              </button>
+            </el-tooltip>
           </div>
         </div>
       </div>
@@ -201,8 +180,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import type { Design } from '@/types/api/design'
+import type { ProductPackagingLogVo } from '@/types/api/product'
 import { Box, Delete, DocumentCopy, Download, Edit, Upload, View } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
@@ -247,6 +228,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
 
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
@@ -305,18 +287,10 @@ const showBuildPrgButton = computed(() => {
 
 const showRunPrgButton = computed(() => {
   const product = design.value.product as any
-  if (!product) return false
-  const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
-  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
-  if (!releaseUpdatedAtRaw || !designUpdatedAtRaw) return false
-
-  const releaseTs = +new Date(releaseUpdatedAtRaw)
-  const designTs = +new Date(designUpdatedAtRaw)
-  return !!product.prgRelease && releaseTs > designTs
+  return !!product?.prgRelease?.prgUrl
 })
 
 const showBuildIqButton = computed(() => {
-  if (!isMerchantUser.value) return false
   const product = design.value.product as any
   if (!product) return false
 
@@ -342,12 +316,12 @@ const showBuildIqButton = computed(() => {
 })
 
 const showDownloadIqButton = computed(() => {
-  return isMerchantUser.value && hasDownloadablePackage.value
+  return hasDownloadablePackage.value
 })
 
 const showPublishButton = computed(() => {
   const product = design.value.product
-  return isMerchantUser.value && !!product?.release
+  return !!product?.release
 })
 
 const lastPackageTimeText = computed(() => {
@@ -361,6 +335,87 @@ const lastUpdatedText = computed(() => {
   if (!updatedAt) return t('common.unknown')
   return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
 })
+
+const packageStatusText = (log?: ProductPackagingLogVo) => {
+  if (!log) return ''
+  const rank = log.rank
+  if (rank !== null && rank !== undefined) {
+    return rank > 0 ? t('card.position', { rank }) : t('card.packaging')
+  }
+  const status = String(log.packagingStatus || '').toLowerCase()
+  if (status === 'completed') return t('card.packageCompleted')
+  if (status === 'failed') return t('card.packageFailed')
+  if (status === 'pending' || status === 'init') return t('card.packagePending')
+  return log.packagingStatus || t('common.unknown')
+}
+
+const packageTone = (log?: ProductPackagingLogVo, hasRelease = false) => {
+  const status = String(log?.packagingStatus || '').toLowerCase()
+  if (status === 'failed') return 'failed'
+  if (log?.rank !== null && log?.rank !== undefined) return 'pending'
+  if (status === 'completed' || hasRelease) return 'ready'
+  return 'neutral'
+}
+
+const packageRows = computed(() => {
+  const product = design.value.product
+  if (!product) return []
+
+  const rows: Array<{
+    key: string
+    label: string
+    value: string
+    tone: string
+    isPackaging: boolean
+    logId?: number
+    canViewBuildLog: boolean
+  }> = []
+
+  const canOpenLog = (log?: ProductPackagingLogVo) => {
+    return !!(isMerchantUser.value && currentUserId.value === design.value.user?.id && log?.id && log?.lastBuildLogPath)
+  }
+
+  const prgLog = product.prgPackagingLog
+  const prgReleaseUpdatedAt = product.prgRelease?.updatedAt
+  if (prgLog || product.prgRelease?.prgUrl) {
+    const value = packageStatusText(prgLog) || (prgReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(prgReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
+    rows.push({
+      key: 'prg',
+      label: 'PRG',
+      value,
+      tone: packageTone(prgLog, !!product.prgRelease?.prgUrl),
+      isPackaging: prgLog?.rank === 0,
+      logId: prgLog?.id,
+      canViewBuildLog: canOpenLog(prgLog),
+    })
+  }
+
+  const iqLog = product.packagingLog
+  const iqReleaseUpdatedAt = product.release?.updatedAt
+  if (iqLog || product.release?.packageUrl) {
+    const value = packageStatusText(iqLog) || (iqReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(iqReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
+    rows.push({
+      key: 'iq',
+      label: 'IQ',
+      value,
+      tone: packageTone(iqLog, !!product.release?.packageUrl),
+      isPackaging: iqLog?.rank === 0,
+      logId: iqLog?.id,
+      canViewBuildLog: canOpenLog(iqLog),
+    })
+  }
+
+  return rows
+})
+
+const openBuildLog = (logId?: number) => {
+  if (!logId) return
+  const target = router.resolve({
+    name: 'PackagingBuildLog',
+    params: { id: String(logId) },
+  })
+  window.open(target.href, '_blank', 'noopener,noreferrer')
+}
 </script>
 
 <style scoped>
@@ -637,11 +692,56 @@ const lastUpdatedText = computed(() => {
 }
 
 .package-info-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
   font-size: 11px;
+  line-height: 1.35;
+}
+
+.package-info-item strong {
+  flex: 0 0 auto;
 }
 
 .package-rank {
+  min-width: 0;
+  color: var(--studio-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.package-ready .package-rank {
+  color: var(--el-color-success);
+}
+
+.package-pending .package-rank {
+  color: var(--el-color-warning);
+}
+
+.package-failed .package-rank {
   color: var(--el-color-danger);
+}
+
+.build-log-btn {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 13px;
+  color: var(--studio-primary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.build-log-btn:hover {
+  background: var(--studio-surface-soft);
 }
 
 .packaging-progress .ellipsis {
