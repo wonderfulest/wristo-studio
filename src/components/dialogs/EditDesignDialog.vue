@@ -57,35 +57,34 @@
             <el-icon><Box /></el-icon>
             <span>{{ t('editDesign.packageInfo') }}</span>
           </div>
-          <div v-if="packageRows.length" class="package-list">
-            <div v-for="row in packageRows" :key="row.key" class="package-row">
-              <span>{{ row.label }}</span>
-              <div class="package-row-content">
-                <strong>{{ row.value }}</strong>
+          <div v-if="packageRows.length" class="package-card-list">
+            <div v-for="row in packageRows" :key="row.key" class="package-card">
+              <div class="package-card-main">
+                <span class="package-type-badge">{{ row.label }}</span>
+                <div class="package-card-copy">
+                  <strong>{{ row.value }}</strong>
+                  <span>{{ row.meta }}</span>
+                </div>
+              </div>
+              <div class="package-card-actions">
                 <a
                   v-if="row.downloadUrl"
-                  class="package-download-link"
+                  class="package-action-button"
                   :href="row.downloadUrl"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {{ t('editDesign.downloadPackage') }}
                 </a>
-                <el-tooltip
+                <button
                   v-if="row.canViewBuildLog"
-                  :content="t('editDesign.viewBuildLog')"
-                  placement="top"
+                  class="package-action-button secondary"
+                  type="button"
+                  @click="openBuildLog(row.logId)"
                 >
-                  <el-button
-                    class="package-log-button"
-                    text
-                    type="primary"
-                    size="small"
-                    @click="openBuildLog(row.logId)"
-                  >
-                    <el-icon><Link /></el-icon>
-                  </el-button>
-                </el-tooltip>
+                  <el-icon><Link /></el-icon>
+                  {{ t('editDesign.viewBuildLog') }}
+                </button>
               </div>
             </div>
           </div>
@@ -93,28 +92,22 @@
         </div>
       </div>
 
-      <div class="log-section form-section">
+      <div v-if="scanLinks.length" class="form-section link-section">
         <div class="section-header">
-          <div class="section-title">{{ t('packagingLog.title') }}</div>
-          <el-button
-            v-if="latestBuildLogId"
-            size="small"
-            class="apple-button secondary"
-            @click="openBuildLog(latestBuildLogId)"
-          >
-            {{ t('editDesign.viewBuildLog') }}
-          </el-button>
-        </div>
-        <div class="build-log-shell">
-          <div v-if="buildLogLoading" class="build-log-state">
-            <el-skeleton :rows="6" animated />
+          <div>
+            <div class="section-title">{{ t('editDesign.mobileLinks') }}</div>
+            <p class="section-description">{{ t('editDesign.mobileLinksTip') }}</p>
           </div>
-          <el-empty
-            v-else-if="buildLogError"
-            :description="buildLogError"
-            :image-size="84"
-          />
-          <pre v-else class="build-log-content">{{ buildLogContent || t('packagingLog.empty') }}</pre>
+        </div>
+        <div class="scan-link-grid">
+          <article v-for="link in scanLinks" :key="link.key" class="scan-link-card">
+            <div class="scan-link-copy">
+              <span>{{ link.label }}</span>
+              <strong>{{ link.title }}</strong>
+              <a :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.url }}</a>
+            </div>
+            <img class="scan-link-qr" :src="link.qrUrl" :alt="link.qrAlt" loading="lazy" />
+          </article>
         </div>
       </div>
 
@@ -213,7 +206,6 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, Payment } from '@/types/api/design'
-import type { ProductPackagingLogVo } from '@/types/api/product'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
@@ -256,14 +248,24 @@ const messageStore = useMessageStore()
 const emit = defineEmits(['cancel'])
 
 const isMerchantUser = computed(() => userStore.isMerchantUser)
-const buildLogLoading = ref(false)
-const buildLogError = ref('')
-const buildLogContent = ref('')
+const WRISTO_STORE_BASE_URL = (import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/+$/, '')
 
 const formatDateTime = (value?: string | number | null) => {
   if (!value) return t('common.unknown')
   const date = dayjs(value)
   return date.isValid() ? date.format('YYYY-MM-DD HH:mm') : t('common.unknown')
+}
+
+const formatPackageSize = (value?: number | null) => {
+  const size = Number(value || 0)
+  if (!Number.isFinite(size) || size <= 0) return ''
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
+  if (size >= 1024) return `${Math.round(size / 1024)} KB`
+  return `${size} B`
+}
+
+const qrImageUrl = (url: string) => {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=132x132&margin=8&data=${encodeURIComponent(url)}`
 }
 
 const designPreviewUrl = computed(() => {
@@ -349,6 +351,7 @@ const packageRows = computed(() => {
     key: string
     label: string
     value: string
+    meta: string
     downloadUrl?: string
     logId?: number
     canViewBuildLog: boolean
@@ -364,6 +367,10 @@ const packageRows = computed(() => {
       value: prgRank !== null && prgRank !== undefined
         ? queueText(prgRank)
         : releaseText(product.prgRelease?.updatedAt),
+      meta: [
+        product.prgRelease?.releaseVersion ? `v${product.prgRelease.releaseVersion}` : '',
+        formatPackageSize(product.prgRelease?.packageSize),
+      ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
       downloadUrl: prgUrl || undefined,
       logId: product.prgPackagingLog?.id,
       canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id)
@@ -378,6 +385,10 @@ const packageRows = computed(() => {
       value: iqRank !== null && iqRank !== undefined
         ? queueText(iqRank)
         : releaseText(product.release?.updatedAt),
+      meta: [
+        product.release?.releaseVersion ? `v${product.release.releaseVersion}` : '',
+        formatPackageSize(product.release?.packageSize),
+      ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
       downloadUrl: iqUrl || undefined,
       logId: product.packagingLog?.id,
       canViewBuildLog: !!(product.packagingLog?.id)
@@ -387,40 +398,33 @@ const packageRows = computed(() => {
   return rows.filter((row) => row.value)
 })
 
-const latestBuildLog = computed<ProductPackagingLogVo | undefined>(() => {
+const wristoAppUrl = computed(() => {
   const product = currentDesign.value?.product
-  const candidates = [product?.packagingLog, product?.prgPackagingLog].filter(Boolean) as ProductPackagingLogVo[]
-  return candidates
-    .filter((log) => log.id)
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]
+  return product?.appId ? `${WRISTO_STORE_BASE_URL}/product/${product.appId}` : ''
 })
 
-const latestBuildLogId = computed(() => latestBuildLog.value?.id)
-
-const loadBuildLog = async () => {
-  const logId = latestBuildLogId.value
-  if (!logId) {
-    buildLogContent.value = ''
-    buildLogError.value = ''
-    return
-  }
-
-  buildLogLoading.value = true
-  buildLogError.value = ''
-  buildLogContent.value = ''
-  try {
-    const response = await designApi.getPackagingBuildLog(logId)
-    if (response.code === 0 && response.data) {
-      buildLogContent.value = response.data.content || ''
-    } else {
-      buildLogError.value = response.msg || t('packagingLog.loadFailed')
-    }
-  } catch (error: any) {
-    buildLogError.value = error?.msg || error?.message || t('packagingLog.loadFailed')
-  } finally {
-    buildLogLoading.value = false
-  }
-}
+const scanLinks = computed(() => {
+  const product = currentDesign.value?.product
+  const links = [
+    {
+      key: 'wristo',
+      label: t('editDesign.wristoAppLink'),
+      title: product?.name || form.name || 'Wristo',
+      url: wristoAppUrl.value,
+      qrAlt: t('editDesign.wristoQrAlt'),
+    },
+    {
+      key: 'garmin',
+      label: t('editDesign.garminStoreLink'),
+      title: product?.garminAppUuid || product?.name || form.name || 'Garmin Connect IQ',
+      url: product?.garminStoreUrl || '',
+      qrAlt: t('editDesign.garminQrAlt'),
+    },
+  ]
+  return links
+    .filter((link) => link.url)
+    .map((link) => ({ ...link, qrUrl: qrImageUrl(link.url) }))
+})
 
 const openBuildLog = (logId?: number) => {
   if (!logId) return
@@ -473,7 +477,6 @@ const loadDesign = async (designUid: string) => {
           }
         })
       }
-      await loadBuildLog()
     } else {
       ElMessage.error(response.msg || t('editDesign.loadFailed'))
       handleCancel()
@@ -489,9 +492,6 @@ const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
   currentDesign.value = null
-  buildLogLoading.value = false
-  buildLogError.value = ''
-  buildLogContent.value = ''
 }
 
 // 复制配置到剪贴板
@@ -680,8 +680,7 @@ defineExpose({
   gap: 10px;
 }
 
-.info-row,
-.package-row {
+.info-row {
   display: grid;
   grid-template-columns: minmax(96px, auto) 1fr;
   gap: 12px;
@@ -689,34 +688,19 @@ defineExpose({
   min-height: 24px;
 }
 
-.info-row span,
-.package-row span {
+.info-row span {
   color: var(--studio-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
-.info-row strong,
-.package-row strong {
+.info-row strong {
   color: var(--studio-text);
   font-size: 13px;
   line-height: 1.5;
   font-weight: 600;
   min-width: 0;
   word-break: break-word;
-}
-
-.package-row strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.package-log-button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  flex: 0 0 auto;
 }
 
 .package-title {
@@ -729,16 +713,179 @@ defineExpose({
   margin-bottom: 2px;
 }
 
-.package-list {
+.package-card-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.package-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+  background: var(--studio-surface-soft);
+}
+
+.package-card-main {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.package-type-badge {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  border: 1px solid var(--studio-primary-border);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.package-card-copy {
+  min-width: 0;
+}
+
+.package-card-copy strong {
+  display: block;
+  color: var(--studio-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.package-card-copy span {
+  display: block;
+  margin-top: 3px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.package-card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.package-action-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--studio-primary);
+  border-radius: 8px;
+  color: var(--color-white);
+  background: var(--studio-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.package-action-button:hover {
+  color: var(--color-white);
+  background: var(--studio-primary-hover);
+  border-color: var(--studio-primary-hover);
+}
+
+.package-action-button.secondary {
+  color: var(--studio-text);
+  background: var(--studio-surface-raised);
+  border-color: var(--studio-border);
 }
 
 .package-empty {
   color: var(--studio-text-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.link-section {
+  background:
+    radial-gradient(circle at top left, var(--studio-primary-soft), transparent 34%),
+    var(--studio-surface-raised);
+}
+
+.section-description {
+  margin: -6px 0 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.scan-link-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scan-link-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--studio-border);
+  border-radius: 12px;
+  background: var(--studio-surface-raised);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.scan-link-copy {
+  min-width: 0;
+}
+
+.scan-link-copy span {
+  display: block;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.scan-link-copy strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--studio-text);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.scan-link-copy a {
+  display: block;
+  margin-top: 8px;
+  color: var(--studio-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.scan-link-qr {
+  width: 92px;
+  height: 92px;
+  padding: 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+  background: var(--color-white);
 }
 
 /* Form Sections */
@@ -1137,10 +1284,31 @@ defineExpose({
     grid-row: auto;
   }
 
-  .info-row,
-  .package-row {
+  .info-row {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+
+  .package-card,
+  .scan-link-card {
+    grid-template-columns: 1fr;
+  }
+
+  .package-card {
+    flex-direction: column;
+  }
+
+  .package-card-actions {
+    justify-content: flex-start;
+  }
+
+  .scan-link-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-link-qr {
+    width: 112px;
+    height: 112px;
   }
 
   .section-header {
