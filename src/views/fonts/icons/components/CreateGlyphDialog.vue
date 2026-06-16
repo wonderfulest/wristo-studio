@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import type { IconGlyphCreateDTO } from '@/api/wristo/iconGlyph'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
@@ -41,6 +41,12 @@ watch(() => props.form, (f) => {
 }, { immediate: true })
 
 const loading = computed(() => !!props.loading)
+
+watch(model, async (visible) => {
+  if (!visible) return
+  await nextTick()
+  ;(namingRef.value as any)?.randomizeName?.()
+})
 
 const onConfirm = () => {
   console.log('onConfirm', namingRef.value)

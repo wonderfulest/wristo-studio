@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
 
@@ -107,6 +107,24 @@ const editing = ref(false)
 
 const styleOptions = ['mono', 'round', 'italic', 'sharp', 'segment', 'hand']
 const variantOptions = ['light', 'regular', 'semi-bold', 'bold', 'outline']
+const seriesOptions = ['aura', 'neon', 'luna', 'nova', 'pixel', 'orbit', 'zen', 'halo', 'muse', 'flux']
+
+const pickRandom = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)]
+
+const makeRandomSuffix = () => {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1296
+    return value.toString(36).padStart(2, '0')
+  }
+  return Math.floor(Math.random() * 1296).toString(36).padStart(2, '0')
+}
+
+const randomizeName = () => {
+  seriesPart.value = `${pickRandom(seriesOptions)}${makeRandomSuffix()}`
+  stylePart.value = pickRandom(styleOptions)
+  variantPart.value = pickRandom(variantOptions)
+  usePart.value = props.type || 'number'
+}
 
 const normalize = (value: string, fallback: string) => {
   // 只做基础规范：trim + 小写；合法性由 watcher 保证
@@ -134,6 +152,10 @@ watch(
   }
 )
 
+onMounted(() => {
+  randomizeName()
+})
+
 // 校验：每一部分都不能以数字开头，且只能包含 [a-z0-9_-]，非法输入时恢复到之前的值
 const makeNoDigitStartWatcher = (part: typeof seriesPart, label: string) => {
   watch(part, (val, oldVal) => {
@@ -158,7 +180,7 @@ const finishEditing = () => {
 }
 
 // 暴露给父组件，如果后面需要用到命名结果
-defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart })
+defineExpose({ namingPreview, seriesPart, usePart, stylePart, variantPart, randomizeName })
 </script>
 
 <style scoped>
