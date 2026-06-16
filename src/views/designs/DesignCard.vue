@@ -120,16 +120,21 @@
                 <Icon icon="material-symbols:article-outline-rounded" />
               </button>
             </el-tooltip>
-            <a
+            <el-tooltip
               v-if="row.buildLogPath"
-              class="build-log-path"
-              :href="row.buildLogPath"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click.stop
+              content="打开最近一次打包日志文件"
+              placement="top"
             >
-              {{ row.buildLogPath }}
-            </a>
+              <a
+                class="build-log-file-link"
+                :href="row.buildLogPath"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click.stop
+              >
+                <Icon icon="material-symbols:description-outline-rounded" />
+              </a>
+            </el-tooltip>
           </div>
         </div>
       </div>
@@ -504,18 +509,17 @@ const openBuildLog = (logId?: number) => {
   gap: 8px;
 }
 
-.build-log-path {
-  display: block;
-  margin-top: 4px;
+.build-log-file-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
   color: var(--studio-primary);
-  font-size: 12px;
-  line-height: 1.4;
-  word-break: break-all;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  font-size: 14px;
+  line-height: 1;
 }
 
-.build-log-path:hover {
+.build-log-file-link:hover {
   color: var(--studio-primary-hover);
 }
 
