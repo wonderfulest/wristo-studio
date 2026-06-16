@@ -372,7 +372,7 @@ const packageRows = computed(() => {
   }> = []
 
   const canOpenLog = (log?: ProductPackagingLogVo) => {
-    return !!(isMerchantUser.value && currentUserId.value === design.value.user?.id && log?.id && log?.lastBuildLogPath)
+    return !!(isMerchantUser.value && currentUserId.value === design.value.user?.id && log?.id)
   }
 
   const prgLog = product.prgPackagingLog

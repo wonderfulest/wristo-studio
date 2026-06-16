@@ -60,8 +60,17 @@
           <div v-if="packageRows.length" class="package-list">
             <div v-for="row in packageRows" :key="row.key" class="package-row">
               <span>{{ row.label }}</span>
-              <strong>
-                <span>{{ row.value }}</span>
+              <div class="package-row-content">
+                <strong>{{ row.value }}</strong>
+                <a
+                  v-if="row.downloadUrl"
+                  class="package-download-link"
+                  :href="row.downloadUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ t('editDesign.downloadPackage') }}
+                </a>
                 <el-tooltip
                   v-if="row.canViewBuildLog"
                   :content="t('editDesign.viewBuildLog')"
@@ -77,10 +86,35 @@
                     <el-icon><Link /></el-icon>
                   </el-button>
                 </el-tooltip>
-              </strong>
+              </div>
             </div>
           </div>
           <div v-else class="package-empty">{{ t('pending.noPackage') }}</div>
+        </div>
+      </div>
+
+      <div class="log-section form-section">
+        <div class="section-header">
+          <div class="section-title">{{ t('packagingLog.title') }}</div>
+          <el-button
+            v-if="latestBuildLogId"
+            size="small"
+            class="apple-button secondary"
+            @click="openBuildLog(latestBuildLogId)"
+          >
+            {{ t('editDesign.viewBuildLog') }}
+          </el-button>
+        </div>
+        <div class="build-log-shell">
+          <div v-if="buildLogLoading" class="build-log-state">
+            <el-skeleton :rows="6" animated />
+          </div>
+          <el-empty
+            v-else-if="buildLogError"
+            :description="buildLogError"
+            :image-size="84"
+          />
+          <pre v-else class="build-log-content">{{ buildLogContent || t('packagingLog.empty') }}</pre>
         </div>
       </div>
 
@@ -179,6 +213,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, Payment } from '@/types/api/design'
+import type { ProductPackagingLogVo } from '@/types/api/product'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
@@ -221,6 +256,9 @@ const messageStore = useMessageStore()
 const emit = defineEmits(['cancel'])
 
 const isMerchantUser = computed(() => userStore.isMerchantUser)
+const buildLogLoading = ref(false)
+const buildLogError = ref('')
+const buildLogContent = ref('')
 
 const formatDateTime = (value?: string | number | null) => {
   if (!value) return t('common.unknown')
@@ -311,36 +349,78 @@ const packageRows = computed(() => {
     key: string
     label: string
     value: string
+    downloadUrl?: string
     logId?: number
     canViewBuildLog: boolean
   }> = []
   const prgRank = product.prgPackagingLog?.rank
   const iqRank = product.packagingLog?.rank
 
-  rows.push({
-    key: 'prg-release',
-    label: 'PRG',
-    value: prgRank !== null && prgRank !== undefined
-      ? queueText(prgRank)
-      : releaseText(product.prgRelease?.updatedAt),
-    logId: product.prgPackagingLog?.id,
-    canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id && product.prgPackagingLog?.lastBuildLogPath)
-  })
+  const prgUrl = product.prgRelease?.prgUrl
+  if (product.prgPackagingLog || prgUrl) {
+    rows.push({
+      key: 'prg-release',
+      label: 'PRG',
+      value: prgRank !== null && prgRank !== undefined
+        ? queueText(prgRank)
+        : releaseText(product.prgRelease?.updatedAt),
+      downloadUrl: prgUrl || undefined,
+      logId: product.prgPackagingLog?.id,
+      canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id)
+    })
+  }
 
-  if (isMerchantUser.value) {
+  const iqUrl = product.release?.packageUrl
+  if (product.packagingLog || iqUrl) {
     rows.push({
       key: 'iq-release',
       label: 'IQ',
       value: iqRank !== null && iqRank !== undefined
         ? queueText(iqRank)
         : releaseText(product.release?.updatedAt),
+      downloadUrl: iqUrl || undefined,
       logId: product.packagingLog?.id,
-      canViewBuildLog: !!(product.packagingLog?.id && product.packagingLog?.lastBuildLogPath)
+      canViewBuildLog: !!(product.packagingLog?.id)
     })
   }
 
   return rows.filter((row) => row.value)
 })
+
+const latestBuildLog = computed<ProductPackagingLogVo | undefined>(() => {
+  const product = currentDesign.value?.product
+  const candidates = [product?.packagingLog, product?.prgPackagingLog].filter(Boolean) as ProductPackagingLogVo[]
+  return candidates
+    .filter((log) => log.id)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]
+})
+
+const latestBuildLogId = computed(() => latestBuildLog.value?.id)
+
+const loadBuildLog = async () => {
+  const logId = latestBuildLogId.value
+  if (!logId) {
+    buildLogContent.value = ''
+    buildLogError.value = ''
+    return
+  }
+
+  buildLogLoading.value = true
+  buildLogError.value = ''
+  buildLogContent.value = ''
+  try {
+    const response = await designApi.getPackagingBuildLog(logId)
+    if (response.code === 0 && response.data) {
+      buildLogContent.value = response.data.content || ''
+    } else {
+      buildLogError.value = response.msg || t('packagingLog.loadFailed')
+    }
+  } catch (error: any) {
+    buildLogError.value = error?.msg || error?.message || t('packagingLog.loadFailed')
+  } finally {
+    buildLogLoading.value = false
+  }
+}
 
 const openBuildLog = (logId?: number) => {
   if (!logId) return
@@ -393,6 +473,7 @@ const loadDesign = async (designUid: string) => {
           }
         })
       }
+      await loadBuildLog()
     } else {
       ElMessage.error(response.msg || t('editDesign.loadFailed'))
       handleCancel()
@@ -408,6 +489,9 @@ const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
   currentDesign.value = null
+  buildLogLoading.value = false
+  buildLogError.value = ''
+  buildLogContent.value = ''
 }
 
 // 复制配置到剪贴板
