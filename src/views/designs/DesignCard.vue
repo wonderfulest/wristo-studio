@@ -120,21 +120,6 @@
                 <Icon icon="material-symbols:article-outline-rounded" />
               </button>
             </el-tooltip>
-            <el-tooltip
-              v-if="row.buildLogPath"
-              content="打开最近一次打包日志文件"
-              placement="top"
-            >
-              <a
-                class="build-log-file-link"
-                :href="row.buildLogPath"
-                target="_blank"
-                rel="noopener noreferrer"
-                @click.stop
-              >
-                <Icon icon="material-symbols:description-outline-rounded" />
-              </a>
-            </el-tooltip>
           </div>
         </div>
       </div>
@@ -388,7 +373,7 @@ const packageRows = computed(() => {
   }> = []
 
   const canOpenLog = (log?: ProductPackagingLogVo) => {
-    return !!(isMerchantUser.value && currentUserId.value === design.value.user?.id && log?.id)
+    return !!(isMerchantUser.value && log?.id)
   }
 
   const prgLog = product.prgPackagingLog
