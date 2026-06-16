@@ -1,5 +1,7 @@
 export type PackageFileType = 'iq' | 'prg'
 
+const compressedPackageTypes = new Set<PackageFileType>(['iq'])
+
 const timestampForFilename = (date = new Date()): string => {
   const pad = (value: number) => String(value).padStart(2, '0')
   return [
@@ -23,7 +25,8 @@ const sanitizeFilenamePart = (value: string): string => {
 
 export const buildPackageFilename = (appName: string, fileType: PackageFileType): string => {
   const safeAppName = sanitizeFilenamePart(appName) || 'wristo-app'
-  return `${safeAppName}-${timestampForFilename()}-${fileType}.${fileType}`
+  const extension = compressedPackageTypes.has(fileType) ? 'zip' : fileType
+  return `${safeAppName}-${timestampForFilename()}-${fileType}.${extension}`
 }
 
 export const downloadPackageFile = async (

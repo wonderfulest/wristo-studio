@@ -1,11 +1,36 @@
 <template>
   <div class="icon-library">
     <div class="header">
-      <h2>{{ t('icon.libraryTitle') }}</h2>
-      <el-button type="primary" @click="goToIconAssets">{{ t('icon.goToAssets') }}</el-button>
+      <div class="header-copy">
+        <h2>{{ t('icon.libraryTitle') }}</h2>
+        <p>{{ t('icon.librarySubtitle') }}</p>
+      </div>
+      <div class="header-actions">
+        <HeaderUploadSvg
+          v-if="canUsePremiumAssets"
+          ref="headerUploadRef"
+          :show-hint="false"
+          @uploaded="onIconUploaded"
+        />
+        <el-button @click="goToIconAssets">{{ t('icon.goToAssets') }}</el-button>
+      </div>
     </div>
 
     <div class="content-card">
+      <div class="library-summary">
+        <div class="summary-item">
+          <span class="summary-label">{{ t('icon.fontSets') }}</span>
+          <strong>{{ glyphTotal }}</strong>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">{{ t('icon.currentAssets') }}</span>
+          <strong>{{ assetTotal }}</strong>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">{{ t('icon.currentDisplayType') }}</span>
+          <strong>{{ displayType }}</strong>
+        </div>
+      </div>
       <el-tabs
         v-model="activeTab"
         type="card"
@@ -48,7 +73,8 @@
             :total="assetTotal"
             v-model:displayType="displayType"
             @edit="handleEdit"
-            @openBind="(p)=> openBindDialog(p.glyphId, p.iconId)"
+            @openBind="(p)=> openBindDialog(p.glyphId, p.iconId, p.iconUnicode)"
+            @uploadForIcon="handleUploadForIcon"
             @unbind="(p)=> handleUnbind(p.glyphId, p.assetId)"
             @pageChange="onAssetPageChange"
             @import="openImportDialog"
@@ -59,7 +85,11 @@
         </el-tab-pane>
       </el-tabs>
 
-      <div class="pager">
+      <div v-if="glyphTotal > glyphPageSize" class="pager glyph-pager">
+        <div class="pager-context">
+          <span>{{ t('icon.fontSets') }}</span>
+          <strong>{{ glyphTotal }}</strong>
+        </div>
         <el-pagination
           background
           layout="prev, pager, next"
@@ -129,6 +159,7 @@ import EditSvgDialog from './components/EditSvgDialog.vue'
 import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
+import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
 import {
@@ -177,6 +208,7 @@ const assetPage = ref(1)
 const assetPageSize = ref(120)
 const loadingAssets = ref(false)
 const displayType = ref<DisplayType>('mip')
+const headerUploadRef = ref<InstanceType<typeof HeaderUploadSvg> | null>(null)
 
 // rename dialog state
 const renameVisible = ref(false)
@@ -438,6 +470,20 @@ const onEditSaved = async () => {
   await fetchAssets(g.id)
 }
 
+const onIconUploaded = async () => {
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  if (!g) return
+  await fetchAssets(g.id)
+}
+
+const handleUploadForIcon = (payload: { iconUnicode?: string; displayType: DisplayType }) => {
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return
+  }
+  headerUploadRef.value?.openUpload(payload.iconUnicode, payload.displayType)
+}
+
 // ---------------- Create glyph ----------------
 const createVisible = ref(false)
 const creating = ref(false)
@@ -485,13 +531,14 @@ const bindTotal = ref(0)
 const bindAssets = ref<IconAssetVO[]>([])
 const bindLoading = ref(false)
 
-const openBindDialog = async (glyphId: number, iconId?: number) => {
+const openBindDialog = async (glyphId: number, iconId?: number, iconUnicode?: string) => {
   if (!canUsePremiumAssets.value) {
     requireIconPremium()
     return
   }
   bindGlyphId.value = glyphId
   bindIconId.value = iconId ?? null
+  bindKeyword.value = iconId ? '' : (iconUnicode || '')
   bindVisible.value = true
   bindPage.value = 1
   await loadBindAssets()
@@ -578,13 +625,20 @@ const handleImport = async () => {
   }
 }
 
-// (upload header button removed)
 </script>
 
 <style scoped>
-.icon-library { padding: 16px; color: var(--studio-text); }
-.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.content-card { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 12px; }
+.icon-library { padding: 20px; color: var(--studio-text); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.header-copy { min-width: 0; }
+.header h2 { margin: 0; font-size: 24px; line-height: 1.25; color: var(--studio-text); }
+.header p { margin: 6px 0 0; max-width: 720px; color: var(--studio-text-muted); line-height: 1.5; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.content-card { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 14px; box-shadow: var(--studio-shadow-sm); }
+.library-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.summary-item { min-height: 68px; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 14px; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); background: var(--studio-surface-soft); }
+.summary-label { font-size: 12px; color: var(--studio-text-subtle); }
+.summary-item strong { font-size: 20px; color: var(--studio-text); line-height: 1.2; font-variant-numeric: tabular-nums; }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0px 0 8px 0; }
 .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--studio-primary-soft); color: var(--studio-primary); margin-right: 8px; }
 .badge.custom { background: var(--el-color-success-light-9); color: var(--el-color-success); }
@@ -606,8 +660,18 @@ const handleImport = async () => {
 .overlay-actions .delete:hover { background: var(--el-color-danger); }
 .grid-meta { font-weight: 900; font-size: 12px; color: var(--studio-text-subtle); }
 .grid-meta .delete { color: var(--el-color-danger); margin-left: 6px; cursor: pointer; font-weight: 500; }
-.pager { display: flex; justify-content: center; padding: 8px 0; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0 4px; }
+.glyph-pager { margin-top: 10px; border-top: 1px solid var(--studio-border); }
+.pager-context { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: 999px; background: var(--studio-surface-soft); color: var(--studio-text-muted); font-size: 12px; }
+.pager-context strong { color: var(--studio-text); font-size: 13px; font-variant-numeric: tabular-nums; }
 .bind-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .icon-tag {margin-left: 4px; color: var(--studio-text-subtle); font-size: 12px;}
 .glyph-edit-icon { margin-left: 4px; color: var(--studio-text-subtle); font-size: 14px; cursor: pointer; }
+
+@media (max-width: 760px) {
+  .icon-library { padding: 14px; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header-actions { justify-content: flex-start; }
+  .library-summary { grid-template-columns: 1fr; }
+}
 </style>

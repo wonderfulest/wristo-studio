@@ -1,7 +1,7 @@
 <template>
   <div class="upload-wrap">
-    <div class="hint">{{ t('icon.uploadHint') }}</div>
-    <el-button v-if="canUsePremiumAssets" type="success" :loading="uploading" @click="dialogVisible = true">{{ t('icon.uploadSvg') }}</el-button>
+    <div v-if="showHint" class="hint">{{ t('icon.uploadHint') }}</div>
+    <el-button v-if="showButton && canUsePremiumAssets" type="success" :loading="uploading" @click="openUpload()">{{ t('icon.uploadSvg') }}</el-button>
 
     <el-dialog v-model="dialogVisible" :title="t('icon.uploadSvgTitle')" width="860px" :close-on-click-modal="false">
       <el-upload
@@ -35,9 +35,15 @@
                 <span v-else>{{ t('icon.notSelected') }}</span>
                 <el-button v-if="selectedSymbolCode" link type="primary" @click="clearSelect" :disabled="uploading">{{ t('icon.clearSelection') }}</el-button>
               </div>
+              <el-input
+                v-model="symbolKeyword"
+                :placeholder="t('icon.searchIconType')"
+                clearable
+                class="symbol-search"
+              />
               <div class="symbol-grid">
                 <div
-                  v-for="it in iconList"
+                  v-for="it in filteredIconList"
                   :key="it.symbolCode"
                   class="symbol-card"
                   :class="{ active: selectedSymbolCode === it.symbolCode }"
@@ -75,7 +81,14 @@ const userStore = useUserStore()
 const membershipGate = useStudioMembershipGate()
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 
-const props = defineProps<{ iconUnicode?: string }>()
+const props = withDefaults(defineProps<{
+  iconUnicode?: string
+  showButton?: boolean
+  showHint?: boolean
+}>(), {
+  showButton: true,
+  showHint: true,
+})
 const emit = defineEmits<{
   (e: 'uploaded'): void
   (e: 'update:iconUnicode', val?: string): void
@@ -88,6 +101,17 @@ const selectedSymbolCode = ref<string | undefined>(undefined)
 const pendingIconUnicode = ref<string | undefined>(undefined)
 const displayType = ref<DisplayType | undefined>(undefined)
 const displayTypeOptions = ref<EnumOption[]>([])
+const symbolKeyword = ref('')
+
+const filteredIconList = computed(() => {
+  const keyword = symbolKeyword.value.trim().toLowerCase()
+  if (!keyword) return iconList.value
+  return iconList.value.filter((it) => {
+    return [it.symbolCode, it.label, it.iconUnicode]
+      .filter(Boolean)
+      .some((v) => String(v).toLowerCase().includes(keyword))
+  })
+})
 
 watch(dialogVisible, async (v) => {
   if (v && !canUsePremiumAssets.value) {
@@ -123,6 +147,30 @@ watch(dialogVisible, async (v) => {
     pendingIconUnicode.value = undefined
   }
 })
+
+function preselectIconUnicode(iconUnicode?: string) {
+  if (!iconUnicode) return
+  if (iconList.value.length > 0) {
+    const found = iconList.value.find(it => it.iconUnicode === iconUnicode)
+    selectedSymbolCode.value = found?.symbolCode
+    pendingIconUnicode.value = undefined
+  } else {
+    pendingIconUnicode.value = iconUnicode
+  }
+}
+
+function openUpload(iconUnicode?: string, initialDisplayType?: DisplayType) {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('icon.premiumRequired')
+    return
+  }
+  symbolKeyword.value = ''
+  if (initialDisplayType) displayType.value = initialDisplayType
+  preselectIconUnicode(iconUnicode || props.iconUnicode)
+  dialogVisible.value = true
+}
+
+defineExpose({ openUpload })
 
 // react to prop change
 watch(
@@ -225,8 +273,11 @@ function clearSelect() {
 .hint { font-size: 12px; color: var(--studio-text-muted); }
 .symbol-quick { margin-top: 8px; }
 .symbol-quick .label { font-size: 12px; color: var(--studio-text-subtle); margin-bottom: 6px; }
-.symbol-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.symbol-card { border: 1px solid var(--studio-border); border-radius: var(--studio-radius-sm); padding: 8px 10px; background: var(--studio-surface-soft); cursor: pointer; color: var(--studio-text); }
+.symbol-selected { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.symbol-search { margin-bottom: 10px; }
+.symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; max-height: 320px; overflow: auto; padding-right: 4px; }
+.symbol-card { border: 1px solid var(--studio-border); border-radius: var(--studio-radius-sm); padding: 8px 10px; background: var(--studio-surface-soft); cursor: pointer; color: var(--studio-text); transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.symbol-card:hover { border-color: var(--studio-primary-border); transform: translateY(-1px); }
 .symbol-card.active { border-color: var(--studio-primary); box-shadow: 0 0 0 1px var(--studio-primary) inset; background: var(--studio-primary-soft); }
 .symbol-code { font-weight: 600; color: var(--studio-text); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 .symbol-label { font-size: 12px; color: var(--studio-text-subtle); margin-top: 4px; }
