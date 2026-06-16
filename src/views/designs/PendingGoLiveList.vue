@@ -63,6 +63,7 @@ import type { ApiResponse } from '@/types/api/api'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { useUserStore } from '@/stores/user'
+import { downloadPackageFile } from '@/utils/packageDownload'
 
 const messageStore = useMessageStore()
 const pendingStore = usePendingGoLiveStore()
@@ -104,11 +105,11 @@ const goLive = async (row: Product): Promise<void> => {
   }
 }
 
-const download = (row: Product): void => {
+const download = async (row: Product): Promise<void> => {
   if (!membershipGate.requireExport()) return
   const url = row.release?.packageUrl
   if (url) {
-    window.open(url, '_blank', 'noopener,noreferrer')
+    await downloadPackageFile(url, row.name, 'iq')
   } else {
     messageStore.error(t('pending.noPackage'))
   }

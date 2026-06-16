@@ -143,6 +143,7 @@ import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { downloadPackageFile } from '@/utils/packageDownload'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -473,21 +474,22 @@ const buildPrg = async (design: Design) => {
 }
 
 // 下载安装包
-const downloadPackage = (design: Design) => {
+const downloadPackage = async (design: Design) => {
   if (!membershipGate.requireExport()) return
-  if (design.product?.release?.packageUrl) {
-    window.open(design.product.release.packageUrl, '_blank')
+  const url = design.product?.release?.packageUrl
+  if (url) {
+    await downloadPackageFile(url, design.product?.name || design.name, 'iq')
   } else {
     messageStore.error(t('project.downloadUnavailable'))
   }
 }
 
 // 运行 PRG：跳转下载 prgUrl
-const runPrg = (design: Design) => {
+const runPrg = async (design: Design) => {
   if (!membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
-    window.open(url, '_blank')
+    await downloadPackageFile(url, design.product?.name || design.name, 'prg')
   } else {
     messageStore.error(t('project.prgUnavailable'))
   }

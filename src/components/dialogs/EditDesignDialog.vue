@@ -67,15 +67,14 @@
                 </div>
               </div>
               <div class="package-card-actions">
-                <a
+                <button
                   v-if="row.downloadUrl"
                   class="package-action-button"
-                  :href="row.downloadUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  type="button"
+                  @click="downloadPackage(row.downloadUrl, row.fileType)"
                 >
                   {{ t('editDesign.downloadPackage') }}
-                </a>
+                </button>
                 <button
                   v-if="row.canViewBuildLog"
                   class="package-action-button secondary"
@@ -217,6 +216,7 @@ import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
+import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const route = useRoute()
@@ -353,6 +353,7 @@ const packageRows = computed(() => {
     value: string
     meta: string
     downloadUrl?: string
+    fileType: PackageFileType
     logId?: number
     canViewBuildLog: boolean
   }> = []
@@ -372,6 +373,7 @@ const packageRows = computed(() => {
         formatPackageSize(product.prgRelease?.packageSize),
       ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
       downloadUrl: prgUrl || undefined,
+      fileType: 'prg',
       logId: product.prgPackagingLog?.id,
       canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id)
     })
@@ -390,6 +392,7 @@ const packageRows = computed(() => {
         formatPackageSize(product.release?.packageSize),
       ].filter(Boolean).join(' · ') || t('editDesign.packageArtifact'),
       downloadUrl: iqUrl || undefined,
+      fileType: 'iq',
       logId: product.packagingLog?.id,
       canViewBuildLog: !!(product.packagingLog?.id)
     })
@@ -433,6 +436,10 @@ const openBuildLog = (logId?: number) => {
     params: { id: String(logId) },
   })
   window.open(target.href, '_blank', 'noopener,noreferrer')
+}
+
+const downloadPackage = async (url: string, fileType: PackageFileType) => {
+  await downloadPackageFile(url, currentDesign.value?.product?.name || form.name, fileType)
 }
 
 // 加载设计数据
