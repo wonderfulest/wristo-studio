@@ -30,6 +30,9 @@ export interface UpdateDesignParamsV2 {
   configJson?: any
   designStatus?: DesignStatus
   userId?: number
+  payment?: ProductPaymentUpdateParams
+  categoryIds?: number[]
+  bundleIds?: number[]
 }
 
 /**
@@ -122,6 +125,13 @@ export interface Payment {
   designUid: string
   paymentMethod: string
   kpayId: string
+  price: number
+  trialLasts: number
+}
+
+export interface ProductPaymentUpdateParams {
+  productId?: number
+  paymentMethod: 'free' | 'wpay' | string
   price: number
   trialLasts: number
 }

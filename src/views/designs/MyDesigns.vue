@@ -102,7 +102,7 @@
     </el-dialog>
 
     <!-- 设计详情对话框 -->
-    <EditDesignDialog ref="editDesignDialog" />
+    <EditDesignDialog ref="editDesignDialog" @success="fetchDesigns" />
     
     <!-- 提交设计对话框 -->
     <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
@@ -457,20 +457,8 @@ const buildPrg = async (design: Design) => {
     return
   }
 
-  try {
-    loadingStates.value.prgBuild.add(design.id)
-    const res = await designApi.submitPrgPackageTask(design.designUid, String(deviceId)) as ApiResponse<boolean>
-    if (res.code === 0 && res.data) {
-      messageStore.success(t('project.prgBuildSubmitted'))
-      await fetchDesigns()
-    } else {
-      messageStore.error(res.msg || t('project.prgBuildFailed'))
-    }
-  } catch (error) {
-    console.error('Submit PRG build task failed:', error)
-    messageStore.error(t('project.prgBuildFailed'))
-  } finally {
-    loadingStates.value.prgBuild.delete(design.id)
+  if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
+    submitDesignDialog.value.show(design, { mode: 'prg-build', deviceId: String(deviceId) })
   }
 }
 

@@ -1,7 +1,7 @@
 <template>
   <el-dialog 
     v-model="dialogVisible" 
-    :title="t('submitDesign.title')" 
+    :title="dialogTitle" 
     width="50%" 
     :top="'10vh'"
     class="submit-design-dialog"
@@ -14,7 +14,7 @@
       class="submit-form"
     >
       <el-form-item :label="t('submitDesign.designName')">
-        <el-input v-model="form.name" disabled />
+        <el-input v-model="form.name" />
       </el-form-item>
       
       <el-form-item :label="t('submitDesign.paymentMethod')" prop="paymentMethod">
@@ -94,7 +94,7 @@
           @click="handleConfirm"
           :loading="loading"
         >
-          {{ t('common.submit') }}
+          {{ confirmText }}
         </el-button>
       </span>
     </template>
@@ -105,7 +105,7 @@
 import { ref, reactive, computed } from 'vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
-import type { Design, DesignSubmitDTO } from '@/types/api/design'
+import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
 import { getAllSeries } from '@/api/wristo/categories'
 import type { Category } from '@/types/api/category'
@@ -122,11 +122,15 @@ const loading = ref(false)
 const refreshingDescription = ref(false)
 const currentDesign = ref<Design | null>(null)
 const formRef = ref()
+const dialogMode = ref<'submit' | 'prg-build'>('submit')
+const prgDeviceId = ref<string>('')
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
+const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
+const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -253,10 +257,12 @@ const handlePaymentMethodChange = (value: string) => {
 }
 
 // Show dialog
-const show = async (design: Design) => {
+const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; deviceId?: string }) => {
   try {
     loading.value = true
     currentDesign.value = null
+    dialogMode.value = options?.mode || 'submit'
+    prgDeviceId.value = options?.deviceId || ''
     
     // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
@@ -376,10 +382,12 @@ const handleConfirm = async () => {
       submitData.trialLasts = form.trialLasts
     }
     // Free mode does not require extra parameters
-    const response = await designApi.submitDesign(submitData)
+    const response = dialogMode.value === 'prg-build'
+      ? await handlePrgBuildConfirm(submitData)
+      : await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
-      messageStore.success(t('submitDesign.submittedSuccessfully'))
+      messageStore.success(dialogMode.value === 'prg-build' ? t('project.prgBuildSubmitted') : t('submitDesign.submittedSuccessfully'))
       emit('success')
       dialogVisible.value = false
     } else {
@@ -387,10 +395,37 @@ const handleConfirm = async () => {
     }
   } catch (error) {
     console.error('Submit failed:', error)
-    messageStore.error(t('submitDesign.submitFailed'))
+    messageStore.error(dialogMode.value === 'prg-build' ? t('project.prgBuildFailed') : t('submitDesign.submitFailed'))
   } finally {
     loading.value = false
   }
+}
+
+const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiResponse<boolean>> => {
+  if (!prgDeviceId.value) {
+    return { code: -1, msg: t('project.selectDeviceFirst'), data: false } as ApiResponse<boolean>
+  }
+
+  const updateData: UpdateDesignParamsV2 = {
+    uid: submitData.designUid,
+    name: submitData.name,
+    description: submitData.description,
+    categoryIds: submitData.categoryIds,
+    bundleIds: submitData.bundleIds,
+  }
+  if (canPublishPaid.value) {
+    updateData.payment = {
+      paymentMethod: submitData.paymentMethod,
+      price: submitData.paymentMethod === 'free' ? 0 : Number(submitData.price || 0),
+      trialLasts: submitData.paymentMethod === 'free' ? 0 : Number(submitData.trialLasts || 0),
+    }
+  }
+
+  const updateResponse = await designApi.updateDesign(updateData)
+  if (updateResponse.code !== 0) {
+    return { code: updateResponse.code, msg: updateResponse.msg || t('common.saveFailed'), data: false } as ApiResponse<boolean>
+  }
+  return designApi.submitPrgPackageTask(submitData.designUid, prgDeviceId.value)
 }
 
 // Cancel

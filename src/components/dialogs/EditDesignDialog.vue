@@ -136,15 +136,32 @@
         <div class="payment-grid">
           <div class="form-field">
             <label class="field-label">{{ t('submitDesign.paymentMethod') }}</label>
-            <div class="readonly-field readonly-text-field">{{ paymentMethodText }}</div>
+            <el-radio-group v-model="form.payment.paymentMethod" @change="handlePaymentMethodChange">
+              <el-radio label="free">{{ t('payment.free') }}</el-radio>
+              <el-radio label="wpay">WPay</el-radio>
+            </el-radio-group>
           </div>
-          <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
+          <div class="form-field" v-if="form.payment.paymentMethod !== 'free'">
             <label class="field-label">{{ t('editDesign.priceCny') }}</label>
-            <div class="readonly-field readonly-text-field">{{ priceText }}</div>
+            <el-input-number
+              v-model="form.payment.price"
+              :min="1.99"
+              :max="99.99"
+              :precision="2"
+              :step="0.01"
+              class="payment-input"
+            />
           </div>
-          <div class="form-field" v-if="form.payment.paymentMethod !== 'none'">
+          <div class="form-field" v-if="form.payment.paymentMethod !== 'free'">
             <label class="field-label">{{ t('editDesign.trialHours') }}</label>
-            <div class="readonly-field readonly-text-field">{{ trialText }}</div>
+            <el-input-number
+              v-model="form.payment.trialLasts"
+              :min="0"
+              :max="720"
+              :precision="2"
+              :step="0.25"
+              class="payment-input"
+            />
           </div>
         </div>
       </div>
@@ -185,10 +202,18 @@
     
     <template #footer>
       <div class="dialog-footer">
-        <el-button 
-          type="primary" 
-          @click="handleCancel"
+        <el-button
+          v-if="isMerchantUser"
+          type="primary"
+          @click="handleSave"
+          :loading="saving"
           class="apple-button primary"
+        >
+          {{ t('common.save') }}
+        </el-button>
+        <el-button 
+          @click="handleCancel"
+          class="apple-button secondary"
         >
           {{ t('common.close') }}
         </el-button>
@@ -217,6 +242,7 @@ import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
+const saving = ref(false)
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
@@ -237,13 +263,13 @@ const form = reactive({
   configJson: {},
   configJsonString: '',
   payment: { 
-    paymentMethod: 'none', price: 0, trialLasts: 0
+    paymentMethod: 'free', price: 0, trialLasts: 0
   } as Payment // 默认结构
 })
 
 const messageStore = useMessageStore()
 
-const emit = defineEmits(['cancel'])
+const emit = defineEmits(['cancel', 'success'])
 
 const isMerchantUser = computed(() => userStore.isMerchantUser)
 const WRISTO_STORE_BASE_URL = (import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/+$/, '')
@@ -308,21 +334,6 @@ const headerSubtitle = computed(() => {
   const uid = currentDesign.value?.designUid
   if (name && uid) return `${name} · ${uid}`
   return name || uid || t('card.design')
-})
-
-const paymentMethodText = computed(() => {
-  if (form.payment.paymentMethod === 'none') return t('payment.free')
-  return 'WPay'
-})
-
-const priceText = computed(() => {
-  const price = Number(form.payment.price || 0)
-  return price ? price.toFixed(2) : '0.00'
-})
-
-const trialText = computed(() => {
-  const trialLasts = Number(form.payment.trialLasts || 0)
-  return trialLasts ? `${trialLasts}` : '0'
 })
 
 const queueText = (rank?: number | null) => {
@@ -439,6 +450,20 @@ const downloadPackage = async (url: string, fileType: PackageFileType) => {
   await downloadPackageFile(url, currentDesign.value?.product?.name || form.name, fileType)
 }
 
+const normalizePaymentMethod = (paymentMethod?: string | null) => {
+  return paymentMethod && paymentMethod !== 'none' ? paymentMethod : 'free'
+}
+
+const handlePaymentMethodChange = (value: string | number | boolean | undefined) => {
+  if (value === 'free') {
+    form.payment.price = 0
+    form.payment.trialLasts = 0
+    return
+  }
+  form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 1.99
+  form.payment.trialLasts = Number(form.payment.trialLasts || 0) >= 0 ? form.payment.trialLasts : 0.25
+}
+
 // 加载设计数据
 const loadDesign = async (designUid: string) => {
   try {
@@ -460,9 +485,9 @@ const loadDesign = async (designUid: string) => {
           configJson: realtimeConfig,
           configJsonString: JSON.stringify(realtimeConfig, null, 2),
           payment: {
-            paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
-            price: designData.product?.payment?.price || 1.99,
-            trialLasts: designData.product?.trialLasts ?? 0.25 // 默认 0.25小时
+            paymentMethod: normalizePaymentMethod(designData.product?.payment?.paymentMethod),
+            price: designData.product?.payment?.price || 0,
+            trialLasts: designData.product?.trialLasts ?? 0
           }
         })
       } else {
@@ -475,9 +500,9 @@ const loadDesign = async (designUid: string) => {
           configJson: serverConfig,
           configJsonString: JSON.stringify(serverConfig, null, 2),
           payment: {
-            paymentMethod: designData.product?.payment?.paymentMethod || 'wpay',
-            price: designData.product?.payment?.price || 1.99,
-            trialLasts: designData.product?.trialLasts ?? 0.25 // 默认 0.25小时
+            paymentMethod: normalizePaymentMethod(designData.product?.payment?.paymentMethod),
+            price: designData.product?.payment?.price || 0,
+            trialLasts: designData.product?.trialLasts ?? 0
           }
         })
       }
@@ -496,6 +521,41 @@ const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
   currentDesign.value = null
+}
+
+const handleSave = async () => {
+  if (!currentDesign.value || !isMerchantUser.value || saving.value) return
+  if (form.payment.paymentMethod !== 'free' && Number(form.payment.price || 0) < 1.99) {
+    messageStore.error(t('submitDesign.priceRange'))
+    return
+  }
+
+  try {
+    saving.value = true
+    const payload = {
+      uid: currentDesign.value.designUid,
+      name: form.name,
+      description: form.description,
+      payment: {
+        paymentMethod: form.payment.paymentMethod,
+        price: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.price || 0),
+        trialLasts: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.trialLasts || 0)
+      }
+    }
+    const response = await designApi.updateDesign(payload)
+    if (response.code === 0) {
+      messageStore.success(t('common.savedSuccessfully'))
+      await loadDesign(currentDesign.value.designUid)
+      emit('success')
+    } else {
+      messageStore.error(response.msg || t('common.saveFailed'))
+    }
+  } catch (error) {
+    console.error('保存设计详情失败:', error)
+    messageStore.error(t('common.saveFailed'))
+  } finally {
+    saving.value = false
+  }
 }
 
 // 复制配置到剪贴板

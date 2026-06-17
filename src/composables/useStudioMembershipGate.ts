@@ -1,17 +1,23 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useMessageStore } from '@/stores/message'
 import { useI18n } from '@/i18n'
+import { ElMessageBox } from 'element-plus'
 
 export function useStudioMembershipGate() {
   const router = useRouter()
   const userStore = useUserStore()
-  const messageStore = useMessageStore()
   const { t } = useI18n()
 
   const block = (messageKey = 'membership.premiumRequired') => {
-    messageStore.warning(t(messageKey))
-    router.push('/pricing')
+    ElMessageBox.confirm(t(messageKey), t('membership.title'), {
+      type: 'warning',
+      confirmButtonText: t('membership.upgrade'),
+      cancelButtonText: t('common.cancel'),
+    })
+      .then(() => router.push('/pricing'))
+      .catch(() => {
+        // User canceled the membership prompt.
+      })
     return false
   }
 
