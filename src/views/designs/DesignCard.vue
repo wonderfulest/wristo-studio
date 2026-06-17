@@ -44,7 +44,7 @@
               </el-button>
               <!-- 删除（仅管理员和自己的应用可见） -->
               <el-button
-                v-if="canDeleteDesign && (isAdminUser || design.user.id === currentUserId)"
+                v-if="canDeleteDesign && canDeleteCurrentDesign && (isAdminUser || design.user.id === currentUserId)"
                 class="delete-action"
                 type="danger"
                 size="small"
@@ -236,6 +236,7 @@ const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
 const isAdminUser = computed(() => props.isAdminUser)
 const canDeleteDesign = computed(() => props.canDeleteDesign)
+const canDeleteCurrentDesign = computed(() => design.value.designStatus !== 'published')
 const showCreator = computed(() => props.showCreator)
 const loadingStates = computed(() => props.loadingStates)
 const currentUserId = computed(() => props.currentUserId)

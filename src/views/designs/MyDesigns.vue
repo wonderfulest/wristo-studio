@@ -203,6 +203,8 @@ const canDeleteDesign = computed(() => {
   return level !== 'free'
 })
 
+const isPublishedDesign = (design: Design | null | undefined) => design?.designStatus === 'published'
+
 // 添加作者显示控制
 const showCreator = ref(false)  // 默认隐藏作者
 const designScope = ref<'mine' | 'all'>('mine')
@@ -394,6 +396,10 @@ const copyDesign = async (design: Design) => {
 
 // 确认删除
 const confirmDelete = (design: Design) => {
+  if (isPublishedDesign(design)) {
+    messageStore.warning(t('project.deletePublishedNotAllowed'))
+    return
+  }
   designToDelete.value = design
   deleteDialogVisible.value = true
 }
@@ -401,6 +407,12 @@ const confirmDelete = (design: Design) => {
 // 执行删除
 const confirmDeleteDesign = async () => {
   if (!designToDelete.value || loadingStates.value.delete.has(designToDelete.value.id)) return
+  if (isPublishedDesign(designToDelete.value)) {
+    messageStore.warning(t('project.deletePublishedNotAllowed'))
+    deleteDialogVisible.value = false
+    designToDelete.value = null
+    return
+  }
 
   try {
     loadingStates.value.delete.add(designToDelete.value.id)

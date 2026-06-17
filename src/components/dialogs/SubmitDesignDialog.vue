@@ -68,6 +68,11 @@
           :rows="3" 
           :placeholder="t('submitDesign.enterDescription')"
         />
+        <div class="description-actions">
+          <el-button size="small" type="primary" :loading="refreshingDescription" @click="refreshDescription">
+            {{ t('common.refresh') }}
+          </el-button>
+        </div>
       </el-form-item>
       <CategorySelector
         v-model:categoryIds="form.categoryIds"
@@ -110,9 +115,12 @@ import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
+import { ElMessage } from 'element-plus'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
+const refreshingDescription = ref(false)
+const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 
 const messageStore = useMessageStore()
@@ -248,12 +256,14 @@ const handlePaymentMethodChange = (value: string) => {
 const show = async (design: Design) => {
   try {
     loading.value = true
+    currentDesign.value = null
     
     // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
     
     if (response.code === 0 && response.data) {
       const designDetail = response.data
+      currentDesign.value = designDetail
       const product = designDetail.product
       
       // Reset form and populate with latest data
@@ -304,6 +314,33 @@ const show = async (design: Design) => {
     messageStore.error(t('submitDesign.loadDetailsFailed'))
   } finally {
     loading.value = false
+  }
+}
+
+const refreshDescription = async () => {
+  const uid = userStore.userInfo?.id
+  if (!uid) {
+    ElMessage.error(t('auth.userNotLoggedIn'))
+    return
+  }
+
+  const productId = currentDesign.value?.product?.id
+  if (!productId) {
+    ElMessage.error(t('submitDesign.loadDetailsFailed'))
+    return
+  }
+
+  try {
+    refreshingDescription.value = true
+    const res = await productsApi.generateDescription({ userId: uid, productId }) as ApiResponse<string>
+    if (typeof res.data === 'string') {
+      form.description = res.data
+      ElMessage.success(t('goLive.descriptionUpdated'))
+    }
+  } catch (e) {
+    ElMessage.error(t('goLive.generateDescriptionFailed'))
+  } finally {
+    refreshingDescription.value = false
   }
 }
 
@@ -360,6 +397,7 @@ const handleConfirm = async () => {
 const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
+  currentDesign.value = null
 }
 
 // Expose methods to parent
@@ -386,6 +424,10 @@ defineExpose({
   font-size: 12px;
   color: var(--el-text-color-secondary);
   vertical-align: middle;
+}
+
+.description-actions {
+  margin-top: 8px;
 }
 
 .dialog-footer {
