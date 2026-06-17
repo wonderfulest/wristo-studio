@@ -133,7 +133,7 @@ const routes: RouteRecordRaw[] = [
         path: 'packaging-logs/:id/build-log',
         name: 'PackagingBuildLog',
         component: () => import('@/views/PackagingBuildLog.vue'),
-        meta: { requiresAuth: true, requiresMerchant: true },
+        meta: { requiresAuth: true },
       },
     ],
   },
