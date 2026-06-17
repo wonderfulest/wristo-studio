@@ -69,9 +69,9 @@
       </div>
       <div class="meta">
        
-        <div v-if="isMerchantUser">
-           <span>{{ t('card.appId') }}: {{ design.product?.appId }}</span> 
-           <div v-if="(isMerchantUser || isAdminUser) && design.product?.appId" class="app-ops-entry">
+        <div v-if="design.product?.appId">
+           <span v-if="isMerchantUser">{{ t('card.appId') }}: {{ design.product?.appId }}</span> 
+           <div class="app-ops-entry" :class="{ 'is-locked': !canViewAppOperations }">
             <div class="score-pill">
               <span class="score-label">{{ t('card.score') }}</span>
               <span class="score-value">{{ appScoreTotalText }}</span>
@@ -188,6 +188,8 @@ import { Box, Delete, DocumentCopy, Download, Edit, Upload, View } from '@elemen
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
+import { useUserStore } from '@/stores/user'
+import { useMessageStore } from '@/stores/message'
 
 interface LoadingStates {
   submit: Set<number>
@@ -229,6 +231,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const userStore = useUserStore()
+const messageStore = useMessageStore()
+const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelled', 'past_due', 'paused'])
 
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
@@ -251,19 +256,38 @@ const appId = computed(() => {
 })
 
 const operationsDrawerVisible = ref(false)
+const hasMonthlyOrAnnualMembership = computed(() => {
+  const membership = userStore.studioMembership
+  const level = String(membership?.level || '').trim().toLowerCase()
+  if (level !== 'monthly' && level !== 'annual') return false
+  const status = String(membership?.status || '').trim().toLowerCase()
+  return !inactiveMembershipStatuses.has(status)
+})
+const canViewAppOperations = computed(() => {
+  return isMerchantUser.value || isAdminUser.value || hasMonthlyOrAnnualMembership.value
+})
 const appScoreTotal = computed(() => {
-  const rawTotal = design.value.product?.score
+  const rawScore = design.value.product?.score as unknown
+  const rawTotal = typeof rawScore === 'object' && rawScore !== null
+    ? (rawScore as { total?: number }).total
+    : rawScore
   const total = Number(rawTotal)
   return Number.isFinite(total) ? total : null
 })
 
 const appScoreTotalText = computed(() => {
+  if (!canViewAppOperations.value) return '--'
   if (appScoreTotal.value === null) return '-'
   return appScoreTotal.value.toFixed(4)
 })
 
 const goToOperations = () => {
   if (!appId.value) return
+  if (!canViewAppOperations.value) {
+    messageStore.warning(t('card.operationsRequiresPremium'))
+    router.push('/pricing')
+    return
+  }
   operationsDrawerVisible.value = true
 }
 
@@ -488,10 +512,13 @@ const openBuildLog = (logId?: number) => {
 }
 
 .app-ops-entry {
-  margin-left: 20px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.app-ops-entry:not(:first-child) {
+  margin-left: 20px;
 }
 
 .build-log-file-link {
@@ -580,6 +607,10 @@ const openBuildLog = (logId?: number) => {
   color: var(--studio-primary);
   background: var(--studio-primary-soft);
   box-shadow: var(--studio-shadow-sm);
+}
+
+.app-ops-entry.is-locked .ops-icon-btn {
+  color: var(--studio-text-subtle);
 }
 
 .ops-icon-btn :deep(svg) {
