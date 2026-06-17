@@ -23,8 +23,15 @@
           
           <div class="header-actions">
             <el-button-group>
-              <!-- 复制设计名称 -->
-              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('copy-name', design.name)" :title="t('card.copyDesignName')">
+              <!-- 复制设计 -->
+              <el-button
+                type="primary"
+                size="small"
+                link
+                @click="emit('copy', design)"
+                :loading="loadingStates.copy.has(design.id)"
+                :title="t('card.duplicate')"
+              >
                 <el-icon>
                   <DocumentCopy />
                 </el-icon>
@@ -116,8 +123,17 @@
               :content="t('editDesign.viewBuildLog')"
               placement="top"
             >
-              <button class="build-log-btn" type="button" @click.stop="openBuildLog(row.logId)">
+              <button class="package-icon-btn" type="button" @click.stop="openBuildLog(row.logId)">
                 <Icon icon="material-symbols:article-outline-rounded" />
+              </button>
+            </el-tooltip>
+            <el-tooltip
+              v-if="row.canDownload"
+              :content="t('editDesign.downloadPackage')"
+              placement="top"
+            >
+              <button class="package-icon-btn" type="button" @click.stop="downloadPackage(row.key)">
+                <el-icon><Download /></el-icon>
               </button>
             </el-tooltip>
           </div>
@@ -128,22 +144,9 @@
           <el-icon><Edit /></el-icon>
           {{ t('card.edit') }}
         </el-button>
-        <el-button
-          type="default"
-          size="small"
-          @click="emit('copy', design)"
-          :loading="loadingStates.copy.has(design.id)"
-        >
-          <el-icon><DocumentCopy /></el-icon>
-          {{ t('card.duplicate') }}
-        </el-button>
         <el-button v-if="showBuildPrgButton" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
           <el-icon><Box /></el-icon>
           {{ t('card.buildPrg') }}
-        </el-button>
-        <el-button v-if="showRunPrgButton" type="default" size="small" @click="emit('run-prg', design)">
-          <el-icon><Download /></el-icon>
-          PRG
         </el-button>
         <el-button
           v-if="showBuildIqButton"
@@ -154,10 +157,6 @@
           :disabled="!!design.product?.packagingLog?.rank">
           <el-icon><Box /></el-icon>
           {{ t('card.buildIq') }}
-        </el-button>
-        <el-button v-if="showDownloadIqButton" type="info" size="small" @click="emit('download-package', design)">
-          <el-icon><Download /></el-icon>
-          IQ
         </el-button>
         <el-button v-if="showPublishButton" type="info" size="small" @click="emit('go-live', design)">
           <el-icon><Upload /></el-icon>
@@ -226,7 +225,6 @@ const emit = defineEmits<{
   (e: 'submit', design: Design): void
   (e: 'download-package', design: Design): void
   (e: 'go-live', design: Design): void
-  (e: 'copy-name', name: string): void
 }>()
 
 const { t } = useI18n()
@@ -316,11 +314,6 @@ const showBuildPrgButton = computed(() => {
   return !hasQueue && releaseTs < designTs
 })
 
-const showRunPrgButton = computed(() => {
-  const product = design.value.product as any
-  return !!product?.prgRelease?.prgUrl
-})
-
 const showBuildIqButton = computed(() => {
   const product = design.value.product as any
   if (!product) return false
@@ -344,10 +337,6 @@ const showBuildIqButton = computed(() => {
       releaseTs === null || designTs > releaseTs
     )
   )
-})
-
-const showDownloadIqButton = computed(() => {
-  return hasDownloadablePackage.value
 })
 
 const showPublishButton = computed(() => {
@@ -393,18 +382,19 @@ const packageRows = computed(() => {
   if (!product) return []
 
   const rows: Array<{
-    key: string
+    key: 'prg' | 'iq'
     label: string
     value: string
     tone: string
     isPackaging: boolean
     logId?: number
     canViewBuildLog: boolean
+    canDownload: boolean
     buildLogPath?: string | null
   }> = []
 
   const canOpenLog = (log?: ProductPackagingLogVo) => {
-    return !!(isMerchantUser.value && log?.id && log?.lastBuildLogPath && log.rank !== 0)
+    return !!(log?.id && log?.lastBuildLogPath)
   }
 
   const prgLog = product.prgPackagingLog
@@ -419,6 +409,7 @@ const packageRows = computed(() => {
       isPackaging: prgLog?.rank === 0,
       logId: prgLog?.id,
       canViewBuildLog: canOpenLog(prgLog),
+      canDownload: !!product.prgRelease?.prgUrl,
       buildLogPath: prgLog?.lastBuildLogPath,
     })
   }
@@ -435,6 +426,7 @@ const packageRows = computed(() => {
       isPackaging: iqLog?.rank === 0,
       logId: iqLog?.id,
       canViewBuildLog: canOpenLog(iqLog),
+      canDownload: !!product.release?.packageUrl,
       buildLogPath: iqLog?.lastBuildLogPath,
     })
   }
@@ -449,6 +441,14 @@ const openBuildLog = (logId?: number) => {
     params: { id: String(logId) },
   })
   window.open(target.href, '_blank', 'noopener,noreferrer')
+}
+
+const downloadPackage = (type: 'prg' | 'iq') => {
+  if (type === 'prg') {
+    emit('run-prg', design.value)
+    return
+  }
+  emit('download-package', design.value)
 }
 </script>
 
@@ -779,7 +779,7 @@ const openBuildLog = (logId?: number) => {
   color: var(--el-color-danger);
 }
 
-.build-log-btn {
+.package-icon-btn {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
@@ -795,7 +795,7 @@ const openBuildLog = (logId?: number) => {
   cursor: pointer;
 }
 
-.build-log-btn:hover {
+.package-icon-btn:hover {
   background: var(--studio-surface-soft);
 }
 

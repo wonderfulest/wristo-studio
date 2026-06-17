@@ -79,14 +79,6 @@
               </div>
               <div class="package-card-actions">
                 <button
-                  v-if="row.downloadUrl"
-                  class="package-action-button"
-                  type="button"
-                  @click="downloadPackage(row.downloadUrl, row.fileType)"
-                >
-                  {{ t('editDesign.downloadPackage') }}
-                </button>
-                <button
                   v-if="row.canViewBuildLog"
                   class="package-action-button secondary"
                   type="button"
@@ -94,6 +86,14 @@
                 >
                   <el-icon><Link /></el-icon>
                   {{ t('editDesign.viewBuildLog') }}
+                </button>
+                <button
+                  v-if="row.downloadUrl"
+                  class="package-action-button"
+                  type="button"
+                  @click="downloadPackage(row.downloadUrl, row.fileType)"
+                >
+                  {{ t('editDesign.downloadPackage') }}
                 </button>
               </div>
             </div>
@@ -1322,7 +1322,8 @@ defineExpose({
   }
 
   .package-card-actions {
-    justify-content: flex-start;
+    align-self: stretch;
+    justify-content: flex-end;
   }
 
   .scan-link-grid {

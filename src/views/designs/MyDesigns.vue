@@ -66,7 +66,6 @@
           @submit="submitDesign"
           @download-package="downloadPackage"
           @go-live="goLive"
-          @copy-name="copyDesignName"
           @copy="copyDesign"
         />
       </el-col>
@@ -391,16 +390,6 @@ const copyDesign = async (design: Design) => {
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
-}
-
-// 复制设计名称
-const copyDesignName = (name: string) => {
-  navigator.clipboard.writeText(name).then(() => {
-    messageStore.success(t('project.nameCopied'))
-  }).catch(err => {
-    console.error('Failed to copy design name:', err)
-    messageStore.error(t('project.nameCopyFailed'))
-  })
 }
 
 // 确认删除
