@@ -202,6 +202,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, Payment } from '@/types/api/design'
+import type { ProductPackagingLogVo } from '@/types/api/product'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
@@ -335,6 +336,13 @@ const releaseText = (updatedAt?: string | number | null) => {
   return formatDateTime(updatedAt)
 }
 
+const canOpenBuildLog = (log?: ProductPackagingLogVo) => {
+  const status = String(log?.packagingStatus || '').toLowerCase()
+  const isFinished = status === 'complete' || status === 'completed' || status === 'failed'
+  const isQueued = log?.rank !== null && log?.rank !== undefined
+  return !!(log?.id && log?.lastBuildLogPath && isFinished && !isQueued)
+}
+
 const packageRows = computed(() => {
   const product = currentDesign.value?.product
   if (!product) return []
@@ -366,7 +374,7 @@ const packageRows = computed(() => {
       downloadUrl: prgUrl || undefined,
       fileType: 'prg',
       logId: product.prgPackagingLog?.id,
-      canViewBuildLog: !!(isMerchantUser.value && product.prgPackagingLog?.id)
+      canViewBuildLog: !!(isMerchantUser.value && canOpenBuildLog(product.prgPackagingLog))
     })
   }
 
@@ -383,7 +391,7 @@ const packageRows = computed(() => {
       downloadUrl: iqUrl || undefined,
       fileType: 'iq',
       logId: product.packagingLog?.id,
-      canViewBuildLog: !!(product.packagingLog?.id)
+      canViewBuildLog: canOpenBuildLog(product.packagingLog)
     })
   }
 

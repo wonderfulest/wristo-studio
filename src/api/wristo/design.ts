@@ -182,7 +182,7 @@ export const designApi = {
   },
 
   getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {
-    return instance.get(`/mch/product-packaging-logs/${logId}/build-log`)
+    return instance.get(`/public/product-packaging-logs/${logId}/build-log`)
   }
 }
 

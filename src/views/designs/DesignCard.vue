@@ -373,7 +373,7 @@ const packageTone = (log?: ProductPackagingLogVo, hasRelease = false) => {
   const status = String(log?.packagingStatus || '').toLowerCase()
   if (status === 'failed') return 'failed'
   if (log?.rank !== null && log?.rank !== undefined) return 'pending'
-  if (status === 'completed' || hasRelease) return 'ready'
+  if (status === 'complete' || status === 'completed' || hasRelease) return 'ready'
   return 'neutral'
 }
 
@@ -394,7 +394,10 @@ const packageRows = computed(() => {
   }> = []
 
   const canOpenLog = (log?: ProductPackagingLogVo) => {
-    return !!(log?.id && log?.lastBuildLogPath)
+    const status = String(log?.packagingStatus || '').toLowerCase()
+    const isFinished = status === 'complete' || status === 'completed' || status === 'failed'
+    const isQueued = log?.rank !== null && log?.rank !== undefined
+    return !!(log?.id && log?.lastBuildLogPath && isFinished && !isQueued)
   }
 
   const prgLog = product.prgPackagingLog
