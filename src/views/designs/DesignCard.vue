@@ -182,6 +182,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
+import { ElMessageBox } from 'element-plus'
 import type { Design } from '@/types/api/design'
 import type { ProductPackagingLogVo } from '@/types/api/product'
 import { Box, Delete, DocumentCopy, Download, Edit, Upload, View } from '@element-plus/icons-vue'
@@ -189,7 +190,6 @@ import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
-import { useMessageStore } from '@/stores/message'
 
 interface LoadingStates {
   submit: Set<number>
@@ -232,7 +232,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
-const messageStore = useMessageStore()
 const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelled', 'past_due', 'paused'])
 
 const design = computed(() => props.design)
@@ -281,11 +280,19 @@ const appScoreTotalText = computed(() => {
   return appScoreTotal.value.toFixed(4)
 })
 
-const goToOperations = () => {
+const goToOperations = async () => {
   if (!appId.value) return
   if (!canViewAppOperations.value) {
-    messageStore.warning(t('card.operationsRequiresPremium'))
-    router.push('/pricing')
+    try {
+      await ElMessageBox.confirm(t('card.operationsRequiresPremium'), t('membership.title'), {
+        type: 'warning',
+        confirmButtonText: t('membership.upgrade'),
+        cancelButtonText: t('common.cancel'),
+      })
+      router.push('/pricing')
+    } catch {
+      // User canceled the upgrade prompt.
+    }
     return
   }
   operationsDrawerVisible.value = true
