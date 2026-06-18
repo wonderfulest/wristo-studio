@@ -81,46 +81,16 @@ const panelLayers = ref<LayerElement[]>([])
 const isDraggingLayers = ref(false)
 const layers = computed(() => panelLayers.value)
 
-const ELEMENT_TYPE_ORDER = [
-  'global',
-  'background',
-  'image',
-  'circle',
-  'rectangle',
-  'line',
-  'time',
-  'date',
-  'label',
-  'data',
-  'icon',
-  'weather',
-  'moon',
-  'windDirection',
-  'battery',
-  'movebar',
-  'alarms',
-  'bluetooth',
-  'disturb',
-  'notification',
-  'goalArc',
-  'goalBar',
-  'goalSegmentBar',
-  'barChart',
-  'lineChart',
-  'tick12',
-  'tick60',
-  'romans',
-  'centerCap',
-  'hourHand',
-  'minuteHand',
-  'secondHand',
-  'text',
-  'angledText',
-  'radialText',
-  'scrollableText',
-]
+type DragEventLike = {
+  oldIndex?: number
+}
 
-const typeRank = new Map(ELEMENT_TYPE_ORDER.map((type, index) => [type, index]))
+type LayerDragSnapshot = {
+  layerId: string
+  groupIds: string[]
+}
+
+let layerDragSnapshot: LayerDragSnapshot | null = null
 
 type LayerGroupMeta = {
   key: string
@@ -145,17 +115,6 @@ const resolveLayerGroupKey = (layer: LayerElement | any): string => {
   return raw == null ? '' : String(raw)
 }
 
-const getTypeSortValue = (layer: LayerElement | any): number => {
-  const eleType = String(layer?.eleType ?? '')
-  return typeRank.get(eleType) ?? ELEMENT_TYPE_ORDER.length
-}
-
-const compareLayerType = (a: LayerElement, b: LayerElement): number => {
-  const rankDiff = getTypeSortValue(a) - getTypeSortValue(b)
-  if (rankDiff !== 0) return rankDiff
-  return String(a.eleType).localeCompare(String(b.eleType))
-}
-
 const isFixedLayer = (layer: any): boolean => {
   const t = String(layer?.eleType ?? '')
   return t === 'global' || t === 'background'
@@ -164,42 +123,87 @@ const isFixedLayer = (layer: any): boolean => {
 const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
   const fixedLayers = sourceLayers.filter((layer) => isFixedLayer(layer))
   const movableLayers = sourceLayers.filter((layer) => !isFixedLayer(layer))
-  const groupCounts = new Map<string, number>()
+  return [...fixedLayers, ...movableLayers]
+}
 
-  movableLayers.forEach((layer) => {
+const getLayerGroupIds = (layer: LayerElement | any, sourceLayers: LayerElement[] = layers.value): string[] => {
+  const id = String(layer?.id ?? '')
+  if (!id) return []
+  const key = resolveLayerGroupKey(layer)
+  if (!key) return [id]
+
+  const groupIds = sourceLayers
+    .filter((item) => !isFixedLayer(item) && resolveLayerGroupKey(item) === key)
+    .map((item) => String(item.id))
+
+  return groupIds.length > 1 ? groupIds : [id]
+}
+
+const keepLayerGroupsContiguous = (idsInOrder: string[]): string[] => {
+  const layerById = new Map(layers.value.map((layer) => [String(layer.id), layer]))
+  const groupIdsByKey = new Map<string, string[]>()
+  const groupedKeys = new Set<string>()
+
+  layers.value.forEach((layer) => {
+    if (isFixedLayer(layer)) return
     const key = resolveLayerGroupKey(layer)
     if (!key) return
-    groupCounts.set(key, (groupCounts.get(key) ?? 0) + 1)
+    const groupIds = groupIdsByKey.get(key) ?? []
+    groupIds.push(String(layer.id))
+    groupIdsByKey.set(key, groupIds)
   })
 
-  const groupedKeys = new Set(
-    [...groupCounts.entries()]
-      .filter(([, count]) => count > 1)
-      .map(([key]) => key)
-  )
-  const groups = new Map<string, { firstIndex: number; items: LayerElement[] }>()
-  const singleLayers: Array<{ layer: LayerElement; originalIndex: number }> = []
+  groupIdsByKey.forEach((groupIds, key) => {
+    if (groupIds.length > 1) {
+      groupedKeys.add(key)
+    }
+  })
 
-  movableLayers.forEach((layer, originalIndex) => {
-    const key = resolveLayerGroupKey(layer)
-    if (key && groupedKeys.has(key)) {
-      const group = groups.get(key) ?? { firstIndex: originalIndex, items: [] }
-      group.items.push(layer)
-      groups.set(key, group)
+  const appendedGroups = new Set<string>()
+  const normalizedIds: string[] = []
+
+  idsInOrder.forEach((id) => {
+    const layer = layerById.get(String(id))
+    const key = layer ? resolveLayerGroupKey(layer) : ''
+    if (!key || !groupedKeys.has(key)) {
+      normalizedIds.push(String(id))
       return
     }
-    singleLayers.push({ layer, originalIndex })
+    if (appendedGroups.has(key)) return
+    normalizedIds.push(...(groupIdsByKey.get(key) ?? []).filter((groupId) => idsInOrder.includes(groupId)))
+    appendedGroups.add(key)
   })
 
-  const sortedGroups = [...groups.values()]
-    .sort((a, b) => a.firstIndex - b.firstIndex)
-    .flatMap((group) => [...group.items].sort(compareLayerType))
+  return normalizedIds
+}
 
-  const sortedSingles = singleLayers
-    .sort((a, b) => compareLayerType(a.layer, b.layer) || a.originalIndex - b.originalIndex)
-    .map((item) => item.layer)
+const resolveDragOrderIds = (): string[] => {
+  const fixedIds = layers.value
+    .filter((layer) => isFixedLayer(layer))
+    .map((layer) => String(layer.id))
+  const movableIds = layers.value
+    .filter((layer) => !isFixedLayer(layer))
+    .map((layer) => String(layer.id))
 
-  return [...fixedLayers, ...sortedGroups, ...sortedSingles]
+  if (!layerDragSnapshot || layerDragSnapshot.groupIds.length <= 1) {
+    return [...fixedIds, ...keepLayerGroupsContiguous(movableIds)]
+  }
+
+  const groupSet = new Set(layerDragSnapshot.groupIds)
+  const draggedIndex = movableIds.findIndex((id) => id === layerDragSnapshot?.layerId)
+  const insertIndex = draggedIndex < 0
+    ? movableIds.length
+    : movableIds.slice(0, draggedIndex).filter((id) => !groupSet.has(id)).length
+  const movableWithoutGroup = movableIds.filter((id) => !groupSet.has(id))
+  const boundedInsertIndex = Math.max(0, Math.min(insertIndex, movableWithoutGroup.length))
+
+  const orderedMovableIds = [
+    ...movableWithoutGroup.slice(0, boundedInsertIndex),
+    ...layerDragSnapshot.groupIds,
+    ...movableWithoutGroup.slice(boundedInsertIndex),
+  ]
+
+  return [...fixedIds, ...keepLayerGroupsContiguous(orderedMovableIds)]
 }
 
 const getLayerGroupMeta = (layer: LayerElement | any): LayerGroupMeta => {
@@ -355,14 +359,21 @@ const toggleLock = (layer: any): void => {
 }
 
 // drag end reorders canvas stacking
-const handleDragStart = (): void => {
+const handleDragStart = (event: DragEventLike): void => {
   isDraggingLayers.value = true
+  const draggedLayer = typeof event.oldIndex === 'number' ? layers.value[event.oldIndex] : null
+  layerDragSnapshot = draggedLayer
+    ? {
+        layerId: String(draggedLayer.id),
+        groupIds: getLayerGroupIds(draggedLayer, layers.value),
+      }
+    : null
 }
 
 const handleDragEnd = (): void => {
   isDraggingLayers.value = false
-  // keep fixed layer(s) unmoved
-  const ids = layers.value.map((l) => String(l.id))
+  const ids = resolveDragOrderIds()
+  layerDragSnapshot = null
   applyOrder(ids)
   baseStore.canvas?.renderAll?.()
 }

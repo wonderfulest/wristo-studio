@@ -168,12 +168,14 @@ const zhAcademyCopy: AcademyCopy = {
     },
     {
       id: 3,
-      title: '设置设备和画布',
-      goal: '学会选择目标设备，并根据设备屏幕建立可编辑的表盘画布。',
+      title: '认识 Studio 画布编辑界面',
+      goal: '了解 Studio 编辑器的左侧图层区、中间画布区和右侧设置区，学会通过“选择元素、查看画布、修改属性”的方式编辑表盘。',
       sections: [
-        { heading: '选择设备', items: ['在设备选择入口中选择主要 Garmin 型号。', '先用一个主设备完成设计，不要一开始适配所有设备。', '注意圆形、方形和不同分辨率的差异。'] },
-        { heading: '理解画布', items: ['画布显示的是当前设备的表盘区域。', '屏幕边缘附近的内容容易被裁切或看不清。', '重要信息优先放在更稳定、更容易阅读的位置。'] },
-        { heading: '检查边界', items: ['时间、文字、图标不要贴边。', '圆形屏幕要特别检查四角和外圈区域。', '切换设备后重新检查元素位置。'] },
+        { heading: '认识编辑器整体布局', items: ['Studio 编辑器主要由左侧图层区、中间画布区和右侧设置区组成。', '左侧帮助你选择和管理元素，中间用于直接查看和摆放设计，右侧用于修改选中元素的属性。', '先理解三个区域的分工，再开始添加复杂内容。'] },
+        { heading: '左侧图层区', items: ['每添加一个时间、文字、图标、图片或图形元素，都会出现在左侧图层列表中。', '点击图层可以快速选中对应元素。', '通过图层列表可以理解元素的前后关系，知道哪些内容可能盖住其它内容。'] },
+        { heading: '中间画布区', items: ['画布是表盘设计的主要操作区域，显示最终会出现在手表上的内容。', '可以在画布中拖动元素，观察它们和中心、边缘之间的距离。', '时间等主要信息适合优先放在更清晰、更稳定的位置。'] },
+        { heading: '右侧设置区和属性面板', items: ['选中元素后，右侧会显示它对应的设置项。', '常见属性包括位置、尺寸、颜色、字体、透明度、填充和描边。', '不同元素会出现不同属性，例如时间有格式和字体，文字有内容和字号，图形有填充和描边，图片有尺寸和透明度。'] },
+        { heading: '本课练习', items: ['在画布中选中一个时间元素。', '观察左侧图层列表中对应图层的选中状态。', '在右侧属性面板调整位置、字号或颜色。', '回到画布确认修改后的显示效果是否清晰。'] },
       ],
     },
     {
@@ -286,12 +288,14 @@ const enAcademyCopy: AcademyCopy = {
     },
     {
       id: 3,
-      title: 'Set the device and canvas',
-      goal: 'Choose a target device and build an editable watch face canvas for that screen.',
+      title: 'Understand the Studio canvas editor',
+      goal: 'Learn the left layer panel, center canvas, and right settings area, then edit a watch face by selecting an element, checking the canvas, and changing its properties.',
       sections: [
-        { heading: 'Choose a device', items: ['Select the primary Garmin model from the device selector.', 'Finish the design on one main device first instead of adapting every device immediately.', 'Pay attention to differences between round, square, and differently sized screens.'] },
-        { heading: 'Understand the canvas', items: ['The canvas shows the watch face area for the current device.', 'Content near the screen edge is easy to crop or hard to read.', 'Place key information in stable, readable positions first.'] },
-        { heading: 'Check boundaries', items: ['Keep time, text, and icons away from the edge.', 'For round screens, check corners and the outer ring carefully.', 'After switching devices, check element positions again.'] },
+        { heading: 'Know the editor layout', items: ['The Studio editor is mainly split into the left layer panel, the center canvas, and the right settings area.', 'The left side helps you select and manage elements, the center shows and positions the design, and the right side changes properties for the selected element.', 'Understand these three areas before adding more complex content.'] },
+        { heading: 'Left layer panel', items: ['Every time, text, icon, image, or shape element you add appears in the layer list.', 'Click a layer to quickly select the matching element.', 'Use the layer list to understand front and back relationships and see which elements may cover others.'] },
+        { heading: 'Center canvas', items: ['The canvas is the main design area and shows the content that will appear on the watch.', 'Drag elements on the canvas and watch their distance from the center and edge.', 'Primary information such as time should be placed in a clear and stable position first.'] },
+        { heading: 'Right settings area and property panel', items: ['After selecting an element, the right side shows its settings.', 'Common properties include position, size, color, font, opacity, fill, and stroke.', 'Different elements show different properties: time has format and font, text has content and size, shapes have fill and stroke, and images have size and opacity.'] },
+        { heading: 'Practice', items: ['Select a time element on the canvas.', 'Check the selected layer state in the left layer list.', 'Change position, font size, or color in the right property panel.', 'Return to the canvas and confirm that the updated display is still clear.'] },
       ],
     },
     {
