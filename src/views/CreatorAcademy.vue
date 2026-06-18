@@ -140,25 +140,30 @@ const zhAcademyCopy: AcademyCopy = {
     {
       id: 1,
       title: '进入 Studio 并创建项目',
-      goal: '完成登录、进入工作台、创建第一个 Garmin 表盘项目。',
+      goal: '从登录 Studio 开始，创建第一个 Garmin 表盘项目，进入编辑器并保存第一张项目卡片。',
       video: {
-        src: 'https://www.youtube.com/embed/aW_UG6qbVXw?si=pAPM8E_Gn-X2flt5',
+        src: 'https://www.youtube.com/embed/ojxoE1SilZo?si=-3FomajP54jAS7L4',
         title: 'Create your first Garmin watch face project in Wristo Studio',
       },
       sections: [
-        { heading: '进入工作台', items: ['打开 Wristo Studio。', '登录 Wristo 账号。', '进入项目列表或新项目入口。'] },
-        { heading: '创建项目', items: ['点击新建项目。', '选择空白项目或可用模板。', '填写项目名称。', '选择目标 Garmin 设备或屏幕尺寸。', '添加时间元素。'] },
-        { heading: '第一次保存', items: ['进入画布后先保存一次项目。', '确认项目出现在工作台列表中。'] },
+        { heading: '登录并进入项目列表', items: ['打开 Wristo Studio 登录页。', '输入账号信息并登录 Studio。', '进入 My Projects 页面，准备创建新的表盘设计。'] },
+        { heading: '新建 Garmin 表盘项目', items: ['在 My Projects 中点击 New Project。', '输入项目名称，使用容易识别的名称管理后续版本。', '选择目标 Garmin 设备型号，让画布尺寸匹配要制作的手表屏幕。', '确认创建项目并进入 Studio 编辑器。'] },
+        { heading: '完成第一张项目卡片', items: ['在编辑器中先查看 Garmin watch 预览区域。', '添加时间元素，并把时间调整到表盘中间。', '保存当前设计。', '返回 My Projects，确认新创建的 watch face 卡片已经出现在项目列表中。'] },
       ],
     },
     {
       id: 2,
-      title: '认识编辑器界面',
-      goal: '理解 Studio 编辑器里每个区域的用途，知道从哪里添加、选择和调整元素。',
+      title: '安装表盘到 Garmin 手表',
+      goal: '从 Wristo Studio 构建 PRG 文件，并通过 USB 复制到 Garmin 手表的 GARMIN / APPS 文件夹完成真机安装测试。',
+      video: {
+        src: 'https://www.youtube.com/embed/y49SQN695a8?si=xjVZ57MSZtuX_RTS',
+        title: 'Install face to Garmin device',
+      },
       sections: [
-        { heading: '主要区域', items: ['顶部栏：进入工作台、打开学院、切换设备和账户相关操作。', '工具菜单：保存、截图、添加时间、数据、图形、天气和帮助。', '画布区：查看当前设备上的表盘效果。', '属性面板：调整选中元素的位置、尺寸、颜色、字体和数据。'] },
-        { heading: '常用操作', items: ['点击画布元素进行选择。', '拖动元素改变位置。', '使用属性面板做精确调整。', '用保存按钮提交当前设计。'] },
-        { heading: '建议习惯', items: ['先选中元素，再看右侧或属性区可调整的内容。', '不要一次添加太多元素，先完成基础结构。', '每次大调整后保存并预览。'] },
+        { heading: '准备可安装的项目', items: ['在 Wristo Studio 中完成第一版 watch face。', '上传配置并保存项目，确保当前设计已经写入项目。', '返回 My Projects，在项目列表中找到对应的应用卡片。'] },
+        { heading: '构建并下载 PRG', items: ['在应用卡片上点击 Build PRG，开始打包 Garmin watch face。', '等待打包完成，不要在处理中重复触发构建。', '构建完成后点击下载图标，把 PRG 文件保存到电脑本地。', '在 Finder 中确认已经能看到下载好的 PRG 文件。'] },
+        { heading: '复制到 Garmin 手表', items: ['用 USB 数据线把 Garmin watch 连接到电脑。', '打开出现的 GARMIN 设备盘。', '进入 GARMIN 文件夹，再进入 APPS 文件夹。', '把下载好的 PRG 文件复制到 GARMIN / APPS。'] },
+        { heading: '完成安装检查', items: ['复制完成后安全弹出 Garmin 设备盘。', '拔下手表并等待设备重新加载。', '在手表上确认 Wristo watch face 已经安装成功。', '本课用于本地 PRG 真机测试，不覆盖 Connect IQ Store 发布流程。'] },
       ],
     },
     {
@@ -253,25 +258,30 @@ const enAcademyCopy: AcademyCopy = {
     {
       id: 1,
       title: 'Enter Studio and create a project',
-      goal: 'Log in, open the workspace, and create your first Garmin watch face project.',
+      goal: 'Start from the Studio sign-in page, create your first Garmin watch face project, enter the editor, and save the first project card.',
       video: {
-        src: 'https://www.youtube.com/embed/aW_UG6qbVXw?si=pAPM8E_Gn-X2flt5',
+        src: 'https://www.youtube.com/embed/ojxoE1SilZo?si=-3FomajP54jAS7L4',
         title: 'Create your first Garmin watch face project in Wristo Studio',
       },
       sections: [
-        { heading: 'Open the workspace', items: ['Open Wristo Studio.', 'Sign in to your Wristo account.', 'Go to the project list or the new project entry.'] },
-        { heading: 'Create a project', items: ['Click New Project.', 'Choose a blank project or an available template.', 'Enter the project name.', 'Select the target Garmin device or screen size.', 'Add a time element.'] },
-        { heading: 'Save for the first time', items: ['Save the project once after entering the canvas.', 'Confirm that the project appears in the workspace list.'] },
+        { heading: 'Sign in and open My Projects', items: ['Open the Wristo Studio sign-in page.', 'Enter your account details and sign in to Studio.', 'Go to My Projects and get ready to create a new watch face design.'] },
+        { heading: 'Create a Garmin watch face project', items: ['Click New Project in My Projects.', 'Enter a project name that will be easy to recognize later.', 'Select the target Garmin device model so the canvas matches the watch screen.', 'Confirm project creation and enter the Studio editor.'] },
+        { heading: 'Finish the first project card', items: ['Check the Garmin watch preview area in the editor.', 'Add a time element and adjust it to the center of the watch face.', 'Save the current design.', 'Return to My Projects and confirm that the new watch face card appears in the project list.'] },
       ],
     },
     {
       id: 2,
-      title: 'Learn the editor interface',
-      goal: 'Understand what each editor area does and where to add, select, and adjust elements.',
+      title: 'Install a watch face on a Garmin device',
+      goal: 'Build a PRG file in Wristo Studio, then copy it over USB into the Garmin watch GARMIN / APPS folder for real-device testing.',
+      video: {
+        src: 'https://www.youtube.com/embed/y49SQN695a8?si=xjVZ57MSZtuX_RTS',
+        title: 'Install face to Garmin device',
+      },
       sections: [
-        { heading: 'Main areas', items: ['Top bar: open the workspace, academy, device switching, and account actions.', 'Tool menu: save, screenshot, add time, data, shapes, weather, and help.', 'Canvas: preview the watch face on the current device.', 'Properties panel: adjust position, size, color, font, and data for the selected element.'] },
-        { heading: 'Common actions', items: ['Click a canvas element to select it.', 'Drag an element to move it.', 'Use the properties panel for precise adjustments.', 'Use the save button to submit the current design.'] },
-        { heading: 'Recommended habits', items: ['Select an element first, then check what can be adjusted in the side or properties area.', 'Do not add too many elements at once. Finish the basic structure first.', 'Save and preview after every major adjustment.'] },
+        { heading: 'Prepare an installable project', items: ['Finish the first version of your watch face in Wristo Studio.', 'Upload the configuration and save the project so the latest design is stored.', 'Return to My Projects and find the app card for this watch face.'] },
+        { heading: 'Build and download the PRG', items: ['Click Build PRG on the app card to package the Garmin watch face.', 'Wait for packaging to finish before starting another build.', 'When the build is complete, click the download icon to save the PRG file locally.', 'Confirm the downloaded PRG file is visible in Finder.'] },
+        { heading: 'Copy it to the Garmin watch', items: ['Connect the Garmin watch to your computer with a USB data cable.', 'Open the GARMIN drive when it appears.', 'Open the GARMIN folder, then open APPS.', 'Copy the downloaded PRG file into GARMIN / APPS.'] },
+        { heading: 'Finish the installation check', items: ['Safely eject the Garmin drive after the copy finishes.', 'Unplug the watch and let the device reload.', 'Confirm the Wristo watch face is installed on the watch.', 'This lesson is for local PRG testing and does not cover Connect IQ Store publishing.'] },
       ],
     },
     {
