@@ -5,8 +5,8 @@ import type { TextElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 // import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { getDataValueByName } from '@/utils/dataSimulator'
-import {usePropertiesStore} from '@/stores/properties'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
+import { usePropertiesStore } from '@/stores/properties'
 export function createText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
@@ -27,10 +27,7 @@ export function createText(config: TextElementConfig): FabricElement {
       ? propertyValue
       : config.textTemplate ?? '') || 'New Text'
 
-  const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_m, p1) => {
-    const key = String(p1 || '').trim()
-    return key ? getDataValueByName(key) : ''
-  })
+  const resolvedText = resolveDataTextTemplate(template)
 
   const element = new FabricText(resolvedText || 'New Text', {
     id: config.id || nanoid(),
@@ -72,7 +69,10 @@ export function updateText(element: FabricElement, patch: Partial<TextElementCon
   if (patch.fontFamily != null) anyEl.set('fontFamily', patch.fontFamily)
   if (patch.originX != null) anyEl.set('originX', patch.originX)
   if (patch.textProperty != null) anyEl.textProperty = patch.textProperty
-  if (patch.textTemplate != null) anyEl.textTemplate = patch.textTemplate
+  if (patch.textTemplate != null) {
+    anyEl.textTemplate = patch.textTemplate
+    anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
+  }
 
   anyEl.setCoords?.()
   canvas.renderAll()

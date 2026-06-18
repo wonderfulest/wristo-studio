@@ -1,7 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { getDataValueByName } from '@/utils/dataSimulator'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 
 export function encodeScrollableText(element: FabricElement): TextElementConfig {
   const anyEl = element as any
@@ -47,10 +47,7 @@ export function decodeScrollableText(config: TextElementConfig): Partial<FabricE
     typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : fallbackTemplate
 
   const textTemplate = baseTemplate ?? ''
-  const resolvedText = (textTemplate || '').replace(/\{\{([^}]+)\}\}/g, (_m: unknown, p1: string) => {
-    const key = String(p1 || '').trim()
-    return key ? getDataValueByName(key) : ''
-  })
+  const resolvedText = resolveDataTextTemplate(textTemplate)
 
   const element: Partial<FabricElement> = {
     id: config.id,

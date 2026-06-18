@@ -1,114 +1,152 @@
 <template>
-  <el-drawer v-model="visible" direction="rtl" size="min(860px, 100vw)" class="properties-drawer">
+  <el-drawer v-model="visible" direction="rtl" size="min(920px, 100vw)" class="properties-drawer">
     <template #header>
       <div class="drawer-settings-heading">
         <h3>{{ t('property.drawerTitle') }}</h3>
-        <p>({{ t('property.settingsHint') }})</p>
+        <p>{{ t('property.settingsHint') }}</p>
       </div>
     </template>
     <div class="properties-container">
+      <section class="properties-overview" :aria-label="t('property.drawerTitle')">
+        <div class="overview-main">
+          <span>{{ t('property.propertyCount', { count: propertyCount }) }}</span>
+          <strong>{{ t('property.drawerTitle') }}</strong>
+        </div>
+        <div class="overview-stats">
+          <span v-for="stat in propertyStats" :key="stat.type" class="overview-stat">
+            <el-icon>
+              <component :is="stat.icon" />
+            </el-icon>
+            <span>{{ stat.label }}</span>
+            <em>{{ stat.count }}</em>
+          </span>
+        </div>
+      </section>
+
       <div class="properties-layout">
         <section class="properties-main" :aria-label="t('property.drawerTitle')">
           <div class="settings-stack">
-            <el-form label-position="top" class="app-settings-form">
-              <el-form-item :label="t('property.textCase')">
-                <el-select v-model="textCase" style="width: 100%">
-                  <el-option :label="t('property.default')" :value="0" />
-                  <el-option :label="t('property.uppercase')" :value="1" />
-                  <el-option :label="t('property.lowercase')" :value="2" />
-                  <el-option :label="t('property.capitalize')" :value="3" />
-                </el-select>
-              </el-form-item>
-
-              <el-form-item :label="t('property.labelLength')">
-                <el-segmented v-model="labelLengthType" :options="labelLengthOptions" block />
-              </el-form-item>
-
-              <div class="switch-row">
+            <section class="settings-card">
+              <div class="section-header">
                 <div>
-                  <span>{{ t('property.showUnit') }}</span>
-                  <small>{{ t('property.showUnitHint') }}</small>
+                  <h3>{{ t('property.appSettings') }}</h3>
+                  <p>{{ t('property.appSettingsHint') }}</p>
                 </div>
-                <el-switch v-model="showUnit" />
               </div>
-            </el-form>
 
-            <div class="properties-toolbar">
-              <el-tag size="small" round>{{ t('property.propertyCount', { count: propertyCount }) }}</el-tag>
-            </div>
+              <el-form label-position="top" class="app-settings-form">
+                <el-form-item :label="t('property.textCase')">
+                  <el-select v-model="textCase" style="width: 100%">
+                    <el-option :label="t('property.default')" :value="0" />
+                    <el-option :label="t('property.uppercase')" :value="1" />
+                    <el-option :label="t('property.lowercase')" :value="2" />
+                    <el-option :label="t('property.capitalize')" :value="3" />
+                  </el-select>
+                </el-form-item>
 
-            <el-empty
-              v-if="propertyCount === 0"
-              class="property-empty"
-              :description="t('property.emptyProperties')"
-            />
+                <el-form-item :label="t('property.labelLength')">
+                  <el-segmented v-model="labelLengthType" :options="labelLengthOptions" block />
+                </el-form-item>
 
-            <div v-else class="property-groups">
-              <section
-                v-for="group in groupedProperties"
-                :key="group.type"
-                class="property-group"
-                :aria-label="group.label"
-              >
-                <div class="group-title">
-                  <el-icon>
-                    <component :is="group.icon" />
-                  </el-icon>
-                  <span>{{ group.label }}</span>
-                  <em>{{ group.items.length }}</em>
+                <div class="switch-row">
+                  <div>
+                    <span>{{ t('property.showUnit') }}</span>
+                    <small>{{ t('property.showUnitHint') }}</small>
+                  </div>
+                  <el-switch v-model="showUnit" />
                 </div>
+              </el-form>
+            </section>
 
-                <div class="property-list">
-                  <article v-for="item in group.items" :key="item.key" class="property-row">
-                    <div class="property-value">
-                      <div class="property-title-line">
-                        <strong>{{ item.prop.title }}</strong>
-                        <code>{{ item.key }}</code>
+            <section class="properties-list-card">
+              <div class="section-header">
+                <div>
+                  <h3>{{ t('property.currentProperties') }}</h3>
+                  <p>{{ t('property.currentPropertiesHint') }}</p>
+                </div>
+                <el-tag size="small" round>{{ t('property.propertyCount', { count: propertyCount }) }}</el-tag>
+              </div>
+
+              <el-empty
+                v-if="propertyCount === 0"
+                class="property-empty"
+                :description="t('property.emptyProperties')"
+              />
+
+              <div v-else class="property-groups">
+                <section
+                  v-for="group in groupedProperties"
+                  :key="group.type"
+                  class="property-group"
+                  :aria-label="group.label"
+                >
+                  <div class="group-title">
+                    <span class="group-title-main">
+                      <el-icon>
+                        <component :is="group.icon" />
+                      </el-icon>
+                      <span>{{ group.label }}</span>
+                    </span>
+                    <em>{{ group.items.length }}</em>
+                  </div>
+
+                  <div class="property-list">
+                    <article v-for="item in group.items" :key="item.key" class="property-row">
+                      <div class="property-type-mark">
+                        <el-icon>
+                          <component :is="group.icon" />
+                        </el-icon>
                       </div>
-                      <div class="property-preview">
-                        <template v-if="item.prop.type === 'color'">
-                          <span
-                            class="color-preview"
-                            :style="{
-                              border: item.prop.value === '-1' ? '1px solid var(--el-border-color)' : '0',
-                              backgroundColor: item.prop.value === '-1' ? 'transparent' : `#${String(item.prop.value).replace('0x', '')}`
-                            }"
+                      <div class="property-value">
+                        <div class="property-title-line">
+                          <strong>{{ item.prop.title }}</strong>
+                          <code>{{ item.key }}</code>
+                        </div>
+                        <div class="property-preview">
+                          <template v-if="item.prop.type === 'color'">
+                            <span
+                              class="color-preview"
+                              :style="{
+                                border: item.prop.value === '-1' ? '1px solid var(--el-border-color)' : '0',
+                                backgroundColor: item.prop.value === '-1' ? 'transparent' : `#${String(item.prop.value).replace('0x', '')}`
+                              }"
+                            >
+                              <span v-if="item.prop.value === '-1'" class="transparent-pattern"></span>
+                            </span>
+                            <span class="mono-value">{{ item.prop.value }}</span>
+                          </template>
+                          <template v-else>
+                            <span>{{ getPropertyPreview(item.prop) }}</span>
+                          </template>
+                        </div>
+                      </div>
+                      <div class="property-actions">
+                        <el-tooltip :content="t('common.edit')" placement="top">
+                          <el-button
+                            :aria-label="t('common.edit')"
+                            circle
+                            @click="editProperty(item.key, item.prop)"
                           >
-                            <span v-if="item.prop.value === '-1'" class="transparent-pattern"></span>
-                          </span>
-                          <span class="mono-value">{{ item.prop.value }}</span>
-                        </template>
-                        <template v-else>
-                          <span>{{ getPropertyPreview(item.prop) }}</span>
-                        </template>
+                            <el-icon><Edit /></el-icon>
+                          </el-button>
+                        </el-tooltip>
+                        <el-tooltip :content="t('common.delete')" placement="top">
+                          <el-button
+                            :aria-label="t('common.delete')"
+                            type="danger"
+                            circle
+                            plain
+                            @click="deleteProperty(item.key)"
+                          >
+                            <el-icon><Delete /></el-icon>
+                          </el-button>
+                        </el-tooltip>
                       </div>
-                    </div>
-                    <div class="property-actions">
-                      <el-tooltip :content="t('common.edit')" placement="top">
-                        <el-button
-                          :aria-label="t('common.edit')"
-                          circle
-                          @click="editProperty(item.key, item.prop)"
-                        >
-                          <el-icon><Edit /></el-icon>
-                        </el-button>
-                      </el-tooltip>
-                      <el-tooltip :content="t('common.delete')" placement="top">
-                        <el-button
-                          :aria-label="t('common.delete')"
-                          type="danger"
-                          circle
-                          plain
-                          @click="deleteProperty(item.key)"
-                        >
-                          <el-icon><Delete /></el-icon>
-                        </el-button>
-                      </el-tooltip>
-                    </div>
-                  </article>
-                </div>
-              </section>
-            </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -117,6 +155,7 @@
             <div class="section-header compact">
               <div>
                 <h3>{{ t('property.addProperty') }}</h3>
+                <p>{{ t('property.addPropertyHint') }}</p>
               </div>
             </div>
             <div class="property-types">
@@ -198,6 +237,15 @@ const propertyEntries = computed(() =>
 )
 
 const propertyCount = computed(() => propertyEntries.value.length)
+
+const propertyStats = computed(() =>
+  typeOrder.map((type) => ({
+    type,
+    label: typeMeta.value[type].label,
+    icon: typeMeta.value[type].icon,
+    count: propertyEntries.value.filter((item) => item.prop.type === type).length,
+  }))
+)
 
 const groupedProperties = computed(() =>
   typeOrder
@@ -366,20 +414,105 @@ defineExpose({
 <style scoped>
 .properties-container {
   box-sizing: border-box;
-  padding: 12px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   height: 100%;
-  background: var(--el-bg-color);
+  padding: 14px 22px 20px;
+  background:
+    linear-gradient(180deg, var(--el-fill-color-extra-light), transparent 180px),
+    var(--el-bg-color);
 }
 
 :deep(.properties-drawer .el-drawer__header) {
   margin-bottom: 0;
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+:deep(.properties-drawer .el-drawer__body) {
+  overflow: hidden;
+}
+
+.properties-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.overview-main {
+  min-width: 0;
+}
+
+.overview-main span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.overview-main strong {
+  display: block;
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.overview-stat {
+  display: inline-grid;
+  grid-template-columns: 16px minmax(0, auto) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+  color: var(--el-text-color-regular);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.overview-stat .el-icon {
+  color: var(--el-color-primary);
+}
+
+.overview-stat em {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--el-fill-color-blank);
+  color: var(--el-text-color-primary);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
 }
 
 .properties-layout {
   display: flex;
   align-items: flex-start;
-  gap: 0;
-  height: 100%;
+  gap: 16px;
+  min-height: 0;
+  flex: 1;
 }
 
 .properties-main {
@@ -387,7 +520,7 @@ defineExpose({
   min-width: 0;
   height: 100%;
   overflow: auto;
-  padding: 0 22px 0 0;
+  padding-right: 2px;
 }
 
 .properties-side {
@@ -397,13 +530,22 @@ defineExpose({
   gap: 14px;
   height: 100%;
   overflow: auto;
-  margin-left: 22px;
-  padding-left: 22px;
-  border-left: 1px solid var(--el-border-color-lighter);
+  padding-right: 2px;
 }
 
 .properties-main {
   box-sizing: border-box;
+}
+
+.properties-main::-webkit-scrollbar,
+.properties-side::-webkit-scrollbar {
+  width: 6px;
+}
+
+.properties-main::-webkit-scrollbar-thumb,
+.properties-side::-webkit-scrollbar-thumb {
+  background: var(--el-border-color-lighter);
+  border-radius: 999px;
 }
 
 .section-header {
@@ -431,7 +573,6 @@ defineExpose({
 
 .section-header.compact {
   margin-bottom: 10px;
-  padding: 0 2px;
 }
 
 .drawer-settings-heading h3 {
@@ -455,28 +596,41 @@ defineExpose({
   gap: 18px;
 }
 
-.properties-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 2px;
-  border-top: 1px solid var(--el-border-color-lighter);
+.settings-card,
+.properties-list-card,
+.add-property {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.settings-card,
+.properties-list-card {
+  padding: 16px;
+}
+
+.add-property {
+  padding: 14px;
+  position: sticky;
+  top: 0;
 }
 
 .property-types {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .property-type-button {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   margin-left: 0;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-color: var(--el-border-color-lighter);
   color: var(--el-text-color-primary);
-  background: transparent;
+  background: var(--el-fill-color-extra-light);
   text-align: left;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .property-type-button + .property-type-button {
@@ -485,15 +639,16 @@ defineExpose({
 
 .property-type-button :deep(> span) {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
   justify-content: stretch;
-  column-gap: 9px;
+  column-gap: 10px;
   width: 100%;
 }
 
 .property-type-button :deep(.el-icon) {
-  width: 18px;
+  width: 20px;
+  font-size: 16px;
   margin: 0;
   color: var(--el-text-color-secondary);
 }
@@ -519,13 +674,13 @@ defineExpose({
   min-height: 220px;
   border: 1px dashed var(--el-border-color);
   border-radius: 8px;
-  background: var(--el-fill-color-lighter);
+  background: var(--el-fill-color-extra-light);
 }
 
 .property-groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .property-group {
@@ -537,11 +692,23 @@ defineExpose({
 .group-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
   color: var(--el-text-color-secondary);
   font-size: 12px;
-  font-weight: 650;
-  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.group-title-main {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.group-title-main .el-icon {
+  color: var(--el-color-primary);
 }
 
 .group-title em {
@@ -550,7 +717,6 @@ defineExpose({
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  margin-left: auto;
   border-radius: 999px;
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
@@ -561,24 +727,37 @@ defineExpose({
 .property-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .property-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  min-height: 64px;
+  min-height: 68px;
   padding: 10px 10px 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   background: var(--el-fill-color-blank);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .property-row:hover {
   border-color: var(--el-border-color);
   background: var(--el-fill-color-extra-light);
+}
+
+.property-type-mark {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+  color: var(--el-color-primary);
 }
 
 .property-value {
@@ -665,25 +844,24 @@ defineExpose({
 .property-actions {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
 }
 
 .property-actions .el-button {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   margin-left: 0;
 }
 
 .app-settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 420px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 14px 16px;
 }
 
 .app-settings-form :deep(.el-form-item) {
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .app-settings-form :deep(.el-form-item__label) {
@@ -698,7 +876,10 @@ defineExpose({
   justify-content: space-between;
   gap: 12px;
   min-height: 48px;
-  padding: 10px 0 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-extra-light);
 }
 
 .switch-row span {
@@ -735,6 +916,19 @@ defineExpose({
 }
 
 @media (max-width: 760px) {
+  .properties-container {
+    padding: 12px 16px 18px;
+  }
+
+  .properties-overview,
+  .app-settings-form {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-stats {
+    justify-content: flex-start;
+  }
+
   .properties-layout {
     flex-direction: column;
     gap: 16px;
@@ -744,11 +938,6 @@ defineExpose({
     flex: none;
     width: 100%;
     height: auto;
-    margin-left: 0;
-    padding-top: 16px;
-    padding-left: 0;
-    border-top: 1px solid var(--el-border-color-lighter);
-    border-left: 0;
     overflow: visible;
   }
 
@@ -756,6 +945,24 @@ defineExpose({
     width: 100%;
     height: auto;
     overflow: visible;
+  }
+
+  .add-property {
+    position: static;
+  }
+
+  .property-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .property-type-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .property-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 }
 </style>

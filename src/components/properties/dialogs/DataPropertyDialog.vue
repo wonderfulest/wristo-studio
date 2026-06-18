@@ -2,8 +2,8 @@
   <el-dialog
     v-model="dialogVisible"
     class="property-dialog"
-    :title="t('property.selectProperty')"
-    width="800px"
+    :title="t('property.dataSelect')"
+    width="720px"
     :close-on-click-modal="false"
     :destroy-on-close="true"
   >
@@ -13,39 +13,37 @@
       label-position="top"
       class="property-form"
     >
-      <!-- 基本信息部分 -->
-      <div class="form-section">
-        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
-        <el-form-item 
-          :label="t('property.title')" 
-          prop="title"
-          :rules="[
-            { required: true, message: t('property.inputTitle'), trigger: 'blur' },
-            { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
-          ]"
-        >
-          <el-input v-model="formData.title" :placeholder="t('property.selectProperty')" />
-          <div class="field-help">
-            {{ t('property.titleHelp') }}
-          </div>
-        </el-form-item>
-
-        <PropertyKeyField
-          v-model="formData.propertyKey"
-          :is-edit="isEdit"
-          default-key="data_1"
-          placeholder="data_1"
-        />
-
-        <el-form-item :label="t('property.type')">
-          <el-input v-model="formData.type" disabled placeholder="data" />
-          <div class="field-help">
-            {{ t('property.typeHelp') }}
-          </div>
-        </el-form-item>
+      <div class="property-hero">
+        <div>
+          <div class="property-hero-kicker">{{ t('property.dataSelect') }}</div>
+          <div class="property-hero-title">{{ formData.title || t('property.dataSelect') }}</div>
+        </div>
+        <code class="property-hero-key">prop.{{ formData.propertyKey || 'data_1' }}</code>
       </div>
 
-      <!-- 选项部分 -->
+      <div class="form-section">
+        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
+        <div class="basic-grid">
+          <el-form-item
+            :label="t('property.title')"
+            prop="title"
+            :rules="[
+              { required: true, message: t('property.inputTitle'), trigger: 'blur' },
+              { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
+            ]"
+          >
+            <el-input v-model="formData.title" :placeholder="t('property.dataSelect')" />
+          </el-form-item>
+
+          <PropertyKeyField
+            v-model="formData.propertyKey"
+            :is-edit="isEdit"
+            default-key="data_1"
+            placeholder="data_1"
+          />
+        </div>
+      </div>
+
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.dataOptions') }}</h3>
@@ -58,7 +56,6 @@
             v-model="formData.value" 
             :placeholder="t('property.selectDataType')"
             style="width: 100%"
-            @change="handleValueChange"
           >
             <el-option
               v-for="option in formData.options"
@@ -73,6 +70,15 @@
             </el-option>
           </el-select>
         </el-form-item>
+
+        <div v-if="selectedOption" class="selected-option-card">
+          <span class="selected-option-icon">{{ selectedOption.icon }}</span>
+          <div class="selected-option-copy">
+            <div class="selected-option-title">{{ selectedOption.label }}</div>
+            <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
+          </div>
+        </div>
+
         <el-collapse v-model="activeOptions" class="options-collapse">
           <el-collapse-item :title="t('property.dataOptions')" name="options">
             <el-form-item 
@@ -114,32 +120,29 @@
         </el-collapse>
       </div>
 
-      <!-- 提示信息部分 -->
       <div class="form-section">
         <h3 class="section-title">{{ t('property.messages') }}</h3>
-        <el-form-item :label="t('property.prompt')">
-          <el-input 
-            type="textarea" 
-            v-model="formData.prompt" 
-            :rows="2" 
-            :placeholder="t('property.promptPlaceholder')"
-          />
-          <div class="field-help">
-            {{ t('property.promptPlaceholder') }}
-          </div>
-        </el-form-item>
+        <div class="message-grid">
+          <el-form-item :label="t('property.promptOptional')">
+            <el-input
+              v-model="formData.prompt"
+              type="textarea"
+              :rows="3"
+              resize="none"
+              :placeholder="t('property.promptPlaceholder')"
+            />
+          </el-form-item>
 
-        <el-form-item :label="t('property.errorMessage')">
-          <el-input 
-            type="textarea" 
-            v-model="formData.errorMessage" 
-            :rows="2" 
-            :placeholder="t('property.errorPlaceholder')"
-          />
-          <div class="field-help">
-            {{ t('property.errorHelp') }}
-          </div>
-        </el-form-item>
+          <el-form-item :label="t('property.errorMessageOptional')">
+            <el-input
+              v-model="formData.errorMessage"
+              type="textarea"
+              :rows="3"
+              resize="none"
+              :placeholder="t('property.errorPlaceholder')"
+            />
+          </el-form-item>
+        </div>
       </div>
     </el-form>
 
@@ -153,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
@@ -168,16 +171,19 @@ const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
 const dataOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':FIELD_TYPE_'))
+const cloneDataOptions = () => JSON.parse(JSON.stringify(dataOptions))
 
 const formData = reactive({
   title: '',
   propertyKey: '',
   type: 'data',
-  options: dataOptions,
+  options: cloneDataOptions(),
   value: dataOptions[0]?.value,
   prompt: '',
   errorMessage: ''
 })
+
+const selectedOption = computed(() => formData.options.find((option) => option.value === formData.value) || null)
 
 const initFormData = (data = null) => {
   isEdit.value = !!data
@@ -186,7 +192,7 @@ const initFormData = (data = null) => {
       title: data.title,
       propertyKey: data.propertyKey,
       type: data.type,
-      options: dataOptions,
+      options: cloneDataOptions(),
       value: data.value || dataOptions[0]?.value,
       prompt: data.prompt,
       errorMessage: data.errorMessage
@@ -196,7 +202,7 @@ const initFormData = (data = null) => {
       title: 'Data 1',
       propertyKey: 'data_1',
       type: 'data',
-      options: dataOptions,
+      options: cloneDataOptions(),
       value: dataOptions[0]?.value,
       prompt: '',
       errorMessage: ''
@@ -205,10 +211,6 @@ const initFormData = (data = null) => {
 }
 
 const emit = defineEmits(['confirm'])
-
-const handleValueChange = (value) => {
-  
-}
 
 const handleConfirm = async () => {
   if (!formRef.value) return

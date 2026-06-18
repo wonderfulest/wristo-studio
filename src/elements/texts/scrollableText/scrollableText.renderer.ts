@@ -4,7 +4,7 @@ import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { getDataValueByName } from '@/utils/dataSimulator'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { usePropertiesStore } from '@/stores/properties'
 
 export function createScrollableText(config: TextElementConfig): FabricElement {
@@ -28,10 +28,7 @@ export function createScrollableText(config: TextElementConfig): FabricElement {
       ? propertyValue
       : (config as any).textTemplate ?? (config as any).text) ?? 'New Text'
 
-  const resolvedText = (template || '').replace(/\{\{([^}]+)\}\}/g, (_m: unknown, p1: string) => {
-    const key = String(p1 || '').trim()
-    return key ? getDataValueByName(key) : ''
-  })
+  const resolvedText = resolveDataTextTemplate(template)
 
   const element = new FabricText(resolvedText || 'New Text', {
     id: config.id || nanoid(),
@@ -96,7 +93,7 @@ export function updateScrollableText(
   if (patch.textProperty != null) anyEl.textProperty = patch.textProperty
   if (patch.textTemplate != null) {
     anyEl.textTemplate = patch.textTemplate
-    anyEl.set('text', patch.textTemplate)
+    anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
   }
 
   anyEl.setCoords?.()

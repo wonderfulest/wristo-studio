@@ -5,18 +5,14 @@
         v-model="textProperty"
         :label="t('elementSettings.textVariable')"
         :placeholder="t('elementSettings.selectTextProperty')"
+        :fallback-text="textTemplate"
         @change="applyTextProperty"
       />
-      <div v-if="selectedTextProperty" class="text-property-preview">
-        <div class="text-property-meta">
-          <span class="label">{{ t('elementSettings.variableName') }}</span>
-          <span class="value">{{ selectedTextProperty.title }}</span>
-        </div>
-        <div class="text-property-meta">
-          <span class="label">{{ t('elementSettings.defaultContent') }}</span>
-        </div>
-        <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
-      </div>
+      <TextPropertyPreview
+        v-if="selectedTextProperty"
+        :property-key="textProperty"
+        :property="selectedTextProperty"
+      />
     </div>
     <div class="setting-item">
       <label>{{ t('elementSettings.position') }}</label>
@@ -50,6 +46,10 @@
       <label>{{ t('elementSettings.font') }}</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
     </div>
+    <div class="setting-item">
+      <label>{{ t('elementSettings.textContent') }}</label>
+      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
+    </div>
   </div>
 </template>
 
@@ -64,6 +64,8 @@ import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/elements/common/settings/TextPropertyField.vue'
+import TextPropertyPreview from '@/elements/common/settings/TextPropertyPreview.vue'
+import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -101,6 +103,7 @@ const originX = ref(currentModel.value?.originX || 'center')
 const positionX = ref(Math.round(currentModel.value?.left || 0))
 const positionY = ref(Math.round(currentModel.value?.top || 0))
 const textProperty = ref(currentModel.value?.textProperty || '')
+const textTemplate = ref((currentModel.value as any)?.textTemplate ?? currentModel.value?.text ?? '')
 
 const selectedTextProperty = computed(() => {
   if (!textProperty.value) return null
@@ -168,10 +171,15 @@ const updatePosition = () => {
   applyUpdate({ left: positionX.value, top: positionY.value })
 }
 
+const updateTextTemplate = () => {
+  applyUpdate({ textTemplate: textTemplate.value })
+}
+
 const applyTextProperty = () => {
   if (!textProperty.value) return
   const template = propertiesStore.getPropertyValue(textProperty.value)
   if (typeof template === 'string') {
+    textTemplate.value = template
     applyUpdate({ textProperty: textProperty.value, textTemplate: template })
   }
 }
@@ -210,8 +218,27 @@ watch(
   () => props.element?.text,
   (newText) => {
     if (typeof newText === 'string') {
-      // 文本内容来源于属性，保持只读，不在这里编辑
+      textTemplate.value =
+        typeof (props.element as any)?.textTemplate === 'string'
+          ? (props.element as any).textTemplate
+          : newText
     }
+  }
+)
+
+watch(
+  () => (props.config as any)?.textTemplate,
+  (newTextTemplate) => {
+    if (typeof newTextTemplate === 'string') {
+      textTemplate.value = newTextTemplate
+    }
+  }
+)
+
+watch(
+  () => (props.config as any)?.textProperty,
+  (newTextProperty) => {
+    textProperty.value = typeof newTextProperty === 'string' ? newTextProperty : ''
   }
 )
 </script>

@@ -133,7 +133,7 @@ const zhAcademyCopy: AcademyCopy = {
   lessonsLabel: '课程列表',
   outcomes: [
     { title: '熟悉 Studio 工作区', body: '了解项目列表、创建设计、画布、顶部工具栏、属性面板和保存流程。' },
-    { title: '掌握表盘制作操作', body: '学习添加时间、文字、图形、图片、字体、图标和 Garmin 数据字段。' },
+    { title: '掌握表盘制作操作', body: '认识表盘元素类别，学习使用图层、对齐、素材、Garmin 数据字段和导出流程。' },
     { title: '完成可交付项目', body: '能检查设备预览、处理多尺寸适配、保存版本、导出文件并准备商店展示资料。' },
   ],
   lessons: [
@@ -184,16 +184,28 @@ const zhAcademyCopy: AcademyCopy = {
     },
     {
       id: 4,
-      title: '添加时间、文字和基础图形',
-      goal: '掌握最常用的表盘元素添加方式，搭出第一版可读布局。',
+      title: '表盘元素介绍',
+      goal: '认识 Studio 元素区的主要类别，理解不同元素在表盘设计中的作用，并学会先从合适的元素类型开始搭建布局。',
       sections: [
-        { heading: '添加时间', items: ['从时间相关菜单添加时间元素。', '选择适合的时间格式。', '调整时间的位置、大小、颜色和字体。', '确保时间是画面中最容易读到的信息。'] },
-        { heading: '添加文字', items: ['添加日期、标签或说明文字。', '保持文字内容短，避免小屏幕上拥挤。', '用字号和颜色区分主次，而不是让所有文字一样醒目。'] },
-        { heading: '添加基础图形', items: ['使用形状或线条做分区、装饰和信息承载。', '调整填充、描边、透明度和层级。', '避免图形遮挡时间和关键数据。'] },
+        { heading: '元素区的作用', items: ['添加元素面板是搭建表盘内容的入口。', '元素区按类别组织，不同类别对应不同设计用途。', '添加元素后，右侧属性面板会根据元素类型显示对应设置。'] },
+        { heading: '基础信息元素', items: ['Time：包含时间和日期，是大多数表盘最核心的信息。', 'Texts：包含普通文字、滚动文字、倾斜文字和环形文字，适合标题、标签、说明和特殊排版。', 'Metric：包含图标、数据和标签，常用于组合步数、心率等信息块。'] },
+        { heading: '状态和环境元素', items: ['Status：包含电量和 move bar，用于展示设备状态。', 'Indicator：包含蓝牙、勿扰、闹钟和通知，用于展示连接和提醒状态。', 'Weather：包含天气、月相和风向，用于展示环境信息。'] },
+        { heading: '视觉结构元素', items: ['Decoration：包含背景和图片，用于建立表盘整体视觉氛围。', 'Shape：包含矩形、圆形和线条，适合做分区、装饰和信息承载。', 'Dials 和 Hands：包含刻度、罗马数字、中心盖、时针、分针和秒针，用于模拟指针表盘结构。'] },
+        { heading: '进度和图表元素', items: ['Goal：包含目标进度条、弧形进度和分段进度，用于展示目标完成情况。', 'Chart：包含柱状图和折线图，用于展示更复杂的数据趋势。', '这类元素通常需要检查数据变化、缺失状态和小屏幕可读性。'] },
       ],
     },
     {
       id: 5,
+      title: '图层和对齐排列方式介绍',
+      goal: '掌握元素隐藏、锁定、删除、元素组、图层顺序、对齐方式和多个元素的快捷排列操作。',
+      sections: [
+        { heading: '图层基础操作', items: ['在左侧图层列表中选择元素，并观察画布中的选中状态。', '隐藏暂时不需要查看的元素，方便编辑被遮挡的内容。', '锁定背景、外圈装饰或已经确定位置的元素，避免误拖动。', '删除不再需要的测试文字、临时图形或多余图标。'] },
+        { heading: '元素组和图层顺序', items: ['把相关元素作为一组理解，例如天气图标加温度文字、步数图标加数字。', '背景放在底层，装饰元素不要盖住时间和关键数据。', '当元素被遮挡或选不中时，先检查图层顺序。', '必要时把重要信息移到更靠上的层级。'] },
+        { heading: '对齐和快捷排列', items: ['选中多个元素后使用左对齐、右对齐、水平居中、顶部对齐、底部对齐或垂直居中。', '同类数据使用一致的对齐方式。', '多个图标、文字或数据块需要整齐排列时，优先使用快捷排序操作。', '手动拖动适合微调，结构化排列优先使用对齐和排序工具。'] },
+      ],
+    },
+    {
+      id: 6,
       title: '使用字体、图标和图片素材',
       goal: '学会在 Studio 中使用视觉素材，并保持表盘风格统一。',
       sections: [
@@ -203,23 +215,13 @@ const zhAcademyCopy: AcademyCopy = {
       ],
     },
     {
-      id: 6,
+      id: 7,
       title: '绑定 Garmin 数据字段',
       goal: '添加步数、心率、电量、天气等动态数据，并检查不同状态下的显示效果。',
       sections: [
         { heading: '添加数据字段', items: ['从数据字段菜单选择电量、步数、心率等信息。', '把数据字段放在不会干扰时间的位置。', '为数据添加简短标签或清晰图标。', '同一组数据保持对齐和间距一致。'] },
         { heading: '常见数据', items: ['电量：适合放在边缘或状态区。', '步数：数字可能较长，要预留宽度。', '心率：要考虑缺失或未连接状态。', '天气：需要检查图标、温度和文字是否拥挤。'] },
         { heading: '状态测试', items: ['测试低电量和满电量。', '测试步数 0、8,532、18,240。', '测试心率 --、72、148。', '检查数据变化时版式是否跳动。'] },
-      ],
-    },
-    {
-      id: 7,
-      title: '调整图层、对齐和细节',
-      goal: '用 Studio 的编辑能力整理元素层级，让表盘看起来有秩序。',
-      sections: [
-        { heading: '图层关系', items: ['背景放在底层。', '装饰元素不要盖住时间和数据。', '选不中元素时，先检查是否被其它元素遮挡。', '必要时调整元素前后层级。'] },
-        { heading: '对齐和间距', items: ['同类数据使用一致的对齐方式。', '图标和文字之间保持固定间距。', '上下左右留白尽量形成统一规则。', '不要靠肉眼微调所有元素，优先使用数值和对齐。'] },
-        { heading: '细节检查', items: ['颜色对比是否足够。', '小字号是否仍然可读。', '背景是否干扰数字。', '不同元素的圆角、线条和透明度是否统一。'] },
       ],
     },
     {
@@ -257,7 +259,7 @@ const enAcademyCopy: AcademyCopy = {
   lessonsLabel: 'Lesson list',
   outcomes: [
     { title: 'Understand the Studio workspace', body: 'Learn the project list, design creation, canvas, top toolbar, properties panel, and save flow.' },
-    { title: 'Build watch face layouts', body: 'Learn how to add time, text, shapes, images, fonts, icons, and Garmin data fields.' },
+    { title: 'Build watch face layouts', body: 'Learn element categories, layers, alignment, assets, Garmin data fields, and export flow.' },
     { title: 'Finish a deliverable project', body: 'Check device previews, handle multiple sizes, save versions, export files, and prepare store assets.' },
   ],
   lessons: [
@@ -308,16 +310,28 @@ const enAcademyCopy: AcademyCopy = {
     },
     {
       id: 4,
-      title: 'Add time, text, and basic shapes',
-      goal: 'Add the most common watch face elements and build a first readable layout.',
+      title: 'Watch face elements overview',
+      goal: 'Understand the main element categories in Studio and choose the right element types before building a watch face layout.',
       sections: [
-        { heading: 'Add time', items: ['Add a time element from the time menu.', 'Choose a suitable time format.', 'Adjust time position, size, color, and font.', 'Make sure time is the easiest information to read.'] },
-        { heading: 'Add text', items: ['Add date, labels, or short explanatory text.', 'Keep text short to avoid crowding on small screens.', 'Use size and color to create hierarchy instead of making all text equally prominent.'] },
-        { heading: 'Add basic shapes', items: ['Use shapes or lines for grouping, decoration, and information support.', 'Adjust fill, stroke, opacity, and layer order.', 'Avoid shapes covering time or critical data.'] },
+        { heading: 'What the element panel does', items: ['The add element panel is the entry point for building watch face content.', 'Elements are organized by category, and each category supports a different design purpose.', 'After adding an element, the right settings panel shows controls for that element type.'] },
+        { heading: 'Basic information elements', items: ['Time: time and date, usually the core information on a watch face.', 'Texts: normal text, scrolling text, angled text, and radial text for titles, labels, notes, and special layouts.', 'Metric: icons, data, and labels for information blocks such as steps or heart rate.'] },
+        { heading: 'Status and environment elements', items: ['Status: battery and move bar for device state.', 'Indicator: Bluetooth, do not disturb, alarms, and notifications for connection and alert states.', 'Weather: weather, moon phase, and wind direction for environment information.'] },
+        { heading: 'Visual structure elements', items: ['Decoration: backgrounds and images for the overall visual style.', 'Shape: rectangles, circles, and lines for grouping, decoration, and information support.', 'Dials and hands: ticks, Roman numerals, center cap, hour hand, minute hand, and second hand for analog-style faces.'] },
+        { heading: 'Progress and chart elements', items: ['Goal: goal bars, goal arcs, and segmented progress for completion states.', 'Chart: bar charts and line charts for more complex data trends.', 'For these elements, check changing values, missing states, and readability on small screens.'] },
       ],
     },
     {
       id: 5,
+      title: 'Layers and alignment arrangement',
+      goal: 'Learn visibility, locking, deleting, element groups, layer order, alignment, and quick arrangement for multiple elements.',
+      sections: [
+        { heading: 'Basic layer operations', items: ['Select elements from the left layer list and watch the selected state on the canvas.', 'Hide elements temporarily when you need to edit content behind them.', 'Lock backgrounds, outer decorations, or elements whose positions are already finished.', 'Delete test text, temporary shapes, or extra icons that are no longer needed.'] },
+        { heading: 'Groups and layer order', items: ['Treat related elements as a group, such as a weather icon with temperature text or a steps icon with a number.', 'Keep backgrounds at the bottom and prevent decorative elements from covering time or key data.', 'If an element is covered or hard to select, check the layer order first.', 'Move important information to a higher layer when needed.'] },
+        { heading: 'Alignment and quick arrangement', items: ['Select multiple elements and use left, right, center, top, bottom, or vertical center alignment.', 'Use consistent alignment for similar data.', 'When several icons, text labels, or data blocks need to be organized, prefer quick arrangement tools.', 'Use manual dragging for small adjustments, and use alignment or arrangement for structure.'] },
+      ],
+    },
+    {
+      id: 6,
       title: 'Use fonts, icons, and images',
       goal: 'Use visual assets in Studio while keeping the watch face style consistent.',
       sections: [
@@ -327,23 +341,13 @@ const enAcademyCopy: AcademyCopy = {
       ],
     },
     {
-      id: 6,
+      id: 7,
       title: 'Bind Garmin data fields',
       goal: 'Add dynamic data such as steps, heart rate, battery, and weather, then check different display states.',
       sections: [
         { heading: 'Add data fields', items: ['Choose battery, steps, heart rate, or other information from the data field menu.', 'Place data fields where they do not interfere with time.', 'Add short labels or clear icons for the data.', 'Keep alignment and spacing consistent within the same data group.'] },
         { heading: 'Common data', items: ['Battery: suitable for edges or status areas.', 'Steps: numbers can become long, so reserve enough width.', 'Heart rate: consider missing or disconnected states.', 'Weather: check whether icons, temperature, and text become crowded.'] },
         { heading: 'State testing', items: ['Test low and full battery.', 'Test steps 0, 8,532, and 18,240.', 'Test heart rate --, 72, and 148.', 'Check whether the layout jumps when data changes.'] },
-      ],
-    },
-    {
-      id: 7,
-      title: 'Adjust layers, alignment, and details',
-      goal: 'Use Studio editing tools to organize hierarchy and make the watch face look orderly.',
-      sections: [
-        { heading: 'Layer relationships', items: ['Keep the background at the bottom.', 'Do not let decorative elements cover time or data.', 'If an element cannot be selected, check whether another element is covering it.', 'Adjust front and back order when needed.'] },
-        { heading: 'Alignment and spacing', items: ['Use consistent alignment for similar data.', 'Keep fixed spacing between icons and text.', 'Make margins follow a consistent rule.', 'Avoid adjusting everything by eye. Prefer numeric values and alignment tools.'] },
-        { heading: 'Detail checks', items: ['Is color contrast sufficient?', 'Is small text still readable?', 'Does the background interfere with numbers?', 'Are corner radius, line weight, and opacity consistent across elements?'] },
       ],
     },
     {

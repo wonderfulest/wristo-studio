@@ -252,6 +252,13 @@ export function getDataValueByName(name: string): string {
   return getSimulatedDataByName(name).display
 }
 
+export function resolveDataTextTemplate(template: string): string {
+  return String(template ?? '').replace(/\{\{([^}]+)\}\}/g, (_m, p1: string) => {
+    const key = String(p1 || '').trim()
+    return key ? getDataValueByName(key) : ''
+  })
+}
+
 export type SimulatedBarChartSeries = {
   data: number[]
   goal: number

@@ -55,6 +55,60 @@
   scroll-padding: 12px;
 }
 
+.property-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin: 0 -18px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  background:
+    linear-gradient(135deg, rgba(64, 158, 255, 0.12), rgba(103, 194, 58, 0.08)),
+    var(--el-fill-color-lighter);
+}
+
+.property-hero-kicker {
+  margin-bottom: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.property-hero-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-hero-key {
+  max-width: 180px;
+  overflow: hidden;
+  padding: 6px 10px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--el-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.basic-grid,
+.message-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .form-section {
   position: relative;
   margin-bottom: 0;
@@ -191,6 +245,108 @@
 .color-label {
   font-size: 14px;
   color: var(--el-text-color-primary);
+}
+
+.property-preview-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.property-preview-main {
+  min-width: 0;
+}
+
+.property-preview-label {
+  margin-bottom: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.property-preview-value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.property-preview-value span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-preview-meta {
+  justify-self: end;
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--el-text-color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-option-card {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.selected-option-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+  color: var(--el-color-primary);
+  font-size: 17px;
+}
+
+.selected-option-copy {
+  min-width: 0;
+}
+
+.selected-option-title {
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-option-meta {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--el-text-color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 目标选项特定样式 */
@@ -388,6 +544,26 @@
   .section-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .property-hero,
+  .property-preview-panel,
+  .basic-grid,
+  .message-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .property-hero {
+    margin-right: -16px;
+    margin-left: -16px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .property-hero-key,
+  .property-preview-meta {
+    max-width: 100%;
+    justify-self: start;
   }
 
   .option-item,

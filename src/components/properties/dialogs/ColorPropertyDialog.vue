@@ -2,8 +2,8 @@
   <el-dialog
     v-model="dialogVisible"
     class="property-dialog"
-    :title="t('property.selectProperty')"
-    width="800px"
+    :title="t('property.colorSelect')"
+    width="720px"
     :close-on-click-modal="false"
     :destroy-on-close="true"
   >
@@ -13,39 +13,37 @@
       label-position="top"
       class="property-form"
     >
-      <!-- 基本信息部分 -->
-      <div class="form-section">
-        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
-        <el-form-item 
-          :label="t('property.title')" 
-          prop="title"
-          :rules="[
-            { required: true, message: t('property.inputTitle'), trigger: 'blur' },
-            { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
-          ]"
-        >
-          <el-input v-model="formData.title" :placeholder="t('property.selectProperty')" />
-          <div class="field-help">
-            {{ t('property.titleHelp') }}
-          </div>
-        </el-form-item>
-
-        <PropertyKeyField
-          v-model="formData.propertyKey"
-          :is-edit="isEdit"
-          default-key="color_1"
-          placeholder="color_1"
-        />
-
-        <el-form-item :label="t('property.type')">
-          <el-input v-model="formData.type" disabled placeholder="number" />
-          <div class="field-help">
-            {{ t('property.typeHelp') }}
-          </div>
-        </el-form-item>
+      <div class="property-hero">
+        <div>
+          <div class="property-hero-kicker">{{ t('property.colorSelect') }}</div>
+          <div class="property-hero-title">{{ formData.title || t('property.colorSelect') }}</div>
+        </div>
+        <code class="property-hero-key">prop.{{ formData.propertyKey || 'color_1' }}</code>
       </div>
 
-      <!-- 选项部分 -->
+      <div class="form-section">
+        <h3 class="section-title">{{ t('property.basicInformation') }}</h3>
+        <div class="basic-grid">
+          <el-form-item
+            :label="t('property.title')"
+            prop="title"
+            :rules="[
+              { required: true, message: t('property.inputTitle'), trigger: 'blur' },
+              { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
+            ]"
+          >
+            <el-input v-model="formData.title" :placeholder="t('property.colorSelect')" />
+          </el-form-item>
+
+          <PropertyKeyField
+            v-model="formData.propertyKey"
+            :is-edit="isEdit"
+            default-key="color_1"
+            placeholder="color_1"
+          />
+        </div>
+      </div>
+
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.colorOptions') }}</h3>
@@ -64,6 +62,26 @@
         >
           <ColorPicker v-model="defaultColorHex" @change="handleDefaultColorChange" />
         </el-form-item>
+
+        <div class="property-preview-panel">
+          <div class="property-preview-main">
+            <div class="property-preview-label">{{ t('property.defaultValue') }}</div>
+            <div class="property-preview-value">
+              <span
+                class="color-preview"
+                :style="{
+                  backgroundColor: formData.value === '-1' ? 'transparent' : `#${String(formData.value).replace('0x', '')}`,
+                  border: formData.value === '-1' ? '1px dashed var(--el-border-color)' : '1px solid var(--el-border-color-lighter)'
+                }"
+              >
+                <span v-if="formData.value === '-1'" class="transparent-pattern"></span>
+              </span>
+              <span>{{ selectedColorLabel }}</span>
+            </div>
+          </div>
+          <code class="property-preview-meta">{{ formData.value }}</code>
+        </div>
+
         <el-collapse v-model="activeOptions" class="options-collapse">
           <el-collapse-item :title="t('property.colorOptions')" name="options">
             <el-form-item 
@@ -121,32 +139,29 @@
         </el-collapse>
       </div>
 
-      <!-- 提示信息部分 -->
       <div class="form-section">
         <h3 class="section-title">{{ t('property.messages') }}</h3>
-        <el-form-item :label="t('property.prompt')">
-          <el-input 
-            type="textarea" 
-            v-model="formData.prompt" 
-            :rows="2" 
-            :placeholder="t('property.promptPlaceholder')"
-          />
-          <div class="field-help">
-            {{ t('property.promptPlaceholder') }}
-          </div>
-        </el-form-item>
+        <div class="message-grid">
+          <el-form-item :label="t('property.promptOptional')">
+            <el-input
+              v-model="formData.prompt"
+              type="textarea"
+              :rows="3"
+              resize="none"
+              :placeholder="t('property.promptPlaceholder')"
+            />
+          </el-form-item>
 
-        <el-form-item :label="t('property.errorMessage')">
-          <el-input 
-            type="textarea" 
-            v-model="formData.errorMessage" 
-            :rows="2" 
-            :placeholder="t('property.errorPlaceholder')"
-          />
-          <div class="field-help">
-            {{ t('property.errorHelp') }}
-          </div>
-        </el-form-item>
+          <el-form-item :label="t('property.errorMessageOptional')">
+            <el-input
+              v-model="formData.errorMessage"
+              type="textarea"
+              :rows="3"
+              resize="none"
+              :placeholder="t('property.errorPlaceholder')"
+            />
+          </el-form-item>
+        </div>
       </div>
     </el-form>
 
@@ -160,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick } from 'vue'
+import { computed, ref, reactive, nextTick } from 'vue'
 import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePropertiesStore } from '@/stores/properties'
@@ -183,11 +198,16 @@ const suppressDefaultChange = ref(false)
 const formData = reactive({
   title: '',
   propertyKey: '',
-  type: 'number',
+  type: 'color',
   options: [],
   value: '0xffffff',
   prompt: '',
   errorMessage: ''
+})
+
+const selectedColorLabel = computed(() => {
+  const selected = formData.options.find((option) => String(option.value || '').toUpperCase() === String(formData.value || '').toUpperCase())
+  return selected?.label || t('common.noData')
 })
 
 // 表单验证规则

@@ -11,10 +11,18 @@
       v-model="localValue"
       :placeholder="resolvedPlaceholder"
       popper-class="property-select-popper"
+      class="text-property-select"
+      :class="{ 'has-selection-summary': !!displaySummary }"
       clearable
       filterable
       @change="handleChange"
+      @visible-change="handleVisibleChange"
     >
+      <template #prefix>
+        <span v-if="displaySummary" class="selection-summary" :title="selectionSummary">
+          {{ selectionSummary }}
+        </span>
+      </template>
       <el-option
         v-for="[key, prop] in textOptions"
         :key="key"
@@ -38,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
@@ -48,11 +56,13 @@ const props = withDefaults(defineProps<{
   modelValue?: string
   label?: string
   placeholder?: string
+  fallbackText?: string
   required?: boolean
   propName?: string
 }>(), {
   label: '',
   placeholder: '',
+  fallbackText: '',
   required: false,
   propName: 'textProperty',
 })
@@ -64,11 +74,27 @@ const emit = defineEmits<{
 
 const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
+const dropdownVisible = ref(false)
 const textOptions = computed(() =>
   Object.entries(propertiesStore.allProperties).filter(([, p]) => p.type === 'text')
 )
 const resolvedLabel = computed(() => props.label || t('elementSettings.textVariable'))
 const resolvedPlaceholder = computed(() => props.placeholder || t('elementSettings.selectTextProperty'))
+const selectedProperty = computed(() => {
+  if (!props.modelValue) return null
+  return propertiesStore.allProperties[props.modelValue] || null
+})
+const selectionSummary = computed(() => {
+  const key = props.modelValue || ''
+  const prop = selectedProperty.value
+  if (prop) {
+    const detail = truncate(prop.value, 36)
+    return detail ? `${key} — ${detail}` : key
+  }
+  if (key) return key
+  return truncate(props.fallbackText, 36)
+})
+const displaySummary = computed(() => Boolean(selectionSummary.value && !dropdownVisible.value))
 
 const localValue = computed({
   get: () => props.modelValue ?? '',
@@ -77,6 +103,10 @@ const localValue = computed({
 
 const handleChange = (val: string) => {
   emit('change', val)
+}
+
+const handleVisibleChange = (visible: boolean) => {
+  dropdownVisible.value = visible
 }
 
 const truncate = (text: unknown, max = 24): string => {
@@ -103,5 +133,31 @@ const openAppProperties = () => {
 
 .footer-text {
   font-size: 12px;
+}
+
+.text-property-select {
+  width: 100%;
+}
+
+.selection-summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-property-select.has-selection-summary :deep(.el-select__prefix) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.text-property-select.has-selection-summary :deep(.el-select__placeholder),
+.text-property-select.has-selection-summary :deep(.el-select__input-wrapper) {
+  display: none;
 }
 </style>

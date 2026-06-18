@@ -1,7 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { getDataValueByName } from '@/utils/dataSimulator'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 
 export function encodeText(element: FabricElement): TextElementConfig {
   const fabricAny = element as any
@@ -30,10 +30,7 @@ export function encodeText(element: FabricElement): TextElementConfig {
 
 export function decodeText(config: TextElementConfig): Partial<FabricElement> {
   const textTemplate = (config as any).textTemplate ?? ''
-  const resolvedText = (textTemplate || '').replace(/\{\{([^}]+)\}\}/g, (_m: unknown, p1: string) => {
-    const key = String(p1 || '').trim()
-    return key ? getDataValueByName(key) : ''
-  })
+  const resolvedText = resolveDataTextTemplate(textTemplate)
 
   const element: Partial<FabricElement> = {
     id: config.id,

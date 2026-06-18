@@ -37,18 +37,14 @@
         v-model="textProperty"
         :label="t('elementSettings.textVariable')"
         :placeholder="t('elementSettings.selectTextProperty')"
+        :fallback-text="currentText"
         @change="applyTextProperty"
       />
-      <div v-if="selectedTextProperty" class="text-property-preview">
-        <div class="text-property-meta">
-          <span class="label">{{ t('elementSettings.variableName') }}</span>
-          <span class="value">{{ selectedTextProperty.title }}</span>
-        </div>
-        <div class="text-property-meta">
-          <span class="label">{{ t('elementSettings.defaultContent') }}</span>
-        </div>
-        <pre class="text-property-content">{{ selectedTextProperty.value }}</pre>
-      </div>
+      <TextPropertyPreview
+        v-if="selectedTextProperty"
+        :property-key="textProperty"
+        :property="selectedTextProperty"
+      />
     </div>
     <div class="setting-item">
       <label>{{ t('elementSettings.angle') }}</label>
@@ -86,6 +82,7 @@ import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextPropertyField from '@/elements/common/settings/TextPropertyField.vue'
+import TextPropertyPreview from '@/elements/common/settings/TextPropertyPreview.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 
@@ -113,6 +110,10 @@ const propertiesStore = usePropertiesStore()
 
 const currentModel = computed<any>(() => {
   return (props.config as any) || props.element || {}
+})
+const currentText = computed(() => {
+  const model = currentModel.value as any
+  return String(model?.textTemplate ?? model?.text ?? '')
 })
 
 const fontSize = ref(currentModel.value?.fontSize || 36)

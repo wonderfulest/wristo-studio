@@ -58,12 +58,6 @@ const variables = [
   'location',
   'aqi',
   'pm25',
-  'pm10',
-  'o3',
-  'no2',
-  'so2',
-  'co',
-  'nh3',
   'bodyBattery',
   'stress',
   'sunrise',
@@ -127,7 +121,7 @@ const insertVariable = (name: string) => {
 .text-template-editor {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .template-input {
@@ -136,25 +130,45 @@ const insertVariable = (name: string) => {
   resize: vertical;
 }
 
+.template-input :deep(.el-textarea__inner) {
+  min-height: 96px !important;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .variables {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
 }
 
 .variables-label {
   font-size: 12px;
-  color: #888;
+  color: var(--el-text-color-secondary);
   margin-right: 4px;
 }
 
 .variable-chip {
-  border: 1px solid #ccc;
+  border: 1px solid var(--el-border-color);
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   font-size: 12px;
-  background: #f7f7f7;
+  background: var(--el-fill-color-blank);
+  color: var(--el-text-color-regular);
   cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+}
+
+.variable-chip:hover {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 </style>
