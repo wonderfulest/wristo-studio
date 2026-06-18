@@ -170,6 +170,10 @@ const zhAcademyCopy: AcademyCopy = {
       id: 3,
       title: '认识 Studio 画布编辑界面',
       goal: '了解 Studio 编辑器的左侧图层区、中间画布区和右侧设置区，学会通过“选择元素、查看画布、修改属性”的方式编辑表盘。',
+      video: {
+        src: 'https://www.youtube.com/embed/n2fBxBPqTj4?si=6oN8nJ2_dDtPi4tN',
+        title: '认识 Studio 画布编辑界面',
+      },
       sections: [
         { heading: '认识编辑器整体布局', items: ['Studio 编辑器主要由左侧图层区、中间画布区和右侧设置区组成。', '左侧帮助你选择和管理元素，中间用于直接查看和摆放设计，右侧用于修改选中元素的属性。', '先理解三个区域的分工，再开始添加复杂内容。'] },
         { heading: '左侧图层区', items: ['每添加一个时间、文字、图标、图片或图形元素，都会出现在左侧图层列表中。', '点击图层可以快速选中对应元素。', '通过图层列表可以理解元素的前后关系，知道哪些内容可能盖住其它内容。'] },
@@ -290,6 +294,10 @@ const enAcademyCopy: AcademyCopy = {
       id: 3,
       title: 'Understand the Studio canvas editor',
       goal: 'Learn the left layer panel, center canvas, and right settings area, then edit a watch face by selecting an element, checking the canvas, and changing its properties.',
+      video: {
+        src: 'https://www.youtube.com/embed/n2fBxBPqTj4?si=6oN8nJ2_dDtPi4tN',
+        title: 'Understand the Studio canvas editor',
+      },
       sections: [
         { heading: 'Know the editor layout', items: ['The Studio editor is mainly split into the left layer panel, the center canvas, and the right settings area.', 'The left side helps you select and manage elements, the center shows and positions the design, and the right side changes properties for the selected element.', 'Understand these three areas before adding more complex content.'] },
         { heading: 'Left layer panel', items: ['Every time, text, icon, image, or shape element you add appears in the layer list.', 'Click a layer to quickly select the matching element.', 'Use the layer list to understand front and back relationships and see which elements may cover others.'] },
