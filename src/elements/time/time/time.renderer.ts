@@ -17,6 +17,14 @@ const bitmapCharCache = new Map<number, BitmapFontAssetRelationVO[]>()
 // 控制同一时间元素的 bitmap Group 重建不并发执行，避免出现多个 time 元素
 const bitmapUpdateLocks = new Set<string>()
 
+export function invalidateBitmapTimeFontCache(fontId?: number | null) {
+  if (fontId == null) {
+    bitmapCharCache.clear()
+    return
+  }
+  bitmapCharCache.delete(Number(fontId))
+}
+
 // 确保同一 id 的 bitmap 时间元素在画布上只存在一个 Group
 function removeBitmapTimeGroupsById(canvas: any, id: string) {
   if (!canvas || !canvas.getObjects) return

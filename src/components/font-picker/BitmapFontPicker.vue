@@ -45,6 +45,7 @@ import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
 import { useI18n } from '@/i18n'
+import { invalidateBitmapTimeFontCache } from '@/elements/time/time/time.renderer'
 
 const BITMAP_FONT_TYPE = 'bitmap_font'
 
@@ -256,9 +257,10 @@ const handleSelectBitmapFont = async (font: BitmapFontVO) => {
     return
   }
   if (!font?.id) return
+  invalidateBitmapTimeFontCache(font.id)
   emit('update:modelValue', font.id)
   emit('change', font.id)
-   currentFontName.value = font.fontName
+  currentFontName.value = font.fontName
   await loadBitmapRows(font.id)
 }
 
@@ -268,6 +270,7 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
     return
   }
   if (!font?.id) return
+  invalidateBitmapTimeFontCache(font.id)
   emit('update:modelValue', font.id)
   emit('change', font.id)
   currentFontName.value = font.fontName
@@ -297,6 +300,10 @@ const handleResetRowByIndex = async (index: string) => {
   } finally {
     // 删除某个 glyph 后，同步清理缓存
     bitmapFontStore.clearSession()
+    if (props.modelValue) {
+      invalidateBitmapTimeFontCache(props.modelValue)
+      emit('change', props.modelValue)
+    }
   }
 }
 
@@ -321,6 +328,10 @@ const handleUploadRow = async (payload: { index: string; file: File; previewUrl:
   } finally {
     // 上传/绑定 glyph 后，同步清理缓存
     bitmapFontStore.clearSession()
+    invalidateBitmapTimeFontCache(props.modelValue)
+    if (props.modelValue) {
+      emit('change', props.modelValue)
+    }
   }
 }
 

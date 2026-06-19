@@ -624,6 +624,8 @@ defineExpose({
   margin-top: 3vh !important;
   margin-bottom: 3vh !important;
   max-height: 94vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
@@ -646,11 +648,14 @@ defineExpose({
 }
 
 :deep(.edit-design-dialog .el-dialog__body) {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
 }
 
 :deep(.edit-design-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
   padding: 16px 24px 20px;
   border-top: 1px solid var(--studio-border);
   background: var(--studio-surface-raised);
@@ -658,7 +663,7 @@ defineExpose({
 
 /* Dialog Content */
 .dialog-content {
-  max-height: calc(94vh - 140px);
+  height: 100%;
   overflow-y: auto;
   padding: 16px;
   background: var(--studio-surface);
@@ -1350,7 +1355,6 @@ defineExpose({
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 8px 16px;
   align-items: center;
 }
 

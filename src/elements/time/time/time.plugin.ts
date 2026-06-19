@@ -12,7 +12,7 @@ export default function registerTimePlugin() {
       return createTime(config as TimeElementConfig)
     },
     update: (element, patch) => {
-      updateTime(element as any, patch as TimeElementConfig)
+      return updateTime(element as any, patch as TimeElementConfig)
     },
     encode: (element) => {
       return encodeTime(element as any) as any
