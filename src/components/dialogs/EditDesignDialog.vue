@@ -183,18 +183,17 @@
         </div>
         <div class="config-editor">
           <div class="config-content">
-            <!-- JSON Preview -->
-            <vue-json-pretty
-              :data="form.configJson"
-              :deep="4"
-              :showLength="true" 
-              :showLineNumber="true"
-              :showDoubleQuotes="true"
-              :highlightMouseoverNode="true"
-              :selectOnClickNode="true"
-              :collapsedOnClickBrackets="true"
-              class="json-preview"
+            <el-input
+              v-model="form.configJsonString"
+              type="textarea"
+              :autosize="{ minRows: 16, maxRows: 32 }"
+              class="json-editor-input"
+              spellcheck="false"
+              @input="configJsonError = ''"
             />
+          </div>
+          <div v-if="configJsonError" class="json-error">
+            {{ configJsonError }}
           </div>
         </div>
       </div>
@@ -232,8 +231,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
-import VueJsonPretty from 'vue-json-pretty'
-import 'vue-json-pretty/lib/styles.css'
 import { Box, DocumentCopy, Link, Picture } from '@element-plus/icons-vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
@@ -249,6 +246,7 @@ const baseStore = useBaseStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 const currentDesign = ref<Design | null>(null)
+const configJsonError = ref('')
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -454,6 +452,22 @@ const normalizePaymentMethod = (paymentMethod?: string | null) => {
   return paymentMethod && paymentMethod !== 'none' ? paymentMethod : 'free'
 }
 
+const stringifyConfig = (config: unknown) => {
+  return JSON.stringify(config ?? {}, null, 2)
+}
+
+const parseConfigJson = () => {
+  try {
+    const parsed = JSON.parse(form.configJsonString || '{}')
+    configJsonError.value = ''
+    return parsed
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    configJsonError.value = t('editDesign.invalidJsonDetail', { error: message })
+    return null
+  }
+}
+
 const handlePaymentMethodChange = (value: string | number | boolean | undefined) => {
   if (value === 'free') {
     form.payment.price = 0
@@ -483,7 +497,7 @@ const loadDesign = async (designUid: string) => {
           designStatus: designData.designStatus,
           description: designData.description,
           configJson: realtimeConfig,
-          configJsonString: JSON.stringify(realtimeConfig, null, 2),
+          configJsonString: stringifyConfig(realtimeConfig),
           payment: {
             paymentMethod: normalizePaymentMethod(designData.product?.payment?.paymentMethod),
             price: designData.product?.payment?.price || 0,
@@ -498,7 +512,7 @@ const loadDesign = async (designUid: string) => {
           designStatus: designData.designStatus,
           description: designData.description,
           configJson: serverConfig,
-          configJsonString: JSON.stringify(serverConfig, null, 2),
+          configJsonString: stringifyConfig(serverConfig),
           payment: {
             paymentMethod: normalizePaymentMethod(designData.product?.payment?.paymentMethod),
             price: designData.product?.payment?.price || 0,
@@ -529,6 +543,9 @@ const handleSave = async () => {
     messageStore.error(t('submitDesign.priceRange'))
     return
   }
+  const nextConfigJson = parseConfigJson()
+  if (nextConfigJson === null) return
+  form.configJson = nextConfigJson
 
   try {
     saving.value = true
@@ -536,6 +553,7 @@ const handleSave = async () => {
       uid: currentDesign.value.designUid,
       name: form.name,
       description: form.description,
+      configJson: nextConfigJson,
       payment: {
         paymentMethod: form.payment.paymentMethod,
         price: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.price || 0),
@@ -560,9 +578,8 @@ const handleSave = async () => {
 
 // 复制配置到剪贴板
 const copyConfig = () => {
-  const configStr = JSON.stringify(form.configJson, null, 2)
   navigator.clipboard
-    .writeText(configStr)
+    .writeText(form.configJsonString || stringifyConfig(form.configJson))
     .then(() => {
       messageStore.success(t('editDesign.configCopied'))
     })
