@@ -5,7 +5,7 @@
       <input
         type="text"
         v-model="searchQuery"
-        :placeholder="t('font.searchFontsPlaceholder')"
+        :placeholder="t('font.searchFontsNaturalPlaceholder')"
         class="search-input"
         @input="onInput"
       />
@@ -43,6 +43,11 @@
                 :type="props.type"
                 :is-monospace="(font as any).isMonospace === true"
                 :is-system="(font as any).isSystem === true"
+                :style-tags="(font as any).styleTags"
+                :font-id="font.id"
+                :can-edit-search-index="!!font.id"
+                compact
+                @edit-search-index="() => emit('editSearchIndex', font)"
               />
             </div>
         </div>
@@ -68,6 +73,11 @@
               :type="props.type"
               :is-monospace="(font as any).isMonospace === true"
               :is-system="(font as any).isSystem === true"
+              :style-tags="(font as any).styleTags"
+              :font-id="font.id"
+              :can-edit-search-index="!!font.id"
+              compact
+              @edit-search-index="() => emit('editSearchIndex', font)"
             />
           </div>
         </div>
@@ -109,6 +119,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', font: FontItem): void
+  (e: 'editSearchIndex', font: FontItem): void
 }>()
 
 const fontStore = useFontStore()
@@ -243,7 +254,20 @@ const filterFonts = async () => {
       const isMonospace = (font?.isMonospace === 1)
       const italic = (font?.italic === 1)
       const isSystem = font?.isSystem === 1
-      return { label, value, family, isMonospace, italic, isSystem } as FontItem
+      const styleTags = font?.styleTags
+      return {
+        id: font.id,
+        label,
+        value,
+        family,
+        isMonospace,
+        italic,
+        isSystem,
+        styleTags,
+        searchKeywords: font.searchKeywords,
+        weightClass: font.weightClass,
+        widthClass: font.widthClass,
+      } as FontItem
     })
     console.log('[FontSearch] remoteFonts mapped', {
       remoteFontsCount: remoteFonts.length,

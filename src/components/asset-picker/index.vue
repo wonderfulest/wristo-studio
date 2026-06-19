@@ -72,9 +72,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown, Refresh, Loading, Star, Delete } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
+import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
+const analogAssetStore = useAnalogAssetStore()
 
 const props = defineProps({
   /** 当前选中的URL */
@@ -223,6 +225,7 @@ const handleUpload = async (event: Event) => {
     
     if (res.data) {
       assets.value.unshift(res.data)
+      analogAssetStore.prependAsset(res.data)
       const url = getAssetUrl(res.data)
       if (url) {
         props.onUpload(url, res.data)
@@ -279,6 +282,7 @@ const handleRemove = async (asset: AnalogAssetVO) => {
     if (res.data) {
       const idx = assets.value.findIndex(a => a.id === asset.id)
       if (idx !== -1) assets.value.splice(idx, 1)
+      analogAssetStore.removeAsset(props.assetType, asset.id)
       ElMessage.success(t('common.deleteSuccess'))
     } else {
       ElMessage.error(t('asset.deleteFailed'))

@@ -4,7 +4,13 @@
       <span class="arrow" :class="{ expanded: expanded }">›</span>
       {{ t('font.recent') }}
     </div>
-    <div v-if="expanded" class="section-content">
+    <div
+      v-if="expanded"
+      class="section-content"
+      @wheel="onSectionWheel"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+    >
       <div v-if="!visibleFonts.length" class="no-fonts">{{ t('font.noRecentFonts') }}</div>
       <div v-else class="font-family-group">
         <div
@@ -19,6 +25,11 @@
             :font-family="font.value"
             :type="type"
             :font-url="font.src"
+            :font-id="font.id"
+            :style-tags="font.styleTags"
+            :can-edit-search-index="!!font.id"
+            compact
+            @edit-search-index="() => emit('editSearchIndex', font)"
           />
         </div>
       </div>
@@ -27,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
@@ -43,12 +54,33 @@ const props = defineProps<{
   canUsePremiumAssets?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'select', font: FontItem): void
   (e: 'toggle'): void
+  (e: 'scrollDown', delta: number): void
+  (e: 'editSearchIndex', font: FontItem): void
 }>()
 
 const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true))
+const touchStartY = ref(0)
+
+const onSectionWheel = (event: WheelEvent) => {
+  if (event.deltaY > 12) {
+    emit('scrollDown', event.deltaY)
+  }
+}
+
+const onTouchStart = (event: TouchEvent) => {
+  touchStartY.value = event.touches[0]?.clientY ?? 0
+}
+
+const onTouchMove = (event: TouchEvent) => {
+  const currentY = event.touches[0]?.clientY ?? touchStartY.value
+  const delta = touchStartY.value - currentY
+  if (delta > 12) {
+    emit('scrollDown', delta)
+  }
+}
 </script>
 
 <style scoped>
@@ -78,6 +110,9 @@ const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, prop
 
 .section-content {
   padding: 8px 0;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .family-name {
@@ -89,7 +124,7 @@ const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, prop
 }
 
 .font-item {
-  padding: 8px 12px;
+  padding: 5px 10px;
   cursor: pointer;
   display: flex;
   flex-direction: column;

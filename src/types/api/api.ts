@@ -11,6 +11,7 @@ export interface PageResponse<T> {
   total: number
   pages: number
   list: T[]
+  meta?: Record<string, unknown>
 }
 
 // 通用分页查询入参，对应后端 PageRequest

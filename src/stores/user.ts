@@ -44,6 +44,10 @@ export const useUserStore = defineStore('user', {
     }
   },
   actions: {
+    clearAuth() {
+      this.token = ''
+      this.userInfo = null
+    },
     async logout() {
       try {
         await logoutApi()
@@ -51,8 +55,7 @@ export const useUserStore = defineStore('user', {
         // 可选：错误处理
         console.error('logout error', e)
       }
-      this.token = ''
-      this.userInfo = null
+      this.clearAuth()
       // 路由跳转请在组件中处理
     },
     setUserInfo(userInfo: UserInfo) {

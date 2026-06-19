@@ -14,6 +14,8 @@ import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import {
+  cancelPendingSsoRedirect,
+  clearLocalAuthState,
   clearPendingStudioPath,
   getPendingStudioPath,
   getSsoRedirectUri,
@@ -54,16 +56,26 @@ onMounted(async () => {
         const userRes = await getUserInfo()
         
         if (userRes.code === 0 && userRes.data) {
-          userStore.userInfo = userRes.data
+          userStore.setUserInfo(userRes.data)
           
           
           
         } else {
-          console.error('Failed to get user info:', userRes)
+          cancelPendingSsoRedirect()
+          userStore.clearAuth()
+          clearLocalAuthState()
+          clearPendingStudioPath()
+          router.replace('/auth/signed-out?reason=forbidden')
+          return
         }
       } catch (e) {
-        // 可选：用户信息获取失败处理
         console.error('Failed to get user info', e)
+        cancelPendingSsoRedirect()
+        userStore.clearAuth()
+        clearLocalAuthState()
+        clearPendingStudioPath()
+        router.replace('/auth/signed-out?reason=forbidden')
+        return
       }
       
       // 延迟跳转，确保数据保存完成

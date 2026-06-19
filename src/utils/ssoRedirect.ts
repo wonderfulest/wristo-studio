@@ -1,17 +1,30 @@
 import { DEFAULT_LOCALE, normalizeLocale, type SupportedLocale } from '@/stores/locale'
 
 let isRedirectingToSso = false
+let ssoRedirectTimer: number | null = null
 
 const STUDIO_LOCALE_KEY = 'wristo-studio-locale'
 const SHARED_LOCALE_KEY = 'wristo-locale'
 const PENDING_STUDIO_PATH_KEY = 'wristo-studio-pending-path'
 const SSO_SUPPORTED_LOCALES = ['en', 'zh', 'de', 'es', 'fr', 'it'] as const
 type SsoLocale = typeof SSO_SUPPORTED_LOCALES[number]
+interface RedirectToSsoLoginOptions {
+  allowFromSignedOut?: boolean
+  forceLogin?: boolean
+}
 
 export function clearLocalAuthState() {
   localStorage.removeItem('wristo-user')
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')
+}
+
+export function cancelPendingSsoRedirect() {
+  if (ssoRedirectTimer !== null) {
+    window.clearTimeout(ssoRedirectTimer)
+    ssoRedirectTimer = null
+  }
+  isRedirectingToSso = false
 }
 
 export function getSsoRedirectUri() {
@@ -71,13 +84,16 @@ function localizeSsoPath(loginUrl: URL, locale: SsoLocale) {
   loginUrl.pathname = `/${locale}${pathWithoutLocale.startsWith('/') ? pathWithoutLocale : `/${pathWithoutLocale}`}`
 }
 
-export function buildSsoLoginUrl(client: string) {
+export function buildSsoLoginUrl(client: string, options: RedirectToSsoLoginOptions = {}) {
   const loginUrl = new URL(getSsoLoginBaseUrl(), window.location.origin)
   const ssoLocale = toSsoLocale(getCurrentLocale())
   syncSsoLocale(ssoLocale)
   localizeSsoPath(loginUrl, ssoLocale)
   loginUrl.searchParams.set('client', client)
   loginUrl.searchParams.set('redirect_uri', getSsoRedirectUri())
+  if (options.forceLogin) {
+    loginUrl.searchParams.set('force_login', '1')
+  }
   return loginUrl.toString()
 }
 
@@ -90,11 +106,21 @@ export function clearPendingStudioPath() {
 }
 
 function rememberPendingStudioPath(path?: string) {
-  if (!path || !path.startsWith('/') || path.startsWith('/auth/callback')) return
+  if (
+    !path
+    || !path.startsWith('/')
+    || path.startsWith('/auth/callback')
+    || path.startsWith('/auth/signed-out')
+  ) return
   sessionStorage.setItem(PENDING_STUDIO_PATH_KEY, path)
 }
 
-export function redirectToSsoLogin(client: string, delay = 0, pendingPath?: string) {
+export function redirectToSsoLogin(
+  client: string,
+  delay = 0,
+  pendingPath?: string,
+  options: RedirectToSsoLoginOptions = {},
+) {
   if (isRedirectingToSso) {
     return
   }
@@ -103,7 +129,12 @@ export function redirectToSsoLogin(client: string, delay = 0, pendingPath?: stri
   rememberPendingStudioPath(pendingPath || `${window.location.pathname}${window.location.search}${window.location.hash}`)
   clearLocalAuthState()
 
-  window.setTimeout(() => {
-    window.location.href = buildSsoLoginUrl(client)
+  ssoRedirectTimer = window.setTimeout(() => {
+    ssoRedirectTimer = null
+    if (window.location.pathname === '/auth/signed-out' && !options.allowFromSignedOut) {
+      isRedirectingToSso = false
+      return
+    }
+    window.location.href = buildSsoLoginUrl(client, options)
   }, delay)
 }

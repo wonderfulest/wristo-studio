@@ -17,6 +17,10 @@
           :subfamily="font.subfamily || ''"
           :font-id="font.id"
           :font-url="font.ttfFile?.url"
+          :style-tags="font.styleTags"
+          :can-edit-search-index="!!font.id"
+          compact
+          @edit-search-index="() => emit('editSearchIndex', font)"
           @removed="onFontRemoved"
         />
       </div>
@@ -47,6 +51,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select', font: FontItem): void
   (e: 'scroll'): void
+  (e: 'editSearchIndex', font: DesignFontVO): void
 }>()
 
 const fonts = ref<DesignFontVO[]>([])
@@ -57,6 +62,12 @@ const total = ref(0)
 
 const hasMore = computed(() => fonts.value.length < total.value)
 const scrollContainer = ref<HTMLDivElement | null>(null)
+
+defineExpose({
+  scrollBy(delta = 120) {
+    scrollContainer.value?.scrollBy({ top: delta, behavior: 'smooth' })
+  },
+})
 
 const loadPage = async () => {
   if (loading.value || (!hasMore.value && pageNum.value !== 1)) return
@@ -140,12 +151,12 @@ watch(
 
 .font-list-scroll {
   padding: 8px 12px;
-  max-height: 800px;
+  max-height: 520px;
   overflow-y: auto;
 }
 
 .font-item {
-  padding: 8px 12px;
+  padding: 5px 10px;
   cursor: pointer;
   display: flex;
   flex-direction: column;

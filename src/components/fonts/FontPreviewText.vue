@@ -30,6 +30,7 @@ const props = defineProps<{
   type?: string
   sectionName?: string
   fontUrl?: string
+  previewText?: string
 }>()
 
 const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
@@ -41,6 +42,10 @@ const effectiveFontFamily = computed(() => loadedFontFamily.value || props.fontF
 const sampleText = computed(() => {
   if (isIcon.value) {
     return iconPreviewText
+  }
+  const customText = props.previewText?.trim()
+  if (customText) {
+    return customText
   }
   if (props.type === FontTypes.NUMBER_FONT) {
     return '0123456789:'

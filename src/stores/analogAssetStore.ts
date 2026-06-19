@@ -15,6 +15,8 @@ export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetSt
   getFirstId(state: AnalogAssetStoreState): (type: AnalogAssetType) => number | null
 }, {
   loadAssets(type: AnalogAssetType): Promise<void>
+  prependAsset(asset: AnalogAssetVO): void
+  removeAsset(type: AnalogAssetType, id: number): void
 }>(
   'analogAssetStore',
   {
@@ -49,6 +51,22 @@ export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetSt
     },
 
     actions: {
+      prependAsset(asset: AnalogAssetVO): void {
+        if (!asset?.analogAssetType || !asset.id) return
+        const type = asset.analogAssetType
+        const list = this.assetsByType[type] || []
+        this.assetsByType[type] = [
+          asset,
+          ...list.filter((item) => item.id !== asset.id),
+        ]
+        this.loadedByType[type] = true
+      },
+
+      removeAsset(type: AnalogAssetType, id: number): void {
+        const list = this.assetsByType[type] || []
+        this.assetsByType[type] = list.filter((asset) => asset.id !== id)
+      },
+
       async loadAssets(type: AnalogAssetType): Promise<void> {
         if (this.loadingByType[type]) return
         try {

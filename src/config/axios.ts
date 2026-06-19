@@ -5,7 +5,7 @@ import type { ApiResponse } from '../types/api/api'
 import { useUserStore } from '../stores/user'
 import { useLocaleStore } from '@/stores/locale'
 import { translate } from '@/i18n'
-import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { cancelPendingSsoRedirect, clearLocalAuthState, redirectToSsoLogin } from '@/utils/ssoRedirect'
 
 type FallbackMessageKey = 'auth.sessionExpired' | 'auth.forbidden' | 'auth.requestFailed' | 'auth.networkError'
 
@@ -20,10 +20,21 @@ const getResponseMessage = (data: any, fallbackKey: FallbackMessageKey) => {
 
 const redirectToLogin = (message = getFallbackMessage('auth.sessionExpired')) => {
   const userStore = useUserStore()
-  userStore.token = ''
-  userStore.userInfo = null
+  userStore.clearAuth()
   ElMessage.error(message)
   redirectToSsoLogin('studio', 1000)
+}
+
+const exitOnForbidden = (message = getFallbackMessage('auth.forbidden')) => {
+  const userStore = useUserStore()
+  cancelPendingSsoRedirect()
+  userStore.clearAuth()
+  clearLocalAuthState()
+  ElMessage.error(message)
+
+  if (window.location.pathname !== '/auth/signed-out') {
+    window.location.replace('/auth/signed-out?reason=forbidden')
+  }
 }
 
 const instance = axios.create({
@@ -54,6 +65,9 @@ instance.interceptors.response.use(
     } else if (res.code === 401) {
       redirectToLogin(getResponseMessage(response.data, 'auth.sessionExpired'))
       return Promise.reject(response.data)
+    } else if (res.code === BizErrorCode.FORBIDDEN) {
+      exitOnForbidden(getResponseMessage(response.data, 'auth.forbidden'))
+      return Promise.reject(response.data)
     } else {
       ElMessage.error(getResponseMessage(response.data, 'auth.requestFailed'))
       return Promise.reject(response.data)
@@ -61,11 +75,10 @@ instance.interceptors.response.use(
   },
   error => {
     const status = error.response?.status
-    const userStore = useUserStore()
-    if (status === 401 || (status === 403 && !userStore.isAuthenticated)) {
+    if (status === 401) {
       redirectToLogin(getResponseMessage(error.response?.data, 'auth.sessionExpired'))
     } else if (status === 403) {
-      ElMessage.error(getResponseMessage(error.response?.data, 'auth.forbidden'))
+      exitOnForbidden(getResponseMessage(error.response?.data, 'auth.forbidden'))
     } else {
       ElMessage.error(getResponseMessage(error.response?.data, 'auth.networkError'))
     }

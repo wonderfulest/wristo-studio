@@ -75,6 +75,24 @@ export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> 
   return instance.get(`/dsn/fonts/get-by-slug/${slug}?populate=ttf`)
 }
 
+export const updateMyFontSearchIndex = (
+  id: number,
+  payload: {
+    styleTags?: string
+    searchKeywords?: string
+    isMonospace?: number
+    italic?: number
+    weightClass?: number
+    widthClass?: number
+  }
+): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.post(`/dsn/fonts/update/${id}?populate=ttf`, payload)
+}
+
+export const getFontStyleTags = (): Promise<ApiResponse<string[]>> => {
+  return instance.get('/dsn/fonts/style-tags')
+}
+
 // 获取已审核并启用的系统字体
 export const getSystemFonts = (type?: string, userId?: number): Promise<ApiResponse<DesignFontVO[]>> => {
   const params = new URLSearchParams()

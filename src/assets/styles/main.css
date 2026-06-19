@@ -244,6 +244,10 @@ button,
   --el-button-active-border-color: var(--studio-primary-active);
 }
 
+.font-search-index-popper {
+  z-index: 12060 !important;
+}
+
 :root[data-studio-theme='dark'] .el-button--primary {
   --el-button-text-color: #042f2e;
   --el-button-hover-text-color: #042f2e;

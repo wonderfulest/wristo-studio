@@ -39,7 +39,17 @@ export function unregisterElementInstance(target: string | FabricElement | null 
 
 export function getElementById(id: string | number | null | undefined): FabricElement | undefined {
   if (id == null) return undefined
-  return elementMap.get(String(id))
+  const element = elementMap.get(String(id))
+  if (!element) return undefined
+
+  const canvas = useCanvasStore().canvas
+  if (!canvas) return element
+
+  const isStillOnCanvas = (canvas.getObjects?.() || []).some((o: any) => o === element)
+  if (isStillOnCanvas) return element
+
+  elementMap.delete(String(id))
+  return undefined
 }
 
 export async function addElement(type: ElementType, config: AnyElementConfig): Promise<FabricElement | null | undefined> {
@@ -84,6 +94,13 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     return
   }
   await handler.update(resolved, patch)
+
+  if (id != null) {
+    const canvasStore = useCanvasStore()
+    const canvas = canvasStore.canvas
+    const current = (canvas?.getObjects?.() || []).find((o: any) => o?.id != null && String(o.id) === String(id)) as FabricElement | undefined
+    if (current) registerElementInstance(current)
+  }
 }
 
 export async function updateElementById(id: string | number | null | undefined, patch: any): Promise<void> {

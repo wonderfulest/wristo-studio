@@ -27,6 +27,7 @@
           :type="type"
           :can-use-premium-assets="canUsePremiumAssets"
           @select="selectFont"
+          @edit-search-index="openSearchIndexDialog"
         />
         <!-- Recent fonts -->
         <RecentFontList
@@ -37,14 +38,18 @@
             :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
             @toggle="() => toggleSection('recent')"
+            @scroll-down="onRecentScrollDown"
+            @edit-search-index="openSearchIndexDialog"
         />
         <!-- Designer available fonts (paginated by usage) -->
         <DesignerFontList
+            ref="designerFontListRef"
             :model-value="modelValue"
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
             @scroll="onDesignerScroll"
+            @edit-search-index="openSearchIndexDialog"
         />
       </div>
     </Teleport>
@@ -52,15 +57,79 @@
     <FontImportDialog v-if="canUsePremiumAssets" v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
     <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
+
+    <el-dialog
+      v-model="searchIndexDialogVisible"
+      :title="t('font.editSearchTags')"
+      width="560px"
+      :append-to-body="true"
+      :z-index="12050"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="searchIndexForm" label-width="110px">
+        <el-form-item :label="t('font.fontLabel')">
+          <div class="font-dialog-title">{{ currentSearchIndexFont?.fullName || currentSearchIndexFont?.family || currentSearchIndexFont?.label || '-' }}</div>
+        </el-form-item>
+        <el-form-item :label="t('font.styleTags')">
+          <el-select
+            v-model="searchIndexForm.styleTags"
+            multiple
+            filterable
+            default-first-option
+            clearable
+            popper-class="font-search-index-popper"
+            placeholder="digital,sport,rounded"
+          >
+            <el-option
+              v-for="tag in styleTagOptions"
+              :key="tag"
+              :label="tag"
+              :value="tag"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('font.searchKeywords')">
+          <el-input
+            v-model="searchIndexForm.searchKeywords"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('font.searchKeywordsPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('font.monospace')">
+          <el-switch v-model="searchIndexForm.isMonospace" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item :label="t('font.italic')">
+          <el-switch v-model="searchIndexForm.italic" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item :label="t('font.weightClassLabel')">
+          <el-select v-model="searchIndexForm.weightClass" clearable :placeholder="t('common.any')">
+            <el-option v-for="w in [100,200,300,400,500,600,700,800,900]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('font.widthClassLabel')">
+          <el-select v-model="searchIndexForm.widthClass" clearable :placeholder="t('common.any')">
+            <el-option v-for="w in [1,2,3,4,5,6,7,8,9]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="searchIndexDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="searchIndexSaving" @click="saveSearchIndex">
+          {{ t('common.save') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
-import { getFontBySlug, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
+import { getFontBySlug, getFontStyleTags, getSystemFonts, increaseFontUsage, updateMyFontSearchIndex } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -72,6 +141,7 @@ import NumberGlyphEditorDialog from '@/views/fonts/number/NumberGlyphEditorDialo
 import FontSearch from '@/components/font-picker/FontSearch.vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import type { FontItem } from '@/types/font-picker'
+import type { DesignFontVO } from '@/types/font'
 import { useI18n } from '@/i18n'
 
 const props = defineProps({
@@ -102,6 +172,33 @@ const dialogVisible = ref<boolean>(false)
 const pickerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
+const designerFontListRef = ref<InstanceType<typeof DesignerFontList> | null>(null)
+type EditableSearchIndexFont = {
+  id: number
+  label?: string
+  value?: string
+  family?: string
+  fullName?: string
+  slug?: string
+  styleTags?: string | string[]
+  searchKeywords?: string
+  isMonospace?: number
+  italic?: number
+  weightClass?: number
+  widthClass?: number
+}
+const searchIndexDialogVisible = ref(false)
+const searchIndexSaving = ref(false)
+const currentSearchIndexFont = ref<EditableSearchIndexFont | null>(null)
+const styleTagOptions = ref<string[]>([])
+const searchIndexForm = ref({
+  styleTags: [] as string[],
+  searchKeywords: '',
+  isMonospace: 0,
+  italic: 0,
+  weightClass: undefined as number | undefined,
+  widthClass: undefined as number | undefined,
+})
 
 // parsed font info moved to child component
 
@@ -159,6 +256,96 @@ const toggleSection = (section: SectionName | string) => {
 const onDesignerScroll = () => {
   if (fontStore.expandedSections?.recent) {
     fontStore.toggleSection('recent')
+  }
+}
+
+const onRecentScrollDown = async (delta: number) => {
+  if (fontStore.expandedSections?.recent) {
+    fontStore.toggleSection('recent')
+    await nextTick()
+  }
+  designerFontListRef.value?.scrollBy(Math.max(delta, 120))
+}
+
+const parseTokenList = (value?: string | string[]) => {
+  const raw = Array.isArray(value) ? value.join(',') : String(value || '')
+  return raw
+    .split(/[,，\s]+/)
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean)
+}
+
+const parseTokenText = (value?: string | string[]) => parseTokenList(value)
+  .filter((item, index, list) => list.indexOf(item) === index)
+
+const normalizeTokenText = (value?: string | string[]) => parseTokenText(value).join(',')
+
+const normalizeKeywordText = (value?: string) => String(value || '')
+  .split(/[,，\s]+/)
+  .map(item => item.trim())
+  .filter(Boolean)
+  .join(',')
+
+const loadStyleTagOptions = async () => {
+  try {
+    const resp = await getFontStyleTags()
+    styleTagOptions.value = Array.isArray(resp.data) ? resp.data : []
+  } catch {
+    styleTagOptions.value = ['digital', 'sport', 'rounded', 'tech', 'outline', 'minimal', 'classic', 'pixel', 'bold', 'thin', 'mono', 'italic']
+  }
+}
+
+const openSearchIndexDialog = async (font: FontItem | DesignFontVO) => {
+  if (!font.id) return
+  if (!styleTagOptions.value.length) {
+    await loadStyleTagOptions()
+  }
+  const editableFont: EditableSearchIndexFont = {
+    ...font,
+    id: font.id,
+    label: 'label' in font ? font.label : font.fullName || font.family || font.slug,
+    value: 'value' in font ? font.value : font.slug,
+    family: font.family || ('fullName' in font ? font.fullName : font.label),
+    isMonospace: typeof font.isMonospace === 'boolean' ? (font.isMonospace ? 1 : 0) : font.isMonospace ?? 0,
+    italic: typeof font.italic === 'boolean' ? (font.italic ? 1 : 0) : font.italic ?? 0,
+  }
+  const allowedTags = new Set(styleTagOptions.value)
+  const styleTags = parseTokenText(editableFont.styleTags || '').filter(tag => allowedTags.has(tag))
+  currentSearchIndexFont.value = editableFont
+  searchIndexForm.value = {
+    styleTags,
+    searchKeywords: editableFont.searchKeywords || '',
+    isMonospace: editableFont.isMonospace ?? 0,
+    italic: editableFont.italic ?? 0,
+    weightClass: editableFont.weightClass || undefined,
+    widthClass: editableFont.widthClass || undefined,
+  }
+  searchIndexDialogVisible.value = true
+}
+
+const saveSearchIndex = async () => {
+  const font = currentSearchIndexFont.value
+  if (!font?.id) return
+  searchIndexSaving.value = true
+  try {
+    const resp = await updateMyFontSearchIndex(font.id, {
+      styleTags: normalizeTokenText(searchIndexForm.value.styleTags),
+      searchKeywords: normalizeKeywordText(searchIndexForm.value.searchKeywords),
+      isMonospace: searchIndexForm.value.isMonospace,
+      italic: searchIndexForm.value.italic,
+      weightClass: searchIndexForm.value.weightClass,
+      widthClass: searchIndexForm.value.widthClass,
+    })
+    if (resp.code === 0 && resp.data) {
+      ElMessage.success(t('common.savedSuccessfully'))
+      searchIndexDialogVisible.value = false
+    } else {
+      ElMessage.error(resp.msg || t('common.saveFailed'))
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.msg || e?.message || t('common.saveFailed'))
+  } finally {
+    searchIndexSaving.value = false
   }
 }
 
@@ -274,6 +461,7 @@ const handleOutsideClick = (event: MouseEvent) => {
 
 onMounted(async () => {
   await fontStore.fetchFonts()
+  loadStyleTagOptions()
   // initial refresh with current type (if provided)
   if (props.type !== undefined) {
     try {

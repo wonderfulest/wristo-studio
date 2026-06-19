@@ -58,7 +58,7 @@ const applyUpdate = (patch: Record<string, any>) => {
 }
 
 const handleAssetSelect = (url: string, asset: any) => {
-  const sourceUrl = asset?.file?.url || url
+  const sourceUrl = asset?.file?.previewUrl || asset?.file?.url || url
   applyUpdate({ imageUrl: sourceUrl, assetId: asset?.id })
 }
 

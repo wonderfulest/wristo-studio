@@ -8,12 +8,14 @@
       v-model:italic="italic"
       v-model:weight-class="weightClass"
       v-model:width-class="widthClass"
+      :interpreted-filters="interpretedFilters"
       :can-upload-fonts="canUsePremiumAssets"
       @search="handleSearch"
       @filterChange="handleFilterChange"
       @resetFilters="handleResetFilters"
       @openUploadDialog="openUploadDialog"
       @previewTextChange="handlePreviewTextChange"
+      @removeInterpretedFilter="handleRemoveInterpretedFilter"
     />
 
     <!-- 字体列表（按类型分 Tab 展示） -->
@@ -34,15 +36,24 @@
             :is-system="!!font.isSystem"
             :is-monospace="!!font.isMonospace"
             :subfamily="font.subfamily"
+            :style-tags="font.styleTags"
             :font-id="font.id"
             :font-url="(font as any)?.ttfFile?.url"
+            :preview-text="previewText"
+            :can-edit-search-index="canEditFontSearchIndex(font)"
+            @edit-search-index="openSearchIndexDialog"
+            @removed="handleFontRemoved"
           />
         </div>
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 分页 -->
-    <div class="pagination-wrap flex justify-center">
+    <div class="library-footer">
+      <div class="result-summary">
+        <span>{{ currentFontTypeName }}</span>
+        <span>{{ t('font.results') }}</span>
+        <strong>{{ total }}</strong>
+      </div>
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
@@ -60,6 +71,70 @@
       v-model:visible="uploadDialogVisible"
       @selected="handleFontUploaded"
     />
+
+    <el-dialog
+      v-model="searchIndexDialogVisible"
+      :title="t('font.editSearchIndex')"
+      width="560px"
+      :append-to-body="true"
+      :z-index="12050"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="searchIndexForm" label-width="110px">
+        <el-form-item :label="t('font.fontLabel')">
+          <div class="font-dialog-title">{{ currentSearchIndexFont?.fullName || currentSearchIndexFont?.family || '-' }}</div>
+        </el-form-item>
+        <el-form-item :label="t('font.styleTags')">
+          <el-select
+            v-model="searchIndexForm.styleTags"
+            multiple
+            filterable
+            default-first-option
+            clearable
+            popper-class="font-search-index-popper"
+            placeholder="digital,sport,rounded"
+          >
+            <el-option
+              v-for="tag in styleTagOptions"
+              :key="tag"
+              :label="tag"
+              :value="tag"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('font.searchKeywords')">
+          <el-input
+            v-model="searchIndexForm.searchKeywords"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('font.searchKeywordsPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('font.monospace')">
+          <el-switch v-model="searchIndexForm.isMonospace" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item :label="t('font.italic')">
+          <el-switch v-model="searchIndexForm.italic" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+        <el-form-item :label="t('font.weightClassLabel')">
+          <el-select v-model="searchIndexForm.weightClass" clearable :placeholder="t('common.any')">
+            <el-option v-for="w in [100,200,300,400,500,600,700,800,900]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('font.widthClassLabel')">
+          <el-select v-model="searchIndexForm.widthClass" clearable :placeholder="t('common.any')">
+            <el-option v-for="w in [1,2,3,4,5,6,7,8,9]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="searchIndexDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="searchIndexSaving" @click="saveSearchIndex">
+          {{ t('common.save') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -69,7 +144,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { ElMessage } from 'element-plus'
-import { searchFonts } from '@/api/wristo/fonts'
+import { getFontStyleTags, searchFonts, updateMyFontSearchIndex } from '@/api/wristo/fonts'
 import type { DesignFontVO } from '@/types/font'
 import FontImportDialog from '@/components/font-picker/FontImportDialog.vue'
 import FontsSearchPanel from './FontsSearchPanel.vue'
@@ -102,6 +177,22 @@ const isMonospace = ref<boolean>(false)
 const italic = ref<boolean>(false)
 const weightClass = ref<number | undefined>(undefined)
 const widthClass = ref<number | undefined>(undefined)
+const interpretedFilters = ref<string[]>([])
+const searchIndexDialogVisible = ref(false)
+const searchIndexSaving = ref(false)
+const currentSearchIndexFont = ref<DesignFontVO | null>(null)
+const searchIndexForm = ref({
+  styleTags: [] as string[],
+  searchKeywords: '',
+  isMonospace: 0,
+  italic: 0,
+  weightClass: undefined as number | undefined,
+  widthClass: undefined as number | undefined,
+})
+const styleTagOptions = ref<string[]>([])
+const currentFontTypeName = computed(() => {
+  return fontTypeOptions.value.find(item => item.value === activeFontType.value)?.name || t('font.searchFonts')
+})
 
 // Apple UI 风格：移除状态展示，无需状态映射函数
 
@@ -120,6 +211,9 @@ const loadFonts = async () => {
       widthClass: widthClass.value,
     })
     const list = filterAssetsByStudioAccess(data?.list ?? [], canUsePremiumAssets.value)
+    interpretedFilters.value = Array.isArray(data?.meta?.interpretedFilters)
+      ? (data.meta.interpretedFilters as string[])
+      : []
     total.value = data?.total ?? list.length
     // 预注册本页字体，使用 slug 作为 font-family
     await Promise.all(
@@ -141,6 +235,34 @@ const loadFontTypes = async () => {
     fontTypeOptions.value = Array.isArray(list) ? list : []
   } catch {
     fontTypeOptions.value = []
+  }
+}
+
+const loadStyleTagOptions = async () => {
+  try {
+    const resp = await getFontStyleTags()
+    styleTagOptions.value = Array.isArray(resp.data) ? resp.data : []
+  } catch (e) {
+    console.warn('Failed to load font style tags', e)
+    styleTagOptions.value = [
+      'digital',
+      'sport',
+      'rounded',
+      'tech',
+      'outline',
+      'cute',
+      'retro',
+      'minimal',
+      'classic',
+      'luxury',
+      'pixel',
+      'bold',
+      'thin',
+      'condensed',
+      'wide',
+      'mono',
+      'italic',
+    ]
   }
 }
 
@@ -177,6 +299,39 @@ const handleResetFilters = () => {
   italic.value = false
   weightClass.value = undefined
   widthClass.value = undefined
+  interpretedFilters.value = []
+  currentPage.value = 1
+  loadFonts()
+}
+
+const intentRemovalPatterns: Record<string, RegExp> = {
+  Sport: /运动|sport/ig,
+  Tech: /科技|未来|tech/ig,
+  Digital: /数码|数字表|电子表|lcd|digital/ig,
+  Outline: /轮廓|空心|描边|outline/ig,
+  Rounded: /圆润|圆角|rounded/ig,
+  Cute: /可爱|cute/ig,
+  Retro: /复古|老表|retro/ig,
+  Minimal: /极简|简洁|minimal/ig,
+  Classic: /经典|classic/ig,
+  Luxury: /高级|奢华|luxury/ig,
+  Pixel: /像素|pixel/ig,
+  Monospace: /等宽|对齐|monospace|mono|same width/ig,
+  Italic: /斜体|italic/ig,
+  Bold: /粗|醒目|bold|heavy|black/ig,
+  Thin: /细|轻|thin|light/ig,
+  Condensed: /窄|condensed|narrow/ig,
+  Wide: /宽|wide|expanded/ig,
+  'Number font': /数字|digit|number|0-9/ig,
+  'Icon font': /图标|icon/ig,
+}
+
+const handleRemoveInterpretedFilter = (filter: string) => {
+  const pattern = intentRemovalPatterns[filter]
+  if (pattern) {
+    searchQuery.value = searchQuery.value.replace(pattern, '').replace(/\s+/g, ' ').trim()
+  }
+  interpretedFilters.value = interpretedFilters.value.filter(item => item !== filter)
   currentPage.value = 1
   loadFonts()
 }
@@ -194,6 +349,87 @@ const handleFontUploaded = () => {
   loadFonts()
 }
 
+const parseTokenList = (value?: string | string[]) => {
+  const raw = Array.isArray(value) ? value.join(',') : String(value || '')
+  return raw
+    .split(/[,，\s]+/)
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean)
+}
+
+const normalizeTokenText = (value?: string | string[]) => parseTokenList(value)
+  .filter((item, index, list) => list.indexOf(item) === index)
+  .join(',')
+
+const parseTokenText = (value?: string | string[]) => parseTokenList(value)
+  .filter((item, index, list) => list.indexOf(item) === index)
+
+const normalizeKeywordText = (value?: string) => String(value || '')
+  .split(/[,，\s]+/)
+  .map(item => item.trim())
+  .filter(Boolean)
+  .join(',')
+
+const canEditFontSearchIndex = (font: DesignFontVO) => {
+  const currentUserId = userStore.userInfo?.id
+  return !!currentUserId && !!font.id
+}
+
+const openSearchIndexDialog = async (id: number) => {
+  const font = fonts.value.find(item => item.id === id)
+  if (!font || !canEditFontSearchIndex(font)) return
+  if (!styleTagOptions.value.length) {
+    await loadStyleTagOptions()
+  }
+  const allowedTags = new Set(styleTagOptions.value)
+  const styleTags = parseTokenText(font.styleTags || '').filter(tag => allowedTags.has(tag))
+  currentSearchIndexFont.value = font
+  searchIndexForm.value = {
+    styleTags,
+    searchKeywords: font.searchKeywords || '',
+    isMonospace: font.isMonospace ?? 0,
+    italic: font.italic ?? 0,
+    weightClass: font.weightClass || undefined,
+    widthClass: font.widthClass || undefined,
+  }
+  searchIndexDialogVisible.value = true
+}
+
+const saveSearchIndex = async () => {
+  const font = currentSearchIndexFont.value
+  if (!font) return
+  searchIndexSaving.value = true
+  try {
+    const resp = await updateMyFontSearchIndex(font.id, {
+      styleTags: normalizeTokenText(searchIndexForm.value.styleTags),
+      searchKeywords: normalizeKeywordText(searchIndexForm.value.searchKeywords),
+      isMonospace: searchIndexForm.value.isMonospace,
+      italic: searchIndexForm.value.italic,
+      weightClass: searchIndexForm.value.weightClass,
+      widthClass: searchIndexForm.value.widthClass,
+    })
+    if (resp.code === 0 && resp.data) {
+      const index = fonts.value.findIndex(item => item.id === font.id)
+      if (index >= 0) {
+        fonts.value[index] = { ...fonts.value[index], ...resp.data, previewFamily: resp.data.slug || resp.data.family }
+      }
+      ElMessage.success(t('common.savedSuccessfully'))
+      searchIndexDialogVisible.value = false
+    } else {
+      ElMessage.error(resp.msg || t('common.saveFailed'))
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.msg || e?.message || t('common.saveFailed'))
+  } finally {
+    searchIndexSaving.value = false
+  }
+}
+
+const handleFontRemoved = (id: number) => {
+  fonts.value = fonts.value.filter(font => font.id !== id)
+  total.value = Math.max(0, total.value - 1)
+}
+
 watch(activeFontType, () => {
   currentPage.value = 1
   loadFonts()
@@ -202,15 +438,20 @@ watch(activeFontType, () => {
 // 初始化
 onMounted(() => {
   loadFontTypes()
+  loadStyleTagOptions()
   loadFonts()
 })
 </script>
 
 <style scoped>
 .fonts-preview {
-  padding: 12px;
+  min-height: 100%;
+  padding: 18px;
   font-family: var(--studio-font-ui);
   color: var(--studio-text);
+  background:
+    linear-gradient(180deg, rgba(15, 107, 104, 0.04), transparent 280px),
+    var(--studio-bg);
 }
 
 .search-panel {
@@ -253,9 +494,9 @@ onMounted(() => {
 
 .fonts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .font-card {
@@ -269,10 +510,7 @@ onMounted(() => {
 }
 
 .fonts-grid :deep(.font-main) {
-  background: var(--studio-surface);
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-md);
-  padding: 6px 12px;
+  min-width: 0;
 }
 
 .font-card-header {
@@ -300,7 +538,63 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
-.pagination-wrap { margin-top: 20px; }
+.font-type-tabs {
+  padding: 14px;
+  background: color-mix(in srgb, var(--studio-surface) 74%, transparent);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.font-type-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+.font-type-tabs :deep(.el-tabs__nav) {
+  border: 0;
+  gap: 8px;
+}
+
+.font-type-tabs :deep(.el-tabs__item) {
+  min-height: 40px;
+  border: 1px solid var(--studio-border) !important;
+  border-radius: var(--studio-radius-md);
+  color: var(--studio-text-muted);
+  font-weight: 700;
+}
+
+.font-type-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary-border) !important;
+}
+
+.library-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+}
+
+.result-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--studio-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.result-summary strong {
+  color: var(--studio-text);
+  font-size: 18px;
+}
 
 /* 上传区域样式 */
 .upload-section {
@@ -484,5 +778,29 @@ onMounted(() => {
 .toolbar-actions {
   display: flex;
   align-items: center;
+}
+
+.font-dialog-title {
+  color: var(--studio-text);
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .fonts-preview {
+    padding: 12px;
+  }
+
+  .font-type-tabs {
+    padding: 10px;
+  }
+
+  .fonts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .library-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 </style>

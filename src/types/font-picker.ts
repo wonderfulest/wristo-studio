@@ -1,4 +1,5 @@
 export type FontItem = {
+  id?: number
   label: string
   value: string
   family: string
@@ -8,6 +9,10 @@ export type FontItem = {
   isMonospace?: boolean
   italic?: boolean
   isSystem?: boolean
+  styleTags?: string | string[]
+  searchKeywords?: string
+  weightClass?: number
+  widthClass?: number
 }
 
 export type Section = {

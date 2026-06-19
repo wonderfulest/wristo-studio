@@ -1,9 +1,18 @@
 <template>
-  <div class="search-panel">
+  <section class="search-panel" aria-label="Font search">
+    <div class="panel-copy">
+      <div>
+        <p class="eyebrow">{{ t('font.searchFonts') }}</p>
+        <h1>{{ t('font.libraryTitle') }}</h1>
+      </div>
+      <p class="panel-description">
+        {{ t('font.librarySubtitle') }}
+      </p>
+    </div>
     <div class="search-inputs">
       <el-input
         :model-value="searchQuery"
-        :placeholder="t('font.searchFonts')"
+        :placeholder="t('font.describeFontSearch')"
         class="search-input"
         clearable
         @input="onSearchInput"
@@ -27,6 +36,18 @@
           <span class="preview-prefix">Aa</span>
         </template>
       </el-input>
+    </div>
+    <div v-if="interpretedFilters?.length" class="intent-chips">
+      <el-tag
+        v-for="filter in interpretedFilters"
+        :key="filter"
+        size="small"
+        closable
+        effect="plain"
+        @close="emit('removeInterpretedFilter', filter)"
+      >
+        {{ filter }}
+      </el-tag>
     </div>
     <el-divider />
     <!-- Filters -->
@@ -95,7 +116,7 @@
         <el-button size="small" style="margin-left: 12px;" @click="emit('resetFilters')">{{ t('common.resetFilters') }}</el-button>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -112,6 +133,7 @@ defineProps<{
   weightClass?: number
   widthClass?: number
   canUploadFonts?: boolean
+  interpretedFilters?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -126,6 +148,7 @@ const emit = defineEmits<{
   (e: 'resetFilters'): void
   (e: 'openUploadDialog'): void
   (e: 'previewTextChange'): void
+  (e: 'removeInterpretedFilter', value: string): void
 }>()
 
 const onSearchInput = (val: string) => {
@@ -161,28 +184,60 @@ const onWidthClassChange = (val?: number) => {
 
 <style scoped>
 .search-panel {
-  background: var(--studio-surface);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(15, 107, 104, 0.12), transparent 32%),
+    linear-gradient(135deg, var(--studio-surface), var(--studio-surface-soft));
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-md);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: var(--studio-shadow-sm);
+}
+
+.panel-copy {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--studio-primary);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.panel-description {
+  max-width: 460px;
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .search-inputs {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.35fr) minmax(220px, 0.8fr);
   gap: 16px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .search-input {
-  min-width: 280px;
-  max-width: 320px;
+  min-width: 0;
 }
 
 .preview-input {
-  min-width: 240px;
-  max-width: 280px;
+  min-width: 0;
 }
 
 .preview-prefix {
@@ -191,14 +246,82 @@ const onWidthClassChange = (val?: number) => {
   color: var(--studio-text-muted);
 }
 
-.filters-form { margin-top: 12px; }
-.filters-form :deep(.el-form-item) { margin-right: 16px; margin-bottom: 8px; }
-.filters-form :deep(.el-select) { min-width: 160px; }
+.intent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.search-panel :deep(.el-input__wrapper) {
+  min-height: 44px;
+  border-radius: var(--studio-radius-md);
+  box-shadow: 0 0 0 1px var(--studio-border) inset;
+}
+
+.search-panel :deep(.el-input-group__append) {
+  border-radius: 0 var(--studio-radius-md) var(--studio-radius-md) 0;
+}
+
+.filters-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+
+.filters-form :deep(.el-form-item) {
+  min-height: 44px;
+  margin-right: 0;
+  margin-bottom: 0;
+  padding: 8px 10px;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+}
+
+.filters-form :deep(.el-form-item__label) {
+  color: var(--studio-text-muted);
+  font-weight: 650;
+}
+
+.filters-form :deep(.el-select) { min-width: 132px; }
 
 .search-toolbar { margin-top: 12px; }
 
 .toolbar-actions {
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.toolbar-actions :deep(.el-button) {
+  margin-left: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .search-panel {
+    padding: 16px;
+  }
+
+  .panel-copy,
+  .search-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-copy {
+    display: block;
+  }
+
+  .panel-description {
+    margin-top: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-panel :deep(*) {
+    transition: none !important;
+  }
 }
 </style>

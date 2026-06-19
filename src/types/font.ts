@@ -21,6 +21,7 @@ export interface DesignFontVO {
   family: string
   subfamily: string
   language: string
+  userId?: number
   type: string
   weight: string
   versionName: string
@@ -29,6 +30,8 @@ export interface DesignFontVO {
   italic: number
   weightClass: number
   widthClass: number
+  styleTags?: string
+  searchKeywords?: string
   copyright: string
   isSystem: number
   status: string
@@ -55,5 +58,11 @@ export interface DesignFontSearchDTO {
   italic?: number // 0/1
   weight?: number
   weightClass?: number
+  minWeightClass?: number
+  maxWeightClass?: number
   widthClass?: number
+  minWidthClass?: number
+  maxWidthClass?: number
+  styleTags?: string[]
+  usageTags?: string[]
 }

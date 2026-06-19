@@ -210,6 +210,7 @@ export function initCanvasManager(
     }
 
     if (target) {
+      elementManager.registerElementInstance(target as any)
       normalizeGlobalObject(target)
       if (shouldApplyDesignerControls(target)) {
         applyControlsToObject(target)
@@ -217,6 +218,7 @@ export function initCanvasManager(
       discoverAndRegisterCanvasProps([target])
     } else {
       const objects = canvas.getObjects() as any[]
+      elementManager.syncElementInstancesFromCanvas(objects as any)
       objects.forEach((obj) => {
         normalizeGlobalObject(obj)
         if (shouldApplyDesignerControls(obj)) {
@@ -225,6 +227,11 @@ export function initCanvasManager(
       })
       discoverAndRegisterCanvasProps(objects as unknown[])
     }
+  })
+
+  canvas.on('object:removed', (e) => {
+    const target = (e as unknown as { target?: unknown }).target as any
+    elementManager.unregisterElementInstance(target as any)
   })
 
   // 键盘空格拖动画布（仅在非输入区域）

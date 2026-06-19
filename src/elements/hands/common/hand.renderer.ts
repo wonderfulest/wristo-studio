@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useDesignStore } from '@/stores/designStore'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 
@@ -13,6 +14,10 @@ function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
   if (eleType === 'minuteHand') return 'minute'
   if (eleType === 'secondHand') return 'second'
   return 'hour'
+}
+
+function getRenderableAssetUrl(asset: { file?: { previewUrl?: string | null; url?: string | null } } | null | undefined): string | null {
+  return asset?.file?.previewUrl || asset?.file?.url || null
 }
 
 function getHourHandAngle(time?: Date): number {
@@ -50,6 +55,47 @@ function rotateHand(element: any, angle: number) {
   element.setCoords()
 }
 
+function scaleHandImage(hand: any) {
+  const iw = hand.width || 0
+  const ih = hand.height || 0
+  if (iw <= 0 || ih <= 0) return
+
+  const designStore = useDesignStore()
+  const scaleBase = designStore.watchSize || designStore.designSpec.width
+  const scale = scaleBase / Math.max(iw, ih)
+  hand.set({ scaleX: scale, scaleY: scale })
+}
+
+function removeExistingHandsByType(eleType: ElementType, exceptId?: string | number | null) {
+  const canvasStore = useCanvasStore()
+  const layerStore = useLayerStore()
+  const elementDataStore = useElementDataStore()
+  const canvas = canvasStore.canvas
+  if (!canvas) return
+
+  const keepId = exceptId == null ? null : String(exceptId)
+  const staleHands = (canvas.getObjects?.() || []).filter((obj: any) => {
+    if (obj?.eleType !== eleType) return false
+    if (keepId != null && obj?.id != null && String(obj.id) === keepId) return false
+    return true
+  })
+
+  staleHands.forEach((obj: any) => {
+    const id = obj?.id == null ? null : String(obj.id)
+    canvas.remove(obj)
+    if (id) {
+      layerStore.removeLayer(id)
+      elementDataStore.removeElement(id)
+    }
+  })
+
+  if (staleHands.length) {
+    canvasStore.setActiveIds(canvasStore.activeIds.filter((id) => {
+      return !staleHands.some((obj: any) => obj?.id != null && String(obj.id) === String(id))
+    }))
+  }
+}
+
 const timers: Partial<Record<ElementType, number | null>> = {
   hourHand: null,
   minuteHand: null,
@@ -85,7 +131,7 @@ async function resolveImageUrl(config: HandElementConfig): Promise<{ url: string
   if (!imageUrl && assetId) {
     try {
       const res = await analogAssetApi.get(assetId)
-      imageUrl = res.data?.file?.url || res.data?.file?.previewUrl || null
+      imageUrl = getRenderableAssetUrl(res.data)
     } catch (e) {
       console.error('Failed to fetch hand asset by id:', e)
       imageUrl = null
@@ -96,8 +142,9 @@ async function resolveImageUrl(config: HandElementConfig): Promise<{ url: string
     const assetType = getAssetType(config.eleType as ElementType)
     const analogAssetStore = useAnalogAssetStore()
     await analogAssetStore.loadAssets(assetType)
-    imageUrl = analogAssetStore.getFirstUrl(assetType)
-    assetId = analogAssetStore.getFirstId(assetType) ?? assetId
+    const firstAsset = analogAssetStore.assetsByType[assetType]?.[0]
+    imageUrl = getRenderableAssetUrl(firstAsset)
+    assetId = firstAsset?.id ?? assetId
   }
 
   return { url: imageUrl, assetId }
@@ -156,24 +203,24 @@ export async function createHand(config: HandElementConfig): Promise<FabricEleme
 
   img.set(commonOptions)
 
-  const iw = img.width || 0
-  const ih = img.height || 0
-  if (iw > 0 && ih > 0) {
-    let scaleBase: number
-    if (eleType === 'hourHand') {
-      scaleBase = designStore.watchSize
-    } else if (eleType === 'minuteHand') {
-      scaleBase = designStore.designSpec.centerX
-    } else {
-      scaleBase = designStore.designSpec.width
-    }
-    const scale = scaleBase / Math.max(iw, ih)
-    img.set({ scaleX: scale, scaleY: scale })
-  }
+  scaleHandImage(img)
 
   img.setCoords()
+  removeExistingHandsByType(eleType, id)
   canvas.add(img)
   layerStore.addLayer(img as any)
+  useElementDataStore().upsertElement({
+    ...config,
+    id,
+    eleType,
+    left: img.left,
+    top: img.top,
+    originX: img.originX,
+    originY: img.originY,
+    angle: img.angle,
+    imageUrl: url,
+    assetId,
+  } as HandElementConfig)
   canvas.requestRenderAll()
   canvas.discardActiveObject?.()
   canvas.setActiveObject?.(img)
@@ -198,10 +245,10 @@ export async function updateHand(
     const prevLeft = hand.left
     const prevTop = hand.top
     const prevAngle = hand.angle
-
-    canvas.remove(hand)
+    const nextAssetId = patch.assetId ?? hand.assetId
 
     const img: any = await FabricImage.fromURL(patch.imageUrl, { crossOrigin: 'anonymous' } as any)
+    canvas.remove(hand)
     hand = img
     hand.set({
       id: element.id,
@@ -212,6 +259,7 @@ export async function updateHand(
       top: prevTop,
       angle: prevAngle,
       imageUrl: patch.imageUrl,
+      assetId: nextAssetId,
       selectable: false,
       evented: false,
       hasControls: false,
@@ -223,32 +271,30 @@ export async function updateHand(
       lockRotation: true,
     })
 
-    const iw = hand.width || 0
-    const ih = hand.height || 0
-    if (iw > 0 && ih > 0) {
-      const designStore = useDesignStore()
-      let scaleBase: number
-      if (eleType === 'hourHand') {
-        scaleBase = designStore.watchSize
-      } else if (eleType === 'minuteHand') {
-        scaleBase = designStore.designSpec.centerX
-      } else {
-        scaleBase = designStore.designSpec.width
-      }
-      const scale = scaleBase / Math.max(iw, ih)
-      hand.set({ scaleX: scale, scaleY: scale })
-    }
+    scaleHandImage(hand)
 
     canvas.add(hand)
+    useLayerStore().addLayer(hand)
   }
 
-  if (typeof patch.assetId === 'number') {
+  if (patch.assetId !== undefined) {
     hand.assetId = patch.assetId
   }
 
   const newAngle = getAngleByType(eleType)
   rotateHand(hand, newAngle)
   hand.setCoords()
+  if (hand.id != null) {
+    useElementDataStore().patchElement(String(hand.id), {
+      left: hand.left,
+      top: hand.top,
+      originX: hand.originX,
+      originY: hand.originY,
+      angle: newAngle,
+      imageUrl: hand.imageUrl,
+      assetId: hand.assetId,
+    } as Partial<HandElementConfig>)
+  }
   canvas.requestRenderAll?.()
   canvas.discardActiveObject?.()
   canvas.setActiveObject?.(hand)

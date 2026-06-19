@@ -5,7 +5,7 @@
       <div class="search-inputs">
         <el-input
           v-model="searchQuery"
-          :placeholder="t('font.searchNumberFonts')"
+          :placeholder="t('font.searchFontsNaturalPlaceholder')"
           class="search-input"
           clearable
           @input="handleSearch"
@@ -29,6 +29,11 @@
             <span class="preview-prefix"></span>
           </template>
         </el-input>
+      </div>
+      <div v-if="interpretedFilters.length" class="intent-chips">
+        <el-tag v-for="filter in interpretedFilters" :key="filter" size="small" effect="plain">
+          {{ filter }}
+        </el-tag>
       </div>
       <el-divider />
 
@@ -163,10 +168,20 @@
         class="font-card"
       >
         <div class="font-card-header">
-          <div class="font-name" :title="font.fullName || font.family">
-            {{ font.fullName || font.family }}
-          </div>
+        <div class="font-name" :title="font.fullName || font.family">
+          {{ font.fullName || font.family }}
         </div>
+        <div v-if="font.styleTags" class="font-tags">
+          <el-tag
+            v-for="tag in splitStyleTags(font.styleTags).slice(0, 3)"
+            :key="tag"
+            size="small"
+            effect="plain"
+          >
+            {{ formatTag(tag) }}
+          </el-tag>
+        </div>
+      </div>
         <div class="preview-oneline" :style="{ fontFamily: font.previewFamily || font.family }">
           {{ previewText || '1234567890:' }}
         </div>
@@ -214,6 +229,7 @@ const pageSize = ref(48)
 const total = ref(0)
 const searchQuery = ref('')
 const previewText = ref('1234567890:')
+const interpretedFilters = ref<string[]>([])
 
 const showUploadArea = ref(false)
 const uploadQueue = ref<UploadQueueItem[]>([])
@@ -250,6 +266,9 @@ const loadFonts = async () => {
       isSystem: canUsePremiumAssets.value ? undefined : 1,
     })
     const list = filterAssetsByStudioAccess(data?.list ?? [], canUsePremiumAssets.value)
+    interpretedFilters.value = Array.isArray(data?.meta?.interpretedFilters)
+      ? (data.meta.interpretedFilters as string[])
+      : []
     total.value = data?.total ?? list.length
     // preload fonts using slug as family via fontStore
     await Promise.all(
@@ -285,9 +304,17 @@ const handleCurrentChange = (val: number) => {
 
 const handleResetFilters = () => {
   searchQuery.value = ''
+  interpretedFilters.value = []
   currentPage.value = 1
   loadFonts()
 }
+
+const splitStyleTags = (value?: string) => String(value || '').split(/[,，\s]+/).map(tag => tag.trim()).filter(Boolean)
+const formatTag = (tag: string) => tag
+  .split('-')
+  .filter(Boolean)
+  .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+  .join(' ')
 
 const handleFontFilesChange = async (file: any) => {
   if (!canUsePremiumAssets.value) {
@@ -499,6 +526,13 @@ onMounted(() => {
   color: var(--studio-text-muted);
 }
 
+.intent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .search-toolbar { margin-top: 12px; }
 
 .fonts-grid {
@@ -522,7 +556,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2px;
+  gap: 8px;
 }
 
 .font-name {
@@ -532,6 +566,14 @@ onMounted(() => {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.font-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
 }
 
 .preview-oneline {

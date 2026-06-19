@@ -11,6 +11,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/auth/signed-out',
+    name: 'AuthSignedOut',
+    component: () => import('@/views/AuthSignedOut.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/moon',
     name: 'MoonPreview',
     component: () => import('@/views/MoonView.vue'),

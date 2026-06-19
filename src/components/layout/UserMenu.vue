@@ -93,7 +93,7 @@ import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import { useI18n } from '@/i18n'
-import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { cancelPendingSsoRedirect, clearLocalAuthState } from '@/utils/ssoRedirect'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -141,9 +141,12 @@ const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
 }
 
-const handleLogout = () => {
-  userStore.logout()
-  redirectToSsoLogin('studio')
+const handleLogout = async () => {
+  cancelPendingSsoRedirect()
+  await userStore.logout()
+  clearLocalAuthState()
+  showDropdown.value = false
+  router.replace('/auth/signed-out')
 }
 
 const go = (path: string) => {
