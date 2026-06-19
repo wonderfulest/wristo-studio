@@ -148,7 +148,7 @@
               :min="1.99"
               :max="99.99"
               :precision="2"
-              :step="0.01"
+              :step="0.2"
               class="payment-input"
             />
           </div>
