@@ -7,7 +7,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
     textCase: 0 as number,
-    labelLengthType: 1 as number,
     showUnit: false as boolean,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
@@ -152,7 +151,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     clearProperties() {
       this.properties = {}
       this.textCase = 0
-      this.labelLengthType = 1
       this.showUnit = false
     },
 

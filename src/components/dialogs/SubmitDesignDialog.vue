@@ -37,7 +37,7 @@
           :min="0" 
           :max="999.99" 
           :precision="2"
-          :step="0.01"
+          :step="0.2"
           :placeholder="t('submitDesign.enterPrice')"
           style="width: 100%"
         />

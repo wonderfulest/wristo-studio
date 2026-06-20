@@ -37,15 +37,10 @@
               <el-form label-position="top" class="app-settings-form">
                 <el-form-item :label="t('property.textCase')">
                   <el-select v-model="textCase" style="width: 100%">
-                    <el-option :label="t('property.default')" :value="0" />
+                    <el-option :label="t('property.capitalize')" :value="0" />
                     <el-option :label="t('property.uppercase')" :value="1" />
                     <el-option :label="t('property.lowercase')" :value="2" />
-                    <el-option :label="t('property.capitalize')" :value="3" />
                   </el-select>
-                </el-form-item>
-
-                <el-form-item :label="t('property.labelLength')">
-                  <el-segmented v-model="labelLengthType" :options="labelLengthOptions" block />
                 </el-form-item>
 
                 <div class="switch-row">
@@ -258,12 +253,6 @@ const groupedProperties = computed(() =>
     .filter((group) => group.items.length > 0)
 )
 
-const labelLengthOptions = computed(() => [
-  { label: t('property.labelLengthShort'), value: 1 },
-  { label: t('property.labelLengthMedium'), value: 2 },
-  { label: t('property.labelLengthLong'), value: 3 },
-])
-
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
 }
@@ -274,15 +263,6 @@ const textCase = computed({
     propertiesStore.textCase = Number(value)
     getDataSimulatorEngine().updateCanvas()
     commitHistory('text-case')
-  },
-})
-
-const labelLengthType = computed({
-  get: () => propertiesStore.labelLengthType,
-  set: (value) => {
-    propertiesStore.labelLengthType = Number(value)
-    getDataSimulatorEngine().updateCanvas()
-    commitHistory('label-length')
   },
 })
 

@@ -237,6 +237,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
+import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -490,7 +491,7 @@ const loadDesign = async (designUid: string) => {
       baseStore.appId = designData.product?.appId || -1
       if (isInCanvas) {
         console.log('isInCanvas', isInCanvas)
-        const realtimeConfig = baseStore?.generateConfig?.() || {}
+        const realtimeConfig = await resolvePackageAssetUrls(baseStore?.generateConfig?.() || null) || {}
         Object.assign(form, {
           id: designData.id,
           name: designData.name,
@@ -543,12 +544,14 @@ const handleSave = async () => {
     messageStore.error(t('submitDesign.priceRange'))
     return
   }
-  const nextConfigJson = parseConfigJson()
-  if (nextConfigJson === null) return
-  form.configJson = nextConfigJson
+  const parsedConfigJson = parseConfigJson()
+  if (parsedConfigJson === null) return
 
   try {
     saving.value = true
+    const nextConfigJson = await resolvePackageAssetUrls(parsedConfigJson as any)
+    if (!nextConfigJson) return
+    form.configJson = nextConfigJson
     const payload = {
       uid: currentDesign.value.designUid,
       name: form.name,

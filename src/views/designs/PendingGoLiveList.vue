@@ -45,7 +45,7 @@
       </el-table>
     </el-card>
 
-    <!-- Go Live Dialog -->
+    <!-- Publish Dialog -->
     <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
   </div>
 </template>

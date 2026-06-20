@@ -85,6 +85,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useI18n } from '@/i18n'
 import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
+import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -150,8 +151,19 @@ const getBackgroundImagePayload = (configJson) => {
   return { url: imageUrl }
 }
 
-const openDialog = () => {
-  jsonConfig.value = baseStore.generateConfig()
+const prepareExportConfig = async (config) => {
+  try {
+    return await resolvePackageAssetUrls(config)
+  } catch (error) {
+    console.error('Failed to resolve package asset URLs:', error)
+    messageStore.error(error?.message || t('common.saveFailed'))
+    return null
+  }
+}
+
+const openDialog = async () => {
+  const config = baseStore.generateConfig()
+  jsonConfig.value = await prepareExportConfig(config) || config || {}
   uploading.value = false
   currentProgress = 0
   currentStatus = ''
@@ -172,8 +184,10 @@ const downloadConfig = async () => {
   }
   const config = baseStore.generateConfig()
   if (!config) return
+  const exportConfig = await prepareExportConfig(config)
+  if (!exportConfig) return
 
-  const blob = new Blob([JSON.stringify(config)], {
+  const blob = new Blob([JSON.stringify(exportConfig)], {
     type: 'application/json'
   })
   const url = URL.createObjectURL(blob)
@@ -221,10 +235,12 @@ const saveConfig = async (options = {}) => {
       validateBindings: options.validateBindings ?? true,
     })
     if (!config) return ''
+    const exportConfig = await prepareExportConfig(config)
+    if (!exportConfig) return ''
 
     const data = {
       name: baseStore.watchFaceName,
-      configJson: JSON.stringify(config),
+      configJson: JSON.stringify(exportConfig),
       // userId: user.value.id
     }
     if (baseStore.id) {
@@ -286,7 +302,10 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    const configJson = config
+    const configJson = await resolvePackageAssetUrls(config)
+    if (!configJson) {
+      throw new Error('Failed to resolve package asset URLs')
+    }
     // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
     currentStatus = t('export.processingBackground')
     currentProgress = 20
@@ -408,11 +427,13 @@ const cancelUpload = () => {
 }
 
 // 复制配置到剪贴板
-const copyConfig = () => {
+const copyConfig = async () => {
   const config = baseStore.generateConfig()
   if (!config) return
+  const exportConfig = await prepareExportConfig(config)
+  if (!exportConfig) return
 
-  const configStr = JSON.stringify(config, null, 2)
+  const configStr = JSON.stringify(exportConfig, null, 2)
   navigator.clipboard
     .writeText(configStr)
     .then(() => {

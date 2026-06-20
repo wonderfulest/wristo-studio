@@ -13,6 +13,7 @@ export interface Product {
   rawImageUrl?: string
   garminImageUrl: string
   garminStoreUrl: string
+  youtubeUrl?: string
   garminAppUuid: string
   payment: ProductPayment | null
   packageLog: ProductPackagingLog | null
@@ -112,6 +113,8 @@ export interface CreateProductDto {
   garminImageUrl?: string
   /** Garmin 商店URL */
   garminStoreUrl?: string
+  /** YouTube URL */
+  youtubeUrl?: string
 }
 
 /** 产品支付信息 */
@@ -132,6 +135,8 @@ export interface GoToLiveDto {
   description: string
   /** Garmin 商店URL */
   garminStoreUrl: string
+  /** YouTube URL */
+  youtubeUrl?: string
   /** 英雄图URL */
   heroImage: string
   /** 原图 */
@@ -160,6 +165,8 @@ export interface ProductUpdateDto {
   garminImageUrl?: string
   /** Garmin 商店URL */
   garminStoreUrl?: string
+  /** YouTube URL */
+  youtubeUrl?: string
   /** Garmin 应用UUID */
   garminAppUuid?: string
   /** 试用期限 */

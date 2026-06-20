@@ -8,7 +8,7 @@ import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useDesignStore } from '@/stores/designStore'
-import { generateConfig as generateRuntimeConfig } from '@/engine/services/exportService'
+import { generateConfig as generateRuntimeConfig, resolvePackageAssetUrls } from '@/engine/services/exportService'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
@@ -357,14 +357,16 @@ export const useBaseStore = defineStore('baseStore', {
         designId: this.id || '',
         watchFaceName: designStore.watchFaceName,
         textCase: propertiesStore.textCase,
-        labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
         validateBindings: true,
       })
+      if (!config) return false
+      const exportConfig = await resolvePackageAssetUrls(config)
+      if (!exportConfig) return false
       const res: any = await designApi.updateDesign({
         uid: this.id ?? '',
         name: designStore.watchFaceName,
-        configJson: JSON.stringify(config),
+        configJson: JSON.stringify(exportConfig),
       })
       this.id = res.data.documentId
       designStore.id = this.id
@@ -396,7 +398,6 @@ export const useBaseStore = defineStore('baseStore', {
         designId: this.id || designStore.id || '',
         watchFaceName: designStore.watchFaceName || this.watchFaceName,
         textCase: propertiesStore.textCase,
-        labelLengthType: propertiesStore.labelLengthType,
         showUnit: propertiesStore.showUnit,
         validateBindings: options.validateBindings ?? false,
       })

@@ -93,6 +93,7 @@ export interface Product {
   rawImageUrl: string
   garminImageUrl: string
   garminStoreUrl: string
+  youtubeUrl?: string
   garminAppUuid: string
   trialLasts: number
   download?: number

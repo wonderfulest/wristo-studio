@@ -32,12 +32,16 @@ export const productsApi = {
   },
 
   /**
-   * Go Live 接口
-   * @param data 产品上线数据
+   * Publish 接口
+   * @param data 产品发布数据
    * @returns 是否成功
    */
+  publish(data: GoToLiveDto): Promise<boolean> {
+    return instance.post('/dsn/products/publish', data)
+  },
+
   goLive(data: GoToLiveDto): Promise<boolean> {
-    return instance.post('/dsn/products/goLive', data)
+    return productsApi.publish(data)
   },
 
   /**
@@ -49,10 +53,10 @@ export const productsApi = {
   },
 
   /**
-   * 获取待上架产品列表
+   * 获取待发布产品列表
    */
   getGoLivePendingList(): Promise<ApiResponse<ProductVo[]>> {
-    return instance.get('/dsn/products/goLive/pending-list?populate=release')
+    return instance.get('/dsn/products/publish/pending-list?populate=release')
   },
 
   /**

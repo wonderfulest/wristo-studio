@@ -7,7 +7,6 @@ export interface RuntimeDesignConfig {
   designId: string
   name: string
   textCase: number
-  labelLengthType: number
   showUnit: boolean
   elements: AnyElementConfig[]
   orderIds: string[]

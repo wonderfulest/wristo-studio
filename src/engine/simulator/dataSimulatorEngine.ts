@@ -54,7 +54,7 @@ function formatDateValue(date: Date, formatter: number, textCase: number | undef
     formatted = formatted.toUpperCase()
   } else if (textCase === 2) {
     formatted = formatted.toLowerCase()
-  } else if (textCase === 3) {
+  } else if (textCase === 0 || textCase === 3) {
     formatted = formatted.replace(/\b\w/g, (c) => c.toUpperCase())
   }
 
@@ -67,7 +67,7 @@ function applyTextCase(text: string, textCase: number | undefined): string {
     formatted = formatted.toUpperCase()
   } else if (textCase === 2) {
     formatted = formatted.toLowerCase()
-  } else if (textCase === 3) {
+  } else if (textCase === 0 || textCase === 3) {
     formatted = formatted.replace(/\b\w/g, (c) => c.toUpperCase())
   }
   return formatted
@@ -216,18 +216,9 @@ export class DataSimulatorEngine {
         })
 
         let nextText = 'Label'
-        const labelLengthType = Number((propertiesStore as any).labelLengthType ?? 1)
         const enLabel = (metric as any)?.enLabel
         if (enLabel && typeof enLabel === 'object') {
-          if (labelLengthType === 1) {
-            nextText = enLabel.short || enLabel.medium || enLabel.long || nextText
-          } else if (labelLengthType === 2) {
-            nextText = enLabel.medium || enLabel.short || enLabel.long || nextText
-          } else if (labelLengthType === 3) {
-            nextText = enLabel.long || enLabel.medium || enLabel.short || nextText
-          } else {
-            nextText = enLabel.short || enLabel.medium || enLabel.long || nextText
-          }
+          nextText = enLabel.short || enLabel.medium || enLabel.long || nextText
         } else if (typeof enLabel === 'string' && enLabel !== '') {
           nextText = enLabel
         }

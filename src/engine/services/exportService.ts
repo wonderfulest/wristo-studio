@@ -11,10 +11,56 @@ import { useLocaleStore } from '@/stores/locale'
 import { translate } from '@/i18n'
 import { normalizeConfigToStandardSize } from '@/utils/designScale'
 import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
   return translate(key, localeStore.currentLocale, params)
+}
+
+const PACKAGE_ASSET_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
+
+function isPackageAssetElement(element: AnyElementConfig): boolean {
+  return PACKAGE_ASSET_ELEMENT_TYPES.has(String((element as any)?.eleType ?? (element as any)?.type ?? ''))
+}
+
+function readNumericAssetId(element: AnyElementConfig): number | null {
+  const assetId = (element as any)?.assetId
+  if (typeof assetId === 'number' && Number.isFinite(assetId)) return assetId
+  if (typeof assetId === 'string' && /^\d+$/.test(assetId)) return Number(assetId)
+  return null
+}
+
+export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null): Promise<RuntimeDesignConfig | null> {
+  if (!config?.elements?.length) return config
+
+  const assetUrlById = new Map<number, string>()
+  const elements = await Promise.all(config.elements.map(async (element) => {
+    if (!isPackageAssetElement(element)) return element
+
+    const assetId = readNumericAssetId(element)
+    if (!assetId) return element
+
+    let fileUrl = assetUrlById.get(assetId)
+    if (!fileUrl) {
+      const res = await analogAssetApi.get(assetId)
+      fileUrl = res.data?.file?.url || ''
+      if (!fileUrl) {
+        throw new Error(`Analog asset ${assetId} has no file URL`)
+      }
+      assetUrlById.set(assetId, fileUrl)
+    }
+
+    return {
+      ...(element as any),
+      imageUrl: fileUrl,
+    } as AnyElementConfig
+  }))
+
+  return {
+    ...config,
+    elements,
+  }
 }
 
 function mapColorProperties(encodeConfig: AnyElementConfig, properties: PropertiesMap): void {
@@ -145,7 +191,6 @@ export interface GenerateConfigOptions {
   designId: string
   watchFaceName: string
   textCase: number
-  labelLengthType: number
   showUnit: boolean
   validateBindings?: boolean
 }
@@ -157,7 +202,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId,
     watchFaceName,
     textCase,
-    labelLengthType,
     showUnit,
     validateBindings = false,
   } = options
@@ -172,7 +216,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId: designId || '',
     name: watchFaceName,
     textCase,
-    labelLengthType,
     showUnit,
     elements: [],
     orderIds: [],

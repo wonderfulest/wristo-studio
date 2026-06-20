@@ -107,7 +107,7 @@
     <!-- 提交设计对话框 -->
     <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
     
-    <!-- Go Live 对话框 -->
+    <!-- Publish 对话框 -->
     <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
 
     <!-- 空列表提示对话框：引导用户前往 New Project 创建第一个应用 -->
@@ -259,7 +259,7 @@ const getStatusColor = (status: DesignStatus) => {
   return statusMap[status as keyof typeof statusMap] || '#909399'
 }
 
-// 格式化可空日期（用于 Last Go Live）
+// 格式化可空日期（用于 Last Publish）
 const formatDateNullable = (date: string | number | null | undefined) => {
   if (!date) return t('common.never')
   return dayjs(date).format('YYYY-MM-DD HH:mm')
@@ -527,7 +527,7 @@ onUnmounted(() => {
   window.removeEventListener('refresh-list', handleRefresh)
 })
 
-// Go live 方法
+// Publish 方法
 const goLive = async (design: Design) => {
   if (!membershipGate.requirePublish()) return
   try {
@@ -538,7 +538,7 @@ const goLive = async (design: Design) => {
       return
     }
     if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
-      console.log('show go live dialog')
+      console.log('show publish dialog')
       goLiveDialog.value.show(fullDesign)
     }
   } catch (e) {
@@ -546,7 +546,7 @@ const goLive = async (design: Design) => {
   }
 }
 
-// 处理 Go Live 成功
+// 处理 Publish 成功
 const handleGoLiveSuccess = () => {
   fetchDesigns() // 刷新设计列表
 }

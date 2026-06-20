@@ -247,7 +247,6 @@ const loadDesign = async (designUid: string) => {
       // 设置默认值
       baseStore.watchFaceName = designData.name
       propertiesStore.textCase = 0
-      propertiesStore.labelLengthType = 1
       propertiesStore.showUnit = false
      
       // 初始化画布
@@ -264,15 +263,11 @@ const loadDesign = async (designUid: string) => {
 
     // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
     propertiesStore.textCase = 0
-    propertiesStore.labelLengthType = 1
     propertiesStore.showUnit = false
 
     // 设置文本大小写
-    if (config.textCase !== undefined) {
-      propertiesStore.textCase = config.textCase
-    }
-    if (config.labelLengthType !== undefined) {
-      propertiesStore.labelLengthType = config.labelLengthType
+    if ([0, 1, 2, 3].includes(Number(config.textCase))) {
+      propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
     }
     // 设置是否显示数据项单位
     if (config.showUnit !== undefined) {

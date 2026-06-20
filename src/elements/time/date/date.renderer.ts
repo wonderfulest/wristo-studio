@@ -21,7 +21,7 @@ function formatDate(date: Date, formatter: number, textCase: number | undefined)
     formatted = formatted.toUpperCase()
   } else if (textCase === 2) {
     formatted = formatted.toLowerCase()
-  } else if (textCase === 3) {
+  } else if (textCase === 0 || textCase === 3) {
     formatted = formatted.replace(/\b\w/g, (c) => c.toUpperCase())
   }
 

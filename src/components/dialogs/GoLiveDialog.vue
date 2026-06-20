@@ -114,6 +114,16 @@
           {{ t('goLive.garminStoreUrlTip') }}
         </div>
       </el-form-item>
+      <el-form-item :label="t('goLive.youtubeUrl')">
+        <el-input
+          v-model="form.youtubeUrl"
+          :placeholder="t('goLive.enterYoutubeUrl')"
+          clearable
+        />
+        <div class="form-tip">
+          {{ t('goLive.youtubeUrlTip') }}
+        </div>
+      </el-form-item>
 
       <!-- Category Selector -->
       <CategorySelector
@@ -236,6 +246,7 @@ const form = reactive({
   rawImageUrl: '',
   bannerImageUrl: '',
   garminStoreUrl: '',
+  youtubeUrl: '',
   categoryIds: [] as number[],
   bundleIds: [] as number[],
   paymentMethod: 'free',
@@ -288,6 +299,7 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = design.product.rawImageUrl || ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
+    form.youtubeUrl = design.product.youtubeUrl || ''
     form.paymentMethod = canPublishPaid.value && design.product.payment?.paymentMethod !== 'free'
       ? (design.product.payment?.paymentMethod || 'wpay')
       : 'free'
@@ -326,6 +338,7 @@ const loadDesign = (design: Design) => {
     form.rawImageUrl = ''
     form.bannerImageUrl = ''
     form.garminStoreUrl = ''
+    form.youtubeUrl = ''
     form.paymentMethod = 'free'
     form.trialLasts = 0.25
     form.price = 0.00
@@ -367,6 +380,7 @@ const handleConfirm = async () => {
       bannerImage: form.bannerImageUrl.trim(),
       appId: currentDesign.value.product.appId,
       garminStoreUrl: form.garminStoreUrl.trim(),
+      youtubeUrl: form.youtubeUrl.trim(),
       payment: {
         paymentMethod: form.paymentMethod,
         price: form.paymentMethod === 'free' ? 0 : form.price,
@@ -381,7 +395,7 @@ const handleConfirm = async () => {
         .map((img) => img.id)
         .filter((id) => typeof id === 'number' && id > 0)
     }
-    await productsApi.goLive(data)
+    await productsApi.publish(data)
     messageStore.success(t('goLive.productUpdated'))
     emit('success')
     dialogVisible.value = false
