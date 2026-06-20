@@ -335,8 +335,8 @@ export const DataTypeOptions: DataTypeOption[] = [
     defaultValue: '80',
     icon: '\u0026',
     unit: '',
-    label: 'Battery (Hide Percentage)',
-    enLabel: { short: 'Bat', medium: 'Battery', long: 'Battery Goal' },
+    label: 'Battery',
+    enLabel: { short: 'Bat', medium: 'Battery', long: 'Battery Lvl' },
   },
   {
     labelCn: '目标步数',
@@ -346,7 +346,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0031',
     unit: 'steps',
     label: 'Steps',
-    enLabel: { short: 'GStp', medium: 'GoalStep', long: 'Step Goal' },
+    enLabel: { short: 'Step', medium: 'Steps', long: 'Step Count' },
   },
   {
     labelCn: '目标卡路里',
@@ -355,8 +355,8 @@ export const DataTypeOptions: DataTypeOption[] = [
     defaultValue: '500',
     icon: '\u0032',
     unit: 'kcal',
-    label: 'Calories (Manual Goal)',
-    enLabel: { short: 'GCal', medium: 'GoalCal', long: 'Calorie Goal' },
+    label: 'Calories',
+    enLabel: { short: 'Cal', medium: 'Calories', long: 'Calories' },
   },
   {
     labelCn: '目标爬楼',
@@ -366,7 +366,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0033',
     unit: 'floors',
     label: 'Floors Climbed',
-    enLabel: { short: 'Floor', medium: 'Floor', long: 'Floor Goal' },
+    enLabel: { short: 'Flr', medium: 'Floors', long: 'Floor Climb' },
   },
   {
     labelCn: '目标心率',
@@ -376,7 +376,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0030',
     unit: 'bpm',
     label: 'Heart Rate',
-    enLabel: { short: 'HR', medium: 'HR', long: 'Heart Rate' },
+    enLabel: { short: 'HR', medium: 'HeartRt', long: 'Heart Rate' },
   },
   {
     labelCn: '目标身体电量',
@@ -386,7 +386,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0035',
     unit: '%',
     label: 'Body Battery',
-    enLabel: { short: 'BdBat', medium: 'BodyBat', long: 'Body Battery' },
+    enLabel: { short: 'BBat', medium: 'BodyBatt', long: 'Body Batt' },
   },
   {
     labelCn: '目标每日活动时间',
@@ -396,7 +396,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0044',
     unit: 'min',
     label: 'Active Minutes (Daily)',
-    enLabel: { short: 'GAct', medium: 'GoalAct', long: 'Daily Active' },
+    enLabel: { short: 'ActM', medium: 'ActvMin', long: 'Daily Active' },
   },
   {
     labelCn: '目标每周活动时间',
@@ -406,7 +406,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0044',
     unit: 'min',
     label: 'Weekly Active Minutes',
-    enLabel: { short: 'GWkA', medium: 'GoalWkAc', long: 'Weekly Activ' },
+    enLabel: { short: 'WkAc', medium: 'WkActive', long: 'Weekly Activ' },
   },
   {
     labelCn: '周跑步目标距离',
@@ -416,7 +416,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0046',
     unit: 'km',
     label: 'Weekly Run Distance',
-    enLabel: { short: 'GRD', medium: 'GoalRunDist', long: 'Run Distance' },
+    enLabel: { short: 'Run', medium: 'RunDist', long: 'Run Distance' },
   },
   {
     labelCn: '周骑行目标距离',
@@ -426,7 +426,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0047',
     unit: 'km',
     label: 'Weekly Cycling Distance',
-    enLabel: { short: 'GCD', medium: 'GoalCycleDist', long: 'Cycle Distance' },
+    enLabel: { short: 'Cycle', medium: 'CycleDist', long: 'Cycle Dist' },
   },
   {
     labelCn: '周游泳目标距离',
@@ -436,7 +436,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0048',
     unit: 'km',
     label: 'Weekly Swim Distance',
-    enLabel: { short: 'GSD', medium: 'SwimDist', long: 'Swim Distance' },
+    enLabel: { short: 'Swim', medium: 'SwimDist', long: 'Swim Dist' },
   },
   {
     labelCn: '周步行目标距离',
@@ -446,7 +446,7 @@ export const DataTypeOptions: DataTypeOption[] = [
     icon: '\u0049',
     unit: 'km',
     label: 'Weekly Walk Distance',
-    enLabel: { short: 'GWD', medium: 'WalkDist', long: 'Walk Distance' },
+    enLabel: { short: 'Walk', medium: 'WalkDist', long: 'Walk Dist' },
   },
   {
     labelCn: '秒针',
