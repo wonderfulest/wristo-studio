@@ -32,31 +32,14 @@ const sourceDesignId = computed(() => {
 
 const title = computed(() => t('project.copyingTemplate'))
 const description = computed(() => t('project.copyingTemplateHint'))
-const STUDIO_CREATE_LIMIT_REACHED = 2004
-
-const getErrorCode = (error: any): number | undefined => {
-  return error?.code ?? error?.response?.data?.code
-}
 
 const getErrorMessage = (error: any): string | undefined => {
   return error?.msg || error?.message || error?.response?.data?.msg || error?.response?.data?.message
 }
 
-const goToPricingForCreateLimit = async () => {
-  const max = userStore.studioMembership?.maxDesigns
-  messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
-  await router.replace('/pricing')
-}
-
 onMounted(async () => {
   if (!sourceDesignId.value) {
     messageStore.error(t('project.missingDesignId'))
-    await router.replace('/designs/new-projects')
-    return
-  }
-
-  if (!userStore.canCreateDesign) {
-    await goToPricingForCreateLimit()
     return
   }
 
@@ -72,14 +55,8 @@ onMounted(async () => {
     messageStore.error(response.msg || t('project.copyFailed'))
   } catch (error) {
     console.error('复制并打开设计失败:', error)
-    if (getErrorCode(error) === STUDIO_CREATE_LIMIT_REACHED) {
-      await goToPricingForCreateLimit()
-      return
-    }
     messageStore.error(getErrorMessage(error) || t('project.copyFailed'))
   }
-
-  await router.replace('/designs/new-projects')
 })
 </script>
 

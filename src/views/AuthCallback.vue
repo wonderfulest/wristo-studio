@@ -32,6 +32,17 @@ const { t } = useI18n()
 const clientId = 'studio'
 const redirectUri = getSsoRedirectUri()
 
+const getCallbackNextPath = () => {
+  const raw = route.query.next
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return typeof value === 'string'
+    && value.startsWith('/')
+    && !value.startsWith('/auth/callback')
+    && !value.startsWith('/auth/signed-out')
+    ? value
+    : ''
+}
+
 onMounted(async () => {
   
   const code = route.query.code as string
@@ -80,7 +91,7 @@ onMounted(async () => {
       
       // 延迟跳转，确保数据保存完成
       setTimeout(() => {
-        const pendingPath = getPendingStudioPath()
+        const pendingPath = getCallbackNextPath() || getPendingStudioPath()
         clearPendingStudioPath()
         router.replace(pendingPath || '/')
       }, 100)

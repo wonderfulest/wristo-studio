@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
@@ -206,8 +206,8 @@ const canDeleteDesign = computed(() => {
 const isPublishedDesign = (design: Design | null | undefined) => design?.designStatus === 'published'
 
 // 添加作者显示控制
-const showCreator = ref(false)  // 默认隐藏作者
-const designScope = ref<'mine' | 'all'>('mine')
+const showCreator = ref(isAdminUser.value)  // 管理员默认查看全部设计时展示作者
+const designScope = ref<'mine' | 'all'>(isAdminUser.value ? 'all' : 'mine')
 const designScopeOptions = computed(() => [
   { label: t('project.scopeMine'), value: 'mine' },
   { label: t('project.scopeAll'), value: 'all' }
@@ -232,6 +232,18 @@ const handleDesignScopeChange = () => {
   }
   fetchDesigns()
 }
+
+watch(isAdminUser, (isAdmin) => {
+  const nextScope = isAdmin ? 'all' : 'mine'
+  if (designScope.value === nextScope) return
+
+  designScope.value = nextScope
+  currentPage.value = 1
+  if (isAdmin) {
+    showCreator.value = true
+  }
+  fetchDesigns()
+})
 
 // 获取状态文本
 const getStatusText = (status: DesignStatus) => {

@@ -39,9 +39,25 @@ export interface MeterConfigVO {
   usageMaxGapSeconds: number
   lifecycleAppIds: string
   lifecycleFixedRateMs: number
+  scoreRecentWindowDays: number
+  scoreMinAgeDaysForVelocity: number
+  scoreTrustFullAgeDays: number
+  scoreTargetTotalDownloads: number
+  scoreTargetTotalPurchases: number
+  scoreTargetRecentDownloads: number
+  scoreTargetRecentPurchases: number
+  scoreTargetDailyPurchases: number
+  scoreTargetConversionRate: number
+  scoreTargetRecentActiveUsers: number
+  scoreTargetRecentUsageMinutes: number
+  scoreTargetAvgUsageMinutes: number
+  scoreMarketWeight: number
+  scoreEngagementWeight: number
+  scoreTrustWeight: number
 }
 
 export interface AppMeterScoreItemVO {
+  value?: number
   score: number
   weight: number
   weightedScore: number
@@ -49,18 +65,8 @@ export interface AppMeterScoreItemVO {
 
 export interface AppMeterScoreVO {
   total: number
-  weights: {
-    scale: number
-    lifecycle: number
-    activeRate: number
-    effectiveRate: number
-  }
-  breakdown: {
-    scale: AppMeterScoreItemVO
-    lifecycle: AppMeterScoreItemVO
-    activeRate: AppMeterScoreItemVO
-    effectiveRate: AppMeterScoreItemVO
-  }
+  weights: Record<string, number>
+  breakdown: Record<string, AppMeterScoreItemVO>
 }
 
 export interface AppMeterVO {

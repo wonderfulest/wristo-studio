@@ -170,6 +170,12 @@ const getCurrentDesignSize = (): DesignSize => ({
   height: Number(designStore.designSpec.height || STANDARD_DESIGN_SIZE),
 })
 
+const getRouteDesignId = (): string => {
+  const raw = route.query.id || route.query.designId || route.query.from
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 const isNear = (a: unknown, b: number, tolerance = 2): boolean => {
   const n = Number(a)
   return Number.isFinite(n) && Math.abs(n - b) <= tolerance
@@ -408,7 +414,7 @@ onMounted(() => {
   changelogDialog.value?.checkShowChangelog()
 
   // 检查URL参数中是否有设计ID
-  const designId = route.query.id as string | undefined
+  const designId = getRouteDesignId()
   if (designId) {
     loadDesign(designId)
   } else {

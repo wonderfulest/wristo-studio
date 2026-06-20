@@ -171,6 +171,38 @@
         <div class="section-header">
           <div class="section-title">{{ t('editDesign.configuration') }}</div>
           <div class="config-actions">
+            <el-button-group class="config-mode-switch">
+              <el-button
+                size="small"
+                :type="configViewMode === 'tree' ? 'primary' : 'default'"
+                @click="switchConfigViewMode('tree')"
+              >
+                {{ t('editDesign.treePreview') }}
+              </el-button>
+              <el-button
+                size="small"
+                :type="configViewMode === 'edit' ? 'primary' : 'default'"
+                @click="switchConfigViewMode('edit')"
+              >
+                {{ t('editDesign.editJson') }}
+              </el-button>
+            </el-button-group>
+            <el-button
+              v-if="configViewMode === 'tree'"
+              size="small"
+              class="apple-button secondary"
+              @click="expandAllConfig"
+            >
+              {{ t('editDesign.expandAll') }}
+            </el-button>
+            <el-button
+              v-if="configViewMode === 'tree'"
+              size="small"
+              class="apple-button secondary"
+              @click="collapseAllConfig"
+            >
+              {{ t('editDesign.collapseAll') }}
+            </el-button>
             <el-button 
               size="small" 
               @click="copyConfig"
@@ -183,7 +215,15 @@
         </div>
         <div class="config-editor">
           <div class="config-content">
+            <div v-if="configViewMode === 'tree'" class="json-preview">
+              <CollapsibleJsonTree
+                :data="configTreeData"
+                :expand-all-token="expandAllToken"
+                :collapse-all-token="collapseAllToken"
+              />
+            </div>
             <el-input
+              v-else
               v-model="form.configJsonString"
               type="textarea"
               :autosize="{ minRows: 16, maxRows: 32 }"
@@ -232,6 +272,7 @@ import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { Box, DocumentCopy, Link, Picture } from '@element-plus/icons-vue'
+import CollapsibleJsonTree from '@/components/common/CollapsibleJsonTree.vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { useUserStore } from '@/stores/user'
@@ -248,6 +289,10 @@ const userStore = useUserStore()
 const { t } = useI18n()
 const currentDesign = ref<Design | null>(null)
 const configJsonError = ref('')
+const configViewMode = ref<'tree' | 'edit'>('tree')
+const configTreeData = ref<unknown>({})
+const expandAllToken = ref(0)
+const collapseAllToken = ref(0)
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -469,6 +514,27 @@ const parseConfigJson = () => {
   }
 }
 
+const syncConfigTreeFromEditor = () => {
+  const parsed = parseConfigJson()
+  if (parsed === null) return false
+  form.configJson = parsed
+  configTreeData.value = parsed
+  return true
+}
+
+const switchConfigViewMode = (mode: 'tree' | 'edit') => {
+  if (mode === 'tree' && !syncConfigTreeFromEditor()) return
+  configViewMode.value = mode
+}
+
+const expandAllConfig = () => {
+  expandAllToken.value += 1
+}
+
+const collapseAllConfig = () => {
+  collapseAllToken.value += 1
+}
+
 const handlePaymentMethodChange = (value: string | number | boolean | undefined) => {
   if (value === 'free') {
     form.payment.price = 0
@@ -505,6 +571,7 @@ const loadDesign = async (designUid: string) => {
             trialLasts: designData.product?.trialLasts ?? 0
           }
         })
+        configTreeData.value = realtimeConfig
       } else {
         const serverConfig = designData.configJson
         Object.assign(form, {
@@ -520,6 +587,7 @@ const loadDesign = async (designUid: string) => {
             trialLasts: designData.product?.trialLasts ?? 0
           }
         })
+        configTreeData.value = serverConfig || {}
       }
     } else {
       ElMessage.error(response.msg || t('editDesign.loadFailed'))
@@ -596,6 +664,7 @@ const show = async (designUid: string) => {
   console.log('show design', designUid)
   designId.value = designUid
   await loadDesign(designUid)
+  configViewMode.value = 'tree'
   dialogVisible.value = true
 }
 
@@ -1280,7 +1349,13 @@ defineExpose({
 
 .config-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.config-mode-switch {
+  flex-shrink: 0;
 }
 
 .config-editor {
@@ -1308,6 +1383,8 @@ defineExpose({
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
+  color: var(--studio-text);
+  min-height: 360px;
 }
 
 :deep(.json-preview .vjs-tree) {

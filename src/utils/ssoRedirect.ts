@@ -84,13 +84,25 @@ function localizeSsoPath(loginUrl: URL, locale: SsoLocale) {
   loginUrl.pathname = `/${locale}${pathWithoutLocale.startsWith('/') ? pathWithoutLocale : `/${pathWithoutLocale}`}`
 }
 
-export function buildSsoLoginUrl(client: string, options: RedirectToSsoLoginOptions = {}) {
+function isValidPendingStudioPath(path?: string | null) {
+  return Boolean(
+    path
+    && path.startsWith('/')
+    && !path.startsWith('/auth/callback')
+    && !path.startsWith('/auth/signed-out')
+  )
+}
+
+export function buildSsoLoginUrl(client: string, options: RedirectToSsoLoginOptions = {}, pendingPath?: string) {
   const loginUrl = new URL(getSsoLoginBaseUrl(), window.location.origin)
   const ssoLocale = toSsoLocale(getCurrentLocale())
   syncSsoLocale(ssoLocale)
   localizeSsoPath(loginUrl, ssoLocale)
   loginUrl.searchParams.set('client', client)
   loginUrl.searchParams.set('redirect_uri', getSsoRedirectUri())
+  if (isValidPendingStudioPath(pendingPath)) {
+    loginUrl.searchParams.set('next', pendingPath!)
+  }
   if (options.forceLogin) {
     loginUrl.searchParams.set('force_login', '1')
   }
@@ -99,20 +111,19 @@ export function buildSsoLoginUrl(client: string, options: RedirectToSsoLoginOpti
 
 export function getPendingStudioPath() {
   return sessionStorage.getItem(PENDING_STUDIO_PATH_KEY)
+    || localStorage.getItem(PENDING_STUDIO_PATH_KEY)
 }
 
 export function clearPendingStudioPath() {
   sessionStorage.removeItem(PENDING_STUDIO_PATH_KEY)
+  localStorage.removeItem(PENDING_STUDIO_PATH_KEY)
 }
 
 function rememberPendingStudioPath(path?: string) {
-  if (
-    !path
-    || !path.startsWith('/')
-    || path.startsWith('/auth/callback')
-    || path.startsWith('/auth/signed-out')
-  ) return
-  sessionStorage.setItem(PENDING_STUDIO_PATH_KEY, path)
+  if (!isValidPendingStudioPath(path)) return
+  const pendingPath = path as string
+  sessionStorage.setItem(PENDING_STUDIO_PATH_KEY, pendingPath)
+  localStorage.setItem(PENDING_STUDIO_PATH_KEY, pendingPath)
 }
 
 export function redirectToSsoLogin(
@@ -126,7 +137,8 @@ export function redirectToSsoLogin(
   }
   isRedirectingToSso = true
 
-  rememberPendingStudioPath(pendingPath || `${window.location.pathname}${window.location.search}${window.location.hash}`)
+  const nextPath = pendingPath || `${window.location.pathname}${window.location.search}${window.location.hash}`
+  rememberPendingStudioPath(nextPath)
   clearLocalAuthState()
 
   ssoRedirectTimer = window.setTimeout(() => {
@@ -135,6 +147,6 @@ export function redirectToSsoLogin(
       isRedirectingToSso = false
       return
     }
-    window.location.href = buildSsoLoginUrl(client, options)
+    window.location.href = buildSsoLoginUrl(client, options, nextPath)
   }, delay)
 }
