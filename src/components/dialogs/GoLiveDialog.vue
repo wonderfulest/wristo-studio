@@ -289,7 +289,6 @@ const loadDesign = (design: Design) => {
   form.name = design.product.name
   form.description = design.product.description
   form.categoryIds = design.product.categories
-    .filter((category: Category) => category.id !== 1)
     .map((category: Category) => category.id)
   form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
   

@@ -179,8 +179,22 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
       const imgEl = await loadHtmlImage(nextUrl)
       const rawW = Math.max(1, Number((imgEl as any).naturalWidth ?? imgEl.width ?? 1))
       const rawH = Math.max(1, Number((imgEl as any).naturalHeight ?? imgEl.height ?? 1))
-      const sx = targetW / rawW
-      const sy = targetH / rawH
+      const hasPatchWidth = patch.width !== undefined
+      const hasPatchHeight = patch.height !== undefined
+      const aspect = rawH / rawW
+      let displayW = targetW
+      let displayH = targetH
+
+      if (hasPatchWidth && !hasPatchHeight) {
+        displayH = displayW * aspect
+      } else if (!hasPatchWidth && hasPatchHeight) {
+        displayW = displayH / aspect
+      } else if (!hasPatchWidth && !hasPatchHeight) {
+        displayH = displayW * aspect
+      }
+
+      const sx = displayW / rawW
+      const sy = displayH / rawH
       ;(obj as any).setElement?.(imgEl)
       obj.set({
         width: rawW,

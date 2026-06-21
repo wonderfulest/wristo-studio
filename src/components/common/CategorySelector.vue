@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import type { Category } from '@/types/api/category'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
@@ -48,23 +48,55 @@ const emit = defineEmits<{
   (e: 'update:categoryIds', val: number[]): void
 }>()
 
+const wholeCategoryId = computed(() => {
+  const whole = (props.categories || []).find((category) => category?.slug === 'whole')
+  if (whole?.id) return whole.id
+  return (props.categories || []).some((category) => category?.id === 1) ? 1 : undefined
+})
+
+const uniqueIds = (ids: number[]) => Array.from(new Set(ids.filter((id) => typeof id === 'number')))
+
+const withWholeCategory = (ids: number[]) => {
+  const normalized = uniqueIds(Array.isArray(ids) ? ids : [])
+  const wholeId = wholeCategoryId.value
+  if (!wholeId || normalized.includes(wholeId)) {
+    return normalized
+  }
+  return [wholeId, ...normalized]
+}
+
+const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id, index) => id === b[index])
+
 const localCategoryIds = computed({
-  get: () => props.categoryIds,
+  get: () => withWholeCategory(props.categoryIds),
   set: (val: number[]) => {
-    const filtered = Array.isArray(val) ? val.filter((id) => id !== 1) : []
-    emit('update:categoryIds', filtered)
+    emit('update:categoryIds', withWholeCategory(val))
   }
 })
 
-const filteredCategories = computed(() => (props.categories || []).filter(c => c && c.id !== 1))
+const filteredCategories = computed(() => props.categories || [])
 
 const onCategoriesChange = (val: number[]) => {
   const limit = props.categoryLimit ?? 3
-  if (Array.isArray(val) && val.length > limit) {
+  const wholeId = wholeCategoryId.value
+  const ids = withWholeCategory(val)
+  const selectedWithoutWhole = wholeId ? ids.filter((id) => id !== wholeId) : ids
+  if (selectedWithoutWhole.length > limit) {
     ElMessage.warning(t('category.limit', { limit }))
-    emit('update:categoryIds', val.slice(0, limit))
+    emit('update:categoryIds', withWholeCategory(selectedWithoutWhole.slice(0, limit)))
   }
 }
+
+watch(
+  () => [wholeCategoryId.value, ...(props.categoryIds || [])],
+  () => {
+    const next = withWholeCategory(props.categoryIds)
+    if (!sameIds(next, props.categoryIds || [])) {
+      emit('update:categoryIds', next)
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>

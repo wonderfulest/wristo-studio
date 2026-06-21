@@ -149,6 +149,11 @@ const form = reactive({
   bundleIds: [] as number[]
 })
 
+function isWholeCategoryId(id: number) {
+  const category = categories.value.find((item) => item.id === id)
+  return category?.slug === 'whole' || id === 1
+}
+
 const rules = computed(() => ({
   paymentMethod: [
     { required: true, message: t('submitDesign.selectPaymentMethod'), trigger: 'change' }
@@ -192,9 +197,12 @@ const rules = computed(() => ({
     { required: true, type: 'array', message: t('category.selectAtLeastOne'), trigger: 'change' },
     { 
       validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
-        const len = Array.isArray(value) ? value.length : 0
+        const ids = Array.isArray(value) ? value : []
+        const len = ids.length
         if (len === 0) return callback(new Error(t('category.selectAtLeastOne')))
-        if (len > 3) return callback(new Error(t('category.selectUpToThree')))
+        if (ids.filter((id) => typeof id === 'number' && !isWholeCategoryId(id)).length > 3) {
+          return callback(new Error(t('category.selectUpToThree')))
+        }
         callback()
       },
       trigger: 'change'
@@ -289,7 +297,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         form.trialLasts = product.trialLasts
         // Initialize categories and bundles
         if (Array.isArray(product.categories)) {
-          form.categoryIds = product.categories.filter((c: Category) => c.id !== 1).map((c: Category) => c.id)
+          form.categoryIds = product.categories.map((c: Category) => c.id)
         }
         if (Array.isArray(product.bundles)) {
           form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)

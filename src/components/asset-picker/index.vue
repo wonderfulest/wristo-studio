@@ -1,7 +1,15 @@
 <template>
   <div class="asset-picker">
     <!-- 上传按钮 -->
-    <div class="asset-item upload-item" @click="triggerUpload">
+    <div
+      class="asset-item upload-item"
+      :class="{ 'is-drag-over': dragOver }"
+      @click="triggerUpload"
+      @dragenter.prevent="handleDragEnter"
+      @dragover.prevent="handleDragOver"
+      @dragleave.prevent="handleDragLeave"
+      @drop.prevent="handleDrop"
+    >
       <el-icon class="upload-icon"><Plus /></el-icon>
       <span>{{ t('asset.upload') }}</span>
       <input 
@@ -23,10 +31,18 @@
         deleting: deletingId === asset.id
       }"
       @click="handleSelect(asset)"
-      @mouseenter="handleMouseEnter(asset)"
+      @mouseenter="handleMouseEnter(asset, $event)"
       @mouseleave="handleMouseLeave"
     >
       <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
+      <el-icon
+        v-if="isEditableSvgAsset(asset)"
+        class="edit-icon"
+        @click.stop="openSvgEditor(asset)"
+        :title="t('asset.editSvgColors')"
+      >
+        <Edit />
+      </el-icon>
       <el-icon
         v-if="!asset.isSystem && !(selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset))"
         class="delete-icon"
@@ -36,14 +52,6 @@
         <Delete />
       </el-icon>
       <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
-
-      <!-- 悬停大图预览（贴在当前项左侧） -->
-      <div
-        v-if="hoverPreviewUrl && hoverPreviewAsset?.id === asset.id"
-        class="asset-large-preview"
-      >
-        <img :src="hoverPreviewUrl" :alt="hoverPreviewAsset?.file?.name" />
-      </div>
     </div>
 
     <!-- 加载中 -->
@@ -63,17 +71,112 @@
       <el-icon class="action-icon"><Refresh /></el-icon>
       <span>{{ t('common.refresh') }}</span>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="hoverPreviewUrl"
+        class="asset-large-preview"
+        :style="hoverPreviewStyle"
+      >
+        <img :src="hoverPreviewUrl" :alt="hoverPreviewAsset?.file?.name" />
+      </div>
+    </Teleport>
+
+    <el-dialog
+      v-model="svgEditorVisible"
+      :title="t('asset.editSvgColors')"
+      append-to-body
+      width="880px"
+      class="svg-color-dialog"
+    >
+      <div v-if="svgPreviewUrl" class="svg-editor-preview">
+        <img :src="svgPreviewUrl" :alt="editingSvgAsset?.file?.name || t('asset.editSvgColors')" />
+      </div>
+      <div v-if="hasSvgEditableEntries" class="svg-editor-fields">
+        <div v-if="svgColorEntries.length" class="svg-editor-section">
+          <div class="svg-editor-section-title">{{ t('asset.svgColors') }}</div>
+          <div
+            v-for="entry in svgColorEntries"
+            :key="entry.id"
+            class="svg-color-row"
+          >
+            <div class="svg-color-meta">
+              <span class="svg-color-prop">{{ entry.property }}</span>
+              <span class="svg-color-value">{{ entry.originalValue }}</span>
+            </div>
+            <ColorPicker v-model="entry.nextColor" class="svg-color-picker" />
+          </div>
+        </div>
+        <div v-if="svgStopEntries.length" class="svg-editor-section">
+          <div class="svg-editor-section-title">{{ t('asset.svgGradientStops') }}</div>
+          <div
+            v-for="entry in svgStopEntries"
+            :key="entry.id"
+            class="svg-stop-row"
+          >
+            <div class="svg-stop-name">Stop {{ entry.index + 1 }}</div>
+            <label class="svg-stop-field">
+              <span>{{ t('asset.svgStopOffset') }}</span>
+              <el-input
+                v-model="entry.nextOffset"
+                size="small"
+                placeholder="0%"
+              />
+            </label>
+            <label class="svg-stop-field">
+              <span>{{ t('asset.svgStopOpacity') }}</span>
+              <el-input
+                v-model="entry.nextOpacity"
+                size="small"
+                placeholder="1"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+      <div v-else class="svg-color-empty">
+        {{ t('asset.noEditableSvgColors') }}
+      </div>
+      <template #footer>
+        <el-button @click="svgEditorVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button
+          type="primary"
+          :loading="svgSaving"
+          :disabled="!hasSvgEditableEntries"
+          @click="saveEditedSvgAsset"
+        >
+          {{ t('asset.applySvgColors') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, PropType, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowDown, Refresh, Loading, Star, Delete } from '@element-plus/icons-vue'
+import { Plus, ArrowDown, Refresh, Loading, Star, Delete, Edit } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useI18n } from '@/i18n'
+import ColorPicker from '@/components/color-picker/index.vue'
+
+type SvgColorProperty = 'fill' | 'stroke' | 'stop-color'
+
+interface SvgColorEntry {
+  id: string
+  property: SvgColorProperty
+  originalValue: string
+  nextColor: string
+}
+
+interface SvgStopEntry {
+  id: string
+  index: number
+  nextOffset: string
+  nextOpacity: string
+}
 
 const { t } = useI18n()
 const analogAssetStore = useAnalogAssetStore()
@@ -114,6 +217,17 @@ const pageNum = ref(1)
 const pageSize = 12
 const deletingId = ref<number | null>(null)
 const hoverPreviewAsset = ref<AnalogAssetVO | null>(null)
+const hoverPreviewStyle = ref<Record<string, string>>({})
+const dragOver = ref(false)
+const svgEditorVisible = ref(false)
+const svgSaving = ref(false)
+const editingSvgAsset = ref<AnalogAssetVO | null>(null)
+const editingSvgText = ref('')
+const svgColorEntries = ref<SvgColorEntry[]>([])
+const svgStopEntries = ref<SvgStopEntry[]>([])
+const svgColorProperties: SvgColorProperty[] = ['fill', 'stroke', 'stop-color']
+
+const hasSvgEditableEntries = computed(() => svgColorEntries.value.length > 0 || svgStopEntries.value.length > 0)
 
 const hoverPreviewUrl = computed(() => {
   if (!hoverPreviewAsset.value) return undefined
@@ -131,6 +245,16 @@ const isAllowedUploadFile = (file: File): boolean => {
     return /\.(svg|png|jpe?g|webp)$/i.test(file.name)
   }
   return /\.svg$/i.test(file.name)
+}
+
+const isSvgUrl = (value?: string): boolean => {
+  const clean = String(value || '').split('?')[0].toLowerCase()
+  return clean.endsWith('.svg')
+}
+
+const isEditableSvgAsset = (asset: AnalogAssetVO): boolean => {
+  if (props.assetType !== 'image') return false
+  return isSvgUrl(asset.file?.url) || isSvgUrl(asset.file?.name)
 }
 
 /**
@@ -206,17 +330,12 @@ const triggerUpload = () => {
   uploadInput.value?.click()
 }
 
-/**
- * 处理上传
- */
-const handleUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+const uploadFile = async (file: File | undefined): Promise<boolean> => {
+  if (!file) return false
 
   if (!isAllowedUploadFile(file)) {
     ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
-    return
+    return false
   }
 
   loading.value = true
@@ -231,14 +350,43 @@ const handleUpload = async (event: Event) => {
         props.onUpload(url, res.data)
       }
       ElMessage.success(t('asset.uploadSuccess'))
+      return true
     }
+    return false
   } catch (error) {
     console.error('上传失败:', error)
     ElMessage.error(t('asset.uploadFailed'))
+    return false
   } finally {
     loading.value = false
-    input.value = ''
   }
+}
+
+/**
+ * 处理上传
+ */
+const handleUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  await uploadFile(file)
+  input.value = ''
+}
+
+const handleDragEnter = () => {
+  dragOver.value = true
+}
+
+const handleDragOver = () => {
+  dragOver.value = true
+}
+
+const handleDragLeave = () => {
+  dragOver.value = false
+}
+
+const handleDrop = async (event: DragEvent) => {
+  dragOver.value = false
+  await uploadFile(event.dataTransfer?.files?.[0])
 }
 
 /**
@@ -254,12 +402,243 @@ const handleSelect = (asset: AnalogAssetVO) => {
 /**
  * 悬停预览
  */
-const handleMouseEnter = (asset: AnalogAssetVO) => {
+const updatePreviewPosition = (target: HTMLElement) => {
+  const rect = target.getBoundingClientRect()
+  const previewSize = 200
+  const gap = 10
+  const viewportPadding = 12
+  const centeredLeft = rect.left + rect.width / 2 - previewSize / 2
+  const left = Math.min(
+    Math.max(centeredLeft, viewportPadding),
+    window.innerWidth - previewSize - viewportPadding
+  )
+  const top = rect.top - previewSize - gap >= viewportPadding
+    ? rect.top - previewSize - gap
+    : Math.min(rect.bottom + gap, window.innerHeight - previewSize - viewportPadding)
+
+  hoverPreviewStyle.value = {
+    left: `${left}px`,
+    top: `${Math.max(top, viewportPadding)}px`,
+  }
+}
+
+const handleMouseEnter = (asset: AnalogAssetVO, event: MouseEvent) => {
   hoverPreviewAsset.value = asset
+  const target = event.currentTarget as HTMLElement | null
+  if (target) updatePreviewPosition(target)
 }
 
 const handleMouseLeave = () => {
   hoverPreviewAsset.value = null
+  hoverPreviewStyle.value = {}
+}
+
+const isEditableColorValue = (value: string | null): value is string => {
+  const raw = String(value || '').trim()
+  if (!raw) return false
+  const lower = raw.toLowerCase()
+  if (['none', 'transparent', 'currentcolor', 'inherit', 'initial', 'unset'].includes(lower)) return false
+  if (lower.startsWith('url(') || lower.startsWith('var(')) return false
+  return Boolean(toHexColor(raw))
+}
+
+const toHexColor = (value: string): string => {
+  const raw = value.trim()
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase()
+  const shortHex = raw.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+  if (shortHex) {
+    return `#${shortHex[1]}${shortHex[1]}${shortHex[2]}${shortHex[2]}${shortHex[3]}${shortHex[3]}`.toLowerCase()
+  }
+  const rgb = raw.match(/^rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})/i)
+  if (rgb) {
+    const parts = rgb.slice(1, 4).map((part) => Math.max(0, Math.min(255, Number(part))))
+    return `#${parts.map((part) => part.toString(16).padStart(2, '0')).join('')}`
+  }
+
+  const ctx = document.createElement('canvas').getContext('2d')
+  if (!ctx) return ''
+  ctx.fillStyle = '#000000'
+  ctx.fillStyle = raw
+  return /^#[0-9a-f]{6}$/i.test(ctx.fillStyle) ? ctx.fillStyle.toLowerCase() : ''
+}
+
+const collectStyleColorEntries = (styleValue: string, entries: Map<string, SvgColorEntry>) => {
+  const declarations = styleValue.split(';')
+  for (const declaration of declarations) {
+    const [rawName, ...rawValueParts] = declaration.split(':')
+    const property = rawName?.trim() as SvgColorProperty
+    if (!svgColorProperties.includes(property)) continue
+    const value = rawValueParts.join(':').trim()
+    if (!isEditableColorValue(value)) continue
+    const key = `${property}:${value}`
+    if (!entries.has(key)) {
+      entries.set(key, {
+        id: key,
+        property,
+        originalValue: value,
+        nextColor: toHexColor(value),
+      })
+    }
+  }
+}
+
+const parseSvgColorEntries = (svgText: string): SvgColorEntry[] => {
+  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
+  if (doc.querySelector('parsererror')) {
+    throw new Error('Invalid SVG')
+  }
+
+  const entries = new Map<string, SvgColorEntry>()
+  doc.querySelectorAll('*').forEach((node) => {
+    for (const property of svgColorProperties) {
+      const value = node.getAttribute(property)
+      if (!isEditableColorValue(value)) continue
+      const key = `${property}:${value}`
+      if (!entries.has(key)) {
+        entries.set(key, {
+          id: key,
+          property,
+          originalValue: value,
+          nextColor: toHexColor(value),
+        })
+      }
+    }
+
+    const styleValue = node.getAttribute('style')
+    if (styleValue) collectStyleColorEntries(styleValue, entries)
+  })
+
+  return Array.from(entries.values())
+}
+
+const parseSvgStopEntries = (svgText: string): SvgStopEntry[] => {
+  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
+  if (doc.querySelector('parsererror')) {
+    throw new Error('Invalid SVG')
+  }
+
+  return Array.from(doc.querySelectorAll('stop')).map((node, index) => ({
+    id: `stop:${index}`,
+    index,
+    nextOffset: node.getAttribute('offset') || '',
+    nextOpacity: node.getAttribute('stop-opacity') || '',
+  }))
+}
+
+const updateStyleDeclaration = (styleValue: string, updates: SvgColorEntry[]): string => {
+  return styleValue
+    .split(';')
+    .map((declaration) => {
+      const [rawName, ...rawValueParts] = declaration.split(':')
+      const property = rawName?.trim() as SvgColorProperty
+      if (!svgColorProperties.includes(property)) return declaration
+      const value = rawValueParts.join(':').trim()
+      const update = updates.find((entry) => entry.property === property && entry.originalValue === value)
+      if (!update) return declaration
+      return `${rawName.trim()}: ${update.nextColor}`
+    })
+    .join(';')
+}
+
+const buildEditedSvgText = (): string => {
+  const doc = new DOMParser().parseFromString(editingSvgText.value, 'image/svg+xml')
+  if (doc.querySelector('parsererror')) {
+    throw new Error('Invalid SVG')
+  }
+
+  doc.querySelectorAll('*').forEach((node) => {
+    for (const entry of svgColorEntries.value) {
+      if (node.getAttribute(entry.property) === entry.originalValue) {
+        node.setAttribute(entry.property, entry.nextColor)
+      }
+    }
+
+    const styleValue = node.getAttribute('style')
+    if (styleValue) {
+      node.setAttribute('style', updateStyleDeclaration(styleValue, svgColorEntries.value))
+    }
+  })
+
+  doc.querySelectorAll('stop').forEach((node, index) => {
+    const entry = svgStopEntries.value[index]
+    if (!entry) return
+
+    const offset = entry.nextOffset.trim()
+    if (offset) {
+      node.setAttribute('offset', offset)
+    } else {
+      node.removeAttribute('offset')
+    }
+
+    const opacity = entry.nextOpacity.trim()
+    if (opacity) {
+      node.setAttribute('stop-opacity', opacity)
+    } else {
+      node.removeAttribute('stop-opacity')
+    }
+  })
+
+  return new XMLSerializer().serializeToString(doc)
+}
+
+const svgPreviewUrl = computed(() => {
+  if (!editingSvgText.value) return ''
+
+  try {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildEditedSvgText())}`
+  } catch {
+    return ''
+  }
+})
+
+const openSvgEditor = async (asset: AnalogAssetVO) => {
+  const svgUrl = asset.file?.url
+  if (!svgUrl) return
+
+  handleMouseLeave()
+  editingSvgAsset.value = asset
+  svgEditorVisible.value = true
+  svgColorEntries.value = []
+  svgStopEntries.value = []
+  editingSvgText.value = ''
+
+  try {
+    const response = await fetch(svgUrl, { credentials: 'same-origin' })
+    if (!response.ok) throw new Error(`Failed to load SVG: ${response.status}`)
+    const svgText = await response.text()
+    editingSvgText.value = svgText
+    svgColorEntries.value = parseSvgColorEntries(svgText)
+    svgStopEntries.value = parseSvgStopEntries(svgText)
+  } catch (error) {
+    console.error('加载 SVG 失败:', error)
+    ElMessage.error(t('asset.loadSvgFailed'))
+    svgEditorVisible.value = false
+  }
+}
+
+const saveEditedSvgAsset = async () => {
+  if (!editingSvgAsset.value || !editingSvgText.value) return
+
+  svgSaving.value = true
+  try {
+    const editedSvgText = buildEditedSvgText()
+    const originalName = editingSvgAsset.value.file?.name || `asset-${editingSvgAsset.value.id}.svg`
+    const baseName = originalName.replace(/\.svg$/i, '')
+    const file = new File([editedSvgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
+    const ok = await uploadFile(file)
+    if (ok) {
+      svgEditorVisible.value = false
+      editingSvgAsset.value = null
+      editingSvgText.value = ''
+      svgColorEntries.value = []
+      svgStopEntries.value = []
+    }
+  } catch (error) {
+    console.error('保存 SVG 失败:', error)
+    ElMessage.error(t('asset.saveSvgFailed'))
+  } finally {
+    svgSaving.value = false
+  }
 }
 
 /**
@@ -361,13 +740,20 @@ defineExpose({
   background-color: var(--studio-primary-soft);
 }
 
+.upload-item.is-drag-over {
+  border-color: #0f6b68;
+  background-color: var(--studio-primary-soft);
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.12);
+}
+
 .upload-icon {
   font-size: 24px;
   color: #909399;
   margin-bottom: 4px;
 }
 
-.upload-item:hover .upload-icon {
+.upload-item:hover .upload-icon,
+.upload-item.is-drag-over .upload-icon {
   color: #0f6b68;
 }
 
@@ -409,10 +795,7 @@ defineExpose({
 }
 
 .asset-large-preview {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translate(-50%, -8px);
+  position: fixed;
   width: 200px;
   height: 200px;
   border-radius: 8px;
@@ -429,7 +812,8 @@ defineExpose({
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10;
+  pointer-events: none;
+  z-index: 13000;
 }
 
 .asset-large-preview img {
@@ -461,6 +845,20 @@ defineExpose({
   color: #e6a23c;
 }
 
+.edit-icon {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 16px;
+  color: #0f6b68;
+  background-color: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+
 .delete-icon {
   position: absolute;
   top: 4px;
@@ -477,5 +875,135 @@ defineExpose({
 
 .asset-item:hover .delete-icon {
   opacity: 1;
+}
+
+.asset-item:hover .edit-icon {
+  opacity: 1;
+}
+
+:deep(.svg-color-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 48px);
+}
+
+:deep(.svg-color-dialog .el-dialog__body) {
+  padding: 20px 24px;
+}
+
+:deep(.svg-color-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
+}
+
+.svg-editor-preview {
+  width: 100%;
+  height: min(34vh, 320px);
+  margin-bottom: 20px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background-image:
+    linear-gradient(45deg, #eee 25%, transparent 25%),
+    linear-gradient(-45deg, #eee 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eee 75%),
+    linear-gradient(-45deg, transparent 75%, #eee 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  background-color: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.svg-editor-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 14px;
+}
+
+.svg-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.svg-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.svg-editor-section-title {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--studio-text-muted);
+}
+
+.svg-color-row,
+.svg-stop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+}
+
+.svg-stop-row {
+  align-items: flex-end;
+}
+
+.svg-color-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.svg-color-prop {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--studio-text);
+}
+
+.svg-color-value {
+  max-width: 280px;
+  font-size: 12px;
+  color: var(--studio-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.svg-color-picker {
+  flex: 0 0 132px;
+  width: 132px;
+}
+
+.svg-stop-name {
+  flex: 0 0 64px;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--studio-text);
+  padding-bottom: 6px;
+}
+
+.svg-stop-field {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--studio-text-muted);
+}
+
+.svg-color-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--studio-text-muted);
 }
 </style>

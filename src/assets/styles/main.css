@@ -248,6 +248,10 @@ button,
   z-index: 12060 !important;
 }
 
+.el-image-viewer__wrapper {
+  z-index: 13000 !important;
+}
+
 :root[data-studio-theme='dark'] .el-button--primary {
   --el-button-text-color: #042f2e;
   --el-button-hover-text-color: #042f2e;
