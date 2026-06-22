@@ -29,6 +29,7 @@
       :symbol-rows="symbolRows"
       @reset-row="handleResetRowByIndex"
       @upload-row="handleUploadRow"
+      @upload-rows="handleUploadRows"
       @confirm="confirmBitmapDialog"
     />
   </div>
@@ -307,31 +308,60 @@ const handleResetRowByIndex = async (index: string) => {
   }
 }
 
-const handleUploadRow = async (payload: { index: string; file: File; previewUrl: string }) => {
+type BitmapUploadPayload = { index: string; file: File; previewUrl: string }
+
+const bindBitmapGlyph = (payload: BitmapUploadPayload) => {
+  const isSymbol = payload.index === ':'
+  return bindBitmapFontAsset({
+    file: payload.file,
+    fontId: props.modelValue as number,
+    charType: isSymbol ? 'symbol' : 'digital',
+    charValue: payload.index,
+  })
+}
+
+const finalizeBitmapGlyphUpload = async () => {
+  if (props.modelValue) {
+    await loadBitmapRows(props.modelValue)
+  }
+  bitmapFontStore.clearSession()
+  invalidateBitmapTimeFontCache(props.modelValue)
+  if (props.modelValue) {
+    emit('change', props.modelValue)
+  }
+}
+
+const handleUploadRow = async (payload: BitmapUploadPayload) => {
   if (!canUsePremiumAssets.value) {
     membershipGate.requirePremium('font.uploadRequiresPremium')
     return
   }
   if (!props.modelValue) return
   try {
-    const isSymbol = payload.index === ':'
-    await bindBitmapFontAsset({
-      file: payload.file,
-      fontId: props.modelValue,
-      charType: isSymbol ? 'symbol' : 'digital',
-      charValue: payload.index,
-    })
-    // 绑定成功后重新加载该字体的行数据
-    await loadBitmapRows(props.modelValue)
+    await bindBitmapGlyph(payload)
   } catch (e) {
     console.warn('bind bitmap font asset failed', e)
   } finally {
     // 上传/绑定 glyph 后，同步清理缓存
-    bitmapFontStore.clearSession()
-    invalidateBitmapTimeFontCache(props.modelValue)
-    if (props.modelValue) {
-      emit('change', props.modelValue)
+    await finalizeBitmapGlyphUpload()
+  }
+}
+
+const handleUploadRows = async (payloads: BitmapUploadPayload[]) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.uploadRequiresPremium')
+    return
+  }
+  if (!props.modelValue || !payloads.length) return
+  try {
+    for (const payload of payloads) {
+      await bindBitmapGlyph(payload)
     }
+  } catch (e) {
+    console.warn('bind bitmap font assets failed', e)
+  } finally {
+    // 批量上传后只重新加载一次，避免 11 个 glyph 连续刷新列表和缓存
+    await finalizeBitmapGlyphUpload()
   }
 }
 

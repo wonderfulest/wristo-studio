@@ -16,6 +16,21 @@
         {{ t('font.watchTutorialYoutube') }}
       </a>
     </div>
+    <el-upload
+      ref="batchUploadRef"
+      class="bitmap-batch-upload"
+      drag
+      multiple
+      :show-file-list="false"
+      :auto-upload="false"
+      accept=".svg,image/svg+xml"
+      @change="handleBatchFileChange"
+    >
+      <div class="bitmap-batch-title">{{ t('font.dragGlyphSvgs') }}</div>
+      <div class="bitmap-batch-hint">
+        {{ t('font.glyphFilenameHint', { example1: '0.svg', example2: '9.svg', example3: 'colon.svg', example4: ':.svg' }) }}
+      </div>
+    </el-upload>
     <el-tabs v-model="activeTab">
       <el-tab-pane :label="t('font.digit')" name="digit" />
       <el-tab-pane :label="t('font.symbol')" name="symbol" />
@@ -128,6 +143,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'reset-row', index: string): void
   (e: 'upload-row', payload: { index: string; file: File; previewUrl: string }): void
+  (e: 'upload-rows', payload: { index: string; file: File; previewUrl: string }[]): void
   (e: 'confirm'): void
 }>()
 
@@ -139,6 +155,9 @@ watch(
 watch(visibleRef, v => emit('update:modelValue', v))
 
 const activeTab = ref<'digit' | 'symbol' | 'other' | 'custom'>('digit')
+const batchUploadRef = ref<any>()
+let batchUploadTimer: ReturnType<typeof setTimeout> | undefined
+let pendingBatchUploadFiles: any[] = []
 
 const localRows = ref<DigitRowState[]>([])
 const localSymbolRows = ref<DigitRowState[]>([])
@@ -173,6 +192,66 @@ const handleFileChange = (file: any, index: string) => {
   emit('upload-row', { index, file: raw, previewUrl: url })
 }
 
+const inferGlyphIndexFromFilename = (filename: string): string | null => {
+  const base = filename
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    ?.replace(/\.[^.]+$/, '')
+    .trim()
+    .toLowerCase()
+  if (!base) return null
+  if (/^[0-9]$/.test(base)) return base
+  const digitMatch = base.match(/(?:^|[-_\s])(?:digit|number|num|glyph)[-_\s]*([0-9])$/)
+    || base.match(/(?:^|[-_\s])([0-9])$/)
+  if (digitMatch) return digitMatch[1]
+  if ([':', 'colon', 'separator', 'time-colon', 'time_colon', 'u003a', '003a'].includes(base)) return ':'
+  if (/(^|[-_\s])colon$/.test(base)) return ':'
+  return null
+}
+
+const applyPreview = (index: string, file: File) => {
+  const url = URL.createObjectURL(file)
+  const row = localRows.value.find(r => r.index === index)
+  if (row) {
+    row.imageUrl = url
+  }
+  const symbolRow = localSymbolRows.value.find(r => r.index === index)
+  if (symbolRow) {
+    symbolRow.imageUrl = url
+  }
+  return url
+}
+
+const handleBatchFileChange = (_file: any, uploadFiles: any[]) => {
+  pendingBatchUploadFiles = uploadFiles || []
+  if (batchUploadTimer) clearTimeout(batchUploadTimer)
+  batchUploadTimer = setTimeout(() => {
+    flushBatchFiles(pendingBatchUploadFiles)
+    pendingBatchUploadFiles = []
+    batchUploadRef.value?.clearFiles?.()
+  }, 60)
+}
+
+const flushBatchFiles = (uploadFiles: any[]) => {
+  const latestByIndex = new Map<string, File>()
+  ;(uploadFiles || []).forEach(item => {
+    const raw = item?.raw as File | undefined
+    if (!raw) return
+    const index = inferGlyphIndexFromFilename(raw.name)
+    if (!index) return
+    latestByIndex.set(index, raw)
+  })
+  const payload = Array.from(latestByIndex.entries()).map(([index, file]) => ({
+    index,
+    file,
+    previewUrl: applyPreview(index, file),
+  }))
+  if (payload.length) {
+    emit('upload-rows', payload)
+  }
+}
+
 const onCancel = () => {
   visibleRef.value = false
 }
@@ -189,6 +268,23 @@ const handleClose = () => {
 <style scoped>
 .bitmap-rows {
   margin-top: 12px;
+}
+
+.bitmap-batch-upload {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.bitmap-batch-title {
+  color: var(--studio-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.bitmap-batch-hint {
+  color: var(--studio-text-subtle);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .bitmap-row {
