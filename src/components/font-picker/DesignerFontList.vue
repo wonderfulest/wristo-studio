@@ -1,6 +1,6 @@
 <template>
   <div class="designer-font-list">
-    <div ref="scrollContainer" class="font-list-scroll" @scroll.passive="onScroll">
+    <div class="font-list-scroll">
       <div
         v-for="font in fonts"
         :key="font.id"
@@ -50,7 +50,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', font: FontItem): void
-  (e: 'scroll'): void
   (e: 'editSearchIndex', font: DesignFontVO): void
 }>()
 
@@ -61,12 +60,9 @@ const pageSize = ref(10)
 const total = ref(0)
 
 const hasMore = computed(() => fonts.value.length < total.value)
-const scrollContainer = ref<HTMLDivElement | null>(null)
 
 defineExpose({
-  scrollBy(delta = 120) {
-    scrollContainer.value?.scrollBy({ top: delta, behavior: 'smooth' })
-  },
+  loadNextPage,
 })
 
 const loadPage = async () => {
@@ -101,15 +97,10 @@ const loadPage = async () => {
   }
 }
 
-const onScroll = () => {
-  emit('scroll')
-  const el = scrollContainer.value
-  if (!el || loading.value || !hasMore.value) return
-  const threshold = 80
-  if (el.scrollTop + el.clientHeight + threshold >= el.scrollHeight) {
-    pageNum.value += 1
-    void loadPage()
-  }
+function loadNextPage() {
+  if (loading.value || !hasMore.value) return
+  pageNum.value += 1
+  void loadPage()
 }
 
 const handleSelect = (font: DesignFontVO) => {
@@ -151,8 +142,6 @@ watch(
 
 .font-list-scroll {
   padding: 8px 12px;
-  max-height: 520px;
-  overflow-y: auto;
 }
 
 .font-item {

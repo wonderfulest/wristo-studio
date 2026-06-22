@@ -350,12 +350,11 @@ const onEditSearchIndex = () => {
 .font-main :deep(.preview-text) {
   display: block;
   min-height: 42px;
-  max-height: 54px;
-  padding: 1px 0 0;
-  overflow: hidden;
+  padding: 3px 0;
+  overflow: visible;
   color: var(--studio-text);
   font-size: clamp(26px, 3.4vw, 36px);
-  line-height: 1.04;
+  line-height: normal;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -403,10 +402,9 @@ const onEditSearchIndex = () => {
 
 .font-main-compact :deep(.preview-text) {
   min-height: 32px;
-  max-height: 38px;
-  padding-top: 0;
+  padding: 2px 0;
   font-size: 25px;
-  line-height: 1.04;
+  line-height: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {

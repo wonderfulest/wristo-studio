@@ -8,7 +8,7 @@
 
     <!-- Font selection panel -->
     <Teleport to="body">
-      <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle">
+      <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle" @scroll.passive="onPanelScroll">
         <!-- Add custom font button -->
         <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
         <!-- Icon library guidance (only for icon fonts) -->
@@ -33,12 +33,9 @@
         <RecentFontList
             :fonts="recentFonts"
             :model-value="modelValue"
-            :expanded="expandedSections['recent']"
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
-            @toggle="() => toggleSection('recent')"
-            @scroll-down="onRecentScrollDown"
             @edit-search-index="openSearchIndexDialog"
         />
         <!-- Designer available fonts (paginated by usage) -->
@@ -48,7 +45,6 @@
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
             @select="selectFont"
-            @scroll="onDesignerScroll"
             @edit-search-index="openSearchIndexDialog"
         />
       </div>
@@ -206,7 +202,6 @@ const searchIndexForm = ref({
 const fontSections = computed(() => fontStore.fontSections as Array<{ label: string; name: SectionName | string; fonts: FontItem[] }>)
 const systemSections = computed(() => (fontSections.value || []).filter(s => s.name !== 'recent'))
 const recentFonts = computed(() => fontStore.recentFonts as FontItem[])
-const expandedSections = computed(() => fontStore.expandedSections as Record<string, boolean>)
 const selectedFontLabel = computed(() => fontStore.getFontLabel(props.modelValue))
 // Map current value (slug) -> family for preview/rendering
 const selectedFontFamily = computed(() => {
@@ -243,28 +238,19 @@ const updatePanelPosition = () => {
 const togglePanel = async () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
+    fontStore.expandedSections.recent = true
     await nextTick()
     updatePanelPosition()
   }
 }
 
-// 切换分组展开/收起
-const toggleSection = (section: SectionName | string) => {
-  fontStore.toggleSection(section)
-}
-
-const onDesignerScroll = () => {
-  if (fontStore.expandedSections?.recent) {
-    fontStore.toggleSection('recent')
+const onPanelScroll = () => {
+  const panel = panelRef.value
+  if (!panel) return
+  const threshold = 120
+  if (panel.scrollTop + panel.clientHeight + threshold >= panel.scrollHeight) {
+    designerFontListRef.value?.loadNextPage()
   }
-}
-
-const onRecentScrollDown = async (delta: number) => {
-  if (fontStore.expandedSections?.recent) {
-    fontStore.toggleSection('recent')
-    await nextTick()
-  }
-  designerFontListRef.value?.scrollBy(Math.max(delta, 120))
 }
 
 const parseTokenList = (value?: string | string[]) => {
@@ -411,7 +397,6 @@ const selectFont = async (font: FontItem) => {
   emit('change', font.value)
   try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
   fontStore.addRecentFont(font)
-  isOpen.value = false
 }
 
 // 上传完成回调（来自子组件）
@@ -523,6 +508,9 @@ void [systemSections, openNumberGlyphEditor]
 
 .font-panel {
   position: fixed;
+  max-height: min(820px, calc(100vh - 48px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--studio-surface-raised);
   border: 1px solid var(--studio-border);
   border-radius: 4px;
