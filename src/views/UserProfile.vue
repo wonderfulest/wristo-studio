@@ -1,217 +1,180 @@
 <template>
   <main class="profile-page" v-loading="isRefreshingProfile" :element-loading-text="t('common.loading')">
-    <section class="profile-shell" aria-labelledby="profile-title">
+    <section class="profile-container" aria-labelledby="profile-title">
       <div class="profile-hero">
-        <div class="profile-identity-card">
-          <div class="avatar-wrap">
-            <img
-              :src="avatarImageSrc"
-              class="profile-avatar"
-              :class="{ 'avatar-editing': editMode }"
-              :alt="t('profile.userAvatar')"
-              @dblclick="onAvatarDblClick"
-            />
-            <button
-              v-if="editMode"
-              class="avatar-action"
-              type="button"
-              :aria-label="t('profile.uploadAvatar')"
-              @click="onAvatarDblClick"
-            >
-              <Icon icon="material-symbols:photo-camera-rounded" />
-            </button>
-            <input
-              v-if="editMode"
-              ref="avatarInputRef"
-              type="file"
-              accept="image/*"
-              class="sr-only"
-              @change="onAvatarFileChange"
-            />
+        <div class="avatar-wrapper" :class="{ editing: editMode }" @click="onAvatarDblClick">
+          <img :src="avatarImageSrc" class="avatar-img" :alt="t('profile.userAvatar')" />
+          <div v-if="editMode" class="avatar-overlay">
+            <Icon icon="material-symbols:photo-camera-rounded" />
           </div>
-
-          <div class="identity-copy">
-            <div class="identity-heading">
-              <h1 id="profile-title">{{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}</h1>
-              <span
-                v-if="isPremiumMember"
-                class="premium-badge"
-                :title="t('membership.premiumBadge')"
-                :aria-label="t('membership.premiumBadge')"
-              >
-                <Icon icon="material-symbols:workspace-premium-rounded" />
-                <span>{{ t('membership.premiumBadge') }}</span>
-              </span>
-            </div>
-            <p>{{ userInfo?.email || t('profile.noEmail') }}</p>
-          </div>
-
-          <div class="profile-actions">
-            <el-button
-              v-if="!editMode"
-              type="primary"
-              class="primary-action edit-icon-action"
-              :aria-label="t('common.edit')"
-              :title="t('common.edit')"
-              @click="startEdit"
-            >
-              <Icon icon="material-symbols:edit-rounded" />
-            </el-button>
-            <template v-else>
-              <el-button class="secondary-action" @click="cancelEdit">{{ t('common.cancel') }}</el-button>
-              <el-button
-                type="primary"
-                class="primary-action"
-                :loading="isSaving"
-                :disabled="isSaving"
-                @click="handleSave"
-              >
-                {{ t('profile.saveChanges') }}
-              </el-button>
-            </template>
-          </div>
+          <input
+            v-if="editMode"
+            ref="avatarInputRef"
+            type="file"
+            accept="image/*"
+            class="sr-only"
+            @change="onAvatarFileChange"
+          />
         </div>
 
-        <aside class="device-panel" :aria-label="t('profile.currentDevice')">
-          <div class="panel-heading">
-            <span class="panel-icon"><Icon icon="material-symbols:watch-rounded" /></span>
-            <div>
-              <span>{{ t('profile.currentDevice') }}</span>
-              <strong>{{ userInfo?.device ? t('profile.connected') : t('profile.notConnected') }}</strong>
-            </div>
-          </div>
-
-          <div v-if="userInfo?.device" class="device-display">
-            <div class="device-avatar">
-              <img
-                v-if="userInfo.device?.imageUrl"
-                :src="userInfo.device.imageUrl"
-                :alt="userInfo.device.displayName"
-              />
-              <Icon v-else icon="material-symbols:watch-rounded" />
-            </div>
-            <div class="device-info">
-              <div class="device-name">{{ userInfo.device?.displayName }}</div>
-              <div v-if="userInfo.device?.deviceFamily" class="device-family">
-                {{ userInfo.device?.deviceFamily }}
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="empty-device">
-            <Icon icon="material-symbols:watch-off-rounded" />
-            <div>
-              <strong>{{ t('profile.noDeviceConnected') }}</strong>
-              <span>{{ t('profile.connectDeviceHint') }}</span>
-            </div>
-          </div>
-        </aside>
+        <div class="hero-name" id="profile-title">
+          {{ userInfo?.nickname || userInfo?.username || t('profile.defaultCreator') }}
+        </div>
+        <div class="hero-email">{{ userInfo?.email || t('profile.noEmail') }}</div>
+        <span v-if="isPremiumMember" class="premium-badge">
+          <Icon icon="material-symbols:workspace-premium-rounded" />
+          {{ t('membership.premiumBadge') }}
+        </span>
       </div>
 
-      <section v-if="!userStore.isMerchantUser" class="profile-card membership-panel" :aria-label="t('membership.title')">
+      <section class="section" :aria-label="t('profile.information')">
         <div class="section-header">
-          <span class="section-title-icon" aria-hidden="true">
-            <Icon icon="material-symbols:workspace-premium" />
-          </span>
-          <span class="status-chip membership-chip">
-            {{ membershipLabel }}
-          </span>
+          <span class="section-title">{{ t('profile.information') }}</span>
+          <button v-if="!editMode" class="edit-trigger" type="button" @click="startEdit">
+            {{ t('common.edit') }}
+          </button>
+          <button v-else class="edit-trigger cancel" type="button" @click="cancelEdit">
+            {{ t('common.cancel') }}
+          </button>
         </div>
 
-        <div class="membership-summary">
-          <div>
-            <span>{{ t('membership.appsUsed') }}</span>
-            <strong>{{ membershipUsageText }}</strong>
+        <div class="section-card">
+          <div class="row">
+            <div class="row-label">{{ t('profile.userName') }}</div>
+            <div class="row-value">
+              <span v-if="!editMode">{{ userInfo?.username || '-' }}</span>
+              <el-input
+                v-else
+                id="profile-username"
+                v-model="form.username"
+                class="apple-input"
+                :placeholder="t('profile.enterUserName')"
+              />
+            </div>
           </div>
-          <div>
-            <span>{{ t('membership.createAccess') }}</span>
-            <strong>{{ canCreateDesign ? t('membership.available') : t('membership.limitReached') }}</strong>
-          </div>
-          <div>
-            <span>{{ t('membership.renewOrEndAt') }}</span>
-            <strong>{{ membershipEndText }}</strong>
-          </div>
-          <div>
-            <span>{{ t('membership.adFree') }}</span>
-            <strong>{{ studioMembership?.adFree ? t('common.yes') : t('common.no') }}</strong>
-          </div>
-        </div>
 
-        <div class="membership-actions">
-          <p>{{ membershipHint }}</p>
-          <el-button type="primary" class="primary-action" @click="goPricing">
-            <Icon icon="material-symbols:arrow-forward-rounded" />
-            {{ t('membership.viewPlans') }}
-          </el-button>
-          <el-button
-            v-if="canCancelSubscription"
-            class="secondary-action subscription-cancel-action"
-            :loading="billingLoading"
-            @click="cancelMembership"
-          >
-            <Icon icon="material-symbols:event-busy-rounded" />
-            {{ t('membership.cancelSubscription') }}
-          </el-button>
-          <el-button
-            v-if="canResumeSubscription"
-            type="primary"
-            class="primary-action subscription-resume-action"
-            :loading="billingLoading"
-            @click="resumeMembership"
-          >
-            <Icon icon="material-symbols:restart-alt-rounded" />
-            {{ t('membership.resumeSubscription') }}
-          </el-button>
+          <div class="row-divider" />
+
+          <div class="row">
+            <div class="row-label">{{ t('profile.nickname') }}</div>
+            <div class="row-value">
+              <span v-if="!editMode">{{ userInfo?.nickname || '-' }}</span>
+              <el-input
+                v-else
+                id="profile-nickname"
+                v-model="form.nickname"
+                class="apple-input"
+                :placeholder="t('profile.enterNickname')"
+              />
+            </div>
+          </div>
+
+          <div class="row-divider" />
+
+          <div class="row">
+            <div class="row-label">{{ t('profile.email') }}</div>
+            <div class="row-value with-chevron">
+              <span class="row-value-text">{{ userInfo?.email || '-' }}</span>
+            </div>
+          </div>
+
+          <template v-if="editMode">
+            <div class="row-divider" />
+            <div class="row save-row">
+              <button class="save-btn" type="button" :disabled="isSaving" @click="handleSave">
+                <span v-if="isSaving">{{ t('common.saving') }}</span>
+                <span v-else>{{ t('profile.saveChanges') }}</span>
+              </button>
+            </div>
+          </template>
         </div>
       </section>
 
-      <section class="profile-card" :aria-label="t('profile.details')">
+      <section v-if="!userStore.isMerchantUser" class="section" :aria-label="t('membership.title')">
         <div class="section-header">
-          <span class="section-title-icon" aria-hidden="true">
-            <Icon icon="material-symbols:manage-accounts-rounded" />
-          </span>
-          <span class="status-chip">
-            <Icon icon="material-symbols:verified-user-rounded" />
-            {{ t('profile.authenticated') }}
-          </span>
+          <span class="section-title">{{ t('membership.title') }}</span>
+          <span class="section-badge">{{ membershipLabel }}</span>
         </div>
 
-        <div class="profile-form">
-          <div class="form-item">
-            <span class="form-icon"><Icon icon="material-symbols:person-rounded" /></span>
-            <div class="form-content">
-              <label for="profile-username">{{ t('profile.userName') }}</label>
-              <el-input
-                v-if="editMode"
-                id="profile-username"
-                v-model="form.username"
-                :placeholder="t('profile.enterUserName')"
-                class="form-input"
-              />
-              <span v-else>{{ userInfo?.username || '-' }}</span>
+        <div class="section-card">
+          <div class="row">
+            <div class="row-label">{{ t('membership.appsUsed') }}</div>
+            <div class="row-value">{{ membershipUsageText }}</div>
+          </div>
+          <div class="row-divider" />
+          <div class="row">
+            <div class="row-label">{{ t('membership.createAccess') }}</div>
+            <div class="row-value">
+              <span class="status-pill" :class="canCreateDesign ? 'green' : 'gray'">
+                {{ canCreateDesign ? t('membership.available') : t('membership.limitReached') }}
+              </span>
             </div>
           </div>
-
-          <div class="form-item">
-            <span class="form-icon"><Icon icon="material-symbols:badge-rounded" /></span>
-            <div class="form-content">
-              <label for="profile-nickname">{{ t('profile.nickname') }}</label>
-              <el-input
-                v-if="editMode"
-                id="profile-nickname"
-                v-model="form.nickname"
-                :placeholder="t('profile.enterNickname')"
-                class="form-input"
-              />
-              <span v-else>{{ userInfo?.nickname || '-' }}</span>
-            </div>
+          <div class="row-divider" />
+          <div class="row">
+            <div class="row-label">{{ t('membership.renewOrEndAt') }}</div>
+            <div class="row-value">{{ membershipEndText }}</div>
           </div>
+          <div class="row-divider" />
+          <button class="row clickable action-row" type="button" @click="goPricing">
+            <span class="row-label">{{ t('membership.viewPlans') }}</span>
+            <span class="row-value with-chevron">
+              <span class="row-value-text">{{ membershipHint }}</span>
+              <Icon icon="mdi:chevron-right" class="chevron" />
+            </span>
+          </button>
+          <template v-if="canCancelSubscription || canResumeSubscription">
+            <div class="row-divider" />
+            <button
+              v-if="canCancelSubscription"
+              class="row clickable action-row subdued"
+              type="button"
+              :disabled="billingLoading"
+              @click="cancelMembership"
+            >
+              <span class="row-label">{{ t('membership.cancelSubscription') }}</span>
+              <Icon icon="mdi:chevron-right" class="chevron" />
+            </button>
+            <button
+              v-if="canResumeSubscription"
+              class="row clickable action-row"
+              type="button"
+              :disabled="billingLoading"
+              @click="resumeMembership"
+            >
+              <span class="row-label">{{ t('membership.resumeSubscription') }}</span>
+              <Icon icon="mdi:chevron-right" class="chevron" />
+            </button>
+          </template>
+        </div>
+      </section>
 
-          <div class="form-item">
-            <span class="form-icon"><Icon icon="material-symbols:mail-rounded" /></span>
-            <div class="form-content">
-              <label>{{ t('profile.email') }}</label>
-              <span>{{ userInfo?.email || '-' }}</span>
+      <section class="section" :aria-label="t('profile.currentDevice')">
+        <div class="section-header">
+          <span class="section-title">{{ t('profile.currentDevice') }}</span>
+        </div>
+
+        <div class="section-card">
+          <div class="row device-row">
+            <div class="row-label">{{ t('profile.currentDevice') }}</div>
+            <div class="row-value">
+              <div v-if="userInfo?.device" class="device-display">
+                <div class="device-avatar">
+                  <img
+                    v-if="userInfo.device?.imageUrl"
+                    :src="userInfo.device.imageUrl"
+                    :alt="userInfo.device.displayName"
+                  />
+                  <Icon v-else icon="material-symbols:watch-rounded" />
+                </div>
+                <div class="device-info">
+                  <div class="device-name">{{ userInfo.device?.displayName }}</div>
+                  <div v-if="userInfo.device?.deviceFamily" class="device-family">
+                    {{ userInfo.device?.deviceFamily }}
+                  </div>
+                </div>
+              </div>
+              <span v-else class="empty-device">{{ t('profile.noDeviceConnected') }}</span>
             </div>
           </div>
         </div>
@@ -598,426 +561,365 @@ onBeforeUnmount(() => {
 <style scoped>
 .profile-page {
   min-height: 100vh;
-  background: var(--studio-bg);
-  color: var(--studio-text);
-  padding: 40px 16px 56px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px 48px;
+  color: #1d1d1f;
+  background: #f2f2f7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.profile-shell {
-  width: min(680px, 100%);
-  margin: 0 auto;
+.profile-container {
+  width: 100%;
+  max-width: 580px;
   display: flex;
   flex-direction: column;
   gap: 32px;
+  padding-top: 40px;
 }
 
 .profile-hero {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  align-items: stretch;
-}
-
-.profile-identity-card,
-.device-panel,
-.profile-card {
-  background: var(--studio-surface);
-  border: 1px solid var(--studio-border);
-  border-radius: 14px;
-  box-shadow: var(--studio-shadow-sm);
-  overflow: hidden;
-}
-
-.profile-identity-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   align-items: center;
-  padding: 0 0 8px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  overflow: visible;
+  gap: 6px;
+  padding-bottom: 8px;
 }
 
-.avatar-wrap {
+.avatar-wrapper {
   position: relative;
-  width: 128px;
-  height: 128px;
-}
-
-.profile-avatar {
-  width: 128px;
-  height: 128px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
-  object-fit: cover;
-  border: 0;
-  box-shadow: 0 0 0 3px var(--studio-surface), 0 2px 16px rgba(0, 0, 0, 0.12);
-  background: var(--studio-surface);
+  overflow: hidden;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 2px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.avatar-editing {
+.avatar-wrapper.editing {
   cursor: pointer;
-  outline: 3px solid var(--studio-focus-ring);
-  outline-offset: 4px;
+  box-shadow:
+    0 0 0 3px #007aff,
+    0 4px 20px rgba(0, 122, 255, 0.18);
 }
 
-.avatar-action {
+.avatar-wrapper.editing:hover {
+  transform: scale(1.04);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.avatar-overlay {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--studio-primary);
-  color: #fff;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 22px rgba(15, 107, 104, 0.24);
-  cursor: pointer;
-  transition: transform 0.18s ease, background 0.18s ease;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.avatar-action:hover,
-.avatar-action:focus-visible {
-  background: var(--studio-primary-hover);
-  transform: translateY(-1px);
+.avatar-overlay svg {
+  width: 24px;
+  height: 24px;
 }
 
-.avatar-action svg {
-  width: 22px;
-  height: 22px;
+.avatar-wrapper.editing:hover .avatar-overlay {
+  opacity: 1;
 }
 
-.identity-copy {
-  min-width: 0;
-  text-align: center;
-}
-
-.identity-heading {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.identity-copy h1,
-.section-header h2 {
-  margin: 0;
-  color: var(--studio-text);
-  line-height: 1.15;
-}
-
-.identity-copy h1 {
+.hero-name {
+  margin-top: 8px;
+  color: #1d1d1f;
   font-size: 1.75rem;
   font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.hero-email {
+  color: #86868b;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
 .premium-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 28px;
+  gap: 5px;
+  min-height: 26px;
+  margin-top: 8px;
   padding: 0 10px;
-  border: 1px solid rgba(217, 119, 6, 0.32);
+  border: 1px solid rgba(217, 119, 6, 0.24);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.08));
-  color: #9a5f00;
-  font-size: 0.78rem;
+  color: #8a5a00;
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+  font-size: 0.75rem;
   font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
 }
 
 .premium-badge svg {
   width: 16px;
   height: 16px;
-  color: var(--studio-warning);
 }
 
-:global(:root[data-studio-theme='dark']) .premium-badge {
-  border-color: rgba(251, 191, 36, 0.4);
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(245, 158, 11, 0.12));
-  color: #fde68a;
-}
-
-.identity-copy p:last-child {
-  margin: 10px 0 0;
-  color: var(--studio-text-subtle);
-  font-size: 0.9375rem;
-}
-
-.profile-actions {
+.section {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.primary-action,
-.secondary-action {
-  min-height: 36px;
-  border-radius: 8px;
-  font-weight: 700;
-}
-
-.primary-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--studio-primary);
-  border-color: var(--studio-primary);
-  padding: 0 14px;
-  box-shadow: 0 8px 16px rgba(15, 107, 104, 0.16);
-}
-
-.primary-action svg {
-  width: 16px;
-  height: 16px;
-}
-
-.secondary-action svg {
-  width: 16px;
-  height: 16px;
-  margin-right: 4px;
-}
-
-.edit-icon-action {
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 50%;
-}
-
-.edit-icon-action svg {
-  width: 18px;
-  height: 18px;
-}
-
-.profile-card {
-  margin-top: 0;
-  padding: 0;
-}
-
-.membership-panel {
-  padding: 0;
-}
-
-.membership-panel .section-header {
-  margin-bottom: 0;
-}
-
-.membership-chip {
-  margin-left: auto;
-  font-weight: 800;
-}
-
-.membership-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 22px 22px 0;
-}
-
-.membership-summary > div {
-  min-height: 84px;
-  padding: 16px;
-  border: 1px solid var(--studio-border);
-  border-radius: 8px;
-  background: var(--studio-surface-soft);
-}
-
-.membership-summary span {
-  display: block;
-  color: var(--studio-text-subtle);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.membership-summary strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--studio-text);
-  font-size: 1.25rem;
-}
-
-.membership-actions {
+.section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 22px 22px;
+  padding: 0 4px;
 }
 
-.membership-actions p {
-  flex: 1 1 180px;
-  margin: 0;
-  color: var(--studio-text-subtle);
-  line-height: 1.5;
-}
-
-.membership-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-
-.subscription-cancel-action {
-  --el-button-bg-color: transparent;
-  --el-button-border-color: var(--studio-border);
-  --el-button-text-color: var(--studio-text-subtle);
-  --el-button-hover-bg-color: color-mix(in srgb, var(--studio-surface-soft) 58%, transparent);
-  --el-button-hover-border-color: var(--studio-border);
-  --el-button-hover-text-color: var(--studio-text-muted);
-  --el-button-active-bg-color: var(--studio-surface-soft);
-  --el-button-active-border-color: var(--studio-border);
-  --el-button-active-text-color: var(--studio-text-muted);
-  min-height: 34px;
-  padding: 0 12px;
-  color: var(--studio-text-subtle);
-  background: transparent;
-  border-color: var(--studio-border);
-  box-shadow: none;
-}
-
-.subscription-cancel-action svg {
-  color: currentColor;
-  opacity: 0.68;
-}
-
-.subscription-cancel-action:hover,
-.subscription-cancel-action:focus {
-  color: var(--studio-text-muted);
-  background: color-mix(in srgb, var(--studio-surface-soft) 58%, transparent);
-  border-color: var(--studio-border);
-}
-
-.subscription-resume-action {
-  --el-button-bg-color: var(--studio-primary);
-  --el-button-border-color: var(--studio-primary);
-  --el-button-hover-bg-color: var(--studio-primary-hover);
-  --el-button-hover-border-color: var(--studio-primary-hover);
-  --el-button-active-bg-color: var(--studio-primary-active);
-  --el-button-active-border-color: var(--studio-primary-active);
-  min-height: 42px;
-  padding: 0 18px;
-  background: linear-gradient(135deg, var(--studio-primary), var(--studio-primary-hover));
-  border-color: var(--studio-primary);
-  box-shadow: 0 12px 24px rgba(15, 107, 104, 0.24);
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-}
-
-.subscription-resume-action:hover,
-.subscription-resume-action:focus {
-  background: linear-gradient(135deg, var(--studio-primary-hover), var(--studio-primary));
-  border-color: var(--studio-primary-hover);
-  box-shadow: 0 16px 30px rgba(15, 107, 104, 0.3);
-  transform: translateY(-1px);
-}
-
-.subscription-resume-action:active {
-  box-shadow: 0 8px 16px rgba(15, 107, 104, 0.22);
-  transform: translateY(0);
-}
-
-:global(:root[data-studio-theme='dark']) .subscription-cancel-action {
-  --el-button-bg-color: rgba(15, 23, 42, 0.18);
-  --el-button-border-color: rgba(148, 163, 184, 0.18);
-  --el-button-text-color: rgba(148, 163, 184, 0.78);
-  --el-button-hover-bg-color: rgba(30, 41, 59, 0.52);
-  --el-button-hover-border-color: rgba(148, 163, 184, 0.28);
-  --el-button-hover-text-color: var(--studio-text-muted);
-  color: rgba(148, 163, 184, 0.78);
-  background: rgba(15, 23, 42, 0.18);
-  border-color: rgba(148, 163, 184, 0.18);
-}
-
-:global(:root[data-studio-theme='dark']) .subscription-resume-action {
-  box-shadow: 0 12px 24px rgba(45, 212, 191, 0.18);
-}
-
-:global(:root[data-studio-theme='dark']) .subscription-resume-action:hover,
-:global(:root[data-studio-theme='dark']) .subscription-resume-action:focus {
-  box-shadow: 0 16px 30px rgba(45, 212, 191, 0.24);
-}
-
-.device-panel {
-  padding: 18px;
-}
-
-.panel-heading,
-.section-header,
-.device-display,
-.empty-device {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.panel-heading {
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.panel-icon,
-.form-icon,
-.status-chip {
-  color: var(--studio-primary);
-  background: var(--studio-primary-soft);
-}
-
-.panel-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.panel-icon svg {
-  width: 26px;
-  height: 26px;
-}
-
-.panel-heading span:not(.panel-icon) {
-  display: block;
-  color: var(--studio-text-subtle);
-  font-size: 0.82rem;
-  font-weight: 700;
+.section-title {
+  color: #86868b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.panel-heading strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--studio-text);
-  font-size: 1.1rem;
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #475569;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.edit-trigger {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  color: #007aff;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.edit-trigger:hover {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.edit-trigger.cancel {
+  color: #86868b;
+}
+
+.edit-trigger.cancel:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.section-card {
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.04);
+}
+
+.row {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.row.clickable {
+  cursor: pointer;
+}
+
+.row.clickable:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.row.clickable:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.row-divider {
+  height: 0.5px;
+  margin-left: 18px;
+  background: #d1d1d6;
+}
+
+.row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: #1d1d1f;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.row-value {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: #86868b;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  text-align: right;
+}
+
+.row-value.with-chevron {
+  gap: 2px;
+}
+
+.row-value-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: #c7c7cc;
+}
+
+.apple-input {
+  width: 100%;
+  max-width: 280px;
+}
+
+.apple-input :deep(.el-input__wrapper) {
+  min-height: 36px;
+  border-radius: 10px;
+  background: #f5f5f7;
+  box-shadow: none;
+}
+
+.apple-input :deep(.el-input__inner) {
+  text-align: right;
+}
+
+.save-row {
+  justify-content: center;
+  padding: 16px 18px;
+}
+
+.save-btn {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: #007aff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.save-btn:hover {
+  background: #006fe6;
+}
+
+.save-btn:active {
+  transform: scale(0.99);
+}
+
+.save-btn:disabled,
+.action-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.status-pill.green {
+  color: #1d7f3a;
+  background: rgba(52, 199, 89, 0.12);
+}
+
+.status-pill.gray {
+  color: #6e6e73;
+  background: rgba(142, 142, 147, 0.14);
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+}
+
+.action-row.subdued .row-label {
+  color: #86868b;
+}
+
+.device-row {
+  min-height: 68px;
 }
 
 .device-display {
+  min-width: 0;
+  display: flex;
   align-items: center;
-  padding: 18px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--studio-surface-soft);
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .device-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-  background: var(--studio-surface);
-  border: 1px solid var(--studio-border);
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
-  flex: 0 0 auto;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  background: #f5f5f7;
 }
 
 .device-avatar img {
@@ -1026,159 +928,37 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 
-.device-avatar svg,
-.empty-device > svg {
-  width: 34px;
-  height: 34px;
-  color: var(--studio-primary);
+.device-avatar svg {
+  width: 24px;
+  height: 24px;
+  color: #0f6b68;
 }
 
 .device-info {
   min-width: 0;
+  text-align: right;
 }
 
 .device-name {
-  color: var(--studio-text);
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  color: #1d1d1f;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .device-family {
-  margin-top: 4px;
-  color: var(--studio-text-muted);
-  font-size: 0.92rem;
+  margin-top: 2px;
+  color: #86868b;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .empty-device {
-  align-items: flex-start;
-  padding: 18px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--studio-surface-soft);
-}
-
-.empty-device strong,
-.empty-device span {
-  display: block;
-}
-
-.empty-device strong {
-  color: var(--studio-text);
-  margin-bottom: 4px;
-}
-
-.empty-device span {
-  color: var(--studio-text-muted);
-  line-height: 1.5;
-}
-
-.section-header {
-  justify-content: space-between;
-  align-items: center;
-  min-height: 72px;
-  margin-bottom: 0;
-  padding: 14px 18px 18px;
-  background: var(--studio-bg);
-  border-bottom: 1px solid var(--studio-border);
-}
-
-.section-title-icon {
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  color: var(--studio-primary);
-  background: var(--studio-primary-soft);
-}
-
-.section-title-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.profile-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.form-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 50px;
-  background: var(--studio-surface);
-  border: 0;
-  border-bottom: 1px solid var(--studio-border);
-  border-radius: 0;
-  padding: 13px 18px;
-}
-
-.form-item:last-child {
-  border-bottom: 0;
-}
-
-.form-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  flex: 0 0 auto;
-}
-
-.form-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.form-content {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-content label {
-  color: var(--studio-text-muted);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.form-content span {
-  color: var(--studio-text);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.5;
+  color: #86868b;
   overflow-wrap: anywhere;
-}
-
-.form-input {
-  width: 100%;
-}
-
-.form-input :deep(.el-input__wrapper) {
-  min-height: 44px;
-  border-radius: 8px;
 }
 
 .sr-only {
@@ -1193,6 +973,39 @@ onBeforeUnmount(() => {
   border: 0;
 }
 
+:global(:root[data-studio-theme='dark']) .profile-page {
+  color: var(--studio-text);
+  background: #0f172a;
+}
+
+:global(:root[data-studio-theme='dark']) .section-card {
+  background: var(--studio-surface-raised);
+  box-shadow: 0 0 0 1px var(--studio-border);
+}
+
+:global(:root[data-studio-theme='dark']) .hero-name,
+:global(:root[data-studio-theme='dark']) .row-label,
+:global(:root[data-studio-theme='dark']) .device-name {
+  color: var(--studio-text);
+}
+
+:global(:root[data-studio-theme='dark']) .hero-email,
+:global(:root[data-studio-theme='dark']) .section-title,
+:global(:root[data-studio-theme='dark']) .row-value,
+:global(:root[data-studio-theme='dark']) .device-family,
+:global(:root[data-studio-theme='dark']) .empty-device {
+  color: var(--studio-text-muted);
+}
+
+:global(:root[data-studio-theme='dark']) .row-divider {
+  background: var(--studio-border);
+}
+
+:global(:root[data-studio-theme='dark']) .apple-input :deep(.el-input__wrapper),
+:global(:root[data-studio-theme='dark']) .device-avatar {
+  background: var(--studio-surface-soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1203,85 +1016,55 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 980px) {
-  .profile-hero,
-  .profile-form {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-identity-card {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .profile-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-}
-
 @media (max-width: 640px) {
   .profile-page {
-    padding: 20px 14px 32px;
+    padding: 0 14px 32px;
   }
 
-  .profile-identity-card,
-  .device-panel {
-    padding: 20px;
+  .profile-container {
+    gap: 26px;
+    padding-top: 28px;
   }
 
-  .profile-identity-card {
-    grid-template-columns: 1fr;
-    justify-items: start;
-  }
-
-  .avatar-wrap,
-  .profile-avatar {
-    width: 116px;
-    height: 116px;
-  }
-
-  .section-header {
-    flex-direction: column;
+  .row {
     align-items: flex-start;
+  }
+
+  .row:not(.device-row) {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .row-value {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .apple-input {
+    max-width: none;
+  }
+
+  .apple-input :deep(.el-input__inner) {
+    text-align: left;
+  }
+
+  .action-row {
+    flex-direction: row !important;
+    align-items: center;
+  }
+
+  .device-row {
+    flex-direction: column;
     gap: 12px;
   }
 
-  .membership-summary {
-    grid-template-columns: 1fr;
-    padding: 20px 20px 0;
+  .device-display {
+    justify-content: flex-start;
   }
 
-  .membership-chip {
-    margin-left: 0;
-  }
-
-  .membership-actions {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 18px 20px 20px;
-  }
-
-  .membership-actions p {
-    flex-basis: auto;
-  }
-
-  .membership-actions :deep(.el-button) {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .profile-actions,
-  .profile-actions :deep(.el-button) {
-    width: 100%;
-  }
-
-  .profile-actions .edit-icon-action {
-    width: 36px;
-    min-width: 36px;
-  }
-
-  .profile-actions :deep(.el-button + .el-button) {
-    margin-left: 0;
+  .device-info {
+    text-align: left;
   }
 }
 </style>

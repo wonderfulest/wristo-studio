@@ -28,58 +28,103 @@
       </div>
     </div>
 
-    <div class="user-avatar" @click.stop="toggleDropdown">
-      <img v-if="userAvatar" :src="userAvatar" class="avatar-image" alt="user avatar" />
-      <div v-else class="avatar-circle" :style="{ backgroundColor: avatarColor }">
-        {{ userInitials }}
-      </div>
+    <button type="button" class="user-avatar-container" :aria-label="t('nav.accountMenu')" @click.stop="toggleDropdown">
+      <img :src="userAvatar" class="user-avatar" alt="user avatar" />
       <span v-if="showAvatarDot" class="avatar-dot" />
-      <el-tooltip 
-        :content="userStore.userInfo?.username"
-        :disabled="!isUsernameTruncated"
-        placement="bottom"
-      >
-        <span class="username" ref="usernameRef">
-          {{ truncatedUsername }}
-        </span>
-      </el-tooltip>
-    </div>
+      <span class="user-trigger-copy">
+        <span>{{ userDisplayName }}</span>
+        <small>{{ accountStatusLabel }}</small>
+      </span>
+      <span v-if="isPremiumMember" class="premium-badge">{{ t('membership.premiumBadge') }}</span>
+      <Icon icon="material-symbols:keyboard-arrow-down-rounded" class="user-trigger-arrow" />
+    </button>
 
     <div class="dropdown-menu" v-if="showDropdown">
-      <div class="dropdown-item" @click="go('/profile')">
-        <Icon icon="material-symbols:account-circle" />
-        {{ t('nav.userProfile') }}
+      <div class="user-dropdown-profile">
+        <img :src="userAvatar" class="user-dropdown-avatar" alt="user avatar" />
+        <div class="user-dropdown-identity">
+          <strong>{{ userDisplayName }}</strong>
+          <span>{{ userEmail }}</span>
+        </div>
+        <span class="user-dropdown-status" :class="{ premium: isPremiumMember }">
+          {{ accountStatusLabel }}
+        </span>
       </div>
-      <div v-if="!userStore.isMerchantUser" class="dropdown-item" @click="openMembership">
-        <Icon icon="material-symbols:workspace-premium" />
-        {{ t('nav.membership') }}
+
+      <div class="user-dropdown-section">
+        <span class="user-dropdown-section-title">{{ t('nav.accountSection') }}</span>
+        <button type="button" class="dropdown-item" @click="go('/profile')">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:account-circle" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.userProfile') }}</strong>
+            <small>{{ t('nav.userInfoDesc') }}</small>
+          </span>
+          <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
+        <button v-if="!userStore.isMerchantUser" type="button" class="dropdown-item" @click="openMembership">
+          <span class="user-dropdown-icon accent"><Icon icon="material-symbols:workspace-premium" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.membership') }}</strong>
+            <small>{{ t('nav.membershipDesc') }}</small>
+          </span>
+          <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
       </div>
-      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/devices')">
-        <Icon icon="material-symbols:extension" />
-        {{ t('nav.devices') }}
+
+      <div v-if="showMerchantEntrypoints" class="user-dropdown-section">
+        <span class="user-dropdown-section-title">{{ t('nav.creatorSection') }}</span>
+        <button type="button" class="dropdown-item" @click="go('/devices')">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:extension" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.devices') }}</strong>
+            <small>{{ t('nav.devicesDesc') }}</small>
+          </span>
+          <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
+        <button type="button" class="dropdown-item" @click="go('/fonts')">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:font-download-outline" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.fontPreview') }}</strong>
+            <small>{{ t('nav.fontPreviewDesc') }}</small>
+          </span>
+          <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
+        <button type="button" class="dropdown-item" @click="go('/FAQ')">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:help-outline" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.helpCenter') }}</strong>
+            <small>{{ t('nav.helpCenterDesc') }}</small>
+          </span>
+          <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
       </div>
-      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/fonts')">
-        <Icon icon="material-symbols:font-download-outline" />
-        {{ t('nav.fontPreview') }}
+
+      <div v-if="showMerchantEntrypoints" class="user-dropdown-section">
+        <span class="user-dropdown-section-title">{{ t('nav.toolsSection') }}</span>
+        <button type="button" class="dropdown-item" @click="openSettings">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:settings-outline" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.settings') }}</strong>
+            <small>{{ t('nav.settingsDesc') }}</small>
+          </span>
+        </button>
+        <button type="button" class="dropdown-item" @click="goTickets">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:confirmation-number-outline" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.tickets') }}</strong>
+            <small>{{ pendingCount > 0 ? t('nav.ticketsDescWithCount', { count: pendingCount }) : t('nav.ticketsDesc') }}</small>
+          </span>
+          <span v-if="pendingCount > 0" class="menu-badge">{{ pendingCount }}</span>
+        </button>
       </div>
-      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="go('/FAQ')">
-        <Icon icon="material-symbols:help-outline" />
-        {{ t('nav.helpCenter') }}
-      </div>
-      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="openSettings">
-        <Icon icon="material-symbols:settings-outline" />
-        {{ t('nav.settings') }}
-      </div>
-      <div v-if="showMerchantEntrypoints" class="dropdown-item" @click="goTickets">
-        <Icon icon="material-symbols:confirmation-number-outline" />
-        <span>{{ t('nav.tickets') }}</span>
-        <span v-if="pendingCount > 0" class="menu-badge">{{ pendingCount }}</span>
-      </div>
-      <div class="dropdown-divider"></div>
-      <div class="dropdown-item" @click="handleLogout">
-        <Icon icon="material-symbols:logout" />
-        {{ t('nav.logout') }}
-      </div>
+
+      <button type="button" class="dropdown-item dropdown-logout" @click="handleLogout">
+        <span class="user-dropdown-icon danger"><Icon icon="material-symbols:logout" /></span>
+        <span class="user-dropdown-copy">
+          <strong>{{ t('nav.logout') }}</strong>
+          <small>{{ t('nav.logoutDesc') }}</small>
+        </span>
+      </button>
     </div>
 
     <DesignerDefaultConfigDialog ref="designerConfigDialogRef" />
@@ -100,8 +145,6 @@ const userStore = useUserStore()
 const { t } = useI18n()
 
 const showDropdown = ref(false)
-const usernameRef = ref<HTMLElement | null>(null)
-const isUsernameTruncated = ref(false)
 const designerConfigDialogRef = ref<InstanceType<typeof DesignerDefaultConfigDialog> | null>(null)
 
 const ticketNudgeVisible = ref(false)
@@ -109,32 +152,18 @@ const pendingCount = ref<number>(0)
 const showMerchantEntrypoints = computed(() => userStore.isMerchantUser)
 const showAvatarDot = computed(() => showMerchantEntrypoints.value && pendingCount.value > 0)
 const userAvatar = computed(() => userStore.userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')
-
-const userInitials = computed(() => {
-  const username = userStore.userInfo?.username || ''
-  const initials = username
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word.charAt(0).toUpperCase())
-    .join('')
-  return initials || username.charAt(0).toUpperCase()
+const userDisplayName = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || t('common.unknownUser'))
+const userEmail = computed(() => userStore.userInfo?.email || t('profile.noEmail'))
+const isPremiumMember = computed(() => {
+  if (userStore.isMerchantUser || userStore.isAdminUser) return true
+  const membership = userStore.studioMembership
+  if (!membership || membership.level === 'free') return false
+  return membership.status == null || membership.status === '1' || membership.status === '5'
 })
-
-const avatarColor = computed(() => {
-  const colors = [
-    '#f56a00', '#7265e6', '#ffbf00', '#00a2ae',
-    '#712fd1', '#f74584', '#13c2c2', '#6f42c1'
-  ]
-  const username = userStore.userInfo?.username || ''
-  const index = Array.from(username).reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length
-  return colors[index]
-})
-
-const truncatedUsername = computed(() => {
-  const username = userStore.userInfo?.username || ''
-  const maxLength = 12
-  if (username.length <= maxLength) return username
-  return `${username.slice(0, maxLength)}...`
+const accountStatusLabel = computed(() => {
+  if (userStore.isMerchantUser) return t('nav.merchant')
+  if (userStore.isAdminUser) return t('nav.admin')
+  return isPremiumMember.value ? t('membership.premiumBadge') : t('nav.account')
 })
 
 const toggleDropdown = () => {
@@ -191,13 +220,6 @@ const fetchPendingTickets = async () => {
 }
 
 onMounted(() => {
-  const checkTruncation = () => {
-    if (!usernameRef.value) return
-    const el = usernameRef.value
-    isUsernameTruncated.value = el.scrollWidth > el.clientWidth
-  }
-  checkTruncation()
-  window.addEventListener('resize', checkTruncation)
   const closeDropdown = (e: MouseEvent) => {
     const target = e.target as HTMLElement
     if (!target.closest('.user-menu')) {
@@ -210,7 +232,6 @@ onMounted(() => {
   fetchPendingTickets()
 
   onUnmounted(() => {
-    window.removeEventListener('resize', checkTruncation)
     window.removeEventListener('click', closeDropdown)
   })
 })
@@ -358,57 +379,65 @@ onMounted(() => {
   height: 18px;
 }
 
-.user-avatar {
+.user-avatar-container {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 40px;
-  padding: 4px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--studio-radius-md);
+  min-height: 46px;
+  padding: 4px 11px 4px 5px;
+  border: 1px solid rgba(15, 107, 104, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+  color: var(--studio-text);
+  box-shadow:
+    0 10px 24px rgba(17, 24, 39, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font: inherit;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  touch-action: manipulation;
 }
 
-.user-avatar:hover {
-  background-color: var(--studio-surface-soft);
-  border-color: var(--studio-border);
+.user-avatar-container:hover,
+.user-avatar-container:focus-visible {
+  border-color: rgba(15, 107, 104, 0.28);
+  background: var(--studio-primary-soft);
+  box-shadow:
+    0 14px 30px rgba(15, 107, 104, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+  transform: translateY(-1px);
 }
 
-.avatar-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 500;
-  user-select: none;
-  transition: transform 0.2s ease;
+.user-avatar-container:focus-visible {
+  outline: 3px solid rgba(15, 107, 104, 0.22);
+  outline-offset: 3px;
 }
 
-.avatar-image {
+.user-avatar-container:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.user-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #fff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-  transition: transform 0.2s ease;
+  box-shadow: 0 0 0 1px rgba(15, 107, 104, 0.12);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.user-avatar:hover .avatar-circle,
-.user-avatar:hover .avatar-image {
-  transform: scale(1.05);
+.user-avatar-container:hover .user-avatar {
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.22);
+  transform: scale(1.03);
 }
 
 .avatar-dot {
   position: absolute;
-  top: 6px;
-  left: 38px;
+  top: 5px;
+  left: 34px;
   width: 14px;
   height: 14px;
   background-color: #ff4d4f;
@@ -416,29 +445,248 @@ onMounted(() => {
   border: 2px solid #fff;
 }
 
-.username {
-  max-width: 120px;
+.user-trigger-copy {
+  min-width: 0;
+  max-width: 116px;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.user-trigger-copy span,
+.user-trigger-copy small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+}
+
+.user-trigger-copy span {
   color: var(--studio-text);
-  font-weight: 650;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.user-trigger-copy small {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.user-trigger-arrow {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.user-avatar-container:hover .user-trigger-arrow {
+  color: var(--studio-primary);
+  transform: translateY(1px);
+}
+
+.premium-badge {
+  position: absolute;
+  bottom: -7px;
+  left: 24px;
+  z-index: 1;
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  color: #111827;
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 10px);
   right: 0;
-  background-color: white;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-lg);
-  box-shadow: var(--studio-shadow-md);
-  min-width: 180px;
-  padding: 8px;
   z-index: 1000;
+  width: 344px;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow:
+    0 28px 70px rgba(15, 23, 42, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.86) inset;
   transform-origin: top right;
   animation: dropdown-fade 0.2s ease;
+}
+
+.user-dropdown-profile {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(15, 107, 104, 0.10);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(15, 107, 104, 0.09), rgba(245, 179, 68, 0.10)),
+    #fff;
+}
+
+.user-dropdown-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.user-dropdown-identity,
+.user-dropdown-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.user-dropdown-identity strong,
+.user-dropdown-identity span,
+.user-dropdown-copy strong,
+.user-dropdown-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-identity strong {
+  color: var(--studio-text);
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.user-dropdown-identity span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.user-dropdown-status {
+  align-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #475569;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.user-dropdown-status.premium {
+  color: #111827;
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+}
+
+.user-dropdown-section {
+  display: grid;
+  gap: 4px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.user-dropdown-section-title {
+  padding: 0 8px 2px;
+  color: var(--studio-primary);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.dropdown-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--studio-text);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  text-align: left;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+  transform: translateY(-1px);
+}
+
+.user-dropdown-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--studio-primary);
+  background: rgba(15, 107, 104, 0.09);
+}
+
+.user-dropdown-icon.accent {
+  color: #92400e;
+  background: rgba(245, 179, 68, 0.16);
+}
+
+.user-dropdown-icon.danger {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.10);
+}
+
+.user-dropdown-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.user-dropdown-copy strong {
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.user-dropdown-copy small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.dropdown-item:hover .user-dropdown-copy small,
+.dropdown-item:focus .user-dropdown-copy small {
+  color: #0f766e;
+}
+
+.dropdown-trailing-icon {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  opacity: 0.72;
+}
+
+.dropdown-logout {
+  margin-top: 6px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+  color: #b91c1c;
+}
+
+.dropdown-logout:hover,
+.dropdown-logout:focus {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 @media (max-width: 720px) {
@@ -484,14 +732,22 @@ onMounted(() => {
     justify-content: space-between;
   }
 
-  .user-avatar {
+  .user-avatar-container {
     width: 44px;
     height: 44px;
+    min-height: 44px;
     justify-content: center;
     padding: 0;
   }
 
-  .username {
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-trigger-copy,
+  .user-trigger-arrow,
+  .premium-badge {
     display: none;
   }
 
@@ -499,31 +755,11 @@ onMounted(() => {
     top: 4px;
     left: 28px;
   }
-}
 
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  padding: 9px 12px;
-  color: var(--studio-text-muted);
-  font-size: 14px;
-  font-weight: 650;
-  transition: all 0.2s ease;
-  border-radius: var(--studio-radius-md);
-  cursor: pointer;
-}
-
-.dropdown-item:hover {
-  background-color: var(--studio-primary-soft);
-  color: var(--studio-primary);
-}
-
-.dropdown-divider {
-  height: 1px;
-  background-color: var(--studio-border);
-  margin: 8px 6px;
+  .dropdown-menu {
+    right: 0;
+    width: min(344px, calc(100vw - 24px));
+  }
 }
 
 :global(html[data-studio-theme='dark']) .ticket-nudge,
@@ -536,6 +772,19 @@ onMounted(() => {
 :global(html[data-studio-theme='dark']) .ticket-nudge-copy strong,
 :global(html[data-studio-theme='dark']) .dropdown-item {
   color: var(--studio-text);
+}
+
+:global(html[data-studio-theme='dark']) .user-avatar-container {
+  background: var(--studio-surface-raised);
+  border-color: var(--studio-border);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+:global(html[data-studio-theme='dark']) .user-dropdown-profile {
+  background:
+    linear-gradient(135deg, rgba(15, 107, 104, 0.18), rgba(245, 179, 68, 0.12)),
+    var(--studio-surface);
+  border-color: var(--studio-border);
 }
 
 :global(html[data-studio-theme='dark']) .ticket-nudge-copy span {
@@ -552,13 +801,10 @@ onMounted(() => {
   color: var(--studio-primary);
 }
 
-:global(html[data-studio-theme='dark']) .avatar-image,
+:global(html[data-studio-theme='dark']) .user-avatar,
+:global(html[data-studio-theme='dark']) .user-dropdown-avatar,
 :global(html[data-studio-theme='dark']) .avatar-dot {
   border-color: var(--studio-surface-raised);
-}
-
-:global(html[data-studio-theme='dark']) .dropdown-divider {
-  background-color: var(--studio-border);
 }
 
 .menu-badge {
