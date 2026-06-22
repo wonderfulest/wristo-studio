@@ -24,6 +24,10 @@
       <el-icon><Picture /></el-icon>
       <span>{{ t('editor.screenshot') }}</span>
     </el-menu-item>
+    <el-menu-item index="actions/recordGif" @click="onRecordGif">
+      <el-icon><VideoCamera /></el-icon>
+      <span>{{ t('editor.recordGif') }}</span>
+    </el-menu-item>
     <!-- Divider -->
     <el-divider direction="horizontal" class="menu-sub-divider" />
     <!-- App Properties -->
@@ -36,7 +40,7 @@
 </template>
 
 <script setup>
-import { Operation, View, Box, Upload, Picture, Setting } from '@element-plus/icons-vue'
+import { Operation, View, Box, Upload, Picture, VideoCamera, Setting } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -51,6 +55,10 @@ const props = defineProps({
     required: true,
   },
   onScreenshot: {
+    type: Function,
+    required: true,
+  },
+  onRecordGif: {
     type: Function,
     required: true,
   },
@@ -70,6 +78,10 @@ const onSave = () => {
 
 const onScreenshot = () => {
   props.onScreenshot && props.onScreenshot()
+}
+
+const onRecordGif = () => {
+  props.onRecordGif && props.onRecordGif()
 }
 
 const onOpenProperties = () => {

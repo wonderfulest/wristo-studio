@@ -8,30 +8,18 @@
       </div>
     </div>
 
-    <div class="simulator-controls">
-      <el-button size="small" @click="advance(-60 * 60 * 1000)">
-        {{ t('timeSimulator.minusHour') }}
-      </el-button>
-      <el-button size="small" @click="advance(-15 * 60 * 1000)">
-        {{ t('timeSimulator.minusQuarter') }}
-      </el-button>
-      <el-button size="small" @click="advance(15 * 60 * 1000)">
-        {{ t('timeSimulator.plusQuarter') }}
-      </el-button>
-      <el-button size="small" @click="advance(60 * 60 * 1000)">
-        {{ t('timeSimulator.plusHour') }}
-      </el-button>
-    </div>
-
     <div class="speed-control">
       <span>{{ t('timeSimulator.speed') }}</span>
-      <el-select v-model="speedMultiplier" size="small" class="speed-select" @change="handleSpeedChange">
-        <el-option label="0x" :value="0" />
-        <el-option label="1x" :value="1" />
-        <el-option label="60x" :value="60" />
-        <el-option label="360x" :value="360" />
-        <el-option label="1440x" :value="1440" />
-      </el-select>
+      <el-slider
+        v-model="speedMultiplier"
+        class="speed-slider"
+        :min="1"
+        :max="1000"
+        :step="1"
+        :show-tooltip="false"
+        @input="handleSpeedInput"
+      />
+      <strong class="speed-value">{{ speedMultiplier }}x</strong>
     </div>
 
     <el-button size="small" class="reset-button" @click="resetClock">
@@ -46,11 +34,16 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from '@/i18n'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
-import { advanceSimulatedTime, getSimulatedClockSnapshot, resetSimulatedClock, setSimulatedSpeed } from '@/engine/simulator/simulatedClock'
+import { getSimulatedClockSnapshot, resetSimulatedClock, setSimulatedSpeed } from '@/engine/simulator/simulatedClock'
 
 const { t } = useI18n()
 const currentTime = ref<Date>(getSimulatedClockSnapshot().currentTime)
-const speedMultiplier = ref<number>(getSimulatedClockSnapshot().speedMultiplier)
+const clampSpeedMultiplier = (value: number): number => {
+  if (!Number.isFinite(value)) return 1
+  return Math.min(1000, Math.max(1, Math.round(value)))
+}
+
+const speedMultiplier = ref<number>(clampSpeedMultiplier(getSimulatedClockSnapshot().speedMultiplier))
 let timer: number | null = null
 
 const pad2 = (value: number) => String(value).padStart(2, '0')
@@ -60,7 +53,7 @@ const formatTimeLabel = (date: Date) => `${pad2(date.getMonth() + 1)}/${pad2(dat
 const syncFromClock = () => {
   const snapshot = getSimulatedClockSnapshot()
   currentTime.value = snapshot.currentTime
-  speedMultiplier.value = snapshot.speedMultiplier
+  speedMultiplier.value = clampSpeedMultiplier(snapshot.speedMultiplier)
 }
 
 const refreshCanvas = () => {
@@ -68,13 +61,8 @@ const refreshCanvas = () => {
   getDataSimulatorEngine().updateCanvas()
 }
 
-const advance = (deltaMs: number) => {
-  advanceSimulatedTime(deltaMs)
-  refreshCanvas()
-}
-
-const handleSpeedChange = (value: number) => {
-  setSimulatedSpeed(Number(value))
+const handleSpeedInput = (value: number) => {
+  setSimulatedSpeed(clampSpeedMultiplier(Number(value)))
   refreshCanvas()
 }
 
@@ -118,7 +106,6 @@ onBeforeUnmount(() => {
 }
 
 .simulator-main,
-.simulator-controls,
 .speed-control,
 .reset-button {
   display: flex;
@@ -148,16 +135,23 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.simulator-controls {
-  gap: 4px;
-}
-
 .speed-control {
   gap: 6px;
+  min-width: 260px;
 }
 
-.speed-select {
-  width: 82px;
+.speed-slider {
+  flex: 1;
+  min-width: 160px;
+}
+
+.speed-value {
+  width: 48px;
+  color: var(--studio-text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
 }
 
 .reset-button {

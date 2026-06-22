@@ -21,6 +21,7 @@
     "axios": "^1.7.9",
     "element-plus": "^2.9.0",
     "fabric": "~6.7.0",
+    "gifenc": "^1.0.3",
     "jszip": "^3.10.1",
     "lodash-es": "^4.17.21",
     "md-editor-v3": "5.8.5",

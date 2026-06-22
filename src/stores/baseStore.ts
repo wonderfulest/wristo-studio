@@ -22,6 +22,10 @@ type Screenshot = string | null
 
 type CanvasLike = Canvas | null
 
+type CaptureScreenshotOptions = {
+  includeDeviceFrame?: boolean
+}
+
 type GenerateConfigStoreOptions = {
   validateBindings?: boolean
 }
@@ -187,7 +191,7 @@ export const useBaseStore = defineStore('baseStore', {
       canvasStore.deactivateObject()
     },
     // 捕获并保存表盘截图
-    async captureScreenshot(): Promise<string | null> {
+    async captureScreenshot(options: CaptureScreenshotOptions = {}): Promise<string | null> {
       const canvasStore = useCanvasStore()
       const canvas = canvasStore.canvas
       if (!canvas) {
@@ -199,7 +203,7 @@ export const useBaseStore = defineStore('baseStore', {
         const designWidth = Number(designStore.designSpec.width || canvas.getWidth?.() || 0)
         const designHeight = Number(designStore.designSpec.height || canvas.getHeight?.() || 0)
         const canvasDataURL = await captureDesignCanvasDataURL(canvas, designWidth, designHeight)
-        const dataURL = await this.captureScreenshotWithDeviceFrame(canvasDataURL)
+        const dataURL = await this.captureScreenshotWithDeviceFrame(canvasDataURL, options)
         this.screenshot = dataURL
         return dataURL
       } catch (error) {
@@ -208,9 +212,10 @@ export const useBaseStore = defineStore('baseStore', {
         return null
       }
     },
-    async captureScreenshotWithDeviceFrame(canvasDataURL: string): Promise<string> {
+    async captureScreenshotWithDeviceFrame(canvasDataURL: string, options: CaptureScreenshotOptions = {}): Promise<string> {
       const editorStore = useEditorStore()
-      if (!editorStore.showDeviceFrame) return canvasDataURL
+      const includeDeviceFrame = options.includeDeviceFrame ?? editorStore.showDeviceFrame
+      if (!includeDeviceFrame) return canvasDataURL
 
       const userStore = useUserStore()
       const currentDevice = userStore.userInfo?.device

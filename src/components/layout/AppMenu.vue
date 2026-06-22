@@ -12,6 +12,7 @@
           :on-build="handleBuild"
           :on-save="handleSave"
           :on-screenshot="handleScreenshot"
+          :on-record-gif="handleRecordGif"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
         />
         <el-menu-item index="actions/save" @click="handleSave">
@@ -54,6 +55,61 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" />
+
+  <el-dialog
+    v-model="screenshotDialogVisible"
+    :title="t('editor.screenshotOptions')"
+    width="360px"
+  >
+    <div class="export-options-form">
+      <label class="export-options-label">{{ t('editor.deviceFrameOption') }}</label>
+      <el-radio-group v-model="screenshotFrameMode">
+        <el-radio-button label="withFrame">{{ t('editor.includeDeviceFrame') }}</el-radio-button>
+        <el-radio-button label="faceOnly">{{ t('editor.watchFaceOnly') }}</el-radio-button>
+      </el-radio-group>
+    </div>
+    <template #footer>
+      <el-button @click="screenshotDialogVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" @click="confirmScreenshot">{{ t('common.downloadPng') }}</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog
+    v-model="gifDialogVisible"
+    :title="t('editor.recordGifOptions')"
+    width="420px"
+    :close-on-click-modal="!recordingGif"
+    :close-on-press-escape="!recordingGif"
+    :show-close="!recordingGif"
+  >
+    <div class="export-options-form">
+      <label class="export-options-label">{{ t('editor.deviceFrameOption') }}</label>
+      <el-radio-group v-model="gifFrameMode" :disabled="recordingGif">
+        <el-radio-button label="withFrame">{{ t('editor.includeDeviceFrame') }}</el-radio-button>
+        <el-radio-button label="faceOnly">{{ t('editor.watchFaceOnly') }}</el-radio-button>
+      </el-radio-group>
+
+      <label class="export-options-label">{{ t('editor.recordGifDuration') }}</label>
+      <el-radio-group v-model="gifDurationSeconds" :disabled="recordingGif">
+        <el-radio-button :label="3">3s</el-radio-button>
+        <el-radio-button :label="5">5s</el-radio-button>
+        <el-radio-button :label="8">8s</el-radio-button>
+      </el-radio-group>
+
+      <label class="export-options-label">{{ t('editor.recordGifFps') }}</label>
+      <el-radio-group v-model="gifFps" :disabled="recordingGif">
+        <el-radio-button :label="6">6fps</el-radio-button>
+        <el-radio-button :label="8">8fps</el-radio-button>
+        <el-radio-button :label="10">10fps</el-radio-button>
+      </el-radio-group>
+    </div>
+    <template #footer>
+      <el-button :disabled="recordingGif" @click="gifDialogVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="recordingGif" @click="confirmRecordGif">
+        {{ recordingGif ? t('editor.recordGifRecording') : t('editor.recordGif') }}
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -65,11 +121,15 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
+import { useEditorStore } from '@/stores/editorStore'
 import { DataTypeOptions } from '@/config/settings'
 import { CircleCheck } from '@element-plus/icons-vue'
 
 import { getElementHandler } from '@/engine/registry/elementRegistry'
 import { elementConfigs } from '@/elements/schemaMap'
+import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
+import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
+import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
@@ -91,6 +151,7 @@ const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
+const editorStore = useEditorStore()
 const { t } = useI18n()
 const activeMenu = computed(() => {
   return route.path
@@ -105,6 +166,43 @@ const shortcutsDialogVisible = ref(false)
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
+
+type FrameMode = 'withFrame' | 'faceOnly'
+
+const screenshotDialogVisible = ref(false)
+const screenshotFrameMode = ref<FrameMode>('faceOnly')
+const gifDialogVisible = ref(false)
+const gifFrameMode = ref<FrameMode>('faceOnly')
+const gifDurationSeconds = ref(3)
+const gifFps = ref(8)
+const recordingGif = ref(false)
+
+const frameModeFromEditorSetting = (): FrameMode => editorStore.showDeviceFrame ? 'withFrame' : 'faceOnly'
+
+const shouldIncludeDeviceFrame = (mode: FrameMode): boolean => mode === 'withFrame'
+
+const waitForNextFrame = (): Promise<void> =>
+  new Promise((resolve) => requestAnimationFrame(() => resolve()))
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const downloadDataURL = (dataURL: string, filename: string) => {
+  const link = document.createElement('a')
+  link.href = dataURL
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 
 const handleMenuKeydown = (e: KeyboardEvent) => {
   // Cmd/Ctrl + . 打开设计详情
@@ -600,27 +698,90 @@ const handleBuild = async () => {
 }
 
 // Screenshot
-const handleScreenshot = async () => {
+const handleScreenshot = () => {
+  screenshotFrameMode.value = frameModeFromEditorSetting()
+  screenshotDialogVisible.value = true
+}
+
+const confirmScreenshot = async () => {
+  screenshotDialogVisible.value = false
   baseStore.deactivateObject()
   try {
-    const dataURL = await baseStore.captureScreenshot()
+    const dataURL = await baseStore.captureScreenshot({
+      includeDeviceFrame: shouldIncludeDeviceFrame(screenshotFrameMode.value),
+    })
     if (!dataURL) {
       throw new Error('Screenshot data is empty')
     }
     if (!watchFaceName.value) {
       throw new Error('Watch face name is required')
     }
-    const link = document.createElement('a')
     const filename = `${watchFaceName.value}.png`
-    link.href = dataURL
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadDataURL(dataURL, filename)
     messageStore.success(t('editor.screenshotSaved'))
   } catch (error) {
     console.error('Failed to save screenshot:', error)
     messageStore.error(t('editor.screenshotFailed'))
+  }
+}
+
+const handleRecordGif = () => {
+  gifFrameMode.value = frameModeFromEditorSetting()
+  gifDurationSeconds.value = 3
+  gifFps.value = 8
+  gifDialogVisible.value = true
+}
+
+const captureGifFrames = async (includeDeviceFrame: boolean, durationSeconds: number, fps: number): Promise<GifFrameSource[]> => {
+  const engine = getDataSimulatorEngine()
+  const initialClock = getSimulatedClockSnapshot()
+  const wasRunning = engine.isRunning()
+  const delayMs = Math.round(1000 / fps)
+  const frameCount = Math.max(1, Math.round(durationSeconds * fps))
+  const startMs = initialClock.currentTime.getTime()
+  const frames: GifFrameSource[] = []
+
+  try {
+    if (wasRunning) engine.stop()
+    setSimulatedSpeed(0)
+
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      setSimulatedTime(new Date(startMs + frameIndex * delayMs))
+      engine.updateCanvas()
+      await waitForNextFrame()
+      const dataURL = await baseStore.captureScreenshot({ includeDeviceFrame })
+      if (!dataURL) throw new Error('GIF frame data is empty')
+      frames.push({ dataURL, delayMs })
+    }
+
+    return frames
+  } finally {
+    setSimulatedTime(new Date(Date.now() + initialClock.offsetMs))
+    setSimulatedSpeed(initialClock.speedMultiplier)
+    engine.updateCanvas()
+    if (wasRunning) engine.start({ intervalMs: 1000 })
+  }
+}
+
+const confirmRecordGif = async () => {
+  if (recordingGif.value) return
+  baseStore.deactivateObject()
+  recordingGif.value = true
+  try {
+    if (!watchFaceName.value) {
+      throw new Error('Watch face name is required')
+    }
+    const includeDeviceFrame = shouldIncludeDeviceFrame(gifFrameMode.value)
+    const frames = await captureGifFrames(includeDeviceFrame, gifDurationSeconds.value, gifFps.value)
+    const blob = await encodeGifFrames(frames)
+    downloadBlob(blob, `${watchFaceName.value}.gif`)
+    gifDialogVisible.value = false
+    messageStore.success(t('editor.recordGifSaved'))
+  } catch (error) {
+    console.error('Failed to save GIF recording:', error)
+    messageStore.error(t('editor.recordGifFailed'))
+  } finally {
+    recordingGif.value = false
   }
 }
 
@@ -877,6 +1038,29 @@ const handleOpenCreatorAcademy = () => {
 :global(.app-menu-rich-dropdown .el-menu-item:focus .el-icon) {
   color: var(--studio-surface);
   background: var(--studio-primary);
+}
+
+.export-options-form {
+  display: grid;
+  gap: 12px;
+}
+
+.export-options-label {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.export-options-form :deep(.el-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.export-options-form :deep(.el-radio-button__inner) {
+  border-left: 1px solid var(--el-border-color);
+  border-radius: 6px;
 }
 
 @media (max-width: 900px) {
