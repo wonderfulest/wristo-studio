@@ -425,7 +425,6 @@ const onFontUploaded = async (slug: string) => {
   }
   emit('update:modelValue', slug)
   emit('change', slug)
-  isOpen.value = false
 }
 
 const addCustomFont = () => {
@@ -434,14 +433,6 @@ const addCustomFont = () => {
     return
   }
   dialogVisible.value = true
-}
-
-// 监听点击外部关闭面板
-const handleOutsideClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (!pickerRef.value?.contains(target) && !panelRef.value?.contains(target)) {
-    isOpen.value = false
-  }
 }
 
 onMounted(async () => {
@@ -456,13 +447,11 @@ onMounted(async () => {
       ])
     } catch {}
   }
-  document.addEventListener('click', handleOutsideClick)
   window.addEventListener('resize', updatePanelPosition)
   window.addEventListener('scroll', updatePanelPosition, true)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
   window.removeEventListener('resize', updatePanelPosition)
   window.removeEventListener('scroll', updatePanelPosition, true)
 })
