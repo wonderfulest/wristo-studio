@@ -29,13 +29,23 @@
     </div>
 
     <button type="button" class="user-avatar-container" :aria-label="t('nav.accountMenu')" @click.stop="toggleDropdown">
-      <img :src="userAvatar" class="user-avatar" alt="user avatar" />
-      <span v-if="showAvatarDot" class="avatar-dot" />
+      <span class="user-avatar-wrap">
+        <img :src="userAvatar" class="user-avatar" alt="user avatar" />
+        <span v-if="showAvatarDot" class="avatar-dot" />
+        <span
+          v-if="isPremiumMember"
+          class="premium-badge"
+          role="img"
+          :aria-label="t('membership.premiumBadge')"
+          :title="t('membership.premiumBadge')"
+        >
+          <Icon icon="material-symbols:workspace-premium-rounded" />
+        </span>
+      </span>
       <span class="user-trigger-copy">
         <span>{{ userDisplayName }}</span>
-        <small>{{ accountStatusLabel }}</small>
+        <small>{{ triggerStatusLabel }}</small>
       </span>
-      <span v-if="isPremiumMember" class="premium-badge">{{ t('membership.premiumBadge') }}</span>
       <Icon icon="material-symbols:keyboard-arrow-down-rounded" class="user-trigger-arrow" />
     </button>
 
@@ -164,6 +174,11 @@ const accountStatusLabel = computed(() => {
   if (userStore.isMerchantUser) return t('nav.merchant')
   if (userStore.isAdminUser) return t('nav.admin')
   return isPremiumMember.value ? t('membership.premiumBadge') : t('nav.account')
+})
+const triggerStatusLabel = computed(() => {
+  if (userStore.isMerchantUser) return t('nav.merchant')
+  if (userStore.isAdminUser) return t('nav.admin')
+  return t('nav.account')
 })
 
 const toggleDropdown = () => {
@@ -419,6 +434,13 @@ onMounted(() => {
   transform: translateY(0) scale(0.98);
 }
 
+.user-avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+}
+
 .user-avatar {
   width: 36px;
   height: 36px;
@@ -488,17 +510,26 @@ onMounted(() => {
 
 .premium-badge {
   position: absolute;
-  bottom: -7px;
-  left: 24px;
+  top: -5px;
+  right: -5px;
   z-index: 1;
-  padding: 2px 6px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  color: #111827;
-  background: linear-gradient(135deg, #fde68a, #f59e0b);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  font-size: 10px;
-  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #7c2d12;
+  background: linear-gradient(135deg, #fef3c7, #f59e0b);
+  box-shadow:
+    0 8px 18px rgba(245, 158, 11, 0.36),
+    0 0 0 1px rgba(146, 64, 14, 0.08);
+}
+
+.premium-badge svg {
+  width: 13px;
+  height: 13px;
 }
 
 .dropdown-menu {
@@ -745,10 +776,27 @@ onMounted(() => {
     height: 36px;
   }
 
+  .user-avatar-wrap {
+    width: 36px;
+    height: 36px;
+  }
+
   .user-trigger-copy,
-  .user-trigger-arrow,
-  .premium-badge {
+  .user-trigger-arrow {
     display: none;
+  }
+
+  .premium-badge {
+    top: -4px;
+    right: -4px;
+    width: 17px;
+    height: 17px;
+    border-width: 2px;
+  }
+
+  .premium-badge svg {
+    width: 11px;
+    height: 11px;
   }
 
   .avatar-dot {

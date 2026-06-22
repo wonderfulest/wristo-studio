@@ -1,76 +1,128 @@
 <template>
-  <div class="asset-picker">
-    <!-- 上传按钮 -->
-    <div
-      class="asset-item upload-item"
-      :class="{ 'is-drag-over': dragOver }"
-      @click="triggerUpload"
-      @dragenter.prevent="handleDragEnter"
-      @dragover.prevent="handleDragOver"
-      @dragleave.prevent="handleDragLeave"
-      @drop.prevent="handleDrop"
+  <div
+    class="asset-picker"
+    :class="{ 'is-drag-over': dragOver }"
+    @dragenter.prevent="handleDragEnter"
+    @dragover.prevent="handleDragOver"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
+  >
+    <button class="asset-trigger" type="button" @click="openAssetDialog">
+      <span class="asset-trigger-preview" :class="{ empty: !currentPreviewUrl }">
+        <img v-if="currentPreviewUrl" :src="currentPreviewUrl" :alt="t('asset.currentAsset')" />
+        <el-icon v-else><Plus /></el-icon>
+      </span>
+      <span class="asset-trigger-copy">
+        <strong>{{ t('asset.openLibrary') }}</strong>
+        <small>{{ t('asset.directDropHint') }}</small>
+      </span>
+    </button>
+    <input
+      ref="uploadInput"
+      type="file"
+      :accept="uploadAccept"
+      multiple
+      style="display: none"
+      @change="handleUpload"
+    />
+
+    <el-dialog
+      v-model="assetDialogVisible"
+      :title="t('asset.libraryTitle')"
+      append-to-body
+      width="760px"
+      class="asset-library-dialog"
     >
-      <el-icon class="upload-icon"><Plus /></el-icon>
-      <span>{{ t('asset.upload') }}</span>
-      <input 
-        ref="uploadInput" 
-        type="file" 
-        :accept="uploadAccept" 
-        style="display: none" 
-        @change="handleUpload" 
-      />
-    </div>
-
-    <!-- 素材列表 -->
-    <div 
-      v-for="asset in assets" 
-      :key="asset.id" 
-      class="asset-item"
-      :class="{
-        active: (selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset)),
-        deleting: deletingId === asset.id
-      }"
-      @click="handleSelect(asset)"
-      @mouseenter="handleMouseEnter(asset, $event)"
-      @mouseleave="handleMouseLeave"
-    >
-      <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
-      <el-icon
-        v-if="isEditableSvgAsset(asset)"
-        class="edit-icon"
-        @click.stop="openSvgEditor(asset)"
-        :title="t('asset.editSvgColors')"
+      <div
+        class="asset-drop-zone"
+        :class="{ 'is-drag-over': dragOver }"
+        @click="triggerUpload"
+        @dragenter.prevent="handleDragEnter"
+        @dragover.prevent="handleDragOver"
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
       >
-        <Edit />
-      </el-icon>
-      <el-icon
-        v-if="!asset.isSystem && !(selectedAssetId != null ? asset.id === selectedAssetId : selectedUrl === getAssetUrl(asset))"
-        class="delete-icon"
-        @click.stop="handleRemove(asset)"
-        :title="t('asset.deleteAsset')"
-      >
-        <Delete />
-      </el-icon>
-      <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
-    </div>
+        <el-icon class="upload-icon"><Plus /></el-icon>
+        <div class="asset-drop-copy">
+          <strong>{{ uploading ? t('common.uploading') : t('asset.upload') }}</strong>
+          <span>{{ t('asset.dropMultiHint') }}</span>
+        </div>
+      </div>
 
-    <!-- 加载中 -->
-    <div v-if="loading" class="asset-item loading-item">
-      <el-icon class="loading-icon"><Loading /></el-icon>
-      <span>{{ t('asset.loading') }}</span>
-    </div>
+      <div v-if="uploadQueue.length" class="upload-queue">
+        <div class="upload-queue-header">
+          <strong>{{ t('asset.uploadQueue') }}</strong>
+          <span>{{ t('asset.uploadQueueSummary', { done: completedUploadCount, total: uploadQueue.length }) }}</span>
+        </div>
+        <div class="upload-queue-list">
+          <div
+            v-for="item in uploadQueue"
+            :key="item.id"
+            class="upload-queue-item"
+            :class="`status-${item.status}`"
+          >
+            <span class="upload-file-name" :title="item.file.name">{{ item.file.name }}</span>
+            <span class="upload-file-status">{{ uploadStatusLabel(item.status) }}</span>
+          </div>
+        </div>
+      </div>
 
-    <!-- 加载更多 / 收起 -->
-    <div v-if="hasMore && !loading" class="asset-item action-item" @click="loadMore">
-      <el-icon class="action-icon"><ArrowDown /></el-icon>
-      <span>{{ t('asset.loadMore') }}</span>
-    </div>
+      <div class="asset-grid">
+        <!-- 素材列表 -->
+        <div
+          v-for="asset in assets"
+          :key="asset.id"
+          class="asset-item"
+          :class="{
+            active: isAssetSelected(asset),
+            deleting: deletingId === asset.id
+          }"
+          @click="handleSelect(asset)"
+          @mouseenter="handleMouseEnter(asset, $event)"
+          @mouseleave="handleMouseLeave"
+        >
+          <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
+          <el-icon
+            v-if="isEditableSvgAsset(asset)"
+            class="edit-icon"
+            @click.stop="openSvgEditor(asset)"
+            :title="t('asset.editSvgColors')"
+          >
+            <Edit />
+          </el-icon>
+          <el-icon
+            v-if="!asset.isSystem && !isAssetSelected(asset)"
+            class="delete-icon"
+            @click.stop="handleRemove(asset)"
+            :title="t('asset.deleteAsset')"
+          >
+            <Delete />
+          </el-icon>
+          <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
+        </div>
 
-    <!-- 刷新按钮 -->
-    <div class="asset-item action-item" @click="refresh">
-      <el-icon class="action-icon"><Refresh /></el-icon>
-      <span>{{ t('common.refresh') }}</span>
-    </div>
+        <!-- 加载中 -->
+        <div v-if="loading" class="asset-item loading-item">
+          <el-icon class="loading-icon"><Loading /></el-icon>
+          <span>{{ t('asset.loading') }}</span>
+        </div>
+      </div>
+
+      <div class="asset-dialog-actions">
+        <el-button v-if="hasMore && !loading" @click="loadMore">
+          <el-icon><ArrowDown /></el-icon>
+          {{ t('asset.loadMore') }}
+        </el-button>
+        <el-button @click="refresh" :disabled="loading || uploading">
+          <el-icon><Refresh /></el-icon>
+          {{ t('common.refresh') }}
+        </el-button>
+      </div>
+
+      <template #footer>
+        <el-button @click="assetDialogVisible = false">{{ t('common.close') }}</el-button>
+      </template>
+    </el-dialog>
 
     <Teleport to="body">
       <div
@@ -178,6 +230,14 @@ interface SvgStopEntry {
   nextOpacity: string
 }
 
+type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
+
+interface UploadQueueItem {
+  id: string
+  file: File
+  status: UploadQueueStatus
+}
+
 const { t } = useI18n()
 const analogAssetStore = useAnalogAssetStore()
 
@@ -212,10 +272,13 @@ const props = defineProps({
 const uploadInput = ref<HTMLInputElement | null>(null)
 const assets = ref<AnalogAssetVO[]>([])
 const loading = ref(false)
+const uploading = ref(false)
 const hasMore = ref(true)
 const pageNum = ref(1)
 const pageSize = 12
 const deletingId = ref<number | null>(null)
+const assetDialogVisible = ref(false)
+const uploadQueue = ref<UploadQueueItem[]>([])
 const hoverPreviewAsset = ref<AnalogAssetVO | null>(null)
 const hoverPreviewStyle = ref<Record<string, string>>({})
 const dragOver = ref(false)
@@ -233,6 +296,19 @@ const hoverPreviewUrl = computed(() => {
   if (!hoverPreviewAsset.value) return undefined
   return getAssetUrl(hoverPreviewAsset.value)
 })
+
+const currentPreviewUrl = computed(() => {
+  if (props.selectedAssetId != null) {
+    const selectedAsset = assets.value.find((asset) => asset.id === props.selectedAssetId)
+    const selectedUrl = selectedAsset ? getAssetUrl(selectedAsset) : ''
+    if (selectedUrl) return selectedUrl
+  }
+  return props.selectedUrl || ''
+})
+
+const completedUploadCount = computed(() =>
+  uploadQueue.value.filter((item) => item.status === 'success' || item.status === 'failed').length
+)
 
 const uploadAccept = computed(() => {
   if (props.assetType === 'image') return '.svg,.png,.jpg,.jpeg,.webp'
@@ -255,6 +331,22 @@ const isSvgUrl = (value?: string): boolean => {
 const isEditableSvgAsset = (asset: AnalogAssetVO): boolean => {
   if (props.assetType !== 'image') return false
   return isSvgUrl(asset.file?.url) || isSvgUrl(asset.file?.name)
+}
+
+const openAssetDialog = () => {
+  assetDialogVisible.value = true
+}
+
+const isAssetSelected = (asset: AnalogAssetVO): boolean => {
+  const url = getAssetUrl(asset)
+  return props.selectedAssetId != null ? asset.id === props.selectedAssetId : props.selectedUrl === url
+}
+
+const uploadStatusLabel = (status: UploadQueueStatus): string => {
+  if (status === 'pending') return t('asset.uploadPending')
+  if (status === 'uploading') return t('common.uploading')
+  if (status === 'success') return t('asset.uploadDone')
+  return t('asset.uploadFailed')
 }
 
 /**
@@ -330,15 +422,16 @@ const triggerUpload = () => {
   uploadInput.value?.click()
 }
 
-const uploadFile = async (file: File | undefined): Promise<boolean> => {
+const uploadFile = async (file: File | undefined, showMessage = false): Promise<boolean> => {
   if (!file) return false
 
   if (!isAllowedUploadFile(file)) {
-    ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
+    if (showMessage) {
+      ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
+    }
     return false
   }
 
-  loading.value = true
   try {
     const res = await analogAssetApi.upload(file, props.assetType)
     
@@ -349,16 +442,61 @@ const uploadFile = async (file: File | undefined): Promise<boolean> => {
       if (url) {
         props.onUpload(url, res.data)
       }
-      ElMessage.success(t('asset.uploadSuccess'))
+      if (showMessage) ElMessage.success(t('asset.uploadSuccess'))
       return true
     }
     return false
   } catch (error) {
     console.error('上传失败:', error)
-    ElMessage.error(t('asset.uploadFailed'))
+    if (showMessage) ElMessage.error(t('asset.uploadFailed'))
     return false
-  } finally {
-    loading.value = false
+  }
+}
+
+const processUploadFiles = async (fileList: FileList | File[] | undefined | null) => {
+  if (!fileList || uploading.value) return
+
+  const files = Array.from(fileList)
+  if (!files.length) return
+
+  const validFiles: File[] = []
+  let invalidCount = 0
+  for (const file of files) {
+    if (isAllowedUploadFile(file)) {
+      validFiles.push(file)
+    } else {
+      invalidCount++
+    }
+  }
+
+  if (invalidCount > 0) {
+    ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
+  }
+  if (!validFiles.length) return
+
+  assetDialogVisible.value = true
+  uploadQueue.value = validFiles.map((file, index) => ({
+    id: `${Date.now()}-${index}-${file.name}`,
+    file,
+    status: 'pending',
+  }))
+
+  uploading.value = true
+  let successCount = 0
+  for (const item of uploadQueue.value) {
+    item.status = 'uploading'
+    const ok = await uploadFile(item.file)
+    item.status = ok ? 'success' : 'failed'
+    if (ok) successCount++
+  }
+  uploading.value = false
+
+  if (successCount === validFiles.length) {
+    ElMessage.success(t('asset.uploadSuccessCount', { count: successCount }))
+  } else if (successCount > 0) {
+    ElMessage.warning(t('asset.uploadPartialCount', { success: successCount, failed: validFiles.length - successCount }))
+  } else {
+    ElMessage.error(t('asset.uploadFailedCount', { count: validFiles.length }))
   }
 }
 
@@ -367,8 +505,7 @@ const uploadFile = async (file: File | undefined): Promise<boolean> => {
  */
 const handleUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  await uploadFile(file)
+  await processUploadFiles(input.files)
   input.value = ''
 }
 
@@ -386,7 +523,7 @@ const handleDragLeave = () => {
 
 const handleDrop = async (event: DragEvent) => {
   dragOver.value = false
-  await uploadFile(event.dataTransfer?.files?.[0])
+  await processUploadFiles(event.dataTransfer?.files)
 }
 
 /**
@@ -625,7 +762,7 @@ const saveEditedSvgAsset = async () => {
     const originalName = editingSvgAsset.value.file?.name || `asset-${editingSvgAsset.value.id}.svg`
     const baseName = originalName.replace(/\.svg$/i, '')
     const file = new File([editedSvgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
-    const ok = await uploadFile(file)
+    const ok = await uploadFile(file, true)
     if (ok) {
       svgEditorVisible.value = false
       editingSvgAsset.value = null
@@ -689,7 +826,198 @@ defineExpose({
 <style scoped>
 .asset-picker {
   display: flex;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+.asset-picker.is-drag-over .asset-trigger {
+  border-color: #0f6b68;
+  background: var(--studio-primary-soft);
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.12);
+}
+
+.asset-trigger {
+  width: 100%;
+  min-height: 72px;
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  text-align: left;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.asset-trigger:hover {
+  border-color: #0f6b68;
+  background: var(--studio-primary-soft);
+}
+
+.asset-trigger-preview {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background-color: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.asset-trigger-preview.empty {
+  border-style: dashed;
+  color: var(--studio-text-muted);
+}
+
+.asset-trigger-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.asset-trigger-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asset-trigger-copy strong {
+  font-size: 13px;
+  color: var(--studio-text);
+}
+
+.asset-trigger-copy small {
+  font-size: 12px;
+  color: var(--studio-text-muted);
+  line-height: 1.35;
+}
+
+:deep(.asset-library-dialog .el-dialog__body) {
+  padding: 18px 20px;
+}
+
+.asset-drop-zone {
+  min-height: 92px;
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.asset-drop-zone:hover,
+.asset-drop-zone.is-drag-over {
+  border-color: #0f6b68;
+  background: var(--studio-primary-soft);
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.12);
+}
+
+.asset-drop-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asset-drop-copy strong {
+  font-size: 14px;
+  color: var(--studio-text);
+}
+
+.asset-drop-copy span {
+  font-size: 12px;
+  color: var(--studio-text-muted);
+}
+
+.asset-grid {
+  max-height: 360px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  padding: 2px;
+}
+
+.upload-queue {
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.upload-queue-header,
+.upload-queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.upload-queue-header {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--studio-border);
+  font-size: 12px;
+  color: var(--studio-text-muted);
+}
+
+.upload-queue-header strong {
+  color: var(--studio-text);
+}
+
+.upload-queue-list {
+  max-height: 160px;
+  overflow: auto;
+}
+
+.upload-queue-item {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.upload-queue-item + .upload-queue-item {
+  border-top: 1px solid var(--studio-border);
+}
+
+.upload-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text);
+}
+
+.upload-file-status {
+  flex: 0 0 auto;
+  color: var(--studio-text-muted);
+}
+
+.upload-queue-item.status-uploading .upload-file-status {
+  color: #0f6b68;
+}
+
+.upload-queue-item.status-success .upload-file-status {
+  color: #67c23a;
+}
+
+.upload-queue-item.status-failed .upload-file-status {
+  color: #f56c6c;
+}
+
+.asset-dialog-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
