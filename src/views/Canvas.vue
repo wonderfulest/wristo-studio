@@ -1,8 +1,13 @@
 <template>
   <div
     class="canvas-wrapper"
+    :class="{ 'is-file-drag-over': isFileDragOver, 'is-file-uploading': isUploadingDroppedImage }"
     :style="{ '--canvas-margin': `${CANVAS_MARGIN}px` }"
     @pointerdown="handleWrapperPointerDown"
+    @dragenter.prevent="handleDragEnter"
+    @dragover.prevent="handleDragOver"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
   >
     <div class="watch-face-backdrop" :style="watchFaceBackdropStyle"></div>
     <canvas ref="canvasRef"></canvas>
@@ -13,11 +18,13 @@
 
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useHistoryStore } from '@/stores/historyStore'
+import { addElement } from '@/engine/managers/elementManager'
 import { initCanvasManager, disposeCanvasManager } from '@/engine/managers/canvasManager'
 import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoomManager'
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
@@ -31,6 +38,11 @@ import {
   scaleFabricCanvasForDesignSize,
   type DesignSize,
 } from '@/utils/designScale'
+import { analogAssetApi } from '@/api/wristo/analogAsset'
+import type { AnalogAssetVO } from '@/types/api/analog-asset'
+import type { ImageElementConfig } from '@/types/elements/image'
+import { imageSchema } from '@/elements/decoration/image/image.schema'
+import { useI18n } from '@/i18n'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -45,6 +57,9 @@ const MAX_ZOOM = 3
 const ZOOM_STEP = 0.1
 const canvasOffset = ref<{ x: number; y: number }>({ x: 0, y: 0 })
 const editorStore = useEditorStore()
+const { t } = useI18n()
+const isFileDragOver = ref(false)
+const isUploadingDroppedImage = ref(false)
 let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
 
@@ -154,6 +169,133 @@ const handleWrapperPointerDown = (event: PointerEvent) => {
   clearCanvasSelection()
 }
 
+const isSvgOrPngFile = (file: File): boolean => {
+  const type = String(file.type || '').toLowerCase()
+  const name = String(file.name || '').toLowerCase()
+  return type === 'image/svg+xml' || type === 'image/png' || /\.(svg|png)$/i.test(name)
+}
+
+const getDroppedImageFile = (event: DragEvent): File | null => {
+  const files = Array.from(event.dataTransfer?.files || [])
+  if (!files.length) return null
+
+  if (files.length !== 1) {
+    ElMessage.warning(t('asset.dropSingleSvgPngOnly'))
+    return null
+  }
+
+  const file = files[0]
+  if (!isSvgOrPngFile(file)) {
+    ElMessage.warning(t('asset.dropSingleSvgPngOnly'))
+    return null
+  }
+
+  return file
+}
+
+const getAssetImageUrl = (asset: AnalogAssetVO): string => {
+  return asset.file?.previewUrl || asset.file?.url || ''
+}
+
+const loadImageSize = (url: string): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => {
+      resolve({
+        width: Math.max(1, Number(image.naturalWidth || image.width || 1)),
+        height: Math.max(1, Number(image.naturalHeight || image.height || 1)),
+      })
+    }
+    image.onerror = () => resolve({ width: 60, height: 60 })
+    image.src = url
+  })
+}
+
+const getDropPoint = (event: DragEvent): { left: number; top: number } => {
+  const canvas = baseStore.canvas
+  const fallback = {
+    left: Number(designStore.designSpec.centerX ?? watchWidth.value / 2),
+    top: Number(designStore.designSpec.centerY ?? watchHeight.value / 2),
+  }
+  if (!canvas?.getPointer) return fallback
+
+  const pointer = canvas.getPointer(event as unknown as MouseEvent)
+  const left = Math.min(Math.max(Number(pointer.x || 0), 0), Number(watchWidth.value || fallback.left * 2))
+  const top = Math.min(Math.max(Number(pointer.y || 0), 0), Number(watchHeight.value || fallback.top * 2))
+  return { left: Math.round(left), top: Math.round(top) }
+}
+
+const getInitialImageSize = async (url: string): Promise<{ width: number; height: number }> => {
+  const natural = await loadImageSize(url)
+  const width = Math.max(1, Number(imageSchema.defaultConfig.width || 60))
+  const aspect = natural.width > 0 ? natural.height / natural.width : 1
+  return {
+    width,
+    height: Math.max(1, Math.round(width * aspect)),
+  }
+}
+
+const handleDragEnter = (event: DragEvent) => {
+  if ((event.dataTransfer?.items?.length || event.dataTransfer?.files?.length || 0) > 0) {
+    isFileDragOver.value = true
+  }
+}
+
+const handleDragOver = (event: DragEvent) => {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+  isFileDragOver.value = true
+}
+
+const handleDragLeave = (event: DragEvent) => {
+  const current = event.currentTarget as HTMLElement | null
+  const related = event.relatedTarget as Node | null
+  if (current && related && current.contains(related)) return
+  isFileDragOver.value = false
+}
+
+const handleDrop = async (event: DragEvent) => {
+  isFileDragOver.value = false
+  if (isUploadingDroppedImage.value) return
+
+  const file = getDroppedImageFile(event)
+  if (!file) return
+
+  isUploadingDroppedImage.value = true
+  try {
+    const res = await analogAssetApi.upload(file, 'image')
+    const asset = res.data
+    const imageUrl = asset ? getAssetImageUrl(asset) : ''
+    if (!asset || !imageUrl) {
+      ElMessage.error(t('asset.uploadFailed'))
+      return
+    }
+
+    const size = await getInitialImageSize(imageUrl)
+    const point = getDropPoint(event)
+    const config: ImageElementConfig = {
+      id: '',
+      eleType: 'image',
+      imageUrl,
+      assetId: asset.id,
+      width: size.width,
+      height: size.height,
+      left: point.left,
+      top: point.top,
+      originX: 'center',
+      originY: 'center',
+    }
+
+    await historyStore.runWithoutRecording(() => addElement('image', config as any))
+    historyStore.saveState('add:image:drop', { coalesceIfSameFabric: true })
+    ElMessage.success(t('asset.uploadSuccess'))
+  } catch (error) {
+    console.error('[Canvas] drop image upload failed:', error)
+    ElMessage.error(t('asset.uploadFailed'))
+  } finally {
+    isUploadingDroppedImage.value = false
+  }
+}
+
 const syncElementDataForCanvasSize = (from: DesignSize, to: DesignSize) => {
   for (const snapshot of elementDataStore.elements) {
     const eleType = String(snapshot.eleType ?? '')
@@ -216,6 +358,21 @@ defineExpose({
 
 .canvas-wrapper:active {
   cursor: grabbing;
+}
+
+.canvas-wrapper.is-file-drag-over::after,
+.canvas-wrapper.is-file-uploading::after {
+  content: '';
+  position: absolute;
+  left: var(--canvas-margin);
+  top: var(--canvas-margin);
+  width: calc(100% - var(--canvas-margin) * 2);
+  height: calc(100% - var(--canvas-margin) * 2);
+  border: 2px dashed var(--studio-primary);
+  border-radius: 8px;
+  background: rgba(15, 107, 104, 0.08);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .canvas-controls {
