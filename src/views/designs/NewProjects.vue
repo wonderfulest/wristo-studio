@@ -72,7 +72,7 @@ const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
 const deletingDesignId = ref<number | null>(null)
 
-const isPublishedDesign = (design: Design | null | undefined) => design?.designStatus === 'published'
+const isLaunchedDesign = (design: Design | null | undefined) => !!design?.product?.lastGoLive
 
 const generateRandomProjectName = () => {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -204,7 +204,7 @@ const handleOpenRecentDesign = async (design: Design) => {
 }
 
 const confirmDeleteRecentDesign = (design: Design) => {
-  if (isPublishedDesign(design)) {
+  if (isLaunchedDesign(design)) {
     messageStore.warning(t('project.deletePublishedNotAllowed'))
     return
   }
@@ -215,7 +215,7 @@ const confirmDeleteRecentDesign = (design: Design) => {
 const deleteRecentDesign = async () => {
   const design = designToDelete.value
   if (!design || deletingDesignId.value === design.id) return
-  if (isPublishedDesign(design)) {
+  if (isLaunchedDesign(design)) {
     messageStore.warning(t('project.deletePublishedNotAllowed'))
     deleteDialogVisible.value = false
     designToDelete.value = null

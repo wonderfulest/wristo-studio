@@ -139,8 +139,6 @@ const getStatusText = (status: Design['designStatus']) => {
     submitted: t('status.submitted'),
     approved: t('status.approved'),
     rejected: t('status.rejected'),
-    packaged: t('status.packaged'),
-    published: t('status.published'),
   }
   return statusMap[status] || t('status.unknown')
 }
@@ -151,8 +149,6 @@ const getStatusColor = (status: Design['designStatus']) => {
     submitted: '#909399',
     approved: '#67C23A',
     rejected: '#F56C6C',
-    packaged: '#E6A23C',
-    published: '#0f6b68',
   }
   return statusMap[status] || '#909399'
 }

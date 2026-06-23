@@ -86,8 +86,8 @@ export type DesignStatus =
   | 'submitted'
   | 'approved'
   | 'rejected'
-  | 'packaged'
-  | 'published'
+
+export type LaunchStatus = 'launched' | 'not_launched'
 
 // 设计相关类型定义
 export interface DesignElement {
@@ -142,6 +142,8 @@ export interface DesignPageParams {
   populate?: string
   userId?: number
   status?: string
+  designStatus?: DesignStatus
+  launchStatus?: LaunchStatus
   name?: string
   scope?: 'mine' | 'all'
   device?: string

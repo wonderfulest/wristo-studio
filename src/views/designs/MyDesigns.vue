@@ -5,12 +5,18 @@
       <!-- 当前设备展示与选择 -->
       <DeviceDisplay ref="deviceDisplayRef" />
       <el-input v-model="searchName" :placeholder="t('project.searchName')" class="name-filter" clearable @keyup.enter="handleSearch" />
-      <!-- <el-select v-model="selectedStatus" placeholder="Select Status" class="status-filter" @change="handleStatusChange">
-        <el-option label="All" value="" />
-        <el-option label="Draft" value="draft" />
-        <el-option label="Pending" value="submitted" />
-        <el-option label="Published" value="published" />
-      </el-select> -->
+      <el-select v-model="selectedStatus" :placeholder="t('project.status')" clearable class="status-filter" @change="handleStatusChange">
+        <el-option :label="t('common.all')" value="" />
+        <el-option :label="t('status.draft')" value="draft" />
+        <el-option :label="t('status.submitted')" value="submitted" />
+        <el-option :label="t('status.approved')" value="approved" />
+        <el-option :label="t('status.rejected')" value="rejected" />
+      </el-select>
+      <el-select v-model="selectedLaunchStatus" :placeholder="t('project.launchStatus')" clearable class="status-filter" @change="handleStatusChange">
+        <el-option :label="t('common.all')" value="" />
+        <el-option :label="t('project.launched')" value="launched" />
+        <el-option :label="t('project.notLaunched')" value="not_launched" />
+      </el-select>
 
       <el-select v-model="sortField" :placeholder="t('project.sortField')" @change="handleSortChange" class="sort-field-filter">
         <el-option :label="t('project.createdTime')" value="created_at" />
@@ -138,7 +144,7 @@ import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
-import { Design, DesignStatus, type DesignPageParams } from '@/types/api/design'
+import { Design, DesignStatus, LaunchStatus, type DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -185,7 +191,8 @@ const loadingStatesPlain = computed(() => loadingStates.value)
 
 // 搜索相关状态
 const searchName = ref('')
-// const selectedStatus = ref('')
+const selectedStatus = ref<DesignStatus | ''>('')
+const selectedLaunchStatus = ref<LaunchStatus | ''>('')
 const sortField = ref('updated_at')
 const sortOrder = ref('desc')
 
@@ -203,11 +210,46 @@ const canDeleteDesign = computed(() => {
   return level !== 'free'
 })
 
-const isPublishedDesign = (design: Design | null | undefined) => design?.designStatus === 'published'
+const isLaunchedDesign = (design: Design | null | undefined) => !!design?.product?.lastGoLive
+
+type DesignScope = 'mine' | 'all'
+
+const DESIGN_SCOPE_STORAGE_KEY = 'wristo-studio:my-designs:scope'
+
+const isDesignScope = (value: string | null): value is DesignScope => value === 'mine' || value === 'all'
+
+const readDesignScopePreference = (): DesignScope | null => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const value = window.localStorage.getItem(DESIGN_SCOPE_STORAGE_KEY)
+    return isDesignScope(value) ? value : null
+  } catch (error) {
+    console.warn('[MyDesigns] read design scope preference failed:', error)
+    return null
+  }
+}
+
+const writeDesignScopePreference = (scope: DesignScope) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(DESIGN_SCOPE_STORAGE_KEY, scope)
+  } catch (error) {
+    console.warn('[MyDesigns] write design scope preference failed:', error)
+  }
+}
+
+const getPreferredDesignScope = (isAdmin: boolean): DesignScope => {
+  if (!isAdmin) return 'mine'
+  return readDesignScopePreference() || 'all'
+}
+
+const initialDesignScope = getPreferredDesignScope(isAdminUser.value)
 
 // 添加作者显示控制
-const showCreator = ref(isAdminUser.value)  // 管理员默认查看全部设计时展示作者
-const designScope = ref<'mine' | 'all'>(isAdminUser.value ? 'all' : 'mine')
+const showCreator = ref(isAdminUser.value && initialDesignScope === 'all')  // 管理员默认查看全部设计时展示作者
+const designScope = ref<DesignScope>(initialDesignScope)
 const designScopeOptions = computed(() => [
   { label: t('project.scopeMine'), value: 'mine' },
   { label: t('project.scopeAll'), value: 'all' }
@@ -225,8 +267,14 @@ const handleSortChange = () => {
   fetchDesigns()
 }
 
+const handleStatusChange = () => {
+  currentPage.value = 1
+  fetchDesigns()
+}
+
 const handleDesignScopeChange = () => {
   currentPage.value = 1
+  writeDesignScopePreference(designScope.value)
   if (designScope.value === 'all') {
     showCreator.value = true
   }
@@ -234,7 +282,7 @@ const handleDesignScopeChange = () => {
 }
 
 watch(isAdminUser, (isAdmin) => {
-  const nextScope = isAdmin ? 'all' : 'mine'
+  const nextScope = getPreferredDesignScope(isAdmin)
   if (designScope.value === nextScope) return
 
   designScope.value = nextScope
@@ -251,9 +299,7 @@ const getStatusText = (status: DesignStatus) => {
     draft: t('status.draft'),
     submitted: t('status.submitted'),
     approved: t('status.approved'),
-    rejected: t('status.rejected'),
-    packaged: t('status.packaged'),
-    published: t('status.published')
+    rejected: t('status.rejected')
   }
   return statusMap[status as keyof typeof statusMap] || t('status.unknown')
 }
@@ -264,9 +310,7 @@ const getStatusColor = (status: DesignStatus) => {
     draft: '#606266',        // 暗色 - 草稿状态
     submitted: '#909399',    // 灰色 - 待审核状态
     approved: '#67C23A',     // 亮色 - 已批准状态
-    rejected: '#F56C6C',     // 红色 - 被拒绝状态
-    packaged: '#E6A23C',     // 橙色 - 已打包状态
-    published: '#0f6b68'     // 品牌绿色 - 已发布状态
+    rejected: '#F56C6C'      // 红色 - 被拒绝状态
   }
   return statusMap[status as keyof typeof statusMap] || '#909399'
 }
@@ -298,7 +342,8 @@ const fetchDesigns = async () => {
     const params: DesignPageParams = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      // status: selectedStatus.value,
+      designStatus: selectedStatus.value || undefined,
+      launchStatus: selectedLaunchStatus.value || undefined,
       name: searchName.value,
       orderBy: `${sortField.value}:${sortOrder.value}`,
       scope: isAdminUser.value ? designScope.value : 'mine',
@@ -408,7 +453,7 @@ const copyDesign = async (design: Design) => {
 
 // 确认删除
 const confirmDelete = (design: Design) => {
-  if (isPublishedDesign(design)) {
+  if (isLaunchedDesign(design)) {
     messageStore.warning(t('project.deletePublishedNotAllowed'))
     return
   }
@@ -419,7 +464,7 @@ const confirmDelete = (design: Design) => {
 // 执行删除
 const confirmDeleteDesign = async () => {
   if (!designToDelete.value || loadingStates.value.delete.has(designToDelete.value.id)) return
-  if (isPublishedDesign(designToDelete.value)) {
+  if (isLaunchedDesign(designToDelete.value)) {
     messageStore.warning(t('project.deletePublishedNotAllowed'))
     deleteDialogVisible.value = false
     designToDelete.value = null
