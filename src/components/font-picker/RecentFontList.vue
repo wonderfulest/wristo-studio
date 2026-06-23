@@ -1,10 +1,6 @@
 <template>
   <div class="font-section">
-    <div class="section-header">
-      <span class="arrow expanded">›</span>
-      {{ t('font.recent') }}
-    </div>
-    <div class="section-content">
+    <div class="font-list-content">
       <div v-if="!visibleFonts.length" class="no-fonts">{{ t('font.noRecentFonts') }}</div>
       <div v-else class="font-family-group">
         <div
@@ -22,6 +18,7 @@
             :font-id="font.id"
             :style-tags="font.styleTags"
             :can-edit-search-index="!!font.id"
+            is-recent
             compact
             @edit-search-index="() => emit('editSearchIndex', font)"
           />
@@ -57,30 +54,12 @@ const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, prop
 
 <style scoped>
 .font-section {
+  position: relative;
   border-bottom: 1px solid var(--studio-border);
 }
 
-.section-header {
-  padding: 4px 12px;
-  font-size: 13px;
-  color: var(--studio-text);
-  display: flex;
-  align-items: center;
-  user-select: none;
-}
-
-.arrow {
-  display: inline-block;
-  margin-right: 8px;
-  transition: transform 0.3s;
-}
-
-.arrow.expanded {
-  transform: rotate(90deg);
-}
-
-.section-content {
-  padding: 8px 0;
+.font-list-content {
+  padding: 8px 12px;
 }
 
 .family-name {
@@ -91,8 +70,16 @@ const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, prop
   border-bottom: 1px solid var(--studio-border);
 }
 
+.font-family-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .font-item {
-  padding: 5px 10px;
+  width: 100%;
+  padding: 0;
   cursor: pointer;
   display: flex;
   flex-direction: column;

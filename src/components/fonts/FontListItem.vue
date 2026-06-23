@@ -1,9 +1,19 @@
 <template>
   <div class="font-main" :class="{ 'font-main-compact': compact }" v-if="isReady">
-    <div class="font-header" v-if="label || hasTags || fontId != null">
+    <el-tooltip v-if="isSystem" :content="t('font.systemFont')" placement="top">
+      <div class="font-corner-badge font-system-badge" :aria-label="t('font.systemFont')">
+        <i class="iconfont icon-system"></i>
+      </div>
+    </el-tooltip>
+    <el-tooltip v-if="isRecent" :content="t('font.recent')" placement="top">
+      <div class="font-corner-badge font-recent-badge" :style="recentBadgeStyle" :aria-label="t('font.recent')">
+        <el-icon><Clock /></el-icon>
+      </div>
+    </el-tooltip>
+    <div class="font-header" v-if="label || hasTags || fontId != null" :style="headerStyle">
       <div class="font-title-group">
         <div class="font-name" v-if="label">{{ label }}</div>
-        <div class="font-name-actions" v-if="fontId != null">
+        <div class="font-name-actions" :style="actionsStyle" v-if="fontId != null">
           <button
             v-if="fontId != null && canEditSearchIndex"
             type="button"
@@ -26,12 +36,7 @@
           </button>
         </div>
       </div>
-      <div class="font-tags" v-if="hasTags">
-        <el-tooltip v-if="isSystem" :content="t('font.systemFont')" placement="top">
-          <el-tag size="small" type="info" class="system-icon-tag">
-            <i class="iconfont icon-system"></i>
-          </el-tag>
-        </el-tooltip>
+      <div class="font-tags" v-if="hasTags" :style="tagsStyle">
         <el-tag v-if="isMonospace" size="small" effect="plain">Mono</el-tag>
         <el-tag
           v-for="tag in visibleStyleTags"
@@ -80,7 +85,7 @@
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElTag, ElMessageBox } from 'element-plus'
-import { CollectionTag, Edit, Delete } from '@element-plus/icons-vue'
+import { CollectionTag, Edit, Delete, Clock } from '@element-plus/icons-vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -104,6 +109,7 @@ const props = defineProps<{
   styleTags?: string | string[]
   canEditSearchIndex?: boolean
   previewText?: string
+  isRecent?: boolean
   compact?: boolean
 }>()
 
@@ -127,8 +133,25 @@ const parsedStyleTags = computed(() => {
   return list.map(tag => tag.trim()).filter(Boolean)
 })
 const visibleStyleTags = computed(() => parsedStyleTags.value.slice(0, 3))
-const hasTags = computed(() => props.isSystem || props.isMonospace || !!props.subfamily || visibleStyleTags.value.length > 0)
+const hasTags = computed(() => props.isMonospace || !!props.subfamily || visibleStyleTags.value.length > 0)
 const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
+const cornerBadgeCount = computed(() => (props.isSystem ? 1 : 0) + (props.isRecent ? 1 : 0))
+const cornerBadgeWidth = computed(() => cornerBadgeCount.value * 28)
+const actionWidth = computed(() => (props.fontId != null ? 58 : 0))
+const recentBadgeStyle = computed(() => ({
+  right: props.isSystem ? '34px' : '6px',
+}))
+const actionsStyle = computed(() => ({
+  right: `${6 + cornerBadgeWidth.value}px`,
+}))
+const tagsStyle = computed(() => ({
+  right: `${10 + cornerBadgeWidth.value + actionWidth.value}px`,
+}))
+const headerStyle = computed(() => {
+  const tagSpace = hasTags.value ? 150 : 0
+  const padding = actionWidth.value + cornerBadgeWidth.value + tagSpace
+  return padding > 0 ? { paddingRight: `${padding}px` } : {}
+})
 
 const formatTag = (tag: string) => tag
   .split('-')
@@ -220,6 +243,7 @@ const onEditSearchIndex = () => {
 
 <style scoped>
 .font-main {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -232,6 +256,35 @@ const onEditSearchIndex = () => {
   border-radius: var(--studio-radius-md);
   box-shadow: var(--studio-shadow-sm);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.font-corner-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--studio-text-muted);
+  box-shadow: none;
+  opacity: 0.64;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.font-corner-badge :deep(.el-icon),
+.font-corner-badge .iconfont {
+  font-size: 14px;
+}
+
+.font-system-badge {
+  right: 6px;
 }
 
 :root[data-studio-theme='dark'] .font-main {
@@ -258,7 +311,7 @@ const onEditSearchIndex = () => {
   display: inline-flex;
   align-items: center;
   min-width: 0;
-  gap: 4px;
+  gap: 8px;
   flex: 1 1 auto;
 }
 
@@ -275,18 +328,25 @@ const onEditSearchIndex = () => {
 }
 
 .font-name-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
-  flex: 0 0 auto;
-  gap: 2px;
+  gap: 4px;
 }
 
 .font-tags {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   justify-content: flex-end;
-  max-width: 42%;
+  align-items: center;
+  max-width: min(42%, 150px);
 }
 
 .font-tags :deep(.el-tag) {
@@ -308,15 +368,16 @@ const onEditSearchIndex = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--studio-surface-soft);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.42) inset;
-  font-size: 15px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  opacity: 0.72;
   cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, color 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
 
 .font-icon-btn-tag,
@@ -330,16 +391,18 @@ const onEditSearchIndex = () => {
 
 .font-icon-btn-tag:hover,
 .font-icon-btn-edit:hover {
-  background: var(--studio-primary-soft);
+  background: transparent;
   border-color: var(--studio-primary-border);
-  box-shadow: 0 0 0 3px var(--studio-focus-ring);
+  box-shadow: none;
+  opacity: 1;
   transform: translateY(-1px);
 }
 
 .font-icon-btn-delete:hover {
-  background: rgba(220, 38, 38, 0.1);
+  background: transparent;
   border-color: rgba(220, 38, 38, 0.28);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+  box-shadow: none;
+  opacity: 1;
   transform: translateY(-1px);
 }
 
@@ -376,6 +439,7 @@ const onEditSearchIndex = () => {
 
 .font-main-compact .font-header {
   min-height: 20px;
+  padding-right: 50px;
 }
 
 .font-main-compact .font-name {
@@ -385,7 +449,7 @@ const onEditSearchIndex = () => {
 }
 
 .font-main-compact .font-title-group {
-  gap: 3px;
+  gap: 7px;
 }
 
 .font-main-compact .font-tags :deep(.el-tag) {

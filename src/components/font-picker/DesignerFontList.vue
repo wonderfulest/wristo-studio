@@ -46,6 +46,7 @@ const props = defineProps<{
   modelValue: string
   type: string
   canUsePremiumAssets?: boolean
+  includeAllUsers?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -75,6 +76,7 @@ const loadPage = async () => {
             pageNum: pageNum.value,
             pageSize: pageSize.value,
             type: props.type,
+            includeAllUsers: props.includeAllUsers === true,
           })
         : await searchFonts({
             pageNum: pageNum.value,
@@ -124,7 +126,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.type, props.canUsePremiumAssets],
+  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers],
   () => {
     // reset when type changes
     pageNum.value = 1
@@ -141,11 +143,15 @@ watch(
 }
 
 .font-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 8px 12px;
 }
 
 .font-item {
-  padding: 5px 10px;
+  width: 100%;
+  padding: 0;
   cursor: pointer;
   display: flex;
   flex-direction: column;

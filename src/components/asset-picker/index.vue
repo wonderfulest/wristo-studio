@@ -30,7 +30,7 @@
       v-model="assetDialogVisible"
       :title="t('asset.libraryTitle')"
       append-to-body
-      width="760px"
+      width="min(1520px, 96vw)"
       class="asset-library-dialog"
     >
       <div
@@ -66,8 +66,24 @@
           </div>
         </div>
       </div>
+      <div
+        v-else-if="uploadSummaryMessage"
+        class="upload-complete-message"
+        :class="`tone-${uploadSummaryTone}`"
+      >
+        {{ uploadSummaryMessage }}
+      </div>
 
-      <div class="asset-grid">
+      <div v-if="canViewAllAssets" class="asset-scope-tabs">
+        <el-segmented
+          v-model="assetScope"
+          :options="assetScopeOptions"
+          size="small"
+          @change="handleScopeChange"
+        />
+      </div>
+
+      <div class="asset-grid" @scroll="handleAssetGridScroll">
         <!-- 素材列表 -->
         <div
           v-for="asset in assets"
@@ -91,7 +107,7 @@
             <Edit />
           </el-icon>
           <el-icon
-            v-if="!asset.isSystem && !isAssetSelected(asset)"
+            v-if="canRemoveAsset(asset) && !isAssetSelected(asset)"
             class="delete-icon"
             @click.stop="handleRemove(asset)"
             :title="t('asset.deleteAsset')"
@@ -108,15 +124,15 @@
         </div>
       </div>
 
-      <div class="asset-dialog-actions">
-        <el-button v-if="hasMore && !loading" @click="loadMore">
-          <el-icon><ArrowDown /></el-icon>
-          {{ t('asset.loadMore') }}
-        </el-button>
-        <el-button @click="refresh" :disabled="loading || uploading">
-          <el-icon><Refresh /></el-icon>
-          {{ t('common.refresh') }}
-        </el-button>
+      <div class="asset-scroll-hint">
+        <span v-if="loading">
+          <el-icon class="hint-loading-icon"><Loading /></el-icon>
+          {{ t('asset.loading') }}
+        </span>
+        <button v-else-if="hasMore" class="asset-scroll-more" type="button" @click="loadMore">
+          {{ t('asset.scrollForMore') }}
+        </button>
+        <span v-else-if="assets.length">{{ t('asset.noMore') }}</span>
       </div>
 
       <template #footer>
@@ -207,10 +223,11 @@
 <script setup lang="ts">
 import { ref, onMounted, PropType, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowDown, Refresh, Loading, Star, Delete, Edit } from '@element-plus/icons-vue'
+import { Plus, Loading, Star, Delete, Edit } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
+import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import ColorPicker from '@/components/color-picker/index.vue'
 
@@ -240,6 +257,7 @@ interface UploadQueueItem {
 
 const { t } = useI18n()
 const analogAssetStore = useAnalogAssetStore()
+const userStore = useUserStore()
 
 const props = defineProps({
   /** 当前选中的URL */
@@ -275,10 +293,13 @@ const loading = ref(false)
 const uploading = ref(false)
 const hasMore = ref(true)
 const pageNum = ref(1)
-const pageSize = 12
+const pageSize = 48
+const assetScope = ref<'mine' | 'all'>('mine')
 const deletingId = ref<number | null>(null)
 const assetDialogVisible = ref(false)
 const uploadQueue = ref<UploadQueueItem[]>([])
+const uploadSummaryMessage = ref('')
+const uploadSummaryTone = ref<'success' | 'warning' | 'danger'>('success')
 const hoverPreviewAsset = ref<AnalogAssetVO | null>(null)
 const hoverPreviewStyle = ref<Record<string, string>>({})
 const dragOver = ref(false)
@@ -289,6 +310,13 @@ const editingSvgText = ref('')
 const svgColorEntries = ref<SvgColorEntry[]>([])
 const svgStopEntries = ref<SvgStopEntry[]>([])
 const svgColorProperties: SvgColorProperty[] = ['fill', 'stroke', 'stop-color']
+
+const canViewAllAssets = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
+const currentUserId = computed(() => userStore.userInfo?.id ?? null)
+const assetScopeOptions = computed(() => [
+  { label: t('asset.scopeMine'), value: 'mine' },
+  { label: t('asset.scopeAll'), value: 'all' },
+])
 
 const hasSvgEditableEntries = computed(() => svgColorEntries.value.length > 0 || svgStopEntries.value.length > 0)
 
@@ -342,6 +370,12 @@ const isAssetSelected = (asset: AnalogAssetVO): boolean => {
   return props.selectedAssetId != null ? asset.id === props.selectedAssetId : props.selectedUrl === url
 }
 
+const canRemoveAsset = (asset: AnalogAssetVO): boolean => {
+  if (asset.isSystem) return false
+  if (userStore.isAdminUser) return true
+  return asset.userId != null && asset.userId === currentUserId.value
+}
+
 const uploadStatusLabel = (status: UploadQueueStatus): string => {
   if (status === 'pending') return t('asset.uploadPending')
   if (status === 'uploading') return t('common.uploading')
@@ -380,7 +414,8 @@ const loadAssets = async (reset = false) => {
       pageSize,
       analogAssetType: props.assetType,
       isActive: true,
-      orderBy: 'createdAt:desc'
+      orderBy: 'createdAt:desc',
+      scope: canViewAllAssets.value ? assetScope.value : 'mine',
     })
     
     if (res.data) {
@@ -404,14 +439,30 @@ const loadAssets = async (reset = false) => {
  * 加载更多
  */
 const loadMore = () => {
+  if (loading.value || !hasMore.value) return
   pageNum.value++
   loadAssets()
+}
+
+const handleAssetGridScroll = (event: Event) => {
+  const target = event.currentTarget as HTMLElement | null
+  if (!target || loading.value || !hasMore.value) return
+
+  const preloadOffset = 120
+  const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+  if (distanceToBottom <= preloadOffset) {
+    loadMore()
+  }
 }
 
 /**
  * 刷新列表
  */
 const refresh = () => {
+  loadAssets(true)
+}
+
+const handleScopeChange = () => {
   loadAssets(true)
 }
 
@@ -475,6 +526,7 @@ const processUploadFiles = async (fileList: FileList | File[] | undefined | null
   if (!validFiles.length) return
 
   assetDialogVisible.value = true
+  uploadSummaryMessage.value = ''
   uploadQueue.value = validFiles.map((file, index) => ({
     id: `${Date.now()}-${index}-${file.name}`,
     file,
@@ -492,12 +544,16 @@ const processUploadFiles = async (fileList: FileList | File[] | undefined | null
   uploading.value = false
 
   if (successCount === validFiles.length) {
-    ElMessage.success(t('asset.uploadSuccessCount', { count: successCount }))
+    uploadSummaryTone.value = 'success'
+    uploadSummaryMessage.value = t('asset.uploadSuccessCount', { count: successCount })
   } else if (successCount > 0) {
-    ElMessage.warning(t('asset.uploadPartialCount', { success: successCount, failed: validFiles.length - successCount }))
+    uploadSummaryTone.value = 'warning'
+    uploadSummaryMessage.value = t('asset.uploadPartialCount', { success: successCount, failed: validFiles.length - successCount })
   } else {
-    ElMessage.error(t('asset.uploadFailedCount', { count: validFiles.length }))
+    uploadSummaryTone.value = 'danger'
+    uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: validFiles.length })
   }
+  uploadQueue.value = []
 }
 
 /**
@@ -939,7 +995,7 @@ defineExpose({
 }
 
 .asset-grid {
-  max-height: 360px;
+  max-height: 536px;
   overflow: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -1014,11 +1070,64 @@ defineExpose({
   color: #f56c6c;
 }
 
-.asset-dialog-actions {
+.upload-complete-message {
+  margin: -2px 0 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #67c23a;
+}
+
+.upload-complete-message.tone-warning {
+  color: #e6a23c;
+}
+
+.upload-complete-message.tone-danger {
+  color: #f56c6c;
+}
+
+.asset-scope-tabs {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.asset-scope-tabs :deep(.el-segmented) {
+  --el-segmented-item-selected-bg-color: var(--studio-primary-soft);
+  --el-segmented-item-selected-color: var(--studio-primary);
+}
+
+.asset-scroll-hint {
   margin-top: 14px;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  min-height: 24px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.asset-scroll-hint span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.asset-scroll-more {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--studio-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.asset-scroll-more:hover {
+  text-decoration: underline;
+}
+
+.hint-loading-icon {
+  color: #0f6b68;
+  animation: spin 1s linear infinite;
 }
 
 .asset-item {

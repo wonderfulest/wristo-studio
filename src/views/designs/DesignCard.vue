@@ -90,6 +90,16 @@
             </el-tooltip>
           </div>
         </div>
+        <div v-if="canViewBusinessMetrics && design.product" class="business-metrics-row">
+          <span class="business-metric">
+            <Icon icon="material-symbols:download-rounded" />
+            <span>{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
+          </span>
+          <span class="business-metric">
+            <Icon icon="material-symbols:shopping-bag-outline-rounded" />
+            <span>{{ t('meter.orders') }}: {{ orderCountText }}</span>
+          </span>
+        </div>
         
         <span v-if="isMerchantUser">{{ t('card.design') }}: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
@@ -264,6 +274,16 @@ const hasMonthlyOrAnnualMembership = computed(() => {
 const canViewAppOperations = computed(() => {
   return isMerchantUser.value || isAdminUser.value || hasMonthlyOrAnnualMembership.value
 })
+const canViewBusinessMetrics = computed(() => isMerchantUser.value || isAdminUser.value)
+
+const formatCount = (value: unknown) => {
+  const count = Number(value ?? 0)
+  return Number.isFinite(count) ? Math.max(0, count).toLocaleString() : '0'
+}
+
+const downloadCountText = computed(() => formatCount(design.value.product?.download))
+const orderCountText = computed(() => formatCount(design.value.product?.purchase))
+
 const appScoreTotal = computed(() => {
   const rawScore = design.value.product?.score as unknown
   const rawTotal = typeof rawScore === 'object' && rawScore !== null
@@ -585,6 +605,30 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   font-weight: 700;
   color: var(--studio-text);
   font-variant-numeric: tabular-nums;
+}
+
+.business-metrics-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.business-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--studio-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.business-metric :deep(svg) {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  color: var(--studio-primary);
 }
 
 .ops-icon-btn {

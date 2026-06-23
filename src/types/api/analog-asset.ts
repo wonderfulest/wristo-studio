@@ -44,4 +44,6 @@ export interface AnalogAssetPageQueryDTO extends PageQueryDTO {
   isActive?: boolean
   /** 用户ID */
   userId?: number
+  /** 查询范围：mine 当前用户素材 + 系统素材；all 全部素材 */
+  scope?: 'mine' | 'all'
 }

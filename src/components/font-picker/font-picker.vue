@@ -9,11 +9,33 @@
     <!-- Font selection panel -->
     <Teleport to="body">
       <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle" @scroll.passive="onPanelScroll">
-        <!-- Add custom font button -->
-        <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
-        <!-- Icon library guidance (only for icon fonts) -->
-        <div v-if="type === FontTypes.ICON_FONT" class="icon-lib-tip">
-          <RouterLink class="open-library-anchor" to="/icon-library" target="_blank" rel="noopener">{{ t('font.manageIconFonts') }}</RouterLink>
+        <div class="font-panel-toolbar">
+          <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
+          <RouterLink
+            v-if="type === FontTypes.ICON_FONT"
+            class="open-library-anchor"
+            to="/icon-library"
+            target="_blank"
+            rel="noopener"
+          >
+            {{ t('font.manageIconFonts') }}
+          </RouterLink>
+          <RouterLink
+            v-else
+            class="open-library-anchor"
+            to="/fonts"
+            target="_blank"
+            rel="noopener"
+          >
+            {{ t('font.openFontsLibrary') }}
+          </RouterLink>
+          <el-segmented
+            v-if="canUsePremiumAssets"
+            v-model="fontScope"
+            class="font-scope-toggle"
+            :options="fontScopeOptions"
+            size="small"
+          />
         </div>
         <!-- Number font library guidance (only for number fonts) -->
         <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
@@ -26,6 +48,7 @@
           :model-value="modelValue"
           :type="type"
           :can-use-premium-assets="canUsePremiumAssets"
+          :include-all-users="includeAllUsers"
           @select="selectFont"
           @edit-search-index="openSearchIndexDialog"
         />
@@ -44,6 +67,7 @@
             :model-value="modelValue"
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
+            :include-all-users="includeAllUsers"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
         />
@@ -169,6 +193,7 @@ const pickerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
 const designerFontListRef = ref<InstanceType<typeof DesignerFontList> | null>(null)
+const fontScope = ref<'mine' | 'all'>('mine')
 type EditableSearchIndexFont = {
   id: number
   label?: string
@@ -213,6 +238,11 @@ const selectedFontFamily = computed(() => {
   return slug
 })
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
+const includeAllUsers = computed(() => canUsePremiumAssets.value === true && fontScope.value === 'all')
+const fontScopeOptions = computed(() => [
+  { label: t('font.scopeMine'), value: 'mine' },
+  { label: t('font.scopeAll'), value: 'all' },
+])
 
 // 切换面板显示
 const updatePanelPosition = () => {
@@ -528,30 +558,46 @@ void [systemSections, openNumberGlyphEditor]
   -webkit-box-orient: vertical;
 }
 
-.add-font-btn {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  background: none;
-  color: var(--studio-primary);
-  font-size: 14px;
-  cursor: pointer;
-  border-top: 1px solid var(--studio-border);
+.font-panel-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--studio-surface-raised);
+  border-bottom: 1px solid var(--studio-border);
 }
 
-.add-font-btn:hover {
+.add-font-btn,
+.open-library-anchor {
+  min-width: 0;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: var(--studio-surface);
+  color: var(--studio-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-font-btn:hover,
+.open-library-anchor:hover {
   background: var(--studio-surface-soft);
 }
 
-.icon-lib-tip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-top: 1px solid var(--studio-border);
-  border-bottom: 1px solid var(--studio-border);
-  font-size: 13px;
-  color: var(--studio-text-muted);
+.font-scope-toggle {
+  flex-shrink: 0;
 }
 
 /* solid divider between sections (thicker with subtle pattern) */

@@ -9,27 +9,16 @@
         class="search-input"
         @input="onInput"
       />
-      <div class="filters">
-        <label class="filter-item">
-          <input type="checkbox" v-model="monospaceChecked" @change="onFilterChange" />
-          {{ t('font.monospace') }}
-        </label>
-        <label class="filter-item">
-          <input type="checkbox" v-model="italicChecked" @change="onFilterChange" />
-          {{ t('font.italic') }}
-        </label>
-        <RouterLink class="open-library-anchor" to="/fonts" target="_blank" rel="noopener">{{ t('font.openFontsLibrary') }}</RouterLink>
-      </div>
     </div>
 
-    <template v-if="searchQuery || monospaceChecked || italicChecked">
+    <template v-if="searchQuery">
       <!-- Local search results -->
       <template v-if="filteredFonts.length > 0">
         <!-- <div class="section-header">
           <span class="arrow expanded">›</span>
           Local Search Results
         </div> -->
-        <div class="section-content">
+        <div class="font-list-content">
             <div
               v-for="font in filteredFonts"
               :key="font.value"
@@ -59,7 +48,7 @@
           <span class="arrow expanded">›</span>
           Online Search Results
         </div> -->
-        <div class="section-content">
+        <div class="font-list-content">
           <div
             v-for="font in remoteSearchResults"
             :key="font.value"
@@ -100,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { FontOption, useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
@@ -115,6 +104,7 @@ const props = defineProps<{
   modelValue: string
   type?: string
   canUsePremiumAssets?: boolean
+  includeAllUsers?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -137,10 +127,6 @@ console.log('[FontSearch] setup init', {
 })
 let searchTimer: number | undefined
 
-// filters
-const monospaceChecked = ref<boolean>(false)
-const italicChecked = ref<boolean>(false)
-
 const onInput = () => {
   console.log('[FontSearch] onInput', {
     rawQuery: searchQuery.value,
@@ -153,51 +139,26 @@ const onInput = () => {
 onMounted(() => {
   console.log('[FontSearch] onMounted', {
     initialQuery: searchQuery.value,
-    monospaceChecked: monospaceChecked.value,
-    italicChecked: italicChecked.value,
   })
   filterFonts()
 })
-// immediate refresh when toggling filters
-const onFilterChange = () => {
-  console.log('[FontSearch] onFilterChange', {
-    query: searchQuery.value,
-    monospaceChecked: monospaceChecked.value,
-    italicChecked: italicChecked.value,
-  })
-  if (searchTimer) window.clearTimeout(searchTimer)
-  filterFonts()
-}
 
-// Precise local style filters using metadata (fallback to heuristic if missing)
-const applyLocalStyleFilters = (items: FontItem[]) => {
-  const beforeCount = items.length
-  const result = items.filter((f) => {
-    // monospace
-    if (monospaceChecked.value && (f as any).isMonospace !== true) return false
-    // italic
-    if (italicChecked.value && (f as any).italic !== true) return false
-    return true
-  })
-  console.log('[FontSearch] applyLocalStyleFilters', {
-    inputCount: beforeCount,
-    outputCount: result.length,
-    monospaceChecked: monospaceChecked.value,
-    italicChecked: italicChecked.value,
-  })
-  return result
-}
+watch(
+  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers],
+  () => {
+    if (searchTimer) window.clearTimeout(searchTimer)
+    filterFonts()
+  }
+)
 
 const filterFonts = async () => {
   console.log('[FontSearch] filterFonts start', {
     query: searchQuery.value,
     type: props.type,
-    monospaceChecked: monospaceChecked.value,
-    italicChecked: italicChecked.value,
   })
   // local filter
   const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true)
-  filteredFonts.value = applyLocalStyleFilters(local)
+  filteredFonts.value = local
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
     filteredLocalCount: filteredFonts.value.length,
@@ -210,8 +171,6 @@ const filterFonts = async () => {
     console.log('[FontSearch] remote search request', {
       query: searchQuery.value,
       type: props.type,
-      monospaceChecked: monospaceChecked.value,
-      italicChecked: italicChecked.value,
     })
     const response = await searchFonts({
       pageNum: 1,
@@ -219,8 +178,7 @@ const filterFonts = async () => {
       name: searchQuery.value,
       type: props.type,
       isSystem: props.canUsePremiumAssets === true ? undefined : 1,
-      isMonospace: monospaceChecked.value ? 1 : undefined,
-      italic: italicChecked.value ? 1 : undefined,
+      includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
     console.log('[FontSearch] remote search response', {
@@ -272,8 +230,7 @@ const filterFonts = async () => {
     console.log('[FontSearch] remoteFonts mapped', {
       remoteFontsCount: remoteFonts.length,
     })
-    // Apply the same local style filters to remote results
-    remoteSearchResults.value = applyLocalStyleFilters(remoteFonts)
+    remoteSearchResults.value = remoteFonts
     console.log('[FontSearch] remoteSearchResults final', {
       remoteSearchResultsCount: remoteSearchResults.value.length,
     })
@@ -318,23 +275,6 @@ const handleSelect = (font: FontItem) => {
   border-color: var(--studio-primary);
   box-shadow: 0 0 0 2px var(--studio-focus-ring);
 }
-.filters {
-  margin-top: 8px;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  overflow-x: auto;
-}
-.filter-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--studio-text-muted);
-  white-space: nowrap;
-}
 .section-header {
   padding: 12px;
   font-size: 13px;
@@ -350,7 +290,12 @@ const handleSelect = (font: FontItem) => {
   transition: transform 0.3s;
 }
 .arrow.expanded { transform: rotate(90deg); }
-.section-content { padding: 8px 0; }
+.font-list-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+}
 .family-name {
   font-size: 12px;
   color: var(--studio-text-subtle);
@@ -359,7 +304,8 @@ const handleSelect = (font: FontItem) => {
   border-bottom: 1px solid var(--studio-border);
 }
 .font-item {
-  padding: 8px 12px;
+  width: 100%;
+  padding: 0;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -380,17 +326,6 @@ const handleSelect = (font: FontItem) => {
   gap: 8px;
 }
 .search-loading .el-icon { font-size: 16px; color: var(--studio-primary); }
-
-/* open library link (subtle, right-aligned) */
-.open-library-anchor {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--studio-primary);
-  text-decoration: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.open-library-anchor:hover { color: var(--studio-text-muted); text-decoration: underline; }
 
 /* active filter chips */
 .active-chips {
