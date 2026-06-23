@@ -23,12 +23,10 @@
         </template>
       </el-form-item>
       <el-form-item :label="t('elementSettings.fontSize')">
-        <el-select
-          v-model.number="currentModel.fontSize"
+        <FontSizeSelect
+          v-model="currentModel.fontSize"
           @change="(v: number) => applyUpdate({ fontSize: v })"
-        >
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
+        />
       </el-form-item>
       <el-form-item v-if="fontRenderType === 'bitmap'" :label="t('elementSettings.fontGap')">
         <el-input-number
@@ -75,11 +73,12 @@ import { onMounted, computed } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { fontSizes, originXOptions, TimeFormatOptions } from '@/config/settings'
+import { originXOptions, TimeFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { FontTypes } from '@/config/fonts'
 import { useI18n } from '@/i18n'
 

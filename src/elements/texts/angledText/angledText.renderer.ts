@@ -4,17 +4,29 @@ import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { usePropertiesStore } from '@/stores/properties'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 
 export function createAngledText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
+  const propertiesStore = usePropertiesStore()
   const canvas = canvasStore.canvas
 
   if (!canvas) {
     throw new Error('Canvas is not initialized, cannot add angled text element')
   }
 
-  const element = new FabricText(((config as any).textTemplate as string) || 'Angled Text', {
+  const propertyKey = typeof (config as any).textProperty === 'string' ? (config as any).textProperty : ''
+  const propertyValue = propertyKey
+    ? propertiesStore?.allProperties?.[propertyKey]?.value
+    : undefined
+  const textTemplate =
+    (typeof propertyValue === 'string' && propertyValue !== ''
+      ? propertyValue
+      : ((config as any).textTemplate as string)) || 'Angled Text'
+
+  const element = new FabricText(resolveDataTextTemplate(textTemplate) || 'Angled Text', {
     id: config.id || nanoid(),
     eleType: 'angledText',
     left: config.left,
@@ -28,7 +40,7 @@ export function createAngledText(config: TextElementConfig): FabricElement {
     originX: config.originX || 'center',
     originY: config.originY || 'center',
     angle: typeof (config as any).angle === 'number' ? (config as any).angle : -45,
-    textTemplate: (config as any).textTemplate,
+    textTemplate,
     textProperty: (config as any).textProperty,
   } as any)
 
@@ -53,9 +65,10 @@ export function updateAngledText(
   if (patch.fill != null) anyEl.set('fill', patch.fill)
   if (patch.fontFamily != null) anyEl.set('fontFamily', patch.fontFamily)
   if (patch.originX != null) anyEl.set('originX', patch.originX)
+  if ((patch as any).textProperty != null) anyEl.textProperty = (patch as any).textProperty
   if (patch.textTemplate != null) {
     anyEl.textTemplate = patch.textTemplate
-    anyEl.set('text', patch.textTemplate)
+    anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
   }
   if ((patch as any).angle != null) anyEl.set('angle', (patch as any).angle)
 

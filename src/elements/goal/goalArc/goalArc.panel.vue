@@ -1,89 +1,94 @@
 <template>
-  <div class="settings-section">
-    <h3>{{ t('editor.progressArc') }} {{ t('nav.settings') }}</h3>
+  <div class="settings-section text-settings-panel progress-arc-settings-panel">
+    <el-form
+      ref="formRef"
+      class="progress-arc-form"
+      :model="currentModel"
+      label-position="top"
+      :rules="rules"
+    >
+      <section class="text-settings-card progress-arc-card">
+        <GoalPropertyField v-model="currentModel.goalProperty" @change="updateElement" />
+      </section>
 
-    <el-form ref="formRef" :model="currentModel" label-position="left" label-width="100px" :rules="rules">
-      <GoalPropertyField v-model="currentModel.goalProperty" @change="updateElement" />
-      <!-- 尺寸属性 -->
-      <div class="setting-item">
-        <div class="size-inputs">
-          <div class="input-group">
+      <section class="text-settings-card progress-arc-card">
+        <div class="text-settings-grid">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.foregroundRadius') }}</label>
             <el-input type="number" v-model="mainRadius" disabled @change="onMainRadiusChange" />
           </div>
-          <div class="input-group">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.backgroundRadius') }}</label>
             <el-input type="number" v-model="bgRadius" disabled @change="onBgRadiusChange" />
           </div>
-          <div class="input-group">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.foregroundStrokeWidth') }}</label>
             <el-input type="number" v-model="mainStrokeWidth" @change="onMainStrokeWidthChange" />
           </div>
-          <div class="input-group">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.backgroundStrokeWidth') }}</label>
             <el-input type="number" v-model="bgStrokeWidth" @change="onBgStrokeWidthChange" />
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- 角度设置 -->
-      <div class="setting-item">
-        <div class="setting-header">
+      <section class="text-settings-card progress-arc-card">
+        <div class="progress-arc-inline-label">
           <label>{{ t('elementSettings.angleSettings') }}</label>
           <el-tooltip :content="tooltipContent" placement="top" effect="light" :show-after="0" raw-content>
             <el-icon class="help-icon"><Warning /></el-icon>
           </el-tooltip>
         </div>
-        <div class="angle-inputs">
-          <div class="input-group">
+        <div class="text-settings-grid">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.startAngle') }}</label>
             <el-input type="number" v-model="startAngleLocal" @change="onStartAngleChange" />
           </div>
-          <div class="input-group">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.endAngle') }}</label>
             <el-input type="number" v-model="endAngleLocal" @change="onEndAngleChange" />
           </div>
         </div>
-        <!-- 添加方向选择 -->
-        <div class="direction-group">
+        <div class="text-setting-field progress-arc-direction">
           <label>{{ t('elementSettings.direction') }}</label>
-          <el-radio-group v-model="currentModel.counterClockwise" @change="updateElement">
+          <el-radio-group class="progress-arc-radio-group" v-model="currentModel.counterClockwise" @change="updateElement">
             <el-radio :label="false">{{ t('elementSettings.clockwise') }}</el-radio>
             <el-radio :label="true">{{ t('elementSettings.counterclockwise') }}</el-radio>
           </el-radio-group>
         </div>
-      </div>
+      </section>
 
-      <!-- 颜色属性 -->
-      <div class="setting-item">
-        <label>{{ t('elementSettings.colors') }}</label>
-        <div class="color-inputs">
-          <div class="input-group">
+      <section class="text-settings-card progress-arc-card">
+        <div class="text-settings-grid">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.foregroundColor') }}</label>
             <ColorPicker
               v-model="fgColor"
               @change="onFgColorChange" />
           </div>
-          <div class="input-group">
+          <div class="text-setting-field">
             <label>{{ t('elementSettings.backgroundColor') }}</label>
             <ColorPicker
               v-model="bgColor"
               @change="onBgColorChange" />
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- 进度值（用于测试） -->
-      <div class="setting-item">
-        <label>{{ t('elementSettings.progress') }}</label>
-        <input
-          type="range"
-          :value="Number((currentModel as any).progress || 0) * 100"
-          min="0"
-          max="100"
-          @input="onProgressInput" />
-        <span>{{ Math.round(Number((currentModel as any).progress || 0) * 100) }}%</span>
-      </div>
+      <section class="text-settings-card progress-arc-card">
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.progress') }}</label>
+          <div class="progress-arc-range-row">
+            <input
+              type="range"
+              :value="Number((currentModel as any).progress || 0) * 100"
+              min="0"
+              max="100"
+              @input="onProgressInput" />
+            <span>{{ Math.round(Number((currentModel as any).progress || 0) * 100) }}%</span>
+          </div>
+        </div>
+      </section>
     </el-form>
   </div>
 </template>
@@ -289,31 +294,106 @@ defineExpose({
 
 <style scoped>
 @import '@/assets/styles/settings.css';
+@import '@/assets/styles/textSettings.css';
 
-.setting-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.progress-arc-form,
+.progress-arc-card {
+  min-width: 0;
 }
 
-.setting-header label {
+.progress-arc-form {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.progress-arc-card :deep(.el-form-item) {
+  margin: 0;
+}
+
+.progress-arc-card :deep(.el-form-item__label) {
+  margin: 0 0 6px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.progress-arc-card :deep(.el-form-item__content) {
   line-height: 1;
 }
 
-.help-icon {
-  color: #909399;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s;
+.progress-arc-inline-label {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.progress-arc-inline-label label {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.help-icon {
+  color: var(--studio-text-subtle);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
 }
 
 .help-icon:hover {
-  color: #0f6b68;
+  color: var(--studio-primary);
+}
+
+.progress-arc-direction {
+  margin-top: 12px;
+}
+
+.progress-arc-radio-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.progress-arc-radio-group :deep(.el-radio) {
+  height: 34px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  background: var(--studio-surface);
+}
+
+.progress-arc-radio-group :deep(.el-radio.is-checked) {
+  border-color: var(--studio-primary-border);
+  background: color-mix(in srgb, var(--studio-primary) 8%, transparent);
+}
+
+.progress-arc-range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-arc-range-row input[type='range'] {
+  margin: 0;
+}
+
+.progress-arc-range-row span {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
 }
 
 /* 调整提示框样式 */

@@ -8,9 +8,7 @@
         <ColorPicker v-model="fill" @change="onColorChange" />
       </el-form-item>
       <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontSize')">
-        <el-select v-model="fontSize" @change="onFontSizeChange">
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
+        <FontSizeSelect v-model="fontSize" @change="onFontSizeChange" />
       </el-form-item>
     </el-form>
 
@@ -118,7 +116,7 @@ import WeatherBindingDialog from './WeatherBindingDialog.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
-import { fontSizes } from '@/config/settings'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 const props = defineProps<{ 
   element?: FabricElement

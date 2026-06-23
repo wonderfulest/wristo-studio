@@ -231,12 +231,32 @@ export class DataSimulatorEngine {
         return
       }
 
-      if (eleType === 'text' || eleType === 'scrollableText') {
+      if (eleType === 'text' || eleType === 'scrollableText' || eleType === 'angledText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
         if (!template.includes('{{')) return
         const nextText = resolveTextTemplate(template)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
+          changed = true
+        }
+        return
+      }
+
+      if (eleType === 'radialText') {
+        const template = String(obj.textTemplate ?? obj.text ?? '')
+        if (!template.includes('{{')) return
+        const nextText = resolveTextTemplate(template)
+        if (String(obj.text ?? '') !== nextText) {
+          if (typeof obj.updateRadialText === 'function') {
+            const previousLeft = obj.left
+            const previousTop = obj.top
+            obj.updateRadialText(template)
+            if (typeof previousLeft === 'number') obj.set?.('left', previousLeft)
+            if (typeof previousTop === 'number') obj.set?.('top', previousTop)
+          } else {
+            obj.textTemplate = template
+            obj.text = nextText
+          }
           changed = true
         }
         return

@@ -164,6 +164,7 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { DataTypeOptions } from '@/config/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -199,9 +200,10 @@ const initFormData = (data = null) => {
       errorMessage: data.errorMessage
     })
   } else {
+    const defaults = getNextMetricPropertyDefaults('goal')
     Object.assign(formData, {
-      title: 'Goal 1',
-      propertyKey: 'goal_1',
+      title: defaults.title,
+      propertyKey: defaults.key,
       type: 'goal',
       options: cloneGoalOptions(),
       value: goalOptions[0]?.value,
@@ -225,7 +227,8 @@ const handleConfirm = async () => {
       options: formData.options,
       defaultValue: formData.value,
       prompt: formData.prompt,
-      errorMessage: formData.errorMessage
+      errorMessage: formData.errorMessage,
+      isEdit: isEdit.value
     })
     dialogVisible.value = false
   } catch (error) {

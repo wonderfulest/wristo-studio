@@ -1,9 +1,136 @@
 /* 设置面板通用样式 */
 .settings-section {
-  padding: 16px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 0;
   background: var(--studio-surface);
   color: var(--studio-text);
+}
+
+.settings-section > .el-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 10px;
+}
+
+.settings-section > .el-form > .el-form-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+}
+
+.settings-section > .el-form > .el-form-item.is-required:not(.is-no-asterisk).asterisk-left > .el-form-item__label::before,
+.settings-section > .el-form > .el-form-item.is-required:not(.is-no-asterisk).asterisk-right > .el-form-item__label::after {
+  margin-right: 3px;
+}
+
+.settings-section > .el-form > .el-form-item > .el-form-item__label {
+  display: flex;
+  width: auto !important;
+  height: auto;
+  min-height: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  padding: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+}
+
+.settings-section > .el-form > .el-form-item > .el-form-item__content {
+  min-width: 0;
+  width: 100%;
+  margin-left: 0 !important;
+  line-height: normal;
+}
+
+.settings-section > .el-form > .el-form-item:has(.el-slider),
+.settings-section > .el-form > .el-form-item:has(.range-color-grid),
+.settings-section > .el-form > .el-form-item:has(.font-picker),
+.settings-section > .el-form > .data-field,
+.settings-section > .el-form > .goal-field,
+.settings-section > .el-form > .chart-field {
+  grid-column: 1 / -1;
+}
+
+.settings-section > .el-form > .el-form-item .el-input-number,
+.settings-section > .el-form > .el-form-item .el-select,
+.settings-section > .el-form > .el-form-item .el-input,
+.settings-section > .el-form > .el-form-item .el-textarea,
+.settings-section > .el-form > .el-form-item .color-picker-wrapper,
+.settings-section > .el-form > .el-form-item .font-size-select {
+  width: 100%;
+}
+
+.settings-section > .el-form .el-input__wrapper,
+.settings-section > .el-form .el-select__wrapper,
+.settings-section > .el-form .el-textarea__inner {
+  min-height: 34px;
+  border-radius: 6px;
+}
+
+.settings-section > .el-form .el-input-number__decrease,
+.settings-section > .el-form .el-input-number__increase {
+  width: 28px;
+}
+
+.settings-section > .el-form .el-slider {
+  --el-slider-main-bg-color: var(--studio-primary);
+  --el-slider-runway-bg-color: var(--studio-border);
+  width: calc(100% - 12px);
+  margin: -2px 6px 0;
+}
+
+.settings-section > .el-form .el-slider__runway {
+  height: 6px;
+  border-radius: 999px;
+}
+
+.settings-section > .el-form .el-slider__bar {
+  height: 6px;
+  border-radius: 999px;
+}
+
+.settings-section > .el-form .el-slider__button {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+
+.settings-section > .el-form .el-switch,
+.settings-section > .el-form .el-checkbox,
+.settings-section > .el-form .el-radio-group {
+  min-height: 34px;
+  align-items: center;
+}
+
+.settings-section > .el-form .align-x-buttons,
+.settings-section > .el-form .align-buttons {
+  width: 100%;
+}
+
+.range-color-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.range-color-grid .color-picker-wrapper {
+  min-width: 0;
+}
+
+.range-color-grid .color-input input {
+  height: 24px;
+  padding: 2px 3px;
+  border-radius: 5px;
+  font-size: 0;
 }
 
 .section-title {

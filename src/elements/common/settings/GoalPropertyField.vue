@@ -85,7 +85,7 @@ const handleChange = (val: string) => {
 }
 
 const openAppProperties = () => {
-  emitter.emit('open-app-properties')
+  emitter.emit('open-app-properties', { type: 'goal' })
 }
 </script>
 

@@ -190,11 +190,81 @@ const loadingStates = ref<LoadingStates>({
 const loadingStatesPlain = computed(() => loadingStates.value)
 
 // 搜索相关状态
-const searchName = ref('')
-const selectedStatus = ref<DesignStatus | ''>('')
-const selectedLaunchStatus = ref<LaunchStatus | ''>('')
-const sortField = ref('updated_at')
-const sortOrder = ref('desc')
+type DesignSortField = 'created_at' | 'updated_at'
+type DesignSortOrder = 'asc' | 'desc'
+
+interface DesignSearchPreference {
+  searchName: string
+  selectedStatus: DesignStatus | ''
+  selectedLaunchStatus: LaunchStatus | ''
+  sortField: DesignSortField
+  sortOrder: DesignSortOrder
+}
+
+const DESIGN_SEARCH_STORAGE_KEY = 'wristo-studio:my-designs:search'
+
+const isDesignStatusValue = (value: unknown): value is DesignStatus | '' => {
+  return value === '' || value === 'draft' || value === 'submitted' || value === 'approved' || value === 'rejected'
+}
+
+const isLaunchStatusValue = (value: unknown): value is LaunchStatus | '' => {
+  return value === '' || value === 'launched' || value === 'not_launched'
+}
+
+const isDesignSortField = (value: unknown): value is DesignSortField => {
+  return value === 'created_at' || value === 'updated_at'
+}
+
+const isDesignSortOrder = (value: unknown): value is DesignSortOrder => {
+  return value === 'asc' || value === 'desc'
+}
+
+const defaultDesignSearchPreference = (): DesignSearchPreference => ({
+  searchName: '',
+  selectedStatus: '',
+  selectedLaunchStatus: '',
+  sortField: 'updated_at',
+  sortOrder: 'desc'
+})
+
+const readDesignSearchPreference = (): DesignSearchPreference => {
+  const defaults = defaultDesignSearchPreference()
+  if (typeof window === 'undefined') return defaults
+
+  try {
+    const raw = window.localStorage.getItem(DESIGN_SEARCH_STORAGE_KEY)
+    if (!raw) return defaults
+
+    const parsed = JSON.parse(raw) as Partial<DesignSearchPreference>
+    return {
+      searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
+      selectedStatus: isDesignStatusValue(parsed.selectedStatus) ? parsed.selectedStatus : defaults.selectedStatus,
+      selectedLaunchStatus: isLaunchStatusValue(parsed.selectedLaunchStatus) ? parsed.selectedLaunchStatus : defaults.selectedLaunchStatus,
+      sortField: isDesignSortField(parsed.sortField) ? parsed.sortField : defaults.sortField,
+      sortOrder: isDesignSortOrder(parsed.sortOrder) ? parsed.sortOrder : defaults.sortOrder
+    }
+  } catch (error) {
+    console.warn('[MyDesigns] read design search preference failed:', error)
+    return defaults
+  }
+}
+
+const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(DESIGN_SEARCH_STORAGE_KEY, JSON.stringify(preference))
+  } catch (error) {
+    console.warn('[MyDesigns] write design search preference failed:', error)
+  }
+}
+
+const initialDesignSearch = readDesignSearchPreference()
+const searchName = ref(initialDesignSearch.searchName)
+const selectedStatus = ref<DesignStatus | ''>(initialDesignSearch.selectedStatus)
+const selectedLaunchStatus = ref<LaunchStatus | ''>(initialDesignSearch.selectedLaunchStatus)
+const sortField = ref<DesignSortField>(initialDesignSearch.sortField)
+const sortOrder = ref<DesignSortOrder>(initialDesignSearch.sortOrder)
 
 // 是否为商家用户（拥有 ROLE_MERCHANT 角色）
 const isMerchantUser = computed(() => {
@@ -292,6 +362,19 @@ watch(isAdminUser, (isAdmin) => {
   }
   fetchDesigns()
 })
+
+watch(
+  [searchName, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
+  () => {
+    writeDesignSearchPreference({
+      searchName: searchName.value,
+      selectedStatus: selectedStatus.value,
+      selectedLaunchStatus: selectedLaunchStatus.value,
+      sortField: sortField.value,
+      sortOrder: sortOrder.value
+    })
+  }
+)
 
 // 获取状态文本
 const getStatusText = (status: DesignStatus) => {

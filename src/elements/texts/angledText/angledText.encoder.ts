@@ -46,6 +46,7 @@ export function decodeAngledText(config: TextElementConfig): Partial<FabricEleme
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
     textTemplate,
+    textProperty: (config as any).textProperty,
     text: textTemplate,
     angle: typeof (config as any).angle === 'number' ? (config as any).angle : -45,
   } as any

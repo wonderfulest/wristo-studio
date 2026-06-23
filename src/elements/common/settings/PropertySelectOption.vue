@@ -1,8 +1,8 @@
 <template>
   <div class="property-select-option">
     <div class="property-select-main">
-      <span class="property-select-title">{{ title || propertyKey }}</span>
-      <span v-if="detail" class="property-select-detail">{{ detail }}</span>
+      <span class="property-select-title" :title="title || propertyKey">{{ title || propertyKey }}</span>
+      <span v-if="detail" class="property-select-detail" :title="detail">{{ detail }}</span>
     </div>
     <code class="property-select-key">{{ propertyKey }}</code>
   </div>
@@ -35,23 +35,21 @@ defineProps<{
 }
 
 .property-select-title {
-  overflow: hidden;
   color: var(--el-text-color-primary);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .property-select-detail {
-  overflow: hidden;
   color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .property-select-key {

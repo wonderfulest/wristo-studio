@@ -1,71 +1,84 @@
 <template>
-  <div class="settings-section">
-    <div class="setting-item">
-      <TextPropertyField
+  <div class="settings-section text-settings-panel">
+    <div class="text-settings-hero">
+      <div class="text-settings-title">
+        <span class="text-settings-kicker">{{ t('elementSettings.textPanelKicker') }}</span>
+        <strong class="text-settings-heading">{{ t('elementSettings.textPanelTitle') }}</strong>
+        <span class="text-settings-description">{{ t('elementSettings.textPanelHint') }}</span>
+      </div>
+      <span class="text-settings-badge">Text</span>
+    </div>
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.contentSection') }}</strong>
+          <span>{{ t('elementSettings.contentSectionHint') }}</span>
+        </div>
+      </div>
+      <TextVariableEditor
         v-model="textProperty"
-        :label="t('elementSettings.textVariable')"
-        :placeholder="t('elementSettings.selectTextProperty')"
         :fallback-text="textTemplate"
-        @change="applyTextProperty"
+        :owner-element-id="currentElementId"
+        @apply="applyTextVariablePatch"
+        @update-template="(value) => (textTemplate = value)"
       />
-      <TextPropertyPreview
-        v-if="selectedTextProperty"
-        :property-key="textProperty"
-        :property="selectedTextProperty"
-      />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.position') }}</label>
-      <PositionInputs 
-        :left="positionX" 
-        :top="positionY" 
-        @update:left="(v)=> positionX = v" 
-        @update:top="(v)=> positionY = v" 
-        @change="updatePosition" 
-      />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.alignment') }}</label>
-      <AlignXButtons 
-        :options="originXOptions"
-        v-model="originX"
-        @update:modelValue="updateOriginX"
-      />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.fontSize') }}</label>
-      <select v-model.number="fontSize" @change="updateFontSize">
-        <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
-      </select>
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.fontColor') }}</label>
-      <ColorPicker v-model="textColor" @change="updateTextColor" />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.font') }}</label>
-      <font-picker v-model="fontFamily" @change="updateFontFamily" />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.textContent') }}</label>
-      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
-    </div>
+    </section>
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.layoutSection') }}</strong>
+          <span>{{ t('elementSettings.layoutSectionHint') }}</span>
+        </div>
+      </div>
+      <div class="text-settings-grid single">
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.alignment') }}</label>
+          <AlignXButtons
+            :options="originXOptions"
+            v-model="originX"
+            @update:modelValue="updateOriginX"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.appearanceSection') }}</strong>
+          <span>{{ t('elementSettings.appearanceSectionHint') }}</span>
+        </div>
+      </div>
+      <div class="text-settings-grid">
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.fontSize') }}</label>
+          <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
+        </div>
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.fontColor') }}</label>
+          <ColorPicker v-model="textColor" @change="updateTextColor" />
+        </div>
+        <div class="text-setting-field full">
+          <label>{{ t('elementSettings.font') }}</label>
+          <font-picker v-model="fontFamily" @change="updateFontFamily" />
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { usePropertiesStore } from '@/stores/properties'
 import { useFontStore } from '@/stores/fontStore'
-import { fontSizes, originXOptions } from '@/config/settings'
+import { originXOptions } from '@/config/settings'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
-import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextPropertyField from '@/elements/common/settings/TextPropertyField.vue'
-import TextPropertyPreview from '@/elements/common/settings/TextPropertyPreview.vue'
-import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import TextVariableEditor from '@/elements/common/settings/TextVariableEditor.vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -88,27 +101,20 @@ const props = defineProps({
 })
 
 const fontStore = useFontStore()
-const propertiesStore = usePropertiesStore()
 
 // 当前表单绑定的数据源：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
+const currentElementId = computed(() => String((props.config as any)?.id ?? props.element?.id ?? ''))
 
 // 设置项的响应式状态
 const fontSize = ref(currentModel.value?.fontSize || 36)
 const textColor = ref(currentModel.value?.fill || '#FFFFFF')
 const fontFamily = ref(currentModel.value?.fontFamily)
 const originX = ref(currentModel.value?.originX || 'center')
-const positionX = ref(Math.round(currentModel.value?.left || 0))
-const positionY = ref(Math.round(currentModel.value?.top || 0))
 const textProperty = ref(currentModel.value?.textProperty || '')
 const textTemplate = ref((currentModel.value as any)?.textTemplate ?? currentModel.value?.text ?? '')
-
-const selectedTextProperty = computed(() => {
-  if (!textProperty.value) return null
-  return propertiesStore.allProperties[textProperty.value] || null
-})
 
 // 监听元素属性变化
 watch(
@@ -165,43 +171,10 @@ const updateOriginX = (value: string) => {
   applyUpdate({ originX: value })
 }
 
-const updatePosition = () => {
-  positionX.value = Math.round(positionX.value)
-  positionY.value = Math.round(positionY.value)
-  applyUpdate({ left: positionX.value, top: positionY.value })
+const applyTextVariablePatch = (patch: { textProperty: string; textTemplate: string }) => {
+  textTemplate.value = patch.textTemplate
+  applyUpdate(patch)
 }
-
-const updateTextTemplate = () => {
-  applyUpdate({ textTemplate: textTemplate.value })
-}
-
-const applyTextProperty = () => {
-  if (!textProperty.value) return
-  const template = propertiesStore.getPropertyValue(textProperty.value)
-  if (typeof template === 'string') {
-    textTemplate.value = template
-    applyUpdate({ textProperty: textProperty.value, textTemplate: template })
-  }
-}
-
-// 监听画布上的对象变化
-watch(
-  () => props.element?.left,
-  (newLeft) => {
-    if (newLeft !== undefined) {
-      positionX.value = Math.round(newLeft)
-    }
-  }
-)
-
-watch(
-  () => props.element?.top,
-  (newTop) => {
-    if (newTop !== undefined) {
-      positionY.value = Math.round(newTop)
-    }
-  }
-)
 
 // 监听字体大小变化
 watch(
@@ -245,6 +218,7 @@ watch(
 
 <style scoped>
 @import '@/assets/styles/settings.css';
+@import '@/assets/styles/textSettings.css';
 
 /* 添加图标样式 */
 .align-buttons button {

@@ -42,6 +42,7 @@ import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
+import { createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -111,6 +112,36 @@ const ensureChartPropertyForChartElement = (normalizedConfig: AnyElementConfig, 
   return false
 }
 
+const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: AnyElementConfig) => {
+  if (['data', 'icon', 'label'].includes(elementType)) {
+    const curDataKey = String((normalizedConfig as any).dataProperty ?? '').trim()
+    const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
+    if (!curDataKey && !curGoalKey) {
+      const unusedKey = getUnusedMetricPropertyKey('data')
+      if (unusedKey) {
+        ;(normalizedConfig as any).dataProperty = unusedKey
+      } else {
+        ;(normalizedConfig as any).dataProperty = createQuickMetricProperty('data')
+        emitter.emit('open-app-properties', { type: 'data' })
+      }
+    }
+    return
+  }
+
+  if (['goalBar', 'goalArc', 'goalSegmentBar'].includes(elementType)) {
+    const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
+    if (!curGoalKey) {
+      const unusedKey = getUnusedMetricPropertyKey('goal')
+      if (unusedKey) {
+        ;(normalizedConfig as any).goalProperty = unusedKey
+      } else {
+        ;(normalizedConfig as any).goalProperty = createQuickMetricProperty('goal')
+        emitter.emit('open-app-properties', { type: 'goal' })
+      }
+    }
+  }
+}
+
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
     // 加载字体
@@ -132,6 +163,8 @@ const addElementByType = async (_category: string, elementType: string, config: 
       const metricSymbol = ':CHART_TYPE_7DAYS_STEPS'
       ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
     }
+
+    ensureMetricPropertyForElement(elementType, normalizedConfig)
 
     // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）
     if (elementType) {

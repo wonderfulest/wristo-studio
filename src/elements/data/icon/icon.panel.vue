@@ -25,17 +25,7 @@
         />
       </el-form-item>
       <el-form-item :label="t('elementSettings.fontSize')">
-        <el-select 
-          v-model="currentModel.fontSize" 
-          @change="handleFontSizeChange"
-        >
-          <el-option 
-            v-for="size in fontSizes" 
-            :key="size" 
-            :label="`${size}px`" 
-            :value="size" 
-          />
-        </el-select>
+        <FontSizeSelect v-model="currentModel.fontSize" @change="handleFontSizeChange" />
       </el-form-item>
       <el-form-item :label="t('elementSettings.textColor')">
         <color-picker 
@@ -57,10 +47,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { fontSizes, originXOptions } from '@/config/settings'
+import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'

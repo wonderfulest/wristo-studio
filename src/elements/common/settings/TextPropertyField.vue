@@ -12,26 +12,19 @@
       :placeholder="resolvedPlaceholder"
       popper-class="property-select-popper"
       class="text-property-select"
-      :class="{ 'has-selection-summary': !!displaySummary }"
       clearable
       filterable
       @change="handleChange"
-      @visible-change="handleVisibleChange"
     >
-      <template #prefix>
-        <span v-if="displaySummary" class="selection-summary" :title="selectionSummary">
-          {{ selectionSummary }}
-        </span>
-      </template>
       <el-option
         v-for="[key, prop] in textOptions"
         :key="key"
-        :label="`${prop.title} — ${truncate(prop.value)}`"
+        :label="optionLabel(key, prop)"
         :value="key"
       >
         <PropertySelectOption
           :title="prop.title"
-          :detail="truncate(prop.value)"
+          :detail="String(prop.value ?? '')"
           :property-key="key"
         />
       </el-option>
@@ -42,14 +35,20 @@
         </div>
       </template>
     </el-select>
+    <div v-if="selectionSummary" class="selection-summary" :title="selectionSummary">
+      <strong>{{ selectionTitle }}</strong>
+      <code>{{ modelValue }}</code>
+      <span v-if="selectionDetail">{{ selectionDetail }}</span>
+    </div>
   </el-form-item>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
+import type { PropertyItem } from '@/types/properties'
 import PropertySelectOption from './PropertySelectOption.vue'
 
 const props = withDefaults(defineProps<{
@@ -74,7 +73,6 @@ const emit = defineEmits<{
 
 const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
-const dropdownVisible = ref(false)
 const textOptions = computed(() =>
   Object.entries(propertiesStore.allProperties).filter(([, p]) => p.type === 'text')
 )
@@ -84,17 +82,26 @@ const selectedProperty = computed(() => {
   if (!props.modelValue) return null
   return propertiesStore.allProperties[props.modelValue] || null
 })
+const selectionTitle = computed(() => {
+  const key = props.modelValue || ''
+  const prop = selectedProperty.value
+  return String(prop?.title || key || '')
+})
+const selectionDetail = computed(() => {
+  const value = selectedProperty.value?.value
+  if (value === null || value === undefined || value === '') return ''
+  return String(value)
+})
 const selectionSummary = computed(() => {
   const key = props.modelValue || ''
   const prop = selectedProperty.value
   if (prop) {
-    const detail = truncate(prop.value, 36)
-    return detail ? `${key} — ${detail}` : key
+    const detail = selectionDetail.value
+    return detail ? `${prop.title || key} · ${key} · ${detail}` : `${prop.title || key} · ${key}`
   }
   if (key) return key
-  return truncate(props.fallbackText, 36)
+  return ''
 })
-const displaySummary = computed(() => Boolean(selectionSummary.value && !dropdownVisible.value))
 
 const localValue = computed({
   get: () => props.modelValue ?? '',
@@ -105,14 +112,9 @@ const handleChange = (val: string) => {
   emit('change', val)
 }
 
-const handleVisibleChange = (visible: boolean) => {
-  dropdownVisible.value = visible
-}
-
-const truncate = (text: unknown, max = 24): string => {
-  if (text === null || text === undefined) return ''
-  const s = String(text)
-  return s.length > max ? `${s.slice(0, max)}…` : s
+const optionLabel = (key: string, prop: PropertyItem): string => {
+  const title = String(prop.title || key)
+  return `${title} · ${key}`
 }
 
 const openAppProperties = () => {
@@ -140,24 +142,39 @@ const openAppProperties = () => {
 }
 
 .selection-summary {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-fill-color-extra-light);
   color: var(--el-text-color-primary);
-  font-size: 13px;
-  line-height: 1;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.selection-summary strong,
+.selection-summary span {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.text-property-select.has-selection-summary :deep(.el-select__prefix) {
-  flex: 1;
-  min-width: 0;
+.selection-summary code {
   overflow: hidden;
+  color: var(--el-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.text-property-select.has-selection-summary :deep(.el-select__placeholder),
-.text-property-select.has-selection-summary :deep(.el-select__input-wrapper) {
-  display: none;
+.selection-summary span {
+  grid-column: 1 / -1;
+  color: var(--el-text-color-secondary);
 }
 </style>

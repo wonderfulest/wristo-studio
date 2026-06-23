@@ -23,9 +23,7 @@
       </el-form-item>
 
       <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.fontSize')" required>
-        <el-select v-model.number="fontSize" @change="updateFontSize">
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
+        <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
       </el-form-item>
 
       <el-form-item v-if="isUpdateColor" :label="t('elementSettings.textColor')" required>
@@ -46,12 +44,13 @@ import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { fontSizes, originXOptions } from '@/config/settings'
+import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
 import { alignSelection } from '@/engine/managers/alignManager'

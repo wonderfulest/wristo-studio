@@ -164,6 +164,7 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { DataTypeOptions } from '@/config/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -198,9 +199,10 @@ const initFormData = (data = null) => {
       errorMessage: data.errorMessage
     })
   } else {
+    const defaults = getNextMetricPropertyDefaults('data')
     Object.assign(formData, {
-      title: 'Data 1',
-      propertyKey: 'data_1',
+      title: defaults.title,
+      propertyKey: defaults.key,
       type: 'data',
       options: cloneDataOptions(),
       value: dataOptions[0]?.value,
@@ -229,7 +231,8 @@ const handleConfirm = async () => {
       options: formData.options,
       defaultValue: selectedOption.value,
       prompt: formData.prompt,
-      errorMessage: formData.errorMessage
+      errorMessage: formData.errorMessage,
+      isEdit: isEdit.value
     })
     dialogVisible.value = false
   } catch (error) {

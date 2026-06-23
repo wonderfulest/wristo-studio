@@ -2,12 +2,10 @@
   <div class="settings-section">
     <el-form :model="currentModel" label-position="left" label-width="100px">
       <el-form-item :label="t('elementSettings.fontSize')">
-        <el-select
-          v-model.number="currentModel.fontSize"
+        <FontSizeSelect
+          v-model="currentModel.fontSize"
           @change="(v: number) => applyUpdate({ fontSize: v })"
-        >
-          <el-option v-for="size in fontSizes" :key="size" :label="`${size}px`" :value="size" />
-        </el-select>
+        />
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.fontColor')">
@@ -54,10 +52,11 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
-import { fontSizes, originXOptions, DateFormatOptions } from '@/config/settings'
+import { originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 
 const props = defineProps<{

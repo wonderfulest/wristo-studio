@@ -230,7 +230,8 @@ const handleConfirm = async () => {
       options: formData.options,
       defaultValue: selectedOption.value,
       prompt: formData.prompt,
-      errorMessage: formData.errorMessage
+      errorMessage: formData.errorMessage,
+      isEdit: isEdit.value
     })
     dialogVisible.value = false
   } catch (error) {

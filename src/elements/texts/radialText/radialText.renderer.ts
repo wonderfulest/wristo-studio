@@ -4,10 +4,12 @@ import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { usePropertiesStore } from '@/stores/properties'
 
 export function createRadialText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
+  const propertiesStore = usePropertiesStore()
   const canvas = canvasStore.canvas
 
   if (!canvas) {
@@ -20,8 +22,17 @@ export function createRadialText(config: TextElementConfig): FabricElement {
   const angle = typeof (config as any).angle === 'number' ? (config as any).angle : 0
   const directionFlag = (config as any).direction === 'counterClockwise' ? -1 : 1
 
+  const propertyKey = typeof (config as any).textProperty === 'string' ? (config as any).textProperty : ''
+  const propertyValue = propertyKey
+    ? propertiesStore?.allProperties?.[propertyKey]?.value
+    : undefined
+  const textTemplate =
+    (typeof propertyValue === 'string' && propertyValue !== ''
+      ? propertyValue
+      : (config as any).textTemplate) || 'Radial Text'
+
   const radial = new FabricRadialText({
-    text: (config as any).textTemplate || 'Radial Text',
+    text: textTemplate,
     cx,
     cy,
     radius,
@@ -47,7 +58,6 @@ export function createRadialText(config: TextElementConfig): FabricElement {
   element.fill = config.fill
   element.fontFamily = config.fontFamily
   element.fontSize = config.fontSize
-  const textTemplate = (config as any).textTemplate || 'Radial Text'
   element.textTemplate = textTemplate
   element.text = textTemplate
   if ((config as any).textProperty) {
@@ -83,6 +93,20 @@ export function updateRadialText(
   if ((patch as any).radius != null) anyEl.radius = (patch as any).radius
   if ((patch as any).direction != null) anyEl.direction = (patch as any).direction
   if ((patch as any).justification != null) anyEl.justification = (patch as any).justification
+  if ((patch as any).textProperty != null) anyEl.textProperty = (patch as any).textProperty
+  if ((patch as any).textTemplate != null) {
+    const textTemplate = String((patch as any).textTemplate)
+    if (typeof anyEl.updateRadialText === 'function') {
+      const previousLeft = anyEl.left
+      const previousTop = anyEl.top
+      anyEl.updateRadialText(textTemplate)
+      if ((patch as any).left == null && typeof previousLeft === 'number') anyEl.set('left', previousLeft)
+      if ((patch as any).top == null && typeof previousTop === 'number') anyEl.set('top', previousTop)
+    } else {
+      anyEl.textTemplate = textTemplate
+      anyEl.text = textTemplate
+    }
+  }
 
   if (typeof anyEl.updateRadialLayout === 'function') {
     anyEl.updateRadialLayout()

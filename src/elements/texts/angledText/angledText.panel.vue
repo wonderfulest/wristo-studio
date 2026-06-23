@@ -1,45 +1,75 @@
 <template>
-  <div class="settings-section">
-    <div class="setting-item">
-      <label>{{ t('elementSettings.position') }}</label>
-      <PositionInputs
-        :left="positionX"
-        :top="positionY"
-        @update:left="(v) => (positionX = v)"
-        @update:top="(v) => (positionY = v)"
-        @change="updatePosition"
-      />
+  <div class="settings-section text-settings-panel">
+    <div class="text-settings-hero">
+      <div class="text-settings-title">
+        <span class="text-settings-kicker">{{ t('elementSettings.textPanelKicker') }}</span>
+        <strong class="text-settings-heading">{{ t('elementSettings.angledTextPanelTitle') }}</strong>
+        <span class="text-settings-description">{{ t('elementSettings.angledTextPanelHint') }}</span>
+      </div>
+      <span class="text-settings-badge">Angle</span>
     </div>
-    <div class="setting-item">
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.contentSection') }}</strong>
+          <span>{{ t('elementSettings.contentSectionHint') }}</span>
+        </div>
+      </div>
+      <TextVariableEditor
+        v-model="textProperty"
+        :fallback-text="textTemplate"
+        :owner-element-id="currentElementId"
+        @apply="applyTextVariablePatch"
+        @update-template="(value) => (textTemplate = value)"
+      />
+    </section>
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.layoutSection') }}</strong>
+          <span>{{ t('elementSettings.layoutSectionHint') }}</span>
+        </div>
+      </div>
+      <div class="text-settings-grid single">
+        <div class="text-setting-field">
       <label>{{ t('elementSettings.alignment') }}</label>
       <AlignXButtons
         :options="originXOptions"
         v-model="originX"
         @update:modelValue="updateOriginX"
       />
-    </div>
-    <div class="setting-item">
+        </div>
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.angle') }}</label>
+          <input type="number" v-model.number="angle" @change="updateAngle" />
+        </div>
+      </div>
+    </section>
+
+    <section class="text-settings-card">
+      <div class="text-settings-card-header">
+        <div class="text-settings-card-title">
+          <strong>{{ t('elementSettings.appearanceSection') }}</strong>
+          <span>{{ t('elementSettings.appearanceSectionHint') }}</span>
+        </div>
+      </div>
+      <div class="text-settings-grid">
+        <div class="text-setting-field">
       <label>{{ t('elementSettings.fontSize') }}</label>
-      <select v-model.number="fontSize" @change="updateFontSize">
-        <option v-for="size in fontSizes" :key="size" :value="size">{{ size }}px</option>
-      </select>
-    </div>
-    <div class="setting-item">
+      <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
+        </div>
+        <div class="text-setting-field">
       <label>{{ t('elementSettings.fontColor') }}</label>
       <ColorPicker v-model="textColor" @change="updateTextColor" />
-    </div>
-    <div class="setting-item">
+        </div>
+        <div class="text-setting-field full">
       <label>{{ t('elementSettings.font') }}</label>
       <font-picker v-model="fontFamily" @change="updateFontFamily" />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.textContent') }}</label>
-      <TextTemplateEditor v-model="textTemplate" @change="updateTextTemplate" />
-    </div>
-    <div class="setting-item">
-      <label>{{ t('elementSettings.angle') }}</label>
-      <input type="number" v-model.number="angle" @change="updateAngle" />
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -47,12 +77,12 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useFontStore } from '@/stores/fontStore'
-import { fontSizes, originXOptions } from '@/config/settings'
+import { originXOptions } from '@/config/settings'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
-import PositionInputs from '@/elements/common/settings/PositionInputs.vue'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
+import TextVariableEditor from '@/elements/common/settings/TextVariableEditor.vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -80,13 +110,13 @@ const fontStore = useFontStore()
 const currentModel = computed<any>(() => {
   return (props.config as any) || props.element || {}
 })
+const currentElementId = computed(() => String((props.config as any)?.id ?? props.element?.id ?? ''))
 
 const fontSize = ref(currentModel.value?.fontSize || 36)
 const textColor = ref(currentModel.value?.fill || '#FFFFFF')
 const fontFamily = ref(currentModel.value?.fontFamily)
 const originX = ref(currentModel.value?.originX || 'center')
-const positionX = ref(Math.round(currentModel.value?.left || 0))
-const positionY = ref(Math.round(currentModel.value?.top || 0))
+const textProperty = ref((currentModel.value as any)?.textProperty || '')
 const textTemplate = ref((currentModel.value as any)?.textTemplate ?? currentModel.value?.text ?? '')
 const angle = ref(
   typeof (currentModel.value as any)?.angle === 'number'
@@ -147,37 +177,15 @@ const updateOriginX = (value: string) => {
   applyUpdate({ originX: value })
 }
 
-const updatePosition = () => {
-  positionX.value = Math.round(positionX.value)
-  positionY.value = Math.round(positionY.value)
-  applyUpdate({ left: positionX.value, top: positionY.value })
-}
-
-const updateTextTemplate = () => {
-  applyUpdate({ textTemplate: textTemplate.value })
+const applyTextVariablePatch = (patch: { textProperty: string; textTemplate: string }) => {
+  textProperty.value = patch.textProperty
+  textTemplate.value = patch.textTemplate
+  applyUpdate(patch)
 }
 
 const updateAngle = () => {
   applyUpdate({ angle: angle.value })
 }
-
-watch(
-  () => props.element?.left,
-  (newLeft) => {
-    if (newLeft !== undefined) {
-      positionX.value = Math.round(newLeft)
-    }
-  }
-)
-
-watch(
-  () => props.element?.top,
-  (newTop) => {
-    if (newTop !== undefined) {
-      positionY.value = Math.round(newTop)
-    }
-  }
-)
 
 watch(
   () => props.element?.fontSize,
@@ -192,14 +200,34 @@ watch(
   () => props.element?.text,
   (newText) => {
     if (typeof newText === 'string') {
-      textTemplate.value = newText
+      textTemplate.value =
+        typeof (props.element as any)?.textTemplate === 'string'
+          ? (props.element as any).textTemplate
+          : newText
     }
+  }
+)
+
+watch(
+  () => (props.config as any)?.textTemplate,
+  (newTextTemplate) => {
+    if (typeof newTextTemplate === 'string') {
+      textTemplate.value = newTextTemplate
+    }
+  }
+)
+
+watch(
+  () => (props.config as any)?.textProperty,
+  (newTextProperty) => {
+    textProperty.value = typeof newTextProperty === 'string' ? newTextProperty : ''
   }
 )
 </script>
 
 <style scoped>
 @import '@/assets/styles/settings.css';
+@import '@/assets/styles/textSettings.css';
 
 .align-buttons button {
   display: flex;

@@ -86,7 +86,13 @@
                   </div>
 
                   <div class="property-list">
-                    <article v-for="item in group.items" :key="item.key" class="property-row">
+                    <article
+                      v-for="item in group.items"
+                      :key="item.key"
+                      class="property-row"
+                      :class="{ 'property-row-bindable': canBindProperty(item.prop.type) }"
+                      @click="canBindProperty(item.prop.type) && bindProperty(item.key, item.prop.type)"
+                    >
                       <div class="property-type-mark">
                         <el-icon>
                           <component :is="group.icon" />
@@ -120,9 +126,21 @@
                           <el-button
                             :aria-label="t('common.edit')"
                             circle
-                            @click="editProperty(item.key, item.prop)"
+                            @click.stop="editProperty(item.key, item.prop)"
                           >
                             <el-icon><Edit /></el-icon>
+                          </el-button>
+                        </el-tooltip>
+                        <el-tooltip :content="getBindTooltip(item.prop.type)" placement="top">
+                          <el-button
+                            :aria-label="t('property.bindToSelection')"
+                            type="primary"
+                            circle
+                            plain
+                            :disabled="!canBindProperty(item.prop.type)"
+                            @click.stop="bindProperty(item.key, item.prop.type)"
+                          >
+                            <el-icon><Link /></el-icon>
                           </el-button>
                         </el-tooltip>
                         <el-tooltip :content="t('common.delete')" placement="top">
@@ -131,7 +149,7 @@
                             type="danger"
                             circle
                             plain
-                            @click="deleteProperty(item.key)"
+                            @click.stop="deleteProperty(item.key)"
                           >
                             <el-icon><Delete /></el-icon>
                           </el-button>
@@ -188,7 +206,8 @@ import {
   Edit,
   Delete,
   DataLine,
-  TrendCharts
+  TrendCharts,
+  Link
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ColorPropertyDialog from '@/components/properties/dialogs/ColorPropertyDialog.vue'
@@ -201,6 +220,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
+import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection } from '@/elements/common/settings/propertyBinding'
 
 const visible = ref(false)
 const colorPropertyDialog = ref(null)
@@ -330,6 +350,26 @@ const editProperty = (key, prop) => {
   }
 }
 
+const canBindProperty = (type) => {
+  return canBindMetricPropertyToSelection(type)
+}
+
+const getBindTooltip = (type) => {
+  if (type !== 'data' && type !== 'goal') return t('property.bindUnsupported')
+  if (!canBindProperty(type)) return t('property.bindRequiresSelection')
+  return t('property.bindToSelection')
+}
+
+const bindProperty = async (key, type) => {
+  const count = await bindMetricPropertyToSelection(key, type)
+  if (count > 0) {
+    ElMessage.success(t('property.bindSuccess'))
+    visible.value = false
+  } else {
+    ElMessage.warning(t('property.bindRequiresSelection'))
+  }
+}
+
 // 删除属性
 const deleteProperty = async (key) => {
   try {
@@ -356,7 +396,13 @@ const deleteProperty = async (key) => {
 
 // 处理属性确认
 const handlePropertyConfirm = (propertyData) => {
-  propertiesStore.addProperty(propertyData)
+  const { isEdit, ...propertyPayload } = propertyData
+  if (!isEdit && propertiesStore.allProperties[propertyPayload.key]) {
+    ElMessage.error(t('property.keyDuplicate'))
+    return
+  }
+
+  propertiesStore.addProperty(propertyPayload)
   commitHistory('upsert-property')
 }
 
@@ -726,6 +772,15 @@ defineExpose({
 .property-row:hover {
   border-color: var(--el-border-color);
   background: var(--el-fill-color-extra-light);
+}
+
+.property-row-bindable {
+  cursor: pointer;
+}
+
+.property-row-bindable:hover {
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-color-primary-light-9);
 }
 
 .property-type-mark {

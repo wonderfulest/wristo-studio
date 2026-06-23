@@ -47,7 +47,7 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.rangeColors')">
-        <div style="display:flex; gap: 8px; flex-wrap: wrap;">
+        <div class="range-color-grid">
           <color-picker
             v-for="idx in 5"
             :key="idx"

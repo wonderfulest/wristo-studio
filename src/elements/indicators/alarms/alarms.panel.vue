@@ -12,9 +12,7 @@
 
     <div class="setting-item">
       <label>{{ t('elementSettings.fontSize') }}</label>
-      <el-select v-model="fontSize" :placeholder="t('elementSettings.selectSize')" @change="updateFontSize">
-        <el-option v-for="size in availableFontSizes" :key="size" :label="size + 'px'" :value="size" />
-      </el-select>
+      <FontSizeSelect v-model="fontSize" :options="availableFontSizes" @change="updateFontSize" />
     </div>
   </div>
 </template>
@@ -27,6 +25,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { fontSizes } from '@/config/settings'
 import { FontTypes } from '@/config/fonts'
+import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
