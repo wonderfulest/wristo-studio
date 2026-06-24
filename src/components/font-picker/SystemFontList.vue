@@ -96,6 +96,11 @@ defineEmits<{
   color: var(--studio-primary);
 }
 
+.font-item.active :deep(.font-main) {
+  border: 2px solid var(--studio-primary);
+  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
+}
+
 .preview-text {
   font-size: 18px;
   color: var(--studio-text);

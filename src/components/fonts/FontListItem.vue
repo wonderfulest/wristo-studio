@@ -15,6 +15,21 @@
         <div class="font-name" v-if="label">{{ label }}</div>
         <div class="font-name-actions" :style="actionsStyle" v-if="fontId != null">
           <button
+            v-if="fontId != null"
+            type="button"
+            class="font-icon-btn font-icon-btn-favorite"
+            :class="{ favorited: isFavorite }"
+            :title="isFavorite ? t('font.removeFavorite') : t('font.addFavorite')"
+            :aria-label="isFavorite ? t('font.removeFavorite') : t('font.addFavorite')"
+            :disabled="favoriteUpdating"
+            @click.stop="onToggleFavorite"
+          >
+            <el-icon>
+              <StarFilled v-if="isFavorite" />
+              <Star v-else />
+            </el-icon>
+          </button>
+          <button
             v-if="fontId != null && canEditSearchIndex"
             type="button"
             class="font-icon-btn font-icon-btn-tag"
@@ -84,12 +99,12 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElTag, ElMessageBox } from 'element-plus'
-import { CollectionTag, Edit, Delete, Clock } from '@element-plus/icons-vue'
+import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
+import { CollectionTag, Edit, Delete, Clock, Star, StarFilled } from '@element-plus/icons-vue'
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { removeMyFont } from '@/api/wristo/fonts'
+import { favoriteFont, removeMyFont, unfavoriteFont } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
@@ -111,14 +126,18 @@ const props = defineProps<{
   previewText?: string
   isRecent?: boolean
   compact?: boolean
+  favoriteWeight?: number | null
 }>()
 
 const emit = defineEmits<{
   (e: 'removed', id: number): void
   (e: 'editSearchIndex', id: number): void
+  (e: 'favoriteChanged', id: number, favoriteWeight: number | null | undefined): void
 }>()
 
 const isReady = ref(false)
+const favoriteUpdating = ref(false)
+const localFavoriteWeight = ref<number | null | undefined>(props.favoriteWeight)
 
 const router = useRouter()
 const fontStore = useFontStore()
@@ -137,7 +156,8 @@ const hasTags = computed(() => props.isMonospace || !!props.subfamily || visible
 const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
 const cornerBadgeCount = computed(() => (props.isSystem ? 1 : 0) + (props.isRecent ? 1 : 0))
 const cornerBadgeWidth = computed(() => cornerBadgeCount.value * 28)
-const actionWidth = computed(() => (props.fontId != null ? 58 : 0))
+const actionWidth = computed(() => (props.fontId != null ? 88 : 0))
+const isFavorite = computed(() => localFavoriteWeight.value != null)
 const recentBadgeStyle = computed(() => ({
   right: props.isSystem ? '34px' : '6px',
 }))
@@ -183,6 +203,13 @@ watch(
   () => [props.fontFamily, props.fontUrl],
   ([newSlug, newUrl]) => {
     loadFont(newSlug, newUrl)
+  }
+)
+
+watch(
+  () => props.favoriteWeight,
+  (value) => {
+    localFavoriteWeight.value = value
   }
 )
 
@@ -238,6 +265,24 @@ const onEditIcon = () => {
 const onEditSearchIndex = () => {
   if (props.fontId == null) return
   emit('editSearchIndex', props.fontId)
+}
+
+const onToggleFavorite = async () => {
+  if (props.fontId == null || favoriteUpdating.value) return
+  favoriteUpdating.value = true
+  try {
+    const res = isFavorite.value
+      ? await unfavoriteFont(props.fontId)
+      : await favoriteFont(props.fontId)
+    const nextWeight = res.data?.favoriteWeight
+    localFavoriteWeight.value = nextWeight
+    emit('favoriteChanged', props.fontId, nextWeight)
+  } catch (e) {
+    console.warn('toggle font favorite failed', e)
+    ElMessage.error(t('font.favoriteFailed'))
+  } finally {
+    favoriteUpdating.value = false
+  }
 }
 </script>
 
@@ -381,8 +426,14 @@ const onEditSearchIndex = () => {
 }
 
 .font-icon-btn-tag,
-.font-icon-btn-edit {
+.font-icon-btn-edit,
+.font-icon-btn-favorite {
   color: var(--studio-primary);
+}
+
+.font-icon-btn-favorite.favorited {
+  color: #f5a524;
+  opacity: 1;
 }
 
 .font-icon-btn-delete {
@@ -390,7 +441,8 @@ const onEditSearchIndex = () => {
 }
 
 .font-icon-btn-tag:hover,
-.font-icon-btn-edit:hover {
+.font-icon-btn-edit:hover,
+.font-icon-btn-favorite:hover {
   background: transparent;
   border-color: var(--studio-primary-border);
   box-shadow: none;

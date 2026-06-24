@@ -16,6 +16,11 @@ type FabricLikeObject = FabricObject & {
   set: (props: Record<string, unknown>) => unknown
 }
 
+type VisualCenter = {
+  x: number
+  y: number
+}
+
 // 统一控制点适用的元素类型（按 eleType 区分），供全局复用
 export const DESIGNER_CONTROL_TYPES: string[] = ['rectangle', 'windDirection', 'circle', 'image']
 
@@ -105,6 +110,45 @@ async function cloneFabricObject(target: FabricLikeObject): Promise<FabricLikeOb
   }
 }
 
+function getVisualCenter(target: FabricLikeObject): VisualCenter {
+  const rect = typeof target.getBoundingRect === 'function' ? target.getBoundingRect() : null
+  if (rect) {
+    const left = Number(rect.left ?? 0)
+    const top = Number(rect.top ?? 0)
+    const width = Number(rect.width ?? 0)
+    const height = Number(rect.height ?? 0)
+    if ([left, top, width, height].every(Number.isFinite)) {
+      return {
+        x: left + width / 2,
+        y: top + height / 2,
+      }
+    }
+  }
+
+  const left = Number(target.left ?? 0)
+  const top = Number(target.top ?? 0)
+  return {
+    x: Number.isFinite(left) ? left : 0,
+    y: Number.isFinite(top) ? top : 0,
+  }
+}
+
+function getOffsetAnchorPosition(source: FabricLikeObject, cloned: FabricLikeObject): { left: number; top: number } {
+  const sourceCenter = getVisualCenter(source)
+  const clonedCenter = getVisualCenter(cloned)
+  const sourceLeft = Number(source.left ?? sourceCenter.x)
+  const sourceTop = Number(source.top ?? sourceCenter.y)
+  const clonedLeft = Number(cloned.left ?? clonedCenter.x)
+  const clonedTop = Number(cloned.top ?? clonedCenter.y)
+  const anchorOffsetX = Number.isFinite(clonedLeft) ? clonedLeft - clonedCenter.x : sourceLeft - sourceCenter.x
+  const anchorOffsetY = Number.isFinite(clonedTop) ? clonedTop - clonedCenter.y : sourceTop - sourceCenter.y
+
+  return {
+    left: sourceCenter.x + runtimeOptions.cloneOffset + anchorOffsetX,
+    top: sourceCenter.y + runtimeOptions.cloneOffset + anchorOffsetY,
+  }
+}
+
 function deleteHandler(_eventData: unknown, transform: { target?: FabricLikeObject }): boolean {
   const target = transform.target
   if (!isManageableTarget(target) || !target.canvas) return false
@@ -128,8 +172,7 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
     const cloned = await cloneFabricObject(source)
     if (!cloned) return
 
-    const left = Number(source.left ?? 0) + runtimeOptions.cloneOffset
-    const top = Number(source.top ?? 0) + runtimeOptions.cloneOffset
+    const { left, top } = getOffsetAnchorPosition(source, cloned)
 
     cloned.set({
       id: nanoid(),

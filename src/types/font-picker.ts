@@ -13,6 +13,7 @@ export type FontItem = {
   searchKeywords?: string
   weightClass?: number
   widthClass?: number
+  favoriteWeight?: number | null
 }
 
 export type Section = {

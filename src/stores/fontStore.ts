@@ -6,6 +6,7 @@ import { DesignFontVO } from '@/types/font'
 import { DesignElement } from '@/types/api/design'
 // Types
 export interface FontOption {
+  id?: number
   label: string
   value: string
   family: string
@@ -17,6 +18,11 @@ export interface FontOption {
   isMonospace?: boolean
   italic?: boolean
   isSystem?: boolean
+  favoriteWeight?: number | null
+  styleTags?: string | string[]
+  searchKeywords?: string
+  weightClass?: number
+  widthClass?: number
 }
 
 interface FontSectionsState {
@@ -63,9 +69,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   loadFonts(fontNames: string[]): Promise<boolean>
   loadFontsForElements(elements: Array<DesignElement>): Promise<boolean>
   loadSystemFonts(type?: string): Promise<DesignFontVO[]>
-  addRecentFont(font: FontOption): void
-  addCustomFont(font: FontOption): void
-  toggleSection(sectionName: keyof FontSectionsState | string): void
+	  addRecentFont(font: FontOption): void
+	  addCustomFont(font: FontOption): void
+	  updateFontFavorite(fontId: number, favoriteWeight: number | null | undefined): void
+	  toggleSection(sectionName: keyof FontSectionsState | string): void
   searchFonts(query: string): FontOption[]
 }>(
   'fontStore',
@@ -287,14 +294,16 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             const label = f.fullName || f.family || f.postscriptName || f.slug
             const family = f.family || f.fullName || f.postscriptName || f.slug
             const value = f.slug || family
-            const option: FontOption = {
-              label,
-              value,
-              family,
-              isMonospace: (f as any)?.isMonospace === 1,
-              italic: (f as any)?.italic === 1,
-              isSystem: true,
-            }
+	            const option: FontOption = {
+	              id: f.id,
+	              label,
+	              value,
+	              family,
+	              isMonospace: (f as any)?.isMonospace === 1,
+	              italic: (f as any)?.italic === 1,
+	              isSystem: true,
+	              favoriteWeight: f.favoriteWeight,
+	            }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
             // 将内置字体的实际加载加入等待队列，避免竞态
@@ -319,14 +328,16 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id)
           const list: DesignFontVO[] = recentFonts?.data ?? []
           const mapped: FontOption[] = list.map((f) => ({
-            label: f.fullName,
-            value: f.slug,
+	            label: f.fullName,
+	            id: f.id,
+	            value: f.slug,
             family: f.family,
             src: f.ttfFile?.url,
-            isMonospace: (f as any)?.isMonospace === 1,
-            italic: (f as any)?.italic === 1,
-            isSystem: (f as any)?.isSystem === 1,
-          }))
+	            isMonospace: (f as any)?.isMonospace === 1,
+	            italic: (f as any)?.italic === 1,
+	            isSystem: (f as any)?.isSystem === 1,
+	            favoriteWeight: f.favoriteWeight,
+	          }))
           // 去重并只保留 5 个
           const seen = new Set<string>()
           this.recentFonts = mapped.filter((m) => {
@@ -406,7 +417,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
       },
 
       // 添加最近使用的字体
-      addRecentFont(font: FontOption) {
+	      addRecentFont(font: FontOption) {
         if (!font || !font.value) return
 
         // 从现有列表中移除这个字体（如果存在）
@@ -422,7 +433,17 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         if (this.recentFonts.length > 5) {
           this.recentFonts.pop()
         }
-      },
+	      },
+
+	      updateFontFavorite(fontId: number, favoriteWeight: number | null | undefined) {
+	        const apply = (font: FontOption) => (
+	          font.id === fontId ? { ...font, favoriteWeight } : font
+	        )
+	        this.recentFonts = this.recentFonts.map(apply)
+	        Object.keys(this.builtinFonts).forEach((key) => {
+	          this.builtinFonts[key] = this.builtinFonts[key].map(apply)
+	        })
+	      },
 
       // 添加自定义字体
       addCustomFont(font: FontOption) {

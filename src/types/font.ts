@@ -37,6 +37,7 @@ export interface DesignFontVO {
   status: string
   ttf: number
   ttfFile: FileVO
+  favoriteWeight?: number | null
 }
 
 // 字体分页查询 DTO

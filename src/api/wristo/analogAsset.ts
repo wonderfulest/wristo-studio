@@ -39,12 +39,19 @@ export const analogAssetApi = {
     return instance.post('/dsn/analog-asset/get?populate=asset', null, {
       params: { id }
     })
-  }
-  ,
+  },
   remove(id: number): Promise<ApiResponse<boolean>> {
     return instance.post('/dsn/analog-asset/remove', null, {
       params: { id }
     })
+  },
+  setFavorite(id: number, favorite: boolean): Promise<ApiResponse<AnalogAssetVO>> {
+    return instance.post('/dsn/analog-asset/favorite', null, {
+      params: { id, favorite }
+    })
+  },
+  batchRemove(ids: number[]): Promise<ApiResponse<boolean>> {
+    return instance.post('/dsn/analog-asset/batch-remove', ids)
   }
 }
 

@@ -19,6 +19,7 @@ export interface BitmapFontVO {
   version?: number
   isActive?: number
   userId?: number
+  favoriteWeight?: number | null
   createdAt?: string
   updatedAt?: string
 }
@@ -29,6 +30,7 @@ export interface BitmapFontPageQueryDTO {
   keyword?: string
   isActive?: number
   orderBy?: string
+  includeAllUsers?: boolean
 }
 
 export interface BitmapFontCreateDTO {
@@ -94,6 +96,14 @@ export const getBitmapFontDetail = (id: number): Promise<ApiResponse<BitmapFontV
 
 export const removeBitmapFont = (id: number): Promise<ApiResponse<boolean>> => {
   return instance.post('/dsn/bitmap-font/remove', undefined, { params: { id } })
+}
+
+export const favoriteBitmapFont = (id: number): Promise<ApiResponse<BitmapFontVO>> => {
+  return instance.post('/dsn/bitmap-font/favorite', undefined, { params: { id } })
+}
+
+export const unfavoriteBitmapFont = (id: number): Promise<ApiResponse<BitmapFontVO>> => {
+  return instance.post('/dsn/bitmap-font/unfavorite', undefined, { params: { id } })
 }
 
 export const listBitmapFontChars = (

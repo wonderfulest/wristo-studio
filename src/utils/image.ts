@@ -2,19 +2,19 @@ import { uploadScreenshot } from '@/api/wristo/upload'
 
 export type UploadType = string
 
-// 上传指针SVG
-export const uploadHandSVG = async (svgUrl: string, type: UploadType) => {
+// 上传指针素材
+export const uploadHandSVG = async (svgUrl: string, type: UploadType, fileName = 'hand.svg') => {
   try {
     const response = await fetch(svgUrl)
     const blob = await response.blob()
     const formData = new FormData()
-    formData.append('file', blob, `hand.svg`)
+    formData.append('file', blob, fileName)
     formData.append('type', type)
     const res = await uploadScreenshot(formData)
     
     return res.data as any
   } catch (error) {
-    console.error('上传指针SVG失败:', error)
+    console.error('上传指针素材失败:', error)
     throw error
   }
 }

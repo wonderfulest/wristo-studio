@@ -8,7 +8,16 @@
     <!-- Bitmap font selection panel -->
     <div v-if="isOpen" class="font-panel">
       <!-- Add bitmap font button -->
-      <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="openNewBitmapFont">{{ t('font.addBitmapFont') }}</button>
+      <div v-if="canUsePremiumAssets" class="font-panel-toolbar">
+        <button class="add-font-btn" type="button" @click.stop.prevent="openNewBitmapFont">{{ t('font.addBitmapFont') }}</button>
+        <el-segmented
+          v-if="canViewAllBitmapFonts"
+          v-model="fontScope"
+          class="font-scope-toggle"
+          :options="fontScopeOptions"
+          size="small"
+        />
+      </div>
       <!-- Bitmap font list -->
       <BitmapFontList
         v-if="canUsePremiumAssets"
@@ -17,8 +26,11 @@
         :page-num="pageNum"
         :page-size="pageSize"
         :total="bitmapTotal"
+        :downloading-id="downloadingFontId"
         @select="handleSelectBitmapFont"
         @edit="handleEditBitmapFont"
+        @download="handleDownloadBitmapFont"
+        @favorite-toggle="handleToggleBitmapFontFavorite"
         @page-change="handleBitmapPageChange"
       />
     </div>
@@ -36,12 +48,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import JSZip from 'jszip'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
+import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, favoriteBitmapFont, unfavoriteBitmapFont, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
@@ -68,11 +81,13 @@ const { t } = useI18n()
 const bitmapType = BITMAP_FONT_TYPE
 
 const isOpen = ref<boolean>(false)
+const fontScope = ref<'mine' | 'all'>('mine')
 
 // bitmap font setting dialog state
 const bitmapDialogVisible = ref(false)
 const currentFontName = ref<string>('')
 const isTempRandFont = ref<boolean>(false)
+const downloadingFontId = ref<number | null>(null)
 type BitmapRow = {
   // 字符值：'0'-'9' 或 ':' 等
   index: string
@@ -93,6 +108,12 @@ const pageNum = computed(() => bitmapFontStore.pageNum)
 const pageSize = computed(() => bitmapFontStore.pageSize)
 const bitmapTotal = computed(() => bitmapFontStore.total)
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
+const canViewAllBitmapFonts = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
+const includeAllUsers = computed(() => canViewAllBitmapFonts.value === true && fontScope.value === 'all')
+const fontScopeOptions = computed(() => [
+  { label: t('font.scopeMine'), value: 'mine' },
+  { label: t('font.scopeAll'), value: 'all' },
+])
 
 const digitRows = computed<DigitRowState[]>(() => rows.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
 const symbolRows = computed<DigitRowState[]>(() => symbolRowList.value.map(r => ({ index: r.index, imageUrl: r.imageUrl })))
@@ -114,7 +135,7 @@ const togglePanel = () => {
   if (isOpen.value && bitmapFonts.value.length === 0) {
     bitmapFontStore.loadFromSession()
     if (!bitmapFontStore.fonts.length) {
-      void bitmapFontStore.loadPage(1)
+      void bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
     }
   }
 }
@@ -139,7 +160,7 @@ const openNewBitmapFont = async () => {
       rows.value = rows.value.map(row => ({ index: row.index, hasValue: false }))
       await loadBitmapRows(font.id)
       // 新建后刷新列表以便展示新字体
-      void bitmapFontStore.loadPage(1)
+      void bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
       // 新建后清理 session 缓存，确保后续列表从最新数据加载
       bitmapFontStore.clearSession()
     }
@@ -195,7 +216,7 @@ const confirmBitmapDialog = async () => {
     // 每次点击 OK 结束编辑后，清理 bitmap 字体缓存
     bitmapFontStore.clearSession()
     // 并重新加载列表，确保 UI 展示的是最新的 bitmap 字体信息
-    void bitmapFontStore.loadPage(1)
+    void bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
   }
 }
 
@@ -249,7 +270,7 @@ const loadBitmapRows = async (fontId: number) => {
 }
 
 const handleBitmapPageChange = async (page: number) => {
-  await bitmapFontStore.loadPage(page)
+  await bitmapFontStore.loadPage(page, undefined, includeAllUsers.value)
 }
 
 const handleSelectBitmapFont = async (font: BitmapFontVO) => {
@@ -278,6 +299,100 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
   isTempRandFont.value = typeof font.fontName === 'string' && font.fontName.startsWith('rand_')
   // 直接使用当前点击的字体 id，避免依赖父组件异步更新后的 props.modelValue 造成一次延迟
   await openBitmapDialog(font.id)
+}
+
+const sanitizeDownloadName = (name: string) => {
+  return String(name || 'bitmap-font')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'bitmap-font'
+}
+
+const safeCharFileName = (charValue: string) => {
+  if (charValue === ':') return 'colon'
+  if (charValue === '/') return 'slash'
+  if (charValue === '\\') return 'backslash'
+  if (charValue === ' ') return 'space'
+  const encoded = Array.from(charValue || '').map((char) => {
+    if (/^[a-zA-Z0-9_-]$/.test(char)) return char
+    return `u${char.codePointAt(0)?.toString(16).padStart(4, '0') || '0000'}`
+  }).join('')
+  return encoded || 'empty'
+}
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const handleDownloadBitmapFont = async (font: BitmapFontVO) => {
+  if (!canUsePremiumAssets.value) {
+    membershipGate.requirePremium('font.premiumAssetRequired')
+    return
+  }
+  if (!font?.id || downloadingFontId.value) return
+
+  downloadingFontId.value = font.id
+  try {
+    const res = await listBitmapFontChars(font.id)
+    const relations = ((res.data || []) as BitmapFontAssetRelationVO[])
+      .filter(relation => relation.image?.url || relation.image?.previewUrl)
+
+    if (!relations.length) {
+      ElMessage.warning(t('font.noBitmapGlyphsToDownload'))
+      return
+    }
+
+    const zip = new JSZip()
+    const usedNames = new Set<string>()
+
+    for (const relation of relations) {
+      const url = relation.image?.url || relation.image?.previewUrl
+      if (!url) continue
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch glyph ${relation.charValue}`)
+      }
+      const baseName = `${relation.charType || 'glyph'}-${safeCharFileName(relation.charValue)}`
+      let fileName = `${baseName}.svg`
+      if (usedNames.has(fileName)) {
+        fileName = `${baseName}-${relation.id}.svg`
+      }
+      usedNames.add(fileName)
+      zip.file(fileName, await response.blob())
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    downloadBlob(blob, `${sanitizeDownloadName(font.fontName)}.zip`)
+  } catch (e) {
+    console.warn('download bitmap font failed', e)
+    ElMessage.error(t('font.downloadBitmapFontFailed'))
+  } finally {
+    downloadingFontId.value = null
+  }
+}
+
+const handleToggleBitmapFontFavorite = async (font: BitmapFontVO) => {
+  if (!font?.id) return
+  try {
+    const favorited = font.favoriteWeight != null
+    const res = favorited
+      ? await unfavoriteBitmapFont(font.id)
+      : await favoriteBitmapFont(font.id)
+    bitmapFontStore.updateFavorite(font.id, res.data?.favoriteWeight)
+    bitmapFontStore.clearSession()
+    await bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
+  } catch (e) {
+    console.warn('toggle bitmap font favorite failed', e)
+    ElMessage.error(t('font.favoriteFailed'))
+  }
 }
 
 const handleResetRowByIndex = async (index: string) => {
@@ -383,6 +498,13 @@ onMounted(async () => {
   document.addEventListener('click', handleOutsideClick)
 })
 
+watch(includeAllUsers, async () => {
+  bitmapFontStore.clearSession()
+  if (isOpen.value) {
+    await bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
+  }
+})
+
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
@@ -422,6 +544,20 @@ onUnmounted(() => {
   border-radius: 4px;
   box-shadow: var(--studio-shadow-md);
   z-index: 1000;
+}
+
+.font-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--studio-surface-raised);
+  border-bottom: 1px solid var(--studio-border);
+}
+
+.font-scope-toggle {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .font-name {

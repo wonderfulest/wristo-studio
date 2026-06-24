@@ -13,15 +13,17 @@
           <FontListItem
             :label="font.family"
             :font-family="font.value"
-            :type="type"
-            :font-url="font.src"
-            :font-id="font.id"
-            :style-tags="font.styleTags"
-            :can-edit-search-index="!!font.id"
-            is-recent
-            compact
-            @edit-search-index="() => emit('editSearchIndex', font)"
-          />
+	            :type="type"
+	            :font-url="font.src"
+	            :font-id="font.id"
+	            :style-tags="font.styleTags"
+	            :favorite-weight="font.favoriteWeight"
+	            :can-edit-search-index="!!font.id"
+	            is-recent
+	            compact
+	            @edit-search-index="() => emit('editSearchIndex', font)"
+	            @favorite-changed="handleFavoriteChanged"
+	          />
         </div>
       </div>
     </div>
@@ -33,6 +35,7 @@ import { computed } from 'vue'
 import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
+import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -49,7 +52,12 @@ const emit = defineEmits<{
   (e: 'editSearchIndex', font: FontItem): void
 }>()
 
+const fontStore = useFontStore()
 const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true))
+
+const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
+  fontStore.updateFontFavorite(id, favoriteWeight)
+}
 </script>
 
 <style scoped>
@@ -93,6 +101,11 @@ const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, prop
 .font-item.active {
   background: var(--studio-primary-soft);
   color: var(--studio-primary);
+}
+
+.font-item.active :deep(.font-main) {
+  border: 2px solid var(--studio-primary);
+  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
 }
 
 .preview-text {

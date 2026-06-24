@@ -33,10 +33,12 @@
                 :is-monospace="(font as any).isMonospace === true"
                 :is-system="(font as any).isSystem === true"
                 :style-tags="(font as any).styleTags"
+                :favorite-weight="(font as any).favoriteWeight"
                 :font-id="font.id"
                 :can-edit-search-index="!!font.id"
                 compact
                 @edit-search-index="() => emit('editSearchIndex', font)"
+                @favorite-changed="handleFavoriteChanged"
               />
             </div>
         </div>
@@ -63,10 +65,12 @@
               :is-monospace="(font as any).isMonospace === true"
               :is-system="(font as any).isSystem === true"
               :style-tags="(font as any).styleTags"
+              :favorite-weight="(font as any).favoriteWeight"
               :font-id="font.id"
               :can-edit-search-index="!!font.id"
               compact
               @edit-search-index="() => emit('editSearchIndex', font)"
+              @favorite-changed="handleFavoriteChanged"
             />
           </div>
         </div>
@@ -158,7 +162,7 @@ const filterFonts = async () => {
   })
   // local filter
   const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true)
-  filteredFonts.value = local
+  filteredFonts.value = sortByFavorite(local)
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
     filteredLocalCount: filteredFonts.value.length,
@@ -222,15 +226,16 @@ const filterFonts = async () => {
         italic,
         isSystem,
         styleTags,
-        searchKeywords: font.searchKeywords,
-        weightClass: font.weightClass,
-        widthClass: font.widthClass,
-      } as FontItem
-    })
+	        searchKeywords: font.searchKeywords,
+	        weightClass: font.weightClass,
+	        widthClass: font.widthClass,
+	        favoriteWeight: font.favoriteWeight,
+	      } as FontItem
+	    })
     console.log('[FontSearch] remoteFonts mapped', {
       remoteFontsCount: remoteFonts.length,
     })
-    remoteSearchResults.value = remoteFonts
+    remoteSearchResults.value = sortByFavorite(remoteFonts)
     console.log('[FontSearch] remoteSearchResults final', {
       remoteSearchResultsCount: remoteSearchResults.value.length,
     })
@@ -252,6 +257,17 @@ const handleSelect = (font: FontItem) => {
     font,
   })
   emit('select', font)
+}
+
+const sortByFavorite = (list: FontItem[]) => {
+  return [...list].sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
+}
+
+const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
+  const update = (font: FontItem) => font.id === id ? { ...font, favoriteWeight } : font
+  filteredFonts.value = sortByFavorite(filteredFonts.value.map(update))
+  remoteSearchResults.value = sortByFavorite(remoteSearchResults.value.map(update))
+  fontStore.updateFontFavorite(id, favoriteWeight)
 }
 </script>
 
@@ -313,6 +329,10 @@ const handleSelect = (font: FontItem) => {
 }
 .font-item:hover { background: var(--studio-surface-soft); }
 .font-item.active { background: var(--studio-primary-soft); color: var(--studio-primary); }
+.font-item.active :deep(.font-main) {
+  border: 2px solid var(--studio-primary);
+  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
+}
 .preview-text { font-size: 18px; color: var(--studio-text); }
 .no-results { padding: 24px; text-align: center; color: var(--studio-text-subtle); font-size: 14px; }
 .search-loading {

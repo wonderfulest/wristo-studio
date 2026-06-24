@@ -6,6 +6,43 @@
       class="bitmap-font-item"
       :class="{ active: font.id === activeId }"
     >
+      <div class="actions">
+        <el-tooltip :content="isFavoriteFont(font) ? t('font.removeFavorite') : t('font.addFavorite')" placement="top">
+          <button
+            type="button"
+            class="bitmap-icon-btn bitmap-icon-btn-favorite"
+            :class="{ favorited: isFavoriteFont(font) }"
+            :aria-label="isFavoriteFont(font) ? t('font.removeFavorite') : t('font.addFavorite')"
+            @click.stop="() => emit('favorite-toggle', font)"
+          >
+            <el-icon>
+              <StarFilled v-if="isFavoriteFont(font)" />
+              <Star v-else />
+            </el-icon>
+          </button>
+        </el-tooltip>
+        <el-tooltip v-if="canEdit(font)" :content="t('common.edit')" placement="top">
+          <button
+            type="button"
+            class="bitmap-icon-btn bitmap-icon-btn-edit"
+            :aria-label="t('common.edit')"
+            @click.stop="() => emit('edit', font)"
+          >
+            <el-icon><Edit /></el-icon>
+          </button>
+        </el-tooltip>
+        <el-tooltip :content="t('common.download')" placement="top">
+          <button
+            type="button"
+            class="bitmap-icon-btn bitmap-icon-btn-download"
+            :disabled="downloadingId != null"
+            :aria-label="t('common.download')"
+            @click.stop="() => emit('download', font)"
+          >
+            <el-icon><Download /></el-icon>
+          </button>
+        </el-tooltip>
+      </div>
       <div class="info" @click="() => emit('select', font)">
         <div class="name">{{ font.fontName }}</div>
         <!-- glyph preview: 0-9 and ':' -->
@@ -25,16 +62,6 @@
           </div>
         </div>
       </div>
-      <div class="actions">
-        <el-button
-          v-if="canEdit(font)"
-          type="text"
-          size="small"
-          @click.stop="() => emit('edit', font)"
-        >
-          {{ t('common.edit') }}
-        </el-button>
-      </div>
     </div>
 
     <div v-if="!fonts.length" class="bitmap-font-empty">
@@ -45,6 +72,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { Download, Edit, Star, StarFilled } from '@element-plus/icons-vue'
 import type { BitmapFontVO, BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 import { useUserStore } from '@/stores/user'
@@ -58,11 +86,14 @@ const props = defineProps<{
   pageNum: number
   pageSize: number
   total: number
+  downloadingId?: number | null
 }>()
 
 const emit = defineEmits<{
   (e: 'select', font: BitmapFontVO): void
   (e: 'edit', font: BitmapFontVO): void
+  (e: 'download', font: BitmapFontVO): void
+  (e: 'favorite-toggle', font: BitmapFontVO): void
   (e: 'page-change', page: number): void
 }>()
 
@@ -88,6 +119,10 @@ const canEdit = (font: BitmapFontVO) => {
   if (font.userId === uid) return true
   if (isAdmin.value) return true
   return false
+}
+
+const isFavoriteFont = (font: BitmapFontVO) => {
+  return font.favoriteWeight != null
 }
 
 const loadGlyphsForFont = async (fontId: number) => {
@@ -164,33 +199,56 @@ const onScroll = (e: Event) => {
 }
 
 .bitmap-font-item {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 6px;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 82px;
+  padding: 2px 4px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58)),
+    var(--studio-surface);
+  box-shadow: var(--studio-shadow-sm);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.bitmap-font-item + .bitmap-font-item {
+  margin-top: 8px;
+}
+
+:root[data-studio-theme='dark'] .bitmap-font-item {
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.78), rgba(15, 23, 42, 0.42)),
+    var(--studio-surface);
 }
 
 .bitmap-font-item:hover {
-  background: var(--studio-surface-soft);
+  border-color: var(--studio-primary-border);
+  box-shadow: var(--studio-shadow-md);
+  transform: translateY(-1px);
 }
 
 .bitmap-font-item.active {
-  background: var(--studio-primary-soft);
   box-shadow: 0 0 0 1px var(--studio-primary) inset;
 }
 
 .info {
-  flex: 1;
+  width: 100%;
   min-width: 0;
+  min-height: 100%;
 }
 
 .name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--studio-text);
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 86px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--studio-text-subtle);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -252,7 +310,57 @@ const onScroll = (e: Event) => {
 }
 
 .actions {
-  margin-left: 8px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bitmap-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  opacity: 0.72;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+.bitmap-icon-btn-edit,
+.bitmap-icon-btn-favorite,
+.bitmap-icon-btn-download {
+  color: var(--studio-primary);
+}
+
+.bitmap-icon-btn-favorite.favorited {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.34);
+  background: rgba(245, 158, 11, 0.1);
+  opacity: 1;
+}
+
+.bitmap-icon-btn:hover:not(:disabled) {
+  border-color: var(--studio-primary-border);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.bitmap-icon-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.bitmap-icon-btn:disabled {
+  cursor: progress;
+  opacity: 0.38;
 }
 
 .bitmap-font-empty {
@@ -268,5 +376,17 @@ const onScroll = (e: Event) => {
   border-top: 1px solid var(--studio-border);
   display: flex;
   justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bitmap-font-item,
+  .bitmap-icon-btn {
+    transition: none;
+  }
+
+  .bitmap-font-item:hover,
+  .bitmap-icon-btn:hover:not(:disabled) {
+    transform: none;
+  }
 }
 </style>

@@ -18,9 +18,11 @@
           :font-id="font.id"
           :font-url="font.ttfFile?.url"
           :style-tags="font.styleTags"
+          :favorite-weight="font.favoriteWeight"
           :can-edit-search-index="!!font.id"
           compact
           @edit-search-index="() => emit('editSearchIndex', font)"
+          @favorite-changed="handleFavoriteChanged"
           @removed="onFontRemoved"
         />
       </div>
@@ -64,6 +66,7 @@ const hasMore = computed(() => fonts.value.length < total.value)
 
 defineExpose({
   loadNextPage,
+  loadUntilFont,
 })
 
 const loadPage = async () => {
@@ -99,10 +102,39 @@ const loadPage = async () => {
   }
 }
 
-function loadNextPage() {
+async function loadNextPage() {
   if (loading.value || !hasMore.value) return
   pageNum.value += 1
-  void loadPage()
+  await loadPage()
+}
+
+const waitForIdle = () => new Promise<void>((resolve) => {
+  if (!loading.value) {
+    resolve()
+    return
+  }
+
+  const timer = window.setInterval(() => {
+    if (!loading.value) {
+      window.clearInterval(timer)
+      resolve()
+    }
+  }, 50)
+})
+
+async function loadUntilFont(slug: string) {
+  if (!slug) return false
+  await waitForIdle()
+
+  while (!fonts.value.some(font => font.slug === slug) && hasMore.value) {
+    const previousLength = fonts.value.length
+    await loadNextPage()
+    await waitForIdle()
+
+    if (fonts.value.length === previousLength && !hasMore.value) break
+  }
+
+  return fonts.value.some(font => font.slug === slug)
 }
 
 const handleSelect = (font: DesignFontVO) => {
@@ -113,12 +145,19 @@ const handleSelect = (font: DesignFontVO) => {
     isMonospace: font.isMonospace === 1,
     italic: font.italic === 1,
     isSystem: font.isSystem === 1,
+    favoriteWeight: font.favoriteWeight,
   }
   emit('select', item)
 }
 
 const onFontRemoved = (id: number) => {
   fonts.value = fonts.value.filter(f => f.id !== id)
+}
+
+const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
+  fonts.value = fonts.value
+    .map(font => font.id === id ? { ...font, favoriteWeight } : font)
+    .sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
 }
 
 onMounted(() => {
@@ -165,6 +204,11 @@ watch(
 .font-item.active {
   background: var(--studio-primary-soft);
   color: var(--studio-primary);
+}
+
+.font-item.active :deep(.font-main) {
+  border: 2px solid var(--studio-primary);
+  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
 }
 
 .font-main {

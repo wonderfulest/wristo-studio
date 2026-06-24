@@ -7,6 +7,7 @@ export interface BitmapFontStoreState {
   pageSize: number
   total: number
   loaded: boolean
+  includeAllUsers: boolean
 }
 
 const SESSION_KEY = 'wristo_bitmap_fonts_cache_v1'
@@ -16,6 +17,7 @@ interface BitmapFontSessionCache {
   pageNum: number
   pageSize: number
   total: number
+  includeAllUsers?: boolean
 }
 
 export const useBitmapFontStore = defineStore('bitmapFontStore', {
@@ -25,6 +27,7 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
     pageSize: 10,
     total: 0,
     loaded: false,
+    includeAllUsers: false,
   }),
 
   actions: {
@@ -34,6 +37,7 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
         if (!raw) return
         const parsed = JSON.parse(raw) as BitmapFontSessionCache
         if (!parsed || !Array.isArray(parsed.fonts)) return
+        if (Boolean(parsed.includeAllUsers) !== this.includeAllUsers) return
         this.fonts = parsed.fonts
         this.pageNum = parsed.pageNum || 1
         this.pageSize = parsed.pageSize || 10
@@ -51,6 +55,7 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
           pageNum: this.pageNum,
           pageSize: this.pageSize,
           total: this.total,
+          includeAllUsers: this.includeAllUsers,
         }
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(payload))
       } catch {
@@ -72,19 +77,36 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
       this.pageSize = 10
       this.total = 0
       this.loaded = false
+      this.includeAllUsers = false
       try {
         sessionStorage.removeItem(SESSION_KEY)
       } catch {}
     },
 
-    async loadPage(page: number, pageSize?: number) {
+    updateFavorite(fontId: number, favoriteWeight: number | null | undefined) {
+      this.fonts = this.fonts.map((font) =>
+        font.id === fontId ? { ...font, favoriteWeight } : font,
+      )
+      this.saveToSession()
+    },
+
+    async loadPage(page: number, pageSize?: number, includeAllUsers?: boolean) {
       if (page <= 0) page = 1
       if (pageSize) this.pageSize = pageSize
+      const effectiveIncludeAllUsers = includeAllUsers ?? this.includeAllUsers
+      if (this.includeAllUsers !== effectiveIncludeAllUsers) {
+        this.fonts = []
+        this.pageNum = 1
+        this.total = 0
+        this.loaded = false
+        this.includeAllUsers = effectiveIncludeAllUsers
+      }
 
       const dto: BitmapFontPageQueryDTO = {
         pageNum: page,
         pageSize: this.pageSize,
         isActive: 1,
+        includeAllUsers: effectiveIncludeAllUsers,
       }
       const res = await pageBitmapFonts(dto)
       const data = res.data

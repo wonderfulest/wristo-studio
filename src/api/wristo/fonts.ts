@@ -90,6 +90,14 @@ export const updateMyFontSearchIndex = (
   return instance.post(`/dsn/fonts/update/${id}?populate=ttf`, payload)
 }
 
+export const favoriteFont = (id: number): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.post('/dsn/fonts/favorite', undefined, { params: { id } })
+}
+
+export const unfavoriteFont = (id: number): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.post('/dsn/fonts/unfavorite', undefined, { params: { id } })
+}
+
 export const getFontStyleTags = (): Promise<ApiResponse<string[]>> => {
   return instance.get('/dsn/fonts/style-tags')
 }

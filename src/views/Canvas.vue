@@ -43,6 +43,7 @@ import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import type { ImageElementConfig } from '@/types/elements/image'
 import { imageSchema } from '@/elements/decoration/image/image.schema'
 import { useI18n } from '@/i18n'
+import { isPngFile, isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -169,13 +170,9 @@ const handleWrapperPointerDown = (event: PointerEvent) => {
   clearCanvasSelection()
 }
 
-const isSvgOrPngFile = (file: File): boolean => {
-  const type = String(file.type || '').toLowerCase()
-  const name = String(file.name || '').toLowerCase()
-  return type === 'image/svg+xml' || type === 'image/png' || /\.(svg|png)$/i.test(name)
-}
+const isSvgOrPngFile = (file: File): boolean => isSvgFile(file) || isPngFile(file)
 
-const getDroppedImageFile = (event: DragEvent): File | null => {
+const getDroppedImageFile = async (event: DragEvent): Promise<File | null> => {
   const files = Array.from(event.dataTransfer?.files || [])
   if (!files.length) return null
 
@@ -187,6 +184,11 @@ const getDroppedImageFile = (event: DragEvent): File | null => {
   const file = files[0]
   if (!isSvgOrPngFile(file)) {
     ElMessage.warning(t('asset.dropSingleSvgPngOnly'))
+    return null
+  }
+
+  if (await svgFileContainsRasterImage(file)) {
+    ElMessage.warning(t('asset.svgVectorOnly'))
     return null
   }
 
@@ -257,7 +259,7 @@ const handleDrop = async (event: DragEvent) => {
   isFileDragOver.value = false
   if (isUploadingDroppedImage.value) return
 
-  const file = getDroppedImageFile(event)
+  const file = await getDroppedImageFile(event)
   if (!file) return
 
   isUploadingDroppedImage.value = true

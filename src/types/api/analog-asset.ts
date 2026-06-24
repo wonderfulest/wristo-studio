@@ -28,6 +28,7 @@ export interface AnalogAssetVO {
   isDeleted: boolean
   version?: number
   isActive: boolean
+  favoriteWeight?: number | null
   /** 关联的文件（可选填充） */
   file?: FileVO
 }

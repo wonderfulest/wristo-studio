@@ -29,6 +29,7 @@ import { ElMessage } from 'element-plus'
 import { Plus, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadHandSVG } from '@/utils/image'
 import { useI18n } from '@/i18n'
+import { isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 
 const { t } = useI18n()
 
@@ -84,8 +85,13 @@ const handleUpload = async (event) => {
   if (!file) return
 
   // 检查文件类型
-  if (!file.name.endsWith('.svg')) {
+  if (!isSvgFile(file)) {
     ElMessage.warning(t('asset.uploadDialSvgOnly'))
+    return
+  }
+
+  if (await svgFileContainsRasterImage(file)) {
+    ElMessage.warning(t('asset.svgVectorOnly'))
     return
   }
 

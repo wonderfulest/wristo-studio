@@ -10,6 +10,15 @@
     <Teleport to="body">
       <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle" @scroll.passive="onPanelScroll">
         <div class="font-panel-toolbar">
+          <button
+            class="locate-font-btn"
+            type="button"
+            title="Locate current font"
+            aria-label="Locate current font"
+            @click.stop.prevent="locateCurrentFont"
+          >
+            <el-icon><Aim /></el-icon>
+          </button>
           <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
           <RouterLink
             v-if="type === FontTypes.ICON_FONT"
@@ -147,6 +156,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Aim } from '@element-plus/icons-vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { getFontBySlug, getFontStyleTags, getSystemFonts, increaseFontUsage, updateMyFontSearchIndex } from '@/api/wristo/fonts'
@@ -281,6 +291,30 @@ const onPanelScroll = () => {
   if (panel.scrollTop + panel.clientHeight + threshold >= panel.scrollHeight) {
     designerFontListRef.value?.loadNextPage()
   }
+}
+
+const scrollActiveFontIntoView = () => {
+  const panel = panelRef.value
+  if (!panel) return false
+
+  const activeItem = panel.querySelector<HTMLElement>('.font-item.active')
+  if (!activeItem) return false
+
+  activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  return true
+}
+
+const locateCurrentFont = async () => {
+  if (!isOpen.value) return
+
+  await nextTick()
+  if (scrollActiveFontIntoView()) return
+
+  const loaded = await designerFontListRef.value?.loadUntilFont(props.modelValue)
+  if (!loaded) return
+
+  await nextTick()
+  scrollActiveFontIntoView()
 }
 
 const parseTokenList = (value?: string | string[]) => {
@@ -563,12 +597,35 @@ void [systemSections, openNumberGlyphEditor]
   top: 0;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   background: var(--studio-surface-raised);
   border-bottom: 1px solid var(--studio-border);
+}
+
+.locate-font-btn {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: var(--studio-surface);
+  color: var(--studio-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.locate-font-btn:hover {
+  color: var(--studio-primary);
+  background: var(--studio-surface-soft);
+}
+
+.locate-font-btn :deep(.el-icon) {
+  font-size: 15px;
 }
 
 .add-font-btn,

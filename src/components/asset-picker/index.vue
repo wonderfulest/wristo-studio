@@ -26,14 +26,67 @@
       @change="handleUpload"
     />
 
-    <el-dialog
+    <el-drawer
       v-model="assetDialogVisible"
       :title="t('asset.libraryTitle')"
       append-to-body
-      width="min(1520px, 96vw)"
-      class="asset-library-dialog"
+      direction="rtl"
+      :size="assetDrawerSize"
+      :modal="false"
+      :close-on-click-modal="false"
+      class="asset-library-drawer"
     >
+      <div class="asset-drawer-resize-handle" @mousedown.prevent="startAssetDrawerResize" />
+      <div class="asset-library-toolbar">
+        <div class="asset-toolbar-summary">
+          <span v-if="batchDeleting">
+            {{ t('asset.deletingProgress', { done: deleteProgressDone, total: deleteProgressTotal }) }}
+          </span>
+          <span v-else-if="batchManageMode">{{ t('asset.selectedCount', { count: selectedAssetIds.length }) }}</span>
+        </div>
+        <div class="asset-toolbar-actions">
+          <el-button size="small" :type="uploadPanelVisible ? 'default' : 'primary'" @click="toggleUploadPanel">
+            <el-icon><Plus /></el-icon>
+            {{ uploadPanelVisible ? t('asset.hideUploadArea') : t('asset.showUploadArea') }}
+          </el-button>
+          <el-button
+            v-if="canManageAssets"
+            size="small"
+            :disabled="batchDeleting"
+            @click="toggleBatchManageMode"
+          >
+            {{ batchManageMode ? t('asset.finishManagement') : t('asset.manageAssets') }}
+          </el-button>
+          <el-button
+            v-if="batchManageMode"
+            size="small"
+            :disabled="batchDeleting || !removableAssets.length"
+            @click="selectAllLoadedAssets"
+          >
+            {{ t('asset.selectAllLoaded') }}
+          </el-button>
+          <el-button
+            v-if="batchManageMode"
+            size="small"
+            :disabled="batchDeleting || !selectedAssetIds.length"
+            @click="clearBatchSelection"
+          >
+            {{ t('asset.clearSelection') }}
+          </el-button>
+          <el-button
+            v-if="batchManageMode"
+            size="small"
+            type="danger"
+            :loading="batchDeleting"
+            :disabled="!selectedAssetIds.length"
+            @click="handleBatchRemove"
+          >
+            {{ t('asset.deleteSelected') }}
+          </el-button>
+        </div>
+      </div>
       <div
+        v-if="uploadPanelVisible"
         class="asset-drop-zone"
         :class="{ 'is-drag-over': dragOver }"
         @click="triggerUpload"
@@ -82,39 +135,78 @@
           @change="handleScopeChange"
         />
       </div>
+      <el-progress
+        v-if="batchDeleting"
+        class="asset-delete-progress"
+        :percentage="deleteProgressPercent"
+        :stroke-width="6"
+        :show-text="false"
+      />
 
-      <div class="asset-grid" @scroll="handleAssetGridScroll">
+      <div class="asset-grid" :class="{ 'batch-manage': batchManageMode }" @scroll.passive="handleAssetGridScroll">
         <!-- 素材列表 -->
         <div
-          v-for="asset in assets"
+          v-for="asset in sortedAssets"
           :key="asset.id"
           class="asset-item"
           :class="{
             active: isAssetSelected(asset),
-            deleting: deletingId === asset.id
+            deleting: isDeletingAsset(asset.id),
+            'batch-selected': isBatchSelected(asset.id),
+            'not-removable': batchManageMode && !canRemoveAsset(asset),
+            'system-asset': asset.isSystem
           }"
-          @click="handleSelect(asset)"
+          @click="handleSelect(asset, $event)"
           @mouseenter="handleMouseEnter(asset, $event)"
           @mouseleave="handleMouseLeave"
         >
+          <el-checkbox
+            v-if="batchManageMode"
+            class="asset-batch-checkbox"
+            :model-value="isBatchSelected(asset.id)"
+            :disabled="!canRemoveAsset(asset)"
+            @click.stop.prevent="handleBatchSelectionClick(asset, $event)"
+          />
           <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
+          <button
+            v-if="!batchManageMode"
+            type="button"
+            class="favorite-button"
+            :class="{ favorited: isFavoriteAsset(asset) }"
+            :disabled="isFavoritingAsset(asset.id)"
+            @click.stop="toggleFavoriteAsset(asset)"
+            :title="isFavoriteAsset(asset) ? t('asset.removeFavorite') : t('asset.addFavorite')"
+          >
+            <el-icon>
+              <Loading v-if="isFavoritingAsset(asset.id)" />
+              <StarFilled v-else-if="isFavoriteAsset(asset)" />
+              <Star v-else />
+            </el-icon>
+          </button>
           <el-icon
-            v-if="isEditableSvgAsset(asset)"
+            v-if="isEditableSvgAsset(asset) && !batchManageMode"
             class="edit-icon"
-            @click.stop="openSvgEditor(asset)"
+            @click.stop="openSvgEditor(asset, $event)"
             :title="t('asset.editSvgColors')"
           >
             <Edit />
           </el-icon>
           <el-icon
-            v-if="canRemoveAsset(asset) && !isAssetSelected(asset)"
+            v-if="canRemoveAsset(asset) && !isAssetSelected(asset) && !batchManageMode"
             class="delete-icon"
             @click.stop="handleRemove(asset)"
             :title="t('asset.deleteAsset')"
           >
             <Delete />
           </el-icon>
-          <el-icon v-if="asset.isSystem" class="system-badge"><Star /></el-icon>
+          <el-icon
+            v-if="getOriginalAssetUrl(asset) && !batchManageMode"
+            class="download-icon"
+            @click.stop="handleDownloadAsset(asset)"
+            :title="t('common.download')"
+          >
+            <Download />
+          </el-icon>
         </div>
 
         <!-- 加载中 -->
@@ -134,11 +226,7 @@
         </button>
         <span v-else-if="assets.length">{{ t('asset.noMore') }}</span>
       </div>
-
-      <template #footer>
-        <el-button @click="assetDialogVisible = false">{{ t('common.close') }}</el-button>
-      </template>
-    </el-dialog>
+    </el-drawer>
 
     <Teleport to="body">
       <div
@@ -150,85 +238,93 @@
       </div>
     </Teleport>
 
-    <el-dialog
-      v-model="svgEditorVisible"
-      :title="t('asset.editSvgColors')"
-      append-to-body
-      width="880px"
-      class="svg-color-dialog"
-    >
-      <div v-if="svgPreviewUrl" class="svg-editor-preview">
-        <img :src="svgPreviewUrl" :alt="editingSvgAsset?.file?.name || t('asset.editSvgColors')" />
-      </div>
-      <div v-if="hasSvgEditableEntries" class="svg-editor-fields">
-        <div v-if="svgColorEntries.length" class="svg-editor-section">
-          <div class="svg-editor-section-title">{{ t('asset.svgColors') }}</div>
-          <div
-            v-for="entry in svgColorEntries"
-            :key="entry.id"
-            class="svg-color-row"
-          >
-            <div class="svg-color-meta">
-              <span class="svg-color-prop">{{ entry.property }}</span>
-              <span class="svg-color-value">{{ entry.originalValue }}</span>
+    <Teleport to="body">
+      <div
+        v-if="svgEditorVisible"
+        class="svg-color-popover"
+        :style="svgEditorPanelStyle"
+      >
+        <div class="svg-color-popover-header">
+          <strong>{{ t('asset.editSvgColors') }}</strong>
+          <button type="button" class="svg-color-popover-close" @click="closeSvgEditor">×</button>
+        </div>
+        <div class="svg-color-popover-body">
+          <div v-if="svgPreviewUrl" class="svg-editor-preview">
+            <img :src="svgPreviewUrl" :alt="editingSvgAsset?.file?.name || t('asset.editSvgColors')" />
+          </div>
+          <div v-if="hasSvgEditableEntries" class="svg-editor-fields">
+            <div v-if="svgColorEntries.length" class="svg-editor-section">
+              <div class="svg-editor-section-title">{{ t('asset.svgColors') }}</div>
+              <div
+                v-for="entry in svgColorEntries"
+                :key="entry.id"
+                class="svg-color-row"
+              >
+                <div class="svg-color-meta">
+                  <span class="svg-color-prop">{{ entry.property }}</span>
+                  <span class="svg-color-value">{{ entry.originalValue }}</span>
+                </div>
+                <ColorPicker v-model="entry.nextColor" class="svg-color-picker" />
+              </div>
             </div>
-            <ColorPicker v-model="entry.nextColor" class="svg-color-picker" />
+            <div v-if="svgStopEntries.length" class="svg-editor-section">
+              <div class="svg-editor-section-title">{{ t('asset.svgGradientStops') }}</div>
+              <div
+                v-for="entry in svgStopEntries"
+                :key="entry.id"
+                class="svg-stop-row"
+              >
+                <div class="svg-stop-name">Stop {{ entry.index + 1 }}</div>
+                <label class="svg-stop-field">
+                  <span>{{ t('asset.svgStopOffset') }}</span>
+                  <el-input
+                    v-model="entry.nextOffset"
+                    size="small"
+                    placeholder="0%"
+                  />
+                </label>
+                <label class="svg-stop-field">
+                  <span>{{ t('asset.svgStopOpacity') }}</span>
+                  <el-input
+                    v-model="entry.nextOpacity"
+                    size="small"
+                    placeholder="1"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+          <div v-else class="svg-color-empty">
+            {{ t('asset.noEditableSvgColors') }}
           </div>
         </div>
-        <div v-if="svgStopEntries.length" class="svg-editor-section">
-          <div class="svg-editor-section-title">{{ t('asset.svgGradientStops') }}</div>
-          <div
-            v-for="entry in svgStopEntries"
-            :key="entry.id"
-            class="svg-stop-row"
+        <div class="svg-color-popover-footer">
+          <el-button @click="closeSvgEditor">{{ t('common.cancel') }}</el-button>
+          <el-button
+            type="primary"
+            :loading="svgSaving"
+            :disabled="!hasSvgEditableEntries"
+            @click="saveEditedSvgAsset"
           >
-            <div class="svg-stop-name">Stop {{ entry.index + 1 }}</div>
-            <label class="svg-stop-field">
-              <span>{{ t('asset.svgStopOffset') }}</span>
-              <el-input
-                v-model="entry.nextOffset"
-                size="small"
-                placeholder="0%"
-              />
-            </label>
-            <label class="svg-stop-field">
-              <span>{{ t('asset.svgStopOpacity') }}</span>
-              <el-input
-                v-model="entry.nextOpacity"
-                size="small"
-                placeholder="1"
-              />
-            </label>
-          </div>
+            {{ t('asset.applySvgColors') }}
+          </el-button>
         </div>
       </div>
-      <div v-else class="svg-color-empty">
-        {{ t('asset.noEditableSvgColors') }}
-      </div>
-      <template #footer>
-        <el-button @click="svgEditorVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button
-          type="primary"
-          :loading="svgSaving"
-          :disabled="!hasSvgEditableEntries"
-          @click="saveEditedSvgAsset"
-        >
-          {{ t('asset.applySvgColors') }}
-        </el-button>
-      </template>
-    </el-dialog>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, PropType, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, PropType, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Loading, Star, Delete, Edit } from '@element-plus/icons-vue'
+import { Plus, Loading, Star, StarFilled, Delete, Edit, Download } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useUserStore } from '@/stores/user'
+import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useI18n } from '@/i18n'
+import { isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import ColorPicker from '@/components/color-picker/index.vue'
 
 type SvgColorProperty = 'fill' | 'stroke' | 'stop-color'
@@ -258,6 +354,7 @@ interface UploadQueueItem {
 const { t } = useI18n()
 const analogAssetStore = useAnalogAssetStore()
 const userStore = useUserStore()
+const editorLayoutStore = useEditorLayoutStore()
 
 const props = defineProps({
   /** 当前选中的URL */
@@ -295,8 +392,18 @@ const hasMore = ref(true)
 const pageNum = ref(1)
 const pageSize = 48
 const assetScope = ref<'mine' | 'all'>('mine')
-const deletingId = ref<number | null>(null)
+const deletingIds = ref<Set<number>>(new Set())
+const batchDeleting = ref(false)
+const batchManageMode = ref(false)
+const selectedAssetIds = ref<number[]>([])
+const lastBatchSelectedAssetId = ref<number | null>(null)
+const deleteProgressDone = ref(0)
+const deleteProgressTotal = ref(0)
 const assetDialogVisible = ref(false)
+const assetDrawerResizeStartX = ref(0)
+const assetDrawerResizeStartWidth = ref(430)
+const assetDrawerResizing = ref(false)
+const uploadPanelVisible = ref(false)
 const uploadQueue = ref<UploadQueueItem[]>([])
 const uploadSummaryMessage = ref('')
 const uploadSummaryTone = ref<'success' | 'warning' | 'danger'>('success')
@@ -307,16 +414,32 @@ const svgEditorVisible = ref(false)
 const svgSaving = ref(false)
 const editingSvgAsset = ref<AnalogAssetVO | null>(null)
 const editingSvgText = ref('')
+const svgEditorPanelStyle = ref<Record<string, string>>({})
 const svgColorEntries = ref<SvgColorEntry[]>([])
 const svgStopEntries = ref<SvgStopEntry[]>([])
 const svgColorProperties: SvgColorProperty[] = ['fill', 'stroke', 'stop-color']
+const favoritingAssetIds = ref<Set<number>>(new Set())
 
 const canViewAllAssets = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
-const currentUserId = computed(() => userStore.userInfo?.id ?? null)
 const assetScopeOptions = computed(() => [
   { label: t('asset.scopeMine'), value: 'mine' },
   { label: t('asset.scopeAll'), value: 'all' },
 ])
+const removableAssets = computed(() => assets.value.filter((asset) => canRemoveAsset(asset)))
+const canManageAssets = computed(() => userStore.isAdminUser || removableAssets.value.length > 0)
+const assetDrawerSize = computed(() => `${editorLayoutStore.getWidth('assetLibraryDrawer')}px`)
+const sortedAssets = computed(() => {
+  return [...assets.value].sort((a, b) => {
+    const aFavoriteWeight = Number(a.favoriteWeight || 0)
+    const bFavoriteWeight = Number(b.favoriteWeight || 0)
+    if (aFavoriteWeight !== bFavoriteWeight) return bFavoriteWeight - aFavoriteWeight
+    return 0
+  })
+})
+const deleteProgressPercent = computed(() => {
+  if (!deleteProgressTotal.value) return 0
+  return Math.round((deleteProgressDone.value / deleteProgressTotal.value) * 100)
+})
 
 const hasSvgEditableEntries = computed(() => svgColorEntries.value.length > 0 || svgStopEntries.value.length > 0)
 
@@ -340,17 +463,34 @@ const completedUploadCount = computed(() =>
 
 const uploadAccept = computed(() => {
   if (props.assetType === 'image') return '.svg,.png,.jpg,.jpeg,.webp'
+  if (isHandAssetType(props.assetType)) return '.svg,.png'
   return '.svg'
 })
 
 const editableSvgAssetTypes: AnalogAssetType[] = ['image', 'hour', 'minute', 'second']
 
-const isAllowedUploadFile = (file: File): boolean => {
-  if (props.assetType === 'image') {
-    if (file.type?.startsWith('image/')) return true
-    return /\.(svg|png|jpe?g|webp)$/i.test(file.name)
+const isAllowedUploadFile = (file: File): boolean => isAllowedAnalogAssetFile(file, props.assetType)
+
+const getUploadFileTypeMessage = (): string => {
+  if (props.assetType === 'image') return t('asset.imageOnly')
+  if (isHandAssetType(props.assetType)) return t('asset.handSvgPngOnly')
+  return t('asset.svgOnly')
+}
+
+const isUploadFileAccepted = async (file: File, showMessage = false): Promise<boolean> => {
+  if (!isAllowedUploadFile(file)) {
+    if (showMessage) {
+      ElMessage.warning(getUploadFileTypeMessage())
+    }
+    return false
   }
-  return /\.svg$/i.test(file.name)
+
+  if (await svgFileContainsRasterImage(file)) {
+    if (showMessage) ElMessage.warning(t('asset.svgVectorOnly'))
+    return false
+  }
+
+  return true
 }
 
 const isSvgUrl = (value?: string): boolean => {
@@ -364,7 +504,51 @@ const isEditableSvgAsset = (asset: AnalogAssetVO): boolean => {
 }
 
 const openAssetDialog = () => {
+  editorLayoutStore.setWidth(
+    'assetLibraryDrawer',
+    clampAssetDrawerWidth(editorLayoutStore.getWidth('assetLibraryDrawer'))
+  )
   assetDialogVisible.value = true
+}
+
+const toggleUploadPanel = () => {
+  uploadPanelVisible.value = !uploadPanelVisible.value
+}
+
+const clampAssetDrawerWidth = (width: number): number => {
+  if (typeof window === 'undefined') return Math.max(360, Math.min(1040, width))
+  const viewportWidth = window.innerWidth
+  const minWidth = Math.min(360, Math.max(280, viewportWidth - 32))
+  const maxWidth = Math.max(minWidth, Math.min(1040, viewportWidth - 48))
+  return Math.round(Math.max(minWidth, Math.min(maxWidth, width)))
+}
+
+const stopAssetDrawerResize = () => {
+  if (!assetDrawerResizing.value) return
+  assetDrawerResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', handleAssetDrawerResize)
+  window.removeEventListener('mouseup', stopAssetDrawerResize)
+}
+
+const handleAssetDrawerResize = (event: MouseEvent) => {
+  if (!assetDrawerResizing.value) return
+  const delta = assetDrawerResizeStartX.value - event.clientX
+  editorLayoutStore.setWidth(
+    'assetLibraryDrawer',
+    clampAssetDrawerWidth(assetDrawerResizeStartWidth.value + delta)
+  )
+}
+
+const startAssetDrawerResize = (event: MouseEvent) => {
+  assetDrawerResizing.value = true
+  assetDrawerResizeStartX.value = event.clientX
+  assetDrawerResizeStartWidth.value = editorLayoutStore.getWidth('assetLibraryDrawer')
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', handleAssetDrawerResize)
+  window.addEventListener('mouseup', stopAssetDrawerResize)
 }
 
 const isAssetSelected = (asset: AnalogAssetVO): boolean => {
@@ -372,10 +556,137 @@ const isAssetSelected = (asset: AnalogAssetVO): boolean => {
   return props.selectedAssetId != null ? asset.id === props.selectedAssetId : props.selectedUrl === url
 }
 
+const isFavoriteAsset = (asset: AnalogAssetVO): boolean => {
+  return Number(asset.favoriteWeight || 0) > 0
+}
+
+const isFavoritingAsset = (id: number): boolean => favoritingAssetIds.value.has(id)
+
+const updateAssetInList = (updatedAsset: AnalogAssetVO) => {
+  const index = assets.value.findIndex((asset) => asset.id === updatedAsset.id)
+  if (index >= 0) {
+    assets.value[index] = {
+      ...assets.value[index],
+      ...updatedAsset,
+      file: updatedAsset.file || assets.value[index].file,
+    }
+  }
+}
+
+const setFavoritingAsset = (id: number, active: boolean) => {
+  const next = new Set(favoritingAssetIds.value)
+  if (active) next.add(id)
+  else next.delete(id)
+  favoritingAssetIds.value = next
+}
+
+const toggleFavoriteAsset = async (asset: AnalogAssetVO) => {
+  if (isFavoritingAsset(asset.id)) return
+
+  const nextFavorite = !isFavoriteAsset(asset)
+  const previousWeight = asset.favoriteWeight
+  asset.favoriteWeight = nextFavorite ? Math.floor(Date.now() / 1000) : null
+  setFavoritingAsset(asset.id, true)
+
+  try {
+    const res = await analogAssetApi.setFavorite(asset.id, nextFavorite)
+    if (res.data) {
+      updateAssetInList(res.data)
+    }
+  } catch (error) {
+    console.error('保存素材收藏失败:', error)
+    asset.favoriteWeight = previousWeight
+    ElMessage.error(t('asset.favoriteFailed'))
+  } finally {
+    setFavoritingAsset(asset.id, false)
+  }
+}
+
 const canRemoveAsset = (asset: AnalogAssetVO): boolean => {
   if (asset.isSystem) return false
   if (userStore.isAdminUser) return true
-  return asset.userId != null && asset.userId === currentUserId.value
+  const currentUserId = userStore.userInfo?.id
+  return currentUserId != null && Number(asset.userId) === Number(currentUserId)
+}
+
+const isDeletingAsset = (id: number): boolean => deletingIds.value.has(id)
+
+const isBatchSelected = (id: number): boolean => selectedAssetIds.value.includes(id)
+
+const setDeletingIds = (ids: number[]) => {
+  deletingIds.value = new Set(ids)
+}
+
+const toggleBatchManageMode = () => {
+  batchManageMode.value = !batchManageMode.value
+  if (!batchManageMode.value) {
+    clearBatchSelection()
+  }
+}
+
+const clearBatchSelection = () => {
+  selectedAssetIds.value = []
+  lastBatchSelectedAssetId.value = null
+}
+
+const toggleBatchSelection = (asset: AnalogAssetVO) => {
+  if (!canRemoveAsset(asset)) return
+  if (isBatchSelected(asset.id)) {
+    selectedAssetIds.value = selectedAssetIds.value.filter((id) => id !== asset.id)
+  } else {
+    selectedAssetIds.value = [...selectedAssetIds.value, asset.id]
+  }
+  lastBatchSelectedAssetId.value = asset.id
+}
+
+const selectBatchRange = (asset: AnalogAssetVO) => {
+  if (!canRemoveAsset(asset)) return
+
+  const anchorId = lastBatchSelectedAssetId.value
+  if (anchorId == null) {
+    toggleBatchSelection(asset)
+    return
+  }
+
+  const visibleAssets = sortedAssets.value
+  const currentIndex = visibleAssets.findIndex((item) => item.id === asset.id)
+  const anchorIndex = visibleAssets.findIndex((item) => item.id === anchorId)
+  if (currentIndex < 0 || anchorIndex < 0) {
+    toggleBatchSelection(asset)
+    return
+  }
+
+  const [start, end] = currentIndex < anchorIndex
+    ? [currentIndex, anchorIndex]
+    : [anchorIndex, currentIndex]
+  const rangeIds = visibleAssets
+    .slice(start, end + 1)
+    .filter((item) => canRemoveAsset(item))
+    .map((item) => item.id)
+  selectedAssetIds.value = Array.from(new Set([...selectedAssetIds.value, ...rangeIds]))
+}
+
+const handleBatchSelectionClick = (asset: AnalogAssetVO, event?: MouseEvent) => {
+  if (event?.shiftKey) {
+    selectBatchRange(asset)
+    return
+  }
+  toggleBatchSelection(asset)
+}
+
+const selectAllLoadedAssets = () => {
+  selectedAssetIds.value = removableAssets.value.map((asset) => asset.id)
+}
+
+const removeDeletedAssetsFromList = (ids: number[]) => {
+  const idSet = new Set(ids)
+  assets.value = assets.value.filter((asset) => !idSet.has(asset.id))
+  if (lastBatchSelectedAssetId.value != null && idSet.has(lastBatchSelectedAssetId.value)) {
+    lastBatchSelectedAssetId.value = null
+  }
+  for (const id of ids) {
+    analogAssetStore.removeAsset(props.assetType, id)
+  }
 }
 
 const uploadStatusLabel = (status: UploadQueueStatus): string => {
@@ -395,6 +706,50 @@ const getAssetUrl = (asset: AnalogAssetVO): string | undefined => {
     return asset.file?.url || asset.file?.previewUrl
   }
   return asset.file?.previewUrl || asset.file?.url
+}
+
+const getOriginalAssetUrl = (asset: AnalogAssetVO): string | undefined => {
+  return asset.file?.url
+}
+
+const getAssetDownloadName = (asset: AnalogAssetVO): string => {
+  const name = asset.file?.name?.trim()
+  return name || `asset-${asset.id}`
+}
+
+const triggerAssetDownload = (url: string, filename: string, openInNewTab = false) => {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  if (openInNewTab) {
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+  }
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+const handleDownloadAsset = async (asset: AnalogAssetVO) => {
+  const url = getOriginalAssetUrl(asset)
+  if (!url) return
+
+  const filename = getAssetDownloadName(asset)
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`)
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    triggerAssetDownload(objectUrl, filename)
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+  } catch (error) {
+    console.warn('下载素材源文件失败，尝试打开原始链接:', error)
+    triggerAssetDownload(url, filename, true)
+  }
 }
 
 /**
@@ -465,6 +820,7 @@ const refresh = () => {
 }
 
 const handleScopeChange = () => {
+  clearBatchSelection()
   loadAssets(true)
 }
 
@@ -478,10 +834,7 @@ const triggerUpload = () => {
 const uploadFile = async (file: File | undefined, showMessage = false): Promise<boolean> => {
   if (!file) return false
 
-  if (!isAllowedUploadFile(file)) {
-    if (showMessage) {
-      ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
-    }
+  if (!(await isUploadFileAccepted(file, showMessage))) {
     return false
   }
 
@@ -514,20 +867,29 @@ const processUploadFiles = async (fileList: FileList | File[] | undefined | null
 
   const validFiles: File[] = []
   let invalidCount = 0
+  let rasterSvgCount = 0
   for (const file of files) {
-    if (isAllowedUploadFile(file)) {
-      validFiles.push(file)
-    } else {
+    if (!isAllowedUploadFile(file)) {
       invalidCount++
+      continue
     }
+    if (await svgFileContainsRasterImage(file)) {
+      rasterSvgCount++
+      continue
+    }
+    validFiles.push(file)
   }
 
   if (invalidCount > 0) {
-    ElMessage.warning(props.assetType === 'image' ? t('asset.imageOnly') : t('asset.svgOnly'))
+    ElMessage.warning(getUploadFileTypeMessage())
+  }
+  if (rasterSvgCount > 0) {
+    ElMessage.warning(t('asset.svgVectorOnly'))
   }
   if (!validFiles.length) return
 
   assetDialogVisible.value = true
+  uploadPanelVisible.value = true
   uploadSummaryMessage.value = ''
   uploadQueue.value = validFiles.map((file, index) => ({
     id: `${Date.now()}-${index}-${file.name}`,
@@ -587,7 +949,12 @@ const handleDrop = async (event: DragEvent) => {
 /**
  * 处理选择
  */
-const handleSelect = (asset: AnalogAssetVO) => {
+const handleSelect = (asset: AnalogAssetVO, event?: MouseEvent) => {
+  if (batchManageMode.value) {
+    handleBatchSelectionClick(asset, event)
+    return
+  }
+
   const url = getAssetUrl(asset)
   if (url) {
     props.onSelect(url, asset)
@@ -786,13 +1153,50 @@ const svgPreviewUrl = computed(() => {
   }
 })
 
-const openSvgEditor = async (asset: AnalogAssetVO) => {
+const updateSvgEditorPosition = (target: HTMLElement) => {
+  const anchor = target.closest('.asset-item') as HTMLElement | null
+  const rect = (anchor || target).getBoundingClientRect()
+  const panelWidth = 430
+  const panelHeight = Math.min(680, window.innerHeight - 24)
+  const gap = 12
+  const viewportPadding = 12
+  const leftCandidate = rect.left - panelWidth - gap
+  const rightCandidate = rect.right + gap
+  const left = leftCandidate >= viewportPadding
+    ? leftCandidate
+    : Math.min(rightCandidate, window.innerWidth - panelWidth - viewportPadding)
+  const top = Math.min(
+    Math.max(rect.top, viewportPadding),
+    window.innerHeight - panelHeight - viewportPadding
+  )
+
+  svgEditorPanelStyle.value = {
+    left: `${Math.max(left, viewportPadding)}px`,
+    top: `${Math.max(top, viewportPadding)}px`,
+    width: `${panelWidth}px`,
+    maxHeight: `${panelHeight}px`,
+  }
+}
+
+const closeSvgEditor = () => {
+  svgEditorVisible.value = false
+  editingSvgAsset.value = null
+  editingSvgText.value = ''
+  svgColorEntries.value = []
+  svgStopEntries.value = []
+  svgEditorPanelStyle.value = {}
+}
+
+const openSvgEditor = async (asset: AnalogAssetVO, event?: MouseEvent) => {
   const svgUrl = asset.file?.url
   if (!svgUrl) return
 
   handleMouseLeave()
   editingSvgAsset.value = asset
   svgEditorVisible.value = true
+  if (event?.currentTarget instanceof HTMLElement) {
+    updateSvgEditorPosition(event.currentTarget)
+  }
   svgColorEntries.value = []
   svgStopEntries.value = []
   editingSvgText.value = ''
@@ -807,7 +1211,7 @@ const openSvgEditor = async (asset: AnalogAssetVO) => {
   } catch (error) {
     console.error('加载 SVG 失败:', error)
     ElMessage.error(t('asset.loadSvgFailed'))
-    svgEditorVisible.value = false
+    closeSvgEditor()
   }
 }
 
@@ -822,11 +1226,7 @@ const saveEditedSvgAsset = async () => {
     const file = new File([editedSvgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
     const ok = await uploadFile(file, true)
     if (ok) {
-      svgEditorVisible.value = false
-      editingSvgAsset.value = null
-      editingSvgText.value = ''
-      svgColorEntries.value = []
-      svgStopEntries.value = []
+      closeSvgEditor()
     }
   } catch (error) {
     console.error('保存 SVG 失败:', error)
@@ -850,13 +1250,12 @@ const handleRemove = async (asset: AnalogAssetVO) => {
     return
   }
 
-  deletingId.value = asset.id
+  setDeletingIds([asset.id])
   try {
     const res = await analogAssetApi.remove(asset.id)
     if (res.data) {
-      const idx = assets.value.findIndex(a => a.id === asset.id)
-      if (idx !== -1) assets.value.splice(idx, 1)
-      analogAssetStore.removeAsset(props.assetType, asset.id)
+      removeDeletedAssetsFromList([asset.id])
+      selectedAssetIds.value = selectedAssetIds.value.filter((id) => id !== asset.id)
       ElMessage.success(t('common.deleteSuccess'))
     } else {
       ElMessage.error(t('asset.deleteFailed'))
@@ -865,13 +1264,79 @@ const handleRemove = async (asset: AnalogAssetVO) => {
     console.error('删除素材失败:', e)
     ElMessage.error(t('asset.deleteFailed'))
   } finally {
-    deletingId.value = null
+    setDeletingIds([])
+  }
+}
+
+const handleBatchRemove = async () => {
+  const ids = [...selectedAssetIds.value]
+  if (!ids.length || batchDeleting.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      t('asset.batchDeleteConfirm', { count: ids.length }),
+      t('common.tip'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel')
+      }
+    )
+  } catch {
+    return
+  }
+
+  batchDeleting.value = true
+  deleteProgressDone.value = 0
+  deleteProgressTotal.value = ids.length
+  const removedIds: number[] = []
+  const failedIds: number[] = []
+  try {
+    for (const id of ids) {
+      setDeletingIds([id])
+      try {
+        const res = await analogAssetApi.remove(id)
+        if (res.data) {
+          removedIds.push(id)
+          removeDeletedAssetsFromList([id])
+          selectedAssetIds.value = selectedAssetIds.value.filter((selectedId) => selectedId !== id)
+        } else {
+          failedIds.push(id)
+        }
+      } catch (e) {
+        failedIds.push(id)
+        console.error('批量删除素材失败:', e)
+      } finally {
+        deleteProgressDone.value += 1
+      }
+    }
+
+    if (removedIds.length && !failedIds.length) {
+      clearBatchSelection()
+      ElMessage.success(t('asset.deleteCompleteCount', { count: removedIds.length }))
+    } else if (removedIds.length) {
+      ElMessage.warning(t('asset.deletePartialCount', { success: removedIds.length, failed: failedIds.length }))
+    } else {
+      ElMessage.error(t('asset.deleteFailed'))
+    }
+  } catch (e) {
+    console.error('批量删除素材失败:', e)
+    ElMessage.error(t('asset.deleteFailed'))
+  } finally {
+    batchDeleting.value = false
+    setDeletingIds([])
+    deleteProgressDone.value = 0
+    deleteProgressTotal.value = 0
   }
 }
 
 // 初始化加载
 onMounted(() => {
   loadAssets(true)
+})
+
+onBeforeUnmount(() => {
+  stopAssetDrawerResize()
 })
 
 // 暴露刷新方法
@@ -955,12 +1420,63 @@ defineExpose({
   line-height: 1.35;
 }
 
-:deep(.asset-library-dialog .el-dialog__body) {
-  padding: 18px 20px;
+:deep(.asset-library-drawer) {
+  --el-drawer-padding-primary: 0;
+  border-left: 1px solid var(--studio-border);
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+:deep(.asset-library-drawer .el-drawer__header) {
+  margin-bottom: 0;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--studio-border);
+}
+
+:deep(.asset-library-drawer .el-drawer__title) {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--studio-text);
+}
+
+:deep(.asset-library-drawer .el-drawer__body) {
+  padding: 12px 16px 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.asset-drawer-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 4;
+}
+
+.asset-drawer-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 2px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--studio-border);
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.16s, background-color 0.16s;
+}
+
+.asset-drawer-resize-handle:hover::after {
+  opacity: 1;
+  background: var(--studio-primary);
 }
 
 .asset-drop-zone {
-  min-height: 92px;
+  min-height: 252px;
   border: 1px dashed var(--studio-border);
   border-radius: var(--studio-radius-md);
   background: var(--studio-surface-soft);
@@ -971,6 +1487,39 @@ defineExpose({
   gap: 12px;
   margin-bottom: 14px;
   transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.asset-library-toolbar {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -4px 0 10px;
+}
+
+.asset-toolbar-summary {
+  min-width: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.asset-toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.asset-toolbar-actions :deep(.el-button) {
+  min-height: 28px;
+  padding: 4px 9px;
+}
+
+.asset-toolbar-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .asset-drop-zone:hover,
@@ -997,10 +1546,14 @@ defineExpose({
 }
 
 .asset-grid {
-  max-height: 536px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
+  overscroll-behavior: contain;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  align-content: start;
   gap: 8px;
   padding: 2px;
 }
@@ -1098,6 +1651,18 @@ defineExpose({
   --el-segmented-item-selected-color: var(--studio-primary);
 }
 
+.asset-delete-progress {
+  margin: -4px 0 12px;
+}
+
+.asset-delete-progress :deep(.el-progress-bar__outer) {
+  background-color: rgba(245, 108, 108, 0.12);
+}
+
+.asset-delete-progress :deep(.el-progress-bar__inner) {
+  background-color: #f56c6c;
+}
+
 .asset-scroll-hint {
   margin-top: 14px;
   display: flex;
@@ -1133,8 +1698,10 @@ defineExpose({
 }
 
 .asset-item {
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 76px;
+  height: auto;
   border: 1px solid #c0c4cc;
   border-radius: 6px;
   cursor: pointer;
@@ -1158,14 +1725,39 @@ defineExpose({
   border-width: 2px;
 }
 
+.asset-grid.batch-manage .asset-item {
+  cursor: pointer;
+}
+
+.asset-grid.batch-manage .asset-item.active {
+  border-width: 1px;
+}
+
+.asset-item.batch-selected {
+  border-color: #f56c6c;
+  background-color: rgba(245, 108, 108, 0.08);
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.16);
+}
+
+.asset-item.not-removable {
+  cursor: not-allowed;
+}
+
 .asset-item.deleting {
   opacity: 0.6;
   pointer-events: none;
 }
 
+.asset-batch-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+}
+
 .asset-item img {
-  width: 60px;
-  height: 60px;
+  width: 70%;
+  height: 70%;
   object-fit: contain;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
 }
@@ -1276,12 +1868,8 @@ defineExpose({
   }
 }
 
-.system-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 14px;
-  color: #e6a23c;
+.asset-item.system-asset {
+  border-style: dashed;
 }
 
 .edit-icon {
@@ -1298,13 +1886,71 @@ defineExpose({
   z-index: 1;
 }
 
-.delete-icon {
+.favorite-button {
   position: absolute;
   top: 4px;
   right: 4px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #8a8f98;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, transform 0.2s;
+  z-index: 2;
+}
+
+.favorite-button .el-icon {
+  font-size: 17px;
+}
+
+.favorite-button:hover,
+.favorite-button.favorited {
+  color: #e6a23c;
+}
+
+.favorite-button:hover {
+  transform: scale(1.08);
+}
+
+.favorite-button:disabled {
+  cursor: wait;
+}
+
+.favorite-button:disabled .el-icon {
+  animation: spin 1s linear infinite;
+}
+
+.favorite-button.favorited {
+  opacity: 1;
+}
+
+.delete-icon {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
   font-size: 16px;
   color: #f56c6c;
   background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+
+.download-icon {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  font-size: 16px;
+  color: #0f6b68;
+  background-color: rgba(255, 255, 255, 0.92);
   border-radius: 10px;
   padding: 2px;
   opacity: 0;
@@ -1320,24 +1966,83 @@ defineExpose({
   opacity: 1;
 }
 
-:deep(.svg-color-dialog) {
+.asset-item:hover .download-icon {
+  opacity: 1;
+}
+
+.asset-item:hover .favorite-button {
+  opacity: 1;
+}
+
+.svg-color-popover {
+  position: fixed;
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - 48px);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+  z-index: 13020;
 }
 
-:deep(.svg-color-dialog .el-dialog__body) {
-  padding: 20px 24px;
-}
-
-:deep(.svg-color-dialog .el-dialog__footer) {
+.svg-color-popover-header,
+.svg-color-popover-footer {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.svg-color-popover-header {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--studio-border);
+}
+
+.svg-color-popover-header strong {
+  min-width: 0;
+  color: var(--studio-text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.svg-color-popover-close {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--studio-text-muted);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 20px;
+}
+
+.svg-color-popover-close:hover {
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
+}
+
+.svg-color-popover-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.svg-color-popover-footer {
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--studio-border);
 }
 
 .svg-editor-preview {
   width: 100%;
-  height: min(34vh, 320px);
-  margin-bottom: 20px;
+  height: 160px;
+  margin-bottom: 14px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-md);
   background-image:

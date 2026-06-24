@@ -1,11 +1,12 @@
 <template>
-  <el-drawer v-model="visible" direction="rtl" size="min(920px, 100vw)" class="properties-drawer">
+  <el-drawer v-model="visible" direction="rtl" :size="propertiesDrawerSize" class="properties-drawer">
     <template #header>
       <div class="drawer-settings-heading">
         <h3>{{ t('property.drawerTitle') }}</h3>
         <p>{{ t('property.settingsHint') }}</p>
       </div>
     </template>
+    <div class="properties-resize-handle" @mousedown.prevent="startPropertiesDrawerResize" />
     <div class="properties-container">
       <section class="properties-overview" :aria-label="t('property.drawerTitle')">
         <div class="overview-main">
@@ -217,12 +218,16 @@ import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDi
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
+import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
 import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection } from '@/elements/common/settings/propertyBinding'
 
 const visible = ref(false)
+const propertiesDrawerResizeStartX = ref(0)
+const propertiesDrawerResizeStartWidth = ref(920)
+const propertiesDrawerResizing = ref(false)
 const colorPropertyDialog = ref(null)
 const goalPropertyDialog = ref(null)
 const dataPropertyDialog = ref(null)
@@ -230,6 +235,7 @@ const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
+const editorLayoutStore = useEditorLayoutStore()
 const { t } = useI18n()
 
 const typeOrder = ['color', 'data', 'goal', 'chart', 'text']
@@ -246,6 +252,44 @@ const addPropertyTypes = computed(() => typeOrder.map((type) => ({
   type,
   ...typeMeta.value[type],
 })))
+
+const propertiesDrawerSize = computed(() => `${editorLayoutStore.getWidth('propertiesDrawer')}px`)
+
+const clampPropertiesDrawerWidth = (width) => {
+  if (typeof window === 'undefined') return Math.max(560, Math.min(1120, width))
+  const viewportWidth = window.innerWidth
+  const minWidth = Math.min(560, Math.max(320, viewportWidth - 32))
+  const maxWidth = Math.max(minWidth, Math.min(1120, viewportWidth - 48))
+  return Math.round(Math.max(minWidth, Math.min(maxWidth, width)))
+}
+
+const stopPropertiesDrawerResize = () => {
+  if (!propertiesDrawerResizing.value) return
+  propertiesDrawerResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', handlePropertiesDrawerResize)
+  window.removeEventListener('mouseup', stopPropertiesDrawerResize)
+}
+
+const handlePropertiesDrawerResize = (event) => {
+  if (!propertiesDrawerResizing.value) return
+  const delta = propertiesDrawerResizeStartX.value - event.clientX
+  editorLayoutStore.setWidth(
+    'propertiesDrawer',
+    clampPropertiesDrawerWidth(propertiesDrawerResizeStartWidth.value + delta)
+  )
+}
+
+const startPropertiesDrawerResize = (event) => {
+  propertiesDrawerResizing.value = true
+  propertiesDrawerResizeStartX.value = event.clientX
+  propertiesDrawerResizeStartWidth.value = editorLayoutStore.getWidth('propertiesDrawer')
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', handlePropertiesDrawerResize)
+  window.addEventListener('mouseup', stopPropertiesDrawerResize)
+}
 
 const propertyEntries = computed(() =>
   Object.entries(propertiesStore.allProperties).map(([key, prop]) => ({ key, prop }))
@@ -298,12 +342,17 @@ const showUnit = computed({
 // 监听打开 App Properties 事件
 onMounted(() => {
   emitter.on('open-app-properties', () => {
+    editorLayoutStore.setWidth(
+      'propertiesDrawer',
+      clampPropertiesDrawerWidth(editorLayoutStore.getWidth('propertiesDrawer'))
+    )
     visible.value = true
   })
 })
 
 onUnmounted(() => {
   emitter.off('open-app-properties')
+  stopPropertiesDrawerResize()
 })
 
 // 添加属性
@@ -432,6 +481,10 @@ const getPropertyPreview = (prop) => {
 // 暴露方法给父组件
 defineExpose({
   show: () => {
+    editorLayoutStore.setWidth(
+      'propertiesDrawer',
+      clampPropertiesDrawerWidth(editorLayoutStore.getWidth('propertiesDrawer'))
+    )
     visible.value = true
   }
 })
@@ -458,6 +511,36 @@ defineExpose({
 
 :deep(.properties-drawer .el-drawer__body) {
   overflow: hidden;
+  position: relative;
+}
+
+.properties-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 5;
+}
+
+.properties-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 2px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--el-border-color);
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.16s, background-color 0.16s;
+}
+
+.properties-resize-handle:hover::after {
+  opacity: 1;
+  background: var(--el-color-primary);
 }
 
 .properties-overview {

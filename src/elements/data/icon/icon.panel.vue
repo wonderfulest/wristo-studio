@@ -108,8 +108,6 @@ const updateElement = async () => {
     fill: model.fill,
     fontFamily: model.fontFamily,
     originX: model.originX,
-    left: model.left,
-    top: model.top,
   })
 }
 

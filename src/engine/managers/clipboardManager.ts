@@ -13,6 +13,8 @@ type ClipboardItem = {
   config: AnyElementConfig
   offsetX: number
   offsetY: number
+  anchorOffsetX: number
+  anchorOffsetY: number
 }
 
 // 剪贴板：存储最近一次复制的元素配置（基于 selection center 的相对偏移）
@@ -22,23 +24,69 @@ let clipboardSelectionCenter: { x: number; y: number } | null = null
 // 连续粘贴计数，用于实现 Figma 风格的递增偏移
 let pasteCount = 0
 
-// 安全计算对象在画布坐标系中的中心点，避免直接调用 Fabric 的 getCenterPoint 导致内部 getRelativeCenterPoint 报错
-function getObjectCenter(obj: any): { x: number; y: number } {
+// 安全计算对象在画布坐标系中的视觉中心，避免把 left/top 误当成左上角或中心点。
+function getObjectVisualCenter(obj: any): { x: number; y: number } {
   if (!obj) return { x: 0, y: 0 }
+
+  const rect = typeof obj.getBoundingRect === 'function' ? obj.getBoundingRect() : null
+  if (rect) {
+    const left = Number(rect.left ?? 0)
+    const top = Number(rect.top ?? 0)
+    const width = Number(rect.width ?? 0)
+    const height = Number(rect.height ?? 0)
+    if ([left, top, width, height].every(Number.isFinite)) {
+      return {
+        x: left + width / 2,
+        y: top + height / 2,
+      }
+    }
+  }
 
   const left = Number(obj.left ?? 0)
   const top = Number(obj.top ?? 0)
-
-  const width = Number(obj.width ?? 0)
-  const height = Number(obj.height ?? 0)
-
-  const scaleX = Number(obj.scaleX ?? 1)
-  const scaleY = Number(obj.scaleY ?? 1)
-
   return {
-    x: left + (width * scaleX) / 2,
-    y: top + (height * scaleY) / 2,
+    x: Number.isFinite(left) ? left : 0,
+    y: Number.isFinite(top) ? top : 0,
   }
+}
+
+function getObjectCanvasAnchor(obj: any): { left: number; top: number } {
+  if (!obj) return { left: 0, top: 0 }
+
+  try {
+    const point = typeof obj.getXY === 'function' ? obj.getXY() : null
+    const left = Number(point?.x)
+    const top = Number(point?.y)
+    if (Number.isFinite(left) && Number.isFinite(top)) {
+      return { left, top }
+    }
+  } catch {
+    // Fall through to raw coordinates. Some Fabric objects can throw while their group is mutating.
+  }
+
+  const left = Number(obj.left ?? 0)
+  const top = Number(obj.top ?? 0)
+  return {
+    left: Number.isFinite(left) ? left : 0,
+    top: Number.isFinite(top) ? top : 0,
+  }
+}
+
+function normalizeConfigCanvasPosition(config: AnyElementConfig, obj: any): AnyElementConfig {
+  const nextConfig = { ...(config as AnyElementConfig) } as AnyElementConfig
+  const anchor = getObjectCanvasAnchor(obj)
+  const currentTop = Number((nextConfig as any).top)
+  const nextTop = Math.round(anchor.top)
+
+  ;(nextConfig as any).left = Math.round(anchor.left)
+  ;(nextConfig as any).top = nextTop
+
+  const topBase = Number((nextConfig as any).topBase)
+  if (Number.isFinite(topBase) && Number.isFinite(currentTop)) {
+    ;(nextConfig as any).topBase = topBase + (nextTop - currentTop)
+  }
+
+  return nextConfig
 }
 
 /**
@@ -59,7 +107,7 @@ export function copySelection(): void {
 
   // 计算选区中心（使用各元素的 centerPoint 平均值）
   const centers = actives
-    .map((el) => getObjectCenter(el))
+    .map((el) => getObjectVisualCenter(el))
     .filter((c) => Number.isFinite(c.x) && Number.isFinite(c.y))
 
   if (!centers.length) {
@@ -82,8 +130,10 @@ export function copySelection(): void {
   actives.forEach((el, index) => {
     const rect = el.getBoundingRect()
 
-    const cfg = encodeElementByRegistry(el)
-    if (!cfg) return
+    const encodedCfg = encodeElementByRegistry(el)
+    if (!encodedCfg) return
+
+    const cfg = normalizeConfigCanvasPosition(encodedCfg, el)
 
     const eleType =
       (cfg as any).eleType ?? (cfg as any).type ?? ((el as any).eleType as ElementType | undefined)
@@ -100,6 +150,8 @@ export function copySelection(): void {
     // 基于 boundingRect 计算真实中心
     const rectCenterX = rect.left + rect.width / 2
     const rectCenterY = rect.top + rect.height / 2
+    const anchorLeft = Number((cfg as any).left ?? (el as any).left ?? rectCenterX)
+    const anchorTop = Number((cfg as any).top ?? (el as any).top ?? rectCenterY)
 
     const item: ClipboardItem = {
       eleType,
@@ -107,6 +159,8 @@ export function copySelection(): void {
       // 基于 rect center 计算 offset
       offsetX: rectCenterX - selectionCenter.x,
       offsetY: rectCenterY - selectionCenter.y,
+      anchorOffsetX: anchorLeft - rectCenterX,
+      anchorOffsetY: anchorTop - rectCenterY,
     }
 
     encoded.push(item)
@@ -148,15 +202,17 @@ export function pasteSelection(): void {
 
           const centerX = pasteCenter.x + item.offsetX
           const centerY = pasteCenter.y + item.offsetY
+          const originX = ((item.config as any).originX ?? 'center') as AnyElementConfig['originX']
+          const originY = ((item.config as any).originY ?? 'center') as AnyElementConfig['originY']
 
           const nextCfg: AnyElementConfig = {
             ...(item.config as AnyElementConfig),
             id: newId,
             eleType,
-            left: centerX,
-            top: centerY,
-            originX: 'center',
-            originY: 'center',
+            left: centerX + item.anchorOffsetX,
+            top: centerY + item.anchorOffsetY,
+            originX,
+            originY,
           }
 
           await addElement(eleType as ElementType, nextCfg)

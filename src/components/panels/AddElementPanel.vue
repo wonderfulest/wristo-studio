@@ -43,6 +43,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
 import { createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
+import type { PropertyItem } from '@/types/properties'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -112,6 +113,57 @@ const ensureChartPropertyForChartElement = (normalizedConfig: AnyElementConfig, 
   return false
 }
 
+const colorVariableBindings = [
+  { propField: 'fillProperty', styleField: 'fill' },
+  { propField: 'colorProperty', styleField: 'color' },
+  { propField: 'strokeProperty', styleField: 'stroke' },
+  { propField: 'pointColorProperty', styleField: 'pointColor' },
+  { propField: 'activeColorProperty', styleField: 'activeColor' },
+  { propField: 'bodyStrokeProperty', styleField: 'bodyStroke' },
+  { propField: 'headFillProperty', styleField: 'headFill' },
+] as const
+
+const normalizeColorVariableValue = (value: unknown): string | null => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  if (raw === '-1' || raw.toLowerCase() === 'transparent') return 'transparent'
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw
+  if (/^0x[0-9a-f]{6}$/i.test(raw)) return `#${raw.slice(2)}`
+  return null
+}
+
+const getFirstColorVariable = (): { key: string; color: string } | null => {
+  const entry = Object.entries(propertiesStore.allProperties || {})
+    .find(([, property]: [string, PropertyItem]) => property?.type === 'color')
+  if (!entry) return null
+
+  const color = normalizeColorVariableValue(entry[1].value)
+  if (!color) return null
+  return { key: entry[0], color }
+}
+
+const applyDefaultColorVariable = (normalizedConfig: AnyElementConfig) => {
+  const firstColorVariable = getFirstColorVariable()
+  if (!firstColorVariable) return {}
+
+  const configRecord = normalizedConfig as unknown as Record<string, unknown>
+  const appliedBindings: Record<string, string> = {}
+
+  colorVariableBindings.forEach(({ propField, styleField }) => {
+    if (!(styleField in configRecord)) return
+    if (configRecord[propField]) return
+
+    const currentValue = configRecord[styleField]
+    if (String(currentValue ?? '').trim().toLowerCase() === 'transparent') return
+
+    configRecord[styleField] = firstColorVariable.color
+    configRecord[propField] = firstColorVariable.key
+    appliedBindings[propField] = firstColorVariable.key
+  })
+
+  return appliedBindings
+}
+
 const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: AnyElementConfig) => {
   if (['data', 'icon', 'label'].includes(elementType)) {
     const curDataKey = String((normalizedConfig as any).dataProperty ?? '').trim()
@@ -159,6 +211,8 @@ const addElementByType = async (_category: string, elementType: string, config: 
       originY: (config as any).originY ?? 'center',
     }
 
+    const colorBindings = applyDefaultColorVariable(normalizedConfig)
+
     if (elementType === 'barChart' || elementType === 'lineChart') {
       const metricSymbol = ':CHART_TYPE_7DAYS_STEPS'
       ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
@@ -177,6 +231,11 @@ const addElementByType = async (_category: string, elementType: string, config: 
           })
         } else {
           const result = await historyStore.runWithoutRecording(() => handler.add(normalizedConfig))
+          if (result && Object.keys(colorBindings).length) {
+            Object.entries(colorBindings).forEach(([field, key]) => {
+              ;(result as any)[field] = key
+            })
+          }
           historyStore.saveState(`add:${elementType}`, { coalesceIfSameFabric: true })
           void result
         }

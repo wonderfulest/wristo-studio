@@ -37,13 +37,15 @@
           <label>{{ t('elementSettings.borderWidth') }}</label>
           <el-input-number v-model="currentModel.bodyStrokeWidth" :min="0" :max="10" @change="updateElement" />
         </div>
-        <div class="text-setting-field">
-          <label>{{ t('elementSettings.borderRadiusX') }}</label>
-          <el-input-number v-model="currentModel.bodyRx" :min="0" :max="50" @change="updateElement" />
-        </div>
-        <div class="text-setting-field">
-          <label>{{ t('elementSettings.borderRadiusY') }}</label>
-          <el-input-number v-model="currentModel.bodyRy" :min="0" :max="50" @change="updateElement" />
+        <div class="text-settings-pair">
+          <div class="text-setting-field">
+            <label>{{ t('elementSettings.borderRadiusX') }}</label>
+            <el-input-number v-model="currentModel.bodyRx" :min="0" :max="50" @change="updateElement" />
+          </div>
+          <div class="text-setting-field">
+            <label>{{ t('elementSettings.borderRadiusY') }}</label>
+            <el-input-number v-model="currentModel.bodyRy" :min="0" :max="50" @change="updateElement" />
+          </div>
         </div>
       </div>
     </section>
@@ -63,13 +65,15 @@
           <label>{{ t('elementSettings.fillColor') }}</label>
           <color-picker v-model="currentModel.headFill" @change="updateElement" />
         </div>
-        <div class="text-setting-field">
-          <label>{{ t('elementSettings.borderRadiusX') }}</label>
-          <el-input-number v-model="currentModel.headRx" :min="0" :max="20" @change="updateElement" />
-        </div>
-        <div class="text-setting-field">
-          <label>{{ t('elementSettings.borderRadiusY') }}</label>
-          <el-input-number v-model="currentModel.headRy" :min="0" :max="20" @change="updateElement" />
+        <div class="text-settings-pair">
+          <div class="text-setting-field">
+            <label>{{ t('elementSettings.borderRadiusX') }}</label>
+            <el-input-number v-model="currentModel.headRx" :min="0" :max="20" @change="updateElement" />
+          </div>
+          <div class="text-setting-field">
+            <label>{{ t('elementSettings.borderRadiusY') }}</label>
+            <el-input-number v-model="currentModel.headRy" :min="0" :max="20" @change="updateElement" />
+          </div>
         </div>
       </div>
     </section>

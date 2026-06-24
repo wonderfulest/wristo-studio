@@ -178,11 +178,23 @@ const handlePropertyChange = (value: string) => {
   emit('update-template', template)
 }
 
+const cleanupUnusedTextProperty = (propertyKey: string, nextPropertyKey = '') => {
+  const key = String(propertyKey || '').trim()
+  const nextKey = String(nextPropertyKey || '').trim()
+  if (!key || key === nextKey) return
+  const property = propertiesStore.allProperties[key]
+  if (!property || property.type !== 'text') return
+  if (isPropertyInUse(key)) return
+  propertiesStore.deleteProperty(key)
+}
+
 const handleSelectChange = async (value: string) => {
+  const previousKey = localProperty.value
   const rawValue = String(value || '')
   if (!rawValue) {
     localProperty.value = ''
     handlePropertyChange('')
+    cleanupUnusedTextProperty(previousKey)
     return
   }
 
@@ -190,7 +202,7 @@ const handleSelectChange = async (value: string) => {
     const key = rawValue.slice(presetPrefix.length)
     const preset = textVariablePresets.find((item) => item.key === key)
     if (preset) {
-      await applyPreset(preset)
+      await applyPreset(preset, previousKey)
     }
     return
   }
@@ -199,6 +211,7 @@ const handleSelectChange = async (value: string) => {
   if (isPropertyInUse(key)) return
   localProperty.value = key
   handlePropertyChange(key)
+  cleanupUnusedTextProperty(previousKey, key)
 }
 
 const handleTextChange = async (value: string) => {
@@ -214,7 +227,7 @@ const handleTextChange = async (value: string) => {
   emit('update-template', value)
 }
 
-const applyPreset = async (preset: TextVariablePreset) => {
+const applyPreset = async (preset: TextVariablePreset, previousKey = '') => {
   const propertyKey = makeUniquePresetKey(preset.key)
   if (!propertiesStore.allProperties[propertyKey] || propertiesStore.allProperties[propertyKey].type !== 'text') {
     propertiesStore.addProperty({
@@ -233,6 +246,7 @@ const applyPreset = async (preset: TextVariablePreset) => {
   await syncTextPropertyValue(propertyKey, preset.value)
   emit('apply', { textProperty: propertyKey, textTemplate: preset.value })
   emit('update-template', preset.value)
+  cleanupUnusedTextProperty(previousKey, propertyKey)
 }
 
 const isPropertyInUse = (key: string) => usedTextPropertyKeys.value.has(key)

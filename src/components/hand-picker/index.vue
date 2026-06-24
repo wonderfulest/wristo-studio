@@ -6,7 +6,7 @@
       <input
         ref="uploadInput"
         type="file"
-        accept=".svg"
+        accept=".svg,.png"
         style="display: none"
         @change="handleUpload"
       />
@@ -37,6 +37,7 @@ import { ElMessage } from 'element-plus'
 import { Plus, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { uploadBase64Image, uploadHandSVG } from '@/utils/image'
 import { useI18n } from '@/i18n'
+import { isPngFile, isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 
 const { t } = useI18n()
 
@@ -92,8 +93,13 @@ const handleUpload = async (event) => {
   if (!file) return
 
   // 检查文件类型
-  if (!file.name.endsWith('.svg')) {
-    ElMessage.warning(t('asset.uploadHandSvgOnly'))
+  if (!isSvgFile(file) && !isPngFile(file)) {
+    ElMessage.warning(t('asset.handSvgPngOnly'))
+    return
+  }
+
+  if (await svgFileContainsRasterImage(file)) {
+    ElMessage.warning(t('asset.svgVectorOnly'))
     return
   }
 
@@ -105,7 +111,7 @@ const handleUpload = async (event) => {
     if (fileUrl && fileUrl.startsWith('data:')) {
       imageUpload = await uploadBase64Image(fileUrl, 'hand')
     } else if (fileUrl && fileUrl.startsWith('blob:')) {
-      imageUpload = await uploadHandSVG(fileUrl, 'hand')
+      imageUpload = await uploadHandSVG(fileUrl, 'hand', file.name)
     } else if (fileUrl && fileUrl.startsWith('http')) {
       imageUpload.url = fileUrl
     }

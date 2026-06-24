@@ -4,8 +4,17 @@
     <ChangelogDialog ref="changelogDialog" />
     <div class="editor-workspace">
       <!-- 左侧面板 -->
-      <div class="left-panel">
+      <div class="left-panel" :style="{ width: `${leftPanelWidth}px` }">
         <SidePanel />
+        <div
+          class="panel-resize-handle panel-resize-handle-left"
+          :class="{ active: resizingPanel === 'left' }"
+          role="separator"
+          aria-label="Resize layers panel"
+          title="Resize layers panel"
+          @mousedown.prevent="startPanelResize('left', $event)"
+          @dblclick.prevent="resetPanelWidth('left')"
+        />
       </div>
       <!-- 中间画布区域 -->
       <div class="center-area">
@@ -19,7 +28,16 @@
         <TimeSimulatorPanel v-if="editorStore.showTimeSimulator" />
       </div>
       <!-- 右侧设置面板 -->
-      <div class="right-panel">
+      <div class="right-panel" :style="{ width: `${rightPanelWidth}px` }">
+        <div
+          class="panel-resize-handle panel-resize-handle-right"
+          :class="{ active: resizingPanel === 'right' }"
+          role="separator"
+          aria-label="Resize settings panel"
+          title="Resize settings panel"
+          @mousedown.prevent="startPanelResize('right', $event)"
+          @dblclick.prevent="resetPanelWidth('right')"
+        />
         <ElementSettings v-if="baseStore.canvas != null" />
       </div>
     </div>
@@ -43,6 +61,7 @@ import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useEditorStore } from '@/stores/editorStore'
+import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useThemeStore } from '@/stores/theme'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
@@ -86,13 +105,98 @@ const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const exportStore = useExportStore()
 const historyStore = useHistoryStore()
+const editorLayoutStore = useEditorLayoutStore()
 const { waitCanvasReady } = useCanvas()
 const canvasRef = ref<InstanceType<typeof CanvasView> | null>(null)
 const exportPanelRef = ref<InstanceType<typeof ExportPanel> | null>(null)
 const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
 const themeStore = useThemeStore()
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
+let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
+
+const PANEL_CENTER_MIN_WIDTH = 320
+const PANEL_WIDTH_LIMITS = {
+  left: { min: 220, max: 560 },
+  right: { min: 280, max: 720 },
+} as const
+
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max)
+
+const getPanelWidthLimit = (side: 'left' | 'right') => {
+  const limits = PANEL_WIDTH_LIMITS[side]
+  const oppositeKey = side === 'left' ? 'rightSettingsPanel' : 'leftLayerPanel'
+  const oppositeLimits = side === 'left' ? PANEL_WIDTH_LIMITS.right : PANEL_WIDTH_LIMITS.left
+  const oppositeWidth = clamp(
+    editorLayoutStore.getWidth(oppositeKey),
+    oppositeLimits.min,
+    oppositeLimits.max,
+  )
+  const viewportMax = viewportWidth.value - oppositeWidth - PANEL_CENTER_MIN_WIDTH
+  return {
+    min: limits.min,
+    max: Math.max(limits.min, Math.min(limits.max, viewportMax)),
+  }
+}
+
+const normalizePanelWidth = (side: 'left' | 'right', width: number): number => {
+  const limit = getPanelWidthLimit(side)
+  return clamp(Math.round(width), limit.min, limit.max)
+}
+
+const leftPanelWidth = computed(() => normalizePanelWidth('left', editorLayoutStore.getWidth('leftLayerPanel')))
+const rightPanelWidth = computed(() => normalizePanelWidth('right', editorLayoutStore.getWidth('rightSettingsPanel')))
+
+const persistNormalizedPanelWidths = (): void => {
+  editorLayoutStore.setWidth('leftLayerPanel', leftPanelWidth.value)
+  editorLayoutStore.setWidth('rightSettingsPanel', rightPanelWidth.value)
+}
+
+const onPanelResizeMove = (event: MouseEvent): void => {
+  if (!panelResizeState) return
+  const { side, startX, startWidth } = panelResizeState
+  const delta = side === 'left' ? event.clientX - startX : startX - event.clientX
+  const nextWidth = normalizePanelWidth(side, startWidth + delta)
+  editorLayoutStore.setWidth(side === 'left' ? 'leftLayerPanel' : 'rightSettingsPanel', nextWidth)
+}
+
+const stopPanelResize = (): void => {
+  if (!panelResizeState) return
+  panelResizeState = null
+  resizingPanel.value = null
+  document.body.classList.remove('studio-panel-resizing')
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', onPanelResizeMove)
+  window.removeEventListener('mouseup', stopPanelResize)
+}
+
+const startPanelResize = (side: 'left' | 'right', event: MouseEvent): void => {
+  stopPanelResize()
+  panelResizeState = {
+    side,
+    startX: event.clientX,
+    startWidth: side === 'left' ? leftPanelWidth.value : rightPanelWidth.value,
+  }
+  resizingPanel.value = side
+  document.body.classList.add('studio-panel-resizing')
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onPanelResizeMove)
+  window.addEventListener('mouseup', stopPanelResize)
+}
+
+const resetPanelWidth = (side: 'left' | 'right'): void => {
+  editorLayoutStore.resetWidth(side === 'left' ? 'leftLayerPanel' : 'rightSettingsPanel')
+  persistNormalizedPanelWidths()
+}
+
+const handleWorkspaceResize = (): void => {
+  viewportWidth.value = window.innerWidth
+  persistNormalizedPanelWidths()
+}
 
 const changelogDialog = ref<InstanceType<typeof ChangelogDialog> | null>(null)
 
@@ -425,6 +529,9 @@ onMounted(() => {
   // 设置自动保存
   setupAutoSave()
 
+  window.addEventListener('resize', handleWorkspaceResize)
+  persistNormalizedPanelWidths()
+
   // 添加 App Properties 快捷键
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === ',') {
@@ -438,6 +545,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopPanelResize()
+  window.removeEventListener('resize', handleWorkspaceResize)
+
   // 清除自动保存定时器
   if (saveTimer) {
     // 使用 window.clearInterval 与上方保持一致的 DOM 重载
@@ -488,6 +598,7 @@ defineExpose({
   border-right: 1px solid var(--studio-border);
   background-color: var(--studio-surface);
   box-shadow: 1px 0 0 rgba(15, 23, 42, 0.02);
+  position: relative;
   z-index: 2;
 }
 
@@ -539,7 +650,44 @@ defineExpose({
   padding: 18px;
   padding-bottom: 84px;
   box-shadow: -1px 0 0 rgba(15, 23, 42, 0.02);
+  position: relative;
   z-index: 2;
+}
+
+.panel-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 12;
+  touch-action: none;
+}
+
+.panel-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background-color 0.16s ease;
+}
+
+.panel-resize-handle:hover::after,
+.panel-resize-handle.active::after,
+:global(.studio-panel-resizing) .panel-resize-handle::after {
+  background: var(--studio-primary);
+}
+
+.panel-resize-handle-left {
+  right: 0;
+}
+
+.panel-resize-handle-right {
+  left: 0;
 }
 
 .canvas-container {

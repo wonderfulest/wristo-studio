@@ -36,14 +36,16 @@
             :is-system="!!font.isSystem"
             :is-monospace="!!font.isMonospace"
             :subfamily="font.subfamily"
-            :style-tags="font.styleTags"
-            :font-id="font.id"
+	            :style-tags="font.styleTags"
+	            :favorite-weight="font.favoriteWeight"
+	            :font-id="font.id"
             :font-url="(font as any)?.ttfFile?.url"
             :preview-text="previewText"
             :can-edit-search-index="canEditFontSearchIndex(font)"
-            @edit-search-index="openSearchIndexDialog"
-            @removed="handleFontRemoved"
-          />
+	            @edit-search-index="openSearchIndexDialog"
+	            @favorite-changed="handleFontFavoriteChanged"
+	            @removed="handleFontRemoved"
+	          />
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -428,6 +430,12 @@ const saveSearchIndex = async () => {
 const handleFontRemoved = (id: number) => {
   fonts.value = fonts.value.filter(font => font.id !== id)
   total.value = Math.max(0, total.value - 1)
+}
+
+const handleFontFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
+  fonts.value = fonts.value
+    .map(font => font.id === id ? { ...font, favoriteWeight } : font)
+    .sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
 }
 
 watch(activeFontType, () => {

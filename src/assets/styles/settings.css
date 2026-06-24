@@ -8,7 +8,7 @@
 
 .settings-section > .el-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px 10px;
 }
 
@@ -52,6 +52,7 @@
 .settings-section > .el-form > .el-form-item:has(.el-slider),
 .settings-section > .el-form > .el-form-item:has(.range-color-grid),
 .settings-section > .el-form > .el-form-item:has(.font-picker),
+.settings-section > .el-form > .el-form-item,
 .settings-section > .el-form > .data-field,
 .settings-section > .el-form > .goal-field,
 .settings-section > .el-form > .chart-field {
@@ -208,10 +209,7 @@
   color: var(--studio-text-subtle);
 }
 
-/* 网格布局组 */
-.angle-inputs,
-.size-inputs,
-.color-inputs,
+/* 坐标类配置保留成对输入。其它属性默认独占一行。 */
 .position-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
