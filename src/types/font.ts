@@ -40,6 +40,17 @@ export interface DesignFontVO {
   favoriteWeight?: number | null
 }
 
+export interface IconFontBuildStatusVO {
+  taskId?: string
+  glyphCode?: string
+  status: 'idle' | 'pending' | 'running' | 'success' | 'failed' | 'unknown' | string
+  error?: string | null
+  createdAt?: string | null
+  startedAt?: string | null
+  updatedAt?: string | null
+  font?: DesignFontVO | null
+}
+
 // 字体分页查询 DTO
 export interface DesignFontPageQueryDTO {
   pageNum: number

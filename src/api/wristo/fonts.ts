@@ -1,5 +1,5 @@
 import instance from '@/config/axios'
-import type { DesignFontVO, DesignFontSearchDTO } from '@/types/font'
+import type { DesignFontVO, DesignFontSearchDTO, IconFontBuildStatusVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 
 /**
@@ -36,12 +36,20 @@ export const autoNumberFontBuild = (
   )
 }
 
-// 自动构建 Icon 字体：根据 glyphCode 构建并返回 DesignFontVO（包含 ttfFile.url）
+// 自动构建 Icon 字体：根据 glyphCode 提交异步构建任务
 export const autoIconFontBuild = (
   glyphCode: string,
-): Promise<ApiResponse<DesignFontVO>> => {
+): Promise<ApiResponse<IconFontBuildStatusVO>> => {
   return instance.post(
     `/dsn/fonts/auto-icon-font-build/${encodeURIComponent(glyphCode)}?populate=ttf,user`,
+  )
+}
+
+export const getIconFontBuildStatus = (
+  glyphCode: string,
+): Promise<ApiResponse<IconFontBuildStatusVO>> => {
+  return instance.get(
+    `/dsn/fonts/icon-font-build-status/${encodeURIComponent(glyphCode)}?populate=ttf,user`,
   )
 }
 

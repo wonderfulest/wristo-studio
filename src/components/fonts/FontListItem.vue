@@ -15,6 +15,16 @@
         <div class="font-name" v-if="label">{{ label }}</div>
         <div class="font-name-actions" :style="actionsStyle" v-if="fontId != null">
           <button
+            v-if="!isSystem && canManageFont && isIcon"
+            type="button"
+            class="font-icon-btn font-icon-btn-edit"
+            title="Edit icon font"
+            aria-label="Edit icon font"
+            @click.stop="onEditIcon"
+          >
+            <el-icon><Edit /></el-icon>
+          </button>
+          <button
             v-if="fontId != null"
             type="button"
             class="font-icon-btn font-icon-btn-favorite"
@@ -67,18 +77,6 @@
         <el-tag v-if="subfamily" size="small" effect="plain">
           <el-icon><CollectionTag /></el-icon>
         </el-tag> -->
-      </div>
-      <div class="font-actions" v-if="fontId != null">
-        <button
-          v-if="!isSystem && canManageFont && isIcon"
-          type="button"
-          class="font-icon-btn font-icon-btn-edit"
-          title="Edit icon font"
-          aria-label="Edit icon font"
-          @click.stop="onEditIcon"
-        >
-          <el-icon><Edit /></el-icon>
-        </button>
       </div>
     </div>
     <FontPreviewText
@@ -156,7 +154,21 @@ const hasTags = computed(() => props.isMonospace || !!props.subfamily || visible
 const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
 const cornerBadgeCount = computed(() => (props.isSystem ? 1 : 0) + (props.isRecent ? 1 : 0))
 const cornerBadgeWidth = computed(() => cornerBadgeCount.value * 28)
-const actionWidth = computed(() => (props.fontId != null ? 88 : 0))
+const actionButtonCount = computed(() => {
+  if (props.fontId == null) return 0
+  return [
+    !props.isSystem && canManageFont.value && isIcon.value,
+    true,
+    props.canEditSearchIndex,
+    !props.isSystem && canManageFont.value,
+  ].filter(Boolean).length
+})
+const actionWidth = computed(() => {
+  if (!actionButtonCount.value) return 0
+  const size = props.compact ? 26 : 22
+  const gap = 4
+  return actionButtonCount.value * size + Math.max(0, actionButtonCount.value - 1) * gap + 4
+})
 const isFavorite = computed(() => localFavoriteWeight.value != null)
 const recentBadgeStyle = computed(() => ({
   right: props.isSystem ? '34px' : '6px',
@@ -400,13 +412,6 @@ const onToggleFavorite = async () => {
   border-radius: 999px;
   font-weight: 650;
   background: var(--studio-surface-soft);
-}
-
-.font-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 2px;
 }
 
 .font-icon-btn {

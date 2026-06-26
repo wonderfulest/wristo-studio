@@ -32,8 +32,8 @@
       <div class="asset-card" v-for="row in assets" :key="row.id">
         <div class="thumb">
           <el-image
-            v-if="row.previewUrl || row.imageUrl"
-            :src="getPreviewUrl(row.previewUrl || row.imageUrl)"
+            v-if="getAssetUrl(row)"
+            :src="getPreviewUrl(getAssetUrl(row))"
             fit="contain"
             class="thumb-img"
           />
@@ -43,7 +43,7 @@
           <div class="sub">{{ iconLabelMap[row.iconId] || '-' }}</div>
         </div>
         <div class="overlay">
-          <el-button size="small" text type="primary" @click="openUrl(row.imageUrl || row.previewUrl)" :disabled="!(row.imageUrl || row.previewUrl)">{{ t('icon.openAsset') }}</el-button>
+          <el-button size="small" text type="primary" @click="openUrl(getAssetUrl(row))" :disabled="!getAssetUrl(row)">{{ t('icon.openAsset') }}</el-button>
           <el-button v-if="canUsePremiumAssets" size="small" text type="primary" @click="openEdit(row)">{{ t('icon.editSvg') }}</el-button>
         </div>
       </div>
@@ -156,16 +156,11 @@ const toAbsUrl = (url: string) => {
 
 const getPreviewUrl = (url?: string) => {
   if (!url) return ''
-  const abs = toAbsUrl(url)
-  const lower = abs.toLowerCase()
-  if (lower.endsWith('.svg') || lower.includes('.svg?')) return abs
-  const [base, query] = abs.split('?')
-  const lastDot = base.lastIndexOf('.')
-  if (lastDot === -1) return abs
-  const prefix = base.substring(0, lastDot)
-  const ext = base.substring(lastDot)
-  const withSize = `${prefix}_128x128${ext}`
-  return query ? `${withSize}?${query}` : withSize
+  return toAbsUrl(url)
+}
+
+const getAssetUrl = (row: IconAssetVO) => {
+  return row.svgFile || row.previewUrl || row.imageUrl || ''
 }
 
 onMounted(async () => {

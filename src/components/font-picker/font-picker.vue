@@ -19,7 +19,7 @@
           >
             <el-icon><Aim /></el-icon>
           </button>
-          <button v-if="canUsePremiumAssets" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
+          <button v-if="canUsePremiumAssets && type !== FontTypes.ICON_FONT" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
           <RouterLink
             v-if="type === FontTypes.ICON_FONT"
             class="open-library-anchor"
@@ -77,13 +77,14 @@
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
             :include-all-users="includeAllUsers"
+            :excluded-font-values="recentFontValues"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
         />
       </div>
     </Teleport>
     <!-- Add font dialog -->
-    <FontImportDialog v-if="canUsePremiumAssets" v-model:visible="dialogVisible" @selected="onFontUploaded" />
+    <FontImportDialog v-if="canUsePremiumAssets && type !== FontTypes.ICON_FONT" v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
     <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
 
@@ -237,6 +238,7 @@ const searchIndexForm = ref({
 const fontSections = computed(() => fontStore.fontSections as Array<{ label: string; name: SectionName | string; fonts: FontItem[] }>)
 const systemSections = computed(() => (fontSections.value || []).filter(s => s.name !== 'recent'))
 const recentFonts = computed(() => fontStore.recentFonts as FontItem[])
+const recentFontValues = computed(() => new Set(recentFonts.value.map(font => font.value).filter(Boolean)))
 const selectedFontLabel = computed(() => fontStore.getFontLabel(props.modelValue))
 // Map current value (slug) -> family for preview/rendering
 const selectedFontFamily = computed(() => {
@@ -311,7 +313,14 @@ const locateCurrentFont = async () => {
   if (scrollActiveFontIntoView()) return
 
   const loaded = await designerFontListRef.value?.loadUntilFont(props.modelValue)
-  if (!loaded) return
+  if (!loaded && canUsePremiumAssets.value && fontScope.value === 'mine') {
+    fontScope.value = 'all'
+    await nextTick()
+    const loadedInAll = await designerFontListRef.value?.loadUntilFont(props.modelValue)
+    if (!loadedInAll) return
+  } else if (!loaded) {
+    return
+  }
 
   await nextTick()
   scrollActiveFontIntoView()
@@ -470,23 +479,6 @@ const onFontUploaded = async (slug: string) => {
     return
   }
 
-  if (props.type === FontTypes.ICON_FONT) {
-    const current = iconFontStrategyStore.currentIconFontSlug
-    if (current && current !== slug) {
-      try {
-        await ElMessageBox.confirm(
-          t('font.switchIconFontConfirm'),
-          t('font.switchIconFontTitle'),
-          { type: 'warning', confirmButtonText: t('font.switch'), cancelButtonText: t('common.cancel') }
-        )
-      } catch {
-        return
-      }
-      iconFontStrategyStore.updateAllIconFont(slug)
-    } else if (!current) {
-      iconFontStrategyStore.setIconFontSlug(slug)
-    }
-  }
   emit('update:modelValue', slug)
   emit('change', slug)
 }
@@ -560,6 +552,9 @@ void [systemSections, openNumberGlyphEditor]
 }
 
 .font-panel {
+  --font-picker-list-x: 12px;
+  --font-picker-list-y: 8px;
+
   position: fixed;
   max-height: min(820px, calc(100vh - 48px));
   overflow-y: auto;

@@ -186,7 +186,7 @@
           <el-icon
             v-if="isEditableSvgAsset(asset) && !batchManageMode"
             class="edit-icon"
-            @click.stop="openSvgEditor(asset, $event)"
+            @click.stop="openSvgEditor(asset)"
             :title="t('asset.editSvgColors')"
           >
             <Edit />
@@ -238,79 +238,17 @@
       </div>
     </Teleport>
 
-    <Teleport to="body">
-      <div
-        v-if="svgEditorVisible"
-        class="svg-color-popover"
-        :style="svgEditorPanelStyle"
-      >
-        <div class="svg-color-popover-header">
-          <strong>{{ t('asset.editSvgColors') }}</strong>
-          <button type="button" class="svg-color-popover-close" @click="closeSvgEditor">×</button>
-        </div>
-        <div class="svg-color-popover-body">
-          <div v-if="svgPreviewUrl" class="svg-editor-preview">
-            <img :src="svgPreviewUrl" :alt="editingSvgAsset?.file?.name || t('asset.editSvgColors')" />
-          </div>
-          <div v-if="hasSvgEditableEntries" class="svg-editor-fields">
-            <div v-if="svgColorEntries.length" class="svg-editor-section">
-              <div class="svg-editor-section-title">{{ t('asset.svgColors') }}</div>
-              <div
-                v-for="entry in svgColorEntries"
-                :key="entry.id"
-                class="svg-color-row"
-              >
-                <div class="svg-color-meta">
-                  <span class="svg-color-prop">{{ entry.property }}</span>
-                  <span class="svg-color-value">{{ entry.originalValue }}</span>
-                </div>
-                <ColorPicker v-model="entry.nextColor" class="svg-color-picker" />
-              </div>
-            </div>
-            <div v-if="svgStopEntries.length" class="svg-editor-section">
-              <div class="svg-editor-section-title">{{ t('asset.svgGradientStops') }}</div>
-              <div
-                v-for="entry in svgStopEntries"
-                :key="entry.id"
-                class="svg-stop-row"
-              >
-                <div class="svg-stop-name">Stop {{ entry.index + 1 }}</div>
-                <label class="svg-stop-field">
-                  <span>{{ t('asset.svgStopOffset') }}</span>
-                  <el-input
-                    v-model="entry.nextOffset"
-                    size="small"
-                    placeholder="0%"
-                  />
-                </label>
-                <label class="svg-stop-field">
-                  <span>{{ t('asset.svgStopOpacity') }}</span>
-                  <el-input
-                    v-model="entry.nextOpacity"
-                    size="small"
-                    placeholder="1"
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-          <div v-else class="svg-color-empty">
-            {{ t('asset.noEditableSvgColors') }}
-          </div>
-        </div>
-        <div class="svg-color-popover-footer">
-          <el-button @click="closeSvgEditor">{{ t('common.cancel') }}</el-button>
-          <el-button
-            type="primary"
-            :loading="svgSaving"
-            :disabled="!hasSvgEditableEntries"
-            @click="saveEditedSvgAsset"
-          >
-            {{ t('asset.applySvgColors') }}
-          </el-button>
-        </div>
-      </div>
-    </Teleport>
+    <SvgEditorDialog
+      v-model="svgEditorVisible"
+      :initial-svg="editingSvgText"
+      :saving="svgSaving"
+      :title="t('asset.editSvgColors')"
+      :placeholder="t('icon.svgPlaceholder')"
+      :save-label="t('asset.applySvgColors')"
+      :empty-color-message="t('asset.noEditableSvgColors')"
+      @save="saveEditedSvgAsset"
+      @closed="closeSvgEditor"
+    />
   </div>
 </template>
 
@@ -325,23 +263,7 @@ import { useUserStore } from '@/stores/user'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useI18n } from '@/i18n'
 import { isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
-import ColorPicker from '@/components/color-picker/index.vue'
-
-type SvgColorProperty = 'fill' | 'stroke' | 'stop-color'
-
-interface SvgColorEntry {
-  id: string
-  property: SvgColorProperty
-  originalValue: string
-  nextColor: string
-}
-
-interface SvgStopEntry {
-  id: string
-  index: number
-  nextOffset: string
-  nextOpacity: string
-}
+import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 
 type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
 
@@ -414,10 +336,6 @@ const svgEditorVisible = ref(false)
 const svgSaving = ref(false)
 const editingSvgAsset = ref<AnalogAssetVO | null>(null)
 const editingSvgText = ref('')
-const svgEditorPanelStyle = ref<Record<string, string>>({})
-const svgColorEntries = ref<SvgColorEntry[]>([])
-const svgStopEntries = ref<SvgStopEntry[]>([])
-const svgColorProperties: SvgColorProperty[] = ['fill', 'stroke', 'stop-color']
 const favoritingAssetIds = ref<Set<number>>(new Set())
 
 const canViewAllAssets = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
@@ -440,8 +358,6 @@ const deleteProgressPercent = computed(() => {
   if (!deleteProgressTotal.value) return 0
   return Math.round((deleteProgressDone.value / deleteProgressTotal.value) * 100)
 })
-
-const hasSvgEditableEntries = computed(() => svgColorEntries.value.length > 0 || svgStopEntries.value.length > 0)
 
 const hoverPreviewUrl = computed(() => {
   if (!hoverPreviewAsset.value) return undefined
@@ -995,210 +911,19 @@ const handleMouseLeave = () => {
   hoverPreviewStyle.value = {}
 }
 
-const isEditableColorValue = (value: string | null): value is string => {
-  const raw = String(value || '').trim()
-  if (!raw) return false
-  const lower = raw.toLowerCase()
-  if (['none', 'transparent', 'currentcolor', 'inherit', 'initial', 'unset'].includes(lower)) return false
-  if (lower.startsWith('url(') || lower.startsWith('var(')) return false
-  return Boolean(toHexColor(raw))
-}
-
-const toHexColor = (value: string): string => {
-  const raw = value.trim()
-  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase()
-  const shortHex = raw.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
-  if (shortHex) {
-    return `#${shortHex[1]}${shortHex[1]}${shortHex[2]}${shortHex[2]}${shortHex[3]}${shortHex[3]}`.toLowerCase()
-  }
-  const rgb = raw.match(/^rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})/i)
-  if (rgb) {
-    const parts = rgb.slice(1, 4).map((part) => Math.max(0, Math.min(255, Number(part))))
-    return `#${parts.map((part) => part.toString(16).padStart(2, '0')).join('')}`
-  }
-
-  const ctx = document.createElement('canvas').getContext('2d')
-  if (!ctx) return ''
-  ctx.fillStyle = '#000000'
-  ctx.fillStyle = raw
-  return /^#[0-9a-f]{6}$/i.test(ctx.fillStyle) ? ctx.fillStyle.toLowerCase() : ''
-}
-
-const collectStyleColorEntries = (styleValue: string, entries: Map<string, SvgColorEntry>) => {
-  const declarations = styleValue.split(';')
-  for (const declaration of declarations) {
-    const [rawName, ...rawValueParts] = declaration.split(':')
-    const property = rawName?.trim() as SvgColorProperty
-    if (!svgColorProperties.includes(property)) continue
-    const value = rawValueParts.join(':').trim()
-    if (!isEditableColorValue(value)) continue
-    const key = `${property}:${value}`
-    if (!entries.has(key)) {
-      entries.set(key, {
-        id: key,
-        property,
-        originalValue: value,
-        nextColor: toHexColor(value),
-      })
-    }
-  }
-}
-
-const parseSvgColorEntries = (svgText: string): SvgColorEntry[] => {
-  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
-  if (doc.querySelector('parsererror')) {
-    throw new Error('Invalid SVG')
-  }
-
-  const entries = new Map<string, SvgColorEntry>()
-  doc.querySelectorAll('*').forEach((node) => {
-    for (const property of svgColorProperties) {
-      const value = node.getAttribute(property)
-      if (!isEditableColorValue(value)) continue
-      const key = `${property}:${value}`
-      if (!entries.has(key)) {
-        entries.set(key, {
-          id: key,
-          property,
-          originalValue: value,
-          nextColor: toHexColor(value),
-        })
-      }
-    }
-
-    const styleValue = node.getAttribute('style')
-    if (styleValue) collectStyleColorEntries(styleValue, entries)
-  })
-
-  return Array.from(entries.values())
-}
-
-const parseSvgStopEntries = (svgText: string): SvgStopEntry[] => {
-  const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
-  if (doc.querySelector('parsererror')) {
-    throw new Error('Invalid SVG')
-  }
-
-  return Array.from(doc.querySelectorAll('stop')).map((node, index) => ({
-    id: `stop:${index}`,
-    index,
-    nextOffset: node.getAttribute('offset') || '',
-    nextOpacity: node.getAttribute('stop-opacity') || '',
-  }))
-}
-
-const updateStyleDeclaration = (styleValue: string, updates: SvgColorEntry[]): string => {
-  return styleValue
-    .split(';')
-    .map((declaration) => {
-      const [rawName, ...rawValueParts] = declaration.split(':')
-      const property = rawName?.trim() as SvgColorProperty
-      if (!svgColorProperties.includes(property)) return declaration
-      const value = rawValueParts.join(':').trim()
-      const update = updates.find((entry) => entry.property === property && entry.originalValue === value)
-      if (!update) return declaration
-      return `${rawName.trim()}: ${update.nextColor}`
-    })
-    .join(';')
-}
-
-const buildEditedSvgText = (): string => {
-  const doc = new DOMParser().parseFromString(editingSvgText.value, 'image/svg+xml')
-  if (doc.querySelector('parsererror')) {
-    throw new Error('Invalid SVG')
-  }
-
-  doc.querySelectorAll('*').forEach((node) => {
-    for (const entry of svgColorEntries.value) {
-      if (node.getAttribute(entry.property) === entry.originalValue) {
-        node.setAttribute(entry.property, entry.nextColor)
-      }
-    }
-
-    const styleValue = node.getAttribute('style')
-    if (styleValue) {
-      node.setAttribute('style', updateStyleDeclaration(styleValue, svgColorEntries.value))
-    }
-  })
-
-  doc.querySelectorAll('stop').forEach((node, index) => {
-    const entry = svgStopEntries.value[index]
-    if (!entry) return
-
-    const offset = entry.nextOffset.trim()
-    if (offset) {
-      node.setAttribute('offset', offset)
-    } else {
-      node.removeAttribute('offset')
-    }
-
-    const opacity = entry.nextOpacity.trim()
-    if (opacity) {
-      node.setAttribute('stop-opacity', opacity)
-    } else {
-      node.removeAttribute('stop-opacity')
-    }
-  })
-
-  return new XMLSerializer().serializeToString(doc)
-}
-
-const svgPreviewUrl = computed(() => {
-  if (!editingSvgText.value) return ''
-
-  try {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildEditedSvgText())}`
-  } catch {
-    return ''
-  }
-})
-
-const updateSvgEditorPosition = (target: HTMLElement) => {
-  const anchor = target.closest('.asset-item') as HTMLElement | null
-  const rect = (anchor || target).getBoundingClientRect()
-  const panelWidth = 430
-  const panelHeight = Math.min(680, window.innerHeight - 24)
-  const gap = 12
-  const viewportPadding = 12
-  const leftCandidate = rect.left - panelWidth - gap
-  const rightCandidate = rect.right + gap
-  const left = leftCandidate >= viewportPadding
-    ? leftCandidate
-    : Math.min(rightCandidate, window.innerWidth - panelWidth - viewportPadding)
-  const top = Math.min(
-    Math.max(rect.top, viewportPadding),
-    window.innerHeight - panelHeight - viewportPadding
-  )
-
-  svgEditorPanelStyle.value = {
-    left: `${Math.max(left, viewportPadding)}px`,
-    top: `${Math.max(top, viewportPadding)}px`,
-    width: `${panelWidth}px`,
-    maxHeight: `${panelHeight}px`,
-  }
-}
-
 const closeSvgEditor = () => {
   svgEditorVisible.value = false
   editingSvgAsset.value = null
   editingSvgText.value = ''
-  svgColorEntries.value = []
-  svgStopEntries.value = []
-  svgEditorPanelStyle.value = {}
 }
 
-const openSvgEditor = async (asset: AnalogAssetVO, event?: MouseEvent) => {
+const openSvgEditor = async (asset: AnalogAssetVO) => {
   const svgUrl = asset.file?.url
   if (!svgUrl) return
 
   handleMouseLeave()
   editingSvgAsset.value = asset
   svgEditorVisible.value = true
-  if (event?.currentTarget instanceof HTMLElement) {
-    updateSvgEditorPosition(event.currentTarget)
-  }
-  svgColorEntries.value = []
-  svgStopEntries.value = []
   editingSvgText.value = ''
 
   try {
@@ -1206,8 +931,6 @@ const openSvgEditor = async (asset: AnalogAssetVO, event?: MouseEvent) => {
     if (!response.ok) throw new Error(`Failed to load SVG: ${response.status}`)
     const svgText = await response.text()
     editingSvgText.value = svgText
-    svgColorEntries.value = parseSvgColorEntries(svgText)
-    svgStopEntries.value = parseSvgStopEntries(svgText)
   } catch (error) {
     console.error('加载 SVG 失败:', error)
     ElMessage.error(t('asset.loadSvgFailed'))
@@ -1215,15 +938,14 @@ const openSvgEditor = async (asset: AnalogAssetVO, event?: MouseEvent) => {
   }
 }
 
-const saveEditedSvgAsset = async () => {
-  if (!editingSvgAsset.value || !editingSvgText.value) return
+const saveEditedSvgAsset = async (svgText: string) => {
+  if (!editingSvgAsset.value || !svgText) return
 
   svgSaving.value = true
   try {
-    const editedSvgText = buildEditedSvgText()
     const originalName = editingSvgAsset.value.file?.name || `asset-${editingSvgAsset.value.id}.svg`
     const baseName = originalName.replace(/\.svg$/i, '')
-    const file = new File([editedSvgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
+    const file = new File([svgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
     const ok = await uploadFile(file, true)
     if (ok) {
       closeSvgEditor()
@@ -1972,182 +1694,5 @@ defineExpose({
 
 .asset-item:hover .favorite-button {
   opacity: 1;
-}
-
-.svg-color-popover {
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-md);
-  background: var(--studio-surface);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
-  overflow: hidden;
-  z-index: 13020;
-}
-
-.svg-color-popover-header,
-.svg-color-popover-footer {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-}
-
-.svg-color-popover-header {
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 42px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--studio-border);
-}
-
-.svg-color-popover-header strong {
-  min-width: 0;
-  color: var(--studio-text);
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.svg-color-popover-close {
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--studio-text-muted);
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 20px;
-}
-
-.svg-color-popover-close:hover {
-  background: var(--studio-surface-soft);
-  color: var(--studio-text);
-}
-
-.svg-color-popover-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 14px;
-}
-
-.svg-color-popover-footer {
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--studio-border);
-}
-
-.svg-editor-preview {
-  width: 100%;
-  height: 160px;
-  margin-bottom: 14px;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-md);
-  background-image:
-    linear-gradient(45deg, #eee 25%, transparent 25%),
-    linear-gradient(-45deg, #eee 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #eee 75%),
-    linear-gradient(-45deg, transparent 75%, #eee 75%);
-  background-size: 10px 10px;
-  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
-  background-color: #f7f7f7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.svg-editor-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 14px;
-}
-
-.svg-editor-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.svg-editor-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.svg-editor-section-title {
-  font-size: 12px;
-  font-weight: 750;
-  color: var(--studio-text-muted);
-}
-
-.svg-color-row,
-.svg-stop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-md);
-  background: var(--studio-surface-soft);
-}
-
-.svg-stop-row {
-  align-items: flex-end;
-}
-
-.svg-color-meta {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.svg-color-prop {
-  font-size: 12px;
-  font-weight: 750;
-  color: var(--studio-text);
-}
-
-.svg-color-value {
-  max-width: 280px;
-  font-size: 12px;
-  color: var(--studio-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.svg-color-picker {
-  flex: 0 0 132px;
-  width: 132px;
-}
-
-.svg-stop-name {
-  flex: 0 0 64px;
-  font-size: 12px;
-  font-weight: 750;
-  color: var(--studio-text);
-  padding-bottom: 6px;
-}
-
-.svg-stop-field {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--studio-text-muted);
-}
-
-.svg-color-empty {
-  padding: 24px 12px;
-  text-align: center;
-  color: var(--studio-text-muted);
 }
 </style>

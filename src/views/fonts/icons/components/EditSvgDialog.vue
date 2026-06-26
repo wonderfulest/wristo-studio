@@ -1,30 +1,20 @@
 <template>
-  <el-dialog v-model="visibleInner" :title="t('icon.svgEditorTitle')" width="70%" :close-on-click-modal="false" @closed="onClosed">
-    <div class="edit-wrap">
-      <div class="editor-side">
-        <el-input
-          v-model="editSvgContent"
-          type="textarea"
-          :rows="18"
-          :placeholder="t('icon.svgPlaceholder')"
-        />
-        <div class="edit-actions">
-          <el-button @click="autoCropAndCenter" :disabled="!editSvgContent">{{ t('icon.autoCropCenter') }}</el-button>
-          <el-button @click="processDuotone" :disabled="!editSvgContent">{{ t('icon.duotone') }}</el-button>
-          <el-button type="primary" :loading="saving" @click="save">{{ t('common.save') }}</el-button>
-          <el-button @click="visibleInner = false">{{ t('common.cancel') }}</el-button>
-        </div>
-      </div>
-      <div class="preview-side">
-        <div class="preview-box" v-html="editSvgContent"></div>
-      </div>
-    </div>
-  </el-dialog>
+  <SvgEditorDialog
+    v-model="visibleInner"
+    :initial-svg="editSvgContent"
+    :saving="saving"
+    :title="t('icon.svgEditorTitle')"
+    :placeholder="t('icon.svgPlaceholder')"
+    :save-label="t('common.save')"
+    @save="save"
+    @closed="onClosed"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { getIconAssetDetail, cropIconSvg } from '@/api/icon-asset'
@@ -48,92 +38,6 @@ const emit = defineEmits<{
 const visibleInner = ref(false)
 const saving = ref(false)
 const editSvgContent = ref('')
-
-// 将 SVG 转换为前景/背景分层：
-// - 前景层：所有图形填充为黑色（#000），去除描边
-// - 背景层：完全透明（无填充、无描边），仅作为占位层
-const processDuotone = () => {
-  const src = editSvgContent.value?.trim()
-  if (!src) return
-  try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(src, 'image/svg+xml')
-    const svg = doc.documentElement as unknown as SVGSVGElement
-    if (!svg || svg.tagName.toLowerCase() !== 'svg') {
-      ElMessage.error(t('icon.invalidSvg'))
-      return
-    }
-
-    // 收集合并所有内容节点（保留 defs 原样）
-    const defs: Element[] = []
-    const contentNodes: Element[] = []
-    const shapeTags = new Set(['path','rect','circle','ellipse','polygon','polyline','line','use'])
-    const isShapeTag = (tag: string) => shapeTags.has(tag)
-
-    // 复制 defs
-    const defsNodes = svg.querySelectorAll('defs')
-    defsNodes.forEach(d => defs.push(d.cloneNode(true) as Element))
-
-    // 收集形状（如果已有 duotone，优先从前景层收集，避免重复加深）
-    const fgExisting = svg.querySelector('#duotone-fg') as Element | null
-    const collectShapes = (el: Element) => {
-      const tag = el.tagName.toLowerCase()
-      if (isShapeTag(tag)) contentNodes.push(el)
-      for (let i = 0; i < el.children.length; i++) collectShapes(el.children[i] as Element)
-    }
-    if (fgExisting) {
-      collectShapes(fgExisting)
-    } else {
-      collectShapes(svg)
-    }
-
-    // 构建新的 SVG 根
-    const newDoc = document.implementation.createDocument('http://www.w3.org/2000/svg', 'svg', null)
-    const root = newDoc.documentElement as unknown as SVGSVGElement
-    // 复制重要属性
-    const copyAttrs = ['viewBox', 'width', 'height', 'xmlns', 'xmlns:xlink', 'preserveAspectRatio']
-    copyAttrs.forEach((k) => {
-      const v = svg.getAttribute(k)
-      if (v != null) root.setAttribute(k, v)
-    })
-    if (!root.getAttribute('xmlns')) root.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-    if (!root.getAttribute('xmlns:xlink')) root.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-
-    // 追加 defs
-    defs.forEach(d => root.appendChild(newDoc.importNode(d, true)))
-
-    // 背景层（透明）
-    const bg = newDoc.createElementNS('http://www.w3.org/2000/svg', 'g')
-    bg.setAttribute('id', 'duotone-bg')
-    contentNodes.forEach((node) => {
-      const cloned = node.cloneNode(true) as Element
-      cloned.setAttribute('fill', 'none')
-      cloned.setAttribute('stroke', 'none')
-      cloned.removeAttribute('stroke-width')
-      bg.appendChild(newDoc.importNode(cloned, true))
-    })
-
-    // 前景层（黑色填充）
-    const fg = newDoc.createElementNS('http://www.w3.org/2000/svg', 'g')
-    fg.setAttribute('id', 'duotone-fg')
-    contentNodes.forEach((node) => {
-      const cloned = node.cloneNode(true) as Element
-      cloned.setAttribute('fill', '#000000')
-      cloned.removeAttribute('stroke')
-      fg.appendChild(newDoc.importNode(cloned, true))
-    })
-
-    root.appendChild(bg)
-    root.appendChild(fg)
-
-    const serializer = new XMLSerializer()
-    const out = serializer.serializeToString(root)
-    editSvgContent.value = out
-    ElMessage.success(t('icon.duotoneSuccess'))
-  } catch (e) {
-    ElMessage.error(t('icon.processFailed'))
-  }
-}
 
 watch(() => props.modelValue, v => {
   if (v && !userStore.canUsePremiumStudioAssets) {
@@ -182,7 +86,7 @@ function onClosed() {
   editSvgContent.value = ''
 }
 
-async function save() {
+async function save(svgContent: string) {
   if (!userStore.canUsePremiumStudioAssets) {
     membershipGate.requirePremium('icon.premiumRequired')
     return
@@ -190,7 +94,7 @@ async function save() {
   if (!props.assetId) return
   saving.value = true
   try {
-    await cropIconSvg({ id: props.assetId, svgContent: editSvgContent.value })
+    await cropIconSvg({ id: props.assetId, svgContent })
     ElMessage.success(t('icon.saveSuccess'))
     visibleInner.value = false
     emit('saved')
@@ -200,87 +104,4 @@ async function save() {
     saving.value = false
   }
 }
-
-const autoCropAndCenter = () => {
-  const src = editSvgContent.value?.trim()
-  if (!src) return
-  try {
-    const cropped = cropSvgToContentBBox(src)
-    if (cropped) {
-      editSvgContent.value = cropped
-      ElMessage.success(t('icon.cropCenterSuccess'))
-    } else {
-      ElMessage.warning(t('icon.boundsUnavailable'))
-    }
-  } catch (e) {
-    ElMessage.error(t('icon.processFailed'))
-  }
-}
-
-function cropSvgToContentBBox(svgText: string): string | null {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(svgText, 'image/svg+xml')
-  const svg = doc.documentElement as unknown as SVGSVGElement
-  if (!svg || svg.tagName.toLowerCase() !== 'svg') return null
-
-  const container = document.createElement('div')
-  container.style.position = 'fixed'
-  container.style.left = '-10000px'
-  container.style.top = '-10000px'
-  container.style.opacity = '0'
-  container.style.pointerEvents = 'none'
-  document.body.appendChild(container)
-
-  const measureSvg = svg.cloneNode(true) as SVGSVGElement
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-  const children: ChildNode[] = []
-  while (measureSvg.firstChild) {
-    children.push(measureSvg.firstChild)
-    measureSvg.removeChild(measureSvg.firstChild)
-  }
-  children.forEach((n) => {
-    if ((n as Element).nodeType === 1 && (n as Element).nodeName.toLowerCase() === 'defs') {
-      measureSvg.appendChild(n)
-    } else {
-      g.appendChild(n)
-    }
-  })
-  measureSvg.appendChild(g)
-  measureSvg.setAttribute('width', '1000')
-  measureSvg.setAttribute('height', '1000')
-  if (!measureSvg.getAttribute('viewBox')) measureSvg.setAttribute('viewBox', '0 0 1000 1000')
-  container.appendChild(measureSvg)
-
-  let bbox: DOMRect
-  try {
-    bbox = (g as any).getBBox()
-  } catch (e) {
-    document.body.removeChild(container)
-    return null
-  }
-  document.body.removeChild(container)
-  if (!bbox || !isFinite(bbox.width) || !isFinite(bbox.height) || bbox.width <= 0 || bbox.height <= 0) return null
-
-  // Make square viewBox centered at content
-  const cx = bbox.x + bbox.width / 2
-  const cy = bbox.y + bbox.height / 2
-  const side = Math.max(bbox.width, bbox.height)
-  const vx = cx - side / 2
-  const vy = cy - side / 2
-  svg.setAttribute('viewBox', `${vx} ${vy} ${side} ${side}`)
-  svg.removeAttribute('width')
-  svg.removeAttribute('height')
-  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-
-  const serializer = new XMLSerializer()
-  return serializer.serializeToString(svg)
-}
 </script>
-
-<style scoped>
-.edit-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.editor-side { display: flex; flex-direction: column; gap: 12px; }
-.preview-side { background: var(--studio-surface-soft); border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 12px; }
-.preview-box { background: var(--studio-canvas-shell); border: 1px solid var(--studio-border); min-height: 340px; display: flex; align-items: center; justify-content: center; }
-.edit-actions { display: flex; gap: 8px; }
-</style>

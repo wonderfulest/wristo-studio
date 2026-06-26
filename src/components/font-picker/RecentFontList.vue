@@ -67,7 +67,7 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
 }
 
 .font-list-content {
-  padding: 8px 12px;
+  padding: var(--font-picker-list-y, 8px) var(--font-picker-list-x, 12px);
 }
 
 .family-name {

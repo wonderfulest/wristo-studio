@@ -2,7 +2,7 @@
   <div class="designer-font-list">
     <div class="font-list-scroll">
       <div
-        v-for="font in fonts"
+        v-for="font in visibleFonts"
         :key="font.id"
         class="font-item"
         :class="{ active: modelValue === font.slug }"
@@ -49,6 +49,7 @@ const props = defineProps<{
   type: string
   canUsePremiumAssets?: boolean
   includeAllUsers?: boolean
+  excludedFontValues?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -63,6 +64,7 @@ const pageSize = ref(10)
 const total = ref(0)
 
 const hasMore = computed(() => fonts.value.length < total.value)
+const visibleFonts = computed(() => fonts.value.filter(font => !props.excludedFontValues?.has(font.slug)))
 
 defineExpose({
   loadNextPage,
@@ -178,14 +180,14 @@ watch(
 
 <style scoped>
 .designer-font-list {
-  padding: 8px 0;
+  padding: 0;
 }
 
 .font-list-scroll {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 12px;
+  padding: var(--font-picker-list-y, 8px) var(--font-picker-list-x, 12px);
 }
 
 .font-item {

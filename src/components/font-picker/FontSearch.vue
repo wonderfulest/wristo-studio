@@ -310,7 +310,7 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 12px;
+  padding: var(--font-picker-list-y, 8px) var(--font-picker-list-x, 12px);
 }
 .family-name {
   font-size: 12px;

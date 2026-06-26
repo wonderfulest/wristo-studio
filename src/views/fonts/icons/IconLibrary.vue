@@ -6,99 +6,270 @@
         <p>{{ t('icon.librarySubtitle') }}</p>
       </div>
       <div class="header-actions">
-        <HeaderUploadSvg
-          v-if="canUsePremiumAssets"
-          ref="headerUploadRef"
-          :show-hint="false"
-          @uploaded="onIconUploaded"
-        />
         <el-button @click="goToIconAssets">{{ t('icon.goToAssets') }}</el-button>
       </div>
     </div>
 
-    <div class="content-card">
-      <div class="library-summary">
-        <div class="summary-item">
-          <span class="summary-label">{{ t('icon.fontSets') }}</span>
-          <strong>{{ glyphTotal }}</strong>
+    <HeaderUploadSvg
+      v-if="canManageActiveGlyph"
+      ref="headerUploadRef"
+      class="hidden-upload"
+      :show-button="false"
+      :show-hint="false"
+      :upload-context="{ glyphId: activeGlyphId }"
+      @uploaded="onIconUploaded"
+    />
+
+    <div class="workspace-card">
+      <aside class="font-set-panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">{{ t('icon.fontSets') }}</div>
+            <strong>{{ glyphTotal }}</strong>
+          </div>
+          <el-tooltip v-if="canUsePremiumAssets" :content="t('icon.createIconFont')" placement="top">
+            <el-button class="icon-only-button" type="primary" circle @click="onAddGlyph">
+              <el-icon><Plus /></el-icon>
+            </el-button>
+          </el-tooltip>
         </div>
-        <div class="summary-item">
-          <span class="summary-label">{{ t('icon.currentAssets') }}</span>
-          <strong>{{ assetTotal }}</strong>
+
+        <div v-if="loadingGlyphs" class="sidebar-loading">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          {{ t('icon.loadingIcons') }}
         </div>
-        <div class="summary-item">
-          <span class="summary-label">{{ t('icon.currentDisplayType') }}</span>
-          <strong>{{ displayType }}</strong>
-        </div>
-      </div>
-      <el-tabs
-        v-model="activeTab"
-        type="card"
-        :addable="canUsePremiumAssets"
-        @tab-change="onTabChange"
-        @tab-add="onAddGlyph"
-      >
-        <el-tab-pane
-          v-for="glyph in glyphs"
-          :key="glyph.glyphCode || glyph.id"
-          :name="glyph.glyphCode || String(glyph.id)"
-        >
-          <template #label>
-            <span>{{ tabLabel(glyph) }}</span>
-            <el-tooltip
-              v-if="glyph.isDefault === 1"
-              :content="t('icon.systemIcon')"
-              placement="top"
-            >
-              <i class="icon-tag iconfont icon-system"></i>
+        <div v-else class="font-set-list">
+          <button
+            v-for="glyph in glyphs"
+            :key="glyph.glyphCode || glyph.id"
+            type="button"
+            class="font-set-item"
+            :class="{ active: glyph.glyphCode === activeTab }"
+            @click="selectGlyph(glyph)"
+          >
+            <el-tooltip :content="tabLabel(glyph)" placement="top" :show-after="120">
+              <span class="font-set-name">{{ tabLabel(glyph) }}</span>
             </el-tooltip>
+            <span class="font-set-meta">
+              <span class="badge" :class="{ custom: glyph.isDefault === 0, system: glyph.isDefault === 1 }">
+                {{ glyph.isDefault === 1 ? t('icon.systemIcon') : t('icon.custom') }}
+              </span>
+              <span>{{ t('font.version') }} {{ glyph.version ?? '-' }}</span>
+            </span>
             <el-tooltip
               v-if="glyph.isDefault === 0 && canUsePremiumAssets"
               :content="t('icon.renameIconFont')"
               placement="top"
             >
-              <el-icon class="glyph-edit-icon" @click.stop="openRenameDialog(glyph)">
-                <Edit />
-              </el-icon>
+              <el-button class="rename-button" text circle @click.stop="openRenameDialog(glyph)">
+                <el-icon><Edit /></el-icon>
+              </el-button>
             </el-tooltip>
-          </template>
-
-          <GlyphAssetsPanel
-            v-if="glyph.glyphCode === activeTab"
-            :glyph="glyph"
-            :assets="assets"
-            :loading="loadingAssets"
-            :page="assetPage"
-            :page-size="assetPageSize"
-            :total="assetTotal"
-            v-model:displayType="displayType"
-            @edit="handleEdit"
-            @openBind="(p)=> openBindDialog(p.glyphId, p.iconId, p.iconUnicode)"
-            @uploadForIcon="handleUploadForIcon"
-            @unbind="(p)=> handleUnbind(p.glyphId, p.assetId)"
-            @pageChange="onAssetPageChange"
-            @import="openImportDialog"
-            @submitGlyph="handleSubmitGlyph"
-            @displayTypeChange="onDisplayTypeChange"
-            :can-manage="canUsePremiumAssets"
-          />
-        </el-tab-pane>
-      </el-tabs>
-
-      <div v-if="glyphTotal > glyphPageSize" class="pager glyph-pager">
-        <div class="pager-context">
-          <span>{{ t('icon.fontSets') }}</span>
-          <strong>{{ glyphTotal }}</strong>
+          </button>
         </div>
-        <el-pagination
-          background
-          layout="prev, pager, next"
-          :current-page="glyphPage"
-          :page-size="glyphPageSize"
-          :total="glyphTotal"
-          @current-change="onGlyphPageChange"
-        />
-      </div>
+
+        <div v-if="glyphTotal > glyphPageSize" class="pager glyph-pager">
+          <el-pagination
+            small
+            background
+            layout="prev, pager, next"
+            :current-page="glyphPage"
+            :page-size="glyphPageSize"
+            :total="glyphTotal"
+            @current-change="onGlyphPageChange"
+          />
+        </div>
+      </aside>
+
+      <main class="glyph-board">
+        <div class="board-toolbar">
+          <div class="board-title">
+            <div class="eyebrow">{{ t('icon.glyphGrid') }}</div>
+            <el-tooltip :content="activeGlyph?.glyphCode || t('icon.noFontSelected')" placement="top" :show-after="120">
+              <div class="board-title-row">
+                <h3>{{ activeGlyph?.glyphCode || t('icon.noFontSelected') }}</h3>
+                <el-tag v-if="activeGlyph?.isDefault === 1" size="small" effect="light" type="primary">
+                  {{ t('icon.systemIcon') }}
+                </el-tag>
+              </div>
+            </el-tooltip>
+          </div>
+          <div class="board-actions">
+            <el-button
+              v-if="canUsePremiumAssets && activeGlyph?.isDefault === 0"
+              type="primary"
+              size="small"
+              :loading="buildSubmitting"
+              @click="handleSubmitGlyph"
+            >
+              {{ t('icon.submitFont') }}
+            </el-button>
+            <el-button
+              v-if="canManageActiveGlyph"
+              type="primary"
+              size="small"
+              @click="handleUploadToActiveGlyph"
+            >
+              <el-icon><Upload /></el-icon>
+              {{ t('icon.uploadAsset') }}
+            </el-button>
+            <el-button
+              v-if="activeGlyph"
+              size="small"
+              :loading="downloadingSvgSources"
+              @click="handleDownloadSvgSources"
+            >
+              <el-icon><Download /></el-icon>
+              {{ t('icon.downloadSvgSources') }}
+            </el-button>
+            <el-radio-group
+              v-model="displayType"
+              class="display-switch"
+              size="small"
+              @change="onDisplayTypeChange"
+            >
+              <el-radio-button label="mip">MIP</el-radio-button>
+              <el-radio-button label="amoled">AMOLED</el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+        <div v-if="downloadingSvgSources" class="download-progress">
+          <div class="download-progress-head">
+            <span>{{ downloadSvgProgressLabel }}</span>
+            <strong>{{ downloadSvgProgress }}%</strong>
+          </div>
+          <el-progress
+            :percentage="downloadSvgProgress"
+            :show-text="false"
+            :stroke-width="8"
+          />
+        </div>
+
+        <div class="board-summary">
+          <div class="summary-item">
+            <span class="summary-label">{{ t('icon.currentAssets') }}</span>
+            <strong>{{ assetTotal }}</strong>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">{{ t('icon.mappedOnPage') }}</span>
+            <strong>{{ mappedAssetCount }}</strong>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">{{ t('icon.missingOnPage') }}</span>
+            <strong>{{ missingAssetCount }}</strong>
+          </div>
+          <div v-if="activeGlyph" class="summary-item build-status-compact" :class="`build-status-compact--${buildStatusTone}`">
+            <div class="build-status-head">
+              <span class="summary-label">{{ t('icon.buildTaskStatus') }}</span>
+              <el-tag size="small" effect="light" :type="buildStatusTagType">
+                {{ buildStatusShortLabel }}
+              </el-tag>
+            </div>
+            <div class="build-status-meta-row">
+              <span v-if="iconFontBuildStatus?.taskId" class="build-status-meta">
+                {{ t('icon.buildTaskId') }} {{ iconFontBuildStatus.taskId }}
+              </span>
+              <span v-if="buildStatusTime" class="build-status-meta">
+                {{ buildStatusTime }}
+              </span>
+              <span v-if="iconFontBuildStatus?.error" class="build-error">{{ iconFontBuildStatus.error }}</span>
+            </div>
+            <div class="build-status-actions">
+              <el-button size="small" text :loading="buildStatusLoading" @click="refreshBuildStatus">
+                {{ t('common.refresh') }}
+              </el-button>
+              <el-button
+                v-if="buildFontUrl"
+                size="small"
+                text
+                type="primary"
+                @click="openBuildFontUrl"
+              >
+                {{ t('common.download') }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <div class="assets-grid">
+          <div v-if="loadingAssets" class="loading">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            {{ t('icon.loadingIcons') }}
+          </div>
+          <template v-else>
+            <div v-if="assets.length === 0" class="empty-state">
+              <div class="empty-title">{{ t('icon.noIcons') }}</div>
+              <div class="empty-desc">{{ t('icon.noIconsHint') }}</div>
+              <el-button v-if="canManageActiveGlyph" type="primary" @click="handleUploadToActiveGlyph">
+                {{ t('icon.uploadAsset') }}
+              </el-button>
+            </div>
+            <div v-else class="grid">
+              <button
+                v-for="item in assets"
+                :key="item.id"
+                type="button"
+                class="grid-item"
+                :class="{ selected: selectedAssetId === item.id, missing: !getAssetImage(item) }"
+                @click="selectAsset(item)"
+              >
+                <div class="grid-topline">
+                  <el-tooltip :content="item.icon?.symbolCode || '-'" placement="top" :show-after="120">
+                    <span class="symbol-code">{{ item.icon?.symbolCode || '-' }}</span>
+                  </el-tooltip>
+                  <span class="display-pill">{{ displayTypeShortLabel(displayType) }}</span>
+                </div>
+                <div class="preview">
+                  <img v-if="getAssetImage(item)" :src="getAssetImage(item)" alt="icon" />
+                  <div v-else class="missing-asset">
+                    <el-icon class="missing-icon"><Plus /></el-icon>
+                    <span>{{ t('icon.assetMissingShort') }}</span>
+                  </div>
+                </div>
+                <div class="grid-meta">
+                  <span>{{ item.icon?.iconUnicode || '-' }}</span>
+                </div>
+                <div v-if="canManageActiveGlyph" class="quick-actions" @click.stop>
+                  <el-tooltip :content="t('icon.uploadForThisIcon')" placement="top">
+                    <button
+                      type="button"
+                      class="icon-action"
+                      @click="handleUploadForIcon({ iconUnicode: item.icon?.iconUnicode, displayType })"
+                    >
+                      <el-icon><Upload /></el-icon>
+                    </button>
+                  </el-tooltip>
+                  <el-tooltip
+                    v-if="activeGlyph?.isDefault === 0 && displayType === 'mip' && item.asset?.id"
+                    :content="t('common.edit')"
+                    placement="top"
+                  >
+                    <button type="button" class="icon-action" @click="handleEdit(item)">
+                      <el-icon><Edit /></el-icon>
+                    </button>
+                  </el-tooltip>
+                </div>
+              </button>
+            </div>
+
+            <div v-if="assetTotal > assetPageSize" class="pager asset-pager">
+              <div class="pager-context">
+                <span>{{ t('icon.currentAssets') }}</span>
+                <strong>{{ assetTotal }}</strong>
+              </div>
+              <el-pagination
+                background
+                layout="prev, pager, next"
+                :current-page="assetPage"
+                :page-size="assetPageSize"
+                :total="assetTotal"
+                @current-change="onAssetPageChange"
+              />
+            </div>
+          </template>
+        </div>
+      </main>
+
     </div>
 
     <CreateGlyphDialog
@@ -121,44 +292,19 @@
       :asset-id="editAssetId"
       @saved="onEditSaved"
     />
-    <!-- Bind Assets Dialog -->
-    <BindAssetsDialog
-      v-model="bindVisible"
-      :assets="bindAssets"
-      :loading="bindLoading"
-      :page="bindPage"
-      :page-size="bindPageSize"
-      :total="bindTotal"
-      :keyword="bindKeyword"
-      :binding="binding"
-      @update:keyword="(v:string)=> bindKeyword = v"
-      @search="loadBindAssets"
-      @pageChange="onBindPageChange"
-      @bind="handleBindSingle"
-    />
-
-    <ImportFromFontDialog
-      v-model="importVisible"
-      :glyphs="importableGlyphs"
-      v-model:selectedId="importFromGlyphId"
-      :loading="importing"
-      @confirm="handleImport"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit } from '@element-plus/icons-vue'
+import { Download, Edit, Loading, Plus, Upload } from '@element-plus/icons-vue'
+import JSZip from 'jszip'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import BindAssetsDialog from './components/BindAssetsDialog.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
-import GlyphAssetsPanel from './components/GlyphAssetsPanel.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
-import ImportFromFontDialog from './components/ImportFromFontDialog.vue'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
@@ -166,28 +312,45 @@ import {
   pageIconGlyphs,
   pageIconGlyphAssets,
   createIconGlyph,
-  pageIconAssets,
   bindAssetsToGlyph,
-  unbindAssetFromGlyph,
-  importAssetsToGlyph,
   editIconGlyph,
   type IconGlyphVO,
   type IconGlyphAssetVO,
   type IconAssetVO,
   type IconGlyphCreateDTO,
-  type IconAssetPageQueryDTO,
   type DisplayType,
   type IconGlyphUpdateDTO,
 } from '@/api/wristo/iconGlyph'
-import { autoIconFontBuild } from '@/api/wristo/fonts'
+import { autoIconFontBuild, getIconFontBuildStatus } from '@/api/wristo/fonts'
+import type { IconFontBuildStatusVO } from '@/types/font'
 
 const route = useRoute()
 const { t } = useI18n()
 const userStore = useUserStore()
 const membershipGate = useStudioMembershipGate()
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
+const isAdminUser = computed(() => userStore.isAdminUser)
 
 const requireIconPremium = () => membershipGate.requirePremium('icon.premiumRequired')
+const canManageGlyph = (glyph?: IconGlyphVO | null) => {
+  if (!glyph) return false
+  return glyph.isDefault === 1 ? isAdminUser.value : canUsePremiumAssets.value
+}
+const canManageActiveGlyph = computed(() => canManageGlyph(activeGlyph.value))
+
+const requireManageActiveGlyph = () => {
+  const glyph = activeGlyph.value
+  if (!glyph) return false
+  if (glyph.isDefault === 1 && !isAdminUser.value) {
+    ElMessage.warning(t('icon.systemIconAdminOnly'))
+    return false
+  }
+  if (!canUsePremiumAssets.value) {
+    requireIconPremium()
+    return false
+  }
+  return true
+}
 
 const goToIconAssets = () => {
   window.open('/icon-assets', '_blank')
@@ -200,6 +363,7 @@ const glyphPage = ref(1)
 const glyphPageSize = ref(10)
 const activeTab = ref<string>('') // stores glyphCode of active glyph
 const loadingGlyphs = ref(false)
+const activeGlyphId = computed(() => glyphs.value.find(x => x.glyphCode === activeTab.value)?.id)
 
 // assets for selected glyph
 const assets = ref<IconGlyphAssetVO[]>([])
@@ -209,6 +373,47 @@ const assetPageSize = ref(120)
 const loadingAssets = ref(false)
 const displayType = ref<DisplayType>('mip')
 const headerUploadRef = ref<InstanceType<typeof HeaderUploadSvg> | null>(null)
+const selectedAssetId = ref<number | null>(null)
+const activeGlyph = computed(() => glyphs.value.find(x => x.glyphCode === activeTab.value) ?? null)
+const mappedAssetCount = computed(() => assets.value.filter(item => !!getAssetImage(item)).length)
+const missingAssetCount = computed(() => Math.max(0, assets.value.length - mappedAssetCount.value))
+const iconFontBuildStatus = ref<IconFontBuildStatusVO | null>(null)
+const buildStatusLoading = ref(false)
+const buildSubmitting = ref(false)
+const downloadingSvgSources = ref(false)
+const downloadSvgProgress = ref(0)
+const downloadSvgProcessed = ref(0)
+const downloadSvgTotal = ref(0)
+const downloadSvgProgressStage = ref<'preparing' | 'downloading' | 'packaging'>('preparing')
+let buildStatusTimer: number | null = null
+
+const buildFontUrl = computed(() => iconFontBuildStatus.value?.font?.ttfFile?.url || '')
+const normalizedBuildStatus = computed(() => String(iconFontBuildStatus.value?.status || 'idle').toLowerCase())
+const buildStatusShortLabel = computed(() => t(`icon.buildStatus.${normalizedBuildStatus.value}`))
+const buildStatusTime = computed(() => iconFontBuildStatus.value?.updatedAt || iconFontBuildStatus.value?.startedAt || iconFontBuildStatus.value?.createdAt || '')
+const buildStatusTone = computed(() => {
+  if (normalizedBuildStatus.value === 'failed') return 'failed'
+  if (normalizedBuildStatus.value === 'success') return 'success'
+  if (normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running') return 'running'
+  return 'idle'
+})
+const buildStatusTagType = computed(() => {
+  if (normalizedBuildStatus.value === 'failed') return 'danger'
+  if (normalizedBuildStatus.value === 'success') return 'success'
+  if (normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running') return 'warning'
+  return 'info'
+})
+const isBuildProcessing = computed(() => normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running')
+const downloadSvgProgressLabel = computed(() => {
+  if (downloadSvgProgressStage.value === 'packaging') return t('icon.downloadSvgPackaging')
+  if (downloadSvgProgressStage.value === 'downloading') {
+    return t('icon.downloadSvgProgress', {
+      current: downloadSvgProcessed.value,
+      total: downloadSvgTotal.value,
+    })
+  }
+  return t('icon.downloadSvgPreparing')
+})
 
 // rename dialog state
 const renameVisible = ref(false)
@@ -259,6 +464,7 @@ const fetchGlyphs = async () => {
         displayType.value = 'mip'
         ensureDisplayTypeForGlyph(g.glyphCode)
         await fetchAssets(g.id)
+        await loadBuildStatus(g.glyphCode, true)
       }
     }
   } finally {
@@ -280,20 +486,55 @@ const fetchAssets = async (glyphId: number) => {
     } as any)
     assets.value = data?.list ?? []
     assetTotal.value = data?.total ?? 0
+    selectedAssetId.value = null
   } finally {
     loadingAssets.value = false
   }
 }
 
+const fetchAllGlyphAssets = async (glyphId: number) => {
+  const pageSize = 500
+  let pageNum = 1
+  let total = 0
+  const list: IconGlyphAssetVO[] = []
+
+  do {
+    const { data } = await pageIconGlyphAssets({
+      pageNum,
+      pageSize,
+      glyphId,
+      active: 1,
+      orderBy: 'id:asc',
+    } as any)
+    const pageList = data?.list ?? []
+    list.push(...pageList)
+    total = data?.total ?? list.length
+    pageNum += 1
+  } while (list.length < total)
+
+  return list
+}
+
+const selectGlyph = async (glyph: IconGlyphVO) => {
+  if (!glyph?.glyphCode || glyph.glyphCode === activeTab.value) return
+  await onTabChange(glyph.glyphCode)
+}
+
+const selectAsset = (item: IconGlyphAssetVO) => {
+  selectedAssetId.value = item.id
+}
+
 const onTabChange = async (name: string) => {
   activeTab.value = name // name is glyphCode
   assetPage.value = 1
+  selectedAssetId.value = null
   const g = glyphs.value.find(x => x.glyphCode === name)
   if (!g) return
   // reset display type to 'mip' when switching glyph tab
   displayType.value = 'mip'
   ensureDisplayTypeForGlyph(g.glyphCode)
   await fetchAssets(g.id)
+  await loadBuildStatus(g.glyphCode, true)
 }
 
 const onGlyphPageChange = async (page: number) => {
@@ -305,43 +546,52 @@ const onAssetPageChange = async (page: number) => {
   assetPage.value = page
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
-  await fetchAssets(g.id)
+  await fetchGlyphs()
 }
 
-const handleUnbind = async (glyphId: number, assetId: number) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
+const clearBuildStatusPolling = () => {
+  if (buildStatusTimer) {
+    window.clearInterval(buildStatusTimer)
+    buildStatusTimer = null
   }
-  if (!glyphId || !assetId) return
+}
+
+const scheduleBuildStatusPolling = () => {
+  clearBuildStatusPolling()
+  if (!isBuildProcessing.value || !activeTab.value) return
+  buildStatusTimer = window.setInterval(() => {
+    void loadBuildStatus(activeTab.value, true)
+  }, 5000)
+}
+
+const loadBuildStatus = async (glyphCode: string, silent = false) => {
+  if (!glyphCode) return
   try {
-    await ElMessageBox.confirm(
-      t('icon.unbindConfirmBody'),
-      t('icon.unbindConfirmTitle'),
-      {
-        type: 'warning',
-        confirmButtonText: t('icon.unbind'),
-        cancelButtonText: t('common.cancel'),
-      }
-    )
-  } catch {
-    return
-  }
-  try {
-    await unbindAssetFromGlyph(glyphId, assetId)
-    ElMessage.success(t('icon.unboundSuccessfully'))
-    const active = glyphs.value.find(g => g.glyphCode === activeTab.value)
-    if (active && active.id === glyphId) {
-      await fetchAssets(glyphId)
-    }
+    if (!silent) buildStatusLoading.value = true
+    const { data } = await getIconFontBuildStatus(glyphCode)
+    iconFontBuildStatus.value = data ?? { glyphCode, status: 'idle' }
+    scheduleBuildStatusPolling()
   } catch (e) {
-    console.error(e)
+    if (!silent) throw e
+  } finally {
+    if (!silent) buildStatusLoading.value = false
   }
 }
 
-const onDisplayTypeChange = async (_v: DisplayType) => {
+const refreshBuildStatus = async () => {
+  if (!activeTab.value) return
+  await loadBuildStatus(activeTab.value)
+}
+
+const openBuildFontUrl = () => {
+  if (!buildFontUrl.value) return
+  window.open(buildFontUrl.value, '_blank')
+}
+
+const onDisplayTypeChange = async (_v: DisplayType | string | number | boolean | undefined) => {
   // reset to first page when switching display type
   assetPage.value = 1
+  selectedAssetId.value = null
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
   await fetchAssets(g.id)
@@ -415,6 +665,11 @@ const handleSubmitGlyph = async () => {
     requireIconPremium()
     return
   }
+  const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
+  if (!glyph || !glyph.glyphCode) {
+    ElMessage.error(t('icon.missingGlyphCode'))
+    return
+  }
   try {
     await ElMessageBox.confirm(
       t('icon.buildFontBody'),
@@ -426,25 +681,22 @@ const handleSubmitGlyph = async () => {
       }
     )
 
-    const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
-    if (!glyph || !glyph.glyphCode) {
-      ElMessage.error(t('icon.missingGlyphCode'))
-      return
-    }
-
+    buildSubmitting.value = true
     const { data } = await autoIconFontBuild(glyph.glyphCode)
-
-    if (data?.ttfFile?.url) {
-      const url = data.ttfFile.url
-      // 自动在新标签页打开 TTF 链接，方便用户下载或预览
-      window.open(url, '_blank')
-      ElMessage.success(t('icon.builtOpened'))
-      // 可选：后续根据需要，触发字体列表刷新
-    } else {
-      ElMessage.warning(t('icon.buildNoUrl'))
-    }
+    iconFontBuildStatus.value = data ?? { glyphCode: glyph.glyphCode, status: 'pending' }
+    scheduleBuildStatusPolling()
+    await ElMessageBox.alert(
+      t('icon.buildSubmittedBody'),
+      t('icon.buildSubmittedTitle'),
+      {
+        type: 'success',
+        confirmButtonText: t('common.ok'),
+      }
+    )
   } catch {
     // user canceled or request failed silently handled elsewhere
+  } finally {
+    buildSubmitting.value = false
   }
 }
 
@@ -452,15 +704,16 @@ onMounted(async () => {
   await fetchGlyphs()
 })
 
+onUnmounted(() => {
+  clearBuildStatusPolling()
+})
+
 // 
 
 const editVisible = ref(false)
 const editAssetId = ref<number | null>(null)
 const handleEdit = (item: IconGlyphAssetVO) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
+  if (!requireManageActiveGlyph()) return
   editAssetId.value = item.asset?.id ?? null
   editVisible.value = true
 }
@@ -470,18 +723,148 @@ const onEditSaved = async () => {
   await fetchAssets(g.id)
 }
 
-const onIconUploaded = async () => {
+const onIconUploaded = async (payload?: { asset?: IconAssetVO; assets?: IconAssetVO[]; context?: { glyphId?: number } }) => {
+  const uploadedAssets = payload?.assets?.length ? payload.assets : (payload?.asset ? [payload.asset] : [])
+  const uploadGlyphId = payload?.context?.glyphId
+  if (uploadGlyphId && uploadedAssets.length) {
+    await Promise.all(
+      uploadedAssets
+        .map(asset => asset.id)
+        .filter((assetId): assetId is number => typeof assetId === 'number')
+        .map(assetId => bindAssetsToGlyph(uploadGlyphId, assetId)),
+    )
+  }
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
   await fetchAssets(g.id)
 }
 
 const handleUploadForIcon = (payload: { iconUnicode?: string; displayType: DisplayType }) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
+  if (!requireManageActiveGlyph()) return
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  headerUploadRef.value?.openUpload(payload.iconUnicode, payload.displayType, { glyphId: g?.id })
+}
+
+const handleUploadToActiveGlyph = () => {
+  if (!requireManageActiveGlyph()) return
+  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
+  if (!g) return
+  headerUploadRef.value?.openUpload(undefined, displayType.value, { glyphId: g.id })
+}
+
+const sanitizeDownloadName = (name: string, fallback = 'icon-font') => {
+  return String(name || fallback)
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/^-+|-+$/g, '') || fallback
+}
+
+const isSvgUrl = (url: string) => {
+  return /\.svg(?:[?#].*)?$/i.test(url)
+}
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const getAssetSvgSource = (item: IconGlyphAssetVO) => {
+  const asset = item.asset
+  if (!asset) return ''
+  if (asset.svgContent) return asset.svgContent
+  const url = asset.svgFile || ''
+  if (url) return toAbsUrl(url)
+  const fallbackUrl = asset.previewUrl || asset.imageUrl || ''
+  return fallbackUrl && isSvgUrl(fallbackUrl) ? toAbsUrl(fallbackUrl) : ''
+}
+
+const buildSvgFileName = (item: IconGlyphAssetVO, usedNames: Set<string>) => {
+  const icon = item.icon
+  const asset = item.asset
+  const displayFolder = sanitizeDownloadName(asset?.displayType || 'unknown', 'unknown')
+  const baseName = sanitizeDownloadName(
+    icon?.symbolCode || icon?.iconUnicode || `asset-${item.assetId || item.id}`,
+    `asset-${item.assetId || item.id}`,
+  )
+  let fileName = `${displayFolder}/${baseName}.svg`
+  if (usedNames.has(fileName)) {
+    fileName = `${displayFolder}/${baseName}-${item.assetId || item.id}.svg`
   }
-  headerUploadRef.value?.openUpload(payload.iconUnicode, payload.displayType)
+  usedNames.add(fileName)
+  return fileName
+}
+
+const handleDownloadSvgSources = async () => {
+  const glyph = activeGlyph.value
+  if (!glyph?.id || downloadingSvgSources.value) return
+
+  downloadingSvgSources.value = true
+  downloadSvgProgress.value = 0
+  downloadSvgProcessed.value = 0
+  downloadSvgTotal.value = 0
+  downloadSvgProgressStage.value = 'preparing'
+  try {
+    const relations = await fetchAllGlyphAssets(glyph.id)
+    const downloadableRelations = relations.filter(relation => !!getAssetSvgSource(relation))
+    downloadSvgTotal.value = downloadableRelations.length
+    const zip = new JSZip()
+    const usedNames = new Set<string>()
+    let fileCount = 0
+
+    if (!downloadableRelations.length) {
+      ElMessage.warning(t('icon.noSvgSourcesToDownload'))
+      return
+    }
+
+    downloadSvgProgressStage.value = 'downloading'
+    downloadSvgProgress.value = 1
+
+    for (const relation of downloadableRelations) {
+      const source = getAssetSvgSource(relation)
+      const fileName = buildSvgFileName(relation, usedNames)
+      if (source.trim().startsWith('<svg') || source.trim().startsWith('<?xml')) {
+        zip.file(fileName, source)
+      } else {
+        const response = await fetch(source)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch SVG source: ${source}`)
+        }
+        zip.file(fileName, await response.blob())
+      }
+      fileCount += 1
+      downloadSvgProcessed.value = fileCount
+      downloadSvgProgress.value = Math.min(95, Math.max(1, Math.round((fileCount / downloadableRelations.length) * 95)))
+    }
+
+    downloadSvgProgressStage.value = 'packaging'
+    downloadSvgProgress.value = Math.max(downloadSvgProgress.value, 96)
+    const blob = await zip.generateAsync(
+      { type: 'blob' },
+      metadata => {
+        downloadSvgProgress.value = Math.min(99, 96 + Math.round((metadata.percent || 0) * 0.03))
+      },
+    )
+    downloadBlob(blob, `${sanitizeDownloadName(glyph.glyphCode, 'icon-font')}-svg-sources.zip`)
+    downloadSvgProgress.value = 100
+  } catch (e) {
+    console.warn('download icon SVG sources failed', e)
+    ElMessage.error(t('icon.downloadSvgSourcesFailed'))
+  } finally {
+    window.setTimeout(() => {
+      downloadingSvgSources.value = false
+      downloadSvgProgress.value = 0
+      downloadSvgProcessed.value = 0
+      downloadSvgTotal.value = 0
+      downloadSvgProgressStage.value = 'preparing'
+    }, 500)
+  }
 }
 
 // ---------------- Create glyph ----------------
@@ -508,9 +891,9 @@ const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
     // refresh list and switch to new glyph
     await fetchGlyphs()
     if (data?.id) {
-      activeTab.value = String(data.id)
+      activeTab.value = data.glyphCode
       assetPage.value = 1
-      await fetchAssets(Number(activeTab.value))
+      await fetchAssets(data.id)
     }
     // reset form
     createForm.value = { glyphCode: '', style: '', isDefault: 0, isActive: 1 }
@@ -519,159 +902,426 @@ const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
   }
 }
 
-// ---------------- Bind assets ----------------
-const bindVisible = ref(false)
-const binding = ref(false)
-const bindGlyphId = ref<number | null>(null)
-const bindIconId = ref<number | null>(null)
-const bindKeyword = ref('')
-const bindPage = ref(1)
-const bindPageSize = ref(12)
-const bindTotal = ref(0)
-const bindAssets = ref<IconAssetVO[]>([])
-const bindLoading = ref(false)
-
-const openBindDialog = async (glyphId: number, iconId?: number, iconUnicode?: string) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
-  bindGlyphId.value = glyphId
-  bindIconId.value = iconId ?? null
-  bindKeyword.value = iconId ? '' : (iconUnicode || '')
-  bindVisible.value = true
-  bindPage.value = 1
-  await loadBindAssets()
+const displayTypeShortLabel = (value?: DisplayType) => {
+  const normalized = String(value || '').toLowerCase()
+  if (normalized === 'amoled') return 'A'
+  if (normalized === 'mip') return 'M'
+  return value || '-'
 }
 
-const loadBindAssets = async () => {
-  try {
-    bindLoading.value = true
-    const dto: IconAssetPageQueryDTO = {
-      pageNum: bindPage.value,
-      pageSize: bindPageSize.value,
-      iconId: bindIconId.value ?? undefined,
-      displayType: displayType.value,
-      keyword: bindKeyword.value || undefined,
-      orderBy: 'id:desc',
-    }
-    const { data } = await pageIconAssets(dto)
-    bindAssets.value = data?.list ?? []
-    bindTotal.value = data?.total ?? 0
-  } finally {
-    bindLoading.value = false
-  }
+const toAbsUrl = (url: string) => {
+  if (!url) return ''
+  return /^(https?:|data:|blob:)/i.test(url) ? url : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
-const onBindPageChange = async (page: number) => {
-  bindPage.value = page
-  await loadBindAssets()
-}
-
-const handleBindSingle = async (assetId: number) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
-  if (!bindGlyphId.value || !assetId) return
-  try {
-    binding.value = true
-    await bindAssetsToGlyph(bindGlyphId.value,  assetId)
-    bindVisible.value = false
-    const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
-    if (!g) return
-    await fetchAssets(g.id)
-  } finally {
-    binding.value = false
-  }
-}
-
-// ---------------- Import from other glyph (for non-default glyphs) ----------------
-const importVisible = ref(false)
-const importing = ref(false)
-const importTargetGlyphId = ref<number | null>(null)
-const importFromGlyphId = ref<number | null>(null)
-const importableGlyphs = ref<IconGlyphVO[]>([])
-
-const openImportDialog = (g: IconGlyphVO) => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
-  importTargetGlyphId.value = g.id
-  // prepare candidate list: non-default glyphs excluding self
-  importableGlyphs.value = glyphs.value.filter(x => x.id !== g.id)
-  importFromGlyphId.value = null
-  importVisible.value = true
-}
-
-const handleImport = async () => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
-  if (!importFromGlyphId.value || !importTargetGlyphId.value) return
-  try {
-    importing.value = true
-    await importAssetsToGlyph(importFromGlyphId.value, importTargetGlyphId.value)
-    importVisible.value = false
-    // refresh assets of target glyph (if it's the active tab)
-    const active = glyphs.value.find(g => g.glyphCode === activeTab.value)
-    if (active && active.id === importTargetGlyphId.value) {
-      await fetchAssets(importTargetGlyphId.value)
-    }
-  } finally {
-    importing.value = false
-  }
+const getAssetImage = (item: IconGlyphAssetVO): string => {
+  const raw = item?.asset?.svgFile || item?.asset?.previewUrl || item?.asset?.imageUrl || ''
+  return raw ? toAbsUrl(raw) : ''
 }
 
 </script>
 
 <style scoped>
-.icon-library { padding: 20px; color: var(--studio-text); }
-.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.icon-library { padding: 14px 18px 18px; color: var(--studio-text); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
 .header-copy { min-width: 0; }
-.header h2 { margin: 0; font-size: 24px; line-height: 1.25; color: var(--studio-text); }
-.header p { margin: 6px 0 0; max-width: 720px; color: var(--studio-text-muted); line-height: 1.5; }
+.header h2 { margin: 0; font-size: 21px; line-height: 1.18; color: var(--studio-text); }
+.header p { margin: 3px 0 0; max-width: 760px; color: var(--studio-text-muted); font-size: 13px; line-height: 1.35; }
 .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-.content-card { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 14px; box-shadow: var(--studio-shadow-sm); }
-.library-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
-.summary-item { min-height: 68px; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 14px; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); background: var(--studio-surface-soft); }
-.summary-label { font-size: 12px; color: var(--studio-text-subtle); }
-.summary-item strong { font-size: 20px; color: var(--studio-text); line-height: 1.2; font-variant-numeric: tabular-nums; }
-.tab-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0px 0 8px 0; }
-.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--studio-primary-soft); color: var(--studio-primary); margin-right: 8px; }
-.badge.custom { background: var(--el-color-success-light-9); color: var(--el-color-success); }
-.meta { font-size: 12px; color: var(--studio-text-muted); margin-right: 12px; }
-.assets-grid { min-height: 220px; }
-.loading { display: flex; gap: 8px; align-items: center; color: var(--studio-text-subtle); padding: 16px; }
-.empty { color: var(--studio-text-subtle); padding: 24px 0; text-align: center; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px; padding: 8px 0; }
-.grid-item { position: relative; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-md); padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--studio-surface-soft); }
-.grid-item .preview { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; }
-.grid-item img { width: 48px; height: 48px; object-fit: contain; transition: opacity .2s ease, filter .2s ease; pointer-events: none; }
-.grid-item .overlay { position: absolute; inset: 0; border-radius: 6px; background: transparent; display: flex; align-items: stretch; justify-content: flex-end; opacity: 0; transition: opacity .2s ease; z-index: 2; }
-.grid-item:hover .overlay { opacity: 1; }
-.grid-item:hover .preview img { opacity: .06; filter: grayscale(100%) brightness(.6); }
-.overlay-actions { width: 42%; min-width: 96px; height: 100%; display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; padding: 8px; background: rgba(0,0,0,0.88); border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
-.overlay-actions .action { display: block; width: 100%; text-align: center; color: var(--studio-primary); background: var(--studio-primary-soft); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 6px 10px; border-radius: 6px; }
-.overlay-actions .action:hover { background: var(--studio-primary); color: var(--color-white); }
-.overlay-actions .delete { color: var(--color-white); background: var(--el-color-danger); cursor: pointer; font-size: 13px; font-weight: 700; text-shadow: none; padding: 2px 8px; border-radius: 6px; }
-.overlay-actions .delete:hover { background: var(--el-color-danger); }
-.grid-meta { font-weight: 900; font-size: 12px; color: var(--studio-text-subtle); }
-.grid-meta .delete { color: var(--el-color-danger); margin-left: 6px; cursor: pointer; font-weight: 500; }
-.pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0 4px; }
-.glyph-pager { margin-top: 10px; border-top: 1px solid var(--studio-border); }
-.pager-context { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: 999px; background: var(--studio-surface-soft); color: var(--studio-text-muted); font-size: 12px; }
-.pager-context strong { color: var(--studio-text); font-size: 13px; font-variant-numeric: tabular-nums; }
-.bind-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.icon-tag {margin-left: 4px; color: var(--studio-text-subtle); font-size: 12px;}
-.glyph-edit-icon { margin-left: 4px; color: var(--studio-text-subtle); font-size: 14px; cursor: pointer; }
+.hidden-upload {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
 
-@media (max-width: 760px) {
+.workspace-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.font-set-panel,
+.glyph-board {
+  min-width: 0;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  box-shadow: var(--studio-shadow-sm);
+}
+.font-set-panel { padding: 12px; }
+.glyph-board { padding: 14px; }
+.panel-head,
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  flex-wrap: wrap;
+}
+.panel-head strong {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text);
+}
+.eyebrow {
+  color: var(--studio-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.icon-only-button { width: 32px; height: 32px; min-width: 32px; padding: 0; }
+.sidebar-loading,
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--studio-text-subtle);
+}
+
+.font-set-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.font-set-item {
+  position: relative;
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.font-set-item:hover,
+.font-set-item.active {
+  border-color: var(--studio-primary-border);
+  background: var(--studio-primary-soft);
+}
+.font-set-item.active { box-shadow: inset 3px 0 0 var(--studio-primary); }
+.font-set-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+.font-set-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge.custom { background: var(--el-color-success-light-9); color: var(--el-color-success); }
+.rename-button { position: absolute; top: 8px; right: 8px; }
+
+.board-title { min-width: 0; }
+.board-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.board-title h3 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  line-height: 1.3;
+}
+.display-switch { flex: none; }
+.download-progress {
+  margin: 8px 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
+}
+.download-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+.download-progress-head strong {
+  color: var(--studio-text);
+  font-variant-numeric: tabular-nums;
+}
+.build-status-compact {
+  border-left-width: 3px;
+  overflow: hidden;
+}
+.build-status-compact--idle { border-left-color: var(--studio-border); }
+.build-status-compact--running { border-left-color: var(--el-color-warning); }
+.build-status-compact--success { border-left-color: var(--el-color-success); }
+.build-status-compact--failed { border-left-color: var(--el-color-danger); }
+.build-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.build-status-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+.build-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+.build-status-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+.build-error {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--el-color-danger);
+  font-size: 12px;
+}
+.board-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: none;
+}
+.board-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.summary-item {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
+}
+.summary-label { color: var(--studio-text-subtle); font-size: 12px; }
+.summary-item strong {
+  color: var(--studio-text);
+  font-size: 20px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.assets-grid { min-height: 320px; }
+.empty-state {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text-subtle);
+  text-align: center;
+}
+.empty-title { color: var(--studio-text); font-weight: 800; }
+.empty-desc { max-width: 420px; color: var(--studio-text-muted); font-size: 13px; line-height: 1.5; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+.grid-item {
+  position: relative;
+  min-height: 132px;
+  padding: 7px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.grid-item:hover,
+.grid-item.selected {
+  border-color: var(--studio-primary-border);
+  box-shadow: var(--studio-shadow-sm);
+  transform: translateY(-1px);
+}
+.grid-item.selected { box-shadow: inset 0 0 0 2px var(--studio-primary-border); }
+.grid-item.missing { border-style: dashed; }
+.grid-topline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  padding-right: 28px;
+}
+.symbol-code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 800;
+}
+.display-pill {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+.preview {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px 0;
+}
+.preview img,
+.preview img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.missing-asset {
+  width: 100%;
+  height: 100%;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+.missing-asset.large { min-height: 132px; }
+.missing-icon { color: var(--studio-primary); font-size: 18px; }
+.grid-meta {
+  min-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text-subtle);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  text-align: center;
+}
+.quick-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  margin-top: 4px;
+}
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--studio-primary);
+  box-shadow: none;
+  font-size: 13px;
+  opacity: 0.72;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+.icon-action :deep(.el-icon) { font-size: 13px; }
+.icon-action:hover {
+  border-color: var(--studio-primary-border);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.icon-action:active {
+  transform: translateY(0);
+}
+
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0 4px; }
+.asset-pager { justify-content: flex-end; }
+.glyph-pager { margin-top: 10px; border-top: 1px solid var(--studio-border); }
+.pager-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  background: var(--studio-surface-soft);
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+.pager-context strong { color: var(--studio-text); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1180px) {
+  .workspace-card { grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); }
+  .board-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 820px) {
   .icon-library { padding: 14px; }
   .header { flex-direction: column; align-items: stretch; }
   .header-actions { justify-content: flex-start; }
-  .library-summary { grid-template-columns: 1fr; }
+  .workspace-card { grid-template-columns: 1fr; }
+  .board-toolbar { align-items: stretch; flex-direction: column; }
+  .board-actions { justify-content: space-between; }
+  .board-summary { grid-template-columns: 1fr; }
 }
 </style>
