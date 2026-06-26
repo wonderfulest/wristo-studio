@@ -1,5 +1,10 @@
 <template>
-  <el-dialog v-model="model" :title="t('icon.createIconFont')" width="460px">
+  <el-dialog
+    v-model="model"
+    :title="t('icon.createIconFont')"
+    width="min(680px, calc(100vw - 32px))"
+    class="icon-font-dialog"
+  >
     <FontNamingBar ref="namingRef" type="icon"/>
     <template #footer>
       <el-button @click="emit('update:modelValue', false)">{{ t('common.cancel') }}</el-button>
@@ -10,6 +15,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import type { IconGlyphCreateDTO } from '@/api/wristo/iconGlyph'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
@@ -49,24 +55,20 @@ watch(model, async (visible) => {
 })
 
 const onConfirm = () => {
-  console.log('onConfirm', namingRef.value)
   const naming = namingRef.value as any
-  const namingPreview = naming?.namingPreview ?? ''
-  if (!namingPreview) {
-    console.log('onConfirm 111')
+  naming?.normalizeAllParts?.()
+  const namingPayload = naming?.getNamingPayload?.()
+  const code = String(namingPayload?.name || '')
+  if (!code) {
+    ElMessage.error(t('font.enterValidName'))
     return
   }
-
-  const code = String(namingPreview)
-  const parts = code.split('-').filter(Boolean)
-  const last = parts[parts.length - 1] || ''
 
   const payload: IconGlyphCreateDTO = {
     ...localForm,
     glyphCode: code,
-    style: last,
+    style: namingPayload?.variant || namingPayload?.style || '',
   }
-    console.log('onConfirm  22',  payload)
 
   emit('confirm', payload)
 }

@@ -57,11 +57,16 @@
               <span>{{ t('font.version') }} {{ glyph.version ?? '-' }}</span>
             </span>
             <el-tooltip
-              v-if="glyph.isDefault === 0 && canUsePremiumAssets"
+              v-if="glyph.isDefault === 0 && canUsePremiumAssets && !isGlyphRenameLocked(glyph)"
               :content="t('icon.renameIconFont')"
               placement="top"
             >
-              <el-button class="rename-button" text circle @click.stop="openRenameDialog(glyph)">
+              <el-button
+                class="rename-button"
+                text
+                circle
+                @click.stop="openRenameDialog(glyph)"
+              >
                 <el-icon><Edit /></el-icon>
               </el-button>
             </el-tooltip>
@@ -95,16 +100,6 @@
             </el-tooltip>
           </div>
           <div class="board-actions">
-            <el-button
-              v-if="activeGlyph && canManageActiveGlyph"
-              type="primary"
-              size="small"
-              :loading="buildSubmitting"
-              :disabled="isBuildRunning"
-              @click="handleSubmitGlyph"
-            >
-              {{ t('icon.submitFont') }}
-            </el-button>
             <el-button
               v-if="canManageActiveGlyph"
               type="primary"
@@ -201,18 +196,18 @@
             <div v-if="assets.length === 0" class="empty-state">
               <div class="empty-title">{{ t('icon.noIcons') }}</div>
               <div class="empty-desc">{{ t('icon.noIconsHint') }}</div>
-              <el-button v-if="canManageActiveGlyph" type="primary" @click="handleUploadToActiveGlyph">
-                {{ t('icon.uploadAsset') }}
-              </el-button>
             </div>
             <div v-else class="grid">
-              <button
+              <div
                 v-for="item in assets"
                 :key="item.id"
-                type="button"
+                role="button"
+                tabindex="0"
                 class="grid-item"
                 :class="{ selected: selectedAssetId === item.id, missing: !getAssetImage(item) }"
                 @click="selectAsset(item)"
+                @keydown.enter.prevent="selectAsset(item)"
+                @keydown.space.prevent="selectAsset(item)"
               >
                 <div class="grid-topline">
                   <el-tooltip :content="item.icon?.symbolCode || '-'" placement="top" :show-after="120">
@@ -222,6 +217,17 @@
                 </div>
                 <div class="preview">
                   <img v-if="getAssetImage(item)" :src="getAssetImage(item)" alt="icon" />
+                  <div v-else-if="canUploadForIconAsset(item)" class="missing-asset">
+                    <button
+                      class="missing-upload-button"
+                      type="button"
+                      :aria-label="t('icon.uploadAsset')"
+                      :title="t('icon.uploadAsset')"
+                      @click.stop="handleUploadForIcon({ iconUnicode: item.icon?.iconUnicode, displayType })"
+                    >
+                      <el-icon><Plus /></el-icon>
+                    </button>
+                  </div>
                   <div v-else class="missing-asset">
                     <el-icon class="missing-icon"><Plus /></el-icon>
                     <span>{{ t('icon.assetMissingShort') }}</span>
@@ -231,15 +237,6 @@
                   <span>{{ item.icon?.iconUnicode || '-' }}</span>
                 </div>
                 <div v-if="canManageActiveGlyph" class="quick-actions" @click.stop>
-                  <el-tooltip :content="t('icon.uploadForThisIcon')" placement="top">
-                    <button
-                      type="button"
-                      class="icon-action"
-                      @click="handleUploadForIcon({ iconUnicode: item.icon?.iconUnicode, displayType })"
-                    >
-                      <el-icon><Upload /></el-icon>
-                    </button>
-                  </el-tooltip>
                   <el-tooltip
                     v-if="activeGlyph?.isDefault === 0 && displayType === 'mip' && item.asset?.id"
                     :content="t('common.edit')"
@@ -250,7 +247,7 @@
                     </button>
                   </el-tooltip>
                 </div>
-              </button>
+              </div>
             </div>
 
             <div v-if="assetTotal > assetPageSize" class="pager asset-pager">
@@ -267,6 +264,17 @@
                 @current-change="onAssetPageChange"
               />
             </div>
+
+            <div v-if="activeGlyph && canManageActiveGlyph" class="board-footer-actions">
+              <el-button
+                type="primary"
+                :loading="buildSubmitting"
+                :disabled="isBuildRunning"
+                @click="handleSubmitGlyph"
+              >
+                {{ t('icon.submitFont') }}
+              </el-button>
+            </div>
           </template>
         </div>
       </main>
@@ -280,7 +288,12 @@
       @confirm="onCreateConfirm"
     />
 
-    <el-dialog v-model="renameVisible" :title="t('icon.renameIconFont')" width="460px">
+    <el-dialog
+      v-model="renameVisible"
+      :title="t('icon.renameIconFont')"
+      width="min(680px, calc(100vw - 32px))"
+      class="icon-font-dialog"
+    >
       <FontNamingBar ref="renameNamingRef" type="icon"/>
       <template #footer>
         <el-button @click="renameVisible = false">{{ t('common.cancel') }}</el-button>
@@ -407,6 +420,7 @@ const buildStatusTagType = computed(() => {
   return 'info'
 })
 const isBuildRunning = computed(() => normalizedBuildStatus.value === 'running')
+const glyphBuildStatuses = ref<Record<string, IconFontBuildStatusVO | null>>({})
 const downloadSvgProgressLabel = computed(() => {
   if (downloadSvgProgressStage.value === 'packaging') return t('icon.downloadSvgPackaging')
   if (downloadSvgProgressStage.value === 'downloading') {
@@ -422,6 +436,7 @@ const downloadSvgProgressLabel = computed(() => {
 const renameVisible = ref(false)
 const renaming = ref(false)
 const renameGlyphId = ref<number | null>(null)
+const renameOriginalGlyphCode = ref('')
 const renameNamingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 
 const ensureDisplayTypeForGlyph = (glyphCode: string) => {
@@ -587,6 +602,28 @@ const refreshBuildStatus = async () => {
   await loadBuildStatus(activeTab.value)
 }
 
+const hasGeneratedTtf = (status?: IconFontBuildStatusVO | null) => {
+  return !!status?.font?.ttfFile?.url || !!status?.font?.ttf
+}
+
+const isGlyphRenameLocked = (glyph?: IconGlyphVO | null) => {
+  if (!glyph?.glyphCode) return false
+  if (glyph.glyphCode === activeTab.value && hasGeneratedTtf(iconFontBuildStatus.value)) {
+    return true
+  }
+  return hasGeneratedTtf(glyphBuildStatuses.value[glyph.glyphCode])
+}
+
+const loadGlyphBuildStatusForRename = async (glyphCode: string) => {
+  const { data } = await getIconFontBuildStatus(glyphCode)
+  glyphBuildStatuses.value[glyphCode] = data ?? null
+  if (glyphCode === activeTab.value) {
+    iconFontBuildStatus.value = data ?? { glyphCode, status: 'idle' }
+    scheduleBuildStatusPolling()
+  }
+  return data ?? null
+}
+
 const openBuildFontUrl = () => {
   if (!canDownloadBuildFont.value) return
   window.open(buildFontUrl.value, '_blank')
@@ -612,7 +649,13 @@ const openRenameDialog = async (glyph: IconGlyphVO) => {
     return
   }
   if (!glyph || glyph.isDefault === 1) return
+  const status = await loadGlyphBuildStatusForRename(glyph.glyphCode)
+  if (hasGeneratedTtf(status)) {
+    ElMessage.warning(t('icon.renameLockedAfterTtf'))
+    return
+  }
   renameGlyphId.value = glyph.id
+  renameOriginalGlyphCode.value = glyph.glyphCode || ''
   renameVisible.value = true
 
   await nextTick()
@@ -637,20 +680,26 @@ const handleRenameConfirm = async () => {
   if (!renameGlyphId.value) return
 
   const naming = renameNamingRef.value as any
-  const namingPreview = naming?.namingPreview ?? ''
-  if (!namingPreview) {
+  naming?.normalizeAllParts?.()
+  const namingPayload = naming?.getNamingPayload?.()
+  const code = String(namingPayload?.name || '')
+  if (!code) {
     ElMessage.error(t('font.enterValidName'))
     return
   }
-
-  const code = String(namingPreview)
-  const parts = code.split('-').filter(Boolean)
-  const last = parts[parts.length - 1] || ''
+  if (renameOriginalGlyphCode.value && code !== renameOriginalGlyphCode.value) {
+    const status = await loadGlyphBuildStatusForRename(renameOriginalGlyphCode.value)
+    if (hasGeneratedTtf(status)) {
+      ElMessage.warning(t('icon.renameLockedAfterTtf'))
+      renameVisible.value = false
+      return
+    }
+  }
 
   const dto: IconGlyphUpdateDTO = {
     id: renameGlyphId.value,
     glyphCode: code,
-    style: last,
+    style: namingPayload?.variant || namingPayload?.style || '',
   }
 
   try {
@@ -933,6 +982,10 @@ const toAbsUrl = (url: string) => {
 const getAssetImage = (item: IconGlyphAssetVO): string => {
   const raw = item?.asset?.svgFile || item?.asset?.previewUrl || item?.asset?.imageUrl || ''
   return raw ? toAbsUrl(raw) : ''
+}
+
+const canUploadForIconAsset = (item: IconGlyphAssetVO) => {
+  return canManageActiveGlyph.value && !!item.icon?.iconUnicode && !getAssetImage(item)
 }
 
 </script>
@@ -1263,6 +1316,27 @@ const getAssetImage = (item: IconGlyphAssetVO): string => {
 }
 .missing-asset.large { min-height: 132px; }
 .missing-icon { color: var(--studio-primary); font-size: 18px; }
+.missing-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+  border: 1px solid var(--studio-primary-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--studio-primary);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.missing-upload-button :deep(.el-icon) { font-size: 18px; }
+.missing-upload-button:hover {
+  background: var(--studio-primary-soft);
+  transform: translateY(-1px);
+}
+.missing-upload-button:active { transform: translateY(0); }
 .grid-meta {
   min-height: 16px;
   overflow: hidden;
@@ -1312,6 +1386,13 @@ const getAssetImage = (item: IconGlyphAssetVO): string => {
 .pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 0 4px; }
 .asset-pager { justify-content: flex-end; }
 .glyph-pager { margin-top: 10px; border-top: 1px solid var(--studio-border); }
+.board-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--studio-border);
+}
 .pager-context {
   display: inline-flex;
   align-items: center;
