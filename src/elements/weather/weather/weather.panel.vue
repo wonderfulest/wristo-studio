@@ -31,8 +31,7 @@
               <template v-if="c.asset">
                 <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
                   <div class="asset clickable-link">
-                    <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
-                    <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
+                    <img v-if="getAssetPreviewSource(c.asset)" :src="getAssetPreviewSource(c.asset)" alt="" />
                     <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
                   </div>
                 </el-tooltip>
@@ -67,8 +66,7 @@
               <template v-if="c.asset">
                 <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
                   <div class="asset clickable-link" @click.stop="openChangeBindingDialog('amoled', c)">
-                    <img v-if="c.asset.previewUrl || c.asset.imageUrl" :src="c.asset.previewUrl || c.asset.imageUrl" alt="" />
-                    <div v-else-if="c.asset.svgContent" class="svg" v-html="c.asset.svgContent"></div>
+                    <img v-if="getAssetPreviewSource(c.asset)" :src="getAssetPreviewSource(c.asset)" alt="" />
                     <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
                   </div>
                 </el-tooltip>
@@ -300,8 +298,34 @@ const handleUpload = async (options: { file: File }, unicode?: string) => {
 }
 
 // ---- selection helpers ----
+function isSvgAsset(asset?: WeatherConditionAssetsVO['asset']): boolean {
+  if (!asset) return false
+  const format = String(asset.format || '').toLowerCase()
+  return format === 'svg' || Boolean(asset.svgContent) || /\.svg(?:$|\?)/i.test(asset.imageUrl || '')
+}
+
+function svgContentToDataUrl(svgContent?: string): string | undefined {
+  const svg = svgContent?.trim()
+  if (!svg) return undefined
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function getAssetSvgSource(asset?: WeatherConditionAssetsVO['asset']): string | undefined {
+  if (!asset || !isSvgAsset(asset)) return undefined
+  return asset.imageUrl || svgContentToDataUrl(asset.svgContent)
+}
+
+function getAssetPreviewSource(asset?: WeatherConditionAssetsVO['asset']): string | undefined {
+  return getAssetSvgSource(asset) || asset?.previewUrl || asset?.imageUrl
+}
+
+function getAmoledAssetSource(c: any): string | undefined {
+  const asset = c?.asset as WeatherConditionAssetsVO['asset'] | undefined
+  return getAssetSvgSource(asset) || asset?.imageUrl || asset?.previewUrl
+}
+
 function hasImageUrl(c: any): boolean {
-  return !!(c && c.asset && c.asset.imageUrl)
+  return !!getAmoledAssetSource(c)
 }
 
 function applyDefaultSelection(dt: 'mip' | 'amoled') {
@@ -355,7 +379,7 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
   }
 
   if (dt === 'amoled' && hasImageUrl(c)) {
-    const url = c?.asset?.imageUrl as string | undefined
+    const url = getAmoledAssetSource(c)
     if (!url) return
     const el = props.element as unknown as { amoledImageUrl?: string }
     el.amoledImageUrl = url

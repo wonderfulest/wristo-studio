@@ -3,7 +3,8 @@
     <el-table :data="assets" v-loading="loading" height="420">
       <el-table-column :label="t('elementSettings.preview')" width="96">
         <template #default="{ row }">
-          <img :src="row.previewUrl || row.imageUrl" alt="preview" style="width:48px;height:48px;object-fit:contain" />
+          <img v-if="getAssetPreviewSource(row)" :src="getAssetPreviewSource(row)" alt="preview" class="asset-preview" />
+          <span v-else>-</span>
         </template>
       </el-table-column>
       <el-table-column prop="id" label="ID" width="120" />
@@ -75,6 +76,26 @@ const page = ref(1)
 const pageSize = ref(100)
 const total = ref(0)
 
+function isSvgAsset(asset: IconAssetVO): boolean {
+  const format = String(asset.format || '').toLowerCase()
+  return format === 'svg' || Boolean(asset.svgContent) || /\.svg(?:$|\?)/i.test(asset.imageUrl || '')
+}
+
+function svgContentToDataUrl(svgContent?: string): string | undefined {
+  const svg = svgContent?.trim()
+  if (!svg) return undefined
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function getAssetSvgSource(asset: IconAssetVO): string | undefined {
+  if (!isSvgAsset(asset)) return undefined
+  return asset.imageUrl || svgContentToDataUrl(asset.svgContent)
+}
+
+function getAssetPreviewSource(asset: IconAssetVO): string | undefined {
+  return getAssetSvgSource(asset) || asset.previewUrl || asset.imageUrl
+}
+
 const loadAssets = async () => {
   if (!props.iconId) {
     assets.value = []
@@ -128,4 +149,9 @@ watch(
 
 <style scoped>
 .pager { display: flex; justify-content: center; padding: 8px 0; }
+.asset-preview {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
 </style>
