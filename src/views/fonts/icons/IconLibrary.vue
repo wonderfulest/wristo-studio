@@ -96,10 +96,11 @@
           </div>
           <div class="board-actions">
             <el-button
-              v-if="canUsePremiumAssets && activeGlyph?.isDefault === 0"
+              v-if="activeGlyph && canManageActiveGlyph"
               type="primary"
               size="small"
               :loading="buildSubmitting"
+              :disabled="isBuildRunning"
               @click="handleSubmitGlyph"
             >
               {{ t('icon.submitFont') }}
@@ -179,7 +180,7 @@
                 {{ t('common.refresh') }}
               </el-button>
               <el-button
-                v-if="buildFontUrl"
+                v-if="canDownloadBuildFont"
                 size="small"
                 text
                 type="primary"
@@ -312,8 +313,9 @@ import {
   pageIconGlyphs,
   pageIconGlyphAssets,
   createIconGlyph,
-  bindAssetsToGlyph,
   editIconGlyph,
+  submitIconGlyph,
+  bindAssetsToGlyph,
   type IconGlyphVO,
   type IconGlyphAssetVO,
   type IconAssetVO,
@@ -389,6 +391,7 @@ let buildStatusTimer: number | null = null
 
 const buildFontUrl = computed(() => iconFontBuildStatus.value?.font?.ttfFile?.url || '')
 const normalizedBuildStatus = computed(() => String(iconFontBuildStatus.value?.status || 'idle').toLowerCase())
+const canDownloadBuildFont = computed(() => normalizedBuildStatus.value === 'success' && !!buildFontUrl.value)
 const buildStatusShortLabel = computed(() => t(`icon.buildStatus.${normalizedBuildStatus.value}`))
 const buildStatusTime = computed(() => iconFontBuildStatus.value?.updatedAt || iconFontBuildStatus.value?.startedAt || iconFontBuildStatus.value?.createdAt || '')
 const buildStatusTone = computed(() => {
@@ -403,7 +406,7 @@ const buildStatusTagType = computed(() => {
   if (normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running') return 'warning'
   return 'info'
 })
-const isBuildProcessing = computed(() => normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running')
+const isBuildRunning = computed(() => normalizedBuildStatus.value === 'running')
 const downloadSvgProgressLabel = computed(() => {
   if (downloadSvgProgressStage.value === 'packaging') return t('icon.downloadSvgPackaging')
   if (downloadSvgProgressStage.value === 'downloading') {
@@ -558,7 +561,8 @@ const clearBuildStatusPolling = () => {
 
 const scheduleBuildStatusPolling = () => {
   clearBuildStatusPolling()
-  if (!isBuildProcessing.value || !activeTab.value) return
+  if (normalizedBuildStatus.value !== 'pending' && normalizedBuildStatus.value !== 'running') return
+  if (!activeTab.value) return
   buildStatusTimer = window.setInterval(() => {
     void loadBuildStatus(activeTab.value, true)
   }, 5000)
@@ -584,7 +588,7 @@ const refreshBuildStatus = async () => {
 }
 
 const openBuildFontUrl = () => {
-  if (!buildFontUrl.value) return
+  if (!canDownloadBuildFont.value) return
   window.open(buildFontUrl.value, '_blank')
 }
 
@@ -661,11 +665,8 @@ const handleRenameConfirm = async () => {
 }
 
 const handleSubmitGlyph = async () => {
-  if (!canUsePremiumAssets.value) {
-    requireIconPremium()
-    return
-  }
   const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
+  if (!requireManageActiveGlyph()) return
   if (!glyph || !glyph.glyphCode) {
     ElMessage.error(t('icon.missingGlyphCode'))
     return
@@ -682,6 +683,7 @@ const handleSubmitGlyph = async () => {
     )
 
     buildSubmitting.value = true
+    await submitIconGlyph(glyph.id)
     const { data } = await autoIconFontBuild(glyph.glyphCode)
     iconFontBuildStatus.value = data ?? { glyphCode: glyph.glyphCode, status: 'pending' }
     scheduleBuildStatusPolling()
@@ -693,8 +695,10 @@ const handleSubmitGlyph = async () => {
         confirmButtonText: t('common.ok'),
       }
     )
-  } catch {
-    // user canceled or request failed silently handled elsewhere
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error(t('icon.buildSubmitFailed'))
+    }
   } finally {
     buildSubmitting.value = false
   }
@@ -723,20 +727,32 @@ const onEditSaved = async () => {
   await fetchAssets(g.id)
 }
 
+const getRequestErrorMessage = (error: unknown): string => {
+  const e = error as any
+  return e?.response?.data?.msg
+    || e?.response?.data?.message
+    || e?.msg
+    || e?.message
+    || t('common.saveFailed')
+}
+
 const onIconUploaded = async (payload?: { asset?: IconAssetVO; assets?: IconAssetVO[]; context?: { glyphId?: number } }) => {
-  const uploadedAssets = payload?.assets?.length ? payload.assets : (payload?.asset ? [payload.asset] : [])
-  const uploadGlyphId = payload?.context?.glyphId
-  if (uploadGlyphId && uploadedAssets.length) {
-    await Promise.all(
-      uploadedAssets
-        .map(asset => asset.id)
-        .filter((assetId): assetId is number => typeof assetId === 'number')
-        .map(assetId => bindAssetsToGlyph(uploadGlyphId, assetId)),
-    )
-  }
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
+  const glyphId = payload?.context?.glyphId || g.id
+  const uploadedAssets = payload?.assets?.length ? payload.assets : (payload?.asset ? [payload.asset] : [])
+  for (const asset of uploadedAssets) {
+    if (!asset?.id) continue
+    try {
+      await bindAssetsToGlyph(glyphId, asset.id)
+    } catch (e) {
+      ElMessage.error(getRequestErrorMessage(e))
+    }
+  }
   await fetchAssets(g.id)
+  if (g.glyphCode) {
+    await loadBuildStatus(g.glyphCode, true)
+  }
 }
 
 const handleUploadForIcon = (payload: { iconUnicode?: string; displayType: DisplayType }) => {

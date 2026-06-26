@@ -242,6 +242,15 @@ const queueStatusLabel = (status: QueueStatus) => {
   return t('asset.uploadFailed')
 }
 
+const getUploadErrorMessage = (error: unknown): string => {
+  const e = error as any
+  return e?.response?.data?.msg
+    || e?.response?.data?.message
+    || e?.msg
+    || e?.message
+    || t('asset.uploadFailed')
+}
+
 const startProcessingProgress = (item: UploadQueueItem) => {
   item.status = 'processing'
   item.message = t('icon.uploadProcessingHint')
@@ -439,8 +448,9 @@ const processUploadQueue = async () => {
       } catch (e) {
         item.status = 'failed'
         item.progress = 100
-        item.message = e instanceof Error ? e.message : t('asset.uploadFailed')
-        ElMessage.error(t('icon.uploadFailed', { name: item.file.name }))
+        const errorMessage = getUploadErrorMessage(e)
+        item.message = errorMessage
+        ElMessage.error(`${t('icon.uploadFailed', { name: item.file.name })}: ${errorMessage}`)
       }
     }
   } finally {

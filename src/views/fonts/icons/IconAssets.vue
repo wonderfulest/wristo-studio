@@ -21,7 +21,7 @@
         <HeaderUploadSvg
           v-if="canUsePremiumAssets"
           v-model:iconUnicode="iconUnicode"
-          @uploaded="fetchPage"
+          @uploaded="handleUploaded"
         />
         <el-button type="primary" @click="handleSearch">{{ t('common.search') }}</el-button>
         <el-button @click="fetchPage">{{ t('common.refresh') }}</el-button>
@@ -141,6 +141,14 @@ const handleSizeChange = (val: number) => {
 }
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
+  fetchPage()
+}
+
+const handleUploaded = (payload?: { asset?: IconAssetVO; assets?: IconAssetVO[] }) => {
+  currentPage.value = 1
+  if ((payload?.assets?.length ?? 0) > 1) {
+    iconUnicode.value = undefined
+  }
   fetchPage()
 }
 
