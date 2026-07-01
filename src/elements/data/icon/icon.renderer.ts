@@ -9,6 +9,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
 export async function createIcon(config: IconElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -54,7 +55,7 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     hasBorders: true,
   }
 
-  const element = new FabricText(String((metric as any)?.icon ?? ''), iconOptions as TextProps & IconElementConfig)
+  const element = new FabricText(resolveIconGlyphText((metric as any)?.icon), iconOptions as TextProps & IconElementConfig)
 
   canvas.add(element as FabricText)
   layerStore.addLayer(element as unknown as MinimalFabricLike)
@@ -101,7 +102,7 @@ export function updateIcon(
   const currentLeft = obj.left
   const currentTop = obj.top
 
-  const updateProps: Partial<TextProps & IconElementConfig> = {
+  const updateProps: Record<string, any> = {
     fontSize: config.fontSize,
     fill: config.fill,
     fontFamily: config.iconFont ?? config.fontFamily,
@@ -112,6 +113,7 @@ export function updateIcon(
     metricSymbol: config.metricSymbol,
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
+    text: typeof (config as any).text === 'undefined' ? undefined : resolveIconGlyphText((config as any).text),
   }
 
   Object.entries(updateProps).forEach(([key, value]) => {

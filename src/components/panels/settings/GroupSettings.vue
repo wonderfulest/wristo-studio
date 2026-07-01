@@ -63,6 +63,7 @@ import { alignSelection } from '@/engine/managers/alignManager'
 import { useI18n } from '@/i18n'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
@@ -131,11 +132,12 @@ const updateDataProperty = () => {
         if (dataId) elementDataStore.patchElement(dataId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
+        const iconText = resolveIconGlyphText(metric.icon)
         iconElement.value.set('dataProperty', dataProperty.value)
         iconElement.value.set('goalProperty', null)
-        iconElement.value.set('text', metric.icon)
+        iconElement.value.set('text', iconText)
         const iconId = String((iconElement.value as any).id)
-        if (iconId) elementDataStore.patchElement(iconId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.icon } as any)
+        if (iconId) elementDataStore.patchElement(iconId, { dataProperty: dataProperty.value, goalProperty: null, text: iconText } as any)
       }
       if (labelElement.value) {
         const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
@@ -178,11 +180,12 @@ const updateGoalProperty = () => {
         if (dataId) elementDataStore.patchElement(dataId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
+        const iconText = resolveIconGlyphText(metric.icon)
         iconElement.value.set('goalProperty', goalProperty.value)
         iconElement.value.set('dataProperty', null)
-        iconElement.value.set('text', metric.icon)
+        iconElement.value.set('text', iconText)
         const iconId = String((iconElement.value as any).id)
-        if (iconId) elementDataStore.patchElement(iconId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.icon } as any)
+        if (iconId) elementDataStore.patchElement(iconId, { goalProperty: goalProperty.value, dataProperty: null, text: iconText } as any)
       }
       if (labelElement.value) {
         const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')

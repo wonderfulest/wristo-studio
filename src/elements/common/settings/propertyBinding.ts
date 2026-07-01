@@ -8,6 +8,7 @@ import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
 import type { DataTypeOption } from '@/types/settings'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -114,7 +115,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
 
   if (type === 'data') {
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
-    if (eleType === 'icon') return { dataProperty: propertyKey, goalProperty: null, text: metric.icon }
+    if (eleType === 'icon') return { dataProperty: propertyKey, goalProperty: null, text: resolveIconGlyphText(metric.icon) }
     if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
     if (eleType === 'unit') {
       const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
@@ -126,7 +127,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   if (['goalBar', 'goalArc', 'goalSegmentBar'].includes(eleType)) {
     return { goalProperty: propertyKey }
   }
-  if (eleType === 'icon') return { goalProperty: propertyKey, dataProperty: null, text: metric.icon }
+  if (eleType === 'icon') return { goalProperty: propertyKey, dataProperty: null, text: resolveIconGlyphText(metric.icon) }
   if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
   if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: metric.defaultValue }
   if (eleType === 'unit') {
