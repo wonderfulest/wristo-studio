@@ -5,8 +5,10 @@ import { nanoid } from 'nanoid'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -16,8 +18,14 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   const canvas = canvasStore.canvas
   const id = nanoid()
   const metric = usePropertiesStore().getMetricByOptions(config)
+  const propertiesStore = usePropertiesStore()
+  const designStore = useDesignStore()
+  const labelText = applyMetricTextCase(
+    resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en'),
+    (propertiesStore as any).textCase,
+  )
 
-  const element = new FabricText(metric.enLabel.short, {
+  const element = new FabricText(labelText, {
     id,
     eleType: 'label',
     left: config.left,
@@ -42,6 +50,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   elementDataStore.upsertElement({
     eleType: 'label',
     id: String(id),
+    text: labelText,
     left: Math.round((element as any).left ?? config.left ?? 0),
     top: Math.round((element as any).top ?? config.top ?? 0),
     originX: ((element as any).originX as any) ?? 'center',
@@ -110,6 +119,7 @@ export function updateLabel(
     const encoded = {
       id: (text as any).id ?? '',
       eleType: 'label' as const,
+      text: String((text as any).text ?? ''),
       left: (text as any).left,
       top: (text as any).top,
       originX: (text as any).originX as any,

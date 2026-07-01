@@ -14,6 +14,8 @@ export type FontItem = {
   weightClass?: number
   widthClass?: number
   favoriteWeight?: number | null
+  language?: string
+  type?: string
 }
 
 export type Section = {

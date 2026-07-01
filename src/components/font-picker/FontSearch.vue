@@ -29,7 +29,8 @@
               <FontListItem
                 :label="font.label"
                 :font-family="font.value"
-                :type="props.type"
+                :type="font.type || props.type"
+                :language="font.language"
                 :is-monospace="(font as any).isMonospace === true"
                 :is-system="(font as any).isSystem === true"
                 :style-tags="(font as any).styleTags"
@@ -61,7 +62,8 @@
             <FontListItem
               :label="font.label"
               :font-family="font.value"
-              :type="props.type"
+              :type="font.type || props.type"
+              :language="font.language"
               :is-monospace="(font as any).isMonospace === true"
               :is-system="(font as any).isSystem === true"
               :style-tags="(font as any).styleTags"
@@ -103,12 +105,19 @@ import { DesignFontVO } from '@/types/font'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
+import {
+  isFontCompatibleWithDateLanguage,
+  type DateContentLanguage,
+} from '@/utils/dateFontCompatibility'
+import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
 
 const props = defineProps<{
   modelValue: string
   type?: string
   canUsePremiumAssets?: boolean
   includeAllUsers?: boolean
+  dateContentLanguage?: DateContentLanguage
+  excludeIconFonts?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -124,6 +133,17 @@ const searchQuery = ref<string>('')
 const filteredFonts = ref<FontItem[]>([])
 const remoteSearchResults = ref<FontItem[]>([])
 const isSearching = ref<boolean>(false)
+const languageFilter = () => getFontLanguagesForDateContent(props.dateContentLanguage)
+
+const isVisibleFont = (font: FontItem | DesignFontVO) => {
+  if (props.dateContentLanguage) {
+    return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
+  }
+  if (props.excludeIconFonts) {
+    return String((font as any).type || '') !== 'icon_font'
+  }
+  return true
+}
 
 console.log('[FontSearch] setup init', {
   modelValue: props.modelValue,
@@ -148,7 +168,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers],
+  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
   () => {
     if (searchTimer) window.clearTimeout(searchTimer)
     filterFonts()
@@ -158,10 +178,11 @@ watch(
 const filterFonts = async () => {
   console.log('[FontSearch] filterFonts start', {
     query: searchQuery.value,
-    type: props.type,
+    type: props.type || undefined,
   })
   // local filter
   const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true)
+    .filter(isVisibleFont)
   filteredFonts.value = sortByFavorite(local)
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
@@ -174,7 +195,7 @@ const filterFonts = async () => {
     isSearching.value = true
     console.log('[FontSearch] remote search request', {
       query: searchQuery.value,
-      type: props.type,
+      type: props.type || undefined,
     })
     const response = await searchFonts({
       pageNum: 1,
@@ -183,6 +204,7 @@ const filterFonts = async () => {
       type: props.type,
       isSystem: props.canUsePremiumAssets === true ? undefined : 1,
       includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
+      languages: languageFilter(),
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
     console.log('[FontSearch] remote search response', {
@@ -193,7 +215,7 @@ const filterFonts = async () => {
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
     const serverList = filterAssetsByStudioAccess(list, props.canUsePremiumAssets === true).filter((font: DesignFontVO) => {
       const val = font.slug
-      return !!val && !localValues.has(val)
+      return !!val && !localValues.has(val) && isVisibleFont(font)
     })
     console.log('[FontSearch] remote fonts after dedupe', {
       serverListCount: serverList.length,
@@ -202,7 +224,7 @@ const filterFonts = async () => {
     try {
       await Promise.all(
         serverList.map((font: DesignFontVO) => {
-          font?.slug ? fontStore.loadFont(font.slug, font?.ttfFile?.url) : Promise.resolve(true)
+          return font?.slug ? fontStore.loadFont(font.slug, font?.ttfFile?.url) : Promise.resolve(true)
         })
       )
     } catch (e) {
@@ -230,6 +252,8 @@ const filterFonts = async () => {
 	        weightClass: font.weightClass,
 	        widthClass: font.widthClass,
 	        favoriteWeight: font.favoriteWeight,
+          language: font.language,
+          type: font.type,
 	      } as FontItem
 	    })
     console.log('[FontSearch] remoteFonts mapped', {

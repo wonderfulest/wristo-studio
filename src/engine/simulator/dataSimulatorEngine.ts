@@ -1,10 +1,14 @@
 import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { DateFormatOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
+import { DateFormatConstants, DateFormatOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
+import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
+import { applyMetricTextCase, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
+import { useDesignStore } from '@/stores/designStore'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -45,9 +49,22 @@ function formatTimeValue(date: Date, formatter: number): string {
   }
 }
 
-function formatDateValue(date: Date, formatter: number, textCase: number | undefined): string {
-  const option = DateFormatOptions.find((o) => o.value === formatter)
-  const format = option ? option.label : 'YYYY-MM-DD'
+function formatDateValue(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
+  const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
+  if (isChineseDateFormatter(normalizedFormatter)) {
+    return formatChineseCulturalDate(date, normalizedFormatter, runtimeLocale)
+  }
+  const normalizedLocale = String(runtimeLocale || '').trim().toLowerCase()
+  const isChineseLocale = normalizedLocale === 'zh' || normalizedLocale === 'zh-cn' || normalizedLocale === 'zh-tw'
+  if (isChineseLocale && normalizedFormatter === DateFormatConstants.WEEKDAY_LONG) {
+    return formatChineseCulturalDate(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
+  }
+  if (isChineseLocale && normalizedFormatter === DateFormatConstants.MONTH_LONG) {
+    return `${date.getMonth() + 1}月`
+  }
+
+  const option = DateFormatOptions.find((o) => o.value === normalizedFormatter)
+  const format = option ? option.format || option.label : 'YYYY-MM-DD'
   let formatted = moment(date).format(format)
 
   if (textCase === 1) {
@@ -61,16 +78,12 @@ function formatDateValue(date: Date, formatter: number, textCase: number | undef
   return formatted
 }
 
+function getDatePreviewLocale(designStore: ReturnType<typeof useDesignStore>): string {
+  return designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+}
+
 function applyTextCase(text: string, textCase: number | undefined): string {
-  let formatted = String(text ?? '')
-  if (textCase === 1) {
-    formatted = formatted.toUpperCase()
-  } else if (textCase === 2) {
-    formatted = formatted.toLowerCase()
-  } else if (textCase === 0 || textCase === 3) {
-    formatted = formatted.replace(/\b\w/g, (c) => c.toUpperCase())
-  }
-  return formatted
+  return applyMetricTextCase(text, textCase)
 }
 
 function metricSymbolToSimKey(symbol: string | undefined | null): string | null {
@@ -150,6 +163,7 @@ export class DataSimulatorEngine {
     if (!canvas) return
 
     const propertiesStore = usePropertiesStore()
+    const designStore = useDesignStore()
 
     const objects = (canvas.getObjects?.() || []) as any[]
     if (!objects.length) return
@@ -177,7 +191,7 @@ export class DataSimulatorEngine {
         const isBitmap = obj.fontRenderType === 'bitmap' || obj.type === 'group'
         if (isBitmap) return
         const formatter = Number(obj.formatter ?? 0)
-        const nextText = formatDateValue(now, formatter, (propertiesStore as any).textCase)
+        const nextText = formatDateValue(now, formatter, (propertiesStore as any).textCase, getDatePreviewLocale(designStore))
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           changed = true
@@ -195,10 +209,24 @@ export class DataSimulatorEngine {
         const simKey = metricSymbolToSimKey(metric?.metricSymbol)
         const rawValue = simKey ? getSimulatedDataByName(simKey).display : String(metric?.defaultValue ?? '')
         const textCase = (propertiesStore as any).textCase
-        const casedValue = applyTextCase(String(rawValue), textCase)
-        const rawUnit = (propertiesStore as any).showUnit ? String((metric as any)?.unit ?? '') : ''
-        const casedUnit = rawUnit ? applyTextCase(rawUnit, textCase) : ''
-        const display = `${casedValue}${casedUnit}`
+        const display = applyTextCase(String(rawValue), textCase)
+
+        if (String(obj.text ?? '') !== String(display)) {
+          obj.set?.('text', String(display))
+          obj.metricValue = String(display)
+          changed = true
+        }
+        return
+      }
+
+      if (eleType === 'unit') {
+        const metric = propertiesStore.getMetricByOptions({
+          dataProperty: obj.dataProperty,
+          goalProperty: obj.goalProperty,
+          metricSymbol: obj.metricSymbol,
+        })
+        const textCase = (propertiesStore as any).textCase
+        const display = applyTextCase(resolveMetricUnit(metric as any, designStore.supportsChineseContent ? 'zh' : 'en'), textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
@@ -215,13 +243,7 @@ export class DataSimulatorEngine {
           metricSymbol: obj.metricSymbol,
         })
 
-        let nextText = 'Label'
-        const enLabel = (metric as any)?.enLabel
-        if (enLabel && typeof enLabel === 'object') {
-          nextText = enLabel.short || enLabel.medium || enLabel.long || nextText
-        } else if (typeof enLabel === 'string' && enLabel !== '') {
-          nextText = enLabel
-        }
+        let nextText = resolveMetricLabel(metric as any, designStore.supportsChineseContent ? 'zh' : 'en')
 
         nextText = applyTextCase(nextText, (propertiesStore as any).textCase)
         if (String(obj.text ?? '') !== nextText) {

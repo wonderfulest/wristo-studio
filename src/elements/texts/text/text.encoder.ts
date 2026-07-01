@@ -24,6 +24,8 @@ export function encodeText(element: FabricElement): TextElementConfig {
     fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 18,
     textProperty: fabricAny.textProperty,
     textTemplate,
+    localizedText: fabricAny.localizedText,
+    localization: fabricAny.localization,
     topBase: encodeTopBaseForElement(element),
   }
 }
@@ -44,6 +46,8 @@ export function decodeText(config: TextElementConfig): Partial<FabricElement> {
     fontSize: config.fontSize,
     textProperty: config.textProperty,
     textTemplate,
+    localizedText: config.localizedText,
+    localization: config.localization,
     text: resolvedText,
   } as any
 

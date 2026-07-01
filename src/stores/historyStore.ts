@@ -235,7 +235,6 @@ export const useHistoryStore = defineStore('history', () => {
       return JSON.stringify({
         properties: propertiesStore.allProperties,
         textCase: propertiesStore.textCase,
-        showUnit: propertiesStore.showUnit,
       })
     } catch {
       return undefined
@@ -301,7 +300,6 @@ export const useHistoryStore = defineStore('history', () => {
       propertiesStore.loadProperties(parsed?.properties || {})
       const textCase = Number(parsed?.textCase ?? 0)
       propertiesStore.textCase = [0, 1, 2, 3].includes(textCase) ? (textCase === 3 ? 0 : textCase) : 0
-      propertiesStore.showUnit = Boolean(parsed?.showUnit ?? false)
     } catch (e) {
       console.warn('[History] restore properties snapshot failed', e)
       debug('restorePropertiesSnapshot:failed', { error: e })

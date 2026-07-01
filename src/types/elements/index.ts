@@ -12,7 +12,7 @@ export type { RotationCenter, HandElementConfig } from './hand'
 export type { TimeElementConfig, DateElementConfig } from './time'
 
 // data-related
-export type { IconElementConfig, DataElementConfig } from './data'
+export type { IconElementConfig, LabelElementConfig, DataElementConfig, UnitElementConfig } from './data'
 // indicators
 export type { IndicatorElementConfig } from './indicator'
 
@@ -39,7 +39,7 @@ export type { TickElementConfig } from './tick'
 import type { BaseElementConfig as _Base } from './base'
 import type { TextElementConfig as _Text } from './text'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
-import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
+import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, UnitElementConfig as _Unit, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc, GoalSegmentBarElementConfig as _GoalSegBar } from './goal'
@@ -57,6 +57,7 @@ export type AnyElementConfig =
   | _Icon
   | _Label
   | _DataText
+  | _Unit
   | _Moon
   | _Weather
   | _WindDirection
@@ -88,6 +89,7 @@ export interface ElementConfigMap {
   'icon': _Icon
   'label': _Label
   'data': _DataText
+  'unit': _Unit
   'moon': _Moon
   'weather': _Weather
   'windDirection': _WindDirection

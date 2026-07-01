@@ -111,7 +111,6 @@ export interface DesignConfig {
   designId: string
   elements: DesignElement[]
   orderIds: string[]
-  showUnit: boolean
   textCase: number
   properties: Record<string, any>
   currentIconFontSlug: string // 当前图标字体(适用于icon、indicator元素)

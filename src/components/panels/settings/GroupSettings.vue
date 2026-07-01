@@ -31,7 +31,12 @@
       </el-form-item>
 
       <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.font')" required>
-        <font-picker v-model="fontFamily" :type="fontType" @change="updateFontFamily" />
+        <font-picker
+          v-model="fontFamily"
+          :type="fontType"
+          :date-content-language="metricTextFontLanguage"
+          @change="updateFontFamily"
+        />
       </el-form-item>
     </el-form>
   </div>
@@ -42,6 +47,7 @@ import { ref, reactive, watch, computed, onMounted, nextTick } from 'vue'
 import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { originXOptions } from '@/config/settings'
@@ -55,10 +61,13 @@ import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
 import { alignSelection } from '@/engine/managers/alignManager'
 import { useI18n } from '@/i18n'
+import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
+const designStore = useDesignStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 
@@ -73,6 +82,7 @@ const getElementByType = (type: string): FabricElement | undefined => {
 const iconElement = computed(() => getElementByType('icon'))
 const dataElement = computed(() => getElementByType('data'))
 const labelElement = computed(() => getElementByType('label'))
+const unitElement = computed(() => getElementByType('unit'))
 const goalBarElement = computed(() => getElementByType('goalBar'))
 const goalArcElement = computed(() => getElementByType('goalArc'))
 const goalSegmentBarElement = computed(() => getElementByType('goalSegmentBar'))
@@ -128,11 +138,21 @@ const updateDataProperty = () => {
         if (iconId) elementDataStore.patchElement(iconId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.icon } as any)
       }
       if (labelElement.value) {
+        const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
         labelElement.value.set('dataProperty', dataProperty.value)
         labelElement.value.set('goalProperty', null)
-        labelElement.value.set('text', metric.enLabel.short)
+        labelElement.value.set('text', labelText)
         const labelId = String((labelElement.value as any).id)
-        if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.enLabel.short } as any)
+        if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: labelText } as any)
+      }
+      if (unitElement.value) {
+        const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        unitElement.value.set('dataProperty', dataProperty.value)
+        unitElement.value.set('goalProperty', null)
+        unitElement.value.set('text', unitText)
+        ;(unitElement.value as any).metricValue = unitText
+        const unitId = String((unitElement.value as any).id)
+        if (unitId) elementDataStore.patchElement(unitId, { dataProperty: dataProperty.value, goalProperty: null, text: unitText, metricValue: unitText } as any)
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('dataProperty')
@@ -165,11 +185,21 @@ const updateGoalProperty = () => {
         if (iconId) elementDataStore.patchElement(iconId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.icon } as any)
       }
       if (labelElement.value) {
+        const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
         labelElement.value.set('goalProperty', goalProperty.value)
         labelElement.value.set('dataProperty', null)
-        labelElement.value.set('text', metric.enLabel.short)
+        labelElement.value.set('text', labelText)
         const labelId = String((labelElement.value as any).id)
-        if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.enLabel.short } as any)
+        if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: labelText } as any)
+      }
+      if (unitElement.value) {
+        const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        unitElement.value.set('goalProperty', goalProperty.value)
+        unitElement.value.set('dataProperty', null)
+        unitElement.value.set('text', unitText)
+        ;(unitElement.value as any).metricValue = unitText
+        const unitId = String((unitElement.value as any).id)
+        if (unitId) elementDataStore.patchElement(unitId, { goalProperty: goalProperty.value, dataProperty: null, text: unitText, metricValue: unitText } as any)
       }
       if (goalBarElement.value) {
         goalBarElement.value.set('goalProperty', goalProperty.value)
@@ -207,7 +237,7 @@ onMounted(() => {
 
 const isUpdateColor = computed(() => {
   const eleType = props.elements[0]?.eleType
-  if (!eleType || !['time', 'date', 'icon', 'data', 'bluetooth', 'disturb'].includes(eleType)) {
+  if (!eleType || !['time', 'date', 'icon', 'data', 'unit', 'bluetooth', 'disturb'].includes(eleType)) {
     return false
   }
   return true
@@ -233,12 +263,21 @@ const fontType = computed(() => {
       return FontTypes.ICON_FONT
     case 'time':
     case 'data':
+    case 'unit':
     case 'label':
     case 'date':
       return FontTypes.TEXT_FONT
     default:
       return FontTypes.TEXT_FONT
   }
+})
+
+const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
+  const eleType = props.elements[0]?.eleType
+  if (!designStore.supportsChineseContent || !['label', 'unit'].includes(String(eleType ?? ''))) {
+    return undefined
+  }
+  return 'zh'
 })
 
 const updateFontSize = () => {
@@ -295,8 +334,9 @@ const showDataProperty = computed(() => {
   const hasData = dataElement.value !== undefined
   const hasIcon = iconElement.value !== undefined
   const hasLabel = labelElement.value !== undefined
+  const hasUnit = unitElement.value !== undefined
 
-  const validTypes = ['data', 'icon', 'label']
+  const validTypes = ['data', 'icon', 'label', 'unit']
   const hasOnlyValidTypes = props.elements.every(
     (element) => element.eleType && validTypes.includes(element.eleType),
   )
@@ -306,7 +346,7 @@ const showDataProperty = computed(() => {
     return count <= 1
   })
 
-  const show = (hasData || hasIcon || hasLabel) && hasOnlyValidTypes && hasOnlyOneOfType
+  const show = (hasData || hasIcon || hasLabel || hasUnit) && hasOnlyValidTypes && hasOnlyOneOfType
   return show
 })
 

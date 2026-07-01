@@ -16,6 +16,7 @@
           <FontListItem
             :font-family="font.value"
             :type="type"
+            :language="font.language"
             :section-name="section.name"
             :font-url="font.src"
           />

@@ -4,8 +4,10 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
 import type { DataTypeOption } from '@/types/settings'
+import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -102,6 +104,7 @@ const getActiveElements = (): any[] => {
 
 const getPatchForElement = (element: any, propertyKey: string, type: BindableMetricPropertyType) => {
   const propertiesStore = usePropertiesStore()
+  const designStore = useDesignStore()
   const metric = propertiesStore.getMetricByOptions(
     type === 'goal'
       ? { goalProperty: propertyKey }
@@ -110,9 +113,13 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   const eleType = String(element?.eleType ?? '')
 
   if (type === 'data') {
-    if (!['data', 'icon', 'label'].includes(eleType)) return null
+    if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
     if (eleType === 'icon') return { dataProperty: propertyKey, goalProperty: null, text: metric.icon }
-    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: metric.enLabel.short }
+    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
+    if (eleType === 'unit') {
+      const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+      return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
+    }
     return { dataProperty: propertyKey, goalProperty: null, text: metric.defaultValue }
   }
 
@@ -120,8 +127,12 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
     return { goalProperty: propertyKey }
   }
   if (eleType === 'icon') return { goalProperty: propertyKey, dataProperty: null, text: metric.icon }
-  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: metric.enLabel.short }
+  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
   if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: metric.defaultValue }
+  if (eleType === 'unit') {
+    const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+    return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }
+  }
 
   return null
 }

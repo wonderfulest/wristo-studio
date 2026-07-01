@@ -25,6 +25,7 @@ const iconPreviewText = String.fromCodePoint(
 const props = defineProps<{
   fontFamily: string
   type?: string
+  language?: string
   sectionName?: string
   fontUrl?: string
   previewText?: string
@@ -35,6 +36,13 @@ const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectio
 const loadedFontFamily = ref<string | null>(null)
 
 const effectiveFontFamily = computed(() => loadedFontFamily.value || props.fontFamily)
+const normalizedLanguage = computed(() => String(props.language || '').trim().toLowerCase())
+const isChineseTextFont = computed(() => (
+  props.type === 'text_font_zh'
+  || normalizedLanguage.value === 'zh'
+  || normalizedLanguage.value === 'zh-cn'
+  || normalizedLanguage.value === 'multi'
+))
 
 const sampleText = computed(() => {
   if (isIcon.value) {
@@ -46,6 +54,9 @@ const sampleText = computed(() => {
   }
   if (props.type === FontTypes.NUMBER_FONT) {
     return '0123456789:'
+  }
+  if (isChineseTextFont.value) {
+    return '12:34 晴 25°C 周二 六月 农历五月十六'
   }
   return '12:34 AM 72°F & Sunny 0123456789'
 })

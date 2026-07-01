@@ -82,6 +82,7 @@
     <FontPreviewText
       :font-family="fontFamily"
       :type="type"
+      :language="language"
       :section-name="sectionName"
       :font-url="fontUrl"
       :preview-text="previewText"
@@ -113,6 +114,7 @@ const props = defineProps<{
   label?: string
   fontFamily: string
   type?: string
+  language?: string
   sectionName?: string
   isSystem?: boolean
   isMonospace?: boolean
@@ -239,6 +241,7 @@ const onDelete = async () => {
         h(FontPreviewText, {
           fontFamily: props.fontFamily,
           type: props.type,
+          language: props.language,
           sectionName: props.sectionName,
           previewText: props.previewText,
         }),

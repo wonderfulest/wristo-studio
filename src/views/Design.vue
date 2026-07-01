@@ -339,6 +339,25 @@ const loadDesign = async (designUid: string) => {
     // 设置基础信息
     baseStore.id = designUid
     baseStore.watchFaceName = designData.name
+    designStore.id = designUid
+    designStore.setWatchFaceName(designData.name)
+    designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
+    if (config.localization) {
+      const localization = config.localization as any
+      if (Array.isArray(localization.supportedLocales)) {
+        designStore.setSupportedLocales(localization.supportedLocales)
+      } else {
+        designStore.setSupportedLocales(['en-US'])
+      }
+      if (localization.defaultLocale) {
+        designStore.setDefaultLocale(localization.defaultLocale)
+      }
+      if (localization.fontRoles && typeof localization.fontRoles === 'object') {
+        designStore.fontRoles = localization.fontRoles
+      }
+    } else {
+      designStore.setSupportedLocales(['en-US'])
+    }
     baseStore.appId = designData.product?.appId || -1
     
     // 加载字体
@@ -356,8 +375,9 @@ const loadDesign = async (designUid: string) => {
       elementDataStore.clearAll()
       // 设置默认值
       baseStore.watchFaceName = designData.name
+      designStore.setWatchFaceName(designData.name)
+      designStore.setSupportsChineseContent(false)
       propertiesStore.textCase = 0
-      propertiesStore.showUnit = false
      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
@@ -373,15 +393,10 @@ const loadDesign = async (designUid: string) => {
 
     // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
     propertiesStore.textCase = 0
-    propertiesStore.showUnit = false
 
     // 设置文本大小写
     if ([0, 1, 2, 3].includes(Number(config.textCase))) {
       propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
-    }
-    // 设置是否显示数据项单位
-    if (config.showUnit !== undefined) {
-      propertiesStore.showUnit = config.showUnit
     }
     // 等待画布初始化完成
     await waitCanvasReady()

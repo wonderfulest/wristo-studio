@@ -85,7 +85,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useI18n } from '@/i18n'
 import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { resolvePackageAssetUrls } from '@/engine/services/exportService'
+import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -152,6 +152,10 @@ const getBackgroundImagePayload = (configJson) => {
 }
 
 const prepareExportConfig = async (config) => {
+  if (!config) return null
+  if (!(await validateRuntimeConfigForExport(config))) {
+    return null
+  }
   try {
     return await resolvePackageAssetUrls(config)
   } catch (error) {
@@ -163,7 +167,7 @@ const prepareExportConfig = async (config) => {
 
 const openDialog = async () => {
   const config = baseStore.generateConfig()
-  jsonConfig.value = await prepareExportConfig(config) || config || {}
+  jsonConfig.value = await prepareExportConfig(config) || {}
   uploading.value = false
   currentProgress = 0
   currentStatus = ''
@@ -273,6 +277,9 @@ const uploadApp = async () => {
   // 生成配置
   const config = baseStore.generateConfig({ validateBindings: true })
   if (!config) {
+    return -1
+  }
+  if (!(await validateRuntimeConfigForExport(config))) {
     return -1
   }
 

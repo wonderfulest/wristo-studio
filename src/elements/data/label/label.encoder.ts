@@ -1,6 +1,9 @@
 import type { FabricElement } from '@/types/element'
 import type { LabelElementConfig } from '@/types/elements/data'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { useDesignStore } from '@/stores/designStore'
+import { usePropertiesStore } from '@/stores/properties'
+import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
 
 export function encodeLabel(element: FabricElement): LabelElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -40,9 +43,22 @@ export function encodeLabel(element: FabricElement): LabelElementConfig {
 }
 
 export function decodeLabel(config: LabelElementConfig): Partial<FabricElement> {
+  const propertiesStore = usePropertiesStore()
+  const metric = propertiesStore.getMetricByOptions({
+    dataProperty: config.dataProperty,
+    goalProperty: config.goalProperty,
+    metricSymbol: config.metricSymbol,
+  })
+  const designStore = useDesignStore()
+  const text = applyMetricTextCase(
+    resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en'),
+    (propertiesStore as any).textCase,
+  )
+
   const element: Partial<FabricElement> = {
     id: config.id,
     eleType: 'label',
+    text,
     left: config.left,
     top: config.top,
     originX: config.originX as any,

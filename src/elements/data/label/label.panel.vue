@@ -38,6 +38,7 @@
       <el-form-item :label="t('elementSettings.font')">
         <font-picker 
           v-model="currentModel.fontFamily" 
+          :date-content-language="metricTextFontLanguage"
           @change="updateElement" 
         />
       </el-form-item>
@@ -57,9 +58,12 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
+import { useDesignStore } from '@/stores/designStore'
+import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
+const designStore = useDesignStore()
 
 const props = defineProps<{
   element?: any
@@ -71,6 +75,10 @@ const formRef = ref<any>(null)
 
 const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
+})
+
+const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
+  return designStore.supportsChineseContent ? 'zh' : undefined
 })
 
 const applyUpdate = async (patch: Record<string, any>) => {

@@ -3,7 +3,7 @@
     <!-- Current selected font preview -->
     <div class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
-      <FontPreviewText :font-family="selectedFontFamily" :type="type" />
+      <FontPreviewText :font-family="selectedFontFamily" :type="selectedFontType" :language="selectedFontLanguage" />
     </div>
 
     <!-- Font selection panel -->
@@ -58,6 +58,8 @@
           :type="type"
           :can-use-premium-assets="canUsePremiumAssets"
           :include-all-users="includeAllUsers"
+          :date-content-language="dateContentLanguage"
+          :exclude-icon-fonts="excludeIconFonts"
           @select="selectFont"
           @edit-search-index="openSearchIndexDialog"
         />
@@ -67,6 +69,8 @@
             :model-value="modelValue"
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
+            :date-content-language="dateContentLanguage"
+            :exclude-icon-fonts="excludeIconFonts"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
         />
@@ -78,6 +82,8 @@
             :can-use-premium-assets="canUsePremiumAssets"
             :include-all-users="includeAllUsers"
             :excluded-font-values="recentFontValues"
+            :date-content-language="dateContentLanguage"
+            :exclude-icon-fonts="excludeIconFonts"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
         />
@@ -174,6 +180,7 @@ import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
 import { useI18n } from '@/i18n'
+import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const props = defineProps({
   modelValue: {
@@ -185,6 +192,16 @@ const props = defineProps({
     type: String,
     required: false,
     default: FontTypes.TEXT_FONT
+  },
+  dateContentLanguage: {
+    type: String as () => DateContentLanguage | undefined,
+    required: false,
+    default: undefined
+  },
+  excludeIconFonts: {
+    type: Boolean,
+    required: false,
+    default: false
   }
 })
 
@@ -249,6 +266,16 @@ const selectedFontFamily = computed(() => {
   }
   return slug
 })
+const selectedFontOption = computed(() => {
+  const slug = props.modelValue
+  for (const sec of fontSections.value) {
+    const match = sec.fonts?.find(f => f.value === slug)
+    if (match) return match
+  }
+  return null
+})
+const selectedFontLanguage = computed(() => selectedFontOption.value?.language)
+const selectedFontType = computed(() => selectedFontOption.value?.type || props.type)
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 const includeAllUsers = computed(() => canUsePremiumAssets.value === true && fontScope.value === 'all')
 const fontScopeOptions = computed(() => [

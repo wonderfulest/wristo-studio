@@ -373,7 +373,7 @@ const handleAddElement = async (category: string, elementType: string, overrides
   }
 }
 
-// Quick add: create a new data property (DataN / data_N) and add paired icon + data elements
+// Quick add: create a new data property (DataN / data_N) and add paired icon + data (+ unit when available) elements
 // metricSymbol: optional, used to choose default data option (Heart Rate, Steps, etc.)
 const handleAddDataField = async (metricSymbol?: string) => {
   try {
@@ -409,6 +409,9 @@ const handleAddDataField = async (metricSymbol?: string) => {
       })
     }
 
+    const metricSymbolForElement = defaultOption.metricSymbol
+    const unitText = String(defaultOption.unit ?? '')
+
     // Base position from default data config
     const baseConfig = (elementConfigs.metric && elementConfigs.metric.data) || {}
     const baseLeft = baseConfig.left ?? 227
@@ -416,12 +419,13 @@ const handleAddDataField = async (metricSymbol?: string) => {
     const gap = (baseConfig.fontSize ?? 36) * 0.1
     const iconLeft = baseLeft - gap / 2
     const dataLeft = baseLeft + gap / 2
+    const unitLeft = dataLeft + (baseConfig.fontSize ?? 36) * 1.35
 
     // Add icon bound to this data property (left side, right-aligned)
     await handleAddElement('metric', 'icon', {
       dataProperty: propertyKey,
       goalProperty: null,
-      metricSymbol,
+      metricSymbol: metricSymbolForElement,
       left: iconLeft,
       top: baseTop,
       originX: 'right',
@@ -431,13 +435,24 @@ const handleAddDataField = async (metricSymbol?: string) => {
     await handleAddElement('metric', 'data', {
       dataProperty: propertyKey,
       goalProperty: null,
-      metricSymbol,
+      metricSymbol: metricSymbolForElement,
       left: dataLeft,
       top: baseTop,
       originX: 'left',
     })
+
+    if (unitText) {
+      await handleAddElement('metric', 'unit', {
+        dataProperty: propertyKey,
+        goalProperty: null,
+        metricSymbol: metricSymbolForElement,
+        left: unitLeft,
+        top: baseTop,
+        originX: 'left',
+      })
+    }
   } catch (e) {
-    console.error('Failed to add data field (icon + data):', e)
+    console.error('Failed to add data field (icon + data + unit):', e)
     messageStore.error(t('editor.addDataFieldFailed'))
   }
 }

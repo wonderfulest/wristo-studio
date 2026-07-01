@@ -43,14 +43,6 @@
                     <el-option :label="t('property.lowercase')" :value="2" />
                   </el-select>
                 </el-form-item>
-
-                <div class="switch-row">
-                  <div>
-                    <span>{{ t('property.showUnit') }}</span>
-                    <small>{{ t('property.showUnitHint') }}</small>
-                  </div>
-                  <el-switch v-model="showUnit" />
-                </div>
               </el-form>
             </section>
 
@@ -327,15 +319,6 @@ const textCase = computed({
     propertiesStore.textCase = Number(value)
     getDataSimulatorEngine().updateCanvas()
     commitHistory('text-case')
-  },
-})
-
-const showUnit = computed({
-  get: () => propertiesStore.showUnit,
-  set: (value) => {
-    propertiesStore.showUnit = Boolean(value)
-    getDataSimulatorEngine().updateCanvas()
-    commitHistory('show-unit')
   },
 })
 

@@ -10,15 +10,20 @@ import type { ApiResponse, PageResponse } from '@/types/api/api'
  */
 export const uploadFontFile =  (
   file: File,
-  type: string
+  type: string,
+  language?: string,
 ): Promise<ApiResponse<DesignFontVO>> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
+  if (language) formData.append('language', language)
   return instance.post(
     '/dsn/fonts/upload?populate=ttf',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    },
   )
 }
 
@@ -69,6 +74,7 @@ export const getDesignerUsageFontsPage = (
     type: string
     isSystem?: number
     includeAllUsers?: boolean
+    languages?: string[]
   }
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
   return instance.post('/dsn/fonts/usage/page?populate=ttf', params)

@@ -1,5 +1,6 @@
 import type { PropertiesMap } from '@/types/properties'
 import type { AnyElementConfig } from '@/types/elements'
+import type { WatchfaceLocalizationConfig } from '@/types/localization'
 
 export interface RuntimeDesignConfig {
   version: string
@@ -7,7 +8,8 @@ export interface RuntimeDesignConfig {
   designId: string
   name: string
   textCase: number
-  showUnit: boolean
+  supportsChineseContent?: boolean
+  localization?: WatchfaceLocalizationConfig
   elements: AnyElementConfig[]
   orderIds: string[]
 }

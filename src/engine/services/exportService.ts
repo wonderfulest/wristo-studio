@@ -12,6 +12,15 @@ import { translate } from '@/i18n'
 import { normalizeConfigToStandardSize } from '@/utils/designScale'
 import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
+import type { WatchfaceLocalizationConfig } from '@/types/localization'
+import { getFontBySlug } from '@/api/wristo/fonts'
+import { useFontStore } from '@/stores/fontStore'
+import {
+  getDateContentLanguage,
+  getDateFontRequirementLabel,
+  isDateFormatAllowedByChineseSupport,
+  isFontCompatibleWithDateLanguage,
+} from '@/utils/dateFontCompatibility'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -185,14 +194,85 @@ function validateColorBindings(
   return errors
 }
 
+async function resolveFontForValidation(slug: string) {
+  const fontStore = useFontStore()
+  const local = [
+    ...(fontStore.allFonts as any[]),
+    ...(fontStore.recentFonts as any[]),
+  ].find((font) => font?.value === slug || font?.slug === slug)
+  if (local) return local
+
+  const cached = fontStore.serverFonts.get(slug)
+  if (cached) return cached
+
+  try {
+    const res = await getFontBySlug(slug)
+    if (res.data) {
+      fontStore.serverFonts.set(slug, res.data)
+      return res.data
+    }
+  } catch {}
+  return null
+}
+
+async function validateDateContentAndFonts(
+  elements: AnyElementConfig[],
+  supportsChineseContent: boolean,
+): Promise<string[]> {
+  const errors: string[] = []
+
+  for (const element of elements) {
+    const eleType = String((element as any)?.eleType ?? (element as any)?.type ?? '')
+    if (eleType !== 'date') continue
+
+    const formatter = Number((element as any).formatter ?? 0)
+    if (!isDateFormatAllowedByChineseSupport(formatter, supportsChineseContent)) {
+      errors.push('Chinese date formats require Chinese content support to be enabled.')
+      continue
+    }
+
+    const fontFamily = String((element as any).fontFamily || '')
+    if (!fontFamily) {
+      errors.push('A date element is missing a font.')
+      continue
+    }
+
+    const language = getDateContentLanguage(formatter)
+    const font = await resolveFontForValidation(fontFamily)
+    if (!font) {
+      errors.push(`Cannot verify the date font "${fontFamily}". Please choose a compatible font again.`)
+      continue
+    }
+    if (!isFontCompatibleWithDateLanguage(font, language)) {
+      errors.push(`Date format requires a ${getDateFontRequirementLabel(language)}. Please choose a compatible font for "${fontFamily}".`)
+    }
+  }
+
+  return Array.from(new Set(errors))
+}
+
 export interface GenerateConfigOptions {
   canvas: Canvas | null
   properties: PropertiesMap
   designId: string
   watchFaceName: string
   textCase: number
-  showUnit: boolean
+  localization?: WatchfaceLocalizationConfig
+  supportsChineseContent?: boolean
   validateBindings?: boolean
+}
+
+export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig): Promise<boolean> {
+  const dateErrors = await validateDateContentAndFonts(
+    config.elements,
+    Boolean(config.supportsChineseContent),
+  )
+  if (dateErrors.length > 0) {
+    ElMessage.error(dateErrors.join(t('common.listSeparator')))
+    console.error('Export date validation failed:', dateErrors)
+    return false
+  }
+  return true
 }
 
 export function generateConfig(options: GenerateConfigOptions): RuntimeDesignConfig | null {
@@ -202,7 +282,8 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId,
     watchFaceName,
     textCase,
-    showUnit,
+    localization,
+    supportsChineseContent,
     validateBindings = false,
   } = options
 
@@ -216,9 +297,12 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId: designId || '',
     name: watchFaceName,
     textCase,
-    showUnit,
+    supportsChineseContent: Boolean(supportsChineseContent),
     elements: [],
     orderIds: [],
+  }
+  if (localization) {
+    config.localization = localization
   }
 
   const objects: FabricElement[] = canvas.getObjects() as FabricElement[]

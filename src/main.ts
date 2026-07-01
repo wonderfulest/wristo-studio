@@ -16,6 +16,7 @@ import '@/assets/styles/element-variables.scss'
 
 import emitter from '@/utils/eventBus'
 import { loadPlugins } from '@/engine/plugins'
+import { loadDataTypeOptions } from '@/config/elements/options/dataTypes'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
@@ -49,4 +50,10 @@ app.config.errorHandler = (err, _vm, info) => {
 
 app.config.globalProperties.$emitter = emitter as any
 
-app.mount('#app')
+loadDataTypeOptions()
+  .catch((err) => {
+    console.error('[data-type-options] failed to load', err)
+  })
+  .finally(() => {
+    app.mount('#app')
+  })

@@ -34,7 +34,7 @@
           <div class="preview-label">{{ t('font.preview') }}</div>
           <div class="font-preview" :style="{ fontFamily: previewFontFamily }">
             <div class="preview-text">
-              <span class="preview-numbers">0123456789,:°F Sunny</span>
+              <span class="preview-numbers">{{ uploadPreviewPrimaryText }}</span>
               <span class="preview-letters">AaBbCcDdEe</span>
             </div>
           </div>
@@ -45,6 +45,19 @@
           <el-radio-group v-model="selectedFontType" :disabled="loadingFontTypes || !fontTypeOptions.length">
             <el-radio-button
               v-for="opt in fontTypeOptions"
+              :key="opt.value"
+              :label="opt.value"
+            >
+              {{ opt.name }}
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <div class="preview-section">
+          <div class="preview-label">{{ t('font.fontLanguage') }}</div>
+          <el-radio-group v-model="selectedFontLanguage">
+            <el-radio-button
+              v-for="opt in fontLanguageOptions"
               :key="opt.value"
               :label="opt.value"
             >
@@ -150,10 +163,24 @@ const parsedInfo = ref<ParsedFontInfo | null>(null)
 const fontTypeOptions = ref<EnumOption[]>([])
 const loadingFontTypes = ref(false)
 const selectedFontType = ref<string>('')
+const selectedFontLanguage = ref<string>('en')
+
+const fontLanguageOptions = computed(() => [
+  { name: t('font.languageEnglish'), value: 'en' },
+  { name: t('font.languageChinese'), value: 'zh' },
+  { name: t('font.languageMultilingual'), value: 'multi' },
+])
 
 const previewFontFamily = computed(() => {
   if (!selectedFile.value) return 'inherit'
   return selectedFile.value.name.replace(/\.(ttf|otf)$/i, '')
+})
+
+const uploadPreviewPrimaryText = computed(() => {
+  if (selectedFontLanguage.value === 'zh' || selectedFontLanguage.value === 'multi' || selectedFontType.value === 'text_font_zh') {
+    return '12:34 晴 25°C 周二 六月 农历五月十六'
+  }
+  return '0123456789,:°F Sunny'
 })
 
 onMounted(async () => {
@@ -171,6 +198,12 @@ onMounted(async () => {
     fontTypeOptions.value = [ { name: 'ratio', value: 'ratio' } ]
   } finally {
     loadingFontTypes.value = false
+  }
+})
+
+watch(selectedFontType, (type) => {
+  if (type === 'text_font_zh') {
+    selectedFontLanguage.value = 'zh'
   }
 })
 
@@ -283,7 +316,7 @@ const confirmUpload = async () => {
       created = byName.data as DesignFontVO
     } else {
       console.log('uploading font type', selectedFontType.value)
-      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, selectedFontType.value)
+      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, selectedFontType.value, selectedFontLanguage.value)
       created = uploadRes.data as DesignFontVO
     }
 
@@ -299,7 +332,14 @@ const confirmUpload = async () => {
       } catch {}
     }
     const ttfUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`) : ''
-    fontStore.addCustomFont({ label: created.fullName || familyName, value: created.slug, family: familyName, src: ttfUrl })
+    fontStore.addCustomFont({
+      label: created.fullName || familyName,
+      value: created.slug,
+      family: familyName,
+      src: ttfUrl,
+      language: created.language || selectedFontLanguage.value,
+      type: created.type || selectedFontType.value,
+    })
 
     try { await increaseFontUsage(created.slug, userStore.userInfo?.id) } catch {}
 
@@ -314,6 +354,7 @@ const confirmUpload = async () => {
     selectedFile.value = null
     fontForm.value = { name: '', family: '' }
     parsedInfo.value = null
+    selectedFontLanguage.value = selectedFontType.value === 'text_font_zh' ? 'zh' : 'en'
   }
 }
 </script>

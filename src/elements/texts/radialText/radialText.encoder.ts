@@ -25,6 +25,8 @@ export function encodeRadialText(element: FabricElement): TextElementConfig {
     fontFamily: anyEl.fontFamily ?? 'Noto Sans SC',
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 36,
     textTemplate,
+    localizedText: anyEl.localizedText,
+    localization: anyEl.localization,
     textProperty: anyEl.textProperty,
     angle:
       typeof anyEl.startAngle === 'number'
@@ -55,6 +57,8 @@ export function decodeRadialText(config: TextElementConfig): Partial<FabricEleme
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
     textTemplate,
+    localizedText: config.localizedText,
+    localization: config.localization,
     textProperty: (config as any).textProperty,
     text: textTemplate,
     angle: typeof (config as any).angle === 'number' ? (config as any).angle : 0,

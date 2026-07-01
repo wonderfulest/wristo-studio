@@ -8,7 +8,11 @@ import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useDesignStore } from '@/stores/designStore'
-import { generateConfig as generateRuntimeConfig, resolvePackageAssetUrls } from '@/engine/services/exportService'
+import {
+  generateConfig as generateRuntimeConfig,
+  resolvePackageAssetUrls,
+  validateRuntimeConfigForExport,
+} from '@/engine/services/exportService'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
@@ -362,10 +366,12 @@ export const useBaseStore = defineStore('baseStore', {
         designId: this.id || '',
         watchFaceName: designStore.watchFaceName,
         textCase: propertiesStore.textCase,
-        showUnit: propertiesStore.showUnit,
+        localization: designStore.getLocalizationConfig(),
+        supportsChineseContent: designStore.supportsChineseContent,
         validateBindings: true,
       })
       if (!config) return false
+      if (!(await validateRuntimeConfigForExport(config))) return false
       const exportConfig = await resolvePackageAssetUrls(config)
       if (!exportConfig) return false
       const res: any = await designApi.updateDesign({
@@ -403,7 +409,8 @@ export const useBaseStore = defineStore('baseStore', {
         designId: this.id || designStore.id || '',
         watchFaceName: designStore.watchFaceName || this.watchFaceName,
         textCase: propertiesStore.textCase,
-        showUnit: propertiesStore.showUnit,
+        localization: designStore.getLocalizationConfig(),
+        supportsChineseContent: designStore.supportsChineseContent,
         validateBindings: options.validateBindings ?? false,
       })
     },

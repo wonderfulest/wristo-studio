@@ -33,6 +33,7 @@
             :label="font.fullName || font.family"
             :font-family="font.previewFamily || font.family"
             :type="font.type"
+            :language="font.language"
             :is-system="!!font.isSystem"
             :is-monospace="!!font.isMonospace"
             :subfamily="font.subfamily"

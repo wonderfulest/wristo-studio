@@ -40,6 +40,15 @@
         <span>{{ t('editorSettings.timeSimulator') }}</span>
       </label>
 
+      <label class="bar-cell check-cell chinese-content-cell">
+        <el-switch
+          :model-value="chineseContentEnabled"
+          size="small"
+          @change="handleChineseContentChange"
+        />
+        <span>{{ t('editorSettings.chineseContent') }}</span>
+      </label>
+
       <div v-if="canQuickAlign" class="bar-cell quick-align-cell">
         <el-button
           v-for="option in quickAlignOptions"
@@ -200,17 +209,32 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useDesignStore } from '@/stores/designStore'
 import { useEditorStore } from '@/stores/editorStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
+import { useFontStore } from '@/stores/fontStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 import { clearAllGuidelines } from '@/utils/guidelineUtil'
 import type { FabricElement } from '@/types/element'
 import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
+import * as elementManager from '@/engine/managers/elementManager'
+import { useHistoryStore } from '@/stores/historyStore'
+import { getFontBySlug } from '@/api/wristo/fonts'
+import {
+  DEFAULT_NON_CHINESE_DATE_FORMATTER,
+  getDateContentLanguageForRuntimeLocale,
+  getDateFontRequirementLabel,
+  isChineseDateFormatter,
+  isFontCompatibleWithDateLanguage,
+} from '@/utils/dateFontCompatibility'
+import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 
 const props = defineProps<{
   canvasRef?: {
@@ -224,8 +248,12 @@ const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
 const designStore = useDesignStore()
 const editorStore = useEditorStore()
+const elementDataStore = useElementDataStore()
 const themeStore = useThemeStore()
 const userStore = useUserStore()
+const fontStore = useFontStore()
+const historyStore = useHistoryStore()
+const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
 
 const lightCanvasBackgroundColor = ref<string>(editorStore.lightCanvasBackgroundColor)
@@ -296,6 +324,7 @@ const selectedElementLabel = computed(() => {
 })
 
 const canQuickAlign = computed(() => selectedElements.value.length > 1)
+const chineseContentEnabled = computed(() => designStore.supportsChineseContent)
 
 const handleLightCanvasBackgroundColorChange = (color: string) => {
   lightCanvasBackgroundColor.value = color
@@ -310,6 +339,132 @@ const handleDarkCanvasBackgroundColorChange = (color: string) => {
 const handleTimeSimulatorChange = (value: boolean) => {
   showTimeSimulator.value = Boolean(value)
   editorStore.updateSetting('showTimeSimulator', showTimeSimulator.value)
+}
+
+const getDateElementsUsingChineseFormats = () => {
+  const canvas = canvasStore.canvas
+  return ((canvas?.getObjects?.() || []) as FabricElement[])
+    .filter((object) => (object as any).eleType === 'date' && isChineseDateFormatter((object as any).formatter))
+}
+
+const resolveFontForDateCheck = async (slug: string) => {
+  const local = [
+    ...(fontStore.allFonts as any[]),
+    ...(fontStore.recentFonts as any[]),
+  ].find((font) => font?.value === slug || font?.slug === slug)
+  if (local) return local
+  const cached = fontStore.serverFonts.get(slug)
+  if (cached) return cached
+  try {
+    const res = await getFontBySlug(slug)
+    if (res.data) {
+      fontStore.serverFonts.set(slug, res.data)
+      return res.data
+    }
+  } catch {}
+  return null
+}
+
+const warnIncompatibleDateFonts = async () => {
+  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
+    .filter((object) => (object as any).eleType === 'date')
+  const datePreviewLocale = designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+  for (const element of dateElements) {
+    const fontFamily = String((element as any).fontFamily || '')
+    if (!fontFamily) continue
+    const language = getDateContentLanguageForRuntimeLocale((element as any).formatter, datePreviewLocale)
+    const font = await resolveFontForDateCheck(fontFamily)
+    if (font && !isFontCompatibleWithDateLanguage(font, language)) {
+      ElMessage.warning(`A date element now requires a ${getDateFontRequirementLabel(language)}. Please choose a compatible font.`)
+      return
+    }
+  }
+}
+
+const refreshMetricTextElementsForContentLanguage = () => {
+  const language = designStore.supportsChineseContent ? 'zh' : 'en'
+  const metricTextElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
+    .filter((object) => ['label', 'unit'].includes(String((object as any).eleType ?? '')))
+
+  for (const element of metricTextElements) {
+    const metric = propertiesStore.getMetricByOptions({
+      dataProperty: (element as any).dataProperty,
+      goalProperty: (element as any).goalProperty,
+      metricSymbol: (element as any).metricSymbol,
+    })
+    const nextText = (element as any).eleType === 'unit'
+      ? resolveMetricUnit(metric, language)
+      : resolveMetricLabel(metric, language)
+    ;(element as any).set?.('text', nextText)
+    if ((element as any).eleType === 'unit') {
+      ;(element as any).metricValue = nextText
+    }
+    const elementId = String((element as any).id || '')
+    if (elementId) {
+      const patch: Record<string, string> = { text: nextText }
+      if ((element as any).eleType === 'unit') patch.metricValue = nextText
+      elementDataStore.patchElement(elementId, patch as any)
+    }
+  }
+
+  if (metricTextElements.length > 0) {
+    canvasStore.canvas?.requestRenderAll?.()
+  }
+}
+
+const refreshDateElementsForContentLanguage = async () => {
+  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
+    .filter((object) => (object as any).eleType === 'date')
+
+  for (const element of dateElements) {
+    const id = (element as any).id
+    if (id != null) {
+      await elementManager.updateElementById(id, { formatter: (element as any).formatter })
+    }
+  }
+}
+
+const handleChineseContentChange = async (value: boolean | string | number) => {
+  const nextEnabled = Boolean(value)
+  if (nextEnabled) {
+    designStore.setSupportsChineseContent(true)
+    refreshMetricTextElementsForContentLanguage()
+    await refreshDateElementsForContentLanguage()
+    await warnIncompatibleDateFonts()
+    historyStore.saveState('settings:enable-chinese-content')
+    return
+  }
+
+  const affectedDates = getDateElementsUsingChineseFormats()
+  if (affectedDates.length > 0) {
+    try {
+      await ElMessageBox.confirm(
+        t('editorSettings.disableChineseContentConfirm', { count: affectedDates.length }),
+        t('editorSettings.disableChineseContentTitle'),
+        {
+          type: 'warning',
+          confirmButtonText: t('common.confirm'),
+          cancelButtonText: t('common.cancel'),
+        },
+      )
+    } catch {
+      return
+    }
+
+    for (const element of affectedDates) {
+      const id = (element as any).id
+      if (id != null) {
+        await elementManager.updateElementById(id, { formatter: DEFAULT_NON_CHINESE_DATE_FORMATTER })
+      }
+    }
+    historyStore.saveState('settings:disable-chinese-content')
+    ElMessage.warning(t('editorSettings.chineseDateFormatsReset'))
+    await warnIncompatibleDateFonts()
+  }
+
+  designStore.setSupportsChineseContent(false)
+  refreshMetricTextElementsForContentLanguage()
+  await refreshDateElementsForContentLanguage()
 }
 
 const handleQuickAlign = (type: AlignType) => {

@@ -4,19 +4,15 @@ export type VerticalAlign = 'top' | 'center' | 'bottom'
 export interface OptionFormat<T> {
   value: T
   label: string
+  labelCn?: string
   example: string
+  format?: string
 }
 
 export interface LayoutOption {
   value: string
   label: string
   icon: string
-}
-
-export interface EnLabel {
-  short: string
-  medium: string
-  long: string
 }
 
 export interface DataTypeOption {
@@ -27,7 +23,7 @@ export interface DataTypeOption {
   icon: string
   unit?: string
   label: string
-  enLabel: EnLabel
+  enLabel: string
 }
 
 export interface HandOption {

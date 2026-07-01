@@ -23,6 +23,8 @@ export interface FontOption {
   searchKeywords?: string
   weightClass?: number
   widthClass?: number
+  language?: string
+  type?: string
 }
 
 interface FontSectionsState {
@@ -303,6 +305,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 	              italic: (f as any)?.italic === 1,
 	              isSystem: true,
 	              favoriteWeight: f.favoriteWeight,
+              language: f.language,
+              type: f.type,
 	            }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
@@ -337,6 +341,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 	            italic: (f as any)?.italic === 1,
 	            isSystem: (f as any)?.isSystem === 1,
 	            favoriteWeight: f.favoriteWeight,
+            language: f.language,
+            type: f.type,
 	          }))
           // 去重并只保留 5 个
           const seen = new Set<string>()

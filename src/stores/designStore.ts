@@ -1,4 +1,10 @@
 import { defineStore } from 'pinia'
+import type {
+  FontRoleBindings,
+  LocaleFontBinding,
+  WatchfaceLocale,
+  WatchfaceLocalizationConfig,
+} from '@/types/localization'
 
 export type WatchShape = 'circle' | 'rectangle'
 
@@ -20,6 +26,10 @@ export const useDesignStore = defineStore('design', {
       centerY: 227,
       shape: 'circle' as WatchShape,
     } as DesignSpec & { centerX: number; centerY: number },
+    defaultLocale: 'en-US' as WatchfaceLocale,
+    supportedLocales: ['en-US'] as WatchfaceLocale[],
+    supportsChineseContent: false,
+    fontRoles: {} as Record<string, FontRoleBindings>,
   }),
 
   actions: {
@@ -36,6 +46,41 @@ export const useDesignStore = defineStore('design', {
       this.designSpec.height = nextHeight
       this.designSpec.centerX = Math.round(nextWidth / 2)
       this.designSpec.centerY = Math.round(nextHeight / 2)
+    },
+
+    setSupportedLocales(locales: WatchfaceLocale[]): void {
+      const uniqueLocales = Array.from(new Set(locales))
+      this.supportedLocales = uniqueLocales.length ? uniqueLocales : ['en-US']
+      if (!this.supportedLocales.includes(this.defaultLocale)) {
+        this.defaultLocale = this.supportedLocales[0]
+      }
+    },
+
+    setDefaultLocale(locale: WatchfaceLocale): void {
+      this.defaultLocale = locale
+      if (!this.supportedLocales.includes(locale)) {
+        this.supportedLocales = [locale, ...this.supportedLocales]
+      }
+    },
+
+    setSupportsChineseContent(value: boolean): void {
+      this.supportsChineseContent = Boolean(value)
+    },
+
+    setLocaleFontRole(role: string, locale: WatchfaceLocale, binding: LocaleFontBinding): void {
+      if (!this.fontRoles[role]) {
+        this.fontRoles[role] = {}
+      }
+      this.fontRoles[role][locale] = binding
+    },
+
+    getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {
+      if (!this.supportedLocales.length || !Object.keys(this.fontRoles).length) return undefined
+      return {
+        defaultLocale: this.defaultLocale,
+        supportedLocales: [...this.supportedLocales],
+        fontRoles: this.fontRoles,
+      }
     },
   },
 })

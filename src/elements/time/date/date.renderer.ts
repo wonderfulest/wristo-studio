@@ -1,20 +1,36 @@
 import moment from 'moment'
 import { Text as FabricText } from 'fabric'
 import { nanoid } from 'nanoid'
-import { DateFormatOptions } from '@/config/settings'
+import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
 import type { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
+import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
+import { useDesignStore } from '@/stores/designStore'
 
-function formatDate(date: Date, formatter: number, textCase: number | undefined): string {
-  const option = DateFormatOptions.find((o) => o.value === formatter)
-  const format = option ? option.label : 'YYYY-MM-DD'
+function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
+  const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
+  if (isChineseDateFormatter(normalizedFormatter)) {
+    return formatChineseCulturalDate(date, normalizedFormatter, runtimeLocale)
+  }
+  const normalizedLocale = String(runtimeLocale || '').trim().toLowerCase()
+  const isChineseLocale = normalizedLocale === 'zh' || normalizedLocale === 'zh-cn' || normalizedLocale === 'zh-tw'
+  if (isChineseLocale && normalizedFormatter === DateFormatConstants.WEEKDAY_LONG) {
+    return formatChineseCulturalDate(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
+  }
+  if (isChineseLocale && normalizedFormatter === DateFormatConstants.MONTH_LONG) {
+    return `${date.getMonth() + 1}月`
+  }
+
+  const option = DateFormatOptions.find((o) => o.value === normalizedFormatter)
+  const format = option ? option.format || option.label : 'YYYY-MM-DD'
   let formatted = moment(date).format(format)
 
   if (textCase === 1) {
@@ -28,9 +44,14 @@ function formatDate(date: Date, formatter: number, textCase: number | undefined)
   return formatted
 }
 
+function getDatePreviewLocale(designStore: ReturnType<typeof useDesignStore>): string {
+  return designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+}
+
 export function createDate(config: DateElementConfig): FabricElement {
   const baseStore = useBaseStore()
   const propertiesStore = usePropertiesStore()
+  const designStore = useDesignStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
   const canvas = baseStore.canvas
@@ -47,7 +68,7 @@ export function createDate(config: DateElementConfig): FabricElement {
   }
 
   const textCase = (propertiesStore as any).textCase as number | undefined
-  const text = formatDate(getSimulatedNow(), formatterValue, textCase)
+  const text = formatDate(getSimulatedNow(), formatterValue, textCase, getDatePreviewLocale(designStore))
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -72,6 +93,7 @@ export function createDate(config: DateElementConfig): FabricElement {
         now,
         option2 ? currentFormatter : (element as any).formatter,
         (propertiesStore as any).textCase,
+        getDatePreviewLocale(designStore),
       )
       element.set('text', nextText)
       canvas.requestRenderAll?.()
@@ -126,6 +148,7 @@ export function createDate(config: DateElementConfig): FabricElement {
 export function updateDate(element: FabricElement, patch: Partial<DateElementConfig> = {}): void {
   const baseStore = useBaseStore()
   const propertiesStore = usePropertiesStore()
+  const designStore = useDesignStore()
   const canvas = baseStore.canvas
   const elementDataStore = useElementDataStore()
 
@@ -157,7 +180,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     const option = DateFormatOptions.find((o) => o.value === nextFormatter)
     if (option) {
       const textCase = (propertiesStore as any).textCase as number | undefined
-      obj.set('text', formatDate(getSimulatedNow(), nextFormatter, textCase))
+      obj.set('text', formatDate(getSimulatedNow(), nextFormatter, textCase, getDatePreviewLocale(designStore)))
     }
   }
 

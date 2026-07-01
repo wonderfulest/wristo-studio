@@ -14,6 +14,7 @@
             :label="font.family"
             :font-family="font.value"
 	            :type="type"
+	            :language="font.language"
 	            :font-url="font.src"
 	            :font-id="font.id"
 	            :style-tags="font.styleTags"
@@ -37,6 +38,10 @@ import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
+import {
+  isFontCompatibleWithDateLanguage,
+  type DateContentLanguage,
+} from '@/utils/dateFontCompatibility'
 
 const { t } = useI18n()
 
@@ -45,6 +50,8 @@ const props = defineProps<{
   modelValue: string
   type?: string
   canUsePremiumAssets?: boolean
+  dateContentLanguage?: DateContentLanguage
+  excludeIconFonts?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -53,7 +60,16 @@ const emit = defineEmits<{
 }>()
 
 const fontStore = useFontStore()
-const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true))
+const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true)
+  .filter((font) => {
+    if (props.dateContentLanguage) {
+      return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
+    }
+    if (props.excludeIconFonts) {
+      return String(font.type || '') !== 'icon_font'
+    }
+    return true
+  }))
 
 const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
   fontStore.updateFontFavorite(id, favoriteWeight)

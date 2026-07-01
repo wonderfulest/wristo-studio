@@ -26,7 +26,11 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.font')">
-        <font-picker v-model="currentModel.fontFamily" @change="updateElement" />
+        <font-picker
+          v-model="currentModel.fontFamily"
+          :date-content-language="metricTextFontLanguage"
+          @change="updateElement"
+        />
       </el-form-item>
     </el-form>
   </div>
@@ -44,9 +48,12 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
+import { useDesignStore } from '@/stores/designStore'
+import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
+const designStore = useDesignStore()
 const props = defineProps<{
   // 旧通道：直接传入 FabricElement
   element?: any
@@ -60,6 +67,14 @@ const formRef = ref<any>(null)
 // 当前表单绑定的数据模型：优先使用业务 config，其次回退到 FabricElement
 const currentModel = computed<any>(() => {
   return props.config ?? props.element ?? {}
+})
+
+const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
+  const eleType = String(currentModel.value?.eleType ?? props.element?.eleType ?? '')
+  if (!designStore.supportsChineseContent || !['label', 'unit'].includes(eleType)) {
+    return undefined
+  }
+  return 'zh'
 })
 
 // 统一更新：先校验，再通过 applyPatch 或 elementManager 下发补丁

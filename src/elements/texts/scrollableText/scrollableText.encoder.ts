@@ -27,6 +27,8 @@ export function encodeScrollableText(element: FabricElement): TextElementConfig 
         : (typeof element.top === 'number' ? element.top : 0),
     scrollAreaBackground: anyEl.scrollAreaBackground,
     textProperty: anyEl.textProperty,
+    localizedText: anyEl.localizedText,
+    localization: anyEl.localization,
     textTemplate:
       typeof anyEl.textTemplate === 'string'
         ? anyEl.textTemplate
@@ -64,6 +66,8 @@ export function decodeScrollableText(config: TextElementConfig): Partial<FabricE
     scrollAreaTop: (config as any).scrollAreaTop,
     scrollAreaBackground: (config as any).scrollAreaBackground,
     textProperty: config.textProperty,
+    localizedText: config.localizedText,
+    localization: config.localization,
     textTemplate,
     text: resolvedText,
   } as any

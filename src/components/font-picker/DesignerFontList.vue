@@ -12,6 +12,7 @@
           :label="font.fullName || font.family || font.slug"
           :font-family="font.slug"
           :type="type"
+          :language="font.language"
           :is-system="font.isSystem === 1"
           :is-monospace="font.isMonospace === 1"
           :subfamily="font.subfamily || ''"
@@ -41,6 +42,11 @@ import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
+import {
+  isFontCompatibleWithDateLanguage,
+  type DateContentLanguage,
+} from '@/utils/dateFontCompatibility'
+import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
 
 const { t } = useI18n()
 
@@ -50,6 +56,8 @@ const props = defineProps<{
   canUsePremiumAssets?: boolean
   includeAllUsers?: boolean
   excludedFontValues?: Set<string>
+  dateContentLanguage?: DateContentLanguage
+  excludeIconFonts?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -64,7 +72,19 @@ const pageSize = ref(10)
 const total = ref(0)
 
 const hasMore = computed(() => fonts.value.length < total.value)
-const visibleFonts = computed(() => fonts.value.filter(font => !props.excludedFontValues?.has(font.slug)))
+const languageFilter = computed(() => getFontLanguagesForDateContent(props.dateContentLanguage))
+const isVisibleFont = (font: DesignFontVO) => {
+  if (props.excludedFontValues?.has(font.slug)) return false
+  if (props.dateContentLanguage) {
+    return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
+  }
+  if (props.excludeIconFonts) {
+    return String(font.type || '') !== 'icon_font'
+  }
+  return true
+}
+
+const visibleFonts = computed(() => fonts.value.filter(isVisibleFont))
 
 defineExpose({
   loadNextPage,
@@ -76,18 +96,21 @@ const loadPage = async () => {
   loading.value = true
   try {
     const resp: ApiResponse<PageResponse<DesignFontVO>> =
-      props.canUsePremiumAssets === true
+      props.canUsePremiumAssets === true && props.type
         ? await getDesignerUsageFontsPage({
             pageNum: pageNum.value,
             pageSize: pageSize.value,
             type: props.type,
             includeAllUsers: props.includeAllUsers === true,
+            languages: languageFilter.value,
           })
         : await searchFonts({
             pageNum: pageNum.value,
             pageSize: pageSize.value,
-            type: props.type,
-            isSystem: 1,
+            type: props.type || undefined,
+            isSystem: props.canUsePremiumAssets === true ? undefined : 1,
+            includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
+            languages: languageFilter.value,
           })
     if (resp.code === 0 && resp.data) {
       const { list, total: t } = resp.data
@@ -148,6 +171,8 @@ const handleSelect = (font: DesignFontVO) => {
     italic: font.italic === 1,
     isSystem: font.isSystem === 1,
     favoriteWeight: font.favoriteWeight,
+    language: font.language,
+    type: font.type,
   }
   emit('select', item)
 }
@@ -167,7 +192,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers],
+  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
   () => {
     // reset when type changes
     pageNum.value = 1

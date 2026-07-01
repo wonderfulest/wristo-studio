@@ -77,5 +77,6 @@ export interface DesignFontSearchDTO {
   maxWidthClass?: number
   styleTags?: string[]
   usageTags?: string[]
+  languages?: string[]
   includeAllUsers?: boolean
 }

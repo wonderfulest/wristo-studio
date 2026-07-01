@@ -9,6 +9,7 @@ import { dateSchema } from '@/elements/time/date/date.schema'
 import { dataSchema } from '@/elements/data/data/data.schema'
 import { iconSchema } from '@/elements/data/icon/icon.schema'
 import { labelSchema } from '@/elements/data/label/label.schema'
+import { unitSchema } from '@/elements/data/unit/unit.schema'
 import { moonSchema } from '@/elements/weather/moon/moon.schema'
 import { weatherSchema } from '@/elements/weather/weather/weather.schema'
 import { windDirectionSchema } from '@/elements/weather/windDirection/windDirection.schema'
@@ -91,7 +92,7 @@ export const elementConfigs: ElementConfigs = {
     icon: buildConfigFromSchema(iconSchema as AnySchema),
     data: buildConfigFromSchema(dataSchema as AnySchema),
     label: buildConfigFromSchema(labelSchema as AnySchema),
-    // unit: DEFAULT_UNIT_CONFIG, // unit 目前未暴露为 schema
+    unit: buildConfigFromSchema(unitSchema as AnySchema),
   },
   indicator: {
     bluetooth: buildConfigFromSchema(bluetoothSchema as AnySchema),
