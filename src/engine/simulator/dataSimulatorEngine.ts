@@ -107,6 +107,31 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'notifications'
     case ':INDICATOR_TYPE_ALARM':
       return 'alarms'
+    case ':FIELD_TYPE_WEATHER':
+    case ':FIELD_TYPE_WEATHER_DESCRIPTION':
+      return 'weather'
+    case ':FIELD_TYPE_TEMPERATURE':
+      return 'temperature'
+    case ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE':
+      return 'feelsLikeTemperature'
+    case ':FIELD_TYPE_TEMPERATURE_HIGH':
+      return 'temperatureHigh'
+    case ':FIELD_TYPE_TEMPERATURE_LOW':
+      return 'temperatureLow'
+    case ':FIELD_TYPE_TEMPERATURE_RANGE':
+      return 'temperatureRange'
+    case ':FIELD_TYPE_SENSOR_TEMPERATURE':
+      return 'sensorTemperature'
+    case ':FIELD_TYPE_HUMIDITY':
+    case ':FIELD_TYPE_WEATHER_HUMIDITY':
+      return 'humidity'
+    case ':FIELD_TYPE_WIND_SPEED':
+    case ':FIELD_TYPE_WEATHER_WIND_SPEED':
+      return 'windSpeed'
+    case ':FIELD_TYPE_WEATHER_WIND_DIRECTION':
+      return 'windDeg'
+    case ':FIELD_TYPE_WEATHER_CLOUDS':
+      return 'clouds'
     case ':FIELD_TYPE_SUN_RISE':
       return 'sunrise'
     case ':FIELD_TYPE_SUN_SET':

@@ -35,9 +35,46 @@ const sortBySortOrder = (a: DataTypeOption, b: DataTypeOption) => {
   return a.label.localeCompare(b.label)
 }
 
+const TEMPERATURE_SYMBOLS = new Set([
+  ':FIELD_TYPE_TEMPERATURE',
+  ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE',
+  ':FIELD_TYPE_TEMPERATURE_HIGH',
+  ':FIELD_TYPE_TEMPERATURE_LOW',
+  ':FIELD_TYPE_TEMPERATURE_RANGE',
+  ':FIELD_TYPE_SENSOR_TEMPERATURE',
+])
+
+const FALLBACK_ICON_UNICODE_BY_SYMBOL: Record<string, string> = {
+  ':FIELD_TYPE_TEMPERATURE': '0062',
+  ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE': '0062',
+  ':FIELD_TYPE_TEMPERATURE_HIGH': '0062',
+  ':FIELD_TYPE_TEMPERATURE_LOW': '0062',
+  ':FIELD_TYPE_TEMPERATURE_RANGE': '0062',
+  ':FIELD_TYPE_SENSOR_TEMPERATURE': '0062',
+  ':FIELD_TYPE_HUMIDITY': '0067',
+  ':FIELD_TYPE_WEATHER_HUMIDITY': '0067',
+  ':FIELD_TYPE_WIND_SPEED': '0068',
+  ':FIELD_TYPE_WEATHER_WIND_SPEED': '0068',
+  ':FIELD_TYPE_WEATHER_WIND_DIRECTION': '0068',
+  ':FIELD_TYPE_WEATHER_CLOUDS': '0069',
+}
+
+const resolveUnit = (option: DataTypeOptionVO): string => {
+  const unit = String(option.unit || '').trim()
+  if (unit) return unit
+  return TEMPERATURE_SYMBOLS.has(option.metricSymbol) ? '°C' : ''
+}
+
+const resolveIconUnicode = (option: DataTypeOptionVO): string => {
+  if (TEMPERATURE_SYMBOLS.has(option.metricSymbol)) return '0062'
+  const iconUnicode = String(option.iconUnicode || option.icon || '').trim()
+  if (iconUnicode) return iconUnicode
+  return FALLBACK_ICON_UNICODE_BY_SYMBOL[option.metricSymbol] || ''
+}
+
 const toDataTypeOption = (option: DataTypeOptionVO): DataTypeOption => {
   const label = localizedLabel(option, 'eng')
-  const iconUnicode = option.iconUnicode || option.icon || ''
+  const iconUnicode = resolveIconUnicode(option)
   return {
     labelCn: localizedLabel(option, 'zhs'),
     metricSymbol: option.metricSymbol,
@@ -46,7 +83,7 @@ const toDataTypeOption = (option: DataTypeOptionVO): DataTypeOption => {
     icon: iconUnicode,
     iconUnicode,
     sortOrder: option.sortOrder,
-    unit: option.unit || '',
+    unit: resolveUnit(option),
     label,
     enLabel: label,
   }

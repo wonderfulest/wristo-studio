@@ -19,6 +19,11 @@ type SimState = {
   floors: number
   distanceKm: number
   altitudeM: number
+  temperatureC: number
+  feelsLikeC: number
+  temperatureHighC: number
+  temperatureLowC: number
+  sensorTemperatureC: number
   battery: number
   notifications: number
   alarms: number
@@ -39,6 +44,11 @@ const simState: SimState = {
   floors: 12,
   distanceKm: 5.2,
   altitudeM: 328,
+  temperatureC: 24,
+  feelsLikeC: 27,
+  temperatureHighC: 29,
+  temperatureLowC: 18,
+  sensorTemperatureC: 23,
   battery: 84,
   notifications: 5,
   alarms: 2,
@@ -78,6 +88,11 @@ export function tickSimulatedData(): void {
   simState.calories = Math.max(0, simState.calories + randInt(0, 3))
   simState.floors = Math.max(0, simState.floors + (Math.random() < 0.02 ? 1 : 0))
   simState.distanceKm = Math.max(0, simState.steps / 1600)
+  simState.temperatureC = clamp(simState.temperatureC + randInt(-1, 1), -30, 50)
+  simState.feelsLikeC = clamp(simState.temperatureC + 3, -30, 55)
+  simState.temperatureHighC = Math.max(simState.temperatureC + 2, simState.temperatureHighC + randInt(-1, 1))
+  simState.temperatureLowC = Math.min(simState.temperatureC - 2, simState.temperatureLowC + randInt(-1, 1))
+  simState.sensorTemperatureC = clamp(simState.temperatureC + randInt(-2, 2), -30, 50)
 
   simState.battery = clamp(simState.battery - (Math.random() < 0.01 ? 1 : 0), 0, 100)
   simState.notifications = clamp(simState.notifications + (Math.random() < 0.05 ? 1 : 0), 0, 99)
@@ -162,6 +177,38 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'weather':
     case 'wthr':
       return { display: 'Sunny', unit: '', label: 'WEATHER' }
+
+    // 温度
+    case 'temperature':
+    case 'temp':
+      return { display: String(simState.temperatureC), numeric: simState.temperatureC, unit: '°C', label: 'TEMP' }
+    case 'feelsLikeTemperature':
+    case 'feelsLike':
+    case 'feel':
+      return { display: String(simState.feelsLikeC), numeric: simState.feelsLikeC, unit: '°C', label: 'FEELS' }
+    case 'temperatureHigh':
+    case 'tempHigh':
+    case 'high':
+      return { display: String(simState.temperatureHighC), numeric: simState.temperatureHighC, unit: '°C', label: 'HIGH' }
+    case 'temperatureLow':
+    case 'tempLow':
+    case 'low':
+      return { display: String(simState.temperatureLowC), numeric: simState.temperatureLowC, unit: '°C', label: 'LOW' }
+    case 'temperatureRange':
+    case 'tempRange':
+      return {
+        display: `${simState.temperatureLowC}-${simState.temperatureHighC}`,
+        unit: '°C',
+        label: 'RANGE',
+      }
+    case 'sensorTemperature':
+    case 'sensorTemp':
+      return {
+        display: String(simState.sensorTemperatureC),
+        numeric: simState.sensorTemperatureC,
+        unit: '°C',
+        label: 'SENSOR_TEMP',
+      }
 
     // 湿度
     case 'humidity':
