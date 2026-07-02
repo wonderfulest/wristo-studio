@@ -21,6 +21,8 @@ export interface DataTypeOption {
   value: number
   defaultValue: string
   icon: string
+  iconUnicode?: string
+  sortOrder?: number
   unit?: string
   label: string
   enLabel: string

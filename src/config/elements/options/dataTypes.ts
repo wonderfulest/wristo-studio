@@ -24,14 +24,28 @@ const localizedLabel = (option: DataTypeOptionVO, lang: 'eng' | 'zhs') => {
   return readLocalizedLabel(option, lang) || labelI18nEng(option)
 }
 
+const sortOrder = (value: unknown) => {
+  const order = Number(value)
+  return Number.isFinite(order) ? order : Number.POSITIVE_INFINITY
+}
+
+const sortBySortOrder = (a: DataTypeOption, b: DataTypeOption) => {
+  const diff = sortOrder(a.sortOrder) - sortOrder(b.sortOrder)
+  if (diff !== 0) return diff
+  return a.label.localeCompare(b.label)
+}
+
 const toDataTypeOption = (option: DataTypeOptionVO): DataTypeOption => {
   const label = localizedLabel(option, 'eng')
+  const iconUnicode = option.iconUnicode || option.icon || ''
   return {
     labelCn: localizedLabel(option, 'zhs'),
     metricSymbol: option.metricSymbol,
     value: option.value ?? option.valueCode,
     defaultValue: option.defaultValue || '',
-    icon: option.icon || option.iconUnicode || '',
+    icon: iconUnicode,
+    iconUnicode,
+    sortOrder: option.sortOrder,
     unit: option.unit || '',
     label,
     enLabel: label,
@@ -43,7 +57,7 @@ export async function loadDataTypeOptions(force = false): Promise<DataTypeOption
   loadPromise = listDataTypeOptions({ active: 1 })
     .then((res) => {
       const list = Array.isArray(res.data) ? res.data : []
-      DataTypeOptions.splice(0, DataTypeOptions.length, ...list.map(toDataTypeOption))
+      DataTypeOptions.splice(0, DataTypeOptions.length, ...list.map(toDataTypeOption).sort(sortBySortOrder))
       dataTypeOptionsLoaded = true
       dataTypeOptionsLoadError = null
       return DataTypeOptions

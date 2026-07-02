@@ -64,7 +64,7 @@
               :value="option.value"
             >
               <div class="metric-option">
-                <span class="metric-icon">{{ option.icon }}</span>
+                <span class="metric-icon">{{ iconGlyph(option) }}</span>
                 <span class="metric-label">{{ option.label }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
@@ -72,7 +72,7 @@
         </el-form-item>
 
         <div v-if="selectedOption" class="selected-option-card">
-          <span class="selected-option-icon">{{ selectedOption.icon }}</span>
+          <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
           <div class="selected-option-copy">
             <div class="selected-option-title">{{ selectedOption.label }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
@@ -91,7 +91,7 @@
                 <div v-for="(option, index) in formData.options" :key="index" class="option-item">
                   <div class="option-content">
                     <div class="option-info">
-                      <span class="metric-icon">{{ option.icon }}</span>
+                      <span class="metric-icon">{{ iconGlyph(option) }}</span>
                       <span class="metric-label">{{ option.label }}</span>
                       <span class="metric-symbol">({{ option.metricSymbol }})</span>
                     </div>
@@ -165,6 +165,7 @@ import { useI18n } from '@/i18n'
 import { DataTypeOptions } from '@/config/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -173,6 +174,7 @@ const isEdit = ref(false)
 const activeOptions = ref([])
 const dataOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':FIELD_TYPE_'))
 const cloneDataOptions = () => JSON.parse(JSON.stringify(dataOptions))
+const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
 
 const formData = reactive({
   title: '',
@@ -289,9 +291,14 @@ defineExpose({
 }
 
 .metric-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
   font-size: 16px;
   width: 24px;
   text-align: center;
+}
+
+.selected-option-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
 }
 
 .metric-label {
