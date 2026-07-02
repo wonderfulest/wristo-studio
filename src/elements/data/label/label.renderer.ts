@@ -9,6 +9,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -24,6 +25,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en'),
     (propertiesStore as any).textCase,
   )
+  const displayStates = normalizeDisplayStates(config.displayStates)
 
   const element = new FabricText(labelText, {
     id,
@@ -37,6 +39,8 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     fontFamily: (config.fontFamily ?? 'roboto-condensed-regular') as any,
     dataProperty: config.dataProperty ?? null,
     goalProperty: config.goalProperty ?? null,
+    displayStates,
+    visible: getDisplayState(displayStates, layerStore.previewMode),
     selectable: true,
     hasControls: false,
     hasBorders: true,
@@ -62,6 +66,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     goalProperty: (element as any).goalProperty ?? config.goalProperty ?? null,
     metricSymbol: (element as any).metricSymbol ?? (config as any).metricSymbol ?? undefined,
     metricValue: (element as any).metricValue ?? (config as any).metricValue ?? undefined,
+    displayStates,
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
@@ -96,6 +101,7 @@ export function updateLabel(
     metricValue: patch.metricValue,
     dataProperty: patch.dataProperty,
     goalProperty: patch.goalProperty,
+    displayStates: patch.displayStates ? normalizeDisplayStates(patch.displayStates) : undefined,
   }
 
   Object.entries(updates).forEach(([key, value]) => {
@@ -107,6 +113,10 @@ export function updateLabel(
       }
     }
   })
+
+  if (patch.displayStates !== undefined) {
+    ;(text as any).set('visible', getDisplayState(normalizeDisplayStates(patch.displayStates), useLayerStore().previewMode))
+  }
 
   if (patch.left === undefined) (text as any).set('left', currentLeft)
   if (patch.top === undefined) (text as any).set('top', currentTop)
@@ -131,6 +141,7 @@ export function updateLabel(
       goalProperty: (text as any).goalProperty ?? undefined,
       metricSymbol: (text as any).metricSymbol ?? undefined,
       metricValue: (text as any).metricValue ?? undefined,
+      displayStates: normalizeDisplayStates((text as any).displayStates),
       topBase: encodeTopBaseForElement(text as any),
     } as LabelElementConfig
 

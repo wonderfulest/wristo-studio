@@ -10,6 +10,7 @@ import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 
 export async function createIcon(config: IconElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -36,6 +37,7 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     strategy.currentIconFontSize === -1
       ? (Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 24)
       : strategy.currentIconFontSize
+  const displayStates = normalizeDisplayStates(config.displayStates)
 
   const iconOptions: Partial<IconProps> = {
     id: config.id || nanoid(),
@@ -50,6 +52,8 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     metricSymbol: config.metricSymbol,
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
+    displayStates,
+    visible: getDisplayState(displayStates, layerStore.previewMode),
     selectable: true,
     hasControls: false,
     hasBorders: true,
@@ -78,6 +82,7 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
     dataProperty: (element as any).dataProperty ?? config.dataProperty ?? null,
     goalProperty: (element as any).goalProperty ?? config.goalProperty ?? null,
     metricSymbol: (element as any).metricSymbol ?? config.metricSymbol ?? '',
+    displayStates,
     topBase: encodeTopBaseForElement(element as unknown as FabricElement),
   } as any)
 
@@ -113,6 +118,7 @@ export function updateIcon(
     metricSymbol: config.metricSymbol,
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
+    displayStates: config.displayStates ? normalizeDisplayStates(config.displayStates) : undefined,
     text: typeof (config as any).text === 'undefined' ? undefined : resolveIconGlyphText((config as any).text),
   }
 
@@ -121,6 +127,10 @@ export function updateIcon(
       obj.set(key as keyof TextProps, value as never)
     }
   })
+
+  if (config.displayStates !== undefined) {
+    obj.set('visible', getDisplayState(normalizeDisplayStates(config.displayStates), useLayerStore().previewMode))
+  }
 
   if (config.left === undefined) obj.set('left', currentLeft)
   if (config.top === undefined) obj.set('top', currentTop)
@@ -145,6 +155,7 @@ export function updateIcon(
       dataProperty: (obj as any).dataProperty,
       goalProperty: (obj as any).goalProperty,
       metricSymbol: (obj as any).metricSymbol,
+      displayStates: normalizeDisplayStates((obj as any).displayStates),
       topBase: encodeTopBaseForElement(obj as unknown as FabricElement),
     } satisfies IconElementConfig
 

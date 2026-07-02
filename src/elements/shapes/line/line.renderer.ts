@@ -5,6 +5,7 @@ import type { LineElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 
 // ─── 辅助：x1/y1/x2/y2 <-> Rect left/top/width/angle 互转 ───────────────────
 
@@ -123,6 +124,7 @@ export async function createLine(config: LineElementConfig): Promise<FabricEleme
   const y2 = Math.round(config.y2 ?? 50)
 
   const { left, top, width, height, angle } = pointsToRect(x1, y1, x2, y2, strokeWidth)
+  const displayStates = normalizeDisplayStates(config.displayStates)
 
   const rect = new Rect({
     id: nanoid(),
@@ -138,7 +140,8 @@ export async function createLine(config: LineElementConfig): Promise<FabricEleme
     originX: 'center',
     originY: 'center',
     opacity: config.opacity ?? 1,
-    visible: true,
+    displayStates,
+    visible: getDisplayState(displayStates, layerStore.previewMode),
     selectable: true,
     hasControls: true,
     hasBorders: true,
@@ -159,6 +162,7 @@ export async function createLine(config: LineElementConfig): Promise<FabricEleme
     height: rect.height,
     fill: rect.fill,
     opacity: rect.opacity,
+    displayStates,
   } as any)
 
   canvas.add(rect as any)
@@ -176,6 +180,7 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
   let currentRect: any = null
   let startX = 0
   let startY = 0
+  const layerStore = useLayerStore()
 
   const mouseDownHandler = (o: any) => {
     const pointer = canvas.getPointer(o.e)
@@ -185,6 +190,7 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
 
     const strokeWidth = Math.max(1, Number(initialConfig.strokeWidth) || 2)
     const fill = initialConfig.stroke || '#000000'
+    const displayStates = normalizeDisplayStates(initialConfig.displayStates)
 
     currentRect = new Rect({
       id: nanoid(),
@@ -200,6 +206,8 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
       originX: 'center',
       originY: 'center',
       opacity: initialConfig.opacity ?? 1,
+      displayStates,
+      visible: getDisplayState(displayStates, layerStore.previewMode),
       selectable: false,
       hasControls: false,
       hasBorders: false,
@@ -263,9 +271,9 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
         height: currentRect.height,
         fill: currentRect.fill,
         opacity: currentRect.opacity,
+        displayStates: normalizeDisplayStates(currentRect.displayStates),
       } as any)
 
-      const layerStore = useLayerStore()
       layerStore.addLayer(currentRect)
       canvas.setActiveObject(currentRect)
     }
@@ -301,6 +309,11 @@ export function updateLine(element: FabricElement, patch: Partial<LineElementCon
   const canvas = canvasStore.canvas
 
   if (!canvas || !rect) return
+
+  if (patch.displayStates !== undefined) {
+    const displayStates = normalizeDisplayStates(patch.displayStates)
+    rect.set({ displayStates, visible: getDisplayState(displayStates, useLayerStore().previewMode) })
+  }
 
   // 颜色 → fill
   if (patch.stroke !== undefined) rect.set('fill', patch.stroke)
@@ -345,6 +358,7 @@ export function updateLine(element: FabricElement, patch: Partial<LineElementCon
       height: rect.height as number,
       fill: rect.fill as string,
       opacity: rect.opacity as number,
+      displayStates: normalizeDisplayStates(rect.displayStates),
     } as any)
   }
 }

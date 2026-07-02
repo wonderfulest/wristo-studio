@@ -9,6 +9,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveMetricUnit } from '@/utils/metricLabel'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
@@ -22,6 +23,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
   const elementDataStore = useElementDataStore()
   const id = config.id || nanoid()
   const text = resolveUnitText(config)
+  const displayStates = normalizeDisplayStates(config.displayStates)
 
   const element = new FabricText(text, {
     id,
@@ -37,6 +39,8 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     goalProperty: config.goalProperty ?? undefined,
     metricSymbol: config.metricSymbol ?? '',
     metricValue: text,
+    displayStates,
+    visible: getDisplayState(displayStates, layerStore.previewMode),
     selectable: true,
     hasControls: false,
     hasBorders: true,
@@ -69,6 +73,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     goalProperty: (element as any).goalProperty ?? undefined,
     metricSymbol: String((element as any).metricSymbol ?? config.metricSymbol ?? ''),
     metricValue: text,
+    displayStates,
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
@@ -102,11 +107,16 @@ export function updateUnit(
     dataProperty: patch.dataProperty,
     goalProperty: patch.goalProperty,
     metricSymbol: patch.metricSymbol,
+    displayStates: patch.displayStates ? normalizeDisplayStates(patch.displayStates) : undefined,
   }
 
   Object.entries(updateProps).forEach(([key, value]) => {
     if (value !== undefined) obj.set(key, value)
   })
+
+  if (patch.displayStates !== undefined) {
+    obj.set('visible', getDisplayState(normalizeDisplayStates(patch.displayStates), useLayerStore().previewMode))
+  }
 
   if (patch.left === undefined) obj.set('left', currentLeft)
   if (patch.top === undefined) obj.set('top', currentTop)
@@ -142,6 +152,7 @@ export function updateUnit(
       goalProperty: (obj as any).goalProperty ?? undefined,
       metricSymbol: String((obj as any).metricSymbol ?? ''),
       metricValue: nextText,
+      displayStates: normalizeDisplayStates((obj as any).displayStates),
       topBase: encodeTopBaseForElement(obj as any),
     } as any)
   }

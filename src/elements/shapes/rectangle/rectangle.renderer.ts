@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { applyControlsToObject } from '@/utils/controlManager'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 
 function attachRectangleScaleSync(rectangle: Rect): void {
   rectangle.on('modified', () => {
@@ -41,6 +42,7 @@ function attachRectangleScaleSync(rectangle: Rect): void {
       strokeWidth: rectangle.strokeWidth as number,
       opacity: rectangle.opacity as number,
       borderRadius: (rectangle as any).rx as number,
+      displayStates: normalizeDisplayStates((rectangle as any).displayStates),
     } as any)
 
     rectangle.canvas?.requestRenderAll?.()
@@ -66,6 +68,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
   const strokeWidth = Number(config.strokeWidth ?? 0)
   const opacity = config.opacity != null ? Number(config.opacity) : 1
   const borderRadius = Number(config.borderRadius ?? 0)
+  const displayStates = normalizeDisplayStates(config.displayStates)
 
   const rectOptions: any = {
     id,
@@ -83,6 +86,8 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     ry: borderRadius,
     originX: (config.originX as any) ?? 'center',
     originY: (config.originY as any) ?? 'center',
+    displayStates,
+    visible: getDisplayState(displayStates, layerStore.previewMode),
     selectable: true,
     hasControls: true,
     hasBorders: true,
@@ -120,6 +125,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     borderRadius: (rectangle as any).rx,
     originX: rectangle.originX,
     originY: rectangle.originY,
+    displayStates,
   } as any)
 
   canvas.add(rectangle as any)
@@ -140,6 +146,11 @@ export function updateRectangle(
   const elementDataStore = useElementDataStore()
 
   if (!canvas || !rect) return
+
+  if (patch.displayStates !== undefined) {
+    const displayStates = normalizeDisplayStates(patch.displayStates)
+    rect.set({ displayStates, visible: getDisplayState(displayStates, useLayerStore().previewMode) })
+  }
 
   // 保护：若当前元素不是矩形，或 patch 看起来是天气的 AMOLED 配置，则忽略本次更新
   const eleType = (rect as any)?.eleType
@@ -223,6 +234,7 @@ export function updateRectangle(
       strokeWidth: rect.strokeWidth as number,
       opacity: rect.opacity as number,
       borderRadius: (rect as any).rx as number,
+      displayStates: normalizeDisplayStates((rect as any).displayStates),
     } as any)
   }
 }
