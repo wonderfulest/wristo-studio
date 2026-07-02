@@ -1,7 +1,30 @@
 <template>
   <div class="layer-panel">
     <div class="layer-list">
-      <h2 class="section-title">{{ t('panel.layers') }}</h2>
+      <div class="display-tabs" role="tablist" aria-label="Layer display state">
+        <button
+          class="display-tab"
+          :class="{ active: previewMode === 'active' }"
+          type="button"
+          role="tab"
+          :aria-selected="previewMode === 'active'"
+          @click="previewMode = 'active'"
+        >
+          <Icon icon="material-symbols:brightness-5-outline" />
+          <span>ACTIVE</span>
+        </button>
+        <button
+          class="display-tab"
+          :class="{ active: previewMode === 'ambient' }"
+          type="button"
+          role="tab"
+          :aria-selected="previewMode === 'ambient'"
+          @click="previewMode = 'ambient'"
+        >
+          <Icon icon="material-symbols:contrast" />
+          <span>AMBIENT</span>
+        </button>
+      </div>
       <draggable
         :list="layers"
         class="layers-list"
@@ -38,14 +61,36 @@
                 </span>
               </div>
               <div class="layer-actions">
-                <button class="layer-btn" @click.stop="toggleVisibility(layer)">
-                  <Icon :icon="layer.visible ? 'material-symbols:visibility' : 'material-symbols:visibility-off'" />
+                <button
+                  class="layer-btn"
+                  :aria-pressed="isLayerVisibleInPreview(layer)"
+                  :title="isLayerVisibleInPreview(layer) ? t('editorSettings.show') : t('editorSettings.hide')"
+                  @click.stop="toggleVisibility(layer)"
+                >
+                  <el-icon v-if="isLayerVisibleInPreview(layer)">
+                    <View />
+                  </el-icon>
+                  <el-icon v-else>
+                    <Hide />
+                  </el-icon>
                 </button>
-                <button class="layer-btn" @click.stop="toggleLock(layer)">
-                  <Icon :icon="layer.locked ? 'material-symbols:lock' : 'material-symbols:lock-open'" />
+                <button
+                  class="layer-btn"
+                  :aria-pressed="layer.locked"
+                  :title="layer.locked ? 'Unlock' : 'Lock'"
+                  @click.stop="toggleLock(layer)"
+                >
+                  <el-icon v-if="layer.locked">
+                    <Lock />
+                  </el-icon>
+                  <el-icon v-else>
+                    <Unlock />
+                  </el-icon>
                 </button>
                 <button v-if="!isFixedLayer(layer)" class="layer-btn" @click.stop="deleteLayer(layer)">
-                  <Icon icon="material-symbols:delete" />
+                  <el-icon>
+                    <Delete />
+                  </el-icon>
                 </button>
               </div>
             </div>
@@ -71,6 +116,8 @@ import { removeElement, getElementById } from '@/engine/managers/elementManager'
 import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager'
 import { useI18n } from '@/i18n'
 import type { LayerElement } from '@/types/layer'
+import { getDisplayState, type DisplayStateMode } from '@/utils/displayStates'
+import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -80,6 +127,16 @@ const { t } = useI18n()
 const panelLayers = ref<LayerElement[]>([])
 const isDraggingLayers = ref(false)
 const layers = computed(() => panelLayers.value)
+const previewMode = computed<DisplayStateMode>({
+  get: () => layerStore.previewMode,
+  set: (mode) => {
+    layerStore.setPreviewMode(mode)
+    if (mode === 'ambient') {
+      clearBackgroundSelection()
+    }
+    debouncedUpdateElements()
+  },
+})
 
 type DragEventLike = {
   oldIndex?: number
@@ -118,6 +175,25 @@ const resolveLayerGroupKey = (layer: LayerElement | any): string => {
 const isFixedLayer = (layer: any): boolean => {
   const t = String(layer?.eleType ?? '')
   return t === 'global' || t === 'background'
+}
+
+const isAmbientBackgroundLayer = (layer: any): boolean => {
+  return previewMode.value === 'ambient' && String(layer?.eleType ?? '') === 'background'
+}
+
+const clearBackgroundSelection = (): void => {
+  const backgroundIds = new Set(
+    layerStore.layers
+      .filter((layer) => String(layer?.eleType ?? '') === 'background')
+      .map((layer) => String(layer.id)),
+  )
+  if (!canvasStore.activeIds.some((id) => backgroundIds.has(String(id)))) return
+  baseStore.canvas?.discardActiveObject?.()
+  canvasStore.clearActiveIds()
+  layerStore.clearSelected()
+  activeElements.value = []
+  selectedIds.value = []
+  baseStore.canvas?.renderAll?.()
 }
 
 const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
@@ -294,6 +370,10 @@ const setupElementListeners = (): void => {
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: any): Promise<void> => {
   const isBackgroundLayer = String(layer?.eleType ?? '') === 'background'
+  if (isAmbientBackgroundLayer(layer)) {
+    clearBackgroundSelection()
+    return
+  }
   // do not allow selecting locked layers from panel
   if ((layer as { locked?: boolean }).locked && !isBackgroundLayer) {
     return
@@ -335,6 +415,7 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
   const layer = layers.value.find((l) => l.id === layerId)
   if (!layer) return false
+  if (isAmbientBackgroundLayer(layer)) return false
   if ((layer as any).locked && String((layer as any).eleType ?? '') !== 'background') return false
   const result =
     selectedIds.value.includes(layerId) ||
@@ -345,9 +426,20 @@ const isActived = (layerId: string | undefined): boolean => {
 
 const toggleVisibility = (layer: any): void => {
   if (!layer?.id) return
-  layerStore.toggleLayerVisibility(String(layer.id))
+  const id = String(layer.id)
+  layerStore.toggleLayerVisibility(id)
+  const updatedLayer = layerStore.layers.find((item) => item.id === id)
+  if (updatedLayer) {
+    layer.displayStates = updatedLayer.displayStates
+    layer.visible = updatedLayer.visible
+  }
   baseStore.canvas?.renderAll?.()
   debouncedUpdateElements()
+}
+
+const isLayerVisibleInPreview = (layer: LayerElement | any): boolean => {
+  const currentLayer = layerStore.layers.find((item) => item.id === String(layer?.id ?? ''))
+  return getDisplayState(currentLayer?.displayStates ?? layer?.displayStates, previewMode.value)
 }
 
 const toggleLock = (layer: any): void => {
@@ -580,14 +672,38 @@ onUnmounted((): void => {
   padding: 14px;
 }
 
-.section-title {
-  margin: 0 0 14px;
-  color: var(--studio-text);
-  padding-bottom: 10px;
+.display-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--studio-border);
-  font-size: 14px;
+}
+
+.display-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--studio-text-muted);
+  cursor: pointer;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.display-tab.active {
+  color: var(--studio-primary);
+  border-bottom-color: var(--studio-primary);
+}
+
+.display-tab svg {
+  width: 15px;
+  height: 15px;
 }
 
 .layers-list {

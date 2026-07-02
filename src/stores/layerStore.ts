@@ -3,6 +3,14 @@ import { useBaseStore } from './baseStore'
 import { markRaw } from 'vue'
 import type { LayerElement } from '@/types/layer'
 import type { MinimalFabricLike } from '@/types/layer'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import {
+  getDisplayState,
+  normalizeDisplayStates,
+  setDisplayState,
+  type DisplayStateMode,
+  type ElementDisplayStates,
+} from '@/utils/displayStates'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -11,6 +19,7 @@ export const useLayerStore = defineStore('layerStore', {
     return {
       baseStore,
       layers: [] as LayerElement[], // all layers
+      previewMode: 'active' as DisplayStateMode,
       selectedLayerIds: [] as string[] // currently selected layer ids, synced with canvas selection
     }
   },
@@ -19,12 +28,37 @@ export const useLayerStore = defineStore('layerStore', {
     allLayers: (state): LayerElement[] => {
       return state.layers
     },
+    currentPreviewMode: (state): DisplayStateMode => {
+      return state.previewMode
+    },
     isSelected: (state) => {
       return (id: string): boolean => state.selectedLayerIds.includes(id)
     }
   },
 
   actions: {
+    applyPreviewVisibility(): void {
+      this.layers.forEach((layer) => {
+        const displayStates = normalizeDisplayStates(layer.displayStates)
+        layer.displayStates = displayStates
+        layer.visible = String(layer.eleType ?? '') === 'background' && this.previewMode === 'ambient'
+          ? false
+          : getDisplayState(displayStates, this.previewMode)
+        if (layer.element) {
+          ;(layer.element as any).displayStates = displayStates
+          if (typeof layer.element.set === 'function') {
+            layer.element.set({ visible: layer.visible, displayStates })
+          } else {
+            ;(layer.element as any).visible = layer.visible
+          }
+        }
+      })
+      this.baseStore.canvas?.renderAll?.()
+    },
+    setPreviewMode(mode: DisplayStateMode): void {
+      this.previewMode = mode
+      this.applyPreviewVisibility()
+    },
     addLayer(element: MinimalFabricLike): void {
       if (!element || !element.id || !element.eleType) {
         console.error('[LayerStore:addLayer] 无效的元素', {
@@ -35,16 +69,23 @@ export const useLayerStore = defineStore('layerStore', {
         return
       }
       const id = String(element.id)
+      const storedConfig = useElementDataStore().getElementConfig(id) as any
+      const displayStates = normalizeDisplayStates((element as any).displayStates ?? storedConfig?.displayStates)
+      ;(element as any).displayStates = displayStates
       const existing = this.layers.find((l) => l.id === id)
       if (existing) {
         existing.eleType = element.eleType
+        existing.displayStates = displayStates
+        existing.visible = getDisplayState(displayStates, this.previewMode)
         existing.element = markRaw(element)
+        this.applyPreviewVisibility()
         return
       }
 
       const layerElement: LayerElement = {
         id,
-        visible: true,
+        visible: getDisplayState(displayStates, this.previewMode),
+        displayStates,
         locked: false,
         selectable: true,
         eleType: element.eleType,
@@ -56,8 +97,11 @@ export const useLayerStore = defineStore('layerStore', {
     setLayers(nextLayers: LayerElement[]): void {
       this.layers = nextLayers.map((l) => ({
         ...l,
+        displayStates: normalizeDisplayStates(l.displayStates ?? (l.element as any)?.displayStates),
+        visible: getDisplayState(l.displayStates ?? (l.element as any)?.displayStates, this.previewMode),
         element: markRaw(l.element),
       }))
+      this.applyPreviewVisibility()
     },
 
     removeLayer(layerId: string): void {
@@ -68,21 +112,30 @@ export const useLayerStore = defineStore('layerStore', {
       this.selectedLayerIds = this.selectedLayerIds.filter((id) => id !== layerId)
     },
 
-    toggleLayerVisibility(layerId: string): void {
-      const element = this.layers.find((l) => l.id === layerId)
-      if (element) {
-        element.visible = !element.visible
-        // sync to Fabric object
-        if (element.element) {
-          if (typeof element.element.set === 'function') {
-            element.element.set({ visible: element.visible })
-          } else {
-            // fallback
-            ;(element.element as unknown as { visible?: boolean }).visible = element.visible
-          }
+    setLayerDisplayStates(layerId: string, displayStates: ElementDisplayStates): void {
+      const layer = this.layers.find((l) => l.id === layerId)
+      if (!layer) return
+
+      const normalized = normalizeDisplayStates(displayStates)
+      layer.displayStates = normalized
+      layer.visible = getDisplayState(normalized, this.previewMode)
+      if (layer.element) {
+        ;(layer.element as any).displayStates = normalized
+        if (typeof layer.element.set === 'function') {
+          layer.element.set({ visible: layer.visible, displayStates: normalized })
+        } else {
+          ;(layer.element as any).visible = layer.visible
         }
-        this.baseStore.canvas?.renderAll?.()
       }
+      useElementDataStore().patchElement(layerId, { displayStates: normalized } as any)
+      this.baseStore.canvas?.renderAll?.()
+    },
+    toggleLayerVisibility(layerId: string): void {
+      const layer = this.layers.find((l) => l.id === layerId)
+      if (!layer) return
+
+      const next = setDisplayState(layer.displayStates, this.previewMode, !getDisplayState(layer.displayStates, this.previewMode))
+      this.setLayerDisplayStates(layerId, next)
     },
     toggleLayerLock(layerId: string): void {
       const layer = this.layers.find((l) => l.id === layerId)
@@ -136,6 +189,6 @@ export const useLayerStore = defineStore('layerStore', {
   },
   persist: {
     storage: localStorage,
-    pick: ['layers', 'selectedLayerIds']
+    pick: ['previewMode', 'selectedLayerIds']
   }
 })

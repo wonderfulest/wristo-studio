@@ -1,6 +1,7 @@
 import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizeFields } from '@/utils/fontSize'
+import { normalizeDisplayStates } from '@/utils/displayStates'
 
 // 统一的元素处理器：负责元素的增删改查编解码
 export type ElementHandler = {
@@ -45,7 +46,11 @@ export const encodeElementByRegistry = (
   if (!encoder) return null
 
   const encoded = encoder(element)
-  return encoded ? normalizeFontSizeFields(encoded as unknown as Record<string, unknown>) as unknown as AnyElementConfig : null
+  if (!encoded) return null
+
+  const normalized = normalizeFontSizeFields(encoded as unknown as Record<string, unknown>) as unknown as AnyElementConfig
+  ;(normalized as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (encoded as any).displayStates)
+  return normalized
 }
 
 // 统一解码入口：根据配置中的 eleType 调用对应 handler.decode，将解码结果合并回配置
@@ -61,12 +66,16 @@ export const decodeElementConfig = (
   const decoder = handler.decode
   if (!decoder) {
     // 未提供专门的 decoder，则直接返回原始配置
-    return normalizeFontSizeFields(config as unknown as Record<string, unknown>) as unknown as AnyElementConfig
+    const normalized = normalizeFontSizeFields(config as unknown as Record<string, unknown>) as unknown as AnyElementConfig
+    ;(normalized as any).displayStates = normalizeDisplayStates((config as any).displayStates)
+    return normalized
   }
 
   const partial = decoder(config)
-  return normalizeFontSizeFields({
+  const normalized = normalizeFontSizeFields({
     ...config,
     ...(partial as object),
   } as Record<string, unknown>) as unknown as AnyElementConfig
+  ;(normalized as any).displayStates = normalizeDisplayStates((partial as any)?.displayStates ?? (config as any).displayStates)
+  return normalized
 }

@@ -65,7 +65,9 @@ import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useThemeStore } from '@/stores/theme'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
+import { useLayerStore } from '@/stores/layerStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
+import { syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
@@ -92,6 +94,7 @@ import {
 } from '@/utils/designScale'
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import { useI18n } from '@/i18n'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -112,6 +115,7 @@ const exportPanelRef = ref<InstanceType<typeof ExportPanel> | null>(null)
 const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
 const themeStore = useThemeStore()
+const layerStore = useLayerStore()
 const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
 const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
@@ -322,6 +326,41 @@ const scaleElementsFromStoredSize = (elements: AnyElementConfig[]): AnyElementCo
   })
 }
 
+const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => {
+  const canvas = baseStore.canvas
+  if (!canvas) return
+
+  const displayStatesById = new Map<string, ReturnType<typeof normalizeDisplayStates>>()
+  elements.forEach((element) => {
+    const id = (element as any)?.id
+    if (id == null) return
+    displayStatesById.set(String(id), normalizeDisplayStates((element as any).displayStates))
+  })
+
+  const objects = canvas.getObjects?.() || []
+  objects.forEach((obj: any) => {
+    const id = obj?.id
+    if (id == null) return
+
+    const savedDisplayStates =
+      displayStatesById.get(String(id)) ??
+      normalizeDisplayStates((elementDataStore.getElementConfig(String(id)) as any)?.displayStates ?? obj.displayStates)
+    const visible = getDisplayState(savedDisplayStates, layerStore.previewMode)
+
+    obj.displayStates = savedDisplayStates
+    if (typeof obj.set === 'function') {
+      obj.set({ displayStates: savedDisplayStates, visible })
+    } else {
+      obj.visible = visible
+    }
+    elementDataStore.patchElement(String(id), { displayStates: savedDisplayStates } as any)
+  })
+
+  syncLayersFromCanvas()
+  layerStore.applyPreviewVisibility()
+  canvas.requestRenderAll?.()
+}
+
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
   baseStore.setDesignLoading(true)
@@ -409,7 +448,9 @@ const loadDesign = async (designUid: string) => {
     // 加载元素到画布
     if (config && config.elements) {
       // config.elements 是 API DesignElement[]，此处通过解码器转换为内部 AnyElementConfig
-      await loadElements(scaleElementsFromStoredSize(config.elements as any))
+      const scaledElements = scaleElementsFromStoredSize(config.elements as any)
+      await loadElements(scaledElements)
+      applyLoadedElementDisplayStates(scaledElements)
     }
     
     // 更新画布缩放
@@ -421,6 +462,9 @@ const loadDesign = async (designUid: string) => {
     // 重新排序画布
     if (config.orderIds) {
       reorderCanvasByIds(config.orderIds)
+      if (Array.isArray(config.elements)) {
+        applyLoadedElementDisplayStates(config.elements as any)
+      }
     }
 
     setTimeout(() => {

@@ -41,17 +41,23 @@ const layerStore = useLayerStore()
 
 // 通过 activeIds 从画布对象列表映射出当前选中的元素
 const activeElements = computed<FabricElement[]>(() => {
+  const isAmbientBackgroundBlocked = (element: unknown): boolean => {
+    return layerStore.previewMode === 'ambient' && String((element as any)?.eleType ?? '') === 'background'
+  }
+
   if (!canvasStore.canvas) return []
   const objects = canvasStore.canvas.getObjects()
   const idSet = new Set(canvasStore.activeIds)
-  const activeObjects = objects.filter((o) => (o as any).id && idSet.has(String((o as any).id)))
+  const activeObjects = objects.filter(
+    (o) => (o as any).id && idSet.has(String((o as any).id)) && !isAmbientBackgroundBlocked(o),
+  )
   if (activeObjects.length > 0) {
     return activeObjects as FabricElement[]
   }
 
   const layerElements = canvasStore.activeIds
     .map((id) => layerStore.layers.find((layer) => String(layer.id) === String(id))?.element)
-    .filter(Boolean)
+    .filter((element) => element && !isAmbientBackgroundBlocked(element))
 
   return layerElements as unknown as FabricElement[]
 })

@@ -5,6 +5,7 @@ import type { BackgroundElementConfig } from '@/types/elements/background'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import {
+  DEFAULT_BACKGROUND_COLOR,
   DEFAULT_BACKGROUND_IMAGE_URL,
   isDefaultBackgroundUrl,
   resolveBackgroundUrl,
@@ -25,6 +26,15 @@ function createPlaceholderImageElement(): HTMLImageElement {
 
 function clearActiveBackground(canvas: any): void {
   canvas.discardActiveObject?.()
+}
+
+function normalizeBackgroundColor(color: unknown): string {
+  if (typeof color !== 'string') return DEFAULT_BACKGROUND_COLOR
+  const value = color.trim()
+  if (!value || value === '-1' || value.toLowerCase() === 'transparent') return DEFAULT_BACKGROUND_COLOR
+  if (/^0x[0-9a-f]{6}$/i.test(value)) return `#${value.slice(2)}`
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value
+  return DEFAULT_BACKGROUND_COLOR
 }
 
 async function setFabricImageSource(
@@ -86,6 +96,7 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
   const locked = hasManualLockState ? Boolean((imgObj as any).locked) : isDefault
   const originX = (config.originX as any) ?? (imgObj as any).originX ?? 'center'
   const originY = (config.originY as any) ?? (imgObj as any).originY ?? 'center'
+  const color = normalizeBackgroundColor(config.color ?? (imgObj as any).color)
 
   imgObj.set({
     left: cx,
@@ -105,7 +116,12 @@ function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundEl
     lockScalingY: true,
     lockRotation: true,
     hoverCursor: 'default',
+    backgroundColor: color,
   } as any)
+  ;(imgObj as any).color = color
+  if (config.colorProperty !== undefined) {
+    ;(imgObj as any).colorProperty = config.colorProperty
+  }
 
   if (config.left != null) imgObj.set('left', Number(config.left) as never)
   if (config.top != null) imgObj.set('top', Number(config.top) as never)
@@ -182,6 +198,8 @@ export async function createBackground(config: BackgroundElementConfig): Promise
 
   ;(img as any).wristoImageUrl = url
   ;(img as any).wristoImageId = config.imageId ?? null
+  ;(img as any).color = normalizeBackgroundColor(config.color)
+  ;(img as any).colorProperty = config.colorProperty ?? ''
 
   applyBackgroundLayout(img, config)
 
@@ -259,6 +277,12 @@ export async function updateBackground(
 
   if (patch.imageId !== undefined) {
     ;(bg as any).wristoImageId = patch.imageId
+  }
+  if (patch.color !== undefined) {
+    ;(bg as any).color = normalizeBackgroundColor(patch.color)
+  }
+  if (patch.colorProperty !== undefined) {
+    ;(bg as any).colorProperty = patch.colorProperty
   }
 
   applyBackgroundLayout(bg, patch)

@@ -13,6 +13,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getFontSizeByStep } from '@/utils/fontSize'
+import { normalizeDisplayStates } from '@/utils/displayStates'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -57,8 +58,12 @@ export async function addElement(type: ElementType, config: AnyElementConfig): P
   if (!handler || !handler.add) {
     throw new Error(`[ElementManager] addElement: unknown type ${type}`)
   }
+  ;(config as any).displayStates = normalizeDisplayStates((config as any).displayStates)
   // 标准化调用：由调用方保证 config.eleType 与 type 一致
   const element = await handler.add(config) as FabricElement | null | undefined
+  if (element) {
+    ;(element as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (config as any).displayStates)
+  }
   registerElementInstance(element as any)
   return element
 }

@@ -44,6 +44,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
 import { createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
+import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -209,6 +210,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
       top: (config as any).top ?? centerY ?? (config as any).top,
       originX: (config as any).originX ?? 'center',
       originY: (config as any).originY ?? 'center',
+      displayStates: DEFAULT_DISPLAY_STATES,
     }
 
     const colorBindings = applyDefaultColorVariable(normalizedConfig)

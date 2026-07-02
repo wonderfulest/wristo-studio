@@ -285,6 +285,7 @@ const handleDrop = async (event: DragEvent) => {
       top: point.top,
       originX: 'center',
       originY: 'center',
+      displayStates: { active: true, ambient: true },
     }
 
     await historyStore.runWithoutRecording(() => addElement('image', config as any))

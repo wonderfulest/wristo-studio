@@ -2,6 +2,7 @@
 
 import { TOriginX, TOriginY } from "fabric"
 import type { FabricFill } from "@/types/fabric"
+import type { ElementDisplayStates } from '@/utils/displayStates'
 
 export interface BaseElementConfig {
   id: string
@@ -14,4 +15,5 @@ export interface BaseElementConfig {
   fontFamily?: string
   fontSize?: number
   topBase?: number
+  displayStates?: ElementDisplayStates
 }

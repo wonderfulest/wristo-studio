@@ -356,6 +356,8 @@ const handleAddElement = async (category: string, elementType: string, overrides
       }
     }
 
+    ;(config as any).displayStates = (config as any).displayStates ?? { active: true, ambient: true }
+
     // Use registry to add element via ElementHandler.add(config)
     if (resolvedElementType) {
       try {

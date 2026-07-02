@@ -3,7 +3,7 @@ import { markRaw } from 'vue'
 import { Circle, type Canvas } from 'fabric'
 import { useDesignStore } from '@/stores/designStore'
 import { createBackground } from '@/elements/decoration/background/background.renderer'
-import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import type { BackgroundElementConfig } from '@/types/elements/background'
 
 type AnyObject = Record<string, any>
@@ -129,6 +129,7 @@ export const useCanvasStore = defineStore('canvas', {
         top: Number(this.designStore.designSpec.centerY ?? 0),
         originX: 'center' as any,
         originY: 'center' as any,
+        color: DEFAULT_BACKGROUND_COLOR,
         imageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
         imageId: null,
       }

@@ -3,6 +3,8 @@ import { useLayerStore } from '@/stores/layerStore'
 import { getElementById } from '@/engine/managers/elementManager'
 import type { LayerElement, MinimalFabricLike } from '@/types/layer'
 import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
+import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import { useElementDataStore } from '@/stores/elementDataStore'
 
 function isFixedLayer(obj: any): boolean {
   const t = String(obj?.eleType ?? '')
@@ -31,12 +33,16 @@ export function syncLayersFromCanvas(): void {
   const objects = (canvas.getObjects?.() || []) as any[]
   const backgroundObj = objects.find((o) => o?.eleType === 'background')
   const userObjects = objects.filter((o) => o?.id != null && o?.eleType && !isFixedLayer(o))
+  const elementDataStore = useElementDataStore()
 
   const nextLayers: LayerElement[] = userObjects.map((obj) => {
     const id = String(obj.id)
+    const displayStates = normalizeDisplayStates(obj.displayStates ?? (elementDataStore.getElementConfig(id) as any)?.displayStates)
+    obj.displayStates = displayStates
     return {
       id,
-      visible: obj.visible ?? true,
+      visible: getDisplayState(displayStates, layerStore.previewMode),
+      displayStates,
       locked: obj.locked ?? false,
       selectable: obj.selectable ?? true,
       eleType: String(obj.eleType ?? ''),
@@ -48,9 +54,12 @@ export function syncLayersFromCanvas(): void {
     const bgId = String(backgroundObj.id ?? 'background')
     const locked = Boolean(backgroundObj.locked ?? isDefaultBackgroundElement(backgroundObj))
     const selectable = Boolean(backgroundObj.selectable ?? !locked)
+    const displayStates = normalizeDisplayStates(backgroundObj.displayStates ?? (elementDataStore.getElementConfig(bgId) as any)?.displayStates)
+    backgroundObj.displayStates = displayStates
     nextLayers.unshift({
       id: bgId,
-      visible: backgroundObj.visible ?? true,
+      visible: getDisplayState(displayStates, layerStore.previewMode),
+      displayStates,
       locked,
       selectable,
       eleType: String(backgroundObj.eleType ?? 'background'),

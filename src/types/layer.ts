@@ -1,4 +1,5 @@
 // Types for layer elements used in layerStore
+import type { ElementDisplayStates } from '@/utils/displayStates'
 
 // Minimal shape stored in layers to avoid strict FabricObject private members
 export type MinimalFabricLike = {
@@ -10,6 +11,7 @@ export type MinimalFabricLike = {
 export interface LayerElement {
   id: string
   visible: boolean
+  displayStates: ElementDisplayStates
   locked: boolean
   selectable: boolean
   eleType: string
