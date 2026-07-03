@@ -32,6 +32,7 @@ export enum DateFormatConstants {
   CHINESE_WEEKDAY_LONG = 28,
   WEEKDAY_LONG = 29,
   MONTH_LONG = 30,
+  MM_DD = 31,
 }
 
 export const DateFormatOptions: OptionFormat<number>[] = [
@@ -66,4 +67,5 @@ export const DateFormatOptions: OptionFormat<number>[] = [
   { value: DateFormatConstants.CHINESE_WEEKDAY_LONG, label: 'Chinese weekday long', labelCn: '中文星期长', example: '星期一' },
   { value: DateFormatConstants.WEEKDAY_LONG, label: 'dddd', labelCn: '完整星期', example: 'Monday' },
   { value: DateFormatConstants.MONTH_LONG, label: 'MMMM', labelCn: '完整月份', example: 'September' },
+  { value: DateFormatConstants.MM_DD, label: 'MM-DD', example: '05-25' },
 ]

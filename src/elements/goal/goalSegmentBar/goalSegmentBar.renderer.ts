@@ -13,6 +13,8 @@ interface BuildSegmentsParams {
   segments: number
   gap: number
   borderRadius: number
+  borderWidth: number
+  borderColor: string
   bgColor: string
   color: string
   progress: number // 0..1
@@ -27,6 +29,8 @@ function buildSegments(params: BuildSegmentsParams) {
     segments,
     gap,
     borderRadius,
+    borderWidth,
+    borderColor,
     bgColor,
     color,
     progress,
@@ -36,6 +40,7 @@ function buildSegments(params: BuildSegmentsParams) {
 
   const bgRects: Rect[] = []
   const activeRects: Rect[] = []
+  const borderRects: Rect[] = []
 
   const activeTotal = Math.max(0, Math.min(1, progress)) * segments
   const fullActive = Math.floor(activeTotal)
@@ -61,6 +66,26 @@ function buildSegments(params: BuildSegmentsParams) {
       evented: false,
     }) as unknown as Rect
     bgRects.push(bgRect)
+
+    if (borderWidth > 0) {
+      const borderRect = new Rect({
+        id: `${i}_seg_border`,
+        left: x,
+        top,
+        width: segmentWidth,
+        height,
+        fill: 'transparent',
+        stroke: borderColor,
+        strokeWidth: borderWidth,
+        rx: borderRadius,
+        ry: borderRadius,
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: false,
+      }) as unknown as Rect
+      borderRects.push(borderRect)
+    }
 
     // active segment(s)
     if (i < fullActive) {
@@ -100,7 +125,7 @@ function buildSegments(params: BuildSegmentsParams) {
     }
   }
 
-  return { bgRects, activeRects }
+  return { bgRects, activeRects, borderRects }
 }
 
 export function createGoalSegmentBar(options: GoalSegmentBarElementConfig): FabricElement {
@@ -120,11 +145,13 @@ export function createGoalSegmentBar(options: GoalSegmentBarElementConfig): Fabr
   const segments = Math.max(1, Math.floor(options.segments ?? 8))
   const gap = Math.max(0, Number(options.gap ?? 2))
   const borderRadius = Math.max(0, Number(options.borderRadius ?? 4))
+  const borderWidth = Math.max(0, Number(options.borderWidth ?? 0))
+  const borderColor = options.borderColor || '#FFFFFF'
   const color = options.color || '#00FF00'
   const bgColor = options.bgColor || '#333333'
   const progress = clampProgress(options.progress ?? 0)
 
-  const { bgRects, activeRects } = buildSegments({
+  const { bgRects, activeRects, borderRects } = buildSegments({
     left,
     top,
     width,
@@ -132,12 +159,14 @@ export function createGoalSegmentBar(options: GoalSegmentBarElementConfig): Fabr
     segments,
     gap,
     borderRadius,
+    borderWidth,
+    borderColor,
     bgColor,
     color,
     progress,
   })
 
-  const group = new Group([...bgRects, ...activeRects], {
+  const group = new Group([...bgRects, ...activeRects, ...borderRects], {
     id,
     eleType: 'goalSegmentBar',
     left,
@@ -153,6 +182,8 @@ export function createGoalSegmentBar(options: GoalSegmentBarElementConfig): Fabr
     color,
     bgColor,
     borderRadius,
+    borderWidth,
+    borderColor,
     segments,
     gap,
     progress,
@@ -186,6 +217,8 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
   const segments = options.segments !== undefined ? Math.max(1, Math.floor(options.segments)) : element.segments
   const gap = options.gap !== undefined ? Math.max(0, Number(options.gap)) : element.gap
   const borderRadius = options.borderRadius !== undefined ? Math.max(0, Number(options.borderRadius)) : element.borderRadius
+  const borderWidth = options.borderWidth !== undefined ? Math.max(0, Number(options.borderWidth)) : Math.max(0, Number(element.borderWidth ?? 0))
+  const borderColor = options.borderColor ?? element.borderColor ?? '#FFFFFF'
   const color = options.color ?? element.color
   const bgColor = options.bgColor ?? element.bgColor
   const progress = options.progress !== undefined ? clampProgress(options.progress) : clampProgress(element.progress)
@@ -203,11 +236,13 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
   element.segments = segments
   element.gap = gap
   element.borderRadius = borderRadius
+  element.borderWidth = borderWidth
+  element.borderColor = borderColor
   element.progress = progress
   element.goalProperty = goalProperty
 
   // rebuild children
-  const { bgRects, activeRects } = buildSegments({
+  const { bgRects, activeRects, borderRects } = buildSegments({
     left,
     top,
     width,
@@ -215,6 +250,8 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
     segments,
     gap,
     borderRadius,
+    borderWidth,
+    borderColor,
     bgColor,
     color,
     progress,
@@ -239,6 +276,7 @@ export function updateGoalSegmentBar(element: any, options: Partial<GoalSegmentB
   }
   bgRects.forEach(addChild)
   activeRects.forEach(addChild)
+  borderRects.forEach(addChild)
 
   if (typeof (element as any)._setAfterTransform === 'function') {
     ;(element as any)._setAfterTransform()

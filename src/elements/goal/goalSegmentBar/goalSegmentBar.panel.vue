@@ -26,6 +26,14 @@
         <el-input-number v-model="currentModel.borderRadius" :min="0" :max="30" @change="updateElement" />
       </el-form-item>
 
+      <el-form-item :label="t('elementSettings.borderWidth')">
+        <el-input-number v-model="currentModel.borderWidth" :min="0" :max="10" :step="1" @change="updateElement" />
+      </el-form-item>
+
+      <el-form-item :label="t('elementSettings.borderColor')">
+        <color-picker v-model="currentModel.borderColor" @change="handleBorderColorChange" />
+      </el-form-item>
+
       <el-form-item :label="t('elementSettings.progress')">
         <el-slider v-model="currentModel.progress" :min="0" :max="1" :step="0.01" @change="updateElement" />
       </el-form-item>
@@ -76,6 +84,8 @@ const buildPatchFromModel = (model: any) => {
     width: model.width,
     height: model.height,
     borderRadius: model.borderRadius,
+    borderWidth: model.borderWidth,
+    borderColor: model.borderColor,
     segments: model.segments,
     gap: model.gap,
     progress: model.progress,
@@ -108,6 +118,11 @@ const handleActiveColorChange = (val: string) => {
 
 const handleBgColorChange = (val: string) => {
   ;(currentModel.value as any).bgColor = val
+  updateElement()
+}
+
+const handleBorderColorChange = (val: string) => {
+  ;(currentModel.value as any).borderColor = val
   updateElement()
 }
 </script>

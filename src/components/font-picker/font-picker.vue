@@ -290,17 +290,30 @@ const updatePanelPosition = () => {
 
   const rect = picker.getBoundingClientRect()
   const viewportPadding = 16
+  const panelGap = 4
+  const maxPanelHeight = 820
+  const minUsefulHeight = 220
   const desiredWidth = Math.min(560, window.innerWidth - viewportPadding * 2)
   const left = Math.min(
     Math.max(viewportPadding, rect.right - desiredWidth),
     window.innerWidth - desiredWidth - viewportPadding,
   )
+  const topBelow = rect.bottom + panelGap
+  const availableBelow = window.innerHeight - topBelow - viewportPadding
+  const availableAbove = rect.top - viewportPadding - panelGap
+  const shouldOpenAbove = availableBelow < minUsefulHeight && availableAbove > availableBelow
+  const availableHeight = shouldOpenAbove ? availableAbove : availableBelow
+  const panelHeight = Math.max(0, Math.min(maxPanelHeight, availableHeight))
+  const top = shouldOpenAbove
+    ? Math.max(viewportPadding, rect.top - panelGap - panelHeight)
+    : topBelow
 
   panelStyle.value = {
-    top: `${rect.bottom + 4}px`,
+    top: `${top}px`,
     left: `${left}px`,
     width: `${desiredWidth}px`,
     maxWidth: `calc(100vw - ${viewportPadding * 2}px)`,
+    maxHeight: `${panelHeight}px`,
   }
 }
 

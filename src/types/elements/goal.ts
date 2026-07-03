@@ -51,6 +51,8 @@ export interface GoalSegmentBarElementConfig extends GoalElementConfig {
   color: string       // active segment color
   bgColor: string     // inactive segment color
   borderRadius: number
+  borderWidth: number
+  borderColor: string
   segments: number    // number of segments
   gap: number         // gap between segments (px)
   progress: number    // 0..1

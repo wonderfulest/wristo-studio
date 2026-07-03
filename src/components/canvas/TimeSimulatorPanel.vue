@@ -11,10 +11,10 @@
     <div class="speed-control">
       <span>{{ t('timeSimulator.speed') }}</span>
       <el-slider
-        v-model="speedMultiplier"
+        v-model="speedSliderValue"
         class="speed-slider"
-        :min="1"
-        :max="1000"
+        :min="SPEED_SLIDER_MIN"
+        :max="SPEED_SLIDER_MAX"
         :step="1"
         :show-tooltip="false"
         @input="handleSpeedInput"
@@ -38,22 +38,47 @@ import { getSimulatedClockSnapshot, resetSimulatedClock, setSimulatedSpeed } fro
 
 const { t } = useI18n()
 const currentTime = ref<Date>(getSimulatedClockSnapshot().currentTime)
+
+const SPEED_MIN = 1
+const SPEED_MAX = 1000
+const SPEED_SLIDER_MIN = 1
+const SPEED_SLIDER_MAX = 1000
+const SPEED_CURVE_EXPONENT = 2.4
+
 const clampSpeedMultiplier = (value: number): number => {
-  if (!Number.isFinite(value)) return 1
-  return Math.min(1000, Math.max(1, Math.round(value)))
+  if (!Number.isFinite(value)) return SPEED_MIN
+  return Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(value)))
 }
 
 const speedMultiplier = ref<number>(clampSpeedMultiplier(getSimulatedClockSnapshot().speedMultiplier))
+const speedSliderValue = ref<number>(SPEED_SLIDER_MIN)
 let timer: number | null = null
 
 const pad2 = (value: number) => String(value).padStart(2, '0')
 
 const formatTimeLabel = (date: Date) => `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 
+const normalizeSliderValue = (value: number): number => (value - SPEED_SLIDER_MIN) / (SPEED_SLIDER_MAX - SPEED_SLIDER_MIN)
+
+const denormalizeSliderValue = (value: number): number => SPEED_SLIDER_MIN + value * (SPEED_SLIDER_MAX - SPEED_SLIDER_MIN)
+
+const speedFromSliderValue = (value: number): number => {
+  const normalizedValue = Math.min(1, Math.max(0, normalizeSliderValue(value)))
+  const curvedValue = Math.pow(normalizedValue, SPEED_CURVE_EXPONENT)
+  return clampSpeedMultiplier(SPEED_MIN + curvedValue * (SPEED_MAX - SPEED_MIN))
+}
+
+const sliderValueFromSpeed = (value: number): number => {
+  const normalizedSpeed = (clampSpeedMultiplier(value) - SPEED_MIN) / (SPEED_MAX - SPEED_MIN)
+  const curvedValue = Math.pow(normalizedSpeed, 1 / SPEED_CURVE_EXPONENT)
+  return Math.round(denormalizeSliderValue(curvedValue))
+}
+
 const syncFromClock = () => {
   const snapshot = getSimulatedClockSnapshot()
   currentTime.value = snapshot.currentTime
   speedMultiplier.value = clampSpeedMultiplier(snapshot.speedMultiplier)
+  speedSliderValue.value = sliderValueFromSpeed(speedMultiplier.value)
 }
 
 const refreshCanvas = () => {
@@ -62,7 +87,10 @@ const refreshCanvas = () => {
 }
 
 const handleSpeedInput = (value: number) => {
-  setSimulatedSpeed(clampSpeedMultiplier(Number(value)))
+  const nextSpeedMultiplier = speedFromSliderValue(Number(value))
+  speedMultiplier.value = nextSpeedMultiplier
+  speedSliderValue.value = sliderValueFromSpeed(nextSpeedMultiplier)
+  setSimulatedSpeed(nextSpeedMultiplier)
   refreshCanvas()
 }
 
@@ -74,6 +102,7 @@ const resetClock = () => {
 const timeLabel = computed(() => formatTimeLabel(currentTime.value))
 
 onMounted(() => {
+  syncFromClock()
   timer = window.setInterval(syncFromClock, 500)
 })
 

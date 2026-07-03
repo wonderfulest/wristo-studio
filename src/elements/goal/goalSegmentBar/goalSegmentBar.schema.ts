@@ -10,6 +10,8 @@ export type GoalSegmentBarElementSchema = {
     color: string
     bgColor: string
     borderRadius: number
+    borderWidth: number
+    borderColor: string
     segments: number
     gap: number
     progress: number
@@ -31,6 +33,8 @@ export const goalSegmentBarSchema: GoalSegmentBarElementSchema = {
     color: '#00FF00',
     bgColor: '#333333',
     borderRadius: 2,
+    borderWidth: 0,
+    borderColor: '#FFFFFF',
     segments: 10,
     gap: 2,
     progress: 0.667,
