@@ -166,7 +166,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Aim } from '@element-plus/icons-vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
-import { getFontBySlug, getFontStyleTags, getSystemFonts, increaseFontUsage, updateMyFontSearchIndex } from '@/api/wristo/fonts'
+import { getFontBySlug, getFontStyleTags, getSystemFonts, updateMyFontSearchIndex } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -282,6 +282,8 @@ const fontScopeOptions = computed(() => [
   { label: t('font.scopeMine'), value: 'mine' },
   { label: t('font.scopeAll'), value: 'all' },
 ])
+const initializedRecentFontTypes = new Set<string>()
+const recentFontTypeKey = computed(() => props.type || FontTypes.TEXT_FONT)
 
 // 切换面板显示
 const updatePanelPosition = () => {
@@ -321,6 +323,10 @@ const togglePanel = async () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     fontStore.expandedSections.recent = true
+    if (!initializedRecentFontTypes.has(recentFontTypeKey.value)) {
+      initializedRecentFontTypes.add(recentFontTypeKey.value)
+      await fontStore.initRecentFonts(props.type)
+    }
     await nextTick()
     updatePanelPosition()
   }
@@ -508,8 +514,6 @@ const selectFont = async (font: FontItem) => {
 
   emit('update:modelValue', font.value)
   emit('change', font.value)
-  try { await increaseFontUsage(font.value, userStore.userInfo?.id) } catch {}
-  fontStore.addRecentFont(font)
 }
 
 // 上传完成回调（来自子组件）
@@ -532,15 +536,11 @@ const addCustomFont = () => {
 }
 
 onMounted(async () => {
-  await fontStore.fetchFonts()
   loadStyleTagOptions()
   // initial refresh with current type (if provided)
   if (props.type !== undefined) {
     try {
-      await Promise.all([
-        fontStore.initBuiltinFontsFromSystem(props.type),
-        fontStore.initRecentFonts(props.type)
-      ])
+      await fontStore.initBuiltinFontsFromSystem(props.type)
     } catch {}
   }
   window.addEventListener('resize', updatePanelPosition)
@@ -558,10 +558,7 @@ watch(
   async (newType, oldType) => {
     if (newType === oldType) return
     try {
-      await Promise.all([
-        fontStore.initBuiltinFontsFromSystem(newType),
-        fontStore.initRecentFonts(newType)
-      ])
+      await fontStore.initBuiltinFontsFromSystem(newType)
     } catch {}
   }
 )

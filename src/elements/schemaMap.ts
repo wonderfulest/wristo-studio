@@ -10,6 +10,7 @@ import { dataSchema } from '@/elements/data/data/data.schema'
 import { iconSchema } from '@/elements/data/icon/icon.schema'
 import { labelSchema } from '@/elements/data/label/label.schema'
 import { unitSchema } from '@/elements/data/unit/unit.schema'
+import { zoneMetricSchema } from '@/elements/metric/zoneMetric/zoneMetric.schema'
 import { moonSchema } from '@/elements/weather/moon/moon.schema'
 import { weatherSchema } from '@/elements/weather/weather/weather.schema'
 import { windDirectionSchema } from '@/elements/weather/windDirection/windDirection.schema'
@@ -93,6 +94,7 @@ export const elementConfigs: ElementConfigs = {
     data: buildConfigFromSchema(dataSchema as AnySchema),
     label: buildConfigFromSchema(labelSchema as AnySchema),
     unit: buildConfigFromSchema(unitSchema as AnySchema),
+    zoneMetric: buildConfigFromSchema(zoneMetricSchema as AnySchema),
   },
   indicator: {
     bluetooth: buildConfigFromSchema(bluetoothSchema as AnySchema),

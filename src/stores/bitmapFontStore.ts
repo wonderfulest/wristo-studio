@@ -90,6 +90,15 @@ export const useBitmapFontStore = defineStore('bitmapFontStore', {
       this.saveToSession()
     },
 
+    removeLocal(fontId: number) {
+      const before = this.fonts.length
+      this.fonts = this.fonts.filter((font) => font.id !== fontId)
+      if (this.fonts.length !== before) {
+        this.total = Math.max(0, this.total - 1)
+      }
+      this.saveToSession()
+    },
+
     async loadPage(page: number, pageSize?: number, includeAllUsers?: boolean) {
       if (page <= 0) page = 1
       if (pageSize) this.pageSize = pageSize

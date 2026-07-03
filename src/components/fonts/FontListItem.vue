@@ -50,7 +50,7 @@
             <el-icon><CollectionTag /></el-icon>
           </button>
           <button
-            v-if="!isSystem && canManageFont && fontId != null"
+            v-if="!isSystem && canDeleteFont && fontId != null"
             type="button"
             class="font-icon-btn font-icon-btn-delete"
             :title="t('font.deleteFont')"
@@ -103,7 +103,7 @@ import { CollectionTag, Edit, Delete, Clock, Star, StarFilled } from '@element-p
 import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { favoriteFont, removeMyFont, unfavoriteFont } from '@/api/wristo/fonts'
+import { favoriteFont, removeAdminFont, removeMyFont, unfavoriteFont } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
@@ -127,6 +127,7 @@ const props = defineProps<{
   isRecent?: boolean
   compact?: boolean
   favoriteWeight?: number | null
+  ownerUserId?: number
 }>()
 
 const emit = defineEmits<{
@@ -154,6 +155,11 @@ const parsedStyleTags = computed(() => {
 const visibleStyleTags = computed(() => parsedStyleTags.value.slice(0, 3))
 const hasTags = computed(() => props.isMonospace || !!props.subfamily || visibleStyleTags.value.length > 0)
 const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
+const canDeleteFont = computed(() => {
+  if (userStore.isAdminUser) return true
+  const currentUserId = userStore.userInfo?.id
+  return currentUserId != null && props.ownerUserId === currentUserId
+})
 const cornerBadgeCount = computed(() => (props.isSystem ? 1 : 0) + (props.isRecent ? 1 : 0))
 const cornerBadgeWidth = computed(() => cornerBadgeCount.value * 28)
 const actionButtonCount = computed(() => {
@@ -162,7 +168,7 @@ const actionButtonCount = computed(() => {
     !props.isSystem && canManageFont.value && isIcon.value,
     true,
     props.canEditSearchIndex,
-    !props.isSystem && canManageFont.value,
+    !props.isSystem && canDeleteFont.value,
   ].filter(Boolean).length
 })
 const actionWidth = computed(() => {
@@ -228,7 +234,7 @@ watch(
 )
 
 const onDelete = async () => {
-  if (!canManageFont.value) {
+  if (!canDeleteFont.value) {
     membershipGate.requirePremium('font.premiumAssetRequired')
     return
   }
@@ -251,14 +257,24 @@ const onDelete = async () => {
       confirmButtonText: t('common.delete'),
       cancelButtonText: t('common.cancel'),
     })
+  } catch {
+    return
+  }
 
-    const resp = await removeMyFont(props.fontId)
+  try {
+    const resp = userStore.isAdminUser
+      ? await removeAdminFont(props.fontId)
+      : await removeMyFont(props.fontId)
     if (resp.code === 0 && resp.data) {
       emit('removed', props.fontId)
+      ElMessage.success(t('common.deleteSuccess'))
+    } else {
+      ElMessage.error(resp.msg || t('common.deleteFailed'))
     }
   } catch (e) {
     // ignore errors here; parent can handle global errors if needed
     console.error('remove font failed', e)
+    ElMessage.error(t('common.deleteFailed'))
   }
 }
 

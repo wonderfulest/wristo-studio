@@ -42,6 +42,17 @@
             <el-icon><Download /></el-icon>
           </button>
         </el-tooltip>
+        <el-tooltip v-if="canDelete(font)" :content="t('font.deleteFont')" placement="top">
+          <button
+            type="button"
+            class="bitmap-icon-btn bitmap-icon-btn-delete"
+            :disabled="deletingId === font.id"
+            :aria-label="t('font.deleteFont')"
+            @click.stop="() => emit('delete', font)"
+          >
+            <el-icon><Delete /></el-icon>
+          </button>
+        </el-tooltip>
       </div>
       <div class="info" @click="() => emit('select', font)">
         <div class="name">{{ font.fontName }}</div>
@@ -72,7 +83,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { Download, Edit, Star, StarFilled } from '@element-plus/icons-vue'
+import { Delete, Download, Edit, Star, StarFilled } from '@element-plus/icons-vue'
 import type { BitmapFontVO, BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 import { useUserStore } from '@/stores/user'
@@ -87,12 +98,14 @@ const props = defineProps<{
   pageSize: number
   total: number
   downloadingId?: number | null
+  deletingId?: number | null
 }>()
 
 const emit = defineEmits<{
   (e: 'select', font: BitmapFontVO): void
   (e: 'edit', font: BitmapFontVO): void
   (e: 'download', font: BitmapFontVO): void
+  (e: 'delete', font: BitmapFontVO): void
   (e: 'favorite-toggle', font: BitmapFontVO): void
   (e: 'page-change', page: number): void
 }>()
@@ -119,6 +132,13 @@ const canEdit = (font: BitmapFontVO) => {
   if (font.userId === uid) return true
   if (isAdmin.value) return true
   return false
+}
+
+const canDelete = (font: BitmapFontVO) => {
+  const uid = currentUserId.value
+  if (!uid) return false
+  if (isAdmin.value) return true
+  return font.userId === uid
 }
 
 const isFavoriteFont = (font: BitmapFontVO) => {
@@ -244,7 +264,7 @@ const onScroll = (e: Event) => {
 .name {
   min-width: 0;
   max-width: 100%;
-  padding-right: 86px;
+  padding-right: 112px;
   font-size: 12px;
   font-weight: 600;
   line-height: 22px;
@@ -339,6 +359,10 @@ const onScroll = (e: Event) => {
 .bitmap-icon-btn-favorite,
 .bitmap-icon-btn-download {
   color: var(--studio-primary);
+}
+
+.bitmap-icon-btn-delete {
+  color: var(--color-danger);
 }
 
 .bitmap-icon-btn-favorite.favorited {

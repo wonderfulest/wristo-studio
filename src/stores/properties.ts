@@ -7,6 +7,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
     textCase: 0 as number,
+    bitmapMode: true as boolean,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
       { label: 'Dark Gray', value: '0x555555' },
@@ -150,6 +151,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     clearProperties() {
       this.properties = {}
       this.textCase = 0
+      this.bitmapMode = true
     },
 
     addProperty(propertyData: {

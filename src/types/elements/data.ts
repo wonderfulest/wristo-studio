@@ -1,5 +1,6 @@
 import type { BaseElementConfig } from './base'
 import type { FabricFill } from '@/types/fabric'
+import type { ZoneMetricDisplayMode, ZoneMetricPreset, ZoneMetricZone } from '@/elements/metric/zoneMetric/zoneMetric.common'
 
 export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
@@ -31,6 +32,33 @@ export interface LabelElementConfig extends DataElementConfig {
 
 export interface UnitElementConfig extends DataElementConfig {
   eleType: 'unit'
+}
+
+export interface ZoneMetricElementConfig extends BaseElementConfig {
+  eleType: 'zoneMetric'
+  width: number
+  height: number
+  dataProperty?: string
+  displayMode: ZoneMetricDisplayMode
+  zonePreset: ZoneMetricPreset
+  value: number
+  unit: string
+  label: string
+  zoneLabel?: string
+  showLabel: boolean
+  showValue: boolean
+  showUnit: boolean
+  showZoneLabel: boolean
+  fill: string
+  textColor: string
+  mutedTextColor: string
+  inactiveColor: string
+  borderColor: string
+  borderWidth: number
+  borderRadius: number
+  ringThickness: number
+  gap: number
+  zones?: ZoneMetricZone[]
 }
 
 export interface MoonElementConfig extends BaseElementConfig {

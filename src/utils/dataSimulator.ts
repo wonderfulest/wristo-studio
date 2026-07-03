@@ -35,6 +35,7 @@ type SimState = {
   aqi: number
   bodyBattery: number
   stress: number
+  sedentaryMinutes: number
 }
 
 const simState: SimState = {
@@ -60,6 +61,7 @@ const simState: SimState = {
   aqi: 32,
   bodyBattery: 72,
   stress: 21,
+  sedentaryMinutes: 36,
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -108,6 +110,7 @@ export function tickSimulatedData(): void {
 
   simState.bodyBattery = clamp(simState.bodyBattery + randInt(-1, 1), 0, 100)
   simState.stress = clamp(simState.stress + randInt(-2, 2), 0, 100)
+  simState.sedentaryMinutes = clamp(simState.sedentaryMinutes + (Math.random() < 0.7 ? 1 : 0), 0, 180)
 }
 
 /**
@@ -242,6 +245,10 @@ export function getSimulatedDataByName(name: string): SimulatedData {
       return { display: String(simState.bodyBattery), numeric: simState.bodyBattery, unit: '%', label: 'BODY' }
     case 'stress':
       return { display: String(simState.stress), numeric: simState.stress, unit: '', label: 'STRESS' }
+    case 'sedentary':
+    case 'sedentaryMinutes':
+    case 'moveBar':
+      return { display: String(simState.sedentaryMinutes), numeric: simState.sedentaryMinutes, unit: 'min', label: 'MOVE' }
 
     // 日出 / 日落
     case 'sunrise':

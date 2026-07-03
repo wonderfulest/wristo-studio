@@ -246,6 +246,7 @@
       :placeholder="t('icon.svgPlaceholder')"
       :save-label="t('asset.applySvgColors')"
       :empty-color-message="t('asset.noEditableSvgColors')"
+      :z-index="16000"
       @save="saveEditedSvgAsset"
       @closed="closeSvgEditor"
     />
@@ -945,7 +946,7 @@ const saveEditedSvgAsset = async (svgText: string) => {
   try {
     const originalName = editingSvgAsset.value.file?.name || `asset-${editingSvgAsset.value.id}.svg`
     const baseName = originalName.replace(/\.svg$/i, '')
-    const file = new File([svgText], `${baseName}-recolor.svg`, { type: 'image/svg+xml' })
+    const file = new File([svgText], `${baseName}-recolor-${Date.now()}.svg`, { type: 'image/svg+xml' })
     const ok = await uploadFile(file, true)
     if (ok) {
       closeSvgEditor()

@@ -27,9 +27,11 @@
         :page-size="pageSize"
         :total="bitmapTotal"
         :downloading-id="downloadingFontId"
+        :deleting-id="deletingFontId"
         @select="handleSelectBitmapFont"
         @edit="handleEditBitmapFont"
         @download="handleDownloadBitmapFont"
+        @delete="handleDeleteBitmapFont"
         @favorite-toggle="handleToggleBitmapFontFavorite"
         @page-change="handleBitmapPageChange"
       />
@@ -54,7 +56,7 @@ import JSZip from 'jszip'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, favoriteBitmapFont, unfavoriteBitmapFont, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
+import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, favoriteBitmapFont, unfavoriteBitmapFont, removeBitmapFont, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
@@ -88,6 +90,7 @@ const bitmapDialogVisible = ref(false)
 const currentFontName = ref<string>('')
 const isTempRandFont = ref<boolean>(false)
 const downloadingFontId = ref<number | null>(null)
+const deletingFontId = ref<number | null>(null)
 type BitmapRow = {
   // 字符值：'0'-'9' 或 ':' 等
   index: string
@@ -376,6 +379,48 @@ const handleDownloadBitmapFont = async (font: BitmapFontVO) => {
     ElMessage.error(t('font.downloadBitmapFontFailed'))
   } finally {
     downloadingFontId.value = null
+  }
+}
+
+const handleDeleteBitmapFont = async (font: BitmapFontVO) => {
+  if (!font?.id || deletingFontId.value) return
+  try {
+    await ElMessageBox.confirm(
+      t('font.deleteFontConfirm'),
+      t('font.deleteFont'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
+      },
+    )
+  } catch {
+    return
+  }
+
+  deletingFontId.value = font.id
+  try {
+    const res = await removeBitmapFont(font.id)
+    if (res.code === 0 && res.data) {
+      if (props.modelValue === font.id) {
+        invalidateBitmapTimeFontCache(font.id)
+        emit('update:modelValue', null)
+        emit('change', null)
+        currentFontName.value = ''
+        rows.value = rows.value.map(row => ({ index: row.index, hasValue: false }))
+        symbolRowList.value = symbolRowList.value.map(row => ({ index: row.index, hasValue: false }))
+      }
+      bitmapFontStore.removeLocal(font.id)
+      bitmapFontStore.clearSession()
+      ElMessage.success(t('common.deleteSuccess'))
+    } else {
+      ElMessage.error(res.msg || t('common.deleteFailed'))
+    }
+  } catch (e) {
+    console.warn('delete bitmap font failed', e)
+    ElMessage.error(t('common.deleteFailed'))
+  } finally {
+    deletingFontId.value = null
   }
 }
 

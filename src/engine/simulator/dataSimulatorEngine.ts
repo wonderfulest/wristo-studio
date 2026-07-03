@@ -95,6 +95,13 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'steps'
     case ':FIELD_TYPE_BATTERY':
       return 'battery'
+    case ':FIELD_TYPE_BODY_BATTERY':
+      return 'bodyBattery'
+    case ':FIELD_TYPE_STRESS':
+      return 'stress'
+    case ':FIELD_TYPE_MOVE_BAR':
+    case ':INDICATOR_TYPE_MOVE_BAR':
+      return 'sedentary'
     case ':FIELD_TYPE_CALORIES':
       return 'calories'
     case ':FIELD_TYPE_FLOORS_CLIMBED':
@@ -331,6 +338,22 @@ export class DataSimulatorEngine {
           __simPointCount: series.pointCount,
         })
         changed = true
+        return
+      }
+
+      if (eleType === 'zoneMetric') {
+        const metric = propertiesStore.getMetricByOptions({
+          dataProperty: obj.dataProperty,
+          metricSymbol: obj.metricSymbol,
+        })
+        const fallbackKey = obj.zonePreset === 'sedentary' ? 'sedentary' : 'hr'
+        const simKey = metricSymbolToSimKey(metric?.metricSymbol) || fallbackKey
+        const sim = getSimulatedDataByName(simKey)
+        const nextValue = typeof sim.numeric === 'number' ? sim.numeric : Number(sim.display)
+        if (Number.isFinite(nextValue) && Number(obj.value ?? NaN) !== nextValue) {
+          elementManager.updateElement(obj as any, { value: nextValue })
+          changed = true
+        }
         return
       }
     })

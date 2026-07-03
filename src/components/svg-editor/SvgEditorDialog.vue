@@ -2,27 +2,16 @@
   <el-dialog
     v-model="visibleInner"
     :title="title"
-    width="70%"
+    width="min(860px, calc(100vw - 32px))"
+    append-to-body
+    :z-index="zIndex"
     :close-on-click-modal="false"
     class="svg-editor-dialog"
     @closed="handleClosed"
   >
     <div class="svg-editor">
-      <div class="svg-editor-main">
-        <el-input
-          v-model="svgText"
-          type="textarea"
-          :rows="18"
-          :placeholder="placeholder"
-        />
-        <div class="svg-editor-actions">
-          <el-button @click="autoCropAndCenter" :disabled="!svgText">{{ t('icon.autoCropCenter') }}</el-button>
-          <el-button @click="processDuotone" :disabled="!svgText">{{ t('icon.duotone') }}</el-button>
-        </div>
-      </div>
-
       <div class="svg-editor-side">
-        <div class="svg-editor-preview" v-html="svgText"></div>
+        <div class="svg-editor-preview" v-html="previewSvgText"></div>
         <div v-if="hasEditableEntries" class="svg-editor-fields">
           <div v-if="colorEntries.length" class="svg-editor-section">
             <div class="svg-editor-section-title">{{ t('asset.svgColors') }}</div>
@@ -35,7 +24,11 @@
                 <span class="svg-color-prop">{{ entry.property }}</span>
                 <span class="svg-color-value">{{ entry.originalValue }}</span>
               </div>
-              <ColorPicker v-model="entry.nextColor" class="svg-color-picker" />
+              <ColorPicker
+                v-model="entry.nextColor"
+                class="svg-color-picker"
+                :popup-z-index="zIndex + 10"
+              />
             </div>
           </div>
 
@@ -108,12 +101,14 @@ const props = withDefaults(defineProps<{
   saveLabel?: string
   saving?: boolean
   emptyColorMessage?: string
+  zIndex?: number
 }>(), {
   title: '',
   placeholder: '',
   saveLabel: '',
   saving: false,
   emptyColorMessage: '',
+  zIndex: 15000,
 })
 
 const emit = defineEmits<{
@@ -132,9 +127,17 @@ const svgColorProperties: SvgColorProperty[] = ['fill', 'stroke', 'stop-color']
 
 const hasEditableEntries = computed(() => colorEntries.value.length > 0 || stopEntries.value.length > 0)
 const title = computed(() => props.title || t('icon.svgEditorTitle'))
-const placeholder = computed(() => props.placeholder || t('icon.svgPlaceholder'))
 const saveLabel = computed(() => props.saveLabel || t('common.save'))
 const emptyColorMessage = computed(() => props.emptyColorMessage || t('asset.noEditableSvgColors'))
+const zIndex = computed(() => props.zIndex)
+const previewSvgText = computed(() => {
+  if (!svgText.value) return ''
+  try {
+    return buildEditedSvgText()
+  } catch {
+    return svgText.value
+  }
+})
 
 watch(() => props.modelValue, (value) => {
   visibleInner.value = value
@@ -234,6 +237,25 @@ const collectStyleColorEntries = (styleValue: string, entries: Map<string, SvgCo
   }
 }
 
+const collectCssColorEntries = (cssText: string, entries: Map<string, SvgColorEntry>) => {
+  const declarationPattern = /\b(fill|stroke|stop-color)\s*:\s*([^;}{]+)/gi
+  let match: RegExpExecArray | null
+  while ((match = declarationPattern.exec(cssText)) !== null) {
+    const property = match[1] as SvgColorProperty
+    const value = match[2].trim()
+    if (!isEditableColorValue(value)) continue
+    const key = `${property}:${value}`
+    if (!entries.has(key)) {
+      entries.set(key, {
+        id: key,
+        property,
+        originalValue: value,
+        nextColor: toHexColor(value),
+      })
+    }
+  }
+}
+
 const parseSvgColorEntries = (value: string): SvgColorEntry[] => {
   const doc = new DOMParser().parseFromString(value, 'image/svg+xml')
   if (doc.querySelector('parsererror')) {
@@ -258,6 +280,9 @@ const parseSvgColorEntries = (value: string): SvgColorEntry[] => {
 
     const styleValue = node.getAttribute('style')
     if (styleValue) collectStyleColorEntries(styleValue, entries)
+  })
+  doc.querySelectorAll('style').forEach((node) => {
+    collectCssColorEntries(node.textContent || '', entries)
   })
 
   return Array.from(entries.values())
@@ -292,6 +317,16 @@ const updateStyleDeclaration = (styleValue: string, updates: SvgColorEntry[]): s
     .join(';')
 }
 
+const updateCssColorDeclarations = (cssText: string, updates: SvgColorEntry[]): string => {
+  return cssText.replace(/\b(fill|stroke|stop-color)\s*:\s*([^;}{]+)/gi, (match, rawProperty, rawValue) => {
+    const property = rawProperty as SvgColorProperty
+    const value = String(rawValue || '').trim()
+    const update = updates.find((entry) => entry.property === property && entry.originalValue === value)
+    if (!update) return match
+    return `${rawProperty}: ${update.nextColor}`
+  })
+}
+
 const buildEditedSvgText = (): string => {
   const doc = new DOMParser().parseFromString(svgText.value, 'image/svg+xml')
   if (doc.querySelector('parsererror')) {
@@ -310,6 +345,9 @@ const buildEditedSvgText = (): string => {
       node.setAttribute('style', updateStyleDeclaration(styleValue, colorEntries.value))
     }
   })
+  doc.querySelectorAll('style').forEach((node) => {
+    node.textContent = updateCssColorDeclarations(node.textContent || '', colorEntries.value)
+  })
 
   doc.querySelectorAll('stop').forEach((node, index) => {
     const entry = stopEntries.value[index]
@@ -326,169 +364,11 @@ const buildEditedSvgText = (): string => {
 
   return new XMLSerializer().serializeToString(doc)
 }
-
-const processDuotone = () => {
-  const src = svgText.value?.trim()
-  if (!src) return
-  try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(src, 'image/svg+xml')
-    const svg = doc.documentElement as unknown as SVGSVGElement
-    if (!svg || svg.tagName.toLowerCase() !== 'svg') {
-      ElMessage.error(t('icon.invalidSvg'))
-      return
-    }
-
-    const defs: Element[] = []
-    const contentNodes: Element[] = []
-    const shapeTags = new Set(['path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line', 'use'])
-    const isShapeTag = (tag: string) => shapeTags.has(tag)
-
-    svg.querySelectorAll('defs').forEach((defsNode) => defs.push(defsNode.cloneNode(true) as Element))
-
-    const fgExisting = svg.querySelector('#duotone-fg') as Element | null
-    const collectShapes = (el: Element) => {
-      const tag = el.tagName.toLowerCase()
-      if (isShapeTag(tag)) contentNodes.push(el)
-      for (let i = 0; i < el.children.length; i++) collectShapes(el.children[i] as Element)
-    }
-    collectShapes(fgExisting || svg)
-
-    const newDoc = document.implementation.createDocument('http://www.w3.org/2000/svg', 'svg', null)
-    const root = newDoc.documentElement as unknown as SVGSVGElement
-    const copyAttrs = ['viewBox', 'width', 'height', 'xmlns', 'xmlns:xlink', 'preserveAspectRatio']
-    copyAttrs.forEach((key) => {
-      const attrValue = svg.getAttribute(key)
-      if (attrValue != null) root.setAttribute(key, attrValue)
-    })
-    if (!root.getAttribute('xmlns')) root.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-    if (!root.getAttribute('xmlns:xlink')) root.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-
-    defs.forEach((defsNode) => root.appendChild(newDoc.importNode(defsNode, true)))
-
-    const bg = newDoc.createElementNS('http://www.w3.org/2000/svg', 'g')
-    bg.setAttribute('id', 'duotone-bg')
-    contentNodes.forEach((node) => {
-      const cloned = node.cloneNode(true) as Element
-      cloned.setAttribute('fill', 'none')
-      cloned.setAttribute('stroke', 'none')
-      cloned.removeAttribute('stroke-width')
-      bg.appendChild(newDoc.importNode(cloned, true))
-    })
-
-    const fg = newDoc.createElementNS('http://www.w3.org/2000/svg', 'g')
-    fg.setAttribute('id', 'duotone-fg')
-    contentNodes.forEach((node) => {
-      const cloned = node.cloneNode(true) as Element
-      cloned.setAttribute('fill', '#000000')
-      cloned.removeAttribute('stroke')
-      fg.appendChild(newDoc.importNode(cloned, true))
-    })
-
-    root.appendChild(bg)
-    root.appendChild(fg)
-
-    svgText.value = new XMLSerializer().serializeToString(root)
-    refreshEditableEntries()
-    ElMessage.success(t('icon.duotoneSuccess'))
-  } catch {
-    ElMessage.error(t('icon.processFailed'))
-  }
-}
-
-const autoCropAndCenter = () => {
-  const src = svgText.value?.trim()
-  if (!src) return
-  try {
-    const cropped = cropSvgToContentBBox(src)
-    if (cropped) {
-      svgText.value = cropped
-      refreshEditableEntries()
-      ElMessage.success(t('icon.cropCenterSuccess'))
-    } else {
-      ElMessage.warning(t('icon.boundsUnavailable'))
-    }
-  } catch {
-    ElMessage.error(t('icon.processFailed'))
-  }
-}
-
-function cropSvgToContentBBox(value: string): string | null {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(value, 'image/svg+xml')
-  const svg = doc.documentElement as unknown as SVGSVGElement
-  if (!svg || svg.tagName.toLowerCase() !== 'svg') return null
-
-  const container = document.createElement('div')
-  container.style.position = 'fixed'
-  container.style.left = '-10000px'
-  container.style.top = '-10000px'
-  container.style.opacity = '0'
-  container.style.pointerEvents = 'none'
-  document.body.appendChild(container)
-
-  const measureSvg = svg.cloneNode(true) as SVGSVGElement
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-  const children: ChildNode[] = []
-  while (measureSvg.firstChild) {
-    children.push(measureSvg.firstChild)
-    measureSvg.removeChild(measureSvg.firstChild)
-  }
-  children.forEach((node) => {
-    if ((node as Element).nodeType === 1 && (node as Element).nodeName.toLowerCase() === 'defs') {
-      measureSvg.appendChild(node)
-    } else {
-      g.appendChild(node)
-    }
-  })
-  measureSvg.appendChild(g)
-  measureSvg.setAttribute('width', '1000')
-  measureSvg.setAttribute('height', '1000')
-  if (!measureSvg.getAttribute('viewBox')) measureSvg.setAttribute('viewBox', '0 0 1000 1000')
-  container.appendChild(measureSvg)
-
-  let bbox: DOMRect
-  try {
-    bbox = (g as unknown as SVGGraphicsElement).getBBox()
-  } catch {
-    document.body.removeChild(container)
-    return null
-  }
-  document.body.removeChild(container)
-  if (!bbox || !isFinite(bbox.width) || !isFinite(bbox.height) || bbox.width <= 0 || bbox.height <= 0) return null
-
-  const cx = bbox.x + bbox.width / 2
-  const cy = bbox.y + bbox.height / 2
-  const side = Math.max(bbox.width, bbox.height)
-  const vx = cx - side / 2
-  const vy = cy - side / 2
-  svg.setAttribute('viewBox', `${vx} ${vy} ${side} ${side}`)
-  svg.removeAttribute('width')
-  svg.removeAttribute('height')
-  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-
-  return new XMLSerializer().serializeToString(svg)
-}
 </script>
 
 <style scoped>
 .svg-editor {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 16px;
-}
-
-.svg-editor-main {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.svg-editor-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .svg-editor-side {
@@ -502,8 +382,9 @@ function cropSvgToContentBBox(value: string): string | null {
 }
 
 .svg-editor-preview {
-  min-height: 260px;
+  min-height: 220px;
   border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
   background: var(--studio-canvas-shell);
   display: flex;
   align-items: center;
@@ -519,8 +400,8 @@ function cropSvgToContentBBox(value: string): string | null {
 .svg-editor-fields {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 14px;
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .svg-editor-section {
@@ -536,27 +417,33 @@ function cropSvgToContentBBox(value: string): string | null {
 }
 
 .svg-color-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface);
 }
 
 .svg-color-meta {
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
 }
 
 .svg-color-prop {
+  flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
   color: var(--studio-text);
+  white-space: nowrap;
 }
 
 .svg-color-value {
-  max-width: 220px;
+  min-width: 0;
   overflow: hidden;
   color: var(--studio-text-muted);
   font-size: 11px;
@@ -565,7 +452,7 @@ function cropSvgToContentBBox(value: string): string | null {
 }
 
 .svg-color-picker {
-  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .svg-stop-row {
@@ -601,12 +488,16 @@ function cropSvgToContentBBox(value: string): string | null {
 }
 
 @media (max-width: 900px) {
-  .svg-editor {
+  .svg-editor-side {
+    max-height: none;
+  }
+
+  .svg-color-row {
     grid-template-columns: 1fr;
   }
 
-  .svg-editor-side {
-    max-height: none;
+  .svg-color-meta {
+    justify-content: space-between;
   }
 }
 </style>

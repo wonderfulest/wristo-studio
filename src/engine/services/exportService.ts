@@ -257,6 +257,7 @@ export interface GenerateConfigOptions {
   designId: string
   watchFaceName: string
   textCase: number
+  bitmapMode: boolean
   localization?: WatchfaceLocalizationConfig
   supportsChineseContent?: boolean
   validateBindings?: boolean
@@ -282,6 +283,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId,
     watchFaceName,
     textCase,
+    bitmapMode,
     localization,
     supportsChineseContent,
     validateBindings = false,
@@ -297,6 +299,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     designId: designId || '',
     name: watchFaceName,
     textCase,
+    bitmapMode,
     supportsChineseContent: Boolean(supportsChineseContent),
     elements: [],
     orderIds: [],

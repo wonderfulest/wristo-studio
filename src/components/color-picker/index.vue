@@ -59,6 +59,10 @@ const props = defineProps({
     // 兼容字符串和数字（有些元素用 -1 之类的数值占位）
     type: [String, Number],
     default: '#FFFFFF'
+  },
+  popupZIndex: {
+    type: Number,
+    default: 10000
   }
 })
 
@@ -350,7 +354,7 @@ const togglePicker = () => {
         position: 'fixed',
         top: top + 'px',
         left: left + 'px',
-        zIndex: 10000
+        zIndex: props.popupZIndex
       }
     })
   }

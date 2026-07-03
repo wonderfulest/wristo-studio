@@ -417,6 +417,7 @@ const loadDesign = async (designUid: string) => {
       designStore.setWatchFaceName(designData.name)
       designStore.setSupportsChineseContent(false)
       propertiesStore.textCase = 0
+      propertiesStore.bitmapMode = true
      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
@@ -432,10 +433,14 @@ const loadDesign = async (designUid: string) => {
 
     // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
     propertiesStore.textCase = 0
+    propertiesStore.bitmapMode = true
 
     // 设置文本大小写
     if ([0, 1, 2, 3].includes(Number(config.textCase))) {
       propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
+    }
+    if (typeof config.bitmapMode === 'boolean') {
+      propertiesStore.bitmapMode = config.bitmapMode
     }
     // 等待画布初始化完成
     await waitCanvasReady()

@@ -160,3 +160,8 @@ export const getFrequentFonts = (limit?: number): Promise<ApiResponse<DesignFont
 export const removeMyFont = (id: number): Promise<ApiResponse<boolean>> => {
   return instance.post(`/dsn/fonts/remove/${id}`)
 }
+
+// admin: remove any non-system font by id
+export const removeAdminFont = (id: number): Promise<ApiResponse<boolean>> => {
+  return instance.post(`/admin/fonts/remove/${id}`)
+}

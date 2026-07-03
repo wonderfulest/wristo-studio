@@ -166,7 +166,7 @@ const applyDefaultColorVariable = (normalizedConfig: AnyElementConfig) => {
 }
 
 const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: AnyElementConfig) => {
-  if (['data', 'icon', 'label'].includes(elementType)) {
+  if (['data', 'icon', 'label', 'zoneMetric'].includes(elementType)) {
     const curDataKey = String((normalizedConfig as any).dataProperty ?? '').trim()
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
     if (!curDataKey && !curGoalKey) {

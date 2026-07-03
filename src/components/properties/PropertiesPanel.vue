@@ -43,6 +43,13 @@
                     <el-option :label="t('property.lowercase')" :value="2" />
                   </el-select>
                 </el-form-item>
+                <el-form-item :label="t('property.bitmapMode')">
+                  <el-switch
+                    v-model="bitmapMode"
+                    :active-text="t('common.enabled')"
+                    :inactive-text="t('common.disabled')"
+                  />
+                </el-form-item>
               </el-form>
             </section>
 
@@ -319,6 +326,14 @@ const textCase = computed({
     propertiesStore.textCase = Number(value)
     getDataSimulatorEngine().updateCanvas()
     commitHistory('text-case')
+  },
+})
+
+const bitmapMode = computed({
+  get: () => propertiesStore.bitmapMode,
+  set: (value) => {
+    propertiesStore.bitmapMode = Boolean(value)
+    commitHistory('bitmap-mode')
   },
 })
 

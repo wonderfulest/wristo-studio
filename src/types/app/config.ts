@@ -8,6 +8,7 @@ export interface RuntimeDesignConfig {
   designId: string
   name: string
   textCase: number
+  bitmapMode: boolean
   supportsChineseContent?: boolean
   localization?: WatchfaceLocalizationConfig
   elements: AnyElementConfig[]
