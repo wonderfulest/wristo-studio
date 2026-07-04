@@ -71,7 +71,6 @@
                     @dblclick.stop="openChangeBindingDialog('amoled', c)"
                   >
                     <img :src="getAmoledPreviewSource(c)" alt="" />
-                    <span v-if="getPendingAmoledIcon(c)" class="pending-badge">Local</span>
                     <el-button
                       class="asset-upload-button"
                       circle
@@ -641,18 +640,6 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
 }
 .amoled-asset:hover .asset-upload-button {
   opacity: 1;
-}
-.pending-badge {
-  position: absolute;
-  left: 4px;
-  bottom: 4px;
-  padding: 2px 5px;
-  border-radius: 999px;
-  background: #0f6b68;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
 }
 .no-preview { font-size: 12px; color: #909399; }
 .upload-empty-button {

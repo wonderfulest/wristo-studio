@@ -95,6 +95,7 @@ import {
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import { useI18n } from '@/i18n'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import { restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -374,6 +375,9 @@ const loadDesign = async (designUid: string) => {
     const designData = response.data
 
     const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+    const restoredConfig = await restoreDesignAssetBundle(config as any, {
+      assetBundleUrl: designData.assetBundleUrl,
+    })
     
     // 设置基础信息
     baseStore.id = designUid
@@ -453,7 +457,7 @@ const loadDesign = async (designUid: string) => {
     // 加载元素到画布
     if (config && config.elements) {
       // config.elements 是 API DesignElement[]，此处通过解码器转换为内部 AnyElementConfig
-      const scaledElements = scaleElementsFromStoredSize(config.elements as any)
+      const scaledElements = scaleElementsFromStoredSize(restoredConfig.elements as any)
       await loadElements(scaledElements)
       applyLoadedElementDisplayStates(scaledElements)
     }
