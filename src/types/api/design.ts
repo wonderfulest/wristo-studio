@@ -67,6 +67,11 @@ export interface Design {
   name: string
   description: string
   configJson: DesignConfig | null
+  assetBundleUrl?: string | null
+  assetBundleHash?: string | null
+  assetBundleSize?: number | null
+  assetBundleVersion?: number | null
+  assetBundleUpdatedAt?: string | null
   designStatus: DesignStatus
   reviewComment?: string | null
   isActive: number

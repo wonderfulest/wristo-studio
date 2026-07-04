@@ -13,6 +13,14 @@
     </el-form>
 
     <div class="tabs-extra">
+      <el-button
+        v-if="activeTab === 'amoled'"
+        size="small"
+        @click="openBatchUploadDialog"
+      >
+        <el-icon><Upload /></el-icon>
+        Batch Upload
+      </el-button>
       <el-button size="small" style="background-color: #0f6b68; color: #fff;" @click="onRefreshTab">{{ t('elementSettings.refresh') }}</el-button>
     </div>
     <div class="weather-tabs-wrapper">
@@ -28,26 +36,18 @@
           >
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
-              <template v-if="c.asset">
-                <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
-                  <div class="asset clickable-link">
-                    <img v-if="getAssetPreviewSource(c.asset)" :src="getAssetPreviewSource(c.asset)" alt="" />
-                    <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
-                  </div>
-                </el-tooltip>
-              </template>
-              <template v-else>
-                <el-tooltip :content="t('elementSettings.bindAsset')" placement="top">
-                  <el-upload
-                    :show-file-list="false"
-                    accept=".svg"
-                    :before-upload="beforeUploadSVG"
-                    :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
+              <el-tooltip :content="fontFamily" placement="top">
+                <div class="asset mip-asset">
+                  <span
+                    v-if="c.iconUnicode"
+                    class="mip-weather-glyph"
+                    :style="{ fontFamily }"
                   >
-                    <div class="no-preview clickable-link">{{ t('elementSettings.bindAsset') }}</div>
-                  </el-upload>
-                </el-tooltip>
-              </template>
+                    {{ getMipGlyph(c.iconUnicode) }}
+                  </span>
+                  <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
+                </div>
+              </el-tooltip>
             </div>
           </div>
         </div>
@@ -63,24 +63,32 @@
           >
             <div class="condition-name">{{ c.condition }}</div>
             <div class="assets">
-              <template v-if="c.asset">
+              <template v-if="getAmoledPreviewSource(c)">
                 <el-tooltip :content="t('elementSettings.changeBinding')" placement="top">
-                  <div class="asset clickable-link" @click.stop="openChangeBindingDialog('amoled', c)">
-                    <img v-if="getAssetPreviewSource(c.asset)" :src="getAssetPreviewSource(c.asset)" alt="" />
-                    <div v-else class="no-preview">{{ t('elementSettings.noPreview') }}</div>
+                  <div
+                    class="asset amoled-asset clickable-link"
+                    @click.stop="onSelect('amoled', c)"
+                    @dblclick.stop="openChangeBindingDialog('amoled', c)"
+                  >
+                    <img :src="getAmoledPreviewSource(c)" alt="" />
+                    <span v-if="getPendingAmoledIcon(c)" class="pending-badge">Local</span>
+                    <el-button
+                      class="asset-upload-button"
+                      circle
+                      size="small"
+                      @click.stop="openSingleUploadDialog(c)"
+                    >
+                      <el-icon><Upload /></el-icon>
+                    </el-button>
                   </div>
                 </el-tooltip>
               </template>
               <template v-else>
                 <el-tooltip :content="t('elementSettings.bindAsset')" placement="top">
-                  <el-upload
-                    :show-file-list="false"
-                    accept=".svg"
-                    :before-upload="beforeUploadSVG"
-                    :http-request="(opt:any)=>handleUpload(opt, c.iconUnicode)"
-                  >
-                    <div class="no-preview clickable-link">{{ t('elementSettings.bindAsset') }}</div>
-                  </el-upload>
+                  <button type="button" class="no-preview upload-empty-button" @click.stop="openSingleUploadDialog(c)">
+                    <el-icon><Upload /></el-icon>
+                    <span>{{ t('elementSettings.bindAsset') }}</span>
+                  </button>
                 </el-tooltip>
               </template>
             </div>
@@ -97,6 +105,55 @@
       :display-type="bindingDisplayType"
       @bound="fetchConditions(bindingDisplayType)"
     />
+
+    <el-dialog
+      v-model="uploadDialogVisible"
+      :title="uploadDialogTitle"
+      width="640px"
+      class="weather-upload-dialog"
+    >
+      <div class="weather-upload-body">
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept=".svg,.png,image/svg+xml,image/png"
+          :multiple="uploadMode === 'batch'"
+          class="hidden-file-input"
+          @change="onUploadFilesPicked"
+        />
+        <div
+          class="upload-drop-target"
+          :class="{ 'is-drag-over': uploadDragOver }"
+          @click="triggerFilePicker"
+          @dragenter.prevent="onUploadDragEnter"
+          @dragover.prevent="onUploadDragOver"
+          @dragleave.prevent="onUploadDragLeave"
+          @drop.prevent="onUploadDrop"
+        >
+          <el-icon><Upload /></el-icon>
+          <span>{{ uploadMode === 'batch' ? 'Choose or drop SVG/PNG files' : 'Choose or drop an SVG/PNG file' }}</span>
+          <small v-if="uploadMode === 'batch'">File name should match weather code or condition, for example 101d.svg or 101d.png. PNG must be at least 64x64.</small>
+          <small v-else>{{ uploadTargetCondition?.condition || '' }}</small>
+        </div>
+        <div v-if="uploadRows.length" class="upload-file-list">
+          <div
+            v-for="(row, index) in uploadRows"
+            :key="`${row.file.name}-${row.file.size}-${index}`"
+            class="upload-file-row"
+            :class="{ invalid: !row.condition }"
+          >
+            <span class="upload-file-name">{{ row.file.name }}</span>
+            <span class="upload-file-target">{{ row.condition?.condition || 'No matching weather code' }}</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :disabled="!uploadRows.some(row => row.condition)" @click="saveLocalUploads">
+          Save Locally
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -106,8 +163,9 @@ import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement } from '@/types/element'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import { FontTypes } from '@/config/fonts'
-import { getWeatherConditions, uploadWeatherSvg } from '@/api/wristo/weather'
+import { getWeatherConditions } from '@/api/wristo/weather'
 import { ElMessage } from 'element-plus'
+import { Upload } from '@element-plus/icons-vue'
 import type { WeatherConditionAssetsVO } from '@/types/api/weather'
 import { getIconGlyphByCode, type DisplayType } from '@/api/wristo/iconGlyph'
 import WeatherBindingDialog from './WeatherBindingDialog.vue'
@@ -116,6 +174,8 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { useWeatherAmoledIconStore, type PendingWeatherAmoledIcon } from '@/stores/weatherAmoledIconStore'
 const props = defineProps<{ 
   element?: FabricElement
   config?: any
@@ -124,6 +184,7 @@ const props = defineProps<{
 const canvasStore = useCanvasStore()
 const { t } = useI18n()
 const iconFontStrategyStore = useIconFontStrategyStore()
+const weatherAmoledIconStore = useWeatherAmoledIconStore()
 
 const fontFamily = ref<string>('')
 const fill = ref<string>('')
@@ -133,6 +194,13 @@ const conditions = reactive<{ mip: WeatherConditionAssetsVO[]; amoled: WeatherCo
 const loading = reactive<{ mip: boolean; amoled: boolean }>({ mip: false, amoled: false })
 const selected = reactive<{ mip: string | null; amoled: string | null }>({ mip: null, amoled: null })
 const bindingDialogVisible = ref(false)
+const uploadDialogVisible = ref(false)
+const uploadMode = ref<'single' | 'batch'>('single')
+const uploadTargetCondition = ref<WeatherConditionAssetsVO | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const uploadRows = ref<Array<{ file: File; condition: WeatherConditionAssetsVO | null }>>([])
+const uploadDialogTitle = ref('Upload AMOLED Weather Icons')
+const uploadDragOver = ref(false)
 
 const initElementProperties = (): void => {
   const canvas = canvasStore.canvas
@@ -265,35 +333,161 @@ function onRefreshTab() {
   }
 }
 
-// ---- upload bind helpers ----
-const beforeUploadSVG = (file: File) => {
-  const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
-  if (!isSvg) {
-    ElMessage.error('Please upload an SVG file')
+// ---- local upload helpers ----
+const isSvgFile = (file: File): boolean => {
+  return file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+}
+
+const isPngFile = (file: File): boolean => {
+  return file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+}
+
+const getPngSize = (file: File): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      const width = Number(image.naturalWidth || image.width || 0)
+      const height = Number(image.naturalHeight || image.height || 0)
+      URL.revokeObjectURL(url)
+      resolve({ width, height })
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to read PNG dimensions'))
+    }
+    image.src = url
+  })
+}
+
+const validateUploadFile = async (file: File): Promise<boolean> => {
+  const isSvg = isSvgFile(file)
+  const isPng = isPngFile(file)
+  if (!isSvg && !isPng) {
+    ElMessage.error('Please upload an SVG or PNG file')
     return false
   }
   if (!fontFamily.value) {
     ElMessage.error('Please select a Weather Font first')
     return false
   }
+  if (isPng) {
+    try {
+      const { width, height } = await getPngSize(file)
+      if (width < 64 || height < 64) {
+        ElMessage.error(`${file.name} is ${width}x${height}. PNG weather icons must be at least 64x64.`)
+        return false
+      }
+    } catch {
+      ElMessage.error(`Cannot read PNG dimensions: ${file.name}`)
+      return false
+    }
+  }
   return true
 }
 
-const handleUpload = async (options: { file: File }, unicode?: string) => {
-  const file = options?.file
-  if (!file) return
-  if (!beforeUploadSVG(file)) return
-  if (!unicode) {
+const normalizeUploadName = (value: unknown): string => {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_\s-]+/g, '')
+}
+
+const findConditionForFile = (file: File): WeatherConditionAssetsVO | null => {
+  if (uploadMode.value === 'single') return uploadTargetCondition.value
+  const fileKey = normalizeUploadName(file.name)
+  return conditions.amoled.find((item) => {
+    return normalizeUploadName(item.iconUnicode) === fileKey || normalizeUploadName(item.condition) === fileKey
+  }) ?? null
+}
+
+const openSingleUploadDialog = (condition: WeatherConditionAssetsVO) => {
+  if (!condition.iconUnicode) {
     ElMessage.error('Missing icon unicode for this condition')
     return
   }
-  try {
-    const dt = activeTab.value
-    await uploadWeatherSvg(file, dt, unicode, fontFamily.value)
-    ElMessage.success('Uploaded and bound successfully')
-    await fetchConditions(dt)
-  } catch (e) {
-    ElMessage.error('Upload failed')
+  uploadMode.value = 'single'
+  uploadTargetCondition.value = condition
+  uploadRows.value = []
+  uploadDialogTitle.value = `Upload ${condition.condition || condition.iconUnicode}`
+  uploadDialogVisible.value = true
+}
+
+const openBatchUploadDialog = () => {
+  uploadMode.value = 'batch'
+  uploadTargetCondition.value = null
+  uploadRows.value = []
+  uploadDialogTitle.value = 'Batch Upload AMOLED Weather Icons'
+  uploadDialogVisible.value = true
+}
+
+const triggerFilePicker = () => {
+  fileInputRef.value?.click()
+}
+
+const setUploadDropEffect = (event: DragEvent) => {
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+
+const buildUploadRowsFromFiles = async (candidates: File[]) => {
+  const scopedCandidates = uploadMode.value === 'single'
+    ? candidates.slice(0, 1)
+    : candidates
+  const files: File[] = []
+  for (const file of scopedCandidates) {
+    if (await validateUploadFile(file)) files.push(file)
+  }
+  uploadRows.value = files.map((file) => ({ file, condition: findConditionForFile(file) }))
+}
+
+const onUploadFilesPicked = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  await buildUploadRowsFromFiles(Array.from(input.files || []))
+  input.value = ''
+}
+
+const onUploadDragEnter = (event: DragEvent) => {
+  setUploadDropEffect(event)
+  uploadDragOver.value = true
+}
+
+const onUploadDragOver = (event: DragEvent) => {
+  setUploadDropEffect(event)
+  uploadDragOver.value = true
+}
+
+const onUploadDragLeave = () => {
+  uploadDragOver.value = false
+}
+
+const onUploadDrop = async (event: DragEvent) => {
+  uploadDragOver.value = false
+  const files = Array.from(event.dataTransfer?.files || [])
+  await buildUploadRowsFromFiles(files)
+}
+
+const saveLocalUploads = () => {
+  const validRows = uploadRows.value.filter((row) => row.condition?.iconUnicode)
+  if (!validRows.length) {
+    ElMessage.error('No matching weather icons')
+    return
+  }
+
+  validRows.forEach((row) => {
+    weatherAmoledIconStore.upsertPending({
+      fontSlug: fontFamily.value,
+      iconUnicode: String(row.condition?.iconUnicode || ''),
+      condition: String(row.condition?.condition || row.condition?.iconUnicode || ''),
+      file: row.file,
+    })
+  })
+
+  uploadDialogVisible.value = false
+  ElMessage.success(`Saved ${validRows.length} icon${validRows.length > 1 ? 's' : ''} locally`)
+
+  if (uploadMode.value === 'single' && uploadTargetCondition.value) {
+    onSelect('amoled', uploadTargetCondition.value)
   }
 }
 
@@ -319,7 +513,24 @@ function getAssetPreviewSource(asset?: WeatherConditionAssetsVO['asset']): strin
   return getAssetSvgSource(asset) || asset?.previewUrl || asset?.imageUrl
 }
 
+function getMipGlyph(iconUnicode?: string): string {
+  return resolveIconGlyphText(iconUnicode)
+}
+
+function getPendingAmoledIcon(c: WeatherConditionAssetsVO): PendingWeatherAmoledIcon | null {
+  if (!c?.iconUnicode) return null
+  return weatherAmoledIconStore.getPending(fontFamily.value, c.iconUnicode)
+}
+
+function getAmoledPreviewSource(c: WeatherConditionAssetsVO): string | undefined {
+  const pending = getPendingAmoledIcon(c)
+  if (pending?.objectUrl) return pending.objectUrl
+  return getAssetPreviewSource(c.asset)
+}
+
 function getAmoledAssetSource(c: any): string | undefined {
+  const pending = getPendingAmoledIcon(c)
+  if (pending?.objectUrl) return pending.objectUrl
   const asset = c?.asset as WeatherConditionAssetsVO['asset'] | undefined
   return getAssetSvgSource(asset) || asset?.imageUrl || asset?.previewUrl
 }
@@ -381,8 +592,9 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
   if (dt === 'amoled' && hasImageUrl(c)) {
     const url = getAmoledAssetSource(c)
     if (!url) return
-    const el = props.element as unknown as { amoledImageUrl?: string }
+    const el = props.element as unknown as { amoledImageUrl?: string; amoledIconUnicode?: string }
     el.amoledImageUrl = url
+    el.amoledIconUnicode = c?.iconUnicode
     console.log('[WeatherPanel] onSelect AMOLED', {
       id: (props.element as any)?.id,
       condition: c?.condition,
@@ -390,7 +602,7 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
     })
     // 不传 width/height，让 renderer 从 group 上的 amoledWidth/amoledHeight 取值，
     // 避免被 MIP 模式下 Fabric 自动调整的 group.width/height（受 fontSize 影响）污染。
-    applyUpdate({ weatherDisplayType: 'amoled', amoledImageUrl: url })
+    applyUpdate({ weatherDisplayType: 'amoled', amoledImageUrl: url, amoledIconUnicode: c?.iconUnicode })
   }
 }
 </script>
@@ -405,14 +617,129 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
 .condition-item { border: 1px solid #ebeef5; border-radius: 6px; padding: 8px; }
 .condition-name { font-size: 12px; color: #606266; margin-bottom: 6px; }
 .assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
-.asset { display: flex; align-items: center; justify-content: center; background: #f9fafb; border: 1px dashed #e5e7eb; border-radius: 4px; min-height: 64px; }
+.asset { position: relative; display: flex; align-items: center; justify-content: center; background: #f9fafb; border: 1px dashed #e5e7eb; border-radius: 4px; min-height: 64px; }
 .asset img { max-width: 100%; max-height: 72px; object-fit: contain; }
 .asset .svg :deep(svg) { width: 72px; height: 72px; }
+.mip-asset {
+  min-height: 72px;
+}
+.mip-weather-glyph {
+  color: #111827;
+  font-size: 34px;
+  line-height: 1;
+}
+.amoled-asset {
+  min-height: 80px;
+  overflow: hidden;
+}
+.asset-upload-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+.amoled-asset:hover .asset-upload-button {
+  opacity: 1;
+}
+.pending-badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #0f6b68;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
 .no-preview { font-size: 12px; color: #909399; }
+.upload-empty-button {
+  display: flex;
+  width: 100%;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
 /* hyperlink-like clickable styling */
 .clickable-link { cursor: pointer; color: #0f6b68; }
 .clickable-link:hover { text-decoration: underline; }
 /* selected condition style */
 .condition-item.selected { border-width: 2px; border-color: #0f6b68; box-shadow: 0 0 0 1px rgba(15, 107, 104, 0.3) inset; }
 .pager { display: flex; justify-content: center; padding: 8px 0; }
+.hidden-file-input {
+  display: none;
+}
+.weather-upload-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.upload-drop-target {
+  display: flex;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f6b68;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.upload-drop-target:hover,
+.upload-drop-target.is-drag-over {
+  border-color: #0f6b68;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 3px rgba(15, 107, 104, 0.12);
+}
+.upload-drop-target small {
+  max-width: 420px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.upload-file-list {
+  display: flex;
+  max-height: 240px;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+}
+.upload-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+}
+.upload-file-row.invalid {
+  border-color: #fca5a5;
+  background: #fff1f2;
+}
+.upload-file-name,
+.upload-file-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.upload-file-target {
+  flex: 0 0 auto;
+  max-width: 220px;
+  color: #64748b;
+}
 </style>

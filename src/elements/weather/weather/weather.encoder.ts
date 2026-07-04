@@ -5,6 +5,7 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
   const anyEl = element as any
   const weatherDisplayType = anyEl.weatherDisplayType as WeatherElementConfig['weatherDisplayType'] | undefined
   const amoledImageUrl = anyEl.amoledImageUrl ?? anyEl.weatherImageUrl ?? anyEl.imageUrl
+  const amoledIconUnicode = anyEl.amoledIconUnicode
   const mipUnicode = anyEl.mipUnicode
   const fontFamily = anyEl.fontFamily
   const fill = anyEl.fill || '#ffffff'
@@ -23,6 +24,7 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
     originY: 'center',
     weatherDisplayType,// 表盘不用 
     amoledImageUrl, // 表盘不用 
+    amoledIconUnicode,
     mipUnicode, // 表盘不用 
     width,
     height,
@@ -44,6 +46,7 @@ export function decodeWeather(config: WeatherElementConfig): Partial<FabricEleme
     originY: config.originY,
     weatherDisplayType: config.weatherDisplayType,
     amoledImageUrl: config.amoledImageUrl,
+    amoledIconUnicode: config.amoledIconUnicode,
     mipUnicode: config.mipUnicode,
     fontSize: config.fontSize,
     imageUrl: config.amoledImageUrl ?? config.imageUrl,

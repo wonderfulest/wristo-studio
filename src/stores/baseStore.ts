@@ -13,6 +13,7 @@ import {
   resolvePackageAssetUrls,
   validateRuntimeConfigForExport,
 } from '@/engine/services/exportService'
+import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
@@ -382,6 +383,11 @@ export const useBaseStore = defineStore('baseStore', {
       })
       this.id = res.data.documentId
       designStore.id = this.id
+      const designUid = res.data?.designUid || this.id
+      const bundleFile = await buildDesignAssetBundle({ ...exportConfig, designId: designUid })
+      if (bundleFile) {
+        await designApi.uploadAssetBundle(designUid, bundleFile)
+      }
       return res.code === 0
     },
     // 获取所有对象

@@ -60,6 +60,7 @@ type WeatherGroupLike = FabricGroup & {
   __weatherScaleSyncAttached?: boolean
   weatherDisplayType?: 'mip' | 'amoled'
   amoledImageUrl?: string
+  amoledIconUnicode?: string
   mipUnicode?: string
   fontFamily?: string
   fill?: string
@@ -183,6 +184,7 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
       const g = group as unknown as WeatherGroupLike
       g.weatherDisplayType = dt
       g.amoledImageUrl = imgUrl
+      g.amoledIconUnicode = config.amoledIconUnicode
       g.weatherImageUrl = imgUrl
       g.mipUnicode = config.mipUnicode
       g.fontFamily = fontFamily
@@ -292,6 +294,7 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
         const g = group as unknown as WeatherGroupLike
         g.weatherDisplayType = 'amoled'
         g.amoledImageUrl = imgUrl
+        g.amoledIconUnicode = config.amoledIconUnicode
         g.weatherImageUrl = imgUrl
         g.fontFamily = fontFamily
         g.fill = fill
@@ -334,6 +337,7 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
   if (config.fill !== undefined) g.fill = config.fill
   if (config.fontSize !== undefined) g.fontSize = Number(config.fontSize)
   if (config.mipUnicode !== undefined) g.mipUnicode = String(config.mipUnicode)
+  if ((config as any).amoledIconUnicode !== undefined) g.amoledIconUnicode = String((config as any).amoledIconUnicode)
 
   const incomingAmoledUrl = config.amoledImageUrl ?? config.imageUrl
   if (incomingAmoledUrl !== undefined) {

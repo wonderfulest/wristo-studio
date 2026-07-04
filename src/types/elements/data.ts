@@ -74,6 +74,7 @@ export interface WeatherElementConfig extends BaseElementConfig {
   weatherDisplayType?: 'mip' | 'amoled'
   // AMOLED image-based rendering
   amoledImageUrl?: string
+  amoledIconUnicode?: string
   width?: number
   height?: number
 

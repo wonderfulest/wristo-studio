@@ -86,6 +86,7 @@ import { useI18n } from '@/i18n'
 import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
+import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -162,6 +163,23 @@ const prepareExportConfig = async (config) => {
     console.error('Failed to resolve package asset URLs:', error)
     messageStore.error(error?.message || t('common.saveFailed'))
     return null
+  }
+}
+
+const uploadDesignAssetBundle = async (designUid, config) => {
+  if (!designUid || !config) return null
+  try {
+    const bundleFile = await buildDesignAssetBundle({
+      ...config,
+      designId: designUid,
+    })
+    if (!bundleFile) return null
+    const res = await designApi.uploadAssetBundle(designUid, bundleFile)
+    return res.data || null
+  } catch (error) {
+    console.error('Failed to upload design asset bundle:', error)
+    messageStore.error(error?.message || t('common.saveFailed'))
+    throw error
   }
 }
 
@@ -362,6 +380,14 @@ const uploadApp = async () => {
     
     // 更新 baseStore.id
     baseStore.id = res.data.documentId
+    if (res.data?.designUid || baseStore.id) {
+      currentStatus = t('export.updatingConfig')
+      currentProgress = 70
+      if (loadingInstance) {
+        loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
+      }
+      await uploadDesignAssetBundle(res.data?.designUid || baseStore.id, configJson)
+    }
     historyStore.saveInitial()
 
     // 更新WPay产品信息(必须在设计创建或更新之后)

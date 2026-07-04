@@ -4,6 +4,7 @@ export interface IconAssetVO {
   sourceType: string
   format: string
   displayType: string
+  svgFile?: string
   svgContent?: string
   imageUrl?: string
   previewUrl?: string

@@ -14,6 +14,15 @@ import type {
 import type { Image } from '@/types/image'
 import type { ProductPackagingBuildLogVo } from '@/types/api/product'
 
+export interface DesignAssetBundleVO {
+  designUid: string
+  url: string
+  hash: string
+  size: number
+  version: number
+  updatedAt?: string
+}
+
 /**
  * 规范化字符串：清理各种特殊空白字符
  * - 将特殊空白符（不间断空格、全角空格等）替换为普通空格
@@ -179,6 +188,15 @@ export const designApi = {
    */
   submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
     return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
+  },
+
+  uploadAssetBundle(designUid: string, file: File): Promise<ApiResponse<DesignAssetBundleVO>> {
+    const form = new FormData()
+    form.append('file', file)
+    return instance.post(`/dsn/design/${encodeURIComponent(designUid)}/asset-bundle`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    })
   },
 
   getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {
