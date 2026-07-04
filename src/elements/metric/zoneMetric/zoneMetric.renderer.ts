@@ -1,4 +1,4 @@
-import { Circle, FabricText, Group, Path, Rect } from 'fabric'
+import { Group, Path, Rect } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { ZoneMetricElementConfig } from '@/types/elements/data'
@@ -93,71 +93,34 @@ function segmentPath(cx: number, cy: number, outerR: number, innerR: number, sta
   return `M ${o1.x} ${o1.y} A ${outerR} ${outerR} 0 ${largeArc} 1 ${o2.x} ${o2.y} L ${i2.x} ${i2.y} A ${innerR} ${innerR} 0 ${largeArc} 0 ${i1.x} ${i1.y} Z`
 }
 
-function makeText(text: string, left: number, top: number, fontSize: number, fill: string, fontWeight: string | number = 'normal') {
-  return new FabricText(text, {
-    left,
-    top,
-    originX: 'center',
-    originY: 'center',
-    fontFamily: 'Arial',
-    fontSize,
-    fontWeight,
-    fill,
-    selectable: false,
-    evented: false,
-  } as any)
-}
-
 function buildRectangle(config: ZoneMetricResolvedConfig) {
   const zone = resolveZone(config.value, config.zones)
+  const zones = config.zones.length ? config.zones : [zone]
   const left = -config.width / 2
   const top = -config.height / 2
-  const children: any[] = [
-    new Rect({
-      left,
+  const totalGap = config.gap * Math.max(0, zones.length - 1)
+  const segmentWidth = Math.max(1, (config.width - totalGap) / zones.length)
+
+  const children = zones.map((item, index) => {
+    const isFirst = index === 0
+    const isLast = index === zones.length - 1
+    const radius = Math.min(config.borderRadius, config.height / 2, segmentWidth / 2)
+    return new Rect({
+      left: left + index * (segmentWidth + config.gap),
       top,
-      width: config.width,
+      width: segmentWidth,
       height: config.height,
-      rx: config.borderRadius,
-      ry: config.borderRadius,
+      rx: isFirst || isLast ? radius : 0,
+      ry: isFirst || isLast ? radius : 0,
       originX: 'left',
       originY: 'top',
-      fill: config.fill,
-      stroke: config.borderColor,
+      fill: item.key === zone.key ? item.color : config.inactiveColor,
+      stroke: config.borderWidth > 0 ? config.borderColor : '',
       strokeWidth: config.borderWidth,
       selectable: false,
       evented: false,
-    } as any),
-  ]
-
-  const swatchSize = Math.min(28, Math.max(12, config.height * 0.24))
-  const swatchLeft = left + 18 + swatchSize / 2
-  children.push(new Rect({
-    left: swatchLeft,
-    top: top + config.height / 2,
-    width: swatchSize,
-    height: swatchSize,
-    rx: Math.max(3, swatchSize * 0.22),
-    ry: Math.max(3, swatchSize * 0.22),
-    originX: 'center',
-    originY: 'center',
-    fill: zone.color,
-    selectable: false,
-    evented: false,
-  } as any))
-
-  if (config.showLabel) {
-    children.push(makeText(config.label, left + 22, top + 17, 13, config.mutedTextColor, 700))
-  }
-  if (config.showValue) {
-    children.push(makeText(String(Math.round(config.value)), left + config.width * 0.55, top + config.height * 0.43, Math.max(22, config.height * 0.38), config.textColor, 500))
-  }
-  if (config.showUnit) {
-    children.push(makeText(config.unit, left + config.width * 0.75, top + config.height * 0.72, 15, config.mutedTextColor, 700))
-  }
-  if (config.showZoneLabel) {
-    children.push(makeText(zone.label, left + config.width * 0.54, top + config.height - 14, 12, zone.color, 700))
-  }
+    } as any)
+  })
 
   return children
 }
@@ -171,20 +134,7 @@ function buildRing(config: ZoneMetricResolvedConfig) {
   const cy = 0
   const totalGap = config.gap * config.zones.length
   const span = (360 - totalGap) / Math.max(1, config.zones.length)
-  const children: any[] = [
-    new Circle({
-      left: cx,
-      top: cy,
-      radius: outerR,
-      originX: 'center',
-      originY: 'center',
-      fill: config.fill,
-      stroke: config.borderColor,
-      strokeWidth: config.borderWidth,
-      selectable: false,
-      evented: false,
-    } as any),
-  ]
+  const children: any[] = []
 
   config.zones.forEach((item, index) => {
     const start = index * (span + config.gap)
@@ -196,11 +146,6 @@ function buildRing(config: ZoneMetricResolvedConfig) {
       evented: false,
     } as any))
   })
-
-  if (config.showLabel) children.push(makeText(config.label, 0, -size * 0.18, 13, config.mutedTextColor, 700))
-  if (config.showValue) children.push(makeText(String(Math.round(config.value)), 0, size * 0.04, Math.max(22, size * 0.22), config.textColor, 600))
-  if (config.showUnit) children.push(makeText(config.unit, 0, size * 0.26, 12, config.mutedTextColor, 700))
-  if (config.showZoneLabel) children.push(makeText(zone.label, 0, size * 0.42, 11, zone.color, 700))
 
   return children
 }

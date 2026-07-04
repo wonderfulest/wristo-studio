@@ -23,68 +23,35 @@
         />
       </el-form-item>
 
-      <el-form-item label="Value">
-        <el-input-number v-model="currentModel.value" :min="0" :max="300" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Label">
-        <el-input v-model="currentModel.label" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Unit">
-        <el-input v-model="currentModel.unit" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Width">
+      <el-form-item :label="t('elementSettings.width')">
         <el-input-number v-model="currentModel.width" :min="48" :max="600" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Height">
+      <el-form-item :label="t('elementSettings.height')">
         <el-input-number v-model="currentModel.height" :min="48" :max="600" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Ring Thick">
+      <el-form-item v-if="currentModel.displayMode === 'ring'" label="Ring Thick">
         <el-input-number v-model="currentModel.ringThickness" :min="2" :max="80" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Gap">
+      <el-form-item :label="t('elementSettings.gap')">
         <el-input-number v-model="currentModel.gap" :min="0" :max="20" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Radius">
+      <el-form-item v-if="currentModel.displayMode === 'rectangle'" :label="t('elementSettings.borderRadius')">
         <el-input-number v-model="currentModel.borderRadius" :min="0" :max="80" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Show">
-        <div class="toggle-list">
-          <el-checkbox v-model="currentModel.showLabel" @change="updateElement">Label</el-checkbox>
-          <el-checkbox v-model="currentModel.showValue" @change="updateElement">Value</el-checkbox>
-          <el-checkbox v-model="currentModel.showUnit" @change="updateElement">Unit</el-checkbox>
-          <el-checkbox v-model="currentModel.showZoneLabel" @change="updateElement">Zone</el-checkbox>
-        </div>
-      </el-form-item>
-
-      <el-form-item label="Fill">
-        <color-picker v-model="currentModel.fill" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Text">
-        <color-picker v-model="currentModel.textColor" @change="updateElement" />
-      </el-form-item>
-
-      <el-form-item label="Muted Text">
-        <color-picker v-model="currentModel.mutedTextColor" @change="updateElement" />
       </el-form-item>
 
       <el-form-item label="Inactive">
         <color-picker v-model="currentModel.inactiveColor" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Border">
+      <el-form-item v-if="currentModel.displayMode === 'rectangle'" :label="t('elementSettings.borderColor')">
         <color-picker v-model="currentModel.borderColor" @change="updateElement" />
       </el-form-item>
 
-      <el-form-item label="Border Width">
+      <el-form-item v-if="currentModel.displayMode === 'rectangle'" :label="t('elementSettings.borderWidth')">
         <el-input-number v-model="currentModel.borderWidth" :min="0" :max="20" @change="updateElement" />
       </el-form-item>
     </el-form>
@@ -97,6 +64,9 @@ import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import { resolvePresetDefaults } from './zoneMetric.common'
+import { useI18n } from '@/i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   element?: any
@@ -176,9 +146,4 @@ const handlePresetChange = () => {
   margin-bottom: 16px;
 }
 
-.toggle-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
-}
 </style>

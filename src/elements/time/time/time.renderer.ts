@@ -149,6 +149,8 @@ function formatTime(date: Date, formatter: number) {
       return minute[0]
     case TimeFormatConstants.M:
       return minute[1]
+    case TimeFormatConstants.COLON:
+      return ':'
     default: {
       return moment(date).format(format)
     }

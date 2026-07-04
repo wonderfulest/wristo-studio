@@ -44,6 +44,21 @@ const TEMPERATURE_SYMBOLS = new Set([
   ':FIELD_TYPE_SENSOR_TEMPERATURE',
 ])
 
+const DISTANCE_SYMBOLS = new Set([
+  ':FIELD_TYPE_DISTANCE',
+  ':FIELD_TYPE_WEEKLY_RUN_DISTANCE',
+  ':FIELD_TYPE_WEEKLY_CYCLING_DISTANCE',
+  ':FIELD_TYPE_WEEKLY_SWIMMING_DISTANCE',
+  ':FIELD_TYPE_WEEKLY_WALKING_DISTANCE',
+  ':GOAL_TYPE_DISTANCE',
+  ':GOAL_TYPE_WEEKLY_RUN_DISTANCE',
+  ':GOAL_TYPE_WEEKLY_CYCLING_DISTANCE',
+  ':GOAL_TYPE_WEEKLY_SWIMMING_DISTANCE',
+  ':GOAL_TYPE_WEEKLY_WALKING_DISTANCE',
+  ':CHART_TYPE_7DAYS_DISTANCE',
+  ':CHART_TYPE_7DAYS_PUSH_DISTANCE',
+])
+
 const FALLBACK_ICON_UNICODE_BY_SYMBOL: Record<string, string> = {
   ':FIELD_TYPE_TEMPERATURE': '0062',
   ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE': '0062',
@@ -62,6 +77,7 @@ const FALLBACK_ICON_UNICODE_BY_SYMBOL: Record<string, string> = {
 const resolveUnit = (option: DataTypeOptionVO): string => {
   const unit = String(option.unit || '').trim()
   if (unit) return unit
+  if (DISTANCE_SYMBOLS.has(option.metricSymbol)) return 'km'
   return TEMPERATURE_SYMBOLS.has(option.metricSymbol) ? '°C' : ''
 }
 

@@ -44,6 +44,8 @@ function formatTimeValue(date: Date, formatter: number): string {
       return minute[0]
     case TimeFormatConstants.M:
       return minute[1]
+    case TimeFormatConstants.COLON:
+      return ':'
     default:
       return moment(date).format(format)
   }

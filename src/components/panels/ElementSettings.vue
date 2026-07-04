@@ -110,6 +110,26 @@ const applyConfigPatch = computed(() => {
   if (!el?.id) return undefined
   const lockedId = String(el.id)
   return (patch: Partial<AnyElementConfig>) => {
+    if (String(el.eleType ?? '') === 'goalArc') {
+      console.groupCollapsed('[goalArc.ElementSettings] applyConfigPatch')
+      console.log('lockedId', lockedId)
+      console.log('patch', patch)
+      console.log('activeElementBefore', {
+        id: el.id,
+        left: el.left,
+        top: el.top,
+        width: el.width,
+        height: el.height,
+        scaleX: el.scaleX,
+        scaleY: el.scaleY,
+        segmentMode: el.segmentMode,
+        segments: el.segments,
+        gapAngle: el.gapAngle,
+        objectCount: el.getObjects?.().length,
+      })
+      console.log('storeBefore', elementDataStore.getElementConfig(lockedId))
+      console.groupEnd()
+    }
     // 更新数据层
     elementDataStore.patchElement(lockedId, patch as AnyElementConfig)
     // 更新画布元素（按 id resolve 真实对象）

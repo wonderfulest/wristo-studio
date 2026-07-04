@@ -52,7 +52,6 @@
     <AppMenuGoalGroup
       :on-add-progress-bar="onAddGoalProgressBar"
       :on-add-progress-arc="onAddGoalArc"
-      :on-add-progress-segments="onAddGoalSegment"
     />
     <div class="menu-group menu-group--chart">
       <div class="menu-group-title">
@@ -82,7 +81,6 @@ const emit = defineEmits([
   'add-data-field',
   'add-goal-progress-bar',
   'add-goal-arc',
-  'add-goal-segment',
   'add-element',
 ])
 
@@ -96,10 +94,6 @@ const onAddGoalProgressBar = () => {
 
 const onAddGoalArc = () => {
   emit('add-goal-arc')
-}
-
-const onAddGoalSegment = () => {
-  emit('add-goal-segment')
 }
 
 const onAddElement = (category, elementType) => {

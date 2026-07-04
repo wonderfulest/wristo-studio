@@ -86,7 +86,6 @@ const labelElement = computed(() => getElementByType('label'))
 const unitElement = computed(() => getElementByType('unit'))
 const goalBarElement = computed(() => getElementByType('goalBar'))
 const goalArcElement = computed(() => getElementByType('goalArc'))
-const goalSegmentBarElement = computed(() => getElementByType('goalSegmentBar'))
 
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
@@ -213,11 +212,6 @@ const updateGoalProperty = () => {
         goalArcElement.value.set('goalProperty', goalProperty.value)
         const goalArcId = String((goalArcElement.value as any).id)
         if (goalArcId) elementDataStore.patchElement(goalArcId, { goalProperty: goalProperty.value } as any)
-      }
-      if (goalSegmentBarElement.value) {
-        goalSegmentBarElement.value.set('goalProperty', goalProperty.value)
-        const goalSegBarId = String((goalSegmentBarElement.value as any).id)
-        if (goalSegBarId) elementDataStore.patchElement(goalSegBarId, { goalProperty: goalProperty.value } as any)
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('goalProperty')
@@ -356,8 +350,7 @@ const showDataProperty = computed(() => {
 const showGoalProperty = computed(() => {
   const hasGoalBar = goalBarElement.value !== undefined
   const hasGoalArc = goalArcElement.value !== undefined
-  const hasGoalSegmentBar = goalSegmentBarElement.value !== undefined
-  return hasGoalBar || hasGoalArc || hasGoalSegmentBar
+  return hasGoalBar || hasGoalArc
 })
 </script>
 

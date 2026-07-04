@@ -16,6 +16,10 @@ export type GoalArcElementSchema = {
     counterClockwise: boolean
     goalProperty: string
     progress: number
+    segmentMode: boolean
+    segments: number
+    gapAngle: number
+    endCap: 'round' | 'butt'
   }
   resizable: boolean
   rotatable: boolean
@@ -37,6 +41,10 @@ export const goalArcSchema: GoalArcElementSchema = {
     counterClockwise: false,
     goalProperty: '',
     progress: 0,
+    segmentMode: false,
+    segments: 12,
+    gapAngle: 2,
+    endCap: 'butt',
   },
   resizable: false,
   rotatable: false,

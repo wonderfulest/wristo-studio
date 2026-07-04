@@ -181,7 +181,7 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
     return
   }
 
-  if (['goalBar', 'goalArc', 'goalSegmentBar'].includes(elementType)) {
+  if (['goalBar', 'goalArc'].includes(elementType)) {
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
     if (!curGoalKey) {
       const unusedKey = getUnusedMetricPropertyKey('goal')
@@ -197,6 +197,11 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
 
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
+    if ((config as any)?.disabled) {
+      messageStore.warning('This element is temporarily disabled')
+      return
+    }
+
     // 加载字体
     await loadElementFont(config)
     
@@ -220,15 +225,16 @@ const addElementByType = async (_category: string, elementType: string, config: 
       ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
     }
 
-    ensureMetricPropertyForElement(elementType, normalizedConfig)
+    const resolvedElementType = elementType
+    ensureMetricPropertyForElement(resolvedElementType, normalizedConfig)
 
     // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）
-    if (elementType) {
+    if (resolvedElementType) {
       try {
-        const handler = getElementHandler(elementType)
+        const handler = getElementHandler(resolvedElementType)
         if (!handler || !handler.add) {
           console.warn('[AddElementPanel] addElementByType: handler or handler.add is missing', {
-            elementType,
+            elementType: resolvedElementType,
             handler,
           })
         } else {

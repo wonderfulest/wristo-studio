@@ -31,6 +31,7 @@ export type ZoneMetricElementSchema = {
   }
   resizable: boolean
   rotatable: boolean
+  disabled: boolean
 }
 
 export const zoneMetricSchema: ZoneMetricElementSchema = {
@@ -64,4 +65,5 @@ export const zoneMetricSchema: ZoneMetricElementSchema = {
   },
   resizable: true,
   rotatable: false,
+  disabled: true,
 }

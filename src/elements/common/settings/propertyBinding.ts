@@ -124,7 +124,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
     return { dataProperty: propertyKey, goalProperty: null, text: metric.defaultValue }
   }
 
-  if (['goalBar', 'goalArc', 'goalSegmentBar'].includes(eleType)) {
+  if (['goalBar', 'goalArc'].includes(eleType)) {
     return { goalProperty: propertyKey }
   }
   if (eleType === 'icon') return { goalProperty: propertyKey, dataProperty: null, text: resolveIconGlyphText(metric.icon) }

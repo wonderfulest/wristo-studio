@@ -14,14 +14,6 @@
       <section class="text-settings-card progress-arc-card">
         <div class="text-settings-grid">
           <div class="text-setting-field">
-            <label>{{ t('elementSettings.foregroundRadius') }}</label>
-            <el-input type="number" v-model="mainRadius" disabled @change="onMainRadiusChange" />
-          </div>
-          <div class="text-setting-field">
-            <label>{{ t('elementSettings.backgroundRadius') }}</label>
-            <el-input type="number" v-model="bgRadius" disabled @change="onBgRadiusChange" />
-          </div>
-          <div class="text-setting-field">
             <label>{{ t('elementSettings.foregroundStrokeWidth') }}</label>
             <el-input type="number" v-model="mainStrokeWidth" @change="onMainStrokeWidthChange" />
           </div>
@@ -55,6 +47,67 @@
             <el-radio :label="false">{{ t('elementSettings.clockwise') }}</el-radio>
             <el-radio :label="true">{{ t('elementSettings.counterclockwise') }}</el-radio>
           </el-radio-group>
+        </div>
+      </section>
+
+      <section class="text-settings-card progress-arc-card">
+        <div class="text-setting-field progress-arc-end-cap">
+          <label>{{ t('elementSettings.endCap') }}</label>
+          <el-radio-group class="progress-arc-radio-group" v-model="currentModel.endCap" @change="onEndCapChange">
+            <el-radio label="butt">{{ t('elementSettings.endCapButt') }}</el-radio>
+            <el-radio label="round">{{ t('elementSettings.endCapRound') }}</el-radio>
+          </el-radio-group>
+        </div>
+      </section>
+
+      <section class="text-settings-card progress-arc-card">
+        <div class="progress-arc-segment-panel" :class="{ 'is-active': currentModel.segmentMode }">
+          <div class="progress-arc-segment-header">
+            <div class="progress-arc-segment-title">
+              <label>{{ t('elementSettings.segmentMode') }}</label>
+              <span>{{ currentModel.segmentMode ? t('common.on') : t('common.off') }}</span>
+            </div>
+            <el-switch v-model="currentModel.segmentMode" @change="onSegmentModeChange" />
+          </div>
+
+          <div v-if="currentModel.segmentMode" class="progress-arc-segment-body">
+            <div class="progress-arc-segment-preview" aria-hidden="true">
+              <span
+                v-for="index in segmentPreviewCount"
+                :key="index"
+                :class="{ active: index <= segmentPreviewActiveCount }"
+              />
+            </div>
+
+            <div class="text-settings-grid progress-arc-segment-grid">
+              <div class="text-setting-field">
+                <label>
+                  {{ t('elementSettings.segments') }}
+                  <strong>{{ segmentsLocal }}</strong>
+                </label>
+                <el-input-number
+                  v-model="segmentsLocal"
+                  :min="1"
+                  :max="120"
+                  :step="1"
+                  controls-position="right"
+                  @change="onSegmentsChange" />
+              </div>
+              <div class="text-setting-field">
+                <label>
+                  {{ t('elementSettings.gapAngle') }}
+                  <strong>{{ gapAngleLocal }} deg</strong>
+                </label>
+                <el-input-number
+                  v-model="gapAngleLocal"
+                  :min="0"
+                  :max="60"
+                  :step="0.5"
+                  controls-position="right"
+                  @change="onGapAngleChange" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -145,6 +198,14 @@ const mainStrokeWidth = ref(0)
 const bgStrokeWidth = ref(0)
 const startAngleLocal = ref(0)
 const endAngleLocal = ref(0)
+const segmentsLocal = ref(12)
+const gapAngleLocal = ref(2)
+const normalizeEndCap = (value: unknown): 'round' | 'butt' => value === 'round' ? 'round' : 'butt'
+const segmentPreviewCount = computed(() => Math.min(16, Math.max(1, segmentsLocal.value)))
+const segmentPreviewActiveCount = computed(() => {
+  const progress = Math.max(0, Math.min(1, Number((currentModel.value as any)?.progress ?? 0)))
+  return Math.max(1, Math.round(segmentPreviewCount.value * progress))
+})
 
 // 初始化并在 element 变动时同步颜色
 watchEffect(() => {
@@ -168,6 +229,11 @@ watchEffect(() => {
 
   startAngleLocal.value = Number(model?.startAngle ?? 0)
   endAngleLocal.value = Number(model?.endAngle ?? 0)
+  segmentsLocal.value = Math.max(1, Math.floor(Number(model?.segments ?? 12)))
+  gapAngleLocal.value = Math.max(0, Number(model?.gapAngle ?? 2))
+  if (model) {
+    model.endCap = normalizeEndCap(model.endCap)
+  }
 })
 
 // 定义提示内容，使用 HTML 格式
@@ -182,18 +248,6 @@ const tooltipContent = computed(() => `
 
 const rules = {
   goalProperty: [{ required: true, message: 'Please select a goal property', trigger: 'change' }]
-}
-
-// 变更处理：半径与描边
-const onMainRadiusChange = (val: number | string) => {
-  const n = Number(val)
-  mainRadius.value = n
-  void applyUpdate({ radius: n })
-}
-const onBgRadiusChange = (val: number | string) => {
-  const n = Number(val)
-  bgRadius.value = n
-  void applyUpdate({ bgRadius: n })
 }
 
 const onMainStrokeWidthChange = (val: number | string) => {
@@ -217,6 +271,55 @@ const onBgColorChange = (val: string) => {
   bgColor.value = val
   ;(currentModel.value as any).bgColor = val
   void applyUpdate({ bgColor: val })
+}
+
+const onSegmentModeChange = (val: string | number | boolean) => {
+  const enabled = Boolean(val)
+  ;(currentModel.value as any).segmentMode = enabled
+  console.groupCollapsed('[goalArc.panel] segmentMode change')
+  console.log('value', val)
+  console.log('currentModel', { ...(currentModel.value as any) })
+  console.log('patch', {
+    segmentMode: enabled,
+    segments: segmentsLocal.value,
+    gapAngle: gapAngleLocal.value,
+  })
+  console.groupEnd()
+  void applyUpdate({
+    segmentMode: enabled,
+    segments: segmentsLocal.value,
+    gapAngle: gapAngleLocal.value,
+  })
+}
+
+const onSegmentsChange = (val: number | undefined) => {
+  const n = Math.max(1, Math.floor(Number(val ?? 12)))
+  segmentsLocal.value = n
+  ;(currentModel.value as any).segments = n
+  console.groupCollapsed('[goalArc.panel] segments change')
+  console.log('value', val)
+  console.log('normalized', n)
+  console.log('currentModel', { ...(currentModel.value as any) })
+  console.groupEnd()
+  void applyUpdate({ segments: n })
+}
+
+const onGapAngleChange = (val: number | undefined) => {
+  const n = Math.max(0, Number(val ?? 0))
+  gapAngleLocal.value = n
+  ;(currentModel.value as any).gapAngle = n
+  console.groupCollapsed('[goalArc.panel] gapAngle change')
+  console.log('value', val)
+  console.log('normalized', n)
+  console.log('currentModel', { ...(currentModel.value as any) })
+  console.groupEnd()
+  void applyUpdate({ gapAngle: n })
+}
+
+const onEndCapChange = (val: string | number | boolean) => {
+  const endCap = normalizeEndCap(val)
+  ;(currentModel.value as any).endCap = endCap
+  void applyUpdate({ endCap })
 }
 
 // 变更处理：角度
@@ -243,6 +346,21 @@ const onEndAngleChange = (val: number | string) => {
 
 const applyUpdate = async (patch: Record<string, any>) => {
   try {
+    console.groupCollapsed('[goalArc.panel] applyUpdate')
+    console.log('patch', patch)
+    console.log('hasApplyPatch', Boolean(props.applyPatch))
+    console.log('hasConfig', Boolean(props.config))
+    console.log('element', {
+      id: (props.element as any)?.id,
+      left: (props.element as any)?.left,
+      top: (props.element as any)?.top,
+      width: (props.element as any)?.width,
+      height: (props.element as any)?.height,
+      segmentMode: (props.element as any)?.segmentMode,
+      objectCount: (props.element as any)?.getObjects?.().length,
+    })
+    console.log('config', props.config)
+    console.groupEnd()
     if (props.applyPatch && props.config) {
       props.applyPatch(patch)
       return
@@ -262,6 +380,10 @@ const updateElement = async () => {
   await applyUpdate({
     counterClockwise: model.counterClockwise,
     goalProperty: model.goalProperty,
+    segmentMode: Boolean(model.segmentMode),
+    segments: Math.max(1, Math.floor(Number(model.segments ?? segmentsLocal.value))),
+    gapAngle: Math.max(0, Number(model.gapAngle ?? gapAngleLocal.value)),
+    endCap: normalizeEndCap(model.endCap),
   })
 }
 
@@ -361,6 +483,123 @@ defineExpose({
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.progress-arc-segment-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface-soft);
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.progress-arc-segment-panel.is-active {
+  border-color: var(--studio-primary-border);
+  background: color-mix(in srgb, var(--studio-primary) 6%, var(--studio-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--studio-primary) 10%, transparent);
+}
+
+.progress-arc-segment-header {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-arc-segment-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-arc-segment-title label {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.progress-arc-segment-title span {
+  flex: 0 0 auto;
+  min-width: 30px;
+  padding: 3px 7px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  background: var(--studio-surface);
+  color: var(--studio-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.progress-arc-segment-panel.is-active .progress-arc-segment-title span {
+  border-color: var(--studio-primary-border);
+  background: color-mix(in srgb, var(--studio-primary) 12%, transparent);
+  color: var(--studio-primary);
+}
+
+.progress-arc-segment-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progress-arc-segment-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5px, 1fr));
+  gap: 4px;
+  align-items: center;
+  height: 14px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 82%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--studio-surface) 78%, transparent);
+}
+
+.progress-arc-segment-preview span {
+  height: 6px;
+  min-width: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--studio-text-muted) 22%, transparent);
+}
+
+.progress-arc-segment-preview span.active {
+  background: var(--studio-primary);
+}
+
+.progress-arc-segment-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.progress-arc-segment-grid .text-setting-field {
+  gap: 6px;
+}
+
+.progress-arc-segment-grid .text-setting-field > label strong {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--studio-text-muted) 10%, transparent);
+  color: var(--studio-text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.progress-arc-segment-grid :deep(.el-input-number) {
+  width: 100%;
 }
 
 .progress-arc-radio-group :deep(.el-radio) {

@@ -30,7 +30,6 @@
         @add-data-field="handleAddDataField"
         @add-goal-progress-bar="handleAddGoalProgressBarField"
         @add-goal-arc="handleAddGoalArcField"
-        @add-goal-segment="handleAddGoalSegmentField"
         @add-element="handleAddElement"
       />
   
@@ -329,6 +328,10 @@ const handleAddElement = async (category: string, elementType: string, overrides
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
+    if ((config as any)?.disabled) {
+      messageStore.warning(t('editor.elementTypeUnsupported'))
+      return
+    }
     config = normalizeShortcutElementConfig(config)
 
     // Preload fonts if necessary
@@ -603,76 +606,6 @@ const handleAddGoalArcField = async () => {
     })
   } catch (e) {
     console.error('Failed to add goal arc (goal + icon + data):', e)
-    messageStore.error(t('editor.addGoalFieldFailed'))
-  }
-}
-
-// Goal quick-add: Progress Segments, bar with icon/data at two ends above bar
-const handleAddGoalSegmentField = async () => {
-  try {
-    const allProps = propertiesStore.allProperties
-
-    let maxIndex = 0
-    Object.keys(allProps || {}).forEach((key) => {
-      const match = key.match(/^goal_(\d+)$/)
-      if (match) {
-        const num = Number(match[1]) || 0
-        if (num > maxIndex) maxIndex = num
-      }
-    })
-    const nextIndex = maxIndex + 1
-    const propertyKey = `goal_${nextIndex}`
-    const title = `Goal ${nextIndex}`
-
-    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
-    const defaultOption = goalOptions[0] || DataTypeOptions[0]
-
-    if (!allProps[propertyKey]) {
-      propertiesStore.addProperty({
-        key: propertyKey,
-        type: 'goal',
-        title,
-        options: goalOptions,
-        defaultValue: defaultOption ? defaultOption.value : undefined,
-      })
-    }
-
-    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalSegmentBar) || {}) as any
-    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
-    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
-    const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
-    const half = width / 2
-
-    const iconLeft = baseLeft - half
-    const dataLeft = baseLeft + half
-    const iconTop = baseTop - 20
-    const dataTop = baseTop - 20
-
-    await handleAddElement('goal', 'goalSegmentBar', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-    })
-
-    await handleAddElement('metric', 'icon', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: iconLeft,
-      top: iconTop,
-      originX: 'right',
-      fontSize: 24,
-      iconSize: 24,
-    })
-
-    await handleAddElement('metric', 'data', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: dataLeft,
-      top: dataTop,
-      originX: 'left',
-      fontSize: 24,
-    })
-  } catch (e) {
-    console.error('Failed to add goal segment bar (goal + icon + data):', e)
     messageStore.error(t('editor.addGoalFieldFailed'))
   }
 }

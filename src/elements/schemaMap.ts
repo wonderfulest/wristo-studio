@@ -54,7 +54,6 @@ import { centerCapSchema } from '@/elements/dials/centerCap/centerCap.schema'
 // goal
 import { goalBarSchema } from '@/elements/goal/goalBar/goalBar.schema'
 import { goalArcSchema } from '@/elements/goal/goalArc/goalArc.schema'
-import { goalSegmentBarSchema } from '@/elements/goal/goalSegmentBar/goalSegmentBar.schema'
 
 // charts
 import { barChartSchema } from '@/elements/charts/barChart/barChart.schema'
@@ -136,7 +135,6 @@ export const elementConfigs: ElementConfigs = {
   goal: {
     goalBar: buildConfigFromSchema(goalBarSchema as AnySchema),
     goalArc: buildConfigFromSchema(goalArcSchema as AnySchema),
-    goalSegmentBar: buildConfigFromSchema(goalSegmentBarSchema as AnySchema),
   },
   chart: {
     barChart: buildConfigFromSchema(barChartSchema as AnySchema),

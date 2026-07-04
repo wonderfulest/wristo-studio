@@ -12,10 +12,6 @@
       <el-icon><Operation /></el-icon>
       <span>{{ t('editor.progressArc') }}</span>
     </el-menu-item>
-    <el-menu-item index="goal/progress-segments" @click="onAddProgressSegments">
-      <el-icon><Operation /></el-icon>
-      <span>{{ t('editor.progressSegments') }}</span>
-    </el-menu-item>
   </div>
 </template>
 
@@ -34,10 +30,6 @@ const props = defineProps({
     type: Function,
     required: true,
   },
-  onAddProgressSegments: {
-    type: Function,
-    required: true,
-  },
 })
 
 const onAddProgressBar = () => {
@@ -46,9 +38,5 @@ const onAddProgressBar = () => {
 
 const onAddProgressArc = () => {
   props.onAddProgressArc && props.onAddProgressArc()
-}
-
-const onAddProgressSegments = () => {
-  props.onAddProgressSegments && props.onAddProgressSegments()
 }
 </script>

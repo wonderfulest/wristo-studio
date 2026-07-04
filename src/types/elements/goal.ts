@@ -2,7 +2,7 @@ import { TOriginX, TOriginY } from 'fabric'
 import type { BaseElementConfig } from './base'
 
 export interface GoalElementConfig extends BaseElementConfig {
-  eleType: 'goalBar' | 'goalArc' | 'goalSegmentBar'
+  eleType: 'goalBar' | 'goalArc'
   color: string
   bgColor: string
   progress: number
@@ -21,6 +21,10 @@ export interface GoalArcElementConfig extends GoalElementConfig {
   counterClockwise: boolean
   goalProperty: string
   progress: number
+  segmentMode?: boolean
+  segments?: number
+  gapAngle?: number
+  endCap?: 'round' | 'butt'
 }
 
 export interface GoalBarElementConfig extends GoalElementConfig {
@@ -31,6 +35,9 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   height: number
   color: string
   bgColor: string
+  variant?: 'continuous' | 'segmented'
+  segments?: number
+  gap?: number
   borderRadius: number
   progress: number
   padding: number
@@ -40,23 +47,4 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   borderColor: string
   goalProperty: string
   progressAlign: 'left' | 'right'
-}
-
-export interface GoalSegmentBarElementConfig extends GoalElementConfig {
-  eleType: 'goalSegmentBar'
-  left: number
-  top: number
-  width: number
-  height: number
-  color: string       // active segment color
-  bgColor: string     // inactive segment color
-  borderRadius: number
-  borderWidth: number
-  borderColor: string
-  segments: number    // number of segments
-  gap: number         // gap between segments (px)
-  progress: number    // 0..1
-  originX: TOriginX
-  originY: TOriginY
-  goalProperty: string
 }

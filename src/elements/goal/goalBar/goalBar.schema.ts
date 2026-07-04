@@ -9,6 +9,9 @@ export type GoalBarElementSchema = {
     height: number
     color: string
     bgColor: string
+    variant: 'continuous' | 'segmented'
+    segments: number
+    gap: number
     borderRadius: number
     progress: number
     padding: number
@@ -23,12 +26,15 @@ export type GoalBarElementSchema = {
 export const goalBarSchema: GoalBarElementSchema = {
   type: 'goalBar' as ElementType,
   name: 'Goal Bar',
-  icon: 'mdi:progress-check',
+  icon: 'mdi:chart-bar',
   defaultConfig: {
     width: 200,
     height: 10,
     color: '#00FF00',
     bgColor: '#333333',
+    variant: 'continuous',
+    segments: 10,
+    gap: 2,
     borderRadius: 5,
     progress: 0.5,
     padding: 2,
