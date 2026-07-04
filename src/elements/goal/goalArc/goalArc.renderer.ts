@@ -313,7 +313,7 @@ export function createGoalArc(config: GoalArcElementConfig): FabricElement {
     evented: true,
     hasControls: true,
     hasBorders: true,
-    designerControlMode: 'resize8',
+    designerControlMode: 'default',
     lockScalingX: false,
     lockScalingY: false,
     originX: 'center',
