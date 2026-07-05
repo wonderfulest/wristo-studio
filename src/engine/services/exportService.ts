@@ -27,7 +27,7 @@ const t = (key: string, params?: Record<string, string | number>): string => {
   return translate(key, localeStore.currentLocale, params)
 }
 
-const PACKAGE_ASSET_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
+const PACKAGE_ASSET_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'centerCap'])
 
 function isPackageAssetElement(element: AnyElementConfig): boolean {
   return PACKAGE_ASSET_ELEMENT_TYPES.has(String((element as any)?.eleType ?? (element as any)?.type ?? ''))

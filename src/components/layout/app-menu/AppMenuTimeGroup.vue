@@ -84,6 +84,10 @@
         <el-icon><Watch /></el-icon>
         <span>{{ t('editor.secondHand') }}</span>
       </el-menu-item>
+      <el-menu-item index="time/center-cap" @click="onAddElement('hands', 'centerCap')">
+        <el-icon><Watch /></el-icon>
+        <span>{{ t('elementSettings.centerCapSettings') }}</span>
+      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>

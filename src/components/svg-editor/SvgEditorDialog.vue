@@ -385,7 +385,18 @@ const buildEditedSvgText = (): string => {
   min-height: 220px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-sm);
-  background: var(--studio-canvas-shell);
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-size: 16px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,8 +404,10 @@ const buildEditedSvgText = (): string => {
 }
 
 .svg-editor-preview :deep(svg) {
+  width: min(280px, calc(100% - 32px));
+  height: min(280px, calc(100% - 32px));
   max-width: 100%;
-  max-height: 240px;
+  max-height: 100%;
 }
 
 .svg-editor-fields {

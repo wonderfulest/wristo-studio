@@ -120,12 +120,12 @@ export const elementConfigs: ElementConfigs = {
     tick12: buildConfigFromSchema(tick12Schema as AnySchema),
     tick60: buildConfigFromSchema(tick60Schema as AnySchema),
     romans: buildConfigFromSchema(romansSchema as AnySchema),
-    centerCap: buildConfigFromSchema(centerCapSchema as AnySchema),
   },
   hands: {
     hourHand: buildConfigFromSchema(hourHandSchema as AnySchema),
     minuteHand: buildConfigFromSchema(minuteHandSchema as AnySchema),
     secondHand: buildConfigFromSchema(secondHandSchema as AnySchema),
+    centerCap: buildConfigFromSchema(centerCapSchema as AnySchema),
   },
   shape: {
     rectangle: buildConfigFromSchema(rectangleSchema as AnySchema),

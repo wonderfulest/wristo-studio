@@ -30,9 +30,18 @@
           <div class="condition-name">
             {{ currentAmoledCandidate?.label || currentAmoledCandidate?.iconUnicode || 'Current icon' }}
           </div>
-          <div class="asset amoled-asset clickable-link">
+          <div
+            class="asset amoled-asset clickable-link"
+            :class="{ 'is-drag-over': directUploadDragOver }"
+            @dragenter.prevent="onDirectUploadDragEnter"
+            @dragover.prevent="onDirectUploadDragOver"
+            @dragleave.prevent="onDirectUploadDragLeave"
+            @drop.prevent="onDirectUploadDrop">
             <template v-if="currentAmoledImageSource">
               <img :src="currentAmoledImageSource" alt="" />
+              <el-button v-if="currentAmoledSvgEditable" class="asset-edit-button" circle size="small" @click.stop="openCurrentAmoledSvgEditor">
+                <el-icon><Edit /></el-icon>
+              </el-button>
               <el-button class="asset-upload-button" circle size="small" @click.stop="openSingleUploadDialog">
                 <el-icon><Upload /></el-icon>
               </el-button>
@@ -74,6 +83,19 @@
         <el-button type="primary" :loading="savingUploads" :disabled="!uploadRows.some((row) => row.iconUnicode)" @click="saveLocalUploads">Save Locally</el-button>
       </template>
     </el-dialog>
+
+    <SvgEditorDialog
+      v-model="svgEditorVisible"
+      :initial-svg="editingSvgText"
+      :saving="svgSaving"
+      :title="t('asset.editSvgColors')"
+      :placeholder="t('icon.svgPlaceholder')"
+      :save-label="t('asset.applySvgColors')"
+      :empty-color-message="t('asset.noEditableSvgColors')"
+      :z-index="16000"
+      @save="saveEditedUploadSvg"
+      @closed="closeSvgEditor"
+    />
   </div>
 </template>
 
@@ -83,8 +105,9 @@ import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
+import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 import { ElMessage } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
+import { Edit, Upload } from '@element-plus/icons-vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { FontTypes } from '@/config/fonts'
@@ -116,8 +139,13 @@ const activeTab = ref<'mip' | 'amoled'>('mip')
 const uploadDialogVisible = ref(false)
 const uploadRows = ref<Array<{ file: File; iconUnicode: string | null }>>([])
 const uploadDragOver = ref(false)
+const directUploadDragOver = ref(false)
 const savingUploads = ref(false)
 const syncingActiveTab = ref(false)
+const svgEditorVisible = ref(false)
+const svgSaving = ref(false)
+const editingSvgText = ref('')
+const editingSvgFile = ref<File | null>(null)
 
 const rules = {
   dataProperty: [{ required: true, message: 'Please select a data property', trigger: 'change' }]
@@ -139,7 +167,17 @@ const currentAmoledPreviewSource = computed(() => {
   if (!iconUnicode) return ''
   return amoledIconAssetStore.getDisplayUrl(currentAmoledFontSlug.value, iconUnicode)
 })
+const currentPendingAmoledAsset = computed(() => {
+  const iconUnicode = currentAmoledCandidate.value?.iconUnicode
+  if (!iconUnicode) return null
+  return amoledIconAssetStore.getPending(currentAmoledFontSlug.value, iconUnicode)
+})
 const currentAmoledImageSource = computed(() => currentAmoledPreviewSource.value || String((currentModel.value as any)?.amoledImageUrl || ''))
+const currentAmoledSvgEditable = computed(() => {
+  const pending = currentPendingAmoledAsset.value
+  if (pending?.file) return isSvgFile(pending.file)
+  return isSvgSource(currentAmoledImageSource.value)
+})
 const hasAmoledMode = computed(() => Boolean(currentAmoledCandidate.value || currentAmoledImageSource.value))
 const desiredActiveTab = computed<'mip' | 'amoled'>(() => {
   const displayType = String((currentModel.value as any)?.iconDisplayType || 'mip')
@@ -271,12 +309,17 @@ const applyAmoledDisplay = async () => {
 const glyph = (iconUnicode: string) => resolveIconGlyphText(iconUnicode)
 
 const openSingleUploadDialog = () => {
-  if (!currentAmoledCandidate.value) {
-    ElMessage.error('No icon unicode found for this icon')
-    return
-  }
+  if (!ensureCurrentAmoledCandidate()) return
   uploadRows.value = []
   uploadDialogVisible.value = true
+}
+
+const ensureCurrentAmoledCandidate = (): boolean => {
+  if (!currentAmoledCandidate.value) {
+    ElMessage.error('No icon unicode found for this icon')
+    return false
+  }
+  return true
 }
 
 const triggerFilePicker = () => {
@@ -285,6 +328,19 @@ const triggerFilePicker = () => {
 
 const isSvgFile = (file: File) => file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
 const isPngFile = (file: File) => file.type === 'image/png' || /\.png$/i.test(file.name)
+const isSvgSource = (source: string): boolean => {
+  const value = String(source || '').trim()
+  return /^data:image\/svg\+xml[,;]/i.test(value) || /^blob:/i.test(value) || /\.svg(?:$|[?#])/i.test(value)
+}
+
+const decodeSvgDataUrl = (source: string): string => {
+  const commaIndex = source.indexOf(',')
+  if (commaIndex < 0) return ''
+  const meta = source.slice(0, commaIndex).toLowerCase()
+  const payload = source.slice(commaIndex + 1)
+  if (meta.includes(';base64')) return atob(payload)
+  return decodeURIComponent(payload)
+}
 
 const getPngSize = (file: File): Promise<{ width: number; height: number }> => {
   return new Promise((resolve, reject) => {
@@ -323,15 +379,72 @@ const validateUploadFile = async (file: File): Promise<boolean> => {
   return true
 }
 
+const openSvgEditorForUpload = async (file: File) => {
+  try {
+    editingSvgFile.value = file
+    editingSvgText.value = await file.text()
+    svgEditorVisible.value = true
+  } catch (error) {
+    console.error('[amoled-icon-panel] failed to read SVG for editing', error)
+    ElMessage.error(t('asset.loadSvgFailed'))
+    closeSvgEditor()
+  }
+}
+
+const openCurrentAmoledSvgEditor = async () => {
+  if (!ensureCurrentAmoledCandidate()) return
+
+  const pending = currentPendingAmoledAsset.value
+  if (pending?.file && isSvgFile(pending.file)) {
+    await openSvgEditorForUpload(pending.file)
+    return
+  }
+
+  const source = currentAmoledImageSource.value
+  if (!isSvgSource(source)) {
+    ElMessage.warning('Only SVG AMOLED assets can be edited')
+    return
+  }
+
+  try {
+    const svgText = source.startsWith('data:image/svg+xml')
+      ? decodeSvgDataUrl(source)
+      : await fetch(source, { credentials: 'same-origin' }).then((response) => {
+        if (!response.ok) throw new Error(`Failed to load SVG: ${response.status}`)
+        return response.text()
+      })
+    const iconUnicode = currentAmoledCandidate.value?.iconUnicode || 'amoled-icon'
+    editingSvgFile.value = new File([svgText], `${iconUnicode}.svg`, { type: 'image/svg+xml' })
+    editingSvgText.value = svgText
+    svgEditorVisible.value = true
+  } catch (error) {
+    console.error('[amoled-icon-panel] failed to load current SVG asset for editing', error)
+    ElMessage.error(t('asset.loadSvgFailed'))
+    closeSvgEditor()
+  }
+}
+
+const closeSvgEditor = () => {
+  svgEditorVisible.value = false
+  editingSvgText.value = ''
+  editingSvgFile.value = null
+}
+
 const findIconUnicodeForFile = (_file: File): string | null => {
   return currentAmoledCandidate.value?.iconUnicode || null
 }
 
-const buildUploadRowsFromFiles = async (candidates: File[]) => {
+const buildUploadRowsFromFiles = async (candidates: File[], options: { editSvg?: boolean } = {}) => {
   const scoped = candidates.slice(0, 1)
   const rows: Array<{ file: File; iconUnicode: string | null }> = []
   for (const file of scoped) {
-    if (await validateUploadFile(file)) rows.push({ file, iconUnicode: findIconUnicodeForFile(file) })
+    if (!(await validateUploadFile(file))) continue
+    if (options.editSvg && isSvgFile(file)) {
+      uploadRows.value = []
+      await openSvgEditorForUpload(file)
+      return
+    }
+    rows.push({ file, iconUnicode: findIconUnicodeForFile(file) })
   }
   uploadRows.value = rows
   console.log('[amoled-icon-panel] built upload rows', {
@@ -349,7 +462,7 @@ const buildUploadRowsFromFiles = async (candidates: File[]) => {
 
 const onUploadFilesPicked = async (event: Event) => {
   const input = event.target as HTMLInputElement
-  await buildUploadRowsFromFiles(Array.from(input.files || []))
+  await buildUploadRowsFromFiles(Array.from(input.files || []), { editSvg: true })
   input.value = ''
 }
 
@@ -373,7 +486,53 @@ const onUploadDragLeave = () => {
 
 const onUploadDrop = async (event: DragEvent) => {
   uploadDragOver.value = false
-  await buildUploadRowsFromFiles(Array.from(event.dataTransfer?.files || []))
+  await buildUploadRowsFromFiles(Array.from(event.dataTransfer?.files || []), { editSvg: true })
+}
+
+const onDirectUploadDragEnter = (event: DragEvent) => {
+  setUploadDropEffect(event)
+  directUploadDragOver.value = true
+}
+
+const onDirectUploadDragOver = (event: DragEvent) => {
+  setUploadDropEffect(event)
+  directUploadDragOver.value = true
+}
+
+const onDirectUploadDragLeave = () => {
+  directUploadDragOver.value = false
+}
+
+const onDirectUploadDrop = async (event: DragEvent) => {
+  directUploadDragOver.value = false
+  if (!ensureCurrentAmoledCandidate()) return
+
+  const files = Array.from(event.dataTransfer?.files || [])
+  if (!files.length) return
+
+  await buildUploadRowsFromFiles(files, { editSvg: true })
+  if (uploadRows.value.some((row) => row.iconUnicode)) {
+    await saveLocalUploads()
+  }
+}
+
+const saveEditedUploadSvg = async (svgText: string) => {
+  const sourceFile = editingSvgFile.value
+  if (!sourceFile || !svgText) return
+
+  svgSaving.value = true
+  try {
+    const baseName = sourceFile.name.replace(/\.svg$/i, '') || 'amoled-icon'
+    const file = new File([svgText], `${baseName}-recolor-${Date.now()}.svg`, { type: 'image/svg+xml' })
+    uploadRows.value = [{ file, iconUnicode: findIconUnicodeForFile(file) }]
+    await saveLocalUploads()
+    closeSvgEditor()
+  } catch (error) {
+    console.error('[amoled-icon-panel] failed to save edited SVG upload', error)
+    ElMessage.error(t('asset.saveSvgFailed'))
+  } finally {
+    svgSaving.value = false
+  }
 }
 
 const saveLocalUploads = async () => {
@@ -502,7 +661,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80px;
+  min-height: 112px;
   border: 1px dashed #e5e7eb;
   border-radius: 4px;
   background: #f9fafb;
@@ -510,7 +669,7 @@ defineExpose({
 
 .asset img {
   max-width: 100%;
-  max-height: 72px;
+  max-height: 160px;
   object-fit: contain;
 }
 
@@ -521,9 +680,16 @@ defineExpose({
 }
 
 .amoled-asset {
-  min-height: 92px;
+  min-height: 184px;
   overflow: hidden;
-  background: #050505;
+  background: #f9fafb;
+}
+
+.amoled-asset img {
+  width: 160px;
+  height: 160px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 24px);
 }
 
 .asset-upload-button {
@@ -534,8 +700,23 @@ defineExpose({
   transition: opacity 0.16s ease;
 }
 
-.amoled-asset:hover .asset-upload-button {
+.asset-edit-button {
+  position: absolute;
+  top: 4px;
+  right: 38px;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.amoled-asset:hover .asset-upload-button,
+.amoled-asset:hover .asset-edit-button {
   opacity: 1;
+}
+
+.amoled-asset.is-drag-over {
+  border-color: #0f6b68;
+  background: rgba(15, 107, 104, 0.16);
+  box-shadow: 0 0 0 2px rgba(15, 107, 104, 0.18) inset;
 }
 
 .upload-empty-button {
@@ -544,10 +725,10 @@ defineExpose({
   justify-content: center;
   gap: 6px;
   width: 100%;
-  min-height: 80px;
+  min-height: 112px;
   border: 0;
   background: transparent;
-  color: #d1d5db;
+  color: #475569;
   cursor: pointer;
 }
 

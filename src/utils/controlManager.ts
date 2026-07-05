@@ -22,7 +22,7 @@ type VisualCenter = {
 }
 
 // 统一控制点适用的元素类型（按 eleType 区分），供全局复用
-export const DESIGNER_CONTROL_TYPES: string[] = ['rectangle', 'windDirection', 'circle', 'image']
+export const DESIGNER_CONTROL_TYPES: string[] = ['rectangle', 'windDirection', 'circle', 'image', 'centerCap']
 
 export interface ControlManagerOptions {
   size?: number
@@ -198,10 +198,10 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
   return true
 }
 
-type ControlSetMode = 'default' | 'resize8'
+type ControlSetMode = 'default' | 'resize8' | 'corner4'
 
 function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
-  const base: Record<string, Control> = {
+  const cornerControls: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
       y: -0.5,
@@ -234,6 +234,12 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       actionName: 'scale',
       render: renderDefaultControl,
     }),
+  }
+
+  if (mode === 'corner4') return cornerControls
+
+  const base: Record<string, Control> = {
+    ...cornerControls,
     cloneControl: new Control({
       x: 0.5,
       y: -0.5,
@@ -298,7 +304,12 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   const t = target as unknown as FabricLikeObject
   if (!isManageableTarget(t)) return
 
-  const mode = (t as any).designerControlMode === 'resize8' ? 'resize8' : 'default'
+  const mode =
+    (t as any).designerControlMode === 'resize8'
+      ? 'resize8'
+      : (t as any).designerControlMode === 'corner4'
+        ? 'corner4'
+        : 'default'
   ;(t as unknown as { controls?: Record<string, Control> }).controls = createControls(mode)
   t.set({
     cornerStyle: 'circle',

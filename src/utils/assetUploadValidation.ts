@@ -13,7 +13,7 @@ export const isPngFile = (file: File): boolean => {
 }
 
 export const isHandAssetType = (assetType: AnalogAssetType): boolean => {
-  return assetType === 'hour' || assetType === 'minute' || assetType === 'second'
+  return assetType === 'hour' || assetType === 'minute' || assetType === 'second' || assetType === 'center_cap'
 }
 
 export const isAllowedAnalogAssetFile = (file: File, assetType: AnalogAssetType): boolean => {

@@ -47,5 +47,6 @@ export function decodeCenterCap(config: CenterCapElementConfig): Partial<FabricE
     fill: config.fill,
     imageUrl: config.imageUrl,
     assetId: config.assetId,
+    targetSize: config.targetSize,
   } as Partial<FabricElement>
 }

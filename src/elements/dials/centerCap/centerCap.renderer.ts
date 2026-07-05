@@ -3,9 +3,61 @@ import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useDesignStore } from '@/stores/designStore'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { CenterCapElementConfig } from '@/elements/dials/centerCap/centerCap.encoder'
+import { applyControlsToObject } from '@/utils/controlManager'
+
+function getCanvasCenter() {
+  const canvasStore = useCanvasStore()
+  const designStore = useDesignStore()
+  const canvas = canvasStore.canvas
+  const canvasCenterX = Number(canvas?.getWidth?.() || 0) / 2
+  const canvasCenterY = Number(canvas?.getHeight?.() || 0) / 2
+  return {
+    x: Number(designStore.designSpec.centerX ?? canvasCenterX),
+    y: Number(designStore.designSpec.centerY ?? canvasCenterY),
+  }
+}
+
+function syncCenterCapSize(element: any) {
+  const renderedWidth = Number(element.width || 0) * Number(element.scaleX || 1)
+  const renderedHeight = Number(element.height || 0) * Number(element.scaleY || 1)
+  const targetSize = Math.max(renderedWidth, renderedHeight)
+  if (Number.isFinite(targetSize) && targetSize > 0) {
+    element.targetSize = targetSize
+  }
+}
+
+function lockCenterCapToCanvasCenter(element: any) {
+  const center = getCanvasCenter()
+  element.set({ left: center.x, top: center.y })
+  element.setCoords?.()
+}
+
+function configureCenterCapControls(element: any) {
+  element.set({
+    selectable: true,
+    evented: true,
+    hasControls: true,
+    hasBorders: true,
+    designerControlMode: 'corner4',
+    lockMovementX: true,
+    lockMovementY: true,
+    lockRotation: true,
+    lockScalingFlip: true,
+  })
+  applyControlsToObject(element)
+  element.on('scaling', () => {
+    lockCenterCapToCanvasCenter(element)
+    syncCenterCapSize(element)
+  })
+  element.on('modified', () => {
+    lockCenterCapToCanvasCenter(element)
+    syncCenterCapSize(element)
+  })
+}
 
 export async function createCenterCap(
   config: CenterCapElementConfig,
@@ -47,35 +99,33 @@ export async function createCenterCap(
   const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
   const element: any = img
 
-  const center = canvas.getWidth?.() / 2 || 0
+  const center = getCanvasCenter()
+  const gw = element.width || 0
+  const gh = element.height || 0
+  const baseSize = Math.max(gw, gh) || 1
+  const targetSize = config.targetSize || Math.min(canvas.getWidth?.() || baseSize, canvas.getHeight?.() || baseSize) * 0.15 || baseSize
 
   element.set({
     id,
     eleType: 'centerCap',
-    left: center,
-    top: center,
+    left: center.x,
+    top: center.y,
     scaleX: 1,
     scaleY: 1,
     originX: 'center',
     originY: 'center',
-    selectable: true,
-    hasControls: false,
-    hasBorders: true,
     imageUrl,
     assetId: config.assetId,
+    targetSize,
   })
 
-  const gw = element.width || 0
-  const gh = element.height || 0
-  const baseSize = Math.max(gw, gh) || 1
-  const targetSize = config.targetSize || canvas.getWidth?.() * 0.15 || baseSize
   const scale = targetSize / baseSize
 
   element.set({ scaleX: scale, scaleY: scale })
+  configureCenterCapControls(element)
 
   element.on('moving', () => {
-    const c = canvas.getWidth?.() / 2 || 0
-    element.set({ left: c, top: c })
+    lockCenterCapToCanvasCenter(element)
   })
   element.on('selected', () => {})
   element.on('deselected', () => {})
@@ -102,13 +152,16 @@ export async function updateCenterCap(
   let group: any = objects.find((obj: any) => obj.id === (element as any).id)
   if (!group) return
 
-  const center = canvas.getWidth?.() / 2 || 0
+  const center = getCanvasCenter()
 
   const nextImageUrl = patch.imageUrl
   const hasNewImage = typeof nextImageUrl === 'string' && nextImageUrl.length > 0
 
   if (hasNewImage && nextImageUrl !== group.imageUrl) {
     const prevAngle = group.angle
+    const prevRenderedWidth = (group.width || 0) * (group.scaleX || 1)
+    const prevRenderedHeight = (group.height || 0) * (group.scaleY || 1)
+    const prevTargetSize = Math.max(prevRenderedWidth, prevRenderedHeight)
 
     canvas.remove(group)
 
@@ -121,25 +174,19 @@ export async function updateCenterCap(
       eleType: 'centerCap',
       originX: 'center',
       originY: 'center',
-      left: center,
-      top: center,
+      left: center.x,
+      top: center.y,
       angle: prevAngle,
       imageUrl: nextImageUrl,
-      selectable: true,
-      hasControls: false,
-      hasBorders: true,
     })
 
     const gw = group.width || 0
     const gh = group.height || 0
     const baseSize = Math.max(gw, gh) || 1
-
-    const renderedWidth = (group.width || 0) * (group.scaleX || 1)
-    const renderedHeight = (group.height || 0) * (group.scaleY || 1)
-    const currentSize = Math.max(renderedWidth, renderedHeight) || baseSize
-    const targetSize = patch.targetSize || currentSize
+    const targetSize = patch.targetSize || prevTargetSize || baseSize
     const scale = targetSize / baseSize
-    group.set({ scaleX: scale, scaleY: scale })
+    group.set({ scaleX: scale, scaleY: scale, targetSize })
+    configureCenterCapControls(group)
 
     canvas.add(group)
   }
@@ -154,14 +201,17 @@ export async function updateCenterCap(
     group.set({ scaleX: scale, scaleY: scale })
   }
 
+  if (patch.targetSize) {
+    group.targetSize = patch.targetSize
+  }
+
   group.on('moving', () => {
-    const c = canvas.getWidth?.() / 2 || 0
-    group.set({ left: c, top: c })
+    lockCenterCapToCanvasCenter(group)
   })
   group.on('selected', () => {})
   group.on('deselected', () => {})
 
-  group.set({ left: center, top: center })
+  group.set({ left: center.x, top: center.y })
   group.setCoords()
   canvas.requestRenderAll?.()
   canvas.discardActiveObject?.()

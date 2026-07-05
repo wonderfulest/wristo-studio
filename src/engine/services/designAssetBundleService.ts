@@ -341,7 +341,7 @@ const getAssetGroupForElementRef = (input: {
   const field = String(input.field || '').toLowerCase()
   const combined = `${category} ${elementType} ${field}`
   if (combined.includes('background')) return 'background'
-  if (combined.includes('hand')) return 'hands'
+  if (combined.includes('hand') || combined.includes('centercap') || combined.includes('center_cap')) return 'hands'
   if (combined.includes('ring') || combined.includes('arc')) return 'rings'
   if (combined.includes('marker') || combined.includes('tick')) return 'markers'
   if (combined.includes('divider')) return 'dividers'

@@ -384,7 +384,7 @@ const uploadAccept = computed(() => {
   return '.svg'
 })
 
-const editableSvgAssetTypes: AnalogAssetType[] = ['image', 'hour', 'minute', 'second']
+const editableSvgAssetTypes: AnalogAssetType[] = ['image', 'hour', 'minute', 'second', 'center_cap']
 
 const isAllowedUploadFile = (file: File): boolean => isAllowedAnalogAssetFile(file, props.assetType)
 

@@ -10,12 +10,8 @@
           :selected-url="element?.imageUrl"
           :selected-asset-id="element?.assetId"
           :asset-type="'center_cap' as any"
-          :on-select="(url, asset) =>
-            element && applyUpdate({ imageUrl: url, assetId: asset?.id })
-          "
-          :on-upload="(url, asset) =>
-            element && applyUpdate({ imageUrl: url, assetId: asset?.id })
-          "
+          :on-select="handleAssetSelect"
+          :on-upload="handleAssetUpload"
         />
         <div class="tips">
           <p>{{ t('elementSettings.svgTipTitle') }}</p>
@@ -49,8 +45,6 @@ const props = defineProps<{
 
 const formRef = ref<any>(null)
 
-// 最小化设置：仅资源选择，不暴露位置/尺寸控件
-
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {
     props.applyPatch(patch)
@@ -60,6 +54,15 @@ const applyUpdate = (patch: Record<string, any>) => {
   if (props.element) {
     elementManager.updateElement(props.element as any, patch)
   }
+}
+
+const handleAssetSelect = (url: string, asset: any) => {
+  const sourceUrl = asset?.file?.url || asset?.file?.previewUrl || url
+  applyUpdate({ imageUrl: sourceUrl, assetId: asset?.id })
+}
+
+const handleAssetUpload = (url: string, asset: any) => {
+  handleAssetSelect(url, asset)
 }
 
 const handleClose = async () => {
