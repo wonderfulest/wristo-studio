@@ -6,6 +6,14 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 
+export const MIN_CIRCLE_RADIUS = 3
+
+export function normalizeCircleRadius(value: unknown): number {
+  const radius = Number(value ?? 50)
+  if (!Number.isFinite(radius)) return MIN_CIRCLE_RADIUS
+  return Math.max(MIN_CIRCLE_RADIUS, Math.round(radius))
+}
+
 function attachCircleScaleSync(circle: Circle): void {
   const c = circle as Circle & { __circleScaleSyncAttached?: boolean }
   if (c.__circleScaleSyncAttached) return
@@ -21,7 +29,7 @@ function attachCircleScaleSync(circle: Circle): void {
     if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001) return
 
     const uniformScale = (sx + sy) / 2 || 1
-    const nextRadius = Math.max(1, radius * uniformScale)
+    const nextRadius = normalizeCircleRadius(radius * uniformScale)
 
     circle.set({
       radius: nextRadius,
@@ -61,7 +69,7 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
 
   const id = nanoid()
 
-  const radius = Number(config.radius ?? 50)
+  const radius = normalizeCircleRadius(config.radius)
   const fill = config.fill || 'transparent'
   const stroke = config.stroke || '#FFFFFF'
   const strokeWidth = Number(config.strokeWidth ?? 0)
@@ -126,7 +134,7 @@ export function updateCircle(element: FabricElement, patch: Partial<CircleElemen
   if (!canvas || !circle) return
 
   if (patch.radius !== undefined) {
-    circle.set('radius', Number(patch.radius))
+    circle.set('radius', normalizeCircleRadius(patch.radius))
   }
 
   if (patch.fill !== undefined) {

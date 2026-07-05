@@ -4,8 +4,10 @@
       <el-form-item :label="t('elementSettings.radius')">
         <el-input-number 
           v-model.number="radiusProxy" 
-          :min="10" 
+          :min="MIN_CIRCLE_RADIUS"
           :max="227" 
+          :step="1"
+          :precision="0"
           @change="(v: number) => applyUpdate({ radius: v })" 
         />
       </el-form-item>
@@ -47,6 +49,7 @@ import { computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
+import { MIN_CIRCLE_RADIUS, normalizeCircleRadius } from '@/elements/shapes/circle/circle.renderer'
 
 const props = defineProps<{
   element?: any
@@ -61,7 +64,7 @@ const { t } = useI18n()
 
 const radiusProxy = computed<number>({
   get() {
-    return Number((currentModel.value as any).radius ?? 0)
+    return normalizeCircleRadius((currentModel.value as any).radius)
   },
   set(v: number) {
     applyUpdate({ radius: v })
@@ -69,13 +72,17 @@ const radiusProxy = computed<number>({
 })
 
 const applyUpdate = (patch: Record<string, any>) => {
+  const nextPatch = patch.radius !== undefined
+    ? { ...patch, radius: normalizeCircleRadius(patch.radius) }
+    : patch
+
   if (props.applyPatch && props.config) {
-    props.applyPatch(patch)
+    props.applyPatch(nextPatch)
     return
   }
 
   if (props.element) {
-    elementManager.updateElement(props.element as any, patch)
+    elementManager.updateElement(props.element as any, nextPatch)
   }
 }
 </script>

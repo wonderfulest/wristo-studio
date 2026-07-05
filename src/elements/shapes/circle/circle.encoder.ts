@@ -1,6 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { CircleElementConfig } from '@/types/elements'
 import { decodeColor, encodeColor } from '@/utils/colorUtils'
+import { normalizeCircleRadius } from '@/elements/shapes/circle/circle.renderer'
 
 export function encodeCircle(element: FabricElement): CircleElementConfig {
   if (!element) throw new Error('Invalid circle element')
@@ -12,7 +13,7 @@ export function encodeCircle(element: FabricElement): CircleElementConfig {
     id: String(circle.id ?? ''),
     left: Math.round(Number(circle.left ?? 0)),
     top: Math.round(Number(circle.top ?? 0)),
-    radius: Number(circle.radius ?? 0),
+    radius: normalizeCircleRadius(circle.radius),
     fill: encodeColor(circle.fill as any) as any,
     stroke: (circle.stroke as string) ?? '#FFFFFF',
     strokeWidth: Number(circle.strokeWidth ?? 0),
@@ -30,7 +31,7 @@ export function decodeCircle(config: CircleElementConfig): Partial<FabricElement
     id: config.id,
     left: config.left,
     top: config.top,
-    radius: config.radius,
+    radius: normalizeCircleRadius(config.radius),
     fill: decodeColor(config.fill as any),
     stroke: config.stroke,
     strokeWidth: config.strokeWidth,

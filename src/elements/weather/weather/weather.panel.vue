@@ -131,7 +131,7 @@
         >
           <el-icon><Upload /></el-icon>
           <span>{{ uploadMode === 'batch' ? 'Choose or drop SVG/PNG files' : 'Choose or drop an SVG/PNG file' }}</span>
-          <small v-if="uploadMode === 'batch'">File name should match weather code or condition, for example 101d.svg or 101d.png. PNG must be at least 64x64.</small>
+          <small v-if="uploadMode === 'batch'">File name should start with or match weather code/condition, for example 101d.svg or 101d-clear-day.svg. PNG must be at least 64x64.</small>
           <small v-else>{{ uploadTargetCondition?.condition || '' }}</small>
         </div>
         <div v-if="uploadRows.length" class="upload-file-list">
@@ -393,11 +393,22 @@ const normalizeUploadName = (value: unknown): string => {
     .replace(/[_\s-]+/g, '')
 }
 
+const extractWeatherCodeFromUploadName = (value: unknown): string => {
+  const baseName = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.[^.]+$/, '')
+  return baseName.match(/^(\d{3}[a-z])(?:$|[^a-z0-9])/)?.[1] || ''
+}
+
 const findConditionForFile = (file: File): WeatherConditionAssetsVO | null => {
   if (uploadMode.value === 'single') return uploadTargetCondition.value
   const fileKey = normalizeUploadName(file.name)
+  const weatherCode = normalizeUploadName(extractWeatherCodeFromUploadName(file.name))
   return conditions.amoled.find((item) => {
-    return normalizeUploadName(item.iconUnicode) === fileKey || normalizeUploadName(item.condition) === fileKey
+    const iconUnicode = normalizeUploadName(item.iconUnicode)
+    const condition = normalizeUploadName(item.condition)
+    return iconUnicode === weatherCode || condition === weatherCode || iconUnicode === fileKey || condition === fileKey
   }) ?? null
 }
 
