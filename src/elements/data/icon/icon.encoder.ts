@@ -4,6 +4,8 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 
 export function encodeIcon(element: FabricElement): IconElementConfig {
   if (!element) throw new Error('Invalid element')
+  const iconSize = Number((element as any).iconSize ?? element.fontSize ?? 24)
+  const isAmoled = (element as any).iconDisplayType === 'amoled'
 
   const config: IconElementConfig = {
     id: String(element.id ?? ''),
@@ -11,16 +13,21 @@ export function encodeIcon(element: FabricElement): IconElementConfig {
     left: element.left,
     top: element.top,
     fill: element.fill as any,
-    originX: element.originX as any,
-    originY: element.originY as any,
+    originX: 'center' as any,
+    originY: 'center' as any,
     fontFamily: element.fontFamily as string,
-    fontSize: Number(element.fontSize),
+    fontSize: Number(element.fontSize ?? iconSize),
     iconFont: element.fontFamily as string,
-    iconSize: Number(element.fontSize),
+    iconSize,
     dataProperty: (element as any).dataProperty,
     goalProperty: (element as any).goalProperty,
     metricSymbol: (element as any).metricSymbol,
-    topBase: encodeTopBaseForElement(element),
+    iconDisplayType: (element as any).iconDisplayType,
+    amoledImageUrl: (element as any).amoledImageUrl,
+    amoledIconUnicode: (element as any).amoledIconUnicode,
+    width: isAmoled ? iconSize : ((element as any).amoledWidth ?? (element as any).width),
+    height: isAmoled ? iconSize : ((element as any).amoledHeight ?? (element as any).height),
+    topBase: encodeTopBaseForElement(element)
   }
 
   // 如果 dataProperty 和 goalProperty 都为空，抛出错误
@@ -29,9 +36,7 @@ export function encodeIcon(element: FabricElement): IconElementConfig {
     const eleType = String((element as any).eleType ?? 'data')
     const eleLeft = Math.round(Number((element as any).left ?? config.left ?? 0))
     const eleTop = Math.round(Number((element as any).top ?? config.top ?? 0))
-    throw new Error(
-      `Invalid element: dataProperty and goalProperty are both null (type=${eleType}, id=${eleId}, left=${eleLeft}, top=${eleTop})`,
-    )
+    throw new Error(`Invalid element: dataProperty and goalProperty are both null (type=${eleType}, id=${eleId}, left=${eleLeft}, top=${eleTop})`)
   }
 
   return config
@@ -53,5 +58,10 @@ export function decodeIcon(config: IconElementConfig): Partial<FabricElement> {
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
     metricSymbol: config.metricSymbol,
+    iconDisplayType: config.iconDisplayType,
+    amoledImageUrl: config.amoledImageUrl,
+    amoledIconUnicode: config.amoledIconUnicode,
+    width: config.width,
+    height: config.height
   } as Partial<FabricElement>
 }

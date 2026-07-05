@@ -15,9 +15,6 @@
           <el-option :label="t('icon.sortIdDesc')" value="id:desc" />
           <el-option :label="t('icon.sortIdAsc')" value="id:asc" />
         </el-select>
-        <el-select v-model="displayType" :placeholder="t('icon.displayType')" clearable style="width: 160px" @change="handleSearch" :loading="loadingEnums">
-          <el-option v-for="opt in displayTypeOptions" :key="String(opt.value)" :label="opt.name || String(opt.value)" :value="opt.value as any" />
-        </el-select>
         <HeaderUploadSvg
           v-if="canUsePremiumAssets"
           v-model:iconUnicode="iconUnicode"
@@ -73,8 +70,7 @@ import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import EditSvgDialog from './components/EditSvgDialog.vue'
-import { pageIconAssets, listIconLibrary, type IconAssetVO, type IconLibraryVO, type DisplayType } from '@/api/wristo/iconGlyph'
-import { getEnumOptions, type EnumOption } from '@/api/common'
+import { pageIconAssets, listIconLibrary, type IconAssetVO, type IconLibraryVO } from '@/api/wristo/iconGlyph'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -104,27 +100,41 @@ const selectedIconId = computed<number | undefined>(() => {
 
 const active = ref<number | undefined>(undefined)
 const sortOrder = ref('id:desc')
-const displayType = ref<DisplayType | undefined>(undefined)
-const displayTypeOptions = ref<EnumOption[]>([])
-const loadingEnums = ref(false)
-
 const editVisible = ref(false)
 const editingId = ref<number | null>(null)
 
 const fetchPage = async () => {
   loading.value = true
+  const query = {
+    pageNum: currentPage.value,
+    pageSize: pageSize.value,
+    iconId: selectedIconId.value,
+    iconUnicode: iconUnicode.value,
+    displayType: 'mip',
+    active: active.value,
+    orderBy: sortOrder.value,
+  }
+  console.log('[icon-assets-page] fetch page', query)
   try {
-    const { data } = await pageIconAssets({
-      pageNum: currentPage.value,
-      pageSize: pageSize.value,
-      iconId: selectedIconId.value,
-      displayType: displayType.value,
-      active: active.value,
-      orderBy: sortOrder.value,
-    } as any)
+    const { data } = await pageIconAssets(query as any)
     assets.value = (data?.list ?? []) as IconAssetVO[]
     total.value = data?.total ?? 0
+    console.log('[icon-assets-page] fetch result', {
+      total: total.value,
+      count: assets.value.length,
+      rows: assets.value.map((row) => ({
+        id: row.id,
+        iconId: row.iconId,
+        displayType: row.displayType,
+        format: row.format,
+        svgFile: row.svgFile,
+        previewUrl: row.previewUrl,
+        imageUrl: row.imageUrl,
+        resolvedUrl: getAssetUrl(row),
+      })),
+    })
   } catch (e) {
+    console.error('[icon-assets-page] fetch failed', { query, error: e })
     ElMessage.error(t('icon.loadAssetsFailed'))
   } finally {
     loading.value = false
@@ -145,6 +155,11 @@ const handleCurrentChange = (val: number) => {
 }
 
 const handleUploaded = (payload?: { asset?: IconAssetVO; assets?: IconAssetVO[] }) => {
+  console.log('[icon-assets-page] uploaded event', {
+    asset: payload?.asset,
+    count: payload?.assets?.length ?? 0,
+    assets: payload?.assets,
+  })
   currentPage.value = 1
   if ((payload?.assets?.length ?? 0) > 1) {
     iconUnicode.value = undefined
@@ -168,7 +183,19 @@ const getPreviewUrl = (url?: string) => {
 }
 
 const getAssetUrl = (row: IconAssetVO) => {
-  return row.svgFile || row.previewUrl || row.imageUrl || ''
+  const url = row.svgFile || row.previewUrl || row.imageUrl || ''
+  if (!url) {
+    console.warn('[icon-assets-page] empty asset url', {
+      id: row.id,
+      iconId: row.iconId,
+      displayType: row.displayType,
+      format: row.format,
+      svgFile: row.svgFile,
+      previewUrl: row.previewUrl,
+      imageUrl: row.imageUrl,
+    })
+  }
+  return url
 }
 
 onMounted(async () => {
@@ -177,16 +204,6 @@ onMounted(async () => {
     iconOptions.value = (resp?.data ?? []).map((it: any) => ({ id: it.id, iconUnicode: it.iconUnicode, symbolCode: it.symbolCode, label: it.label }))
   } catch {
     // silent
-  }
-  try {
-    loadingEnums.value = true
-    const res: any = await getEnumOptions('DisplayType')
-    const list: EnumOption[] = res?.data ?? res ?? []
-    displayTypeOptions.value = Array.isArray(list) && list.length ? list : [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
-  } catch {
-    displayTypeOptions.value = [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
-  } finally {
-    loadingEnums.value = false
   }
   fetchPage()
 })

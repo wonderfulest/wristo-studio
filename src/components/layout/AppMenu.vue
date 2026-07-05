@@ -13,6 +13,7 @@
           :on-save="handleSave"
           :on-screenshot="handleScreenshot"
           :on-record-gif="handleRecordGif"
+          :on-export-asset-package="handleExportAssetPackage"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
         />
         <el-menu-item index="actions/save" @click="handleSave">
@@ -421,29 +422,28 @@ const handleAddDataField = async (metricSymbol?: string) => {
     const baseConfig = (elementConfigs.metric && elementConfigs.metric.data) || {}
     const baseLeft = baseConfig.left ?? 227
     const baseTop = baseConfig.top ?? 227
-    const gap = (baseConfig.fontSize ?? 36) * 0.1
-    const iconLeft = baseLeft - gap / 2
-    const dataLeft = baseLeft + gap / 2
-    const unitLeft = dataLeft + (baseConfig.fontSize ?? 36) * 1.35
+    const dataFontSize = baseConfig.fontSize ?? 36
+    const iconTop = baseTop - dataFontSize
+    const dataTop = baseTop
+    const unitTop = baseTop + dataFontSize * 0.8
 
-    // Add icon bound to this data property (left side, right-aligned)
+    // Add icon/data/unit as a centered vertical stack.
     await handleAddElement('metric', 'icon', {
       dataProperty: propertyKey,
       goalProperty: null,
       metricSymbol: metricSymbolForElement,
-      left: iconLeft,
-      top: baseTop,
-      originX: 'right',
+      left: baseLeft,
+      top: iconTop,
+      originX: 'center',
     })
 
-    // Add data text bound to this data property (right side, left-aligned)
     await handleAddElement('metric', 'data', {
       dataProperty: propertyKey,
       goalProperty: null,
       metricSymbol: metricSymbolForElement,
-      left: dataLeft,
-      top: baseTop,
-      originX: 'left',
+      left: baseLeft,
+      top: dataTop,
+      originX: 'center',
     })
 
     if (unitText) {
@@ -451,9 +451,9 @@ const handleAddDataField = async (metricSymbol?: string) => {
         dataProperty: propertyKey,
         goalProperty: null,
         metricSymbol: metricSymbolForElement,
-        left: unitLeft,
-        top: baseTop,
-        originX: 'left',
+        left: baseLeft,
+        top: unitTop,
+        originX: 'center',
       })
     }
   } catch (e) {
@@ -682,6 +682,16 @@ const handleRecordGif = () => {
   gifDialogVisible.value = true
 }
 
+const handleExportAssetPackage = async () => {
+  baseStore.deactivateObject()
+  try {
+    await exportStore.downloadConfig()
+  } catch (error: any) {
+    console.error('Failed to export asset package:', error)
+    messageStore.error(error?.message || t('common.saveFailed'))
+  }
+}
+
 const captureGifFrames = async (includeDeviceFrame: boolean, durationSeconds: number, fps: number): Promise<GifFrameSource[]> => {
   const engine = getDataSimulatorEngine()
   const initialClock = getSimulatedClockSnapshot()
@@ -774,26 +784,30 @@ const handleOpenCreatorAcademy = () => {
   background: var(--studio-surface);
   border-bottom: 1px solid var(--studio-border);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .menu-list {
-  width: 100%;
-  min-width: max-content;
+  width: max-content;
+  min-width: 100%;
   height: 48px;
+  display: flex;
   align-items: center;
   padding: 0;
   background: transparent;
   border-bottom: 0;
+  flex: 0 0 auto;
 }
 
 .menu-leading-zone {
-  --studio-left-panel-width: 312px;
-  flex: 0 0 var(--studio-left-panel-width);
-  width: var(--studio-left-panel-width);
-  min-width: var(--studio-left-panel-width);
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
   height: 48px;
   display: flex;
   align-items: center;
@@ -801,6 +815,7 @@ const handleOpenCreatorAcademy = () => {
 
 .menu-list :deep(.el-sub-menu__title),
 .menu-list :deep(.el-menu-item) {
+  flex: 0 0 auto;
   height: 36px;
   min-width: 44px;
   margin: 0 3px;
@@ -812,6 +827,11 @@ const handleOpenCreatorAcademy = () => {
   line-height: 36px;
   border: 1px solid transparent;
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.menu-list :deep(> .el-sub-menu),
+.menu-list :deep(> .el-menu-item) {
+  flex: 0 0 auto;
 }
 
 .menu-list :deep(.el-sub-menu__title:hover),
@@ -829,24 +849,49 @@ const handleOpenCreatorAcademy = () => {
 
 .menu-divider {
   height: 24px;
-  margin: 0 0 0 auto;
+  margin: 0 6px;
   border-left-color: var(--studio-border);
 }
 
 .menu-leading-zone + :deep(.el-sub-menu),
 .menu-leading-zone + :deep(.el-menu-item) {
-  margin-left: 6px;
+  margin-left: 0;
 }
 
 @media (max-width: 1180px) {
   .menu-leading-zone {
-    --studio-left-panel-width: 280px;
+    min-width: 0;
   }
 }
 
 @media (max-width: 920px) {
   .menu-leading-zone {
-    --studio-left-panel-width: 260px;
+    min-width: 0;
+  }
+
+  .app-menu {
+    scroll-padding-inline: 8px;
+  }
+
+  .menu-list {
+    padding-right: 8px;
+  }
+
+  .menu-list :deep(.el-sub-menu__title),
+  .menu-list :deep(.el-menu-item) {
+    margin: 0 2px;
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-leading-zone {
+    min-width: 0;
+  }
+
+  .menu-list :deep(.el-sub-menu__title),
+  .menu-list :deep(.el-menu-item) {
+    min-width: 44px;
   }
 }
 

@@ -34,11 +34,22 @@ let isSpacePressed = false
 
 function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | null) {
   if (!canvas) return
-  const ids = (canvas.getActiveObjects() as Array<{ id?: string | number }>)
+  const activeObjects = canvas.getActiveObjects() as Array<{ id?: string | number; type?: string; eleType?: string }>
+  const ids = activeObjects
     .map((o) => o.id)
     .filter((id): id is string | number => id !== undefined && id !== null && id !== '')
     .map(String)
   canvasStore.setActiveIds(ids)
+  console.log('[canvas-selection] sync active ids', {
+    ids,
+    activeObjectCount: activeObjects.length,
+    activeObjects: activeObjects.map((obj) => ({
+      id: obj.id,
+      type: obj.type,
+      eleType: obj.eleType,
+    })),
+    activeType: (canvas.getActiveObject?.() as any)?.type,
+  })
 }
 
 function clearCanvasSelection(layerStore: any, canvasStore: any, canvas: FabricCanvas): void {
@@ -146,7 +157,13 @@ export function initCanvasManager(
     'selection:created': () => {
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
-      if (active && active.type === 'activeselection') {
+      console.log('[canvas-selection] created', {
+        activeType: active?.type,
+        activeId: active?.id,
+        activeEleType: active?.eleType,
+        activeObjectCount: canvas.getActiveObjects?.().length,
+      })
+      if (active && String(active.type).toLowerCase() === 'activeselection') {
         active.set({ hasControls: false })
         active.setCoords?.()
       }
@@ -155,13 +172,20 @@ export function initCanvasManager(
     'selection:updated': () => {
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
-      if (active && active.type === 'activeselection') {
+      console.log('[canvas-selection] updated', {
+        activeType: active?.type,
+        activeId: active?.id,
+        activeEleType: active?.eleType,
+        activeObjectCount: canvas.getActiveObjects?.().length,
+      })
+      if (active && String(active.type).toLowerCase() === 'activeselection') {
         active.set({ hasControls: false })
         active.setCoords?.()
       }
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:cleared': () => {
+      console.log('[canvas-selection] cleared')
       canvasStore.clearActiveIds()
       layerStore.clearSelected()
     },

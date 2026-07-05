@@ -55,8 +55,19 @@
 
         <div class="package-panel">
           <div class="package-title">
-            <el-icon><Box /></el-icon>
-            <span>{{ t('editDesign.packageInfo') }}</span>
+            <div class="package-title-copy">
+              <el-icon><Box /></el-icon>
+              <span>{{ t('editDesign.packageInfo') }}</span>
+            </div>
+            <el-button
+              class="package-assets-button"
+              size="small"
+              :loading="downloadingAssets"
+              @click="downloadDesignAssets"
+            >
+              <el-icon v-if="!downloadingAssets"><Download /></el-icon>
+              {{ t('editDesign.downloadDesignAssets') }}
+            </el-button>
           </div>
           <div v-if="packageRows.length" class="package-card-list">
             <div v-for="row in packageRows" :key="row.key" class="package-card">
@@ -271,7 +282,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
-import { Box, DocumentCopy, Link, Picture } from '@element-plus/icons-vue'
+import { Box, DocumentCopy, Download, Link, Picture } from '@element-plus/icons-vue'
 import CollapsibleJsonTree from '@/components/common/CollapsibleJsonTree.vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
@@ -279,6 +290,7 @@ import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
+import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -293,6 +305,7 @@ const configViewMode = ref<'tree' | 'edit'>('tree')
 const configTreeData = ref<unknown>({})
 const expandAllToken = ref(0)
 const collapseAllToken = ref(0)
+const downloadingAssets = ref(false)
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -492,6 +505,40 @@ const openBuildLog = (logId?: number) => {
 
 const downloadPackage = async (url: string, fileType: PackageFileType) => {
   await downloadPackageFile(url, currentDesign.value?.product?.name || form.name, fileType)
+}
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const downloadDesignAssets = async () => {
+  if (!currentDesign.value || downloadingAssets.value) return
+  if (configViewMode.value === 'edit' && !syncConfigTreeFromEditor()) return
+
+  try {
+    downloadingAssets.value = true
+    const config = await resolvePackageAssetUrls(form.configJson as any)
+    if (!config) return
+    const bundleFile = await buildDesignAssetBundle({
+      ...config,
+      designId: currentDesign.value.designUid || (config as any).designId || 'design',
+      name: (config as any).name || form.name,
+    })
+    if (!bundleFile) return
+    downloadBlob(bundleFile, bundleFile.name || `${currentDesign.value.designUid || 'design'}-assets.zip`)
+  } catch (error: any) {
+    console.error('Failed to download design assets:', error)
+    ElMessage.error(error?.message || t('editDesign.downloadDesignAssetsFailed'))
+  } finally {
+    downloadingAssets.value = false
+  }
 }
 
 const normalizePaymentMethod = (paymentMethod?: string | null) => {
@@ -879,11 +926,26 @@ defineExpose({
 .package-title {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   color: var(--studio-text);
   font-size: 14px;
   font-weight: 700;
   margin-bottom: 2px;
+}
+
+.package-title-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.package-assets-button {
+  flex: 0 0 auto;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .package-card-list {

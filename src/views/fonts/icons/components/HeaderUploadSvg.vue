@@ -24,14 +24,6 @@
               <div class="guidance-item">{{ t('icon.uploadRuleSelected') }}</div>
               <div class="guidance-item">{{ t('icon.uploadRuleFilenames') }}</div>
             </div>
-            <div class="upload-extra">
-              <div class="display-type-row">
-                <span class="label"><span class="required-mark">*</span> {{ t('icon.displayTypeRequired') }}</span>
-                <el-radio-group v-model="displayType">
-                  <el-radio v-for="opt in displayTypeOptions" :key="opt.value" :label="opt.value">{{ opt.name || opt.value }}</el-radio>
-                </el-radio-group>
-              </div>
-            </div>
             <div class="symbol-quick">
               <div class="symbol-selected">
                 <span>{{ t('icon.selectedIconType') }}</span>
@@ -108,7 +100,6 @@ import { UploadFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { uploadIconSvg, listIconLibrary, type IconLibraryVO, type IconAssetVO, type DisplayType } from '@/api/wristo/iconGlyph'
-import { getEnumOptions, type EnumOption } from '@/api/common'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -140,8 +131,6 @@ const iconList = ref<Pick<IconLibraryVO, 'symbolCode' | 'label' | 'iconUnicode'>
 const selectedSymbolCode = ref<string | undefined>(undefined)
 const pendingIconUnicode = ref<string | undefined>(undefined)
 const activeUploadContext = ref<UploadContext | undefined>(undefined)
-const displayType = ref<DisplayType | undefined>(undefined)
-const displayTypeOptions = ref<EnumOption[]>([])
 const symbolKeyword = ref('')
 type QueueStatus = 'pending' | 'uploading' | 'processing' | 'done' | 'failed'
 
@@ -191,6 +180,7 @@ const loadIconLibrary = async () => {
     .map((it: any) => ({ symbolCode: it?.symbolCode, label: it?.label, iconUnicode: it?.iconUnicode }))
     .filter((it: any) => !!it.symbolCode)
   iconList.value = arr
+  console.log('[icon-asset-upload] loaded icon library', { count: arr.length })
 }
 
 const readSvgIconMetadata = async (file: File) => {
@@ -212,17 +202,41 @@ const readSvgIconMetadata = async (file: File) => {
 const resolveUploadUnicode = async (file: File, selectedSymbol?: string) => {
   if (selectedSymbol) {
     const found = findIconBySymbolCode(selectedSymbol)
+    console.log('[icon-asset-upload] resolve unicode by selected symbol', {
+      fileName: file.name,
+      selectedSymbol,
+      iconUnicode: found?.iconUnicode || '',
+    })
     return found?.iconUnicode || ''
   }
 
   const fileNameMetadata = readFileNameIconMetadata(file.name)
-  if (fileNameMetadata.iconUnicode) return fileNameMetadata.iconUnicode
+  if (fileNameMetadata.iconUnicode) {
+    console.log('[icon-asset-upload] resolve unicode by filename hex prefix', {
+      fileName: file.name,
+      iconUnicode: fileNameMetadata.iconUnicode,
+      symbolCode: fileNameMetadata.symbolCode,
+    })
+    return fileNameMetadata.iconUnicode
+  }
 
   const foundByName = findIconBySymbolCode(fileNameMetadata.symbolCode || fileNameMetadata.baseName)
-  if (foundByName?.iconUnicode) return foundByName.iconUnicode
+  if (foundByName?.iconUnicode) {
+    console.log('[icon-asset-upload] resolve unicode by filename symbol', {
+      fileName: file.name,
+      symbolCode: fileNameMetadata.symbolCode || fileNameMetadata.baseName,
+      iconUnicode: foundByName.iconUnicode,
+    })
+    return foundByName.iconUnicode
+  }
 
   const metadata = await readSvgIconMetadata(file)
   const foundByMetadata = findIconBySymbolCode(metadata.symbolCode)
+  console.log('[icon-asset-upload] resolve unicode by svg metadata', {
+    fileName: file.name,
+    metadata,
+    iconUnicode: foundByMetadata?.iconUnicode || metadata.iconUnicode || '',
+  })
   if (foundByMetadata?.iconUnicode) return foundByMetadata.iconUnicode
   return metadata.iconUnicode || ''
 }
@@ -284,16 +298,6 @@ watch(dialogVisible, async (v) => {
       // silent
     }
   }
-  if (v && displayTypeOptions.value.length === 0) {
-    try {
-      const res: any = await getEnumOptions('DisplayType')
-      const list: EnumOption[] = res?.data ?? res ?? []
-      displayTypeOptions.value = Array.isArray(list) && list.length ? list : [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
-    } catch {
-      displayTypeOptions.value = [ { name: 'mip', value: 'mip' }, { name: 'amoled', value: 'amoled' } ]
-    }
-    // no default; user must select explicitly
-  }
   // apply pending preselection if possible
   if (v && pendingIconUnicode.value && iconList.value.length) {
     const found = iconList.value.find(it => it.iconUnicode === pendingIconUnicode.value)
@@ -313,7 +317,7 @@ function preselectIconUnicode(iconUnicode?: string) {
   }
 }
 
-function openUpload(iconUnicode?: string, initialDisplayType?: DisplayType, context?: UploadContext) {
+function openUpload(iconUnicode?: string, _initialDisplayType?: DisplayType, context?: UploadContext) {
   if (!canUsePremiumAssets.value) {
     membershipGate.requirePremium('icon.premiumRequired')
     return
@@ -323,7 +327,6 @@ function openUpload(iconUnicode?: string, initialDisplayType?: DisplayType, cont
     uploadQueue.value = []
   }
   activeUploadContext.value = context ?? props.uploadContext
-  if (initialDisplayType) displayType.value = initialDisplayType
   const targetIconUnicode = iconUnicode || props.iconUnicode
   if (targetIconUnicode) {
     preselectIconUnicode(targetIconUnicode)
@@ -377,18 +380,22 @@ const doUpload = async (options: { file: File }) => {
   }
   const file = options.file
   if (!beforeUpload(file)) return
-  if (!displayType.value) {
-    ElMessage.error(t('icon.selectDisplayType'))
-    return
-  }
   uploadQueue.value.push({
     id: `${Date.now()}-${queueSeq++}`,
     file,
-    displayType: displayType.value,
+    displayType: 'mip',
     selectedSymbolCode: selectedSymbolCode.value,
     context: activeUploadContext.value,
     status: 'pending',
     progress: 0,
+  })
+  console.log('[icon-asset-upload] queued file', {
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+    displayType: 'mip',
+    selectedSymbolCode: selectedSymbolCode.value,
+    queueLength: uploadQueue.value.length,
   })
   processUploadQueue()
 }
@@ -418,6 +425,12 @@ const processUploadQueue = async () => {
 
         let processingTimer: number | undefined
         try {
+          console.log('[icon-asset-upload] uploading svg', {
+            fileName: item.file.name,
+            unicode,
+            displayType: item.displayType,
+            selectedSymbolCode: item.selectedSymbolCode,
+          })
           const { data } = await uploadIconSvg(
             item.file,
             unicode,
@@ -439,6 +452,12 @@ const processUploadQueue = async () => {
           item.progress = 100
           ElMessage.success(t('icon.uploadSuccess', { name: item.file.name }))
           if (data) uploadedAssets.push(data)
+          console.log('[icon-asset-upload] upload success', {
+            fileName: item.file.name,
+            unicode,
+            displayType: item.displayType,
+            asset: data,
+          })
           uploadedContext = item.context
         } finally {
           if (processingTimer != null) {
@@ -450,12 +469,24 @@ const processUploadQueue = async () => {
         item.progress = 100
         const errorMessage = getUploadErrorMessage(e)
         item.message = errorMessage
+        console.error('[icon-asset-upload] upload failed', {
+          fileName: item.file.name,
+          displayType: item.displayType,
+          selectedSymbolCode: item.selectedSymbolCode,
+          error: e,
+          errorMessage,
+        })
         ElMessage.error(`${t('icon.uploadFailed', { name: item.file.name })}: ${errorMessage}`)
       }
     }
   } finally {
     uploading.value = false
     if (uploadedAssets.length > 0) {
+      console.log('[icon-asset-upload] emit uploaded', {
+        count: uploadedAssets.length,
+        lastAsset: uploadedAssets[uploadedAssets.length - 1],
+        context: uploadedContext,
+      })
       emit('uploaded', {
         asset: uploadedAssets[uploadedAssets.length - 1],
         assets: uploadedAssets,

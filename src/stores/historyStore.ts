@@ -14,6 +14,7 @@ export type Snapshot = {
   configJSON?: string
   elementDataJSON?: string
   propertiesJSON?: string
+  designJSON?: string
 }
 
 type SaveStateOptions = {
@@ -195,6 +196,7 @@ export const useHistoryStore = defineStore('history', () => {
       left.fabricJSON === right.fabricJSON &&
       (left.elementDataJSON ?? '') === (right.elementDataJSON ?? '') &&
       (left.propertiesJSON ?? '') === (right.propertiesJSON ?? '') &&
+      (left.designJSON ?? '') === (right.designJSON ?? '') &&
       (left.configJSON ?? '') === (right.configJSON ?? '')
     )
   }
@@ -240,6 +242,10 @@ export const useHistoryStore = defineStore('history', () => {
     } catch {
       return undefined
     }
+  }
+
+  const takeDesignSnapshot = (): string | undefined => {
+    return undefined
   }
 
   const restoreElementDataSnapshot = (snap: Snapshot) => {
@@ -308,6 +314,10 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
+  const restoreDesignSnapshot = (_snap: Snapshot) => {
+    return
+  }
+
   const syncElementDataFromFabricObject = (obj: any) => {
     if (!obj?.id) return
     const eleType = String(obj?.eleType ?? '')
@@ -341,6 +351,7 @@ export const useHistoryStore = defineStore('history', () => {
     syncElementInstancesFromCanvas(objects)
     restoreElementDataSnapshot(snap)
     restorePropertiesSnapshot(snap)
+    restoreDesignSnapshot(snap)
     await restoreBackgroundFromElementData()
     syncLayersFromCanvas()
     canvas.requestRenderAll?.()
@@ -363,6 +374,7 @@ export const useHistoryStore = defineStore('history', () => {
         fabricJSON,
         elementDataJSON: takeElementDataSnapshot(),
         propertiesJSON: takePropertiesSnapshot(),
+        designJSON: takeDesignSnapshot(),
       }
     } catch {
       return null
@@ -445,6 +457,7 @@ export const useHistoryStore = defineStore('history', () => {
       configJSON,
       elementDataJSON: takeElementDataSnapshot(),
       propertiesJSON: takePropertiesSnapshot(),
+      designJSON: takeDesignSnapshot(),
     }
     undoStack.value = [snap]
     redoStack.value = []

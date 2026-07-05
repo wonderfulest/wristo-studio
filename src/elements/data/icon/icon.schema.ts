@@ -8,6 +8,7 @@ export type IconElementSchema = {
     fontSize: number
     fontFamily: string
     fill: string
+    iconDisplayType: 'mip' | 'amoled'
   }
   resizable: boolean
   rotatable: boolean
@@ -21,6 +22,7 @@ export const iconSchema: IconElementSchema = {
     fontSize: 30,
     fontFamily: 'wristo-icon',
     fill: '#ffffff',
+    iconDisplayType: 'mip',
   },
   resizable: false,
   rotatable: false,

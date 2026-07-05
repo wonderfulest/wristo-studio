@@ -23,6 +23,11 @@ export interface IconElementConfig extends DataElementConfig {
   eleType: 'icon'
   iconFont: string
   iconSize: number
+  iconDisplayType?: 'mip' | 'amoled'
+  amoledImageUrl?: string
+  amoledIconUnicode?: string
+  width?: number
+  height?: number
 }
 
 export interface LabelElementConfig extends DataElementConfig {

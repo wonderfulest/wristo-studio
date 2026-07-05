@@ -1,6 +1,5 @@
 <template>
   <div class="side-panel">
-    <!-- 添加元素按钮，仅在图层面板时显示 -->
     <div v-if="!isAddElementMode" class="add-element-button">
       <el-button class="op-btn" round type="primary" @click="switchToAddElement">{{ t('panel.addElement') }}</el-button>
     </div>
@@ -77,4 +76,5 @@ defineExpose({
   border-radius: var(--studio-radius-md);
   font-weight: 750;
 }
+
 </style>

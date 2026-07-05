@@ -118,15 +118,6 @@
               <el-icon><Download /></el-icon>
               {{ t('icon.downloadSvgSources') }}
             </el-button>
-            <el-radio-group
-              v-model="displayType"
-              class="display-switch"
-              size="small"
-              @change="onDisplayTypeChange"
-            >
-              <el-radio-button label="mip">MIP</el-radio-button>
-              <el-radio-button label="amoled">AMOLED</el-radio-button>
-            </el-radio-group>
           </div>
         </div>
         <div v-if="downloadingSvgSources" class="download-progress">
@@ -213,7 +204,7 @@
                   <el-tooltip :content="item.icon?.symbolCode || '-'" placement="top" :show-after="120">
                     <span class="symbol-code">{{ item.icon?.symbolCode || '-' }}</span>
                   </el-tooltip>
-                  <span class="display-pill">{{ displayTypeShortLabel(displayType) }}</span>
+                  <span class="display-pill">M</span>
                 </div>
                 <div class="preview">
                   <img v-if="getAssetImage(item)" :src="getAssetImage(item)" alt="icon" />
@@ -223,7 +214,7 @@
                       type="button"
                       :aria-label="t('icon.uploadAsset')"
                       :title="t('icon.uploadAsset')"
-                      @click.stop="handleUploadForIcon({ iconUnicode: item.icon?.iconUnicode, displayType })"
+                      @click.stop="handleUploadForIcon(item.icon?.iconUnicode)"
                     >
                       <el-icon><Plus /></el-icon>
                     </button>
@@ -238,7 +229,7 @@
                 </div>
                 <div v-if="canManageActiveGlyph" class="quick-actions" @click.stop>
                   <el-tooltip
-                    v-if="activeGlyph?.isDefault === 0 && displayType === 'mip' && item.asset?.id"
+                    v-if="activeGlyph?.isDefault === 0 && item.asset?.id"
                     :content="t('common.edit')"
                     placement="top"
                   >
@@ -439,14 +430,6 @@ const renameGlyphId = ref<number | null>(null)
 const renameOriginalGlyphCode = ref('')
 const renameNamingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 
-const ensureDisplayTypeForGlyph = (glyphCode: string) => {
-  const g = glyphs.value.find(x => x.glyphCode === glyphCode)
-  if (!g) return
-  if (g.isDefault === 1 && displayType.value !== 'mip') {
-    displayType.value = 'mip'
-  }
-}
-
 const fetchGlyphs = async () => {
   try {
     loadingGlyphs.value = true
@@ -478,9 +461,7 @@ const fetchGlyphs = async () => {
     if (activeTab.value) {
       const g = list.find(x => x.glyphCode === activeTab.value)
       if (g) {
-        // default to 'mip' when (re)initializing active glyph
         displayType.value = 'mip'
-        ensureDisplayTypeForGlyph(g.glyphCode)
         await fetchAssets(g.id)
         await loadBuildStatus(g.glyphCode, true)
       }
@@ -499,7 +480,7 @@ const fetchAssets = async (glyphId: number) => {
       pageSize: assetPage.value ? assetPageSize.value : assetPageSize.value,
       glyphId,
       active: 1,
-      displayType: displayType.value,
+      displayType: 'mip',
       orderBy: 'id:asc',
     } as any)
     assets.value = data?.list ?? []
@@ -522,6 +503,7 @@ const fetchAllGlyphAssets = async (glyphId: number) => {
       pageSize,
       glyphId,
       active: 1,
+      displayType: 'mip',
       orderBy: 'id:asc',
     } as any)
     const pageList = data?.list ?? []
@@ -548,9 +530,7 @@ const onTabChange = async (name: string) => {
   selectedAssetId.value = null
   const g = glyphs.value.find(x => x.glyphCode === name)
   if (!g) return
-  // reset display type to 'mip' when switching glyph tab
   displayType.value = 'mip'
-  ensureDisplayTypeForGlyph(g.glyphCode)
   await fetchAssets(g.id)
   await loadBuildStatus(g.glyphCode, true)
 }
@@ -627,15 +607,6 @@ const loadGlyphBuildStatusForRename = async (glyphCode: string) => {
 const openBuildFontUrl = () => {
   if (!canDownloadBuildFont.value) return
   window.open(buildFontUrl.value, '_blank')
-}
-
-const onDisplayTypeChange = async (_v: DisplayType | string | number | boolean | undefined) => {
-  // reset to first page when switching display type
-  assetPage.value = 1
-  selectedAssetId.value = null
-  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
-  if (!g) return
-  await fetchAssets(g.id)
 }
 
 const tabLabel = (g: IconGlyphVO) => {
@@ -804,17 +775,17 @@ const onIconUploaded = async (payload?: { asset?: IconAssetVO; assets?: IconAsse
   }
 }
 
-const handleUploadForIcon = (payload: { iconUnicode?: string; displayType: DisplayType }) => {
+const handleUploadForIcon = (iconUnicode?: string) => {
   if (!requireManageActiveGlyph()) return
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
-  headerUploadRef.value?.openUpload(payload.iconUnicode, payload.displayType, { glyphId: g?.id })
+  headerUploadRef.value?.openUpload(iconUnicode, 'mip', { glyphId: g?.id })
 }
 
 const handleUploadToActiveGlyph = () => {
   if (!requireManageActiveGlyph()) return
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
-  headerUploadRef.value?.openUpload(undefined, displayType.value, { glyphId: g.id })
+  headerUploadRef.value?.openUpload(undefined, 'mip', { glyphId: g.id })
 }
 
 const sanitizeDownloadName = (name: string, fallback = 'icon-font') => {
@@ -967,13 +938,6 @@ const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
   }
 }
 
-const displayTypeShortLabel = (value?: DisplayType) => {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'amoled') return 'A'
-  if (normalized === 'mip') return 'M'
-  return value || '-'
-}
-
 const toAbsUrl = (url: string) => {
   if (!url) return ''
   return /^(https?:|data:|blob:)/i.test(url) ? url : `${location.origin}${url.startsWith('/') ? '' : '/'}${url}`
@@ -1120,7 +1084,6 @@ const canUploadForIconAsset = (item: IconGlyphAssetVO) => {
   font-size: 18px;
   line-height: 1.3;
 }
-.display-switch { flex: none; }
 .download-progress {
   margin: 8px 0 12px;
   padding: 8px 10px;

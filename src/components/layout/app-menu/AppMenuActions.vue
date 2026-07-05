@@ -28,6 +28,10 @@
       <el-icon><VideoCamera /></el-icon>
       <span>{{ t('editor.recordGif') }}</span>
     </el-menu-item>
+    <el-menu-item index="actions/exportAssetPackage" @click="onExportAssetPackage">
+      <el-icon><Download /></el-icon>
+      <span>{{ t('editor.exportAssetPackage') }}</span>
+    </el-menu-item>
     <!-- Divider -->
     <el-divider direction="horizontal" class="menu-sub-divider" />
     <!-- App Properties -->
@@ -40,7 +44,7 @@
 </template>
 
 <script setup>
-import { Operation, View, Box, Upload, Picture, VideoCamera, Setting } from '@element-plus/icons-vue'
+import { Operation, View, Box, Upload, Picture, VideoCamera, Download, Setting } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -59,6 +63,10 @@ const props = defineProps({
     required: true,
   },
   onRecordGif: {
+    type: Function,
+    required: true,
+  },
+  onExportAssetPackage: {
     type: Function,
     required: true,
   },
@@ -82,6 +90,10 @@ const onScreenshot = () => {
 
 const onRecordGif = () => {
   props.onRecordGif && props.onRecordGif()
+}
+
+const onExportAssetPackage = () => {
+  props.onExportAssetPackage && props.onExportAssetPackage()
 }
 
 const onOpenProperties = () => {

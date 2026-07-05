@@ -384,7 +384,16 @@ export const useBaseStore = defineStore('baseStore', {
       this.id = res.data.documentId
       designStore.id = this.id
       const designUid = res.data?.designUid || this.id
-      const bundleFile = await buildDesignAssetBundle({ ...exportConfig, designId: designUid })
+      let previewDataUrl = ''
+      try {
+        previewDataUrl = await this.captureScreenshot() || ''
+      } catch (error) {
+        console.warn('Failed to capture preview for asset bundle:', error)
+      }
+      const bundleFile = await buildDesignAssetBundle(
+        { ...exportConfig, designId: designUid },
+        { previewDataUrl },
+      )
       if (bundleFile) {
         await designApi.uploadAssetBundle(designUid, bundleFile)
       }

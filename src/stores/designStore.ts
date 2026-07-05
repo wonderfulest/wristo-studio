@@ -82,5 +82,6 @@ export const useDesignStore = defineStore('design', {
         fontRoles: this.fontRoles,
       }
     },
+
   },
 })

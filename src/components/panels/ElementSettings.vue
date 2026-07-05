@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -66,6 +66,25 @@ const activeElements = computed<FabricElement[]>(() => {
 const activeElement = computed<FabricElement | null>(() => {
   return activeElements.value.length === 1 ? activeElements.value[0] : null
 })
+
+watch(
+  activeElements,
+  (elements) => {
+    console.log('[element-settings] active elements changed', {
+      canvasStoreActiveIds: canvasStore.activeIds,
+      activeElementCount: elements.length,
+      panelMode: elements.length > 1 ? 'group' : elements.length === 1 ? 'single' : 'empty',
+      elements: elements.map((element: any) => ({
+        id: element?.id,
+        type: element?.type,
+        eleType: element?.eleType,
+        iconDisplayType: element?.iconDisplayType,
+        amoledImageUrl: element?.amoledImageUrl,
+      })),
+    })
+  },
+  { immediate: true },
+)
 
 // 当前元素在 ElementDataStore 中的业务配置
 const activeConfig = computed<AnyElementConfig | null>(() => {

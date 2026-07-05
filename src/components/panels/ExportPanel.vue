@@ -166,12 +166,14 @@ const prepareExportConfig = async (config) => {
   }
 }
 
-const uploadDesignAssetBundle = async (designUid, config) => {
+const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
   if (!designUid || !config) return null
   try {
     const bundleFile = await buildDesignAssetBundle({
       ...config,
       designId: designUid,
+    }, {
+      previewDataUrl: options.previewDataUrl || null,
     })
     if (!bundleFile) return null
     const res = await designApi.uploadAssetBundle(designUid, bundleFile)
@@ -209,13 +211,25 @@ const downloadConfig = async () => {
   const exportConfig = await prepareExportConfig(config)
   if (!exportConfig) return
 
-  const blob = new Blob([JSON.stringify(exportConfig)], {
-    type: 'application/json'
+  let previewDataUrl = ''
+  try {
+    previewDataUrl = await baseStore.captureScreenshot()
+  } catch (error) {
+    console.warn('Failed to capture preview for asset bundle:', error)
+  }
+
+  const bundleFile = await buildDesignAssetBundle({
+    ...exportConfig,
+    designId: baseStore.id || exportConfig.designId || 'design',
+  }, {
+    previewDataUrl,
   })
-  const url = URL.createObjectURL(blob)
+  if (!bundleFile) return
+
+  const url = URL.createObjectURL(bundleFile)
   const link = document.createElement('a')
   link.href = url
-  link.download = `face-${baseStore.id}.json`
+  link.download = bundleFile.name || `face-${baseStore.id || 'design'}-assets.zip`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -229,13 +243,19 @@ const uploadScreenshot = async () => {
     const screenshot = await baseStore.captureScreenshot()
     if (screenshot) {
       const screenshotUrl = await uploadBase64Image(screenshot, 'screenshot')
-      return screenshotUrl
+      return {
+        url: screenshotUrl,
+        dataUrl: screenshot,
+      }
     }
   } catch (screenshotError) {
     console.error('上传表盘截图失败:', screenshotError)
     // 截图上传失败不影响整体上传过程
   }
-  return ""
+  return {
+    url: '',
+    dataUrl: '',
+  }
 }
 
 // 添加一个互斥锁
@@ -339,7 +359,8 @@ const uploadApp = async () => {
     }
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = t('export.uploadingScreenshot')
-    const screenshotUrl = await uploadScreenshot()
+    const screenshotResult = await uploadScreenshot()
+    const screenshotUrl = screenshotResult.url
     currentProgress = 40
     if (loadingInstance) {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
@@ -386,7 +407,9 @@ const uploadApp = async () => {
       if (loadingInstance) {
         loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
       }
-      await uploadDesignAssetBundle(res.data?.designUid || baseStore.id, configJson)
+      await uploadDesignAssetBundle(res.data?.designUid || baseStore.id, configJson, {
+        previewDataUrl: screenshotResult.dataUrl,
+      })
     }
     historyStore.saveInitial()
 

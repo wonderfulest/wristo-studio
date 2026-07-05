@@ -12,7 +12,7 @@ export default function registerIconPlugin() {
       return createIcon(config as IconElementConfig)
     },
     update: (element, patch) => {
-      updateIcon(element as any, patch as Partial<IconElementConfig>)
+      return updateIcon(element as any, patch as Partial<IconElementConfig>)
     },
     encode: (element) => {
       return encodeIcon(element as any) as any
