@@ -281,24 +281,17 @@ const saveConfig = async (options = {}) => {
     if (!exportConfig) return ''
 
     const data = {
+      uid: baseStore.id,
       name: baseStore.watchFaceName,
       configJson: JSON.stringify(exportConfig),
       // userId: user.value.id
     }
-    if (baseStore.id) {
-      // 如果 id 存在，则更新; 否则创建
-      data.documentId = baseStore.id
+    if (!baseStore.id) {
+      return ''
     }
-    // const designRes = await saveDddddDesign(data)
-    // 
-    // // 如果 query 中 id 为空，则更新 query 中的 id
-    // if (!router.currentRoute.value.query.id) {
-    //   router.push({
-    //     path: '/design',
-    //     query: { id: designRes.data.documentId }
-    //   })
-    // }
-    // return designRes.data.documentId
+    await designApi.updateDesign(data)
+    historyStore.saveInitial()
+    return baseStore.id
   } catch (error) {
     console.error('Auto save failed', error)
     return ''

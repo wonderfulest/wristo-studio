@@ -108,6 +108,7 @@ import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -122,6 +123,7 @@ import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
+const historyStore = useHistoryStore()
 const { t } = useI18n()
 
 const panelLayers = ref<LayerElement[]>([])
@@ -467,6 +469,7 @@ const handleDragEnd = (): void => {
   const ids = resolveDragOrderIds()
   layerDragSnapshot = null
   applyOrder(ids)
+  historyStore.saveState('layer:reorder')
   baseStore.canvas?.renderAll?.()
 }
 
