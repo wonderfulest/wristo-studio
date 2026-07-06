@@ -37,7 +37,7 @@
                 </el-icon>
               </el-button>
               <!-- 编辑设计详情 -->
-              <el-button v-if="isMerchantUser" type="primary" size="small" link @click="emit('edit', design)" :title="t('editDesign.title')">
+              <el-button v-if="canManageAppDetails" type="primary" size="small" link @click="emit('edit', design)" :title="t('editDesign.title')">
                 <el-icon>
                   <EditPen />
                 </el-icon>
@@ -77,7 +77,7 @@
       <div class="meta">
        
         <div v-if="design.product?.appId">
-           <span v-if="isMerchantUser">{{ t('card.appId') }}: {{ design.product?.appId }}</span> 
+           <span v-if="canManageAppDetails">{{ t('card.appId') }}: {{ design.product?.appId }}</span>
            <div class="app-ops-entry" :class="{ 'is-locked': !canViewAppOperations }">
             <div class="score-pill">
               <span class="score-label">{{ t('card.score') }}</span>
@@ -101,15 +101,15 @@
           </span>
         </div>
         
-        <span v-if="isMerchantUser">{{ t('card.design') }}: {{ design.designUid }}</span>
+        <span v-if="canManageAppDetails">{{ t('card.design') }}: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
-        <div v-if="isMerchantUser" class="last-go-live-row">
+        <div v-if="canManageAppDetails" class="last-go-live-row">
           <span>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
         </div>
-        <div v-if="isMerchantUser && hasDownloadablePackage" class="last-go-live-row">
+        <div v-if="canManageAppDetails && hasDownloadablePackage" class="last-go-live-row">
           <span>{{ t('card.lastPackage') }}: {{ lastPackageTimeText }}</span>
         </div>
-        <div v-if="isMerchantUser" class="last-go-live-row">
+        <div v-if="canManageAppDetails" class="last-go-live-row">
           <span>{{ t('card.lastGoLive') }}: {{ lastGoLiveText }}</span>
           <el-tooltip v-if="hasNewRelease" :content="t('card.newRelease')" placement="top">
             <span class="new-release-indicator" role="img" :aria-label="t('card.newRelease')">
@@ -150,7 +150,7 @@
         </div>
       </div>
       <div class="actions">
-        <el-button v-if="currentUserId === 1 || design.user.id === currentUserId" type="default" size="small" @click="emit('open', design)">
+        <el-button v-if="canEditCurrentDesign" type="default" size="small" @click="emit('open', design)">
           <el-icon><Edit /></el-icon>
           {{ t('card.edit') }}
         </el-button>
@@ -245,6 +245,7 @@ const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelle
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
 const isAdminUser = computed(() => props.isAdminUser)
+const canManageAppDetails = computed(() => isMerchantUser.value || isAdminUser.value)
 const canDeleteDesign = computed(() => props.canDeleteDesign)
 const canDeleteCurrentDesign = computed(() => !design.value.product?.lastGoLive)
 const showCreator = computed(() => props.showCreator)
@@ -257,6 +258,9 @@ const creatorName = computed(() => props.creatorName)
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
+const canEditCurrentDesign = computed(() => {
+  return isAdminUser.value || currentUserId.value === 1 || design.value.user?.id === currentUserId.value
+})
 
 const appId = computed(() => {
   const id = (design.value.product as any)?.appId

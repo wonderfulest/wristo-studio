@@ -142,7 +142,7 @@
       </div>
 
       <!-- Payment Section -->
-      <div v-if="isMerchantUser" class="form-section">
+      <div v-if="canManageAppDetails" class="form-section">
         <div class="section-title">{{ t('editDesign.paymentSettings') }}</div>
         <div class="payment-grid">
           <div class="form-field">
@@ -178,7 +178,7 @@
       </div>
 
       <!-- Configuration Section -->
-      <div v-if="isMerchantUser" class="form-section config-section">
+      <div v-if="canManageAppDetails" class="form-section config-section">
         <div class="section-header">
           <div class="section-title">{{ t('editDesign.configuration') }}</div>
           <div class="config-actions">
@@ -253,7 +253,7 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button
-          v-if="isMerchantUser"
+          v-if="canManageAppDetails"
           type="primary"
           @click="handleSave"
           :loading="saving"
@@ -328,7 +328,7 @@ const messageStore = useMessageStore()
 
 const emit = defineEmits(['cancel', 'success'])
 
-const isMerchantUser = computed(() => userStore.isMerchantUser)
+const canManageAppDetails = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 const WRISTO_STORE_BASE_URL = (import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/+$/, '')
 
 const formatDateTime = (value?: string | number | null) => {
@@ -442,7 +442,7 @@ const packageRows = computed(() => {
       downloadUrl: prgUrl || undefined,
       fileType: 'prg',
       logId: product.prgPackagingLog?.id,
-      canViewBuildLog: !!(isMerchantUser.value && canOpenBuildLog(product.prgPackagingLog))
+      canViewBuildLog: !!(canManageAppDetails.value && canOpenBuildLog(product.prgPackagingLog))
     })
   }
 
@@ -654,7 +654,7 @@ const handleCancel = () => {
 }
 
 const handleSave = async () => {
-  if (!currentDesign.value || !isMerchantUser.value || saving.value) return
+  if (!currentDesign.value || !canManageAppDetails.value || saving.value) return
   if (form.payment.paymentMethod !== 'free' && Number(form.payment.price || 0) < 1.99) {
     messageStore.error(t('submitDesign.priceRange'))
     return
