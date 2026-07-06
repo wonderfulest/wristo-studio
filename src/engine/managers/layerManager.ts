@@ -11,6 +11,26 @@ function isFixedLayer(obj: any): boolean {
   return t === 'global' || t === 'background'
 }
 
+function getFixedLayerPriority(obj: any): number {
+  const t = String(obj?.eleType ?? '')
+  if (t === 'global') return 0
+  if (t === 'background' || isDefaultBackgroundElement(obj)) return 1
+  return 2
+}
+
+function normalizeFixedLayers(canvas: any): number {
+  const objects = (canvas.getObjects?.() || []) as any[]
+  const fixedObjects = objects
+    .filter((obj) => isFixedLayer(obj))
+    .sort((a, b) => getFixedLayerPriority(a) - getFixedLayerPriority(b))
+
+  fixedObjects.forEach((obj, index) => {
+    canvas.moveObjectTo?.(obj as any, index)
+  })
+
+  return fixedObjects.length
+}
+
 function resolveCanvasObjectById(id: string): any {
   const fromRegistry = getElementById(id)
   if (fromRegistry) return fromRegistry as any
@@ -76,10 +96,11 @@ export function moveLayerToIndex(id: string, newIndex: number): void {
 
   const obj = resolveCanvasObjectById(String(id))
   if (!obj) return
+  if (isFixedLayer(obj)) return
 
-  const objects = (canvas.getObjects?.() || []) as any[]
-  const fixedCount = objects.filter((o) => isFixedLayer(o)).length
-  const targetIndex = Math.max(0, fixedCount + Math.max(0, newIndex))
+  const fixedCount = normalizeFixedLayers(canvas)
+  const movableCount = Math.max(0, (canvas.getObjects?.() || []).length - fixedCount)
+  const targetIndex = fixedCount + Math.min(Math.max(0, newIndex), Math.max(0, movableCount - 1))
 
   canvas.moveObjectTo?.(obj as any, targetIndex)
   canvas.requestRenderAll?.()
@@ -90,18 +111,26 @@ export function applyOrder(idsInOrder: string[]): void {
   const canvas = useCanvasStore().canvas
   if (!canvas) return
 
-  const objects = (canvas.getObjects?.() || []) as any[]
-  const fixedCount = objects.filter((o) => isFixedLayer(o)).length
+  const fixedCount = normalizeFixedLayers(canvas)
+  const seenMovableIds = new Set<string>()
 
   const movableIds = idsInOrder
     .map(String)
     .filter((id) => {
+      if (seenMovableIds.has(id)) return false
       const obj = resolveCanvasObjectById(id)
       if (!obj) return false
-      return !isFixedLayer(obj)
+      if (isFixedLayer(obj)) return false
+      seenMovableIds.add(id)
+      return true
     })
+  const orderedSet = new Set(movableIds)
+  const remainingMovableIds = ((canvas.getObjects?.() || []) as any[])
+    .filter((obj) => obj?.id != null && obj?.eleType && !isFixedLayer(obj))
+    .map((obj) => String(obj.id))
+    .filter((id) => !orderedSet.has(id))
 
-  movableIds.forEach((id, idx) => {
+  ;[...movableIds, ...remainingMovableIds].forEach((id, idx) => {
     const obj = resolveCanvasObjectById(id)
     if (!obj) return
     canvas.moveObjectTo?.(obj as any, fixedCount + idx)
@@ -117,7 +146,9 @@ export function bringToFront(id: string): void {
 
   const obj = resolveCanvasObjectById(String(id))
   if (!obj) return
+  if (isFixedLayer(obj)) return
 
+  normalizeFixedLayers(canvas)
   canvas.bringObjectToFront?.(obj as any)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
@@ -129,9 +160,9 @@ export function sendToBack(id: string): void {
 
   const obj = resolveCanvasObjectById(String(id))
   if (!obj) return
+  if (isFixedLayer(obj)) return
 
-  const objects = (canvas.getObjects?.() || []) as any[]
-  const fixedCount = objects.filter((o) => isFixedLayer(o)).length
+  const fixedCount = normalizeFixedLayers(canvas)
   canvas.moveObjectTo?.(obj as any, fixedCount)
 
   canvas.requestRenderAll?.()
@@ -144,8 +175,13 @@ export function bringForward(id: string): void {
 
   const obj = resolveCanvasObjectById(String(id))
   if (!obj) return
+  if (isFixedLayer(obj)) return
 
-  canvas.bringObjectForward?.(obj as any)
+  normalizeFixedLayers(canvas)
+  const objects = (canvas.getObjects?.() || []) as any[]
+  const currentIndex = objects.indexOf(obj)
+  if (currentIndex < 0 || currentIndex >= objects.length - 1) return
+  canvas.moveObjectTo?.(obj as any, currentIndex + 1)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
 }
@@ -156,8 +192,13 @@ export function sendBackward(id: string): void {
 
   const obj = resolveCanvasObjectById(String(id))
   if (!obj) return
+  if (isFixedLayer(obj)) return
 
-  canvas.sendObjectBackwards?.(obj as any)
+  const fixedCount = normalizeFixedLayers(canvas)
+  const objects = (canvas.getObjects?.() || []) as any[]
+  const currentIndex = objects.indexOf(obj)
+  if (currentIndex <= fixedCount) return
+  canvas.moveObjectTo?.(obj as any, currentIndex - 1)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
 }

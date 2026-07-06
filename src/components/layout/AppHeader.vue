@@ -280,7 +280,7 @@ const openAcademy = () => {
   box-shadow: var(--studio-shadow-sm);
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: var(--studio-z-app-header);
   flex: 0 0 56px;
   min-width: 0;
   backdrop-filter: saturate(160%) blur(14px);
@@ -470,7 +470,7 @@ const openAcademy = () => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   min-width: 160px;
   padding: 6px;
-  z-index: 1000;
+  z-index: var(--studio-z-app-header);
   transform-origin: top right;
   animation: dropdown-fade 0.2s ease;
 }

@@ -67,7 +67,7 @@ import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
-import { syncLayersFromCanvas } from '@/engine/managers/layerManager'
+import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
@@ -82,7 +82,6 @@ import HistoryControls from '@/components/canvas/HistoryControls.vue'
 import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
-import type { FabricObject } from 'fabric'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { useDesignStore } from '@/stores/designStore'
 import { useUserStore } from '@/stores/user'
@@ -470,7 +469,7 @@ const loadDesign = async (designUid: string) => {
 
     // 重新排序画布
     if (config.orderIds) {
-      reorderCanvasByIds(config.orderIds)
+      applyOrder(config.orderIds)
       if (Array.isArray(config.elements)) {
         applyLoadedElementDisplayStates(config.elements as any)
       }
@@ -543,40 +542,6 @@ const loadElements = async (elements: AnyElementConfig[]) => {
   }
 }
 
-const reorderCanvasByIds = (orderedIds: string[]) => {
-  const c = baseStore.canvas
-  if (!c) return
-  const objects = c.getObjects() as (FabricObject & { id?: string })[]
-
-  const globalObj = objects.find((o) => String((o as any).eleType ?? '') === 'global')
-  console.log('globalObj', globalObj)
-  const backgroundObj = objects.find((o) => String((o as any).eleType ?? '') === 'background')
-
-  const isFixed = (obj: any): boolean => {
-    const t = String(obj?.eleType ?? '')
-    return t === 'global' || t === 'background'
-  }
-
-  const fixedCount = objects.filter((o) => isFixed(o)).length
-
-  // orderIds 只包含用户元素；移动时要加上 fixedCount，避免把 fixed layer 挤到上层
-  orderedIds.forEach((id, index) => {
-    const obj = objects.find((o: FabricObject & { id?: string }) => o.id === id)
-    if (!obj) return
-    if (isFixed(obj)) return
-    c.moveObjectTo(obj, fixedCount + index)
-  })
-
-  // 再次强制 fixed layer 位于底部（moveObjectTo 会影响其他对象的 index）
-  if (globalObj) {
-    c.moveObjectTo(globalObj, 0)
-  }
-  if (backgroundObj) {
-    c.moveObjectTo(backgroundObj, globalObj ? 1 : 0)
-  }
-};
-
-
 onMounted(() => {
   editorStore.updateSettings({
     showZoomControls: true,
@@ -643,18 +608,18 @@ defineExpose({
 }
 .canvas-container {
   position: relative;
-  z-index: 0;
+  z-index: var(--studio-z-base);
 }
 /* Ensure Fabric canvas layers are below rulers overlay */
 .center-area .canvas-container canvas {
   position: absolute;
-  z-index: 1;
+  z-index: var(--studio-z-canvas-backdrop);
 }
 .center-area .canvas-container .lower-canvas {
   background-color: transparent;
 }
 .center-area .canvas-container .upper-canvas {
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
   background-color: transparent;
 }
 </style>
@@ -667,7 +632,7 @@ defineExpose({
   background-color: var(--studio-surface);
   box-shadow: 1px 0 0 rgba(15, 23, 42, 0.02);
   position: relative;
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
 }
 
 .design-container {
@@ -719,7 +684,7 @@ defineExpose({
   padding-bottom: 84px;
   box-shadow: -1px 0 0 rgba(15, 23, 42, 0.02);
   position: relative;
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
 }
 
 .panel-resize-handle {
@@ -728,7 +693,7 @@ defineExpose({
   bottom: 0;
   width: 10px;
   cursor: col-resize;
-  z-index: 12;
+  z-index: var(--studio-z-workspace-control-active);
   touch-action: none;
 }
 
@@ -773,7 +738,7 @@ defineExpose({
   background: var(--studio-ruler-bg);
   border-right: 1px solid var(--studio-border);
   border-bottom: 1px solid var(--studio-border);
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
 }
 
 .ruler-horizontal-wrapper {
@@ -784,7 +749,7 @@ defineExpose({
   height: 40px;
   background: var(--studio-ruler-bg);
   border-bottom: 1px solid var(--studio-border);
-  z-index: 1;
+  z-index: var(--studio-z-canvas-backdrop);
 }
 
 .ruler-vertical-wrapper {
@@ -795,14 +760,14 @@ defineExpose({
   width: 40px;
   background: var(--studio-ruler-bg);
   border-right: 1px solid var(--studio-border);
-  z-index: 1;
+  z-index: var(--studio-z-canvas-backdrop);
 }
 
 .history-controls-anchor {
   position: absolute;
   top: 56px;
   left: 56px;
-  z-index: 10;
+  z-index: var(--studio-z-workspace-control);
 }
 
 @media (max-width: 1180px) {

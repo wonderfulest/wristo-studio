@@ -116,6 +116,7 @@ import { useI18n } from '@/i18n'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -134,6 +135,7 @@ const { t } = useI18n()
 const amoledIconAssetStore = useAmoledIconAssetStore()
 const historyStore = useHistoryStore()
 const elementDataStore = useElementDataStore()
+const propertiesStore = usePropertiesStore()
 const amoledFileInputRef = ref<HTMLInputElement | null>(null)
 const activeTab = ref<'mip' | 'amoled'>('mip')
 const uploadDialogVisible = ref(false)
@@ -172,7 +174,14 @@ const currentPendingAmoledAsset = computed(() => {
   if (!iconUnicode) return null
   return amoledIconAssetStore.getPending(currentAmoledFontSlug.value, iconUnicode)
 })
-const currentAmoledImageSource = computed(() => currentAmoledPreviewSource.value || String((currentModel.value as any)?.amoledImageUrl || ''))
+const currentAmoledImageSource = computed(() => {
+  if (currentAmoledPreviewSource.value) return currentAmoledPreviewSource.value
+  const model = currentModel.value as any
+  const candidateUnicode = normalizeIconUnicode(currentAmoledCandidate.value?.iconUnicode)
+  const modelUnicode = normalizeIconUnicode(model?.amoledIconUnicode || model?.iconUnicode || model?.text)
+  if (candidateUnicode && modelUnicode && candidateUnicode !== modelUnicode) return ''
+  return String(model?.amoledImageUrl || '')
+})
 const currentAmoledSvgEditable = computed(() => {
   const pending = currentPendingAmoledAsset.value
   if (pending?.file) return isSvgFile(pending.file)
@@ -212,11 +221,36 @@ const applyUpdate = async (patch: Record<string, any>) => {
   }
 }
 
+const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => {
+  const metric = propertiesStore.getMetricByOptions({
+    dataProperty: model.dataProperty,
+    goalProperty: model.goalProperty,
+    metricSymbol: model.metricSymbol
+  })
+  const iconUnicode = normalizeIconUnicode((metric as any)?.iconUnicode || (metric as any)?.icon || model.iconUnicode || model.text)
+  const fontSlug = String(model.fontFamily || model.iconFont || currentAmoledFontSlug.value || '').trim()
+  const existingUnicode = normalizeIconUnicode(model.amoledIconUnicode || model.iconUnicode || model.text)
+  const existingImageUrl = iconUnicode && existingUnicode === iconUnicode ? String(model.amoledImageUrl || '') : ''
+  const imageUrl = (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
+  const keepAmoled = String(model.iconDisplayType || 'mip') === 'amoled' && Boolean(imageUrl)
+
+  return {
+    metricSymbol: (metric as any)?.metricSymbol,
+    text: iconUnicode ? resolveIconGlyphText(iconUnicode) : model.text,
+    iconDisplayType: keepAmoled ? 'amoled' : 'mip',
+    amoledImageUrl: keepAmoled ? imageUrl : null,
+    amoledIconUnicode: iconUnicode || null,
+    width: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
+    height: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
+  }
+}
+
 const updateElement = async () => {
   const model = currentModel.value as any
   await applyUpdate({
     dataProperty: model.dataProperty,
     goalProperty: model.goalProperty,
+    ...getMetricIconPatch(model),
     fontSize: model.fontSize,
     iconSize: model.fontSize,
     fill: model.fill,

@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   bottom: 22px;
-  z-index: 12;
+  z-index: var(--studio-z-workspace-control-active);
   display: flex;
   align-items: center;
   gap: 10px;

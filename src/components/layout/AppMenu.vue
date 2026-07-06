@@ -777,7 +777,7 @@ const handleOpenCreatorAcademy = () => {
   height: 48px;
   position: sticky;
   top: 56px;
-  z-index: 900;
+  z-index: var(--studio-z-app-menu);
   flex: 0 0 48px;
   display: flex;
   align-items: center;

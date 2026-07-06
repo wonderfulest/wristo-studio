@@ -50,6 +50,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
+import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -60,10 +61,12 @@ import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
 import { alignSelection } from '@/engine/managers/alignManager'
+import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { normalizeIconUnicode } from '@/types/amoledIcons'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
@@ -71,6 +74,7 @@ const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
+const amoledIconAssetStore = useAmoledIconAssetStore()
 
 const props = defineProps<{
   elements: FabricElement[]
@@ -105,6 +109,25 @@ const commitHistory = (reason: string) => {
   historyStore.saveState(`group:${reason}`)
 }
 
+const buildIconMetricPatch = (element: FabricElement, metric: any, propertyPatch: Record<string, any>) => {
+  const iconUnicode = normalizeIconUnicode(metric?.iconUnicode || metric?.icon)
+  const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
+  const amoledImageUrl = iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : ''
+  const keepAmoled = String((element as any).iconDisplayType || 'mip') === 'amoled' && Boolean(amoledImageUrl)
+  const size = Number((element as any).iconSize || (element as any).fontSize || 30)
+
+  return {
+    ...propertyPatch,
+    metricSymbol: metric?.metricSymbol,
+    text: resolveIconGlyphText(iconUnicode),
+    iconDisplayType: keepAmoled ? 'amoled' : 'mip',
+    amoledImageUrl: keepAmoled ? amoledImageUrl : null,
+    amoledIconUnicode: iconUnicode || null,
+    width: keepAmoled ? size : undefined,
+    height: keepAmoled ? size : undefined,
+  }
+}
+
 watch(dataProperty, (val) => {
   formModel.dataProperty = val
 })
@@ -122,7 +145,7 @@ const updateDataProperty = () => {
     goalProperty: goalProperty.value,
   })
   if (dataProperty.value) {
-    nextTick(() => {
+    nextTick(async () => {
       if (dataElement.value) {
         dataElement.value.set('dataProperty', dataProperty.value)
         dataElement.value.set('goalProperty', null)
@@ -131,12 +154,13 @@ const updateDataProperty = () => {
         if (dataId) elementDataStore.patchElement(dataId, { dataProperty: dataProperty.value, goalProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
-        const iconText = resolveIconGlyphText(metric.icon)
-        iconElement.value.set('dataProperty', dataProperty.value)
-        iconElement.value.set('goalProperty', null)
-        iconElement.value.set('text', iconText)
         const iconId = String((iconElement.value as any).id)
-        if (iconId) elementDataStore.patchElement(iconId, { dataProperty: dataProperty.value, goalProperty: null, text: iconText } as any)
+        if (iconId) {
+          await elementManager.updateElementById(
+            iconId,
+            buildIconMetricPatch(iconElement.value, metric, { dataProperty: dataProperty.value, goalProperty: null })
+          )
+        }
       }
       if (labelElement.value) {
         const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
@@ -170,7 +194,7 @@ const updateGoalProperty = () => {
     dataProperty: dataProperty.value,
   })
   if (goalProperty.value) {
-    nextTick(() => {
+    nextTick(async () => {
       if (dataElement.value) {
         dataElement.value.set('goalProperty', goalProperty.value)
         dataElement.value.set('dataProperty', null)
@@ -179,12 +203,13 @@ const updateGoalProperty = () => {
         if (dataId) elementDataStore.patchElement(dataId, { goalProperty: goalProperty.value, dataProperty: null, text: metric.defaultValue } as any)
       }
       if (iconElement.value) {
-        const iconText = resolveIconGlyphText(metric.icon)
-        iconElement.value.set('goalProperty', goalProperty.value)
-        iconElement.value.set('dataProperty', null)
-        iconElement.value.set('text', iconText)
         const iconId = String((iconElement.value as any).id)
-        if (iconId) elementDataStore.patchElement(iconId, { goalProperty: goalProperty.value, dataProperty: null, text: iconText } as any)
+        if (iconId) {
+          await elementManager.updateElementById(
+            iconId,
+            buildIconMetricPatch(iconElement.value, metric, { goalProperty: goalProperty.value, dataProperty: null })
+          )
+        }
       }
       if (labelElement.value) {
         const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')

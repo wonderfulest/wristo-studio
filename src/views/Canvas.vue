@@ -375,14 +375,14 @@ defineExpose({
   border-radius: 8px;
   background: rgba(15, 107, 104, 0.08);
   pointer-events: none;
-  z-index: 5;
+  z-index: var(--studio-z-canvas-overlay);
 }
 
 .canvas-controls {
   position: absolute;
   top: 20px;
   left: 20px;
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
 }
 
 .guideline-btn {
@@ -403,7 +403,7 @@ defineExpose({
   position: absolute;
   background: #000000;
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--studio-z-canvas-backdrop);
 }
 
 .canvas-container {
@@ -414,7 +414,7 @@ defineExpose({
   overflow: visible;
   transform: translate(0px, 0px);
   will-change: transform;
-  z-index: 1;
+  z-index: var(--studio-z-canvas-backdrop);
 }
 
 .canvas-wrapper :deep(.canvas-container) {
@@ -423,7 +423,7 @@ defineExpose({
   border-radius: 4px;
   position: relative;
   overflow: visible;
-  z-index: 2;
+  z-index: var(--studio-z-canvas-surface);
 }
 
 .canvas-wrapper :deep(.lower-canvas) {

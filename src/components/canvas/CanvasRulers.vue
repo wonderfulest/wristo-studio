@@ -249,7 +249,7 @@ watch(() => themeStore.currentTheme, () => update())
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: var(--studio-z-workspace-control);
   pointer-events: none;
 }
 .ruler-corner {
@@ -261,7 +261,7 @@ watch(() => themeStore.currentTheme, () => update())
   background: var(--studio-ruler-bg);
   border-right: 1px solid var(--studio-border);
   border-bottom: 1px solid var(--studio-border);
-  z-index: 11;
+  z-index: calc(var(--studio-z-workspace-control) + 1);
   pointer-events: none;
 }
 .ruler-horizontal {
@@ -270,7 +270,7 @@ watch(() => themeStore.currentTheme, () => update())
   left: 40px;
   right: 0;
   height: 40px;
-  z-index: 10;
+  z-index: var(--studio-z-workspace-control);
   pointer-events: auto;
 }
 .ruler-vertical {
@@ -279,7 +279,7 @@ watch(() => themeStore.currentTheme, () => update())
   left: 0;
   bottom: 0;
   width: 40px;
-  z-index: 10;
+  z-index: var(--studio-z-workspace-control);
   pointer-events: auto;
 }
 .ruler-extensions {
@@ -288,7 +288,7 @@ watch(() => themeStore.currentTheme, () => update())
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: var(--studio-z-workspace-control);
   pointer-events: none;
 }
 </style>

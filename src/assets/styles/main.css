@@ -44,6 +44,20 @@
   --studio-radius-sm: 6px;
   --studio-radius-md: 8px;
   --studio-radius-lg: 12px;
+  --studio-z-base: 0;
+  --studio-z-canvas-backdrop: 1;
+  --studio-z-canvas-surface: 2;
+  --studio-z-canvas-overlay: 5;
+  --studio-z-workspace-control: 10;
+  --studio-z-workspace-control-active: 12;
+  --studio-z-app-menu: 900;
+  --studio-z-app-header: 1000;
+  --studio-z-floating-panel: 10000;
+  --studio-z-font-picker: 12050;
+  --studio-z-font-search-popper: 12060;
+  --studio-z-image-viewer: 13000;
+  --studio-z-svg-editor: 15000;
+  --studio-z-asset-picker: 16000;
 
   /* 主题基础色 */
   --color-primary: var(--studio-primary);
@@ -252,11 +266,11 @@ button,
 }
 
 .font-search-index-popper {
-  z-index: 12060 !important;
+  z-index: var(--studio-z-font-search-popper) !important;
 }
 
 .el-image-viewer__wrapper {
-  z-index: 13000 !important;
+  z-index: var(--studio-z-image-viewer) !important;
 }
 
 :root[data-studio-theme='dark'] .el-button--primary {
