@@ -176,12 +176,15 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'pos':
       return { display: '31.23, 121.47', unit: '', label: 'POS' }
 
-    // 天气文本
-    case 'weather':
-    case 'wthr':
+    // 天气描述
+    case 'weatherDescription':
+    case 'weatherDesc':
       return { display: 'Sunny', unit: '', label: 'WEATHER' }
 
     // 温度
+    case 'weather':
+    case 'wthr':
+      return { display: String(simState.temperatureC), numeric: simState.temperatureC, unit: '°C', label: 'WEATHER' }
     case 'temperature':
     case 'temp':
       return { display: String(simState.temperatureC), numeric: simState.temperatureC, unit: '°C', label: 'TEMP' }

@@ -29,6 +29,8 @@ export function resolveMetricLabel(
 ): string {
   if (!metric) return 'Label'
 
+  if ((metric as any).metricSymbol === ':FIELD_TYPE_WEATHER') return 'WEATHER'
+
   if (language === 'zh') {
     const labelCn = String((metric as any).labelCn || '').trim()
     if (labelCn) return labelCn

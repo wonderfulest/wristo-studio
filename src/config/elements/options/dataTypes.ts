@@ -36,6 +36,7 @@ const sortBySortOrder = (a: DataTypeOption, b: DataTypeOption) => {
 }
 
 const TEMPERATURE_SYMBOLS = new Set([
+  ':FIELD_TYPE_WEATHER',
   ':FIELD_TYPE_TEMPERATURE',
   ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE',
   ':FIELD_TYPE_TEMPERATURE_HIGH',
@@ -82,6 +83,7 @@ const resolveUnit = (option: DataTypeOptionVO): string => {
 }
 
 const resolveIconUnicode = (option: DataTypeOptionVO): string => {
+  if (option.metricSymbol === ':FIELD_TYPE_WEATHER') return '101d'
   if (TEMPERATURE_SYMBOLS.has(option.metricSymbol)) return '0062'
   const iconUnicode = String(option.iconUnicode || option.icon || '').trim()
   if (iconUnicode) return iconUnicode

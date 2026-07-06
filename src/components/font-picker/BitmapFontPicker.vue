@@ -62,6 +62,7 @@ import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
 import { useI18n } from '@/i18n'
 import { invalidateBitmapTimeFontCache } from '@/elements/time/time/time.renderer'
+import emitter from '@/utils/eventBus'
 
 const BITMAP_FONT_TYPE = 'bitmap_font'
 
@@ -84,6 +85,7 @@ const bitmapType = BITMAP_FONT_TYPE
 
 const isOpen = ref<boolean>(false)
 const fontScope = ref<'mine' | 'all'>('mine')
+const settingsPopupId = `bitmap-font-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
 // bitmap font setting dialog state
 const bitmapDialogVisible = ref(false)
@@ -136,10 +138,13 @@ const togglePanel = () => {
   }
   isOpen.value = !isOpen.value
   if (isOpen.value && bitmapFonts.value.length === 0) {
+    emitter.emit('settings-popup-open', settingsPopupId)
     bitmapFontStore.loadFromSession()
     if (!bitmapFontStore.fonts.length) {
       void bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
     }
+  } else if (isOpen.value) {
+    emitter.emit('settings-popup-open', settingsPopupId)
   }
 }
 
@@ -532,6 +537,12 @@ const handleOutsideClick = (event: MouseEvent) => {
   }
 }
 
+const handleSettingsPopupOpen = (id: unknown) => {
+  if (String(id) !== settingsPopupId) {
+    isOpen.value = false
+  }
+}
+
 onMounted(async () => {
   await fontStore.fetchFonts()
   try {
@@ -541,6 +552,7 @@ onMounted(async () => {
     ])
   } catch {}
   document.addEventListener('click', handleOutsideClick)
+  emitter.on('settings-popup-open', handleSettingsPopupOpen)
 })
 
 watch(includeAllUsers, async () => {
@@ -552,6 +564,7 @@ watch(includeAllUsers, async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
+  emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 </script>
 

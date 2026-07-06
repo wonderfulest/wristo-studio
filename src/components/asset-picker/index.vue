@@ -265,6 +265,7 @@ import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useI18n } from '@/i18n'
 import { isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
+import emitter from '@/utils/eventBus'
 
 type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
 
@@ -323,6 +324,7 @@ const lastBatchSelectedAssetId = ref<number | null>(null)
 const deleteProgressDone = ref(0)
 const deleteProgressTotal = ref(0)
 const assetDialogVisible = ref(false)
+const settingsPopupId = `asset-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
 const assetDrawerResizeStartX = ref(0)
 const assetDrawerResizeStartWidth = ref(430)
 const assetDrawerResizing = ref(false)
@@ -421,6 +423,7 @@ const isEditableSvgAsset = (asset: AnalogAssetVO): boolean => {
 }
 
 const openAssetDialog = () => {
+  emitter.emit('settings-popup-open', settingsPopupId)
   editorLayoutStore.setWidth(
     'assetLibraryDrawer',
     clampAssetDrawerWidth(editorLayoutStore.getWidth('assetLibraryDrawer'))
@@ -805,6 +808,7 @@ const processUploadFiles = async (fileList: FileList | File[] | undefined | null
   }
   if (!validFiles.length) return
 
+  emitter.emit('settings-popup-open', settingsPopupId)
   assetDialogVisible.value = true
   uploadPanelVisible.value = true
   uploadSummaryMessage.value = ''
@@ -1053,13 +1057,21 @@ const handleBatchRemove = async () => {
   }
 }
 
+const handleSettingsPopupOpen = (id: unknown) => {
+  if (String(id) === settingsPopupId) return
+  assetDialogVisible.value = false
+  hoverPreviewAsset.value = null
+}
+
 // 初始化加载
 onMounted(() => {
   loadAssets(true)
+  emitter.on('settings-popup-open', handleSettingsPopupOpen)
 })
 
 onBeforeUnmount(() => {
   stopAssetDrawerResize()
+  emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 
 // 暴露刷新方法

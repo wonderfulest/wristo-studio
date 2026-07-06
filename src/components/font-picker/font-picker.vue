@@ -181,6 +181,7 @@ import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
 import { useI18n } from '@/i18n'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
+import emitter from '@/utils/eventBus'
 
 const props = defineProps({
   modelValue: {
@@ -220,6 +221,7 @@ const dialogVisible = ref<boolean>(false)
 const pickerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
+const settingsPopupId = `font-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
 const designerFontListRef = ref<InstanceType<typeof DesignerFontList> | null>(null)
 const fontScope = ref<'mine' | 'all'>('mine')
 type EditableSearchIndexFont = {
@@ -322,6 +324,7 @@ const updatePanelPosition = () => {
 const togglePanel = async () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
+    emitter.emit('settings-popup-open', settingsPopupId)
     fontStore.expandedSections.recent = true
     if (!initializedRecentFontTypes.has(recentFontTypeKey.value)) {
       initializedRecentFontTypes.add(recentFontTypeKey.value)
@@ -535,6 +538,12 @@ const addCustomFont = () => {
   dialogVisible.value = true
 }
 
+const handleSettingsPopupOpen = (id: unknown) => {
+  if (String(id) !== settingsPopupId) {
+    isOpen.value = false
+  }
+}
+
 onMounted(async () => {
   loadStyleTagOptions()
   // initial refresh with current type (if provided)
@@ -545,11 +554,13 @@ onMounted(async () => {
   }
   window.addEventListener('resize', updatePanelPosition)
   window.addEventListener('scroll', updatePanelPosition, true)
+  emitter.on('settings-popup-open', handleSettingsPopupOpen)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updatePanelPosition)
   window.removeEventListener('scroll', updatePanelPosition, true)
+  emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 
 // When type changes, refresh system and recent fonts for the new type

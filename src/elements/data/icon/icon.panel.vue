@@ -202,6 +202,21 @@ const allIconConfigs = computed(() => elementDataStore.elements.filter((snapshot
 const uploadDialogTitle = computed(() =>
   `Upload ${currentAmoledCandidate.value?.label || currentAmoledCandidate.value?.iconUnicode || 'AMOLED Icon'}`
 )
+const currentMetricSignature = computed(() => {
+  const model = currentModel.value as any
+  const metric = propertiesStore.getMetricByOptions({
+    dataProperty: model.dataProperty,
+    goalProperty: model.goalProperty,
+    metricSymbol: model.metricSymbol
+  })
+  return [
+    model.id,
+    model.dataProperty || '',
+    model.goalProperty || '',
+    (metric as any)?.metricSymbol || '',
+    normalizeIconUnicode((metric as any)?.iconUnicode || (metric as any)?.icon),
+  ].join('|')
+})
 
 const applyUpdate = async (patch: Record<string, any>) => {
   try {
@@ -637,6 +652,18 @@ watch(activeTab, (tab) => {
     return
   }
   void applyAmoledDisplay()
+})
+
+watch(currentMetricSignature, async () => {
+  const model = currentModel.value as any
+  if (!model?.dataProperty && !model?.goalProperty) return
+  await applyUpdate({
+    dataProperty: model.dataProperty,
+    goalProperty: model.goalProperty,
+    ...getMetricIconPatch(model),
+    originX: 'center',
+    originY: 'center'
+  })
 })
 
 const handleClose = async () => {

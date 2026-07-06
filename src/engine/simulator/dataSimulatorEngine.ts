@@ -116,9 +116,9 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'notifications'
     case ':INDICATOR_TYPE_ALARM':
       return 'alarms'
-    case ':FIELD_TYPE_WEATHER':
     case ':FIELD_TYPE_WEATHER_DESCRIPTION':
-      return 'weather'
+      return 'weatherDesc'
+    case ':FIELD_TYPE_WEATHER':
     case ':FIELD_TYPE_TEMPERATURE':
       return 'temperature'
     case ':FIELD_TYPE_FEELS_LIKE_TEMPERATURE':

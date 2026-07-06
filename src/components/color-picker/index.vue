@@ -11,7 +11,7 @@
           color: modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor
         }" />
     </div>
-    <div v-if="isOpen" class="color-picker" :style="pickerStyle">
+    <div v-if="isOpen" ref="pickerRef" class="color-picker" :style="pickerStyle">
       <div class="tabs">
         <div class="tab" :class="{ active: true }">{{ t('colorPicker.solid') }}</div>
       </div>
@@ -24,16 +24,10 @@
       <div v-if="colorProperties.length > 0" class="recent-colors">
         <div class="recent-colors-header">
           <div class="recent-colors-title">{{ t('colorPicker.currentColors') }}</div>
-          <button class="toggle-list-btn" @click="toggleColorList">
-            {{ showColorList ? t('common.collapse') : t('common.expand') }}
-          </button>
         </div>
-        <div v-if="!showColorList" class="recent-colors-grid">
-          <div v-for="colorProperty in colorProperties" :key="colorProperty.name" class="recent-color" :style="{ backgroundColor: colorProperty.hex }" @click="selectColor(colorProperty)"></div>
-        </div>
-        <div v-else class="color-variables-list">
-          <div v-for="colorProperty in colorProperties" :key="colorProperty.name" class="color-variable-item">
-            <div class="color-preview-small" :style="{ backgroundColor: colorProperty.hex }" @click.stop="selectColor(colorProperty)"></div>
+        <div class="color-variables-list">
+          <div v-for="colorProperty in colorProperties" :key="colorProperty.name" class="color-variable-item" @click="selectColor(colorProperty)">
+            <div class="color-preview-small" :style="{ backgroundColor: colorProperty.hex }"></div>
             <div class="color-variable-info">
               <div class="color-hex">{{ colorProperty.hex }}</div>
               <div class="color-name">{{ colorProperty.name }}</div>
@@ -48,7 +42,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import emitter from '@/utils/eventBus.ts'
-import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 
@@ -68,7 +61,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change'])
 
-const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
 
 // 颜色矩阵
@@ -143,16 +135,14 @@ const colorMatrix = [
 // 状态
 const isOpen = ref(false)
 const wrapperRef = ref(null)
+const pickerRef = ref(null)
 const pickerStyle = ref({})
 // 为每个实例生成唯一标识，用于互斥控制
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
+const settingsPopupId = `color-picker_${instanceId}`
 // 内部统一使用字符串表示颜色
 const hexColor = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
 const inputValue = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
-
-// 获取当前使用的颜色
-const colorVariables = computed(() => baseStore.getAllColors())
-const showColorList = ref(false)
 
 // 计算属性：获取所有颜色属性
 const colorProperties = computed(() => {
@@ -192,11 +182,6 @@ const textColor = computed(() => {
   return luminance < 0.5 ? '#dddddd' : '#222222'
 })
 
-// 切换颜色列表展开/收起
-const toggleColorList = () => {
-  showColorList.value = !showColorList.value
-}
-
 // 选择颜色
 const selectColor = (color) => {
   hexColor.value = color.hex
@@ -228,20 +213,61 @@ const handleOutsideClick = (event) => {
   }
 }
 
+const positionColorPicker = () => {
+  const anchorEl = wrapperRef.value
+  const pickerEl = pickerRef.value
+  if (!isOpen.value || !anchorEl || !pickerEl) return
+
+  const viewportPadding = 8
+  const popupGap = 4
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0
+  const anchorRect = anchorEl.getBoundingClientRect()
+  const targetWidth = Math.max(0, Math.min(300, viewportWidth - viewportPadding * 2))
+  const naturalHeight = pickerEl.scrollHeight || pickerEl.getBoundingClientRect().height || 0
+  const spaceBelow = Math.max(0, viewportHeight - anchorRect.bottom - popupGap - viewportPadding)
+  const spaceAbove = Math.max(0, anchorRect.top - popupGap - viewportPadding)
+  const openAbove = naturalHeight > spaceBelow && spaceAbove > spaceBelow
+  const availableHeight = openAbove ? spaceAbove : spaceBelow
+  const maxHeight = Math.max(0, Math.min(naturalHeight, availableHeight || viewportHeight - viewportPadding * 2))
+
+  let top = openAbove
+    ? anchorRect.top - popupGap - maxHeight
+    : anchorRect.bottom + popupGap
+  top = Math.max(viewportPadding, Math.min(top, viewportHeight - viewportPadding - maxHeight))
+
+  let left = anchorRect.left
+  left = Math.max(viewportPadding, Math.min(left, viewportWidth - viewportPadding - targetWidth))
+
+  pickerStyle.value = {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${targetWidth}px`,
+    maxHeight: `${maxHeight}px`,
+    zIndex: props.popupZIndex
+  }
+}
+
+const handleSettingsPopupOpen = (id) => {
+  if (id !== settingsPopupId) {
+    isOpen.value = false
+  }
+}
+
 // 添加和移除事件监听
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
-  // 监听全局事件：有其他 color-picker 打开时，关闭当前
-  emitter.on('color-picker-open', (id) => {
-    if (id !== instanceId) {
-      isOpen.value = false
-    }
-  })
+  window.addEventListener('resize', positionColorPicker)
+  document.addEventListener('scroll', positionColorPicker, true)
+  emitter.on('settings-popup-open', handleSettingsPopupOpen)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
-  emitter.off?.('color-picker-open')
+  window.removeEventListener('resize', positionColorPicker)
+  document.removeEventListener('scroll', positionColorPicker, true)
+  emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 
 // 监听 modelValue 变化
@@ -325,38 +351,8 @@ const togglePicker = () => {
   const willOpen = !isOpen.value
   isOpen.value = willOpen
   if (willOpen) {
-    emitter.emit?.('color-picker-open', instanceId)
-    nextTick(() => {
-      const el = wrapperRef.value
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
-      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0
-      const popupHeight = 320 // 近似高度：矩阵+标题+边距
-      const popupWidth = 300
-
-      // 计算默认向下展开的位置
-      let top = rect.bottom + 4
-      let left = rect.left
-
-      // 如果下面空间不够，改为向上展开
-      const spaceBelow = viewportHeight - rect.bottom
-      if (spaceBelow < popupHeight && rect.top > popupHeight) {
-        top = rect.top - popupHeight - 4
-      }
-
-      // 避免越出右侧边界
-      if (left + popupWidth > viewportWidth - 8) {
-        left = Math.max(8, viewportWidth - popupWidth - 8)
-      }
-
-      pickerStyle.value = {
-        position: 'fixed',
-        top: top + 'px',
-        left: left + 'px',
-        zIndex: props.popupZIndex
-      }
-    })
+    emitter.emit('settings-popup-open', settingsPopupId)
+    nextTick(positionColorPicker)
   }
 }
 </script>
@@ -416,6 +412,9 @@ const togglePicker = () => {
   margin-top: 4px;
   z-index: 1000;
   width: 300px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   background: var(--studio-surface-raised);
   border: 1px solid var(--studio-border);
   border-radius: 4px;
@@ -536,7 +535,6 @@ const togglePicker = () => {
 
 .recent-colors-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
@@ -546,24 +544,8 @@ const togglePicker = () => {
   color: var(--studio-text-muted);
 }
 
-.toggle-list-btn {
-  padding: 2px 8px;
-  font-size: 12px;
-  color: var(--studio-text-muted);
-  background-color: transparent;
-  border: 1px solid var(--studio-border);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.toggle-list-btn:hover {
-  border-color: var(--studio-primary);
-  color: var(--studio-primary);
-}
-
 .color-variables-list {
-  max-height: 200px;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .color-variable-item {
@@ -646,26 +628,6 @@ const togglePicker = () => {
 
 .name-input:focus {
   border-color: var(--studio-primary-hover);
-}
-
-.recent-colors-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-}
-
-.recent-color {
-  aspect-ratio: 1;
-  border-radius: 2px;
-  cursor: pointer;
-  border: 1px solid var(--studio-border);
-  transition: transform 0.2s;
-}
-
-.recent-color:hover {
-  transform: scale(1.1);
-  z-index: 1;
-  border-color: var(--studio-primary);
 }
 
 input[type='number']::-webkit-inner-spin-button,
