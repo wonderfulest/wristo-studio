@@ -64,7 +64,7 @@
               :value="option.value"
             >
               <div class="goal-option">
-                <span class="goal-icon">{{ option.icon }}</span>
+                <span class="goal-icon">{{ iconGlyph(option) }}</span>
                 <span class="goal-label">{{ option.label }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
@@ -72,7 +72,7 @@
         </el-form-item>
 
         <div v-if="selectedOption" class="selected-option-card">
-          <span class="selected-option-icon">{{ selectedOption.icon }}</span>
+          <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
           <div class="selected-option-copy">
             <div class="selected-option-title">{{ selectedOption.label }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
@@ -91,7 +91,7 @@
                 <div v-for="(option, index) in formData.options" :key="index" class="option-item">
                   <div class="option-content">
                     <div class="option-info">
-                      <span class="goal-icon">{{ option.icon }}</span>
+                      <span class="goal-icon">{{ iconGlyph(option) }}</span>
                       <span class="goal-label">{{ option.label }}</span>
                       <span class="goal-metric">({{ option.metricSymbol }})</span>
                     </div>
@@ -165,6 +165,7 @@ import { useI18n } from '@/i18n'
 import { DataTypeOptions } from '@/config/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
+import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -174,6 +175,7 @@ const activeOptions = ref([])
 // 获取目标数据项作为选项
 const goalOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':GOAL_TYPE_'))
 const cloneGoalOptions = () => JSON.parse(JSON.stringify(goalOptions))
+const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
 
 const formData = reactive({
   title: '',

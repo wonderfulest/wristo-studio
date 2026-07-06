@@ -8,6 +8,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     properties: {} as PropertiesMap,
     textCase: 0 as number,
     bitmapMode: true as boolean,
+    lastSelectedColor: '' as string,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
       { label: 'Dark Gray', value: '0x555555' },
@@ -152,6 +153,31 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties = {}
       this.textCase = 0
       this.bitmapMode = true
+      this.lastSelectedColor = ''
+    },
+
+    setLastSelectedColor(value: unknown) {
+      const raw = String(value ?? '').trim()
+      if (!raw) return
+
+      if (raw === '-1' || raw.toLowerCase() === 'transparent') {
+        this.lastSelectedColor = '-1'
+        return
+      }
+
+      if (/^#[0-9A-Fa-f]{6}$/.test(raw)) {
+        this.lastSelectedColor = `0x${raw.slice(1).toLowerCase()}`
+        return
+      }
+
+      if (/^0x[0-9A-Fa-f]{6}$/.test(raw)) {
+        this.lastSelectedColor = `0x${raw.slice(2).toLowerCase()}`
+        return
+      }
+
+      if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
+        this.lastSelectedColor = `0x${raw.toLowerCase()}`
+      }
     },
 
     addProperty(propertyData: {

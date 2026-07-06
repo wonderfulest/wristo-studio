@@ -186,12 +186,14 @@ const textColor = computed(() => {
 const selectColor = (color) => {
   hexColor.value = color.hex
   inputValue.value = color.hex
+  propertiesStore.setLastSelectedColor(color.hex)
   emit('update:modelValue', color.hex)
   emit('change', color.hex)
 }
 
 // 更新颜色
 const updateColor = () => {
+  propertiesStore.setLastSelectedColor(hexColor.value)
   emit('update:modelValue', hexColor.value)
   emit('change', hexColor.value)
 }
@@ -199,6 +201,7 @@ const updateColor = () => {
 // 从十六进制更新
 const updateFromHex = () => {
   if (hexColor.value.startsWith('#')) {
+    propertiesStore.setLastSelectedColor(hexColor.value)
     emit('update:modelValue', `0x${hexColor.value.slice(1)}`)
   }
 }
@@ -317,6 +320,7 @@ const handleInputConfirm = () => {
   // 透明色单独处理
   if (normalized === 'transparent') {
     hexColor.value = 'transparent'
+    propertiesStore.setLastSelectedColor('transparent')
     emit('update:modelValue', 'transparent')
     emit('change', 'transparent')
     inputValue.value = 'transparent'
@@ -341,6 +345,7 @@ const handleInputConfirm = () => {
 
   // 若未命中任何选项，仍然按该 hex 作为当前颜色
   hexColor.value = normalized
+  propertiesStore.setLastSelectedColor(normalized)
   emit('update:modelValue', normalized)
   emit('change', normalized)
   inputValue.value = normalized

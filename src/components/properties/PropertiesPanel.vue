@@ -218,6 +218,8 @@ import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDial
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
@@ -235,6 +237,8 @@ const textPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
+const canvasStore = useCanvasStore()
+const elementDataStore = useElementDataStore()
 const { t } = useI18n()
 
 const typeOrder = ['color', 'data', 'goal', 'chart', 'text']
@@ -417,6 +421,95 @@ const bindProperty = async (key, type) => {
   }
 }
 
+const colorVariableBindings = [
+  { propField: 'colorProperty', styleField: 'color' },
+  { propField: 'bgColorProperty', styleField: 'bgColor' },
+  { propField: 'strokeProperty', styleField: 'stroke' },
+  { propField: 'borderColorProperty', styleField: 'borderColor' },
+  { propField: 'bodyStrokeProperty', styleField: 'bodyStroke' },
+  { propField: 'headFillProperty', styleField: 'headFill' },
+  { propField: 'bodyFillProperty', styleField: 'bodyFill' },
+  { propField: 'fillProperty', styleField: 'fill' },
+  { propField: 'activeColorProperty', styleField: 'activeColor' },
+  { propField: 'inactiveColorProperty', styleField: 'inactiveColor' },
+  { propField: 'pointColorProperty', styleField: 'pointColor' },
+  { propField: 'gridColorProperty', styleField: 'gridColor' },
+  { propField: 'xAxisColorProperty', styleField: 'xAxisColor' },
+  { propField: 'yAxisColorProperty', styleField: 'yAxisColor' },
+  { propField: 'xLabelColorProperty', styleField: 'xLabelColor' },
+  { propField: 'yLabelColorProperty', styleField: 'yLabelColor' },
+  { propField: 'levelColorHighProperty', styleField: 'levelColorHigh' },
+  { propField: 'levelColorMediumProperty', styleField: 'levelColorMedium' },
+  { propField: 'levelColorLowProperty', styleField: 'levelColorLow' },
+]
+
+const normalizeColorValue = (value) => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  if (raw === '-1' || raw.toLowerCase() === 'transparent') return 'transparent'
+  if (/^#[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw.slice(1).toLowerCase()}`
+  if (/^0x[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw.slice(2).toLowerCase()}`
+  if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw.toLowerCase()}`
+  return ''
+}
+
+const isCurrentColorBinding = (boundKey, normalizedValue) => {
+  if (!boundKey) return false
+  const property = propertiesStore.allProperties?.[boundKey]
+  return property?.type === 'color' && normalizeColorValue(property.value) === normalizedValue
+}
+
+const bindColorPropertyToMatchingElements = (propertyKey, value) => {
+  const normalizedValue = normalizeColorValue(value)
+  if (!propertyKey || !normalizedValue) return 0
+
+  let boundCount = 0
+  const patchedElementIds = new Set()
+  const patchObject = (obj) => {
+    if (!obj) return
+    const patch = {}
+
+    colorVariableBindings.forEach(({ propField, styleField }) => {
+      if (normalizeColorValue(obj[styleField]) !== normalizedValue) return
+      if (isCurrentColorBinding(obj[propField], normalizedValue)) return
+      patch[propField] = propertyKey
+    })
+
+    if (Object.keys(patch).length === 0) return
+    obj.set?.(patch)
+    const id = obj.id != null ? String(obj.id) : ''
+    if (id) {
+      elementDataStore.patchElement(id, patch)
+      patchedElementIds.add(id)
+    }
+    boundCount += 1
+  }
+
+  ;(canvasStore.canvas?.getObjects?.() || []).forEach(patchObject)
+
+  elementDataStore.elements.forEach((snapshot) => {
+    if (!snapshot?.id || patchedElementIds.has(String(snapshot.id))) return
+    const config = snapshot.config || {}
+    const patch = {}
+
+    colorVariableBindings.forEach(({ propField, styleField }) => {
+      if (normalizeColorValue(config[styleField]) !== normalizedValue) return
+      if (isCurrentColorBinding(config[propField], normalizedValue)) return
+      patch[propField] = propertyKey
+    })
+
+    if (Object.keys(patch).length === 0) return
+    elementDataStore.patchElement(String(snapshot.id), patch)
+    boundCount += 1
+  })
+
+  if (boundCount > 0) {
+    canvasStore.canvas?.requestRenderAll?.()
+  }
+
+  return boundCount
+}
+
 // 删除属性
 const deleteProperty = async (key) => {
   try {
@@ -450,6 +543,9 @@ const handlePropertyConfirm = (propertyData) => {
   }
 
   propertiesStore.addProperty(propertyPayload)
+  if (!isEdit && propertyPayload.type === 'color') {
+    bindColorPropertyToMatchingElements(propertyPayload.key, propertyPayload.defaultValue)
+  }
   commitHistory('upsert-property')
 }
 

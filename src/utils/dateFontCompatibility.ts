@@ -14,6 +14,7 @@ const NUMERIC_DATE_FORMATTERS = new Set<number>([
   DateFormatConstants.MM_DD_YYYY,
   DateFormatConstants.YYYY_MM_DD,
   DateFormatConstants.MM_DD,
+  DateFormatConstants.MM_DD_SLASH,
 ])
 
 const CHINESE_DATE_FORMATTERS = new Set<number>([

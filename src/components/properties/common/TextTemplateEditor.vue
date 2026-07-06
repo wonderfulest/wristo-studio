@@ -81,7 +81,7 @@ const variableGroups = [
   },
   {
     title: 'Environment',
-    items: ['location', 'aqi', 'pm25', 'sunrise', 'sunset'],
+    items: ['weatherDesc', 'temperatureHigh', 'temperatureLow', 'location', 'aqi', 'pm25', 'sunrise', 'sunset'],
   },
   {
     title: 'Calendar',
@@ -98,6 +98,9 @@ const variableLabels: Record<string, string> = {
   heart: 'Heart',
   restingHeart: 'Rest HR',
   bodyBattery: 'Body Battery',
+  weatherDesc: 'Weather Description',
+  temperatureHigh: 'High Temp',
+  temperatureLow: 'Low Temp',
   pm25: 'PM2.5',
 }
 

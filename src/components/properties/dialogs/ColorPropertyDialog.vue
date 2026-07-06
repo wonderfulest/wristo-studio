@@ -210,6 +210,48 @@ const selectedColorLabel = computed(() => {
   return selected?.label || t('common.noData')
 })
 
+const normalizeGarminColorValue = (value) => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  if (raw === '-1' || raw.toLowerCase() === 'transparent') return '-1'
+  if (/^#[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.slice(1).toLowerCase()}`
+  if (/^0x[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.slice(2).toLowerCase()}`
+  if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.toLowerCase()}`
+  return ''
+}
+
+const getNextColorPropertyDefaults = () => {
+  let maxIndex = 0
+  Object.keys(propertiesStore.allProperties || {}).forEach((key) => {
+    const match = key.match(/^color_(\d+)$/)
+    if (match) maxIndex = Math.max(maxIndex, Number(match[1]) || 0)
+  })
+  const index = maxIndex + 1
+  return {
+    index,
+    key: `color_${index}`,
+    title: `Color ${index}`,
+  }
+}
+
+const ensureOptionForColorValue = (options, value) => {
+  const normalized = normalizeGarminColorValue(value)
+  if (!normalized) return options
+  const exists = options.some((option) => normalizeGarminColorValue(option.value) === normalized)
+  if (exists) return options
+
+  const label = normalized === '-1'
+    ? 'Transparent'
+    : `Custom #${normalized.slice(2).toUpperCase()}`
+  return [
+    {
+      label,
+      value: normalized,
+    },
+    ...options,
+  ]
+}
+
 // 表单验证规则
 const validateOptions = (rule, value, callback) => {
   if (!value || value.length === 0) {
@@ -293,12 +335,18 @@ const initFormData = (data = null) => {
       errorMessage: data.errorMessage
     })
   } else {
+    const defaults = getNextColorPropertyDefaults()
+    const defaultValue = normalizeGarminColorValue(propertiesStore.lastSelectedColor) || '0xffffff'
+    const options = ensureOptionForColorValue(
+      JSON.parse(JSON.stringify(propertiesStore.getDefaultColorOptions)),
+      defaultValue
+    )
     Object.assign(formData, {
-      title: 'Color 1',
-      propertyKey: 'color_1',
+      title: defaults.title,
+      propertyKey: defaults.key,
       type: 'color',
-      options: JSON.parse(JSON.stringify(propertiesStore.getDefaultColorOptions)),
-      value: '0xffffff',
+      options,
+      value: defaultValue,
       prompt: '',
       errorMessage: ''
     })
