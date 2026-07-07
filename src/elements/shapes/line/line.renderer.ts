@@ -127,7 +127,7 @@ export async function createLine(config: LineElementConfig): Promise<FabricEleme
   const displayStates = normalizeDisplayStates(config.displayStates)
 
   const rect = new Rect({
-    id: nanoid(),
+    id: config.id || nanoid(),
     eleType: 'line',
     left,
     top,

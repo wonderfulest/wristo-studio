@@ -17,7 +17,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   const elementDataStore = useElementDataStore()
 
   const canvas = canvasStore.canvas
-  const id = nanoid()
+  const id = config.id || nanoid()
   const metric = usePropertiesStore().getMetricByOptions(config)
   const propertiesStore = usePropertiesStore()
   const designStore = useDesignStore()

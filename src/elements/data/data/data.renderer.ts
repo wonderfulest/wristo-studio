@@ -14,7 +14,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
 
-  const id = nanoid()
+  const id = config.id || nanoid()
   const metric = usePropertiesStore().getMetricByOptions(config)
   const displayStates = normalizeDisplayStates(config.displayStates)
   const element = new FabricText(metric.defaultValue, {

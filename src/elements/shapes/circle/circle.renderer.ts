@@ -67,7 +67,7 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
     throw new Error('Canvas is not initialized, cannot add circle element')
   }
 
-  const id = nanoid()
+  const id = config.id || nanoid()
 
   const radius = normalizeCircleRadius(config.radius)
   const fill = config.fill || 'transparent'

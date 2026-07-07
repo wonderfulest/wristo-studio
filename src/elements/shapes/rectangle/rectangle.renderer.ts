@@ -59,7 +59,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     throw new Error('Canvas is not initialized, cannot add rectangle element')
   }
 
-  const id = nanoid()
+  const id = config.id || nanoid()
 
   const width = Number(config.width ?? 100)
   const height = Number(config.height ?? 100)
