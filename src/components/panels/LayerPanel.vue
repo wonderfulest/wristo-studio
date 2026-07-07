@@ -469,7 +469,7 @@ const handleDragEnd = (): void => {
   const ids = resolveDragOrderIds()
   layerDragSnapshot = null
   applyOrder(ids)
-  historyStore.saveState('layer:reorder')
+  historyStore.saveState('layer:reorder', { captureConfig: true })
   baseStore.canvas?.renderAll?.()
 }
 

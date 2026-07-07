@@ -7,7 +7,7 @@ export interface MinimalBaseStore {
 
 export interface HistoryController {
   saveInitial: () => void
-  saveState: (reason?: string, options?: { coalesceIfSameFabric?: boolean }) => void
+  saveState: (reason?: string, options?: { coalesceIfSameFabric?: boolean; captureConfig?: boolean }) => void
   attachCanvas: (canvas: Canvas) => void
   registerCanvasEvents: () => void
   undo: () => void | Promise<void>

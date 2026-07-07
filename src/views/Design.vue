@@ -563,9 +563,11 @@ const loadDesign = async (designUid: string) => {
       applyLoadedElementDisplayStates(config.elements as any)
     }
 
-    setTimeout(() => {
+    await new Promise<void>((resolve) => window.setTimeout(async () => {
       getDataSimulatorEngine().updateCanvas()
-    }, 0)
+      await restoreLayerOrder(config.orderIds)
+      resolve()
+    }, 0))
     historyStore.saveInitial()
 
   } catch (error) {

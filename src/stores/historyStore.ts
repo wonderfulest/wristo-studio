@@ -25,6 +25,7 @@ export type Snapshot = {
 
 type SaveStateOptions = {
   coalesceIfSameFabric?: boolean
+  captureConfig?: boolean
 }
 
 const MAX_HISTORY = 100
@@ -256,6 +257,16 @@ export const useHistoryStore = defineStore('history', () => {
     return undefined
   }
 
+  const takeConfigSnapshot = (): string | undefined => {
+    if (!baseStore) return undefined
+    try {
+      const cfg = baseStore.generateConfig()
+      return cfg == null ? undefined : JSON.stringify(cfg)
+    } catch {
+      return undefined
+    }
+  }
+
   const restoreElementDataSnapshot = (snap: Snapshot) => {
     const elementDataStore = useElementDataStore()
     if (snap.elementDataJSON) {
@@ -409,6 +420,9 @@ export const useHistoryStore = defineStore('history', () => {
       debug('saveState:blocked:no-snapshot', { reason: _reason })
       return
     }
+    if (options.captureConfig) {
+      snap.configJSON = takeConfigSnapshot()
+    }
     const last = undoStack.value[undoStack.value.length - 1]
     if (last?.configJSON && !snap.configJSON) snap.configJSON = last.configJSON
     if (last?.elementDataJSON && !snap.elementDataJSON) snap.elementDataJSON = last.elementDataJSON
@@ -449,13 +463,7 @@ export const useHistoryStore = defineStore('history', () => {
       })
       return
     }
-    let configJSON: string | undefined
-    try {
-      const cfg = baseStore.generateConfig()
-      if (cfg != null) configJSON = JSON.stringify(cfg)
-    } catch {
-      // ignore config capture errors
-    }
+    const configJSON = takeConfigSnapshot()
     const rawFabricJSON = JSON.stringify(canvas.toJSON())
     const sanitized = sanitizeFabricJsonForLoad(rawFabricJSON)
     if (sanitized.replacedImageSrcCount > 0) {
