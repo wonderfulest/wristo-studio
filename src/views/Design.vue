@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import emitter from '@/utils/eventBus'
@@ -127,6 +127,8 @@ const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
 let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
 
+const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
+
 const PANEL_CENTER_MIN_WIDTH = 320
 const PANEL_WIDTH_LIMITS = {
   left: { min: 220, max: 560 },
@@ -134,6 +136,85 @@ const PANEL_WIDTH_LIMITS = {
 } as const
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max)
+
+const normalizeLayerOrderIds = (orderIds: unknown): string[] => {
+  if (!Array.isArray(orderIds)) return []
+  const seen = new Set<string>()
+  const ids: string[] = []
+  orderIds.forEach((id) => {
+    const normalized = String(id ?? '').trim()
+    if (!normalized || seen.has(normalized)) return
+    seen.add(normalized)
+    ids.push(normalized)
+  })
+  return ids
+}
+
+const getCanvasObjectIds = (): Set<string> => {
+  const objects = baseStore.canvas?.getObjects?.() || []
+  return new Set(
+    objects
+      .map((obj: any) => obj?.id)
+      .filter((id: unknown) => id !== undefined && id !== null && String(id).trim() !== '')
+      .map((id: unknown) => String(id)),
+  )
+}
+
+const hasAllOrderableCanvasObjects = (orderIds: string[]): boolean => {
+  if (!orderIds.length) return true
+  const objectIds = getCanvasObjectIds()
+  return orderIds.every((id) => objectIds.has(id))
+}
+
+const waitForOrderableCanvasObjects = async (orderIds: string[]): Promise<void> => {
+  const canvas = baseStore.canvas
+  if (!canvas || hasAllOrderableCanvasObjects(orderIds)) return
+
+  await new Promise<void>((resolve) => {
+    let settled = false
+    let timeoutId: number | null = null
+    let frameId: number | null = null
+
+    const cleanup = () => {
+      if (timeoutId != null) window.clearTimeout(timeoutId)
+      if (frameId != null) window.cancelAnimationFrame(frameId)
+      canvas.off?.('object:added', check)
+    }
+
+    const finish = () => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve()
+    }
+
+    const check = () => {
+      if (hasAllOrderableCanvasObjects(orderIds)) {
+        finish()
+        return
+      }
+      frameId = window.requestAnimationFrame(check)
+    }
+
+    canvas.on?.('object:added', check)
+    timeoutId = window.setTimeout(finish, LAYER_ORDER_WAIT_TIMEOUT_MS)
+    frameId = window.requestAnimationFrame(check)
+  })
+}
+
+const restoreLayerOrder = async (orderIds: unknown): Promise<void> => {
+  const normalizedOrderIds = normalizeLayerOrderIds(orderIds)
+  if (!normalizedOrderIds.length) {
+    syncLayersFromCanvas()
+    return
+  }
+
+  await waitForOrderableCanvasObjects(normalizedOrderIds)
+  applyOrder(normalizedOrderIds)
+  await nextTick()
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+  applyOrder(normalizedOrderIds)
+}
 
 const getPanelWidthLimit = (side: 'left' | 'right') => {
   const limits = PANEL_WIDTH_LIMITS[side]
@@ -476,15 +557,10 @@ const loadDesign = async (designUid: string) => {
     // 更新画布缩放
     canvasRef.value?.updateZoom()
 
-    // 等待100毫秒, fabric.js 加载元素为异步
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // 重新排序画布
-    if (config.orderIds) {
-      applyOrder(config.orderIds)
-      if (Array.isArray(config.elements)) {
-        applyLoadedElementDisplayStates(config.elements as any)
-      }
+    // Restore the saved Fabric stacking order after all known objects are present.
+    await restoreLayerOrder(config.orderIds)
+    if (Array.isArray(config.elements)) {
+      applyLoadedElementDisplayStates(config.elements as any)
     }
 
     setTimeout(() => {
