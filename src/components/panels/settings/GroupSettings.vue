@@ -229,14 +229,12 @@ const updateGoalProperty = () => {
         if (unitId) elementDataStore.patchElement(unitId, { goalProperty: goalProperty.value, dataProperty: null, text: unitText, metricValue: unitText } as any)
       }
       if (goalBarElement.value) {
-        goalBarElement.value.set('goalProperty', goalProperty.value)
         const goalBarId = String((goalBarElement.value as any).id)
-        if (goalBarId) elementDataStore.patchElement(goalBarId, { goalProperty: goalProperty.value } as any)
+        if (goalBarId) await elementManager.updateElementById(goalBarId, { goalProperty: goalProperty.value } as any)
       }
       if (goalArcElement.value) {
-        goalArcElement.value.set('goalProperty', goalProperty.value)
         const goalArcId = String((goalArcElement.value as any).id)
-        if (goalArcId) elementDataStore.patchElement(goalArcId, { goalProperty: goalProperty.value } as any)
+        if (goalArcId) await elementManager.updateElementById(goalArcId, { goalProperty: goalProperty.value } as any)
       }
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('goalProperty')

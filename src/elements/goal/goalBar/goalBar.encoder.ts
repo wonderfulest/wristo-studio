@@ -35,7 +35,7 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     originY: 'center' as any,
     borderWidth: config.borderWidth ?? anyElement.borderWidth,
     borderColor: config.borderColor ?? anyElement.borderColor,
-    goalProperty: config.goalProperty ?? anyElement.goalProperty,
+    goalProperty: anyElement.goalProperty ?? config.goalProperty,
     progressAlign: config.progressAlign ?? anyElement.progressAlign,
   }
 
