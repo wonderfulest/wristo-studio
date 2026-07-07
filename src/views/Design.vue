@@ -57,6 +57,12 @@ import emitter from '@/utils/eventBus'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useCanvas } from '@/composables/useCanvas'
 import { usePropertiesStore } from '@/stores/properties'
+import {
+  DATA_NUMBER_FORMAT_AUTO,
+  DEFAULT_MAX_FIELD_LENGTH,
+  normalizeDataNumberFormatMode,
+  normalizeMaxFieldLength,
+} from '@/utils/dataNumberFormat'
 import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { useExportStore } from '@/stores/exportStore'
@@ -421,6 +427,8 @@ const loadDesign = async (designUid: string) => {
       designStore.setSupportsChineseContent(false)
       propertiesStore.textCase = 0
       propertiesStore.bitmapMode = true
+      propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+      propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
      
       // 初始化画布
       baseStore.canvas?.requestRenderAll()
@@ -437,6 +445,8 @@ const loadDesign = async (designUid: string) => {
     // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
     propertiesStore.textCase = 0
     propertiesStore.bitmapMode = true
+    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
 
     // 设置文本大小写
     if ([0, 1, 2, 3].includes(Number(config.textCase))) {
@@ -445,6 +455,8 @@ const loadDesign = async (designUid: string) => {
     if (typeof config.bitmapMode === 'boolean') {
       propertiesStore.bitmapMode = config.bitmapMode
     }
+    propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
+    propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
     // 等待画布初始化完成
     await waitCanvasReady()
     // ✅ 先清空上一次设计的元素配置

@@ -75,7 +75,7 @@ function randInt(min: number, max: number): number {
 }
 
 function formatInt(n: number): string {
-  return Number(n).toLocaleString('en-US')
+  return String(Math.round(Number(n)))
 }
 
 function formatFloat(n: number, digits: number = 1): string {

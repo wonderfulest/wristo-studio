@@ -117,6 +117,9 @@ export interface DesignConfig {
   elements: DesignElement[]
   orderIds: string[]
   textCase: number
+  bitmapMode?: boolean
+  dataNumberFormat?: number
+  maxFieldLength?: number
   properties: Record<string, any>
   currentIconFontSlug: string // 当前图标字体(适用于icon、indicator元素)
   currentIconFontSize: number // 当前图标字体大小(适用于icon、indicator元素)

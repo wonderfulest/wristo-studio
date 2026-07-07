@@ -6,6 +6,7 @@ import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
 import { applyMetricTextCase, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
+import { formatDataNumberDisplay } from '@/utils/dataNumberFormat'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { useDesignStore } from '@/stores/designStore'
@@ -150,10 +151,19 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
   }
 }
 
-function resolveTextTemplate(template: string): string {
+function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
+  return formatDataNumberDisplay(
+    data.display,
+    data.numeric,
+    (propertiesStore as any).dataNumberFormat,
+    (propertiesStore as any).maxFieldLength,
+  )
+}
+
+function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
   return (template || '').replace(/\{\{([^}]+)\}\}/g, (_m, p1: string) => {
     const key = String(p1 || '').trim()
-    return key ? getSimulatedDataByName(key).display : ''
+    return key ? formatSimulatedDisplay(getSimulatedDataByName(key), propertiesStore) : ''
   })
 }
 
@@ -241,7 +251,9 @@ export class DataSimulatorEngine {
         })
 
         const simKey = metricSymbolToSimKey(metric?.metricSymbol)
-        const rawValue = simKey ? getSimulatedDataByName(simKey).display : String(metric?.defaultValue ?? '')
+        const rawValue = simKey
+          ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore)
+          : String(metric?.defaultValue ?? '')
         const textCase = (propertiesStore as any).textCase
         const display = applyTextCase(String(rawValue), textCase)
 
@@ -290,7 +302,7 @@ export class DataSimulatorEngine {
       if (eleType === 'text' || eleType === 'scrollableText' || eleType === 'angledText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
         if (!template.includes('{{')) return
-        const nextText = resolveTextTemplate(template)
+        const nextText = resolveTextTemplate(template, propertiesStore)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           changed = true
@@ -301,7 +313,7 @@ export class DataSimulatorEngine {
       if (eleType === 'radialText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
         if (!template.includes('{{')) return
-        const nextText = resolveTextTemplate(template)
+        const nextText = resolveTextTemplate(template, propertiesStore)
         if (String(obj.text ?? '') !== nextText) {
           if (typeof obj.updateRadialText === 'function') {
             const previousLeft = obj.left

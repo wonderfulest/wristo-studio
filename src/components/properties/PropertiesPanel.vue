@@ -43,6 +43,24 @@
                     <el-option :label="t('property.lowercase')" :value="2" />
                   </el-select>
                 </el-form-item>
+                <el-form-item :label="t('property.dataNumberFormat')">
+                  <el-select v-model="dataNumberFormat" style="width: 100%">
+                    <el-option :label="t('property.dataNumberFormatAuto')" :value="0" />
+                    <el-option :label="t('property.dataNumberFormatPlain')" :value="1" />
+                    <el-option :label="t('property.dataNumberFormatGrouped')" :value="2" />
+                    <el-option :label="t('property.dataNumberFormatCompact')" :value="3" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item :label="t('property.maxFieldLength')">
+                  <el-input-number
+                    v-model="maxFieldLength"
+                    :min="1"
+                    :max="12"
+                    :step="1"
+                    controls-position="right"
+                    style="width: 100%"
+                  />
+                </el-form-item>
                 <el-form-item :label="t('property.bitmapMode')">
                   <el-switch
                     v-model="bitmapMode"
@@ -224,6 +242,7 @@ import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
 import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection } from '@/elements/common/settings/propertyBinding'
+import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -338,6 +357,24 @@ const bitmapMode = computed({
   set: (value) => {
     propertiesStore.bitmapMode = Boolean(value)
     commitHistory('bitmap-mode')
+  },
+})
+
+const dataNumberFormat = computed({
+  get: () => propertiesStore.dataNumberFormat,
+  set: (value) => {
+    propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(value)
+    getDataSimulatorEngine().updateCanvas()
+    commitHistory('data-number-format')
+  },
+})
+
+const maxFieldLength = computed({
+  get: () => propertiesStore.maxFieldLength,
+  set: (value) => {
+    propertiesStore.maxFieldLength = normalizeMaxFieldLength(value)
+    getDataSimulatorEngine().updateCanvas()
+    commitHistory('max-field-length')
   },
 })
 

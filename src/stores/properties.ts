@@ -2,12 +2,15 @@ import { defineStore } from 'pinia'
 import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
 import { DataTypeOption } from '@/types/settings'
 import { DataTypeOptions } from '@/config/settings'
+import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
 
 export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
     textCase: 0 as number,
     bitmapMode: true as boolean,
+    dataNumberFormat: DATA_NUMBER_FORMAT_AUTO as number,
+    maxFieldLength: DEFAULT_MAX_FIELD_LENGTH as number,
     lastSelectedColor: '' as string,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
@@ -153,6 +156,8 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties = {}
       this.textCase = 0
       this.bitmapMode = true
+      this.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+      this.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
       this.lastSelectedColor = ''
     },
 

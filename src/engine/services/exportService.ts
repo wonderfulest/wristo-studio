@@ -13,6 +13,7 @@ import { normalizeConfigToStandardSize } from '@/utils/designScale'
 import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { WatchfaceLocalizationConfig } from '@/types/localization'
+import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import {
@@ -258,6 +259,8 @@ export interface GenerateConfigOptions {
   watchFaceName: string
   textCase: number
   bitmapMode: boolean
+  dataNumberFormat?: number
+  maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
   supportsChineseContent?: boolean
   validateBindings?: boolean
@@ -284,6 +287,8 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     watchFaceName,
     textCase,
     bitmapMode,
+    dataNumberFormat,
+    maxFieldLength,
     localization,
     supportsChineseContent,
     validateBindings = false,
@@ -300,6 +305,8 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     name: watchFaceName,
     textCase,
     bitmapMode,
+    dataNumberFormat: normalizeDataNumberFormatMode(dataNumberFormat),
+    maxFieldLength: normalizeMaxFieldLength(maxFieldLength),
     supportsChineseContent: Boolean(supportsChineseContent),
     elements: [],
     orderIds: [],

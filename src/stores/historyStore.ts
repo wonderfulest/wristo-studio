@@ -7,6 +7,12 @@ import { syncElementInstancesFromCanvas, updateElementById } from '@/engine/mana
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
+import {
+  DATA_NUMBER_FORMAT_AUTO,
+  DEFAULT_MAX_FIELD_LENGTH,
+  normalizeDataNumberFormatMode,
+  normalizeMaxFieldLength,
+} from '@/utils/dataNumberFormat'
 import type { FabricElement } from '@/types/element'
 
 export type Snapshot = {
@@ -238,6 +244,8 @@ export const useHistoryStore = defineStore('history', () => {
         properties: propertiesStore.allProperties,
         textCase: propertiesStore.textCase,
         bitmapMode: propertiesStore.bitmapMode,
+        dataNumberFormat: propertiesStore.dataNumberFormat,
+        maxFieldLength: propertiesStore.maxFieldLength,
       })
     } catch {
       return undefined
@@ -308,6 +316,8 @@ export const useHistoryStore = defineStore('history', () => {
       const textCase = Number(parsed?.textCase ?? 0)
       propertiesStore.textCase = [0, 1, 2, 3].includes(textCase) ? (textCase === 3 ? 0 : textCase) : 0
       propertiesStore.bitmapMode = typeof parsed?.bitmapMode === 'boolean' ? parsed.bitmapMode : true
+      propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(parsed?.dataNumberFormat ?? DATA_NUMBER_FORMAT_AUTO)
+      propertiesStore.maxFieldLength = normalizeMaxFieldLength(parsed?.maxFieldLength ?? DEFAULT_MAX_FIELD_LENGTH)
     } catch (e) {
       console.warn('[History] restore properties snapshot failed', e)
       debug('restorePropertiesSnapshot:failed', { error: e })

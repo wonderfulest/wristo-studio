@@ -9,6 +9,8 @@ export interface RuntimeDesignConfig {
   name: string
   textCase: number
   bitmapMode: boolean
+  dataNumberFormat?: number
+  maxFieldLength?: number
   supportsChineseContent?: boolean
   localization?: WatchfaceLocalizationConfig
   elements: AnyElementConfig[]
