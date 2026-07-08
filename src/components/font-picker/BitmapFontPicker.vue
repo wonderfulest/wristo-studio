@@ -41,6 +41,8 @@
       v-model="bitmapDialogVisible"
       :rows="digitRows"
       :symbol-rows="symbolRows"
+      :editing-font-id="editingBitmapFontId"
+      :editing-font-name="editingBitmapFontName"
       @reset-row="handleResetRowByIndex"
       @upload-row="handleUploadRow"
       @upload-rows="handleUploadRows"
@@ -90,7 +92,9 @@ const settingsPopupId = `bitmap-font-picker_${Date.now()}_${Math.random().toStri
 // bitmap font setting dialog state
 const bitmapDialogVisible = ref(false)
 const currentFontName = ref<string>('')
-const isTempRandFont = ref<boolean>(false)
+const editingBitmapFontId = ref<number | null>(null)
+const editingBitmapFontName = ref<string>('')
+const editingBitmapFontIsTempRand = ref<boolean>(false)
 const downloadingFontId = ref<number | null>(null)
 const deletingFontId = ref<number | null>(null)
 type BitmapRow = {
@@ -131,6 +135,16 @@ const selectedFontLabel = computed(() => {
   return hit?.fontName || `Bitmap Font #${id}`
 })
 
+const findBitmapFontName = (fontId: number) => {
+  return bitmapFonts.value.find(f => f.id === fontId)?.fontName || ''
+}
+
+const setEditingBitmapFont = (fontId: number | null, fontName = '') => {
+  editingBitmapFontId.value = fontId
+  editingBitmapFontName.value = fontName || (fontId ? findBitmapFontName(fontId) : '')
+  editingBitmapFontIsTempRand.value = typeof editingBitmapFontName.value === 'string' && editingBitmapFontName.value.startsWith('rand_')
+}
+
 const togglePanel = () => {
   if (!canUsePremiumAssets.value) {
     membershipGate.requirePremium('font.premiumAssetRequired')
@@ -160,7 +174,7 @@ const openNewBitmapFont = async () => {
     const res = await createBitmapFont({ fontName: randName, isDefault: 0 })
     const font = res.data as BitmapFontVO
     if (font?.id) {
-      isTempRandFont.value = typeof font.fontName === 'string' && font.fontName.startsWith('rand_')
+      setEditingBitmapFont(font.id, font.fontName)
       currentFontName.value = font.fontName
       emit('update:modelValue', font.id)
       emit('change', font.id)
@@ -185,6 +199,9 @@ const openBitmapDialog = async (fontId?: number) => {
   }
   const id = fontId ?? props.modelValue
   if (!id) return
+  if (editingBitmapFontId.value !== id) {
+    setEditingBitmapFont(id)
+  }
   bitmapDialogVisible.value = true
   await loadBitmapRows(id)
 }
@@ -197,25 +214,29 @@ const confirmBitmapDialog = async () => {
   }
   try {
     // 如果是自动创建的 rand_ 前缀名字，引导用户修改名字
-    if (props.modelValue && isTempRandFont.value) {
+    const editingId = editingBitmapFontId.value
+    if (editingId && editingBitmapFontIsTempRand.value) {
       const { value } = await ElMessageBox.prompt(
         t('font.renameBitmapPrompt'),
         t('font.renameBitmapTitle'),
         {
-          inputValue: currentFontName.value || '',
+          inputValue: editingBitmapFontName.value || '',
           inputPlaceholder: t('font.enterFontName'),
         },
       )
       const newName = String(value || '').trim()
-      if (newName && newName !== currentFontName.value) {
+      if (newName && newName !== editingBitmapFontName.value) {
         try {
-          await updateBitmapFont({ id: props.modelValue as number, fontName: newName })
-          currentFontName.value = newName
+          await updateBitmapFont({ id: editingId, fontName: newName })
+          editingBitmapFontName.value = newName
+          if (props.modelValue === editingId) {
+            currentFontName.value = newName
+          }
         } catch (e) {
           console.warn('update bitmap font name failed', e)
         }
       }
-      isTempRandFont.value = false
+      editingBitmapFontIsTempRand.value = false
     }
   } catch {
     // 用户取消重命名则保持原名
@@ -300,12 +321,8 @@ const handleEditBitmapFont = async (font: BitmapFontVO) => {
     return
   }
   if (!font?.id) return
-  invalidateBitmapTimeFontCache(font.id)
-  emit('update:modelValue', font.id)
-  emit('change', font.id)
-  currentFontName.value = font.fontName
-  isTempRandFont.value = typeof font.fontName === 'string' && font.fontName.startsWith('rand_')
-  // 直接使用当前点击的字体 id，避免依赖父组件异步更新后的 props.modelValue 造成一次延迟
+  setEditingBitmapFont(font.id, font.fontName)
+  // Edit 只编辑点击的字体资产，不切换当前时间元素绑定的 bitmapFontId。
   await openBitmapDialog(font.id)
 }
 
@@ -466,9 +483,12 @@ const handleResetRowByIndex = async (index: string) => {
   } finally {
     // 删除某个 glyph 后，同步清理缓存
     bitmapFontStore.clearSession()
-    if (props.modelValue) {
-      invalidateBitmapTimeFontCache(props.modelValue)
-      emit('change', props.modelValue)
+    const editingId = editingBitmapFontId.value
+    if (editingId) {
+      invalidateBitmapTimeFontCache(editingId)
+      if (props.modelValue === editingId) {
+        emit('change', editingId)
+      }
     }
   }
 }
@@ -477,22 +497,29 @@ type BitmapUploadPayload = { index: string; file: File; previewUrl: string }
 
 const bindBitmapGlyph = (payload: BitmapUploadPayload) => {
   const isSymbol = payload.index === ':'
+  const editingId = editingBitmapFontId.value
+  if (!editingId) {
+    throw new Error('No bitmap font is open for editing')
+  }
   return bindBitmapFontAsset({
     file: payload.file,
-    fontId: props.modelValue as number,
+    fontId: editingId,
     charType: isSymbol ? 'symbol' : 'digital',
     charValue: payload.index,
   })
 }
 
 const finalizeBitmapGlyphUpload = async () => {
-  if (props.modelValue) {
-    await loadBitmapRows(props.modelValue)
+  const editingId = editingBitmapFontId.value
+  if (editingId) {
+    await loadBitmapRows(editingId)
   }
   bitmapFontStore.clearSession()
-  invalidateBitmapTimeFontCache(props.modelValue)
-  if (props.modelValue) {
-    emit('change', props.modelValue)
+  if (editingId) {
+    invalidateBitmapTimeFontCache(editingId)
+    if (props.modelValue === editingId) {
+      emit('change', editingId)
+    }
   }
 }
 
@@ -501,7 +528,7 @@ const handleUploadRow = async (payload: BitmapUploadPayload) => {
     membershipGate.requirePremium('font.uploadRequiresPremium')
     return
   }
-  if (!props.modelValue) return
+  if (!editingBitmapFontId.value) return
   try {
     await bindBitmapGlyph(payload)
   } catch (e) {
@@ -517,7 +544,7 @@ const handleUploadRows = async (payloads: BitmapUploadPayload[]) => {
     membershipGate.requirePremium('font.uploadRequiresPremium')
     return
   }
-  if (!props.modelValue || !payloads.length) return
+  if (!editingBitmapFontId.value || !payloads.length) return
   try {
     for (const payload of payloads) {
       await bindBitmapGlyph(payload)

@@ -13,4 +13,5 @@ export interface DialElementConfig {
   originX?: FabricElement['originX']
   originY?: FabricElement['originY']
   height?: number
+  scaleFactor?: number
 }

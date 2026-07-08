@@ -130,6 +130,7 @@
         v-model:categoryIds="form.categoryIds"
         :categories="categories"
         :loadingCategories="loadingCategories"
+        :hidden-category-slugs="['whole']"
       />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
@@ -190,7 +191,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted } from 'vue'
-import { getAllSeries } from '@/api/wristo/categories'
+import { getBasicCategories } from '@/api/wristo/categories'
 import type { Category } from '@/types/api/category'
 import type { Bundle } from '@/types/api/bundle'
 import { productsApi } from '@/api/wristo/products'
@@ -445,7 +446,7 @@ const onRawImageUploaded = (img: any) => {
 const loadCategories = async () => {
   try {
     loadingCategories.value = true
-    const response: Category[] = await getAllSeries()
+    const response: Category[] = await getBasicCategories()
     categories.value = response
   } catch (error) {
     console.error('Failed to load categories:', error)

@@ -13,12 +13,12 @@
         <el-option
           v-for="category in filteredCategories"
           :key="category.id"
-          :label="category.name"
+          :label="categoryDisplayName(category)"
           :value="category.id"
         />
       </el-select>
       <div class="form-tip">
-        {{ t('category.tip') }}
+        {{ t('category.tip') }} {{ t('category.limit', { limit: selectionLimit }) }}
       </div>
     </el-form-item>
   </div>
@@ -37,11 +37,13 @@ const props = withDefaults(defineProps<{
   categories: Category[]
   loadingCategories?: boolean
   categoryLimit?: number
+  hiddenCategorySlugs?: string[]
 }>(), {
   categoryIds: () => [],
   categories: () => [],
   loadingCategories: false,
-  categoryLimit: 3
+  categoryLimit: 5,
+  hiddenCategorySlugs: () => []
 })
 
 const emit = defineEmits<{
@@ -67,17 +69,69 @@ const withWholeCategory = (ids: number[]) => {
 
 const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id, index) => id === b[index])
 
+const withoutHiddenCategories = (ids: number[]) => {
+  const hiddenIds = new Set(
+    (props.categories || [])
+      .filter((category) => hiddenCategorySlugs.value.has((category.slug || '').toLowerCase()))
+      .map((category) => category.id)
+  )
+  return ids.filter((id) => !hiddenIds.has(id))
+}
+
 const localCategoryIds = computed({
-  get: () => withWholeCategory(props.categoryIds),
+  get: () => withoutHiddenCategories(uniqueIds(props.categoryIds)),
   set: (val: number[]) => {
     emit('update:categoryIds', withWholeCategory(val))
   }
 })
 
-const filteredCategories = computed(() => props.categories || [])
+const studioBaseCategoryLabels: Record<string, string> = {
+  whole: 'All Watch Faces',
+  digital: 'Digital',
+  'data-rich': 'Data-rich',
+  weather: 'Weather',
+  minimal: 'Minimal',
+  simple: 'Simple',
+  daily: 'Daily',
+  strokes: 'Strokes',
+  analog: 'Analog',
+  neon: 'Neon',
+  cyberpunk: 'Cyberpunk',
+  halo: 'Halo',
+  nature: 'Nature',
+  landscape: 'Landscape',
+  mountain: 'Mountain',
+  cartoon: 'Cartoon',
+  animal: 'Animal',
+  family: 'Family',
+  fun: 'Fun',
+  flower: 'Flower',
+  mandala: 'Mandala',
+  dots: 'Dots',
+  galaxy: 'Galaxy',
+  fantasy: 'Fantasy',
+  'pop-retro': 'Pop & Retro',
+  'pop-pulse': 'Pop Pulse',
+  retro: 'Retro',
+  skull: 'Skull',
+  seasonal: 'Seasonal',
+  christmas: 'Christmas',
+  'seasonal-themes': 'Seasonal Themes',
+}
+
+const hiddenCategorySlugs = computed(() => new Set((props.hiddenCategorySlugs || []).map((slug) => slug.toLowerCase())))
+const selectionLimit = computed(() => props.categoryLimit ?? 5)
+
+const filteredCategories = computed(() => {
+  return (props.categories || []).filter((category) => !hiddenCategorySlugs.value.has((category.slug || '').toLowerCase()))
+})
+
+const categoryDisplayName = (category: Category) => {
+  return studioBaseCategoryLabels[(category.slug || '').toLowerCase()] || category.name
+}
 
 const onCategoriesChange = (val: number[]) => {
-  const limit = props.categoryLimit ?? 3
+  const limit = selectionLimit.value
   const wholeId = wholeCategoryId.value
   const ids = withWholeCategory(val)
   const selectedWithoutWhole = wholeId ? ids.filter((id) => id !== wholeId) : ids

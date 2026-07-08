@@ -6,6 +6,10 @@
     append-to-body
     @close="handleClose"
   >
+    <div v-if="editingFontLabel" class="bitmap-dialog-editing-font">
+      <span>{{ t('font.editingBitmapFont') }}</span>
+      <strong>{{ editingFontLabel }}</strong>
+    </div>
     <div class="bitmap-dialog-header-extra">
       <a
         href="https://youtu.be/gNikiDDrrpU?si=FptKoIr0HL0EhX7R"
@@ -121,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -137,6 +141,8 @@ const props = defineProps<{
   rows: DigitRowState[]
   // 符号行，例如 ':'
   symbolRows?: DigitRowState[]
+  editingFontId?: number | null
+  editingFontName?: string
 }>()
 
 const emit = defineEmits<{
@@ -158,6 +164,15 @@ const activeTab = ref<'digit' | 'symbol' | 'other' | 'custom'>('digit')
 const batchUploadRef = ref<any>()
 let batchUploadTimer: ReturnType<typeof setTimeout> | undefined
 let pendingBatchUploadFiles: any[] = []
+
+const editingFontLabel = computed(() => {
+  const name = String(props.editingFontName || '').trim()
+  const id = props.editingFontId
+  if (name && id) return `${name} (#${id})`
+  if (name) return name
+  if (id) return `#${id}`
+  return ''
+})
 
 const localRows = ref<DigitRowState[]>([])
 const localSymbolRows = ref<DigitRowState[]>([])
@@ -356,6 +371,26 @@ const handleClose = () => {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 8px;
+}
+
+.bitmap-dialog-editing-font {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 8px;
+  color: var(--studio-text-subtle);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.bitmap-dialog-editing-font strong {
+  min-width: 0;
+  color: var(--studio-text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bitmap-tutorial-link {

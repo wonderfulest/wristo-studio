@@ -10,6 +10,11 @@ export const getAllSeries = async (): Promise<Category[]> => {
   return response.data
 }
 
+export const getBasicCategories = async (): Promise<Category[]> => {
+  const response = await axiosInstance.get('/dsn/categories/basic')
+  return response.data
+}
+
 /**
  * 获取分类详情
  * @param {number} id - 分类ID

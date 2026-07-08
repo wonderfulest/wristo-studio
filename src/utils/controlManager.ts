@@ -22,7 +22,16 @@ type VisualCenter = {
 }
 
 // 统一控制点适用的元素类型（按 eleType 区分），供全局复用
-export const DESIGNER_CONTROL_TYPES: string[] = ['rectangle', 'windDirection', 'circle', 'image', 'centerCap']
+export const DESIGNER_CONTROL_TYPES: string[] = [
+  'rectangle',
+  'windDirection',
+  'circle',
+  'image',
+  'centerCap',
+  'tick12',
+  'tick60',
+  'romans',
+]
 
 export interface ControlManagerOptions {
   size?: number

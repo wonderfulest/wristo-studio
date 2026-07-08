@@ -78,6 +78,7 @@
         v-model:categoryIds="form.categoryIds"
         :categories="categories"
         :loadingCategories="loadingCategories"
+        :hidden-category-slugs="['whole']"
       />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
@@ -107,7 +108,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
-import { getAllSeries } from '@/api/wristo/categories'
+import { getBasicCategories } from '@/api/wristo/categories'
 import type { Category } from '@/types/api/category'
 import { productsApi } from '@/api/wristo/products'
 import type { Bundle } from '@/types/api/bundle'
@@ -131,6 +132,7 @@ const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
+const CATEGORY_LIMIT = 5
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -200,8 +202,8 @@ const rules = computed(() => ({
         const ids = Array.isArray(value) ? value : []
         const len = ids.length
         if (len === 0) return callback(new Error(t('category.selectAtLeastOne')))
-        if (ids.filter((id) => typeof id === 'number' && !isWholeCategoryId(id)).length > 3) {
-          return callback(new Error(t('category.selectUpToThree')))
+        if (ids.filter((id) => typeof id === 'number' && !isWholeCategoryId(id)).length > CATEGORY_LIMIT) {
+          return callback(new Error(t('category.limit', { limit: CATEGORY_LIMIT })))
         }
         callback()
       },
@@ -221,7 +223,7 @@ const loadingBundles = ref(false)
 const loadCategories = async () => {
   try {
     loadingCategories.value = true
-    const res: Category[] = await getAllSeries()
+    const res: Category[] = await getBasicCategories()
     categories.value = res
   } catch (e) {
     console.error('Failed to load categories:', e)

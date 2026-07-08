@@ -7,6 +7,7 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { useDesignStore } from '@/stores/designStore'
 import type { DialElementConfig, DialType } from './dial.schema'
+import { applyControlsToObject } from '@/utils/controlManager'
 
 function getBaseSize(type: DialType): number {
   const canvasStore = useCanvasStore()
@@ -23,6 +24,86 @@ function getBaseSize(type: DialType): number {
 
   // tick60 默认用 watchSize
   return (designStore as any).watchSize ?? designStore.designSpec.width
+}
+
+function getCanvasCenter() {
+  const canvasStore = useCanvasStore()
+  const designStore = useDesignStore()
+  const canvas = canvasStore.canvas
+  const canvasCenterX = Number(canvas?.getWidth?.() || 0) / 2
+  const canvasCenterY = Number(canvas?.getHeight?.() || 0) / 2
+  return {
+    x: Number(designStore.designSpec.centerX ?? canvasCenterX),
+    y: Number(designStore.designSpec.centerY ?? canvasCenterY),
+  }
+}
+
+function normalizeScaleFactor(value: unknown): number {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) return 1
+  return numeric
+}
+
+function getDialRenderedSize(element: any): number {
+  const renderedWidth = Number(element.width || 0) * Number(element.scaleX || 1)
+  const renderedHeight = Number(element.height || 0) * Number(element.scaleY || 1)
+  return Math.max(renderedWidth, renderedHeight)
+}
+
+function syncDialScaleFactor(element: any) {
+  const baseSize = Number(element.dialBaseSize || 0)
+  const renderedSize = getDialRenderedSize(element)
+  if (baseSize > 0 && Number.isFinite(renderedSize) && renderedSize > 0) {
+    element.scaleFactor = Number((renderedSize / baseSize).toFixed(4))
+  }
+}
+
+function lockDialToCanvasCenter(element: any) {
+  const center = getCanvasCenter()
+  element.set({ left: center.x, top: center.y })
+  element.setCoords?.()
+}
+
+function applyDialScale(element: any, type: DialType, scaleFactor: unknown) {
+  const gw = Number(element.width || 0)
+  const gh = Number(element.height || 0)
+  const baseSize = getBaseSize(type)
+  const normalizedScaleFactor = normalizeScaleFactor(scaleFactor)
+  element.dialBaseSize = baseSize
+  element.scaleFactor = normalizedScaleFactor
+
+  if (gw > 0 && gh > 0 && baseSize > 0) {
+    const scale = (baseSize * normalizedScaleFactor) / Math.max(gw, gh)
+    element.set({ scaleX: scale, scaleY: scale })
+  } else if (baseSize > 0) {
+    element.scaleToWidth(baseSize * normalizedScaleFactor)
+  }
+  syncDialScaleFactor(element)
+}
+
+function configureDialControls(element: any) {
+  element.set({
+    selectable: true,
+    evented: true,
+    hasControls: true,
+    hasBorders: true,
+    designerControlMode: 'corner4',
+    lockMovementX: true,
+    lockMovementY: true,
+    lockRotation: true,
+    lockScalingFlip: true,
+  })
+  applyControlsToObject(element)
+  if (!element.__dialControlHandlersBound) {
+    const syncDialTransform = () => {
+      lockDialToCanvasCenter(element)
+      syncDialScaleFactor(element)
+    }
+    element.on('scaling', syncDialTransform)
+    element.on('modified', syncDialTransform)
+    element.on('moving', syncDialTransform)
+    element.__dialControlHandlersBound = true
+  }
 }
 
 export async function createDial(
@@ -62,35 +143,30 @@ export async function createDial(
 
   const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
   const element: any = img
+  const center = getCanvasCenter()
 
   element.set({
     id,
     eleType: type,
-    left: config.left,
-    top: config.top,
+    left: center.x,
+    top: center.y,
     scaleX: 1,
     scaleY: 1,
     originX: 'center',
     originY: 'center',
     selectable: true,
-    hasControls: false,
+    evented: true,
+    hasControls: true,
     hasBorders: true,
+    designerControlMode: 'corner4',
     imageUrl: imageUrl,
     assetId: config.assetId,
+    scaleFactor: normalizeScaleFactor(config.scaleFactor),
   })
 
-  const gw = element.width || 0
-  const gh = element.height || 0
-  const baseSize = getBaseSize(type)
+  applyDialScale(element, type, config.scaleFactor)
+  configureDialControls(element)
 
-  if (gw > 0 && gh > 0 && baseSize > 0) {
-    const scale = baseSize / Math.max(gw, gh)
-    element.set({ scaleX: scale, scaleY: scale })
-  } else if (baseSize > 0) {
-    element.scaleToWidth(baseSize)
-  }
-
-  element.on('moving', () => {})
   element.on('selected', () => {})
   element.on('deselected', () => {})
 
@@ -121,9 +197,10 @@ export async function updateDial(
   const hasNewImage = typeof nextImageUrl === 'string' && nextImageUrl.length > 0
 
   if (hasNewImage && nextImageUrl !== group.imageUrl) {
-    const prevLeft = group.left
-    const prevTop = group.top
     const prevAngle = group.angle
+    syncDialScaleFactor(group)
+    const prevScaleFactor = normalizeScaleFactor(group.scaleFactor)
+    const center = getCanvasCenter()
 
     canvas.remove(group)
 
@@ -136,24 +213,20 @@ export async function updateDial(
       eleType: type,
       originX: 'center',
       originY: 'center',
-      left: prevLeft,
-      top: prevTop,
+      left: center.x,
+      top: center.y,
       angle: prevAngle,
       imageUrl: nextImageUrl,
       selectable: true,
-      hasControls: false,
+      evented: true,
+      hasControls: true,
       hasBorders: true,
+      designerControlMode: 'corner4',
+      scaleFactor: prevScaleFactor,
     })
 
-    const gw = group.width || 0
-    const gh = group.height || 0
-    const baseSize = getBaseSize(type)
-    if (gw > 0 && gh > 0 && baseSize > 0) {
-      const scale = baseSize / Math.max(gw, gh)
-      group.set({ scaleX: scale, scaleY: scale })
-    } else if (baseSize > 0) {
-      group.scaleToWidth(baseSize)
-    }
+    applyDialScale(group, type, patch.scaleFactor ?? prevScaleFactor)
+    configureDialControls(group)
 
     canvas.add(group)
   }
@@ -162,17 +235,16 @@ export async function updateDial(
     group.assetId = patch.assetId
   }
 
-  if (patch.left !== undefined || patch.top !== undefined) {
-    group.set({
-      left: patch.left !== undefined ? patch.left : group.left,
-      top: patch.top !== undefined ? patch.top : group.top,
-    })
+  if (patch.scaleFactor !== undefined && !hasNewImage) {
+    applyDialScale(group, type, patch.scaleFactor)
   }
 
-  group.on('moving', () => {})
+  configureDialControls(group)
   group.on('selected', () => {})
   group.on('deselected', () => {})
 
+  lockDialToCanvasCenter(group)
+  syncDialScaleFactor(group)
   group.setCoords()
   canvas.requestRenderAll?.()
   canvas.discardActiveObject?.()
