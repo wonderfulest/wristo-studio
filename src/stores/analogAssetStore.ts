@@ -9,6 +9,15 @@ export interface AnalogAssetStoreState {
   loadedByType: Partial<Record<AnalogAssetType, boolean>>
 }
 
+const originalFirstAssetTypes = new Set<AnalogAssetType>(['hour', 'minute', 'second', 'center_cap', 'windDirection'])
+
+function getRenderableAssetUrl(asset: AnalogAssetVO): string {
+  if (originalFirstAssetTypes.has(asset.analogAssetType)) {
+    return asset.file?.url || asset.file?.previewUrl || ''
+  }
+  return asset.file?.previewUrl || asset.file?.url || ''
+}
+
 export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetStoreState, {
   getOptions(state: AnalogAssetStoreState): (type: AnalogAssetType) => HandOption[]
   getFirstUrl(state: AnalogAssetStoreState): (type: AnalogAssetType) => string | null
@@ -30,7 +39,7 @@ export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetSt
       getOptions: (state) => (type: AnalogAssetType): HandOption[] => {
         const list = state.assetsByType[type] || []
         return list.map((asset) => {
-          const url = asset.file?.previewUrl || asset.file?.url || ''
+          const url = getRenderableAssetUrl(asset)
           return {
             name: asset.file?.name || `${asset.analogAssetType}-${asset.id}`,
             url,
@@ -41,7 +50,7 @@ export const useAnalogAssetStore = defineStore<'analogAssetStore', AnalogAssetSt
         const list = state.assetsByType[type] || []
         if (!list.length) return null
         const first = list[0]
-        return first.file?.previewUrl || first.file?.url || null
+        return getRenderableAssetUrl(first) || null
       },
       getFirstId: (state) => (type: AnalogAssetType): number | null => {
         const list = state.assetsByType[type] || []

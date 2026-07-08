@@ -263,7 +263,7 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useUserStore } from '@/stores/user'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useI18n } from '@/i18n'
-import { isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
+import { ensureSvgFileHasIntrinsicSize, isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 import emitter from '@/utils/eventBus'
 
@@ -618,11 +618,11 @@ const uploadStatusLabel = (status: UploadQueueStatus): string => {
 
 /**
  * 获取素材展示URL
- * - windDirection：优先原始 SVG，避免固定尺寸 preview PNG 影响比例观感
+ * - hand-like / windDirection：优先原始 SVG，避免固定尺寸 preview PNG 影响画布渲染
  * - 其他类型：优先 previewUrl，兼顾加载性能
  */
 const getAssetUrl = (asset: AnalogAssetVO): string | undefined => {
-  if (props.assetType === 'windDirection') {
+  if (isHandAssetType(props.assetType) || props.assetType === 'center_cap' || props.assetType === 'windDirection') {
     return asset.file?.url || asset.file?.previewUrl
   }
   return asset.file?.previewUrl || asset.file?.url
@@ -759,7 +759,8 @@ const uploadFile = async (file: File | undefined, showMessage = false): Promise<
   }
 
   try {
-    const res = await analogAssetApi.upload(file, props.assetType)
+    const uploadFile = await ensureSvgFileHasIntrinsicSize(file)
+    const res = await analogAssetApi.upload(uploadFile, props.assetType)
     
     if (res.data) {
       assets.value.unshift(res.data)

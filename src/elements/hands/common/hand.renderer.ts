@@ -17,7 +17,7 @@ function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
 }
 
 function getRenderableAssetUrl(asset: { file?: { previewUrl?: string | null; url?: string | null } } | null | undefined): string | null {
-  return asset?.file?.previewUrl || asset?.file?.url || null
+  return asset?.file?.url || asset?.file?.previewUrl || null
 }
 
 function getHourHandAngle(time?: Date): number {
@@ -128,13 +128,13 @@ async function resolveImageUrl(config: HandElementConfig): Promise<{ url: string
   let imageUrl = config.imageUrl
   let assetId = config.assetId ?? null
 
-  if (!imageUrl && assetId) {
+  if (assetId) {
     try {
       const res = await analogAssetApi.get(assetId)
-      imageUrl = getRenderableAssetUrl(res.data)
+      imageUrl = getRenderableAssetUrl(res.data) || imageUrl
     } catch (e) {
       console.error('Failed to fetch hand asset by id:', e)
-      imageUrl = null
+      imageUrl = imageUrl || null
     }
   }
 
