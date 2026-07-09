@@ -30,6 +30,8 @@ export function resolveMetricLabel(
   if (!metric) return 'Label'
 
   if ((metric as any).metricSymbol === ':FIELD_TYPE_WEATHER') return 'WEATHER'
+  if ((metric as any).metricSymbol === ':FIELD_TYPE_SUN_RISE') return 'sunrise'
+  if ((metric as any).metricSymbol === ':FIELD_TYPE_SUN_SET') return 'sunset'
 
   if (language === 'zh') {
     const labelCn = String((metric as any).labelCn || '').trim()

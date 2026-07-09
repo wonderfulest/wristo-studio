@@ -256,10 +256,10 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     // 日出 / 日落
     case 'sunrise':
     case 'sr':
-      return { display: '06:42', unit: '', label: 'SUNRISE' }
+      return { display: '06:42', unit: '', label: 'sunrise' }
     case 'sunset':
     case 'ss':
-      return { display: '18:12', unit: '', label: 'SUNSET' }
+      return { display: '18:12', unit: '', label: 'sunset' }
 
     // 名言 / 文本
     case 'quote':
