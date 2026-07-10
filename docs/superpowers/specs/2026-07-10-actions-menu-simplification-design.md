@@ -8,13 +8,13 @@
 
 - 导入 `.wrt`
 - 导出 `.wrt`
+- View / JSON View
 - 截图
 - 录制 GIF
 - 应用属性
 
 ## 移除项
 
-- View / JSON View
 - Build（当前仅显示未支持提示）
 - 菜单内 Save（顶栏已有 Save）
 - Export asset package（`.wrt` 是新的可反向导入设计包）
