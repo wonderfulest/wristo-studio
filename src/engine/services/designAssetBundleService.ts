@@ -1151,17 +1151,23 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
   }
 
   const manifest = await parseManifest(zip)
-  if (!manifest) {
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new WrtDesignPackageError('invalid-manifest', 'Missing or invalid manifest.json')
   }
-  if (manifest.format !== WRT_FORMAT || manifest.version !== WRT_VERSION) {
-    throw new WrtDesignPackageError('unsupported-version', 'Unsupported .wrt package format or version')
+  if (!manifest.design || typeof manifest.design !== 'object' || Array.isArray(manifest.design)) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Manifest is missing a valid design entry')
   }
-  if (!manifest.design?.path?.trim()) {
+  if (typeof manifest.design.path !== 'string' || !manifest.design.path.trim()) {
     throw new WrtDesignPackageError('invalid-manifest', 'Manifest is missing design.path')
   }
+  if (manifest.format !== WRT_FORMAT) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Unsupported .wrt package format')
+  }
+  if (manifest.version !== WRT_VERSION) {
+    throw new WrtDesignPackageError('unsupported-version', 'Unsupported .wrt package version')
+  }
 
-  const designFile = zip.file(manifest.design.path)
+  const designFile = zip.file(manifest.design.path.trim())
   if (!designFile) {
     throw new WrtDesignPackageError('invalid-design', 'Design configuration is missing from the archive')
   }
