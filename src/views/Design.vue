@@ -457,8 +457,20 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
 
 const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig): Promise<void> => {
   await fontStore.fetchFonts()
-  if (config.elements) {
+  if (Array.isArray(config.elements)) {
     await fontStore.loadFontsForElements(config.elements as any)
+  } else {
+    designStore.setSupportsChineseContent(false)
+    designStore.setSupportedLocales(['en-US'])
+    propertiesStore.textCase = 0
+    propertiesStore.bitmapMode = true
+    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
+    await waitCanvasReady()
+    elementDataStore.clearAll()
+    baseStore.canvas?.requestRenderAll()
+    historyStore.saveInitial()
+    return
   }
 
   designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
@@ -650,6 +662,13 @@ const loadElements = async (elements: AnyElementConfig[]) => {
   }
 }
 
+const handleAppPropertiesShortcut = (event: KeyboardEvent): void => {
+  if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+    event.preventDefault()
+    emitter.emit('open-app-properties')
+  }
+}
+
 onMounted(() => {
   editorStore.updateSettings({
     showZoomControls: true,
@@ -675,12 +694,7 @@ onMounted(() => {
   persistNormalizedPanelWidths()
 
   // 添加 App Properties 快捷键
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-      e.preventDefault()
-      emitter.emit('open-app-properties')
-    }
-  })
+  document.addEventListener('keydown', handleAppPropertiesShortcut)
 
   exportStore.setExportPanelRef(exportPanelRef.value as any)
   baseStore.setInCanvasWorkarea(true)
@@ -698,12 +712,7 @@ onBeforeUnmount(() => {
     window.clearInterval(saveTimer)
   }
   // 移除快捷键事件监听
-  document.removeEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-      e.preventDefault()
-      emitter.emit('open-app-properties')
-    }
-  })
+  document.removeEventListener('keydown', handleAppPropertiesShortcut)
   baseStore.setInCanvasWorkarea(false)
 })
 
