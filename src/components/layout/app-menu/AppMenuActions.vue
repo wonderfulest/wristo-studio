@@ -32,6 +32,14 @@
       <el-icon><Download /></el-icon>
       <span>{{ t('editor.exportAssetPackage') }}</span>
     </el-menu-item>
+    <el-menu-item index="actions/exportWrt" @click="onExportWrt">
+      <el-icon><Download /></el-icon>
+      <span>{{ t('editor.exportWrt') }}</span>
+    </el-menu-item>
+    <el-menu-item index="actions/importWrt" @click="onImportWrt">
+      <el-icon><Upload /></el-icon>
+      <span>{{ t('editor.importWrt') }}</span>
+    </el-menu-item>
     <!-- Divider -->
     <el-divider direction="horizontal" class="menu-sub-divider" />
     <!-- App Properties -->
@@ -70,6 +78,14 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  onExportWrt: {
+    type: Function,
+    required: true,
+  },
+  onImportWrt: {
+    type: Function,
+    required: true,
+  },
   onOpenProperties: {
     type: Function,
     required: true,
@@ -94,6 +110,14 @@ const onRecordGif = () => {
 
 const onExportAssetPackage = () => {
   props.onExportAssetPackage && props.onExportAssetPackage()
+}
+
+const onExportWrt = () => {
+  props.onExportWrt && props.onExportWrt()
+}
+
+const onImportWrt = () => {
+  props.onImportWrt && props.onImportWrt()
 }
 
 const onOpenProperties = () => {

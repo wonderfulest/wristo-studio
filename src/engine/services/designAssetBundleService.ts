@@ -57,6 +57,7 @@ type ManifestAsset = {
   format: string
   mimeType?: string
   sourceUrl?: string
+  sourceRef?: string
   elementId?: string
   elementType?: string
   field?: string
@@ -71,7 +72,7 @@ type ManifestFontAsset = {
   metadata?: Record<string, unknown>
 }
 
-type ManifestFailure = {
+export type ManifestFailure = {
   category: string
   sourceUrl?: string
   elementId?: string
@@ -81,6 +82,7 @@ type ManifestFailure = {
 
 type DesignAssetManifest = {
   version: 1 | 2
+  format?: string
   generatedAt: string
   designUid: string
   designName?: string
@@ -128,9 +130,39 @@ type RestoreBundleOptions = {
   assetBundleUrl?: string | null
 }
 
+export const WRT_FORMAT = 'wristo-design-package'
+export const WRT_VERSION = 1
+
+export class WrtDesignPackageError extends Error {
+  readonly code: 'invalid-file' | 'invalid-archive' | 'invalid-manifest' | 'unsupported-version' | 'invalid-design'
+
+  constructor(
+    code: WrtDesignPackageError['code'],
+    message: string,
+  ) {
+    super(message)
+    this.name = 'WrtDesignPackageError'
+    this.code = code
+  }
+}
+
+export type ImportedWrtDesignPackage = {
+  config: RuntimeDesignConfig
+  sourceName: string
+  failures: ManifestFailure[]
+}
+
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value)
 const isDataUrl = (value: string): boolean => /^data:/i.test(value)
 const isBlobUrl = (value: string): boolean => /^blob:/i.test(value)
+
+const restoredDesignAssetUrls = new Set<string>()
+
+/** Call after a successfully imported design replaces the current canvas, and when that canvas unmounts. */
+export const clearRestoredDesignAssetUrls = (): void => {
+  restoredDesignAssetUrls.forEach((url) => URL.revokeObjectURL(url))
+  restoredDesignAssetUrls.clear()
+}
 
 const ASSET_URL_FIELDS = new Set([
   'imageUrl',
@@ -558,6 +590,7 @@ const addReferencedAssetToBundle = async (
       format,
       mimeType: blob.type || getMimeTypeForFormat(format),
       sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
+      sourceRef: source,
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
@@ -722,10 +755,11 @@ const addAmoledIconAssetToBundle = async (
   manifest.icons?.amoled.push(entry)
 }
 
-export async function buildDesignAssetBundle(
+const buildDesignAssetArchive = async (
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
-): Promise<File | null> {
+  packageOptions: { format?: string; version?: 1; fileNameSuffix: string; mimeType: string },
+): Promise<File> => {
   const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
   const pendingStore = useWeatherAmoledIconStore()
@@ -735,7 +769,8 @@ export async function buildDesignAssetBundle(
   const designUid = String((config as any).designId || 'design')
   const slug = slugifyDesignName(config.name, designUid || 'watchface')
   const manifest: DesignAssetManifest = {
-    version: 2,
+    version: packageOptions.version || 2,
+    format: packageOptions.format,
     generatedAt: new Date().toISOString(),
     designUid,
     designName: config.name,
@@ -917,12 +952,35 @@ export async function buildDesignAssetBundle(
   zip.file('README.md', createReadme(config, manifest))
   zip.file('manifest.json', JSON.stringify(manifest, null, 2))
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
-  return new File([blob], `${slug}-assets.zip`, { type: 'application/zip' })
+  return new File([blob], `${slug}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
 }
 
-export async function restoreDesignAssetBundle(
+export async function buildDesignAssetBundle(
   config: RuntimeDesignConfig,
-  options: RestoreBundleOptions,
+  options: BuildDesignAssetBundleOptions = {},
+): Promise<File | null> {
+  return buildDesignAssetArchive(config, options, {
+    fileNameSuffix: '-assets.zip',
+    mimeType: 'application/zip',
+  })
+}
+
+export async function buildWrtDesignPackage(
+  config: RuntimeDesignConfig,
+  options: BuildDesignAssetBundleOptions = {},
+): Promise<File> {
+  return buildDesignAssetArchive(config, options, {
+    format: WRT_FORMAT,
+    version: WRT_VERSION,
+    fileNameSuffix: '.wrt',
+    mimeType: 'application/vnd.wristo.design-package+zip',
+  })
+}
+
+export async function restoreDesignAssetBundleFromZip(
+  config: RuntimeDesignConfig,
+  zip: JSZip,
+  manifest: DesignAssetManifest | null,
 ): Promise<RuntimeDesignConfig> {
   const pendingStore = useWeatherAmoledIconStore()
   const iconPendingStore = useAmoledIconAssetStore()
@@ -934,20 +992,43 @@ export async function restoreDesignAssetBundle(
   const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
 
-  const assetBundleUrl = String(options.assetBundleUrl || '').trim()
-  if (!assetBundleUrl) return config
-
   try {
-    const response = await fetch(toAbsoluteUrl(assetBundleUrl))
-    if (!response.ok) {
-      throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
-    }
-
-    const zip = await JSZip.loadAsync(await response.blob())
-    const manifest = await parseManifest(zip)
     const assets = getBundleAssetEntries(zip, manifest)
     const iconAssets = getBundleIconAssetEntries(zip, manifest)
-    if (!assets.length && !iconAssets.length) return config
+    const assetRefs = manifest?.studio?.assetRefs || []
+    if (!assets.length && !iconAssets.length && !assetRefs.length) return config
+
+    const restoredAssetUrls = new Map<string, string>()
+    for (const asset of assetRefs) {
+      const sourceRef = asset.sourceRef || asset.sourceUrl
+      if (!sourceRef || !asset.path || restoredAssetUrls.has(sourceRef)) continue
+      try {
+        const fileEntry = zip.file(asset.path)
+        if (!fileEntry) continue
+        const blob = await fileEntry.async('blob')
+        const objectUrl = URL.createObjectURL(blob)
+        restoredDesignAssetUrls.add(objectUrl)
+        restoredAssetUrls.set(sourceRef, objectUrl)
+      } catch (error) {
+        console.warn('[designAssetBundle] Failed to restore referenced asset', error)
+      }
+    }
+    const restoreElementAssetUrls = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return
+      if (Array.isArray(value)) {
+        value.forEach(restoreElementAssetUrls)
+        return
+      }
+      Object.entries(value as Record<string, unknown>).forEach(([key, childValue]) => {
+        if (typeof childValue === 'string' && ASSET_URL_FIELDS.has(key)) {
+          const restoredUrl = restoredAssetUrls.get(childValue)
+          if (restoredUrl) (value as Record<string, unknown>)[key] = restoredUrl
+          return
+        }
+        restoreElementAssetUrls(childValue)
+      })
+    }
+    restoreElementAssetUrls(config.elements)
 
     const weatherFontSlugs = Array.from(new Set(
       weatherElements
@@ -1048,4 +1129,79 @@ export async function restoreDesignAssetBundle(
   }
 
   return config
+}
+
+export async function restoreDesignAssetBundle(
+  config: RuntimeDesignConfig,
+  options: RestoreBundleOptions,
+): Promise<RuntimeDesignConfig> {
+  const assetBundleUrl = String(options.assetBundleUrl || '').trim()
+  if (!assetBundleUrl) return config
+
+  try {
+    const response = await fetch(toAbsoluteUrl(assetBundleUrl))
+    if (!response.ok) {
+      throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
+    }
+    const zip = await JSZip.loadAsync(await response.blob())
+    const manifest = await parseManifest(zip)
+    clearRestoredDesignAssetUrls()
+    return restoreDesignAssetBundleFromZip(config, zip, manifest)
+  } catch (error) {
+    console.warn('[designAssetBundle] Failed to restore design asset bundle', error)
+    return config
+  }
+}
+
+export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesignPackage> {
+  if (!file || !/\.wrt$/i.test(file.name || '')) {
+    throw new WrtDesignPackageError('invalid-file', 'Expected a .wrt design package file')
+  }
+
+  let zip: JSZip
+  try {
+    zip = await JSZip.loadAsync(file)
+  } catch (error) {
+    throw new WrtDesignPackageError('invalid-archive', 'Unable to read .wrt archive')
+  }
+
+  const manifest = await parseManifest(zip)
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Missing or invalid manifest.json')
+  }
+  if (!manifest.design || typeof manifest.design !== 'object' || Array.isArray(manifest.design)) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Manifest is missing a valid design entry')
+  }
+  if (typeof manifest.design.path !== 'string' || !manifest.design.path.trim()) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Manifest is missing design.path')
+  }
+  if (manifest.format !== WRT_FORMAT) {
+    throw new WrtDesignPackageError('invalid-manifest', 'Unsupported .wrt package format')
+  }
+  if (manifest.version !== WRT_VERSION) {
+    throw new WrtDesignPackageError('unsupported-version', 'Unsupported .wrt package version')
+  }
+
+  const designFile = zip.file(manifest.design.path.trim())
+  if (!designFile) {
+    throw new WrtDesignPackageError('invalid-design', 'Design configuration is missing from the archive')
+  }
+
+  let config: RuntimeDesignConfig
+  try {
+    config = JSON.parse(await designFile.async('string')) as RuntimeDesignConfig
+  } catch (error) {
+    throw new WrtDesignPackageError('invalid-design', 'Unable to parse design configuration')
+  }
+  if (!Array.isArray(config?.elements)) {
+    throw new WrtDesignPackageError('invalid-design', 'Design configuration must contain an elements array')
+  }
+
+  clearRestoredDesignAssetUrls()
+  const restoredConfig = await restoreDesignAssetBundleFromZip(config, zip, manifest)
+  return {
+    config: restoredConfig,
+    sourceName: manifest.designName || config.name || 'Watch Face',
+    failures: manifest.failures || [],
+  }
 }

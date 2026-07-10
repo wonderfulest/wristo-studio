@@ -73,6 +73,7 @@ import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
+import { syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
@@ -89,6 +90,7 @@ import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
+import type { RuntimeDesignConfig } from '@/types/app/config'
 import { useDesignStore } from '@/stores/designStore'
 import { useUserStore } from '@/stores/user'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
@@ -100,7 +102,12 @@ import {
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import { useI18n } from '@/i18n'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
-import { restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import {
+  clearRestoredDesignAssetUrls,
+  readWrtDesignPackage,
+  restoreDesignAssetBundle,
+  WrtDesignPackageError,
+} from '@/engine/services/designAssetBundleService'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -126,6 +133,8 @@ const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWid
 const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
 let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
+let designLoadGeneration = 0
+let designLoadQueue: Promise<void> = Promise.resolve()
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -202,18 +211,31 @@ const waitForOrderableCanvasObjects = async (orderIds: string[]): Promise<void> 
   })
 }
 
-const restoreLayerOrder = async (orderIds: unknown): Promise<void> => {
+const isCurrentDesignLoad = (generation: number): boolean => generation === designLoadGeneration
+
+const enqueueDesignLoad = <T>(operation: () => Promise<T>): Promise<T> => {
+  const result = designLoadQueue.then(operation, operation)
+  designLoadQueue = result.then(() => undefined, () => undefined)
+  return result
+}
+
+const restoreLayerOrder = async (orderIds: unknown, generation: number): Promise<boolean> => {
   const normalizedOrderIds = normalizeLayerOrderIds(orderIds)
   if (!normalizedOrderIds.length) {
+    if (!isCurrentDesignLoad(generation)) return false
     syncLayersFromCanvas()
-    return
+    return true
   }
 
   await waitForOrderableCanvasObjects(normalizedOrderIds)
+  if (!isCurrentDesignLoad(generation)) return false
   applyOrder(normalizedOrderIds)
   await nextTick()
+  if (!isCurrentDesignLoad(generation)) return false
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+  if (!isCurrentDesignLoad(generation)) return false
   applyOrder(normalizedOrderIds)
+  return true
 }
 
 const getPanelWidthLimit = (side: 'left' | 'right') => {
@@ -448,30 +470,29 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
   canvas.requestRenderAll?.()
 }
 
-// 加载设计配置
-const loadDesign = async (designUid: string) => {
-  baseStore.setDesignLoading(true)
-  try {
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
-    if (!response.data) {
-      messageStore.error(t('design.notFound'))
-      router.push('/designs')
-      return
-    }
-    const designData = response.data
+const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
+  await fontStore.fetchFonts()
+  if (!isCurrentDesignLoad(generation)) return false
+  if (Array.isArray(config.elements)) {
+    await fontStore.loadFontsForElements(config.elements as any)
+    if (!isCurrentDesignLoad(generation)) return false
+  } else {
+    designStore.setSupportsChineseContent(false)
+    designStore.setSupportedLocales(['en-US'])
+    propertiesStore.textCase = 0
+    propertiesStore.bitmapMode = true
+    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
+    await waitCanvasReady()
+    if (!isCurrentDesignLoad(generation)) return false
+    elementDataStore.clearAll()
+    baseStore.canvas?.requestRenderAll()
+    historyStore.saveInitial()
+    return true
+  }
 
-    const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
-    const restoredConfig = await restoreDesignAssetBundle(config as any, {
-      assetBundleUrl: designData.assetBundleUrl,
-    })
-    
-    // 设置基础信息
-    baseStore.id = designUid
-    baseStore.watchFaceName = designData.name
-    designStore.id = designUid
-    designStore.setWatchFaceName(designData.name)
-    designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
-    if (config.localization) {
+  designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
+  if (config.localization) {
       const localization = config.localization as any
       if (Array.isArray(localization.supportedLocales)) {
         designStore.setSupportedLocales(localization.supportedLocales)
@@ -484,97 +505,166 @@ const loadDesign = async (designUid: string) => {
       if (localization.fontRoles && typeof localization.fontRoles === 'object') {
         designStore.fontRoles = localization.fontRoles
       }
-    } else {
-      designStore.setSupportedLocales(['en-US'])
-    }
-    baseStore.appId = designData.product?.appId || -1
-    
-    // 加载字体
-    await fontStore.fetchFonts()
-    if (config.elements) {
-      await fontStore.loadFontsForElements(config.elements)
-    }
-    
-    // 如果配置为空，使用默认值
-    if (!config || Object.keys(config).length === 0) {
-      
-      // 等待画布初始化完成
-      await waitCanvasReady()
-      // ✅ 先清空上一次设计的元素配置
-      elementDataStore.clearAll()
-      // 设置默认值
-      baseStore.watchFaceName = designData.name
-      designStore.setWatchFaceName(designData.name)
-      designStore.setSupportsChineseContent(false)
-      propertiesStore.textCase = 0
-      propertiesStore.bitmapMode = true
-      propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
-      propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
-     
-      // 初始化画布
-      baseStore.canvas?.requestRenderAll()
-      historyStore.saveInitial()
+  } else {
+    designStore.setSupportedLocales(['en-US'])
+  }
 
+  if (config.properties) {
+    propertiesStore.loadProperties(config.properties)
+  }
+
+  propertiesStore.textCase = 0
+  propertiesStore.bitmapMode = true
+  propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+  propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
+
+  if ([0, 1, 2, 3].includes(Number(config.textCase))) {
+    propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
+  }
+  if (typeof config.bitmapMode === 'boolean') {
+    propertiesStore.bitmapMode = config.bitmapMode
+  }
+  propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
+  propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
+
+  await waitCanvasReady()
+  if (!isCurrentDesignLoad(generation)) return false
+  elementDataStore.clearAll()
+  ensureBackgroundElement(config as any)
+
+  const scaledElements = scaleElementsFromStoredSize(config.elements as any)
+  if (!await loadElements(scaledElements, generation) || !isCurrentDesignLoad(generation)) return false
+  applyLoadedElementDisplayStates(scaledElements)
+  canvasRef.value?.updateZoom()
+
+  if (!await restoreLayerOrder(config.orderIds, generation) || !isCurrentDesignLoad(generation)) return false
+  applyLoadedElementDisplayStates(scaledElements)
+
+  await new Promise<void>((resolve, reject) => window.setTimeout(() => {
+    void (async () => {
+      try {
+        if (!isCurrentDesignLoad(generation)) {
+          resolve()
+          return
+        }
+        getDataSimulatorEngine().updateCanvas()
+        await restoreLayerOrder(config.orderIds, generation)
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
+    })()
+  }, 0))
+  if (!isCurrentDesignLoad(generation)) return false
+  historyStore.saveInitial()
+  return true
+}
+
+const clearEditableDesignCanvas = async (generation: number): Promise<boolean> => {
+  const canvas = baseStore.canvas
+  if (!canvas || !isCurrentDesignLoad(generation)) return false
+
+  canvas.discardActiveObject?.()
+  const objects = canvas.getObjects?.() || []
+  objects
+    .filter((object: any) => !['global', 'background'].includes(String(object?.eleType ?? '')))
+    .forEach((object: any) => canvas.remove?.(object))
+  elementDataStore.clearAll()
+  syncElementInstancesFromCanvas(canvas.getObjects() as any)
+  syncLayersFromCanvas()
+  canvas.requestRenderAll?.()
+  await nextTick()
+  return isCurrentDesignLoad(generation)
+}
+
+const importWrtDesign = async (file: File): Promise<void> => {
+  const generation = ++designLoadGeneration
+  let packageRead = false
+  try {
+    await enqueueDesignLoad(async () => {
+      if (!isCurrentDesignLoad(generation)) return
+      const imported = await readWrtDesignPackage(file)
+      packageRead = true
+      const clearImportedUrlsIfStale = (): boolean => {
+        if (isCurrentDesignLoad(generation)) return false
+        clearRestoredDesignAssetUrls()
+        return true
+      }
+      if (clearImportedUrlsIfStale()) return
+      baseStore.setDesignLoading(true)
+      // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
+      // They are released on unmount or by the next successful package read.
+      if (!await clearEditableDesignCanvas(generation) || clearImportedUrlsIfStale()) return
+
+      baseStore.id = ''
+      designStore.id = ''
+      baseStore.appId = -1
+      const copyName = `${imported.sourceName} Copy`
+      baseStore.setWatchFaceName(copyName)
+      designStore.setWatchFaceName(copyName)
+      await router.replace({ path: route.path, query: {} })
+      if (clearImportedUrlsIfStale()) return
+      if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) {
+        if (clearImportedUrlsIfStale()) return
+        return
+      }
+      if (clearImportedUrlsIfStale()) return
+      messageStore.success(t('editor.wrtImported'))
+    })
+  } catch (error) {
+    if (!isCurrentDesignLoad(generation)) {
+      if (packageRead) clearRestoredDesignAssetUrls()
       return
     }
-    
-    // 加载属性
-    if (config.properties) {
-      propertiesStore.loadProperties(config.properties)
+    if (error instanceof WrtDesignPackageError) {
+      messageStore.error(t(`editor.wrtImport.${error.code}`))
+    } else {
+      console.error('导入 .wrt 设计失败:', error)
+      messageStore.error(t('editor.wrtImport.failed'))
     }
-
-    // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
-    propertiesStore.textCase = 0
-    propertiesStore.bitmapMode = true
-    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
-    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
-
-    // 设置文本大小写
-    if ([0, 1, 2, 3].includes(Number(config.textCase))) {
-      propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
+  } finally {
+    if (isCurrentDesignLoad(generation)) {
+      baseStore.setDesignLoading(false)
     }
-    if (typeof config.bitmapMode === 'boolean') {
-      propertiesStore.bitmapMode = config.bitmapMode
-    }
-    propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
-    propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
-    // 等待画布初始化完成
-    await waitCanvasReady()
-    // ✅ 先清空上一次设计的元素配置
-    elementDataStore.clearAll() 
+  }
+}
 
-    // 兼容旧字段：backgroundImage -> background 元素
-    ensureBackgroundElement(config)
- 
-    // 加载元素到画布
-    if (config && config.elements) {
-      // config.elements 是 API DesignElement[]，此处通过解码器转换为内部 AnyElementConfig
-      const scaledElements = scaleElementsFromStoredSize(restoredConfig.elements as any)
-      await loadElements(scaledElements)
-      applyLoadedElementDisplayStates(scaledElements)
-    }
-    
-    // 更新画布缩放
-    canvasRef.value?.updateZoom()
+// 加载设计配置
+const loadDesign = async (designUid: string) => {
+  const generation = ++designLoadGeneration
+  baseStore.setDesignLoading(true)
+  try {
+    await enqueueDesignLoad(async () => {
+      if (!isCurrentDesignLoad(generation)) return
+      const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
+      if (!isCurrentDesignLoad(generation)) return
+      if (!response.data) {
+        messageStore.error(t('design.notFound'))
+        router.push('/designs')
+        return
+      }
+      const designData = response.data
+      const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+      const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
+        assetBundleUrl: designData.assetBundleUrl,
+      })
+      if (!isCurrentDesignLoad(generation)) return
 
-    // Restore the saved Fabric stacking order after all known objects are present.
-    await restoreLayerOrder(config.orderIds)
-    if (Array.isArray(config.elements)) {
-      applyLoadedElementDisplayStates(config.elements as any)
-    }
-
-    await new Promise<void>((resolve) => window.setTimeout(async () => {
-      getDataSimulatorEngine().updateCanvas()
-      await restoreLayerOrder(config.orderIds)
-      resolve()
-    }, 0))
-    historyStore.saveInitial()
-
+      baseStore.id = designUid
+      designStore.id = designUid
+      baseStore.setWatchFaceName(designData.name)
+      designStore.setWatchFaceName(designData.name)
+      baseStore.appId = designData.product?.appId || -1
+      await applyRuntimeDesignConfig(restoredConfig, generation)
+    })
   } catch (error) {
+    if (!isCurrentDesignLoad(generation)) return
     console.error('加载设计失败:', error)
     messageStore.error('加载设计失败')
   } finally {
-    baseStore.setDesignLoading(false)
+    if (isCurrentDesignLoad(generation)) {
+      baseStore.setDesignLoading(false)
+    }
   }
 }
 
@@ -594,9 +684,10 @@ const setupAutoSave = () => {
 }
 
 // 替换元素加载逻辑
-const loadElements = async (elements: AnyElementConfig[]) => {
+const loadElements = async (elements: AnyElementConfig[], generation: number): Promise<boolean> => {
   const elementDataStore = useElementDataStore()
   for (const element of elements) {
+    if (!isCurrentDesignLoad(generation)) return false
     const decodedElement = decodeElementConfig(element)
     if (!decodedElement) {
       console.warn(`Unknown element type: ${element.eleType}`)
@@ -616,8 +707,16 @@ const loadElements = async (elements: AnyElementConfig[]) => {
 
       // 新版 Registry：通过 ElementHandler.add(config) 创建元素，由调用方保证 eleType 一致
       const handler = getElementHandler(element.eleType as string)
-      await handler.add(config as any)
+      const addedElement = await handler.add(config as any)
+      if (!isCurrentDesignLoad(generation)) {
+        const canvas = baseStore.canvas
+        if (addedElement && canvas?.getObjects?.().includes(addedElement as any)) {
+          canvas.remove?.(addedElement as any)
+        }
+        return false
+      }
     } catch (error) {
+      if (!isCurrentDesignLoad(generation)) return false
       console.error('加载元素失败:', element, error)
       const name = (element as any)?.name || element.eleType || '未知元素'
       await ElMessageBox.alert(
@@ -628,7 +727,16 @@ const loadElements = async (elements: AnyElementConfig[]) => {
           type: 'error',
         },
       )
+      if (!isCurrentDesignLoad(generation)) return false
     }
+  }
+  return true
+}
+
+const handleAppPropertiesShortcut = (event: KeyboardEvent): void => {
+  if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+    event.preventDefault()
+    emitter.emit('open-app-properties')
   }
 }
 
@@ -639,6 +747,7 @@ onMounted(() => {
   })
 
   changelogDialog.value?.checkShowChangelog()
+  emitter.on('import-wrt-design', importWrtDesign as any)
 
   // 检查URL参数中是否有设计ID
   const designId = getRouteDesignId()
@@ -656,20 +765,18 @@ onMounted(() => {
   persistNormalizedPanelWidths()
 
   // 添加 App Properties 快捷键
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-      e.preventDefault()
-      emitter.emit('open-app-properties')
-    }
-  })
+  document.addEventListener('keydown', handleAppPropertiesShortcut)
 
   exportStore.setExportPanelRef(exportPanelRef.value as any)
   baseStore.setInCanvasWorkarea(true)
 })
 
 onBeforeUnmount(() => {
+  designLoadGeneration += 1
   stopPanelResize()
   window.removeEventListener('resize', handleWorkspaceResize)
+  emitter.off('import-wrt-design', importWrtDesign as any)
+  clearRestoredDesignAssetUrls()
 
   // 清除自动保存定时器
   if (saveTimer) {
@@ -677,12 +784,7 @@ onBeforeUnmount(() => {
     window.clearInterval(saveTimer)
   }
   // 移除快捷键事件监听
-  document.removeEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
-      e.preventDefault()
-      emitter.emit('open-app-properties')
-    }
-  })
+  document.removeEventListener('keydown', handleAppPropertiesShortcut)
   baseStore.setInCanvasWorkarea(false)
 })
 
