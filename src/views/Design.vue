@@ -579,15 +579,22 @@ const clearEditableDesignCanvas = async (generation: number): Promise<boolean> =
 
 const importWrtDesign = async (file: File): Promise<void> => {
   const generation = ++designLoadGeneration
+  let packageRead = false
   try {
     await enqueueDesignLoad(async () => {
       if (!isCurrentDesignLoad(generation)) return
       const imported = await readWrtDesignPackage(file)
-      if (!isCurrentDesignLoad(generation)) return
+      packageRead = true
+      const clearImportedUrlsIfStale = (): boolean => {
+        if (isCurrentDesignLoad(generation)) return false
+        clearRestoredDesignAssetUrls()
+        return true
+      }
+      if (clearImportedUrlsIfStale()) return
       baseStore.setDesignLoading(true)
       // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
       // They are released on unmount or by the next successful package read.
-      if (!await clearEditableDesignCanvas(generation) || !isCurrentDesignLoad(generation)) return
+      if (!await clearEditableDesignCanvas(generation) || clearImportedUrlsIfStale()) return
 
       baseStore.id = ''
       designStore.id = ''
@@ -596,13 +603,19 @@ const importWrtDesign = async (file: File): Promise<void> => {
       baseStore.setWatchFaceName(copyName)
       designStore.setWatchFaceName(copyName)
       await router.replace({ path: route.path, query: {} })
-      if (!isCurrentDesignLoad(generation)) return
-      if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) return
-      if (!isCurrentDesignLoad(generation)) return
+      if (clearImportedUrlsIfStale()) return
+      if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) {
+        if (clearImportedUrlsIfStale()) return
+        return
+      }
+      if (clearImportedUrlsIfStale()) return
       messageStore.success(t('editor.wrtImported'))
     })
   } catch (error) {
-    if (!isCurrentDesignLoad(generation)) return
+    if (!isCurrentDesignLoad(generation)) {
+      if (packageRead) clearRestoredDesignAssetUrls()
+      return
+    }
     if (error instanceof WrtDesignPackageError) {
       messageStore.error(t(`editor.wrtImport.${error.code}`))
     } else {
