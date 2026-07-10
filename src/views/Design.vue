@@ -134,6 +134,7 @@ const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
 let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
 let designLoadGeneration = 0
+let designLoadQueue: Promise<void> = Promise.resolve()
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -211,6 +212,12 @@ const waitForOrderableCanvasObjects = async (orderIds: string[]): Promise<void> 
 }
 
 const isCurrentDesignLoad = (generation: number): boolean => generation === designLoadGeneration
+
+const enqueueDesignLoad = <T>(operation: () => Promise<T>): Promise<T> => {
+  const result = designLoadQueue.then(operation, operation)
+  designLoadQueue = result.then(() => undefined, () => undefined)
+  return result
+}
 
 const restoreLayerOrder = async (orderIds: unknown, generation: number): Promise<boolean> => {
   const normalizedOrderIds = normalizeLayerOrderIds(orderIds)
@@ -567,24 +574,27 @@ const clearEditableDesignCanvas = async (generation: number): Promise<boolean> =
 const importWrtDesign = async (file: File): Promise<void> => {
   const generation = ++designLoadGeneration
   try {
-    const imported = await readWrtDesignPackage(file)
-    if (!isCurrentDesignLoad(generation)) return
-    baseStore.setDesignLoading(true)
-    // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
-    // They are released on unmount or by the next successful package read.
-    if (!await clearEditableDesignCanvas(generation) || !isCurrentDesignLoad(generation)) return
+    await enqueueDesignLoad(async () => {
+      if (!isCurrentDesignLoad(generation)) return
+      const imported = await readWrtDesignPackage(file)
+      if (!isCurrentDesignLoad(generation)) return
+      baseStore.setDesignLoading(true)
+      // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
+      // They are released on unmount or by the next successful package read.
+      if (!await clearEditableDesignCanvas(generation) || !isCurrentDesignLoad(generation)) return
 
-    baseStore.id = ''
-    designStore.id = ''
-    baseStore.appId = -1
-    const copyName = `${imported.sourceName} Copy`
-    baseStore.setWatchFaceName(copyName)
-    designStore.setWatchFaceName(copyName)
-    await router.replace({ path: route.path, query: {} })
-    if (!isCurrentDesignLoad(generation)) return
-    if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) return
-    if (!isCurrentDesignLoad(generation)) return
-    messageStore.success(t('editor.wrtImported'))
+      baseStore.id = ''
+      designStore.id = ''
+      baseStore.appId = -1
+      const copyName = `${imported.sourceName} Copy`
+      baseStore.setWatchFaceName(copyName)
+      designStore.setWatchFaceName(copyName)
+      await router.replace({ path: route.path, query: {} })
+      if (!isCurrentDesignLoad(generation)) return
+      if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) return
+      if (!isCurrentDesignLoad(generation)) return
+      messageStore.success(t('editor.wrtImported'))
+    })
   } catch (error) {
     if (!isCurrentDesignLoad(generation)) return
     if (error instanceof WrtDesignPackageError) {
@@ -605,26 +615,29 @@ const loadDesign = async (designUid: string) => {
   const generation = ++designLoadGeneration
   baseStore.setDesignLoading(true)
   try {
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
-    if (!isCurrentDesignLoad(generation)) return
-    if (!response.data) {
-      messageStore.error(t('design.notFound'))
-      router.push('/designs')
-      return
-    }
-    const designData = response.data
-    const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
-    const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
-      assetBundleUrl: designData.assetBundleUrl,
-    })
-    if (!isCurrentDesignLoad(generation)) return
+    await enqueueDesignLoad(async () => {
+      if (!isCurrentDesignLoad(generation)) return
+      const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
+      if (!isCurrentDesignLoad(generation)) return
+      if (!response.data) {
+        messageStore.error(t('design.notFound'))
+        router.push('/designs')
+        return
+      }
+      const designData = response.data
+      const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+      const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
+        assetBundleUrl: designData.assetBundleUrl,
+      })
+      if (!isCurrentDesignLoad(generation)) return
 
-    baseStore.id = designUid
-    designStore.id = designUid
-    baseStore.setWatchFaceName(designData.name)
-    designStore.setWatchFaceName(designData.name)
-    baseStore.appId = designData.product?.appId || -1
-    await applyRuntimeDesignConfig(restoredConfig, generation)
+      baseStore.id = designUid
+      designStore.id = designUid
+      baseStore.setWatchFaceName(designData.name)
+      designStore.setWatchFaceName(designData.name)
+      baseStore.appId = designData.product?.appId || -1
+      await applyRuntimeDesignConfig(restoredConfig, generation)
+    })
   } catch (error) {
     if (!isCurrentDesignLoad(generation)) return
     console.error('加载设计失败:', error)
@@ -677,8 +690,10 @@ const loadElements = async (elements: AnyElementConfig[], generation: number): P
       const handler = getElementHandler(element.eleType as string)
       const addedElement = await handler.add(config as any)
       if (!isCurrentDesignLoad(generation)) {
-        elementDataStore.removeElement(String(config.id))
-        baseStore.canvas?.remove?.(addedElement as any)
+        const canvas = baseStore.canvas
+        if (addedElement && canvas?.getObjects?.().includes(addedElement as any)) {
+          canvas.remove?.(addedElement as any)
+        }
         return false
       }
     } catch (error) {
