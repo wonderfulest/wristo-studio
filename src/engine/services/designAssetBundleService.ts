@@ -1197,6 +1197,7 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
     throw new WrtDesignPackageError('invalid-design', 'Design configuration must contain an elements array')
   }
 
+  clearRestoredDesignAssetUrls()
   const restoredConfig = await restoreDesignAssetBundleFromZip(config, zip, manifest)
   return {
     config: restoredConfig,
