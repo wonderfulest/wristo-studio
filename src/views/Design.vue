@@ -73,6 +73,7 @@ import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
+import { syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
@@ -89,6 +90,7 @@ import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
+import type { RuntimeDesignConfig } from '@/types/app/config'
 import { useDesignStore } from '@/stores/designStore'
 import { useUserStore } from '@/stores/user'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
@@ -100,7 +102,12 @@ import {
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import { useI18n } from '@/i18n'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
-import { restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import {
+  clearRestoredDesignAssetUrls,
+  readWrtDesignPackage,
+  restoreDesignAssetBundle,
+  WrtDesignPackageError,
+} from '@/engine/services/designAssetBundleService'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -448,30 +455,14 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
   canvas.requestRenderAll?.()
 }
 
-// 加载设计配置
-const loadDesign = async (designUid: string) => {
-  baseStore.setDesignLoading(true)
-  try {
-    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
-    if (!response.data) {
-      messageStore.error(t('design.notFound'))
-      router.push('/designs')
-      return
-    }
-    const designData = response.data
+const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig): Promise<void> => {
+  await fontStore.fetchFonts()
+  if (config.elements) {
+    await fontStore.loadFontsForElements(config.elements as any)
+  }
 
-    const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
-    const restoredConfig = await restoreDesignAssetBundle(config as any, {
-      assetBundleUrl: designData.assetBundleUrl,
-    })
-    
-    // 设置基础信息
-    baseStore.id = designUid
-    baseStore.watchFaceName = designData.name
-    designStore.id = designUid
-    designStore.setWatchFaceName(designData.name)
-    designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
-    if (config.localization) {
+  designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
+  if (config.localization) {
       const localization = config.localization as any
       if (Array.isArray(localization.supportedLocales)) {
         designStore.setSupportedLocales(localization.supportedLocales)
@@ -484,92 +475,119 @@ const loadDesign = async (designUid: string) => {
       if (localization.fontRoles && typeof localization.fontRoles === 'object') {
         designStore.fontRoles = localization.fontRoles
       }
-    } else {
-      designStore.setSupportedLocales(['en-US'])
-    }
-    baseStore.appId = designData.product?.appId || -1
-    
-    // 加载字体
-    await fontStore.fetchFonts()
-    if (config.elements) {
-      await fontStore.loadFontsForElements(config.elements)
-    }
-    
-    // 如果配置为空，使用默认值
-    if (!config || Object.keys(config).length === 0) {
-      
-      // 等待画布初始化完成
-      await waitCanvasReady()
-      // ✅ 先清空上一次设计的元素配置
-      elementDataStore.clearAll()
-      // 设置默认值
-      baseStore.watchFaceName = designData.name
-      designStore.setWatchFaceName(designData.name)
-      designStore.setSupportsChineseContent(false)
-      propertiesStore.textCase = 0
-      propertiesStore.bitmapMode = true
-      propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
-      propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
-     
-      // 初始化画布
-      baseStore.canvas?.requestRenderAll()
-      historyStore.saveInitial()
+  } else {
+    designStore.setSupportedLocales(['en-US'])
+  }
 
+  if (config.properties) {
+    propertiesStore.loadProperties(config.properties)
+  }
+
+  propertiesStore.textCase = 0
+  propertiesStore.bitmapMode = true
+  propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+  propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
+
+  if ([0, 1, 2, 3].includes(Number(config.textCase))) {
+    propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
+  }
+  if (typeof config.bitmapMode === 'boolean') {
+    propertiesStore.bitmapMode = config.bitmapMode
+  }
+  propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
+  propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
+
+  await waitCanvasReady()
+  elementDataStore.clearAll()
+  ensureBackgroundElement(config as any)
+
+  const scaledElements = scaleElementsFromStoredSize(config.elements as any)
+  await loadElements(scaledElements)
+  applyLoadedElementDisplayStates(scaledElements)
+  canvasRef.value?.updateZoom()
+
+  await restoreLayerOrder(config.orderIds)
+  applyLoadedElementDisplayStates(scaledElements)
+
+  await new Promise<void>((resolve) => window.setTimeout(async () => {
+    getDataSimulatorEngine().updateCanvas()
+    await restoreLayerOrder(config.orderIds)
+    resolve()
+  }, 0))
+  historyStore.saveInitial()
+}
+
+const clearEditableDesignCanvas = async (): Promise<void> => {
+  const canvas = baseStore.canvas
+  if (!canvas) return
+
+  canvas.discardActiveObject?.()
+  const objects = canvas.getObjects?.() || []
+  objects
+    .filter((object: any) => !['global', 'background'].includes(String(object?.eleType ?? '')))
+    .forEach((object: any) => canvas.remove?.(object))
+  elementDataStore.clearAll()
+  syncElementInstancesFromCanvas(canvas.getObjects() as any)
+  syncLayersFromCanvas()
+  canvas.requestRenderAll?.()
+  await nextTick()
+}
+
+const importWrtDesign = async (file: File): Promise<void> => {
+  let loading = false
+  try {
+    const imported = await readWrtDesignPackage(file)
+    loading = true
+    baseStore.setDesignLoading(true)
+    // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
+    // They are released on unmount or by the next successful package read.
+    await clearEditableDesignCanvas()
+
+    baseStore.id = ''
+    designStore.id = ''
+    baseStore.appId = -1
+    const copyName = `${imported.sourceName} Copy`
+    baseStore.setWatchFaceName(copyName)
+    designStore.setWatchFaceName(copyName)
+    await router.replace({ path: route.path, query: {} })
+    await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName })
+    messageStore.success(t('editor.wrtImported'))
+  } catch (error) {
+    if (error instanceof WrtDesignPackageError) {
+      messageStore.error(t(`editor.wrtImport.${error.code}`))
+    } else {
+      console.error('导入 .wrt 设计失败:', error)
+      messageStore.error(t('editor.wrtImport.failed'))
+    }
+  } finally {
+    if (loading) {
+      baseStore.setDesignLoading(false)
+    }
+  }
+}
+
+// 加载设计配置
+const loadDesign = async (designUid: string) => {
+  baseStore.setDesignLoading(true)
+  try {
+    const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
+    if (!response.data) {
+      messageStore.error(t('design.notFound'))
+      router.push('/designs')
       return
     }
-    
-    // 加载属性
-    if (config.properties) {
-      propertiesStore.loadProperties(config.properties)
-    }
+    const designData = response.data
+    const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+    const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
+      assetBundleUrl: designData.assetBundleUrl,
+    })
 
-    // 初始化 App Settings 默认值（避免旧值在不同设计之间串味）
-    propertiesStore.textCase = 0
-    propertiesStore.bitmapMode = true
-    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
-    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
-
-    // 设置文本大小写
-    if ([0, 1, 2, 3].includes(Number(config.textCase))) {
-      propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
-    }
-    if (typeof config.bitmapMode === 'boolean') {
-      propertiesStore.bitmapMode = config.bitmapMode
-    }
-    propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
-    propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
-    // 等待画布初始化完成
-    await waitCanvasReady()
-    // ✅ 先清空上一次设计的元素配置
-    elementDataStore.clearAll() 
-
-    // 兼容旧字段：backgroundImage -> background 元素
-    ensureBackgroundElement(config)
- 
-    // 加载元素到画布
-    if (config && config.elements) {
-      // config.elements 是 API DesignElement[]，此处通过解码器转换为内部 AnyElementConfig
-      const scaledElements = scaleElementsFromStoredSize(restoredConfig.elements as any)
-      await loadElements(scaledElements)
-      applyLoadedElementDisplayStates(scaledElements)
-    }
-    
-    // 更新画布缩放
-    canvasRef.value?.updateZoom()
-
-    // Restore the saved Fabric stacking order after all known objects are present.
-    await restoreLayerOrder(config.orderIds)
-    if (Array.isArray(config.elements)) {
-      applyLoadedElementDisplayStates(config.elements as any)
-    }
-
-    await new Promise<void>((resolve) => window.setTimeout(async () => {
-      getDataSimulatorEngine().updateCanvas()
-      await restoreLayerOrder(config.orderIds)
-      resolve()
-    }, 0))
-    historyStore.saveInitial()
-
+    baseStore.id = designUid
+    designStore.id = designUid
+    baseStore.setWatchFaceName(designData.name)
+    designStore.setWatchFaceName(designData.name)
+    baseStore.appId = designData.product?.appId || -1
+    await applyRuntimeDesignConfig(restoredConfig)
   } catch (error) {
     console.error('加载设计失败:', error)
     messageStore.error('加载设计失败')
@@ -639,6 +657,7 @@ onMounted(() => {
   })
 
   changelogDialog.value?.checkShowChangelog()
+  emitter.on('import-wrt-design', importWrtDesign as any)
 
   // 检查URL参数中是否有设计ID
   const designId = getRouteDesignId()
@@ -670,6 +689,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopPanelResize()
   window.removeEventListener('resize', handleWorkspaceResize)
+  emitter.off('import-wrt-design', importWrtDesign as any)
+  clearRestoredDesignAssetUrls()
 
   // 清除自动保存定时器
   if (saveTimer) {
