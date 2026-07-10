@@ -14,6 +14,8 @@
           :on-screenshot="handleScreenshot"
           :on-record-gif="handleRecordGif"
           :on-export-asset-package="handleExportAssetPackage"
+          :on-export-wrt="handleExportWrt"
+          :on-import-wrt="handleImportWrt"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
         />
         <el-menu-item index="actions/save" @click="handleSave">
@@ -55,6 +57,13 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" />
+  <input
+    ref="wrtFileInput"
+    type="file"
+    accept=".wrt,application/vnd.wristo.design-package+zip"
+    class="sr-only"
+    @change="handleWrtFileChange"
+  />
 
   <el-dialog
     v-model="screenshotDialogVisible"
@@ -130,6 +139,8 @@ import { elementConfigs } from '@/elements/schemaMap'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
+import { buildWrtDesignPackage } from '@/engine/services/designAssetBundleService'
+import emitter from '@/utils/eventBus'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
@@ -166,6 +177,7 @@ const shortcutsDialogVisible = ref(false)
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
+const wrtFileInput = ref<HTMLInputElement | null>(null)
 
 type FrameMode = 'withFrame' | 'faceOnly'
 
@@ -689,6 +701,40 @@ const handleExportAssetPackage = async () => {
   } catch (error: any) {
     console.error('Failed to export asset package:', error)
     messageStore.error(error?.message || t('common.saveFailed'))
+  }
+}
+
+const handleExportWrt = async () => {
+  baseStore.deactivateObject()
+  try {
+    const config = baseStore.generateConfig({ validateBindings: false })
+    if (!config) {
+      messageStore.error(t('editor.wrtExportFailed'))
+      return
+    }
+    const previewDataUrl = await baseStore.captureScreenshot().catch(() => null)
+    const file = await buildWrtDesignPackage(config, { previewDataUrl })
+    downloadBlob(file, file.name)
+    messageStore.success(t('editor.wrtExported'))
+  } catch (error) {
+    console.error('Failed to export WRT design package:', error)
+    messageStore.error(t('editor.wrtExportFailed'))
+  }
+}
+
+const handleImportWrt = () => {
+  wrtFileInput.value?.click()
+}
+
+const handleWrtFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  try {
+    const file = input.files?.[0]
+    if (file) {
+      emitter.emit('import-wrt-design', file)
+    }
+  } finally {
+    input.value = ''
   }
 }
 
