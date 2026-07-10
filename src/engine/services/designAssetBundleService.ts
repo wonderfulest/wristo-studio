@@ -57,6 +57,7 @@ type ManifestAsset = {
   format: string
   mimeType?: string
   sourceUrl?: string
+  sourceRef?: string
   elementId?: string
   elementType?: string
   field?: string
@@ -154,6 +155,14 @@ export type ImportedWrtDesignPackage = {
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value)
 const isDataUrl = (value: string): boolean => /^data:/i.test(value)
 const isBlobUrl = (value: string): boolean => /^blob:/i.test(value)
+
+const restoredDesignAssetUrls = new Set<string>()
+
+/** Call after a successfully imported design replaces the current canvas, and when that canvas unmounts. */
+export const clearRestoredDesignAssetUrls = (): void => {
+  restoredDesignAssetUrls.forEach((url) => URL.revokeObjectURL(url))
+  restoredDesignAssetUrls.clear()
+}
 
 const ASSET_URL_FIELDS = new Set([
   'imageUrl',
@@ -581,6 +590,7 @@ const addReferencedAssetToBundle = async (
       format,
       mimeType: blob.type || getMimeTypeForFormat(format),
       sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
+      sourceRef: source,
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
@@ -990,12 +1000,15 @@ export async function restoreDesignAssetBundleFromZip(
 
     const restoredAssetUrls = new Map<string, string>()
     for (const asset of assetRefs) {
-      if (!asset.sourceUrl || !asset.path) continue
+      const sourceRef = asset.sourceRef || asset.sourceUrl
+      if (!sourceRef || !asset.path || restoredAssetUrls.has(sourceRef)) continue
       try {
         const fileEntry = zip.file(asset.path)
         if (!fileEntry) continue
         const blob = await fileEntry.async('blob')
-        restoredAssetUrls.set(asset.sourceUrl, URL.createObjectURL(blob))
+        const objectUrl = URL.createObjectURL(blob)
+        restoredDesignAssetUrls.add(objectUrl)
+        restoredAssetUrls.set(sourceRef, objectUrl)
       } catch (error) {
         console.warn('[designAssetBundle] Failed to restore referenced asset', error)
       }
@@ -1131,7 +1144,9 @@ export async function restoreDesignAssetBundle(
       throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
     }
     const zip = await JSZip.loadAsync(await response.blob())
-    return restoreDesignAssetBundleFromZip(config, zip, await parseManifest(zip))
+    const manifest = await parseManifest(zip)
+    clearRestoredDesignAssetUrls()
+    return restoreDesignAssetBundleFromZip(config, zip, manifest)
   } catch (error) {
     console.warn('[designAssetBundle] Failed to restore design asset bundle', error)
     return config
