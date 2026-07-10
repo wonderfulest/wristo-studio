@@ -540,14 +540,20 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   if (!await restoreLayerOrder(config.orderIds, generation) || !isCurrentDesignLoad(generation)) return false
   applyLoadedElementDisplayStates(scaledElements)
 
-  await new Promise<void>((resolve) => window.setTimeout(async () => {
-    if (!isCurrentDesignLoad(generation)) {
-      resolve()
-      return
-    }
-    getDataSimulatorEngine().updateCanvas()
-    await restoreLayerOrder(config.orderIds, generation)
-    resolve()
+  await new Promise<void>((resolve, reject) => window.setTimeout(() => {
+    void (async () => {
+      try {
+        if (!isCurrentDesignLoad(generation)) {
+          resolve()
+          return
+        }
+        getDataSimulatorEngine().updateCanvas()
+        await restoreLayerOrder(config.orderIds, generation)
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
+    })()
   }, 0))
   if (!isCurrentDesignLoad(generation)) return false
   historyStore.saveInitial()
