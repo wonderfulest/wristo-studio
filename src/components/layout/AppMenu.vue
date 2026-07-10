@@ -9,11 +9,8 @@
       <div class="menu-leading-zone">
         <!-- Actions group and items -->
         <AppMenuActions
-          :on-build="handleBuild"
-          :on-save="handleSave"
           :on-screenshot="handleScreenshot"
           :on-record-gif="handleRecordGif"
-          :on-export-asset-package="handleExportAssetPackage"
           :on-export-wrt="handleExportWrt"
           :on-import-wrt="handleImportWrt"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
@@ -648,11 +645,6 @@ const handleSelect = (key: string) => {
   }
 }
 
-// Build
-const handleBuild = async () => {
-  messageStore.warning(t('editor.notSupportedYet'))
-}
-
 // Screenshot
 const handleScreenshot = () => {
   screenshotFrameMode.value = frameModeFromEditorSetting()
@@ -686,16 +678,6 @@ const handleRecordGif = () => {
   gifDurationSeconds.value = 3
   gifFps.value = 8
   gifDialogVisible.value = true
-}
-
-const handleExportAssetPackage = async () => {
-  baseStore.deactivateObject()
-  try {
-    await exportStore.downloadConfig()
-  } catch (error: any) {
-    console.error('Failed to export asset package:', error)
-    messageStore.error(error?.message || t('common.saveFailed'))
-  }
 }
 
 const handleExportWrt = async () => {

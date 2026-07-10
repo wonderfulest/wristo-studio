@@ -10,16 +10,6 @@
       <span>{{ t('editor.view') }}</span>
       <span class="shortcut-hint">⌘ + .</span>
     </el-menu-item>
-    <!-- Build -->
-    <el-menu-item index="actions/build" @click="onBuild">
-      <el-icon><Box /></el-icon>
-      <span>{{ t('editor.build') }}</span>
-    </el-menu-item>
-    <!-- Save -->
-    <el-menu-item index="actions/save" @click="onSave">
-      <el-icon><Upload /></el-icon>
-      <span>{{ t('common.save') }}</span>
-    </el-menu-item>
     <el-menu-item index="actions/screenshot" @click="onScreenshot">
       <el-icon><Picture /></el-icon>
       <span>{{ t('editor.screenshot') }}</span>
@@ -27,10 +17,6 @@
     <el-menu-item index="actions/recordGif" @click="onRecordGif">
       <el-icon><VideoCamera /></el-icon>
       <span>{{ t('editor.recordGif') }}</span>
-    </el-menu-item>
-    <el-menu-item index="actions/exportAssetPackage" @click="onExportAssetPackage">
-      <el-icon><Download /></el-icon>
-      <span>{{ t('editor.exportAssetPackage') }}</span>
     </el-menu-item>
     <el-menu-item index="actions/exportWrt" @click="onExportWrt">
       <el-icon><Download /></el-icon>
@@ -52,29 +38,17 @@
 </template>
 
 <script setup>
-import { Operation, View, Box, Upload, Picture, VideoCamera, Download, Setting } from '@element-plus/icons-vue'
+import { Operation, View, Upload, Picture, VideoCamera, Download, Setting } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
 
 const props = defineProps({
-  onBuild: {
-    type: Function,
-    required: true,
-  },
-  onSave: {
-    type: Function,
-    required: true,
-  },
   onScreenshot: {
     type: Function,
     required: true,
   },
   onRecordGif: {
-    type: Function,
-    required: true,
-  },
-  onExportAssetPackage: {
     type: Function,
     required: true,
   },
@@ -92,24 +66,12 @@ const props = defineProps({
   },
 })
 
-const onBuild = () => {
-  props.onBuild && props.onBuild()
-}
-
-const onSave = () => {
-  props.onSave && props.onSave()
-}
-
 const onScreenshot = () => {
   props.onScreenshot && props.onScreenshot()
 }
 
 const onRecordGif = () => {
   props.onRecordGif && props.onRecordGif()
-}
-
-const onExportAssetPackage = () => {
-  props.onExportAssetPackage && props.onExportAssetPackage()
 }
 
 const onExportWrt = () => {
