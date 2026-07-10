@@ -133,6 +133,7 @@ const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWid
 const resizingPanel = ref<'left' | 'right' | null>(null)
 let saveTimer: number | null = null
 let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
+let designLoadGeneration = 0
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -209,18 +210,25 @@ const waitForOrderableCanvasObjects = async (orderIds: string[]): Promise<void> 
   })
 }
 
-const restoreLayerOrder = async (orderIds: unknown): Promise<void> => {
+const isCurrentDesignLoad = (generation: number): boolean => generation === designLoadGeneration
+
+const restoreLayerOrder = async (orderIds: unknown, generation: number): Promise<boolean> => {
   const normalizedOrderIds = normalizeLayerOrderIds(orderIds)
   if (!normalizedOrderIds.length) {
+    if (!isCurrentDesignLoad(generation)) return false
     syncLayersFromCanvas()
-    return
+    return true
   }
 
   await waitForOrderableCanvasObjects(normalizedOrderIds)
+  if (!isCurrentDesignLoad(generation)) return false
   applyOrder(normalizedOrderIds)
   await nextTick()
+  if (!isCurrentDesignLoad(generation)) return false
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+  if (!isCurrentDesignLoad(generation)) return false
   applyOrder(normalizedOrderIds)
+  return true
 }
 
 const getPanelWidthLimit = (side: 'left' | 'right') => {
@@ -455,10 +463,12 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
   canvas.requestRenderAll?.()
 }
 
-const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig): Promise<void> => {
+const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
   await fontStore.fetchFonts()
+  if (!isCurrentDesignLoad(generation)) return false
   if (Array.isArray(config.elements)) {
     await fontStore.loadFontsForElements(config.elements as any)
+    if (!isCurrentDesignLoad(generation)) return false
   } else {
     designStore.setSupportsChineseContent(false)
     designStore.setSupportedLocales(['en-US'])
@@ -467,10 +477,11 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig): Promise<vo
     propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
     propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
     await waitCanvasReady()
+    if (!isCurrentDesignLoad(generation)) return false
     elementDataStore.clearAll()
     baseStore.canvas?.requestRenderAll()
     historyStore.saveInitial()
-    return
+    return true
   }
 
   designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
@@ -510,28 +521,35 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig): Promise<vo
   propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
 
   await waitCanvasReady()
+  if (!isCurrentDesignLoad(generation)) return false
   elementDataStore.clearAll()
   ensureBackgroundElement(config as any)
 
   const scaledElements = scaleElementsFromStoredSize(config.elements as any)
-  await loadElements(scaledElements)
+  if (!await loadElements(scaledElements, generation) || !isCurrentDesignLoad(generation)) return false
   applyLoadedElementDisplayStates(scaledElements)
   canvasRef.value?.updateZoom()
 
-  await restoreLayerOrder(config.orderIds)
+  if (!await restoreLayerOrder(config.orderIds, generation) || !isCurrentDesignLoad(generation)) return false
   applyLoadedElementDisplayStates(scaledElements)
 
   await new Promise<void>((resolve) => window.setTimeout(async () => {
+    if (!isCurrentDesignLoad(generation)) {
+      resolve()
+      return
+    }
     getDataSimulatorEngine().updateCanvas()
-    await restoreLayerOrder(config.orderIds)
+    await restoreLayerOrder(config.orderIds, generation)
     resolve()
   }, 0))
+  if (!isCurrentDesignLoad(generation)) return false
   historyStore.saveInitial()
+  return true
 }
 
-const clearEditableDesignCanvas = async (): Promise<void> => {
+const clearEditableDesignCanvas = async (generation: number): Promise<boolean> => {
   const canvas = baseStore.canvas
-  if (!canvas) return
+  if (!canvas || !isCurrentDesignLoad(generation)) return false
 
   canvas.discardActiveObject?.()
   const objects = canvas.getObjects?.() || []
@@ -543,17 +561,18 @@ const clearEditableDesignCanvas = async (): Promise<void> => {
   syncLayersFromCanvas()
   canvas.requestRenderAll?.()
   await nextTick()
+  return isCurrentDesignLoad(generation)
 }
 
 const importWrtDesign = async (file: File): Promise<void> => {
-  let loading = false
+  const generation = ++designLoadGeneration
   try {
     const imported = await readWrtDesignPackage(file)
-    loading = true
+    if (!isCurrentDesignLoad(generation)) return
     baseStore.setDesignLoading(true)
     // readWrtDesignPackage clears the previous package only after validation, then owns these new URLs.
     // They are released on unmount or by the next successful package read.
-    await clearEditableDesignCanvas()
+    if (!await clearEditableDesignCanvas(generation) || !isCurrentDesignLoad(generation)) return
 
     baseStore.id = ''
     designStore.id = ''
@@ -562,9 +581,12 @@ const importWrtDesign = async (file: File): Promise<void> => {
     baseStore.setWatchFaceName(copyName)
     designStore.setWatchFaceName(copyName)
     await router.replace({ path: route.path, query: {} })
-    await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName })
+    if (!isCurrentDesignLoad(generation)) return
+    if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) return
+    if (!isCurrentDesignLoad(generation)) return
     messageStore.success(t('editor.wrtImported'))
   } catch (error) {
+    if (!isCurrentDesignLoad(generation)) return
     if (error instanceof WrtDesignPackageError) {
       messageStore.error(t(`editor.wrtImport.${error.code}`))
     } else {
@@ -572,7 +594,7 @@ const importWrtDesign = async (file: File): Promise<void> => {
       messageStore.error(t('editor.wrtImport.failed'))
     }
   } finally {
-    if (loading) {
+    if (isCurrentDesignLoad(generation)) {
       baseStore.setDesignLoading(false)
     }
   }
@@ -580,9 +602,11 @@ const importWrtDesign = async (file: File): Promise<void> => {
 
 // 加载设计配置
 const loadDesign = async (designUid: string) => {
+  const generation = ++designLoadGeneration
   baseStore.setDesignLoading(true)
   try {
     const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
+    if (!isCurrentDesignLoad(generation)) return
     if (!response.data) {
       messageStore.error(t('design.notFound'))
       router.push('/designs')
@@ -593,18 +617,22 @@ const loadDesign = async (designUid: string) => {
     const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
       assetBundleUrl: designData.assetBundleUrl,
     })
+    if (!isCurrentDesignLoad(generation)) return
 
     baseStore.id = designUid
     designStore.id = designUid
     baseStore.setWatchFaceName(designData.name)
     designStore.setWatchFaceName(designData.name)
     baseStore.appId = designData.product?.appId || -1
-    await applyRuntimeDesignConfig(restoredConfig)
+    await applyRuntimeDesignConfig(restoredConfig, generation)
   } catch (error) {
+    if (!isCurrentDesignLoad(generation)) return
     console.error('加载设计失败:', error)
     messageStore.error('加载设计失败')
   } finally {
-    baseStore.setDesignLoading(false)
+    if (isCurrentDesignLoad(generation)) {
+      baseStore.setDesignLoading(false)
+    }
   }
 }
 
@@ -624,9 +652,10 @@ const setupAutoSave = () => {
 }
 
 // 替换元素加载逻辑
-const loadElements = async (elements: AnyElementConfig[]) => {
+const loadElements = async (elements: AnyElementConfig[], generation: number): Promise<boolean> => {
   const elementDataStore = useElementDataStore()
   for (const element of elements) {
+    if (!isCurrentDesignLoad(generation)) return false
     const decodedElement = decodeElementConfig(element)
     if (!decodedElement) {
       console.warn(`Unknown element type: ${element.eleType}`)
@@ -646,8 +675,14 @@ const loadElements = async (elements: AnyElementConfig[]) => {
 
       // 新版 Registry：通过 ElementHandler.add(config) 创建元素，由调用方保证 eleType 一致
       const handler = getElementHandler(element.eleType as string)
-      await handler.add(config as any)
+      const addedElement = await handler.add(config as any)
+      if (!isCurrentDesignLoad(generation)) {
+        elementDataStore.removeElement(String(config.id))
+        baseStore.canvas?.remove?.(addedElement as any)
+        return false
+      }
     } catch (error) {
+      if (!isCurrentDesignLoad(generation)) return false
       console.error('加载元素失败:', element, error)
       const name = (element as any)?.name || element.eleType || '未知元素'
       await ElMessageBox.alert(
@@ -658,8 +693,10 @@ const loadElements = async (elements: AnyElementConfig[]) => {
           type: 'error',
         },
       )
+      if (!isCurrentDesignLoad(generation)) return false
     }
   }
+  return true
 }
 
 const handleAppPropertiesShortcut = (event: KeyboardEvent): void => {
@@ -701,6 +738,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  designLoadGeneration += 1
   stopPanelResize()
   window.removeEventListener('resize', handleWorkspaceResize)
   emitter.off('import-wrt-design', importWrtDesign as any)
