@@ -82,7 +82,8 @@ const en = {
   'common.more': 'More',
   'common.copied': 'Copied',
   'common.copyFailed': 'Copy failed',
-  'cookie.message': 'This site uses cookies and other tracking technologies to assist with navigation, analyse your use of our products, assist with our promotional and marketing efforts, and provide content from third parties. By continuing to use the site, you agree to the use of cookies.',
+  'cookie.message':
+    'This site uses cookies and other tracking technologies to assist with navigation, analyse your use of our products, assist with our promotional and marketing efforts, and provide content from third parties. By continuing to use the site, you agree to the use of cookies.',
   'changelog.title': 'System Changelog',
   'changelog.doNotShowAgain': 'Do not show this version update reminder again',
   'templateEditor.placeholder': 'Enter template... You can insert variables from the right panel.',
@@ -357,6 +358,17 @@ const en = {
   'editor.screenshot': 'Screenshot',
   'editor.recordGif': 'Record GIF',
   'editor.exportAssetPackage': 'Export asset package',
+  'editor.exportWrt': 'Export .wrt package',
+  'editor.importWrt': 'Import .wrt package',
+  'editor.wrtExported': '.wrt package exported',
+  'editor.wrtExportFailed': 'Failed to export .wrt package',
+  'editor.wrtImported': '.wrt package imported',
+  'editor.wrtImport.invalid-file': 'Please select a .wrt file',
+  'editor.wrtImport.invalid-archive': 'Invalid .wrt archive',
+  'editor.wrtImport.invalid-manifest': 'Invalid .wrt manifest',
+  'editor.wrtImport.unsupported-version': 'Unsupported .wrt package version',
+  'editor.wrtImport.invalid-design': 'Invalid design data',
+  'editor.wrtImport.failed': 'Failed to import .wrt package',
   'editor.screenshotOptions': 'Screenshot Options',
   'editor.recordGifOptions': 'Record GIF Options',
   'editor.deviceFrameOption': 'Device frame',
@@ -771,7 +783,8 @@ const en = {
   'icon.dropSvgTitle': 'Drop SVG files here',
   'icon.dropSvgSubtitle': 'or click to choose. Multiple files are supported.',
   'icon.singleTypeTip': '1. Select an icon type to upload one icon type at a time.',
-  'icon.filenameMatchTip': '2. If no type is selected, use Symbol Code filenames like heart_rate.svg, or hex-name filenames like 0030-heart-rate.svg / 101d-clear-sky.svg. Multiple icon types can be uploaded.',
+  'icon.filenameMatchTip':
+    '2. If no type is selected, use Symbol Code filenames like heart_rate.svg, or hex-name filenames like 0030-heart-rate.svg / 101d-clear-sky.svg. Multiple icon types can be uploaded.',
   'icon.uploadRuleSelected': 'Select an icon type for one target, or leave it blank for filename matching.',
   'icon.uploadRuleFilenames': 'Filename examples: heart_rate.svg, 0030-heart-rate.svg, 101d-clear-sky.svg.',
   'icon.displayTypeRequired': 'Display type (required):',
@@ -1361,7 +1374,8 @@ const en = {
   'property.keyDuplicate': 'This property key already exists',
   'property.keyPattern': 'Only letters, numbers and underscore allowed, must start with letter',
   'property.keyPatternDetailed': 'Only letters, numbers and underscore allowed, and must start with a letter',
-  'property.keyHelpPrefix': 'The key of the property that this setting will manage. Only letters, underscores, and numbers are allowed; spaces and special characters are not allowed. To access this property value in your design, use',
+  'property.keyHelpPrefix':
+    'The key of the property that this setting will manage. Only letters, underscores, and numbers are allowed; spaces and special characters are not allowed. To access this property value in your design, use',
   'property.keyHelpSuffix': 'in the expression.',
   'property.selectValidOption': 'Please select a valid option',
   'property.selectChartType': 'Select Chart Type',
@@ -1551,7 +1565,7 @@ const en = {
   'feedback.mail.sectionContent': 'Feedback details',
   'feedback.mail.sectionExpectedResult': 'Expected result',
   'feedback.mail.sectionSteps': 'Steps to reproduce',
-  'feedback.mail.closing': 'Thank you.',
+  'feedback.mail.closing': 'Thank you.'
 } as const
 
 type MessageKey = keyof typeof en
@@ -1561,7 +1575,7 @@ type MessageOverrides = Partial<Record<MessageKey, string>> & Record<string, str
 function createMessages(overrides: MessageOverrides): Messages {
   return {
     ...en,
-    ...overrides,
+    ...overrides
   }
 }
 
@@ -1922,6 +1936,17 @@ const zh: Messages = {
   'editor.screenshot': '截图',
   'editor.recordGif': '录制 GIF',
   'editor.exportAssetPackage': '导出素材包',
+  'editor.exportWrt': '导出 .wrt 包',
+  'editor.importWrt': '导入 .wrt 包',
+  'editor.wrtExported': '.wrt 包已导出',
+  'editor.wrtExportFailed': '.wrt 包导出失败',
+  'editor.wrtImported': '.wrt 包已导入',
+  'editor.wrtImport.invalid-file': '请选择 .wrt 文件',
+  'editor.wrtImport.invalid-archive': '无效的 .wrt 压缩包',
+  'editor.wrtImport.invalid-manifest': '无效的 .wrt 清单文件',
+  'editor.wrtImport.unsupported-version': '不支持的 .wrt 包版本',
+  'editor.wrtImport.invalid-design': '无效的设计数据',
+  'editor.wrtImport.failed': '.wrt 包导入失败',
   'editor.screenshotOptions': '截图选项',
   'editor.recordGifOptions': '录制 GIF 选项',
   'editor.deviceFrameOption': '设备边框',
@@ -3116,7 +3141,7 @@ const zh: Messages = {
   'feedback.mail.sectionContent': '反馈内容',
   'feedback.mail.sectionExpectedResult': '期望结果',
   'feedback.mail.sectionSteps': '复现步骤',
-  'feedback.mail.closing': '谢谢。',
+  'feedback.mail.closing': '谢谢。'
 }
 
 const zhTw = createMessages({
@@ -3231,6 +3256,18 @@ const zhTw = createMessages({
   'editor.view': '檢視',
   'editor.build': '建置',
   'editor.screenshot': '截圖',
+  'editor.exportAssetPackage': '匯出素材包',
+  'editor.exportWrt': '匯出 .wrt 套件',
+  'editor.importWrt': '匯入 .wrt 套件',
+  'editor.wrtExported': '.wrt 套件已匯出',
+  'editor.wrtExportFailed': '.wrt 套件匯出失敗',
+  'editor.wrtImported': '.wrt 套件已匯入',
+  'editor.wrtImport.invalid-file': '請選擇 .wrt 檔案',
+  'editor.wrtImport.invalid-archive': '無效的 .wrt 壓縮檔',
+  'editor.wrtImport.invalid-manifest': '無效的 .wrt 資訊清單',
+  'editor.wrtImport.unsupported-version': '不支援的 .wrt 套件版本',
+  'editor.wrtImport.invalid-design': '無效的設計資料',
+  'editor.wrtImport.failed': '.wrt 套件匯入失敗',
   'editor.appProperties': '應用程式屬性',
   'editor.editorSettings': '編輯器設定',
   'editor.align': '對齊',
@@ -3252,7 +3289,7 @@ const zhTw = createMessages({
   'profile.saveChanges': '儲存變更',
   'profile.currentDevice': '目前裝置',
   'profile.connected': '已連線',
-  'profile.notConnected': '未連線',
+  'profile.notConnected': '未連線'
 })
 
 const ja = createMessages({
@@ -3357,6 +3394,18 @@ const ja = createMessages({
   'editor.view': '表示',
   'editor.build': 'ビルド',
   'editor.screenshot': 'スクリーンショット',
+  'editor.exportAssetPackage': 'アセットパッケージをエクスポート',
+  'editor.exportWrt': '.wrt パッケージをエクスポート',
+  'editor.importWrt': '.wrt パッケージをインポート',
+  'editor.wrtExported': '.wrt パッケージをエクスポートしました',
+  'editor.wrtExportFailed': '.wrt パッケージのエクスポートに失敗しました',
+  'editor.wrtImported': '.wrt パッケージをインポートしました',
+  'editor.wrtImport.invalid-file': '.wrt ファイルを選択してください',
+  'editor.wrtImport.invalid-archive': '無効な .wrt アーカイブです',
+  'editor.wrtImport.invalid-manifest': '無効な .wrt マニフェストです',
+  'editor.wrtImport.unsupported-version': 'サポートされていない .wrt パッケージのバージョンです',
+  'editor.wrtImport.invalid-design': '無効なデザインデータです',
+  'editor.wrtImport.failed': '.wrt パッケージのインポートに失敗しました',
   'editor.appProperties': 'アプリ設定',
   'editor.editorSettings': 'エディター設定',
   'editor.align': '整列',
@@ -3378,7 +3427,7 @@ const ja = createMessages({
   'profile.saveChanges': '変更を保存',
   'profile.currentDevice': '現在のデバイス',
   'profile.connected': '接続済み',
-  'profile.notConnected': '未接続',
+  'profile.notConnected': '未接続'
 })
 
 const ko = createMessages({
@@ -3483,6 +3532,18 @@ const ko = createMessages({
   'editor.view': '보기',
   'editor.build': '빌드',
   'editor.screenshot': '스크린샷',
+  'editor.exportAssetPackage': '에셋 패키지 내보내기',
+  'editor.exportWrt': '.wrt 패키지 내보내기',
+  'editor.importWrt': '.wrt 패키지 가져오기',
+  'editor.wrtExported': '.wrt 패키지를 내보냈습니다',
+  'editor.wrtExportFailed': '.wrt 패키지를 내보내지 못했습니다',
+  'editor.wrtImported': '.wrt 패키지를 가져왔습니다',
+  'editor.wrtImport.invalid-file': '.wrt 파일을 선택하세요',
+  'editor.wrtImport.invalid-archive': '유효하지 않은 .wrt 압축 파일입니다',
+  'editor.wrtImport.invalid-manifest': '유효하지 않은 .wrt 매니페스트입니다',
+  'editor.wrtImport.unsupported-version': '지원하지 않는 .wrt 패키지 버전입니다',
+  'editor.wrtImport.invalid-design': '유효하지 않은 디자인 데이터입니다',
+  'editor.wrtImport.failed': '.wrt 패키지를 가져오지 못했습니다',
   'editor.appProperties': '앱 속성',
   'editor.editorSettings': '편집기 설정',
   'editor.align': '정렬',
@@ -3504,7 +3565,7 @@ const ko = createMessages({
   'profile.saveChanges': '변경 저장',
   'profile.currentDevice': '현재 기기',
   'profile.connected': '연결됨',
-  'profile.notConnected': '연결되지 않음',
+  'profile.notConnected': '연결되지 않음'
 })
 
 const de = createMessages({
@@ -3609,6 +3670,18 @@ const de = createMessages({
   'editor.view': 'Ansicht',
   'editor.build': 'Build',
   'editor.screenshot': 'Screenshot',
+  'editor.exportAssetPackage': 'Asset-Paket exportieren',
+  'editor.exportWrt': '.wrt-Paket exportieren',
+  'editor.importWrt': '.wrt-Paket importieren',
+  'editor.wrtExported': '.wrt-Paket exportiert',
+  'editor.wrtExportFailed': '.wrt-Paket konnte nicht exportiert werden',
+  'editor.wrtImported': '.wrt-Paket importiert',
+  'editor.wrtImport.invalid-file': 'Bitte wählen Sie eine .wrt-Datei aus',
+  'editor.wrtImport.invalid-archive': 'Ungültiges .wrt-Archiv',
+  'editor.wrtImport.invalid-manifest': 'Ungültiges .wrt-Manifest',
+  'editor.wrtImport.unsupported-version': 'Nicht unterstützte .wrt-Paketversion',
+  'editor.wrtImport.invalid-design': 'Ungültige Designdaten',
+  'editor.wrtImport.failed': '.wrt-Paket konnte nicht importiert werden',
   'editor.appProperties': 'App-Eigenschaften',
   'editor.editorSettings': 'Editor-Einstellungen',
   'editor.align': 'Ausrichten',
@@ -3630,7 +3703,7 @@ const de = createMessages({
   'profile.saveChanges': 'Änderungen speichern',
   'profile.currentDevice': 'Aktuelles Gerät',
   'profile.connected': 'Verbunden',
-  'profile.notConnected': 'Nicht verbunden',
+  'profile.notConnected': 'Nicht verbunden'
 })
 
 const fr = createMessages({
@@ -3735,6 +3808,18 @@ const fr = createMessages({
   'editor.view': 'Affichage',
   'editor.build': 'Build',
   'editor.screenshot': 'Capture',
+  'editor.exportAssetPackage': 'Exporter le package de ressources',
+  'editor.exportWrt': 'Exporter le package .wrt',
+  'editor.importWrt': 'Importer le package .wrt',
+  'editor.wrtExported': 'Package .wrt exporté',
+  'editor.wrtExportFailed': 'Échec de l’export du package .wrt',
+  'editor.wrtImported': 'Package .wrt importé',
+  'editor.wrtImport.invalid-file': 'Veuillez sélectionner un fichier .wrt',
+  'editor.wrtImport.invalid-archive': 'Archive .wrt non valide',
+  'editor.wrtImport.invalid-manifest': 'Manifeste .wrt non valide',
+  'editor.wrtImport.unsupported-version': 'Version du package .wrt non prise en charge',
+  'editor.wrtImport.invalid-design': 'Données de conception non valides',
+  'editor.wrtImport.failed': 'Échec de l’import du package .wrt',
   'editor.appProperties': 'Propriétés de l’app',
   'editor.editorSettings': 'Paramètres de l’éditeur',
   'editor.align': 'Aligner',
@@ -3756,7 +3841,7 @@ const fr = createMessages({
   'profile.saveChanges': 'Enregistrer les modifications',
   'profile.currentDevice': 'Appareil actuel',
   'profile.connected': 'Connecté',
-  'profile.notConnected': 'Non connecté',
+  'profile.notConnected': 'Non connecté'
 })
 
 const es = createMessages({
@@ -3861,6 +3946,18 @@ const es = createMessages({
   'editor.view': 'Vista',
   'editor.build': 'Build',
   'editor.screenshot': 'Captura',
+  'editor.exportAssetPackage': 'Exportar paquete de recursos',
+  'editor.exportWrt': 'Exportar paquete .wrt',
+  'editor.importWrt': 'Importar paquete .wrt',
+  'editor.wrtExported': 'Paquete .wrt exportado',
+  'editor.wrtExportFailed': 'No se pudo exportar el paquete .wrt',
+  'editor.wrtImported': 'Paquete .wrt importado',
+  'editor.wrtImport.invalid-file': 'Selecciona un archivo .wrt',
+  'editor.wrtImport.invalid-archive': 'Archivo .wrt no válido',
+  'editor.wrtImport.invalid-manifest': 'Manifiesto .wrt no válido',
+  'editor.wrtImport.unsupported-version': 'Versión del paquete .wrt no compatible',
+  'editor.wrtImport.invalid-design': 'Datos de diseño no válidos',
+  'editor.wrtImport.failed': 'No se pudo importar el paquete .wrt',
   'editor.appProperties': 'Propiedades de la app',
   'editor.editorSettings': 'Ajustes del editor',
   'editor.align': 'Alinear',
@@ -3882,7 +3979,7 @@ const es = createMessages({
   'profile.saveChanges': 'Guardar cambios',
   'profile.currentDevice': 'Dispositivo actual',
   'profile.connected': 'Conectado',
-  'profile.notConnected': 'No conectado',
+  'profile.notConnected': 'No conectado'
 })
 
 const it = createMessages({
@@ -3974,6 +4071,18 @@ const it = createMessages({
   'editor.view': 'Vista',
   'editor.build': 'Build',
   'editor.screenshot': 'Screenshot',
+  'editor.exportAssetPackage': 'Esporta pacchetto di risorse',
+  'editor.exportWrt': 'Esporta pacchetto .wrt',
+  'editor.importWrt': 'Importa pacchetto .wrt',
+  'editor.wrtExported': 'Pacchetto .wrt esportato',
+  'editor.wrtExportFailed': 'Impossibile esportare il pacchetto .wrt',
+  'editor.wrtImported': 'Pacchetto .wrt importato',
+  'editor.wrtImport.invalid-file': 'Seleziona un file .wrt',
+  'editor.wrtImport.invalid-archive': 'Archivio .wrt non valido',
+  'editor.wrtImport.invalid-manifest': 'Manifest .wrt non valido',
+  'editor.wrtImport.unsupported-version': 'Versione del pacchetto .wrt non supportata',
+  'editor.wrtImport.invalid-design': 'Dati di progettazione non validi',
+  'editor.wrtImport.failed': 'Impossibile importare il pacchetto .wrt',
   'editor.appProperties': 'Proprietà app',
   'editor.editorSettings': 'Impostazioni editor',
   'editor.align': 'Allinea',
@@ -3989,7 +4098,7 @@ const it = createMessages({
   'editor.weather': 'Meteo',
   'editor.help': 'Aiuto',
   'editor.sendFeedback': 'Invia feedback',
-  'feedback.title': 'Invia feedback',
+  'feedback.title': 'Invia feedback'
 })
 
 const pt = createMessages({
@@ -4081,6 +4190,18 @@ const pt = createMessages({
   'editor.view': 'Visualizar',
   'editor.build': 'Build',
   'editor.screenshot': 'Captura',
+  'editor.exportAssetPackage': 'Exportar pacote de recursos',
+  'editor.exportWrt': 'Exportar pacote .wrt',
+  'editor.importWrt': 'Importar pacote .wrt',
+  'editor.wrtExported': 'Pacote .wrt exportado',
+  'editor.wrtExportFailed': 'Falha ao exportar o pacote .wrt',
+  'editor.wrtImported': 'Pacote .wrt importado',
+  'editor.wrtImport.invalid-file': 'Selecione um arquivo .wrt',
+  'editor.wrtImport.invalid-archive': 'Arquivo .wrt inválido',
+  'editor.wrtImport.invalid-manifest': 'Manifesto .wrt inválido',
+  'editor.wrtImport.unsupported-version': 'Versão do pacote .wrt não compatível',
+  'editor.wrtImport.invalid-design': 'Dados de design inválidos',
+  'editor.wrtImport.failed': 'Falha ao importar o pacote .wrt',
   'editor.appProperties': 'Propriedades do app',
   'editor.editorSettings': 'Configurações do editor',
   'editor.align': 'Alinhar',
@@ -4096,7 +4217,7 @@ const pt = createMessages({
   'editor.weather': 'Clima',
   'editor.help': 'Ajuda',
   'editor.sendFeedback': 'Enviar feedback',
-  'feedback.title': 'Enviar feedback',
+  'feedback.title': 'Enviar feedback'
 })
 
 const nl = createMessages({
@@ -4188,6 +4309,18 @@ const nl = createMessages({
   'editor.view': 'Weergave',
   'editor.build': 'Build',
   'editor.screenshot': 'Screenshot',
+  'editor.exportAssetPackage': 'Middelenpakket exporteren',
+  'editor.exportWrt': '.wrt-pakket exporteren',
+  'editor.importWrt': '.wrt-pakket importeren',
+  'editor.wrtExported': '.wrt-pakket geëxporteerd',
+  'editor.wrtExportFailed': 'Kan .wrt-pakket niet exporteren',
+  'editor.wrtImported': '.wrt-pakket geïmporteerd',
+  'editor.wrtImport.invalid-file': 'Selecteer een .wrt-bestand',
+  'editor.wrtImport.invalid-archive': 'Ongeldig .wrt-archief',
+  'editor.wrtImport.invalid-manifest': 'Ongeldig .wrt-manifest',
+  'editor.wrtImport.unsupported-version': 'Niet-ondersteunde .wrt-pakketversie',
+  'editor.wrtImport.invalid-design': 'Ongeldige ontwerpgegevens',
+  'editor.wrtImport.failed': 'Kan .wrt-pakket niet importeren',
   'editor.appProperties': 'App-eigenschappen',
   'editor.editorSettings': 'Editorinstellingen',
   'editor.align': 'Uitlijnen',
@@ -4203,7 +4336,7 @@ const nl = createMessages({
   'editor.weather': 'Weer',
   'editor.help': 'Help',
   'editor.sendFeedback': 'Feedback verzenden',
-  'feedback.title': 'Feedback verzenden',
+  'feedback.title': 'Feedback verzenden'
 })
 
 const pl = createMessages({
@@ -4295,6 +4428,18 @@ const pl = createMessages({
   'editor.view': 'Widok',
   'editor.build': 'Build',
   'editor.screenshot': 'Zrzut ekranu',
+  'editor.exportAssetPackage': 'Eksportuj pakiet zasobów',
+  'editor.exportWrt': 'Eksportuj pakiet .wrt',
+  'editor.importWrt': 'Importuj pakiet .wrt',
+  'editor.wrtExported': 'Pakiet .wrt wyeksportowano',
+  'editor.wrtExportFailed': 'Nie udało się wyeksportować pakietu .wrt',
+  'editor.wrtImported': 'Pakiet .wrt zaimportowano',
+  'editor.wrtImport.invalid-file': 'Wybierz plik .wrt',
+  'editor.wrtImport.invalid-archive': 'Nieprawidłowe archiwum .wrt',
+  'editor.wrtImport.invalid-manifest': 'Nieprawidłowy manifest .wrt',
+  'editor.wrtImport.unsupported-version': 'Nieobsługiwana wersja pakietu .wrt',
+  'editor.wrtImport.invalid-design': 'Nieprawidłowe dane projektu',
+  'editor.wrtImport.failed': 'Nie udało się zaimportować pakietu .wrt',
   'editor.appProperties': 'Właściwości aplikacji',
   'editor.editorSettings': 'Ustawienia edytora',
   'editor.align': 'Wyrównaj',
@@ -4310,7 +4455,7 @@ const pl = createMessages({
   'editor.weather': 'Pogoda',
   'editor.help': 'Pomoc',
   'editor.sendFeedback': 'Wyślij opinię',
-  'feedback.title': 'Wyślij opinię',
+  'feedback.title': 'Wyślij opinię'
 })
 
 const messages: Record<SupportedLocale, Messages> = {
@@ -4325,7 +4470,7 @@ const messages: Record<SupportedLocale, Messages> = {
   ja,
   ko,
   zh,
-  'zh-tw': zhTw,
+  'zh-tw': zhTw
 }
 
 export function translate(key: string, locale: SupportedLocale, params?: Record<string, string | number>): string {
