@@ -57,13 +57,7 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" />
-  <input
-    ref="wrtFileInput"
-    type="file"
-    accept=".wrt,application/vnd.wristo.design-package+zip"
-    class="sr-only"
-    @change="handleWrtFileChange"
-  />
+  <input ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
 
   <el-dialog
     v-model="screenshotDialogVisible"
