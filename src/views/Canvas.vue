@@ -331,6 +331,11 @@ watch(
   },
 )
 
+const syncCanvasOffset = () => {
+  baseStore.canvas?.calcOffset?.()
+  baseStore.canvas?.requestRenderAll?.()
+}
+
 // 在 Canvas.vue 的 script setup 中暴露缩放与历史方法
 defineExpose({
   zoomIn: () => zoomManager?.zoomIn(),
@@ -341,6 +346,8 @@ defineExpose({
   redo: () => historyManager.redo(),
   canUndo: () => historyManager.canUndo(),
   canRedo: () => historyManager.canRedo(),
+  clearSelection: clearCanvasSelection,
+  syncCanvasOffset,
 })
 </script>
 

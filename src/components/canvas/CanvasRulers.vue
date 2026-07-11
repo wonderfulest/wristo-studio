@@ -114,8 +114,8 @@ const update = () => {
   const verticalRuler = vRef.value
   const extCanvas = extRef.value
   const centerArea = document.querySelector('.center-area') as HTMLElement | null
-  const canvasContainer = document.querySelector('.canvas-container') as HTMLElement | null
-  if (!horizontalRuler || !verticalRuler || !extCanvas || !centerArea || !canvasContainer) return
+  const canvasStage = document.querySelector('.canvas-stage') as HTMLElement | null
+  if (!horizontalRuler || !verticalRuler || !extCanvas || !centerArea || !canvasStage) return
 
   const hctx = horizontalRuler.getContext('2d')
   const vctx = verticalRuler.getContext('2d')
@@ -127,7 +127,7 @@ const update = () => {
   const vpt = baseStore.canvas ? baseStore.canvas.viewportTransform : null
   const offsetX = vpt ? vpt[4] : 0
   const offsetY = vpt ? vpt[5] : 0
-  const containerRect = canvasContainer.getBoundingClientRect()
+  const containerRect = canvasStage.getBoundingClientRect()
   const centerRect = centerArea.getBoundingClientRect()
 
   const canvasLeft = containerRect.left - centerRect.left - props.rulerOffset + offsetX
@@ -195,9 +195,9 @@ const onDblclick = (e: MouseEvent, isHorizontal: boolean) => {
   if (isHorizontal) {
     const y = e.clientY - rect.top
     const centerArea = document.querySelector('.center-area') as HTMLElement | null
-    const canvasContainer = document.querySelector('.canvas-container') as HTMLElement | null
-    if (!centerArea || !canvasContainer) return
-    const containerRect = canvasContainer.getBoundingClientRect()
+    const canvasStage = document.querySelector('.canvas-stage') as HTMLElement | null
+    if (!centerArea || !canvasStage) return
+    const containerRect = canvasStage.getBoundingClientRect()
     const centerRect = centerArea.getBoundingClientRect()
     const canvasTop = containerRect.top - centerRect.top - props.rulerOffset + offsetY
     const worldY = (y - props.rulerOffset - canvasTop) / zoom
@@ -205,9 +205,9 @@ const onDblclick = (e: MouseEvent, isHorizontal: boolean) => {
   } else {
     const x = e.clientX - rect.left
     const centerArea = document.querySelector('.center-area') as HTMLElement | null
-    const canvasContainer = document.querySelector('.canvas-container') as HTMLElement | null
-    if (!centerArea || !canvasContainer) return
-    const containerRect = canvasContainer.getBoundingClientRect()
+    const canvasStage = document.querySelector('.canvas-stage') as HTMLElement | null
+    if (!centerArea || !canvasStage) return
+    const containerRect = canvasStage.getBoundingClientRect()
     const centerRect = centerArea.getBoundingClientRect()
     const canvasLeft = containerRect.left - centerRect.left - props.rulerOffset + offsetX
     const worldX = (x - props.rulerOffset - canvasLeft) / zoom
@@ -240,6 +240,10 @@ watch(() => editorStore.rulerGuidesColor, applyGuidesFromStore)
 watch(() => editorStore.rulerGuidesMajor, applyGuidesFromStore)
 watch(() => editorStore.rulerGuidesMinor, applyGuidesFromStore)
 watch(() => themeStore.currentTheme, () => update())
+
+defineExpose({
+  refresh: update,
+})
 </script>
 
 <style scoped>

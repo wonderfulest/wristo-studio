@@ -13,7 +13,7 @@
 ## 文件结构
 
 - 新建 `src/utils/canvasPan.ts`：纯函数，负责表盘轮廓命中检测和画布平移边界限制。
-- 新建 `tests/canvasPan.test.ts`：使用 Node 原生测试覆盖圆形、矩形和边界限制。
+- 新建 `tests/canvasPan.test.mjs`：使用 Node 原生测试和现有 TypeScript 编译器覆盖圆形、矩形和边界限制。
 - 修改 `package.json`：增加独立的画布平移测试命令，不引入新依赖。
 - 修改 `src/views/Design.vue`：持有平移状态、处理 Pointer Events、移动整个舞台并协调标尺/Fabric 刷新。
 - 修改 `src/views/Canvas.vue`：暴露清除选择和同步 Fabric DOM 偏移的方法。
@@ -23,21 +23,34 @@
 ### Task 1: 画布平移几何函数
 
 **Files:**
-- Create: `tests/canvasPan.test.ts`
+- Create: `tests/canvasPan.test.mjs`
 - Create: `src/utils/canvasPan.ts`
 - Modify: `package.json`
 
 - [ ] **Step 1: 写入命中检测和边界限制的失败测试**
 
-新建 `tests/canvasPan.test.ts`：
+新建 `tests/canvasPan.test.mjs`：
 
-```ts
+```js
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import test from 'node:test'
-import {
+
+const require = createRequire(import.meta.url)
+const ts = require('typescript')
+const source = await readFile(new URL('../src/utils/canvasPan.ts', import.meta.url), 'utf8')
+const { outputText } = ts.transpileModule(source, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2020,
+  },
+})
+const compiledModuleUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
+const {
   clampCanvasPanOffset,
   isPointOutsideWatchFace,
-} from '../src/utils/canvasPan.ts'
+} = await import(compiledModuleUrl)
 
 test('round watch face treats transparent square corners as pannable', () => {
   const faceRect = { left: 100, top: 100, width: 200, height: 200 }
@@ -78,14 +91,14 @@ test('pan offset keeps the configured amount of the stage visible', () => {
 在 `package.json` 的 `scripts` 中加入：
 
 ```json
-"test:canvas-pan": "node --experimental-strip-types --test tests/canvasPan.test.ts"
+"test:canvas-pan": "node --test tests/canvasPan.test.mjs"
 ```
 
 - [ ] **Step 2: 运行测试并确认因实现缺失而失败**
 
 Run: `npm run test:canvas-pan`
 
-Expected: FAIL，错误包含 `Cannot find module .../src/utils/canvasPan.ts`。
+Expected: FAIL，错误包含无法读取 `src/utils/canvasPan.ts`。
 
 - [ ] **Step 3: 实现纯几何函数**
 
@@ -164,7 +177,7 @@ Expected: PASS，3 个测试全部通过。
 - [ ] **Step 5: 提交纯函数和测试**
 
 ```bash
-git add package.json src/utils/canvasPan.ts tests/canvasPan.test.ts
+git add package.json src/utils/canvasPan.ts tests/canvasPan.test.mjs
 git commit -m "test: cover canvas stage panning geometry"
 ```
 
@@ -372,7 +385,7 @@ const getStageBaseRect = (): CanvasPanRect | null => {
 }
 
 const isPannablePointerLocation = (event: PointerEvent): boolean => {
-  const target = event.target as HTMLElement | null
+  const target = event.target as Element | null
   if (!target || target.closest(PAN_EXCLUDED_SELECTOR)) return false
 
   const upperCanvas = baseStore.canvas?.upperCanvasEl as HTMLCanvasElement | undefined
@@ -381,9 +394,14 @@ const isPannablePointerLocation = (event: PointerEvent): boolean => {
     return Boolean(canvasStageRef.value)
   }
 
+  const point = { x: event.clientX, y: event.clientY }
+  const canvasRect = toCanvasPanRect(faceRect)
+  const isOutsideCanvasBounds = isPointOutsideWatchFace(point, canvasRect, false)
+  if (!isOutsideCanvasBounds && baseStore.canvas?.findTarget?.(event)) return false
+
   return isPointOutsideWatchFace(
-    { x: event.clientX, y: event.clientY },
-    toCanvasPanRect(faceRect),
+    point,
+    canvasRect,
     designStore.designSpec.width === designStore.designSpec.height,
   )
 }

@@ -28,9 +28,6 @@ export interface CanvasManagerDeps {
 }
 
 let fabricCanvas: FabricCanvas | null = null
-let keydownHandler: ((e: KeyboardEvent) => void) | null = null
-let keyupHandler: ((e: KeyboardEvent) => void) | null = null
-let isSpacePressed = false
 
 function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | null) {
   if (!canvas) return
@@ -259,39 +256,6 @@ export function initCanvasManager(
     elementManager.unregisterElementInstance(target as any)
   })
 
-  // 键盘空格拖动画布（仅在非输入区域）
-  keydownHandler = (e: KeyboardEvent) => {
-    const target = e.target as HTMLElement | null
-    if (target) {
-      const tag = target.tagName
-      const isEditable =
-        tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
-      if (isEditable) return
-    }
-
-    if (e.code === 'Space' && !isSpacePressed) {
-      isSpacePressed = true
-      const canvasWrapper = document.querySelector('.canvas-wrapper') as HTMLElement | null
-      if (canvasWrapper) {
-        canvasWrapper.style.cursor = 'grab'
-      }
-      e.preventDefault()
-    }
-  }
-
-  keyupHandler = (e: KeyboardEvent) => {
-    if (e.code === 'Space') {
-      isSpacePressed = false
-      const canvasWrapper = document.querySelector('.canvas-wrapper') as HTMLElement | null
-      if (canvasWrapper) {
-        canvasWrapper.style.cursor = 'default'
-      }
-    }
-  }
-
-  window.addEventListener('keydown', keydownHandler)
-  window.addEventListener('keyup', keyupHandler)
-
   // 监听撤销/重做事件
   emitter.on('canvas-undo', () => {
     void historyStore.undo()
@@ -300,14 +264,6 @@ export function initCanvasManager(
     void historyStore.redo()
   })
 
-  // 初始化容器样式
-  const containerInit = document.querySelector('.canvas-container') as HTMLElement | null
-  if (containerInit) {
-    containerInit.style.transform = 'translate(0px, 0px)'
-    containerInit.style.transition = 'transform 0s'
-    containerInit.style.backgroundColor = 'transparent'
-  }
-
   fabricCanvas = canvas
   return canvas
 }
@@ -315,14 +271,6 @@ export function initCanvasManager(
 export function disposeCanvasManager(): void {
   // 读取一次 fabricCanvas 以满足 TS 对“已声明未读取”的检查要求
   void fabricCanvas
-  if (keydownHandler) {
-    window.removeEventListener('keydown', keydownHandler)
-    keydownHandler = null
-  }
-  if (keyupHandler) {
-    window.removeEventListener('keyup', keyupHandler)
-    keyupHandler = null
-  }
 
   emitter.off('canvas-undo')
   emitter.off('canvas-redo')
