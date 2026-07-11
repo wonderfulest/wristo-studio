@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  assertCurrentTransactionDocument,
   createSerialTaskQueue,
   measureActualBounds,
+  removeCanvasObjectsByReference,
+  restoreCanvasActiveObject,
   restoreCanvasObjects,
 } from './shortcutAddTransaction'
 
@@ -67,6 +70,54 @@ describe('shortcut add serial task queue', () => {
 
     await expect(failed).rejects.toThrow('failed transaction')
     await expect(next).resolves.toBe('next-result')
+  })
+
+  it('delays queued shared-state preparation until the previous task completes', async () => {
+    const enqueue = createSerialTaskQueue()
+    let releaseFirst!: () => void
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve
+    })
+    const preparedProperties: string[] = []
+
+    const first = enqueue(() => firstGate)
+    const second = enqueue(() => {
+      preparedProperties.push('chart_1')
+    })
+
+    await Promise.resolve()
+    expect(preparedProperties).toEqual([])
+    releaseFirst()
+    await first
+    await second
+    expect(preparedProperties).toEqual(['chart_1'])
+  })
+})
+
+describe('shortcut transaction document identity', () => {
+  it('rejects canvas, document, generation, and loading changes', () => {
+    const canvas = {}
+    const expected = {
+      canvas,
+      generation: 4,
+      baseId: 'design-a',
+      designId: 'design-a',
+      loading: false,
+    }
+
+    expect(() => assertCurrentTransactionDocument(expected, { ...expected })).not.toThrow()
+    expect(() =>
+      assertCurrentTransactionDocument(expected, { ...expected, canvas: {} }),
+    ).toThrow('stale')
+    expect(() =>
+      assertCurrentTransactionDocument(expected, { ...expected, generation: 5 }),
+    ).toThrow('stale')
+    expect(() =>
+      assertCurrentTransactionDocument(expected, { ...expected, designId: 'design-b' }),
+    ).toThrow('stale')
+    expect(() =>
+      assertCurrentTransactionDocument(expected, { ...expected, loading: true }),
+    ).toThrow('stale')
   })
 })
 
@@ -169,5 +220,38 @@ describe('shortcut canvas transaction rollback', () => {
     expect(() => restoreCanvasObjects(canvas, [existing], () => undefined)).toThrow(
       'Shortcut rollback failed',
     )
+  })
+
+  it('removes only exact owned references during stale cleanup', () => {
+    const owned = { id: 'same-id', eleType: 'data' }
+    const currentDocumentObject = { id: 'same-id', eleType: 'data' }
+    const canvas = createFakeCanvas([owned, currentDocumentObject])
+
+    removeCanvasObjectsByReference(canvas, [owned])
+
+    expect(canvas.getObjects()).toEqual([currentDocumentObject])
+  })
+
+  it('restores the original Fabric active object after rollback', () => {
+    const original = { id: 'a', eleType: 'data' }
+    const added = { id: 'b', eleType: 'data' }
+    let activeObject: FakeObject | undefined = original
+    const canvas = {
+      ...createFakeCanvas([original, added]),
+      getActiveObject: () => activeObject,
+      getActiveObjects: () => (activeObject ? [activeObject] : []),
+      discardActiveObject: () => {
+        activeObject = undefined
+      },
+      setActiveObject: (target: FakeObject) => {
+        activeObject = target
+      },
+    }
+    canvas.setActiveObject(added)
+
+    restoreCanvasActiveObject(canvas, original)
+
+    expect(canvas.getActiveObject()).toBe(original)
+    expect(canvas.getActiveObjects()).toEqual([original])
   })
 })

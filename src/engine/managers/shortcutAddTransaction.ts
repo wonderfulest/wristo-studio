@@ -20,6 +20,37 @@ const shortcutAddQueue = createSerialTaskQueue()
 export const enqueueShortcutAdd = <T>(task: () => T | Promise<T>): Promise<T> =>
   shortcutAddQueue(task)
 
+export type TransactionDocumentIdentity<TCanvas> = {
+  canvas: TCanvas | null
+  generation: number
+  baseId: string
+  designId: string
+  loading: boolean
+}
+
+export class StaleShortcutTransactionError extends Error {
+  constructor() {
+    super('Shortcut transaction is stale')
+    this.name = 'StaleShortcutTransactionError'
+  }
+}
+
+export function assertCurrentTransactionDocument<TCanvas>(
+  expected: TransactionDocumentIdentity<TCanvas>,
+  current: TransactionDocumentIdentity<TCanvas>,
+): void {
+  if (
+    expected.canvas !== current.canvas ||
+    expected.generation !== current.generation ||
+    expected.baseId !== current.baseId ||
+    expected.designId !== current.designId ||
+    expected.loading ||
+    current.loading
+  ) {
+    throw new StaleShortcutTransactionError()
+  }
+}
+
 type BoundsReadable = {
   id?: unknown
   getBoundingRect: () => {
@@ -79,6 +110,48 @@ export type TransactionCanvas<T extends object> = {
   add?: (...targets: T[]) => unknown
   insertAt?: (index: number, ...targets: T[]) => unknown
   moveObjectTo?: (target: T, index: number) => unknown
+  getActiveObject?: () => T | undefined
+  getActiveObjects?: () => T[]
+  discardActiveObject?: () => unknown
+  setActiveObject?: (target: T) => unknown
+}
+
+export function removeCanvasObjectsByReference<T extends object>(
+  canvas: TransactionCanvas<T>,
+  targets: Iterable<T>,
+): void {
+  const failures: string[] = []
+  const uniqueTargets = [...new Set(targets)]
+
+  for (let index = uniqueTargets.length - 1; index >= 0; index -= 1) {
+    const target = uniqueTargets[index]
+    if (!canvas.getObjects().includes(target)) continue
+    try {
+      canvas.remove(target)
+    } catch {
+      // Verification below reports the failed direct cleanup once.
+    }
+    if (canvas.getObjects().includes(target)) {
+      failures.push('owned object remains on canvas')
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Shortcut stale cleanup failed: ${failures.join('; ')}`)
+  }
+}
+
+export function restoreCanvasActiveObject<T extends object>(
+  canvas: TransactionCanvas<T>,
+  activeObject: T | null | undefined,
+): void {
+  canvas.discardActiveObject?.()
+  if (activeObject) {
+    canvas.setActiveObject?.(activeObject)
+  }
+  if (canvas.getActiveObject && canvas.getActiveObject() !== (activeObject ?? undefined)) {
+    throw new Error('Shortcut rollback failed: active object could not be restored')
+  }
 }
 
 export function restoreCanvasObjects<T extends object>(

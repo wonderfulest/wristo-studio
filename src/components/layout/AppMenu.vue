@@ -113,8 +113,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { nanoid } from 'nanoid'
 import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
@@ -145,9 +146,14 @@ import {
   type ShortcutPlacementMode,
 } from '@/engine/managers/shortcutPlacementManager'
 import {
+  assertCurrentTransactionDocument,
   enqueueShortcutAdd,
   measureActualBounds,
+  removeCanvasObjectsByReference,
+  restoreCanvasActiveObject,
   restoreCanvasObjects,
+  StaleShortcutTransactionError,
+  type TransactionDocumentIdentity,
   type TransactionCanvas,
 } from '@/engine/managers/shortcutAddTransaction'
 import { elementConfigs } from '@/elements/schemaMap'
@@ -185,6 +191,20 @@ const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
 const { t } = useI18n()
+let shortcutDocumentGeneration = 0
+watch(
+  [
+    () => canvasStore.canvas,
+    () => baseStore.id,
+    () => designStore.id,
+    () => baseStore.designLoading,
+    () => historyStore.isRestoring,
+  ],
+  () => {
+    shortcutDocumentGeneration += 1
+  },
+  { flush: 'sync' },
+)
 const activeMenu = computed(() => {
   return route.path
 })
@@ -356,9 +376,13 @@ const resolvePlacementKind = (category: string, elementType: string): ShortcutPl
   return 'shape'
 }
 
+type ShortcutCanvas = TransactionCanvas<FabricElement> & { requestRenderAll?: () => void }
+
 type ShortcutTransactionSnapshot = {
-  canvas: TransactionCanvas<FabricElement> & { requestRenderAll?: () => void }
+  document: TransactionDocumentIdentity<ShortcutCanvas>
+  canvas: ShortcutCanvas
   objects: FabricElement[]
+  activeObject: FabricElement | null
   elementMap: Record<string, ElementConfigSnapshot>
   layers: LayerElement[]
   selectedLayerIds: string[]
@@ -368,15 +392,31 @@ type ShortcutTransactionSnapshot = {
 const cloneElementMap = (): Record<string, ElementConfigSnapshot> =>
   JSON.parse(JSON.stringify(elementDataStore.elementMap)) as Record<string, ElementConfigSnapshot>
 
+const getShortcutDocumentIdentity = (): TransactionDocumentIdentity<ShortcutCanvas> => ({
+  canvas: canvasStore.canvas as unknown as ShortcutCanvas | null,
+  generation: shortcutDocumentGeneration,
+  baseId: String(baseStore.id ?? ''),
+  designId: String(designStore.id ?? ''),
+  loading: Boolean(baseStore.designLoading || historyStore.isRestoring),
+})
+
+const assertShortcutTransactionCurrent = (snapshot: ShortcutTransactionSnapshot) => {
+  assertCurrentTransactionDocument(snapshot.document, getShortcutDocumentIdentity())
+}
+
 const captureShortcutTransaction = (): ShortcutTransactionSnapshot => {
-  const canvas = canvasStore.canvas as unknown as ShortcutTransactionSnapshot['canvas'] | null
+  const document = getShortcutDocumentIdentity()
+  const canvas = document.canvas
   if (!canvas) {
     throw new Error('Canvas not initialized, cannot add shortcut element')
   }
+  assertCurrentTransactionDocument(document, document)
 
   return {
+    document,
     canvas,
     objects: [...canvas.getObjects()] as FabricElement[],
+    activeObject: canvas.getActiveObject?.() ?? null,
     elementMap: cloneElementMap(),
     layers: layerStore.layers.map((layer) => ({
       ...layer,
@@ -389,11 +429,13 @@ const captureShortcutTransaction = (): ShortcutTransactionSnapshot => {
 }
 
 const restoreShortcutTransaction = (snapshot: ShortcutTransactionSnapshot) => {
+  assertShortcutTransactionCurrent(snapshot)
   let rollbackError: unknown = null
   let canvasRestored = false
 
   try {
     restoreCanvasObjects(snapshot.canvas, snapshot.objects, removeElement)
+    restoreCanvasActiveObject(snapshot.canvas, snapshot.activeObject)
     canvasRestored = true
   } catch (error) {
     rollbackError = error
@@ -463,9 +505,57 @@ type AddShortcutBlockOptions = {
   kind: ShortcutPlacementKind
   mode?: ShortcutPlacementMode
   drafts: ShortcutDraft[]
-  createdPropertyKeys?: string[]
   successName: string
   errorMessageKey: string
+}
+
+type CreatedShortcutProperty = {
+  container: Record<string, any>
+  key: string
+  value: unknown
+}
+
+type AddShortcutPreparationContext = {
+  trackCreatedProperty: (key: string) => void
+}
+
+type AddShortcutBlockFactory = (
+  context: AddShortcutPreparationContext,
+) => AddShortcutBlockOptions | Promise<AddShortcutBlockOptions>
+
+const cleanupCreatedProperties = (createdProperties: CreatedShortcutProperty[]) => {
+  createdProperties.forEach(({ container, key, value }) => {
+    if (container[key] === value) {
+      delete container[key]
+    }
+  })
+}
+
+const cleanupStaleShortcutTransaction = (
+  snapshot: ShortcutTransactionSnapshot,
+  ownedIds: Set<string>,
+  returnedElements: FabricElement[],
+) => {
+  const ownedOnTransactionCanvas = snapshot.canvas
+    .getObjects()
+    .filter((element) => ownedIds.has(String(element.id ?? '')))
+  const returnedOnTransactionCanvas = returnedElements.filter((element) =>
+    snapshot.canvas.getObjects().includes(element),
+  )
+  removeCanvasObjectsByReference(snapshot.canvas, [
+    ...ownedOnTransactionCanvas,
+    ...returnedOnTransactionCanvas,
+  ])
+  snapshot.canvas.requestRenderAll?.()
+
+  const currentCanvas = getShortcutDocumentIdentity().canvas
+  if (currentCanvas && currentCanvas !== snapshot.canvas) {
+    const returnedOnCurrentCanvas = returnedElements.filter((element) =>
+      currentCanvas.getObjects().includes(element),
+    )
+    removeCanvasObjectsByReference(currentCanvas, returnedOnCurrentCanvas)
+    currentCanvas.requestRenderAll?.()
+  }
 }
 
 const showShortcutMessageSafely = (showMessage: () => void) => {
@@ -476,21 +566,43 @@ const showShortcutMessageSafely = (showMessage: () => void) => {
   }
 }
 
-const runShortcutBlock = async ({
-  kind,
-  mode = 'smart',
-  drafts,
-  createdPropertyKeys = [],
-  successName,
-  errorMessageKey,
-}: AddShortcutBlockOptions): Promise<FabricElement[] | null> => {
+const runShortcutBlock = async (
+  prepare: AddShortcutBlockFactory,
+  fallbackErrorMessageKey: string,
+): Promise<FabricElement[] | null> => {
   const createdElements: FabricElement[] = []
+  const createdProperties: CreatedShortcutProperty[] = []
+  const ownedIds = new Set<string>()
   let snapshot: ShortcutTransactionSnapshot | null = null
+  let options: AddShortcutBlockOptions | null = null
   let committed = false
 
   try {
     const transaction = captureShortcutTransaction()
     snapshot = transaction
+    assertShortcutTransactionCurrent(transaction)
+    options = await prepare({
+      trackCreatedProperty: (key) => {
+        assertShortcutTransactionCurrent(transaction)
+        const container = propertiesStore.properties as Record<string, any>
+        const value = container[key]
+        if (value == null) {
+          throw new Error(`Shortcut property was not created: ${key}`)
+        }
+        createdProperties.push({ container, key, value })
+      },
+    })
+    assertShortcutTransactionCurrent(transaction)
+
+    const { kind, mode = 'smart' } = options
+    const drafts = options.drafts.map((draft) => {
+      const id = nanoid()
+      ownedIds.add(id)
+      return {
+        ...draft,
+        config: { ...draft.config, id },
+      }
+    })
     const geometry = getCurrentDesignMetrics()
     const occupied = collectOccupiedBounds(transaction.canvas.getObjects())
     const prepared = placeShortcutDrafts({
@@ -502,21 +614,28 @@ const runShortcutBlock = async ({
     })
 
     await historyStore.runWithoutRecording(async () => {
+      assertShortcutTransactionCurrent(transaction)
       for (const draft of prepared.drafts) {
+        assertShortcutTransactionCurrent(transaction)
         const fontFamily = String(draft.config.fontFamily ?? '').trim()
         if (fontFamily) {
           await fontStore.loadFont(fontFamily)
+          assertShortcutTransactionCurrent(transaction)
         }
 
+        assertShortcutTransactionCurrent(transaction)
         const created = await addElement(draft.elementType, draft.config as any)
+        if (created) createdElements.push(created)
+        assertShortcutTransactionCurrent(transaction)
         if (!created) {
           throw new Error(`Shortcut element handler returned no element: ${draft.elementType}`)
         }
-        createdElements.push(created)
       }
 
+      assertShortcutTransactionCurrent(transaction)
       const actualMeasurement = measureActualBounds(createdElements)
       if (actualMeasurement.status === 'all') {
+        assertShortcutTransactionCurrent(transaction)
         const beforeObjectSet = new Set(transaction.objects)
         const createdIds = transaction.canvas
           .getObjects()
@@ -536,6 +655,7 @@ const runShortcutBlock = async ({
           occupied: refinedOccupied,
         })
         const currentCenter = boundsCenter(actualMeasurement.bounds)
+        assertShortcutTransactionCurrent(transaction)
         moveCreatedElements(
           createdElements,
           refinedPlacement.center.x - currentCenter.x,
@@ -544,59 +664,81 @@ const runShortcutBlock = async ({
       }
     })
 
+    assertShortcutTransactionCurrent(transaction)
     syncLayersFromCanvas()
+    assertShortcutTransactionCurrent(transaction)
     transaction.canvas.requestRenderAll?.()
-    historyStore.saveState('shortcut:add', { captureConfig: true })
+    assertShortcutTransactionCurrent(transaction)
+    const saved = historyStore.saveState('shortcut:add', { captureConfig: true })
+    if (!saved) {
+      throw new Error('Shortcut history commit was rejected')
+    }
     committed = true
   } catch (error) {
     let rollbackError: unknown = null
     if (!committed && snapshot) {
+      let stale = error instanceof StaleShortcutTransactionError
+      if (!stale) {
+        try {
+          assertShortcutTransactionCurrent(snapshot)
+        } catch (identityError) {
+          if (identityError instanceof StaleShortcutTransactionError) {
+            stale = true
+          } else {
+            rollbackError = identityError
+          }
+        }
+      }
       try {
-        await historyStore.runWithoutRecording(() => restoreShortcutTransaction(snapshot!))
+        await historyStore.runWithoutRecording(() => {
+          if (stale) {
+            cleanupStaleShortcutTransaction(snapshot!, ownedIds, createdElements)
+            return
+          }
+          assertShortcutTransactionCurrent(snapshot!)
+          restoreShortcutTransaction(snapshot!)
+        })
       } catch (caughtRollbackError) {
-        rollbackError = caughtRollbackError
+        rollbackError = rollbackError ?? caughtRollbackError
       }
     }
     try {
-      new Set(createdPropertyKeys).forEach((key) => propertiesStore.deleteProperty(key))
+      cleanupCreatedProperties(createdProperties)
     } catch (propertyCleanupError) {
       rollbackError = rollbackError ?? propertyCleanupError
     }
-    if (!snapshot) {
-      try {
-        syncLayersFromCanvas()
-        canvasStore.canvas?.requestRenderAll?.()
-      } catch (cleanupError) {
-        rollbackError = rollbackError ?? cleanupError
-      }
-    }
     console.error('[AppMenu] Failed to add shortcut block', {
-      kind,
-      mode,
-      draftKeys: drafts.map((draft) => draft.key),
+      kind: options?.kind ?? 'unknown',
+      mode: options?.mode ?? 'smart',
+      draftKeys: options?.drafts.map((draft) => draft.key) ?? [],
       error,
       rollbackError,
     })
-    showShortcutMessageSafely(() => messageStore.error(t(errorMessageKey)))
+    showShortcutMessageSafely(() =>
+      messageStore.error(t(options?.errorMessageKey ?? fallbackErrorMessageKey)),
+    )
     return null
   }
 
-  showShortcutMessageSafely(() => messageStore.success(t('editor.elementAdded', { name: successName })))
+  showShortcutMessageSafely(() =>
+    messageStore.success(t('editor.elementAdded', { name: options!.successName })),
+  )
   return createdElements
 }
 
-const addShortcutBlock = (options: AddShortcutBlockOptions): Promise<FabricElement[] | null> =>
-  enqueueShortcutAdd(() => runShortcutBlock(options))
+const addShortcutBlock = (
+  prepare: AddShortcutBlockFactory,
+  fallbackErrorMessageKey: string,
+): Promise<FabricElement[] | null> =>
+  enqueueShortcutAdd(() => runShortcutBlock(prepare, fallbackErrorMessageKey))
 
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
-  const createdPropertyKeys: string[] = []
-
   try {
     const resolvedElementType = elementType || (category === 'image' ? 'image' : '')
-    let config: Record<string, any>
+    let baseConfig: Record<string, any>
     if (category === 'image') {
-      config = {
+      baseConfig = {
         ...(elementConfigs.decoration?.image || {
           width: 100,
           height: 100,
@@ -606,50 +748,52 @@ const handleAddElement = async (category: string, elementType: string, overrides
         ...overrides,
       }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      config = { ...elementConfigs[category][elementType], ...overrides }
+      baseConfig = { ...elementConfigs[category][elementType], ...overrides }
     } else {
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
-    if ((config as any)?.disabled) {
+    if ((baseConfig as any)?.disabled) {
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
 
-    if (category === 'chart' && (resolvedElementType === 'barChart' || resolvedElementType === 'lineChart')) {
-      const resolvedOverrides: any = { ...overrides }
-      const requested = String(resolvedOverrides.chartProperty ?? '').trim()
-      const requestedMetricSymbol = requested.startsWith(':CHART_TYPE_') ? requested : ''
-      const metricSymbolForCreation = requestedMetricSymbol || ':CHART_TYPE_7DAYS_STEPS'
+    const resolvedOverrides = { ...overrides }
+    return await addShortcutBlock(({ trackCreatedProperty }) => {
+      let config = { ...baseConfig }
+      if (category === 'chart' && (resolvedElementType === 'barChart' || resolvedElementType === 'lineChart')) {
+        const requested = String(resolvedOverrides.chartProperty ?? '').trim()
+        const requestedMetricSymbol = requested.startsWith(':CHART_TYPE_') ? requested : ''
+        const metricSymbolForCreation = requestedMetricSymbol || ':CHART_TYPE_7DAYS_STEPS'
+        const keyCandidate = requestedMetricSymbol
+          ? ''
+          : (requested || String(config.chartProperty ?? '').trim())
+        const item = keyCandidate ? (propertiesStore.allProperties as any)[keyCandidate] : null
 
-      const keyCandidate = requestedMetricSymbol ? '' : (requested || String((config as any).chartProperty ?? '').trim())
-      const item = keyCandidate ? (propertiesStore.allProperties as any)[keyCandidate] : null
-
-      if (!keyCandidate || !item || item.type !== 'chart') {
-        const nextKey = ensureNextChartProperty(metricSymbolForCreation)
-        createdPropertyKeys.push(nextKey)
-        config = { ...config, chartProperty: nextKey }
+        if (!keyCandidate || !item || item.type !== 'chart') {
+          const nextKey = ensureNextChartProperty(metricSymbolForCreation)
+          trackCreatedProperty(nextKey)
+          config = { ...config, chartProperty: nextKey }
+        }
       }
-    }
 
-    config = scaleShortcutDraftConfig(config)
-    const kind = resolvePlacementKind(category, resolvedElementType)
-    return await addShortcutBlock({
-      kind,
-      mode: kind === 'axis' ? 'fixedCenter' : 'smart',
-      drafts: [
-        {
-          key: resolvedElementType,
-          elementType: resolvedElementType,
-          config,
-        },
-      ],
-      createdPropertyKeys,
-      successName: String(config.label || resolvedElementType),
-      errorMessageKey: 'editor.addElementFailed',
-    })
+      config = scaleShortcutDraftConfig(config)
+      const kind = resolvePlacementKind(category, resolvedElementType)
+      return {
+        kind,
+        mode: kind === 'axis' ? 'fixedCenter' : 'smart',
+        drafts: [
+          {
+            key: resolvedElementType,
+            elementType: resolvedElementType,
+            config,
+          },
+        ],
+        successName: String(config.label || resolvedElementType),
+        errorMessageKey: 'editor.addElementFailed',
+      }
+    }, 'editor.addElementFailed')
   } catch (error: any) {
-    createdPropertyKeys.forEach((key) => propertiesStore.deleteProperty(key))
     console.error('Failed to add element:', error)
     messageStore.error(t('editor.addElementFailed'))
   }
