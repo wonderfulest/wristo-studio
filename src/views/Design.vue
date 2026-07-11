@@ -120,7 +120,9 @@ import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/b
 import { useI18n } from '@/i18n'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import {
+  CANVAS_LONG_PRESS_DELAY_MS,
   clampCanvasPanOffset,
+  hasExceededCanvasLongPressTolerance,
   isPointOutsideWatchFace,
   type CanvasPanPoint,
   type CanvasPanRect,
@@ -192,7 +194,27 @@ type CanvasPanSession = {
   stageBaseRect: CanvasPanRect
 }
 
+type CanvasPanPointerRegion = 'excluded' | 'immediate' | 'long-press'
+
+type CanvasLongPressSession = {
+  pointerId: number
+  startClientX: number
+  startClientY: number
+  lastClientX: number
+  lastClientY: number
+  sourceEvent: PointerEvent
+  timerId: number
+}
+
+type StartCanvasPanOptions = {
+  pointerId: number
+  startClientX: number
+  startClientY: number
+  clearSelection: boolean
+}
+
 let canvasPanSession: CanvasPanSession | null = null
+let canvasLongPressSession: CanvasLongPressSession | null = null
 
 const PANEL_CENTER_MIN_WIDTH = 320
 const PANEL_WIDTH_LIMITS = {
@@ -350,27 +372,34 @@ const getStageBaseRect = (): CanvasPanRect | null => {
   }
 }
 
-const isPannablePointerLocation = (event: PointerEvent): boolean => {
+const getCanvasPanPointerRegion = (event: PointerEvent): CanvasPanPointerRegion => {
   const target = event.target as Element | null
-  if (!target || target.closest(PAN_EXCLUDED_SELECTOR)) return false
+  if (!target || target.closest(PAN_EXCLUDED_SELECTOR)) return 'excluded'
 
   const upperCanvas = baseStore.canvas?.upperCanvasEl as HTMLCanvasElement | undefined
   const faceRect = upperCanvas?.getBoundingClientRect()
   if (!faceRect || faceRect.width <= 0 || faceRect.height <= 0) {
-    return Boolean(canvasStageRef.value)
+    return canvasStageRef.value ? 'immediate' : 'excluded'
   }
 
   const point = { x: event.clientX, y: event.clientY }
   const canvasRect = toCanvasPanRect(faceRect)
   const isOutsideCanvasBounds = isPointOutsideWatchFace(point, canvasRect, false)
-  if (!isOutsideCanvasBounds && baseStore.canvas?.findTarget?.(event)) return false
+  if (!isOutsideCanvasBounds && baseStore.canvas?.findTarget?.(event)) {
+    return 'long-press'
+  }
 
   return isPointOutsideWatchFace(
     point,
     canvasRect,
     designStore.designSpec.width === designStore.designSpec.height,
   )
+    ? 'immediate'
+    : 'long-press'
 }
+
+const isImmediateCanvasPanPointerLocation = (event: PointerEvent): boolean =>
+  getCanvasPanPointerRegion(event) === 'immediate'
 
 const scheduleCanvasViewportSync = (): void => {
   if (canvasPanFrame != null) return
@@ -393,30 +422,144 @@ const constrainPanOffset = (stageBaseRect = getStageBaseRect()): void => {
   scheduleCanvasViewportSync()
 }
 
-const handleCanvasPanPointerDown = (event: PointerEvent): void => {
-  if (!event.isPrimary || event.button !== 0 || !isPannablePointerLocation(event)) return
-
+const startCanvasPan = (options: StartCanvasPanOptions): boolean => {
   const stageBaseRect = getStageBaseRect()
-  if (!stageBaseRect) return
+  const centerArea = centerAreaRef.value
+  if (!stageBaseRect || !centerArea || typeof centerArea.setPointerCapture !== 'function') {
+    return false
+  }
+
+  try {
+    centerArea.setPointerCapture(options.pointerId)
+  } catch {
+    return false
+  }
 
   canvasPanSession = {
-    pointerId: event.pointerId,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
+    pointerId: options.pointerId,
+    startClientX: options.startClientX,
+    startClientY: options.startClientY,
     startOffset: { ...panOffset.value },
     stageBaseRect,
   }
   isCanvasPanning.value = true
   isCanvasPanReady.value = false
-  canvasRef.value?.clearSelection?.()
-  centerAreaRef.value?.setPointerCapture?.(event.pointerId)
+  if (options.clearSelection) canvasRef.value?.clearSelection?.()
+  return true
+}
+
+function removeCanvasLongPressDocumentListeners(): void {
+  document.removeEventListener('pointermove', handleCanvasLongPressDocumentMove, true)
+  document.removeEventListener('pointerup', handleCanvasLongPressDocumentEnd, true)
+  document.removeEventListener('pointercancel', handleCanvasLongPressDocumentCancel, true)
+}
+
+function clearCanvasLongPressSession(): CanvasLongPressSession | null {
+  const session = canvasLongPressSession
+  canvasLongPressSession = null
+  if (session) window.clearTimeout(session.timerId)
+  removeCanvasLongPressDocumentListeners()
+  return session
+}
+
+function activateCanvasLongPress(expectedSession: CanvasLongPressSession): void {
+  if (canvasLongPressSession !== expectedSession) return
+  const session = clearCanvasLongPressSession()
+  if (!session) return
+
+  const didCancelFabric =
+    canvasRef.value?.cancelFabricInteractionForStagePan?.(session.sourceEvent) === true
+  if (!didCancelFabric) return
+
+  startCanvasPan({
+    pointerId: session.pointerId,
+    startClientX: session.lastClientX,
+    startClientY: session.lastClientY,
+    clearSelection: false,
+  })
+}
+
+function handleCanvasLongPressDocumentMove(event: PointerEvent): void {
+  const session = canvasLongPressSession
+  if (!session || event.pointerId !== session.pointerId) return
+
+  session.lastClientX = event.clientX
+  session.lastClientY = event.clientY
+  const exceeded = hasExceededCanvasLongPressTolerance(
+    { x: session.startClientX, y: session.startClientY },
+    { x: event.clientX, y: event.clientY },
+  )
+  if (exceeded) {
+    clearCanvasLongPressSession()
+    isCanvasPanReady.value = false
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function handleCanvasLongPressDocumentEnd(event: PointerEvent): void {
+  const session = canvasLongPressSession
+  if (!session || event.pointerId !== session.pointerId) return
+  clearCanvasLongPressSession()
+}
+
+function handleCanvasLongPressDocumentCancel(event: PointerEvent): void {
+  const session = canvasLongPressSession
+  if (!session || event.pointerId !== session.pointerId) return
+  clearCanvasLongPressSession()
+  canvasRef.value?.cancelFabricInteractionForStagePan?.(session.sourceEvent)
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const beginCanvasLongPress = (event: PointerEvent): void => {
+  clearCanvasLongPressSession()
+  const session: CanvasLongPressSession = {
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    lastClientX: event.clientX,
+    lastClientY: event.clientY,
+    sourceEvent: event,
+    timerId: 0,
+  }
+  session.timerId = window.setTimeout(
+    () => activateCanvasLongPress(session),
+    CANVAS_LONG_PRESS_DELAY_MS,
+  )
+  canvasLongPressSession = session
+  document.addEventListener('pointermove', handleCanvasLongPressDocumentMove, true)
+  document.addEventListener('pointerup', handleCanvasLongPressDocumentEnd, true)
+  document.addEventListener('pointercancel', handleCanvasLongPressDocumentCancel, true)
+}
+
+const handleCanvasPanPointerDown = (event: PointerEvent): void => {
+  if (!event.isPrimary || event.button !== 0 || canvasPanSession) return
+
+  const region = getCanvasPanPointerRegion(event)
+  if (region === 'long-press') {
+    beginCanvasLongPress(event)
+    return
+  }
+  if (region !== 'immediate') return
+
+  const started = startCanvasPan({
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    clearSelection: true,
+  })
+  if (!started) return
   event.preventDefault()
   event.stopPropagation()
 }
 
 const handleCanvasPanPointerMove = (event: PointerEvent): void => {
   if (!canvasPanSession) {
-    isCanvasPanReady.value = event.isPrimary && isPannablePointerLocation(event)
+    isCanvasPanReady.value =
+      event.isPrimary && isImmediateCanvasPanPointerLocation(event)
     return
   }
   if (event.pointerId !== canvasPanSession.pointerId) return
@@ -453,6 +596,10 @@ const finishCanvasPan = (pointerId?: number): void => {
 }
 
 const handleCanvasPanPointerEnd = (event: PointerEvent): void => {
+  const session = canvasPanSession
+  if (!session || event.pointerId !== session.pointerId) return
+  event.preventDefault()
+  event.stopPropagation()
   finishCanvasPan(event.pointerId)
 }
 
@@ -988,6 +1135,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearCanvasLongPressSession()
   finishCanvasPan()
   if (canvasPanFrame != null) {
     window.cancelAnimationFrame(canvasPanFrame)
