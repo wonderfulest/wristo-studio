@@ -66,5 +66,13 @@ test('long press tolerance is measured from the original pointer position', () =
 
   assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 106, y: 100 }), false)
   assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 100, y: 106.01 }), true)
+  assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 104, y: 103 }), false)
   assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 105, y: 104 }), true)
+})
+
+test('long press tolerance normalizes negative custom values to zero', () => {
+  const start = { x: 100, y: 100 }
+
+  assert.equal(hasExceededCanvasLongPressTolerance(start, start, -1), false)
+  assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 100.01, y: 100 }, -1), true)
 })
