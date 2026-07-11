@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   assertCurrentTransactionDocument,
   createSerialTaskQueue,
+  enqueueShortcutAdd,
   measureActualBounds,
   removeCanvasObjectsByReference,
   restoreCanvasActiveObject,
   restoreCanvasObjects,
+  StaleShortcutTransactionError,
 } from './shortcutAddTransaction'
 
 type FakeObject = {
@@ -91,6 +93,65 @@ describe('shortcut add serial task queue', () => {
     await first
     await second
     expect(preparedProperties).toEqual(['chart_1'])
+  })
+
+  it('cancels a queued factory when the document changes while it waits', async () => {
+    const canvasA = {}
+    const canvasB = {}
+    let currentDocument = {
+      canvas: canvasA,
+      generation: 1,
+      baseId: 'design-a',
+      designId: 'design-a',
+      loading: false,
+    }
+    const readCurrentDocument = vi.fn(() => currentDocument)
+    const newDocumentState = {
+      properties: ['existing-property'],
+      canvasObjects: ['existing-object'],
+      history: ['initial-state'],
+    }
+    const factory = vi.fn(() => {
+      newDocumentState.properties.push('shortcut-property')
+      newDocumentState.canvasObjects.push('shortcut-object')
+      newDocumentState.history.push('shortcut:add')
+      return 'created'
+    })
+    let releaseFirst!: () => void
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve
+    })
+
+    const first = enqueueShortcutAdd(() => firstGate)
+    const queued = enqueueShortcutAdd(() => factory(), readCurrentDocument)
+    const queuedOutcome = queued.then(
+      (value) => ({ status: 'fulfilled' as const, value }),
+      (error: unknown) => ({ status: 'rejected' as const, error }),
+    )
+
+    await Promise.resolve()
+    currentDocument = {
+      canvas: canvasB,
+      generation: 2,
+      baseId: 'design-b',
+      designId: 'design-b',
+      loading: false,
+    }
+    releaseFirst()
+    await first
+
+    const outcome = await queuedOutcome
+    expect(outcome.status).toBe('rejected')
+    if (outcome.status === 'rejected') {
+      expect(outcome.error).toBeInstanceOf(StaleShortcutTransactionError)
+    }
+    expect(readCurrentDocument).toHaveBeenCalledTimes(2)
+    expect(factory).not.toHaveBeenCalled()
+    expect(newDocumentState).toEqual({
+      properties: ['existing-property'],
+      canvasObjects: ['existing-object'],
+      history: ['initial-state'],
+    })
   })
 })
 

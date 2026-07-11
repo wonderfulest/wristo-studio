@@ -404,8 +404,11 @@ const assertShortcutTransactionCurrent = (snapshot: ShortcutTransactionSnapshot)
   assertCurrentTransactionDocument(snapshot.document, getShortcutDocumentIdentity())
 }
 
-const captureShortcutTransaction = (): ShortcutTransactionSnapshot => {
+const captureShortcutTransaction = (
+  expectedDocument: TransactionDocumentIdentity<ShortcutCanvas>,
+): ShortcutTransactionSnapshot => {
   const document = getShortcutDocumentIdentity()
+  assertCurrentTransactionDocument(expectedDocument, document)
   const canvas = document.canvas
   if (!canvas) {
     throw new Error('Canvas not initialized, cannot add shortcut element')
@@ -413,7 +416,7 @@ const captureShortcutTransaction = (): ShortcutTransactionSnapshot => {
   assertCurrentTransactionDocument(document, document)
 
   return {
-    document,
+    document: expectedDocument,
     canvas,
     objects: [...canvas.getObjects()] as FabricElement[],
     activeObject: canvas.getActiveObject?.() ?? null,
@@ -569,6 +572,7 @@ const showShortcutMessageSafely = (showMessage: () => void) => {
 const runShortcutBlock = async (
   prepare: AddShortcutBlockFactory,
   fallbackErrorMessageKey: string,
+  expectedDocument: TransactionDocumentIdentity<ShortcutCanvas>,
 ): Promise<FabricElement[] | null> => {
   const createdElements: FabricElement[] = []
   const createdProperties: CreatedShortcutProperty[] = []
@@ -578,7 +582,7 @@ const runShortcutBlock = async (
   let committed = false
 
   try {
-    const transaction = captureShortcutTransaction()
+    const transaction = captureShortcutTransaction(expectedDocument)
     snapshot = transaction
     assertShortcutTransactionCurrent(transaction)
     options = await prepare({
@@ -730,7 +734,11 @@ const addShortcutBlock = (
   prepare: AddShortcutBlockFactory,
   fallbackErrorMessageKey: string,
 ): Promise<FabricElement[] | null> =>
-  enqueueShortcutAdd(() => runShortcutBlock(prepare, fallbackErrorMessageKey))
+  enqueueShortcutAdd(
+    (expectedDocument) =>
+      runShortcutBlock(prepare, fallbackErrorMessageKey, expectedDocument),
+    getShortcutDocumentIdentity,
+  )
 
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {

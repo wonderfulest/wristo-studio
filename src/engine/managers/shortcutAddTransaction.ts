@@ -17,8 +17,29 @@ export function createSerialTaskQueue(): SerialTaskQueue {
 
 const shortcutAddQueue = createSerialTaskQueue()
 
-export const enqueueShortcutAdd = <T>(task: () => T | Promise<T>): Promise<T> =>
-  shortcutAddQueue(task)
+export function enqueueShortcutAdd<T>(task: () => T | Promise<T>): Promise<T>
+export function enqueueShortcutAdd<TCanvas, T>(
+  task: (expectedDocument: TransactionDocumentIdentity<TCanvas>) => T | Promise<T>,
+  getCurrentDocument: () => TransactionDocumentIdentity<TCanvas>,
+): Promise<T>
+export function enqueueShortcutAdd<TCanvas, T>(
+  task:
+    | (() => T | Promise<T>)
+    | ((expectedDocument: TransactionDocumentIdentity<TCanvas>) => T | Promise<T>),
+  getCurrentDocument?: () => TransactionDocumentIdentity<TCanvas>,
+): Promise<T> {
+  if (!getCurrentDocument) {
+    return shortcutAddQueue(task as () => T | Promise<T>)
+  }
+
+  const expectedDocument = getCurrentDocument()
+  return shortcutAddQueue(() => {
+    assertCurrentTransactionDocument(expectedDocument, getCurrentDocument())
+    return (
+      task as (expected: TransactionDocumentIdentity<TCanvas>) => T | Promise<T>
+    )(expectedDocument)
+  })
+}
 
 export type TransactionDocumentIdentity<TCanvas> = {
   canvas: TCanvas | null
