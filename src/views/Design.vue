@@ -17,12 +17,29 @@
         />
       </div>
       <!-- 中间画布区域 -->
-      <div class="center-area">
+      <div
+        ref="centerAreaRef"
+        class="center-area"
+        :class="{
+          'is-canvas-pan-ready': isCanvasPanReady,
+          'is-canvas-panning': isCanvasPanning,
+        }"
+        @pointerdown.capture="handleCanvasPanPointerDown"
+        @pointermove="handleCanvasPanPointerMove"
+        @pointerup="handleCanvasPanPointerEnd"
+        @pointercancel="handleCanvasPanPointerEnd"
+        @lostpointercapture="handleCanvasPanPointerEnd"
+        @pointerleave="handleCanvasPanPointerLeave"
+      >
         <!-- 画布 -->
-        <div class="canvas-container">
+        <div ref="canvasStageRef" class="canvas-stage" :style="canvasStageStyle">
           <CanvasView ref="canvasRef" />
         </div>
-        <CanvasRulers :watch-size="designStore.designSpec.width" :ruler-offset="40" />
+        <CanvasRulers
+          ref="canvasRulersRef"
+          :watch-size="designStore.designSpec.width"
+          :ruler-offset="RULER_OFFSET"
+        />
         <!-- 缩放控件 -->
         <HistoryControls class="history-controls-anchor" :canvas-ref="canvasRef" />
         <TimeSimulatorPanel v-if="editorStore.showTimeSimulator" />
@@ -103,6 +120,12 @@ import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/b
 import { useI18n } from '@/i18n'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import {
+  clampCanvasPanOffset,
+  isPointOutsideWatchFace,
+  type CanvasPanPoint,
+  type CanvasPanRect,
+} from '@/utils/canvasPan'
+import {
   clearRestoredDesignAssetUrls,
   readWrtDesignPackage,
   restoreDesignAssetBundle,
@@ -124,6 +147,9 @@ const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
 const { waitCanvasReady } = useCanvas()
 const canvasRef = ref<InstanceType<typeof CanvasView> | null>(null)
+const centerAreaRef = ref<HTMLElement | null>(null)
+const canvasStageRef = ref<HTMLElement | null>(null)
+const canvasRulersRef = ref<InstanceType<typeof CanvasRulers> | null>(null)
 const exportPanelRef = ref<InstanceType<typeof ExportPanel> | null>(null)
 const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
@@ -131,12 +157,42 @@ const themeStore = useThemeStore()
 const layerStore = useLayerStore()
 const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
 const resizingPanel = ref<'left' | 'right' | null>(null)
+const panOffset = ref<CanvasPanPoint>({ x: 0, y: 0 })
+const isCanvasPanning = ref(false)
+const isCanvasPanReady = ref(false)
 let saveTimer: number | null = null
 let panelResizeState: { side: 'left' | 'right'; startX: number; startWidth: number } | null = null
 let designLoadGeneration = 0
 let designLoadQueue: Promise<void> = Promise.resolve()
+let canvasPanFrame: number | null = null
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
+const RULER_OFFSET = 40
+const MINIMUM_VISIBLE_STAGE = 64
+const PAN_EXCLUDED_SELECTOR = [
+  '.ruler-horizontal',
+  '.ruler-vertical',
+  '.ruler-corner',
+  '.history-controls-anchor',
+  '.time-simulator-panel',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'a',
+  '[role="button"]',
+  '[role="slider"]',
+].join(',')
+
+type CanvasPanSession = {
+  pointerId: number
+  startClientX: number
+  startClientY: number
+  startOffset: CanvasPanPoint
+  stageBaseRect: CanvasPanRect
+}
+
+let canvasPanSession: CanvasPanSession | null = null
 
 const PANEL_CENTER_MIN_WIDTH = 320
 const PANEL_WIDTH_LIMITS = {
@@ -261,6 +317,158 @@ const normalizePanelWidth = (side: 'left' | 'right', width: number): number => {
 
 const leftPanelWidth = computed(() => normalizePanelWidth('left', editorLayoutStore.getWidth('leftLayerPanel')))
 const rightPanelWidth = computed(() => normalizePanelWidth('right', editorLayoutStore.getWidth('rightSettingsPanel')))
+const canvasStageStyle = computed(() => ({
+  transform: `translate3d(${panOffset.value.x}px, ${panOffset.value.y}px, 0)`,
+}))
+
+const toCanvasPanRect = (rect: DOMRect): CanvasPanRect => ({
+  left: rect.left,
+  top: rect.top,
+  width: rect.width,
+  height: rect.height,
+})
+
+const getWorkspaceRect = (): CanvasPanRect | null => {
+  const rect = centerAreaRef.value?.getBoundingClientRect()
+  if (!rect) return null
+  return {
+    left: rect.left + RULER_OFFSET,
+    top: rect.top + RULER_OFFSET,
+    width: Math.max(0, rect.width - RULER_OFFSET),
+    height: Math.max(0, rect.height - RULER_OFFSET),
+  }
+}
+
+const getStageBaseRect = (): CanvasPanRect | null => {
+  const rect = canvasStageRef.value?.getBoundingClientRect()
+  if (!rect) return null
+  return {
+    left: rect.left - panOffset.value.x,
+    top: rect.top - panOffset.value.y,
+    width: rect.width,
+    height: rect.height,
+  }
+}
+
+const isPannablePointerLocation = (event: PointerEvent): boolean => {
+  const target = event.target as Element | null
+  if (!target || target.closest(PAN_EXCLUDED_SELECTOR)) return false
+
+  const upperCanvas = baseStore.canvas?.upperCanvasEl as HTMLCanvasElement | undefined
+  const faceRect = upperCanvas?.getBoundingClientRect()
+  if (!faceRect || faceRect.width <= 0 || faceRect.height <= 0) {
+    return Boolean(canvasStageRef.value)
+  }
+
+  return isPointOutsideWatchFace(
+    { x: event.clientX, y: event.clientY },
+    toCanvasPanRect(faceRect),
+    designStore.designSpec.width === designStore.designSpec.height,
+  )
+}
+
+const scheduleCanvasViewportSync = (): void => {
+  if (canvasPanFrame != null) return
+  canvasPanFrame = window.requestAnimationFrame(() => {
+    canvasPanFrame = null
+    canvasRef.value?.syncCanvasOffset?.()
+    canvasRulersRef.value?.refresh?.()
+  })
+}
+
+const constrainPanOffset = (stageBaseRect = getStageBaseRect()): void => {
+  const workspaceRect = getWorkspaceRect()
+  if (!stageBaseRect || !workspaceRect) return
+  panOffset.value = clampCanvasPanOffset(
+    panOffset.value,
+    stageBaseRect,
+    workspaceRect,
+    MINIMUM_VISIBLE_STAGE,
+  )
+  scheduleCanvasViewportSync()
+}
+
+const handleCanvasPanPointerDown = (event: PointerEvent): void => {
+  if (!event.isPrimary || event.button !== 0 || !isPannablePointerLocation(event)) return
+
+  const stageBaseRect = getStageBaseRect()
+  if (!stageBaseRect) return
+
+  canvasPanSession = {
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startOffset: { ...panOffset.value },
+    stageBaseRect,
+  }
+  isCanvasPanning.value = true
+  isCanvasPanReady.value = false
+  canvasRef.value?.clearSelection?.()
+  centerAreaRef.value?.setPointerCapture?.(event.pointerId)
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const handleCanvasPanPointerMove = (event: PointerEvent): void => {
+  if (!canvasPanSession) {
+    isCanvasPanReady.value = event.isPrimary && isPannablePointerLocation(event)
+    return
+  }
+  if (event.pointerId !== canvasPanSession.pointerId) return
+
+  const workspaceRect = getWorkspaceRect()
+  if (!workspaceRect) return
+  const desiredOffset = {
+    x: canvasPanSession.startOffset.x + event.clientX - canvasPanSession.startClientX,
+    y: canvasPanSession.startOffset.y + event.clientY - canvasPanSession.startClientY,
+  }
+  panOffset.value = clampCanvasPanOffset(
+    desiredOffset,
+    canvasPanSession.stageBaseRect,
+    workspaceRect,
+    MINIMUM_VISIBLE_STAGE,
+  )
+  scheduleCanvasViewportSync()
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const finishCanvasPan = (pointerId?: number): void => {
+  const session = canvasPanSession
+  if (!session || (pointerId !== undefined && pointerId !== session.pointerId)) return
+  canvasPanSession = null
+  isCanvasPanning.value = false
+  isCanvasPanReady.value = false
+
+  const centerArea = centerAreaRef.value
+  if (centerArea?.hasPointerCapture?.(session.pointerId)) {
+    centerArea.releasePointerCapture(session.pointerId)
+  }
+  scheduleCanvasViewportSync()
+}
+
+const handleCanvasPanPointerEnd = (event: PointerEvent): void => {
+  finishCanvasPan(event.pointerId)
+}
+
+const handleCanvasPanPointerLeave = (): void => {
+  if (!canvasPanSession) isCanvasPanReady.value = false
+}
+
+watch(
+  () => [
+    editorStore.zoomLevel,
+    designStore.designSpec.width,
+    designStore.designSpec.height,
+    leftPanelWidth.value,
+    rightPanelWidth.value,
+    viewportWidth.value,
+  ],
+  () => {
+    void nextTick(() => constrainPanOffset())
+  },
+  { flush: 'post' },
+)
 
 const persistNormalizedPanelWidths = (): void => {
   editorLayoutStore.setWidth('leftLayerPanel', leftPanelWidth.value)
@@ -771,9 +979,15 @@ onMounted(() => {
 
   exportStore.setExportPanelRef(exportPanelRef.value as any)
   baseStore.setInCanvasWorkarea(true)
+  void nextTick(() => constrainPanOffset())
 })
 
 onBeforeUnmount(() => {
+  finishCanvasPan()
+  if (canvasPanFrame != null) {
+    window.cancelAnimationFrame(canvasPanFrame)
+    canvasPanFrame = null
+  }
   designLoadGeneration += 1
   stopPanelResize()
   window.removeEventListener('resize', handleWorkspaceResize)
@@ -800,19 +1014,19 @@ defineExpose({
 .center-area {
   position: relative;
 }
-.canvas-container {
+.canvas-stage {
   position: relative;
   z-index: var(--studio-z-base);
 }
 /* Ensure Fabric canvas layers are below rulers overlay */
-.center-area .canvas-container canvas {
+.center-area .canvas-stage canvas {
   position: absolute;
   z-index: var(--studio-z-canvas-backdrop);
 }
-.center-area .canvas-container .lower-canvas {
+.center-area .canvas-stage .lower-canvas {
   background-color: transparent;
 }
-.center-area .canvas-container .upper-canvas {
+.center-area .canvas-stage .upper-canvas {
   z-index: var(--studio-z-canvas-surface);
   background-color: transparent;
 }
@@ -866,6 +1080,17 @@ defineExpose({
   padding: 28px;
   position: relative;
   min-width: 0;
+  touch-action: none;
+}
+
+.center-area.is-canvas-pan-ready,
+.center-area.is-canvas-pan-ready * {
+  cursor: grab !important;
+}
+
+.center-area.is-canvas-panning,
+.center-area.is-canvas-panning * {
+  cursor: grabbing !important;
 }
 
 .right-panel {
@@ -917,10 +1142,12 @@ defineExpose({
   left: 0;
 }
 
-.canvas-container {
+.canvas-stage {
   position: relative;
   background: transparent;
   margin: 40px 0 0 40px;
+  will-change: transform;
+  transform-origin: center;
 }
 
 .ruler-corner {
