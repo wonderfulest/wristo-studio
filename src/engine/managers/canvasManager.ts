@@ -124,6 +124,7 @@ export function initCanvasManager(
     centeredScaling: true,
     centeredRotation: true,
     controlsAboveOverlay: true,
+    enablePointerEvents: true,
   }) as FabricCanvas
 
   // 将 viewport 原点移动到中心

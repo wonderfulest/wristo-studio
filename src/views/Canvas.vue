@@ -331,6 +331,48 @@ watch(
   },
 )
 
+const createStagePanCancelEvent = (
+  sourceEvent: PointerEvent,
+  upperCanvas: HTMLCanvasElement,
+): PointerEvent => {
+  const rect = upperCanvas.getBoundingClientRect()
+  return new PointerEvent('pointerup', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    pointerId: sourceEvent.pointerId,
+    pointerType: sourceEvent.pointerType,
+    isPrimary: sourceEvent.isPrimary,
+    button: 0,
+    buttons: 0,
+    clientX: rect.left - Math.max(rect.width, 1) - 1,
+    clientY: rect.top - Math.max(rect.height, 1) - 1,
+    ctrlKey: sourceEvent.ctrlKey,
+    shiftKey: sourceEvent.shiftKey,
+    altKey: sourceEvent.altKey,
+    metaKey: sourceEvent.metaKey,
+  })
+}
+
+const cancelFabricInteractionForStagePan = (sourceEvent: PointerEvent): boolean => {
+  const canvas = baseStore.canvas
+  if (!canvas || !canvas.enablePointerEvents || typeof canvas._onMouseUp !== 'function') {
+    return false
+  }
+
+  const transform = canvas._currentTransform
+  if (transform?.actionPerformed) return false
+
+  if (transform) {
+    canvas.endCurrentTransform(sourceEvent)
+    ;(transform.target as { __corner?: string }).__corner = undefined
+  }
+
+  canvas._onMouseUp(createStagePanCancelEvent(sourceEvent, canvas.upperCanvasEl))
+  canvas.requestRenderAll?.()
+  return true
+}
+
 const syncCanvasOffset = () => {
   baseStore.canvas?.calcOffset?.()
   baseStore.canvas?.requestRenderAll?.()
@@ -347,6 +389,7 @@ defineExpose({
   canUndo: () => historyManager.canUndo(),
   canRedo: () => historyManager.canRedo(),
   clearSelection: clearCanvasSelection,
+  cancelFabricInteractionForStagePan,
   syncCanvasOffset,
 })
 </script>
