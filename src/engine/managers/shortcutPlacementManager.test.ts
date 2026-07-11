@@ -251,6 +251,19 @@ describe('findShortcutPlacement', () => {
     expect(() => findShortcutPlacement(oversizedRequest)).toThrow(/cannot fit.*safe area/i)
   })
 
+  it('uses the exact design center when sampled candidates miss the only safe placement', () => {
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry,
+      footprint: { width: 320, height: 320 },
+      occupied: [],
+    })
+    expect(result.center).toEqual({ x: 227, y: 227 })
+    expect(isBoundsInsideCircle(result.bounds, geometry)).toBe(true)
+    expect(result.score.regionRank).toBeGreaterThan(99)
+  })
+
   it('uses the exact first anchor for every static placement kind', () => {
     const smallFootprint = { width: 20, height: 20 }
     for (const { kind, xRatio, yRatio } of staticAnchors) {

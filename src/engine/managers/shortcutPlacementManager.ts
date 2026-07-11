@@ -380,6 +380,7 @@ const buildCandidates = (request: PlacementRequest): Candidate[] => {
       push({ x, y }, 99, primary)
     }
   }
+  push({ x: request.geometry.centerX, y: request.geometry.centerY }, 100, primary)
   return candidates
 }
 
