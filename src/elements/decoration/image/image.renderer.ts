@@ -9,6 +9,8 @@ import type { MinimalFabricLike } from '@/types/layer'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { encodeImage } from './image.encoder'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 const EMPTY_IMAGE_PLACEHOLDER =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
@@ -79,7 +81,11 @@ function attachImageScaleSync(image: FabricImage): void {
   })
 }
 
-export async function createImage(config: ImageElementConfig): Promise<FabricElement> {
+export async function createImage(
+  config: ImageElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvas = useCanvasStore().canvas
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -89,10 +95,12 @@ export async function createImage(config: ImageElementConfig): Promise<FabricEle
   const id = config.id || nanoid()
 
   const resolved = await resolveImageSource({ imageUrl: config.imageUrl, assetId: config.assetId })
+  assertElementRenderCurrent(renderContext)
   const businessImageUrl = resolved.imageUrl ? normalizeUrl(String(resolved.imageUrl)) : ''
   const imageUrl = resolveRenderableImageUrl(businessImageUrl)
 
   const imgEl = await loadHtmlImage(imageUrl)
+  assertElementRenderCurrent(renderContext)
   const rawW = Math.max(1, Number((imgEl as any).naturalWidth ?? imgEl.width ?? 1))
   const rawH = Math.max(1, Number((imgEl as any).naturalHeight ?? imgEl.height ?? 1))
 
@@ -131,6 +139,7 @@ export async function createImage(config: ImageElementConfig): Promise<FabricEle
   attachImageScaleSync(image)
   applyControlsToObject(image as unknown as FabricObject)
 
+  assertElementRenderCurrent(renderContext)
   canvas.add(image as unknown as FabricObject)
   layerStore.addLayer(image as unknown as MinimalFabricLike)
   canvas.setActiveObject(image as unknown as FabricObject)

@@ -8,8 +8,8 @@ import { encodeHand, decodeHand } from '@/elements/hands/common/hand.encoder'
 
 export default function registerMinuteHandPlugin() {
   registerElement('minuteHand' as ElementType, {
-    add: (config) => {
-      return createHand({ ...(config as HandElementConfig), eleType: 'minuteHand' })
+    add: (config, renderContext) => {
+      return createHand({ ...(config as HandElementConfig), eleType: 'minuteHand' }, renderContext)
     },
     update: (element, patch) => {
       // 目前只关心素材和 assetId，其他字段仍由时间驱动逻辑控制

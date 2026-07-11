@@ -9,6 +9,8 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
@@ -157,7 +159,11 @@ function formatTime(date: Date, formatter: number) {
   }
 }
 
-export async function createTime(config: TimeElementConfig): Promise<FabricElement> {
+export async function createTime(
+  config: TimeElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -181,6 +187,7 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
         text,
         options: config,
       })
+      assertElementRenderCurrent(renderContext)
       
       // 先移除画布上同 id 的旧 bitmap Group，避免同一个元素残留多份
       removeBitmapTimeGroupsById(canvas, String(id))
@@ -229,6 +236,7 @@ export async function createTime(config: TimeElementConfig): Promise<FabricEleme
     }
 
     const element = new FabricText(text, timeOptions as TimeElementOptions)
+    assertElementRenderCurrent(renderContext)
     canvas.add(element as FabricText)
     layerStore.addLayer(element as any)
     canvas.setActiveObject(element as FabricText)

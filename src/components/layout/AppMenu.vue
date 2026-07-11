@@ -628,7 +628,9 @@ const runShortcutBlock = async (
         }
 
         assertShortcutTransactionCurrent(transaction)
-        const created = await addElement(draft.elementType, draft.config as any)
+        const created = await addElement(draft.elementType, draft.config as any, {
+          assertDocumentCurrent: () => assertShortcutTransactionCurrent(transaction),
+        })
         if (created) createdElements.push(created)
         assertShortcutTransactionCurrent(transaction)
         if (!created) {

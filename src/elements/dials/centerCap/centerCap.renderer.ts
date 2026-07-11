@@ -8,6 +8,8 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { CenterCapElementConfig } from '@/elements/dials/centerCap/centerCap.encoder'
 import { applyControlsToObject } from '@/utils/controlManager'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function getCanvasCenter() {
   const canvasStore = useCanvasStore()
@@ -61,7 +63,9 @@ function configureCenterCapControls(element: any) {
 
 export async function createCenterCap(
   config: CenterCapElementConfig,
+  renderContext?: ElementRenderContext,
 ): Promise<FabricElement | undefined> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const canvas = canvasStore.canvas
@@ -78,12 +82,14 @@ export async function createCenterCap(
       console.error('Failed to fetch centerCap asset:', e)
       imageUrl = null
     }
+    assertElementRenderCurrent(renderContext)
   }
 
   if (!imageUrl) {
     const analogAssetStore = useAnalogAssetStore()
     // 暂时复用 center_cap 资源类型，如果后续有独立的 centerCap 资源类型再调整
     await analogAssetStore.loadAssets('center_cap' as any)
+    assertElementRenderCurrent(renderContext)
     const getFirstUrl = analogAssetStore.getFirstUrl as (type: any) => string | null
     const getFirstId = analogAssetStore.getFirstId as (type: any) => number | null
 
@@ -97,6 +103,7 @@ export async function createCenterCap(
   }
 
   const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
+  assertElementRenderCurrent(renderContext)
   const element: any = img
 
   const center = getCanvasCenter()
@@ -131,6 +138,7 @@ export async function createCenterCap(
   element.on('deselected', () => {})
 
   element.setCoords()
+  assertElementRenderCurrent(renderContext)
   canvas.add(element)
   layerStore.addLayer(element)
   canvas.requestRenderAll?.()

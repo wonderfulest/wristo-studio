@@ -14,6 +14,8 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getFontSizeByStep } from '@/utils/fontSize'
 import { normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -53,14 +55,20 @@ export function getElementById(id: string | number | null | undefined): FabricEl
   return undefined
 }
 
-export async function addElement(type: ElementType, config: AnyElementConfig): Promise<FabricElement | null | undefined> {
+export async function addElement(
+  type: ElementType,
+  config: AnyElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement | null | undefined> {
   const handler = getElementHandler(type)
   if (!handler || !handler.add) {
     throw new Error(`[ElementManager] addElement: unknown type ${type}`)
   }
+  assertElementRenderCurrent(renderContext)
   ;(config as any).displayStates = normalizeDisplayStates((config as any).displayStates)
   // 标准化调用：由调用方保证 config.eleType 与 type 一致
-  const element = await handler.add(config) as FabricElement | null | undefined
+  const element = await handler.add(config, renderContext) as FabricElement | null | undefined
+  assertElementRenderCurrent(renderContext)
   if (element) {
     ;(element as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (config as any).displayStates)
   }

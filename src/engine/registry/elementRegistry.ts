@@ -2,11 +2,15 @@ import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizeFields } from '@/utils/fontSize'
 import { normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 
 // 统一的元素处理器：负责元素的增删改查编解码
 export type ElementHandler = {
   // 根据业务配置创建 FabricElement；config.eleType 必须与注册类型一致
-  add: (config: AnyElementConfig) => Promise<FabricElement> | FabricElement
+  add: (
+    config: AnyElementConfig,
+    renderContext?: ElementRenderContext,
+  ) => Promise<FabricElement> | FabricElement
 
   // 可选的增量更新逻辑，由具体元素自行决定 patch 结构
   update?: (element: FabricElement, patch: Partial<AnyElementConfig>) => void

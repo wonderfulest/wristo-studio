@@ -8,8 +8,8 @@ import WindDirectionSettings from '@/elements/weather/windDirection/windDirectio
 
 export default function registerWindDirectionPlugin() {
   registerElement('windDirection' as ElementType, {
-    add: (config) => {
-      return createWindDirection(config as WindDirectionElementConfig)
+    add: (config, renderContext) => {
+      return createWindDirection(config as WindDirectionElementConfig, renderContext)
     },
     update: (element, patch) => {
       updateWindDirection(element as any, patch as Partial<WindDirectionElementConfig>)

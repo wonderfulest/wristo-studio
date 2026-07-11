@@ -1,5 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import { FabricObject, Image as FabricImage, FabricText, type ImageProps, type TextProps } from 'fabric'
 import { nanoid } from 'nanoid'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -156,7 +158,11 @@ const createMipText = (text: string, base: Record<string, any>) => {
   return element
 }
 
-export async function createIcon(config: IconElementConfig): Promise<FabricElement> {
+export async function createIcon(
+  config: IconElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -208,10 +214,12 @@ export async function createIcon(config: IconElementConfig): Promise<FabricEleme
       })
     }
   }
+  assertElementRenderCurrent(renderContext)
   if (!element) {
     element = createMipText((metric as any)?.icon, iconOptions as any) as unknown as FabricElement
   }
 
+  assertElementRenderCurrent(renderContext)
   canvas.add(element as unknown as FabricObject)
   layerStore.addLayer(element as unknown as MinimalFabricLike)
   canvas.setActiveObject(element as unknown as FabricObject)
