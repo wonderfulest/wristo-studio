@@ -331,7 +331,7 @@ watch(
   },
 )
 
-const createStagePanCancelEvent = (
+const createFabricInteractionFinishEvent = (
   sourceEvent: PointerEvent,
   upperCanvas: HTMLCanvasElement,
 ): PointerEvent => {
@@ -354,30 +354,53 @@ const createStagePanCancelEvent = (
   })
 }
 
-const cancelFabricInteractionForStagePan = (sourceEvent: PointerEvent): boolean => {
+type FinishFabricPointerInteractionOptions = {
+  allowPerformedTransform: boolean
+  clearGroupSelector: boolean
+}
+
+const finishFabricPointerInteraction = (
+  sourceEvent: PointerEvent,
+  options: FinishFabricPointerInteractionOptions,
+): boolean => {
   const canvas = baseStore.canvas
   if (!canvas || !canvas.enablePointerEvents || typeof canvas._onMouseUp !== 'function') {
     return false
   }
 
   const transform = canvas._currentTransform
-  if (transform?.actionPerformed) return false
+  if (transform?.actionPerformed && !options.allowPerformedTransform) return false
 
   if (transform) {
     canvas.endCurrentTransform(sourceEvent)
     ;(transform.target as { __corner?: string }).__corner = undefined
   }
+  if (options.clearGroupSelector) {
+    ;(canvas as unknown as { _groupSelector: unknown })._groupSelector = null
+  }
 
   const previousSkipTargetFind = canvas.skipTargetFind
   canvas.skipTargetFind = true
   try {
-    canvas._onMouseUp(createStagePanCancelEvent(sourceEvent, canvas.upperCanvasEl))
+    canvas._onMouseUp(createFabricInteractionFinishEvent(sourceEvent, canvas.upperCanvasEl))
   } finally {
     canvas.skipTargetFind = previousSkipTargetFind
   }
   canvas.requestRenderAll?.()
   return true
 }
+
+const cancelFabricInteractionForStagePan = (sourceEvent: PointerEvent): boolean =>
+  finishFabricPointerInteraction(sourceEvent, {
+    allowPerformedTransform: false,
+    clearGroupSelector: false,
+  })
+
+const finishFabricInteractionForPointerCancel = (sourceEvent: PointerEvent): boolean =>
+  finishFabricPointerInteraction(sourceEvent, {
+    allowPerformedTransform: true,
+    clearGroupSelector: true,
+  })
 
 const syncCanvasOffset = () => {
   baseStore.canvas?.calcOffset?.()
@@ -396,6 +419,7 @@ defineExpose({
   canRedo: () => historyManager.canRedo(),
   clearSelection: clearCanvasSelection,
   cancelFabricInteractionForStagePan,
+  finishFabricInteractionForPointerCancel,
   syncCanvasOffset,
 })
 </script>
