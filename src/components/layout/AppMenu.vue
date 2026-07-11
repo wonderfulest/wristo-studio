@@ -157,9 +157,11 @@ import {
   type TransactionCanvas,
 } from '@/engine/managers/shortcutAddTransaction'
 import {
+  createDynamicPropertyTracker,
   enqueueCompoundShortcut,
-  executeCompoundMembers,
+  runCompoundTransaction,
 } from '@/engine/managers/compoundShortcutOrchestrator'
+import { buildDataFieldDrafts, buildGoalArcDrafts, buildGoalBarDrafts } from '@/engine/managers/shortcutCompoundDrafts'
 import { elementConfigs } from '@/elements/schemaMap'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
@@ -533,12 +535,6 @@ type AddShortcutBlockOptions = {
   errorMessageKey: string
 }
 
-type CreatedShortcutProperty = {
-  container: Record<string, any>
-  key: string
-  value: unknown
-}
-
 type AddShortcutPreparationContext = {
   trackCreatedProperty: (key: string) => void
 }
@@ -546,12 +542,6 @@ type AddShortcutPreparationContext = {
 type AddShortcutBlockFactory = (
   context: AddShortcutPreparationContext,
 ) => AddShortcutBlockOptions | Promise<AddShortcutBlockOptions>
-
-const cleanupCreatedProperties = (createdProperties: CreatedShortcutProperty[]) => {
-  createdProperties.forEach(({ container, key, value }) => {
-    if (container[key] === value) delete container[key]
-  })
-}
 
 const cleanupStaleShortcutTransaction = (
   snapshot: ShortcutTransactionSnapshot,
@@ -594,7 +584,7 @@ const runShortcutBlock = async (
   expectedDocument: TransactionDocumentIdentity<ShortcutCanvas>,
 ): Promise<FabricElement[] | null> => {
   const createdElements: FabricElement[] = []
-  const createdProperties: CreatedShortcutProperty[] = []
+  const propertyTracker = createDynamicPropertyTracker()
   const ownedIds = new Set<string>()
   let snapshot: ShortcutTransactionSnapshot | null = null
   let options: AddShortcutBlockOptions | null = null
@@ -625,7 +615,7 @@ const runShortcutBlock = async (
       }
     }
     try {
-      cleanupCreatedProperties(createdProperties)
+      propertyTracker.rollback()
     } catch (propertyCleanupError) {
       rollbackError = rollbackError ?? propertyCleanupError
     }
@@ -653,7 +643,7 @@ const runShortcutBlock = async (
         if (value == null) {
           throw new Error(`Shortcut property was not created: ${key}`)
         }
-        createdProperties.push({ container, key, value })
+        propertyTracker.track(container, key, value)
       },
     })
     assertShortcutTransactionCurrent(transaction)
@@ -677,7 +667,7 @@ const runShortcutBlock = async (
       occupied,
     })
 
-    const result = await executeCompoundMembers({
+    const result = await runCompoundTransaction({
       members: prepared.drafts,
       createMember: (draft) => historyStore.runWithoutRecording(async () => {
           assertShortcutTransactionCurrent(transaction)
@@ -694,8 +684,7 @@ const runShortcutBlock = async (
           assertShortcutTransactionCurrent(transaction)
           return created
       }),
-      commit: async () => {
-        await historyStore.runWithoutRecording(() => {
+      refine: async () => historyStore.runWithoutRecording(() => {
           assertShortcutTransactionCurrent(transaction)
           const actualMeasurement = measureActualBounds(createdElements)
           if (actualMeasurement.status !== 'all') return
@@ -717,17 +706,23 @@ const runShortcutBlock = async (
           const currentCenter = boundsCenter(actualMeasurement.bounds)
           assertShortcutTransactionCurrent(transaction)
           moveCreatedElements(createdElements, refinedPlacement.center.x - currentCenter.x, refinedPlacement.center.y - currentCenter.y)
-        })
+      }),
+      sync: () => {
         assertShortcutTransactionCurrent(transaction)
         syncLayersFromCanvas()
         assertShortcutTransactionCurrent(transaction)
+      },
+      render: () => {
         transaction.canvas.requestRenderAll?.()
         assertShortcutTransactionCurrent(transaction)
+      },
+      save: () => {
         const saved = historyStore.saveState('shortcut:add', { captureConfig: true })
-        if (!saved) throw new Error('Shortcut history commit was rejected')
-        committed = true
+        if (saved) committed = true
+        return saved
       },
       rollback: rollbackFailure,
+      propertyTracker,
       onSuccess: () => showShortcutMessageSafely(() =>
         messageStore.success(t('editor.elementAdded', { name: options!.successName })),
       ),
@@ -849,14 +844,10 @@ const handleAddDataField = async (metricSymbol?: string) => {
       const baseLeft = baseConfig.left ?? 227
       const baseTop = baseConfig.top ?? 227
       const dataFontSize = baseConfig.fontSize ?? 36
-      const shared = { dataProperty: propertyKey, goalProperty: null, metricSymbol: defaultOption.metricSymbol, left: baseLeft, originX: 'center' }
-      const drafts = [
-        shortcutDraft('metric', 'icon', { ...shared, top: baseTop - dataFontSize }, 'data-icon'),
-        shortcutDraft('metric', 'data', { ...shared, top: baseTop }, 'data-value'),
-      ]
-      if (String(defaultOption.unit ?? '')) {
-        drafts.push(shortcutDraft('metric', 'unit', { ...shared, top: baseTop + dataFontSize * 0.8 }, 'data-unit'))
-      }
+      const drafts = buildDataFieldDrafts(shortcutDraft, {
+        propertyKey, metricSymbol: defaultOption.metricSymbol, unit: String(defaultOption.unit ?? ''),
+        left: baseLeft, top: baseTop, fontSize: dataFontSize,
+      })
       return { kind: 'dataField', drafts, successName: title, errorMessageKey: 'editor.addDataFieldFailed' }
     }, 'editor.addDataFieldFailed')
   } catch (e) {
@@ -887,15 +878,9 @@ const handleAddGoalProgressBarField = async () => {
       const base = ((elementConfigs.goal && elementConfigs.goal.goalBar) || {}) as any
       const left = base.left ?? 227
       const top = base.top ?? 260
-      const half = (base.width ?? 100) / 2
-      const shared = { goalProperty: propertyKey, dataProperty: null }
       return {
         kind: 'goalBar',
-        drafts: [
-          shortcutDraft('goal', 'goalBar', shared, 'goal-bar'),
-          shortcutDraft('metric', 'icon', { ...shared, left: left - half, top: top - 20, originX: 'right', fontSize: 24, iconSize: 24 }, 'goal-bar-icon'),
-          shortcutDraft('metric', 'data', { ...shared, left: left + half, top: top - 20, originX: 'left', fontSize: 24 }, 'goal-bar-value'),
-        ],
+        drafts: buildGoalBarDrafts(shortcutDraft, { propertyKey, left, top, width: base.width ?? 100 }),
         successName: title,
         errorMessageKey: 'editor.addGoalFieldFailed',
       }
@@ -928,14 +913,9 @@ const handleAddGoalArcField = async () => {
       const base = ((elementConfigs.goal && elementConfigs.goal.goalArc) || {}) as any
       const left = base.left ?? 227
       const top = base.top ?? 260
-      const shared = { goalProperty: propertyKey, dataProperty: null }
       return {
         kind: 'goalArc',
-        drafts: [
-          shortcutDraft('goal', 'goalArc', { ...shared, strokeWidth: 4, bgStrokeWidth: 4, progress: 0.45 }, 'goal-arc'),
-          shortcutDraft('metric', 'icon', { ...shared, left, top: top - 16, originX: 'center', fontSize: 24, iconSize: 24 }, 'goal-arc-icon'),
-          shortcutDraft('metric', 'data', { ...shared, left, top: top + 16, originX: 'center', fontSize: 24 }, 'goal-arc-value'),
-        ],
+        drafts: buildGoalArcDrafts(shortcutDraft, { propertyKey, left, top }),
         successName: title,
         errorMessageKey: 'editor.addGoalFieldFailed',
       }
