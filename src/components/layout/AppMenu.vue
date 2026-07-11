@@ -589,8 +589,11 @@ const runShortcutBlock = async (
   let snapshot: ShortcutTransactionSnapshot | null = null
   let options: AddShortcutBlockOptions | null = null
   let committed = false
+  let failurePromise: Promise<void> | null = null
 
-  const rollbackFailure = async (error: unknown) => {
+  const rollbackFailure = (error: unknown): Promise<void> => {
+    if (failurePromise) return failurePromise
+    failurePromise = (async () => {
     let rollbackError: unknown = null
     if (!committed && snapshot) {
       let stale = error instanceof StaleShortcutTransactionError
@@ -629,6 +632,8 @@ const runShortcutBlock = async (
     showShortcutMessageSafely(() =>
       messageStore.error(t(options?.errorMessageKey ?? fallbackErrorMessageKey)),
     )
+    })()
+    return failurePromise
   }
 
   try {
@@ -722,7 +727,6 @@ const runShortcutBlock = async (
         return saved
       },
       rollback: rollbackFailure,
-      propertyTracker,
       onSuccess: () => showShortcutMessageSafely(() =>
         messageStore.success(t('editor.elementAdded', { name: options!.successName })),
       ),

@@ -29,9 +29,8 @@ export async function runCompoundTransaction<TMember, TCreated>(options: {
   render: () => unknown | Promise<unknown>
   save: () => boolean | Promise<boolean>
   rollback: (error: unknown, created: TCreated[]) => unknown | Promise<unknown>
-  propertyTracker?: ReturnType<typeof createDynamicPropertyTracker>
   onSuccess: (created: TCreated[]) => unknown
-  onError: (error: unknown) => unknown
+  onError: (error: unknown, rollbackError?: unknown) => unknown
 }): Promise<TCreated[] | null> {
   const created: TCreated[] = []
   try {
@@ -45,11 +44,11 @@ export async function runCompoundTransaction<TMember, TCreated>(options: {
     options.onSuccess(created)
     return created
   } catch (error) {
+    let rollbackError: unknown
     try { await options.rollback(error, created) }
-    finally {
-      options.propertyTracker?.rollback()
-      options.onError(error)
-    }
+    catch (caught) { rollbackError = caught }
+    try { options.onError(error, rollbackError) }
+    catch (caught) { console.warn('[AppMenu] Failed to report compound shortcut error', caught) }
     return null
   }
 }

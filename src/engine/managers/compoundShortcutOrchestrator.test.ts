@@ -5,7 +5,7 @@ import {
   enqueueCompoundShortcut,
   runCompoundTransaction,
 } from './compoundShortcutOrchestrator'
-import { buildGoalBarDrafts } from './shortcutCompoundDrafts'
+import { buildDataFieldDrafts, buildGoalArcDrafts, buildGoalBarDrafts } from './shortcutCompoundDrafts'
 
 describe('compound shortcut production orchestrator', () => {
   it('does not prepare or allocate a property until its queued task starts', async () => {
@@ -57,11 +57,11 @@ describe('compound shortcut production orchestrator', () => {
         return member
       },
       refine: vi.fn(), sync: vi.fn(), render: vi.fn(), save,
-      propertyTracker: tracker,
       rollback: async () => {
         canvas.splice(1)
         elementMap.splice(1)
         layers.splice(1)
+        tracker.rollback()
       },
       onSuccess: success,
       onError: error,
@@ -135,5 +135,51 @@ describe('compound shortcut production orchestrator', () => {
     expect(result).toBeNull()
     expect(rollback).toHaveBeenCalledTimes(1)
     expect(error).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['member', 'refine', 'sync', 'render', 'save'] as const)(
+    'uses one failure owner when %s fails, including cleanup errors',
+    async (stage) => {
+      const snapshotRollback = vi.fn()
+      const propertyCleanup = vi.fn(() => { throw new Error('cleanup failed') })
+      const rollback = vi.fn(async () => {
+        snapshotRollback()
+        propertyCleanup()
+      })
+      const error = vi.fn()
+      const fail = () => { throw new Error(`${stage} failed`) }
+      const result = await runCompoundTransaction({
+        members: ['one'],
+        createMember: stage === 'member' ? fail : async (member) => member,
+        refine: stage === 'refine' ? fail : vi.fn(),
+        sync: stage === 'sync' ? fail : vi.fn(),
+        render: stage === 'render' ? fail : vi.fn(),
+        save: stage === 'save' ? vi.fn(() => false) : vi.fn(() => true),
+        rollback,
+        onSuccess: vi.fn(),
+        onError: error,
+      })
+      expect(result).toBeNull()
+      expect(rollback).toHaveBeenCalledTimes(1)
+      expect(snapshotRollback).toHaveBeenCalledTimes(1)
+      expect(propertyCleanup).toHaveBeenCalledTimes(1)
+      expect(error).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('builds Data Field with and without unit and preserves schema roles', () => {
+    const factory = (_category: string, elementType: string, overrides: Record<string, any>, key: string) => ({ key, elementType, config: overrides })
+    const base = { propertyKey: 'data_1', metricSymbol: ':DATA_TYPE_STEPS', left: 227, top: 227, fontSize: 36 }
+    expect(buildDataFieldDrafts(factory, { ...base, unit: 'steps' }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value', 'data-unit'])
+    expect(buildDataFieldDrafts(factory, { ...base, unit: '' }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value'])
+  })
+
+  it('builds Goal Arc keys, types, and centered relative coordinates', () => {
+    const factory = (_category: string, elementType: string, overrides: Record<string, any>, key: string) => ({ key, elementType, config: overrides })
+    const drafts = buildGoalArcDrafts(factory, { propertyKey: 'goal_1', left: 227, top: 260 })
+    expect(drafts.map(({ key, elementType }) => [key, elementType])).toEqual([
+      ['goal-arc', 'goalArc'], ['goal-arc-icon', 'icon'], ['goal-arc-value', 'data'],
+    ])
+    expect(drafts.slice(1).map((draft) => [draft.config.left, draft.config.top])).toEqual([[227, 244], [227, 276]])
   })
 })
