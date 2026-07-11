@@ -156,6 +156,10 @@ import {
   type TransactionDocumentIdentity,
   type TransactionCanvas,
 } from '@/engine/managers/shortcutAddTransaction'
+import {
+  rollbackCreatedShortcutProperty,
+  type CreatedShortcutProperty,
+} from '@/engine/managers/shortcutCompound'
 import { elementConfigs } from '@/elements/schemaMap'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
@@ -361,6 +365,23 @@ const scaleShortcutDraftConfig = (config: Record<string, any>) => {
   return normalized
 }
 
+const shortcutDraft = (
+  category: string,
+  elementType: string,
+  overrides: Record<string, any>,
+  key: string,
+): ShortcutDraft => {
+  const schema = (elementConfigs as Record<string, Record<string, any> | undefined>)[category]?.[elementType]
+  if (!schema || schema.disabled) {
+    throw new Error(`Unsupported shortcut element: ${category}/${elementType}`)
+  }
+  return {
+    key,
+    elementType,
+    config: scaleShortcutDraftConfig({ ...schema, ...overrides }),
+  }
+}
+
 const AXIS_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'centerCap'])
 
 const resolvePlacementKind = (category: string, elementType: string): ShortcutPlacementKind => {
@@ -512,12 +533,6 @@ type AddShortcutBlockOptions = {
   errorMessageKey: string
 }
 
-type CreatedShortcutProperty = {
-  container: Record<string, any>
-  key: string
-  value: unknown
-}
-
 type AddShortcutPreparationContext = {
   trackCreatedProperty: (key: string) => void
 }
@@ -527,11 +542,7 @@ type AddShortcutBlockFactory = (
 ) => AddShortcutBlockOptions | Promise<AddShortcutBlockOptions>
 
 const cleanupCreatedProperties = (createdProperties: CreatedShortcutProperty[]) => {
-  createdProperties.forEach(({ container, key, value }) => {
-    if (container[key] === value) {
-      delete container[key]
-    }
-  })
+  createdProperties.forEach(rollbackCreatedShortcutProperty)
 }
 
 const cleanupStaleShortcutTransaction = (
@@ -593,7 +604,7 @@ const runShortcutBlock = async (
         if (value == null) {
           throw new Error(`Shortcut property was not created: ${key}`)
         }
-        createdProperties.push({ container, key, value })
+        createdProperties.push({ container, key, value, created: true })
       },
     })
     assertShortcutTransactionCurrent(transaction)
@@ -813,79 +824,39 @@ const handleAddElement = async (category: string, elementType: string, overrides
 // metricSymbol: optional, used to choose default data option (Heart Rate, Steps, etc.)
 const handleAddDataField = async (metricSymbol?: string) => {
   try {
-    // Find next available index based on existing data_* properties
-    const allProps = propertiesStore.allProperties
-    let maxIndex = 0
-    Object.keys(allProps || {}).forEach((key) => {
-      const match = key.match(/^data_(\d+)$/)
-      if (match) {
-        const num = Number(match[1]) || 0
-        if (num > maxIndex) maxIndex = num
+    await addShortcutBlock(({ trackCreatedProperty }) => {
+      const allProps = propertiesStore.allProperties
+      let maxIndex = 0
+      Object.keys(allProps || {}).forEach((key) => {
+        const match = key.match(/^data_(\d+)$/)
+        if (match) maxIndex = Math.max(maxIndex, Number(match[1]) || 0)
+      })
+      const nextIndex = maxIndex + 1
+      const propertyKey = `data_${nextIndex}`
+      const title = `Data ${nextIndex}`
+      let defaultOption = DataTypeOptions[0]
+      if (metricSymbol) {
+        defaultOption = DataTypeOptions.find((option) => option.metricSymbol === metricSymbol) || defaultOption
       }
-    })
-    const nextIndex = maxIndex + 1
-    const propertyKey = `data_${nextIndex}`
-    const title = `Data ${nextIndex}`
+      if (!allProps[propertyKey]) {
+        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: DataTypeOptions, defaultValue: defaultOption.value })
+        trackCreatedProperty(propertyKey)
+      }
 
-    // Choose default option based on metricSymbol (fallback to first)
-    let defaultOption = DataTypeOptions[0]
-    if (metricSymbol) {
-      const found = DataTypeOptions.find((opt) => opt.metricSymbol === metricSymbol)
-      if (found) defaultOption = found
-    }
-
-    // If property already exists (edge case), just reuse it; otherwise create with default value
-    if (!allProps[propertyKey]) {
-      propertiesStore.addProperty({
-        key: propertyKey,
-        type: 'data',
-        title,
-        options: DataTypeOptions,
-        defaultValue: defaultOption.value,
-      })
-    }
-
-    const metricSymbolForElement = defaultOption.metricSymbol
-    const unitText = String(defaultOption.unit ?? '')
-
-    // Base position from default data config
-    const baseConfig = (elementConfigs.metric && elementConfigs.metric.data) || {}
-    const baseLeft = baseConfig.left ?? 227
-    const baseTop = baseConfig.top ?? 227
-    const dataFontSize = baseConfig.fontSize ?? 36
-    const iconTop = baseTop - dataFontSize
-    const dataTop = baseTop
-    const unitTop = baseTop + dataFontSize * 0.8
-
-    // Add icon/data/unit as a centered vertical stack.
-    await handleAddElement('metric', 'icon', {
-      dataProperty: propertyKey,
-      goalProperty: null,
-      metricSymbol: metricSymbolForElement,
-      left: baseLeft,
-      top: iconTop,
-      originX: 'center',
-    })
-
-    await handleAddElement('metric', 'data', {
-      dataProperty: propertyKey,
-      goalProperty: null,
-      metricSymbol: metricSymbolForElement,
-      left: baseLeft,
-      top: dataTop,
-      originX: 'center',
-    })
-
-    if (unitText) {
-      await handleAddElement('metric', 'unit', {
-        dataProperty: propertyKey,
-        goalProperty: null,
-        metricSymbol: metricSymbolForElement,
-        left: baseLeft,
-        top: unitTop,
-        originX: 'center',
-      })
-    }
+      const baseConfig = (elementConfigs.metric && elementConfigs.metric.data) || {}
+      const baseLeft = baseConfig.left ?? 227
+      const baseTop = baseConfig.top ?? 227
+      const dataFontSize = baseConfig.fontSize ?? 36
+      const shared = { dataProperty: propertyKey, goalProperty: null, metricSymbol: defaultOption.metricSymbol, left: baseLeft, originX: 'center' }
+      const drafts = [
+        shortcutDraft('metric', 'icon', { ...shared, top: baseTop - dataFontSize }, 'data-icon'),
+        shortcutDraft('metric', 'data', { ...shared, top: baseTop }, 'data-value'),
+      ]
+      if (String(defaultOption.unit ?? '')) {
+        drafts.push(shortcutDraft('metric', 'unit', { ...shared, top: baseTop + dataFontSize * 0.8 }, 'data-unit'))
+      }
+      return { kind: 'dataField', drafts, successName: title, errorMessageKey: 'editor.addDataFieldFailed' }
+    }, 'editor.addDataFieldFailed')
   } catch (e) {
     console.error('Failed to add data field (icon + data + unit):', e)
     messageStore.error(t('editor.addDataFieldFailed'))
@@ -895,74 +866,38 @@ const handleAddDataField = async (metricSymbol?: string) => {
 // Goal quick-add: Progress Bar (steps), bar with icon/data at two ends above bar
 const handleAddGoalProgressBarField = async () => {
   try {
-    const allProps = propertiesStore.allProperties
-
-    // Compute next goal index from existing goal_* properties
-    let maxIndex = 0
-    Object.keys(allProps || {}).forEach((key) => {
-      const match = key.match(/^goal_(\d+)$/)
-      if (match) {
-        const num = Number(match[1]) || 0
-        if (num > maxIndex) maxIndex = num
-      }
-    })
-    const nextIndex = maxIndex + 1
-    const propertyKey = `goal_${nextIndex}`
-    const title = `Goal ${nextIndex}`
-
-    // Use goal options (DataTypeOptions filtered by :GOAL_TYPE_), prefer steps
-    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
-    let defaultOption = goalOptions[0] || DataTypeOptions[0]
-    const stepsOption = goalOptions.find((opt) => opt.metricSymbol === ':GOAL_TYPE_STEPS')
-    if (stepsOption) defaultOption = stepsOption
-
-    if (!allProps[propertyKey]) {
-      propertiesStore.addProperty({
-        key: propertyKey,
-        type: 'goal',
-        title,
-        options: goalOptions,
-        defaultValue: defaultOption ? defaultOption.value : undefined,
+    await addShortcutBlock(({ trackCreatedProperty }) => {
+      const allProps = propertiesStore.allProperties
+      let maxIndex = 0
+      Object.keys(allProps || {}).forEach((key) => {
+        const match = key.match(/^goal_(\d+)$/)
+        if (match) maxIndex = Math.max(maxIndex, Number(match[1]) || 0)
       })
-    }
-
-    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalBar) || {}) as any
-    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
-    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
-    const width = baseGoalConfig.width != null ? baseGoalConfig.width : 100
-    const half = width / 2
-
-    const iconLeft = baseLeft - half
-    const dataLeft = baseLeft + half
-    const iconTop = baseTop - 20
-    const dataTop = baseTop - 20
-
-    // bar 本身
-    await handleAddElement('goal', 'goalBar', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-    })
-
-    // 左端 icon
-    await handleAddElement('metric', 'icon', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: iconLeft,
-      top: iconTop,
-      originX: 'right',
-      fontSize: 24,
-      iconSize: 24,
-    })
-
-    // 右端 data
-    await handleAddElement('metric', 'data', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: dataLeft,
-      top: dataTop,
-      originX: 'left',
-      fontSize: 24,
-    })
+      const nextIndex = maxIndex + 1
+      const propertyKey = `goal_${nextIndex}`
+      const title = `Goal ${nextIndex}`
+      const goalOptions = DataTypeOptions.filter((option) => String(option.metricSymbol || '').startsWith(':GOAL_TYPE_'))
+      const defaultOption = goalOptions.find((option) => option.metricSymbol === ':GOAL_TYPE_STEPS') || goalOptions[0] || DataTypeOptions[0]
+      if (!allProps[propertyKey]) {
+        propertiesStore.addProperty({ key: propertyKey, type: 'goal', title, options: goalOptions, defaultValue: defaultOption?.value })
+        trackCreatedProperty(propertyKey)
+      }
+      const base = ((elementConfigs.goal && elementConfigs.goal.goalBar) || {}) as any
+      const left = base.left ?? 227
+      const top = base.top ?? 260
+      const half = (base.width ?? 100) / 2
+      const shared = { goalProperty: propertyKey, dataProperty: null }
+      return {
+        kind: 'goalBar',
+        drafts: [
+          shortcutDraft('goal', 'goalBar', shared, 'goal-bar'),
+          shortcutDraft('metric', 'icon', { ...shared, left: left - half, top: top - 20, originX: 'right', fontSize: 24, iconSize: 24 }, 'goal-bar-icon'),
+          shortcutDraft('metric', 'data', { ...shared, left: left + half, top: top - 20, originX: 'left', fontSize: 24 }, 'goal-bar-value'),
+        ],
+        successName: title,
+        errorMessageKey: 'editor.addGoalFieldFailed',
+      }
+    }, 'editor.addGoalFieldFailed')
   } catch (e) {
     console.error('Failed to add goal progress bar (goal + icon + data):', e)
     messageStore.error(t('editor.addGoalFieldFailed'))
@@ -972,68 +907,37 @@ const handleAddGoalProgressBarField = async () => {
 // Goal quick-add: Progress Arc, icon/data stacked in center of ring, thicker stroke, 45% progress
 const handleAddGoalArcField = async () => {
   try {
-    const allProps = propertiesStore.allProperties
-
-    let maxIndex = 0
-    Object.keys(allProps || {}).forEach((key) => {
-      const match = key.match(/^goal_(\d+)$/)
-      if (match) {
-        const num = Number(match[1]) || 0
-        if (num > maxIndex) maxIndex = num
-      }
-    })
-    const nextIndex = maxIndex + 1
-    const propertyKey = `goal_${nextIndex}`
-    const title = `Goal ${nextIndex}`
-
-    const goalOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':GOAL_TYPE_'))
-    const defaultOption = goalOptions[0] || DataTypeOptions[0]
-
-    if (!allProps[propertyKey]) {
-      propertiesStore.addProperty({
-        key: propertyKey,
-        type: 'goal',
-        title,
-        options: goalOptions,
-        defaultValue: defaultOption ? defaultOption.value : undefined,
+    await addShortcutBlock(({ trackCreatedProperty }) => {
+      const allProps = propertiesStore.allProperties
+      let maxIndex = 0
+      Object.keys(allProps || {}).forEach((key) => {
+        const match = key.match(/^goal_(\d+)$/)
+        if (match) maxIndex = Math.max(maxIndex, Number(match[1]) || 0)
       })
-    }
-
-    const baseGoalConfig = ((elementConfigs.goal && elementConfigs.goal.goalArc) || {}) as any
-    const baseLeft = baseGoalConfig.left != null ? baseGoalConfig.left : 227
-    const baseTop = baseGoalConfig.top != null ? baseGoalConfig.top : 260
-
-    const iconLeft = baseLeft
-    const dataLeft = baseLeft
-    const iconTop = baseTop - 16
-    const dataTop = baseTop + 16
-
-    await handleAddElement('goal', 'goalArc', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      strokeWidth: 4,
-      bgStrokeWidth: 4,
-      progress: 0.45,
-    })
-
-    await handleAddElement('metric', 'icon', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: iconLeft,
-      top: iconTop,
-      originX: 'center',
-      fontSize: 24,
-      iconSize: 24,
-    })
-
-    await handleAddElement('metric', 'data', {
-      goalProperty: propertyKey,
-      dataProperty: null,
-      left: dataLeft,
-      top: dataTop,
-      originX: 'center',
-      fontSize: 24,
-    })
+      const nextIndex = maxIndex + 1
+      const propertyKey = `goal_${nextIndex}`
+      const title = `Goal ${nextIndex}`
+      const goalOptions = DataTypeOptions.filter((option) => String(option.metricSymbol || '').startsWith(':GOAL_TYPE_'))
+      const defaultOption = goalOptions[0] || DataTypeOptions[0]
+      if (!allProps[propertyKey]) {
+        propertiesStore.addProperty({ key: propertyKey, type: 'goal', title, options: goalOptions, defaultValue: defaultOption?.value })
+        trackCreatedProperty(propertyKey)
+      }
+      const base = ((elementConfigs.goal && elementConfigs.goal.goalArc) || {}) as any
+      const left = base.left ?? 227
+      const top = base.top ?? 260
+      const shared = { goalProperty: propertyKey, dataProperty: null }
+      return {
+        kind: 'goalArc',
+        drafts: [
+          shortcutDraft('goal', 'goalArc', { ...shared, strokeWidth: 4, bgStrokeWidth: 4, progress: 0.45 }, 'goal-arc'),
+          shortcutDraft('metric', 'icon', { ...shared, left, top: top - 16, originX: 'center', fontSize: 24, iconSize: 24 }, 'goal-arc-icon'),
+          shortcutDraft('metric', 'data', { ...shared, left, top: top + 16, originX: 'center', fontSize: 24 }, 'goal-arc-value'),
+        ],
+        successName: title,
+        errorMessageKey: 'editor.addGoalFieldFailed',
+      }
+    }, 'editor.addGoalFieldFailed')
   } catch (e) {
     console.error('Failed to add goal arc (goal + icon + data):', e)
     messageStore.error(t('editor.addGoalFieldFailed'))
