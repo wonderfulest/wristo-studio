@@ -122,15 +122,30 @@ import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import { useEditorStore } from '@/stores/editorStore'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
 import { CircleCheck } from '@element-plus/icons-vue'
 
-import { getElementHandler } from '@/engine/registry/elementRegistry'
+import { addElement, removeElement } from '@/engine/managers/elementManager'
+import { syncLayersFromCanvas } from '@/engine/managers/layerManager'
+import {
+  boundsCenter,
+  collectOccupiedBounds,
+  findShortcutPlacement,
+  placeShortcutDrafts,
+  unionBounds,
+  type ShortcutDraft,
+  type ShortcutPlacementKind,
+  type ShortcutPlacementMode,
+} from '@/engine/managers/shortcutPlacementManager'
 import { elementConfigs } from '@/elements/schemaMap'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
 import { buildWrtDesignPackage } from '@/engine/services/designAssetBundleService'
+import type { FabricElement } from '@/types/element'
 import emitter from '@/utils/eventBus'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
@@ -154,6 +169,9 @@ const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
 const editorStore = useEditorStore()
+const canvasStore = useCanvasStore()
+const elementDataStore = useElementDataStore()
+const historyStore = useHistoryStore()
 const { t } = useI18n()
 const activeMenu = computed(() => {
   return route.path
@@ -290,7 +308,7 @@ const scaleStandardY = (value: unknown) => {
   return Math.round((numericValue / STANDARD_DESIGN_SIZE) * height)
 }
 
-const normalizeShortcutElementConfig = (config: Record<string, any>) => {
+const scaleShortcutDraftConfig = (config: Record<string, any>) => {
   const { centerX, centerY } = getCurrentDesignMetrics()
   const normalized = { ...config }
   const hasLinePoints = ['x1', 'y1', 'x2', 'y2'].some((key) => normalized[key] != null)
@@ -307,15 +325,196 @@ const normalizeShortcutElementConfig = (config: Record<string, any>) => {
 
   normalized.originX = normalized.originX ?? 'center'
   normalized.originY = normalized.originY ?? 'center'
+  normalized.displayStates = normalized.displayStates ?? { active: true, ambient: true }
   return normalized
+}
+
+const AXIS_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'centerCap'])
+
+const resolvePlacementKind = (category: string, elementType: string): ShortcutPlacementKind => {
+  if (AXIS_TYPES.has(elementType)) return 'axis'
+  if (elementType === 'time') return 'time'
+  if (elementType === 'date') return 'date'
+  if (category === 'status' || category === 'indicator') return 'status'
+  if (category === 'weather' || elementType === 'weather') return 'weather'
+  if (category === 'chart') return 'chart'
+  if (elementType === 'goalBar') return 'goalBar'
+  if (elementType === 'goalArc') return 'goalArc'
+  if (category === 'image' || elementType === 'image') return 'image'
+  return 'shape'
+}
+
+const getActualBounds = (elements: FabricElement[]) => {
+  const bounds: Array<{ left: number; top: number; width: number; height: number }> = []
+
+  elements.forEach((element) => {
+    try {
+      const actual = element.getBoundingRect()
+      if (
+        !Number.isFinite(actual.left) ||
+        !Number.isFinite(actual.top) ||
+        !Number.isFinite(actual.width) ||
+        !Number.isFinite(actual.height) ||
+        actual.width <= 0 ||
+        actual.height <= 0
+      ) {
+        return
+      }
+      bounds.push({
+        left: actual.left,
+        top: actual.top,
+        width: actual.width,
+        height: actual.height,
+      })
+    } catch (error) {
+      console.warn('[AppMenu] Failed to read shortcut element bounds', {
+        id: element.id,
+        error,
+      })
+    }
+  })
+
+  return unionBounds(bounds)
+}
+
+const moveCreatedElements = (elements: FabricElement[], dx: number, dy: number) => {
+  elements.forEach((element) => {
+    const nextLeft = element.left + dx
+    const nextTop = element.top + dy
+    element.set({ left: nextLeft, top: nextTop })
+    element.setCoords()
+
+    const widgetConfig = element.__element?.config
+    if (widgetConfig) {
+      widgetConfig.left = nextLeft
+      widgetConfig.top = nextTop
+    }
+
+    if (element.id != null) {
+      elementDataStore.patchElement(String(element.id), { left: nextLeft, top: nextTop } as any)
+    }
+  })
+}
+
+type AddShortcutBlockOptions = {
+  kind: ShortcutPlacementKind
+  mode?: ShortcutPlacementMode
+  drafts: ShortcutDraft[]
+  createdPropertyKeys?: string[]
+  successName: string
+  errorMessageKey: string
+}
+
+const addShortcutBlock = async ({
+  kind,
+  mode = 'smart',
+  drafts,
+  createdPropertyKeys = [],
+  successName,
+  errorMessageKey,
+}: AddShortcutBlockOptions): Promise<FabricElement[] | null> => {
+  const geometry = getCurrentDesignMetrics()
+  const occupied = collectOccupiedBounds(canvasStore.getObjects())
+  const createdElements: FabricElement[] = []
+
+  const rollbackCreatedElements = () => {
+    for (let index = createdElements.length - 1; index >= 0; index -= 1) {
+      try {
+        removeElement(createdElements[index])
+      } catch (rollbackError) {
+        console.warn('[AppMenu] Failed to roll back shortcut element', {
+          id: createdElements[index].id,
+          rollbackError,
+        })
+      }
+    }
+    createdElements.length = 0
+  }
+
+  try {
+    const prepared = placeShortcutDrafts({
+      kind,
+      mode,
+      geometry,
+      drafts,
+      occupied,
+    })
+
+    await historyStore.runWithoutRecording(async () => {
+      try {
+        for (const draft of prepared.drafts) {
+          const fontFamily = String(draft.config.fontFamily ?? '').trim()
+          if (fontFamily) {
+            await fontStore.loadFont(fontFamily)
+          }
+
+          const created = await addElement(draft.elementType, draft.config as any)
+          if (!created) {
+            throw new Error(`Shortcut element handler returned no element: ${draft.elementType}`)
+          }
+          createdElements.push(created)
+        }
+
+        const actualBounds = getActualBounds(createdElements)
+        if (actualBounds) {
+          const createdIds = createdElements
+            .map((element) => element.id)
+            .filter((id) => id != null)
+            .map(String)
+          const refinedOccupied = collectOccupiedBounds(canvasStore.getObjects(), createdIds)
+          const refinedPlacement = findShortcutPlacement({
+            kind,
+            mode,
+            geometry,
+            footprint: {
+              width: actualBounds.width,
+              height: actualBounds.height,
+            },
+            occupied: refinedOccupied,
+          })
+          const currentCenter = boundsCenter(actualBounds)
+          moveCreatedElements(
+            createdElements,
+            refinedPlacement.center.x - currentCenter.x,
+            refinedPlacement.center.y - currentCenter.y,
+          )
+        }
+      } catch (error) {
+        rollbackCreatedElements()
+        throw error
+      }
+    })
+
+    syncLayersFromCanvas()
+    canvasStore.canvas?.requestRenderAll?.()
+    historyStore.saveState('shortcut:add', { captureConfig: true })
+    messageStore.success(t('editor.elementAdded', { name: successName }))
+    return createdElements
+  } catch (error) {
+    if (createdElements.length > 0) {
+      await historyStore.runWithoutRecording(() => rollbackCreatedElements())
+    }
+    new Set(createdPropertyKeys).forEach((key) => propertiesStore.deleteProperty(key))
+    syncLayersFromCanvas()
+    canvasStore.canvas?.requestRenderAll?.()
+    console.error('[AppMenu] Failed to add shortcut block', {
+      kind,
+      mode,
+      draftKeys: drafts.map((draft) => draft.key),
+      error,
+    })
+    messageStore.error(t(errorMessageKey))
+    return null
+  }
 }
 
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
-  
+  const createdPropertyKeys: string[] = []
+
   try {
     const resolvedElementType = elementType || (category === 'image' ? 'image' : '')
-    let config 
+    let config: Record<string, any>
     if (category === 'image') {
       config = {
         ...(elementConfigs.decoration?.image || {
@@ -336,17 +535,6 @@ const handleAddElement = async (category: string, elementType: string, overrides
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
-    config = normalizeShortcutElementConfig(config)
-
-    // Preload fonts if necessary
-    try {
-      const anyConfig = config as any
-      if (anyConfig?.fontFamily) {
-        await fontStore.loadFont(anyConfig.fontFamily)
-      }
-    } catch (e) {
-      console.warn('Failed to load font (continue adding element):', e)
-    }
 
     if (category === 'chart' && (resolvedElementType === 'barChart' || resolvedElementType === 'lineChart')) {
       const resolvedOverrides: any = { ...overrides }
@@ -359,24 +547,29 @@ const handleAddElement = async (category: string, elementType: string, overrides
 
       if (!keyCandidate || !item || item.type !== 'chart') {
         const nextKey = ensureNextChartProperty(metricSymbolForCreation)
+        createdPropertyKeys.push(nextKey)
         config = { ...config, chartProperty: nextKey }
       }
     }
 
-    ;(config as any).displayStates = (config as any).displayStates ?? { active: true, ambient: true }
-
-    // Use registry to add element via ElementHandler.add(config)
-    if (resolvedElementType) {
-      try {
-        const handler = getElementHandler(resolvedElementType)
-        await handler.add(config as any)
-      } catch (e) {
-        console.warn(`No add element handler registered for type: ${resolvedElementType}`, e)
-      }
-    }
-
-    messageStore.success(t('editor.elementAdded', { name: config.label || resolvedElementType }))
+    config = scaleShortcutDraftConfig(config)
+    const kind = resolvePlacementKind(category, resolvedElementType)
+    return await addShortcutBlock({
+      kind,
+      mode: kind === 'axis' ? 'fixedCenter' : 'smart',
+      drafts: [
+        {
+          key: resolvedElementType,
+          elementType: resolvedElementType,
+          config,
+        },
+      ],
+      createdPropertyKeys,
+      successName: String(config.label || resolvedElementType),
+      errorMessageKey: 'editor.addElementFailed',
+    })
   } catch (error: any) {
+    createdPropertyKeys.forEach((key) => propertiesStore.deleteProperty(key))
     console.error('Failed to add element:', error)
     messageStore.error(t('editor.addElementFailed'))
   }
