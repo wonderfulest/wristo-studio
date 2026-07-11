@@ -530,6 +530,11 @@ const downloadDesignAssets = async () => {
       ...config,
       designId: currentDesign.value.designUid || (config as any).designId || 'design',
       name: (config as any).name || form.name,
+    }, {
+      productImages: {
+        heroImageUrl: currentDesign.value.product?.garminImageUrl,
+        rawImageUrl: currentDesign.value.product?.rawImageUrl,
+      },
     })
     if (!bundleFile) return
     downloadBlob(bundleFile, bundleFile.name || `${currentDesign.value.designUid || 'design'}-assets.zip`)

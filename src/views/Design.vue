@@ -583,6 +583,12 @@ const importWrtDesign = async (file: File): Promise<void> => {
   try {
     await enqueueDesignLoad(async () => {
       if (!isCurrentDesignLoad(generation)) return
+      const currentDesignId = baseStore.id || designStore.id
+      if (!currentDesignId) {
+        messageStore.warning(t('editor.saveDesignFirst'))
+        return
+      }
+      const currentDesignName = designStore.watchFaceName || baseStore.watchFaceName
       const imported = await readWrtDesignPackage(file)
       packageRead = true
       const clearImportedUrlsIfStale = (): boolean => {
@@ -596,15 +602,11 @@ const importWrtDesign = async (file: File): Promise<void> => {
       // They are released on unmount or by the next successful package read.
       if (!await clearEditableDesignCanvas(generation) || clearImportedUrlsIfStale()) return
 
-      baseStore.id = ''
-      designStore.id = ''
-      baseStore.appId = -1
-      const copyName = `${imported.sourceName} Copy`
-      baseStore.setWatchFaceName(copyName)
-      designStore.setWatchFaceName(copyName)
-      await router.replace({ path: route.path, query: {} })
-      if (clearImportedUrlsIfStale()) return
-      if (!await applyRuntimeDesignConfig({ ...imported.config, designId: '', name: copyName }, generation)) {
+      if (!await applyRuntimeDesignConfig({
+        ...imported.config,
+        designId: currentDesignId,
+        name: currentDesignName,
+      }, generation)) {
         if (clearImportedUrlsIfStale()) return
         return
       }

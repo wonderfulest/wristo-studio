@@ -124,6 +124,10 @@ type DesignAssetManifest = {
 
 type BuildDesignAssetBundleOptions = {
   previewDataUrl?: string | null
+  productImages?: {
+    heroImageUrl?: string | null
+    rawImageUrl?: string | null
+  }
 }
 
 type RestoreBundleOptions = {
@@ -831,6 +835,17 @@ const buildDesignAssetArchive = async (
       })
     }
   }
+
+  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, usedPaths, {
+    category: 'product',
+    field: 'heroImage',
+    source: options.productImages?.heroImageUrl || '',
+  })
+  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, usedPaths, {
+    category: 'product',
+    field: 'rawImage',
+    source: options.productImages?.rawImageUrl || '',
+  })
 
   for (const slug of collectFontSlugs(config)) {
     await addFontAssetToBundle(zip, manifest, usedPaths, slug)

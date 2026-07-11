@@ -18,6 +18,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
 import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO } from '@/api/device'
+import { getProduct } from '@/api/products'
 import * as elementManager from '@/engine/managers/elementManager'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
@@ -378,23 +379,53 @@ export const useBaseStore = defineStore('baseStore', {
       if (!(await validateRuntimeConfigForExport(config))) return false
       const exportConfig = await resolvePackageAssetUrls(config)
       if (!exportConfig) return false
+      let designUid = this.id
+      if (!designUid) {
+        const created = await designApi.createDesign({
+          name: designStore.watchFaceName,
+          description: designStore.watchFaceName,
+        })
+        if (created.code !== 0 || !created.data?.designUid) {
+          ElMessage.error('创建设计失败！')
+          return false
+        }
+        designUid = created.data.designUid
+        this.id = designUid
+        designStore.id = designUid
+      }
+
       const res: any = await designApi.updateDesign({
-        uid: this.id ?? '',
+        uid: designUid,
         name: designStore.watchFaceName,
         configJson: JSON.stringify(exportConfig),
       })
-      this.id = res.data.documentId
+      if (res.code !== 0) return false
+      this.id = res.data?.designUid || designUid
       designStore.id = this.id
-      const designUid = res.data?.designUid || this.id
+      designUid = res.data?.designUid || designUid
       let previewDataUrl = ''
       try {
         previewDataUrl = await this.captureScreenshot() || ''
       } catch (error) {
         console.warn('Failed to capture preview for asset bundle:', error)
       }
+      let productImages: { heroImageUrl?: string; rawImageUrl?: string } | undefined
+      if (this.appId > 0) {
+        try {
+          const productResponse = await getProduct(this.appId)
+          if (productResponse.code === 0 && productResponse.data) {
+            productImages = {
+              heroImageUrl: productResponse.data.garminImageUrl,
+              rawImageUrl: productResponse.data.rawImageUrl,
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to load product images for asset bundle:', error)
+        }
+      }
       const bundleFile = await buildDesignAssetBundle(
         { ...exportConfig, designId: designUid },
-        { previewDataUrl },
+        { previewDataUrl, productImages },
       )
       if (bundleFile) {
         await designApi.uploadAssetBundle(designUid, bundleFile)
