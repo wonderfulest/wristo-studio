@@ -157,9 +157,9 @@ import {
   type TransactionCanvas,
 } from '@/engine/managers/shortcutAddTransaction'
 import {
-  rollbackCreatedShortcutProperty,
-  type CreatedShortcutProperty,
-} from '@/engine/managers/shortcutCompound'
+  enqueueCompoundShortcut,
+  executeCompoundMembers,
+} from '@/engine/managers/compoundShortcutOrchestrator'
 import { elementConfigs } from '@/elements/schemaMap'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
@@ -533,6 +533,12 @@ type AddShortcutBlockOptions = {
   errorMessageKey: string
 }
 
+type CreatedShortcutProperty = {
+  container: Record<string, any>
+  key: string
+  value: unknown
+}
+
 type AddShortcutPreparationContext = {
   trackCreatedProperty: (key: string) => void
 }
@@ -542,7 +548,9 @@ type AddShortcutBlockFactory = (
 ) => AddShortcutBlockOptions | Promise<AddShortcutBlockOptions>
 
 const cleanupCreatedProperties = (createdProperties: CreatedShortcutProperty[]) => {
-  createdProperties.forEach(rollbackCreatedShortcutProperty)
+  createdProperties.forEach(({ container, key, value }) => {
+    if (container[key] === value) delete container[key]
+  })
 }
 
 const cleanupStaleShortcutTransaction = (
@@ -592,6 +600,47 @@ const runShortcutBlock = async (
   let options: AddShortcutBlockOptions | null = null
   let committed = false
 
+  const rollbackFailure = async (error: unknown) => {
+    let rollbackError: unknown = null
+    if (!committed && snapshot) {
+      let stale = error instanceof StaleShortcutTransactionError
+      if (!stale) {
+        try {
+          assertShortcutTransactionCurrent(snapshot)
+        } catch (identityError) {
+          if (identityError instanceof StaleShortcutTransactionError) stale = true
+          else rollbackError = identityError
+        }
+      }
+      try {
+        await historyStore.runWithoutRecording(() => {
+          if (stale) cleanupStaleShortcutTransaction(snapshot!, ownedIds, createdElements)
+          else {
+            assertShortcutTransactionCurrent(snapshot!)
+            restoreShortcutTransaction(snapshot!)
+          }
+        })
+      } catch (caughtRollbackError) {
+        rollbackError = rollbackError ?? caughtRollbackError
+      }
+    }
+    try {
+      cleanupCreatedProperties(createdProperties)
+    } catch (propertyCleanupError) {
+      rollbackError = rollbackError ?? propertyCleanupError
+    }
+    console.error('[AppMenu] Failed to add shortcut block', {
+      kind: options?.kind ?? 'unknown',
+      mode: options?.mode ?? 'smart',
+      draftKeys: options?.drafts.map((draft) => draft.key) ?? [],
+      error,
+      rollbackError,
+    })
+    showShortcutMessageSafely(() =>
+      messageStore.error(t(options?.errorMessageKey ?? fallbackErrorMessageKey)),
+    )
+  }
+
   try {
     const transaction = captureShortcutTransaction(expectedDocument)
     snapshot = transaction
@@ -604,7 +653,7 @@ const runShortcutBlock = async (
         if (value == null) {
           throw new Error(`Shortcut property was not created: ${key}`)
         }
-        createdProperties.push({ container, key, value, created: true })
+        createdProperties.push({ container, key, value })
       },
     })
     assertShortcutTransactionCurrent(transaction)
@@ -628,130 +677,83 @@ const runShortcutBlock = async (
       occupied,
     })
 
-    await historyStore.runWithoutRecording(async () => {
-      assertShortcutTransactionCurrent(transaction)
-      for (const draft of prepared.drafts) {
-        assertShortcutTransactionCurrent(transaction)
-        const fontFamily = String(draft.config.fontFamily ?? '').trim()
-        if (fontFamily) {
-          await fontStore.loadFont(fontFamily)
+    const result = await executeCompoundMembers({
+      members: prepared.drafts,
+      createMember: (draft) => historyStore.runWithoutRecording(async () => {
           assertShortcutTransactionCurrent(transaction)
-        }
-
-        assertShortcutTransactionCurrent(transaction)
-        const created = await addElement(draft.elementType, draft.config as any, {
-          assertDocumentCurrent: () => assertShortcutTransactionCurrent(transaction),
-        })
-        if (created) createdElements.push(created)
-        assertShortcutTransactionCurrent(transaction)
-        if (!created) {
-          throw new Error(`Shortcut element handler returned no element: ${draft.elementType}`)
-        }
-      }
-
-      assertShortcutTransactionCurrent(transaction)
-      const actualMeasurement = measureActualBounds(createdElements)
-      if (actualMeasurement.status === 'all') {
-        assertShortcutTransactionCurrent(transaction)
-        const beforeObjectSet = new Set(transaction.objects)
-        const createdIds = transaction.canvas
-          .getObjects()
-          .filter((element) => !beforeObjectSet.has(element))
-          .map((element) => element.id)
-          .filter((id) => id != null)
-          .map(String)
-        const refinedOccupied = collectOccupiedBounds(transaction.canvas.getObjects(), createdIds)
-        const refinedPlacement = findShortcutPlacement({
-          kind,
-          mode,
-          geometry,
-          footprint: {
-            width: actualMeasurement.bounds.width,
-            height: actualMeasurement.bounds.height,
-          },
-          occupied: refinedOccupied,
-        })
-        const currentCenter = boundsCenter(actualMeasurement.bounds)
-        assertShortcutTransactionCurrent(transaction)
-        moveCreatedElements(
-          createdElements,
-          refinedPlacement.center.x - currentCenter.x,
-          refinedPlacement.center.y - currentCenter.y,
-        )
-      }
-    })
-
-    assertShortcutTransactionCurrent(transaction)
-    syncLayersFromCanvas()
-    assertShortcutTransactionCurrent(transaction)
-    transaction.canvas.requestRenderAll?.()
-    assertShortcutTransactionCurrent(transaction)
-    const saved = historyStore.saveState('shortcut:add', { captureConfig: true })
-    if (!saved) {
-      throw new Error('Shortcut history commit was rejected')
-    }
-    committed = true
-  } catch (error) {
-    let rollbackError: unknown = null
-    if (!committed && snapshot) {
-      let stale = error instanceof StaleShortcutTransactionError
-      if (!stale) {
-        try {
-          assertShortcutTransactionCurrent(snapshot)
-        } catch (identityError) {
-          if (identityError instanceof StaleShortcutTransactionError) {
-            stale = true
-          } else {
-            rollbackError = identityError
+          const fontFamily = String(draft.config.fontFamily ?? '').trim()
+          if (fontFamily) {
+            await fontStore.loadFont(fontFamily)
+            assertShortcutTransactionCurrent(transaction)
           }
-        }
-      }
-      try {
+          const created = await addElement(draft.elementType, draft.config as any, {
+            assertDocumentCurrent: () => assertShortcutTransactionCurrent(transaction),
+          })
+          if (!created) throw new Error(`Shortcut element handler returned no element: ${draft.elementType}`)
+          createdElements.push(created)
+          assertShortcutTransactionCurrent(transaction)
+          return created
+      }),
+      commit: async () => {
         await historyStore.runWithoutRecording(() => {
-          if (stale) {
-            cleanupStaleShortcutTransaction(snapshot!, ownedIds, createdElements)
-            return
-          }
-          assertShortcutTransactionCurrent(snapshot!)
-          restoreShortcutTransaction(snapshot!)
+          assertShortcutTransactionCurrent(transaction)
+          const actualMeasurement = measureActualBounds(createdElements)
+          if (actualMeasurement.status !== 'all') return
+          const beforeObjectSet = new Set(transaction.objects)
+          const createdIds = transaction.canvas
+            .getObjects()
+            .filter((element) => !beforeObjectSet.has(element))
+            .map((element) => element.id)
+            .filter((id) => id != null)
+            .map(String)
+          const refinedOccupied = collectOccupiedBounds(transaction.canvas.getObjects(), createdIds)
+          const refinedPlacement = findShortcutPlacement({
+            kind,
+            mode,
+            geometry,
+            footprint: { width: actualMeasurement.bounds.width, height: actualMeasurement.bounds.height },
+            occupied: refinedOccupied,
+          })
+          const currentCenter = boundsCenter(actualMeasurement.bounds)
+          assertShortcutTransactionCurrent(transaction)
+          moveCreatedElements(createdElements, refinedPlacement.center.x - currentCenter.x, refinedPlacement.center.y - currentCenter.y)
         })
-      } catch (caughtRollbackError) {
-        rollbackError = rollbackError ?? caughtRollbackError
-      }
-    }
-    try {
-      cleanupCreatedProperties(createdProperties)
-    } catch (propertyCleanupError) {
-      rollbackError = rollbackError ?? propertyCleanupError
-    }
-    console.error('[AppMenu] Failed to add shortcut block', {
-      kind: options?.kind ?? 'unknown',
-      mode: options?.mode ?? 'smart',
-      draftKeys: options?.drafts.map((draft) => draft.key) ?? [],
-      error,
-      rollbackError,
+        assertShortcutTransactionCurrent(transaction)
+        syncLayersFromCanvas()
+        assertShortcutTransactionCurrent(transaction)
+        transaction.canvas.requestRenderAll?.()
+        assertShortcutTransactionCurrent(transaction)
+        const saved = historyStore.saveState('shortcut:add', { captureConfig: true })
+        if (!saved) throw new Error('Shortcut history commit was rejected')
+        committed = true
+      },
+      rollback: rollbackFailure,
+      onSuccess: () => showShortcutMessageSafely(() =>
+        messageStore.success(t('editor.elementAdded', { name: options!.successName })),
+      ),
+      onError: () => undefined,
     })
-    showShortcutMessageSafely(() =>
-      messageStore.error(t(options?.errorMessageKey ?? fallbackErrorMessageKey)),
-    )
+    if (!result) return null
+  } catch (error) {
+    await rollbackFailure(error)
     return null
   }
-
-  showShortcutMessageSafely(() =>
-    messageStore.success(t('editor.elementAdded', { name: options!.successName })),
-  )
   return createdElements
 }
 
 const addShortcutBlock = (
   prepare: AddShortcutBlockFactory,
   fallbackErrorMessageKey: string,
-): Promise<FabricElement[] | null> =>
-  enqueueShortcutAdd(
-    (expectedDocument) =>
-      runShortcutBlock(prepare, fallbackErrorMessageKey, expectedDocument),
-    getShortcutDocumentIdentity,
+): Promise<FabricElement[] | null> => {
+  let expectedDocument!: TransactionDocumentIdentity<ShortcutCanvas>
+  return enqueueCompoundShortcut(
+    (task) => enqueueShortcutAdd((expected) => {
+      expectedDocument = expected
+      return task()
+    }, getShortcutDocumentIdentity),
+    () => runShortcutBlock(prepare, fallbackErrorMessageKey, expectedDocument),
   )
+}
 
 // Add element (similar to AddElementPanel implementation)
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
