@@ -223,18 +223,23 @@ export function unionBounds(bounds: PlacementBounds[]): PlacementBounds | null {
   return { left, top, width: right - left, height: bottom - top }
 }
 
+const strictFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string' || !value.trim()) return null
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
 const lineEndpoints = (
   config: Record<string, any>,
 ): [number, number, number, number] | null => {
-  const endpoints = [config.x1, config.y1, config.x2, config.y2]
-  return endpoints.every(Number.isFinite)
-    ? (endpoints as [number, number, number, number])
-    : null
-}
-
-const finiteNumberOr = (value: unknown, fallback: number): number => {
-  const numericValue = Number(value)
-  return Number.isFinite(numericValue) ? numericValue : fallback
+  const x1 = strictFiniteNumber(config.x1)
+  const y1 = strictFiniteNumber(config.y1)
+  const x2 = strictFiniteNumber(config.x2)
+  const y2 = strictFiniteNumber(config.y2)
+  return x1 === null || y1 === null || x2 === null || y2 === null
+    ? null
+    : [x1, y1, x2, y2]
 }
 
 const clampDimension = (value: number): number =>
@@ -247,7 +252,7 @@ export function estimateElementBounds(
   const endpoints = lineEndpoints(config)
   if (endpoints) {
     const [x1, y1, x2, y2] = endpoints
-    const strokeWidth = finiteNumberOr(config.strokeWidth ?? 1, 1)
+    const strokeWidth = Math.max(0, strictFiniteNumber(config.strokeWidth) ?? 1)
     const halfStroke = Math.max(0.5, strokeWidth / 2)
     const left = Math.min(x1, x2) - halfStroke
     const top = Math.min(y1, y2) - halfStroke
@@ -261,28 +266,31 @@ export function estimateElementBounds(
 
   const fontSize = Math.max(
     1,
-    finiteNumberOr(config.fontSize ?? config.iconSize ?? 24, 24),
+    strictFiniteNumber(config.fontSize) ?? strictFiniteNumber(config.iconSize) ?? 24,
   )
-  const radius = finiteNumberOr(config.radius ?? config.bgRadius ?? 0, 0)
-  const strokeWidth = finiteNumberOr(config.strokeWidth ?? 0, 0)
+  const radius = Math.max(0, strictFiniteNumber(config.radius) ?? 0)
+  const bgRadius = Math.max(0, strictFiniteNumber(config.bgRadius) ?? 0)
+  const strokeWidth = Math.max(0, strictFiniteNumber(config.strokeWidth) ?? 0)
+  const bgStrokeWidth = Math.max(
+    0,
+    strictFiniteNumber(config.bgStrokeWidth) ?? strokeWidth,
+  )
+  const outerDiameter = Math.max(
+    radius * 2 + strokeWidth,
+    bgRadius * 2 + bgStrokeWidth,
+  )
   const sampleLength = ELEMENT_SAMPLE_LENGTHS[elementType] ?? 3
-  const hasRadius = radius !== 0
+  const hasRadius = radius > 0 || bgRadius > 0
+  const explicitWidth = strictFiniteNumber(config.width)
+  const explicitHeight = strictFiniteNumber(config.height)
   const width = clampDimension(
-    config.width != null
-      ? Number(config.width)
-      : hasRadius
-        ? radius * 2 + strokeWidth
-        : fontSize * sampleLength * 0.58,
+    explicitWidth ?? (hasRadius ? outerDiameter : fontSize * sampleLength * 0.58),
   )
   const height = clampDimension(
-    config.height != null
-      ? Number(config.height)
-      : hasRadius
-        ? radius * 2 + strokeWidth
-        : fontSize * 1.2,
+    explicitHeight ?? (hasRadius ? outerDiameter : fontSize * 1.2),
   )
-  const anchorLeft = finiteNumberOr(config.left ?? 0, 0)
-  const anchorTop = finiteNumberOr(config.top ?? 0, 0)
+  const anchorLeft = strictFiniteNumber(config.left) ?? 0
+  const anchorTop = strictFiniteNumber(config.top) ?? 0
   const left =
     config.originX === 'left'
       ? anchorLeft
@@ -353,17 +361,19 @@ const translateConfig = (
     translated.y1 = y1 + dy
     translated.x2 = x2 + dx
     translated.y2 = y2 + dy
-    if (Number.isFinite(config.left)) {
-      translated.left = config.left + dx
+    const left = strictFiniteNumber(config.left)
+    const top = strictFiniteNumber(config.top)
+    if (left !== null) {
+      translated.left = left + dx
     }
-    if (Number.isFinite(config.top)) {
-      translated.top = config.top + dy
+    if (top !== null) {
+      translated.top = top + dy
     }
     return translated
   }
 
-  translated.left = finiteNumberOr(config.left ?? 0, 0) + dx
-  translated.top = finiteNumberOr(config.top ?? 0, 0) + dy
+  translated.left = (strictFiniteNumber(config.left) ?? 0) + dx
+  translated.top = (strictFiniteNumber(config.top) ?? 0) + dy
   translated.originX = config.originX ?? 'center'
   translated.originY = config.originY ?? 'center'
   return translated

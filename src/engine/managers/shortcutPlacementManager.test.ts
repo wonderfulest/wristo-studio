@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  boundsCenter,
   boundsFromCenter,
   collectOccupiedBounds,
   estimateElementBounds,
@@ -97,6 +98,94 @@ describe('shortcut draft bounds', () => {
     ).toEqual({ left: 76, top: 226, width: 302, height: 2 })
   })
 
+  it('uses a larger background radius for the goal arc footprint', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 40,
+        bgRadius: '60',
+        strokeWidth: 4,
+        bgStrokeWidth: 2,
+      }),
+    ).toEqual({ left: 166, top: 166, width: 122, height: 122 })
+  })
+
+  it('uses a larger background stroke for the goal arc footprint', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 50,
+        bgRadius: 50,
+        strokeWidth: 2,
+        bgStrokeWidth: '12',
+      }),
+    ).toEqual({ left: 171, top: 171, width: 112, height: 112 })
+  })
+
+  it('falls back to the main stroke when the background stroke is invalid', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 40,
+        bgRadius: 60,
+        strokeWidth: 4,
+        bgStrokeWidth: ' ',
+      }),
+    ).toEqual({ left: 165, top: 165, width: 124, height: 124 })
+  })
+
+  it('keeps explicit finite dimensions ahead of the ring estimate', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        width: '80',
+        height: 60,
+        radius: 60,
+        bgRadius: 70,
+        strokeWidth: 10,
+        bgStrokeWidth: 10,
+      }),
+    ).toEqual({ left: 187, top: 197, width: 80, height: 60 })
+  })
+
+  it('normalizes negative radius and stroke values without hiding a valid ring', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: -50,
+        bgRadius: 40,
+        strokeWidth: -10,
+        bgStrokeWidth: -8,
+      }),
+    ).toEqual({ left: 187, top: 187, width: 80, height: 80 })
+  })
+
+  it('rejects non-finite and nonnumeric values while keeping positive bounds', () => {
+    const bounds = estimateElementBounds('goalArc', {
+      left: '227',
+      top: '227',
+      width: ' ',
+      height: true,
+      fontSize: Number.NaN,
+      iconSize: false,
+      radius: Number.NaN,
+      bgRadius: Number.POSITIVE_INFINITY,
+      strokeWidth: Number.NEGATIVE_INFINITY,
+      bgStrokeWidth: Number.NaN,
+    })
+
+    expect(bounds.width).toBeCloseTo(41.76)
+    expect(bounds.height).toBeCloseTo(28.8)
+    expect(Object.values(bounds).every(Number.isFinite)).toBe(true)
+    expect(bounds.width).toBeGreaterThan(0)
+    expect(bounds.height).toBeGreaterThan(0)
+  })
+
   it('respects left and top origins for non-line bounds', () => {
     const bounds = estimateElementBounds('data', {
       left: 100,
@@ -187,24 +276,52 @@ describe('placeShortcutDrafts', () => {
     })
   })
 
-  it('preserves line endpoint deltas when placing a shape', () => {
+  it('normalizes and translates every numeric-string line coordinate without mutation', () => {
+    const lineGeometry: DesignGeometry = {
+      width: 500,
+      height: 500,
+      centerX: 250,
+      centerY: 250,
+    }
+    const config = {
+      x1: '77',
+      y1: '100',
+      x2: '377',
+      y2: '100',
+      left: '227',
+      top: '100',
+      strokeWidth: '2',
+    }
+    const drafts: ShortcutDraft[] = [{ key: 'line', elementType: 'line', config }]
+    const before = JSON.stringify(drafts)
+    Object.freeze(config)
+    Object.freeze(drafts[0])
+    Object.freeze(drafts)
+
     const result = placeShortcutDrafts({
       kind: 'shape',
       mode: 'smart',
-      geometry,
-      drafts: [
-        {
-          key: 'line',
-          elementType: 'line',
-          config: { x1: 77, y1: 100, x2: 377, y2: 100, strokeWidth: 2 },
-        },
-      ],
+      geometry: lineGeometry,
+      drafts,
       occupied: [],
     })
-    const config = result.drafts[0].config
+    const translated = result.drafts[0].config
+    const dx = result.placement.center.x - 227
+    const dy = result.placement.center.y - 100
 
-    expect((config.x2 as number) - (config.x1 as number)).toBeCloseTo(300)
-    expect((config.y2 as number) - (config.y1 as number)).toBeCloseTo(0)
+    expect(dx).not.toBe(0)
+    expect(dy).not.toBe(0)
+    expect((translated.x1 as number) - 77).toBeCloseTo(dx)
+    expect((translated.x2 as number) - 377).toBeCloseTo(dx)
+    expect((translated.y1 as number) - 100).toBeCloseTo(dy)
+    expect((translated.y2 as number) - 100).toBeCloseTo(dy)
+    expect((translated.left as number) - 227).toBeCloseTo(dx)
+    expect((translated.top as number) - 100).toBeCloseTo(dy)
+    expect((translated.x2 as number) - (translated.x1 as number)).toBeCloseTo(300)
+    expect((translated.y2 as number) - (translated.y1 as number)).toBeCloseTo(0)
+    expect(boundsCenter(result.estimatedBounds)).toEqual(result.placement.center)
+    expect(JSON.stringify(drafts)).toBe(before)
+    expect(result.drafts[0].config).not.toBe(config)
   })
 })
 
