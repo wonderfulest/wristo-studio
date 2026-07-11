@@ -360,9 +360,14 @@ const isPannablePointerLocation = (event: PointerEvent): boolean => {
     return Boolean(canvasStageRef.value)
   }
 
+  const point = { x: event.clientX, y: event.clientY }
+  const canvasRect = toCanvasPanRect(faceRect)
+  const isOutsideCanvasBounds = isPointOutsideWatchFace(point, canvasRect, false)
+  if (!isOutsideCanvasBounds && baseStore.canvas?.findTarget?.(event)) return false
+
   return isPointOutsideWatchFace(
-    { x: event.clientX, y: event.clientY },
-    toCanvasPanRect(faceRect),
+    point,
+    canvasRect,
     designStore.designSpec.width === designStore.designSpec.height,
   )
 }
