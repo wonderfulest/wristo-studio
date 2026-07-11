@@ -1,9 +1,22 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import test from 'node:test'
-import {
+
+const require = createRequire(import.meta.url)
+const ts = require('typescript')
+const source = await readFile(new URL('../src/utils/canvasPan.ts', import.meta.url), 'utf8')
+const { outputText } = ts.transpileModule(source, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2020,
+  },
+})
+const compiledModuleUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
+const {
   clampCanvasPanOffset,
   isPointOutsideWatchFace,
-} from '../src/utils/canvasPan.ts'
+} = await import(compiledModuleUrl)
 
 test('round watch face treats transparent square corners as pannable', () => {
   const faceRect = { left: 100, top: 100, width: 200, height: 200 }
