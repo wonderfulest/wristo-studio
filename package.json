@@ -8,6 +8,7 @@
     "dev": "vite --mode development",
     "dev:prod": "vite --mode prod",
     "typecheck": "vue-tsc --noEmit",
+    "test:canvas-pan": "node --experimental-strip-types --test tests/canvasPan.test.ts",
     "build": "vue-tsc --noEmit && vite build --mode prod",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
