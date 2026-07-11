@@ -9,6 +9,8 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
   if (eleType === 'minuteHand') return 'minute'
@@ -150,7 +152,11 @@ async function resolveImageUrl(config: HandElementConfig): Promise<{ url: string
   return { url: imageUrl, assetId }
 }
 
-export async function createHand(config: HandElementConfig): Promise<FabricElement> {
+export async function createHand(
+  config: HandElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const designStore = useDesignStore()
@@ -164,6 +170,7 @@ export async function createHand(config: HandElementConfig): Promise<FabricEleme
   const id = config.id || nanoid()
 
   const { url, assetId } = await resolveImageUrl({ ...config, eleType })
+  assertElementRenderCurrent(renderContext)
 
   if (!url) {
     console.error('No active hand assets available for default hand:', eleType)
@@ -171,6 +178,7 @@ export async function createHand(config: HandElementConfig): Promise<FabricEleme
   }
 
   const img: any = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' } as any)
+  assertElementRenderCurrent(renderContext)
 
   const commonOptions: any = {
     id,
@@ -206,6 +214,7 @@ export async function createHand(config: HandElementConfig): Promise<FabricEleme
   scaleHandImage(img)
 
   img.setCoords()
+  assertElementRenderCurrent(renderContext)
   removeExistingHandsByType(eleType, id)
   canvas.add(img)
   layerStore.addLayer(img as any)

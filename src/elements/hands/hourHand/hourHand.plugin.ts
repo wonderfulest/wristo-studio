@@ -8,8 +8,8 @@ import HourHandPanel from '@/elements/hands/hourHand/hourHand.panel.vue'
 
 export default function registerHourHandPlugin() {
   registerElement('hourHand' as ElementType, {
-    add: (config) => {
-      return createHand(config as HandElementConfig)
+    add: (config, renderContext) => {
+      return createHand(config as HandElementConfig, renderContext)
     },
     update: (element, patch) => {
       // 目前只关心素材和 assetId，其他字段仍由时间驱动逻辑控制

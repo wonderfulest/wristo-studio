@@ -8,8 +8,11 @@ import { encodeCenterCap, decodeCenterCap } from '@/elements/dials/centerCap/cen
 
 export default function registerCenterCapPlugin() {
   registerElement('centerCap' as ElementType, {
-    add: (config) => {
-      return createCenterCap(config as unknown as CenterCapElementConfig) as Promise<any>
+    add: (config, renderContext) => {
+      return createCenterCap(
+        config as unknown as CenterCapElementConfig,
+        renderContext,
+      ) as Promise<any>
     },
     update: (element, patch) => {
       return updateCenterCap(element as any, patch as Partial<CenterCapElementConfig>)

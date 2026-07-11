@@ -8,8 +8,8 @@ import { encodeImage, decodeImage } from '@/elements/decoration/image/image.enco
 
 export default function registerImagePlugin() {
   registerElement('image' as ElementType, {
-    add: (config) => {
-      return createImage(config as unknown as ImageElementConfig) as Promise<any>
+    add: (config, renderContext) => {
+      return createImage(config as unknown as ImageElementConfig, renderContext) as Promise<any>
     },
     update: (element, patch) => {
       return updateImage(element as any, patch as Partial<ImageElementConfig>)

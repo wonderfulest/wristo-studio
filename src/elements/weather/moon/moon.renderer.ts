@@ -6,6 +6,8 @@ import type { FabricElement } from '@/types/element'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { MoonElementConfig } from '@/types/elements/data'
 import { applyControlsToObject } from '@/utils/controlManager'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function getDefaultMoonImage(): string {
   return 'https://cdn.wristo.io/moonphase/h-phase-16.png'
@@ -41,7 +43,11 @@ function normalizeUrl(u: string): string {
   return u
 }
 
-export async function createMoon(config: MoonElementConfig): Promise<FabricElement> {
+export async function createMoon(
+  config: MoonElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const canvas = canvasStore.canvas
@@ -54,6 +60,7 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
   const cy = config.top ?? 0
 
   const addGroupToCanvas = (group: FabricGroup) => {
+    assertElementRenderCurrent(renderContext)
     ;(group as unknown as { id?: string }).id = id
     ;(group as unknown as { eleType?: string }).eleType = 'moon'
     // 统一应用全局控制点样式
@@ -72,7 +79,7 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
     imgUrl = getDefaultMoonImage()
   }
 
-  return await new Promise<FabricElement>((resolve) => {
+  return await new Promise<FabricElement>((resolve, reject) => {
     const createEmptyGroup = () => {
       const group = new FabricGroup([], {
         left: cx,
@@ -145,8 +152,13 @@ export async function createMoon(config: MoonElementConfig): Promise<FabricEleme
         resolve(el)
       })
       .catch((err) => {
-        console.error('[MoonRenderer] createMoon image load error, creating empty group', { imgUrl, err })
-        createEmptyGroup()
+        try {
+          assertElementRenderCurrent(renderContext)
+          console.error('[MoonRenderer] createMoon image load error, creating empty group', { imgUrl, err })
+          createEmptyGroup()
+        } catch (error) {
+          reject(error)
+        }
       })
   })
 }

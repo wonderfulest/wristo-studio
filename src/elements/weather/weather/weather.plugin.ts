@@ -8,8 +8,8 @@ import WeatherSettings from '@/elements/weather/weather/weather.panel.vue'
 
 export default function registerWeatherPlugin() {
   registerElement('weather' as ElementType, {
-    add: (config) => {
-      return createWeather(config as WeatherElementConfig)
+    add: (config, renderContext) => {
+      return createWeather(config as WeatherElementConfig, renderContext)
     },
     update: (element, patch) => {
       updateWeather(element as any, patch as Partial<WeatherElementConfig>)

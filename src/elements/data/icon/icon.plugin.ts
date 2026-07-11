@@ -8,8 +8,8 @@ import IconPanel from '@/elements/data/icon/icon.panel.vue'
 
 export default function registerIconPlugin() {
   registerElement('icon' as ElementType, {
-    add: (config) => {
-      return createIcon(config as IconElementConfig)
+    add: (config, renderContext) => {
+      return createIcon(config as IconElementConfig, renderContext)
     },
     update: (element, patch) => {
       return updateIcon(element as any, patch as Partial<IconElementConfig>)

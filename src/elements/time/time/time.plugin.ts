@@ -8,8 +8,8 @@ import TimePanel from '@/elements/time/time/time.panel.vue'
 
 export default function registerTimePlugin() {
   registerElement('time' as ElementType, {
-    add: (config) => {
-      return createTime(config as TimeElementConfig)
+    add: (config, renderContext) => {
+      return createTime(config as TimeElementConfig, renderContext)
     },
     update: (element, patch) => {
       return updateTime(element as any, patch as TimeElementConfig)

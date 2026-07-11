@@ -1,0 +1,670 @@
+import { describe, expect, it, vi } from 'vitest'
+import {
+  boundsCenter,
+  boundsFromCenter,
+  collectOccupiedBounds,
+  estimateElementBounds,
+  expandBounds,
+  findShortcutPlacement,
+  intersectionArea,
+  isBoundsInsideCircle,
+  placeShortcutDrafts,
+  unionBounds,
+  type DesignGeometry,
+  type OccupiedPlacement,
+  type ShortcutDraft,
+  type ShortcutPlacementKind,
+} from './shortcutPlacementManager'
+
+const geometry: DesignGeometry = {
+  width: 454,
+  height: 454,
+  centerX: 227,
+  centerY: 227,
+}
+
+describe('shortcut placement geometry', () => {
+  it('builds centered bounds', () => {
+    expect(boundsFromCenter({ x: 227, y: 100 }, { width: 100, height: 40 })).toEqual({
+      left: 177,
+      top: 80,
+      width: 100,
+      height: 40,
+    })
+  })
+
+  it('calculates overlap area', () => {
+    expect(
+      intersectionArea(
+        { left: 0, top: 0, width: 100, height: 100 },
+        { left: 60, top: 40, width: 100, height: 100 },
+      ),
+    ).toBe(2400)
+  })
+
+  it('joins multiple element bounds', () => {
+    expect(
+      unionBounds([
+        { left: 10, top: 20, width: 40, height: 30 },
+        { left: 70, top: 10, width: 20, height: 80 },
+      ]),
+    ).toEqual({ left: 10, top: 10, width: 80, height: 80 })
+  })
+
+  it('rejects rectangle corners outside the round safe area', () => {
+    expect(isBoundsInsideCircle({ left: 177, top: 80, width: 100, height: 40 }, geometry)).toBe(
+      true,
+    )
+    expect(isBoundsInsideCircle({ left: 0, top: 0, width: 100, height: 40 }, geometry)).toBe(
+      false,
+    )
+  })
+})
+
+describe('shortcut draft bounds', () => {
+  it('ignores structural Fabric objects when collecting occupied bounds', () => {
+    const objects = [
+      {
+        id: 'global',
+        eleType: 'global',
+        getBoundingRect: () => ({ left: 0, top: 0, width: 454, height: 454 }),
+      },
+      {
+        id: 'hour',
+        eleType: 'hourHand',
+        getBoundingRect: () => ({ left: 187, top: 67, width: 80, height: 180 }),
+      },
+      {
+        id: 'data',
+        eleType: 'data',
+        getBoundingRect: () => ({ left: 180, top: 250, width: 90, height: 40 }),
+      },
+    ]
+
+    expect(collectOccupiedBounds(objects)).toEqual([
+      { id: 'data', eleType: 'data', left: 180, top: 250, width: 90, height: 40 },
+    ])
+  })
+
+  it('estimates line bounds from endpoints and half the stroke width', () => {
+    expect(
+      estimateElementBounds('line', {
+        x1: 77,
+        y1: 227,
+        x2: 377,
+        y2: 227,
+        strokeWidth: 2,
+      }),
+    ).toEqual({ left: 76, top: 226, width: 302, height: 2 })
+  })
+
+  it('uses a larger background radius for the goal arc footprint', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 40,
+        bgRadius: '60',
+        strokeWidth: 4,
+        bgStrokeWidth: 2,
+      }),
+    ).toEqual({ left: 166, top: 166, width: 122, height: 122 })
+  })
+
+  it('uses a larger background stroke for the goal arc footprint', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 50,
+        bgRadius: 50,
+        strokeWidth: 2,
+        bgStrokeWidth: '12',
+      }),
+    ).toEqual({ left: 171, top: 171, width: 112, height: 112 })
+  })
+
+  it('falls back to the main stroke when the background stroke is invalid', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: 40,
+        bgRadius: 60,
+        strokeWidth: 4,
+        bgStrokeWidth: ' ',
+      }),
+    ).toEqual({ left: 165, top: 165, width: 124, height: 124 })
+  })
+
+  it('keeps explicit finite dimensions ahead of the ring estimate', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        width: '80',
+        height: 60,
+        radius: 60,
+        bgRadius: 70,
+        strokeWidth: 10,
+        bgStrokeWidth: 10,
+      }),
+    ).toEqual({ left: 187, top: 197, width: 80, height: 60 })
+  })
+
+  it('normalizes negative radius and stroke values without hiding a valid ring', () => {
+    expect(
+      estimateElementBounds('goalArc', {
+        left: 227,
+        top: 227,
+        radius: -50,
+        bgRadius: 40,
+        strokeWidth: -10,
+        bgStrokeWidth: -8,
+      }),
+    ).toEqual({ left: 187, top: 187, width: 80, height: 80 })
+  })
+
+  it('rejects non-finite and nonnumeric values while keeping positive bounds', () => {
+    const bounds = estimateElementBounds('goalArc', {
+      left: '227',
+      top: '227',
+      width: ' ',
+      height: true,
+      fontSize: Number.NaN,
+      iconSize: false,
+      radius: Number.NaN,
+      bgRadius: Number.POSITIVE_INFINITY,
+      strokeWidth: Number.NEGATIVE_INFINITY,
+      bgStrokeWidth: Number.NaN,
+    })
+
+    expect(bounds.width).toBeCloseTo(41.76)
+    expect(bounds.height).toBeCloseTo(28.8)
+    expect(Object.values(bounds).every(Number.isFinite)).toBe(true)
+    expect(bounds.width).toBeGreaterThan(0)
+    expect(bounds.height).toBeGreaterThan(0)
+  })
+
+  it('respects left and top origins for non-line bounds', () => {
+    const bounds = estimateElementBounds('data', {
+      left: 100,
+      top: 50,
+      fontSize: 20,
+      originX: 'left',
+      originY: 'top',
+    })
+
+    expect(bounds).toMatchObject({ left: 100, top: 50, height: 24 })
+    expect(bounds.width).toBeCloseTo(58)
+  })
+
+  it('coerces excluded IDs and skips invalid Fabric bounds', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      expect(
+        collectOccupiedBounds(
+          [
+            {
+              id: 7,
+              eleType: 'data',
+              getBoundingRect: () => ({ left: 10, top: 10, width: 20, height: 20 }),
+            },
+            {
+              id: 8,
+              eleType: 'data',
+              getBoundingRect: () => ({ left: '20', top: '30', width: '40', height: '50' }),
+            },
+            {
+              id: 'invalid-size',
+              eleType: 'data',
+              getBoundingRect: () => ({ left: 0, top: 0, width: 0, height: 20 }),
+            },
+            {
+              id: 'broken',
+              eleType: 'data',
+              getBoundingRect: () => {
+                throw new Error('broken bounds')
+              },
+            },
+          ],
+          ['7'],
+        ),
+      ).toEqual([
+        { id: '8', eleType: 'data', left: 20, top: 30, width: 40, height: 50 },
+      ])
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('broken'),
+        expect.any(Error),
+      )
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('rejects coercion-only Fabric bounds while preserving numeric strings', () => {
+    expect(
+      collectOccupiedBounds([
+        {
+          id: 'valid-strings',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: '20', top: '30', width: '40', height: '50' }),
+        },
+        {
+          id: 'invalid-primitives',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: null, top: false, width: true, height: '20' }),
+        },
+        {
+          id: 'invalid-blank',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: ' ', top: '30', width: '40', height: '50' }),
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'valid-strings',
+        eleType: 'data',
+        left: 20,
+        top: 30,
+        width: 40,
+        height: 50,
+      },
+    ])
+  })
+})
+
+describe('placeShortcutDrafts', () => {
+  it('translates a compound data field without changing internal spacing', () => {
+    const drafts: ShortcutDraft[] = [
+      { key: 'icon', elementType: 'icon', config: { left: 227, top: 190, fontSize: 30 } },
+      { key: 'data', elementType: 'data', config: { left: 227, top: 227, fontSize: 36 } },
+      { key: 'unit', elementType: 'unit', config: { left: 227, top: 256, fontSize: 18 } },
+    ]
+    const before = JSON.stringify(drafts)
+    drafts.forEach((draft) => {
+      Object.freeze(draft.config)
+      Object.freeze(draft)
+    })
+    Object.freeze(drafts)
+
+    const result = placeShortcutDrafts({
+      kind: 'dataField',
+      mode: 'smart',
+      geometry,
+      drafts,
+      occupied: [],
+    })
+    const [icon, data, unit] = result.drafts.map((draft) => draft.config.top as number)
+
+    expect(data - icon).toBeCloseTo(37)
+    expect(unit - data).toBeCloseTo(29)
+    expect(JSON.stringify(drafts)).toBe(before)
+    expect(result.drafts).not.toBe(drafts)
+    result.drafts.forEach((draft, index) => {
+      expect(draft).not.toBe(drafts[index])
+      expect(draft.config).not.toBe(drafts[index].config)
+    })
+  })
+
+  it('normalizes and translates every numeric-string line coordinate without mutation', () => {
+    const lineGeometry: DesignGeometry = {
+      width: 500,
+      height: 500,
+      centerX: 250,
+      centerY: 250,
+    }
+    const config = {
+      x1: '77',
+      y1: '100',
+      x2: '377',
+      y2: '100',
+      left: '227',
+      top: '100',
+      strokeWidth: '2',
+    }
+    const drafts: ShortcutDraft[] = [{ key: 'line', elementType: 'line', config }]
+    const before = JSON.stringify(drafts)
+    Object.freeze(config)
+    Object.freeze(drafts[0])
+    Object.freeze(drafts)
+
+    const result = placeShortcutDrafts({
+      kind: 'shape',
+      mode: 'smart',
+      geometry: lineGeometry,
+      drafts,
+      occupied: [],
+    })
+    const translated = result.drafts[0].config
+    const dx = result.placement.center.x - 227
+    const dy = result.placement.center.y - 100
+
+    expect(dx).not.toBe(0)
+    expect(dy).not.toBe(0)
+    expect((translated.x1 as number) - 77).toBeCloseTo(dx)
+    expect((translated.x2 as number) - 377).toBeCloseTo(dx)
+    expect((translated.y1 as number) - 100).toBeCloseTo(dy)
+    expect((translated.y2 as number) - 100).toBeCloseTo(dy)
+    expect((translated.left as number) - 227).toBeCloseTo(dx)
+    expect((translated.top as number) - 100).toBeCloseTo(dy)
+    expect((translated.x2 as number) - (translated.x1 as number)).toBeCloseTo(300)
+    expect((translated.y2 as number) - (translated.y1 as number)).toBeCloseTo(0)
+    expect(boundsCenter(result.estimatedBounds)).toEqual(result.placement.center)
+    expect(JSON.stringify(drafts)).toBe(before)
+    expect(result.drafts[0].config).not.toBe(config)
+  })
+})
+
+describe('findShortcutPlacement', () => {
+  const footprint = { width: 100, height: 40 }
+  const staticAnchors: Array<{
+    kind: Exclude<ShortcutPlacementKind, 'axis' | 'date'>
+    xRatio: number
+    yRatio: number
+  }> = [
+    { kind: 'time', xRatio: 0.5, yRatio: 0.23 },
+    { kind: 'status', xRatio: 0.28, yRatio: 0.16 },
+    { kind: 'weather', xRatio: 0.3, yRatio: 0.28 },
+    { kind: 'dataField', xRatio: 0.5, yRatio: 0.58 },
+    { kind: 'chart', xRatio: 0.5, yRatio: 0.72 },
+    { kind: 'goalBar', xRatio: 0.5, yRatio: 0.72 },
+    { kind: 'goalArc', xRatio: 0.3, yRatio: 0.55 },
+    { kind: 'shape', xRatio: 0.5, yRatio: 0.5 },
+    { kind: 'image', xRatio: 0.5, yRatio: 0.5 },
+  ]
+
+  it('keeps axis elements at the design center', () => {
+    const result = findShortcutPlacement({
+      kind: 'axis',
+      mode: 'fixedCenter',
+      geometry,
+      footprint,
+      occupied: [],
+    })
+    expect(result.center).toEqual({ x: 227, y: 227 })
+  })
+
+  it('keeps oversized axis artwork centered without applying the ordinary safe-area limit', () => {
+    const result = findShortcutPlacement({
+      kind: 'axis',
+      mode: 'fixedCenter',
+      geometry,
+      footprint: { width: 600, height: 600 },
+      occupied: [],
+    })
+
+    expect(result.center).toEqual({ x: 227, y: 227 })
+    expect(result.bounds).toEqual({ left: -73, top: -73, width: 600, height: 600 })
+  })
+
+  it('keeps the safe-area limit for oversized non-axis fixed-center requests', () => {
+    expect(() => findShortcutPlacement({
+      kind: 'time',
+      mode: 'fixedCenter',
+      geometry,
+      footprint: { width: 500, height: 500 },
+      occupied: [],
+    })).toThrow(/cannot fit.*safe area/i)
+  })
+
+  it('prefers the upper center for time', () => {
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry,
+      footprint,
+      occupied: [],
+    })
+    expect(result.center.x).toBe(227)
+    expect(result.center.y).toBeLessThan(180)
+    expect(result.score.overlapRatio).toBe(0)
+  })
+
+  it('moves away from an occupied preferred anchor', () => {
+    const occupied: OccupiedPlacement[] = [
+      {
+        id: 'existing-time',
+        eleType: 'time',
+        left: 157,
+        top: 65,
+        width: 140,
+        height: 70,
+      },
+    ]
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry,
+      footprint,
+      occupied,
+    })
+    expect(intersectionArea(result.bounds, occupied[0])).toBe(0)
+  })
+
+  it('places a date below an existing time when that space is free', () => {
+    const occupied: OccupiedPlacement[] = [
+      {
+        id: 'time-1',
+        eleType: 'time',
+        left: 147,
+        top: 70,
+        width: 160,
+        height: 60,
+      },
+    ]
+    const result = findShortcutPlacement({
+      kind: 'date',
+      mode: 'smart',
+      geometry,
+      footprint: { width: 120, height: 30 },
+      occupied,
+    })
+    expect(result.center.x).toBe(227)
+    expect(result.bounds.top).toBeGreaterThanOrEqual(138)
+  })
+
+  it('returns the same least-overlap result for the same crowded canvas', () => {
+    const occupied: OccupiedPlacement[] = [
+      { id: 'a', eleType: 'data', left: 80, top: 120, width: 290, height: 100 },
+      { id: 'b', eleType: 'barChart', left: 80, top: 230, width: 290, height: 100 },
+    ]
+    const request = {
+      kind: 'dataField' as const,
+      mode: 'smart' as const,
+      geometry,
+      footprint: { width: 120, height: 80 },
+      occupied,
+    }
+    const first = findShortcutPlacement(request)
+    const second = findShortcutPlacement(request)
+    const gap = 8
+    const area = request.footprint.width * request.footprint.height
+    const testedCenters = [
+      ...staticAnchors
+        .filter(({ kind }) => kind === 'dataField')
+        .map(({ xRatio, yRatio }) => ({ x: geometry.width * xRatio, y: geometry.height * yRatio })),
+      { x: geometry.width * 0.32, y: geometry.height * 0.58 },
+      { x: geometry.width * 0.68, y: geometry.height * 0.58 },
+      { x: geometry.width * 0.32, y: geometry.height * 0.72 },
+      { x: geometry.width * 0.68, y: geometry.height * 0.72 },
+      { x: geometry.width * 0.5, y: geometry.height * 0.78 },
+      { x: 222, y: 66 },
+    ]
+    const testedOverlapRatios = testedCenters
+      .map((center) => boundsFromCenter(center, request.footprint))
+      .filter((bounds) => isBoundsInsideCircle(bounds, geometry))
+      .map(
+        (bounds) =>
+          occupied.reduce(
+            (sum, item) => sum + intersectionArea(bounds, expandBounds(item, gap)),
+            0,
+          ) / area,
+      )
+    const chosenOverlapRatio =
+      occupied.reduce(
+        (sum, item) => sum + intersectionArea(first.bounds, expandBounds(item, gap)),
+        0,
+      ) / area
+    expect(first).toEqual(second)
+    expect(first.score.overlapRatio).toBe(chosenOverlapRatio)
+    expect(first.score.overlapRatio).toBe(Math.min(...testedOverlapRatios))
+    expect(isBoundsInsideCircle(first.bounds, geometry)).toBe(true)
+  })
+
+  it('scales semantic anchors for a non-454 design', () => {
+    const smallGeometry = { width: 390, height: 390, centerX: 195, centerY: 195 }
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry: smallGeometry,
+      footprint,
+      occupied: [],
+    })
+    expect(result.center.x).toBe(195)
+    expect(result.center.y).toBeLessThan(160)
+    expect(isBoundsInsideCircle(result.bounds, smallGeometry)).toBe(true)
+  })
+
+  it('rejects non-finite and non-positive geometry or footprint values', () => {
+    const invalidCases: Array<{
+      field: string
+      geometry?: Partial<DesignGeometry>
+      footprint?: Partial<{ width: number; height: number }>
+    }> = [
+      { field: 'geometry.centerX', geometry: { centerX: Number.NaN } },
+      { field: 'geometry.width', geometry: { width: 0 } },
+      { field: 'geometry.height', geometry: { height: -1 } },
+      { field: 'geometry.width', geometry: { width: Number.NaN } },
+      { field: 'geometry.height', geometry: { height: Number.POSITIVE_INFINITY } },
+      { field: 'geometry.centerY', geometry: { centerY: Number.POSITIVE_INFINITY } },
+      { field: 'footprint.width', footprint: { width: 0 } },
+      { field: 'footprint.height', footprint: { height: -1 } },
+      { field: 'footprint.width', footprint: { width: Number.NaN } },
+      { field: 'footprint.height', footprint: { height: Number.POSITIVE_INFINITY } },
+    ]
+
+    for (const invalid of invalidCases) {
+      let thrown: unknown
+      try {
+        findShortcutPlacement({
+          kind: 'time',
+          mode: 'smart',
+          geometry: { ...geometry, ...invalid.geometry },
+          footprint: { ...footprint, ...invalid.footprint },
+          occupied: [],
+        })
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).toBeInstanceOf(RangeError)
+      expect((thrown as Error).message).toContain(invalid.field)
+    }
+  })
+
+  it('throws when the footprint cannot fit inside the round safe area', () => {
+    const oversizedRequest = {
+      kind: 'time' as const,
+      mode: 'smart' as const,
+      geometry,
+      footprint: { width: 500, height: 500 },
+      occupied: [],
+    }
+    expect(() => findShortcutPlacement(oversizedRequest)).toThrowError(RangeError)
+    expect(() => findShortcutPlacement(oversizedRequest)).toThrow(/cannot fit.*safe area/i)
+  })
+
+  it('uses the exact design center when sampled candidates miss the only safe placement', () => {
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry,
+      footprint: { width: 320, height: 320 },
+      occupied: [],
+    })
+    expect(result.center).toEqual({ x: 227, y: 227 })
+    expect(isBoundsInsideCircle(result.bounds, geometry)).toBe(true)
+    expect(result.score.regionRank).toBeGreaterThan(99)
+  })
+
+  it('uses the exact first anchor for every static placement kind', () => {
+    const smallFootprint = { width: 20, height: 20 }
+    for (const { kind, xRatio, yRatio } of staticAnchors) {
+      const result = findShortcutPlacement({
+        kind,
+        mode: 'smart',
+        geometry,
+        footprint: smallFootprint,
+        occupied: [],
+      })
+      expect(result.center).toEqual({
+        x: geometry.width * xRatio,
+        y: geometry.height * yRatio,
+      })
+      expect(result.score).toMatchObject({
+        overlapRatio: 0,
+        regionRank: 0,
+        anchorDistance: 0,
+        candidateIndex: 0,
+      })
+    }
+  })
+
+  it('does not mutate frozen occupied items or their array', () => {
+    const occupied: OccupiedPlacement[] = [
+      { id: 'lower-time', eleType: 'time', left: 177, top: 90, width: 100, height: 40 },
+      { id: 'top-time', eleType: 'time', left: 177, top: 60, width: 100, height: 30 },
+    ]
+    occupied.forEach((item) => Object.freeze(item))
+    Object.freeze(occupied)
+    const before = JSON.stringify(occupied)
+
+    expect(() =>
+      findShortcutPlacement({
+        kind: 'date',
+        mode: 'smart',
+        geometry,
+        footprint: { width: 100, height: 20 },
+        occupied,
+      }),
+    ).not.toThrow()
+    expect(JSON.stringify(occupied)).toBe(before)
+    expect(occupied.every((item) => Object.isFrozen(item))).toBe(true)
+    expect(Object.isFrozen(occupied)).toBe(true)
+  })
+
+  it('uses the scaled 12px ring to preserve the scaled 8px occupied gap', () => {
+    const smallGeometry = { width: 390, height: 390, centerX: 195, centerY: 195 }
+    const scale = 390 / 454
+    const ringStep = 12 * scale
+    const gap = 8 * scale
+    const smallFootprint = { width: 20, height: 20 }
+    const anchor = { x: 195, y: 390 * 0.23 }
+    const anchorBounds = boundsFromCenter(anchor, smallFootprint)
+    const occupied: OccupiedPlacement[] = [
+      {
+        id: 'nearby',
+        eleType: 'shape',
+        left: 190,
+        top: anchorBounds.top + anchorBounds.height + gap / 2,
+        width: 10,
+        height: 10,
+      },
+    ]
+    const expandedOccupied = expandBounds(occupied[0], gap)
+
+    expect(intersectionArea(anchorBounds, occupied[0])).toBe(0)
+    expect(intersectionArea(anchorBounds, expandedOccupied)).toBeGreaterThan(0)
+
+    const result = findShortcutPlacement({
+      kind: 'time',
+      mode: 'smart',
+      geometry: smallGeometry,
+      footprint: smallFootprint,
+      occupied,
+    })
+    expect(result.center).toEqual({ x: anchor.x, y: anchor.y - ringStep })
+    expect(result.score.anchorDistance).toBeCloseTo(ringStep, 10)
+    expect(intersectionArea(result.bounds, expandedOccupied)).toBe(0)
+  })
+})

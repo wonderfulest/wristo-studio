@@ -402,23 +402,23 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
-  const saveState = (_reason?: string, options: SaveStateOptions = {}) => {
+  const saveState = (_reason?: string, options: SaveStateOptions = {}): boolean => {
     if (!canvas) {
       debug('saveState:blocked:no-canvas', { reason: _reason })
-      return
+      return false
     }
     if (isRestoring.value) {
       debug('saveState:skipped:restoring', { reason: _reason })
-      return
+      return false
     }
     if (recordingDepth > 0) {
       debug('saveState:skipped:recording-suspended', { reason: _reason, recordingDepth })
-      return
+      return false
     }
     const snap = takeSnapshot()
     if (!snap) {
       debug('saveState:blocked:no-snapshot', { reason: _reason })
-      return
+      return false
     }
     if (options.captureConfig) {
       snap.configJSON = takeConfigSnapshot()
@@ -432,7 +432,7 @@ export const useHistoryStore = defineStore('history', () => {
         reason: _reason,
         snapshot: summarizeSnapshot(snap),
       })
-      return
+      return false
     }
     if (last && options.coalesceIfSameFabric && last.fabricJSON === snap.fabricJSON) {
       undoStack.value[undoStack.value.length - 1] = snap
@@ -440,7 +440,7 @@ export const useHistoryStore = defineStore('history', () => {
         reason: _reason,
         snapshot: summarizeSnapshot(snap),
       })
-      return
+      return true
     }
 
     undoStack.value.push(snap)
@@ -453,6 +453,7 @@ export const useHistoryStore = defineStore('history', () => {
       reason: _reason,
       snapshot: summarizeSnapshot(snap),
     })
+    return true
   }
 
   const saveInitial = () => {
@@ -699,6 +700,7 @@ export const useHistoryStore = defineStore('history', () => {
     redo,
     canUndo,
     canRedo,
+    isRestoring,
     runWithoutRecording,
     hasUnsavedChanges,
     clear,

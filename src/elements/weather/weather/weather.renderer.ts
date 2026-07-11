@@ -14,6 +14,8 @@ import type { FabricElement } from '@/types/element'
 import type { MinimalFabricLike } from '@/types/layer'
 import type { WeatherElementConfig } from '@/types/elements/data'
 import { applyControlsToObject } from '@/utils/controlManager'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function getDefaultWeatherImage(): string {
   return 'https://cdn.wristo.io/product/0ead49628f08435497e54594ad08b8f3/original.png'
@@ -113,7 +115,11 @@ function attachManualScaleSync(group: FabricGroup): void {
   })
 }
 
-export async function createWeather(config: WeatherElementConfig): Promise<FabricElement> {
+export async function createWeather(
+  config: WeatherElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const canvas = canvasStore.canvas
@@ -140,6 +146,7 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
   })
 
   const addGroupToCanvas = (group: FabricGroup) => {
+    assertElementRenderCurrent(renderContext)
     ;(group as unknown as { id?: string }).id = id
     ;(group as unknown as { eleType?: string }).eleType = 'weather'
     if (config.fontFamily) (group as unknown as { fontFamily?: string }).fontFamily = config.fontFamily
@@ -166,7 +173,7 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
   const mipChar = unicodeToChar(config.mipUnicode)
   if (dt === 'amoled' && !imgUrl) imgUrl = getDefaultWeatherImage()
 
-  return await new Promise<FabricElement>((resolve) => {
+  return await new Promise<FabricElement>((resolve, reject) => {
     const createEmptyGroup = () => {
       const group = new FabricGroup([], {
         left: cx,
@@ -309,8 +316,13 @@ export async function createWeather(config: WeatherElementConfig): Promise<Fabri
         resolve(el)
       })
       .catch((err) => {
-        console.error('[WeatherRenderer] createWeather image load error, creating empty group', { imgUrl, err })
-        createEmptyGroup()
+        try {
+          assertElementRenderCurrent(renderContext)
+          console.error('[WeatherRenderer] createWeather image load error, creating empty group', { imgUrl, err })
+          createEmptyGroup()
+        } catch (error) {
+          reject(error)
+        }
       })
   })
 }

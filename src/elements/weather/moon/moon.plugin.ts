@@ -8,8 +8,8 @@ import MoonSettings from '@/elements/weather/moon/moon.panel.vue'
 
 export default function registerMoonPlugin() {
   registerElement('moon' as ElementType, {
-    add: (config) => {
-      return createMoon(config as MoonElementConfig)
+    add: (config, renderContext) => {
+      return createMoon(config as MoonElementConfig, renderContext)
     },
     update: (element, patch) => {
       updateMoon(element as any, patch as Partial<MoonElementConfig>)

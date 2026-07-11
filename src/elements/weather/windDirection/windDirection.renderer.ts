@@ -4,6 +4,8 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { FabricElement } from '@/types/element'
 import type { WindDirectionElementConfig } from '@/types/elements/data'
+import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function loadHtmlImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -71,7 +73,11 @@ export type WindDirectionElement = FabricImage & {
   imageSvg?: string
 }
 
-export async function createWindDirection(config: WindDirectionElementConfig): Promise<FabricElement> {
+export async function createWindDirection(
+  config: WindDirectionElementConfig,
+  renderContext?: ElementRenderContext,
+): Promise<FabricElement> {
+  assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   if (!canvas) throw new Error('Canvas not ready')
@@ -84,9 +90,11 @@ export async function createWindDirection(config: WindDirectionElementConfig): P
     imageSvg: config.imageSvg,
     assetId: config.assetId,
   })
+  assertElementRenderCurrent(renderContext)
   if (!imageUrl) throw new Error('WindDirection: no imageUrl source')
 
   const imgEl = await loadHtmlImage(imageUrl)
+  assertElementRenderCurrent(renderContext)
   const natural = getImageNaturalSize(imgEl)
   const originalW = natural.width
   const originalH = natural.height
@@ -120,6 +128,7 @@ export async function createWindDirection(config: WindDirectionElementConfig): P
   image.imageUrl = imageUrl
   if (imageSvg) image.imageSvg = imageSvg
 
+  assertElementRenderCurrent(renderContext)
   canvas.add(image as unknown as FabricObject)
   canvas.setActiveObject(image as unknown as FabricObject)
   canvas.renderAll()
