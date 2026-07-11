@@ -10,6 +10,20 @@ export interface CanvasPanRect {
   height: number
 }
 
+export const CANVAS_LONG_PRESS_DELAY_MS = 400
+export const CANVAS_LONG_PRESS_TOLERANCE_PX = 6
+
+export function hasExceededCanvasLongPressTolerance(
+  start: CanvasPanPoint,
+  current: CanvasPanPoint,
+  tolerance = CANVAS_LONG_PRESS_TOLERANCE_PX,
+): boolean {
+  const safeTolerance = Math.max(0, tolerance)
+  const deltaX = current.x - start.x
+  const deltaY = current.y - start.y
+  return deltaX * deltaX + deltaY * deltaY > safeTolerance * safeTolerance
+}
+
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max)
 

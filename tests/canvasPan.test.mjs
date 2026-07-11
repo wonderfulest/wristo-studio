@@ -14,7 +14,10 @@ const { outputText } = ts.transpileModule(source, {
 })
 const compiledModuleUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
 const {
+  CANVAS_LONG_PRESS_DELAY_MS,
+  CANVAS_LONG_PRESS_TOLERANCE_PX,
   clampCanvasPanOffset,
+  hasExceededCanvasLongPressTolerance,
   isPointOutsideWatchFace,
 } = await import(compiledModuleUrl)
 
@@ -51,4 +54,17 @@ test('pan offset keeps the configured amount of the stage visible', () => {
     clampCanvasPanOffset({ x: 20, y: -30 }, stageBaseRect, workspaceRect, 64),
     { x: 20, y: -30 },
   )
+})
+
+test('canvas long press uses the agreed delay and movement tolerance', () => {
+  assert.equal(CANVAS_LONG_PRESS_DELAY_MS, 400)
+  assert.equal(CANVAS_LONG_PRESS_TOLERANCE_PX, 6)
+})
+
+test('long press tolerance is measured from the original pointer position', () => {
+  const start = { x: 100, y: 100 }
+
+  assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 106, y: 100 }), false)
+  assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 100, y: 106.01 }), true)
+  assert.equal(hasExceededCanvasLongPressTolerance(start, { x: 105, y: 104 }), true)
 })
