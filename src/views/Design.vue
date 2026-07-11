@@ -566,10 +566,13 @@ function handleCanvasPanPointerOwnerDocumentCancel(event: PointerEvent): void {
   const pendingSession = canvasLongPressSession
   if (pendingSession?.pointerId === ownerId) {
     clearCanvasLongPressSession()
-    canvasRef.value?.cancelFabricInteractionForStagePan?.(pendingSession.sourceEvent)
-    releaseCanvasPanPointerOwner(ownerId)
-    event.preventDefault()
-    event.stopPropagation()
+    try {
+      canvasRef.value?.cancelFabricInteractionForStagePan?.(pendingSession.sourceEvent)
+    } finally {
+      releaseCanvasPanPointerOwner(ownerId)
+      event.preventDefault()
+      event.stopPropagation()
+    }
     return
   }
 
@@ -578,10 +581,13 @@ function handleCanvasPanPointerOwnerDocumentCancel(event: PointerEvent): void {
     return
   }
 
-  canvasRef.value?.finishFabricInteractionForPointerCancel?.(event)
-  releaseCanvasPanPointerOwner(ownerId)
-  event.preventDefault()
-  event.stopPropagation()
+  try {
+    canvasRef.value?.finishFabricInteractionForPointerCancel?.(event)
+  } finally {
+    releaseCanvasPanPointerOwner(ownerId)
+    event.preventDefault()
+    event.stopPropagation()
+  }
 }
 
 const beginCanvasLongPress = (event: PointerEvent): boolean => {
