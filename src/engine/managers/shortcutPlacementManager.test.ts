@@ -1,13 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   boundsFromCenter,
+  collectOccupiedBounds,
+  estimateElementBounds,
   expandBounds,
   findShortcutPlacement,
   intersectionArea,
   isBoundsInsideCircle,
+  placeShortcutDrafts,
   unionBounds,
   type DesignGeometry,
   type OccupiedPlacement,
+  type ShortcutDraft,
   type ShortcutPlacementKind,
 } from './shortcutPlacementManager'
 
@@ -53,6 +57,154 @@ describe('shortcut placement geometry', () => {
     expect(isBoundsInsideCircle({ left: 0, top: 0, width: 100, height: 40 }, geometry)).toBe(
       false,
     )
+  })
+})
+
+describe('shortcut draft bounds', () => {
+  it('ignores structural Fabric objects when collecting occupied bounds', () => {
+    const objects = [
+      {
+        id: 'global',
+        eleType: 'global',
+        getBoundingRect: () => ({ left: 0, top: 0, width: 454, height: 454 }),
+      },
+      {
+        id: 'hour',
+        eleType: 'hourHand',
+        getBoundingRect: () => ({ left: 187, top: 67, width: 80, height: 180 }),
+      },
+      {
+        id: 'data',
+        eleType: 'data',
+        getBoundingRect: () => ({ left: 180, top: 250, width: 90, height: 40 }),
+      },
+    ]
+
+    expect(collectOccupiedBounds(objects)).toEqual([
+      { id: 'data', eleType: 'data', left: 180, top: 250, width: 90, height: 40 },
+    ])
+  })
+
+  it('estimates line bounds from endpoints and half the stroke width', () => {
+    expect(
+      estimateElementBounds('line', {
+        x1: 77,
+        y1: 227,
+        x2: 377,
+        y2: 227,
+        strokeWidth: 2,
+      }),
+    ).toEqual({ left: 76, top: 226, width: 302, height: 2 })
+  })
+
+  it('respects left and top origins for non-line bounds', () => {
+    const bounds = estimateElementBounds('data', {
+      left: 100,
+      top: 50,
+      fontSize: 20,
+      originX: 'left',
+      originY: 'top',
+    })
+
+    expect(bounds).toMatchObject({ left: 100, top: 50, height: 24 })
+    expect(bounds.width).toBeCloseTo(58)
+  })
+
+  it('coerces excluded IDs and skips invalid Fabric bounds', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      expect(
+        collectOccupiedBounds(
+          [
+            {
+              id: 7,
+              eleType: 'data',
+              getBoundingRect: () => ({ left: 10, top: 10, width: 20, height: 20 }),
+            },
+            {
+              id: 8,
+              eleType: 'data',
+              getBoundingRect: () => ({ left: '20', top: '30', width: '40', height: '50' }),
+            },
+            {
+              id: 'invalid-size',
+              eleType: 'data',
+              getBoundingRect: () => ({ left: 0, top: 0, width: 0, height: 20 }),
+            },
+            {
+              id: 'broken',
+              eleType: 'data',
+              getBoundingRect: () => {
+                throw new Error('broken bounds')
+              },
+            },
+          ],
+          ['7'],
+        ),
+      ).toEqual([
+        { id: '8', eleType: 'data', left: 20, top: 30, width: 40, height: 50 },
+      ])
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('broken'),
+        expect.any(Error),
+      )
+    } finally {
+      warn.mockRestore()
+    }
+  })
+})
+
+describe('placeShortcutDrafts', () => {
+  it('translates a compound data field without changing internal spacing', () => {
+    const drafts: ShortcutDraft[] = [
+      { key: 'icon', elementType: 'icon', config: { left: 227, top: 190, fontSize: 30 } },
+      { key: 'data', elementType: 'data', config: { left: 227, top: 227, fontSize: 36 } },
+      { key: 'unit', elementType: 'unit', config: { left: 227, top: 256, fontSize: 18 } },
+    ]
+    const before = JSON.stringify(drafts)
+    drafts.forEach((draft) => {
+      Object.freeze(draft.config)
+      Object.freeze(draft)
+    })
+    Object.freeze(drafts)
+
+    const result = placeShortcutDrafts({
+      kind: 'dataField',
+      mode: 'smart',
+      geometry,
+      drafts,
+      occupied: [],
+    })
+    const [icon, data, unit] = result.drafts.map((draft) => draft.config.top as number)
+
+    expect(data - icon).toBeCloseTo(37)
+    expect(unit - data).toBeCloseTo(29)
+    expect(JSON.stringify(drafts)).toBe(before)
+    expect(result.drafts).not.toBe(drafts)
+    result.drafts.forEach((draft, index) => {
+      expect(draft).not.toBe(drafts[index])
+      expect(draft.config).not.toBe(drafts[index].config)
+    })
+  })
+
+  it('preserves line endpoint deltas when placing a shape', () => {
+    const result = placeShortcutDrafts({
+      kind: 'shape',
+      mode: 'smart',
+      geometry,
+      drafts: [
+        {
+          key: 'line',
+          elementType: 'line',
+          config: { x1: 77, y1: 100, x2: 377, y2: 100, strokeWidth: 2 },
+        },
+      ],
+      occupied: [],
+    })
+    const config = result.drafts[0].config
+
+    expect((config.x2 as number) - (config.x1 as number)).toBeCloseTo(300)
+    expect((config.y2 as number) - (config.y1 as number)).toBeCloseTo(0)
   })
 })
 

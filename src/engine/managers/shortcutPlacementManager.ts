@@ -62,6 +62,12 @@ export interface PlacementResult {
   score: PlacementScore
 }
 
+export interface ShortcutDraft {
+  key: string
+  elementType: string
+  config: Record<string, any>
+}
+
 export const STRUCTURAL_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   'global',
   'background',
@@ -73,6 +79,19 @@ export const STRUCTURAL_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   'secondHand',
   'centerCap',
 ])
+
+const ELEMENT_SAMPLE_LENGTHS: Record<string, number> = {
+  time: 5,
+  date: 11,
+  data: 5,
+  unit: 4,
+  icon: 1,
+  bluetooth: 1,
+  notification: 1,
+  disturb: 1,
+  alarms: 1,
+  weather: 1,
+}
 
 type RatioAnchor = { x: number; y: number; regionRank: number }
 
@@ -202,6 +221,197 @@ export function unionBounds(bounds: PlacementBounds[]): PlacementBounds | null {
   const right = Math.max(...bounds.map((item) => item.left + item.width))
   const bottom = Math.max(...bounds.map((item) => item.top + item.height))
   return { left, top, width: right - left, height: bottom - top }
+}
+
+const lineEndpoints = (
+  config: Record<string, any>,
+): [number, number, number, number] | null => {
+  const endpoints = [config.x1, config.y1, config.x2, config.y2]
+  return endpoints.every(Number.isFinite)
+    ? (endpoints as [number, number, number, number])
+    : null
+}
+
+const finiteNumberOr = (value: unknown, fallback: number): number => {
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : fallback
+}
+
+const clampDimension = (value: number): number =>
+  Math.max(1, Number.isFinite(value) ? value : 1)
+
+export function estimateElementBounds(
+  elementType: string,
+  config: Record<string, any>,
+): PlacementBounds {
+  const endpoints = lineEndpoints(config)
+  if (endpoints) {
+    const [x1, y1, x2, y2] = endpoints
+    const strokeWidth = finiteNumberOr(config.strokeWidth ?? 1, 1)
+    const halfStroke = Math.max(0.5, strokeWidth / 2)
+    const left = Math.min(x1, x2) - halfStroke
+    const top = Math.min(y1, y2) - halfStroke
+    return {
+      left,
+      top,
+      width: Math.max(x1, x2) + halfStroke - left,
+      height: Math.max(y1, y2) + halfStroke - top,
+    }
+  }
+
+  const fontSize = Math.max(
+    1,
+    finiteNumberOr(config.fontSize ?? config.iconSize ?? 24, 24),
+  )
+  const radius = finiteNumberOr(config.radius ?? config.bgRadius ?? 0, 0)
+  const strokeWidth = finiteNumberOr(config.strokeWidth ?? 0, 0)
+  const sampleLength = ELEMENT_SAMPLE_LENGTHS[elementType] ?? 3
+  const hasRadius = radius !== 0
+  const width = clampDimension(
+    config.width != null
+      ? Number(config.width)
+      : hasRadius
+        ? radius * 2 + strokeWidth
+        : fontSize * sampleLength * 0.58,
+  )
+  const height = clampDimension(
+    config.height != null
+      ? Number(config.height)
+      : hasRadius
+        ? radius * 2 + strokeWidth
+        : fontSize * 1.2,
+  )
+  const anchorLeft = finiteNumberOr(config.left ?? 0, 0)
+  const anchorTop = finiteNumberOr(config.top ?? 0, 0)
+  const left =
+    config.originX === 'left'
+      ? anchorLeft
+      : config.originX === 'right'
+        ? anchorLeft - width
+        : anchorLeft - width / 2
+  const top =
+    config.originY === 'top'
+      ? anchorTop
+      : config.originY === 'bottom'
+        ? anchorTop - height
+        : anchorTop - height / 2
+
+  return { left, top, width, height }
+}
+
+export function collectOccupiedBounds(
+  objects: Array<Record<string, any>>,
+  excludedIds: Iterable<string> = [],
+): OccupiedPlacement[] {
+  const excluded = new Set(Array.from(excludedIds, String))
+  const occupied: OccupiedPlacement[] = []
+
+  objects.forEach((object) => {
+    if (object.id == null || object.eleType == null) return
+    const id = String(object.id)
+    const eleType = String(object.eleType)
+    if (!id.trim() || !eleType.trim()) return
+    if (excluded.has(id) || STRUCTURAL_ELEMENT_TYPES.has(eleType)) return
+
+    try {
+      const rawBounds = object.getBoundingRect()
+      const bounds = {
+        left: Number(rawBounds.left),
+        top: Number(rawBounds.top),
+        width: Number(rawBounds.width),
+        height: Number(rawBounds.height),
+      }
+      if (
+        !Number.isFinite(bounds.left) ||
+        !Number.isFinite(bounds.top) ||
+        !Number.isFinite(bounds.width) ||
+        !Number.isFinite(bounds.height) ||
+        bounds.width <= 0 ||
+        bounds.height <= 0
+      ) {
+        return
+      }
+      occupied.push({ id, eleType, ...bounds })
+    } catch (error) {
+      console.warn(`Failed to read occupied bounds for ${id} (${eleType})`, error)
+    }
+  })
+
+  return occupied
+}
+
+const translateConfig = (
+  config: Record<string, any>,
+  dx: number,
+  dy: number,
+): Record<string, any> => {
+  const translated = { ...config }
+  const endpoints = lineEndpoints(config)
+  if (endpoints) {
+    const [x1, y1, x2, y2] = endpoints
+    translated.x1 = x1 + dx
+    translated.y1 = y1 + dy
+    translated.x2 = x2 + dx
+    translated.y2 = y2 + dy
+    if (Number.isFinite(config.left)) {
+      translated.left = config.left + dx
+    }
+    if (Number.isFinite(config.top)) {
+      translated.top = config.top + dy
+    }
+    return translated
+  }
+
+  translated.left = finiteNumberOr(config.left ?? 0, 0) + dx
+  translated.top = finiteNumberOr(config.top ?? 0, 0) + dy
+  translated.originX = config.originX ?? 'center'
+  translated.originY = config.originY ?? 'center'
+  return translated
+}
+
+const isMeasurableBounds = (bounds: PlacementBounds): boolean =>
+  Number.isFinite(bounds.left) &&
+  Number.isFinite(bounds.top) &&
+  Number.isFinite(bounds.width) &&
+  Number.isFinite(bounds.height) &&
+  bounds.width > 0 &&
+  bounds.height > 0
+
+export function placeShortcutDrafts(input: {
+  kind: ShortcutPlacementKind
+  mode: ShortcutPlacementMode
+  geometry: DesignGeometry
+  drafts: ShortcutDraft[]
+  occupied: OccupiedPlacement[]
+}): { drafts: ShortcutDraft[]; placement: PlacementResult; estimatedBounds: PlacementBounds } {
+  const estimatedItems = input.drafts
+    .map((draft) => estimateElementBounds(draft.elementType, draft.config))
+    .filter(isMeasurableBounds)
+  const estimatedBounds = unionBounds(estimatedItems)
+  if (!estimatedBounds) {
+    throw new Error('Cannot place shortcut drafts: no measurable items')
+  }
+
+  const placement = findShortcutPlacement({
+    kind: input.kind,
+    mode: input.mode,
+    geometry: input.geometry,
+    footprint: { width: estimatedBounds.width, height: estimatedBounds.height },
+    occupied: input.occupied,
+  })
+  const currentCenter = boundsCenter(estimatedBounds)
+  const dx = placement.center.x - currentCenter.x
+  const dy = placement.center.y - currentCenter.y
+
+  return {
+    drafts: input.drafts.map((draft) => ({
+      key: draft.key,
+      elementType: draft.elementType,
+      config: translateConfig(draft.config, dx, dy),
+    })),
+    placement,
+    estimatedBounds: translateBounds(estimatedBounds, dx, dy),
+  }
 }
 
 export function isBoundsInsideCircle(
