@@ -62,7 +62,7 @@ export interface PlacementResult {
   score: PlacementScore
 }
 
-export const STRUCTURAL_ELEMENT_TYPES = new Set([
+export const STRUCTURAL_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   'global',
   'background',
   'tick12',
@@ -229,6 +229,33 @@ type Candidate = PlacementPoint & {
 const designScale = (geometry: DesignGeometry): number =>
   Math.min(geometry.width, geometry.height) / 454
 
+const assertFinitePositive = (value: number, field: string): void => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`Shortcut placement ${field} must be a finite number greater than 0`)
+  }
+}
+
+const assertFinite = (value: number, field: string): void => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`Shortcut placement ${field} must be a finite number`)
+  }
+}
+
+const validatePlacementRequest = (request: PlacementRequest): void => {
+  assertFinitePositive(request.geometry.width, 'geometry.width')
+  assertFinitePositive(request.geometry.height, 'geometry.height')
+  assertFinite(request.geometry.centerX, 'geometry.centerX')
+  assertFinite(request.geometry.centerY, 'geometry.centerY')
+  assertFinitePositive(request.footprint.width, 'footprint.width')
+  assertFinitePositive(request.footprint.height, 'footprint.height')
+  if (12 * designScale(request.geometry) <= 0) {
+    throw new RangeError('Shortcut placement geometry dimensions are too small')
+  }
+}
+
+const safeAreaRangeError = (): RangeError =>
+  new RangeError('Shortcut placement footprint cannot fit inside the design safe area')
+
 const distance = (a: PlacementPoint, b: PlacementPoint): number =>
   Math.hypot(a.x - b.x, a.y - b.y)
 
@@ -387,11 +414,17 @@ const alignmentPenalty = (
 }
 
 export function findShortcutPlacement(request: PlacementRequest): PlacementResult {
+  validatePlacementRequest(request)
+
   if (request.mode === 'fixedCenter' || request.kind === 'axis') {
     const center = { x: request.geometry.centerX, y: request.geometry.centerY }
+    const bounds = boundsFromCenter(center, request.footprint)
+    if (!isBoundsInsideCircle(bounds, request.geometry)) {
+      throw safeAreaRangeError()
+    }
     return {
       center,
-      bounds: boundsFromCenter(center, request.footprint),
+      bounds,
       score: {
         overlapRatio: 0,
         regionRank: 0,
@@ -408,24 +441,13 @@ export function findShortcutPlacement(request: PlacementRequest): PlacementResul
       bounds: boundsFromCenter(candidate, request.footprint),
     }))
     .filter(({ bounds }) => isBoundsInsideCircle(bounds, request.geometry))
-  const fallback = {
-    candidate: {
-      x: request.geometry.centerX,
-      y: request.geometry.centerY,
-      regionRank: 999,
-      anchorDistance: 0,
-      candidateIndex: Number.MAX_SAFE_INTEGER,
-    },
-    bounds: boundsFromCenter(
-      { x: request.geometry.centerX, y: request.geometry.centerY },
-      request.footprint,
-    ),
+  if (!candidates.length) {
+    throw safeAreaRangeError()
   }
-  const available = candidates.length ? candidates : [fallback]
   const gap = 8 * designScale(request.geometry)
   const area = Math.max(1, request.footprint.width * request.footprint.height)
 
-  return available
+  return candidates
     .map(({ candidate, bounds }) => {
       const overlap = request.occupied.reduce(
         (sum, item) => sum + intersectionArea(bounds, expandBounds(item, gap)),
