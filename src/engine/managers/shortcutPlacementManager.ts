@@ -323,23 +323,21 @@ export function collectOccupiedBounds(
 
     try {
       const rawBounds = object.getBoundingRect()
-      const bounds = {
-        left: Number(rawBounds.left),
-        top: Number(rawBounds.top),
-        width: Number(rawBounds.width),
-        height: Number(rawBounds.height),
-      }
+      const left = strictFiniteNumber(rawBounds.left)
+      const top = strictFiniteNumber(rawBounds.top)
+      const width = strictFiniteNumber(rawBounds.width)
+      const height = strictFiniteNumber(rawBounds.height)
       if (
-        !Number.isFinite(bounds.left) ||
-        !Number.isFinite(bounds.top) ||
-        !Number.isFinite(bounds.width) ||
-        !Number.isFinite(bounds.height) ||
-        bounds.width <= 0 ||
-        bounds.height <= 0
+        left === null ||
+        top === null ||
+        width === null ||
+        height === null ||
+        width <= 0 ||
+        height <= 0
       ) {
         return
       }
-      occupied.push({ id, eleType, ...bounds })
+      occupied.push({ id, eleType, left, top, width, height })
     } catch (error) {
       console.warn(`Failed to read occupied bounds for ${id} (${eleType})`, error)
     }

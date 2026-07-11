@@ -241,6 +241,37 @@ describe('shortcut draft bounds', () => {
       warn.mockRestore()
     }
   })
+
+  it('rejects coercion-only Fabric bounds while preserving numeric strings', () => {
+    expect(
+      collectOccupiedBounds([
+        {
+          id: 'valid-strings',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: '20', top: '30', width: '40', height: '50' }),
+        },
+        {
+          id: 'invalid-primitives',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: null, top: false, width: true, height: '20' }),
+        },
+        {
+          id: 'invalid-blank',
+          eleType: 'data',
+          getBoundingRect: () => ({ left: ' ', top: '30', width: '40', height: '50' }),
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'valid-strings',
+        eleType: 'data',
+        left: 20,
+        top: 30,
+        width: 40,
+        height: 50,
+      },
+    ])
+  })
 })
 
 describe('placeShortcutDrafts', () => {
