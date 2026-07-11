@@ -368,7 +368,13 @@ const cancelFabricInteractionForStagePan = (sourceEvent: PointerEvent): boolean 
     ;(transform.target as { __corner?: string }).__corner = undefined
   }
 
-  canvas._onMouseUp(createStagePanCancelEvent(sourceEvent, canvas.upperCanvasEl))
+  const previousSkipTargetFind = canvas.skipTargetFind
+  canvas.skipTargetFind = true
+  try {
+    canvas._onMouseUp(createStagePanCancelEvent(sourceEvent, canvas.upperCanvasEl))
+  } finally {
+    canvas.skipTargetFind = previousSkipTargetFind
+  }
   canvas.requestRenderAll?.()
   return true
 }
