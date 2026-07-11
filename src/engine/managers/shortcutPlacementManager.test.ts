@@ -398,6 +398,16 @@ describe('findShortcutPlacement', () => {
     expect(result.bounds).toEqual({ left: -73, top: -73, width: 600, height: 600 })
   })
 
+  it('keeps the safe-area limit for oversized non-axis fixed-center requests', () => {
+    expect(() => findShortcutPlacement({
+      kind: 'time',
+      mode: 'fixedCenter',
+      geometry,
+      footprint: { width: 500, height: 500 },
+      occupied: [],
+    })).toThrow(/cannot fit.*safe area/i)
+  })
+
   it('prefers the upper center for time', () => {
     const result = findShortcutPlacement({
       kind: 'time',

@@ -638,6 +638,9 @@ export function findShortcutPlacement(request: PlacementRequest): PlacementResul
   if (request.mode === 'fixedCenter' || request.kind === 'axis') {
     const center = { x: request.geometry.centerX, y: request.geometry.centerY }
     const bounds = boundsFromCenter(center, request.footprint)
+    if (request.kind !== 'axis' && !isBoundsInsideCircle(bounds, request.geometry)) {
+      throw safeAreaRangeError()
+    }
     return {
       center,
       bounds,
