@@ -385,6 +385,19 @@ describe('findShortcutPlacement', () => {
     expect(result.center).toEqual({ x: 227, y: 227 })
   })
 
+  it('keeps oversized axis artwork centered without applying the ordinary safe-area limit', () => {
+    const result = findShortcutPlacement({
+      kind: 'axis',
+      mode: 'fixedCenter',
+      geometry,
+      footprint: { width: 600, height: 600 },
+      occupied: [],
+    })
+
+    expect(result.center).toEqual({ x: 227, y: 227 })
+    expect(result.bounds).toEqual({ left: -73, top: -73, width: 600, height: 600 })
+  })
+
   it('prefers the upper center for time', () => {
     const result = findShortcutPlacement({
       kind: 'time',
