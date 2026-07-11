@@ -423,6 +423,8 @@ const constrainPanOffset = (stageBaseRect = getStageBaseRect()): void => {
 }
 
 const startCanvasPan = (options: StartCanvasPanOptions): boolean => {
+  if (canvasPanSession || canvasLongPressSession) return false
+
   const stageBaseRect = getStageBaseRect()
   const centerArea = centerAreaRef.value
   if (!stageBaseRect || !centerArea || typeof centerArea.setPointerCapture !== 'function') {
@@ -515,7 +517,8 @@ function handleCanvasLongPressDocumentCancel(event: PointerEvent): void {
 }
 
 const beginCanvasLongPress = (event: PointerEvent): void => {
-  clearCanvasLongPressSession()
+  if (canvasLongPressSession || canvasPanSession) return
+
   const session: CanvasLongPressSession = {
     pointerId: event.pointerId,
     startClientX: event.clientX,
@@ -536,7 +539,12 @@ const beginCanvasLongPress = (event: PointerEvent): void => {
 }
 
 const handleCanvasPanPointerDown = (event: PointerEvent): void => {
-  if (!event.isPrimary || event.button !== 0 || canvasPanSession) return
+  if (canvasPanSession || canvasLongPressSession) {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+  if (!event.isPrimary || event.button !== 0) return
 
   const region = getCanvasPanPointerRegion(event)
   if (region === 'long-press') {
