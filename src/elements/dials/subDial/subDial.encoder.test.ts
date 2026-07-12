@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SubDialElementConfig } from '@/types/elements/subDial'
 import { decodeSubDial, encodeSubDial } from './subDial.encoder'
+import { subDialSchema } from './subDial.schema'
 
 const config: SubDialElementConfig = {
   id: 'sub-dial-1',
@@ -140,6 +141,37 @@ describe('subDial encoder', () => {
       scaleY: 1,
       eleType: 'subDial'
     })
+  })
+
+  it('does not share content defaults between encoded results', () => {
+    const first = encodeSubDial({})
+    first.content.value.x = 0.9
+
+    const second = encodeSubDial({})
+    expect(second.content.value.x).toBe(0)
+    expect(subDialSchema.defaultConfig.content.value.x).toBe(0)
+  })
+
+  it('deeply merges partial stored content with classic defaults', () => {
+    const encoded = encodeSubDial({
+      __element: {
+        config: {
+          content: {
+            value: { x: 0.25 }
+          }
+        }
+      }
+    } as any)
+
+    expect(encoded.content.value).toMatchObject({
+      visible: true,
+      x: 0.25,
+      y: 0.2,
+      fontSize: 14,
+      textAlign: 'center'
+    })
+    expect(Object.keys(encoded.content)).toEqual(['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'])
+    expect(encoded.content.percentage).toMatchObject({ visible: true, suffix: '%' })
   })
 
   it('prefers live goalProperty over stale widget config', () => {
