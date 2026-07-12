@@ -33,9 +33,18 @@ type GoalBarProgressDirection =
   | 'topToBottom'
 
 progressDirection: GoalBarProgressDirection
+orientation: 'horizontal' | 'vertical'
 ```
 
-默认值为 `leftToRight`。方向本身可以唯一确定水平或垂直轴，因此不额外保存 `orientation`，避免产生互相矛盾的配置组合。
+默认值为 `orientation: 'horizontal'` 和 `progressDirection: 'leftToRight'`。`orientation` 用于 Studio 设置语义和条件化选项，Runtime 仍以四方向 `progressDirection` 为最终绘制依据。
+
+配置归一化必须保证二者一致：
+
+- `leftToRight`、`rightToLeft` 对应 `horizontal`。
+- `bottomToTop`、`topToBottom` 对应 `vertical`。
+- 切换到 `horizontal` 时将方向重置为 `leftToRight`。
+- 切换到 `vertical` 时将方向重置为 `bottomToTop`。
+- 不记忆另一个 orientation 下的历史方向。
 
 `progressAlign` 只作为旧配置输入字段保留。解码规则为：
 
@@ -43,20 +52,27 @@ progressDirection: GoalBarProgressDirection
 - 缺少 `progressDirection` 且 `progressAlign === 'right'` 时，映射为 `rightToLeft`。
 - 其他情况映射为 `leftToRight`。
 
-编码和新建元素只输出 `progressDirection`，不再写入 `progressAlign`。未知方向值按 `leftToRight` 降级，并保持 Studio 与生成器使用相同的归一化规则。
+旧配置缺少 `orientation` 时，根据规范化后的 `progressDirection` 推导 orientation。编码和新建元素同时输出 `orientation` 与 `progressDirection`；scaffold 和 Runtime 继续只依赖最终四方向字段。
+
+编码不再写入 `progressAlign`。未知方向值按 `leftToRight` 降级，并保持 Studio 与生成器使用相同的归一化规则。
 
 ## Studio 交互
 
-GoalBar 设置面板新增 `Progress Direction` 四选一控件，用户可直接选择：
+GoalBar 设置面板拆分为两个配置项。字段顺序为：`Goal Select` → `Orientation` → `Shape` → `Padding` → `Progress Direction`。
 
-- Left to Right
-- Right to Left
-- Bottom to Top
-- Top to Bottom
+`Orientation` 放在 Shape 上方，可选择：
 
-这是面向终端用户的设置文案，因此保持英文。切换方向只改变进度绘制，不自动交换元素的 `width` 和 `height`，也不改变元素位置、自定义多边形顶点或其他样式。用户仍可通过尺寸设置得到期望的横条或竖条比例。
+- Horizontal
+- Vertical
 
-旧的水平对齐控件由四方向控件完全取代，不同时展示两套方向设置。
+`Progress Direction` 根据当前 Orientation 只展示两个有效选项：
+
+- Horizontal：Left to Right、Right to Left。
+- Vertical：Bottom to Top、Top to Bottom。
+
+这是面向终端用户的设置文案，因此保持英文。切换 Orientation 不自动交换元素的 `width` 和 `height`，也不改变元素位置、自定义多边形顶点或其他样式，只重置为该轴向的默认进度方向。用户仍可通过尺寸设置得到期望的横条或竖条比例。
+
+旧的水平对齐控件由 Orientation 和条件化 Progress Direction 取代。
 
 ## 轴向绘制模型
 
