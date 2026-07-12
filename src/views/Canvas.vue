@@ -104,6 +104,7 @@ onMounted(() => {
       saveHistory: () => {
         historyStore.saveState('subDial:content-layout')
       },
+      runWithoutRecording: (task) => historyStore.runWithoutRecording(task),
     })
     disposeSubDialLayoutEditor = () => editor.dispose()
   }

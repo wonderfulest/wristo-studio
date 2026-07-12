@@ -1,4 +1,5 @@
 import type { SubDialContentConfig, SubDialContentKey } from '@/types/elements/subDial'
+import { Rect } from 'fabric'
 import { canvasToLocal, constrainContentPosition, lockDragAxis, type CanvasPoint } from './subDial.layout'
 
 const CONTENT_KEYS: SubDialContentKey[] = ['icon', 'label', 'value', 'unit', 'goalValue', 'percentage']
@@ -10,6 +11,8 @@ type CanvasLike = {
   getPointer?(event: any): CanvasPoint
   discardActiveObject?(): void
   requestRenderAll?(): void
+  add?(object: any): void
+  remove?(object: any): void
 }
 
 type DocumentLike = Pick<Document, 'addEventListener' | 'removeEventListener'>
@@ -18,6 +21,7 @@ export interface SubDialLayoutEditorOptions {
   canvas: CanvasLike
   updateElement: (element: any, patch: { content: SubDialContentConfig }) => void | Promise<void>
   saveHistory: () => void | Promise<void>
+  runWithoutRecording?: (task: () => void) => void | Promise<void>
   document?: DocumentLike | null
 }
 
@@ -28,18 +32,24 @@ export class SubDialLayoutEditor {
   private readonly updateElement: SubDialLayoutEditorOptions['updateElement']
   private readonly saveHistory: SubDialLayoutEditorOptions['saveHistory']
   private readonly document: DocumentLike | null
+  private readonly runWithoutRecording: (task: () => void) => void | Promise<void>
   private group: any = null
   private selectedKey: SubDialContentKey | null = null
   private outerState: InteractionState | null = null
-  private childEvented = new Map<any, boolean>()
-  private drag: { startCanvas: CanvasPoint; startLocal: CanvasPoint; itemStart: CanvasPoint } | null = null
+  private childInteraction = new Map<any, { evented: unknown; selectable: unknown }>()
+  private drag: { startCanvas: CanvasPoint; startLocal: CanvasPoint; itemStart: CanvasPoint; pending: CanvasPoint } | null = null
+  private selectionOverlay: Rect | null = null
   private disposed = false
   private suppressSelectionExit = false
 
   private readonly handlers = {
     doubleClick: (event: any) => {
       const target = event?.target
-      if (target?.eleType === 'subDial') this.enter(target)
+      if (this.group) {
+        if (target !== this.group) this.exit()
+      } else if (target?.eleType === 'subDial') {
+        this.enter(target)
+      }
     },
     mouseDown: (event: any) => {
       if (!this.group) return
@@ -70,6 +80,7 @@ export class SubDialLayoutEditor {
     this.canvas = options.canvas
     this.updateElement = options.updateElement
     this.saveHistory = options.saveHistory
+    this.runWithoutRecording = options.runWithoutRecording ?? ((task) => task())
     this.document = options.document === undefined ? (typeof document === 'undefined' ? null : document) : options.document
     this.canvas.on('mouse:dblclick', this.handlers.doubleClick)
     this.canvas.on('mouse:down', this.handlers.mouseDown)
@@ -83,6 +94,7 @@ export class SubDialLayoutEditor {
 
   enter(group: any): boolean {
     if (this.disposed || group?.eleType !== 'subDial' || !group?.__element?.children?.content) return false
+    if (!this.validGroupScale(group)) return false
     if (this.group === group) return true
     this.exit()
     this.group = group
@@ -104,7 +116,7 @@ export class SubDialLayoutEditor {
     for (const key of CONTENT_KEYS) {
       const child = this.child(key)
       if (!child) continue
-      this.childEvented.set(child, Boolean(child.evented))
+      this.childInteraction.set(child, { evented: child.evented, selectable: child.selectable })
       child.set?.({ evented: this.item(key)?.visible !== false, selectable: false })
     }
     group.setCoords?.()
@@ -116,14 +128,15 @@ export class SubDialLayoutEditor {
   exit(): void {
     if (!this.group) return
     this.cancelDragPreview()
+    this.removeSelectionOverlay()
     const group = this.group
     if (this.outerState) {
       const { controlsVisibility, ...values } = this.outerState
       group.set?.(values)
       if (controlsVisibility && typeof group.setControlsVisibility === 'function') group.setControlsVisibility(controlsVisibility)
     }
-    this.childEvented.forEach((evented, child) => child.set?.({ evented }))
-    this.childEvented.clear()
+    this.childInteraction.forEach((state, child) => child.set?.(state))
+    this.childInteraction.clear()
     this.selectedKey = null
     this.drag = null
     this.group = null
@@ -140,34 +153,35 @@ export class SubDialLayoutEditor {
   select(key: SubDialContentKey): boolean {
     if (!this.group || !CONTENT_KEYS.includes(key) || !this.child(key)) return false
     this.selectedKey = key
+    this.updateSelectionOverlay()
     return true
   }
 
   beginDrag(point: CanvasPoint): boolean {
-    if (!this.group || !this.selectedKey || this.drag || !this.finitePoint(point)) return false
+    if (!this.group || !this.validGroupScale(this.group) || !this.selectedKey || this.drag || !this.finitePoint(point)) return false
     const item = this.item(this.selectedKey)
     if (!item) return false
-    this.drag = { startCanvas: { ...point }, startLocal: this.toLocal(point), itemStart: { x: item.x, y: item.y } }
+    this.drag = { startCanvas: { ...point }, startLocal: this.toLocal(point), itemStart: { x: item.x, y: item.y }, pending: { x: item.x, y: item.y } }
     return true
   }
 
   updateDrag(point: CanvasPoint, options: { shiftKey: boolean }): boolean {
-    if (!this.group || !this.selectedKey || !this.drag || !this.finitePoint(point)) return false
+    if (!this.group || !this.validGroupScale(this.group) || !this.selectedKey || !this.drag || !this.finitePoint(point)) return false
     const locked = lockDragAxis(this.drag.startCanvas, point, options.shiftKey)
     const current = this.toLocal(locked)
     const target = { x: this.drag.itemStart.x + current.x - this.drag.startLocal.x, y: this.drag.itemStart.y + current.y - this.drag.startLocal.y }
     const child = this.child(this.selectedKey)
     const scale = this.groupScale()
+    const boundingRect = child?.getBoundingRect?.()
     const bounds = {
-      width: Number(child?.getScaledWidth?.() ?? child?.width ?? 0) * scale,
-      height: Number(child?.getScaledHeight?.() ?? child?.height ?? 0) * scale
+      width: Number(boundingRect?.width ?? Number(child?.getScaledWidth?.() ?? child?.width ?? 0) * scale),
+      height: Number(boundingRect?.height ?? Number(child?.getScaledHeight?.() ?? child?.height ?? 0) * scale)
     }
     const position = constrainContentPosition(target, bounds, this.radius() * scale)
-    const item = this.item(this.selectedKey)
-    item.x = position.x
-    item.y = position.y
+    this.drag.pending = position
     child?.set?.({ left: position.x * this.radius(), top: position.y * this.radius() })
     child?.setCoords?.()
+    this.updateSelectionOverlay()
     this.canvas.requestRenderAll?.()
     return true
   }
@@ -177,18 +191,18 @@ export class SubDialLayoutEditor {
       this.drag = null
       return false
     }
+    const position = this.drag.pending
     this.drag = null
-    await this.commit()
+    await this.commitPosition(position)
     return true
   }
 
-  async center(axis: 'x' | 'y' | 'both'): Promise<boolean> {
+  async center(axis: 'horizontal' | 'vertical' | 'both'): Promise<boolean> {
     const item = this.selectedKey ? this.item(this.selectedKey) : null
     if (!item) return false
-    if (axis === 'x' || axis === 'both') item.x = 0
-    if (axis === 'y' || axis === 'both') item.y = 0
-    this.previewSelected()
-    await this.commit()
+    const position = { x: axis === 'horizontal' || axis === 'both' ? 0 : item.x, y: axis === 'vertical' || axis === 'both' ? 0 : item.y }
+    this.previewSelected(position)
+    await this.commitPosition(position)
     return true
   }
 
@@ -227,7 +241,7 @@ export class SubDialLayoutEditor {
     return Number(this.group?.__element?.config?.radius ?? 1)
   }
   private groupScale(): number {
-    return (Math.abs(Number(this.group?.scaleX ?? 1)) + Math.abs(Number(this.group?.scaleY ?? 1))) / 2 || 1
+    return Number(this.group.scaleX)
   }
   private toLocal(point: CanvasPoint): CanvasPoint {
     const center = this.group.getCenterPoint?.() ?? { x: Number(this.group.left ?? 0), y: Number(this.group.top ?? 0) }
@@ -247,26 +261,61 @@ export class SubDialLayoutEditor {
       this.suppressSelectionExit = false
     }
   }
-  private contentSnapshot(): SubDialContentConfig {
-    return structuredClone(this.group.__element.config.content)
+  private validGroupScale(group: any): boolean {
+    const scaleX = Number(group?.scaleX)
+    const scaleY = Number(group?.scaleY)
+    return Number.isFinite(scaleX) && Number.isFinite(scaleY) && scaleX > 0 && scaleY > 0 && Math.abs(scaleX - scaleY) <= 1e-6
   }
-  private async commit(): Promise<void> {
+  private async commitPosition(position: CanvasPoint): Promise<void> {
     const group = this.group
-    if (!group) return
-    await this.updateElement(group, { content: this.contentSnapshot() })
+    if (!group || !this.selectedKey) return
+    const content = structuredClone(group.__element.config.content) as SubDialContentConfig
+    content[this.selectedKey].x = position.x
+    content[this.selectedKey].y = position.y
+    await this.updateElement(group, { content })
     await this.saveHistory()
   }
-  private previewSelected(): void {
+  private previewSelected(position?: CanvasPoint): void {
     if (!this.selectedKey) return
     const item = this.item(this.selectedKey)
-    this.child(this.selectedKey)?.set?.({ left: item.x * this.radius(), top: item.y * this.radius() })
+    const target = position ?? { x: item.x, y: item.y }
+    this.child(this.selectedKey)?.set?.({ left: target.x * this.radius(), top: target.y * this.radius() })
+    this.updateSelectionOverlay()
     this.canvas.requestRenderAll?.()
   }
   private cancelDragPreview(): void {
     if (!this.drag || !this.selectedKey) return
-    const item = this.item(this.selectedKey)
-    item.x = this.drag.itemStart.x
-    item.y = this.drag.itemStart.y
-    this.previewSelected()
+    this.previewSelected(this.drag.itemStart)
+  }
+  private updateSelectionOverlay(): void {
+    const child = this.selectedKey ? this.child(this.selectedKey) : null
+    if (!child || child.visible === false || this.item(this.selectedKey!)?.visible === false) {
+      this.removeSelectionOverlay()
+      return
+    }
+    const bounds = child.getBoundingRect?.()
+    if (!bounds || ![bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite)) return
+    if (!this.selectionOverlay) {
+      this.selectionOverlay = new Rect({
+        fill: 'transparent',
+        stroke: '#00a8ff',
+        strokeWidth: 1,
+        strokeDashArray: [4, 3],
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+        originX: 'center',
+        originY: 'center'
+      } as any)
+      void this.runWithoutRecording(() => this.canvas.add?.(this.selectionOverlay))
+    }
+    this.selectionOverlay.set({ left: bounds.left + bounds.width / 2, top: bounds.top + bounds.height / 2, width: bounds.width, height: bounds.height, angle: 0 })
+    this.selectionOverlay.setCoords()
+    this.canvas.requestRenderAll?.()
+  }
+  private removeSelectionOverlay(): void {
+    if (!this.selectionOverlay) return
+    void this.runWithoutRecording(() => this.canvas.remove?.(this.selectionOverlay))
+    this.selectionOverlay = null
   }
 }
