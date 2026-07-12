@@ -42,6 +42,7 @@ export const DESIGNER_CONTROL_TYPES: string[] = [
   'romans',
   'barChart',
   'lineChart',
+  'subDial',
 ]
 
 export interface ControlManagerOptions {
