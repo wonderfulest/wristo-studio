@@ -5,6 +5,7 @@ import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import {
   applyControlManager,
   applyControlsToObject,
+  applyLayerOrderControlsToObject,
   DESIGNER_CONTROL_TYPES,
 } from '@/utils/controlManager'
 import {
@@ -261,6 +262,7 @@ export function initCanvasManager(
       if (shouldApplyDesignerControls(target)) {
         applyControlsToObject(target)
       }
+      applyLayerOrderControlsToObject(target)
       discoverAndRegisterCanvasProps([target])
     } else {
       const objects = canvas.getObjects() as any[]
@@ -270,6 +272,7 @@ export function initCanvasManager(
         if (shouldApplyDesignerControls(obj)) {
           applyControlsToObject(obj as any)
         }
+        applyLayerOrderControlsToObject(obj as any)
       })
       discoverAndRegisterCanvasProps(objects as unknown[])
     }

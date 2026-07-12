@@ -205,6 +205,72 @@ function isLayerEntryControlVisible(target: FabricObject): boolean {
   return visible
 }
 
+function createLayerOrderControls(): Record<string, Control> {
+  return {
+    layerOrderControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: offset * 2,
+      cursorStyle: 'pointer',
+      actionName: 'layerOrder',
+      getVisibility: isLayerEntryControlVisible,
+      mouseUpHandler: (_eventData, transform) => {
+        const target = transform.target as FabricLikeObject | undefined
+        if (!target?.canvas || target.id == null || !isLayerOrderControlTarget(target)) return false
+        toggleExpandedLayerOrderControl(String(target.id))
+        target.canvas.requestRenderAll()
+        return true
+      },
+      render: renderLayerOrderEntryControl,
+    }),
+    bringToFrontControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 6,
+      cursorStyle: 'pointer',
+      actionName: 'bringToFront',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('front'),
+      render: createLayerActionRenderer('front', '⇈'),
+    }),
+    bringForwardControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 4,
+      cursorStyle: 'pointer',
+      actionName: 'bringForward',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('forward'),
+      render: createLayerActionRenderer('forward', '↑'),
+    }),
+    sendBackwardControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 2,
+      cursorStyle: 'pointer',
+      actionName: 'sendBackward',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('backward'),
+      render: createLayerActionRenderer('backward', '↓'),
+    }),
+    sendToBackControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: 0,
+      cursorStyle: 'pointer',
+      actionName: 'sendToBack',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('back'),
+      render: createLayerActionRenderer('back', '⇊'),
+    }),
+  }
+}
+
 async function cloneFabricObject(target: FabricLikeObject): Promise<FabricLikeObject | null> {
   try {
     const maybePromise = target.clone()
@@ -351,10 +417,13 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     }),
   }
 
-  if (mode === 'corner4') return cornerControls
+  const layerOrderControls = createLayerOrderControls()
+
+  if (mode === 'corner4') return { ...cornerControls, ...layerOrderControls }
 
   const base: Record<string, Control> = {
     ...cornerControls,
+    ...layerOrderControls,
     cloneControl: new Control({
       x: 0.5,
       y: -0.5,
@@ -372,67 +441,6 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       cursorStyle: 'pointer',
       mouseUpHandler: deleteHandler,
       render: renderDeleteControl,
-    }),
-    layerOrderControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: offset * 2,
-      offsetY: offset * 2,
-      cursorStyle: 'pointer',
-      actionName: 'layerOrder',
-      getVisibility: isLayerEntryControlVisible,
-      mouseUpHandler: (_eventData, transform) => {
-        const target = transform.target as FabricLikeObject | undefined
-        if (!target?.canvas || target.id == null || !isLayerOrderControlTarget(target)) return false
-        toggleExpandedLayerOrderControl(String(target.id))
-        target.canvas.requestRenderAll()
-        return true
-      },
-      render: renderLayerOrderEntryControl,
-    }),
-    bringToFrontControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 6,
-      cursorStyle: 'pointer',
-      actionName: 'bringToFront',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('front'),
-      render: createLayerActionRenderer('front', '⇈'),
-    }),
-    bringForwardControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 4,
-      cursorStyle: 'pointer',
-      actionName: 'bringForward',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('forward'),
-      render: createLayerActionRenderer('forward', '↑'),
-    }),
-    sendBackwardControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 2,
-      cursorStyle: 'pointer',
-      actionName: 'sendBackward',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('backward'),
-      render: createLayerActionRenderer('backward', '↓'),
-    }),
-    sendToBackControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: offset * 2,
-      offsetY: 0,
-      cursorStyle: 'pointer',
-      actionName: 'sendToBack',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('back'),
-      render: createLayerActionRenderer('back', '⇊'),
     }),
   }
 
@@ -496,6 +504,15 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
     cornerStrokeColor: runtimeOptions.stroke,
     borderColor: '#0f6b68',
   })
+}
+
+export function applyLayerOrderControlsToObject(target: FabricObject | null | undefined): void {
+  if (!target) return
+  const currentControls = (target as unknown as { controls?: Record<string, Control> }).controls ?? {}
+  ;(target as unknown as { controls: Record<string, Control> }).controls = {
+    ...currentControls,
+    ...createLayerOrderControls(),
+  }
 }
 
 export function applyControlManager(options: ControlManagerOptions = {}): void {
