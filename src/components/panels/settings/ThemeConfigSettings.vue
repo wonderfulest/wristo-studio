@@ -115,6 +115,7 @@ import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
+import { applyDialColorPreview } from '@/elements/dials/common/dialColor'
 
 const props = defineProps({
   appId: {
@@ -326,6 +327,9 @@ const handleColorChange = (propertyKey, hex) => {
         }
       }
     })
+    if (['tick12', 'tick60'].includes(obj.eleType)) {
+      applyDialColorPreview(obj, obj.fill, obj.fillProperty)
+    }
   })
 
   canvas.renderAll()
