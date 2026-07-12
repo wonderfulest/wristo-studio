@@ -1,5 +1,5 @@
-import { Control, FabricObject, controlsUtils } from 'fabric'
-import type { Canvas } from 'fabric'
+import { Control, FabricObject, Point, controlsUtils } from 'fabric'
+import type { Canvas, TMat2D } from 'fabric'
 import { nanoid } from 'nanoid'
 import { bringForward, bringToFront, sendBackward, sendToBack } from '@/engine/managers/layerManager'
 import {
@@ -58,7 +58,7 @@ export interface ControlManagerOptions {
 
 const offset = 10
 export const LAYER_ORDER_ENTRY_OFFSET = 10
-export const INSET_CORNER_CONTROL_OFFSET = 12
+export const INSET_CORNER_CONTROL_OFFSET = 30
 export const OBJECT_ACTION_MENU_WIDTH = 144
 export const OBJECT_ACTION_MENU_HEIGHT = 28
 export const OBJECT_ACTION_MENU_TOUCH_HEIGHT = 32
@@ -411,15 +411,35 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
 
 type ControlSetMode = 'default' | 'resize8' | 'corner4' | 'corner4Inset'
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+function insetCornerPositionHandler(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+  control: Control,
+): Point {
+  const position = new Point(control.x * dim.x, control.y * dim.y).transform(finalMatrix)
+  const canvas = fabricObject.canvas
+  if (!canvas) return position
+
+  const margin = INSET_CORNER_CONTROL_OFFSET
+  return new Point(
+    clamp(position.x, margin, canvas.getWidth() - margin),
+    clamp(position.y, margin, canvas.getHeight() - margin),
+  )
+}
+
 function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
-  const inset = mode === 'corner4Inset' ? INSET_CORNER_CONTROL_OFFSET : 0
-  const negativeInset = inset === 0 ? 0 : -inset
+  const positionHandler =
+    mode === 'corner4Inset' ? insetCornerPositionHandler : Control.prototype.positionHandler
   const cornerControls: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
       y: -0.5,
-      offsetX: inset,
-      offsetY: inset,
+      positionHandler,
       cursorStyle: 'nwse-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -428,8 +448,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     tr: new Control({
       x: 0.5,
       y: -0.5,
-      offsetX: negativeInset,
-      offsetY: inset,
+      positionHandler,
       cursorStyle: 'nesw-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -438,8 +457,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     bl: new Control({
       x: -0.5,
       y: 0.5,
-      offsetX: inset,
-      offsetY: negativeInset,
+      positionHandler,
       cursorStyle: 'nesw-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -448,8 +466,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     br: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: negativeInset,
-      offsetY: negativeInset,
+      positionHandler,
       cursorStyle: 'nwse-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
