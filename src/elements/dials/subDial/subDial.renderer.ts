@@ -180,10 +180,12 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
   const maxValue = config.rangeMode === 'percentage' ? 100 : config.maxValue
   const progress = normalizeSubDialValue(config.previewValue, minValue, maxValue, config.outOfRangeBehavior)
   const visible = progress !== null
+  const dataAngle = progress === null
+    ? config.startAngle + config.pointer.rotationOffset
+    : resolveSubDialAngle(progress, config.startAngle, config.endAngle, config.counterClockwise, config.pointer.rotationOffset)
   children.pointer.set({
-    angle: progress === null
-      ? config.startAngle + config.pointer.rotationOffset
-      : resolveSubDialAngle(progress, config.startAngle, config.endAngle, config.counterClockwise, config.pointer.rotationOffset),
+    // Fabric pointer geometry points upward; dial angles use 3 o'clock as 0°.
+    angle: dataAngle + 90,
     visible,
   })
   children.valueText.set({ text: formatValue(config), visible: config.showValue && visible })

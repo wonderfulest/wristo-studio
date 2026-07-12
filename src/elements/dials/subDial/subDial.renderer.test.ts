@@ -92,7 +92,7 @@ describe('subDial renderer', () => {
     await updateSubDial(dial as any, { previewValue: 75 })
 
     expect((dial as any).__element.children.majorTicks).toBe(beforeTicks)
-    expect((dial as any).__element.children.pointer.angle).toBe(330)
+    expect((dial as any).__element.children.pointer.angle).toBe(420)
     expect((dial as any).__element.children.valueText.text).toBe('75')
   })
 
@@ -111,7 +111,7 @@ describe('subDial renderer', () => {
 
     expect(pointer.left).toBe(0)
     expect(pointer.top).toBe(0)
-    expect(pointer.angle).toBe(270)
+    expect(pointer.angle).toBe(360)
     expect(image.left).toBe(0)
     expect(image.top).toBeCloseTo(-13.44)
   })
