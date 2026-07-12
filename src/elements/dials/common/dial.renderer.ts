@@ -8,6 +8,7 @@ import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { useDesignStore } from '@/stores/designStore'
 import type { DialElementConfig, DialType } from './dial.schema'
 import { applyControlsToObject } from '@/utils/controlManager'
+import { applyDialColorPreview, supportsDialDynamicColor } from './dialColor'
 
 function getBaseSize(type: DialType): number {
   const canvasStore = useCanvasStore()
@@ -161,10 +162,15 @@ export async function createDial(
     designerControlMode: 'corner4',
     imageUrl: imageUrl,
     assetId: config.assetId,
+    fill: config.fill || '#ffffff',
+    fillProperty: config.fillProperty || '',
     scaleFactor: normalizeScaleFactor(config.scaleFactor),
   })
 
   applyDialScale(element, type, config.scaleFactor)
+  if (supportsDialDynamicColor(type)) {
+    applyDialColorPreview(element, element.fill, element.fillProperty)
+  }
   configureDialControls(element)
 
   element.on('selected', () => {})
@@ -200,6 +206,8 @@ export async function updateDial(
     const prevAngle = group.angle
     syncDialScaleFactor(group)
     const prevScaleFactor = normalizeScaleFactor(group.scaleFactor)
+    const prevFill = group.fill || '#ffffff'
+    const prevFillProperty = group.fillProperty || ''
     const center = getCanvasCenter()
 
     canvas.remove(group)
@@ -222,6 +230,8 @@ export async function updateDial(
       hasControls: true,
       hasBorders: true,
       designerControlMode: 'corner4',
+      fill: patch.fill ?? prevFill,
+      fillProperty: patch.fillProperty ?? prevFillProperty,
       scaleFactor: prevScaleFactor,
     })
 
@@ -235,8 +245,19 @@ export async function updateDial(
     group.assetId = patch.assetId
   }
 
+  if (patch.fill !== undefined) {
+    group.fill = patch.fill
+  }
+  if (patch.fillProperty !== undefined) {
+    group.fillProperty = patch.fillProperty
+  }
+
   if (patch.scaleFactor !== undefined && !hasNewImage) {
     applyDialScale(group, type, patch.scaleFactor)
+  }
+
+  if (supportsDialDynamicColor(type)) {
+    applyDialColorPreview(group, group.fill || '#ffffff', group.fillProperty || '')
   }
 
   configureDialControls(group)

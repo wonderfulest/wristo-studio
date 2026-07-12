@@ -21,6 +21,11 @@
           </ul>
         </div>
       </div>
+      <TickColorSettings
+        :element="element"
+        :config="config"
+        :apply-patch="applyUpdate"
+      />
     </el-form>
   </div>
 </template>
@@ -31,6 +36,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import { useI18n } from '@/i18n'
+import TickColorSettings from '@/elements/dials/common/TickColorSettings.vue'
 
 const { t } = useI18n()
 

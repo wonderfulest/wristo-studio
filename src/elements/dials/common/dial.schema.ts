@@ -8,6 +8,7 @@ export interface DialElementConfig {
   imageUrl: string | null
   assetId: number | null
   fill?: string
+  fillProperty?: string
   left?: number
   top?: number
   originX?: FabricElement['originX']
