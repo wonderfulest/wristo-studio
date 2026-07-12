@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import dialRendererSource from '@/elements/dials/common/dial.renderer.ts?raw'
 
 vi.mock('@/engine/managers/layerManager', () => ({
   bringToFront: vi.fn(),
@@ -46,6 +47,11 @@ describe('applyControlsToObject', () => {
 
     expect(target.controls.tl).toMatchObject({ offsetX: 0, offsetY: 0 })
     expect(target.controls.br).toMatchObject({ offsetX: 0, offsetY: 0 })
+  })
+
+  it('uses inset corner controls throughout the shared dial renderer', () => {
+    expect(dialRendererSource).not.toContain("designerControlMode: 'corner4',")
+    expect(dialRendererSource.match(/designerControlMode: 'corner4Inset'/g)).toHaveLength(3)
   })
 })
 
