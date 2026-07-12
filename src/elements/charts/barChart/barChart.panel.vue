@@ -15,7 +15,7 @@
           v-model="formModel.width" 
           :min="60" 
           :max="454" 
-          @change="() => applyUpdate({ width: formModel.width })" 
+          disabled
         />
       </el-form-item>
       
@@ -24,7 +24,7 @@
           v-model="formModel.height" 
           :min="20" 
           :max="227" 
-          @change="() => applyUpdate({ height: formModel.height })" 
+          disabled
         />
       </el-form-item>
 
@@ -94,6 +94,17 @@ watch(
     syncFromProps()
   },
   { immediate: true },
+)
+
+watch(
+  () => [
+    (props.config as any)?.width ?? (props.element as any)?.width,
+    (props.config as any)?.height ?? (props.element as any)?.height,
+  ],
+  ([width, height]) => {
+    formModel.value.width = width
+    formModel.value.height = height
+  },
 )
 
 const originXOptions = [

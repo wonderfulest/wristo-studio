@@ -31,6 +31,8 @@ export const DESIGNER_CONTROL_TYPES: string[] = [
   'tick12',
   'tick60',
   'romans',
+  'barChart',
+  'lineChart',
 ]
 
 export interface ControlManagerOptions {

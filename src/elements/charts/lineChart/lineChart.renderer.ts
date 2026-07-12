@@ -4,7 +4,43 @@ import type { FabricElement } from '@/types/element'
 import type { LineChartElementConfig } from '@/types/elements/charts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import { applyControlsToObject } from '@/utils/controlManager'
+import { normalizeChartSize } from '@/elements/charts/chartSize'
 import { lineChartSchema } from './lineChart.schema'
+import { encodeLineChart } from './lineChart.encoder'
+
+function attachScaleHandler(group: any): void {
+  if (group.__chartScaleHandlerBound) return
+  group.__chartScaleHandlerBound = true
+  let committing = false
+
+  group.on('modified', () => {
+    if (committing) return
+    const scaleX = Number(group.scaleX ?? 1)
+    const scaleY = Number(group.scaleY ?? 1)
+    const hasScale = Math.abs(scaleX - 1) >= 0.001 || Math.abs(scaleY - 1) >= 0.001
+
+    committing = true
+    try {
+      if (hasScale) {
+        const size = normalizeChartSize(
+          'lineChart',
+          Number(group.width ?? 0),
+          Number(group.height ?? 0),
+          scaleX,
+          scaleY,
+        )
+        group.set({ scaleX: 1, scaleY: 1 })
+        updateLineChart(group as FabricElement, size)
+      }
+
+      useElementDataStore().patchElement(String(group.id), encodeLineChart(group as FabricElement))
+    } finally {
+      committing = false
+    }
+  })
+}
 
 function generateSampleData(count: number) {
   const data: Array<number | null> = []
@@ -114,13 +150,19 @@ export async function createLineChart(config: LineChartElementConfig): Promise<F
     showPoints: config.showPoints ?? schemaDefaults.showPoints,
     pointColor: config.pointColor ?? schemaDefaults.pointColor,
     pointRadius: config.pointRadius ?? schemaDefaults.pointRadius,
+    designerControlMode: 'resize8',
     selectable: true,
-    hasControls: false,
+    hasControls: true,
     hasBorders: true,
+    lockScalingX: false,
+    lockScalingY: false,
+    lockScalingFlip: true,
   } as any)
 
   createBaseRect(group)
   createPolyline(group)
+  attachScaleHandler(group)
+  applyControlsToObject(group)
 
   group.set({ left, top, originX: 'center', originY: 'center' })
   group.setCoords()
@@ -178,5 +220,6 @@ export function updateLineChart(
     height,
   })
   group.setCoords()
+  applyControlsToObject(group)
   canvas.renderAll()
 }
