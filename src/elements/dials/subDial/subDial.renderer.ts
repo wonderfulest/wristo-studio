@@ -137,10 +137,13 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
 }
 
 function formatValue(config: SubDialElementConfig): string {
-  return Number(config.previewValue).toFixed(Math.max(0, Math.min(6, config.decimals)))
+  const decimals = config.decimals ?? config.content.value.decimals
+  return Number(config.previewValue).toFixed(Math.max(0, Math.min(6, decimals)))
 }
 
 async function buildChildren(config: SubDialElementConfig): Promise<SubDialChildren> {
+  const valueColor = config.valueColor ?? config.content.value.color
+  const valueFontSize = config.valueFontSize ?? config.content.value.fontSize
   const background = new Circle({
     radius: config.radius,
     fill: config.backgroundColor,
@@ -162,22 +165,22 @@ async function buildChildren(config: SubDialElementConfig): Promise<SubDialChild
   const valueText = new Text(formatValue(config), {
     left: 0,
     top: config.radius * 0.42,
-    fill: config.valueColor,
-    fontSize: config.valueFontSize,
+    fill: valueColor,
+    fontSize: valueFontSize,
     originX: 'center',
     originY: 'center',
-    visible: config.showValue,
+    visible: config.showValue ?? config.content.value.visible,
     selectable: false,
     evented: false,
   })
-  const unitText = new Text(config.unit, {
+  const unitText = new Text(config.unit ?? config.content.unit.suffix, {
     left: 0,
     top: config.radius * 0.68,
-    fill: config.valueColor,
-    fontSize: Math.max(8, config.valueFontSize * 0.7),
+    fill: valueColor,
+    fontSize: Math.max(8, valueFontSize * 0.7),
     originX: 'center',
     originY: 'center',
-    visible: config.showUnit,
+    visible: config.showUnit ?? config.content.unit.visible,
     selectable: false,
     evented: false,
   })
@@ -207,8 +210,11 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
     angle: dataAngle + 90,
     visible,
   })
-  children.valueText.set({ text: formatValue(config), visible: config.showValue && visible })
-  children.unitText.set({ text: config.unit, visible: config.showUnit && visible })
+  children.valueText.set({ text: formatValue(config), visible: (config.showValue ?? config.content.value.visible) && visible })
+  children.unitText.set({
+    text: config.unit ?? config.content.unit.suffix,
+    visible: (config.showUnit ?? config.content.unit.visible) && visible,
+  })
 }
 
 function needsStructuralRebuild(patch: Partial<SubDialElementConfig>): boolean {
@@ -296,8 +302,10 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
     widget.children = nextChildren
   } else {
     updateDynamicChildren(widget.children, config)
-    widget.children.valueText.set({ fill: config.valueColor, fontSize: config.valueFontSize })
-    widget.children.unitText.set({ fill: config.valueColor, fontSize: Math.max(8, config.valueFontSize * 0.7) })
+    const valueColor = config.valueColor ?? config.content.value.color
+    const valueFontSize = config.valueFontSize ?? config.content.value.fontSize
+    widget.children.valueText.set({ fill: valueColor, fontSize: valueFontSize })
+    widget.children.unitText.set({ fill: valueColor, fontSize: Math.max(8, valueFontSize * 0.7) })
   }
 
   group.set({ left: config.left, top: config.top, angle: config.rotation } as any)

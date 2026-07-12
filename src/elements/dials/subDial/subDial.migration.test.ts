@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
+import type { SubDialElementConfig } from '@/types/elements/subDial'
 import { subDialSchema } from './subDial.schema'
 import { migrateSubDialConfig } from './subDial.migration'
 
 describe('subDial migration', () => {
+  it('produces a valid config that requires no legacy properties', () => {
+    const config: SubDialElementConfig = migrateSubDialConfig({
+      progressProperty: 'steps',
+      progressMode: 'auto'
+    })
+
+    expect(config.progressProperty).toBe('steps')
+    expect(config).not.toHaveProperty('goalProperty')
+  })
+
   it('migrates legacy progress and value presentation fields without retaining legacy keys', () => {
     const legacy = {
       goalProperty: 'steps',

@@ -59,7 +59,7 @@ export interface SubDialElementConfig extends BaseElementConfig {
   radius: number
   rotation: number
   /** @deprecated Temporary live-layer compatibility; persisted configs use progressProperty. */
-  goalProperty: string
+  goalProperty?: string
   progressProperty: string
   progressMode: SubDialProgressMode
   customMin: number
@@ -88,15 +88,15 @@ export interface SubDialElementConfig extends BaseElementConfig {
   backgroundColor: string
   backgroundOpacity: number
   /** @deprecated Migrated to content.value.visible. */
-  showValue: boolean
+  showValue?: boolean
   /** @deprecated Migrated to content.unit.visible. */
-  showUnit: boolean
+  showUnit?: boolean
   /** @deprecated Migrated to content.unit.suffix. */
-  unit: string
+  unit?: string
   /** @deprecated Migrated to content.value.decimals. */
-  decimals: number
+  decimals?: number
   /** @deprecated Migrated to content.value.color. */
-  valueColor: string
+  valueColor?: string
   /** @deprecated Migrated to content.value.fontSize. */
-  valueFontSize: number
+  valueFontSize?: number
 }
