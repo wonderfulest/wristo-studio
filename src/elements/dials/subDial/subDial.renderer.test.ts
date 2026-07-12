@@ -38,8 +38,14 @@ vi.mock('fabric', () => {
     objects: any[]
     constructor(objects: any[] = [], options = {}) { super(options); this.objects = [...objects] }
     getObjects() { return this.objects }
-    add(child: any) { this.objects.push(child) }
-    remove(child: any) { this.objects = this.objects.filter((item) => item !== child) }
+    add(child: any) {
+      this.objects.push(child)
+      if (this.eleType === 'subDial') this.set({ left: 0, top: 0 })
+    }
+    remove(child: any) {
+      this.objects = this.objects.filter((item) => item !== child)
+      if (this.eleType === 'subDial') this.set({ left: 0, top: 0 })
+    }
   }
   return { Circle, Line, Triangle, Text: FabricText, Image: FabricImage, Group }
 })
@@ -94,6 +100,16 @@ describe('subDial renderer', () => {
     expect((dial as any).__element.children.majorTicks).toBe(beforeTicks)
     expect((dial as any).__element.children.pointer.angle).toBe(420)
     expect((dial as any).__element.children.valueText.text).toBe('75')
+  })
+
+  it('preserves canvas position when a settings change rebuilds group children', async () => {
+    const dial = await createSubDial(makeConfig({ left: 120, top: 180, rotation: 15 }) as any)
+
+    await updateSubDial(dial as any, { majorTicks: 8 })
+
+    expect(dial).toMatchObject({ left: 120, top: 180, angle: 15 })
+    expect((dial as any).__element.config).toMatchObject({ left: 120, top: 180, rotation: 15 })
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ left: 120, top: 180, rotation: 15 }))
   })
 
   it('aligns an image pivot with the local dial center', async () => {

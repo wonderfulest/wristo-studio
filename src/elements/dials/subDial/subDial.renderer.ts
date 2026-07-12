@@ -244,9 +244,23 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   const group = element as unknown as Group & FabricElement
   const widget = getWidget(group)
   if (!widget?.config) throw new Error('Invalid sub-dial element')
+  const liveLeft = Number.isFinite(Number((group as any).left))
+    ? Number((group as any).left)
+    : widget.config.left
+  const liveTop = Number.isFinite(Number((group as any).top))
+    ? Number((group as any).top)
+    : widget.config.top
+  const liveRotation = Number.isFinite(Number((group as any).angle))
+    ? Number((group as any).angle)
+    : widget.config.rotation
   const config: SubDialElementConfig = {
     ...widget.config,
     ...patch,
+    // Fabric may rewrite Group coordinates while children are replaced. Lock the
+    // business position before rebuilding; only an explicit transform patch may change it.
+    left: patch.left !== undefined ? Number(patch.left) : liveLeft,
+    top: patch.top !== undefined ? Number(patch.top) : liveTop,
+    rotation: patch.rotation !== undefined ? Number(patch.rotation) : liveRotation,
     pointer: { ...widget.config.pointer, ...(patch.pointer ?? {}) },
   }
 
@@ -265,6 +279,7 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
     widget.children.unitText.set({ fill: config.valueColor, fontSize: Math.max(8, config.valueFontSize * 0.7) })
   }
 
+  group.set({ left: config.left, top: config.top, angle: config.rotation } as any)
   widget.config = config
   group.setCoords()
   useCanvasStore().canvas?.requestRenderAll?.()
