@@ -18,6 +18,11 @@ export type GoalBarElementSchema = {
     borderWidth: number
     borderColor: string
     progressAlign: 'left' | 'right'
+    shape: 'rectangle' | 'customPolygon'
+    polygonPoints: Array<{ x: number; y: number }>
+    gradientEnabled: boolean
+    gradientStartColor: string
+    gradientEndColor: string
   }
   resizable: boolean
   rotatable: boolean
@@ -41,7 +46,12 @@ export const goalBarSchema: GoalBarElementSchema = {
     borderWidth: 0,
     borderColor: '#FFFFFF',
     progressAlign: 'left',
+    shape: 'rectangle',
+    polygonPoints: [],
+    gradientEnabled: false,
+    gradientStartColor: '#00FF00',
+    gradientEndColor: '#00FF00'
   },
   resizable: false,
-  rotatable: false,
+  rotatable: false
 }

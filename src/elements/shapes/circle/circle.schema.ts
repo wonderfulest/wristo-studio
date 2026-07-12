@@ -10,6 +10,10 @@ export type CircleElementSchema = {
     stroke: string
     strokeWidth: number
     opacity: number
+    gradientEnabled: boolean
+    gradientStartColor: string
+    gradientEndColor: string
+    gradientDirection: 'leftToRight' | 'rightToLeft' | 'topToBottom' | 'bottomToTop'
   }
   resizable: boolean
   rotatable: boolean
@@ -25,6 +29,10 @@ export const circleSchema: CircleElementSchema = {
     stroke: '#FFFFFF',
     strokeWidth: 2,
     opacity: 1,
+    gradientEnabled: false,
+    gradientStartColor: '#FFFFFF',
+    gradientEndColor: '#FFFFFF',
+    gradientDirection: 'leftToRight',
   },
   resizable: true,
   rotatable: false,

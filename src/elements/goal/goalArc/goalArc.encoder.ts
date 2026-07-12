@@ -44,6 +44,15 @@ export function encodeGoalArc(element: Partial<FabricElement>): GoalArcElementCo
     segments: Number(anyElement.segments ?? widgetConfig?.segments ?? 12),
     gapAngle: Number(anyElement.gapAngle ?? widgetConfig?.gapAngle ?? 2),
     endCap: normalizeEndCap(anyElement.endCap ?? widgetConfig?.endCap),
+    gradientEnabled: Boolean(anyElement.gradientEnabled ?? widgetConfig?.gradientEnabled ?? false),
+    gradientStartColor: String(
+      anyElement.gradientStartColor
+        ?? widgetConfig?.gradientStartColor
+        ?? widgetConfig?.color
+        ?? mainRing?.stroke
+        ?? '#FFFFFF',
+    ),
+    gradientEndColor: String(anyElement.gradientEndColor ?? widgetConfig?.gradientEndColor ?? '#00FFFF'),
   }
 
   if (GOAL_ARC_ENCODER_DEBUG) {
@@ -92,6 +101,9 @@ export function decodeGoalArc(config: GoalArcElementConfig): Partial<FabricEleme
     segments: config.segments,
     gapAngle: config.gapAngle,
     endCap: normalizeEndCap(config.endCap),
+    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientStartColor: config.gradientStartColor ?? config.color,
+    gradientEndColor: config.gradientEndColor ?? '#00FFFF',
   }
 
   if (GOAL_ARC_ENCODER_DEBUG) {

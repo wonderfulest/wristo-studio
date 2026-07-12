@@ -1,4 +1,4 @@
-import { Rect, Group } from 'fabric'
+import { Rect, Group, Polygon } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
@@ -9,6 +9,14 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeGoalBar } from './goalBar.encoder'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampProgress } from '@/elements/goal/goal.common'
+import {
+  clipGoalBarPolygon,
+  denormalizePolygonPoints,
+  normalizeGoalBarPolygonConfig,
+  validateGoalBarPolygon,
+  type GoalBarPolygonPoint,
+} from './goalBar.geometry'
+import { createGoalBarGradientFill } from './goalBar.gradient'
 
 type GoalBarVariant = NonNullable<GoalBarElementConfig['variant']>
 type GoalBarRuntimeConfig = Omit<GoalBarElementConfig, 'eleType'> & {
@@ -16,6 +24,8 @@ type GoalBarRuntimeConfig = Omit<GoalBarElementConfig, 'eleType'> & {
   variant: GoalBarVariant
   segments: number
   gap: number
+  shape: NonNullable<GoalBarElementConfig['shape']>
+  polygonPoints: GoalBarPolygonPoint[]
 }
 
 /**
@@ -117,10 +127,43 @@ function createBoundsAnchor(group: Group, width: number, height: number, borderW
   return anchor
 }
 
+function createPolygonObject(
+  id: string,
+  points: GoalBarPolygonPoint[],
+  fill: any,
+  stroke?: string,
+  strokeWidth = 0,
+) {
+  const xs = points.map((point) => point.x)
+  const ys = points.map((point) => point.y)
+  const left = (Math.min(...xs) + Math.max(...xs)) / 2
+  const top = (Math.min(...ys) + Math.max(...ys)) / 2
+
+  return new Polygon(points, {
+    id,
+    left,
+    top,
+    fill,
+    stroke,
+    strokeWidth,
+    originX: 'center',
+    originY: 'center',
+    selectable: false,
+    evented: false,
+    objectCaching: false,
+  } as any)
+}
+
 function normalizeGoalBarConfig(
   config: Partial<GoalBarElementConfig>,
   id: string,
 ): GoalBarRuntimeConfig {
+  const polygon = normalizeGoalBarPolygonConfig({
+    shape: (config as any).shape,
+    polygonPoints: (config as any).polygonPoints,
+    slantRatio: (config as any).slantRatio,
+  })
+
   return {
     id,
     eleType: 'goalBar',
@@ -134,6 +177,8 @@ function normalizeGoalBarConfig(
     variant: ((config as Partial<GoalBarElementConfig>).variant ?? 'continuous') as GoalBarVariant,
     segments: Math.max(1, Math.floor(Number((config as any).segments ?? 10))),
     gap: Math.max(0, Number((config as any).gap ?? 2)),
+    shape: polygon.shape,
+    polygonPoints: polygon.polygonPoints,
     borderRadius: Math.max(0, Number(config.borderRadius ?? 5)),
     color: config.color ?? '#00FF00',
     bgColor: config.bgColor ?? '#333333',
@@ -142,6 +187,9 @@ function normalizeGoalBarConfig(
     originX: 'center' as any,
     originY: 'center' as any,
     goalProperty: config.goalProperty ?? '',
+    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientStartColor: config.gradientStartColor ?? config.color ?? '#00FF00',
+    gradientEndColor: config.gradientEndColor ?? config.color ?? '#00FF00',
   }
 }
 
@@ -168,10 +216,43 @@ function syncGoalBarPosition(group: Group) {
  * layout：集中布局逻辑
  * ===============================
  */
-function layoutGoalBar(group: Group) {
-  const config = getConfig(group)
+type GoalBarLayoutOptions = {
+  configOverride?: Partial<GoalBarElementConfig>
+  syncRuntimeMetadata?: boolean
+}
 
-  if (!config) return
+const GOAL_BAR_ENCODER_LIVE_FIELDS = [
+  'left', 'top', 'shape', 'polygonPoints', 'slantRatio', 'color', 'bgColor',
+  'variant', 'segments', 'gap', 'borderRadius', 'progress', 'padding',
+  'borderWidth', 'borderColor', 'goalProperty', 'progressAlign',
+  'gradientEnabled', 'gradientStartColor', 'gradientEndColor',
+] as const
+
+function snapshotGoalBarEncoderLiveFields(group: Group): Record<string, unknown> {
+  return Object.fromEntries(
+    GOAL_BAR_ENCODER_LIVE_FIELDS.map((field) => [field, (group as any)[field]]),
+  )
+}
+
+function isGoalBarGroup(element: FabricElement): element is FabricElement & Group {
+  if (!(element instanceof Group)) return false
+  const group = element as unknown as Group
+  return (group as any).eleType === 'goalBar' && getConfig(group)?.eleType === 'goalBar'
+}
+
+function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
+  const persistentConfig = getConfig(group)
+
+  if (!persistentConfig) return
+
+  const config = normalizeGoalBarConfig(
+    { ...persistentConfig, ...options.configOverride },
+    String(persistentConfig.id ?? (group as any).id),
+  )
+  const syncRuntimeMetadata = options.syncRuntimeMetadata ?? true
+  const previewRuntimeSnapshot = syncRuntimeMetadata
+    ? undefined
+    : snapshotGoalBarEncoderLiveFields(group)
 
   const {
     width,
@@ -187,18 +268,36 @@ function layoutGoalBar(group: Group) {
     variant,
     segments,
     gap,
+    shape,
+    polygonPoints,
+    gradientEnabled,
+    gradientStartColor,
+    gradientEndColor,
   } = config
   const stableLeft = Number(config.left ?? (group as any).left ?? 0)
   const stableTop = Number(config.top ?? (group as any).top ?? 0)
   const restoreGroupPosition = () => {
-    group.set({
-      left: stableLeft,
-      top: stableTop,
+    if (previewRuntimeSnapshot) {
+      group.set(previewRuntimeSnapshot as any)
+      group.setCoords()
+      return
+    }
+    const runtimeMetadata = syncRuntimeMetadata ? {
       goalProperty: config.goalProperty,
       progress: progressValue,
       variant,
       segments,
       gap,
+      shape,
+      polygonPoints: polygonPoints.map((point) => ({ ...point })),
+      gradientEnabled,
+      gradientStartColor,
+      gradientEndColor,
+    } : {}
+    group.set({
+      left: stableLeft,
+      top: stableTop,
+      ...runtimeMetadata,
     } as any)
     group.setCoords()
   }
@@ -220,70 +319,191 @@ function layoutGoalBar(group: Group) {
 
     for (let i = 0; i < segmentCount; i++) {
       const x = -width / 2 + i * (segmentWidth + segmentGap) + segmentWidth / 2
+      const segmentLeft = x - segmentWidth / 2
       const radius = Math.min(borderRadius, segmentWidth / 2, height / 2)
+      const segmentPolygonPoints = shape === 'rectangle'
+        ? []
+        : denormalizePolygonPoints(polygonPoints, {
+            left: segmentLeft,
+            top: -height / 2,
+            width: segmentWidth,
+            height,
+          })
 
-      const bgRect = new Rect({
-        id: `${(group as any).id}_${i}_seg_bg`,
-        left: x,
-        top: 0,
-        width: segmentWidth,
-        height,
-        fill: bgColor,
-        rx: radius,
-        ry: radius,
-        originX: 'center',
-        originY: 'center',
-        selectable: false,
-        evented: false,
-      }) as unknown as Rect
-      nextChildren[`segmentBg${i}`] = bgRect
-      addGroupChild(group, bgRect)
+      const backgroundObject = shape === 'rectangle'
+        ? new Rect({
+            id: `${(group as any).id}_${i}_seg_bg`,
+            left: x,
+            top: 0,
+            width: segmentWidth,
+            height,
+            fill: bgColor,
+            rx: radius,
+            ry: radius,
+            originX: 'center',
+            originY: 'center',
+            selectable: false,
+            evented: false,
+          })
+        : createPolygonObject(`${(group as any).id}_${i}_seg_bg`, segmentPolygonPoints, bgColor)
+      nextChildren[`segmentBg${i}`] = backgroundObject
+      addGroupChild(group, backgroundObject)
 
       const progressIndex = progressAlign === 'right' ? segmentCount - 1 - i : i
-      if (progressIndex < fullActive || (progressIndex === fullActive && remainder > 0)) {
-        const activeWidth = progressIndex < fullActive ? segmentWidth : Math.max(0, Math.min(1, remainder)) * segmentWidth
-        const activeLeft = progressAlign === 'right'
-          ? x + segmentWidth / 2 - activeWidth / 2
-          : x - segmentWidth / 2 + activeWidth / 2
-        const activeRadius = Math.min(radius, activeWidth / 2, height / 2)
-        const activeRect = new Rect({
-          id: `${(group as any).id}_${i}_seg_active`,
-          left: activeLeft,
-          top: 0,
+      const segmentProgress = progressIndex < fullActive
+        ? 1
+        : progressIndex === fullActive
+          ? remainder
+          : 0
+      if (segmentProgress > 0) {
+        const activeWidth = segmentProgress * segmentWidth
+        const gradientFill = createGoalBarGradientFill({
+          enabled: Boolean(gradientEnabled),
+          startColor: gradientStartColor,
+          endColor: gradientEndColor,
+          progressAlign,
           width: activeWidth,
-          height,
-          fill: color,
-          rx: activeRadius,
-          ry: activeRadius,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false,
-        }) as unknown as Rect
-        nextChildren[`segmentActive${i}`] = activeRect
-        addGroupChild(group, activeRect)
+          startRatio: activeTotal > 0 ? progressIndex / activeTotal : 0,
+          endRatio: activeTotal > 0 ? (progressIndex + segmentProgress) / activeTotal : 1,
+        })
+        const activeFill = gradientFill ?? color
+        let activeObject: Rect | Polygon | undefined
+        if (shape === 'rectangle') {
+          const activeLeft = progressAlign === 'right'
+            ? x + segmentWidth / 2 - activeWidth / 2
+            : x - segmentWidth / 2 + activeWidth / 2
+          const activeRadius = Math.min(radius, activeWidth / 2, height / 2)
+          activeObject = new Rect({
+            id: `${(group as any).id}_${i}_seg_active`,
+            left: activeLeft,
+            top: 0,
+            width: activeWidth,
+            height,
+            fill: activeFill,
+            rx: activeRadius,
+            ry: activeRadius,
+            originX: 'center',
+            originY: 'center',
+            selectable: false,
+            evented: false,
+          })
+        } else {
+          const activePoints = clipGoalBarPolygon(
+            segmentPolygonPoints,
+            segmentLeft,
+            segmentLeft + segmentWidth,
+            segmentProgress,
+            progressAlign,
+          )
+          if (activePoints.length >= 3) {
+            activeObject = createPolygonObject(
+              `${(group as any).id}_${i}_seg_active`,
+              activePoints,
+              activeFill,
+            )
+          }
+        }
+        if (activeObject) {
+          nextChildren[`segmentActive${i}`] = activeObject
+          addGroupChild(group, activeObject)
+        }
       }
 
       if (borderWidth > 0) {
-        const borderRect = new Rect({
-          id: `${(group as any).id}_${i}_seg_border`,
-          left: x,
-          top: 0,
-          width: segmentWidth,
-          height,
-          fill: 'transparent',
-          stroke: borderColor,
-          strokeWidth: borderWidth,
-          rx: radius,
-          ry: radius,
-          originX: 'center',
-          originY: 'center',
-          selectable: false,
-          evented: false,
-        }) as unknown as Rect
-        nextChildren[`segmentBorder${i}`] = borderRect
-        addGroupChild(group, borderRect)
+        const borderObject = shape === 'rectangle'
+          ? new Rect({
+              id: `${(group as any).id}_${i}_seg_border`,
+              left: x,
+              top: 0,
+              width: segmentWidth,
+              height,
+              fill: 'transparent',
+              stroke: borderColor,
+              strokeWidth: borderWidth,
+              rx: radius,
+              ry: radius,
+              originX: 'center',
+              originY: 'center',
+              selectable: false,
+              evented: false,
+            })
+          : createPolygonObject(
+              `${(group as any).id}_${i}_seg_border`,
+              segmentPolygonPoints,
+              'transparent',
+              borderColor,
+              borderWidth,
+            )
+        nextChildren[`segmentBorder${i}`] = borderObject
+        addGroupChild(group, borderObject)
       }
+    }
+
+    ;(group as any).designWidth = width
+    ;(group as any).designHeight = height
+    ;(group as any).width = width
+    ;(group as any).height = height
+    setChildren(group, nextChildren)
+    refreshGroup(group)
+    restoreGroupPosition()
+    return
+  }
+
+  if (shape !== 'rectangle') {
+    removeGroupChildren(group)
+    const nextChildren: Record<string, any> = {}
+    const boundsAnchor = createBoundsAnchor(group, width, height, borderWidth)
+    const absolutePolygonPoints = denormalizePolygonPoints(polygonPoints, {
+      left: -width / 2,
+      top: -height / 2,
+      width,
+      height,
+    })
+    const background = createPolygonObject(
+      `${(group as any).id}_background`,
+      absolutePolygonPoints,
+      bgColor,
+    )
+    nextChildren.boundsAnchor = boundsAnchor
+    nextChildren.background = background
+    addGroupChild(group, boundsAnchor)
+    addGroupChild(group, background)
+
+    const activePoints = clipGoalBarPolygon(
+      absolutePolygonPoints,
+      -width / 2,
+      width / 2,
+      progressValue,
+      progressAlign,
+    )
+    if (activePoints.length >= 3) {
+      const activeXs = activePoints.map((point) => point.x)
+      const activeWidth = Math.max(...activeXs) - Math.min(...activeXs)
+      const progress = createPolygonObject(
+        `${(group as any).id}_progress`,
+        activePoints,
+        createGoalBarGradientFill({
+          enabled: Boolean(gradientEnabled),
+          startColor: gradientStartColor,
+          endColor: gradientEndColor,
+          progressAlign,
+          width: activeWidth,
+        }) ?? color,
+      )
+      nextChildren.progress = progress
+      addGroupChild(group, progress)
+    }
+
+    if (borderWidth > 0) {
+      const border = createPolygonObject(
+        `${(group as any).id}_border`,
+        absolutePolygonPoints,
+        'transparent',
+        borderColor,
+        borderWidth,
+      )
+      nextChildren.border = border
+      addGroupChild(group, border)
     }
 
     ;(group as any).designWidth = width
@@ -299,7 +519,7 @@ function layoutGoalBar(group: Group) {
   let background = getChild(group, 'background') as Rect | undefined
   let progress = getChild(group, 'progress') as Rect | undefined
   let boundsAnchor = getChild(group, 'boundsAnchor') as Rect | undefined
-  if (!background || !progress || !boundsAnchor) {
+  if (!(background instanceof Rect) || !(progress instanceof Rect) || !(boundsAnchor instanceof Rect)) {
     removeGroupChildren(group)
     boundsAnchor = createBoundsAnchor(group, width, height, borderWidth)
     background = new Rect({
@@ -350,11 +570,72 @@ function layoutGoalBar(group: Group) {
     height: height - padding * 2,
     rx: Math.max(0, borderRadius - padding),
     ry: Math.max(0, borderRadius - padding),
-    fill: color,
+    fill: createGoalBarGradientFill({
+      enabled: Boolean(gradientEnabled),
+      startColor: gradientStartColor,
+      endColor: gradientEndColor,
+      progressAlign,
+      width: (width - padding * 2) * progressValue,
+    }) ?? color,
   })
 
   refreshGroup(group)
   restoreGroupPosition()
+}
+
+/**
+ * Rebuilds a goal bar with temporary polygon geometry without touching its
+ * persistent config or the live metadata preferred by encodeGoalBar.
+ */
+export function previewGoalBarPolygon(
+  element: FabricElement,
+  polygonPoints: GoalBarPolygonPoint[],
+): boolean {
+  if (!isGoalBarGroup(element)) return false
+  const group = element as unknown as Group
+
+  const points = Array.isArray(polygonPoints)
+    ? polygonPoints.map((point) => ({ x: Number(point?.x), y: Number(point?.y) }))
+    : []
+  if (!validateGoalBarPolygon(points).valid) return false
+
+  const originalObjects = [...(group.getObjects?.() ?? [])]
+  const elementMeta = getElement(group)
+  const originalChildren = elementMeta?.children
+  const originalLiveFields = snapshotGoalBarEncoderLiveFields(group)
+
+  try {
+    layoutGoalBar(group, {
+      configOverride: { shape: 'customPolygon', polygonPoints: points },
+      syncRuntimeMetadata: false,
+    })
+  } catch {
+    try {
+      removeGroupChildren(group)
+      originalObjects.forEach((child) => addGroupChild(group, child))
+    } catch {
+      // Best effort continues below: metadata and encoder-visible fields must
+      // still be restored even if Fabric itself rejects an object operation.
+    }
+    if (elementMeta) elementMeta.children = originalChildren
+    try {
+      group.set(originalLiveFields as any)
+    } catch {
+      Object.assign(group as any, originalLiveFields)
+    }
+    return false
+  }
+  useCanvasStore().canvas?.requestRenderAll()
+  return true
+}
+
+/** Restores previewed visuals and runtime metadata from persistent config. */
+export function restoreGoalBarPreview(element: FabricElement): void {
+  if (!isGoalBarGroup(element)) return
+  const group = element as unknown as Group
+
+  layoutGoalBar(group, { syncRuntimeMetadata: true })
+  useCanvasStore().canvas?.requestRenderAll()
 }
 
 /**
@@ -464,12 +745,26 @@ export function updateGoalBar(
   const currentConfig = getConfig(group)
   if (!currentConfig) return
 
+  const {
+    slantRatio: legacyCurrentSlantRatio,
+    ...currentConfigWithoutLegacySlant
+  } = currentConfig as GoalBarRuntimeConfig & { slantRatio?: unknown }
+  const {
+    slantRatio: legacyPatchSlantRatio,
+    ...patchWithoutLegacySlant
+  } = patch as Partial<GoalBarElementConfig> & { slantRatio?: unknown }
+  const polygon = normalizeGoalBarPolygonConfig({
+    shape: patchWithoutLegacySlant.shape ?? currentConfigWithoutLegacySlant.shape,
+    polygonPoints: patchWithoutLegacySlant.polygonPoints ?? currentConfigWithoutLegacySlant.polygonPoints,
+    slantRatio: legacyPatchSlantRatio ?? legacyCurrentSlantRatio,
+  })
+
   /**
    * === 数据合并到 config ===
    */
   const nextConfig = {
-    ...currentConfig,
-    ...patch,
+    ...currentConfigWithoutLegacySlant,
+    ...patchWithoutLegacySlant,
     // Fabric group bounds can be recalculated during layout. Only explicit left/top patches
     // should override the current canvas position stored in the widget config.
     left: Number(patch.left ?? (group as any).left ?? currentConfig.left ?? 0),
@@ -477,6 +772,8 @@ export function updateGoalBar(
     progress: patch.progress !== undefined ? clampProgress(patch.progress) : currentConfig.progress,
     segments: patch.segments !== undefined ? Math.max(1, Math.floor(Number(patch.segments))) : currentConfig.segments,
     gap: patch.gap !== undefined ? Math.max(0, Number(patch.gap)) : currentConfig.gap,
+    shape: polygon.shape,
+    polygonPoints: polygon.polygonPoints,
   }
 
   const elementMeta = getElement(group)

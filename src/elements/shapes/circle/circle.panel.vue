@@ -12,10 +12,26 @@
         />
       </el-form-item>
       <el-form-item :label="t('elementSettings.fillColor')">
-        <color-picker 
-          v-model="currentModel.fill" 
-          @change="(v: string) => applyUpdate({ fill: v })" 
+        <color-picker
+          v-model="currentModel.fill"
+          enable-gradient
+          :gradient-enabled="Boolean(currentModel.gradientEnabled)"
+          :gradient-start-color="currentModel.gradientStartColor ?? currentModel.fill"
+          :gradient-end-color="currentModel.gradientEndColor ?? currentModel.fill"
+          @change="(v: string) => applyUpdate({ fill: v })"
+          @gradient-change="handleGradientChange"
         />
+      </el-form-item>
+      <el-form-item v-if="currentModel.gradientEnabled" :label="t('elementSettings.gradientDirection')">
+        <el-select
+          v-model="currentModel.gradientDirection"
+          @change="(v: string) => applyUpdate({ gradientDirection: v })"
+        >
+          <el-option :label="t('elementSettings.leftToRight')" value="leftToRight" />
+          <el-option :label="t('elementSettings.rightToLeft')" value="rightToLeft" />
+          <el-option :label="t('elementSettings.topToBottom')" value="topToBottom" />
+          <el-option :label="t('elementSettings.bottomToTop')" value="bottomToTop" />
+        </el-select>
       </el-form-item>
       <el-form-item :label="t('elementSettings.borderColor')">
         <color-picker 
@@ -84,6 +100,21 @@ const applyUpdate = (patch: Record<string, any>) => {
   if (props.element) {
     elementManager.updateElement(props.element as any, nextPatch)
   }
+}
+
+const handleGradientChange = (value: { enabled: boolean; startColor: string; endColor: string }) => {
+  Object.assign(currentModel.value, {
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+    gradientDirection: currentModel.value.gradientDirection ?? 'leftToRight',
+  })
+  applyUpdate({
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+    gradientDirection: currentModel.value.gradientDirection,
+  })
 }
 </script>
 

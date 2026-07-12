@@ -5,6 +5,7 @@ import type { CircleElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { createRectangleGradientFill, normalizeRectangleGradientDirection } from '../rectangle/rectangle.gradient'
 
 export const MIN_CIRCLE_RADIUS = 3
 
@@ -12,6 +13,21 @@ export function normalizeCircleRadius(value: unknown): number {
   const radius = Number(value ?? 50)
   if (!Number.isFinite(radius)) return MIN_CIRCLE_RADIUS
   return Math.max(MIN_CIRCLE_RADIUS, Math.round(radius))
+}
+
+function applyCircleFill(circle: Circle): void {
+  const target = circle as any
+  const solidFill = target.solidFill ?? 'transparent'
+  const diameter = Number(circle.radius ?? 0) * 2
+  const gradient = createRectangleGradientFill({
+    enabled: Boolean(target.gradientEnabled),
+    startColor: target.gradientStartColor ?? solidFill,
+    endColor: target.gradientEndColor ?? solidFill,
+    direction: normalizeRectangleGradientDirection(target.gradientDirection),
+    width: diameter,
+    height: diameter,
+  })
+  circle.set('fill', gradient ?? solidFill)
 }
 
 function attachCircleScaleSync(circle: Circle): void {
@@ -38,6 +54,7 @@ function attachCircleScaleSync(circle: Circle): void {
     } as any)
 
     circle.setCoords()
+    applyCircleFill(circle)
 
     const idOnCircle = (circle as any).id
     if (idOnCircle) {
@@ -46,10 +63,14 @@ function attachCircleScaleSync(circle: Circle): void {
         left: circle.left as number,
         top: circle.top as number,
         radius: circle.radius as number,
-        fill: circle.fill as string,
+        fill: (circle as any).solidFill as string,
         stroke: circle.stroke as string,
         strokeWidth: circle.strokeWidth as number,
         opacity: circle.opacity as number,
+        gradientEnabled: Boolean((circle as any).gradientEnabled),
+        gradientStartColor: (circle as any).gradientStartColor,
+        gradientEndColor: (circle as any).gradientEndColor,
+        gradientDirection: normalizeRectangleGradientDirection((circle as any).gradientDirection),
       } as any)
     }
 
@@ -74,6 +95,10 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
   const stroke = config.stroke || '#FFFFFF'
   const strokeWidth = Number(config.strokeWidth ?? 0)
   const opacity = config.opacity != null ? Number(config.opacity) : 1
+  const gradientEnabled = Boolean(config.gradientEnabled ?? false)
+  const gradientStartColor = config.gradientStartColor ?? String(fill)
+  const gradientEndColor = config.gradientEndColor ?? String(fill)
+  const gradientDirection = normalizeRectangleGradientDirection(config.gradientDirection)
 
   const circleOptions: any = {
     id,
@@ -82,6 +107,11 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
     top: Number(config.top) || 0,
     radius,
     fill,
+    solidFill: fill,
+    gradientEnabled,
+    gradientStartColor,
+    gradientEndColor,
+    gradientDirection,
     stroke,
     strokeWidth,
     opacity,
@@ -96,10 +126,15 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
       stroke,
       strokeWidth,
       opacity,
+      gradientEnabled,
+      gradientStartColor,
+      gradientEndColor,
+      gradientDirection,
     },
   }
 
   const circle = new Circle(circleOptions)
+  applyCircleFill(circle)
 
   attachCircleScaleSync(circle)
 
@@ -109,10 +144,14 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
     left: circle.left,
     top: circle.top,
     radius: circle.radius,
-    fill: circle.fill,
+    fill,
     stroke: circle.stroke,
     strokeWidth: circle.strokeWidth,
     opacity: circle.opacity,
+    gradientEnabled,
+    gradientStartColor,
+    gradientEndColor,
+    gradientDirection,
     originX: circle.originX,
     originY: circle.originY,
   } as any)
@@ -138,7 +177,14 @@ export function updateCircle(element: FabricElement, patch: Partial<CircleElemen
   }
 
   if (patch.fill !== undefined) {
-    circle.set('fill', patch.fill)
+    circle.set('solidFill', patch.fill)
+  }
+
+  if (patch.gradientEnabled !== undefined) circle.set('gradientEnabled', Boolean(patch.gradientEnabled))
+  if (patch.gradientStartColor !== undefined) circle.set('gradientStartColor', patch.gradientStartColor)
+  if (patch.gradientEndColor !== undefined) circle.set('gradientEndColor', patch.gradientEndColor)
+  if (patch.gradientDirection !== undefined) {
+    circle.set('gradientDirection', normalizeRectangleGradientDirection(patch.gradientDirection))
   }
 
   if (patch.stroke !== undefined) {
@@ -163,12 +209,18 @@ export function updateCircle(element: FabricElement, patch: Partial<CircleElemen
     circle.set('top', Number(patch.top))
   }
 
+  applyCircleFill(circle)
+
   circle.initialConfig = {
     radius: circle.radius,
-    fill: circle.fill,
+    fill: circle.solidFill,
     stroke: circle.stroke,
     strokeWidth: circle.strokeWidth,
     opacity: circle.opacity,
+    gradientEnabled: Boolean(circle.gradientEnabled),
+    gradientStartColor: circle.gradientStartColor,
+    gradientEndColor: circle.gradientEndColor,
+    gradientDirection: normalizeRectangleGradientDirection(circle.gradientDirection),
   }
 
   circle.setCoords()
@@ -181,10 +233,14 @@ export function updateCircle(element: FabricElement, patch: Partial<CircleElemen
       left: circle.left as number,
       top: circle.top as number,
       radius: circle.radius as number,
-      fill: circle.fill as string,
+      fill: circle.solidFill as string,
       stroke: circle.stroke as string,
       strokeWidth: circle.strokeWidth as number,
       opacity: circle.opacity as number,
+      gradientEnabled: Boolean(circle.gradientEnabled),
+      gradientStartColor: circle.gradientStartColor,
+      gradientEndColor: circle.gradientEndColor,
+      gradientDirection: normalizeRectangleGradientDirection(circle.gradientDirection),
     } as any)
   }
 }

@@ -8,12 +8,27 @@ export interface ShapeElementConfig extends BaseElementConfig {
   opacity?: number
 }
 
-export interface CircleElementConfig extends ShapeElementConfig {
+export type ShapeGradientDirection =
+  | 'leftToRight'
+  | 'rightToLeft'
+  | 'topToBottom'
+  | 'bottomToTop'
+
+export interface ShapeGradientConfig {
+  gradientEnabled?: boolean
+  gradientStartColor?: string
+  gradientEndColor?: string
+  gradientDirection?: ShapeGradientDirection
+}
+
+export interface CircleElementConfig extends ShapeElementConfig, ShapeGradientConfig {
   eleType: 'circle'
   radius: number
 }
 
-export interface RectangleElementConfig extends ShapeElementConfig {
+export type RectangleGradientDirection = ShapeGradientDirection
+
+export interface RectangleElementConfig extends ShapeElementConfig, ShapeGradientConfig {
   eleType: 'rectangle'
   width: number
   height: number

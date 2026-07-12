@@ -117,7 +117,12 @@
             <label>{{ t('elementSettings.foregroundColor') }}</label>
             <ColorPicker
               v-model="fgColor"
-              @change="onFgColorChange" />
+              enable-gradient
+              :gradient-enabled="gradientEnabled"
+              :gradient-start-color="gradientStartColor"
+              :gradient-end-color="gradientEndColor"
+              @change="onFgColorChange"
+              @gradient-change="onGradientChange" />
           </div>
           <div class="text-setting-field">
             <label>{{ t('elementSettings.backgroundColor') }}</label>
@@ -190,6 +195,9 @@ const bgRing = computed(() => (props.element as any)?.getObjects()?.find((obj: a
 // 颜色本地状态，避免直接修改 fabric 对象属性导致不渲染
 const fgColor = ref('#FFFFFF')
 const bgColor = ref('#555555')
+const gradientEnabled = ref(false)
+const gradientStartColor = ref('#FFFFFF')
+const gradientEndColor = ref('#00FFFF')
 
 // 本地响应式中间变量，避免直接在输入过程中修改 fabric 对象
 const mainRadius = ref(0)
@@ -221,6 +229,14 @@ watchEffect(() => {
   } else if (bgRing.value && typeof bgRing.value.stroke === 'string') {
     bgColor.value = bgRing.value.stroke
   }
+
+  gradientEnabled.value = Boolean(model?.gradientEnabled ?? false)
+  gradientStartColor.value = typeof model?.gradientStartColor === 'string'
+    ? model.gradientStartColor
+    : fgColor.value
+  gradientEndColor.value = typeof model?.gradientEndColor === 'string'
+    ? model.gradientEndColor
+    : '#00FFFF'
 
   mainRadius.value = Number(model?.radius ?? mainRing.value?.radius ?? 0)
   bgRadius.value = Number(model?.bgRadius ?? bgRing.value?.radius ?? mainRadius.value)
@@ -263,9 +279,31 @@ const onBgStrokeWidthChange = (val: number | string) => {
 
 // 颜色变更：更新本地模型并走统一 applyUpdate
 const onFgColorChange = (val: string) => {
+  const previousColor = fgColor.value
   fgColor.value = val
   ;(currentModel.value as any).color = val
-  void applyUpdate({ color: val })
+  const patch: Record<string, string> = { color: val }
+  if (!gradientEnabled.value && gradientStartColor.value.toUpperCase() === previousColor.toUpperCase()) {
+    gradientStartColor.value = val
+    ;(currentModel.value as any).gradientStartColor = val
+    patch.gradientStartColor = val
+  }
+  void applyUpdate(patch)
+}
+const onGradientChange = (value: { enabled: boolean; startColor: string; endColor: string }) => {
+  gradientEnabled.value = value.enabled
+  gradientStartColor.value = value.startColor
+  gradientEndColor.value = value.endColor
+  Object.assign(currentModel.value as any, {
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+  })
+  void applyUpdate({
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+  })
 }
 const onBgColorChange = (val: string) => {
   bgColor.value = val
@@ -384,6 +422,9 @@ const updateElement = async () => {
     segments: Math.max(1, Math.floor(Number(model.segments ?? segmentsLocal.value))),
     gapAngle: Math.max(0, Number(model.gapAngle ?? gapAngleLocal.value)),
     endCap: normalizeEndCap(model.endCap),
+    gradientEnabled: Boolean(model.gradientEnabled),
+    gradientStartColor: String(model.gradientStartColor ?? fgColor.value),
+    gradientEndColor: String(model.gradientEndColor ?? '#00FFFF'),
   })
 }
 

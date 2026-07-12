@@ -25,6 +25,9 @@ export interface GoalArcElementConfig extends GoalElementConfig {
   segments?: number
   gapAngle?: number
   endCap?: 'round' | 'butt'
+  gradientEnabled?: boolean
+  gradientStartColor?: string
+  gradientEndColor?: string
 }
 
 export interface GoalBarElementConfig extends GoalElementConfig {
@@ -47,4 +50,9 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   borderColor: string
   goalProperty: string
   progressAlign: 'left' | 'right'
+  shape?: 'rectangle' | 'customPolygon'
+  polygonPoints?: Array<{ x: number; y: number }>
+  gradientEnabled?: boolean
+  gradientStartColor?: string
+  gradientEndColor?: string
 }

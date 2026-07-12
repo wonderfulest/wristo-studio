@@ -2,22 +2,63 @@
   <div class="color-picker-wrapper" @click.stop ref="wrapperRef">
     <div class="color-input" @click="togglePicker">
       <input
-        v-model="inputValue"
+        :value="displayInputValue"
+        :readonly="isGradientMode"
+        @input="handleDisplayInput"
         @keydown.enter.prevent="handleInputConfirm"
         @blur="handleInputConfirm"
-        :class="{ 'transparent-input': modelValue === 'transparent' }"
-        :style="{
-          backgroundColor: modelValue === 'transparent' ? 'transparent' : modelValue,
-          color: modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor
-        }" />
+        :class="{
+          'transparent-input': !isGradientMode && modelValue === 'transparent',
+          'gradient-input': isGradientMode,
+        }"
+        :style="inputStyle" />
     </div>
     <div v-if="isOpen" ref="pickerRef" class="color-picker" :style="pickerStyle">
       <div class="tabs">
-        <div class="tab" :class="{ active: true }">{{ t('colorPicker.solid') }}</div>
+        <button type="button" class="tab" :class="{ active: activeMode === 'solid' }" @click="setMode('solid')">
+          {{ t('colorPicker.solid') }}
+        </button>
+        <button
+          v-if="enableGradient"
+          type="button"
+          class="tab"
+          :class="{ active: activeMode === 'gradient' }"
+          @click="setMode('gradient')">
+          {{ t('colorPicker.gradient') }}
+        </button>
       </div>
+
+      <div v-if="isGradientMode" class="gradient-editor">
+        <div class="gradient-preview" :style="gradientPreviewStyle" />
+        <div class="gradient-stops">
+          <label
+            class="gradient-stop"
+            :class="{ active: activeGradientStop === 'start' }"
+            @click="activeGradientStop = 'start'">
+            <span>{{ t('colorPicker.gradientStart') }}</span>
+            <input
+              :value="localGradientStartColor"
+              @focus="activeGradientStop = 'start'"
+              @keydown.enter.prevent="handleGradientInputConfirm('start', $event)"
+              @blur="handleGradientInputConfirm('start', $event)" />
+          </label>
+          <label
+            class="gradient-stop"
+            :class="{ active: activeGradientStop === 'end' }"
+            @click="activeGradientStop = 'end'">
+            <span>{{ t('colorPicker.gradientEnd') }}</span>
+            <input
+              :value="localGradientEndColor"
+              @focus="activeGradientStop = 'end'"
+              @keydown.enter.prevent="handleGradientInputConfirm('end', $event)"
+              @blur="handleGradientInputConfirm('end', $event)" />
+          </label>
+        </div>
+      </div>
+
       <!-- 颜色矩阵 -->
       <div class="color-matrix">
-        <div v-for="color in colorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({hex: color, value: color})"></div>
+        <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({hex: color, value: color})"></div>
       </div>
 
       <!-- 当前使用的颜色 -->
@@ -26,7 +67,7 @@
           <div class="recent-colors-title">{{ t('colorPicker.currentColors') }}</div>
         </div>
         <div class="color-variables-list">
-          <div v-for="colorProperty in colorProperties" :key="colorProperty.name" class="color-variable-item" @click="selectColor(colorProperty)">
+          <div v-for="colorProperty in visibleColorProperties" :key="colorProperty.name" class="color-variable-item" @click="selectColor(colorProperty)">
             <div class="color-preview-small" :style="{ backgroundColor: colorProperty.hex }"></div>
             <div class="color-variable-info">
               <div class="color-hex">{{ colorProperty.hex }}</div>
@@ -56,10 +97,33 @@ const props = defineProps({
   popupZIndex: {
     type: Number,
     default: 10000
+  },
+  enableGradient: {
+    type: Boolean,
+    default: false
+  },
+  gradientEnabled: {
+    type: Boolean,
+    default: false
+  },
+  gradientStartColor: {
+    type: String,
+    default: '#FFFFFF'
+  },
+  gradientEndColor: {
+    type: String,
+    default: '#00FFFF'
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits([
+  'update:modelValue',
+  'change',
+  'update:gradientEnabled',
+  'update:gradientStartColor',
+  'update:gradientEndColor',
+  'gradientChange',
+])
 
 const propertiesStore = usePropertiesStore()
 
@@ -143,6 +207,14 @@ const settingsPopupId = `color-picker_${instanceId}`
 // 内部统一使用字符串表示颜色
 const hexColor = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
 const inputValue = ref(typeof props.modelValue === 'string' ? props.modelValue : String(props.modelValue))
+const activeMode = ref(props.enableGradient && props.gradientEnabled ? 'gradient' : 'solid')
+const activeGradientStop = ref('start')
+const localGradientStartColor = ref(normalizeOpaqueColor(props.gradientStartColor) || '#FFFFFF')
+const localGradientEndColor = ref(normalizeOpaqueColor(props.gradientEndColor) || '#00FFFF')
+const isGradientMode = computed(() => props.enableGradient && activeMode.value === 'gradient')
+const visibleColorMatrix = computed(() => isGradientMode.value
+  ? colorMatrix.filter((color) => color !== 'transparent')
+  : colorMatrix)
 
 // 计算属性：获取所有颜色属性
 const colorProperties = computed(() => {
@@ -155,6 +227,9 @@ const colorProperties = computed(() => {
       propertyKey: key
     }))
 })
+const visibleColorProperties = computed(() => isGradientMode.value
+  ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex))
+  : colorProperties.value)
 
 // Helper: convert hex string to RGB
 const hexToRgb = (hex) => {
@@ -182,8 +257,70 @@ const textColor = computed(() => {
   return luminance < 0.5 ? '#dddddd' : '#222222'
 })
 
+const displayInputValue = computed(() => isGradientMode.value
+  ? `${localGradientStartColor.value} - ${localGradientEndColor.value}`
+  : inputValue.value)
+
+const gradientPreviewStyle = computed(() => ({
+  background: `linear-gradient(90deg, ${localGradientStartColor.value}, ${localGradientEndColor.value})`,
+}))
+
+const inputStyle = computed(() => {
+  if (isGradientMode.value) {
+    return {
+      background: gradientPreviewStyle.value.background,
+      color: 'transparent',
+      textShadow: 'none',
+    }
+  }
+  return {
+    backgroundColor: props.modelValue === 'transparent' ? 'transparent' : props.modelValue,
+    color: props.modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor.value,
+  }
+})
+
+const emitGradientChange = () => {
+  emit('gradientChange', {
+    enabled: isGradientMode.value,
+    startColor: localGradientStartColor.value,
+    endColor: localGradientEndColor.value,
+  })
+}
+
+const updateGradientStop = (stop, color) => {
+  const normalized = normalizeOpaqueColor(color)
+  if (!normalized) return
+
+  propertiesStore.setLastSelectedColor(normalized)
+  if (stop === 'start') {
+    localGradientStartColor.value = normalized
+    emit('update:gradientStartColor', normalized)
+  } else {
+    localGradientEndColor.value = normalized
+    emit('update:gradientEndColor', normalized)
+  }
+  emitGradientChange()
+}
+
+const setMode = (mode) => {
+  if (mode === 'gradient' && !props.enableGradient) return
+  activeMode.value = mode
+  const enabled = mode === 'gradient'
+  emit('update:gradientEnabled', enabled)
+  if (enabled) {
+    emit('update:gradientStartColor', localGradientStartColor.value)
+    emit('update:gradientEndColor', localGradientEndColor.value)
+  }
+  emitGradientChange()
+  nextTick(positionColorPicker)
+}
+
 // 选择颜色
 const selectColor = (color) => {
+  if (isGradientMode.value) {
+    updateGradientStop(activeGradientStop.value, color.hex)
+    return
+  }
   hexColor.value = color.hex
   inputValue.value = color.hex
   propertiesStore.setLastSelectedColor(color.hex)
@@ -208,6 +345,14 @@ const updateFromHex = () => {
 
 // 工具函数
 const isValidHex = (hex) => /^#[0-9A-F]{6}$/i.test(hex)
+
+function normalizeOpaqueColor(raw) {
+  const value = String(raw ?? '').trim()
+  if (/^#[0-9A-Fa-f]{6}$/.test(value)) return value.toUpperCase()
+  if (/^0x[0-9A-Fa-f]{6}$/.test(value)) return `#${value.slice(2).toUpperCase()}`
+  if (/^[0-9A-Fa-f]{6}$/.test(value)) return `#${value.toUpperCase()}`
+  return null
+}
   
 // 监听点击外部关闭
 const handleOutsideClick = (event) => {
@@ -292,6 +437,29 @@ watch(
   }
 )
 
+watch(
+  () => props.gradientEnabled,
+  (enabled) => {
+    if (props.enableGradient) activeMode.value = enabled ? 'gradient' : 'solid'
+  }
+)
+
+watch(
+  () => props.gradientStartColor,
+  (color) => {
+    const normalized = normalizeOpaqueColor(color)
+    if (normalized) localGradientStartColor.value = normalized
+  }
+)
+
+watch(
+  () => props.gradientEndColor,
+  (color) => {
+    const normalized = normalizeOpaqueColor(color)
+    if (normalized) localGradientEndColor.value = normalized
+  }
+)
+
 // 规范化用户在输入框里输入的颜色字符串
 const normalizeInputToHex = (raw) => {
   if (!raw) return null
@@ -314,6 +482,7 @@ const normalizeInputToHex = (raw) => {
 }
 
 const handleInputConfirm = () => {
+  if (isGradientMode.value) return
   const normalized = normalizeInputToHex(inputValue.value)
   if (!normalized) return
 
@@ -349,6 +518,20 @@ const handleInputConfirm = () => {
   emit('update:modelValue', normalized)
   emit('change', normalized)
   inputValue.value = normalized
+}
+
+const handleDisplayInput = (event) => {
+  if (!isGradientMode.value) inputValue.value = event.target.value
+}
+
+const handleGradientInputConfirm = (stop, event) => {
+  const normalized = normalizeOpaqueColor(event.target.value)
+  if (!normalized) {
+    event.target.value = stop === 'start' ? localGradientStartColor.value : localGradientEndColor.value
+    return
+  }
+  event.target.value = normalized
+  updateGradientStop(stop, normalized)
 }
 
 const togglePicker = () => {
@@ -434,10 +617,62 @@ const togglePicker = () => {
 }
 
 .tab {
+  border: 0;
+  background: transparent;
   padding: 6px 12px;
   cursor: pointer;
   color: var(--studio-text-muted);
   font-size: 13px;
+}
+
+.gradient-editor {
+  margin-bottom: 10px;
+}
+
+.gradient-preview {
+  height: 28px;
+  margin-bottom: 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+}
+
+.gradient-stops {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.gradient-stop {
+  display: block;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.gradient-stop.active {
+  border-color: var(--studio-primary);
+}
+
+.gradient-stop span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--studio-text-muted);
+  font-size: 11px;
+}
+
+.gradient-stop input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 2px 4px;
+  border: 1px solid var(--studio-border);
+  border-radius: 3px;
+  color: var(--studio-text);
+  background: var(--studio-surface);
+  font-size: 12px;
+  text-align: center;
 }
 
 .tab.active {

@@ -7,6 +7,21 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import { createRectangleGradientFill, normalizeRectangleGradientDirection } from './rectangle.gradient'
+
+function applyRectangleFill(rectangle: Rect): void {
+  const rect = rectangle as any
+  const solidFill = rect.solidFill ?? 'transparent'
+  const gradient = createRectangleGradientFill({
+    enabled: Boolean(rect.gradientEnabled),
+    startColor: rect.gradientStartColor ?? solidFill,
+    endColor: rect.gradientEndColor ?? solidFill,
+    direction: normalizeRectangleGradientDirection(rect.gradientDirection),
+    width: Number(rect.width ?? 0),
+    height: Number(rect.height ?? 0),
+  })
+  rectangle.set('fill', gradient ?? solidFill)
+}
 
 function attachRectangleScaleSync(rectangle: Rect): void {
   rectangle.on('modified', () => {
@@ -29,6 +44,7 @@ function attachRectangleScaleSync(rectangle: Rect): void {
         scaleY: 1,
       } as any)
       rectangle.setCoords()
+      applyRectangleFill(rectangle)
     }
 
     const store = useElementDataStore()
@@ -37,11 +53,15 @@ function attachRectangleScaleSync(rectangle: Rect): void {
       top: rectangle.top as number,
       width: rectangle.width as number,
       height: rectangle.height as number,
-      fill: rectangle.fill as string,
+      fill: (rectangle as any).solidFill as string,
       stroke: rectangle.stroke as string,
       strokeWidth: rectangle.strokeWidth as number,
       opacity: rectangle.opacity as number,
       borderRadius: (rectangle as any).rx as number,
+      gradientEnabled: Boolean((rectangle as any).gradientEnabled),
+      gradientStartColor: (rectangle as any).gradientStartColor,
+      gradientEndColor: (rectangle as any).gradientEndColor,
+      gradientDirection: normalizeRectangleGradientDirection((rectangle as any).gradientDirection),
       displayStates: normalizeDisplayStates((rectangle as any).displayStates),
     } as any)
 
@@ -69,6 +89,10 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
   const opacity = config.opacity != null ? Number(config.opacity) : 1
   const borderRadius = Number(config.borderRadius ?? 0)
   const displayStates = normalizeDisplayStates(config.displayStates)
+  const gradientEnabled = Boolean(config.gradientEnabled ?? false)
+  const gradientStartColor = config.gradientStartColor ?? String(fill)
+  const gradientEndColor = config.gradientEndColor ?? String(fill)
+  const gradientDirection = normalizeRectangleGradientDirection(config.gradientDirection)
 
   const rectOptions: any = {
     id,
@@ -79,6 +103,11 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     width,
     height,
     fill,
+    solidFill: fill,
+    gradientEnabled,
+    gradientStartColor,
+    gradientEndColor,
+    gradientDirection,
     stroke,
     strokeWidth,
     opacity,
@@ -106,6 +135,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
   }
 
   const rectangle = new Rect(rectOptions)
+  applyRectangleFill(rectangle)
 
   attachRectangleScaleSync(rectangle)
 
@@ -118,11 +148,15 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
     top: rectangle.top,
     width: rectangle.width,
     height: rectangle.height,
-    fill: rectangle.fill,
+    fill,
     stroke: rectangle.stroke,
     strokeWidth: rectangle.strokeWidth,
     opacity: rectangle.opacity,
     borderRadius: (rectangle as any).rx,
+    gradientEnabled,
+    gradientStartColor,
+    gradientEndColor,
+    gradientDirection,
     originX: rectangle.originX,
     originY: rectangle.originY,
     displayStates,
@@ -176,7 +210,14 @@ export function updateRectangle(
   }
 
   if (patch.fill !== undefined) {
-    rect.set('fill', patch.fill)
+    rect.set('solidFill', patch.fill)
+  }
+
+  if (patch.gradientEnabled !== undefined) rect.set('gradientEnabled', Boolean(patch.gradientEnabled))
+  if (patch.gradientStartColor !== undefined) rect.set('gradientStartColor', patch.gradientStartColor)
+  if (patch.gradientEndColor !== undefined) rect.set('gradientEndColor', patch.gradientEndColor)
+  if (patch.gradientDirection !== undefined) {
+    rect.set('gradientDirection', normalizeRectangleGradientDirection(patch.gradientDirection))
   }
 
   if (patch.stroke !== undefined) {
@@ -208,14 +249,20 @@ export function updateRectangle(
     rect.set('top', Number(patch.top))
   }
 
+  applyRectangleFill(rect)
+
   rect.initialConfig = {
     width: rect.width,
     height: rect.height,
-    fill: rect.fill,
+    fill: rect.solidFill,
     stroke: rect.stroke,
     strokeWidth: rect.strokeWidth,
     opacity: rect.opacity,
     borderRadius: rect.rx,
+    gradientEnabled: Boolean(rect.gradientEnabled),
+    gradientStartColor: rect.gradientStartColor,
+    gradientEndColor: rect.gradientEndColor,
+    gradientDirection: normalizeRectangleGradientDirection(rect.gradientDirection),
   }
 
   rect.setCoords()
@@ -229,11 +276,15 @@ export function updateRectangle(
       top: rect.top as number,
       width: rect.width as number,
       height: rect.height as number,
-      fill: rect.fill as string,
+      fill: rect.solidFill as string,
       stroke: rect.stroke as string,
       strokeWidth: rect.strokeWidth as number,
       opacity: rect.opacity as number,
       borderRadius: (rect as any).rx as number,
+      gradientEnabled: Boolean(rect.gradientEnabled),
+      gradientStartColor: rect.gradientStartColor,
+      gradientEndColor: rect.gradientEndColor,
+      gradientDirection: normalizeRectangleGradientDirection(rect.gradientDirection),
       displayStates: normalizeDisplayStates((rect as any).displayStates),
     } as any)
   }

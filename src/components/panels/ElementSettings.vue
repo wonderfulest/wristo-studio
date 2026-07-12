@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, toRaw, watch } from 'vue'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -38,6 +38,22 @@ const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
+let configPatchQueue: Promise<void> = Promise.resolve()
+const committedConfigById = new Map<string, AnyElementConfig>()
+
+function cloneJsonData<T>(value: T): T {
+  const rawValue = toRaw(value)
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(rawValue) as T
+    } catch {
+      // Element configs are JSON data; use JSON cloning if nested reactive values cannot be cloned.
+    }
+  }
+  return JSON.parse(JSON.stringify(rawValue)) as T
+}
+
+const cloneElementConfig = (config: AnyElementConfig): AnyElementConfig => cloneJsonData(config)
 
 // 通过 activeIds 从画布对象列表映射出当前选中的元素
 const activeElements = computed<FabricElement[]>(() => {
@@ -94,6 +110,22 @@ const activeConfig = computed<AnyElementConfig | null>(() => {
   return elementDataStore.getElementConfig(String(id))
 })
 
+watch(
+  activeElement,
+  (element, previousElement) => {
+    const id = (element as any)?.id
+    if (id == null || (element === previousElement && committedConfigById.has(String(id)))) return
+    const lockedId = String(id)
+    const storedConfig = elementDataStore.getElementConfig(lockedId)
+    if (storedConfig) {
+      committedConfigById.set(lockedId, cloneElementConfig(storedConfig))
+    } else {
+      committedConfigById.delete(lockedId)
+    }
+  },
+  { immediate: true, flush: 'sync' },
+)
+
 // 获取元素图标
 const getElementIcon = (type: string) => {
   // 遍历所有分类和元素类型查找对应的图标
@@ -128,33 +160,70 @@ const applyConfigPatch = computed(() => {
   const el = activeElement.value as any
   if (!el?.id) return undefined
   const lockedId = String(el.id)
-  return (patch: Partial<AnyElementConfig>) => {
-    if (String(el.eleType ?? '') === 'goalArc') {
-      console.groupCollapsed('[goalArc.ElementSettings] applyConfigPatch')
-      console.log('lockedId', lockedId)
-      console.log('patch', patch)
-      console.log('activeElementBefore', {
-        id: el.id,
-        left: el.left,
-        top: el.top,
-        width: el.width,
-        height: el.height,
-        scaleX: el.scaleX,
-        scaleY: el.scaleY,
-        segmentMode: el.segmentMode,
-        segments: el.segments,
-        gapAngle: el.gapAngle,
-        objectCount: el.getObjects?.().length,
-      })
-      console.log('storeBefore', elementDataStore.getElementConfig(lockedId))
-      console.groupEnd()
-    }
-    // 更新数据层
-    elementDataStore.patchElement(lockedId, patch as AnyElementConfig)
-    // 更新画布元素（按 id resolve 真实对象）
-    void Promise.resolve(elementManager.updateElementById(lockedId, patch)).then(() => {
-      historyStore.saveState(`settings:${lockedId}`)
+  return async (patch: Partial<AnyElementConfig>): Promise<void> => {
+    const queuedPatch = cloneJsonData(patch)
+    const operation = configPatchQueue.then(async () => {
+      if (String(el.eleType ?? '') === 'goalArc') {
+        console.groupCollapsed('[goalArc.ElementSettings] applyConfigPatch')
+        console.log('lockedId', lockedId)
+        console.log('patch', queuedPatch)
+        console.log('activeElementBefore', {
+          id: el.id,
+          left: el.left,
+          top: el.top,
+          width: el.width,
+          height: el.height,
+          scaleX: el.scaleX,
+          scaleY: el.scaleY,
+          segmentMode: el.segmentMode,
+          segments: el.segments,
+          gapAngle: el.gapAngle,
+          objectCount: el.getObjects?.().length,
+        })
+        console.log('storeBefore', elementDataStore.getElementConfig(lockedId))
+        console.groupEnd()
+      }
+
+      let committedConfig = committedConfigById.get(lockedId)
+      if (!committedConfig) {
+        const storedConfig = elementDataStore.getElementConfig(lockedId)
+        if (storedConfig) {
+          committedConfig = cloneElementConfig(storedConfig)
+          committedConfigById.set(lockedId, committedConfig)
+        }
+      }
+      const baselineConfig = committedConfig ? cloneElementConfig(committedConfig) : null
+      const commitBase = baselineConfig ?? cloneElementConfig({
+        id: lockedId,
+        eleType: el.eleType,
+      } as AnyElementConfig)
+      const nextCommittedConfig = cloneElementConfig({
+        ...commitBase,
+        ...queuedPatch,
+        id: lockedId,
+        eleType: commitBase.eleType,
+      } as AnyElementConfig)
+      try {
+        // 更新数据层（始终从最后一次成功提交的基线应用本次补丁）
+        elementDataStore.upsertElement(commitBase)
+        elementDataStore.patchElement(lockedId, queuedPatch as AnyElementConfig)
+        // 更新画布元素（按 id resolve 真实对象）
+        await elementManager.updateElementById(lockedId, queuedPatch)
+        // await 期间 panel 可能已提前修改 Store；用确定的提交结果覆盖并刷新基线。
+        elementDataStore.upsertElement(nextCommittedConfig)
+        committedConfigById.set(lockedId, cloneElementConfig(nextCommittedConfig))
+        historyStore.saveState(`settings:${lockedId}`)
+      } catch (error) {
+        if (baselineConfig) {
+          elementDataStore.upsertElement(baselineConfig)
+          committedConfigById.set(lockedId, cloneElementConfig(baselineConfig))
+        }
+        throw error
+      }
     })
+
+    configPatchQueue = operation.catch(() => undefined)
+    return operation
   }
 })
 </script>

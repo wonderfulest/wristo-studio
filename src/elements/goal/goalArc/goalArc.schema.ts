@@ -20,6 +20,9 @@ export type GoalArcElementSchema = {
     segments: number
     gapAngle: number
     endCap: 'round' | 'butt'
+    gradientEnabled: boolean
+    gradientStartColor: string
+    gradientEndColor: string
   }
   resizable: boolean
   rotatable: boolean
@@ -45,6 +48,9 @@ export const goalArcSchema: GoalArcElementSchema = {
     segments: 12,
     gapAngle: 2,
     endCap: 'butt',
+    gradientEnabled: false,
+    gradientStartColor: '#FFFFFF',
+    gradientEndColor: '#00FFFF',
   },
   resizable: false,
   rotatable: false,

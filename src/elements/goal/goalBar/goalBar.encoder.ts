@@ -1,6 +1,23 @@
 import type { FabricElement } from '@/types/element'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
 import { ensureGoalElementId } from '../goal.common'
+import { normalizeGoalBarPolygonConfig } from './goalBar.geometry'
+
+type LegacyGoalBarPolygonConfig = {
+  shape?: unknown
+  polygonPoints?: unknown
+  slantRatio?: unknown
+}
+
+const INVALID_POLYGON_WARNING = '[GoalBar] Invalid polygonPoints; falling back to rectangle'
+
+function normalizePersistedPolygonConfig(input: LegacyGoalBarPolygonConfig, id: unknown) {
+  const normalized = normalizeGoalBarPolygonConfig(input)
+  if (input.shape === 'customPolygon' && normalized.shape === 'rectangle') {
+    console.warn(INVALID_POLYGON_WARNING, { id })
+  }
+  return normalized
+}
 
 export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementConfig {
   if (!element) {
@@ -11,11 +28,19 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
   const objects = anyElement.getObjects?.() ?? []
   const background: any = objects.find((obj: any) => (obj as any).id?.endsWith?.('_background'))
 
-  // 优先从 widget config 读取（如果存在 __element.config）
+  // Widget config 提供持久化回退；可能分叉的 live 字段在下方按字段优先读取。
   const widget = anyElement.__element as { config?: Partial<GoalBarElementConfig> } | undefined
-  const config = (widget?.config ?? {}) as Partial<GoalBarElementConfig>
+  const config = (widget?.config ?? {}) as Partial<GoalBarElementConfig> & LegacyGoalBarPolygonConfig
 
   const id = ensureGoalElementId(anyElement.id as string | undefined)
+  const polygonConfig = normalizePersistedPolygonConfig(
+    {
+      shape: anyElement.shape ?? config.shape,
+      polygonPoints: anyElement.polygonPoints ?? config.polygonPoints,
+      slantRatio: anyElement.slantRatio ?? config.slantRatio
+    },
+    id
+  )
   const result: Partial<GoalBarElementConfig> = {
     id,
     eleType: 'goalBar',
@@ -37,12 +62,19 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     borderColor: config.borderColor ?? anyElement.borderColor,
     goalProperty: anyElement.goalProperty ?? config.goalProperty,
     progressAlign: config.progressAlign ?? anyElement.progressAlign,
+    shape: polygonConfig.shape,
+    polygonPoints: polygonConfig.polygonPoints,
+    gradientEnabled: Boolean(anyElement.gradientEnabled ?? config.gradientEnabled ?? false),
+    gradientStartColor: anyElement.gradientStartColor ?? config.gradientStartColor ?? anyElement.color ?? config.color,
+    gradientEndColor: anyElement.gradientEndColor ?? config.gradientEndColor ?? anyElement.color ?? config.color
   }
 
   return result as GoalBarElementConfig
 }
 
 export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricElement> {
+  const legacyConfig = config as unknown as LegacyGoalBarPolygonConfig
+  const polygonConfig = normalizePersistedPolygonConfig(legacyConfig, config.id)
   const result: Partial<FabricElement> = {
     id: config.id,
     eleType: 'goalBar',
@@ -64,6 +96,11 @@ export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricEleme
     borderColor: config.borderColor,
     goalProperty: config.goalProperty,
     progressAlign: config.progressAlign,
+    shape: polygonConfig.shape,
+    polygonPoints: polygonConfig.polygonPoints,
+    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientStartColor: config.gradientStartColor ?? config.color,
+    gradientEndColor: config.gradientEndColor ?? config.color
   }
 
   return result

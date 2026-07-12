@@ -12,7 +12,69 @@
         @change="updateElement"
       />
 
-      <el-form-item v-if="!isSegmentMode" :label="t('elementSettings.padding')">
+      <el-form-item :label="t('elementSettings.shape')">
+        <el-select
+          :model-value="currentShape"
+          :disabled="editorState.active"
+          @change="onShapeChange"
+        >
+          <el-option :label="t('elementSettings.rectangle')" value="rectangle" />
+          <el-option :label="t('elementSettings.customPolygon')" value="customPolygon" />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item v-if="isPolygonShape" class="polygon-editor-form-item" label-width="0">
+        <div v-if="editorSession" class="polygon-editor-card">
+          <div class="polygon-editor-header">
+            <span class="polygon-editor-mode">
+              {{ editorState.mode === 'create' ? t('common.create') : t('common.edit') }}
+            </span>
+            <strong>
+              {{ t('elementSettings.vertices', { count: editorState.pointCount, max: 8 }) }}
+            </strong>
+          </div>
+          <GoalBarPolygonMiniEditor
+            :key="editorSession.key"
+            :mode="editorSession.mode"
+            :initial-points="editorSession.initialPoints"
+            @state="onPolygonEditorState"
+            @preview="onPolygonPreview"
+            @commit="commitPolygonEditing"
+            @cancel="cancelPolygonEditing"
+          />
+          <p class="polygon-editor-instruction">{{ polygonEditorInstruction }}</p>
+          <p
+            v-if="polygonEditorFeedback"
+            class="polygon-editor-feedback"
+            :class="{ 'is-error': polygonEditorFeedbackIsError }"
+          >
+            {{ polygonEditorFeedback }}
+          </p>
+          <div class="polygon-editor-actions">
+            <el-button size="small" @click="cancelPolygonEditing">
+              {{ t('common.cancel') }}
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="polygonDoneDisabled"
+              @click="commitPolygonEditing"
+            >
+              {{ t('common.done') }}
+            </el-button>
+          </div>
+        </div>
+        <el-button
+          v-else-if="persistedShape === 'customPolygon'"
+          class="edit-polygon-button"
+          :disabled="!hasValidPersistedPolygon"
+          @click="startEditing('edit')"
+        >
+          {{ t('elementSettings.editVertices') }}
+        </el-button>
+      </el-form-item>
+
+      <el-form-item v-if="!isSegmentMode && !isPolygonShape" :label="t('elementSettings.padding')">
         <el-input-number 
           v-model="currentModel.padding" 
           :min="0" 
@@ -99,8 +161,13 @@
 
       <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker 
-          v-model="currentModel.color" 
-          @change="handleMainColorChange" 
+          v-model="currentModel.color"
+          enable-gradient
+          :gradient-enabled="Boolean(currentModel.gradientEnabled)"
+          :gradient-start-color="currentModel.gradientStartColor ?? currentModel.color"
+          :gradient-end-color="currentModel.gradientEndColor ?? currentModel.color"
+          @change="handleMainColorChange"
+          @gradient-change="handleGradientChange"
         />
       </el-form-item>
 
@@ -127,7 +194,7 @@
         />
       </el-form-item>
 
-      <el-form-item :label="t('elementSettings.borderRadius')">
+      <el-form-item v-if="!isPolygonShape" :label="t('elementSettings.borderRadius')">
         <el-input-number 
           v-model="currentModel.borderRadius" 
           :min="0" 
@@ -150,12 +217,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch, watchEffect } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { ElMessage } from 'element-plus'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
+import type { FabricElement } from '@/types/element'
+import GoalBarPolygonMiniEditor from './GoalBarPolygonMiniEditor.vue'
+import {
+  normalizeGoalBarPolygonConfig,
+  validateGoalBarPolygon,
+  type GoalBarPolygonPoint,
+  type PolygonValidationReason,
+} from './goalBar.geometry'
+import { previewGoalBarPolygon, restoreGoalBarPreview } from './goalBar.renderer'
+import {
+  cloneGoalBarPolygonPoints,
+  createGoalBarPolygonPanelSession,
+  isGoalBarPolygonSessionElement,
+  resolveGoalBarPolygonCommitPoints,
+  resolveGoalBarPolygonPreviewState,
+  updateGoalBarPolygonPanelState,
+  type GoalBarPolygonMiniEditorState,
+  type GoalBarPolygonPanelSession,
+} from './goalBar.panelSession'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
@@ -163,12 +249,22 @@ const { t } = useI18n()
 const props = defineProps<{
   element?: any
   config?: Record<string, any> | null
-  applyPatch?: (patch: Record<string, any>) => void
+  applyPatch?: (patch: Record<string, any>) => Promise<void> | void
 }>()
 
 const formRef = ref<any>(null)
 const segmentsLocal = ref(10)
 const gapLocal = ref(2)
+const pendingShape = ref<'customPolygon' | null>(null)
+const editorSession = shallowRef<GoalBarPolygonPanelSession | null>(null)
+const editorState = shallowRef<GoalBarPolygonMiniEditorState & { active: boolean; mode: 'create' | 'edit'; error?: string }>({
+  active: false,
+  mode: 'create',
+  points: [],
+  closed: false,
+  pointCount: 0,
+  valid: false,
+})
 
 const currentModel = computed<any>(() => {
   console.log('[GoalBarPanel] currentModel', props.config, props.element)
@@ -176,11 +272,69 @@ const currentModel = computed<any>(() => {
 })
 
 const isSegmentMode = computed(() => (currentModel.value as any)?.variant === 'segmented')
+const persistedPolygonConfig = computed(() => {
+  const model = currentModel.value as any
+  return normalizeGoalBarPolygonConfig({
+    shape: model?.shape,
+    polygonPoints: model?.polygonPoints,
+    slantRatio: model?.slantRatio,
+  })
+})
+const persistedShape = computed(() => persistedPolygonConfig.value.shape)
+const persistedPolygonPoints = computed<GoalBarPolygonPoint[]>(() =>
+  persistedPolygonConfig.value.polygonPoints.map((point) => ({ ...point })),
+)
+const hasValidPersistedPolygon = computed(() => validateGoalBarPolygon(persistedPolygonPoints.value).valid)
+const currentShape = computed(() => pendingShape.value ?? persistedShape.value)
+const isPolygonShape = computed(() => currentShape.value === 'customPolygon')
 const segmentPreviewCount = computed(() => Math.min(16, Math.max(1, segmentsLocal.value)))
 const segmentPreviewActiveCount = computed(() => {
   const progress = Math.max(0, Math.min(1, Number((currentModel.value as any)?.progress ?? 0)))
   return Math.max(1, Math.round(segmentPreviewCount.value * progress))
 })
+const currentElementId = computed(() => {
+  const id = (props.element as any)?.id ?? (props.config as any)?.id
+  return id == null ? '' : String(id)
+})
+const polygonDoneDisabled = computed(
+  () =>
+    !editorState.value.active ||
+    !editorState.value.valid ||
+    (editorState.value.mode === 'create' && !editorState.value.closed),
+)
+const polygonEditorInstruction = computed(() => {
+  const state = editorState.value
+  if (state.mode === 'edit') return t('elementSettings.polygonEditHint')
+  if (state.closed && state.valid) return t('elementSettings.polygonReady')
+  if (state.pointCount >= 3) return t('elementSettings.polygonCloseHint')
+  return t('elementSettings.polygonCreateHint')
+})
+const polygonValidationMessageKeys: Record<PolygonValidationReason, string> = {
+  pointCount: 'elementSettings.polygonPointCountInvalid',
+  range: 'elementSettings.polygonRangeInvalid',
+  duplicate: 'elementSettings.polygonDuplicateInvalid',
+  selfIntersection: 'elementSettings.polygonSelfIntersectionInvalid',
+  concave: 'elementSettings.polygonMustStayConvex',
+  area: 'elementSettings.polygonAreaInvalid',
+}
+const polygonEditorFeedback = computed(() => {
+  const state = editorState.value
+  if (state.error) return state.error
+  if (state.reason) return t(polygonValidationMessageKeys[state.reason])
+  if (state.mode === 'edit' && state.valid) return t('elementSettings.polygonReady')
+  return ''
+})
+const polygonEditorFeedbackIsError = computed(
+  () => Boolean(editorState.value.error || editorState.value.reason),
+)
+
+let nextEditorSessionKey = 0
+let previewReplayScheduled = false
+
+const resolveCurrentLiveElement = (): FabricElement | null =>
+  (currentElementId.value ? elementManager.getElementById(currentElementId.value) : undefined) ??
+  (props.element as FabricElement | undefined) ??
+  null
 
 watchEffect(() => {
   const model = currentModel.value as any
@@ -199,17 +353,30 @@ const applyUpdate = async (patch: Record<string, any>) => {
     hasElement: !!props.element,
   })
   if (props.applyPatch) {
-    props.applyPatch(patch)
+    await props.applyPatch(patch)
     return
   }
 
   if (props.element) {
-    elementManager.updateElement(props.element as any, patch)
+    await elementManager.updateElement(props.element as any, patch)
   }
 }
 
 const handleMainColorChange = async (val: string) => {
   await applyUpdate({ color: val })
+}
+
+const handleGradientChange = async (value: { enabled: boolean; startColor: string; endColor: string }) => {
+  Object.assign(currentModel.value as any, {
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+  })
+  await applyUpdate({
+    gradientEnabled: value.enabled,
+    gradientStartColor: value.startColor,
+    gradientEndColor: value.endColor,
+  })
 }
 
 const handleBgColorChange = async (val: string) => {
@@ -225,6 +392,126 @@ const setProgressAlign = async (value: 'left' | 'right') => {
   await applyUpdate({ progressAlign: value })
 }
 
+const clearPolygonEditor = () => {
+  editorSession.value = null
+  editorState.value = { ...editorState.value, active: false }
+}
+
+const cancelAndRestoreEditor = () => {
+  const session = editorSession.value
+  if (session) restoreGoalBarPreview(session.liveElement)
+  clearPolygonEditor()
+}
+
+const startEditing = (mode: 'create' | 'edit') => {
+  if (editorSession.value) cancelAndRestoreEditor()
+  if (mode === 'create') pendingShape.value = 'customPolygon'
+  const liveElement = resolveCurrentLiveElement()
+  if (!liveElement) {
+    pendingShape.value = null
+    editorState.value = { ...editorState.value, active: false }
+    ElMessage.error(t('elementSettings.polygonEditorUnavailable'))
+    return
+  }
+
+  const polygonPoints = mode === 'create' ? [] : cloneGoalBarPolygonPoints(persistedPolygonPoints.value)
+  if (mode === 'edit' && !validateGoalBarPolygon(polygonPoints).valid) {
+    pendingShape.value = null
+    editorState.value = { ...editorState.value, active: false }
+    ElMessage.error(t('elementSettings.polygonEditorUnavailable'))
+    return
+  }
+
+  const session = createGoalBarPolygonPanelSession(mode, polygonPoints, liveElement, ++nextEditorSessionKey)
+  editorSession.value = session
+  editorState.value = { ...session.state, active: true, mode }
+}
+
+const onPolygonEditorState = (state: GoalBarPolygonMiniEditorState) => {
+  const session = editorSession.value
+  if (!session) return
+  updateGoalBarPolygonPanelState(session, state)
+  editorState.value = { ...state, active: true, mode: session.mode, error: session.error }
+}
+
+const tryPreviewSessionPoints = (points: GoalBarPolygonPoint[]): boolean => {
+  const session = editorSession.value
+  if (!session || !validateGoalBarPolygon(points).valid || !session.state.closed) return false
+  try {
+    if (!previewGoalBarPolygon(session.liveElement, cloneGoalBarPolygonPoints(points))) {
+      throw new Error('Goal bar polygon preview was rejected')
+    }
+    editorState.value = {
+      ...resolveGoalBarPolygonPreviewState(session),
+      active: true,
+      mode: session.mode,
+    }
+    return true
+  } catch (error) {
+    console.error('[GoalBarPanel] polygon preview failed', error)
+    try {
+      restoreGoalBarPreview(session.liveElement)
+    } catch (restoreError) {
+      console.error('[GoalBarPanel] polygon preview restore failed', restoreError)
+    }
+    editorState.value = {
+      ...resolveGoalBarPolygonPreviewState(
+        session,
+        t('elementSettings.polygonEditorUnavailable'),
+      ),
+      active: true,
+      mode: session.mode,
+    }
+    return false
+  }
+}
+
+const onPolygonPreview = (points: GoalBarPolygonPoint[]) => {
+  tryPreviewSessionPoints(points)
+}
+
+const commitPolygonEditing = async (emittedValue?: unknown) => {
+  const session = editorSession.value
+  if (!session || session.saving) return
+  const points = resolveGoalBarPolygonCommitPoints(session, emittedValue)
+  if (!session.state.valid || !session.state.closed || !validateGoalBarPolygon(points).valid) return
+  session.saving = true
+  try {
+    await applyUpdate({ shape: 'customPolygon', polygonPoints: cloneGoalBarPolygonPoints(points) })
+    pendingShape.value = null
+    clearPolygonEditor()
+  } catch (error) {
+    console.error('[GoalBarPanel] polygon save failed', error)
+    session.saving = false
+    session.error = t('elementSettings.polygonSaveFailed')
+    editorState.value = { ...editorState.value, error: session.error }
+    ElMessage.error(session.error)
+  }
+}
+
+const cancelPolygonEditing = () => {
+  cancelAndRestoreEditor()
+  pendingShape.value = null
+}
+
+const onShapeChange = async (value: 'rectangle' | 'customPolygon') => {
+  if (value === 'rectangle') {
+    cancelAndRestoreEditor()
+    pendingShape.value = null
+    await applyUpdate({ shape: 'rectangle' })
+    return
+  }
+
+  const polygonPoints = persistedPolygonPoints.value.map((point) => ({ ...point }))
+  if (validateGoalBarPolygon(polygonPoints).valid) {
+    await applyUpdate({ shape: 'customPolygon', polygonPoints })
+    return
+  }
+
+  pendingShape.value = 'customPolygon'
+  startEditing('create')
+}
+
 const onSegmentModeChange = async (val: string | number | boolean) => {
   const enabled = Boolean(val)
   const model = currentModel.value as any
@@ -237,7 +524,7 @@ const onSegmentModeChange = async (val: string | number | boolean) => {
     variant: model.variant,
     segments: segmentsLocal.value,
     gap: gapLocal.value,
-    padding: enabled ? 0 : model.padding,
+    padding: isPolygonShape.value ? model.padding : enabled ? 0 : model.padding,
   })
 }
 
@@ -272,6 +559,9 @@ const updateElement = async () => {
       borderWidth: model.borderWidth,
       borderColor: model.borderColor,
       goalProperty: model.goalProperty,
+      gradientEnabled: Boolean(model.gradientEnabled),
+      gradientStartColor: model.gradientStartColor ?? model.color,
+      gradientEndColor: model.gradientEndColor ?? model.color,
     })
     await applyUpdate({
       variant: model.variant ?? 'continuous',
@@ -292,6 +582,46 @@ const updateElement = async () => {
     console.error('Form validation failed:', error)
   }
 }
+
+watch(
+  () => [
+    currentElementId.value,
+    resolveCurrentLiveElement(),
+    currentModel.value,
+  ] as const,
+  ([nextId, nextLiveElement]) => {
+    const session = editorSession.value
+    if (!session) return
+    if (!isGoalBarPolygonSessionElement(session, nextId, nextLiveElement)) {
+      cancelAndRestoreEditor()
+      pendingShape.value = null
+      return
+    }
+
+    if (session.saving || previewReplayScheduled || session.lastValidPoints.length === 0) return
+    previewReplayScheduled = true
+    void nextTick(() => {
+      previewReplayScheduled = false
+      const activeSession = editorSession.value
+      if (
+        activeSession !== session ||
+        activeSession.saving ||
+        !isGoalBarPolygonSessionElement(
+          activeSession,
+          currentElementId.value,
+          resolveCurrentLiveElement(),
+        )
+      ) return
+      tryPreviewSessionPoints(activeSession.lastValidPoints)
+    })
+  },
+  { flush: 'sync' },
+)
+
+onBeforeUnmount(() => {
+  cancelAndRestoreEditor()
+  pendingShape.value = null
+})
 
 const handleClose = async () => {
   try {
@@ -316,6 +646,74 @@ defineExpose({
 
 .el-form-item {
   margin-bottom: 16px;
+}
+
+.polygon-editor-form-item :deep(.el-form-item__content) {
+  width: 100%;
+  min-width: 0;
+  margin-left: 0 !important;
+}
+
+.polygon-editor-card {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--studio-primary-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--studio-primary) 5%, var(--studio-surface));
+}
+
+.polygon-editor-header,
+.polygon-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.polygon-editor-header strong {
+  color: var(--studio-text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.polygon-editor-mode {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.polygon-editor-instruction,
+.polygon-editor-feedback {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.polygon-editor-feedback {
+  color: var(--studio-primary);
+  font-weight: 700;
+}
+
+.polygon-editor-feedback.is-error {
+  color: var(--el-color-danger);
+}
+
+.polygon-editor-actions {
+  justify-content: flex-end;
+}
+
+.edit-polygon-button {
+  width: 100%;
 }
 
 .progress-align-control {

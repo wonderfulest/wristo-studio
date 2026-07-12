@@ -10,6 +10,34 @@ import { applyControlsToObject } from '@/utils/controlManager'
 
 const GOAL_ARC_DEBUG = false
 const normalizeEndCap = (value: unknown): 'round' | 'butt' => value === 'round' ? 'round' : 'butt'
+const GRADIENT_ARC_STEP_DEGREES = 4
+const MAX_GRADIENT_ARC_SEGMENTS = 90
+
+function normalizeGradientColor(value: unknown): string | null {
+  const raw = String(value ?? '').trim()
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toUpperCase()
+  if (/^0x[0-9a-f]{6}$/i.test(raw)) return `#${raw.slice(2).toUpperCase()}`
+  return null
+}
+
+function getGradientColors(config: GoalArcElementConfig): { start: string; end: string } | null {
+  if (!config.gradientEnabled) return null
+  const start = normalizeGradientColor(config.gradientStartColor)
+  const end = normalizeGradientColor(config.gradientEndColor)
+  return start && end ? { start, end } : null
+}
+
+function interpolateColor(start: string, end: string, position: number): string {
+  const t = Math.max(0, Math.min(1, position))
+  const startValue = Number.parseInt(start.slice(1), 16)
+  const endValue = Number.parseInt(end.slice(1), 16)
+  const channel = (shift: number) => Math.round(
+    ((startValue >> shift) & 0xff) + (((endValue >> shift) & 0xff) - ((startValue >> shift) & 0xff)) * t,
+  )
+  return `#${[channel(16), channel(8), channel(0)]
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('')}`
+}
 
 function numberOrNull(value: unknown) {
   const n = Number(value)
@@ -99,8 +127,12 @@ function installGoalArcRenderer(group: Group) {
   anyGroup.drawObject = (ctx: CanvasRenderingContext2D, forClipping?: boolean, context?: any) => {
     originalDrawObject?.(ctx, forClipping, context)
     const config = getConfig(group) as GoalArcElementConfig | undefined
-    if (forClipping || !config || !config.segmentMode) return
-    drawSegmentedGoalArc(ctx, config)
+    if (forClipping || !config) return
+    if (config.segmentMode) {
+      drawSegmentedGoalArc(ctx, config)
+    } else if (getGradientColors(config)) {
+      drawContinuousGradientGoalArc(ctx, config)
+    }
   }
 }
 
@@ -211,6 +243,91 @@ function drawArcStroke(
   ctx.restore()
 }
 
+function drawRoundCap(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  strokeWidth: number,
+  color: string,
+  angle: number,
+) {
+  if (radius <= 0 || strokeWidth <= 0) return
+  const radians = toRadians(angle)
+  ctx.save()
+  ctx.beginPath()
+  ctx.fillStyle = color
+  ctx.arc(Math.cos(radians) * radius, Math.sin(radians) * radius, strokeWidth / 2, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+function drawGradientSpan(
+  ctx: CanvasRenderingContext2D,
+  config: GoalArcElementConfig,
+  colors: { start: string; end: string },
+  spanStartDistance: number,
+  spanEndDistance: number,
+  totalAngle: number,
+  sliceCount: number,
+) {
+  const spanAngle = spanEndDistance - spanStartDistance
+  if (spanAngle <= 0.001 || totalAngle <= 0.001 || sliceCount < 1) return
+
+  const direction = getSignedSweep(config.startAngle, config.endAngle, config.counterClockwise) < 0 ? -1 : 1
+  const arcDirection = Boolean(config.counterClockwise)
+  const radius = Number(config.radius)
+  const strokeWidth = Number(config.strokeWidth)
+  const sliceAngle = spanAngle / sliceCount
+
+  for (let index = 0; index < sliceCount; index += 1) {
+    const fromDistance = spanStartDistance + sliceAngle * index
+    const toDistance = spanStartDistance + sliceAngle * (index + 1)
+    const position = ((fromDistance + toDistance) / 2) / totalAngle
+    drawArcStroke(
+      ctx,
+      radius,
+      strokeWidth,
+      interpolateColor(colors.start, colors.end, position),
+      Number(config.startAngle) + direction * fromDistance,
+      Number(config.startAngle) + direction * toDistance,
+      arcDirection,
+      'butt',
+    )
+  }
+
+  if (normalizeEndCap(config.endCap) === 'round') {
+    const startPosition = spanStartDistance / totalAngle
+    const endPosition = spanEndDistance / totalAngle
+    drawRoundCap(
+      ctx,
+      radius,
+      strokeWidth,
+      interpolateColor(colors.start, colors.end, startPosition),
+      Number(config.startAngle) + direction * spanStartDistance,
+    )
+    drawRoundCap(
+      ctx,
+      radius,
+      strokeWidth,
+      interpolateColor(colors.start, colors.end, endPosition),
+      Number(config.startAngle) + direction * spanEndDistance,
+    )
+  }
+}
+
+function drawContinuousGradientGoalArc(ctx: CanvasRenderingContext2D, config: GoalArcElementConfig) {
+  const colors = getGradientColors(config)
+  const progress = clampProgress(config.progress ?? 0)
+  const totalAngle = Math.abs(getSignedSweep(config.startAngle, config.endAngle, config.counterClockwise))
+  const activeAngle = totalAngle * progress
+  if (!colors || activeAngle <= 0.001) return
+
+  const sliceCount = Math.min(
+    MAX_GRADIENT_ARC_SEGMENTS,
+    Math.max(1, Math.ceil(activeAngle / GRADIENT_ARC_STEP_DEGREES)),
+  )
+  drawGradientSpan(ctx, config, colors, 0, activeAngle, totalAngle, sliceCount)
+}
+
 function drawSegmentedGoalArc(ctx: CanvasRenderingContext2D, config: GoalArcElementConfig) {
   const startAngle = Number(config.startAngle)
   const endAngle = Number(config.endAngle)
@@ -230,6 +347,8 @@ function drawSegmentedGoalArc(ctx: CanvasRenderingContext2D, config: GoalArcElem
   const strokeWidth = Number(config.strokeWidth)
   const bgStrokeWidth = Number(config.bgStrokeWidth ?? config.strokeWidth)
   const endCap = normalizeEndCap(config.endCap)
+  const gradientColors = getGradientColors(config)
+  const activeSpans: Array<{ start: number; end: number }> = []
 
   for (let index = 0; index < segments; index += 1) {
     const segmentStartDistance = index * sliceAngle + visibleGap / 2
@@ -242,18 +361,42 @@ function drawSegmentedGoalArc(ctx: CanvasRenderingContext2D, config: GoalArcElem
     const activeEndDistance = Math.min(segmentEndDistance, Math.max(segmentStartDistance, activeAngle))
     const activeVisibleAngle = activeEndDistance - segmentStartDistance
     if (activeVisibleAngle > 0.001) {
-      drawArcStroke(
-        ctx,
-        radius,
-        strokeWidth,
-        config.color,
-        segmentStart,
-        segmentStart + direction * activeVisibleAngle,
-        counterClockwise,
-        endCap,
-      )
+      if (gradientColors) {
+        activeSpans.push({ start: segmentStartDistance, end: activeEndDistance })
+      } else {
+        drawArcStroke(
+          ctx,
+          radius,
+          strokeWidth,
+          config.color,
+          segmentStart,
+          segmentStart + direction * activeVisibleAngle,
+          counterClockwise,
+          endCap,
+        )
+      }
     }
   }
+
+  if (!gradientColors || activeSpans.length === 0) return
+
+  const desiredSlices = activeSpans.map((span) => Math.max(
+    1,
+    Math.ceil((span.end - span.start) / GRADIENT_ARC_STEP_DEGREES),
+  ))
+  const desiredSliceCount = desiredSlices.reduce((sum, count) => sum + count, 0)
+  const sliceBudget = Math.max(
+    activeSpans.length,
+    Math.min(MAX_GRADIENT_ARC_SEGMENTS, desiredSliceCount),
+  )
+  let usedSlices = 0
+  activeSpans.forEach((span, index) => {
+    const remainingSpans = activeSpans.length - index
+    const remainingBudget = sliceBudget - usedSlices
+    const sliceCount = Math.max(1, Math.min(desiredSlices[index], remainingBudget - remainingSpans + 1))
+    drawGradientSpan(ctx, config, gradientColors, span.start, span.end, totalAngle, sliceCount)
+    usedSlices += sliceCount
+  })
 }
 
 export function createGoalArc(config: GoalArcElementConfig): FabricElement {
@@ -287,6 +430,9 @@ export function createGoalArc(config: GoalArcElementConfig): FabricElement {
     segments: Math.max(1, Math.floor(Number(config.segments ?? 12))),
     gapAngle: Math.max(0, Number(config.gapAngle ?? 2)),
     endCap: normalizeEndCap(config.endCap),
+    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientStartColor: normalizeGradientColor(config.gradientStartColor) ?? normalizeGradientColor(config.color) ?? '#FFFFFF',
+    gradientEndColor: normalizeGradientColor(config.gradientEndColor) ?? '#00FFFF',
   }
   debugGoalArc('createGoalArc:finalConfig', { finalConfig })
 
@@ -329,6 +475,9 @@ export function createGoalArc(config: GoalArcElementConfig): FabricElement {
     segments: finalConfig.segments,
     gapAngle: finalConfig.gapAngle,
     endCap: finalConfig.endCap,
+    gradientEnabled: finalConfig.gradientEnabled,
+    gradientStartColor: finalConfig.gradientStartColor,
+    gradientEndColor: finalConfig.gradientEndColor,
   } as any)
 
   installGoalArcRenderer(group)
@@ -383,6 +532,7 @@ function layoutGoalArc(group: Group) {
   const segments = Math.max(1, Math.floor(Number(config.segments ?? 12)))
   const gapAngle = Math.max(0, Number(config.gapAngle ?? 2))
   const endCap = normalizeEndCap(config.endCap)
+  const gradientEnabled = Boolean(getGradientColors(config))
 
   debugGoalArc('layout:start', {
     config,
@@ -435,7 +585,7 @@ function layoutGoalArc(group: Group) {
     })
   } else {
     bgRing.set({ visible: true, opacity: 1, left: 0, top: 0 })
-    mainRing.set({ visible: true, opacity: 1, left: 0, top: 0 })
+    mainRing.set({ visible: true, opacity: gradientEnabled ? 0 : 1, left: 0, top: 0 })
 
     bgRing.set({
       radius: Number(config.bgRadius ?? config.radius),
@@ -470,6 +620,9 @@ function layoutGoalArc(group: Group) {
     segments,
     gapAngle,
     endCap,
+    gradientEnabled: Boolean(config.gradientEnabled),
+    gradientStartColor: config.gradientStartColor,
+    gradientEndColor: config.gradientEndColor,
   } as any)
 
   refreshGroup(group)
@@ -526,6 +679,11 @@ export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElem
     segments: Math.max(1, Math.floor(Number(patch.segments ?? currentConfig.segments ?? 12))),
     gapAngle: Math.max(0, Number(patch.gapAngle ?? currentConfig.gapAngle ?? 2)),
     endCap: normalizeEndCap(patch.endCap ?? currentConfig.endCap),
+    gradientEnabled: Boolean(patch.gradientEnabled ?? currentConfig.gradientEnabled ?? false),
+    gradientStartColor: normalizeGradientColor(patch.gradientStartColor ?? currentConfig.gradientStartColor)
+      ?? normalizeGradientColor(patch.color ?? currentConfig.color)
+      ?? '#FFFFFF',
+    gradientEndColor: normalizeGradientColor(patch.gradientEndColor ?? currentConfig.gradientEndColor) ?? '#00FFFF',
   }
 
   const elementMeta = getElement(group)
@@ -553,6 +711,9 @@ export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElem
       segments: nextConfig.segments,
       gapAngle: nextConfig.gapAngle,
       endCap: nextConfig.endCap,
+      gradientEnabled: nextConfig.gradientEnabled,
+      gradientStartColor: nextConfig.gradientStartColor,
+      gradientEndColor: nextConfig.gradientEndColor,
     } as any)
     debugGoalArc('update:paintOnly', {
       patch,

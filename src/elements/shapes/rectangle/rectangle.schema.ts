@@ -12,6 +12,10 @@ export type RectangleElementSchema = {
     stroke: string
     strokeWidth: number
     opacity: number
+    gradientEnabled: boolean
+    gradientStartColor: string
+    gradientEndColor: string
+    gradientDirection: 'leftToRight' | 'rightToLeft' | 'topToBottom' | 'bottomToTop'
   }
   resizable: boolean
   rotatable: boolean
@@ -29,6 +33,10 @@ export const rectangleSchema: RectangleElementSchema = {
     stroke: '#FFFFFF',
     strokeWidth: 2,
     opacity: 1,
+    gradientEnabled: false,
+    gradientStartColor: '#FFFFFF',
+    gradientEndColor: '#FFFFFF',
+    gradientDirection: 'leftToRight',
   },
   resizable: true,
   rotatable: false,
