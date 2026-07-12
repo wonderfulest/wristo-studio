@@ -53,6 +53,16 @@
       :on-add-progress-bar="onAddGoalProgressBar"
       :on-add-progress-arc="onAddGoalArc"
     />
+    <div class="menu-group menu-group--dial">
+      <div class="menu-group-title">
+        <el-icon><Odometer /></el-icon>
+        <span>{{ t('editor.subDial') }}</span>
+      </div>
+      <el-menu-item index="dial/sub-dial" @click="onAddElement('dials', 'subDial')">
+        <el-icon><Odometer /></el-icon>
+        <span>{{ t('editor.subDial') }}</span>
+      </el-menu-item>
+    </div>
     <div class="menu-group menu-group--chart">
       <div class="menu-group-title">
         <el-icon><TrendCharts /></el-icon>
@@ -71,7 +81,7 @@
 </template>
 
 <script setup>
-import { DataLine, TrendCharts, Aim, Monitor } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, Aim, Monitor, Odometer } from '@element-plus/icons-vue'
 import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
 import { useI18n } from '@/i18n'
 

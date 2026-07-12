@@ -21,7 +21,7 @@ export const subDialSchema: SubDialElementSchema = {
     originY: 'center',
     radius: 48,
     rotation: 0,
-    dataProperty: ':FIELD_TYPE_BATTERY',
+    dataProperty: '',
     rangeMode: 'percentage',
     minValue: 0,
     maxValue: 100,
