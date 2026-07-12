@@ -8,7 +8,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampPivot, normalizeSubDialValue, resolveSubDialAngle } from './subDial.math'
 import { encodeSubDial } from './subDial.encoder'
-import { subDialSchema } from './subDial.schema'
+import { migrateSubDialConfig } from './subDial.migration'
 
 type SubDialChildren = {
   background: FabricObject
@@ -137,13 +137,12 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
 }
 
 function formatValue(config: SubDialElementConfig): string {
-  const decimals = config.decimals ?? config.content.value.decimals
-  return Number(config.previewValue).toFixed(Math.max(0, Math.min(6, decimals)))
+  return Number(config.previewValue).toFixed(Math.max(0, Math.min(6, config.content.value.decimals)))
 }
 
 async function buildChildren(config: SubDialElementConfig): Promise<SubDialChildren> {
-  const valueColor = config.valueColor ?? config.content.value.color
-  const valueFontSize = config.valueFontSize ?? config.content.value.fontSize
+  const value = config.content.value
+  const unit = config.content.unit
   const background = new Circle({
     radius: config.radius,
     fill: config.backgroundColor,
@@ -165,22 +164,22 @@ async function buildChildren(config: SubDialElementConfig): Promise<SubDialChild
   const valueText = new Text(formatValue(config), {
     left: 0,
     top: config.radius * 0.42,
-    fill: valueColor,
-    fontSize: valueFontSize,
+    fill: value.color,
+    fontSize: value.fontSize,
     originX: 'center',
     originY: 'center',
-    visible: config.showValue ?? config.content.value.visible,
+    visible: value.visible,
     selectable: false,
     evented: false,
   })
-  const unitText = new Text(config.unit ?? config.content.unit.suffix, {
+  const unitText = new Text(unit.suffix, {
     left: 0,
     top: config.radius * 0.68,
-    fill: valueColor,
-    fontSize: Math.max(8, valueFontSize * 0.7),
+    fill: unit.color,
+    fontSize: unit.fontSize,
     originX: 'center',
     originY: 'center',
-    visible: config.showUnit ?? config.content.unit.visible,
+    visible: unit.visible,
     selectable: false,
     evented: false,
   })
@@ -210,10 +209,10 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
     angle: dataAngle + 90,
     visible,
   })
-  children.valueText.set({ text: formatValue(config), visible: (config.showValue ?? config.content.value.visible) && visible })
+  children.valueText.set({ text: formatValue(config), visible: config.content.value.visible && visible })
   children.unitText.set({
-    text: config.unit ?? config.content.unit.suffix,
-    visible: (config.showUnit ?? config.content.unit.visible) && visible,
+    text: config.content.unit.suffix,
+    visible: config.content.unit.visible && visible,
   })
 }
 
@@ -231,13 +230,10 @@ function getWidget(group: Group): SubDialWidget {
 export async function createSubDial(input: SubDialElementConfig): Promise<FabricElement> {
   const canvas = useCanvasStore().canvas
   if (!canvas) throw new Error('Canvas is not initialized, cannot add sub-dial element')
-  const defaults = subDialSchema.defaultConfig
   const config: SubDialElementConfig = {
-    ...defaults,
-    ...input,
+    ...migrateSubDialConfig(input),
     id: input.id || nanoid(),
     eleType: 'subDial',
-    pointer: { ...defaults.pointer, ...input.pointer },
   }
   const children = await buildChildren(config)
   const group = new Group(Object.values(children), {
@@ -254,7 +250,7 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
     hasControls: true,
     hasBorders: true,
     subTargetCheck: false,
-    goalProperty: config.goalProperty,
+    progressProperty: config.progressProperty,
   } as any) as Group & FabricElement
   ;(group as any).__element = { kind: 'widget', type: 'subDial', config, children } satisfies SubDialWidget
   applyControlsToObject(group)
@@ -279,21 +275,44 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   const liveRotation = Number.isFinite(Number((group as any).angle))
     ? Number((group as any).angle)
     : widget.config.rotation
-  const config: SubDialElementConfig = {
+  const config: SubDialElementConfig = migrateSubDialConfig({
     ...widget.config,
     ...patch,
+    progressProperty: patch.progressProperty || widget.config.progressProperty || patch.goalProperty,
     // Fabric may rewrite Group coordinates while children are replaced. Lock the
     // business position before rebuilding; only an explicit transform patch may change it.
     left: patch.left !== undefined ? Number(patch.left) : liveLeft,
     top: patch.top !== undefined ? Number(patch.top) : liveTop,
     rotation: patch.rotation !== undefined ? Number(patch.rotation) : liveRotation,
     pointer: { ...widget.config.pointer, ...(patch.pointer ?? {}) },
-  }
+    content: {
+      icon: { ...widget.config.content.icon, ...patch.content?.icon },
+      label: { ...widget.config.content.label, ...patch.content?.label },
+      value: {
+        ...widget.config.content.value,
+        ...(patch.showValue === undefined ? {} : { visible: patch.showValue }),
+        ...(patch.decimals === undefined ? {} : { decimals: patch.decimals }),
+        ...(patch.valueColor === undefined ? {} : { color: patch.valueColor }),
+        ...(patch.valueFontSize === undefined ? {} : { fontSize: patch.valueFontSize }),
+        ...patch.content?.value,
+      },
+      unit: {
+        ...widget.config.content.unit,
+        ...(patch.showUnit === undefined ? {} : { visible: patch.showUnit }),
+        ...(patch.unit === undefined ? {} : { suffix: patch.unit }),
+        ...patch.content?.unit,
+      },
+      goalValue: { ...widget.config.content.goalValue, ...patch.content?.goalValue },
+      percentage: { ...widget.config.content.percentage, ...patch.content?.percentage },
+    },
+  })
 
   if (patch.left !== undefined) group.set('left', patch.left)
   if (patch.top !== undefined) group.set('top', patch.top)
   if (patch.rotation !== undefined) group.set('angle', patch.rotation)
-  if (patch.goalProperty !== undefined) group.set('goalProperty', patch.goalProperty)
+  if (patch.progressProperty !== undefined || patch.goalProperty !== undefined) {
+    group.set('progressProperty', config.progressProperty)
+  }
 
   if (needsStructuralRebuild(patch)) {
     const nextChildren = await buildChildren(config)
@@ -302,10 +321,8 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
     widget.children = nextChildren
   } else {
     updateDynamicChildren(widget.children, config)
-    const valueColor = config.valueColor ?? config.content.value.color
-    const valueFontSize = config.valueFontSize ?? config.content.value.fontSize
-    widget.children.valueText.set({ fill: valueColor, fontSize: valueFontSize })
-    widget.children.unitText.set({ fill: valueColor, fontSize: Math.max(8, valueFontSize * 0.7) })
+    widget.children.valueText.set({ fill: config.content.value.color, fontSize: config.content.value.fontSize })
+    widget.children.unitText.set({ fill: config.content.unit.color, fontSize: config.content.unit.fontSize })
   }
 
   group.set({ left: config.left, top: config.top, angle: config.rotation } as any)

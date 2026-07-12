@@ -66,4 +66,10 @@ describe('subDial migration', () => {
     expect(second.content.value.y).toBe(subDialSchema.defaultConfig.content.value.y)
     expect(second.pointer.width).toBe(subDialSchema.defaultConfig.pointer.width)
   })
+
+  it('drops unknown input fields from the persistent result', () => {
+    const migrated = migrateSubDialConfig({ progressProperty: 'steps', unknownFutureField: 'leak' })
+
+    expect(migrated).not.toHaveProperty('unknownFutureField')
+  })
 })

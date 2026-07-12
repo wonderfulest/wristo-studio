@@ -8,6 +8,10 @@ function finiteOr(value: unknown, fallback: number): number {
   return Number.isFinite(number) ? number : fallback
 }
 
+function nonEmptyString(...values: unknown[]): string | undefined {
+  return values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+}
+
 export function encodeSubDial(element: Partial<FabricElement>): MigratedSubDialConfig {
   const live = element as any
   const stored = (live.__element?.config ?? {}) as Partial<SubDialElementConfig>
@@ -27,7 +31,12 @@ export function encodeSubDial(element: Partial<FabricElement>): MigratedSubDialC
     originY: live.originY ?? stored.originY ?? defaults.originY,
     // Task 4/7 will move remaining consumers to progressProperty. Until then a
     // live legacy binding is accepted as migration input but never persisted.
-    progressProperty: live.progressProperty ?? live.goalProperty ?? stored.progressProperty,
+    progressProperty: nonEmptyString(
+      live.progressProperty,
+      stored.progressProperty,
+      live.goalProperty,
+      stored.goalProperty
+    ),
     goalProperty: stored.goalProperty
   })
 }

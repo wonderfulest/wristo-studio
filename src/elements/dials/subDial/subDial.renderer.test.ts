@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { subDialSchema } from './subDial.schema'
+import { migrateSubDialConfig } from './subDial.migration'
 
 const { add, addLayer, requestRenderAll, setActiveObject, upsertElement } = vi.hoisted(() => ({
   add: vi.fn(),
@@ -148,12 +149,38 @@ describe('subDial renderer', () => {
     expect(triangle).toMatchObject({ left: 0, top: -18, height: 36 })
   })
 
-  it('keeps live and stored goalProperty in sync', async () => {
-    const dial = await createSubDial(makeConfig({ goalProperty: 'goal_1' }) as any)
+  it('migrates a legacy binding into the live and stored progress property', async () => {
+    const { progressProperty: _progressProperty, ...legacyConfig } = makeConfig({ goalProperty: 'goal_1' })
+    const dial = await createSubDial(legacyConfig as any)
 
-    expect((dial as any).goalProperty).toBe('goal_1')
-    await updateSubDial(dial, { goalProperty: 'goal_2' } as any)
-    expect((dial as any).goalProperty).toBe('goal_2')
-    expect((dial as any).__element.config.goalProperty).toBe('goal_2')
+    expect((dial as any).progressProperty).toBe('goal_1')
+    await updateSubDial(dial, { progressProperty: 'goal_2' })
+    expect((dial as any).progressProperty).toBe('goal_2')
+    expect((dial as any).__element.config.progressProperty).toBe('goal_2')
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
+  })
+
+  it('renders new-only content ahead of conflicting legacy presentation fields', async () => {
+    const config = migrateSubDialConfig({
+      progressProperty: 'steps',
+      previewValue: 12.34,
+      showValue: false,
+      showUnit: false,
+      unit: 'OLD',
+      decimals: 0,
+      valueColor: '#FF0000',
+      valueFontSize: 8,
+      content: {
+        value: { visible: true, decimals: 1, color: '#00FF00', fontSize: 18 },
+        unit: { visible: true, suffix: 'STEPS', color: '#00AA00', fontSize: 11 },
+      },
+    })
+
+    const dial = await createSubDial(config)
+    const { valueText, unitText } = (dial as any).__element.children
+
+    expect(valueText).toMatchObject({ text: '12.3', visible: true, fill: '#00FF00', fontSize: 18 })
+    expect(unitText).toMatchObject({ text: 'STEPS', visible: true, fill: '#00AA00', fontSize: 11 })
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ progressProperty: 'steps' }))
   })
 })

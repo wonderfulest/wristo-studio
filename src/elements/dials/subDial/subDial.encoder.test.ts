@@ -194,4 +194,21 @@ describe('subDial encoder', () => {
     expect(decoded.progressProperty).toBe('legacy_goal')
     expect(decoded).not.toHaveProperty('goalProperty')
   })
+
+  it('preserves a new progress binding across decode and encode', () => {
+    const live = decodeSubDial({ ...config, progressProperty: 'steps', goalProperty: 'legacy' }) as any
+    live.__element = { config: { ...config, progressProperty: 'steps', goalProperty: 'legacy' } }
+
+    expect(encodeSubDial(live).progressProperty).toBe('steps')
+  })
+
+  it('does not let an empty live binding hide a stored new binding', () => {
+    const encoded = encodeSubDial({
+      progressProperty: '',
+      goalProperty: 'legacy_live',
+      __element: { config: { ...config, progressProperty: 'steps' } },
+    } as any)
+
+    expect(encoded.progressProperty).toBe('steps')
+  })
 })
