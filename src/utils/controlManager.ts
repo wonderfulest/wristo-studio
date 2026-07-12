@@ -113,6 +113,7 @@ function renderDefaultControl(ctx: CanvasRenderingContext2D, left: number, top: 
 }
 
 type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
+type ControlSetMode = 'default' | 'resize8' | 'corner4' | 'corner4Inset'
 
 type ObjectActionDescriptor = {
   key: string
@@ -259,13 +260,89 @@ function getObjectActionOffsetY(index: number): number {
   return LAYER_ORDER_ENTRY_OFFSET - itemStep - distanceFromBottom * itemStep
 }
 
-function createLayerOrderControls(): Record<string, Control> {
+function getDefaultControlPosition(
+  dim: Point,
+  finalMatrix: TMat2D,
+  control: Pick<Control, 'x' | 'y' | 'offsetX' | 'offsetY'>,
+): Point {
+  return new Point(
+    control.x * dim.x + control.offsetX,
+    control.y * dim.y + control.offsetY,
+  ).transform(finalMatrix)
+}
+
+function getInsetActionAnchor(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+): Point {
+  const position = getDefaultControlPosition(dim, finalMatrix, {
+    x: 0.5,
+    y: 0.5,
+    offsetX: LAYER_ORDER_ENTRY_OFFSET,
+    offsetY: LAYER_ORDER_ENTRY_OFFSET,
+  })
+  const canvas = fabricObject.canvas
+  if (!canvas) return position
+
+  const margin = INSET_CORNER_CONTROL_OFFSET
+  return new Point(
+    clamp(position.x, margin, canvas.getWidth() - margin),
+    clamp(position.y, margin, canvas.getHeight() - margin * 2),
+  )
+}
+
+function insetActionEntryPositionHandler(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+): Point {
+  return getInsetActionAnchor(dim, finalMatrix, fabricObject)
+}
+
+function createInsetActionItemPositionHandler(index: number) {
+  return (
+    dim: Point,
+    finalMatrix: TMat2D,
+    fabricObject: FabricObject,
+  ): Point => {
+    const anchor = getInsetActionAnchor(dim, finalMatrix, fabricObject)
+    const canvas = fabricObject.canvas
+    const itemStep = OBJECT_ACTION_MENU_HEIGHT + OBJECT_ACTION_MENU_GAP
+    const distanceFromBottom = OBJECT_ACTIONS.length - 1 - index
+    const position = new Point(
+      anchor.x - OBJECT_ACTION_MENU_WIDTH / 2,
+      anchor.y - itemStep * (distanceFromBottom + 1),
+    )
+    if (!canvas) return position
+
+    const margin = INSET_CORNER_CONTROL_OFFSET
+    return new Point(
+      clamp(
+        position.x,
+        margin + OBJECT_ACTION_MENU_WIDTH / 2,
+        canvas.getWidth() - margin - OBJECT_ACTION_MENU_WIDTH / 2,
+      ),
+      clamp(
+        position.y,
+        margin + OBJECT_ACTION_MENU_HEIGHT / 2,
+        canvas.getHeight() - margin - OBJECT_ACTION_MENU_HEIGHT / 2,
+      ),
+    )
+  }
+}
+
+function createLayerOrderControls(mode: ControlSetMode = 'default'): Record<string, Control> {
+  const useInsetMenu = mode === 'corner4Inset'
   const controls: Record<string, Control> = {
     layerOrderControl: new Control({
       x: 0.5,
       y: 0.5,
       offsetX: LAYER_ORDER_ENTRY_OFFSET,
       offsetY: LAYER_ORDER_ENTRY_OFFSET,
+      positionHandler: useInsetMenu
+        ? insetActionEntryPositionHandler
+        : Control.prototype.positionHandler,
       cursorStyle: 'pointer',
       actionName: 'objectActions',
       getVisibility: isLayerEntryControlVisible,
@@ -286,6 +363,9 @@ function createLayerOrderControls(): Record<string, Control> {
       y: 0.5,
       offsetX: OBJECT_ACTION_MENU_OFFSET_X,
       offsetY: getObjectActionOffsetY(index),
+      positionHandler: useInsetMenu
+        ? createInsetActionItemPositionHandler(index)
+        : Control.prototype.positionHandler,
       sizeX: OBJECT_ACTION_MENU_WIDTH,
       sizeY: OBJECT_ACTION_MENU_HEIGHT,
       touchSizeX: OBJECT_ACTION_MENU_WIDTH,
@@ -409,8 +489,6 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
   return true
 }
 
-type ControlSetMode = 'default' | 'resize8' | 'corner4' | 'corner4Inset'
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
@@ -519,7 +597,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     }),
   }
 
-  const layerOrderControls = createLayerOrderControls()
+  const layerOrderControls = createLayerOrderControls(mode)
 
   if (mode === 'corner4' || mode === 'corner4Inset') {
     return { ...cornerControls, ...layerOrderControls }

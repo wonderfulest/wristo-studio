@@ -29,7 +29,7 @@ describe('applyControlsToObject', () => {
     }
   }
 
-  function getControlPosition(target: any, key: 'tl' | 'tr' | 'bl' | 'br', dim: Point) {
+  function getControlPosition(target: any, key: string, dim: Point) {
     const control = target.controls[key]
     return control.positionHandler(dim, [1, 0, 0, 1, 300, 300], target, control)
   }
@@ -105,6 +105,46 @@ describe('applyControlsToObject', () => {
 
     expect(getControlPosition(target, 'tl', new Point(800, 800))).toMatchObject({ x: -100, y: -100 })
     expect(getControlPosition(target, 'br', new Point(800, 800))).toMatchObject({ x: 700, y: 700 })
+  })
+
+  it('keeps the oversized ticks action entry above the bottom-right resize control', () => {
+    const target = createTarget('corner4Inset') as any
+    target.canvas = { getWidth: () => 600, getHeight: () => 600 }
+    applyControlsToObject(target)
+
+    expect(getControlPosition(target, 'layerOrderControl', new Point(800, 800)))
+      .toMatchObject({ x: 570, y: 540 })
+  })
+
+  it('opens the oversized ticks action menu to the left and upward', () => {
+    const target = createTarget('corner4Inset') as any
+    target.canvas = { getWidth: () => 600, getHeight: () => 600 }
+    applyControlsToObject(target)
+
+    expect(getControlPosition(target, 'sendToBackControl', new Point(800, 800)))
+      .toMatchObject({ x: 498, y: 508 })
+    expect(getControlPosition(target, 'cloneActionControl', new Point(800, 800)))
+      .toMatchObject({ x: 498, y: 348 })
+  })
+
+  it('keeps the ticks action entry attached while the object is inside the safe area', () => {
+    const target = createTarget('corner4Inset') as any
+    target.canvas = { getWidth: () => 600, getHeight: () => 600 }
+    applyControlsToObject(target)
+
+    expect(getControlPosition(target, 'layerOrderControl', new Point(200, 200)))
+      .toMatchObject({ x: 410, y: 410 })
+  })
+
+  it('keeps the regular action menu outside the object bottom-right corner', () => {
+    const target = createTarget('corner4') as any
+    target.canvas = { getWidth: () => 600, getHeight: () => 600 }
+    applyControlsToObject(target)
+
+    expect(getControlPosition(target, 'layerOrderControl', new Point(800, 800)))
+      .toMatchObject({ x: 710, y: 710 })
+    expect(getControlPosition(target, 'sendToBackControl', new Point(800, 800)))
+      .toMatchObject({ x: 782, y: 678 })
   })
 
   it('starts a clamped corner drag without changing the current scale', () => {
