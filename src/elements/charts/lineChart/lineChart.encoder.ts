@@ -1,10 +1,18 @@
 import type { FabricElement } from '@/types/element'
 import type { LineChartElementConfig } from '@/types/elements/charts'
+import { normalizeChartSize } from '@/elements/charts/chartSize'
 
 export function encodeLineChart(element: FabricElement): LineChartElementConfig {
   if (!element) throw new Error('Invalid element')
 
   const anyEl = element as any
+  const size = normalizeChartSize(
+    'lineChart',
+    Number(anyEl.width ?? 0),
+    Number(anyEl.height ?? 0),
+    Number(anyEl.scaleX ?? 1),
+    Number(anyEl.scaleY ?? 1),
+  )
 
   return {
     eleType: 'lineChart',
@@ -13,8 +21,8 @@ export function encodeLineChart(element: FabricElement): LineChartElementConfig 
     top: Math.round(anyEl.top ?? 0),
     originX: (anyEl.originX as any) ?? 'center',
     originY: (anyEl.originY as any) ?? 'center',
-    width: Math.round(anyEl.width ?? 0),
-    height: Math.round(anyEl.height ?? 0),
+    width: size.width,
+    height: size.height,
     chartProperty: anyEl.chartProperty,
     color: anyEl.color,
     lineWidth: anyEl.lineWidth,

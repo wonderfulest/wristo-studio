@@ -4,7 +4,43 @@ import type { FabricElement } from '@/types/element'
 import type { BarChartElementConfig } from '@/types/elements/charts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import { applyControlsToObject } from '@/utils/controlManager'
+import { normalizeChartSize } from '@/elements/charts/chartSize'
 import { barChartSchema } from './barChart.schema'
+import { encodeBarChart } from './barChart.encoder'
+
+function attachScaleHandler(group: any): void {
+  if (group.__chartScaleHandlerBound) return
+  group.__chartScaleHandlerBound = true
+  let committing = false
+
+  group.on('modified', () => {
+    if (committing) return
+    const scaleX = Number(group.scaleX ?? 1)
+    const scaleY = Number(group.scaleY ?? 1)
+    const hasScale = Math.abs(scaleX - 1) >= 0.001 || Math.abs(scaleY - 1) >= 0.001
+
+    committing = true
+    try {
+      if (hasScale) {
+        const size = normalizeChartSize(
+          'barChart',
+          Number(group.width ?? 0),
+          Number(group.height ?? 0),
+          scaleX,
+          scaleY,
+        )
+        group.set({ scaleX: 1, scaleY: 1 })
+        updateBarChart(group as FabricElement, size)
+      }
+
+      useElementDataStore().patchElement(String(group.id), encodeBarChart(group as FabricElement))
+    } finally {
+      committing = false
+    }
+  })
+}
 
 function resolveColors(colors: BarChartElementConfig['colors'] | undefined): [string, string, string, string, string] {
   const fallback: [string, string, string, string, string] = barChartSchema.defaultConfig.colors
@@ -110,12 +146,18 @@ export async function createBarChart(config: BarChartElementConfig): Promise<Fab
     chartProperty: config.chartProperty,
     barWidth,
     colors,
+    designerControlMode: 'resize8',
     selectable: true,
-    hasControls: false,
+    hasControls: true,
     hasBorders: true,
+    lockScalingX: false,
+    lockScalingY: false,
+    lockScalingFlip: true,
   } as any)
 
   createBaseRect(group)
+  attachScaleHandler(group)
+  applyControlsToObject(group)
   group.set({ left, top })
   group.setCoords()
   canvas.add(group)
@@ -195,5 +237,6 @@ export function updateBarChart(
     height,
   })
   group.setCoords()
+  applyControlsToObject(group)
   canvas.requestRenderAll?.()
 }

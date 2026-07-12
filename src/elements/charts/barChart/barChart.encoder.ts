@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { BarChartElementConfig } from '@/types/elements/charts'
+import { normalizeChartSize } from '@/elements/charts/chartSize'
 
 export function encodeBarChart(element: FabricElement): BarChartElementConfig {
   if (!element) {
@@ -7,6 +8,13 @@ export function encodeBarChart(element: FabricElement): BarChartElementConfig {
   }
 
   const anyEl = element as any
+  const size = normalizeChartSize(
+    'barChart',
+    Number(anyEl.width ?? 0),
+    Number(anyEl.height ?? 0),
+    Number(anyEl.scaleX ?? 1),
+    Number(anyEl.scaleY ?? 1),
+  )
 
   return {
     eleType: 'barChart',
@@ -15,8 +23,8 @@ export function encodeBarChart(element: FabricElement): BarChartElementConfig {
     top: Math.round(anyEl.top),
     originX: (anyEl.originX as any) ?? 'center',
     originY: (anyEl.originY as any) ?? 'center',
-    width: Math.round(anyEl.width),
-    height: Math.round(anyEl.height),
+    width: size.width,
+    height: size.height,
     chartProperty: anyEl.chartProperty,
     barWidth: anyEl.barWidth,
     colors: anyEl.colors,
