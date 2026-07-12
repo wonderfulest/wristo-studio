@@ -680,9 +680,13 @@ export function applyLayerOrderControlsToObject(target: FabricObject | null | un
     deleteControl: _legacyDeleteControl,
     ...currentControls
   } = existingControls
+  const mode: ControlSetMode =
+    (target as unknown as FabricLikeObject).designerControlMode === 'corner4Inset'
+      ? 'corner4Inset'
+      : 'default'
   ;(target as unknown as { controls: Record<string, Control> }).controls = {
     ...currentControls,
-    ...createLayerOrderControls(),
+    ...createLayerOrderControls(mode),
   }
 }
 

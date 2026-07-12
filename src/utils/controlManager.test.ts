@@ -147,6 +147,19 @@ describe('applyControlsToObject', () => {
       .toMatchObject({ x: 782, y: 678 })
   })
 
+  it('preserves the ticks safe action menu after generic layer controls are reapplied', () => {
+    const target = createTarget('corner4Inset') as any
+    target.canvas = { getWidth: () => 600, getHeight: () => 600 }
+
+    applyControlsToObject(target)
+    applyLayerOrderControlsToObject(target)
+
+    expect(getControlPosition(target, 'layerOrderControl', new Point(800, 800)))
+      .toMatchObject({ x: 570, y: 540 })
+    expect(getControlPosition(target, 'sendToBackControl', new Point(800, 800)))
+      .toMatchObject({ x: 498, y: 508 })
+  })
+
   it('starts a clamped corner drag without changing the current scale', () => {
     const target = createScaleTarget()
 
