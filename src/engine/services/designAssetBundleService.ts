@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
 import { getWeatherConditions } from '@/api/wristo/weather'
@@ -1020,7 +1021,8 @@ export async function restoreDesignAssetBundleFromZip(
       try {
         const fileEntry = zip.file(asset.path)
         if (!fileEntry) continue
-        const blob = await fileEntry.async('blob')
+        const archiveBlob = await fileEntry.async('blob')
+        const blob = new Blob([archiveBlob], { type: getBundleAssetMimeType(asset.path) })
         const objectUrl = URL.createObjectURL(blob)
         restoredDesignAssetUrls.add(objectUrl)
         restoredAssetUrls.set(sourceRef, objectUrl)
