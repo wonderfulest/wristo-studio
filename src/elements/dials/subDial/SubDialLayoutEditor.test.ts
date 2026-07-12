@@ -5,6 +5,7 @@ import { SubDialLayoutEditor } from './SubDialLayoutEditor'
 const keys = ['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'] as const
 
 function fixture(hidden: (typeof keys)[number] | null = null) {
+  const objects: any[] = []
   const listeners = new Map<string, Set<(event: any) => void>>()
   const canvas = {
     on: vi.fn((name: string, handler: (event: any) => void) => {
@@ -16,6 +17,7 @@ function fixture(hidden: (typeof keys)[number] | null = null) {
     getScenePoint: (event: any) => ({ x: event.x, y: event.y }),
     add: vi.fn(),
     remove: vi.fn(),
+    getObjects: () => objects,
     discardActiveObject: vi.fn(),
     requestRenderAll: vi.fn()
   }
@@ -95,8 +97,20 @@ function fixture(hidden: (typeof keys)[number] | null = null) {
   })
   const saveHistory = vi.fn()
   const runWithoutRecording = vi.fn((task: () => void) => task())
-  const editor = new SubDialLayoutEditor({ canvas: canvas as any, updateElement, saveHistory, runWithoutRecording, document: null })
-  return { canvas, group, children, updateElement, saveHistory, runWithoutRecording, editor }
+  const onError = vi.fn()
+  objects.push(group)
+  const editor = new SubDialLayoutEditor({ canvas: canvas as any, updateElement, saveHistory, runWithoutRecording, onError, document: null })
+  return { canvas, group, children, objects, updateElement, saveHistory, runWithoutRecording, onError, editor }
+}
+
+function deferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
 }
 
 describe('SubDialLayoutEditor', () => {
@@ -341,5 +355,80 @@ describe('SubDialLayoutEditor', () => {
     canvas.fire('mouse:dblclick', { target: group })
     expect(editor.isEditing()).toBe(false)
     expect(canvas.off).toHaveBeenCalled()
+  })
+
+  it('serializes rapid commits and merges each operation onto the latest config', async () => {
+    const { editor, group, updateElement, saveHistory } = fixture()
+    const first = deferred<void>()
+    updateElement.mockImplementationOnce(async (_group, patch) => {
+      await first.promise
+      group.__element.config.content = patch.content
+    })
+    editor.enter(group)
+    editor.select('value')
+    const horizontal = editor.center('horizontal')
+    const vertical = editor.center('vertical')
+    await Promise.resolve()
+    expect(updateElement).toHaveBeenCalledTimes(1)
+    first.resolve()
+    await horizontal
+    await vertical
+    expect(updateElement).toHaveBeenCalledTimes(2)
+    expect(updateElement.mock.calls[1][1].content.value).toMatchObject({ x: 0, y: 0 })
+    expect(saveHistory).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports update failures, restores preview and does not save history', async () => {
+    const { editor, group, children, updateElement, saveHistory, onError } = fixture()
+    updateElement.mockRejectedValueOnce(new Error('update failed'))
+    editor.enter(group)
+    editor.select('value')
+    editor.beginDrag({ x: 300, y: 200 })
+    editor.updateDrag({ x: 400, y: 200 }, { shiftKey: false })
+    expect(await editor.endDrag()).toBe(false)
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'update failed' }))
+    expect(saveHistory).not.toHaveBeenCalled()
+    expect(children.value).toMatchObject({ left: 20, top: 10 })
+  })
+
+  it.each(['exit', 'dispose'] as const)('does not save history when %s occurs during an update', async (action) => {
+    const { editor, group, updateElement, saveHistory } = fixture()
+    const pending = deferred<void>()
+    updateElement.mockImplementationOnce(async (_group, patch) => {
+      await pending.promise
+      group.__element.config.content = patch.content
+    })
+    editor.enter(group)
+    editor.select('value')
+    const commit = editor.center('horizontal')
+    await Promise.resolve()
+    editor[action]()
+    pending.resolve()
+    expect(await commit).toBe(false)
+    expect(saveHistory).not.toHaveBeenCalled()
+  })
+
+  it('exits when the edited group is removed or replaced during history restore', () => {
+    const { editor, group, canvas, objects } = fixture()
+    editor.enter(group)
+    objects.splice(0)
+    canvas.fire('object:removed', { target: group })
+    expect(editor.isEditing()).toBe(false)
+    objects.push(group)
+    editor.enter(group)
+    objects.splice(0, 1, { ...group })
+    canvas.fire('object:added', { target: objects[0] })
+    expect(editor.isEditing()).toBe(false)
+  })
+
+  it('refuses to commit a stale group that is no longer attached', async () => {
+    const { editor, group, objects, updateElement, saveHistory } = fixture()
+    editor.enter(group)
+    editor.select('value')
+    objects.splice(0)
+    expect(await editor.center('horizontal')).toBe(false)
+    expect(updateElement).not.toHaveBeenCalled()
+    expect(saveHistory).not.toHaveBeenCalled()
+    expect(editor.isEditing()).toBe(false)
   })
 })

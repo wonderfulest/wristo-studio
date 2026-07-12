@@ -13,6 +13,7 @@ type CanvasLike = {
   requestRenderAll?(): void
   add?(object: any): void
   remove?(object: any): void
+  getObjects?(): any[]
 }
 
 type DocumentLike = Pick<Document, 'addEventListener' | 'removeEventListener'>
@@ -22,6 +23,7 @@ export interface SubDialLayoutEditorOptions {
   updateElement: (element: any, patch: { content: SubDialContentConfig }) => void | Promise<void>
   saveHistory: () => void | Promise<void>
   runWithoutRecording?: (task: () => void) => void | Promise<void>
+  onError?: (error: Error) => void
   document?: DocumentLike | null
 }
 
@@ -33,6 +35,7 @@ export class SubDialLayoutEditor {
   private readonly saveHistory: SubDialLayoutEditorOptions['saveHistory']
   private readonly document: DocumentLike | null
   private readonly runWithoutRecording: (task: () => void) => void | Promise<void>
+  private readonly onError: (error: Error) => void
   private group: any = null
   private selectedKey: SubDialContentKey | null = null
   private outerState: InteractionState | null = null
@@ -41,6 +44,8 @@ export class SubDialLayoutEditor {
   private selectionOverlay: Rect | null = null
   private disposed = false
   private suppressSelectionExit = false
+  private interactionRevision = 0
+  private commitQueue: Promise<void> = Promise.resolve()
 
   private readonly handlers = {
     doubleClick: (event: any) => {
@@ -52,7 +57,7 @@ export class SubDialLayoutEditor {
       }
     },
     mouseDown: (event: any) => {
-      if (!this.group) return
+      if (!this.ensureAttached()) return
       const child = [...(event?.subTargets ?? [])]
         .reverse()
         .find((candidate: any) => CONTENT_KEYS.includes(candidate?.subDialContentKey) && candidate.visible !== false && this.item(candidate.subDialContentKey)?.visible !== false)
@@ -71,6 +76,10 @@ export class SubDialLayoutEditor {
       const selection = event?.selected ?? (event?.target ? [event.target] : [])
       if (!selection.includes(this.group)) this.exit()
     },
+    canvasMutation: (event: any) => {
+      if (!this.group || event?.target === this.selectionOverlay) return
+      if (event?.target === this.group || !this.isAttached(this.group)) this.exit()
+    },
     keyDown: (event: Event) => {
       this.handleKeyDown(event as KeyboardEvent)
     }
@@ -81,6 +90,7 @@ export class SubDialLayoutEditor {
     this.updateElement = options.updateElement
     this.saveHistory = options.saveHistory
     this.runWithoutRecording = options.runWithoutRecording ?? ((task) => task())
+    this.onError = options.onError ?? ((error) => console.error('[SubDialLayoutEditor]', error))
     this.document = options.document === undefined ? (typeof document === 'undefined' ? null : document) : options.document
     this.canvas.on('mouse:dblclick', this.handlers.doubleClick)
     this.canvas.on('mouse:down', this.handlers.mouseDown)
@@ -89,14 +99,18 @@ export class SubDialLayoutEditor {
     this.canvas.on('selection:created', this.handlers.selection)
     this.canvas.on('selection:updated', this.handlers.selection)
     this.canvas.on('selection:cleared', this.handlers.selection)
+    this.canvas.on('object:removed', this.handlers.canvasMutation)
+    this.canvas.on('object:added', this.handlers.canvasMutation)
+    this.canvas.on('canvas:cleared', this.handlers.canvasMutation)
     this.document?.addEventListener('keydown', this.handlers.keyDown)
   }
 
   enter(group: any): boolean {
-    if (this.disposed || group?.eleType !== 'subDial' || !group?.__element?.children?.content) return false
+    if (this.disposed || group?.eleType !== 'subDial' || !group?.__element?.children?.content || !this.isAttached(group)) return false
     if (!this.validGroupScale(group)) return false
     if (this.group === group) return true
     this.exit()
+    this.interactionRevision += 1
     this.group = group
     const names = ['selectable', 'evented', 'hasControls', 'hasBorders', 'lockMovementX', 'lockMovementY', 'lockScalingX', 'lockScalingY', 'lockRotation', 'subTargetCheck']
     this.outerState = Object.fromEntries(names.map((name) => [name, group[name]]))
@@ -127,6 +141,7 @@ export class SubDialLayoutEditor {
 
   exit(): void {
     if (!this.group) return
+    this.interactionRevision += 1
     this.cancelDragPreview()
     this.removeSelectionOverlay()
     const group = this.group
@@ -151,22 +166,24 @@ export class SubDialLayoutEditor {
   }
 
   select(key: SubDialContentKey): boolean {
-    if (!this.group || !CONTENT_KEYS.includes(key) || !this.child(key)) return false
+    if (!this.ensureAttached() || !this.group || !CONTENT_KEYS.includes(key) || !this.child(key)) return false
     this.selectedKey = key
     this.updateSelectionOverlay()
     return true
   }
 
   beginDrag(point: CanvasPoint): boolean {
-    if (!this.group || !this.validGroupScale(this.group) || !this.selectedKey || this.drag || !this.finitePoint(point)) return false
+    if (!this.ensureAttached() || !this.group || !this.validGroupScale(this.group) || !this.selectedKey || this.drag || !this.finitePoint(point)) return false
     const item = this.item(this.selectedKey)
-    if (!item) return false
-    this.drag = { startCanvas: { ...point }, startLocal: this.toLocal(point), itemStart: { x: item.x, y: item.y }, pending: { x: item.x, y: item.y } }
+    const child = this.child(this.selectedKey)
+    if (!item || !child) return false
+    const itemStart = { x: Number(child.left) / this.radius(), y: Number(child.top) / this.radius() }
+    this.drag = { startCanvas: { ...point }, startLocal: this.toLocal(point), itemStart, pending: { ...itemStart } }
     return true
   }
 
   updateDrag(point: CanvasPoint, options: { shiftKey: boolean }): boolean {
-    if (!this.group || !this.validGroupScale(this.group) || !this.selectedKey || !this.drag || !this.finitePoint(point)) return false
+    if (!this.ensureAttached() || !this.group || !this.validGroupScale(this.group) || !this.selectedKey || !this.drag || !this.finitePoint(point)) return false
     const locked = lockDragAxis(this.drag.startCanvas, point, options.shiftKey)
     const current = this.toLocal(locked)
     const target = { x: this.drag.itemStart.x + current.x - this.drag.startLocal.x, y: this.drag.itemStart.y + current.y - this.drag.startLocal.y }
@@ -193,17 +210,19 @@ export class SubDialLayoutEditor {
     }
     const position = this.drag.pending
     this.drag = null
-    await this.commitPosition(position)
-    return true
+    return this.commitPosition(position)
   }
 
   async center(axis: 'horizontal' | 'vertical' | 'both'): Promise<boolean> {
     const item = this.selectedKey ? this.item(this.selectedKey) : null
-    if (!item) return false
-    const position = { x: axis === 'horizontal' || axis === 'both' ? 0 : item.x, y: axis === 'vertical' || axis === 'both' ? 0 : item.y }
+    const child = this.selectedKey ? this.child(this.selectedKey) : null
+    if (!item || !child || !this.ensureAttached()) return false
+    const patch: Partial<CanvasPoint> = {}
+    if (axis === 'horizontal' || axis === 'both') patch.x = 0
+    if (axis === 'vertical' || axis === 'both') patch.y = 0
+    const position = { x: patch.x ?? Number(child.left) / this.radius(), y: patch.y ?? Number(child.top) / this.radius() }
     this.previewSelected(position)
-    await this.commitPosition(position)
-    return true
+    return this.commitPosition(patch)
   }
 
   async resetSelectedPosition(): Promise<boolean> {
@@ -228,6 +247,9 @@ export class SubDialLayoutEditor {
     this.canvas.off('selection:created', this.handlers.selection)
     this.canvas.off('selection:updated', this.handlers.selection)
     this.canvas.off('selection:cleared', this.handlers.selection)
+    this.canvas.off('object:removed', this.handlers.canvasMutation)
+    this.canvas.off('object:added', this.handlers.canvasMutation)
+    this.canvas.off('canvas:cleared', this.handlers.canvasMutation)
     this.document?.removeEventListener('keydown', this.handlers.keyDown)
   }
 
@@ -266,14 +288,40 @@ export class SubDialLayoutEditor {
     const scaleY = Number(group?.scaleY)
     return Number.isFinite(scaleX) && Number.isFinite(scaleY) && scaleX > 0 && scaleY > 0 && Math.abs(scaleX - scaleY) <= 1e-6
   }
-  private async commitPosition(position: CanvasPoint): Promise<void> {
+  private commitPosition(position: Partial<CanvasPoint>): Promise<boolean> {
     const group = this.group
-    if (!group || !this.selectedKey) return
-    const content = structuredClone(group.__element.config.content) as SubDialContentConfig
-    content[this.selectedKey].x = position.x
-    content[this.selectedKey].y = position.y
-    await this.updateElement(group, { content })
-    await this.saveHistory()
+    const key = this.selectedKey
+    const revision = this.interactionRevision
+    if (!group || !key) return Promise.resolve(false)
+    const operation = this.commitQueue.then(async () => {
+      if (!this.isCurrentInteraction(group, revision)) return false
+      const content = structuredClone(group.__element.config.content) as SubDialContentConfig
+      if (position.x !== undefined) content[key].x = position.x
+      if (position.y !== undefined) content[key].y = position.y
+      try {
+        await this.updateElement(group, { content })
+      } catch (error) {
+        if (this.isCurrentInteraction(group, revision)) this.previewSelected()
+        this.reportError(error)
+        return false
+      }
+      if (!this.isCurrentInteraction(group, revision)) return false
+      try {
+        await this.saveHistory()
+      } catch (error) {
+        this.reportError(error)
+        return false
+      }
+      return this.isCurrentInteraction(group, revision)
+    })
+    this.commitQueue = operation.then(
+      () => undefined,
+      () => undefined
+    )
+    return operation.catch((error) => {
+      this.reportError(error)
+      return false
+    })
   }
   private previewSelected(position?: CanvasPoint): void {
     if (!this.selectedKey) return
@@ -317,5 +365,28 @@ export class SubDialLayoutEditor {
     if (!this.selectionOverlay) return
     void this.runWithoutRecording(() => this.canvas.remove?.(this.selectionOverlay))
     this.selectionOverlay = null
+  }
+  private isAttached(group: any): boolean {
+    const objects = this.canvas.getObjects?.()
+    return !objects || objects.includes(group)
+  }
+  private ensureAttached(): boolean {
+    if (!this.group) return false
+    if (this.isAttached(this.group)) return true
+    this.exit()
+    return false
+  }
+  private isCurrentInteraction(group: any, revision: number): boolean {
+    const current = this.group === group && this.interactionRevision === revision && !this.disposed && this.isAttached(group)
+    if (!current && this.group === group && !this.isAttached(group)) this.exit()
+    return current
+  }
+  private reportError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error))
+    try {
+      this.onError(normalized)
+    } catch {
+      // Error reporting must never reject a Fabric event handler.
+    }
   }
 }
