@@ -16,6 +16,11 @@ describe('multi-selection alignment placement', () => {
     expect(groupSettingsSource).toContain('v-for="option in groupAlignOptions"')
     expect(groupSettingsSource).toContain('@click="handleGroupAlign(option.type)"')
     expect(groupSettingsSource.match(/labelKey: 'editor\.align/g)).toHaveLength(6)
+    expect(groupSettingsSource).toContain('class="group-alignment-item"')
+    expect(groupSettingsSource).toContain('grid-template-columns: repeat(6, minmax(0, 1fr))')
+    expect(groupSettingsSource).toContain('.group-alignment-button:nth-child(4)')
+    expect(groupSettingsSource).toContain(':focus-visible')
+    expect(groupSettingsSource).not.toContain('grid-template-columns: repeat(6, 28px)')
   })
 
   it('does not render alignment actions in the bottom editor bar', () => {

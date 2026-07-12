@@ -2,7 +2,7 @@
   <div class="settings-group">
     <h3>{{ t('elementSettings.dataGroupTitle') }}</h3>
     <el-form ref="formRef" :model="formModel" label-position="left" label-width="120px">
-      <el-form-item :label="t('editor.align')">
+      <el-form-item class="group-alignment-item" :label="t('editor.align')">
         <div class="group-alignment-actions">
           <el-button
             v-for="option in groupAlignOptions"
@@ -425,14 +425,62 @@ const showGoalProperty = computed(() => {
 
 .group-alignment-actions {
   display: grid;
-  grid-template-columns: repeat(6, 28px);
-  gap: 4px;
+  width: 100%;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--studio-border);
+  border-radius: 7px;
+  background: var(--studio-surface-subtle, var(--studio-surface));
 }
 
 .group-alignment-button {
-  width: 28px;
-  height: 28px;
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
   margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--studio-text-muted);
+}
+
+.group-alignment-item {
+  display: block;
+}
+
+.group-alignment-item :deep(.el-form-item__label) {
+  width: auto !important;
+  height: auto;
+  margin: 0 0 8px;
+  padding: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.group-alignment-item :deep(.el-form-item__content) {
+  width: 100%;
+  margin-left: 0 !important;
+  line-height: normal;
+}
+
+.group-alignment-button + .group-alignment-button {
+  border-left: 1px solid var(--studio-border);
+}
+
+.group-alignment-button:nth-child(4) {
+  border-left-color: var(--studio-border-strong);
+}
+
+.group-alignment-button:hover,
+.group-alignment-button:focus-visible {
+  position: relative;
+  z-index: 1;
+  color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--studio-primary-border);
+  outline: none;
 }
 </style>
