@@ -1,6 +1,15 @@
 import { Control, FabricObject, controlsUtils } from 'fabric'
 import type { Canvas } from 'fabric'
 import { nanoid } from 'nanoid'
+import { bringForward, bringToFront, sendBackward, sendToBack } from '@/engine/managers/layerManager'
+import {
+  clearExpandedLayerOrderControl,
+  getExpandedLayerOrderControlId,
+  getLayerOrderAvailability,
+  isLayerOrderControlExpanded,
+  isLayerOrderControlTarget,
+  toggleExpandedLayerOrderControl,
+} from '@/utils/layerOrderControl'
 
 type FabricLikeObject = FabricObject & {
   id?: string
@@ -44,11 +53,12 @@ export interface ControlManagerOptions {
   cloneOffset?: number
   onDelete?: (target: FabricLikeObject, canvas: Canvas) => void
   onClone?: (source: FabricLikeObject, cloned: FabricLikeObject, canvas: Canvas) => void
+  onLayerOrderChange?: (target: FabricLikeObject, canvas: Canvas) => void
 }
 
 const offset = 10
 
-const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone'>> = {
+const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone' | 'onLayerOrderChange'>> = {
   size: 6,
   stroke: '#333333',
   fill: '#ffffff',
@@ -57,7 +67,8 @@ const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClon
   cloneOffset: offset,
 }
 
-let runtimeOptions: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone'>> & Pick<ControlManagerOptions, 'onDelete' | 'onClone'> = {
+let runtimeOptions: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone' | 'onLayerOrderChange'>> &
+  Pick<ControlManagerOptions, 'onDelete' | 'onClone' | 'onLayerOrderChange'> = {
   ...DEFAULT_OPTIONS,
 }
 
@@ -99,6 +110,165 @@ function renderDeleteControl(ctx: CanvasRenderingContext2D, left: number, top: n
 
 function renderCloneControl(ctx: CanvasRenderingContext2D, left: number, top: number): void {
   renderCircle(ctx, left, top, runtimeOptions.cloneFill)
+}
+
+type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
+
+function getLayerActionEnabled(target: FabricLikeObject | undefined, action: LayerOrderAction): boolean {
+  const canvas = target?.canvas
+  if (!target || !canvas) return false
+  const availability = getLayerOrderAvailability(canvas.getObjects() as FabricLikeObject[], target)
+  return action === 'front' || action === 'forward'
+    ? availability.canMoveUp
+    : availability.canMoveDown
+}
+
+function renderLayerGlyph(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  glyph: string,
+  enabled = true,
+): void {
+  renderCircle(ctx, left, top, runtimeOptions.fill)
+  ctx.save()
+  ctx.fillStyle = enabled ? '#0f6b68' : '#94a3b8'
+  ctx.font = 'bold 11px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(glyph, left, top + 0.5)
+  ctx.restore()
+}
+
+function renderLayerOrderEntryControl(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+): void {
+  renderLayerGlyph(ctx, left, top, '▤')
+}
+
+function createLayerActionRenderer(action: LayerOrderAction, glyph: string) {
+  return (
+    ctx: CanvasRenderingContext2D,
+    left: number,
+    top: number,
+    _styleOverride: unknown,
+    target: FabricObject,
+  ): void => {
+    renderLayerGlyph(ctx, left, top, glyph, getLayerActionEnabled(target as FabricLikeObject, action))
+  }
+}
+
+function applyLayerOrderAction(target: FabricLikeObject, action: LayerOrderAction): boolean {
+  const id = target.id == null ? '' : String(target.id)
+  if (!id) return false
+  if (action === 'front') return bringToFront(id)
+  if (action === 'forward') return bringForward(id)
+  if (action === 'backward') return sendBackward(id)
+  return sendToBack(id)
+}
+
+function createLayerActionHandler(action: LayerOrderAction) {
+  return (_eventData: unknown, transform: { target?: FabricLikeObject }): boolean => {
+    const target = transform.target
+    if (!target?.canvas || !isLayerOrderControlTarget(target)) return false
+    if (!applyLayerOrderAction(target, action)) return false
+
+    const canvas = target.canvas
+    canvas.setActiveObject(target)
+    runtimeOptions.onLayerOrderChange?.(target, canvas)
+    canvas.requestRenderAll()
+    return true
+  }
+}
+
+function isLayerMenuControlVisible(target: FabricObject): boolean {
+  const layerTarget = target as FabricLikeObject
+  return Boolean(
+    isLayerOrderControlTarget(layerTarget) &&
+      layerTarget.id != null &&
+      isLayerOrderControlExpanded(String(layerTarget.id)),
+  )
+}
+
+function isLayerEntryControlVisible(target: FabricObject): boolean {
+  const layerTarget = target as FabricLikeObject
+  const visible = isLayerOrderControlTarget(layerTarget)
+  if (
+    !visible &&
+    layerTarget.id != null &&
+    getExpandedLayerOrderControlId() === String(layerTarget.id)
+  ) {
+    clearExpandedLayerOrderControl()
+  }
+  return visible
+}
+
+function createLayerOrderControls(): Record<string, Control> {
+  return {
+    layerOrderControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: offset * 2,
+      cursorStyle: 'pointer',
+      actionName: 'layerOrder',
+      getVisibility: isLayerEntryControlVisible,
+      mouseUpHandler: (_eventData, transform) => {
+        const target = transform.target as FabricLikeObject | undefined
+        if (!target?.canvas || target.id == null || !isLayerOrderControlTarget(target)) return false
+        toggleExpandedLayerOrderControl(String(target.id))
+        target.canvas.requestRenderAll()
+        return true
+      },
+      render: renderLayerOrderEntryControl,
+    }),
+    bringToFrontControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 6,
+      cursorStyle: 'pointer',
+      actionName: 'bringToFront',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('front'),
+      render: createLayerActionRenderer('front', '⇈'),
+    }),
+    bringForwardControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 4,
+      cursorStyle: 'pointer',
+      actionName: 'bringForward',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('forward'),
+      render: createLayerActionRenderer('forward', '↑'),
+    }),
+    sendBackwardControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: -offset * 2,
+      cursorStyle: 'pointer',
+      actionName: 'sendBackward',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('backward'),
+      render: createLayerActionRenderer('backward', '↓'),
+    }),
+    sendToBackControl: new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: offset * 2,
+      offsetY: 0,
+      cursorStyle: 'pointer',
+      actionName: 'sendToBack',
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: createLayerActionHandler('back'),
+      render: createLayerActionRenderer('back', '⇊'),
+    }),
+  }
 }
 
 async function cloneFabricObject(target: FabricLikeObject): Promise<FabricLikeObject | null> {
@@ -247,10 +417,13 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     }),
   }
 
-  if (mode === 'corner4') return cornerControls
+  const layerOrderControls = createLayerOrderControls()
+
+  if (mode === 'corner4') return { ...cornerControls, ...layerOrderControls }
 
   const base: Record<string, Control> = {
     ...cornerControls,
+    ...layerOrderControls,
     cloneControl: new Control({
       x: 0.5,
       y: -0.5,
@@ -331,6 +504,15 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
     cornerStrokeColor: runtimeOptions.stroke,
     borderColor: '#0f6b68',
   })
+}
+
+export function applyLayerOrderControlsToObject(target: FabricObject | null | undefined): void {
+  if (!target) return
+  const currentControls = (target as unknown as { controls?: Record<string, Control> }).controls ?? {}
+  ;(target as unknown as { controls: Record<string, Control> }).controls = {
+    ...currentControls,
+    ...createLayerOrderControls(),
+  }
 }
 
 export function applyControlManager(options: ControlManagerOptions = {}): void {

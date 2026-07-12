@@ -140,65 +140,73 @@ export function applyOrder(idsInOrder: string[]): void {
   syncLayersFromCanvas()
 }
 
-export function bringToFront(id: string): void {
+export function bringToFront(id: string): boolean {
   const canvas = useCanvasStore().canvas
-  if (!canvas) return
+  if (!canvas) return false
 
   const obj = resolveCanvasObjectById(String(id))
-  if (!obj) return
-  if (isFixedLayer(obj)) return
+  if (!obj) return false
+  if (isFixedLayer(obj)) return false
 
   normalizeFixedLayers(canvas)
+  const objects = (canvas.getObjects?.() || []) as any[]
+  if (objects.indexOf(obj) === objects.length - 1) return false
   canvas.bringObjectToFront?.(obj as any)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
+  return true
 }
 
-export function sendToBack(id: string): void {
+export function sendToBack(id: string): boolean {
   const canvas = useCanvasStore().canvas
-  if (!canvas) return
+  if (!canvas) return false
 
   const obj = resolveCanvasObjectById(String(id))
-  if (!obj) return
-  if (isFixedLayer(obj)) return
+  if (!obj) return false
+  if (isFixedLayer(obj)) return false
 
   const fixedCount = normalizeFixedLayers(canvas)
+  const objects = (canvas.getObjects?.() || []) as any[]
+  if (objects.indexOf(obj) === fixedCount) return false
   canvas.moveObjectTo?.(obj as any, fixedCount)
 
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
+  return true
 }
 
-export function bringForward(id: string): void {
+export function bringForward(id: string): boolean {
   const canvas = useCanvasStore().canvas
-  if (!canvas) return
+  if (!canvas) return false
 
   const obj = resolveCanvasObjectById(String(id))
-  if (!obj) return
-  if (isFixedLayer(obj)) return
+  if (!obj) return false
+  if (isFixedLayer(obj)) return false
 
   normalizeFixedLayers(canvas)
   const objects = (canvas.getObjects?.() || []) as any[]
   const currentIndex = objects.indexOf(obj)
-  if (currentIndex < 0 || currentIndex >= objects.length - 1) return
+  if (currentIndex < 0 || currentIndex >= objects.length - 1) return false
   canvas.moveObjectTo?.(obj as any, currentIndex + 1)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
+  return true
 }
 
-export function sendBackward(id: string): void {
+export function sendBackward(id: string): boolean {
   const canvas = useCanvasStore().canvas
-  if (!canvas) return
+  if (!canvas) return false
 
   const obj = resolveCanvasObjectById(String(id))
-  if (!obj) return
-  if (isFixedLayer(obj)) return
+  if (!obj) return false
+  if (isFixedLayer(obj)) return false
 
   const fixedCount = normalizeFixedLayers(canvas)
   const objects = (canvas.getObjects?.() || []) as any[]
   const currentIndex = objects.indexOf(obj)
-  if (currentIndex <= fixedCount) return
+  if (currentIndex <= fixedCount) return false
   canvas.moveObjectTo?.(obj as any, currentIndex - 1)
   canvas.requestRenderAll?.()
   syncLayersFromCanvas()
+  return true
 }

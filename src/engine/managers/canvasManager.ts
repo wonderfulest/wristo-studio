@@ -5,6 +5,7 @@ import { initCenteringGuidelines } from '@/lib/centering_guidelines'
 import {
   applyControlManager,
   applyControlsToObject,
+  applyLayerOrderControlsToObject,
   DESIGNER_CONTROL_TYPES,
 } from '@/utils/controlManager'
 import {
@@ -15,6 +16,11 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import type { Canvas as FabricCanvas } from 'fabric'
 import { isDefaultBackgroundElement } from '@/elements/decoration/background/background.constants'
+import {
+  clearExpandedLayerOrderControl,
+  getExpandedLayerOrderControlId,
+  getLayerOrderControlTitle,
+} from '@/utils/layerOrderControl'
 
 export interface CanvasManagerDeps {
   baseStore: any
@@ -50,6 +56,7 @@ function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | nu
 }
 
 function clearCanvasSelection(layerStore: any, canvasStore: any, canvas: FabricCanvas): void {
+  clearExpandedLayerOrderControl()
   canvas.discardActiveObject?.()
   canvas.requestRenderAll?.()
   canvasStore.clearActiveIds()
@@ -115,6 +122,10 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, (cloned as any)?.canvas as FabricCanvas | undefined)
       historyStore.saveState('clone:control', { coalesceIfSameFabric: true })
     },
+    onLayerOrderChange: (_target, canvas) => {
+      syncSelectionIdsFromCanvas(canvasStore, canvas as FabricCanvas)
+      historyStore.saveState('layer:reorder', { captureConfig: true })
+    },
   })
 
   const canvas = new Canvas(canvasElement, {
@@ -147,6 +158,13 @@ export function initCanvasManager(
 
   // 选择事件同步到 canvasStore
   canvas.on({
+    'mouse:move': (event) => {
+      const target = (event as unknown as { target?: { __corner?: unknown } }).target
+      canvas.upperCanvasEl.title = getLayerOrderControlTitle(target?.__corner)
+    },
+    'mouse:out': () => {
+      canvas.upperCanvasEl.title = ''
+    },
     'mouse:down': (event) => {
       const target = (event as unknown as { target?: unknown }).target
       if (target && !isBackgroundElement(target) && !isDefaultBackgroundElement(target)) return
@@ -155,6 +173,10 @@ export function initCanvasManager(
     'selection:created': () => {
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
       const active = canvas.getActiveObject() as any
+      const activeId = active?.id == null ? null : String(active.id)
+      if (getExpandedLayerOrderControlId() !== activeId) {
+        clearExpandedLayerOrderControl()
+      }
       console.log('[canvas-selection] created', {
         activeType: active?.type,
         activeId: active?.id,
@@ -169,6 +191,7 @@ export function initCanvasManager(
     },
     'selection:updated': () => {
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
+      clearExpandedLayerOrderControl()
       const active = canvas.getActiveObject() as any
       console.log('[canvas-selection] updated', {
         activeType: active?.type,
@@ -183,6 +206,7 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:cleared': () => {
+      clearExpandedLayerOrderControl()
       console.log('[canvas-selection] cleared')
       canvasStore.clearActiveIds()
       layerStore.clearSelected()
@@ -238,6 +262,7 @@ export function initCanvasManager(
       if (shouldApplyDesignerControls(target)) {
         applyControlsToObject(target)
       }
+      applyLayerOrderControlsToObject(target)
       discoverAndRegisterCanvasProps([target])
     } else {
       const objects = canvas.getObjects() as any[]
@@ -247,6 +272,7 @@ export function initCanvasManager(
         if (shouldApplyDesignerControls(obj)) {
           applyControlsToObject(obj as any)
         }
+        applyLayerOrderControlsToObject(obj as any)
       })
       discoverAndRegisterCanvasProps(objects as unknown[])
     }
@@ -254,6 +280,9 @@ export function initCanvasManager(
 
   canvas.on('object:removed', (e) => {
     const target = (e as unknown as { target?: unknown }).target as any
+    if (target?.id != null && getExpandedLayerOrderControlId() === String(target.id)) {
+      clearExpandedLayerOrderControl()
+    }
     elementManager.unregisterElementInstance(target as any)
   })
 
@@ -275,6 +304,10 @@ export function disposeCanvasManager(): void {
 
   emitter.off('canvas-undo')
   emitter.off('canvas-redo')
+  clearExpandedLayerOrderControl()
+  if (fabricCanvas?.upperCanvasEl) {
+    fabricCanvas.upperCanvasEl.title = ''
+  }
 
   // 此处暂不销毁 fabricCanvas，由上层（如 baseStore）按需要处理
   fabricCanvas = null
