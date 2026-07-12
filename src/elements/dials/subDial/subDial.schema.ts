@@ -21,7 +21,7 @@ export const subDialSchema: SubDialElementSchema = {
     originY: 'center',
     radius: 48,
     rotation: 0,
-    dataProperty: '',
+    goalProperty: '',
     rangeMode: 'percentage',
     minValue: 0,
     maxValue: 100,

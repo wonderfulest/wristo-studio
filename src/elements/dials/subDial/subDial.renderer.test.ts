@@ -131,4 +131,29 @@ describe('subDial renderer', () => {
     expect(image.left).toBe(0)
     expect(image.top).toBeCloseTo(-13.44)
   })
+
+  it('rotates a triangle pointer around the local dial center', async () => {
+    const dial = await createSubDial(makeConfig({
+      pointer: {
+        ...subDialSchema.defaultConfig.pointer,
+        style: 'triangle',
+        lengthRatio: 0.75,
+      },
+    }) as any)
+    const pointer = (dial as any).__element.children.pointer
+    const triangle = pointer.getObjects().find((child: any) => child.height === 36)
+
+    expect(pointer).toMatchObject({ left: 0, top: 0, originX: 'center', originY: 'center' })
+    expect(pointer.angle).toBe(360)
+    expect(triangle).toMatchObject({ left: 0, top: -18, height: 36 })
+  })
+
+  it('keeps live and stored goalProperty in sync', async () => {
+    const dial = await createSubDial(makeConfig({ goalProperty: 'goal_1' }) as any)
+
+    expect((dial as any).goalProperty).toBe('goal_1')
+    await updateSubDial(dial, { goalProperty: 'goal_2' } as any)
+    expect((dial as any).goalProperty).toBe('goal_2')
+    expect((dial as any).__element.config.goalProperty).toBe('goal_2')
+  })
 })

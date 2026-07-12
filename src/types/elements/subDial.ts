@@ -22,7 +22,7 @@ export interface SubDialElementConfig extends BaseElementConfig {
   eleType: 'subDial'
   radius: number
   rotation: number
-  dataProperty: string
+  goalProperty: string
   rangeMode: SubDialRangeMode
   minValue: number
   maxValue: number

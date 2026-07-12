@@ -25,6 +25,7 @@ export function encodeSubDial(element: Partial<FabricElement>): SubDialElementCo
     radius: baseRadius * scale,
     originX: live.originX ?? stored.originX ?? defaults.originX,
     originY: live.originY ?? stored.originY ?? defaults.originY,
+    goalProperty: String(live.goalProperty ?? stored.goalProperty ?? defaults.goalProperty),
     pointer: {
       ...defaults.pointer,
       ...stored.pointer,

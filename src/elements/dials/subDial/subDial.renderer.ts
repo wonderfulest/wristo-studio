@@ -92,12 +92,31 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
   }
 
   if (pointer.style === 'triangle') {
-    return new Triangle({
+    const pivotAnchor = new Circle({
+      left: 0,
+      top: 0,
+      radius: length,
+      fill: 'transparent',
+      opacity: 0,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      evented: false,
+    })
+    const triangle = new Triangle({
       left: 0,
       top: -length / 2,
       width: Math.max(2, pointer.width * 2),
       height: length,
       fill: pointer.color,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      evented: false,
+    })
+    return new Group([pivotAnchor, triangle], {
+      left: 0,
+      top: 0,
       originX: 'center',
       originY: 'center',
       selectable: false,
@@ -194,7 +213,7 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
 
 function needsStructuralRebuild(patch: Partial<SubDialElementConfig>): boolean {
   return Object.keys(patch).some((key) => ![
-    'previewValue', 'dataProperty', 'rangeMode', 'minValue', 'maxValue', 'outOfRangeBehavior',
+    'previewValue', 'goalProperty', 'rangeMode', 'minValue', 'maxValue', 'outOfRangeBehavior',
     'showValue', 'showUnit', 'unit', 'decimals', 'valueColor', 'valueFontSize', 'left', 'top', 'rotation',
   ].includes(key))
 }
@@ -229,6 +248,7 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
     hasControls: true,
     hasBorders: true,
     subTargetCheck: false,
+    goalProperty: config.goalProperty,
   } as any) as Group & FabricElement
   ;(group as any).__element = { kind: 'widget', type: 'subDial', config, children } satisfies SubDialWidget
   applyControlsToObject(group)
@@ -267,6 +287,7 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   if (patch.left !== undefined) group.set('left', patch.left)
   if (patch.top !== undefined) group.set('top', patch.top)
   if (patch.rotation !== undefined) group.set('angle', patch.rotation)
+  if (patch.goalProperty !== undefined) group.set('goalProperty', patch.goalProperty)
 
   if (needsStructuralRebuild(patch)) {
     const nextChildren = await buildChildren(config)

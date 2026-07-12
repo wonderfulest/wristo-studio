@@ -163,6 +163,7 @@ import {
 } from '@/engine/managers/compoundShortcutOrchestrator'
 import { buildDataFieldDrafts, buildGoalArcDrafts, buildGoalBarDrafts } from '@/engine/managers/shortcutCompoundDrafts'
 import { elementConfigs } from '@/elements/schemaMap'
+import { getOrCreateAvailableMetricProperty } from '@/elements/common/settings/propertyBinding'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
@@ -797,6 +798,12 @@ const handleAddElement = async (category: string, elementType: string, overrides
           trackCreatedProperty(nextKey)
           config = { ...config, chartProperty: nextKey }
         }
+      }
+
+      if (resolvedElementType === 'subDial' && !String(config.goalProperty ?? '').trim()) {
+        const binding = getOrCreateAvailableMetricProperty('goal')
+        if (binding.created) trackCreatedProperty(binding.key)
+        config = { ...config, goalProperty: binding.key }
       }
 
       config = scaleShortcutDraftConfig(config)

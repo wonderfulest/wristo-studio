@@ -3,7 +3,7 @@
     <el-form label-position="top">
       <section class="settings-card">
         <h3>{{ t('subDial.data') }}</h3>
-        <DataPropertyField :model-value="model.dataProperty" :required="false" @change="patch({ dataProperty: $event })" />
+        <GoalPropertyField :model-value="model.goalProperty" :required="false" @change="patch({ goalProperty: $event })" />
         <el-form-item :label="t('subDial.rangeMode')">
           <el-segmented :model-value="model.rangeMode" :options="rangeOptions" @change="changeRangeMode" />
         </el-form-item>
@@ -134,7 +134,7 @@ import { ElMessage } from 'element-plus'
 import * as elementManager from '@/engine/managers/elementManager'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
-import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import type { SubDialElementConfig, SubDialPointerConfig, SubDialRangeMode } from '@/types/elements/subDial'
 import { useI18n } from '@/i18n'
 import { buildSubDialPointerAssetPatch, buildSubDialRangePatch } from './subDial.panelModel'

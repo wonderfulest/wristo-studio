@@ -11,7 +11,7 @@ const config: SubDialElementConfig = {
   originY: 'center',
   radius: 40,
   rotation: 5,
-  dataProperty: ':FIELD_TYPE_BATTERY',
+  goalProperty: 'goal_1',
   rangeMode: 'percentage',
   minValue: 0,
   maxValue: 100,
@@ -92,5 +92,18 @@ describe('subDial encoder', () => {
       scaleY: 1,
       eleType: 'subDial',
     })
+  })
+
+  it('prefers live goalProperty over stale widget config', () => {
+    const element = {
+      id: 'sub-dial-1',
+      goalProperty: 'goal_live',
+      scaleX: 1,
+      __element: { config: { ...config, goalProperty: 'goal_stale' } },
+    }
+
+    const encoded = encodeSubDial(element as any)
+    expect(encoded.goalProperty).toBe('goal_live')
+    expect(encoded).not.toHaveProperty('dataProperty')
   })
 })

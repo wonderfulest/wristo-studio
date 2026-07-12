@@ -181,7 +181,7 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
     return
   }
 
-  if (['goalBar', 'goalArc'].includes(elementType)) {
+  if (['goalBar', 'goalArc', 'subDial'].includes(elementType)) {
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
     if (!curGoalKey) {
       const unusedKey = getUnusedMetricPropertyKey('goal')
