@@ -44,24 +44,32 @@ vi.mock('fabric', () => {
     static fromURL = vi.fn(async () => new FabricImage({ width: 100, height: 200 }))
   }
   class Group extends FabricObject {
-    objects: any[]
+    _objects: any[]
+    layoutManager = { unsubscribeTargets: vi.fn(), subscribeTargets: vi.fn() }
     constructor(objects: any[] = [], options = {}) {
       super(options)
-      this.objects = [...objects]
+      this._objects = [...objects]
     }
     getObjects() {
-      return this.objects
+      return this._objects
     }
+    enterGroup(child: any) {
+      child.group = this
+    }
+    exitGroup(child: any) {
+      child.group = undefined
+    }
+    triggerLayout() {}
     add(child: any) {
-      this.objects.push(child)
+      this._objects.push(child)
       if (this.eleType === 'subDial') this.set({ left: 0, top: 0 })
     }
     remove(child: any) {
-      this.objects = this.objects.filter((item) => item !== child)
+      this._objects = this._objects.filter((item) => item !== child)
       if (this.eleType === 'subDial') this.set({ left: 0, top: 0 })
     }
     insertAt(index: number, ...children: any[]) {
-      this.objects.splice(index, 0, ...children)
+      this._objects.splice(index, 0, ...children)
       return children.length
     }
   }

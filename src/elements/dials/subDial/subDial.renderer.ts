@@ -274,10 +274,18 @@ function flattenChildren(children: SubDialChildren): FabricObject[] {
   return [...Object.values(children.static), ...Object.values(children.content)]
 }
 
-function replaceChild(group: Group, current: FabricObject, replacement: FabricObject): void {
-  const index = group.getObjects().indexOf(current)
-  group.remove(current)
-  group.insertAt(Math.max(0, index), replacement)
+export function atomicReplaceGroupObjects(group: Group, objects: FabricObject[]): void {
+  const current = group.getObjects()
+  const removed = current.filter((object) => !objects.includes(object))
+  const added = objects.filter((object) => !current.includes(object))
+  const layoutManager = group.layoutManager
+
+  layoutManager.unsubscribeTargets({ target: group, targets: removed })
+  removed.forEach((object) => group.exitGroup(object, true))
+  ;(group as any)._objects = [...objects]
+  added.forEach((object) => group.enterGroup(object, false))
+  layoutManager.subscribeTargets({ target: group, targets: added })
+  group.triggerLayout({ bubbles: false })
 }
 
 function patchHas(patch: Partial<SubDialElementConfig>, keys: string[]): boolean {
@@ -370,9 +378,11 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   }
 
   const children = widget.children
+  const nextStatic = { ...children.static }
+  let staticChanged = false
   const replaceStatic = (key: keyof SubDialChildren['static'], replacement: FabricObject) => {
-    replaceChild(group, children.static[key], replacement)
-    ;(children.static as any)[key] = replacement
+    nextStatic[key] = replacement as never
+    staticChanged = true
   }
   const radiusChanged = hasOwn(patch, 'radius')
   if (radiusChanged || patchHas(patch, ['backgroundColor', 'backgroundOpacity'])) {
@@ -430,6 +440,10 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
         evented: false
       })
     )
+  }
+  if (staticChanged) {
+    children.static = nextStatic
+    atomicReplaceGroupObjects(group, flattenChildren(children))
   }
   updateDynamicChildren(children, config)
 
