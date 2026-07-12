@@ -4,6 +4,11 @@ import type { SubDialElementConfig } from '@/types/elements/subDial'
 import { decodeSubDial, encodeSubDial } from './subDial.encoder'
 import SubDialPanel from './subDial.panel.vue'
 import { createSubDial, updateSubDial } from './subDial.renderer'
+import { SubDialLayoutEditor, type SubDialLayoutEditorOptions } from './SubDialLayoutEditor'
+
+export function installSubDialLayoutEditor(options: SubDialLayoutEditorOptions): SubDialLayoutEditor {
+  return new SubDialLayoutEditor(options)
+}
 
 export default function registerSubDialPlugin() {
   registerElement('subDial', {

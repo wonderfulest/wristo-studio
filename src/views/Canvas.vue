@@ -24,7 +24,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { addElement } from '@/engine/managers/elementManager'
+import { addElement, updateElement } from '@/engine/managers/elementManager'
 import { initCanvasManager, disposeCanvasManager } from '@/engine/managers/canvasManager'
 import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoomManager'
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
@@ -44,6 +44,7 @@ import type { ImageElementConfig } from '@/types/elements/image'
 import { imageSchema } from '@/elements/decoration/image/image.schema'
 import { useI18n } from '@/i18n'
 import { isPngFile, isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
+import { installSubDialLayoutEditor } from '@/elements/dials/subDial/subDial.plugin'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -63,6 +64,7 @@ const isFileDragOver = ref(false)
 const isUploadingDroppedImage = ref(false)
 let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
+let disposeSubDialLayoutEditor: (() => void) | null = null
 
 const watchSize = computed(() => designStore.designSpec.width)
 const watchWidth = computed(() => designStore.designSpec.width)
@@ -94,6 +96,18 @@ onMounted(() => {
     zoomManager: null,
   })
 
+  const canvas = baseStore.canvas
+  if (canvas) {
+    const editor = installSubDialLayoutEditor({
+      canvas: canvas as any,
+      updateElement: (element, patch) => updateElement(element, patch),
+      saveHistory: () => {
+        historyStore.saveState('subDial:content-layout')
+      },
+    })
+    disposeSubDialLayoutEditor = () => editor.dispose()
+  }
+
   // 绑定缩放管理器
   zoomManager = attachZoomManager({
     baseStore,
@@ -121,6 +135,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  disposeSubDialLayoutEditor?.()
+  disposeSubDialLayoutEditor = null
   getDataSimulatorEngine().stop()
   historyManager.dispose()
   disposeCanvasManager()
