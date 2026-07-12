@@ -362,6 +362,19 @@ describe('legacy polygon migration and config normalization', () => {
 
 describe('clipGoalBarPolygon', () => {
   it.each([
+    ['leftToRight', { minX: 0, maxX: 0.5, minY: 0, maxY: 1 }],
+    ['rightToLeft', { minX: 0.5, maxX: 1, minY: 0, maxY: 1 }],
+    ['topToBottom', { minX: 0, maxX: 1, minY: 0, maxY: 0.5 }],
+    ['bottomToTop', { minX: 0, maxX: 1, minY: 0.5, maxY: 1 }],
+  ] as const)('clips normalized points %s', (direction, expected) => {
+    const square = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
+    const clipped = clipGoalBarPolygon(square, 0.5, direction)
+    const xs = clipped.map((point) => point.x)
+    const ys = clipped.map((point) => point.y)
+    expect({ minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }).toEqual(expected)
+  })
+
+  it.each([
     ['left', 0, []],
     [
       'left',

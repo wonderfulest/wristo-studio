@@ -83,27 +83,18 @@
         />
       </el-form-item>
 
-      <el-form-item :label="t('elementSettings.progressAlign')">
-        <div class="progress-align-control" role="group" :aria-label="t('elementSettings.progressAlign')">
-          <button
-            type="button"
-            class="progress-align-option"
-            :class="{ 'is-active': currentModel.progressAlign !== 'right' }"
-            @click="setProgressAlign('left')"
-          >
-            <span class="progress-align-preview is-left" aria-hidden="true"><i /></span>
-            <span>{{ t('elementSettings.left') }}</span>
-          </button>
-          <button
-            type="button"
-            class="progress-align-option"
-            :class="{ 'is-active': currentModel.progressAlign === 'right' }"
-            @click="setProgressAlign('right')"
-          >
-            <span class="progress-align-preview is-right" aria-hidden="true"><i /></span>
-            <span>{{ t('elementSettings.right') }}</span>
-          </button>
-        </div>
+      <el-form-item :label="t('elementSettings.progressDirection')">
+        <el-select
+          :model-value="currentModel.progressDirection"
+          @change="setProgressDirection"
+        >
+          <el-option
+            v-for="direction in GOAL_BAR_DIRECTIONS"
+            :key="direction"
+            :label="t(`elementSettings.${direction}`)"
+            :value="direction"
+          />
+        </el-select>
       </el-form-item>
 
       <el-form-item>
@@ -224,6 +215,7 @@ import { ElMessage } from 'element-plus'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
 import type { FabricElement } from '@/types/element'
+import { GOAL_BAR_DIRECTIONS, type GoalBarProgressDirection } from './goalBar.direction'
 import GoalBarPolygonMiniEditor from './GoalBarPolygonMiniEditor.vue'
 import {
   normalizeGoalBarPolygonConfig,
@@ -387,9 +379,9 @@ const handleProgressChange = async (val: number) => {
   await applyUpdate({ progress: val })
 }
 
-const setProgressAlign = async (value: 'left' | 'right') => {
-  ;(currentModel.value as any).progressAlign = value
-  await applyUpdate({ progressAlign: value })
+const setProgressDirection = async (value: GoalBarProgressDirection) => {
+  ;(currentModel.value as any).progressDirection = value
+  await applyUpdate({ progressDirection: value })
 }
 
 const clearPolygonEditor = () => {
@@ -553,7 +545,7 @@ const updateElement = async () => {
       segments: Math.max(1, Math.floor(Number(model.segments ?? segmentsLocal.value))),
       gap: Math.max(0, Number(model.gap ?? gapLocal.value)),
       padding: model.padding,
-      progressAlign: model.progressAlign,
+      progressDirection: model.progressDirection,
       color: model.color,
       bgColor: model.bgColor,
       borderWidth: model.borderWidth,
@@ -571,7 +563,7 @@ const updateElement = async () => {
       padding: model.padding,
       originX: 'center',
       originY: 'center',
-      progressAlign: model.progressAlign,
+      progressDirection: model.progressDirection,
       color: model.color,
       bgColor: model.bgColor,
       goalProperty: model.goalProperty,

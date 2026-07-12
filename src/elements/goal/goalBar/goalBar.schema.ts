@@ -1,4 +1,5 @@
 import type { ElementType } from '@/types/element'
+import type { GoalBarProgressDirection } from './goalBar.direction'
 
 export type GoalBarElementSchema = {
   type: ElementType
@@ -17,7 +18,7 @@ export type GoalBarElementSchema = {
     padding: number
     borderWidth: number
     borderColor: string
-    progressAlign: 'left' | 'right'
+    progressDirection: GoalBarProgressDirection
     shape: 'rectangle' | 'customPolygon'
     polygonPoints: Array<{ x: number; y: number }>
     gradientEnabled: boolean
@@ -45,7 +46,7 @@ export const goalBarSchema: GoalBarElementSchema = {
     padding: 2,
     borderWidth: 0,
     borderColor: '#FFFFFF',
-    progressAlign: 'left',
+    progressDirection: 'leftToRight',
     shape: 'rectangle',
     polygonPoints: [],
     gradientEnabled: false,

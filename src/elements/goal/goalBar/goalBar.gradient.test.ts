@@ -2,6 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { createGoalBarGradientSpec } from './goalBar.gradient'
 
 describe('goalBar gradient', () => {
+  it.each([
+    ['leftToRight', { x1: 0, y1: 0, x2: 100, y2: 0 }],
+    ['rightToLeft', { x1: 100, y1: 0, x2: 0, y2: 0 }],
+    ['topToBottom', { x1: 0, y1: 0, x2: 0, y2: 40 }],
+    ['bottomToTop', { x1: 0, y1: 40, x2: 0, y2: 0 }],
+  ] as const)('orients %s gradient', (progressDirection, coords) => {
+    const spec = createGoalBarGradientSpec({
+      enabled: true,
+      startColor: '#000000',
+      endColor: '#FFFFFF',
+      progressDirection,
+      width: 100,
+      height: 40,
+    })
+    expect(spec?.coords).toEqual(coords)
+  })
+
   it('runs from left to right for left-aligned progress', () => {
     const spec = createGoalBarGradientSpec({
       enabled: true,
