@@ -169,6 +169,57 @@ describe('subDial renderer', () => {
     expect(value.top).toBeCloseTo(-19.2)
   })
 
+  it('applies each content item layout and presentation contract', async () => {
+    const base = subDialSchema.defaultConfig.content
+    const content = {
+      icon: { ...base.icon, visible: true, x: -0.4, y: -0.6, rotation: 1, scale: 1.1, color: '#111111', size: 17, displayType: 'amoled' },
+      label: { ...base.label, visible: false, x: -0.3, y: -0.2, rotation: 2, scale: 1.2, color: '#222222', fontSize: 12, textAlign: 'left', prefix: '[', suffix: ']' },
+      value: { ...base.value, visible: true, x: -0.1, y: 0.1, rotation: 3, scale: 1.3, color: '#333333', fontSize: 13, textAlign: 'right', prefix: '$', suffix: 'v', decimals: 1 },
+      unit: { ...base.unit, visible: true, x: 0.1, y: 0.2, rotation: 4, scale: 1.4, color: '#444444', fontSize: 14, textAlign: 'center', prefix: '<', suffix: 'km' },
+      goalValue: { ...base.goalValue, visible: true, x: 0.3, y: 0.4, rotation: 5, scale: 1.5, color: '#555555', fontSize: 15, textAlign: 'left', prefix: 'G', suffix: '!' },
+      percentage: { ...base.percentage, visible: true, x: 0.5, y: 0.6, rotation: 6, scale: 1.6, color: '#666666', fontSize: 16, textAlign: 'right', prefix: 'P', suffix: '%' }
+    }
+    const dial = await createSubDial(makeConfig({ progressProperty: 'steps', content }) as any)
+    const rendered = (dial as any).__element.children.content
+
+    expect(rendered.icon).toMatchObject({ text: '●', visible: true, angle: 1, scaleX: 1.1, scaleY: 1.1, fill: '#111111', fontSize: 17, subDialIconDisplayType: 'amoled' })
+    expect(rendered.icon.left).toBeCloseTo(-19.2)
+    expect(rendered.icon.top).toBeCloseTo(-28.8)
+    const expected = {
+      label: { text: '[steps]', visible: false, x: -14.4, y: -9.6, angle: 2, scale: 1.2, color: '#222222', fontSize: 12, align: 'left' },
+      value: { text: '$50.0v', visible: true, x: -4.8, y: 4.8, angle: 3, scale: 1.3, color: '#333333', fontSize: 13, align: 'right' },
+      unit: { text: '<km', visible: true, x: 4.8, y: 9.6, angle: 4, scale: 1.4, color: '#444444', fontSize: 14, align: 'center' },
+      goalValue: { text: 'G100!', visible: true, x: 14.4, y: 19.2, angle: 5, scale: 1.5, color: '#555555', fontSize: 15, align: 'left' },
+      percentage: { text: 'P50%', visible: true, x: 24, y: 28.8, angle: 6, scale: 1.6, color: '#666666', fontSize: 16, align: 'right' }
+    }
+    for (const [key, item] of Object.entries(expected)) {
+      const child = rendered[key]
+      expect(child).toMatchObject({
+        text: item.text,
+        visible: item.visible,
+        angle: item.angle,
+        scaleX: item.scale,
+        scaleY: item.scale,
+        fill: item.color,
+        fontSize: item.fontSize,
+        textAlign: item.align
+      })
+      expect(child.left).toBeCloseTo(item.x)
+      expect(child.top).toBeCloseTo(item.y)
+    }
+
+    await updateSubDial(dial as any, { progressProperty: '' })
+    expect(rendered.icon.text).toBe('○')
+  })
+
+  it.each([
+    { name: 'percentage range', config: { previewValue: 50 }, expected: '50%' },
+    { name: 'custom range midpoint', config: { progressMode: 'custom', customMin: 20, customMax: 60, previewValue: 40 }, expected: '50%' }
+  ])('formats normalized progress for $name', async ({ config, expected }) => {
+    const dial = await createSubDial(makeConfig(config) as any)
+    expect((dial as any).__element.children.content.percentage.text).toBe(expected)
+  })
+
   it('repositions content in place when radius changes and only rebuilds static geometry', async () => {
     const dial = await createSubDial(makeConfig() as any)
     const children = (dial as any).__element.children
@@ -187,6 +238,12 @@ describe('subDial renderer', () => {
     await updateSubDial(dial as any, { showTickLabels: true })
     const labels = (dial as any).__element.children.static.tickLabels.getObjects()
     expect(labels.map((label: any) => label.text)).toEqual(['0', '50', '100'])
+    const labelRadius = subDialSchema.defaultConfig.radius * 0.67
+    ;[150, 270, 390].forEach((angle, index) => {
+      const radians = (angle * Math.PI) / 180
+      expect(labels[index].left).toBeCloseTo(Math.cos(radians) * labelRadius)
+      expect(labels[index].top).toBeCloseTo(Math.sin(radians) * labelRadius)
+    })
     expect((dial as any).__element.children.content.value).toBe(beforeContent)
   })
 

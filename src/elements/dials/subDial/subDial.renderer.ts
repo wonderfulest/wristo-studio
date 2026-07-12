@@ -231,9 +231,9 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
     angle: dataAngle + 90,
     visible
   })
-  const percentage = progress === null ? null : ((progress - minValue) / (maxValue - minValue)) * 100
+  const percentage = progress === null ? null : progress * 100
   const textValues: Record<Exclude<SubDialContentKey, 'icon'>, string> = {
-    label: config.progressProperty || 'Progress',
+    label: `${config.content.label.prefix}${config.progressProperty || 'Progress'}${config.content.label.suffix}`,
     value: formatNumber(config.previewValue, config.content.value),
     unit: `${config.content.unit.prefix}${config.content.unit.suffix}`,
     goalValue: formatNumber(maxValue, config.content.goalValue),
@@ -249,6 +249,7 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
     scaleY: icon.scale,
     fill: icon.color,
     fontSize: icon.size,
+    subDialIconDisplayType: icon.displayType,
     visible: icon.visible
   })
   ;(['label', 'value', 'unit', 'goalValue', 'percentage'] as const).forEach((key) => {
