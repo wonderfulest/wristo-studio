@@ -174,16 +174,24 @@ describe('subDial encoder', () => {
     expect(encoded.content.percentage).toMatchObject({ visible: true, suffix: '%' })
   })
 
-  it('prefers live goalProperty over stale widget config', () => {
+  it('migrates a live legacy property to the new persistent contract', () => {
     const element = {
       id: 'sub-dial-1',
       goalProperty: 'goal_live',
       scaleX: 1,
-      __element: { config: { ...config, goalProperty: 'goal_stale' } }
+      __element: { config: { ...config, progressProperty: undefined, goalProperty: 'goal_stale' } }
     }
 
     const encoded = encodeSubDial(element as any)
-    expect(encoded.goalProperty).toBe('goal_live')
-    expect(encoded).not.toHaveProperty('dataProperty')
+    expect(encoded.progressProperty).toBe('goal_live')
+    expect(encoded).not.toHaveProperty('goalProperty')
+  })
+
+  it('decodes legacy config to a live progress property without a legacy live property', () => {
+    const { progressProperty: _progressProperty, ...legacyConfig } = config
+    const decoded = decodeSubDial({ ...legacyConfig, goalProperty: 'legacy_goal' } as any) as any
+
+    expect(decoded.progressProperty).toBe('legacy_goal')
+    expect(decoded).not.toHaveProperty('goalProperty')
   })
 })

@@ -1,22 +1,21 @@
 import type { FabricElement } from '@/types/element'
-import type { SubDialContentConfig, SubDialElementConfig } from '@/types/elements/subDial'
+import type { SubDialElementConfig } from '@/types/elements/subDial'
 import { subDialSchema } from './subDial.schema'
+import { migrateSubDialConfig, type MigratedSubDialConfig } from './subDial.migration'
 
 function finiteOr(value: unknown, fallback: number): number {
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback
 }
 
-export function encodeSubDial(element: Partial<FabricElement>): SubDialElementConfig {
+export function encodeSubDial(element: Partial<FabricElement>): MigratedSubDialConfig {
   const live = element as any
   const stored = (live.__element?.config ?? {}) as Partial<SubDialElementConfig>
   const defaults = subDialSchema.defaultConfig
-  const storedContent: Partial<SubDialContentConfig> = stored.content ?? {}
   const baseRadius = finiteOr(stored.radius, defaults.radius)
   const scale = Math.abs(finiteOr(live.scaleX, 1))
 
-  return {
-    ...defaults,
+  return migrateSubDialConfig({
     ...stored,
     id: String(live.id ?? stored.id ?? ''),
     eleType: 'subDial',
@@ -26,29 +25,21 @@ export function encodeSubDial(element: Partial<FabricElement>): SubDialElementCo
     radius: baseRadius * scale,
     originX: live.originX ?? stored.originX ?? defaults.originX,
     originY: live.originY ?? stored.originY ?? defaults.originY,
-    goalProperty: String(live.goalProperty ?? stored.goalProperty ?? defaults.goalProperty),
-    content: {
-      icon: { ...defaults.content.icon, ...storedContent.icon },
-      label: { ...defaults.content.label, ...storedContent.label },
-      value: { ...defaults.content.value, ...storedContent.value },
-      unit: { ...defaults.content.unit, ...storedContent.unit },
-      goalValue: { ...defaults.content.goalValue, ...storedContent.goalValue },
-      percentage: { ...defaults.content.percentage, ...storedContent.percentage }
-    },
-    pointer: {
-      ...defaults.pointer,
-      ...stored.pointer
-    }
-  }
+    // Task 4/7 will move remaining consumers to progressProperty. Until then a
+    // live legacy binding is accepted as migration input but never persisted.
+    progressProperty: live.progressProperty ?? live.goalProperty ?? stored.progressProperty,
+    goalProperty: stored.goalProperty
+  })
 }
 
 export function decodeSubDial(config: SubDialElementConfig): Partial<FabricElement> {
+  const migrated = migrateSubDialConfig(config as any)
   return {
-    ...(config as any),
+    ...migrated,
     eleType: 'subDial',
-    left: config.left,
-    top: config.top,
-    angle: config.rotation,
+    left: migrated.left,
+    top: migrated.top,
+    angle: migrated.rotation,
     scaleX: 1,
     scaleY: 1
   } as Partial<FabricElement>

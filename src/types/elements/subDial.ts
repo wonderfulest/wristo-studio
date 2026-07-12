@@ -58,6 +58,7 @@ export interface SubDialElementConfig extends BaseElementConfig {
   eleType: 'subDial'
   radius: number
   rotation: number
+  /** @deprecated Temporary live-layer compatibility; persisted configs use progressProperty. */
   goalProperty: string
   progressProperty: string
   progressMode: SubDialProgressMode
@@ -86,10 +87,16 @@ export interface SubDialElementConfig extends BaseElementConfig {
   centerCapRadius: number
   backgroundColor: string
   backgroundOpacity: number
+  /** @deprecated Migrated to content.value.visible. */
   showValue: boolean
+  /** @deprecated Migrated to content.unit.visible. */
   showUnit: boolean
+  /** @deprecated Migrated to content.unit.suffix. */
   unit: string
+  /** @deprecated Migrated to content.value.decimals. */
   decimals: number
+  /** @deprecated Migrated to content.value.color. */
   valueColor: string
+  /** @deprecated Migrated to content.value.fontSize. */
   valueFontSize: number
 }
