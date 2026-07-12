@@ -72,12 +72,28 @@ describe('applyDialColorPreview', () => {
     expect(image.filters[0]).toMatchObject({ color: '#222222' })
   })
 
-  it('removes the owned filter when the binding is cleared', () => {
+  it('keeps tinting when a static color clears the property binding', () => {
     const unrelated = { type: 'Blur' }
     const image = { filters: [unrelated], applyFilters: vi.fn() }
     applyDialColorPreview(image, '#111111', 'accentColor')
 
-    applyDialColorPreview(image, '#111111', '')
+    applyDialColorPreview(image, '#55ff55', '')
+
+    expect(image.filters).toHaveLength(2)
+    expect(image.filters[0]).toBe(unrelated)
+    expect(image.filters[1]).toMatchObject({
+      color: '#55ff55',
+      __wristoDialColorFilter: true,
+    })
+    expect(image.applyFilters).toHaveBeenCalledTimes(2)
+  })
+
+  it('removes the owned filter for transparent to show the original SVG colors', () => {
+    const unrelated = { type: 'Blur' }
+    const image = { filters: [unrelated], applyFilters: vi.fn() }
+    applyDialColorPreview(image, '#111111', 'accentColor')
+
+    applyDialColorPreview(image, 'transparent', '')
 
     expect(image.filters).toEqual([unrelated])
     expect(image.applyFilters).toHaveBeenCalledTimes(2)

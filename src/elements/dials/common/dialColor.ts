@@ -43,17 +43,17 @@ export const resolveDialColorPatch = (
 export const applyDialColorPreview = (
   image: any,
   fill: unknown,
-  fillProperty: unknown,
+  _fillProperty: unknown,
 ): void => {
   if (!image) return
 
   const existingFilters = Array.isArray(image.filters) ? image.filters : []
   image.filters = existingFilters.filter((filter: any) => !filter?.__wristoDialColorFilter)
 
-  if (String(fillProperty || '').trim()) {
-    const normalizedFill = normalizePropertyColor(fill)
+  const normalizedFill = normalizePropertyColor(fill)
+  if (normalizedFill !== 'transparent') {
     const filter: any = new filters.BlendColor({
-      color: normalizedFill === 'transparent' ? '#000000' : normalizedFill,
+      color: normalizedFill,
       mode: 'tint',
       alpha: 1,
     })
