@@ -432,16 +432,61 @@ function insetCornerPositionHandler(
   )
 }
 
+const CORNER_DIRECTIONS: Record<string, Point> = {
+  tl: new Point(-1, -1),
+  tr: new Point(1, -1),
+  bl: new Point(-1, 1),
+  br: new Point(1, 1),
+}
+
+const scaleInsetCorner = controlsUtils.wrapWithFireEvent(
+  'scaling',
+  (_eventData, transform, x, y) => {
+    const target = transform.target
+    const direction = CORNER_DIRECTIONS[transform.corner]
+    if (!direction) return false
+
+    const originalScaleX = Number(transform.original.scaleX)
+    const originalScaleY = Number(transform.original.scaleY)
+    const halfDiagonal = Math.hypot(
+      Number(transform.width) * originalScaleX,
+      Number(transform.height) * originalScaleY,
+    ) / 2
+    if (!Number.isFinite(halfDiagonal) || halfDiagonal <= 0) return false
+
+    const projectedDelta = (
+      (x - transform.ex) * direction.x +
+      (y - transform.ey) * direction.y
+    ) / Math.SQRT2
+    const minScale = Number(target.minScaleLimit || 0.01)
+    const minRatio = Math.max(
+      minScale / originalScaleX,
+      minScale / originalScaleY,
+    )
+    const ratio = Math.max(minRatio, 1 + projectedDelta / halfDiagonal)
+    const nextScaleX = originalScaleX * ratio
+    const nextScaleY = originalScaleY * ratio
+    const changed = target.scaleX !== nextScaleX || target.scaleY !== nextScaleY
+
+    if (changed) {
+      target.set({ scaleX: nextScaleX, scaleY: nextScaleY })
+    }
+    return changed
+  },
+)
+
 function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
   const positionHandler =
     mode === 'corner4Inset' ? insetCornerPositionHandler : Control.prototype.positionHandler
+  const cornerScaleHandler =
+    mode === 'corner4Inset' ? scaleInsetCorner : controlsUtils.scalingEqually
   const cornerControls: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
       y: -0.5,
       positionHandler,
       cursorStyle: 'nwse-resize',
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: cornerScaleHandler,
       actionName: 'scale',
       render: renderDefaultControl,
     }),
@@ -450,7 +495,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       y: -0.5,
       positionHandler,
       cursorStyle: 'nesw-resize',
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: cornerScaleHandler,
       actionName: 'scale',
       render: renderDefaultControl,
     }),
@@ -459,7 +504,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       y: 0.5,
       positionHandler,
       cursorStyle: 'nesw-resize',
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: cornerScaleHandler,
       actionName: 'scale',
       render: renderDefaultControl,
     }),
@@ -468,7 +513,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       y: 0.5,
       positionHandler,
       cursorStyle: 'nwse-resize',
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: cornerScaleHandler,
       actionName: 'scale',
       render: renderDefaultControl,
     }),

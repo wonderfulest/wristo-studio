@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Point } from 'fabric'
+import { FabricObject, Point } from 'fabric'
 import dialRendererSource from '@/elements/dials/common/dial.renderer.ts?raw'
 
 vi.mock('@/engine/managers/layerManager', () => ({
@@ -34,6 +34,46 @@ describe('applyControlsToObject', () => {
     return control.positionHandler(dim, [1, 0, 0, 1, 300, 300], target, control)
   }
 
+  function createScaleTarget() {
+    const target = new FabricObject({
+      width: 600,
+      height: 600,
+      scaleX: 2,
+      scaleY: 2,
+      selectable: true,
+      evented: true,
+      hasControls: true,
+    }) as any
+    target.designerControlMode = 'corner4Inset'
+    target.canvas = {
+      fire: vi.fn(),
+      getWidth: () => 600,
+      getHeight: () => 600,
+      getZoom: () => 1,
+      uniformScaling: true,
+      uniScaleKey: 'shiftKey',
+    }
+    vi.spyOn(target, 'fire')
+    applyControlsToObject(target)
+    return target
+  }
+
+  function createScaleTransform(target: any, corner: string) {
+    return {
+      target,
+      corner,
+      ex: 570,
+      ey: 570,
+      originX: 'center',
+      originY: 'center',
+      original: { scaleX: 2, scaleY: 2 },
+      scaleX: 2,
+      scaleY: 2,
+      width: 600,
+      height: 600,
+    } as any
+  }
+
   it('clamps oversized element controls to the 30px canvas safe area', () => {
     const target = createTarget('corner4Inset') as any
     target.canvas = { getWidth: () => 600, getHeight: () => 600 }
@@ -65,6 +105,38 @@ describe('applyControlsToObject', () => {
 
     expect(getControlPosition(target, 'tl', new Point(800, 800))).toMatchObject({ x: -100, y: -100 })
     expect(getControlPosition(target, 'br', new Point(800, 800))).toMatchObject({ x: 700, y: 700 })
+  })
+
+  it('starts a clamped corner drag without changing the current scale', () => {
+    const target = createScaleTarget()
+
+    const changed = target.controls.br.actionHandler(
+      { shiftKey: false } as PointerEvent,
+      createScaleTransform(target, 'br'),
+      570,
+      570,
+    )
+
+    expect(changed).toBe(false)
+    expect(target.scaleX).toBe(2)
+    expect(target.scaleY).toBe(2)
+  })
+
+  it('scales smoothly from the original size using diagonal drag distance', () => {
+    const target = createScaleTarget()
+
+    const changed = target.controls.br.actionHandler(
+      { shiftKey: false } as PointerEvent,
+      createScaleTransform(target, 'br'),
+      580,
+      580,
+    )
+
+    expect(changed).toBe(true)
+    expect(target.scaleX).toBeCloseTo(2.033333, 5)
+    expect(target.scaleY).toBeCloseTo(2.033333, 5)
+    expect(target.canvas.fire).toHaveBeenCalledWith('object:scaling', expect.any(Object))
+    expect(target.fire).toHaveBeenCalledWith('scaling', expect.any(Object))
   })
 
   it('uses inset corner controls throughout the shared dial renderer', () => {
