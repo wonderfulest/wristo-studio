@@ -2,31 +2,17 @@
   <div class="layer-panel">
     <div class="layer-list">
       <div class="display-tabs" role="tablist" aria-label="Layer display state">
-        <button
-          class="display-tab"
-          :class="{ active: previewMode === 'active' }"
-          type="button"
-          role="tab"
-          :aria-selected="previewMode === 'active'"
-          @click="previewMode = 'active'"
-        >
+        <button class="display-tab" :class="{ active: previewMode === 'active' }" type="button" role="tab" :aria-selected="previewMode === 'active'" @click="previewMode = 'active'">
           <Icon icon="material-symbols:brightness-5-outline" />
           <span>ACTIVE</span>
         </button>
-        <button
-          class="display-tab"
-          :class="{ active: previewMode === 'ambient' }"
-          type="button"
-          role="tab"
-          :aria-selected="previewMode === 'ambient'"
-          @click="previewMode = 'ambient'"
-        >
+        <button class="display-tab" :class="{ active: previewMode === 'ambient' }" type="button" role="tab" :aria-selected="previewMode === 'ambient'" @click="previewMode = 'ambient'">
           <Icon icon="material-symbols:contrast" />
           <span>AMBIENT</span>
         </button>
       </div>
       <draggable
-        :list="layers"
+        :list="panelItems"
         class="layers-list"
         :animation="150"
         @start="handleDragStart"
@@ -34,60 +20,103 @@
         item-key="id"
         handle=".layer-content"
         :filter="'.no-drag'"
-        :prevent-on-filter="false"
-      >
-        <template #item="{ element: layer }">
+        :prevent-on-filter="false">
+        <template #item="{ element: item }">
+          <div v-if="item.kind === 'group'" class="layer-group-block">
+            <button
+              class="layer-group-summary layer-content"
+              :class="{ 'layer-group-selected': isGroupActived(item) }"
+              type="button"
+              :aria-expanded="item.isExpanded"
+              @click.stop="selectLayerGroup(item)"
+              @dblclick.stop="toggleGroup(item.key)">
+              <span class="layer-group-toggle" :title="item.isExpanded ? 'Collapse group' : 'Expand group'" @click.stop="toggleGroup(item.key)">
+                <Icon :icon="item.isExpanded ? 'material-symbols:expand-more' : 'material-symbols:chevron-right'" />
+              </span>
+              <span class="layer-group-summary-name">{{ item.label }}</span>
+              <span class="layer-group-count">{{ item.members.length }} items</span>
+            </button>
+            <div v-if="item.isExpanded" class="layer-group-members">
+              <div
+                v-for="layer in item.members"
+                :key="layer.id"
+                class="layer-row layer-group-member"
+                :class="{
+                  'layer-selected': isActived(layer.id),
+                  'layer-locked': layer.locked
+                }"
+                :style="getLayerBackgroundColor(layer)"
+                @click="selectLayer(layer)">
+                <div v-if="layer.eleType" class="layer-item">
+                  <div class="layer-content">
+                    <span class="layer-icon">
+                      <Icon :icon="getElementIcon(layer.eleType)" />
+                    </span>
+                    <span class="layer-text">
+                      <span class="layer-name">{{ layer.eleType }}</span>
+                    </span>
+                  </div>
+                  <div class="layer-actions">
+                    <button
+                      class="layer-btn"
+                      :aria-pressed="isLayerVisibleInPreview(layer)"
+                      :title="isLayerVisibleInPreview(layer) ? t('editorSettings.show') : t('editorSettings.hide')"
+                      @click.stop="toggleVisibility(layer)">
+                      <el-icon v-if="isLayerVisibleInPreview(layer)"><View /></el-icon>
+                      <el-icon v-else><Hide /></el-icon>
+                    </button>
+                    <button class="layer-btn" :aria-pressed="layer.locked" :title="layer.locked ? 'Unlock' : 'Lock'" @click.stop="toggleLock(layer)">
+                      <el-icon v-if="layer.locked"><Lock /></el-icon>
+                      <el-icon v-else><Unlock /></el-icon>
+                    </button>
+                    <button class="layer-btn" @click.stop="deleteLayer(layer)">
+                      <el-icon><Delete /></el-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div
+            v-else
             class="layer-row"
             :class="{
-              'layer-selected': isActived(layer.id),
-              'layer-locked': layer.locked,
-              'layer-grouped': getLayerGroupMeta(layer).isGrouped,
-              'layer-group-first': getLayerGroupMeta(layer).isFirst,
-              'layer-group-last': getLayerGroupMeta(layer).isLast
+              'layer-selected': isActived(item.layer.id),
+              'layer-locked': item.layer.locked
             }"
-            :style="getLayerBackgroundColor(layer)"
-            @click="selectLayer(layer)">
-            <div v-if="layer.eleType" class="layer-item">
-              <div class="layer-content" :class="{ 'no-drag': isFixedLayer(layer) }">
+            :style="getLayerBackgroundColor(item.layer)"
+            @click="selectLayer(item.layer)">
+            <div v-if="item.layer.eleType" class="layer-item">
+              <div class="layer-content" :class="{ 'no-drag': isFixedLayer(item.layer) }">
                 <span class="layer-icon">
-                  <Icon :icon="getElementIcon(layer.eleType)" />
+                  <Icon :icon="getElementIcon(item.layer.eleType)" />
                 </span>
                 <span class="layer-text">
-                  <span class="layer-name">{{ layer.eleType }}</span>
-                  <span v-if="getLayerGroupMeta(layer).isGrouped" class="layer-group-name">
-                    {{ getLayerGroupMeta(layer).label }}
-                  </span>
+                  <span class="layer-name">{{ item.layer.eleType }}</span>
                 </span>
               </div>
               <div class="layer-actions">
                 <button
                   class="layer-btn"
-                  :aria-pressed="isLayerVisibleInPreview(layer)"
-                  :title="isLayerVisibleInPreview(layer) ? t('editorSettings.show') : t('editorSettings.hide')"
-                  @click.stop="toggleVisibility(layer)"
-                >
-                  <el-icon v-if="isLayerVisibleInPreview(layer)">
+                  :aria-pressed="isLayerVisibleInPreview(item.layer)"
+                  :title="isLayerVisibleInPreview(item.layer) ? t('editorSettings.show') : t('editorSettings.hide')"
+                  @click.stop="toggleVisibility(item.layer)">
+                  <el-icon v-if="isLayerVisibleInPreview(item.layer)">
                     <View />
                   </el-icon>
                   <el-icon v-else>
                     <Hide />
                   </el-icon>
                 </button>
-                <button
-                  class="layer-btn"
-                  :aria-pressed="layer.locked"
-                  :title="layer.locked ? 'Unlock' : 'Lock'"
-                  @click.stop="toggleLock(layer)"
-                >
-                  <el-icon v-if="layer.locked">
+                <button class="layer-btn" :aria-pressed="item.layer.locked" :title="item.layer.locked ? 'Unlock' : 'Lock'" @click.stop="toggleLock(item.layer)">
+                  <el-icon v-if="item.layer.locked">
                     <Lock />
                   </el-icon>
                   <el-icon v-else>
                     <Unlock />
                   </el-icon>
                 </button>
-                <button v-if="!isFixedLayer(layer)" class="layer-btn" @click.stop="deleteLayer(layer)">
+                <button v-if="!isFixedLayer(item.layer)" class="layer-btn" @click.stop="deleteLayer(item.layer)">
                   <el-icon>
                     <Delete />
                   </el-icon>
@@ -103,6 +132,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ActiveSelection } from 'fabric'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
 import { useLayerStore } from '@/stores/layerStore'
@@ -119,6 +149,8 @@ import { useI18n } from '@/i18n'
 import type { LayerElement } from '@/types/layer'
 import { getDisplayState, type DisplayStateMode } from '@/utils/displayStates'
 import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
+import { toPanelLayers } from './layerPanelOrder'
+import { buildLayerPanelItems, findCollapsedGroupsForLayerIds, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
@@ -127,6 +159,8 @@ const historyStore = useHistoryStore()
 const { t } = useI18n()
 
 const panelLayers = ref<LayerElement[]>([])
+const panelItems = ref<LayerPanelItem[]>([])
+const expandedGroupKeys = ref(new Set<string>())
 const isDraggingLayers = ref(false)
 const layers = computed(() => panelLayers.value)
 const previewMode = computed<DisplayStateMode>({
@@ -137,42 +171,8 @@ const previewMode = computed<DisplayStateMode>({
       clearBackgroundSelection()
     }
     debouncedUpdateElements()
-  },
+  }
 })
-
-type DragEventLike = {
-  oldIndex?: number
-}
-
-type LayerDragSnapshot = {
-  layerId: string
-  groupIds: string[]
-}
-
-let layerDragSnapshot: LayerDragSnapshot | null = null
-
-type LayerGroupMeta = {
-  key: string
-  label: string
-  isGrouped: boolean
-  isFirst: boolean
-  isLast: boolean
-}
-
-const getLayerObject = (layer: LayerElement | any): any => layer?.element ?? layer
-
-const resolveLayerGroupKey = (layer: LayerElement | any): string => {
-  const obj = getLayerObject(layer)
-  const raw =
-    obj?.groupId ??
-    obj?.groupKey ??
-    obj?.groupName ??
-    obj?.parentId ??
-    obj?.dataProperty ??
-    obj?.goalProperty ??
-    ''
-  return raw == null ? '' : String(raw)
-}
 
 const isFixedLayer = (layer: any): boolean => {
   const t = String(layer?.eleType ?? '')
@@ -184,11 +184,7 @@ const isAmbientBackgroundLayer = (layer: any): boolean => {
 }
 
 const clearBackgroundSelection = (): void => {
-  const backgroundIds = new Set(
-    layerStore.layers
-      .filter((layer) => String(layer?.eleType ?? '') === 'background')
-      .map((layer) => String(layer.id)),
-  )
+  const backgroundIds = new Set(layerStore.layers.filter((layer) => String(layer?.eleType ?? '') === 'background').map((layer) => String(layer.id)))
   if (!canvasStore.activeIds.some((id) => backgroundIds.has(String(id)))) return
   baseStore.canvas?.discardActiveObject?.()
   canvasStore.clearActiveIds()
@@ -199,109 +195,25 @@ const clearBackgroundSelection = (): void => {
 }
 
 const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
-  const fixedLayers = sourceLayers.filter((layer) => isFixedLayer(layer))
-  const movableLayers = sourceLayers.filter((layer) => !isFixedLayer(layer))
-  return [...fixedLayers, ...movableLayers]
+  return toPanelLayers(sourceLayers)
 }
 
-const getLayerGroupIds = (layer: LayerElement | any, sourceLayers: LayerElement[] = layers.value): string[] => {
-  const id = String(layer?.id ?? '')
-  if (!id) return []
-  const key = resolveLayerGroupKey(layer)
-  if (!key) return [id]
-
-  const groupIds = sourceLayers
-    .filter((item) => !isFixedLayer(item) && resolveLayerGroupKey(item) === key)
-    .map((item) => String(item.id))
-
-  return groupIds.length > 1 ? groupIds : [id]
-}
-
-const keepLayerGroupsContiguous = (idsInOrder: string[]): string[] => {
-  const layerById = new Map(layers.value.map((layer) => [String(layer.id), layer]))
-  const groupIdsByKey = new Map<string, string[]>()
-  const groupedKeys = new Set<string>()
-
-  layers.value.forEach((layer) => {
-    if (isFixedLayer(layer)) return
-    const key = resolveLayerGroupKey(layer)
-    if (!key) return
-    const groupIds = groupIdsByKey.get(key) ?? []
-    groupIds.push(String(layer.id))
-    groupIdsByKey.set(key, groupIds)
-  })
-
-  groupIdsByKey.forEach((groupIds, key) => {
-    if (groupIds.length > 1) {
-      groupedKeys.add(key)
-    }
-  })
-
-  const appendedGroups = new Set<string>()
-  const normalizedIds: string[] = []
-
-  idsInOrder.forEach((id) => {
-    const layer = layerById.get(String(id))
-    const key = layer ? resolveLayerGroupKey(layer) : ''
-    if (!key || !groupedKeys.has(key)) {
-      normalizedIds.push(String(id))
-      return
-    }
-    if (appendedGroups.has(key)) return
-    normalizedIds.push(...(groupIdsByKey.get(key) ?? []).filter((groupId) => idsInOrder.includes(groupId)))
-    appendedGroups.add(key)
-  })
-
-  return normalizedIds
+const rebuildPanelItems = (): void => {
+  const nextItems = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value)
+  expandedGroupKeys.value = retainExistingExpandedGroups(expandedGroupKeys.value, nextItems)
+  panelItems.value = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value)
 }
 
 const resolveDragOrderIds = (): string[] => {
-  const fixedIds = layers.value
-    .filter((layer) => isFixedLayer(layer))
-    .map((layer) => String(layer.id))
-  const movableIds = layers.value
-    .filter((layer) => !isFixedLayer(layer))
-    .map((layer) => String(layer.id))
-
-  if (!layerDragSnapshot || layerDragSnapshot.groupIds.length <= 1) {
-    return [...fixedIds, ...keepLayerGroupsContiguous(movableIds)]
-  }
-
-  const groupSet = new Set(layerDragSnapshot.groupIds)
-  const draggedIndex = movableIds.findIndex((id) => id === layerDragSnapshot?.layerId)
-  const insertIndex = draggedIndex < 0
-    ? movableIds.length
-    : movableIds.slice(0, draggedIndex).filter((id) => !groupSet.has(id)).length
-  const movableWithoutGroup = movableIds.filter((id) => !groupSet.has(id))
-  const boundedInsertIndex = Math.max(0, Math.min(insertIndex, movableWithoutGroup.length))
-
-  const orderedMovableIds = [
-    ...movableWithoutGroup.slice(0, boundedInsertIndex),
-    ...layerDragSnapshot.groupIds,
-    ...movableWithoutGroup.slice(boundedInsertIndex),
-  ]
-
-  return [...fixedIds, ...keepLayerGroupsContiguous(orderedMovableIds)]
+  return resolvePanelItemsToCanvasIds(panelItems.value)
 }
 
-const getLayerGroupMeta = (layer: LayerElement | any): LayerGroupMeta => {
-  const key = resolveLayerGroupKey(layer)
-  if (!key) {
-    return { key: '', label: '', isGrouped: false, isFirst: false, isLast: false }
-  }
-  const groupLayers = layers.value.filter((item) => resolveLayerGroupKey(item) === key)
-  const isGrouped = groupLayers.length > 1
-  if (!isGrouped) {
-    return { key, label: key, isGrouped: false, isFirst: false, isLast: false }
-  }
-  const index = groupLayers.findIndex((item) => item.id === layer.id)
-  return {
-    key,
-    label: key,
-    isGrouped,
-    isFirst: index === 0,
-    isLast: index === groupLayers.length - 1,
-  }
+const toggleGroup = (key: string): void => {
+  const next = new Set(expandedGroupKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedGroupKeys.value = next
+  rebuildPanelItems()
 }
 
 watch(
@@ -309,6 +221,7 @@ watch(
   (nextLayers) => {
     if (isDraggingLayers.value) return
     panelLayers.value = sortLayersForPanel(nextLayers)
+    rebuildPanelItems()
   },
   { deep: true, immediate: true }
 )
@@ -347,6 +260,15 @@ watch(activeElements, (newVal) => {
   selectedIds.value = ids
 })
 
+watch(selectedIds, (ids) => {
+  const keys = findCollapsedGroupsForLayerIds(panelItems.value, ids)
+  if (!keys.length) return
+  const next = new Set(expandedGroupKeys.value)
+  keys.forEach((key) => next.add(key))
+  expandedGroupKeys.value = next
+  rebuildPanelItems()
+})
+
 // listen for element property changes to trigger re-render
 type ElementState = { dataProperty?: string; goalProperty?: string }
 type FabricModifiedEvent = { transform?: unknown; target: ElementState & { _previousState?: ElementState } }
@@ -355,14 +277,12 @@ const setupElementListeners = (): void => {
     const element = layer.element as any
     element.on?.('modified', (e: FabricModifiedEvent) => {
       if (e.transform) return
-      if (
-        e.target.dataProperty !== e.target._previousState?.dataProperty ||
-        e.target.goalProperty !== e.target._previousState?.goalProperty
-      ) {
+      if (e.target.dataProperty !== e.target._previousState?.dataProperty || e.target.goalProperty !== e.target._previousState?.goalProperty) {
         e.target._previousState = {
           dataProperty: e.target.dataProperty,
           goalProperty: e.target.goalProperty
         }
+        rebuildPanelItems()
         baseStore.canvas?.renderAll?.()
       }
     })
@@ -412,6 +332,25 @@ const selectLayer = async (layer: any): Promise<void> => {
   debouncedUpdateElements()
 }
 
+const selectLayerGroup = (item: LayerPanelGroupItem): void => {
+  const canvas = baseStore.canvas
+  if (!canvas) return
+
+  const selectableLayers = item.members.filter((layer) => !layer.locked && layer.selectable !== false)
+  const objects = selectableLayers.map((layer) => getElementById(layer.id) ?? layer.element).filter(Boolean)
+  if (!objects.length) return
+
+  canvas.discardActiveObject?.()
+  const selection = new ActiveSelection(objects as any[], { canvas: canvas as any })
+  canvas.setActiveObject?.(selection as any)
+  const ids = selectableLayers.map((layer) => String(layer.id))
+  canvasStore.setActiveIds(ids)
+  layerStore.setSelected(ids)
+  activeElements.value = objects as MinimalFabricLike[]
+  selectedIds.value = ids
+  canvas.requestRenderAll?.()
+}
+
 // determine if a layer is selected using reactive selectedIds derived from activeElements
 const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
@@ -419,11 +358,12 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layer) return false
   if (isAmbientBackgroundLayer(layer)) return false
   if ((layer as any).locked && String((layer as any).eleType ?? '') !== 'background') return false
-  const result =
-    selectedIds.value.includes(layerId) ||
-    canvasStore.activeIds.includes(layerId) ||
-    layerStore.isSelected(layerId)
+  const result = selectedIds.value.includes(layerId) || canvasStore.activeIds.includes(layerId) || layerStore.isSelected(layerId)
   return result
+}
+
+const isGroupActived = (item: LayerPanelGroupItem): boolean => {
+  return item.members.some((layer) => isActived(layer.id))
 }
 
 const toggleVisibility = (layer: any): void => {
@@ -453,21 +393,13 @@ const toggleLock = (layer: any): void => {
 }
 
 // drag end reorders canvas stacking
-const handleDragStart = (event: DragEventLike): void => {
+const handleDragStart = (): void => {
   isDraggingLayers.value = true
-  const draggedLayer = typeof event.oldIndex === 'number' ? layers.value[event.oldIndex] : null
-  layerDragSnapshot = draggedLayer
-    ? {
-        layerId: String(draggedLayer.id),
-        groupIds: getLayerGroupIds(draggedLayer, layers.value),
-      }
-    : null
 }
 
 const handleDragEnd = (): void => {
   isDraggingLayers.value = false
   const ids = resolveDragOrderIds()
-  layerDragSnapshot = null
   applyOrder(ids)
   historyStore.saveState('layer:reorder', { captureConfig: true })
   baseStore.canvas?.renderAll?.()
@@ -507,7 +439,7 @@ const deleteLayer = (layer: any): void => {
   }
   if (!baseStore.canvas) {
     console.warn('[LayerPanel] deleteLayer: baseStore.canvas is null, cannot delete', {
-      id: (layer as any)?.id,
+      id: (layer as any)?.id
     })
     return
   }
@@ -519,9 +451,9 @@ const deleteLayer = (layer: any): void => {
   if (!fromRegistry) {
     console.warn('[LayerPanel] deleteLayer: getElementById returned null, will fallback to raw layer reference', {
       id,
-      layer,
+      layer
     })
-  } 
+  }
   const fabricElement = (fromRegistry ?? (layer.element as unknown) ?? (layer as unknown)) as FabricElement
   addToHistory({ type: 'delete', element: (layer.element as any) ?? (layer as any) })
   removeElement(fabricElement)
@@ -532,11 +464,7 @@ const deleteLayer = (layer: any): void => {
 
 const handleKeyDown = (event: KeyboardEvent): void => {
   const activeElement = document.activeElement as HTMLElement | null
-  const isInputActive = !!activeElement && (
-    activeElement.tagName === 'INPUT' ||
-    activeElement.tagName === 'TEXTAREA' ||
-    (activeElement as HTMLElement).isContentEditable
-  )
+  const isInputActive = !!activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || (activeElement as HTMLElement).isContentEditable)
   if (isInputActive) return
 
   if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -730,56 +658,82 @@ onUnmounted((): void => {
   border-radius: var(--studio-radius-md);
   background: var(--studio-surface-soft);
   cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.layer-grouped {
-  padding-left: 8px;
+.layer-group-block {
+  overflow: hidden;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
 }
 
-.layer-grouped::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--studio-primary);
-  opacity: 0.85;
+.layer-group-summary {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--studio-text);
+  cursor: move;
+  text-align: left;
+  transition: background-color 0.18s ease;
 }
 
-.layer-grouped .layer-item {
-  min-height: 42px;
-  border-left-color: rgba(15, 107, 104, 0.42);
-  background: linear-gradient(90deg, rgba(15, 107, 104, 0.08), var(--studio-surface-soft) 34px);
+.layer-group-summary:hover,
+.layer-group-selected {
+  background: var(--studio-primary-soft);
 }
 
-.layer-group-first:not(.layer-group-last) {
-  margin-bottom: -3px;
+.layer-group-toggle {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--studio-radius-sm);
+  color: var(--studio-primary);
+  cursor: pointer;
 }
 
-.layer-group-first:not(.layer-group-last) .layer-item {
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
+.layer-group-toggle:hover {
+  background: rgba(15, 107, 104, 0.1);
 }
 
-.layer-grouped:not(.layer-group-first):not(.layer-group-last) {
-  margin-top: -3px;
-  margin-bottom: -3px;
+.layer-group-summary-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.layer-grouped:not(.layer-group-first):not(.layer-group-last) .layer-item {
-  border-radius: 4px;
+.layer-group-count {
+  flex: 0 0 auto;
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.layer-group-last:not(.layer-group-first) {
-  margin-top: -3px;
+.layer-group-members {
+  display: grid;
+  gap: 4px;
+  padding: 0 6px 6px 18px;
 }
 
-.layer-group-last:not(.layer-group-first) .layer-item {
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
+.layer-group-member .layer-item {
+  min-height: 40px;
+  border-color: rgba(15, 107, 104, 0.24);
+  background: #ffffff;
 }
 
 .layer-item:hover {
@@ -836,17 +790,6 @@ onUnmounted((): void => {
   color: var(--studio-text);
   font-weight: 700;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.layer-group-name {
-  max-width: 148px;
-  overflow: hidden;
-  color: var(--studio-text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
