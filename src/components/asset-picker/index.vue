@@ -266,6 +266,7 @@ import { useI18n } from '@/i18n'
 import { ensureSvgFileHasIntrinsicSize, isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 import emitter from '@/utils/eventBus'
+import { isEditableSvgAssetSource } from './assetEditability'
 
 type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
 
@@ -386,8 +387,6 @@ const uploadAccept = computed(() => {
   return '.svg'
 })
 
-const editableSvgAssetTypes: AnalogAssetType[] = ['image', 'hour', 'minute', 'second', 'center_cap']
-
 const isAllowedUploadFile = (file: File): boolean => isAllowedAnalogAssetFile(file, props.assetType)
 
 const getUploadFileTypeMessage = (): string => {
@@ -412,15 +411,8 @@ const isUploadFileAccepted = async (file: File, showMessage = false): Promise<bo
   return true
 }
 
-const isSvgUrl = (value?: string): boolean => {
-  const clean = String(value || '').split('?')[0].toLowerCase()
-  return clean.endsWith('.svg')
-}
-
-const isEditableSvgAsset = (asset: AnalogAssetVO): boolean => {
-  if (!editableSvgAssetTypes.includes(props.assetType)) return false
-  return isSvgUrl(asset.file?.url) || isSvgUrl(asset.file?.name)
-}
+const isEditableSvgAsset = (asset: AnalogAssetVO): boolean =>
+  isEditableSvgAssetSource(props.assetType, asset.file?.url, asset.file?.name)
 
 const openAssetDialog = () => {
   emitter.emit('settings-popup-open', settingsPopupId)
