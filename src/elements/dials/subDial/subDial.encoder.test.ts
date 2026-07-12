@@ -202,13 +202,13 @@ describe('subDial encoder', () => {
     expect(encodeSubDial(live).progressProperty).toBe('steps')
   })
 
-  it('does not let an empty live binding hide a stored new binding', () => {
+  it('treats an own empty live binding as an explicit clear', () => {
     const encoded = encodeSubDial({
       progressProperty: '',
       goalProperty: 'legacy_live',
       __element: { config: { ...config, progressProperty: 'steps' } },
     } as any)
 
-    expect(encoded.progressProperty).toBe('steps')
+    expect(encoded.progressProperty).toBe('')
   })
 })
