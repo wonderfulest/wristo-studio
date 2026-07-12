@@ -14,6 +14,14 @@ export type LayerOrderAvailability = {
 
 let expandedTargetId: string | null = null
 
+const LAYER_ORDER_CONTROL_TITLES: Record<string, string> = {
+  layerOrderControl: 'Layer Order',
+  bringToFrontControl: 'Bring to Front',
+  bringForwardControl: 'Bring Forward',
+  sendBackwardControl: 'Send Backward',
+  sendToBackControl: 'Send to Back',
+}
+
 function isFixedLayer(target: LayerOrderTarget): boolean {
   const type = String(target.eleType ?? '')
   return type === 'global' || type === 'background'
@@ -58,4 +66,8 @@ export function getExpandedLayerOrderControlId(): string | null {
 
 export function clearExpandedLayerOrderControl(): void {
   expandedTargetId = null
+}
+
+export function getLayerOrderControlTitle(controlKey: unknown): string {
+  return typeof controlKey === 'string' ? (LAYER_ORDER_CONTROL_TITLES[controlKey] ?? '') : ''
 }

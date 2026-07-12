@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearExpandedLayerOrderControl,
   getExpandedLayerOrderControlId,
+  getLayerOrderControlTitle,
   getLayerOrderAvailability,
   isLayerOrderControlExpanded,
   isLayerOrderControlTarget,
@@ -43,5 +44,12 @@ describe('layerOrderControl', () => {
     clearExpandedLayerOrderControl()
     expect(isLayerOrderControlExpanded('b')).toBe(false)
     expect(getExpandedLayerOrderControlId()).toBeNull()
+  })
+
+  it('maps Fabric control keys to user-facing titles', () => {
+    expect(getLayerOrderControlTitle('layerOrderControl')).toBe('Layer Order')
+    expect(getLayerOrderControlTitle('bringForwardControl')).toBe('Bring Forward')
+    expect(getLayerOrderControlTitle('unknown')).toBe('')
+    expect(getLayerOrderControlTitle(undefined)).toBe('')
   })
 })
