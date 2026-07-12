@@ -102,7 +102,7 @@ onMounted(() => {
       canvas: canvas as any,
       updateElement: (element, patch) => updateElement(element, patch),
       saveHistory: () => {
-        historyStore.saveState('subDial:content-layout')
+        historyStore.saveState('sub-dial:content-drag')
       },
       runWithoutRecording: (task) => historyStore.runWithoutRecording(task),
     })

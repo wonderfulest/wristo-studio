@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { SubDialLayoutEditor } from './SubDialLayoutEditor'
 
 const keys = ['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'] as const
@@ -99,6 +100,11 @@ function fixture(hidden: (typeof keys)[number] | null = null) {
 }
 
 describe('SubDialLayoutEditor', () => {
+  it('wires the exact content drag history reason in Canvas', () => {
+    const canvasSource = readFileSync(new URL('../../../views/Canvas.vue', import.meta.url), 'utf8')
+    expect(canvasSource).toContain("historyStore.saveState('sub-dial:content-drag')")
+  })
+
   it('enters, selects a visible child and restores all interaction state on exit', () => {
     const { editor, group, children, canvas } = fixture()
     editor.enter(group)
