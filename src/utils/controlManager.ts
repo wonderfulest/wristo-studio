@@ -57,6 +57,12 @@ export interface ControlManagerOptions {
 }
 
 const offset = 10
+export const LAYER_ORDER_ENTRY_OFFSET = 10
+export const LAYER_ORDER_MENU_CONTROL_SIZE = 16
+export const LAYER_ORDER_MENU_FONT_SIZE = 14
+export const LAYER_ORDER_MENU_TOUCH_SIZE = 32
+
+const LAYER_ORDER_MENU_RADIUS = LAYER_ORDER_MENU_CONTROL_SIZE / 2
 
 const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone' | 'onLayerOrderChange'>> = {
   size: 6,
@@ -87,14 +93,15 @@ function renderCircle(
   left: number,
   top: number,
   fill: string,
+  radius = runtimeOptions.size,
 ): void {
-  const { size, stroke } = runtimeOptions
+  const { stroke } = runtimeOptions
   ctx.save()
   ctx.fillStyle = fill
   ctx.strokeStyle = stroke
   ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.arc(left, top, size, 0, Math.PI * 2)
+  ctx.arc(left, top, radius, 0, Math.PI * 2)
   ctx.fill()
   ctx.stroke()
   ctx.restore()
@@ -129,11 +136,13 @@ function renderLayerGlyph(
   top: number,
   glyph: string,
   enabled = true,
+  radius = runtimeOptions.size,
+  fontSize = 11,
 ): void {
-  renderCircle(ctx, left, top, runtimeOptions.fill)
+  renderCircle(ctx, left, top, runtimeOptions.fill, radius)
   ctx.save()
   ctx.fillStyle = enabled ? '#0f6b68' : '#94a3b8'
-  ctx.font = 'bold 11px sans-serif'
+  ctx.font = `bold ${fontSize}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(glyph, left, top + 0.5)
@@ -156,7 +165,15 @@ function createLayerActionRenderer(action: LayerOrderAction, glyph: string) {
     _styleOverride: unknown,
     target: FabricObject,
   ): void => {
-    renderLayerGlyph(ctx, left, top, glyph, getLayerActionEnabled(target as FabricLikeObject, action))
+    renderLayerGlyph(
+      ctx,
+      left,
+      top,
+      glyph,
+      getLayerActionEnabled(target as FabricLikeObject, action),
+      LAYER_ORDER_MENU_RADIUS,
+      LAYER_ORDER_MENU_FONT_SIZE,
+    )
   }
 }
 
@@ -210,8 +227,8 @@ function createLayerOrderControls(): Record<string, Control> {
     layerOrderControl: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: offset * 2,
-      offsetY: offset * 2,
+      offsetX: LAYER_ORDER_ENTRY_OFFSET,
+      offsetY: LAYER_ORDER_ENTRY_OFFSET,
       cursorStyle: 'pointer',
       actionName: 'layerOrder',
       getVisibility: isLayerEntryControlVisible,
@@ -227,8 +244,12 @@ function createLayerOrderControls(): Record<string, Control> {
     bringToFrontControl: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 6,
+      offsetX: LAYER_ORDER_ENTRY_OFFSET,
+      offsetY: -118,
+      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
+      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
+      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
+      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
       cursorStyle: 'pointer',
       actionName: 'bringToFront',
       getVisibility: isLayerMenuControlVisible,
@@ -238,8 +259,12 @@ function createLayerOrderControls(): Record<string, Control> {
     bringForwardControl: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 4,
+      offsetX: LAYER_ORDER_ENTRY_OFFSET,
+      offsetY: -86,
+      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
+      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
+      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
+      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
       cursorStyle: 'pointer',
       actionName: 'bringForward',
       getVisibility: isLayerMenuControlVisible,
@@ -249,8 +274,12 @@ function createLayerOrderControls(): Record<string, Control> {
     sendBackwardControl: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: offset * 2,
-      offsetY: -offset * 2,
+      offsetX: LAYER_ORDER_ENTRY_OFFSET,
+      offsetY: -54,
+      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
+      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
+      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
+      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
       cursorStyle: 'pointer',
       actionName: 'sendBackward',
       getVisibility: isLayerMenuControlVisible,
@@ -260,8 +289,12 @@ function createLayerOrderControls(): Record<string, Control> {
     sendToBackControl: new Control({
       x: 0.5,
       y: 0.5,
-      offsetX: offset * 2,
-      offsetY: 0,
+      offsetX: LAYER_ORDER_ENTRY_OFFSET,
+      offsetY: -22,
+      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
+      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
+      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
+      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
       cursorStyle: 'pointer',
       actionName: 'sendToBack',
       getVisibility: isLayerMenuControlVisible,
