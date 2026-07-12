@@ -47,7 +47,9 @@ describe('layerOrderControl', () => {
   })
 
   it('maps Fabric control keys to user-facing titles', () => {
-    expect(getLayerOrderControlTitle('layerOrderControl')).toBe('Layer Order')
+    expect(getLayerOrderControlTitle('layerOrderControl')).toBe('Object Actions')
+    expect(getLayerOrderControlTitle('cloneActionControl')).toBe('Clone')
+    expect(getLayerOrderControlTitle('deleteActionControl')).toBe('Delete')
     expect(getLayerOrderControlTitle('bringForwardControl')).toBe('Bring Forward')
     expect(getLayerOrderControlTitle('unknown')).toBe('')
     expect(getLayerOrderControlTitle(undefined)).toBe('')
