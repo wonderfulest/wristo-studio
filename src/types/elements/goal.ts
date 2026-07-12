@@ -1,5 +1,6 @@
 import { TOriginX, TOriginY } from 'fabric'
 import type { BaseElementConfig } from './base'
+import type { GoalBarProgressDirection } from '@/elements/goal/goalBar/goalBar.direction'
 
 export interface GoalElementConfig extends BaseElementConfig {
   eleType: 'goalBar' | 'goalArc'
@@ -49,7 +50,7 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   borderWidth: number
   borderColor: string
   goalProperty: string
-  progressAlign: 'left' | 'right'
+  progressDirection: GoalBarProgressDirection
   shape?: 'rectangle' | 'customPolygon'
   polygonPoints?: Array<{ x: number; y: number }>
   gradientEnabled?: boolean

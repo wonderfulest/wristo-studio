@@ -1,4 +1,6 @@
 export type GoalBarShape = 'rectangle' | 'customPolygon'
+import type { GoalBarProgressDirection } from './goalBar.direction'
+import { resolveGoalBarDirection } from './goalBar.direction'
 export type GoalBarLegacyShape = 'trapezoid' | 'reverseTrapezoid' | 'parallelogram'
 export type GoalBarPolygonPoint = { x: number; y: number }
 export type GoalBarPolygonBounds = { left: number; top: number; width: number; height: number }
@@ -289,6 +291,13 @@ function intersectVerticalEdge(a: GoalBarPolygonPoint, b: GoalBarPolygonPoint, x
   return { x, y: a.y + (b.y - a.y) * ratio }
 }
 
+function intersectHorizontalEdge(a: GoalBarPolygonPoint, b: GoalBarPolygonPoint, y: number): GoalBarPolygonPoint {
+  const deltaY = b.y - a.y
+  if (Math.abs(deltaY) < POLYGON_EPSILON) return { x: a.x, y }
+  const ratio = (y - a.y) / deltaY
+  return { x: a.x + (b.x - a.x) * ratio, y }
+}
+
 function deduplicatePoints(points: GoalBarPolygonPoint[]): GoalBarPolygonPoint[] {
   return points.filter((point, index) => {
     const previous = points[(index + points.length - 1) % points.length]
@@ -296,7 +305,49 @@ function deduplicatePoints(points: GoalBarPolygonPoint[]): GoalBarPolygonPoint[]
   })
 }
 
-export function clipGoalBarPolygon(points: GoalBarPolygonPoint[], left: number, right: number, progress: number, align: 'left' | 'right'): GoalBarPolygonPoint[] {
+export function clipGoalBarPolygon(points: GoalBarPolygonPoint[], progress: number, direction: GoalBarProgressDirection): GoalBarPolygonPoint[]
+export function clipGoalBarPolygon(points: GoalBarPolygonPoint[], left: number, right: number, progress: number, align: 'left' | 'right'): GoalBarPolygonPoint[]
+export function clipGoalBarPolygon(
+  points: GoalBarPolygonPoint[],
+  progressOrLeft: number,
+  directionOrRight: GoalBarProgressDirection | number,
+  legacyProgress?: number,
+  legacyAlign?: 'left' | 'right',
+): GoalBarPolygonPoint[] {
+  if (typeof directionOrRight === 'string') {
+    const boundedProgress = Math.max(0, Math.min(1, Number(progressOrLeft) || 0))
+    if (boundedProgress <= 0 || points.length < MIN_POLYGON_POINTS) return []
+    if (boundedProgress >= 1) return points.map((point) => ({ ...point }))
+    const { axis, reversed } = resolveGoalBarDirection(directionOrRight)
+    const boundary = reversed ? 1 - boundedProgress : boundedProgress
+    const coordinate = axis === 'horizontal'
+      ? (point: GoalBarPolygonPoint) => point.x
+      : (point: GoalBarPolygonPoint) => point.y
+    const isInside = reversed
+      ? (point: GoalBarPolygonPoint) => coordinate(point) >= boundary
+      : (point: GoalBarPolygonPoint) => coordinate(point) <= boundary
+    const intersect = axis === 'horizontal' ? intersectVerticalEdge : intersectHorizontalEdge
+    const output: GoalBarPolygonPoint[] = []
+    for (let index = 0; index < points.length; index++) {
+      const current = points[index]
+      const previous = points[(index + points.length - 1) % points.length]
+      const currentInside = isInside(current)
+      const previousInside = isInside(previous)
+      if (currentInside) {
+        if (!previousInside) output.push(intersect(previous, current, boundary))
+        output.push({ ...current })
+      } else if (previousInside) {
+        output.push(intersect(previous, current, boundary))
+      }
+    }
+    const result = deduplicatePoints(output)
+    return result.length >= MIN_POLYGON_POINTS ? result : []
+  }
+
+  const left = progressOrLeft
+  const right = directionOrRight
+  const progress = legacyProgress ?? 0
+  const align = legacyAlign ?? 'left'
   const boundedProgress = Math.max(0, Math.min(1, Number(progress) || 0))
   if (boundedProgress <= 0 || points.length < MIN_POLYGON_POINTS) return []
   if (boundedProgress >= 1) return points.map((point) => ({ ...point }))

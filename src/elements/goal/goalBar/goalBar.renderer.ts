@@ -17,6 +17,11 @@ import {
   type GoalBarPolygonPoint,
 } from './goalBar.geometry'
 import { createGoalBarGradientFill } from './goalBar.gradient'
+import {
+  getGoalBarProgressBounds,
+  normalizeGoalBarDirection,
+  resolveGoalBarDirection,
+} from './goalBar.direction'
 
 type GoalBarVariant = NonNullable<GoalBarElementConfig['variant']>
 type GoalBarRuntimeConfig = Omit<GoalBarElementConfig, 'eleType'> & {
@@ -69,26 +74,6 @@ function setChildren(group: Group, children: Record<string, any>) {
   if (elementMeta) {
     elementMeta.children = children
   }
-}
-
-/**
- * ✅ 正确的进度条定位（基于 origin=center）
- */
-function getProgressLeft(
-  background: Rect,
-  padding: number,
-  align: 'left' | 'right',
-  progress: number,
-) {
-  const leftEdge = -background.width / 2
-  const rightEdge = background.width / 2
-
-  if (align === 'right') {
-    const progressWidth = (background.width - padding * 2) * progress
-    return rightEdge - padding - progressWidth
-  }
-
-  return leftEdge + padding
 }
 
 function removeGroupChildren(group: Group) {
@@ -173,7 +158,10 @@ function normalizeGoalBarConfig(
     height: Number(config.height ?? 10),
     padding: Number((config as Partial<GoalBarElementConfig>).padding ?? 0),
     progress: clampProgress(config.progress ?? 0),
-    progressAlign: ((config as Partial<GoalBarElementConfig>).progressAlign ?? 'left') as 'left' | 'right',
+    progressDirection: normalizeGoalBarDirection(
+      (config as any).progressDirection,
+      (config as any).progressAlign,
+    ),
     variant: ((config as Partial<GoalBarElementConfig>).variant ?? 'continuous') as GoalBarVariant,
     segments: Math.max(1, Math.floor(Number((config as any).segments ?? 10))),
     gap: Math.max(0, Number((config as any).gap ?? 2)),
@@ -224,7 +212,7 @@ type GoalBarLayoutOptions = {
 const GOAL_BAR_ENCODER_LIVE_FIELDS = [
   'left', 'top', 'shape', 'polygonPoints', 'slantRatio', 'color', 'bgColor',
   'variant', 'segments', 'gap', 'borderRadius', 'progress', 'padding',
-  'borderWidth', 'borderColor', 'goalProperty', 'progressAlign',
+  'borderWidth', 'borderColor', 'goalProperty', 'progressDirection',
   'gradientEnabled', 'gradientStartColor', 'gradientEndColor',
 ] as const
 
@@ -259,7 +247,7 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     height,
     padding,
     progress: progressValue,
-    progressAlign,
+    progressDirection,
     borderRadius,
     color,
     bgColor,
@@ -274,6 +262,7 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     gradientStartColor,
     gradientEndColor,
   } = config
+  const directionModel = resolveGoalBarDirection(progressDirection)
   const stableLeft = Number(config.left ?? (group as any).left ?? 0)
   const stableTop = Number(config.top ?? (group as any).top ?? 0)
   const restoreGroupPosition = () => {
@@ -290,6 +279,7 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
       gap,
       shape,
       polygonPoints: polygonPoints.map((point) => ({ ...point })),
+      progressDirection,
       gradientEnabled,
       gradientStartColor,
       gradientEndColor,
@@ -307,8 +297,9 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
 
     const segmentCount = Math.max(1, Math.floor(Number(segments ?? 10)))
     const segmentGap = Math.max(0, Number(gap ?? 2))
-    const contentWidth = Math.max(0, width - segmentGap * (segmentCount - 1))
-    const segmentWidth = segmentCount > 0 ? contentWidth / segmentCount : 0
+    const mainLength = directionModel.axis === 'horizontal' ? width : height
+    const contentLength = Math.max(0, mainLength - segmentGap * (segmentCount - 1))
+    const segmentLength = segmentCount > 0 ? contentLength / segmentCount : 0
     const activeTotal = clampProgress(progressValue ?? 0) * segmentCount
     const fullActive = Math.floor(activeTotal)
     const remainder = activeTotal - fullActive
@@ -318,25 +309,30 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     addGroupChild(group, boundsAnchor)
 
     for (let i = 0; i < segmentCount; i++) {
-      const x = -width / 2 + i * (segmentWidth + segmentGap) + segmentWidth / 2
+      const mainCenter = -mainLength / 2 + i * (segmentLength + segmentGap) + segmentLength / 2
+      const segmentWidth = directionModel.axis === 'horizontal' ? segmentLength : width
+      const segmentHeight = directionModel.axis === 'horizontal' ? height : segmentLength
+      const x = directionModel.axis === 'horizontal' ? mainCenter : 0
+      const y = directionModel.axis === 'horizontal' ? 0 : mainCenter
       const segmentLeft = x - segmentWidth / 2
-      const radius = Math.min(borderRadius, segmentWidth / 2, height / 2)
+      const segmentTop = y - segmentHeight / 2
+      const radius = Math.min(borderRadius, segmentWidth / 2, segmentHeight / 2)
       const segmentPolygonPoints = shape === 'rectangle'
         ? []
         : denormalizePolygonPoints(polygonPoints, {
             left: segmentLeft,
-            top: -height / 2,
+            top: segmentTop,
             width: segmentWidth,
-            height,
+            height: segmentHeight,
           })
 
       const backgroundObject = shape === 'rectangle'
         ? new Rect({
             id: `${(group as any).id}_${i}_seg_bg`,
             left: x,
-            top: 0,
+            top: y,
             width: segmentWidth,
-            height,
+            height: segmentHeight,
             fill: bgColor,
             rx: radius,
             ry: radius,
@@ -349,36 +345,36 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
       nextChildren[`segmentBg${i}`] = backgroundObject
       addGroupChild(group, backgroundObject)
 
-      const progressIndex = progressAlign === 'right' ? segmentCount - 1 - i : i
+      const progressIndex = directionModel.reversed ? segmentCount - 1 - i : i
       const segmentProgress = progressIndex < fullActive
         ? 1
         : progressIndex === fullActive
           ? remainder
           : 0
       if (segmentProgress > 0) {
-        const activeWidth = segmentProgress * segmentWidth
+        const activeBounds = getGoalBarProgressBounds(segmentWidth, segmentHeight, segmentProgress, progressDirection)
         const gradientFill = createGoalBarGradientFill({
           enabled: Boolean(gradientEnabled),
           startColor: gradientStartColor,
           endColor: gradientEndColor,
-          progressAlign,
-          width: activeWidth,
+          progressDirection,
+          width: activeBounds.width,
+          height: activeBounds.height,
           startRatio: activeTotal > 0 ? progressIndex / activeTotal : 0,
           endRatio: activeTotal > 0 ? (progressIndex + segmentProgress) / activeTotal : 1,
         })
         const activeFill = gradientFill ?? color
         let activeObject: Rect | Polygon | undefined
         if (shape === 'rectangle') {
-          const activeLeft = progressAlign === 'right'
-            ? x + segmentWidth / 2 - activeWidth / 2
-            : x - segmentWidth / 2 + activeWidth / 2
-          const activeRadius = Math.min(radius, activeWidth / 2, height / 2)
+          const activeLeft = segmentLeft + activeBounds.left + activeBounds.width / 2
+          const activeTop = segmentTop + activeBounds.top + activeBounds.height / 2
+          const activeRadius = Math.min(radius, activeBounds.width / 2, activeBounds.height / 2)
           activeObject = new Rect({
             id: `${(group as any).id}_${i}_seg_active`,
             left: activeLeft,
-            top: 0,
-            width: activeWidth,
-            height,
+            top: activeTop,
+            width: activeBounds.width,
+            height: activeBounds.height,
             fill: activeFill,
             rx: activeRadius,
             ry: activeRadius,
@@ -388,12 +384,9 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
             evented: false,
           })
         } else {
-          const activePoints = clipGoalBarPolygon(
-            segmentPolygonPoints,
-            segmentLeft,
-            segmentLeft + segmentWidth,
-            segmentProgress,
-            progressAlign,
+          const activePoints = denormalizePolygonPoints(
+            clipGoalBarPolygon(polygonPoints, segmentProgress, progressDirection),
+            { left: segmentLeft, top: segmentTop, width: segmentWidth, height: segmentHeight },
           )
           if (activePoints.length >= 3) {
             activeObject = createPolygonObject(
@@ -414,9 +407,9 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
           ? new Rect({
               id: `${(group as any).id}_${i}_seg_border`,
               left: x,
-              top: 0,
+              top: y,
               width: segmentWidth,
-              height,
+              height: segmentHeight,
               fill: 'transparent',
               stroke: borderColor,
               strokeWidth: borderWidth,
@@ -469,16 +462,15 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     addGroupChild(group, boundsAnchor)
     addGroupChild(group, background)
 
-    const activePoints = clipGoalBarPolygon(
-      absolutePolygonPoints,
-      -width / 2,
-      width / 2,
-      progressValue,
-      progressAlign,
+    const activePoints = denormalizePolygonPoints(
+      clipGoalBarPolygon(polygonPoints, progressValue, progressDirection),
+      { left: -width / 2, top: -height / 2, width, height },
     )
     if (activePoints.length >= 3) {
       const activeXs = activePoints.map((point) => point.x)
       const activeWidth = Math.max(...activeXs) - Math.min(...activeXs)
+      const activeYs = activePoints.map((point) => point.y)
+      const activeHeight = Math.max(...activeYs) - Math.min(...activeYs)
       const progress = createPolygonObject(
         `${(group as any).id}_progress`,
         activePoints,
@@ -486,8 +478,9 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
           enabled: Boolean(gradientEnabled),
           startColor: gradientStartColor,
           endColor: gradientEndColor,
-          progressAlign,
+          progressDirection,
           width: activeWidth,
+          height: activeHeight,
         }) ?? color,
       )
       nextChildren.progress = progress
@@ -564,18 +557,25 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     strokeWidth: borderWidth ?? 0,
   })
 
+  const contentWidth = Math.max(0, width - padding * 2)
+  const contentHeight = Math.max(0, height - padding * 2)
+  const progressBounds = getGoalBarProgressBounds(contentWidth, contentHeight, progressValue, progressDirection)
   progress.set({
-    left: getProgressLeft(background, padding, progressAlign, progressValue),
-    width: (width - padding * 2) * progressValue,
-    height: height - padding * 2,
+    left: -width / 2 + padding + progressBounds.left,
+    top: -height / 2 + padding + progressBounds.top,
+    originX: 'left',
+    originY: 'top',
+    width: progressBounds.width,
+    height: progressBounds.height,
     rx: Math.max(0, borderRadius - padding),
     ry: Math.max(0, borderRadius - padding),
     fill: createGoalBarGradientFill({
       enabled: Boolean(gradientEnabled),
       startColor: gradientStartColor,
       endColor: gradientEndColor,
-      progressAlign,
-      width: (width - padding * 2) * progressValue,
+      progressDirection,
+      width: progressBounds.width,
+      height: progressBounds.height,
     }) ?? color,
   })
 

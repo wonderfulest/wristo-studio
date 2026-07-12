@@ -1,11 +1,14 @@
 import { Gradient } from 'fabric'
+import type { GoalBarProgressDirection } from './goalBar.direction'
 
 type GoalBarGradientInput = {
   enabled: boolean
   startColor?: string
   endColor?: string
-  progressAlign: 'left' | 'right'
+  progressDirection?: GoalBarProgressDirection
+  progressAlign?: 'left' | 'right'
   width: number
+  height?: number
   startRatio?: number
   endRatio?: number
 }
@@ -42,10 +45,16 @@ export function createGoalBarGradientSpec(input: GoalBarGradientInput): GoalBarG
 
   const startRatio = Math.max(0, Math.min(1, input.startRatio ?? 0))
   const endRatio = Math.max(startRatio, Math.min(1, input.endRatio ?? 1))
+  const direction = input.progressDirection ?? (input.progressAlign === 'right' ? 'rightToLeft' : 'leftToRight')
+  const height = input.height ?? 0
+  const coords = {
+    leftToRight: { x1: 0, y1: 0, x2: input.width, y2: 0 },
+    rightToLeft: { x1: input.width, y1: 0, x2: 0, y2: 0 },
+    topToBottom: { x1: 0, y1: 0, x2: 0, y2: height },
+    bottomToTop: { x1: 0, y1: height, x2: 0, y2: 0 },
+  }[direction]
   return {
-    coords: input.progressAlign === 'right'
-      ? { x1: input.width, y1: 0, x2: 0, y2: 0 }
-      : { x1: 0, y1: 0, x2: input.width, y2: 0 },
+    coords,
     colorStops: [
       { offset: 0, color: interpolateColor(start, end, startRatio) },
       { offset: 1, color: interpolateColor(start, end, endRatio) },

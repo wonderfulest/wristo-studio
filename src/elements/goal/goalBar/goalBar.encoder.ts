@@ -2,11 +2,17 @@ import type { FabricElement } from '@/types/element'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
 import { ensureGoalElementId } from '../goal.common'
 import { normalizeGoalBarPolygonConfig } from './goalBar.geometry'
+import { normalizeGoalBarDirection } from './goalBar.direction'
 
 type LegacyGoalBarPolygonConfig = {
   shape?: unknown
   polygonPoints?: unknown
   slantRatio?: unknown
+}
+
+type LegacyGoalBarDirectionConfig = {
+  progressDirection?: unknown
+  progressAlign?: unknown
 }
 
 const INVALID_POLYGON_WARNING = '[GoalBar] Invalid polygonPoints; falling back to rectangle'
@@ -30,7 +36,7 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
 
   // Widget config 提供持久化回退；可能分叉的 live 字段在下方按字段优先读取。
   const widget = anyElement.__element as { config?: Partial<GoalBarElementConfig> } | undefined
-  const config = (widget?.config ?? {}) as Partial<GoalBarElementConfig> & LegacyGoalBarPolygonConfig
+  const config = (widget?.config ?? {}) as Partial<GoalBarElementConfig> & LegacyGoalBarPolygonConfig & LegacyGoalBarDirectionConfig
 
   const id = ensureGoalElementId(anyElement.id as string | undefined)
   const polygonConfig = normalizePersistedPolygonConfig(
@@ -61,7 +67,10 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     borderWidth: config.borderWidth ?? anyElement.borderWidth,
     borderColor: config.borderColor ?? anyElement.borderColor,
     goalProperty: anyElement.goalProperty ?? config.goalProperty,
-    progressAlign: config.progressAlign ?? anyElement.progressAlign,
+    progressDirection: normalizeGoalBarDirection(
+      anyElement.progressDirection ?? config.progressDirection,
+      anyElement.progressAlign ?? config.progressAlign,
+    ),
     shape: polygonConfig.shape,
     polygonPoints: polygonConfig.polygonPoints,
     gradientEnabled: Boolean(anyElement.gradientEnabled ?? config.gradientEnabled ?? false),
@@ -73,7 +82,7 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
 }
 
 export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricElement> {
-  const legacyConfig = config as unknown as LegacyGoalBarPolygonConfig
+  const legacyConfig = config as unknown as LegacyGoalBarPolygonConfig & LegacyGoalBarDirectionConfig
   const polygonConfig = normalizePersistedPolygonConfig(legacyConfig, config.id)
   const result: Partial<FabricElement> = {
     id: config.id,
@@ -95,7 +104,7 @@ export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricEleme
     borderWidth: config.borderWidth,
     borderColor: config.borderColor,
     goalProperty: config.goalProperty,
-    progressAlign: config.progressAlign,
+    progressDirection: normalizeGoalBarDirection(legacyConfig.progressDirection, legacyConfig.progressAlign),
     shape: polygonConfig.shape,
     polygonPoints: polygonConfig.polygonPoints,
     gradientEnabled: Boolean(config.gradientEnabled ?? false),

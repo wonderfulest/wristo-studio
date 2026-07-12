@@ -40,6 +40,20 @@ afterEach(() => {
 })
 
 describe('goalBar encoder compatibility', () => {
+  it.each([
+    [{ progressAlign: 'left' }, 'leftToRight'],
+    [{ progressAlign: 'right' }, 'rightToLeft'],
+    [{ progressDirection: 'bottomToTop', progressAlign: 'right' }, 'bottomToTop'],
+    [{ progressDirection: 'topToBottom' }, 'topToBottom'],
+  ] as const)('normalizes direction from %o', (input, expected) => {
+    const decoded = decodeGoalBar(createConfig(input as unknown as Record<string, unknown>))
+    expect((decoded as any).progressDirection).toBe(expected)
+    expect((decoded as any).progressAlign).toBeUndefined()
+    const encoded = encodeGoalBar(decoded)
+    expect(encoded.progressDirection).toBe(expected)
+    expect((encoded as any).progressAlign).toBeUndefined()
+  })
+
   it.each([undefined, 'rectangle'])('decodes legacy shape %s as rectangle', (shape) => {
     const decoded = decodeGoalBar(createConfig({ shape }))
 
