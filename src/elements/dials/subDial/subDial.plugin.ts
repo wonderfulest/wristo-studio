@@ -5,7 +5,7 @@ import { decodeSubDial, encodeSubDial } from './subDial.encoder'
 import SubDialPanel from './subDial.panel.vue'
 import { createSubDial, updateSubDial } from './subDial.renderer'
 import { SubDialLayoutEditor, type SubDialLayoutEditorOptions } from './SubDialLayoutEditor'
-import { SubDialEditorRegistry } from './subDial.editorRegistry'
+import { createOwnedDispose, SubDialEditorRegistry } from './subDial.editorRegistry'
 
 const editorRegistry = new SubDialEditorRegistry<SubDialLayoutEditor>()
 
@@ -15,10 +15,7 @@ export const subscribeSubDialLayoutEditor = (listener: (editor: SubDialLayoutEdi
 export function installSubDialLayoutEditor(options: SubDialLayoutEditorOptions): SubDialLayoutEditor {
   const editor = new SubDialLayoutEditor(options)
   const dispose = editor.dispose.bind(editor)
-  editor.dispose = () => {
-    dispose()
-    editorRegistry.unregister(editor)
-  }
+  editor.dispose = createOwnedDispose(editor, editorRegistry, dispose)
   editorRegistry.register(editor)
   return editor
 }
@@ -28,7 +25,7 @@ export default function registerSubDialPlugin() {
     add: (config) => createSubDial(config as SubDialElementConfig),
     update: (element, patch) => updateSubDial(element, patch as Partial<SubDialElementConfig>),
     encode: (element) => encodeSubDial(element),
-    decode: (config) => decodeSubDial(config as SubDialElementConfig),
+    decode: (config) => decodeSubDial(config as SubDialElementConfig)
   })
   registerSettings('subDial', SubDialPanel)
 }

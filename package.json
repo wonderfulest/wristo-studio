@@ -51,6 +51,7 @@
     "@vitejs/plugin-vue": "^4.0.0",
     "@vue/cli-plugin-typescript": "^4.5.17",
     "@vue/runtime-dom": "^3.5.13",
+    "@vue/test-utils": "^2.4.6",
     "less": "^4.2.1",
     "prettier": "^3.5.3",
     "sass": "^1.81.1",

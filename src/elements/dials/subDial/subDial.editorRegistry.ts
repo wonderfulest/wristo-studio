@@ -2,7 +2,9 @@ export class SubDialEditorRegistry<T extends { dispose(): void }> {
   private active: T | null = null
   private listeners = new Set<(editor: T | null) => void>()
 
-  current(): T | null { return this.active }
+  current(): T | null {
+    return this.active
+  }
 
   register(editor: T): void {
     if (this.active === editor) return
@@ -21,14 +23,33 @@ export class SubDialEditorRegistry<T extends { dispose(): void }> {
   subscribe(listener: (editor: T | null) => void): () => void {
     this.listeners.add(listener)
     this.call(listener, this.active)
-    return () => { this.listeners.delete(listener) }
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
 
   private notify(editor: T | null): void {
-    this.listeners.forEach(listener => this.call(listener, editor))
+    this.listeners.forEach((listener) => this.call(listener, editor))
   }
 
   private call(listener: (editor: T | null) => void, editor: T | null): void {
-    try { listener(editor) } catch { /* UI subscribers must not break ownership cleanup. */ }
+    try {
+      listener(editor)
+    } catch {
+      /* UI subscribers must not break ownership cleanup. */
+    }
+  }
+}
+
+export function createOwnedDispose<T extends { dispose(): void }>(owner: T, registry: SubDialEditorRegistry<T>, dispose: () => void): () => void {
+  let disposed = false
+  return () => {
+    if (disposed) return
+    disposed = true
+    try {
+      dispose()
+    } finally {
+      registry.unregister(owner)
+    }
   }
 }
