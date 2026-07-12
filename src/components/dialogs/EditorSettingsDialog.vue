@@ -49,18 +49,6 @@
         <span>{{ t('editorSettings.chineseContent') }}</span>
       </label>
 
-      <div v-if="canQuickAlign" class="bar-cell quick-align-cell">
-        <el-button
-          v-for="option in quickAlignOptions"
-          :key="option.type"
-          circle
-          class="icon-button quick-align-button"
-          :title="t(option.labelKey)"
-          @click="handleQuickAlign(option.type)"
-        >
-          <Icon :icon="option.icon" width="17" height="17" />
-        </el-button>
-      </div>
     </div>
 
     <div class="bar-group right-group">
@@ -223,7 +211,6 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 import { clearAllGuidelines } from '@/utils/guidelineUtil'
 import type { FabricElement } from '@/types/element'
-import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getFontBySlug } from '@/api/wristo/fonts'
@@ -267,15 +254,6 @@ const rulerGuidesMinor = ref<number>(editorStore.rulerGuidesMinor)
 const opacityPopoverVisible = ref<boolean>(false)
 const showKeyGuidelines = ref<boolean>(editorStore.showKeyGuidelines)
 const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelineDivisions)
-
-const quickAlignOptions: Array<{ type: AlignType; icon: string; labelKey: string }> = [
-  { type: 'left', icon: 'mdi:align-horizontal-left', labelKey: 'editor.alignLeft' },
-  { type: 'center', icon: 'mdi:align-horizontal-center', labelKey: 'editor.alignCenter' },
-  { type: 'right', icon: 'mdi:align-horizontal-right', labelKey: 'editor.alignRight' },
-  { type: 'top', icon: 'mdi:align-vertical-top', labelKey: 'editor.alignTop' },
-  { type: 'middle', icon: 'mdi:align-vertical-center', labelKey: 'editor.alignMiddle' },
-  { type: 'bottom', icon: 'mdi:align-vertical-bottom', labelKey: 'editor.alignBottom' },
-]
 
 const canvasSizeLabel = computed(() => {
   const width = Number(designStore.designSpec.width || 0)
@@ -323,7 +301,6 @@ const selectedElementLabel = computed(() => {
   return '-'
 })
 
-const canQuickAlign = computed(() => selectedElements.value.length > 1)
 const chineseContentEnabled = computed(() => designStore.supportsChineseContent)
 
 const handleLightCanvasBackgroundColorChange = (color: string) => {
@@ -465,11 +442,6 @@ const handleChineseContentChange = async (value: boolean | string | number) => {
   designStore.setSupportsChineseContent(false)
   refreshMetricTextElementsForContentLanguage()
   await refreshDateElementsForContentLanguage()
-}
-
-const handleQuickAlign = (type: AlignType) => {
-  if (!canQuickAlign.value) return
-  alignSelection(type)
 }
 
 const handleDeviceFrameChange = (value: boolean) => {
@@ -743,13 +715,6 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   justify-content: center;
 }
 
-.quick-align-cell {
-  width: 206px;
-  justify-content: center;
-  gap: 2px;
-  padding: 0 6px;
-}
-
 .icon-button {
   width: 26px;
   height: 26px;
@@ -777,10 +742,6 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   color: var(--studio-primary);
   border-color: var(--studio-primary-border);
   background: var(--studio-primary-soft);
-}
-
-.quick-align-button {
-  flex: 0 0 auto;
 }
 
 .toggle-button.active {

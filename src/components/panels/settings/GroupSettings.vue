@@ -2,6 +2,21 @@
   <div class="settings-group">
     <h3>{{ t('elementSettings.dataGroupTitle') }}</h3>
     <el-form ref="formRef" :model="formModel" label-position="left" label-width="120px">
+      <el-form-item :label="t('editor.align')">
+        <div class="group-alignment-actions">
+          <el-button
+            v-for="option in groupAlignOptions"
+            :key="option.type"
+            circle
+            class="group-alignment-button"
+            :title="t(option.labelKey)"
+            @click="handleGroupAlign(option.type)"
+          >
+            <Icon :icon="option.icon" width="17" height="17" />
+          </el-button>
+        </div>
+      </el-form-item>
+
       <DataPropertyField
         v-if="showDataProperty"
         v-model="dataProperty"
@@ -44,6 +59,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, computed, onMounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -60,7 +76,7 @@ import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
-import { alignSelection } from '@/engine/managers/alignManager'
+import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
@@ -79,6 +95,20 @@ const amoledIconAssetStore = useAmoledIconAssetStore()
 const props = defineProps<{
   elements: FabricElement[]
 }>()
+
+const groupAlignOptions: Array<{ type: AlignType; icon: string; labelKey: string }> = [
+  { type: 'left', icon: 'mdi:align-horizontal-left', labelKey: 'editor.alignLeft' },
+  { type: 'center', icon: 'mdi:align-horizontal-center', labelKey: 'editor.alignCenter' },
+  { type: 'right', icon: 'mdi:align-horizontal-right', labelKey: 'editor.alignRight' },
+  { type: 'top', icon: 'mdi:align-vertical-top', labelKey: 'editor.alignTop' },
+  { type: 'middle', icon: 'mdi:align-vertical-center', labelKey: 'editor.alignMiddle' },
+  { type: 'bottom', icon: 'mdi:align-vertical-bottom', labelKey: 'editor.alignBottom' },
+]
+
+const handleGroupAlign = (type: AlignType) => {
+  if (props.elements.length <= 1) return
+  alignSelection(type)
+}
 
 const getElementByType = (type: string): FabricElement | undefined => {
   return props.elements.find((obj) => obj.eleType === type)
@@ -391,5 +421,18 @@ const showGoalProperty = computed(() => {
 .required {
   color: var(--el-color-danger);
   margin-left: 4px;
+}
+
+.group-alignment-actions {
+  display: grid;
+  grid-template-columns: repeat(6, 28px);
+  gap: 4px;
+}
+
+.group-alignment-button {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
 }
 </style>
