@@ -1,6 +1,11 @@
 export class SubDialEditorRegistry<T extends { dispose(): void }> {
   private active: T | null = null
   private listeners = new Set<(editor: T | null) => void>()
+  private readonly onError: (error: Error) => void
+
+  constructor(onError: (error: Error) => void = (error) => console.error('[SubDialEditorRegistry]', error)) {
+    this.onError = onError
+  }
 
   current(): T | null {
     return this.active
@@ -11,7 +16,17 @@ export class SubDialEditorRegistry<T extends { dispose(): void }> {
     const previous = this.active
     this.active = editor
     this.notify(editor)
-    previous?.dispose()
+    if (previous) {
+      try {
+        previous.dispose()
+      } catch (error) {
+        try {
+          this.onError(error instanceof Error ? error : new Error(String(error)))
+        } catch {
+          // Error reporting must not make owner activation non-atomic.
+        }
+      }
+    }
   }
 
   unregister(editor: T): void {

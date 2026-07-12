@@ -30,7 +30,8 @@ describe('SubDialEditorRegistry', () => {
   })
 
   it('keeps the replacement owner when disposing the previous owner throws', () => {
-    const registry = new SubDialEditorRegistry<any>()
+    const onError = vi.fn()
+    const registry = new SubDialEditorRegistry<any>(onError)
     const first = {
       dispose: vi.fn(() => {
         throw new Error('dispose')
@@ -40,11 +41,13 @@ describe('SubDialEditorRegistry', () => {
     const values: any[] = []
     registry.subscribe((value) => values.push(value))
     registry.register(first)
-    expect(() => registry.register(second)).toThrow('dispose')
+    expect(() => registry.register(second)).not.toThrow()
     expect(registry.current()).toBe(second)
     expect(values).toEqual([null, first, second])
     registry.unregister(first)
     expect(registry.current()).toBe(second)
+    expect(onError).toHaveBeenCalledOnce()
+    expect(onError.mock.calls[0][0]).toMatchObject({ message: 'dispose' })
   })
 
   it('unregisters an active owner even when dispose throws and only disposes once', () => {
