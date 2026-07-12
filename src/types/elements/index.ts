@@ -34,6 +34,13 @@ export type { BarChartElementConfig, LineChartElementConfig } from './charts'
 
 // tick/dials
 export type { TickElementConfig } from './tick'
+export type {
+  SubDialElementConfig,
+  SubDialOutOfRangeBehavior,
+  SubDialPointerConfig,
+  SubDialPointerStyle,
+  SubDialRangeMode,
+} from './subDial'
 
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
@@ -50,6 +57,7 @@ import type { HandElementConfig as _Hand } from './hand'
 import type { TickElementConfig as _Tick } from './tick'
 import type { ImageElementConfig as _Image } from './image'
 import type { BackgroundElementConfig as _Background } from './background'
+import type { SubDialElementConfig as _SubDial } from './subDial'
 
 export type AnyElementConfig =
   | _Time
@@ -77,6 +85,7 @@ export type AnyElementConfig =
   | _GoalArc
   | _BarChart
   | _LineChart
+  | _SubDial
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {
@@ -119,6 +128,7 @@ export interface ElementConfigMap {
   'lineChart': _LineChart
   'battery': _Battery
   'moveBar': _MoveBar
+  'subDial': _SubDial
   [key: string]: _Base
 }
 

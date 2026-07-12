@@ -50,6 +50,7 @@ import { tick12Schema } from '@/elements/dials/tick12/tick12.schema'
 import { tick60Schema } from '@/elements/dials/tick60/tick60.schema'
 import { romansSchema } from '@/elements/dials/romans/romans.schema'
 import { centerCapSchema } from '@/elements/dials/centerCap/centerCap.schema'
+import { subDialSchema } from '@/elements/dials/subDial/subDial.schema'
 
 // goal
 import { goalBarSchema } from '@/elements/goal/goalBar/goalBar.schema'
@@ -120,6 +121,7 @@ export const elementConfigs: ElementConfigs = {
     tick12: buildConfigFromSchema(tick12Schema as AnySchema),
     tick60: buildConfigFromSchema(tick60Schema as AnySchema),
     romans: buildConfigFromSchema(romansSchema as AnySchema),
+    subDial: buildConfigFromSchema(subDialSchema as AnySchema),
   },
   hands: {
     hourHand: buildConfigFromSchema(hourHandSchema as AnySchema),
