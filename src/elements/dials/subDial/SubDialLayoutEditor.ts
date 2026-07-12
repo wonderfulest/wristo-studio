@@ -25,6 +25,7 @@ export interface SubDialLayoutEditorOptions {
   runWithoutRecording?: (task: () => void) => void | Promise<void>
   onError?: (error: Error) => void
   document?: DocumentLike | null
+  onSelectionChange?: (key: SubDialContentKey | null, group: any | null) => void
 }
 
 type InteractionState = Record<string, unknown> & { controlsVisibility?: Record<string, boolean> }
@@ -36,6 +37,7 @@ export class SubDialLayoutEditor {
   private readonly document: DocumentLike | null
   private readonly runWithoutRecording: (task: () => void) => void | Promise<void>
   private readonly onError: (error: Error) => void
+  private readonly onSelectionChange: NonNullable<SubDialLayoutEditorOptions['onSelectionChange']>
   private group: any = null
   private selectedKey: SubDialContentKey | null = null
   private outerState: InteractionState | null = null
@@ -46,6 +48,7 @@ export class SubDialLayoutEditor {
   private suppressSelectionExit = false
   private interactionRevision = 0
   private commitQueue: Promise<void> = Promise.resolve()
+  private selectionListeners = new Set<(key: SubDialContentKey | null, group: any | null) => void>()
 
   private readonly handlers = {
     doubleClick: (event: any) => {
@@ -91,6 +94,7 @@ export class SubDialLayoutEditor {
     this.saveHistory = options.saveHistory
     this.runWithoutRecording = options.runWithoutRecording ?? ((task) => task())
     this.onError = options.onError ?? ((error) => console.error('[SubDialLayoutEditor]', error))
+    this.onSelectionChange = options.onSelectionChange ?? (() => undefined)
     this.document = options.document === undefined ? (typeof document === 'undefined' ? null : document) : options.document
     this.canvas.on('mouse:dblclick', this.handlers.doubleClick)
     this.canvas.on('mouse:down', this.handlers.mouseDown)
@@ -156,6 +160,7 @@ export class SubDialLayoutEditor {
     this.drag = null
     this.group = null
     this.outerState = null
+    this.emitSelection(null, null)
     group.setCoords?.()
     this.clearCanvasSelection()
     this.canvas.requestRenderAll?.()
@@ -165,9 +170,18 @@ export class SubDialLayoutEditor {
     return Boolean(this.group && (!group || group === this.group))
   }
 
+  getSelectedKey(): SubDialContentKey | null { return this.selectedKey }
+  getEditingGroup(): any | null { return this.group }
+  subscribeSelection(listener: (key: SubDialContentKey | null, group: any | null) => void): () => void {
+    this.selectionListeners.add(listener)
+    listener(this.selectedKey, this.group)
+    return () => this.selectionListeners.delete(listener)
+  }
+
   select(key: SubDialContentKey): boolean {
     if (!this.ensureAttached() || !this.group || !CONTENT_KEYS.includes(key) || !this.child(key)) return false
     this.selectedKey = key
+    this.emitSelection(key, this.group)
     this.updateSelectionOverlay()
     return true
   }
@@ -388,5 +402,9 @@ export class SubDialLayoutEditor {
     } catch {
       // Error reporting must never reject a Fabric event handler.
     }
+  }
+  private emitSelection(key: SubDialContentKey | null, group: any | null): void {
+    this.onSelectionChange(key, group)
+    this.selectionListeners.forEach((listener) => listener(key, group))
   }
 }
