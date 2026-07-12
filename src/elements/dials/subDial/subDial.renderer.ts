@@ -1,7 +1,7 @@
 import { Circle, Group, Image as FabricImage, Line, Text, Triangle, type FabricObject } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
-import type { SubDialElementConfig } from '@/types/elements/subDial'
+import type { SubDialContentKey, SubDialElementConfig, SubDialTextItemConfig } from '@/types/elements/subDial'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useLayerStore } from '@/stores/layerStore'
@@ -11,13 +11,15 @@ import { encodeSubDial } from './subDial.encoder'
 import { migrateSubDialConfig } from './subDial.migration'
 
 type SubDialChildren = {
-  background: FabricObject
-  majorTicks: Group
-  minorTicks: Group
-  pointer: FabricObject
-  centerCap: FabricObject
-  valueText: Text
-  unitText: Text
+  static: {
+    background: FabricObject
+    majorTicks: Group
+    minorTicks: Group
+    tickLabels: Group
+    pointer: FabricObject
+    centerCap: FabricObject
+  }
+  content: Record<SubDialContentKey, Text>
 }
 
 type SubDialWidget = {
@@ -31,10 +33,7 @@ function hasOwn(value: object, key: PropertyKey): boolean {
   return Object.prototype.hasOwnProperty.call(value, key)
 }
 
-function resolvePatchedProgressProperty(
-  patch: Partial<SubDialElementConfig>,
-  existing: string
-): string {
+function resolvePatchedProgressProperty(patch: Partial<SubDialElementConfig>, existing: string): string {
   if (hasOwn(patch, 'progressProperty') && patch.progressProperty !== undefined) return String(patch.progressProperty)
   if (hasOwn(patch, 'goalProperty') && patch.goalProperty !== undefined) return String(patch.goalProperty)
   return existing
@@ -48,7 +47,7 @@ function resolveSweep(config: SubDialElementConfig): number {
 }
 
 function pointAt(radius: number, angle: number): { x: number; y: number } {
-  const radians = angle * Math.PI / 180
+  const radians = (angle * Math.PI) / 180
   return { x: Math.cos(radians) * radius, y: Math.sin(radians) * radius }
 }
 
@@ -68,10 +67,36 @@ function buildTicks(config: SubDialElementConfig, count: number, major: boolean)
       stroke: color,
       strokeWidth: major ? 2 : 1,
       selectable: false,
-      evented: false,
+      evented: false
     })
   })
   return new Group(lines, { selectable: false, evented: false })
+}
+
+function buildTickLabels(config: SubDialElementConfig): Group {
+  if (!config.showTickLabels || config.majorTicks <= 0) return new Group([], { selectable: false, evented: false })
+  const count = config.majorTicks
+  const steps = config.showEndpointTicks ? Math.max(1, count - 1) : count + 1
+  const indexes = Array.from({ length: count }, (_, index) => index + (config.showEndpointTicks ? 0 : 1))
+  const min = config.progressMode === 'custom' ? config.customMin : config.rangeMode === 'custom' ? config.minValue : 0
+  const max = config.progressMode === 'custom' ? config.customMax : config.rangeMode === 'custom' ? config.maxValue : 100
+  const sweep = resolveSweep(config)
+  const labels = indexes.map((index) => {
+    const ratio = index / steps
+    const point = pointAt(config.radius * 0.67, config.startAngle + sweep * ratio)
+    const value = min + (max - min) * ratio
+    return new Text(Number(value.toFixed(2)).toString(), {
+      left: point.x,
+      top: point.y,
+      fill: config.majorTickColor,
+      fontSize: Math.max(7, config.radius * 0.16),
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      evented: false
+    })
+  })
+  return new Group(labels, { selectable: false, evented: false })
 }
 
 async function buildPointer(config: SubDialElementConfig): Promise<FabricObject> {
@@ -81,7 +106,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
     const image = await FabricImage.fromURL(pointer.imageUrl, { crossOrigin: 'anonymous' } as any)
     const width = Math.max(1, Number(image.width ?? 1))
     const height = Math.max(1, Number(image.height ?? 1))
-    const scale = length * pointer.scale / height
+    const scale = (length * pointer.scale) / height
     const displayWidth = width * scale
     const displayHeight = height * scale
     image.set({
@@ -92,7 +117,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
       scaleX: scale,
       scaleY: scale,
       selectable: false,
-      evented: false,
+      evented: false
     })
     return new Group([image], {
       left: 0,
@@ -100,7 +125,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
       originX: 'center',
       originY: 'center',
       selectable: false,
-      evented: false,
+      evented: false
     })
   }
 
@@ -114,7 +139,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
       originX: 'center',
       originY: 'center',
       selectable: false,
-      evented: false,
+      evented: false
     })
     const triangle = new Triangle({
       left: 0,
@@ -125,7 +150,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
       originX: 'center',
       originY: 'center',
       selectable: false,
-      evented: false,
+      evented: false
     })
     return new Group([pivotAnchor, triangle], {
       left: 0,
@@ -133,7 +158,7 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
       originX: 'center',
       originY: 'center',
       selectable: false,
-      evented: false,
+      evented: false
     })
   }
 
@@ -145,17 +170,16 @@ async function buildPointer(config: SubDialElementConfig): Promise<FabricObject>
     originX: 'center',
     originY: 'bottom',
     selectable: false,
-    evented: false,
+    evented: false
   })
 }
 
-function formatValue(config: SubDialElementConfig): string {
-  return Number(config.previewValue).toFixed(Math.max(0, Math.min(6, config.content.value.decimals)))
+function formatNumber(value: number, item: SubDialTextItemConfig): string {
+  const number = Number.isFinite(value) ? value.toFixed(Math.max(0, Math.min(6, item.decimals))) : ''
+  return `${item.prefix}${number}${item.suffix}`
 }
 
 async function buildChildren(config: SubDialElementConfig): Promise<SubDialChildren> {
-  const value = config.content.value
-  const unit = config.content.unit
   const background = new Circle({
     radius: config.radius,
     fill: config.backgroundColor,
@@ -163,7 +187,7 @@ async function buildChildren(config: SubDialElementConfig): Promise<SubDialChild
     originX: 'center',
     originY: 'center',
     selectable: false,
-    evented: false,
+    evented: false
   })
   const pointer = await buildPointer(config)
   const centerCap = new Circle({
@@ -172,68 +196,91 @@ async function buildChildren(config: SubDialElementConfig): Promise<SubDialChild
     originX: 'center',
     originY: 'center',
     selectable: false,
-    evented: false,
+    evented: false
   })
-  const valueText = new Text(formatValue(config), {
-    left: 0,
-    top: config.radius * 0.42,
-    fill: value.color,
-    fontSize: value.fontSize,
-    originX: 'center',
-    originY: 'center',
-    visible: value.visible,
-    selectable: false,
-    evented: false,
-  })
-  const unitText = new Text(unit.suffix, {
-    left: 0,
-    top: config.radius * 0.68,
-    fill: unit.color,
-    fontSize: unit.fontSize,
-    originX: 'center',
-    originY: 'center',
-    visible: unit.visible,
-    selectable: false,
-    evented: false,
-  })
+  const content = Object.fromEntries(
+    (['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'] as SubDialContentKey[]).map((key) => [
+      key,
+      new Text('', { subDialContentKey: key, originX: 'center', originY: 'center', selectable: false, evented: false })
+    ])
+  ) as Record<SubDialContentKey, Text>
   const children = {
-    background,
-    majorTicks: buildTicks(config, config.majorTicks, true),
-    minorTicks: buildTicks(config, config.minorTicks, false),
-    pointer,
-    centerCap,
-    valueText,
-    unitText,
+    static: {
+      background,
+      majorTicks: buildTicks(config, config.majorTicks, true),
+      minorTicks: buildTicks(config, config.minorTicks, false),
+      tickLabels: buildTickLabels(config),
+      pointer,
+      centerCap
+    },
+    content
   }
   updateDynamicChildren(children, config)
   return children
 }
 
 function updateDynamicChildren(children: SubDialChildren, config: SubDialElementConfig): void {
-  const minValue = config.rangeMode === 'percentage' ? 0 : config.minValue
-  const maxValue = config.rangeMode === 'percentage' ? 100 : config.maxValue
+  const minValue = config.progressMode === 'custom' ? config.customMin : config.rangeMode === 'percentage' ? 0 : config.minValue
+  const maxValue = config.progressMode === 'custom' ? config.customMax : config.rangeMode === 'percentage' ? 100 : config.maxValue
   const progress = normalizeSubDialValue(config.previewValue, minValue, maxValue, config.outOfRangeBehavior)
   const visible = progress !== null
-  const dataAngle = progress === null
-    ? config.startAngle + config.pointer.rotationOffset
-    : resolveSubDialAngle(progress, config.startAngle, config.endAngle, config.counterClockwise, config.pointer.rotationOffset)
-  children.pointer.set({
+  const dataAngle =
+    progress === null ? config.startAngle + config.pointer.rotationOffset : resolveSubDialAngle(progress, config.startAngle, config.endAngle, config.counterClockwise, config.pointer.rotationOffset)
+  children.static.pointer.set({
     // Fabric pointer geometry points upward; dial angles use 3 o'clock as 0°.
     angle: dataAngle + 90,
-    visible,
+    visible
   })
-  children.valueText.set({ text: formatValue(config), visible: config.content.value.visible && visible })
-  children.unitText.set({
-    text: config.content.unit.suffix,
-    visible: config.content.unit.visible && visible,
+  const percentage = progress === null ? null : ((progress - minValue) / (maxValue - minValue)) * 100
+  const textValues: Record<Exclude<SubDialContentKey, 'icon'>, string> = {
+    label: config.progressProperty || 'Progress',
+    value: formatNumber(config.previewValue, config.content.value),
+    unit: `${config.content.unit.prefix}${config.content.unit.suffix}`,
+    goalValue: formatNumber(maxValue, config.content.goalValue),
+    percentage: percentage === null ? '' : formatNumber(percentage, config.content.percentage)
+  }
+  const icon = config.content.icon
+  children.content.icon.set({
+    text: config.progressProperty ? '●' : '○',
+    left: icon.x * config.radius,
+    top: icon.y * config.radius,
+    angle: icon.rotation,
+    scaleX: icon.scale,
+    scaleY: icon.scale,
+    fill: icon.color,
+    fontSize: icon.size,
+    visible: icon.visible
+  })
+  ;(['label', 'value', 'unit', 'goalValue', 'percentage'] as const).forEach((key) => {
+    const item = config.content[key]
+    children.content[key].set({
+      text: textValues[key],
+      left: item.x * config.radius,
+      top: item.y * config.radius,
+      angle: item.rotation,
+      scaleX: item.scale,
+      scaleY: item.scale,
+      fill: item.color,
+      fontFamily: item.font || undefined,
+      fontSize: item.fontSize,
+      textAlign: item.textAlign,
+      visible: item.visible && (key === 'goalValue' || key === 'percentage' ? visible : true)
+    })
   })
 }
 
-function needsStructuralRebuild(patch: Partial<SubDialElementConfig>): boolean {
-  return Object.keys(patch).some((key) => ![
-    'previewValue', 'goalProperty', 'rangeMode', 'minValue', 'maxValue', 'outOfRangeBehavior',
-    'showValue', 'showUnit', 'unit', 'decimals', 'valueColor', 'valueFontSize', 'left', 'top', 'rotation',
-  ].includes(key))
+function flattenChildren(children: SubDialChildren): FabricObject[] {
+  return [...Object.values(children.static), ...Object.values(children.content)]
+}
+
+function replaceChild(group: Group, current: FabricObject, replacement: FabricObject): void {
+  const index = group.getObjects().indexOf(current)
+  group.remove(current)
+  group.insertAt(Math.max(0, index), replacement)
+}
+
+function patchHas(patch: Partial<SubDialElementConfig>, keys: string[]): boolean {
+  return keys.some((key) => hasOwn(patch, key))
 }
 
 function getWidget(group: Group): SubDialWidget {
@@ -246,10 +293,10 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
   const config: SubDialElementConfig = {
     ...migrateSubDialConfig(input),
     id: input.id || nanoid(),
-    eleType: 'subDial',
+    eleType: 'subDial'
   }
   const children = await buildChildren(config)
-  const group = new Group(Object.values(children), {
+  const group = new Group(flattenChildren(children), {
     id: config.id,
     eleType: 'subDial',
     designerControlMode: 'corner4',
@@ -263,7 +310,7 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
     hasControls: true,
     hasBorders: true,
     subTargetCheck: false,
-    progressProperty: config.progressProperty,
+    progressProperty: config.progressProperty
   } as any) as Group & FabricElement
   ;(group as any).__element = { kind: 'widget', type: 'subDial', config, children } satisfies SubDialWidget
   applyControlsToObject(group)
@@ -279,15 +326,9 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   const group = element as unknown as Group & FabricElement
   const widget = getWidget(group)
   if (!widget?.config) throw new Error('Invalid sub-dial element')
-  const liveLeft = Number.isFinite(Number((group as any).left))
-    ? Number((group as any).left)
-    : widget.config.left
-  const liveTop = Number.isFinite(Number((group as any).top))
-    ? Number((group as any).top)
-    : widget.config.top
-  const liveRotation = Number.isFinite(Number((group as any).angle))
-    ? Number((group as any).angle)
-    : widget.config.rotation
+  const liveLeft = Number.isFinite(Number((group as any).left)) ? Number((group as any).left) : widget.config.left
+  const liveTop = Number.isFinite(Number((group as any).top)) ? Number((group as any).top) : widget.config.top
+  const liveRotation = Number.isFinite(Number((group as any).angle)) ? Number((group as any).angle) : widget.config.rotation
   const config: SubDialElementConfig = migrateSubDialConfig({
     ...widget.config,
     ...patch,
@@ -307,17 +348,17 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
         ...(patch.decimals === undefined ? {} : { decimals: patch.decimals }),
         ...(patch.valueColor === undefined ? {} : { color: patch.valueColor }),
         ...(patch.valueFontSize === undefined ? {} : { fontSize: patch.valueFontSize }),
-        ...patch.content?.value,
+        ...patch.content?.value
       },
       unit: {
         ...widget.config.content.unit,
         ...(patch.showUnit === undefined ? {} : { visible: patch.showUnit }),
         ...(patch.unit === undefined ? {} : { suffix: patch.unit }),
-        ...patch.content?.unit,
+        ...patch.content?.unit
       },
       goalValue: { ...widget.config.content.goalValue, ...patch.content?.goalValue },
-      percentage: { ...widget.config.content.percentage, ...patch.content?.percentage },
-    },
+      percentage: { ...widget.config.content.percentage, ...patch.content?.percentage }
+    }
   })
 
   if (patch.left !== undefined) group.set('left', patch.left)
@@ -327,16 +368,69 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
     group.set('progressProperty', config.progressProperty)
   }
 
-  if (needsStructuralRebuild(patch)) {
-    const nextChildren = await buildChildren(config)
-    group.getObjects().slice().forEach((child) => group.remove(child))
-    Object.values(nextChildren).forEach((child) => group.add(child))
-    widget.children = nextChildren
-  } else {
-    updateDynamicChildren(widget.children, config)
-    widget.children.valueText.set({ fill: config.content.value.color, fontSize: config.content.value.fontSize })
-    widget.children.unitText.set({ fill: config.content.unit.color, fontSize: config.content.unit.fontSize })
+  const children = widget.children
+  const replaceStatic = (key: keyof SubDialChildren['static'], replacement: FabricObject) => {
+    replaceChild(group, children.static[key], replacement)
+    ;(children.static as any)[key] = replacement
   }
+  const radiusChanged = hasOwn(patch, 'radius')
+  if (radiusChanged || patchHas(patch, ['backgroundColor', 'backgroundOpacity'])) {
+    replaceStatic(
+      'background',
+      new Circle({
+        radius: config.radius,
+        fill: config.backgroundColor,
+        opacity: config.backgroundOpacity,
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: false
+      })
+    )
+  }
+  if (radiusChanged || patchHas(patch, ['majorTicks', 'showMajorTicks', 'showEndpointTicks', 'majorTickColor', 'startAngle', 'endAngle', 'counterClockwise'])) {
+    replaceStatic('majorTicks', buildTicks(config, config.majorTicks, true))
+  }
+  if (radiusChanged || patchHas(patch, ['minorTicks', 'showMinorTicks', 'showEndpointTicks', 'minorTickColor', 'startAngle', 'endAngle', 'counterClockwise'])) {
+    replaceStatic('minorTicks', buildTicks(config, config.minorTicks, false))
+  }
+  if (
+    radiusChanged ||
+    patchHas(patch, [
+      'showTickLabels',
+      'majorTicks',
+      'showEndpointTicks',
+      'majorTickColor',
+      'startAngle',
+      'endAngle',
+      'counterClockwise',
+      'rangeMode',
+      'minValue',
+      'maxValue',
+      'progressMode',
+      'customMin',
+      'customMax'
+    ])
+  ) {
+    replaceStatic('tickLabels', buildTickLabels(config))
+  }
+  if (radiusChanged || (patch.pointer && Object.keys(patch.pointer).some((key) => key !== 'rotationOffset'))) {
+    replaceStatic('pointer', await buildPointer(config))
+  }
+  if (radiusChanged || patchHas(patch, ['showCenterCap', 'centerCapColor', 'centerCapRadius'])) {
+    replaceStatic(
+      'centerCap',
+      new Circle({
+        radius: config.showCenterCap ? config.centerCapRadius : 0,
+        fill: config.centerCapColor,
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: false
+      })
+    )
+  }
+  updateDynamicChildren(children, config)
 
   group.set({ left: config.left, top: config.top, angle: config.rotation } as any)
   widget.config = config
