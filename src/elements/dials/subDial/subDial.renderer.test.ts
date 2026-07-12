@@ -160,6 +160,17 @@ describe('subDial renderer', () => {
     expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
   })
 
+  it('treats an explicit non-empty legacy binding patch as the latest binding update', async () => {
+    const dial = await createSubDial(makeConfig({ progressProperty: 'existing_goal' }) as any)
+
+    await updateSubDial(dial, { goalProperty: 'new_goal' })
+
+    expect((dial as any).progressProperty).toBe('new_goal')
+    expect((dial as any).__element.config.progressProperty).toBe('new_goal')
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ progressProperty: 'new_goal' }))
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
+  })
+
   it('renders new-only content ahead of conflicting legacy presentation fields', async () => {
     const config = migrateSubDialConfig({
       progressProperty: 'steps',

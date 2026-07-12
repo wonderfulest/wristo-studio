@@ -27,6 +27,10 @@ type SubDialWidget = {
   children: SubDialChildren
 }
 
+function nonEmptyString(...values: unknown[]): string | undefined {
+  return values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+}
+
 function resolveSweep(config: SubDialElementConfig): number {
   let sweep = config.endAngle - config.startAngle
   if (config.counterClockwise && sweep > 0) sweep -= 360
@@ -278,7 +282,11 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   const config: SubDialElementConfig = migrateSubDialConfig({
     ...widget.config,
     ...patch,
-    progressProperty: patch.progressProperty || widget.config.progressProperty || patch.goalProperty,
+    progressProperty: nonEmptyString(
+      patch.progressProperty,
+      patch.goalProperty,
+      widget.config.progressProperty
+    ),
     // Fabric may rewrite Group coordinates while children are replaced. Lock the
     // business position before rebuilding; only an explicit transform patch may change it.
     left: patch.left !== undefined ? Number(patch.left) : liveLeft,
