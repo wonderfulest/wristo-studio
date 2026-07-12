@@ -8,6 +8,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampPivot, normalizeSubDialValue, resolveSubDialAngle } from './subDial.math'
 import { encodeSubDial } from './subDial.encoder'
+import { atomicReplaceGroupObjects } from './fabricGroupAtomicReplace'
 import { migrateSubDialConfig } from './subDial.migration'
 
 type SubDialChildren = {
@@ -272,20 +273,6 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
 
 function flattenChildren(children: SubDialChildren): FabricObject[] {
   return [...Object.values(children.static), ...Object.values(children.content)]
-}
-
-export function atomicReplaceGroupObjects(group: Group, objects: FabricObject[]): void {
-  const current = group.getObjects()
-  const removed = current.filter((object) => !objects.includes(object))
-  const added = objects.filter((object) => !current.includes(object))
-  const layoutManager = group.layoutManager
-
-  layoutManager.unsubscribeTargets({ target: group, targets: removed })
-  removed.forEach((object) => group.exitGroup(object, true))
-  ;(group as any)._objects = [...objects]
-  added.forEach((object) => group.enterGroup(object, false))
-  layoutManager.subscribeTargets({ target: group, targets: added })
-  group.triggerLayout({ bubbles: false })
 }
 
 function patchHas(patch: Partial<SubDialElementConfig>, keys: string[]): boolean {
