@@ -294,7 +294,7 @@ export class SubDialLayoutEditor {
     const revision = this.interactionRevision
     if (!group || !key) return Promise.resolve(false)
     const operation = this.commitQueue.then(async () => {
-      if (!this.isCurrentInteraction(group, revision)) return false
+      if (!this.isAttached(group)) return false
       const content = structuredClone(group.__element.config.content) as SubDialContentConfig
       if (position.x !== undefined) content[key].x = position.x
       if (position.y !== undefined) content[key].y = position.y
@@ -305,14 +305,14 @@ export class SubDialLayoutEditor {
         this.reportError(error)
         return false
       }
-      if (!this.isCurrentInteraction(group, revision)) return false
+      if (!this.isAttached(group)) return false
       try {
         await this.saveHistory()
       } catch (error) {
         this.reportError(error)
         return false
       }
-      return this.isCurrentInteraction(group, revision)
+      return this.isAttached(group)
     })
     this.commitQueue = operation.then(
       () => undefined,

@@ -24,7 +24,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { addElement, updateElement } from '@/engine/managers/elementManager'
+import { addElement } from '@/engine/managers/elementManager'
 import { initCanvasManager, disposeCanvasManager } from '@/engine/managers/canvasManager'
 import { attachZoomManager, type ZoomManagerHandle } from '@/engine/managers/zoomManager'
 import { attachGuidelineManager, type GuidelineManagerHandle } from '@/engine/managers/guidelineManager'
@@ -45,6 +45,7 @@ import { imageSchema } from '@/elements/decoration/image/image.schema'
 import { useI18n } from '@/i18n'
 import { isPngFile, isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import { installSubDialLayoutEditor } from '@/elements/dials/subDial/subDial.plugin'
+import { updateSubDial } from '@/elements/dials/subDial/subDial.renderer'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -100,7 +101,7 @@ onMounted(() => {
   if (canvas) {
     const editor = installSubDialLayoutEditor({
       canvas: canvas as any,
-      updateElement: (element, patch) => updateElement(element, patch),
+      updateElement: (element, patch) => updateSubDial(element, patch),
       saveHistory: () => {
         historyStore.saveState('sub-dial:content-drag')
       },

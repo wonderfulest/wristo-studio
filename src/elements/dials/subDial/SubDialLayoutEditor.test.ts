@@ -117,6 +117,7 @@ describe('SubDialLayoutEditor', () => {
   it('wires the exact content drag history reason in Canvas', () => {
     const canvasSource = readFileSync(new URL('../../../views/Canvas.vue', import.meta.url), 'utf8')
     expect(canvasSource).toContain("historyStore.saveState('sub-dial:content-drag')")
+    expect(canvasSource).toContain('updateElement: (element, patch) => updateSubDial(element, patch)')
   })
 
   it('enters, selects a visible child and restores all interaction state on exit', () => {
@@ -391,7 +392,7 @@ describe('SubDialLayoutEditor', () => {
     expect(children.value).toMatchObject({ left: 20, top: 10 })
   })
 
-  it.each(['exit', 'dispose'] as const)('does not save history when %s occurs during an update', async (action) => {
+  it.each(['exit', 'dispose'] as const)('finishes the original update and saves history once when %s occurs during it', async (action) => {
     const { editor, group, updateElement, saveHistory } = fixture()
     const pending = deferred<void>()
     updateElement.mockImplementationOnce(async (_group, patch) => {
@@ -404,7 +405,37 @@ describe('SubDialLayoutEditor', () => {
     await Promise.resolve()
     editor[action]()
     pending.resolve()
+    expect(await commit).toBe(true)
+    expect(group.__element.config.content.value.x).toBe(0)
+    expect(saveHistory).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not route or save a pending old-group patch after restore replaces that instance', async () => {
+    const { editor, group, canvas, objects, updateElement, saveHistory } = fixture()
+    group.id = 'same-id'
+    const pending = deferred<void>()
+    updateElement.mockImplementationOnce(async (capturedGroup, patch) => {
+      await pending.promise
+      capturedGroup.__element.config.content = patch.content
+    })
+    editor.enter(group)
+    editor.select('value')
+    const commit = editor.center('horizontal')
+    await Promise.resolve()
+    const replacement = {
+      ...group,
+      __element: {
+        ...group.__element,
+        config: { ...group.__element.config, content: structuredClone(group.__element.config.content) }
+      }
+    }
+    replacement.__element.config.content.value.x = 0.75
+    objects.splice(0, 1, replacement)
+    canvas.fire('object:removed', { target: group })
+    canvas.fire('object:added', { target: replacement })
+    pending.resolve()
     expect(await commit).toBe(false)
+    expect(replacement.__element.config.content.value.x).toBe(0.75)
     expect(saveHistory).not.toHaveBeenCalled()
   })
 
