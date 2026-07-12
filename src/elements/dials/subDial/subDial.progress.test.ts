@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { resolveSubDialProgress, type SubDialProgressSourceMeta } from './subDial.progress'
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import { resolveSubDialProgress, type SubDialProgressOptions, type SubDialProgressSourceMeta, type SubDialResolvedProgressMode } from './subDial.progress'
 
 const source = (overrides: Partial<SubDialProgressSourceMeta> = {}): SubDialProgressSourceMeta => ({
   value: 25,
@@ -14,6 +14,17 @@ const source = (overrides: Partial<SubDialProgressSourceMeta> = {}): SubDialProg
 })
 
 describe('resolveSubDialProgress', () => {
+  it('exposes distinct resolved modes and discriminated options', () => {
+    expectTypeOf<SubDialResolvedProgressMode>().toEqualTypeOf<'goal' | 'range' | 'none'>()
+
+    if (false) {
+      // @ts-expect-error custom mode requires both bounds
+      resolveSubDialProgress(source(), { mode: 'custom', customMin: 0 })
+      // @ts-expect-error non-custom modes do not accept custom bounds
+      resolveSubDialProgress(source(), { mode: 'auto', customMin: 0 })
+    }
+  })
+
   it('uses a positive goal in auto mode', () => {
     expect(resolveSubDialProgress(source(), { mode: 'auto' })).toMatchObject({
       mode: 'goal',
@@ -94,6 +105,43 @@ describe('resolveSubDialProgress', () => {
       percentage: null,
       valid: false
     })
+  })
+
+  it('rejects a null value while preserving display metadata', () => {
+    expect(resolveSubDialProgress(source({ value: null, displayValue: '--', icon: 'steps' }), { mode: 'goal' })).toEqual({
+      value: null,
+      displayValue: '--',
+      icon: 'steps',
+      label: 'Steps',
+      unit: 'steps',
+      mode: 'none',
+      goal: null,
+      min: null,
+      max: null,
+      percentage: null,
+      valid: false
+    })
+  })
+
+  it('rejects a null explicit goal while preserving display metadata', () => {
+    expect(resolveSubDialProgress(source({ goal: null, displayValue: '25 steps' }), { mode: 'goal' })).toMatchObject({
+      value: 25,
+      displayValue: '25 steps',
+      icon: 'steps',
+      label: 'Steps',
+      unit: 'steps',
+      mode: 'none',
+      percentage: null,
+      valid: false
+    })
+  })
+
+  it.each([
+    { mode: 'custom', customMin: 0 },
+    { mode: 'custom', customMax: 100 }
+  ])('defensively rejects a custom mode missing one bound', (options) => {
+    const result = resolveSubDialProgress(source(), options as SubDialProgressOptions)
+    expect(result).toMatchObject({ mode: 'none', percentage: null, valid: false })
   })
 
   it('rejects non-finite range bounds and custom bounds', () => {

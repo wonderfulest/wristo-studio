@@ -1,5 +1,4 @@
-export type SubDialProgressMode = 'goal' | 'range' | 'none'
-export type SubDialProgressResolveMode = 'auto' | 'goal' | 'range' | 'custom'
+export type SubDialResolvedProgressMode = 'goal' | 'range' | 'none'
 
 export interface SubDialProgressSourceMeta {
   value: number | null
@@ -12,11 +11,7 @@ export interface SubDialProgressSourceMeta {
   max: number | null
 }
 
-export interface SubDialProgressOptions {
-  mode: SubDialProgressResolveMode
-  customMin?: number | null
-  customMax?: number | null
-}
+export type SubDialProgressOptions = { mode: 'auto' | 'goal' | 'range' } | { mode: 'custom'; customMin: number; customMax: number }
 
 export interface SubDialProgressData {
   value: number | null
@@ -24,7 +19,7 @@ export interface SubDialProgressData {
   icon: string | null
   label: string
   unit: string
-  mode: SubDialProgressMode
+  mode: SubDialResolvedProgressMode
   goal: number | null
   min: number | null
   max: number | null
