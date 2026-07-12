@@ -15,7 +15,9 @@ export type LayerOrderAvailability = {
 let expandedTargetId: string | null = null
 
 const LAYER_ORDER_CONTROL_TITLES: Record<string, string> = {
-  layerOrderControl: 'Layer Order',
+  layerOrderControl: 'Object Actions',
+  cloneActionControl: 'Clone',
+  deleteActionControl: 'Delete',
   bringToFrontControl: 'Bring to Front',
   bringForwardControl: 'Bring Forward',
   sendBackwardControl: 'Send Backward',

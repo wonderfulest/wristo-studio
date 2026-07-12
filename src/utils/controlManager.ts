@@ -58,11 +58,11 @@ export interface ControlManagerOptions {
 
 const offset = 10
 export const LAYER_ORDER_ENTRY_OFFSET = 10
-export const LAYER_ORDER_MENU_CONTROL_SIZE = 16
-export const LAYER_ORDER_MENU_FONT_SIZE = 14
-export const LAYER_ORDER_MENU_TOUCH_SIZE = 32
-
-const LAYER_ORDER_MENU_RADIUS = LAYER_ORDER_MENU_CONTROL_SIZE / 2
+export const OBJECT_ACTION_MENU_WIDTH = 144
+export const OBJECT_ACTION_MENU_HEIGHT = 28
+export const OBJECT_ACTION_MENU_TOUCH_HEIGHT = 32
+export const OBJECT_ACTION_MENU_GAP = 4
+export const OBJECT_ACTION_MENU_OFFSET_X = LAYER_ORDER_ENTRY_OFFSET + OBJECT_ACTION_MENU_WIDTH / 2
 
 const DEFAULT_OPTIONS: Required<Omit<ControlManagerOptions, 'onDelete' | 'onClone' | 'onLayerOrderChange'>> = {
   size: 6,
@@ -111,15 +111,24 @@ function renderDefaultControl(ctx: CanvasRenderingContext2D, left: number, top: 
   renderCircle(ctx, left, top, runtimeOptions.fill)
 }
 
-function renderDeleteControl(ctx: CanvasRenderingContext2D, left: number, top: number): void {
-  renderCircle(ctx, left, top, runtimeOptions.deleteFill)
-}
-
-function renderCloneControl(ctx: CanvasRenderingContext2D, left: number, top: number): void {
-  renderCircle(ctx, left, top, runtimeOptions.cloneFill)
-}
-
 type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
+
+type ObjectActionDescriptor = {
+  key: string
+  label: string
+  glyph: string
+  tone: 'primary' | 'danger'
+  layerAction?: LayerOrderAction
+}
+
+const OBJECT_ACTIONS: ObjectActionDescriptor[] = [
+  { key: 'cloneActionControl', label: 'Clone', glyph: '＋', tone: 'primary' },
+  { key: 'deleteActionControl', label: 'Delete', glyph: '×', tone: 'danger' },
+  { key: 'bringToFrontControl', label: 'Bring to Front', glyph: '⇈', tone: 'primary', layerAction: 'front' },
+  { key: 'bringForwardControl', label: 'Bring Forward', glyph: '↑', tone: 'primary', layerAction: 'forward' },
+  { key: 'sendBackwardControl', label: 'Send Backward', glyph: '↓', tone: 'primary', layerAction: 'backward' },
+  { key: 'sendToBackControl', label: 'Send to Back', glyph: '⇊', tone: 'primary', layerAction: 'back' },
+]
 
 function getLayerActionEnabled(target: FabricLikeObject | undefined, action: LayerOrderAction): boolean {
   const canvas = target?.canvas
@@ -130,51 +139,51 @@ function getLayerActionEnabled(target: FabricLikeObject | undefined, action: Lay
     : availability.canMoveDown
 }
 
-function renderLayerGlyph(
-  ctx: CanvasRenderingContext2D,
-  left: number,
-  top: number,
-  glyph: string,
-  enabled = true,
-  radius = runtimeOptions.size,
-  fontSize = 11,
-): void {
-  renderCircle(ctx, left, top, runtimeOptions.fill, radius)
-  ctx.save()
-  ctx.fillStyle = enabled ? '#0f6b68' : '#94a3b8'
-  ctx.font = `bold ${fontSize}px sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(glyph, left, top + 0.5)
-  ctx.restore()
-}
-
 function renderLayerOrderEntryControl(
   ctx: CanvasRenderingContext2D,
   left: number,
   top: number,
 ): void {
-  renderLayerGlyph(ctx, left, top, '▤')
+  renderCircle(ctx, left, top, runtimeOptions.cloneFill)
+  ctx.save()
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 11px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('•••', left, top)
+  ctx.restore()
 }
 
-function createLayerActionRenderer(action: LayerOrderAction, glyph: string) {
-  return (
-    ctx: CanvasRenderingContext2D,
-    left: number,
-    top: number,
-    _styleOverride: unknown,
-    target: FabricObject,
-  ): void => {
-    renderLayerGlyph(
-      ctx,
-      left,
-      top,
-      glyph,
-      getLayerActionEnabled(target as FabricLikeObject, action),
-      LAYER_ORDER_MENU_RADIUS,
-      LAYER_ORDER_MENU_FONT_SIZE,
-    )
-  }
+function renderObjectActionPill(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  descriptor: ObjectActionDescriptor,
+  enabled: boolean,
+): void {
+  const x = left - OBJECT_ACTION_MENU_WIDTH / 2
+  const y = top - OBJECT_ACTION_MENU_HEIGHT / 2
+  const color = enabled
+    ? descriptor.tone === 'danger' ? runtimeOptions.deleteFill : '#0f6b68'
+    : '#94a3b8'
+
+  ctx.save()
+  ctx.fillStyle = '#ffffff'
+  ctx.strokeStyle = runtimeOptions.stroke
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.roundRect(x, y, OBJECT_ACTION_MENU_WIDTH, OBJECT_ACTION_MENU_HEIGHT, 7)
+  ctx.fill()
+  ctx.stroke()
+  ctx.fillStyle = color
+  ctx.font = 'bold 14px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(descriptor.glyph, x + 18, top + 0.5)
+  ctx.font = '12px sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText(descriptor.label, x + 34, top + 0.5)
+  ctx.restore()
 }
 
 function applyLayerOrderAction(target: FabricLikeObject, action: LayerOrderAction): boolean {
@@ -222,15 +231,42 @@ function isLayerEntryControlVisible(target: FabricObject): boolean {
   return visible
 }
 
+function createObjectActionRenderer(descriptor: ObjectActionDescriptor) {
+  return (
+    ctx: CanvasRenderingContext2D,
+    left: number,
+    top: number,
+    _styleOverride: unknown,
+    target: FabricObject,
+  ): void => {
+    const enabled = descriptor.layerAction
+      ? getLayerActionEnabled(target as FabricLikeObject, descriptor.layerAction)
+      : true
+    renderObjectActionPill(ctx, left, top, descriptor, enabled)
+  }
+}
+
+function getObjectActionHandler(descriptor: ObjectActionDescriptor) {
+  if (descriptor.key === 'cloneActionControl') return cloneHandler
+  if (descriptor.key === 'deleteActionControl') return deleteHandler
+  return createLayerActionHandler(descriptor.layerAction as LayerOrderAction)
+}
+
+function getObjectActionOffsetY(index: number): number {
+  const itemStep = OBJECT_ACTION_MENU_HEIGHT + OBJECT_ACTION_MENU_GAP
+  const distanceFromBottom = OBJECT_ACTIONS.length - 1 - index
+  return LAYER_ORDER_ENTRY_OFFSET - itemStep - distanceFromBottom * itemStep
+}
+
 function createLayerOrderControls(): Record<string, Control> {
-  return {
+  const controls: Record<string, Control> = {
     layerOrderControl: new Control({
       x: 0.5,
       y: 0.5,
       offsetX: LAYER_ORDER_ENTRY_OFFSET,
       offsetY: LAYER_ORDER_ENTRY_OFFSET,
       cursorStyle: 'pointer',
-      actionName: 'layerOrder',
+      actionName: 'objectActions',
       getVisibility: isLayerEntryControlVisible,
       mouseUpHandler: (_eventData, transform) => {
         const target = transform.target as FabricLikeObject | undefined
@@ -241,67 +277,27 @@ function createLayerOrderControls(): Record<string, Control> {
       },
       render: renderLayerOrderEntryControl,
     }),
-    bringToFrontControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: LAYER_ORDER_ENTRY_OFFSET,
-      offsetY: -118,
-      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
-      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
-      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
-      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
-      cursorStyle: 'pointer',
-      actionName: 'bringToFront',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('front'),
-      render: createLayerActionRenderer('front', '⇈'),
-    }),
-    bringForwardControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: LAYER_ORDER_ENTRY_OFFSET,
-      offsetY: -86,
-      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
-      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
-      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
-      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
-      cursorStyle: 'pointer',
-      actionName: 'bringForward',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('forward'),
-      render: createLayerActionRenderer('forward', '↑'),
-    }),
-    sendBackwardControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: LAYER_ORDER_ENTRY_OFFSET,
-      offsetY: -54,
-      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
-      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
-      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
-      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
-      cursorStyle: 'pointer',
-      actionName: 'sendBackward',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('backward'),
-      render: createLayerActionRenderer('backward', '↓'),
-    }),
-    sendToBackControl: new Control({
-      x: 0.5,
-      y: 0.5,
-      offsetX: LAYER_ORDER_ENTRY_OFFSET,
-      offsetY: -22,
-      sizeX: LAYER_ORDER_MENU_CONTROL_SIZE,
-      sizeY: LAYER_ORDER_MENU_CONTROL_SIZE,
-      touchSizeX: LAYER_ORDER_MENU_TOUCH_SIZE,
-      touchSizeY: LAYER_ORDER_MENU_TOUCH_SIZE,
-      cursorStyle: 'pointer',
-      actionName: 'sendToBack',
-      getVisibility: isLayerMenuControlVisible,
-      mouseUpHandler: createLayerActionHandler('back'),
-      render: createLayerActionRenderer('back', '⇊'),
-    }),
   }
+
+  OBJECT_ACTIONS.forEach((descriptor, index) => {
+    controls[descriptor.key] = new Control({
+      x: 0.5,
+      y: 0.5,
+      offsetX: OBJECT_ACTION_MENU_OFFSET_X,
+      offsetY: getObjectActionOffsetY(index),
+      sizeX: OBJECT_ACTION_MENU_WIDTH,
+      sizeY: OBJECT_ACTION_MENU_HEIGHT,
+      touchSizeX: OBJECT_ACTION_MENU_WIDTH,
+      touchSizeY: OBJECT_ACTION_MENU_TOUCH_HEIGHT,
+      cursorStyle: 'pointer',
+      actionName: descriptor.key,
+      getVisibility: isLayerMenuControlVisible,
+      mouseUpHandler: getObjectActionHandler(descriptor),
+      render: createObjectActionRenderer(descriptor),
+    })
+  })
+
+  return controls
 }
 
 async function cloneFabricObject(target: FabricLikeObject): Promise<FabricLikeObject | null> {
@@ -457,24 +453,6 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
   const base: Record<string, Control> = {
     ...cornerControls,
     ...layerOrderControls,
-    cloneControl: new Control({
-      x: 0.5,
-      y: -0.5,
-      offsetX: offset,
-      offsetY: -offset,
-      cursorStyle: 'copy',
-      mouseUpHandler: cloneHandler,
-      render: renderCloneControl,
-    }),
-    deleteControl: new Control({
-      x: -0.5,
-      y: -0.5,
-      offsetX: -offset,
-      offsetY: -offset,
-      cursorStyle: 'pointer',
-      mouseUpHandler: deleteHandler,
-      render: renderDeleteControl,
-    }),
   }
 
   if (mode !== 'resize8') return base
@@ -541,7 +519,12 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
 
 export function applyLayerOrderControlsToObject(target: FabricObject | null | undefined): void {
   if (!target) return
-  const currentControls = (target as unknown as { controls?: Record<string, Control> }).controls ?? {}
+  const existingControls = (target as unknown as { controls?: Record<string, Control> }).controls ?? {}
+  const {
+    cloneControl: _legacyCloneControl,
+    deleteControl: _legacyDeleteControl,
+    ...currentControls
+  } = existingControls
   ;(target as unknown as { controls: Record<string, Control> }).controls = {
     ...currentControls,
     ...createLayerOrderControls(),
