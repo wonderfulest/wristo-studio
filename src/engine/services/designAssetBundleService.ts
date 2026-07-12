@@ -62,6 +62,12 @@ type ManifestAsset = {
   elementId?: string
   elementType?: string
   field?: string
+  role?: 'subDialPointer'
+  sha256?: string
+  width?: number
+  height?: number
+  pivotX?: number
+  pivotY?: number
 }
 
 type ManifestFontAsset = {
@@ -422,6 +428,9 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
     elementType: string
     field: string
     source: string
+    role?: 'subDialPointer'
+    pivotX?: number
+    pivotY?: number
   }> = []
   const elementId = getElementId(element, index)
   const elementType = getElementType(element)
@@ -430,7 +439,19 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
     if (typeof value === 'string') {
       const source = value.trim()
       if (source && ASSET_URL_FIELDS.has(key)) {
-        refs.push({ elementId, elementType, field: key, source })
+        const pointer = (element as any).pointer
+        const isSubDialPointer = elementType === 'subDial'
+          && key === 'imageUrl'
+          && pointer?.imageUrl === source
+        refs.push({
+          elementId,
+          elementType,
+          field: key,
+          source,
+          role: isSubDialPointer ? 'subDialPointer' : undefined,
+          pivotX: isSubDialPointer ? Number(pointer?.pivotX) : undefined,
+          pivotY: isSubDialPointer ? Number(pointer?.pivotY) : undefined,
+        })
       }
       return
     }
@@ -546,10 +567,33 @@ const fetchBlob = async (source: string): Promise<Blob> => {
   return response.blob()
 }
 
+const sha256Hex = async (blob: Blob): Promise<string> => {
+  const bytes = await blob.arrayBuffer()
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+const readImageDimensions = async (blob: Blob, format: string): Promise<{ width?: number; height?: number }> => {
+  if (format === 'svg') {
+    const source = await blob.text()
+    const width = Number(source.match(/\bwidth=["']([0-9.]+)/i)?.[1])
+    const height = Number(source.match(/\bheight=["']([0-9.]+)/i)?.[1])
+    if (Number.isFinite(width) && Number.isFinite(height)) return { width, height }
+    const viewBox = source.match(/\bviewBox=["'][^"']*?([0-9.]+)[ ,]+([0-9.]+)["']/i)
+    if (viewBox) return { width: Number(viewBox[1]), height: Number(viewBox[2]) }
+  }
+  if (format === 'png') {
+    const bytes = new DataView(await blob.arrayBuffer())
+    if (bytes.byteLength >= 24) return { width: bytes.getUint32(16), height: bytes.getUint32(20) }
+  }
+  return {}
+}
+
 const addReferencedAssetToBundle = async (
   zip: JSZip,
   manifest: DesignAssetManifest,
   sourcePathByUrl: Map<string, ManifestAsset>,
+  contentAssetByHash: Map<string, ManifestAsset>,
   usedPaths: Set<string>,
   input: {
     source: string
@@ -557,6 +601,9 @@ const addReferencedAssetToBundle = async (
     elementId?: string
     elementType?: string
     field?: string
+    role?: 'subDialPointer'
+    pivotX?: number
+    pivotY?: number
   },
 ) => {
   const source = String(input.source || '').trim()
@@ -577,16 +624,36 @@ const addReferencedAssetToBundle = async (
   try {
     const blob = await fetchBlob(source)
     const format = getFormatFromBlob(blob, source)
+    const sha256 = await sha256Hex(blob)
+    const dimensions = await readImageDimensions(blob, format)
+    const duplicateContent = contentAssetByHash.get(sha256)
+    if (duplicateContent) {
+      manifest.studio?.assetRefs.push({
+        ...duplicateContent,
+        id: `${duplicateContent.id}-ref-${manifest.studio?.assetRefs.length || 0}`,
+        sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
+        sourceRef: source,
+        elementId: input.elementId,
+        elementType: input.elementType,
+        field: input.field,
+        role: input.role,
+        pivotX: input.pivotX,
+        pivotY: input.pivotY,
+      })
+      return
+    }
     const elementPart = sanitizePathSegment(input.elementId || input.category, input.category)
     const fieldPart = sanitizePathSegment(input.field || 'asset', 'asset')
-    let path = `assets/${sanitizePathSegment(input.category, 'asset')}/${elementPart}-${fieldPart}.${format}`
+    let path = input.role === 'subDialPointer'
+      ? `assets/sub-dial-pointers/${sha256}.${format}`
+      : `assets/${sanitizePathSegment(input.category, 'asset')}/${elementPart}-${fieldPart}.${format}`
     let suffix = 1
     while (usedPaths.has(path)) {
       suffix += 1
       path = `assets/${sanitizePathSegment(input.category, 'asset')}/${elementPart}-${fieldPart}-${suffix}.${format}`
     }
     usedPaths.add(path)
-    zip.file(path, blob)
+    zip.file(path, await blob.arrayBuffer())
 
     const asset: ManifestAsset = {
       id: `asset-${sourcePathByUrl.size + 1}`,
@@ -599,8 +666,14 @@ const addReferencedAssetToBundle = async (
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
+      role: input.role,
+      sha256,
+      ...dimensions,
+      pivotX: input.pivotX,
+      pivotY: input.pivotY,
     }
     sourcePathByUrl.set(source, asset)
+    contentAssetByHash.set(sha256, asset)
     manifest.studio?.assetRefs.push(asset)
     pushAssetGroupPath(manifest.assets, getAssetGroupForElementRef(input), path)
   } catch (error: any) {
@@ -824,25 +897,29 @@ const buildDesignAssetArchive = async (
   }
 
   const sourcePathByUrl = new Map<string, ManifestAsset>()
+  const contentAssetByHash = new Map<string, ManifestAsset>()
   for (const [index, element] of (config.elements || []).entries()) {
     const refs = collectElementAssetRefs(element, index)
     for (const ref of refs) {
-      await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, usedPaths, {
+      await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
         category: ref.elementType || 'element',
         elementId: ref.elementId,
         elementType: ref.elementType,
         field: ref.field,
         source: ref.source,
+        role: ref.role,
+        pivotX: ref.pivotX,
+        pivotY: ref.pivotY,
       })
     }
   }
 
-  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, usedPaths, {
+  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
     category: 'product',
     field: 'heroImage',
     source: options.productImages?.heroImageUrl || '',
   })
-  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, usedPaths, {
+  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
     category: 'product',
     field: 'rawImage',
     source: options.productImages?.rawImageUrl || '',
