@@ -8,9 +8,46 @@ vi.mock('@/engine/managers/layerManager', () => ({
 }))
 
 import {
+  applyControlsToObject,
   applyLayerOrderControlsToObject,
+  INSET_CORNER_CONTROL_OFFSET,
   LAYER_ORDER_ENTRY_OFFSET,
 } from './controlManager'
+
+describe('applyControlsToObject', () => {
+  function createTarget(mode: string) {
+    return {
+      designerControlMode: mode,
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      set(props: Record<string, unknown>) {
+        Object.assign(this, props)
+      },
+    }
+  }
+
+  it('insets all four corner controls for edge-sized elements', () => {
+    const target = createTarget('corner4Inset') as any
+
+    applyControlsToObject(target)
+
+    expect(INSET_CORNER_CONTROL_OFFSET).toBe(12)
+    expect(target.controls.tl).toMatchObject({ offsetX: 12, offsetY: 12 })
+    expect(target.controls.tr).toMatchObject({ offsetX: -12, offsetY: 12 })
+    expect(target.controls.bl).toMatchObject({ offsetX: 12, offsetY: -12 })
+    expect(target.controls.br).toMatchObject({ offsetX: -12, offsetY: -12 })
+  })
+
+  it('keeps regular corner controls on the object bounds', () => {
+    const target = createTarget('corner4') as any
+
+    applyControlsToObject(target)
+
+    expect(target.controls.tl).toMatchObject({ offsetX: 0, offsetY: 0 })
+    expect(target.controls.br).toMatchObject({ offsetX: 0, offsetY: 0 })
+  })
+})
 
 describe('applyLayerOrderControlsToObject', () => {
   it('adds layer controls without replacing element-specific controls', () => {

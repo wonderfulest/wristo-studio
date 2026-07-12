@@ -58,6 +58,7 @@ export interface ControlManagerOptions {
 
 const offset = 10
 export const LAYER_ORDER_ENTRY_OFFSET = 10
+export const INSET_CORNER_CONTROL_OFFSET = 12
 export const OBJECT_ACTION_MENU_WIDTH = 144
 export const OBJECT_ACTION_MENU_HEIGHT = 28
 export const OBJECT_ACTION_MENU_TOUCH_HEIGHT = 32
@@ -408,13 +409,17 @@ function cloneHandler(_eventData: unknown, transform: { target?: FabricLikeObjec
   return true
 }
 
-type ControlSetMode = 'default' | 'resize8' | 'corner4'
+type ControlSetMode = 'default' | 'resize8' | 'corner4' | 'corner4Inset'
 
 function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
+  const inset = mode === 'corner4Inset' ? INSET_CORNER_CONTROL_OFFSET : 0
+  const negativeInset = inset === 0 ? 0 : -inset
   const cornerControls: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
       y: -0.5,
+      offsetX: inset,
+      offsetY: inset,
       cursorStyle: 'nwse-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -423,6 +428,8 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     tr: new Control({
       x: 0.5,
       y: -0.5,
+      offsetX: negativeInset,
+      offsetY: inset,
       cursorStyle: 'nesw-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -431,6 +438,8 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     bl: new Control({
       x: -0.5,
       y: 0.5,
+      offsetX: inset,
+      offsetY: negativeInset,
       cursorStyle: 'nesw-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -439,6 +448,8 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     br: new Control({
       x: 0.5,
       y: 0.5,
+      offsetX: negativeInset,
+      offsetY: negativeInset,
       cursorStyle: 'nwse-resize',
       actionHandler: controlsUtils.scalingEqually,
       actionName: 'scale',
@@ -448,7 +459,9 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
 
   const layerOrderControls = createLayerOrderControls()
 
-  if (mode === 'corner4') return { ...cornerControls, ...layerOrderControls }
+  if (mode === 'corner4' || mode === 'corner4Inset') {
+    return { ...cornerControls, ...layerOrderControls }
+  }
 
   const base: Record<string, Control> = {
     ...cornerControls,
@@ -502,9 +515,11 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   const mode =
     (t as any).designerControlMode === 'resize8'
       ? 'resize8'
-      : (t as any).designerControlMode === 'corner4'
-        ? 'corner4'
-        : 'default'
+      : (t as any).designerControlMode === 'corner4Inset'
+        ? 'corner4Inset'
+        : (t as any).designerControlMode === 'corner4'
+          ? 'corner4'
+          : 'default'
   ;(t as unknown as { controls?: Record<string, Control> }).controls = createControls(mode)
   t.set({
     cornerStyle: 'circle',
