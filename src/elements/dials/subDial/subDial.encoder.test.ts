@@ -12,6 +12,27 @@ const config: SubDialElementConfig = {
   radius: 40,
   rotation: 5,
   goalProperty: 'goal_1',
+  progressProperty: 'progress_1',
+  progressMode: 'auto',
+  customMin: 0,
+  customMax: 100,
+  content: {
+    icon: {
+      visible: true,
+      x: 0,
+      y: -0.5,
+      rotation: 0,
+      scale: 1,
+      displayType: 'auto',
+      color: '#FFFFFF',
+      size: 14
+    },
+    label: textItem(true, 0, 0.55, 10),
+    value: textItem(true, 0, 0.2, 14),
+    unit: textItem(true, 0.42, 0.2, 10),
+    goalValue: textItem(false, -0.35, 0.72, 9),
+    percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
+  },
   rangeMode: 'percentage',
   minValue: 0,
   maxValue: 100,
@@ -39,7 +60,7 @@ const config: SubDialElementConfig = {
     pivotY: 0.85,
     scale: 1,
     rotationOffset: 3,
-    tintColor: null,
+    tintColor: null
   },
   showCenterCap: true,
   centerCapColor: '#FFFFFF',
@@ -51,10 +72,37 @@ const config: SubDialElementConfig = {
   unit: '%',
   decimals: 0,
   valueColor: '#FFFFFF',
-  valueFontSize: 14,
+  valueFontSize: 14
+}
+
+function textItem(visible: boolean, x: number, y: number, fontSize: number, overrides = {}) {
+  return {
+    visible,
+    x,
+    y,
+    rotation: 0,
+    scale: 1,
+    color: '#FFFFFF',
+    font: '',
+    fontSize,
+    textAlign: 'center' as const,
+    prefix: '',
+    suffix: '',
+    decimals: 0,
+    ...overrides
+  }
 }
 
 describe('subDial encoder', () => {
+  it('provides the classic content layout by default', () => {
+    const encoded = encodeSubDial({})
+
+    expect(encoded.progressProperty).toBe('')
+    expect(Object.keys(encoded.content)).toEqual(['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'])
+    expect(encoded.content.value).toMatchObject({ visible: true, x: 0, y: 0.2 })
+    expect(encoded.content.percentage.visible).toBe(true)
+  })
+
   it('prefers live canvas transforms and folds scale into radius', () => {
     const element = {
       id: 'sub-dial-1',
@@ -64,7 +112,7 @@ describe('subDial encoder', () => {
       angle: 15,
       scaleX: 1.5,
       scaleY: 1.5,
-      __element: { config },
+      __element: { config }
     }
 
     expect(encodeSubDial(element as any)).toMatchObject({
@@ -78,8 +126,8 @@ describe('subDial encoder', () => {
         style: 'image',
         assetId: 'hand-asset-1',
         pivotX: 0.5,
-        pivotY: 0.85,
-      },
+        pivotY: 0.85
+      }
     })
   })
 
@@ -90,7 +138,7 @@ describe('subDial encoder', () => {
       angle: 15,
       scaleX: 1,
       scaleY: 1,
-      eleType: 'subDial',
+      eleType: 'subDial'
     })
   })
 
@@ -99,7 +147,7 @@ describe('subDial encoder', () => {
       id: 'sub-dial-1',
       goalProperty: 'goal_live',
       scaleX: 1,
-      __element: { config: { ...config, goalProperty: 'goal_stale' } },
+      __element: { config: { ...config, goalProperty: 'goal_stale' } }
     }
 
     const encoded = encodeSubDial(element as any)
