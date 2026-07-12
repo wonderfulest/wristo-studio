@@ -18,13 +18,13 @@ describe('Tick color settings integration', () => {
     expect(readSource('../romans/romans.panel.vue')).not.toContain('TickColorSettings')
   })
 
-  it('binds both the property key and preview color in the shared component', () => {
+  it('uses one ColorPicker for both static colors and variable bindings', () => {
     const source = readSource('./TickColorSettings.vue')
-    expect(source).toContain('ColorPropertyField')
-    expect(source).toContain('ColorPicker')
-    expect(source).toContain('resolveDialColorPatch')
-    expect(source).toContain('fillProperty')
-    expect(source).toContain('fill: color')
+    expect(source).not.toContain('ColorPropertyField')
+    expect(source.match(/<ColorPicker/g)).toHaveLength(1)
+    expect(source).toContain('@property-change="handleColorSelection"')
+    expect(source).toContain('fill: payload.color')
+    expect(source).toContain('fillProperty: payload.propertyKey')
   })
 
   it('refreshes the tick tint when a theme color variable changes', () => {

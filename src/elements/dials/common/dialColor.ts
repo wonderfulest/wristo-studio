@@ -1,7 +1,16 @@
 import { filters } from 'fabric'
 import type { PropertiesMap } from '@/types/properties'
-import { normalizePropertyColor } from '@/elements/common/settings/colorProperty'
 import type { DialType } from './dial.schema'
+
+export const normalizePropertyColor = (value: unknown, fallback = '#ffffff'): string => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return fallback
+  if (raw === '-1' || raw.toLowerCase() === 'transparent') return 'transparent'
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase()
+  if (/^0x[0-9a-f]{6}$/i.test(raw)) return `#${raw.slice(2).toLowerCase()}`
+  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toLowerCase()}`
+  return fallback
+}
 
 export interface DialColorPatch {
   fillProperty: string
