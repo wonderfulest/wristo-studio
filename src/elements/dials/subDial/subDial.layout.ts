@@ -60,27 +60,37 @@ function assertTransform(transform: SubDialTransform): void {
   }
 }
 
+function rotationRadians(rotation: number): number {
+  const normalized = (((rotation % 360) + 540) % 360) - 180
+  return (normalized * Math.PI) / 180
+}
+
+function assertFiniteResult(value: number, operation: string): number {
+  if (!Number.isFinite(value)) throw new RangeError(`${operation} exceeded the finite numeric range`)
+  return value
+}
+
 export function localToCanvas(point: NormalizedPoint, transform: SubDialTransform): CanvasPoint {
   assertFinitePoint(point, 'Local point')
   assertTransform(transform)
-  const radians = (transform.rotation * Math.PI) / 180
-  const localX = point.x * transform.radius
-  const localY = point.y * transform.radius
+  const radians = rotationRadians(transform.rotation)
+  const localX = assertFiniteResult(point.x * transform.radius, 'Local x scaling')
+  const localY = assertFiniteResult(point.y * transform.radius, 'Local y scaling')
   return {
-    x: transform.centerX + localX * Math.cos(radians) - localY * Math.sin(radians),
-    y: transform.centerY + localX * Math.sin(radians) + localY * Math.cos(radians)
+    x: assertFiniteResult(transform.centerX + localX * Math.cos(radians) - localY * Math.sin(radians), 'Canvas x transform'),
+    y: assertFiniteResult(transform.centerY + localX * Math.sin(radians) + localY * Math.cos(radians), 'Canvas y transform')
   }
 }
 
 export function canvasToLocal(point: CanvasPoint, transform: SubDialTransform): NormalizedPoint {
   assertFinitePoint(point, 'Canvas point')
   assertTransform(transform)
-  const radians = (-transform.rotation * Math.PI) / 180
-  const offsetX = point.x - transform.centerX
-  const offsetY = point.y - transform.centerY
+  const radians = -rotationRadians(transform.rotation)
+  const offsetX = assertFiniteResult(point.x - transform.centerX, 'Canvas x offset')
+  const offsetY = assertFiniteResult(point.y - transform.centerY, 'Canvas y offset')
   return {
-    x: (offsetX * Math.cos(radians) - offsetY * Math.sin(radians)) / transform.radius,
-    y: (offsetX * Math.sin(radians) + offsetY * Math.cos(radians)) / transform.radius
+    x: assertFiniteResult((offsetX * Math.cos(radians) - offsetY * Math.sin(radians)) / transform.radius, 'Local x transform'),
+    y: assertFiniteResult((offsetX * Math.sin(radians) + offsetY * Math.cos(radians)) / transform.radius, 'Local y transform')
   }
 }
 
@@ -97,10 +107,16 @@ export function constrainContentPosition(target: NormalizedPoint, bounds: Conten
   if (safePixelRadius <= 0) return { x: 0, y: 0 }
 
   const safeNormalizedRadius = safePixelRadius / radius
-  const distance = Math.hypot(target.x, target.y)
-  if (distance <= safeNormalizedRadius) return { x: target.x, y: target.y }
-  const scale = safeNormalizedRadius / distance
-  return { x: target.x * scale, y: target.y * scale }
+  const maxAbs = Math.max(Math.abs(target.x), Math.abs(target.y))
+  if (maxAbs === 0) return { x: 0, y: 0 }
+  const directionX = target.x / maxAbs
+  const directionY = target.y / maxAbs
+  const scaledDistance = Math.hypot(directionX, directionY)
+  if (maxAbs <= safeNormalizedRadius / scaledDistance) return { x: target.x, y: target.y }
+  return {
+    x: assertFiniteResult((directionX / scaledDistance) * safeNormalizedRadius, 'Constrained x position'),
+    y: assertFiniteResult((directionY / scaledDistance) * safeNormalizedRadius, 'Constrained y position')
+  }
 }
 
 export function lockDragAxis(start: CanvasPoint, current: CanvasPoint, shiftKey: boolean): CanvasPoint {
