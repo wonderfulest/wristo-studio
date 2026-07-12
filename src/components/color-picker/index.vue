@@ -85,6 +85,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import emitter from '@/utils/eventBus.ts'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
+import { toColorSelectionPayload } from './colorSelection'
 
 const { t } = useI18n()
 
@@ -119,6 +120,7 @@ const props = defineProps({
 const emit = defineEmits([
   'update:modelValue',
   'change',
+  'property-change',
   'update:gradientEnabled',
   'update:gradientStartColor',
   'update:gradientEndColor',
@@ -326,6 +328,7 @@ const selectColor = (color) => {
   propertiesStore.setLastSelectedColor(color.hex)
   emit('update:modelValue', color.hex)
   emit('change', color.hex)
+  emit('property-change', toColorSelectionPayload(color))
 }
 
 // 更新颜色
@@ -333,6 +336,7 @@ const updateColor = () => {
   propertiesStore.setLastSelectedColor(hexColor.value)
   emit('update:modelValue', hexColor.value)
   emit('change', hexColor.value)
+  emit('property-change', toColorSelectionPayload({ hex: hexColor.value }))
 }
 
 // 从十六进制更新
@@ -492,6 +496,7 @@ const handleInputConfirm = () => {
     propertiesStore.setLastSelectedColor('transparent')
     emit('update:modelValue', 'transparent')
     emit('change', 'transparent')
+    emit('property-change', toColorSelectionPayload({ hex: 'transparent' }))
     inputValue.value = 'transparent'
     return
   }
@@ -504,19 +509,12 @@ const handleInputConfirm = () => {
     return
   }
 
-  // 在当前属性颜色中查找完全匹配
-  const fromProps = colorProperties.value.find((cp) => cp.hex.toLowerCase() === normalized.toLowerCase())
-  if (fromProps) {
-    selectColor(fromProps)
-    inputValue.value = fromProps.hex
-    return
-  }
-
   // 若未命中任何选项，仍然按该 hex 作为当前颜色
   hexColor.value = normalized
   propertiesStore.setLastSelectedColor(normalized)
   emit('update:modelValue', normalized)
   emit('change', normalized)
+  emit('property-change', toColorSelectionPayload({ hex: normalized }))
   inputValue.value = normalized
 }
 
