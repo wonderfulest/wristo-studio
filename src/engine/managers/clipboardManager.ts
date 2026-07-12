@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import { addElement } from '@/engine/managers/elementManager'
 import { useHistoryStore } from '@/stores/historyStore'
+import { ActiveSelection } from 'fabric'
 
 // Selection-level clipboard state
 
@@ -23,6 +24,21 @@ let selectionClipboard: ClipboardItem[] = []
 let clipboardSelectionCenter: { x: number; y: number } | null = null
 // 连续粘贴计数，用于实现 Figma 风格的递增偏移
 let pasteCount = 0
+
+export function commitPastedSelection(canvas: any, pastedObjects: FabricElement[]): void {
+  canvas.discardActiveObject?.()
+
+  if (pastedObjects.length === 1) {
+    canvas.setActiveObject?.(pastedObjects[0])
+  } else if (pastedObjects.length > 1) {
+    const selection = new ActiveSelection(pastedObjects as any[], { canvas })
+    selection.set({ hasControls: false })
+    selection.setCoords?.()
+    canvas.setActiveObject?.(selection)
+  }
+
+  canvas.requestRenderAll?.()
+}
 
 // 安全计算对象在画布坐标系中的视觉中心，避免把 left/top 误当成左上角或中心点。
 function getObjectVisualCenter(obj: any): { x: number; y: number } {
@@ -185,7 +201,11 @@ export function pasteSelection(): void {
   }
 
   void (async () => {
+    const canvas = useCanvasStore().canvas
+    if (!canvas) return
+
     const historyStore = useHistoryStore()
+    const pastedObjects: FabricElement[] = []
     await historyStore.runWithoutRecording(async () => {
       for (const [index, item] of selectionClipboard.entries()) {
         try {
@@ -215,7 +235,8 @@ export function pasteSelection(): void {
             originY,
           }
 
-          await addElement(eleType as ElementType, nextCfg)
+          const pastedObject = await addElement(eleType as ElementType, nextCfg)
+          if (pastedObject) pastedObjects.push(pastedObject)
         } catch (e) {
           console.warn('[ClipboardManager] pasteSelection: failed to add element from clipboard', {
             index,
@@ -225,6 +246,7 @@ export function pasteSelection(): void {
         }
       }
     })
+    commitPastedSelection(canvas, pastedObjects)
     historyStore.saveState('paste:selection')
   })()
 }
