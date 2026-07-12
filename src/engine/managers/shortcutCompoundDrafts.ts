@@ -10,9 +10,9 @@ export function buildGoalBarDrafts(factory: ShortcutDraftFactory, input: {
   const shared = { goalProperty: input.propertyKey, dataProperty: null }
   const half = input.width / 2
   return [
-    factory('goal', 'goalBar', shared, 'goal-bar'),
-    factory('metric', 'icon', { ...shared, left: input.left - half, top: input.top - 20, originX: 'right', fontSize: 24, iconSize: 24 }, 'goal-bar-icon'),
-    factory('metric', 'data', { ...shared, left: input.left + half, top: input.top - 20, originX: 'left', fontSize: 24 }, 'goal-bar-value'),
+    factory('goal', 'goalBar', { ...shared, left: input.left, top: input.top }, 'goal-bar'),
+    factory('metric', 'icon', { ...shared, left: input.left - half, top: input.top, originX: 'center', fontSize: 24, iconSize: 24 }, 'goal-bar-icon'),
+    factory('metric', 'data', { ...shared, left: input.left + half, top: input.top, originX: 'left', fontSize: 24 }, 'goal-bar-value'),
   ]
 }
 
@@ -21,7 +21,7 @@ export function buildGoalArcDrafts(factory: ShortcutDraftFactory, input: {
 }): ShortcutDraft[] {
   const shared = { goalProperty: input.propertyKey, dataProperty: null }
   return [
-    factory('goal', 'goalArc', { ...shared, strokeWidth: 4, bgStrokeWidth: 4, progress: 0.45 }, 'goal-arc'),
+    factory('goal', 'goalArc', { ...shared, left: input.left, top: input.top, strokeWidth: 4, bgStrokeWidth: 4, progress: 0.45 }, 'goal-arc'),
     factory('metric', 'icon', { ...shared, left: input.left, top: input.top - 16, originX: 'center', fontSize: 24, iconSize: 24 }, 'goal-arc-icon'),
     factory('metric', 'data', { ...shared, left: input.left, top: input.top + 16, originX: 'center', fontSize: 24 }, 'goal-arc-value'),
   ]

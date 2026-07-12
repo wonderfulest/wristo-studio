@@ -93,8 +93,14 @@ describe('compound shortcut production orchestrator', () => {
       onError: error,
     })
 
-    expect(result?.map((member) => [member.config.left, member.config.top])).toEqual([
-      [undefined, undefined], [177, 240], [277, 240],
+    expect(result?.map((member) => [
+      member.config.left,
+      member.config.top,
+      member.config.originX,
+    ])).toEqual([
+      [227, 260, undefined],
+      [177, 260, 'center'],
+      [277, 260, 'left'],
     ])
     expect(result?.map(({ key, elementType }) => [key, elementType])).toEqual([
       ['goal-bar', 'goalBar'], ['goal-bar-icon', 'icon'], ['goal-bar-value', 'data'],
@@ -180,6 +186,7 @@ describe('compound shortcut production orchestrator', () => {
     expect(drafts.map(({ key, elementType }) => [key, elementType])).toEqual([
       ['goal-arc', 'goalArc'], ['goal-arc-icon', 'icon'], ['goal-arc-value', 'data'],
     ])
+    expect([drafts[0].config.left, drafts[0].config.top]).toEqual([227, 260])
     expect(drafts.slice(1).map((draft) => [draft.config.left, draft.config.top])).toEqual([[227, 244], [227, 276]])
   })
 })
