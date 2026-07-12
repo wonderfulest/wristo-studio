@@ -5,29 +5,21 @@ import { decodeSubDial, encodeSubDial } from './subDial.encoder'
 import SubDialPanel from './subDial.panel.vue'
 import { createSubDial, updateSubDial } from './subDial.renderer'
 import { SubDialLayoutEditor, type SubDialLayoutEditorOptions } from './SubDialLayoutEditor'
+import { SubDialEditorRegistry } from './subDial.editorRegistry'
 
-let activeLayoutEditor: SubDialLayoutEditor | null = null
-const listeners = new Set<(editor: SubDialLayoutEditor | null) => void>()
+const editorRegistry = new SubDialEditorRegistry<SubDialLayoutEditor>()
 
-export const getActiveSubDialLayoutEditor = () => activeLayoutEditor
-export const subscribeSubDialLayoutEditor = (listener: (editor: SubDialLayoutEditor | null) => void) => {
-  listeners.add(listener)
-  listener(activeLayoutEditor)
-  return () => listeners.delete(listener)
-}
+export const getActiveSubDialLayoutEditor = () => editorRegistry.current()
+export const subscribeSubDialLayoutEditor = (listener: (editor: SubDialLayoutEditor | null) => void) => editorRegistry.subscribe(listener)
 
 export function installSubDialLayoutEditor(options: SubDialLayoutEditorOptions): SubDialLayoutEditor {
   const editor = new SubDialLayoutEditor(options)
-  activeLayoutEditor = editor
-  listeners.forEach((listener) => listener(editor))
   const dispose = editor.dispose.bind(editor)
   editor.dispose = () => {
     dispose()
-    if (activeLayoutEditor === editor) {
-      activeLayoutEditor = null
-      listeners.forEach((listener) => listener(null))
-    }
+    editorRegistry.unregister(editor)
   }
+  editorRegistry.register(editor)
   return editor
 }
 

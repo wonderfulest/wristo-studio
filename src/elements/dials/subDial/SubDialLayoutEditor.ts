@@ -174,7 +174,7 @@ export class SubDialLayoutEditor {
   getEditingGroup(): any | null { return this.group }
   subscribeSelection(listener: (key: SubDialContentKey | null, group: any | null) => void): () => void {
     this.selectionListeners.add(listener)
-    listener(this.selectedKey, this.group)
+    try { listener(this.selectedKey, this.group) } catch { /* Match later notification isolation. */ }
     return () => this.selectionListeners.delete(listener)
   }
 
@@ -404,7 +404,9 @@ export class SubDialLayoutEditor {
     }
   }
   private emitSelection(key: SubDialContentKey | null, group: any | null): void {
-    this.onSelectionChange(key, group)
-    this.selectionListeners.forEach((listener) => listener(key, group))
+    try { this.onSelectionChange(key, group) } catch { /* Selection observers cannot break Fabric cleanup. */ }
+    this.selectionListeners.forEach((listener) => {
+      try { listener(key, group) } catch { /* Keep notifying the remaining observers. */ }
+    })
   }
 }

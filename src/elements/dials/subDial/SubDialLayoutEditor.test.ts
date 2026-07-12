@@ -114,6 +114,17 @@ function deferred<T = void>() {
 }
 
 describe('SubDialLayoutEditor', () => {
+  it('isolates selection listener errors and removes an unsubscribed callback', () => {
+    const { editor, group } = fixture()
+    const listener = vi.fn()
+    editor.subscribeSelection(() => { throw new Error('listener') })
+    const stop = editor.subscribeSelection(listener)
+    editor.enter(group)
+    expect(() => editor.select('value')).not.toThrow()
+    stop()
+    editor.select('unit')
+    expect(listener).toHaveBeenCalledTimes(2)
+  })
   it('wires the exact content drag history reason in Canvas', () => {
     const canvasSource = readFileSync(new URL('../../../views/Canvas.vue', import.meta.url), 'utf8')
     expect(canvasSource).toContain("historyStore.saveState('sub-dial:content-drag')")

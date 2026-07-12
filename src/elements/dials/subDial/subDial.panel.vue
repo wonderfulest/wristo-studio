@@ -42,7 +42,6 @@
             <ColorPicker :model-value="model.backgroundColor" @change="patch({ backgroundColor: $event })" />
           </el-form-item>
         </div>
-      </section>
 
       <section class="dial-subsection">
         <h4>{{ t('subDial.ticks') }}</h4>
@@ -106,6 +105,8 @@
             <ColorPicker :model-value="model.centerCapColor" @change="patch({ centerCapColor: $event })" />
           </el-form-item>
         </div>
+      </section>
+
       </section>
 
       <section class="settings-card"><h3>{{ t('subDial.content') }}</h3>
