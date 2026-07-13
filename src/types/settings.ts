@@ -26,7 +26,14 @@ export interface DataTypeOption {
   unit?: string
   label: string
   enLabel: string
+  dialMode?: 'goal' | 'range' | null
+  dialMin?: number | null
+  dialMax?: number | null
+  dialGoalSource?: 'garmin' | 'fixed' | null
 }
+
+export type DialProgressMode = 'goal' | 'range'
+export type DialDataTypeOption = DataTypeOption & { dialMode: DialProgressMode }
 
 export interface HandOption {
   name: string

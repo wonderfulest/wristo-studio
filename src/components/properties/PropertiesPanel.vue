@@ -212,6 +212,7 @@
     <DataPropertyDialog ref="dataPropertyDialog" @confirm="handlePropertyConfirm" />
     <ChartPropertyDialog ref="chartPropertyDialog" @confirm="handlePropertyConfirm" />
     <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
+    <DialPropertyDialog ref="dialPropertyDialog" @confirm="handlePropertyConfirm" />
   </el-drawer>
 </template>
 
@@ -233,6 +234,7 @@ import GoalPropertyDialog from '@/components/properties/dialogs/GoalPropertyDial
 import DataPropertyDialog from '@/components/properties/dialogs/DataPropertyDialog.vue'
 import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDialog.vue'
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
+import DialPropertyDialog from '@/components/properties/dialogs/DialPropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
@@ -253,6 +255,7 @@ const goalPropertyDialog = ref(null)
 const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
+const dialPropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
@@ -260,7 +263,7 @@ const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const { t } = useI18n()
 
-const typeOrder = ['color', 'data', 'goal', 'chart', 'text']
+const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial']
 
 const typeMeta = computed(() => ({
   color: { label: t('property.colorSelect'), icon: Brush },
@@ -268,6 +271,7 @@ const typeMeta = computed(() => ({
   goal: { label: t('property.goalSelect'), icon: Histogram },
   chart: { label: t('property.chartSelect'), icon: TrendCharts },
   text: { label: t('property.textString'), icon: Document },
+  dial: { label: 'Dial', icon: Histogram },
 }))
 
 const addPropertyTypes = computed(() => typeOrder.map((type) => ({
@@ -406,6 +410,8 @@ const addProperty = (type) => {
     chartPropertyDialog.value?.show()
   } else if (type === 'text') {
     textPropertyDialog.value?.show()
+  } else if (type === 'dial') {
+    dialPropertyDialog.value?.show()
   }
 }
 // 编辑属性
@@ -432,6 +438,11 @@ const editProperty = (key, prop) => {
     })
   } else if (prop.type === 'text') {
     textPropertyDialog.value?.show({
+      ...prop,
+      propertyKey: key
+    })
+  } else if (prop.type === 'dial') {
+    dialPropertyDialog.value?.show({
       ...prop,
       propertyKey: key
     })
@@ -606,6 +617,7 @@ const getPropertyPreview = (prop) => {
   if (prop.type === 'chart') return getChartOption(prop)?.label || prop.value || '-'
   if (prop.type === 'data') return getDataOption(prop)?.label || prop.value || '-'
   if (prop.type === 'text') return prop.value || '-'
+  if (prop.type === 'dial') return `${prop.dialMode}: ${getDataOption(prop)?.label || prop.value || '-'}`
   return prop.value || '-'
 }
 

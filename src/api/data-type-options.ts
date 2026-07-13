@@ -22,6 +22,10 @@ export interface DataTypeOptionVO {
   isActive: number
   sortOrder: number
   description?: string
+  dialMode?: 'goal' | 'range' | null
+  dialMin?: number | null
+  dialMax?: number | null
+  dialGoalSource?: 'garmin' | 'fixed' | null
 }
 
 export function listDataTypeOptions(params: { category?: string; active?: number } = {}) {

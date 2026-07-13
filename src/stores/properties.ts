@@ -3,6 +3,7 @@ import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '
 import { DataTypeOption } from '@/types/settings'
 import { DataTypeOptions } from '@/config/settings'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
+import type { DialProgressMode } from '@/types/settings'
 
 export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
@@ -85,6 +86,11 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     allProperties: (state) => state.properties || ({} as PropertiesMap),
 
     getPropertyValue: (state) => (key: string) => state.properties[key]?.value,
+
+    getDialProperties: (state) => (mode: DialProgressMode) =>
+      Object.entries(state.properties).filter(([, property]) =>
+        property.type === 'dial' && property.dialMode === mode
+      ),
 
     getDefaultValue: () => (type: PropertyType) => {
       switch (type) {
@@ -193,6 +199,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       defaultValue?: unknown
       prompt?: string
       errorMessage?: string
+      dialMode?: DialProgressMode
     }) {
       const defaultValue =
         propertyData.defaultValue !== undefined
@@ -208,6 +215,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         value: defaultValue,
         prompt: propertyData.prompt,
         errorMessage: propertyData.errorMessage,
+        dialMode: propertyData.dialMode,
       } as PropertyItem
     },
 
@@ -216,14 +224,19 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       propertyData: Partial<Omit<PropertyItem, 'value'>> & { type?: PropertyType; defaultValue?: unknown; options?: PropertyOption[] }
     ) {
       if (this.properties[key]) {
+        const current = this.properties[key]
+        const next = { ...propertyData }
+        if (current.type === 'dial' && next.dialMode !== undefined && next.dialMode !== current.dialMode) {
+          delete next.dialMode
+        }
         this.properties[key] = {
-          ...this.properties[key],
-          ...propertyData,
+          ...current,
+          ...next,
           value:
             propertyData.defaultValue ||
-            this.properties[key].value ||
+            current.value ||
             propertyData.options?.[0]?.value ||
-            this.getDefaultValue(propertyData.type || this.properties[key].type as PropertyType),
+            this.getDefaultValue(next.type || current.type as PropertyType),
         }
       }
     },

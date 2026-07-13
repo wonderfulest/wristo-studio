@@ -104,6 +104,10 @@ const toDataTypeOption = (option: DataTypeOptionVO): DataTypeOption => {
     unit: resolveUnit(option),
     label,
     enLabel: label,
+    dialMode: option.dialMode ?? null,
+    dialMin: option.dialMin ?? null,
+    dialMax: option.dialMax ?? null,
+    dialGoalSource: option.dialGoalSource ?? null,
   }
 }
 
