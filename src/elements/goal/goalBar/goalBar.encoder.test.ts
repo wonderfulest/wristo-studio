@@ -41,6 +41,22 @@ afterEach(() => {
 
 describe('goalBar encoder compatibility', () => {
   it.each([
+    ['leftToRight', 'horizontal'],
+    ['rightToLeft', 'horizontal'],
+    ['bottomToTop', 'vertical'],
+    ['topToBottom', 'vertical'],
+  ] as const)('derives %s orientation for legacy configs', (progressDirection, orientation) => {
+    const decoded = decodeGoalBar(createConfig({ progressDirection }))
+    expect((decoded as any).orientation).toBe(orientation)
+    expect(encodeGoalBar(decoded).orientation).toBe(orientation)
+  })
+
+  it('repairs an orientation that conflicts with the final direction', () => {
+    const decoded = decodeGoalBar(createConfig({ orientation: 'vertical', progressDirection: 'rightToLeft' }))
+    expect((decoded as any).orientation).toBe('horizontal')
+  })
+
+  it.each([
     [{ progressAlign: 'left' }, 'leftToRight'],
     [{ progressAlign: 'right' }, 'rightToLeft'],
     [{ progressDirection: 'bottomToTop', progressAlign: 'right' }, 'bottomToTop'],

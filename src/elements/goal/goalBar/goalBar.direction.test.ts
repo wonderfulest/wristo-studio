@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { getGoalBarProgressBounds, normalizeGoalBarDirection, resolveGoalBarDirection } from './goalBar.direction'
+import {
+  getDefaultGoalBarDirection,
+  getGoalBarProgressBounds,
+  normalizeGoalBarDirection,
+  resolveGoalBarDirection,
+  resolveGoalBarOrientation,
+} from './goalBar.direction'
 
 describe('goalBar direction', () => {
   it.each([
@@ -28,5 +34,19 @@ describe('goalBar direction', () => {
     ['bottomToTop', { left: 0, top: 30, width: 100, height: 10 }],
   ] as const)('calculates %s progress bounds', (direction, expected) => {
     expect(getGoalBarProgressBounds(100, 40, 0.25, direction)).toEqual(expected)
+  })
+
+  it.each([
+    ['leftToRight', 'horizontal'],
+    ['rightToLeft', 'horizontal'],
+    ['bottomToTop', 'vertical'],
+    ['topToBottom', 'vertical'],
+  ] as const)('derives %s orientation', (direction, orientation) => {
+    expect(resolveGoalBarOrientation(direction)).toBe(orientation)
+  })
+
+  it('uses an axis-specific default direction', () => {
+    expect(getDefaultGoalBarDirection('horizontal')).toBe('leftToRight')
+    expect(getDefaultGoalBarDirection('vertical')).toBe('bottomToTop')
   })
 })
