@@ -128,20 +128,20 @@ export function validateGoalBarPolygon(points: GoalBarPolygonPoint[]): { valid: 
     return { valid: false, reason: 'area' }
   }
 
+  return { valid: true }
+}
+
+export function isConvexPolygon(points: GoalBarPolygonPoint[]): boolean {
+  if (!validateGoalBarPolygon(points).valid) return false
   let windingDirection = 0
   for (let index = 0; index < points.length; index++) {
     const cross = crossProduct(points[index], points[(index + 1) % points.length], points[(index + 2) % points.length])
     if (Math.abs(cross) <= POLYGON_EPSILON) continue
-
     const direction = Math.sign(cross)
-    if (windingDirection === 0) {
-      windingDirection = direction
-    } else if (direction !== windingDirection) {
-      return { valid: false, reason: 'concave' }
-    }
+    if (windingDirection === 0) windingDirection = direction
+    else if (direction !== windingDirection) return false
   }
-
-  return { valid: true }
+  return windingDirection !== 0
 }
 
 export function normalizePolygonPoints(points: GoalBarPolygonPoint[]): { points: GoalBarPolygonPoint[]; bounds: GoalBarPolygonBounds } {

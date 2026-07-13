@@ -144,16 +144,6 @@ describe('goalBar encoder compatibility', () => {
         { x: 1, y: 1 },
         { x: 0, y: 1 }
       ]
-    ],
-    [
-      'a concave polygon',
-      [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 0.5, y: 0.5 },
-        { x: 1, y: 1 },
-        { x: 0, y: 1 }
-      ]
     ]
   ])('falls back and warns when decoding customPolygon with %s', (_case, polygonPoints) => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -253,6 +243,27 @@ describe('goalBar encoder compatibility', () => {
     expect(encoded.gradientEnabled).toBe(true)
     expect(encoded.gradientStartColor).toBe('#112233')
     expect(encoded.gradientEndColor).toBe('#AABBCC')
+  })
+
+  it('preserves gradient for convex custom polygons', () => {
+    const decoded = decodeGoalBar(createConfig({
+      shape: 'customPolygon',
+      polygonPoints: square,
+      gradientEnabled: true,
+      gradientStartColor: '#112233',
+      gradientEndColor: '#AABBCC',
+    }))
+    const encoded = encodeGoalBar(decoded)
+
+    expect(decoded.gradientEnabled).toBe(true)
+    expect(encoded.gradientEnabled).toBe(true)
+  })
+
+  it('forces concave custom polygons to a solid foreground color', () => {
+    const concave = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 0.4 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
+    const decoded = decodeGoalBar(createConfig({ shape: 'customPolygon', polygonPoints: concave, gradientEnabled: true }))
+    expect(decoded.gradientEnabled).toBe(false)
+    expect(encodeGoalBar(decoded).gradientEnabled).toBe(false)
   })
 
   it('defaults legacy gradient settings to the foreground color', () => {

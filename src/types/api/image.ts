@@ -4,5 +4,5 @@ export interface ImageFormats {
   medium?: ImageFormatSize
   large?: ImageFormatSize
 }
-export interface ImageBase { url: string; formats?: ImageFormats }
+export interface ImageBase { url: string; previewUrl?: string; formats?: ImageFormats }
 export interface Image extends ImageBase { id: number }

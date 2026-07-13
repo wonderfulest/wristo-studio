@@ -52,6 +52,19 @@
         <el-icon><Minus /></el-icon>
         <span>{{ t('editor.line') }}</span>
       </el-menu-item>
+      <el-menu-item
+        index="basic/polygon"
+        @click="onAddElement('shape', 'polygon', {
+          fill: 'transparent',
+          stroke: '#FFFFFF',
+          strokeWidth: 2,
+          width: 100,
+          height: 100,
+        })"
+      >
+        <el-icon><Crop /></el-icon>
+        <span>{{ t('editor.polygon') }}</span>
+      </el-menu-item>
       <el-menu-item index="basic/image" @click="onAddElement('image')">
         <el-icon><Picture /></el-icon>
         <span>{{ t('editor.image') }}</span>

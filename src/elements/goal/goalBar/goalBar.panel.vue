@@ -202,7 +202,7 @@
       <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker 
           v-model="currentModel.color"
-          enable-gradient
+          :enable-gradient="!isPolygonShape || isPolygonConvex"
           :gradient-enabled="Boolean(currentModel.gradientEnabled)"
           :gradient-start-color="currentModel.gradientStartColor ?? currentModel.color"
           :gradient-end-color="currentModel.gradientEndColor ?? currentModel.color"
@@ -210,6 +210,14 @@
           @gradient-change="handleGradientChange"
         />
       </el-form-item>
+      <el-alert
+        v-if="isPolygonShape && !isPolygonConvex"
+        class="polygon-solid-only-hint"
+        type="info"
+        :closable="false"
+        show-icon
+        :title="t('elementSettings.concavePolygonSolidOnly')"
+      />
 
       <el-form-item :label="t('elementSettings.backgroundColor')">
         <color-picker 
@@ -275,6 +283,7 @@ import {
 } from './goalBar.direction'
 import GoalBarPolygonMiniEditor from './GoalBarPolygonMiniEditor.vue'
 import {
+  isConvexPolygon,
   normalizeGoalBarPolygonConfig,
   validateGoalBarPolygon,
   type GoalBarPolygonPoint,
@@ -355,6 +364,7 @@ const persistedPolygonPoints = computed<GoalBarPolygonPoint[]>(() =>
 const hasValidPersistedPolygon = computed(() => validateGoalBarPolygon(persistedPolygonPoints.value).valid)
 const currentShape = computed(() => pendingShape.value ?? persistedShape.value)
 const isPolygonShape = computed(() => currentShape.value === 'customPolygon')
+const isPolygonConvex = computed(() => isPolygonShape.value && isConvexPolygon(persistedPolygonPoints.value))
 const segmentPreviewCount = computed(() => Math.min(16, Math.max(1, segmentsLocal.value)))
 const segmentPreviewActiveCount = computed(() => {
   const progress = Math.max(0, Math.min(1, Number((currentModel.value as any)?.progress ?? 0)))
@@ -561,7 +571,11 @@ const commitPolygonEditing = async (emittedValue?: unknown) => {
   if (!session.state.valid || !session.state.closed || !validateGoalBarPolygon(points).valid) return
   session.saving = true
   try {
-    await applyUpdate({ shape: 'customPolygon', polygonPoints: cloneGoalBarPolygonPoints(points) })
+    await applyUpdate({
+      shape: 'customPolygon',
+      polygonPoints: cloneGoalBarPolygonPoints(points),
+      ...(isConvexPolygon(points) ? {} : { gradientEnabled: false }),
+    })
     pendingShape.value = null
     clearPolygonEditor()
   } catch (error) {
@@ -588,7 +602,11 @@ const onShapeChange = async (value: 'rectangle' | 'customPolygon') => {
 
   const polygonPoints = persistedPolygonPoints.value.map((point) => ({ ...point }))
   if (validateGoalBarPolygon(polygonPoints).valid) {
-    await applyUpdate({ shape: 'customPolygon', polygonPoints })
+    await applyUpdate({
+      shape: 'customPolygon',
+      polygonPoints,
+      ...(isConvexPolygon(polygonPoints) ? {} : { gradientEnabled: false }),
+    })
     return
   }
 

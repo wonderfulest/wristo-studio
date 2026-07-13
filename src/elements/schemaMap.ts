@@ -29,6 +29,7 @@ import { moveBarSchema } from '@/elements/status/movebar/movebar.schema'
 import { rectangleSchema } from '@/elements/shapes/rectangle/rectangle.schema'
 import { circleSchema } from '@/elements/shapes/circle/circle.schema'
 import { lineSchema } from '@/elements/shapes/line/line.schema'
+import { polygonSchema } from '@/elements/shapes/polygon/polygon.schema'
 
 // common
 import { imageSchema } from '@/elements/decoration/image/image.schema'
@@ -133,6 +134,7 @@ export const elementConfigs: ElementConfigs = {
     rectangle: buildConfigFromSchema(rectangleSchema as AnySchema),
     circle: buildConfigFromSchema(circleSchema as AnySchema),
     line: buildConfigFromSchema(lineSchema as AnySchema),
+    polygon: buildConfigFromSchema(polygonSchema as AnySchema),
   },
   goal: {
     goalBar: buildConfigFromSchema(goalBarSchema as AnySchema),

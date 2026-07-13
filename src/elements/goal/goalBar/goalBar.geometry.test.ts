@@ -10,6 +10,7 @@ import {
   normalizeGoalBarPolygonConfig,
   normalizePolygonPoints,
   validateGoalBarPolygon,
+  isConvexPolygon,
   type GoalBarLegacyShape,
   type GoalBarPolygonPoint
 } from './goalBar.geometry'
@@ -22,6 +23,12 @@ const square: GoalBarPolygonPoint[] = [
 ]
 
 describe('validateGoalBarPolygon', () => {
+  it('classifies convex and concave polygons independently from validity', () => {
+    expect(isConvexPolygon(square)).toBe(true)
+    expect(isConvexPolygon([
+      { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.5, y: 0.4 }, { x: 1, y: 1 }, { x: 0, y: 1 }
+    ])).toBe(false)
+  })
   it.each([
     [
       'three points',
@@ -131,7 +138,7 @@ describe('validateGoalBarPolygon', () => {
     expect(validateGoalBarPolygon(points)).toEqual({ valid: false, reason: 'selfIntersection' })
   })
 
-  it('rejects a simple concave polygon', () => {
+  it('accepts a simple concave polygon', () => {
     expect(
       validateGoalBarPolygon([
         { x: 0, y: 0 },
@@ -140,7 +147,7 @@ describe('validateGoalBarPolygon', () => {
         { x: 1, y: 1 },
         { x: 0, y: 1 }
       ])
-    ).toEqual({ valid: false, reason: 'concave' })
+    ).toEqual({ valid: true })
   })
 
   it('rejects an area at or below the normalized minimum', () => {

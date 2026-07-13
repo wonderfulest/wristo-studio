@@ -10,8 +10,9 @@ import { encodeGoalBar } from './goalBar.encoder'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampProgress } from '@/elements/goal/goal.common'
 import {
-  clipGoalBarPolygon,
   denormalizePolygonPoints,
+  isConvexPolygon,
+  clipGoalBarPolygon,
   normalizeGoalBarPolygonConfig,
   validateGoalBarPolygon,
   type GoalBarPolygonPoint,
@@ -22,6 +23,7 @@ import {
   normalizeGoalBarDirection,
   resolveGoalBarDirection,
   resolveGoalBarOrientation,
+  type GoalBarProgressDirection,
 } from './goalBar.direction'
 
 type GoalBarVariant = NonNullable<GoalBarElementConfig['variant']>
@@ -140,6 +142,31 @@ function createPolygonObject(
   } as any)
 }
 
+function createPolygonProgressObject(
+  id: string,
+  points: GoalBarPolygonPoint[],
+  fill: any,
+  width: number,
+  height: number,
+  progress: number,
+  direction: GoalBarProgressDirection,
+) {
+  const polygon = createPolygonObject(id, points, fill)
+  const bounds = getGoalBarProgressBounds(width, height, progress, direction)
+  ;(polygon as any).clipPath = new Rect({
+    left: -width / 2 + bounds.left + bounds.width / 2,
+    top: -height / 2 + bounds.top + bounds.height / 2,
+    width: bounds.width,
+    height: bounds.height,
+    originX: 'center',
+    originY: 'center',
+    fill: '#000000',
+    selectable: false,
+    evented: false,
+  })
+  return polygon
+}
+
 function normalizeGoalBarConfig(
   config: Partial<GoalBarElementConfig>,
   id: string,
@@ -178,7 +205,9 @@ function normalizeGoalBarConfig(
     originX: 'center' as any,
     originY: 'center' as any,
     goalProperty: config.goalProperty ?? '',
-    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientEnabled: polygon.shape === 'customPolygon' && !isConvexPolygon(polygon.polygonPoints)
+      ? false
+      : Boolean(config.gradientEnabled ?? false),
     gradientStartColor: config.gradientStartColor ?? config.color ?? '#00FF00',
     gradientEndColor: config.gradientEndColor ?? config.color ?? '#00FF00',
   }
@@ -387,15 +416,23 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
             evented: false,
           })
         } else {
-          const activePoints = denormalizePolygonPoints(
-            clipGoalBarPolygon(polygonPoints, segmentProgress, progressDirection),
-            { left: segmentLeft, top: segmentTop, width: segmentWidth, height: segmentHeight },
-          )
-          if (activePoints.length >= 3) {
-            activeObject = createPolygonObject(
+          if (isConvexPolygon(polygonPoints)) {
+            const activePoints = denormalizePolygonPoints(
+              clipGoalBarPolygon(polygonPoints, segmentProgress, progressDirection),
+              { left: segmentLeft, top: segmentTop, width: segmentWidth, height: segmentHeight },
+            )
+            if (activePoints.length >= 3) {
+              activeObject = createPolygonObject(`${(group as any).id}_${i}_seg_active`, activePoints, activeFill)
+            }
+          } else {
+            activeObject = createPolygonProgressObject(
               `${(group as any).id}_${i}_seg_active`,
-              activePoints,
-              activeFill,
+              segmentPolygonPoints,
+              color,
+              segmentWidth,
+              segmentHeight,
+              segmentProgress,
+              progressDirection,
             )
           }
         }
@@ -465,27 +502,36 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
     addGroupChild(group, boundsAnchor)
     addGroupChild(group, background)
 
-    const activePoints = denormalizePolygonPoints(
-      clipGoalBarPolygon(polygonPoints, progressValue, progressDirection),
-      { left: -width / 2, top: -height / 2, width, height },
-    )
-    if (activePoints.length >= 3) {
-      const activeXs = activePoints.map((point) => point.x)
-      const activeWidth = Math.max(...activeXs) - Math.min(...activeXs)
-      const activeYs = activePoints.map((point) => point.y)
-      const activeHeight = Math.max(...activeYs) - Math.min(...activeYs)
-      const progress = createPolygonObject(
-        `${(group as any).id}_progress`,
-        activePoints,
-        createGoalBarGradientFill({
-          enabled: Boolean(gradientEnabled),
-          startColor: gradientStartColor,
-          endColor: gradientEndColor,
-          progressDirection,
-          width: activeWidth,
-          height: activeHeight,
-        }) ?? color,
-      )
+    if (progressValue > 0) {
+      const polygonConvex = isConvexPolygon(polygonPoints)
+      const activePoints = polygonConvex
+        ? denormalizePolygonPoints(
+            clipGoalBarPolygon(polygonPoints, progressValue, progressDirection),
+            { left: -width / 2, top: -height / 2, width, height },
+          )
+        : []
+      const progress = polygonConvex
+        ? createPolygonObject(
+            `${(group as any).id}_progress`,
+            activePoints,
+            createGoalBarGradientFill({
+              enabled: Boolean(gradientEnabled),
+              startColor: gradientStartColor,
+              endColor: gradientEndColor,
+              progressDirection,
+              width,
+              height,
+            }) ?? color,
+          )
+        : createPolygonProgressObject(
+            `${(group as any).id}_progress`,
+            absolutePolygonPoints,
+            color,
+            width,
+            height,
+            progressValue,
+            progressDirection,
+          )
       nextChildren.progress = progress
       addGroupChild(group, progress)
     }
@@ -777,6 +823,9 @@ export function updateGoalBar(
     gap: patch.gap !== undefined ? Math.max(0, Number(patch.gap)) : currentConfig.gap,
     shape: polygon.shape,
     polygonPoints: polygon.polygonPoints,
+    gradientEnabled: polygon.shape === 'customPolygon' && !isConvexPolygon(polygon.polygonPoints)
+      ? false
+      : Boolean(patchWithoutLegacySlant.gradientEnabled ?? currentConfigWithoutLegacySlant.gradientEnabled ?? false),
   }
 
   const elementMeta = getElement(group)

@@ -120,6 +120,7 @@ async function createBitmapTimeGroup(params: {
   group.fontRenderType = 'bitmap'
   group.bitmapFontId = fontId
   group.isBitmapTimeGroup = true
+  group.text = text
   group.fontSize = fontSize
   group.fill = options.fill ?? '#ffffff'
   ;(group as any).fontGap = spacing
@@ -426,7 +427,11 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
   if (isGroup && (config.fontRenderType == null || config.fontRenderType === 'bitmap')) {
     const fontId = config.bitmapFontId ?? (obj as any).bitmapFontId
     if (fontId) {
+      const simulatedTime = (config as any).simulatedTime as Date | undefined
+      const formatter = config.formatter ?? (obj as any).formatter ?? 0
+      const nextText = formatTime(simulatedTime ?? getSimulatedNow(), Number(formatter))
       const shouldRebuild =
+        (simulatedTime !== undefined && String((obj as any).text ?? '') !== nextText) ||
         config.formatter !== undefined ||
         config.fontSize !== undefined ||
         config.bitmapFontId !== undefined ||
@@ -444,11 +449,9 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
             return
           }
           if (lockId) bitmapUpdateLocks.add(lockId)
-          const formatter = config.formatter ?? (obj as any).formatter ?? 0
-          const text = formatTime(getSimulatedNow(), Number(formatter))
           const group = await createBitmapTimeGroup({
             id: String(obj.id || element.id || nanoid()),
-            text,
+            text: nextText,
             options: {
               ...(config as any),
               id: String(obj.id || element.id || nanoid()),

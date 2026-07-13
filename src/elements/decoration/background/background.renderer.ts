@@ -11,6 +11,7 @@ import {
   resolveBackgroundUrl,
 } from './background.constants'
 import _ from 'lodash'
+import { resolveBackgroundImageSource } from './background.imageSource'
 
 function getImageNaturalSize(img: HTMLImageElement): { width: number; height: number } {
   const w = Number((img as any).naturalWidth ?? img.width ?? 0)
@@ -178,7 +179,8 @@ export async function createBackground(config: BackgroundElementConfig): Promise
   }
 
   const id = config.id || nanoid()
-  const url = resolveBackgroundUrl(config.imageUrl)
+  const resolvedImageUrl = await resolveBackgroundImageSource(config)
+  const url = resolveBackgroundUrl(resolvedImageUrl)
 
   const img = url
     ? await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
@@ -243,7 +245,12 @@ export async function updateBackground(
   if (patch.left !== undefined) bg.set('left', Number(patch.left) as never)
   if (patch.top !== undefined) bg.set('top', Number(patch.top) as never)
 
-  const nextUrlRaw = patch.imageUrl ?? (bg as any).wristoImageUrl
+  const nextUrlRaw = patch.imageId
+    ? await resolveBackgroundImageSource({
+        imageId: patch.imageId,
+        imageUrl: patch.imageUrl ?? (bg as any).wristoImageUrl,
+      })
+    : patch.imageUrl ?? (bg as any).wristoImageUrl
   const nextUrl = resolveBackgroundUrl(nextUrlRaw)
 
   const isExplicitClear = patch.imageUrl === '' || patch.imageUrl === null

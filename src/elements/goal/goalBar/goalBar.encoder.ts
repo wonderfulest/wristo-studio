@@ -1,7 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { GoalBarElementConfig } from '@/types/elements/goal'
 import { ensureGoalElementId } from '../goal.common'
-import { normalizeGoalBarPolygonConfig } from './goalBar.geometry'
+import { isConvexPolygon, normalizeGoalBarPolygonConfig } from './goalBar.geometry'
 import { normalizeGoalBarDirection, resolveGoalBarOrientation } from './goalBar.direction'
 
 type LegacyGoalBarPolygonConfig = {
@@ -75,7 +75,9 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     progressDirection,
     shape: polygonConfig.shape,
     polygonPoints: polygonConfig.polygonPoints,
-    gradientEnabled: Boolean(anyElement.gradientEnabled ?? config.gradientEnabled ?? false),
+    gradientEnabled: polygonConfig.shape === 'customPolygon' && !isConvexPolygon(polygonConfig.polygonPoints)
+      ? false
+      : Boolean(anyElement.gradientEnabled ?? config.gradientEnabled ?? false),
     gradientStartColor: anyElement.gradientStartColor ?? config.gradientStartColor ?? anyElement.color ?? config.color,
     gradientEndColor: anyElement.gradientEndColor ?? config.gradientEndColor ?? anyElement.color ?? config.color
   }
@@ -111,7 +113,9 @@ export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricEleme
     progressDirection,
     shape: polygonConfig.shape,
     polygonPoints: polygonConfig.polygonPoints,
-    gradientEnabled: Boolean(config.gradientEnabled ?? false),
+    gradientEnabled: polygonConfig.shape === 'customPolygon' && !isConvexPolygon(polygonConfig.polygonPoints)
+      ? false
+      : Boolean(config.gradientEnabled ?? false),
     gradientStartColor: config.gradientStartColor ?? config.color,
     gradientEndColor: config.gradientEndColor ?? config.color
   }

@@ -221,7 +221,12 @@ export class DataSimulatorEngine {
 
       if (eleType === 'time') {
         const isBitmap = obj.fontRenderType === 'bitmap' || obj.type === 'group'
-        if (isBitmap) return
+        if (isBitmap) {
+          void elementManager.updateElement(obj, { simulatedTime: now }).catch((error) => {
+            console.warn('[DataSimulatorEngine] bitmap time refresh failed', error)
+          })
+          return
+        }
         const formatter = Number(obj.formatter ?? 0)
         const nextText = formatTimeValue(now, formatter)
         if (String(obj.text ?? '') !== nextText) {
