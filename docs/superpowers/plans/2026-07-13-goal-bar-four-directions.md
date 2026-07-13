@@ -4,7 +4,7 @@
 
 **Goal:** 扩展单一 GoalBar，使连续、分段、自定义多边形和渐变前景在 Studio 与 Connect IQ Runtime 中一致支持四种进度方向，并兼容旧 `progressAlign` 配置。
 
-**Architecture:** 使用 `progressDirection` 作为唯一持久化方向字段，通过纯函数方向模型统一主轴和反向语义。Studio renderer 与 SuperBarrel Runtime 按同一契约实现轴向尺寸、裁剪、分段顺序和渐变；scaffold 负责旧字段迁移和模板透传。
+**Architecture:** 使用 `orientation` 表达 Studio 中的水平/垂直配置语义，使用四值 `progressDirection` 作为最终绘制方向。Studio 保证两个字段组合有效；renderer、scaffold 与 SuperBarrel Runtime 继续按既有四方向契约工作。
 
 **Tech Stack:** Vue 3、TypeScript、Fabric.js、Vitest、Python unittest、Jinja、Garmin Monkey C
 
@@ -20,6 +20,93 @@
 - Modify: `wristo-connectiq-app-build/wristo-scaffold/super-extract-elements.py` — 导出及旧配置迁移。
 - Modify: `wristo-apps/SuperAlpha/source/SuperAlphaView.j2.mc` — 模板参数。
 - Modify: `wristo-apps/SuperBarrel/goal/GoalBar.mc` — Monkey C 四方向 Runtime。
+
+## Task 0: 拆分 Orientation 与 Progress Direction 设置
+
+**Files:**
+- Modify: `wristo-studio/src/types/elements/goal.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.schema.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.direction.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.direction.test.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.encoder.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.encoder.test.ts`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.panel.vue`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.panel.test.ts`
+- Modify: `wristo-studio/src/i18n.ts`
+
+- [ ] **Step 1: 编写 orientation 归一化失败测试**
+
+```ts
+expect(resolveGoalBarOrientation('leftToRight')).toBe('horizontal')
+expect(resolveGoalBarOrientation('rightToLeft')).toBe('horizontal')
+expect(resolveGoalBarOrientation('bottomToTop')).toBe('vertical')
+expect(resolveGoalBarOrientation('topToBottom')).toBe('vertical')
+expect(getDefaultGoalBarDirection('horizontal')).toBe('leftToRight')
+expect(getDefaultGoalBarDirection('vertical')).toBe('bottomToTop')
+```
+
+- [ ] **Step 2: 运行测试确认 helper 缺失**
+
+Run: `npx vitest run src/elements/goal/goalBar/goalBar.direction.test.ts`
+
+Expected: FAIL，缺少 `resolveGoalBarOrientation` 或 `getDefaultGoalBarDirection`。
+
+- [ ] **Step 3: 实现 orientation 契约**
+
+```ts
+export type GoalBarOrientation = 'horizontal' | 'vertical'
+
+export function resolveGoalBarOrientation(direction: GoalBarProgressDirection): GoalBarOrientation {
+  return direction === 'leftToRight' || direction === 'rightToLeft' ? 'horizontal' : 'vertical'
+}
+
+export function getDefaultGoalBarDirection(orientation: GoalBarOrientation): GoalBarProgressDirection {
+  return orientation === 'vertical' ? 'bottomToTop' : 'leftToRight'
+}
+```
+
+`GoalBarElementConfig` 新增 `orientation`，schema 默认值为 `horizontal`。
+
+- [ ] **Step 4: 编写 encoder 兼容失败测试**
+
+```ts
+it.each([
+  ['leftToRight', 'horizontal'], ['rightToLeft', 'horizontal'],
+  ['bottomToTop', 'vertical'], ['topToBottom', 'vertical'],
+] as const)('derives %s orientation', (progressDirection, orientation) => {
+  const decoded = decodeGoalBar(createConfig({ progressDirection } as any))
+  expect((decoded as any).orientation).toBe(orientation)
+  expect(encodeGoalBar(decoded).orientation).toBe(orientation)
+})
+```
+
+- [ ] **Step 5: 让 encoder 输出一致的两个字段**
+
+decode 缺少 orientation 时根据规范化后的 `progressDirection` 推导；encode 对无效组合以方向字段推导 orientation，输出 `orientation` 和 `progressDirection`，仍不输出 `progressAlign`。
+
+- [ ] **Step 6: 编写面板结构失败测试**
+
+```ts
+expect(source.indexOf("elementSettings.orientation")).toBeLessThan(source.indexOf("elementSettings.shape"))
+expect(source).toContain("HORIZONTAL_GOAL_BAR_DIRECTIONS")
+expect(source).toContain("VERTICAL_GOAL_BAR_DIRECTIONS")
+expect(source).toContain("applyUpdate({ orientation: value, progressDirection })")
+```
+
+- [ ] **Step 7: 拆分面板控件**
+
+在 Shape 上方增加 Orientation 下拉框。Progress Direction 根据 orientation 使用 `['leftToRight', 'rightToLeft']` 或 `['bottomToTop', 'topToBottom']`。切换 orientation 时同时更新 orientation 和对应默认方向，不交换宽高。
+
+- [ ] **Step 8: 运行验证并提交**
+
+Run: `npx vitest run src/elements/goal/goalBar && npm run build`
+
+Expected: GoalBar 测试全部 PASS，Studio 构建成功。
+
+```bash
+git add src/types/elements/goal.ts src/elements/goal/goalBar src/i18n.ts
+git commit -m "拆分 GoalBar 轴向与进度方向设置"
+```
 
 ## Task 1: 建立四方向配置契约
 
