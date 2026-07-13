@@ -39,11 +39,8 @@ export const subDialSchema: SubDialElementSchema = {
     originY: 'center',
     radius: 48,
     rotation: 0,
-    goalProperty: '',
-    progressProperty: '',
-    progressMode: 'auto',
-    customMin: 0,
-    customMax: 100,
+    dialProperty: '',
+    progressMode: 'goal',
     content: {
       icon: {
         visible: true,
@@ -61,9 +58,6 @@ export const subDialSchema: SubDialElementSchema = {
       goalValue: textItem(false, -0.35, 0.72, 9),
       percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
     },
-    rangeMode: 'percentage',
-    minValue: 0,
-    maxValue: 100,
     previewValue: 50,
     outOfRangeBehavior: 'clamp',
     startAngle: 150,

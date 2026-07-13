@@ -11,7 +11,7 @@ export interface SubDialProgressSourceMeta {
   max: number | null
 }
 
-export type SubDialProgressOptions = { mode: 'auto' | 'goal' | 'range' } | { mode: 'custom'; customMin: number; customMax: number }
+export type SubDialProgressOptions = { mode: 'goal' | 'range' }
 
 export interface SubDialProgressData {
   value: number | null
@@ -78,11 +78,5 @@ function resolveRange(source: SubDialProgressSourceMeta, min: number | null | un
 
 export function resolveSubDialProgress(source: SubDialProgressSourceMeta, options: SubDialProgressOptions): SubDialProgressData {
   if (options.mode === 'goal') return resolveGoal(source)
-  if (options.mode === 'range') return resolveRange(source, source.min, source.max)
-  if (options.mode === 'custom') return resolveRange(source, options.customMin, options.customMax)
-
-  const goalProgress = resolveGoal(source)
-  if (goalProgress.valid) return goalProgress
-
   return resolveRange(source, source.min, source.max)
 }

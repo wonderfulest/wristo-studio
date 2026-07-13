@@ -5,6 +5,7 @@ import type { SubDialContentKey, SubDialElementConfig, SubDialTextItemConfig } f
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampPivot, normalizeSubDialValue, resolveSubDialAngle } from './subDial.math'
 import { encodeSubDial } from './subDial.encoder'
@@ -34,10 +35,17 @@ function hasOwn(value: object, key: PropertyKey): boolean {
   return Object.prototype.hasOwnProperty.call(value, key)
 }
 
-function resolvePatchedProgressProperty(patch: Partial<SubDialElementConfig>, existing: string): string {
-  if (hasOwn(patch, 'progressProperty') && patch.progressProperty !== undefined) return String(patch.progressProperty)
-  if (hasOwn(patch, 'goalProperty') && patch.goalProperty !== undefined) return String(patch.goalProperty)
-  return existing
+function resolveDialPreview(config: SubDialElementConfig) {
+  const property = usePropertiesStore().allProperties[config.dialProperty]
+  const option = property?.options?.find(item => item.value === property.value) as any
+  const rangeMin = Number(option?.dialMin)
+  const rangeMax = Number(option?.dialMax)
+  return {
+    label: option?.label || property?.title || 'Progress',
+    bound: property?.type === 'dial' && property.dialMode === config.progressMode,
+    min: config.progressMode === 'range' && Number.isFinite(rangeMin) ? rangeMin : 0,
+    max: config.progressMode === 'range' && Number.isFinite(rangeMax) ? rangeMax : 100,
+  }
 }
 
 function resolveSweep(config: SubDialElementConfig): number {
@@ -79,8 +87,7 @@ function buildTickLabels(config: SubDialElementConfig): Group {
   const count = config.majorTicks
   const steps = config.showEndpointTicks ? Math.max(1, count - 1) : count + 1
   const indexes = Array.from({ length: count }, (_, index) => index + (config.showEndpointTicks ? 0 : 1))
-  const min = config.progressMode === 'custom' ? config.customMin : config.rangeMode === 'custom' ? config.minValue : 0
-  const max = config.progressMode === 'custom' ? config.customMax : config.rangeMode === 'custom' ? config.maxValue : 100
+  const { min, max } = resolveDialPreview(config)
   const sweep = resolveSweep(config)
   const labels = indexes.map((index) => {
     const ratio = index / steps
@@ -221,10 +228,11 @@ async function buildChildren(config: SubDialElementConfig): Promise<SubDialChild
 }
 
 function updateDynamicChildren(children: SubDialChildren, config: SubDialElementConfig): void {
-  const minValue = config.progressMode === 'custom' ? config.customMin : config.rangeMode === 'percentage' ? 0 : config.minValue
-  const maxValue = config.progressMode === 'custom' ? config.customMax : config.rangeMode === 'percentage' ? 100 : config.maxValue
-  const progress = normalizeSubDialValue(config.previewValue, minValue, maxValue, config.outOfRangeBehavior)
-  const visible = progress !== null
+  const dial = resolveDialPreview(config)
+  const minValue = dial.min
+  const maxValue = dial.max
+  const progress = dial.bound ? normalizeSubDialValue(config.previewValue, minValue, maxValue, config.outOfRangeBehavior) : null
+  const visible = dial.bound && progress !== null
   const dataAngle =
     progress === null ? config.startAngle + config.pointer.rotationOffset : resolveSubDialAngle(progress, config.startAngle, config.endAngle, config.counterClockwise, config.pointer.rotationOffset)
   children.static.pointer.set({
@@ -234,7 +242,7 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
   })
   const percentage = progress === null ? null : progress * 100
   const textValues: Record<Exclude<SubDialContentKey, 'icon'>, string> = {
-    label: `${config.content.label.prefix}${config.progressProperty || 'Progress'}${config.content.label.suffix}`,
+    label: `${config.content.label.prefix}${dial.label}${config.content.label.suffix}`,
     value: formatNumber(config.previewValue, config.content.value),
     unit: `${config.content.unit.prefix}${config.content.unit.suffix}`,
     goalValue: formatNumber(maxValue, config.content.goalValue),
@@ -242,7 +250,7 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
   }
   const icon = config.content.icon
   children.content.icon.set({
-    text: config.progressProperty ? '●' : '○',
+    text: dial.bound ? '●' : '○',
     left: icon.x * config.radius,
     top: icon.y * config.radius,
     angle: icon.rotation,
@@ -263,7 +271,7 @@ function updateDynamicChildren(children: SubDialChildren, config: SubDialElement
       scaleX: item.scale,
       scaleY: item.scale,
       fill: item.color,
-      fontFamily: item.font || undefined,
+      fontFamily: item.font || 'roboto-condensed-regular',
       fontSize: item.fontSize,
       textAlign: item.textAlign,
       visible: item.visible && (key === 'goalValue' || key === 'percentage' ? visible : true)
@@ -306,7 +314,7 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
     hasControls: true,
     hasBorders: true,
     subTargetCheck: false,
-    progressProperty: config.progressProperty
+    dialProperty: config.dialProperty
   } as any) as Group & FabricElement
   ;(group as any).__element = { kind: 'widget', type: 'subDial', config, children } satisfies SubDialWidget
   applyControlsToObject(group)
@@ -328,7 +336,7 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   const config: SubDialElementConfig = migrateSubDialConfig({
     ...widget.config,
     ...patch,
-    progressProperty: resolvePatchedProgressProperty(patch, widget.config.progressProperty),
+    dialProperty: hasOwn(patch, 'dialProperty') ? String(patch.dialProperty ?? '') : widget.config.dialProperty,
     // Fabric may rewrite Group coordinates while children are replaced. Lock the
     // business position before rebuilding; only an explicit transform patch may change it.
     left: patch.left !== undefined ? Number(patch.left) : liveLeft,
@@ -360,8 +368,8 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   if (patch.left !== undefined) group.set('left', patch.left)
   if (patch.top !== undefined) group.set('top', patch.top)
   if (patch.rotation !== undefined) group.set('angle', patch.rotation)
-  if (patch.progressProperty !== undefined || patch.goalProperty !== undefined) {
-    group.set('progressProperty', config.progressProperty)
+  if (patch.dialProperty !== undefined) {
+    group.set('dialProperty', config.dialProperty)
   }
 
   const children = widget.children
@@ -402,12 +410,8 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
       'startAngle',
       'endAngle',
       'counterClockwise',
-      'rangeMode',
-      'minValue',
-      'maxValue',
       'progressMode',
-      'customMin',
-      'customMax'
+      'dialProperty'
     ])
   ) {
     replaceStatic('tickLabels', buildTickLabels(config))

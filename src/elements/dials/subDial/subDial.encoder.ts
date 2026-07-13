@@ -8,18 +8,6 @@ function finiteOr(value: unknown, fallback: number): number {
   return Number.isFinite(number) ? number : fallback
 }
 
-function hasOwn(value: object, key: PropertyKey): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key)
-}
-
-function resolveProgressProperty(live: Record<string, unknown>, stored: Partial<SubDialElementConfig>): string {
-  if (hasOwn(live, 'progressProperty') && live.progressProperty !== undefined) return String(live.progressProperty)
-  if (hasOwn(stored, 'progressProperty') && stored.progressProperty !== undefined) return String(stored.progressProperty)
-  if (hasOwn(live, 'goalProperty') && live.goalProperty !== undefined) return String(live.goalProperty)
-  if (hasOwn(stored, 'goalProperty') && stored.goalProperty !== undefined) return String(stored.goalProperty)
-  return ''
-}
-
 export function encodeSubDial(element: Partial<FabricElement>): MigratedSubDialConfig {
   const live = element as any
   const stored = (live.__element?.config ?? {}) as Partial<SubDialElementConfig>
@@ -37,10 +25,9 @@ export function encodeSubDial(element: Partial<FabricElement>): MigratedSubDialC
     radius: baseRadius * scale,
     originX: live.originX ?? stored.originX ?? defaults.originX,
     originY: live.originY ?? stored.originY ?? defaults.originY,
-    // Task 4/7 will move remaining consumers to progressProperty. Until then a
-    // live legacy binding is accepted as migration input but never persisted.
-    progressProperty: resolveProgressProperty(live, stored),
-    goalProperty: stored.goalProperty
+    dialProperty: Object.prototype.hasOwnProperty.call(live, 'dialProperty')
+      ? String(live.dialProperty ?? '')
+      : String(stored.dialProperty ?? '')
   })
 }
 

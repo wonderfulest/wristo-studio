@@ -42,7 +42,7 @@ import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { DataTypeOptions } from '@/config/settings'
-import { createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
+import { createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 
@@ -166,6 +166,16 @@ const applyDefaultColorVariable = (normalizedConfig: AnyElementConfig) => {
 }
 
 const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: AnyElementConfig) => {
+  if (elementType === 'subDial') {
+    const mode = (normalizedConfig as any).progressMode === 'range' ? 'range' : 'goal'
+    const current = String((normalizedConfig as any).dialProperty ?? '').trim()
+    const property = current ? propertiesStore.allProperties[current] : null
+    if (!property || property.type !== 'dial' || property.dialMode !== mode) {
+      ;(normalizedConfig as any).dialProperty = createQuickDialProperty(mode)
+      emitter.emit('open-app-properties', { type: 'dial', dialMode: mode })
+    }
+    return
+  }
   if (['data', 'icon', 'label', 'zoneMetric'].includes(elementType)) {
     const curDataKey = String((normalizedConfig as any).dataProperty ?? '').trim()
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
@@ -181,7 +191,7 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
     return
   }
 
-  if (['goalBar', 'goalArc', 'subDial'].includes(elementType)) {
+  if (['goalBar', 'goalArc'].includes(elementType)) {
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
     if (!curGoalKey) {
       const unusedKey = getUnusedMetricPropertyKey('goal')

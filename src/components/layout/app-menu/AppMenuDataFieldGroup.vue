@@ -58,9 +58,13 @@
         <el-icon><Odometer /></el-icon>
         <span>{{ t('editor.subDial') }}</span>
       </div>
-      <el-menu-item index="dial/sub-dial" @click="onAddElement('dials', 'subDial')">
+      <el-menu-item index="dial/sub-dial-goal" @click="onAddElement('dials', 'subDial', { progressMode: 'goal' })">
         <el-icon><Odometer /></el-icon>
-        <span>{{ t('editor.subDial') }}</span>
+        <span>Goal Sub-dial</span>
+      </el-menu-item>
+      <el-menu-item index="dial/sub-dial-range" @click="onAddElement('dials', 'subDial', { progressMode: 'range' })">
+        <el-icon><Odometer /></el-icon>
+        <span>Range Sub-dial</span>
       </el-menu-item>
     </div>
     <div class="menu-group menu-group--chart">
@@ -106,7 +110,7 @@ const onAddGoalArc = () => {
   emit('add-goal-arc')
 }
 
-const onAddElement = (category, elementType) => {
-  emit('add-element', category, elementType)
+const onAddElement = (category, elementType, overrides = {}) => {
+  emit('add-element', category, elementType, overrides)
 }
 </script>

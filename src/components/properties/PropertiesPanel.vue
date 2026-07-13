@@ -245,6 +245,7 @@ import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
 import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection } from '@/elements/common/settings/propertyBinding'
 import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
+import * as elementManager from '@/engine/managers/elementManager'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -384,12 +385,15 @@ const maxFieldLength = computed({
 
 // 监听打开 App Properties 事件
 onMounted(() => {
-  emitter.on('open-app-properties', () => {
+  emitter.on('open-app-properties', (request) => {
     editorLayoutStore.setWidth(
       'propertiesDrawer',
       clampPropertiesDrawerWidth(editorLayoutStore.getWidth('propertiesDrawer'))
     )
     visible.value = true
+    if (request?.type === 'dial') {
+      dialPropertyDialog.value?.show({ dialMode: request.dialMode })
+    }
   })
 })
 
@@ -571,6 +575,14 @@ const deleteProperty = async (key) => {
       }
     )
 
+    const boundIds = new Set()
+    elementDataStore.elements.forEach((snapshot) => {
+      if (snapshot.config?.dialProperty === key && snapshot.id) boundIds.add(String(snapshot.id))
+    })
+    ;(canvasStore.canvas?.getObjects?.() || []).forEach((element) => {
+      if (element?.dialProperty === key && element.id) boundIds.add(String(element.id))
+    })
+    await Promise.all(Array.from(boundIds).map((id) => elementManager.updateElementById(id, { dialProperty: '' })))
     propertiesStore.deleteProperty(key)
     commitHistory('delete-property')
     ElMessage({

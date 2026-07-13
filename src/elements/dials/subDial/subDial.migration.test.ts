@@ -1,75 +1,36 @@
 import { describe, expect, it } from 'vitest'
-import type { SubDialElementConfig } from '@/types/elements/subDial'
-import { subDialSchema } from './subDial.schema'
 import { migrateSubDialConfig } from './subDial.migration'
 
 describe('subDial migration', () => {
-  it('produces a valid config that requires no legacy properties', () => {
-    const config: SubDialElementConfig = migrateSubDialConfig({
-      progressProperty: 'steps',
-      progressMode: 'auto'
-    })
-
-    expect(config.progressProperty).toBe('steps')
+  it('keeps the new Dial Property contract', () => {
+    const config = migrateSubDialConfig({ dialProperty: 'dial_goal_1', progressMode: 'goal' })
+    expect(config).toMatchObject({ dialProperty: 'dial_goal_1', progressMode: 'goal' })
+    expect(config).not.toHaveProperty('progressProperty')
     expect(config).not.toHaveProperty('goalProperty')
   })
 
-  it('migrates legacy progress and value presentation fields without retaining legacy keys', () => {
-    const legacy = {
-      goalProperty: 'steps',
-      showValue: false,
-      showUnit: true,
-      unit: 'STEPS',
-      decimals: 1,
-      valueColor: '#00FF00',
-      valueFontSize: 18
-    }
-
-    const migrated = migrateSubDialConfig(legacy)
-
-    expect(migrated.progressProperty).toBe('steps')
-    expect(migrated.content.value).toMatchObject({
-      visible: false,
-      decimals: 1,
-      color: '#00FF00',
-      fontSize: 18
+  it('marks legacy auto and custom bindings for explicit user migration', () => {
+    expect(migrateSubDialConfig({ progressProperty: 'steps', progressMode: 'auto' })).toMatchObject({
+      dialProperty: '', progressMode: 'goal', needsDialMigration: true
     })
-    expect(migrated.content.unit).toMatchObject({ visible: true, suffix: 'STEPS' })
-    for (const key of ['goalProperty', 'showValue', 'showUnit', 'unit', 'decimals', 'valueColor', 'valueFontSize']) {
-      expect(Object.prototype.hasOwnProperty.call(migrated, key)).toBe(false)
-    }
-    expect(legacy).toEqual({
+    expect(migrateSubDialConfig({ progressProperty: 'temperature', progressMode: 'custom' })).toMatchObject({
+      dialProperty: '', progressMode: 'goal', needsDialMigration: true
+    })
+  })
+
+  it('migrates presentation fields without retaining legacy keys', () => {
+    const migrated = migrateSubDialConfig({
       goalProperty: 'steps', showValue: false, showUnit: true, unit: 'STEPS', decimals: 1,
       valueColor: '#00FF00', valueFontSize: 18
     })
-  })
-
-  it('prefers partial new content and fills every nested default independently', () => {
-    const input = {
-      goalProperty: 'legacy',
-      progressProperty: 'new',
-      progressMode: 'custom' as const,
-      showValue: false,
-      valueColor: '#00FF00',
-      content: { value: { visible: true, x: 0.25 }, unit: { suffix: 'KM' } }
+    expect(migrated.content.value).toMatchObject({ visible: false, decimals: 1, color: '#00FF00', fontSize: 18 })
+    expect(migrated.content.unit).toMatchObject({ visible: true, suffix: 'STEPS' })
+    for (const key of ['goalProperty', 'progressProperty', 'showValue', 'showUnit', 'unit', 'decimals', 'valueColor', 'valueFontSize']) {
+      expect(migrated).not.toHaveProperty(key)
     }
-
-    const first = migrateSubDialConfig(input)
-    first.content.value.y = 99
-    first.pointer.width = 99
-    const second = migrateSubDialConfig(input)
-
-    expect(second.progressProperty).toBe('new')
-    expect(second.progressMode).toBe('custom')
-    expect(second.content.value).toMatchObject({ visible: true, x: 0.25, y: 0.2, color: '#00FF00' })
-    expect(second.content.unit).toMatchObject({ visible: true, suffix: 'KM' })
-    expect(second.content.value.y).toBe(subDialSchema.defaultConfig.content.value.y)
-    expect(second.pointer.width).toBe(subDialSchema.defaultConfig.pointer.width)
   })
 
-  it('drops unknown input fields from the persistent result', () => {
-    const migrated = migrateSubDialConfig({ progressProperty: 'steps', unknownFutureField: 'leak' })
-
-    expect(migrated).not.toHaveProperty('unknownFutureField')
+  it('drops unknown fields', () => {
+    expect(migrateSubDialConfig({ dialProperty: 'dial_range_1', unknownFutureField: 'leak' })).not.toHaveProperty('unknownFutureField')
   })
 })

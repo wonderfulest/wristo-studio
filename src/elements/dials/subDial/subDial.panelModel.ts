@@ -1,4 +1,4 @@
-import type { SubDialContentConfig, SubDialContentKey, SubDialRangeMode } from '@/types/elements/subDial'
+import type { SubDialContentConfig, SubDialContentKey } from '@/types/elements/subDial'
 import { applySubDialLayoutPreset, type SubDialLayoutPreset } from './subDial.layout'
 
 export function buildContentItemPatch(
@@ -11,20 +11,6 @@ export function buildContentItemPatch(
 
 export function buildLayoutPresetPatch(content: SubDialContentConfig, preset: SubDialLayoutPreset) {
   return { content: applySubDialLayoutPreset(content, preset) }
-}
-
-export function buildSubDialRangePatch(
-  rangeMode: SubDialRangeMode,
-  minValue: number,
-  maxValue: number,
-) {
-  if (rangeMode === 'percentage') {
-    return { rangeMode, minValue: 0, maxValue: 100 }
-  }
-  if (![minValue, maxValue].every(Number.isFinite) || maxValue <= minValue) {
-    throw new Error('Maximum must be greater than minimum')
-  }
-  return { rangeMode, minValue, maxValue }
 }
 
 export function buildSubDialPointerAssetPatch(

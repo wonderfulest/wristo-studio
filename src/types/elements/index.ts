@@ -5,7 +5,7 @@
 // base & common
 export type { BaseElementConfig } from './base'
 export type { TextElementConfig } from './text'
-export type { ShapeElementConfig, CircleElementConfig, RectangleElementConfig, LineElementConfig } from './shape'
+export type { ShapeElementConfig, CircleElementConfig, RectangleElementConfig, PolygonElementConfig, LineElementConfig } from './shape'
 export type { RotationCenter, HandElementConfig } from './hand'
 
 // time & date
@@ -39,7 +39,6 @@ export type {
   SubDialOutOfRangeBehavior,
   SubDialPointerConfig,
   SubDialPointerStyle,
-  SubDialRangeMode,
 } from './subDial'
 
 // 联合类型 - 所有可能的元素配置
@@ -48,7 +47,7 @@ import type { TextElementConfig as _Text } from './text'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
 import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, UnitElementConfig as _Unit, ZoneMetricElementConfig as _ZoneMetric, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
-import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, LineElementConfig as _Line } from './shape'
+import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, PolygonElementConfig as _Polygon, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc } from './goal'
 import type { BarChartElementConfig as _BarChart, LineChartElementConfig as _LineChart } from './charts'
 import type { MoveBarElementConfig as _MoveBar } from './status'
@@ -86,6 +85,7 @@ export type AnyElementConfig =
   | _BarChart
   | _LineChart
   | _SubDial
+  | _Polygon
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {
@@ -113,6 +113,7 @@ export interface ElementConfigMap {
   'shape': _Shape
   'circle': _Circle
   'rectangle': _Rectangle
+  'polygon': _Polygon
   'line': _Line
   'hourHand': _Hand
   'minuteHand': _Hand

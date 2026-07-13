@@ -12,11 +12,8 @@ const config: SubDialElementConfig = {
   originY: 'center',
   radius: 40,
   rotation: 5,
-  goalProperty: 'goal_1',
-  progressProperty: 'progress_1',
-  progressMode: 'auto',
-  customMin: 0,
-  customMax: 100,
+  dialProperty: 'dial_goal_1',
+  progressMode: 'goal',
   content: {
     icon: {
       visible: true,
@@ -34,9 +31,6 @@ const config: SubDialElementConfig = {
     goalValue: textItem(false, -0.35, 0.72, 9),
     percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
   },
-  rangeMode: 'percentage',
-  minValue: 0,
-  maxValue: 100,
   previewValue: 50,
   outOfRangeBehavior: 'clamp',
   startAngle: 150,
@@ -98,7 +92,7 @@ describe('subDial encoder', () => {
   it('provides the classic content layout by default', () => {
     const encoded = encodeSubDial({})
 
-    expect(encoded.progressProperty).toBe('')
+    expect(encoded.dialProperty).toBe('')
     expect(Object.keys(encoded.content)).toEqual(['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'])
     expect(encoded.content.value).toMatchObject({ visible: true, x: 0, y: 0.2 })
     expect(encoded.content.percentage.visible).toBe(true)
@@ -174,41 +168,43 @@ describe('subDial encoder', () => {
     expect(encoded.content.percentage).toMatchObject({ visible: true, suffix: '%' })
   })
 
-  it('migrates a live legacy property to the new persistent contract', () => {
+  it('marks a live legacy property for explicit migration', () => {
+    const { dialProperty: _dialProperty, ...legacyStored } = config
     const element = {
       id: 'sub-dial-1',
       goalProperty: 'goal_live',
       scaleX: 1,
-      __element: { config: { ...config, progressProperty: undefined, goalProperty: 'goal_stale' } }
+      __element: { config: { ...legacyStored, progressProperty: undefined, goalProperty: 'goal_stale' } }
     }
 
     const encoded = encodeSubDial(element as any)
-    expect(encoded.progressProperty).toBe('goal_live')
+    expect(encoded.dialProperty).toBe('')
+    expect(encoded.needsDialMigration).toBe(true)
     expect(encoded).not.toHaveProperty('goalProperty')
   })
 
-  it('decodes legacy config to a live progress property without a legacy live property', () => {
-    const { progressProperty: _progressProperty, ...legacyConfig } = config
+  it('decodes legacy config without retaining the legacy binding', () => {
+    const legacyConfig = { ...config, dialProperty: undefined }
     const decoded = decodeSubDial({ ...legacyConfig, goalProperty: 'legacy_goal' } as any) as any
 
-    expect(decoded.progressProperty).toBe('legacy_goal')
+    expect(decoded.dialProperty).toBe('')
+    expect(decoded.needsDialMigration).toBe(true)
     expect(decoded).not.toHaveProperty('goalProperty')
   })
 
-  it('preserves a new progress binding across decode and encode', () => {
-    const live = decodeSubDial({ ...config, progressProperty: 'steps', goalProperty: 'legacy' }) as any
-    live.__element = { config: { ...config, progressProperty: 'steps', goalProperty: 'legacy' } }
+  it('preserves a new Dial Property across decode and encode', () => {
+    const live = decodeSubDial({ ...config, dialProperty: 'dial_goal_2' }) as any
+    live.__element = { config: { ...config, dialProperty: 'dial_goal_2' } }
 
-    expect(encodeSubDial(live).progressProperty).toBe('steps')
+    expect(encodeSubDial(live).dialProperty).toBe('dial_goal_2')
   })
 
   it('treats an own empty live binding as an explicit clear', () => {
     const encoded = encodeSubDial({
-      progressProperty: '',
-      goalProperty: 'legacy_live',
-      __element: { config: { ...config, progressProperty: 'steps' } },
+      dialProperty: '',
+      __element: { config: { ...config, dialProperty: 'dial_goal_2' } },
     } as any)
 
-    expect(encoded.progressProperty).toBe('')
+    expect(encoded.dialProperty).toBe('')
   })
 })

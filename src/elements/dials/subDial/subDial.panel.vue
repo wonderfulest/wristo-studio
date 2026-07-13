@@ -3,18 +3,10 @@
     <el-form label-position="top">
       <section class="settings-card">
         <h3>{{ t('subDial.data') }}</h3>
-        <DataPropertyField :model-value="model.progressProperty" :label="t('subDial.dataItem')" :required="false" @change="patch({ progressProperty: $event })" />
         <el-form-item :label="t('subDial.progressMode')">
-          <el-segmented :model-value="model.progressMode" :options="progressOptions" @change="patch({ progressMode: $event })" />
+          <el-segmented :model-value="model.progressMode" :options="progressOptions" @change="changeProgressMode($event)" />
         </el-form-item>
-        <div v-if="model.progressMode === 'custom'" class="settings-grid">
-          <el-form-item :label="t('subDial.minimum')">
-            <el-input-number :model-value="model.customMin" @change="changeCustomRange('customMin', $event)" />
-          </el-form-item>
-          <el-form-item :label="t('subDial.maximum')" :error="rangeError">
-            <el-input-number :model-value="model.customMax" @change="changeCustomRange('customMax', $event)" />
-          </el-form-item>
-        </div>
+        <DialPropertyField :model-value="model.dialProperty" :mode="model.progressMode" :required="false" @change="patch({ dialProperty: $event })" />
         <el-form-item :label="t('subDial.previewValue')">
           <el-input-number :model-value="model.previewValue" @change="patch({ previewValue: Number($event) })" />
         </el-form-item>
@@ -162,7 +154,7 @@ import { ElMessage } from 'element-plus'
 import * as elementManager from '@/engine/managers/elementManager'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
-import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
+import DialPropertyField from '@/elements/common/settings/DialPropertyField.vue'
 import type { SubDialContentKey, SubDialElementConfig, SubDialPointerConfig } from '@/types/elements/subDial'
 import { useI18n } from '@/i18n'
 import { buildContentItemPatch, buildLayoutPresetPatch, buildSubDialPointerAssetPatch } from './subDial.panelModel'
@@ -178,7 +170,6 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const model = computed(() => (props.config ?? props.element) as SubDialElementConfig)
-const rangeError = ref('')
 const selectedKey = ref<SubDialContentKey>('value')
 const layoutEditor = ref<SubDialLayoutEditor | null>(null)
 const editorSelectedKey = ref<SubDialContentKey | null>(null)
@@ -211,7 +202,7 @@ onBeforeUnmount(() => {
   editorSelectedKey.value = null
   editorEditingElement.value = false
 })
-const progressOptions = computed(() => ['auto', 'goal', 'range', 'custom'].map((value) => ({ label: t(`subDial.${value}`), value })))
+const progressOptions = computed(() => ['goal', 'range'].map((value) => ({ label: t(`subDial.${value}`), value })))
 const pointerOptions = computed(() => [
   { label: t('subDial.line'), value: 'line' },
   { label: t('subDial.triangle'), value: 'triangle' },
@@ -251,6 +242,7 @@ const patch = (next: Record<string, any>) => {
   if (props.element) return elementManager.updateElement(props.element, next)
 }
 const patchPointer = (next: Partial<SubDialPointerConfig>) => patch({ pointer: { ...model.value.pointer, ...next } })
+const changeProgressMode = (mode: 'goal' | 'range') => patch({ progressMode: mode, dialProperty: '' })
 const patchItem = (next: Record<string, any>) => patch(buildContentItemPatch(model.value.content, selectedKey.value, next as any))
 const selectContent = (key: SubDialContentKey) => {
   selectedKey.value = key
@@ -261,17 +253,6 @@ const editLayout = () => {
 }
 const applyPreset = (preset: SubDialLayoutPreset) => patch(buildLayoutPresetPatch(model.value.content, preset))
 
-const changeCustomRange = (key: 'customMin' | 'customMax', value: unknown) => {
-  try {
-    const minValue = key === 'customMin' ? Number(value) : model.value.customMin
-    const maxValue = key === 'customMax' ? Number(value) : model.value.customMax
-    rangeError.value = ''
-    if (maxValue <= minValue) throw new Error('invalid range')
-    patch({ [key]: Number(value) })
-  } catch (error) {
-    rangeError.value = t('subDial.invalidRange')
-  }
-}
 const selectPointerAsset = (url: string, asset: any) => {
   const assetPatch = buildSubDialPointerAssetPatch(url, asset)
   if (!assetPatch.imageUrl) {

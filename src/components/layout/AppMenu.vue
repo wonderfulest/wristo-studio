@@ -163,7 +163,7 @@ import {
 } from '@/engine/managers/compoundShortcutOrchestrator'
 import { buildDataFieldDrafts, buildGoalArcDrafts, buildGoalBarDrafts } from '@/engine/managers/shortcutCompoundDrafts'
 import { elementConfigs } from '@/elements/schemaMap'
-import { getOrCreateAvailableMetricProperty } from '@/elements/common/settings/propertyBinding'
+import { getOrCreateAvailableDialProperty } from '@/elements/common/settings/propertyBinding'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
@@ -800,10 +800,11 @@ const handleAddElement = async (category: string, elementType: string, overrides
         }
       }
 
-      if (resolvedElementType === 'subDial' && !String(config.goalProperty ?? '').trim()) {
-        const binding = getOrCreateAvailableMetricProperty('goal')
+      if (resolvedElementType === 'subDial' && !String(config.dialProperty ?? '').trim()) {
+        const mode = config.progressMode === 'range' ? 'range' : 'goal'
+        const binding = getOrCreateAvailableDialProperty(mode)
         if (binding.created) trackCreatedProperty(binding.key)
-        config = { ...config, goalProperty: binding.key }
+        config = { ...config, progressMode: mode, dialProperty: binding.key }
       }
 
       config = scaleShortcutDraftConfig(config)

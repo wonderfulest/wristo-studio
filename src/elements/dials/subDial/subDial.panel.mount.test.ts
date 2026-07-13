@@ -32,7 +32,7 @@ const stubs = {
   ElSelect: { template: '<div><slot /></div>' },
   ElOption: true,
   ElButton: { props: ['disabled'], emits: ['click'], template: '<button class="el-button" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>' },
-  DataPropertyField: { emits: ['change'], template: '<button class="data-property" @click="$emit(\'change\',\'\')">data</button>' },
+  DialPropertyField: { emits: ['change'], template: '<button class="dial-property" @click="$emit(\'change\',\'\')">dial</button>' },
   ColorPicker: { template: '<button class="color">color</button>' },
   AssetPicker: true
 }
@@ -108,8 +108,8 @@ describe('subDial panel mounted interactions', () => {
     const applyPatch = vi.fn()
     const config = structuredClone(subDialSchema.defaultConfig) as any
     const wrapper = mount(Panel, { props: { config, applyPatch }, global: { stubs } })
-    await wrapper.find('button.data-property').trigger('click')
-    expect(applyPatch).toHaveBeenCalledWith({ progressProperty: '' })
+    await wrapper.find('button.dial-property').trigger('click')
+    expect(applyPatch).toHaveBeenCalledWith({ dialProperty: '' })
     await wrapper.find('button[data-value="icon"]').trigger('click')
     const contentCard = wrapper.findAll('section.settings-card')[2]
     await contentCard.find('button.switch').trigger('click')

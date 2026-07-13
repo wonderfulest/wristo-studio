@@ -6,7 +6,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
-import type { DataTypeOption } from '@/types/settings'
+import type { DataTypeOption, DialProgressMode } from '@/types/settings'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
@@ -93,6 +93,38 @@ export const getOrCreateAvailableMetricProperty = (
   const unusedKey = getUnusedMetricPropertyKey(type)
   if (unusedKey) return { key: unusedKey, created: false }
   return { key: createQuickMetricProperty(type), created: true }
+}
+
+export const createQuickDialProperty = (mode: DialProgressMode): string => {
+  const propertiesStore = usePropertiesStore()
+  let index = 1
+  while (propertiesStore.allProperties[`dial_${mode}_${index}`]) index += 1
+  const key = `dial_${mode}_${index}`
+  const options = DataTypeOptions.filter(option => option.dialMode === mode)
+  propertiesStore.addProperty({
+    key,
+    type: 'dial',
+    dialMode: mode,
+    title: mode === 'goal' ? `Goal Dial ${index}` : `Range Dial ${index}`,
+    options: clone(options),
+    defaultValue: options[0]?.value ?? '',
+  })
+  useHistoryStore().saveState(`properties:quick-add-dial-${mode}`)
+  return key
+}
+
+export const getOrCreateAvailableDialProperty = (mode: DialProgressMode): { key: string; created: boolean } => {
+  const propertiesStore = usePropertiesStore()
+  const used = new Set<string>()
+  useElementDataStore().elements.forEach(snapshot => {
+    const key = (snapshot.config as any)?.dialProperty
+    if (key) used.add(String(key))
+  })
+  ;(useCanvasStore().canvas?.getObjects?.() ?? []).forEach((element: any) => {
+    if (element?.dialProperty) used.add(String(element.dialProperty))
+  })
+  const existing = propertiesStore.getDialProperties(mode).find(([key]) => !used.has(key))?.[0]
+  return existing ? { key: existing, created: false } : { key: createQuickDialProperty(mode), created: true }
 }
 
 const getActiveElements = (): any[] => {

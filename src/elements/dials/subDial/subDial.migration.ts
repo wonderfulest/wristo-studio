@@ -1,10 +1,9 @@
 import type { SubDialContentConfig, SubDialElementConfig } from '@/types/elements/subDial'
 import { subDialSchema } from './subDial.schema'
 
-type LegacySubDialKey = 'goalProperty' | 'showValue' | 'showUnit' | 'unit' | 'decimals' | 'valueColor' | 'valueFontSize'
-export type MigratedSubDialConfig = Omit<SubDialElementConfig, LegacySubDialKey>
+export type MigratedSubDialConfig = SubDialElementConfig
 type PartialContent = { [Key in keyof SubDialContentConfig]?: Partial<SubDialContentConfig[Key]> }
-type MigrationInput = Omit<Partial<SubDialElementConfig>, 'content'> & { content?: PartialContent }
+type MigrationInput = Record<string, any> & { content?: PartialContent }
 
 function mergeKnown<T extends object>(defaults: T, input?: Partial<T>): T {
   return Object.fromEntries(
@@ -44,7 +43,6 @@ export function migrateSubDialConfig<Extra extends object = Record<never, never>
 ): MigratedSubDialConfig {
   const defaults = subDialSchema.defaultConfig
   const {
-    goalProperty: _defaultGoalProperty,
     showValue: _defaultShowValue,
     showUnit: _defaultShowUnit,
     unit: _defaultUnit,
@@ -68,8 +66,11 @@ export function migrateSubDialConfig<Extra extends object = Record<never, never>
     ...current,
     id: String(input.id ?? ''),
     eleType: 'subDial',
-    progressProperty: String(input.progressProperty ?? input.goalProperty ?? ''),
-    progressMode: input.progressMode ?? 'auto',
+    dialProperty: String(input.dialProperty ?? ''),
+    progressMode: input.progressMode === 'range' ? 'range' : 'goal',
+    ...(!input.dialProperty && (input.progressProperty || input.goalProperty || ['auto', 'custom'].includes(input.progressMode))
+      ? { needsDialMigration: true }
+      : {}),
     content: migrateContent(input),
     pointer: { ...defaults.pointer, ...input.pointer }
   }

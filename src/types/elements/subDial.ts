@@ -1,6 +1,6 @@
 import type { BaseElementConfig } from './base'
 
-export type SubDialProgressMode = 'auto' | 'goal' | 'range' | 'custom'
+export type SubDialProgressMode = 'goal' | 'range'
 export type SubDialContentKey = 'icon' | 'label' | 'value' | 'unit' | 'goalValue' | 'percentage'
 
 export interface SubDialContentBaseConfig {
@@ -36,7 +36,6 @@ export interface SubDialContentConfig {
   percentage: SubDialTextItemConfig
 }
 
-export type SubDialRangeMode = 'percentage' | 'custom'
 export type SubDialOutOfRangeBehavior = 'clamp' | 'hide'
 export type SubDialPointerStyle = 'line' | 'triangle' | 'image'
 
@@ -58,16 +57,10 @@ export interface SubDialElementConfig extends BaseElementConfig {
   eleType: 'subDial'
   radius: number
   rotation: number
-  /** @deprecated Temporary live-layer compatibility; persisted configs use progressProperty. */
-  goalProperty?: string
-  progressProperty: string
+  dialProperty: string
   progressMode: SubDialProgressMode
-  customMin: number
-  customMax: number
+  needsDialMigration?: boolean
   content: SubDialContentConfig
-  rangeMode: SubDialRangeMode
-  minValue: number
-  maxValue: number
   previewValue: number
   outOfRangeBehavior: SubDialOutOfRangeBehavior
   startAngle: number

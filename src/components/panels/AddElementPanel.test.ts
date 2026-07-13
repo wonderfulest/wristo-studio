@@ -5,13 +5,14 @@ const source = readFileSync(new URL('./AddElementPanel.vue', import.meta.url), '
 const appMenuSource = readFileSync(new URL('../layout/AppMenu.vue', import.meta.url), 'utf8')
 
 describe('AddElementPanel metric property assignment', () => {
-  it('assigns goal properties to subDial elements', () => {
-    expect(source).toContain("['goalBar', 'goalArc', 'subDial'].includes(elementType)")
+  it('assigns mode-compatible Dial Properties to subDial elements', () => {
+    expect(source).toContain("elementType === 'subDial'")
+    expect(source).toContain('createQuickDialProperty(mode)')
   })
 
-  it('assigns an available goal property from the top app menu', () => {
+  it('assigns an available Dial Property from the top app menu', () => {
     expect(appMenuSource).toContain("resolvedElementType === 'subDial'")
-    expect(appMenuSource).toContain("getOrCreateAvailableMetricProperty('goal')")
-    expect(appMenuSource).toContain('goalProperty: binding.key')
+    expect(appMenuSource).toContain('getOrCreateAvailableDialProperty(mode)')
+    expect(appMenuSource).toContain('dialProperty: binding.key')
   })
 })

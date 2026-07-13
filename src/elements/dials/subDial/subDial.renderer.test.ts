@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { subDialSchema } from './subDial.schema'
 import { migrateSubDialConfig } from './subDial.migration'
@@ -8,6 +10,14 @@ const { add, addLayer, requestRenderAll, setActiveObject, upsertElement } = vi.h
   requestRenderAll: vi.fn(),
   setActiveObject: vi.fn(),
   upsertElement: vi.fn()
+}))
+
+vi.mock('@/stores/properties', () => ({
+  usePropertiesStore: () => ({ allProperties: {
+    dial_goal_1: { type: 'dial', dialMode: 'goal', title: 'Steps', value: 1, options: [{ value: 1, label: 'steps', dialMode: 'goal' }] },
+    dial_goal_2: { type: 'dial', dialMode: 'goal', title: 'Calories', value: 2, options: [{ value: 2, label: 'calories', dialMode: 'goal' }] },
+    dial_range_1: { type: 'dial', dialMode: 'range', title: 'Temperature', value: 3, options: [{ value: 3, label: 'temperature', dialMode: 'range', dialMin: 20, dialMax: 60 }] }
+  } })
 }))
 
 vi.mock('fabric', () => {
@@ -36,7 +46,7 @@ vi.mock('fabric', () => {
   class FabricText extends FabricObject {
     text: string
     constructor(text: string, options = {}) {
-      super(options)
+      super({ fontFamily: 'Times New Roman', ...options })
       this.text = text
     }
   }
@@ -90,6 +100,7 @@ function makeConfig(overrides: Record<string, any> = {}) {
     ...subDialSchema.defaultConfig,
     id: 'sub-dial-1',
     eleType: 'subDial' as const,
+    dialProperty: 'dial_goal_1',
     pointer: { ...subDialSchema.defaultConfig.pointer },
     ...overrides
   }
@@ -132,6 +143,15 @@ describe('subDial renderer', () => {
     expect(add).toHaveBeenCalledWith(dial)
     expect(addLayer).toHaveBeenCalledWith(dial)
     expect(upsertElement).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a valid Fabric font family when the content font is empty', async () => {
+    const dial = await createSubDial(makeConfig() as any)
+    const content = (dial as any).__element.children.content
+
+    expect(content.label.fontFamily).toBe('roboto-condensed-regular')
+    expect(content.value.fontFamily).toBe('roboto-condensed-regular')
+    expect(content.percentage.fontFamily).toBe('roboto-condensed-regular')
   })
 
   it('updates dynamic children without rebuilding static ticks', async () => {
@@ -187,7 +207,7 @@ describe('subDial renderer', () => {
       goalValue: { ...base.goalValue, visible: true, x: 0.3, y: 0.4, rotation: 5, scale: 1.5, color: '#555555', fontSize: 15, textAlign: 'left', prefix: 'G', suffix: '!' },
       percentage: { ...base.percentage, visible: true, x: 0.5, y: 0.6, rotation: 6, scale: 1.6, color: '#666666', fontSize: 16, textAlign: 'right', prefix: 'P', suffix: '%' }
     }
-    const dial = await createSubDial(makeConfig({ progressProperty: 'steps', content }) as any)
+    const dial = await createSubDial(makeConfig({ dialProperty: 'dial_goal_1', content }) as any)
     const rendered = (dial as any).__element.children.content
 
     expect(rendered.icon).toMatchObject({ text: '●', visible: true, angle: 1, scaleX: 1.1, scaleY: 1.1, fill: '#111111', fontSize: 17, subDialIconDisplayType: 'amoled' })
@@ -216,13 +236,13 @@ describe('subDial renderer', () => {
       expect(child.top).toBeCloseTo(item.y)
     }
 
-    await updateSubDial(dial as any, { progressProperty: '' })
+    await updateSubDial(dial as any, { dialProperty: '' })
     expect(rendered.icon.text).toBe('○')
   })
 
   it.each([
-    { name: 'percentage range', config: { previewValue: 50 }, expected: '50%' },
-    { name: 'custom range midpoint', config: { progressMode: 'custom', customMin: 20, customMax: 60, previewValue: 40 }, expected: '50%' }
+    { name: 'goal progress', config: { previewValue: 50 }, expected: '50%' },
+    { name: 'backend range midpoint', config: { progressMode: 'range', dialProperty: 'dial_range_1', previewValue: 40 }, expected: '50%' }
   ])('formats normalized progress for $name', async ({ config, expected }) => {
     const dial = await createSubDial(makeConfig(config) as any)
     expect((dial as any).__element.children.content.percentage.text).toBe(expected)
@@ -332,42 +352,19 @@ describe('subDial renderer', () => {
     expect(triangle).toMatchObject({ left: 0, top: -18, height: 36 })
   })
 
-  it('migrates a legacy binding into the live and stored progress property', async () => {
-    const { progressProperty: _progressProperty, ...legacyConfig } = makeConfig({ goalProperty: 'goal_1' })
-    const dial = await createSubDial(legacyConfig as any)
-
-    expect((dial as any).progressProperty).toBe('goal_1')
-    await updateSubDial(dial, { progressProperty: 'goal_2' })
-    expect((dial as any).progressProperty).toBe('goal_2')
-    expect((dial as any).__element.config.progressProperty).toBe('goal_2')
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
-  })
-
-  it('treats an explicit non-empty legacy binding patch as the latest binding update', async () => {
-    const dial = await createSubDial(makeConfig({ progressProperty: 'existing_goal' }) as any)
-
-    await updateSubDial(dial, { goalProperty: 'new_goal' })
-
-    expect((dial as any).progressProperty).toBe('new_goal')
-    expect((dial as any).__element.config.progressProperty).toBe('new_goal')
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ progressProperty: 'new_goal' }))
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
-  })
-
-  it.each([{ progressProperty: '' }, { goalProperty: '' }])('clears a binding when an own empty patch is provided: %o', async (patch) => {
-    const dial = await createSubDial(makeConfig({ progressProperty: 'existing_goal' }) as any)
-
-    await updateSubDial(dial, patch)
-
-    expect((dial as any).progressProperty).toBe('')
-    expect((dial as any).__element.config.progressProperty).toBe('')
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ progressProperty: '' }))
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.not.objectContaining({ goalProperty: expect.anything() }))
+  it('updates and clears the live and stored Dial Property', async () => {
+    const dial = await createSubDial(makeConfig({ dialProperty: 'dial_goal_1' }) as any)
+    await updateSubDial(dial, { dialProperty: 'dial_goal_2' })
+    expect((dial as any).dialProperty).toBe('dial_goal_2')
+    expect((dial as any).__element.config.dialProperty).toBe('dial_goal_2')
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ dialProperty: 'dial_goal_2' }))
+    await updateSubDial(dial, { dialProperty: '' })
+    expect((dial as any).dialProperty).toBe('')
   })
 
   it('renders new-only content ahead of conflicting legacy presentation fields', async () => {
     const config = migrateSubDialConfig({
-      progressProperty: 'steps',
+      dialProperty: 'dial_goal_1',
       previewValue: 12.34,
       showValue: false,
       showUnit: false,
@@ -386,6 +383,6 @@ describe('subDial renderer', () => {
 
     expect(value).toMatchObject({ text: '12.3', visible: true, fill: '#00FF00', fontSize: 18 })
     expect(unit).toMatchObject({ text: 'STEPS', visible: true, fill: '#00AA00', fontSize: 11 })
-    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ progressProperty: 'steps' }))
+    expect(upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ dialProperty: 'dial_goal_1' }))
   })
 })
