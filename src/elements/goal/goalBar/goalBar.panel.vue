@@ -13,21 +13,59 @@
       />
 
       <el-form-item :label="t('elementSettings.orientation')">
-        <el-select :model-value="currentOrientation" @change="setOrientation">
-          <el-option :label="t('elementSettings.horizontal')" value="horizontal" />
-          <el-option :label="t('elementSettings.vertical')" value="vertical" />
-        </el-select>
+        <div class="goal-bar-icon-options" role="group" aria-label="Orientation">
+          <button
+            type="button"
+            class="goal-bar-icon-option"
+            :class="{ 'is-active': currentOrientation === 'horizontal' }"
+            title="Horizontal"
+            aria-label="Horizontal"
+            :aria-pressed="currentOrientation === 'horizontal'"
+            @click="setOrientation('horizontal')"
+          >
+            <Icon icon="mdi:arrow-expand-horizontal" />
+          </button>
+          <button
+            type="button"
+            class="goal-bar-icon-option"
+            :class="{ 'is-active': currentOrientation === 'vertical' }"
+            title="Vertical"
+            aria-label="Vertical"
+            :aria-pressed="currentOrientation === 'vertical'"
+            @click="setOrientation('vertical')"
+          >
+            <Icon icon="mdi:arrow-expand-vertical" />
+          </button>
+        </div>
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.shape')">
-        <el-select
-          :model-value="currentShape"
-          :disabled="editorState.active"
-          @change="onShapeChange"
-        >
-          <el-option :label="t('elementSettings.rectangle')" value="rectangle" />
-          <el-option :label="t('elementSettings.customPolygon')" value="customPolygon" />
-        </el-select>
+        <div class="goal-bar-icon-options" role="group" aria-label="Shape">
+          <button
+            type="button"
+            class="goal-bar-icon-option"
+            :class="{ 'is-active': currentShape === 'rectangle' }"
+            :disabled="editorState.active"
+            title="Rectangle"
+            aria-label="Rectangle"
+            :aria-pressed="currentShape === 'rectangle'"
+            @click="onShapeChange('rectangle')"
+          >
+            <Icon icon="mdi:rectangle-outline" />
+          </button>
+          <button
+            type="button"
+            class="goal-bar-icon-option"
+            :class="{ 'is-active': currentShape === 'customPolygon' }"
+            :disabled="editorState.active"
+            title="Custom Polygon"
+            aria-label="Custom Polygon"
+            :aria-pressed="currentShape === 'customPolygon'"
+            @click="onShapeChange('customPolygon')"
+          >
+            <Icon icon="mdi:vector-polygon" />
+          </button>
+        </div>
       </el-form-item>
 
       <el-form-item v-if="isPolygonShape" class="polygon-editor-form-item" label-width="0">
@@ -91,17 +129,21 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.progressDirection')">
-        <el-select
-          :model-value="currentModel.progressDirection"
-          @change="setProgressDirection"
-        >
-          <el-option
+        <div class="goal-bar-icon-options" role="group" aria-label="Progress Direction">
+          <button
             v-for="direction in availableProgressDirections"
             :key="direction"
-            :label="t(`elementSettings.${direction}`)"
-            :value="direction"
-          />
-        </el-select>
+            type="button"
+            class="goal-bar-icon-option"
+            :class="{ 'is-active': currentProgressDirection === direction }"
+            :title="progressDirectionLabels[direction]"
+            :aria-label="progressDirectionLabels[direction]"
+            :aria-pressed="currentProgressDirection === direction"
+            @click="setProgressDirection(direction)"
+          >
+            <Icon :icon="progressDirectionIcons[direction]" />
+          </button>
+        </div>
       </el-form-item>
 
       <el-form-item>
@@ -284,6 +326,18 @@ const availableProgressDirections = computed<readonly GoalBarProgressDirection[]
     ? VERTICAL_GOAL_BAR_DIRECTIONS
     : HORIZONTAL_GOAL_BAR_DIRECTIONS,
 )
+const progressDirectionIcons: Record<GoalBarProgressDirection, string> = {
+  leftToRight: 'mdi:arrow-right',
+  rightToLeft: 'mdi:arrow-left',
+  bottomToTop: 'mdi:arrow-up',
+  topToBottom: 'mdi:arrow-down',
+}
+const progressDirectionLabels: Record<GoalBarProgressDirection, string> = {
+  leftToRight: 'Left to Right',
+  rightToLeft: 'Right to Left',
+  bottomToTop: 'Bottom to Top',
+  topToBottom: 'Top to Bottom',
+}
 
 const isSegmentMode = computed(() => (currentModel.value as any)?.variant === 'segmented')
 const persistedPolygonConfig = computed(() => {
@@ -746,76 +800,70 @@ defineExpose({
   width: 100%;
 }
 
-.progress-align-control {
-  display: grid;
+.goal-bar-icon-options {
+  display: flex;
   width: 100%;
   min-width: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 0;
   padding: 3px;
   border: 1px solid var(--studio-border);
   border-radius: 8px;
   background: var(--studio-surface-soft);
 }
 
-.progress-align-option {
-  display: flex;
-  min-width: 0;
+.goal-bar-icon-option {
+  display: inline-flex;
+  flex: 1 1 0;
   height: 34px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border: 1px solid transparent;
-  border-radius: 6px;
   background: transparent;
   color: var(--studio-text-muted);
   cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.progress-align-option:hover {
+.goal-bar-icon-option:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.goal-bar-icon-option:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.goal-bar-icon-option + .goal-bar-icon-option {
+  margin-left: -1px;
+}
+
+.goal-bar-icon-option:hover:not(:disabled) {
+  position: relative;
   color: var(--studio-text);
   background: color-mix(in srgb, var(--studio-surface) 82%, transparent);
 }
 
-.progress-align-option.is-active {
+.goal-bar-icon-option.is-active {
+  position: relative;
   border-color: var(--studio-primary-border);
   background: var(--studio-surface);
   color: var(--studio-primary);
   box-shadow: 0 1px 2px color-mix(in srgb, #000 10%, transparent);
 }
 
-.progress-align-preview {
-  position: relative;
-  display: block;
-  flex: 0 0 auto;
-  width: 26px;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--studio-text-muted) 18%, transparent);
+.goal-bar-icon-option:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--studio-primary-border);
+  outline-offset: 2px;
 }
 
-.progress-align-preview i {
-  position: absolute;
-  top: 0;
-  display: block;
-  width: 58%;
-  height: 100%;
-  border-radius: inherit;
-  background: currentColor;
+.goal-bar-icon-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
-.progress-align-preview.is-left i {
-  left: 0;
-}
-
-.progress-align-preview.is-right i {
-  right: 0;
+.goal-bar-icon-option :deep(.iconify) {
+  width: 20px;
+  height: 20px;
 }
 
 .progress-bar-segment-panel {
