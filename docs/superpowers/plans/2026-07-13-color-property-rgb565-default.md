@@ -105,6 +105,14 @@ it('builds Default, standard colors, and Transparent in fixed order', () => {
   ])
 })
 
+it('keeps Default and removes a matching standard color', () => {
+  expect(buildColorPropertyOptions('#ffffff', standard)).toEqual([
+    { label: 'Default', value: '0xffffff' },
+    { label: 'Black', value: '0x000000' },
+    { label: 'Transparent', value: '-1' },
+  ])
+})
+
 it('ignores legacy custom options by rebuilding from standards', () => {
   const result = buildColorPropertyOptions('#abcdef', standard)
   expect(result.some((option) => option.label.startsWith('Custom'))).toBe(false)
@@ -130,11 +138,17 @@ import type { PropertyOption } from '@/types/properties'
 export const buildColorPropertyOptions = (
   defaultColor: unknown,
   standardColors: PropertyOption[],
-): PropertyOption[] => [
-  { label: 'Default', value: normalizeRgb565GarminColor(defaultColor) },
-  ...standardColors.map((option) => ({ ...option })),
-  { label: 'Transparent', value: '-1' },
-]
+): PropertyOption[] => {
+  const defaultValue = normalizeRgb565GarminColor(defaultColor)
+
+  return [
+    { label: 'Default', value: defaultValue },
+    ...standardColors
+      .filter((option) => normalizeRgb565GarminColor(option.value) !== defaultValue)
+      .map((option) => ({ ...option })),
+    { label: 'Transparent', value: '-1' },
+  ]
+}
 ```
 
 - [ ] **Step 8: 运行工具测试**
@@ -288,11 +302,11 @@ Run: `npm run dev`
 
 Expected:
 
-- 新建颜色属性时默认显示白色，候选集合为 66 项：Default、64 色、Transparent。
+- 新建颜色属性时默认显示白色，候选集合为 65 项：Default、其余 63 色、Transparent；White 标准色因与 Default 重复而被过滤。
 - 输入非 64 色（例如 `#123456`）后显示量化后的 `#103452`，Default 项同步为 `0x103452`。
 - 候选项没有新增、编辑、排序和删除控件。
 - 编辑带 Custom option 的旧颜色属性并保存后，Custom option 不再出现在 payload 中。
-- 导出的 settings 列表保留 Default、64 色和 Transparent，Default 使用实际颜色数值而非新哨兵值。
+- 导出的 settings 列表保留 Default、不重复的标准色和 Transparent，Default 使用实际颜色数值而非新哨兵值。
 
 - [ ] **Step 5: 记录验证结果**
 

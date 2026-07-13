@@ -31,3 +31,6 @@ playwright/.cache/
 
 # Local Git worktrees
 .worktrees/
+
+# Local Superpowers artifacts
+docs/superpowers/
