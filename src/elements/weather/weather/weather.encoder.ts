@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { WeatherElementConfig } from '@/types/elements/data'
+import { weatherSchema } from './weather.schema'
 
 export function encodeWeather(element: FabricElement): WeatherElementConfig {
   const anyEl = element as any
@@ -52,7 +53,7 @@ export function decodeWeather(config: WeatherElementConfig): Partial<FabricEleme
     imageUrl: config.amoledImageUrl ?? config.imageUrl,
     width: config.width,
     height: config.height,
-    fontFamily: config.fontFamily,
+    fontFamily: config.fontFamily || weatherSchema.defaultConfig.fontFamily,
     fill: config.fill,
   } as Partial<FabricElement>
 }
