@@ -1,4 +1,17 @@
-import type { SubDialRangeMode } from '@/types/elements/subDial'
+import type { SubDialContentConfig, SubDialContentKey, SubDialRangeMode } from '@/types/elements/subDial'
+import { applySubDialLayoutPreset, type SubDialLayoutPreset } from './subDial.layout'
+
+export function buildContentItemPatch(
+  content: SubDialContentConfig,
+  key: SubDialContentKey,
+  next: Partial<SubDialContentConfig[SubDialContentKey]>,
+) {
+  return { content: { ...content, [key]: { ...content[key], ...next } } as SubDialContentConfig }
+}
+
+export function buildLayoutPresetPatch(content: SubDialContentConfig, preset: SubDialLayoutPreset) {
+  return { content: applySubDialLayoutPreset(content, preset) }
+}
 
 export function buildSubDialRangePatch(
   rangeMode: SubDialRangeMode,

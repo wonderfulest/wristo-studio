@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SubDialElementConfig } from '@/types/elements/subDial'
 import { decodeSubDial, encodeSubDial } from './subDial.encoder'
+import { subDialSchema } from './subDial.schema'
 
 const config: SubDialElementConfig = {
   id: 'sub-dial-1',
@@ -11,7 +12,28 @@ const config: SubDialElementConfig = {
   originY: 'center',
   radius: 40,
   rotation: 5,
-  dataProperty: ':FIELD_TYPE_BATTERY',
+  goalProperty: 'goal_1',
+  progressProperty: 'progress_1',
+  progressMode: 'auto',
+  customMin: 0,
+  customMax: 100,
+  content: {
+    icon: {
+      visible: true,
+      x: 0,
+      y: -0.5,
+      rotation: 0,
+      scale: 1,
+      displayType: 'auto',
+      color: '#FFFFFF',
+      size: 14
+    },
+    label: textItem(true, 0, 0.55, 10),
+    value: textItem(true, 0, 0.2, 14),
+    unit: textItem(true, 0.42, 0.2, 10),
+    goalValue: textItem(false, -0.35, 0.72, 9),
+    percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
+  },
   rangeMode: 'percentage',
   minValue: 0,
   maxValue: 100,
@@ -39,7 +61,7 @@ const config: SubDialElementConfig = {
     pivotY: 0.85,
     scale: 1,
     rotationOffset: 3,
-    tintColor: null,
+    tintColor: null
   },
   showCenterCap: true,
   centerCapColor: '#FFFFFF',
@@ -51,10 +73,37 @@ const config: SubDialElementConfig = {
   unit: '%',
   decimals: 0,
   valueColor: '#FFFFFF',
-  valueFontSize: 14,
+  valueFontSize: 14
+}
+
+function textItem(visible: boolean, x: number, y: number, fontSize: number, overrides = {}) {
+  return {
+    visible,
+    x,
+    y,
+    rotation: 0,
+    scale: 1,
+    color: '#FFFFFF',
+    font: '',
+    fontSize,
+    textAlign: 'center' as const,
+    prefix: '',
+    suffix: '',
+    decimals: 0,
+    ...overrides
+  }
 }
 
 describe('subDial encoder', () => {
+  it('provides the classic content layout by default', () => {
+    const encoded = encodeSubDial({})
+
+    expect(encoded.progressProperty).toBe('')
+    expect(Object.keys(encoded.content)).toEqual(['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'])
+    expect(encoded.content.value).toMatchObject({ visible: true, x: 0, y: 0.2 })
+    expect(encoded.content.percentage.visible).toBe(true)
+  })
+
   it('prefers live canvas transforms and folds scale into radius', () => {
     const element = {
       id: 'sub-dial-1',
@@ -64,7 +113,7 @@ describe('subDial encoder', () => {
       angle: 15,
       scaleX: 1.5,
       scaleY: 1.5,
-      __element: { config },
+      __element: { config }
     }
 
     expect(encodeSubDial(element as any)).toMatchObject({
@@ -78,8 +127,8 @@ describe('subDial encoder', () => {
         style: 'image',
         assetId: 'hand-asset-1',
         pivotX: 0.5,
-        pivotY: 0.85,
-      },
+        pivotY: 0.85
+      }
     })
   })
 
@@ -90,7 +139,76 @@ describe('subDial encoder', () => {
       angle: 15,
       scaleX: 1,
       scaleY: 1,
-      eleType: 'subDial',
+      eleType: 'subDial'
     })
+  })
+
+  it('does not share content defaults between encoded results', () => {
+    const first = encodeSubDial({})
+    first.content.value.x = 0.9
+
+    const second = encodeSubDial({})
+    expect(second.content.value.x).toBe(0)
+    expect(subDialSchema.defaultConfig.content.value.x).toBe(0)
+  })
+
+  it('deeply merges partial stored content with classic defaults', () => {
+    const encoded = encodeSubDial({
+      __element: {
+        config: {
+          content: {
+            value: { x: 0.25 }
+          }
+        }
+      }
+    } as any)
+
+    expect(encoded.content.value).toMatchObject({
+      visible: true,
+      x: 0.25,
+      y: 0.2,
+      fontSize: 14,
+      textAlign: 'center'
+    })
+    expect(Object.keys(encoded.content)).toEqual(['icon', 'label', 'value', 'unit', 'goalValue', 'percentage'])
+    expect(encoded.content.percentage).toMatchObject({ visible: true, suffix: '%' })
+  })
+
+  it('migrates a live legacy property to the new persistent contract', () => {
+    const element = {
+      id: 'sub-dial-1',
+      goalProperty: 'goal_live',
+      scaleX: 1,
+      __element: { config: { ...config, progressProperty: undefined, goalProperty: 'goal_stale' } }
+    }
+
+    const encoded = encodeSubDial(element as any)
+    expect(encoded.progressProperty).toBe('goal_live')
+    expect(encoded).not.toHaveProperty('goalProperty')
+  })
+
+  it('decodes legacy config to a live progress property without a legacy live property', () => {
+    const { progressProperty: _progressProperty, ...legacyConfig } = config
+    const decoded = decodeSubDial({ ...legacyConfig, goalProperty: 'legacy_goal' } as any) as any
+
+    expect(decoded.progressProperty).toBe('legacy_goal')
+    expect(decoded).not.toHaveProperty('goalProperty')
+  })
+
+  it('preserves a new progress binding across decode and encode', () => {
+    const live = decodeSubDial({ ...config, progressProperty: 'steps', goalProperty: 'legacy' }) as any
+    live.__element = { config: { ...config, progressProperty: 'steps', goalProperty: 'legacy' } }
+
+    expect(encodeSubDial(live).progressProperty).toBe('steps')
+  })
+
+  it('treats an own empty live binding as an explicit clear', () => {
+    const encoded = encodeSubDial({
+      progressProperty: '',
+      goalProperty: 'legacy_live',
+      __element: { config: { ...config, progressProperty: 'steps' } },
+    } as any)
+
+    expect(encoded.progressProperty).toBe('')
   })
 })
