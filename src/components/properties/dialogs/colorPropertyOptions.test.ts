@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildColorPropertyOptions,
-  normalizeRgb565GarminColor,
-} from './colorPropertyOptions'
+import { buildColorPropertyOptions, normalizeRgb565GarminColor } from './colorPropertyOptions'
 
 describe('normalizeRgb565GarminColor', () => {
   it.each([
@@ -11,7 +8,7 @@ describe('normalizeRgb565GarminColor', () => {
     ['0x123456', '0x103452'],
     ['abcdef', '0xadcfef'],
     ['', '0xffffff'],
-    ['transparent', '0xffffff'],
+    ['transparent', '0xffffff']
   ])('normalizes %s to %s', (input, expected) => {
     expect(normalizeRgb565GarminColor(input)).toBe(expected)
   })
@@ -25,15 +22,11 @@ describe('normalizeRgb565GarminColor', () => {
 describe('buildColorPropertyOptions', () => {
   const standard = [
     { label: 'White', value: '0xFFFFFF' },
-    { label: 'Black', value: '0x000000' },
+    { label: 'Black', value: '0x000000' }
   ]
 
   it('builds Default, standard colors, and Transparent in fixed order', () => {
-    expect(buildColorPropertyOptions('#123456', standard)).toEqual([
-      { label: 'Default', value: '0x103452' },
-      ...standard,
-      { label: 'Transparent', value: '-1' },
-    ])
+    expect(buildColorPropertyOptions('#123456', standard)).toEqual([{ label: 'Default', value: '0x103452' }, ...standard, { label: 'Transparent', value: '-1' }])
   })
 
   it('rebuilds options without legacy custom colors', () => {

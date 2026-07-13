@@ -17,16 +17,11 @@ export const normalizeRgb565GarminColor = (value: unknown): string => {
   const green = expand6(Math.round((parseInt(hex.slice(2, 4), 16) * 63) / 255))
   const blue = expand5(Math.round((parseInt(hex.slice(4, 6), 16) * 31) / 255))
 
-  return `0x${[red, green, blue]
-    .map((channel) => channel.toString(16).padStart(2, '0'))
-    .join('')}`
+  return `0x${[red, green, blue].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`
 }
 
-export const buildColorPropertyOptions = (
-  defaultColor: unknown,
-  standardColors: PropertyOption[],
-): PropertyOption[] => [
+export const buildColorPropertyOptions = (defaultColor: unknown, standardColors: PropertyOption[]): PropertyOption[] => [
   { label: 'Default', value: normalizeRgb565GarminColor(defaultColor) },
   ...standardColors.map((option) => ({ ...option })),
-  { label: 'Transparent', value: '-1' },
+  { label: 'Transparent', value: '-1' }
 ]

@@ -1,18 +1,6 @@
 <template>
-  <el-dialog
-    v-model="dialogVisible"
-    class="property-dialog"
-    :title="t('property.colorSelect')"
-    width="720px"
-    :close-on-click-modal="false"
-    :destroy-on-close="true"
-  >
-    <el-form 
-      ref="formRef"
-      :model="formData"
-      label-position="top"
-      class="property-form"
-    >
+  <el-dialog v-model="dialogVisible" class="property-dialog" :title="t('property.colorSelect')" width="720px" :close-on-click-modal="false" :destroy-on-close="true">
+    <el-form ref="formRef" :model="formData" label-position="top" class="property-form">
       <div class="property-hero">
         <div>
           <div class="property-hero-kicker">{{ t('property.colorSelect') }}</div>
@@ -30,36 +18,25 @@
             :rules="[
               { required: true, message: t('property.inputTitle'), trigger: 'blur' },
               { min: 2, max: 50, message: t('property.titleLength'), trigger: 'blur' }
-            ]"
-          >
+            ]">
             <el-input v-model="formData.title" :placeholder="t('property.colorSelect')" />
           </el-form-item>
 
-          <PropertyKeyField
-            v-model="formData.propertyKey"
-            :is-edit="isEdit"
-            default-key="color_1"
-            placeholder="color_1"
-          />
+          <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="color_1" placeholder="color_1" />
         </div>
       </div>
 
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.colorOptions') }}</h3>
-          <el-button type="primary" plain @click="addOption">
-            <el-icon><Plus /></el-icon>
-            {{ t('property.addOption') }}
-          </el-button>
         </div>
-        <el-form-item 
+        <el-form-item
           :label="t('property.defaultValue')"
           prop="value"
           :rules="[
             { required: true, message: t('property.defaultValueRequired'), trigger: 'change' },
             { validator: validateDefaultValue, trigger: 'change' }
-          ]"
-        >
+          ]">
           <ColorPicker v-model="defaultColorHex" @change="handleDefaultColorChange" />
         </el-form-item>
 
@@ -72,8 +49,7 @@
                 :style="{
                   backgroundColor: formData.value === '-1' ? 'transparent' : `#${String(formData.value).replace('0x', '')}`,
                   border: formData.value === '-1' ? '1px dashed var(--el-border-color)' : '1px solid var(--el-border-color-lighter)'
-                }"
-              >
+                }">
                 <span v-if="formData.value === '-1'" class="transparent-pattern"></span>
               </span>
               <span>{{ selectedColorLabel }}</span>
@@ -84,53 +60,20 @@
 
         <el-collapse v-model="activeOptions" class="options-collapse">
           <el-collapse-item :title="t('property.colorOptions')" name="options">
-            <el-form-item 
+            <el-form-item
               prop="options"
               :rules="[
                 { required: true, message: t('property.atLeastOneOption'), trigger: 'change' },
                 { validator: validateOptions, trigger: 'change' }
-              ]"
-            >
+              ]">
               <div class="options-list">
-                <div v-for="(option, index) in formData.options" :key="index" class="option-item">
-                  <div class="option-content">
-                    <div class="option-inputs">
-                      <el-input v-model="option.label" :placeholder="t('property.optionLabel')">
-                        <template #prefix>
-                          <div 
-                            class="color-preview" 
-                            :style="{ 
-                              backgroundColor: option.value === '-1' ? 'transparent' : `#${option.value.replace('0x', '')}`,
-                              border: option.value === '-1' ? '1px dashed var(--el-border-color)' : 'none'
-                            }"
-                          >
-                            <div v-if="option.value === '-1'" class="transparent-pattern"></div>
-                          </div>
-                        </template>
-                      </el-input>
-                      <el-input 
-                        v-model="option.value" 
-                        :placeholder="t('property.colorValue')"
-                        :class="{ 'is-invalid': !isValidColorValue(option.value) }"
-                      />
-                    </div>
-                  </div>
-                  <div class="option-actions">
-                    <el-tooltip :content="t('common.moveUp')" placement="top" :disabled="index === 0">
-                      <el-button type="primary" link :disabled="index === 0" @click="moveOption(index, 'up')">
-                        <el-icon><ArrowUp /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === formData.options.length - 1">
-                      <el-button type="primary" link :disabled="index === formData.options.length - 1" @click="moveOption(index, 'down')">
-                        <el-icon><ArrowDown /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip :content="t('common.delete')" placement="top">
-                      <el-button type="danger" link @click="deleteOption(index)">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </el-tooltip>
+                <div v-for="option in formData.options" :key="`${option.label}-${option.value}`" class="option-item">
+                  <div class="option-content color-option-content">
+                    <span class="color-preview" :style="getOptionPreviewStyle(option.value)">
+                      <span v-if="option.value === '-1'" class="transparent-pattern"></span>
+                    </span>
+                    <span class="option-label">{{ option.label }}</span>
+                    <code class="option-value">{{ option.value }}</code>
                   </div>
                 </div>
               </div>
@@ -143,23 +86,11 @@
         <h3 class="section-title">{{ t('property.messages') }}</h3>
         <div class="message-grid">
           <el-form-item :label="t('property.promptOptional')">
-            <el-input
-              v-model="formData.prompt"
-              type="textarea"
-              :rows="3"
-              resize="none"
-              :placeholder="t('property.promptPlaceholder')"
-            />
+            <el-input v-model="formData.prompt" type="textarea" :rows="3" resize="none" :placeholder="t('property.promptPlaceholder')" />
           </el-form-item>
 
           <el-form-item :label="t('property.errorMessageOptional')">
-            <el-input
-              v-model="formData.errorMessage"
-              type="textarea"
-              :rows="3"
-              resize="none"
-              :placeholder="t('property.errorPlaceholder')"
-            />
+            <el-input v-model="formData.errorMessage" type="textarea" :rows="3" resize="none" :placeholder="t('property.errorPlaceholder')" />
           </el-form-item>
         </div>
       </div>
@@ -175,8 +106,7 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, nextTick } from 'vue'
-import { ArrowUp, ArrowDown, Delete, Plus } from '@element-plus/icons-vue'
+import { computed, ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { usePropertiesStore } from '@/stores/properties'
 import { ElMessageBox } from 'element-plus'
@@ -184,6 +114,7 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
+import { buildColorPropertyOptions, normalizeRgb565GarminColor } from './colorPropertyOptions'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -193,7 +124,6 @@ const propertiesStore = usePropertiesStore()
 const isEdit = ref(false)
 
 const defaultColorHex = ref('#ffffff')
-const suppressDefaultChange = ref(false)
 
 const formData = reactive({
   title: '',
@@ -210,16 +140,6 @@ const selectedColorLabel = computed(() => {
   return selected?.label || t('common.noData')
 })
 
-const normalizeGarminColorValue = (value) => {
-  const raw = String(value ?? '').trim()
-  if (!raw) return ''
-  if (raw === '-1' || raw.toLowerCase() === 'transparent') return '-1'
-  if (/^#[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.slice(1).toLowerCase()}`
-  if (/^0x[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.slice(2).toLowerCase()}`
-  if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `0x${raw.toLowerCase()}`
-  return ''
-}
-
 const getNextColorPropertyDefaults = () => {
   let maxIndex = 0
   Object.keys(propertiesStore.allProperties || {}).forEach((key) => {
@@ -230,46 +150,18 @@ const getNextColorPropertyDefaults = () => {
   return {
     index,
     key: `color_${index}`,
-    title: `Color ${index}`,
+    title: `Color ${index}`
   }
-}
-
-const ensureOptionForColorValue = (options, value) => {
-  const normalized = normalizeGarminColorValue(value)
-  if (!normalized) return options
-  const exists = options.some((option) => normalizeGarminColorValue(option.value) === normalized)
-  if (exists) return options
-
-  const label = normalized === '-1'
-    ? 'Transparent'
-    : `Custom #${normalized.slice(2).toUpperCase()}`
-  return [
-    {
-      label,
-      value: normalized,
-    },
-    ...options,
-  ]
 }
 
 // 表单验证规则
 const validateOptions = (rule, value, callback) => {
-  if (!value || value.length === 0) {
-    callback(new Error(t('property.atLeastOneOption')))
-  } else if (!value.every(option => option.label && propertiesStore.isValidColorValue(option.value))) {
+  const expected = buildColorPropertyOptions(formData.value, propertiesStore.getDefaultColorOptions)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) {
     callback(new Error(t('property.validLabelColorRequired')))
   } else {
     callback()
   }
-}
-
-const isValidColorValue = (value) => {
-  if (value === '-1') return true // 支持透明色
-  return /^0x[0-9A-Fa-f]{6}$/.test(value)
-}
-
-const isValueInOptions = (garminValue) => {
-  return formData.options.some((opt) => String(opt.value || '').toUpperCase() === String(garminValue || '').toUpperCase())
 }
 
 const validateDefaultValue = (rule, value, callback) => {
@@ -277,7 +169,7 @@ const validateDefaultValue = (rule, value, callback) => {
     callback(new Error(t('property.defaultValueRequired')))
     return
   }
-  if (!isValueInOptions(value)) {
+  if (value !== normalizeRgb565GarminColor(value)) {
     callback(new Error(t('property.defaultValueInColorOptions')))
     return
   }
@@ -285,41 +177,19 @@ const validateDefaultValue = (rule, value, callback) => {
 }
 
 const garminToHex = (value) => {
-  if (value === '-1') return 'transparent'
-  if (!value) return '#ffffff'
-  const v = typeof value === 'string' ? value : String(value)
-  if (v.startsWith('0x') && v.length === 8) {
-    return `#${v.slice(2)}`
-  }
-  if (v.startsWith('#') && v.length === 7) {
-    return v
-  }
-  return '#ffffff'
+  const normalized = normalizeRgb565GarminColor(value)
+  return `#${normalized.slice(2)}`
 }
 
-const hexToGarmin = (hex) => {
-  if (hex === 'transparent') return '-1'
-  if (!hex) return '0xffffff'
-  const h = typeof hex === 'string' ? hex : String(hex)
-  const normalized = h.startsWith('#') ? h.slice(1) : (h.startsWith('0x') ? h.slice(2) : h)
-  if (!/^[0-9A-Fa-f]{6}$/.test(normalized)) return '0xffffff'
-  return `0x${normalized.toLowerCase()}`
+const syncDefaultColor = (value) => {
+  const normalized = normalizeRgb565GarminColor(value)
+  formData.value = normalized
+  defaultColorHex.value = garminToHex(normalized)
+  formData.options = buildColorPropertyOptions(normalized, propertiesStore.getDefaultColorOptions)
 }
 
-const handleDefaultColorChange = async (hex) => {
-  if (suppressDefaultChange.value) return
-
-  const garminValue = hexToGarmin(hex)
-  if (!isValueInOptions(garminValue)) {
-    ElMessage.warning(t('property.chooseColorFromOptions'))
-    suppressDefaultChange.value = true
-    defaultColorHex.value = garminToHex(formData.value)
-    await nextTick()
-    suppressDefaultChange.value = false
-    return
-  }
-
-  formData.value = garminValue
+const handleDefaultColorChange = (hex) => {
+  syncDefaultColor(hex)
 }
 
 const initFormData = (data = null) => {
@@ -336,58 +206,33 @@ const initFormData = (data = null) => {
     })
   } else {
     const defaults = getNextColorPropertyDefaults()
-    const defaultValue = normalizeGarminColorValue(propertiesStore.lastSelectedColor) || '0xffffff'
-    const options = ensureOptionForColorValue(
-      JSON.parse(JSON.stringify(propertiesStore.getDefaultColorOptions)),
-      defaultValue
-    )
+    const defaultValue = propertiesStore.lastSelectedColor || '0xffffff'
     Object.assign(formData, {
       title: defaults.title,
       propertyKey: defaults.key,
       type: 'color',
-      options,
+      options: [],
       value: defaultValue,
       prompt: '',
       errorMessage: ''
     })
   }
 
-  if (!isValueInOptions(formData.value)) {
-    formData.value = formData.options[0]?.value || '0xffffff'
-  }
-
-  defaultColorHex.value = garminToHex(formData.value)
+  syncDefaultColor(formData.value)
 }
 
-const addOption = () => {
-  formData.options.push({
-    label: '',
-    value: '0x000000'
-  })
-}
-
-const deleteOption = (index) => {
-  formData.options.splice(index, 1)
-}
-
-const moveOption = (index, direction) => {
-  if (direction === 'up' && index > 0) {
-    const temp = formData.options[index]
-    formData.options[index] = formData.options[index - 1]
-    formData.options[index - 1] = temp
-  } else if (direction === 'down' && index < formData.options.length - 1) {
-    const temp = formData.options[index]
-    formData.options[index] = formData.options[index + 1]
-    formData.options[index + 1] = temp
-  }
-}
+const getOptionPreviewStyle = (value) => ({
+  backgroundColor: value === '-1' ? 'transparent' : `#${String(value).replace('0x', '')}`,
+  border: value === '-1' ? '1px dashed var(--el-border-color)' : 'none'
+})
 
 const emit = defineEmits(['confirm'])
 
 const handleConfirm = async () => {
   if (!formRef.value) return
-  
+
   try {
+    syncDefaultColor(formData.value)
     await formRef.value.validate()
     emit('confirm', {
       type: 'color',
@@ -406,17 +251,15 @@ const handleConfirm = async () => {
 }
 
 const handleClose = () => {
-  ElMessageBox.confirm(
-    t('property.closeConfirm'),
-    t('property.warning'),
-    {
-      confirmButtonText: t('common.yes'),
-      cancelButtonText: t('common.no'),
-      type: 'warning',
-    }
-  ).then(() => {
-    dialogVisible.value = false
-  }).catch(() => {})
+  ElMessageBox.confirm(t('property.closeConfirm'), t('property.warning'), {
+    confirmButtonText: t('common.yes'),
+    cancelButtonText: t('common.no'),
+    type: 'warning'
+  })
+    .then(() => {
+      dialogVisible.value = false
+    })
+    .catch(() => {})
 }
 
 defineExpose({
@@ -426,3 +269,27 @@ defineExpose({
   }
 })
 </script>
+
+<style scoped>
+.color-option-content {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-option-content .color-preview {
+  display: block;
+}
+
+.option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option-value {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+</style>

@@ -77,8 +77,8 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       { label: 'Navy Blue', value: '0x000055' },
       { label: 'Tyrian Purple', value: '0x550055' },
       { label: 'Maroon', value: '0x550000' },
-      { label: 'Black', value: '0x000000' },
-    ] as PropertyOption[],
+      { label: 'Black', value: '0x000000' }
+    ] as PropertyOption[]
   }),
 
   getters: {
@@ -86,10 +86,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
 
     getPropertyValue: (state) => (key: string) => state.properties[key]?.value,
 
-    getDialProperties: (state) => (mode: DialProgressMode) =>
-      Object.entries(state.properties).filter(([, property]) =>
-        property.type === 'dial' && property.dialMode === mode
-      ),
+    getDialProperties: (state) => (mode: DialProgressMode) => Object.entries(state.properties).filter(([, property]) => property.type === 'dial' && property.dialMode === mode),
 
     getDefaultValue: () => (type: PropertyType) => {
       switch (type) {
@@ -201,11 +198,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       dialMode?: DialProgressMode
     }) {
       const defaultValue =
-        propertyData.defaultValue !== undefined
-          ? propertyData.defaultValue
-          : this.properties[propertyData.key]?.value ||
-            propertyData.options?.[0]?.value ||
-            this.getDefaultValue(propertyData.type)
+        propertyData.defaultValue !== undefined ? propertyData.defaultValue : this.properties[propertyData.key]?.value || propertyData.options?.[0]?.value || this.getDefaultValue(propertyData.type)
 
       this.properties[propertyData.key] = {
         type: propertyData.type,
@@ -214,14 +207,11 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         value: defaultValue,
         prompt: propertyData.prompt,
         errorMessage: propertyData.errorMessage,
-        dialMode: propertyData.dialMode,
+        dialMode: propertyData.dialMode
       } as PropertyItem
     },
 
-    editProperty(
-      key: string,
-      propertyData: Partial<Omit<PropertyItem, 'value'>> & { type?: PropertyType; defaultValue?: unknown; options?: PropertyOption[] }
-    ) {
+    editProperty(key: string, propertyData: Partial<Omit<PropertyItem, 'value'>> & { type?: PropertyType; defaultValue?: unknown; options?: PropertyOption[] }) {
       if (this.properties[key]) {
         const current = this.properties[key]
         const next = { ...propertyData }
@@ -231,11 +221,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         this.properties[key] = {
           ...current,
           ...next,
-          value:
-            propertyData.defaultValue ||
-            current.value ||
-            propertyData.options?.[0]?.value ||
-            this.getDefaultValue(next.type || current.type as PropertyType),
+          value: propertyData.defaultValue || current.value || propertyData.options?.[0]?.value || this.getDefaultValue(next.type || (current.type as PropertyType))
         }
       }
     },
@@ -318,6 +304,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
           options[index + 1] = temp
         }
       }
-    },
-  },
+    }
+  }
 })
