@@ -22,6 +22,7 @@ import {
   isDateFormatAllowedByChineseSupport,
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
+import { validateDataGoalBindings } from '@/engine/services/propertyBindingValidation'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -115,49 +116,6 @@ function mapColorProperties(encodeConfig: AnyElementConfig, properties: Properti
       encRec[target] = match[0]
     }
   }
-}
-
-/**
- * 校验数据属性和目标属性：每个属性必须被至少一个元素绑定
- */
-function validateDataGoalBindings(
-  objects: FabricElement[],
-  properties: PropertiesMap,
-): string[] {
-  const errors: string[] = []
-  const elements = objects.filter((o) => {
-    const t = (o as any).eleType
-    return t && t !== 'background' && t !== 'global'
-  })
-
-  for (const [key, prop] of Object.entries(properties)) {
-    if (prop.type === 'data') {
-      const bound = elements.some((o) => (o as any).dataProperty === key)
-      if (!bound) {
-        errors.push(t('export.validation.unboundDataProperty', { title: prop.title, key }))
-      }
-    }
-    if (prop.type === 'goal') {
-      const bound = elements.some((o) => (o as any).goalProperty === key)
-      if (!bound) {
-        errors.push(t('export.validation.unboundGoalProperty', { title: prop.title, key }))
-      }
-    }
-    if (prop.type === 'chart') {
-      const bound = elements.some((o) => (o as any).chartProperty === key)
-      if (!bound) {
-        errors.push(t('export.validation.unboundChartProperty', { title: prop.title, key }))
-      }
-    }
-    if (prop.type === 'text') {
-      const bound = elements.some((o) => (o as any).textProperty === key)
-      if (!bound) {
-        errors.push(t('export.validation.unboundTextProperty', { title: prop.title, key }))
-      }
-    }
-  }
-
-  return errors
 }
 
 /**
@@ -319,7 +277,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
   // ── 导出前校验：数据属性 / 目标属性必须绑定到元素 ──
   if (validateBindings) {
-    const bindingErrors = validateDataGoalBindings(objects, properties)
+    const bindingErrors = validateDataGoalBindings(objects, properties, t)
     if (bindingErrors.length > 0) {
       ElMessage.error(bindingErrors.join(t('common.listSeparator')))
       console.error('Export validation failed:', bindingErrors)
