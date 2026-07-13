@@ -7,6 +7,20 @@ export const GOAL_BAR_DIRECTIONS = [
 
 export type GoalBarProgressDirection = typeof GOAL_BAR_DIRECTIONS[number]
 export type GoalBarAxis = 'horizontal' | 'vertical'
+export type GoalBarOrientation = GoalBarAxis
+
+export const HORIZONTAL_GOAL_BAR_DIRECTIONS = ['leftToRight', 'rightToLeft'] as const
+export const VERTICAL_GOAL_BAR_DIRECTIONS = ['bottomToTop', 'topToBottom'] as const
+
+export function resolveGoalBarOrientation(direction: GoalBarProgressDirection): GoalBarOrientation {
+  return HORIZONTAL_GOAL_BAR_DIRECTIONS.includes(direction as typeof HORIZONTAL_GOAL_BAR_DIRECTIONS[number])
+    ? 'horizontal'
+    : 'vertical'
+}
+
+export function getDefaultGoalBarDirection(orientation: GoalBarOrientation): GoalBarProgressDirection {
+  return orientation === 'vertical' ? 'bottomToTop' : 'leftToRight'
+}
 
 export function normalizeGoalBarDirection(value: unknown, legacyAlign?: unknown): GoalBarProgressDirection {
   if (GOAL_BAR_DIRECTIONS.includes(value as GoalBarProgressDirection)) {

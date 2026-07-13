@@ -12,6 +12,13 @@
         @change="updateElement"
       />
 
+      <el-form-item :label="t('elementSettings.orientation')">
+        <el-select :model-value="currentOrientation" @change="setOrientation">
+          <el-option :label="t('elementSettings.horizontal')" value="horizontal" />
+          <el-option :label="t('elementSettings.vertical')" value="vertical" />
+        </el-select>
+      </el-form-item>
+
       <el-form-item :label="t('elementSettings.shape')">
         <el-select
           :model-value="currentShape"
@@ -89,7 +96,7 @@
           @change="setProgressDirection"
         >
           <el-option
-            v-for="direction in GOAL_BAR_DIRECTIONS"
+            v-for="direction in availableProgressDirections"
             :key="direction"
             :label="t(`elementSettings.${direction}`)"
             :value="direction"
@@ -215,7 +222,15 @@ import { ElMessage } from 'element-plus'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
 import type { FabricElement } from '@/types/element'
-import { GOAL_BAR_DIRECTIONS, type GoalBarProgressDirection } from './goalBar.direction'
+import {
+  HORIZONTAL_GOAL_BAR_DIRECTIONS,
+  VERTICAL_GOAL_BAR_DIRECTIONS,
+  getDefaultGoalBarDirection,
+  normalizeGoalBarDirection,
+  resolveGoalBarOrientation,
+  type GoalBarOrientation,
+  type GoalBarProgressDirection,
+} from './goalBar.direction'
 import GoalBarPolygonMiniEditor from './GoalBarPolygonMiniEditor.vue'
 import {
   normalizeGoalBarPolygonConfig,
@@ -262,6 +277,13 @@ const currentModel = computed<any>(() => {
   console.log('[GoalBarPanel] currentModel', props.config, props.element)
   return props.config ?? props.element ?? {}
 })
+const currentProgressDirection = computed(() => normalizeGoalBarDirection(currentModel.value.progressDirection))
+const currentOrientation = computed<GoalBarOrientation>(() => resolveGoalBarOrientation(currentProgressDirection.value))
+const availableProgressDirections = computed<readonly GoalBarProgressDirection[]>(() =>
+  currentOrientation.value === 'vertical'
+    ? VERTICAL_GOAL_BAR_DIRECTIONS
+    : HORIZONTAL_GOAL_BAR_DIRECTIONS,
+)
 
 const isSegmentMode = computed(() => (currentModel.value as any)?.variant === 'segmented')
 const persistedPolygonConfig = computed(() => {
@@ -382,6 +404,13 @@ const handleProgressChange = async (val: number) => {
 const setProgressDirection = async (value: GoalBarProgressDirection) => {
   ;(currentModel.value as any).progressDirection = value
   await applyUpdate({ progressDirection: value })
+}
+
+const setOrientation = async (value: GoalBarOrientation) => {
+  const progressDirection = getDefaultGoalBarDirection(value)
+  ;(currentModel.value as any).orientation = value
+  ;(currentModel.value as any).progressDirection = progressDirection
+  await applyUpdate({ orientation: value, progressDirection })
 }
 
 const clearPolygonEditor = () => {

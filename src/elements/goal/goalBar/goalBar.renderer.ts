@@ -21,6 +21,7 @@ import {
   getGoalBarProgressBounds,
   normalizeGoalBarDirection,
   resolveGoalBarDirection,
+  resolveGoalBarOrientation,
 } from './goalBar.direction'
 
 type GoalBarVariant = NonNullable<GoalBarElementConfig['variant']>
@@ -148,6 +149,10 @@ function normalizeGoalBarConfig(
     polygonPoints: (config as any).polygonPoints,
     slantRatio: (config as any).slantRatio,
   })
+  const progressDirection = normalizeGoalBarDirection(
+    (config as any).progressDirection,
+    (config as any).progressAlign,
+  )
 
   return {
     id,
@@ -158,10 +163,8 @@ function normalizeGoalBarConfig(
     height: Number(config.height ?? 10),
     padding: Number((config as Partial<GoalBarElementConfig>).padding ?? 0),
     progress: clampProgress(config.progress ?? 0),
-    progressDirection: normalizeGoalBarDirection(
-      (config as any).progressDirection,
-      (config as any).progressAlign,
-    ),
+    orientation: resolveGoalBarOrientation(progressDirection),
+    progressDirection,
     variant: ((config as Partial<GoalBarElementConfig>).variant ?? 'continuous') as GoalBarVariant,
     segments: Math.max(1, Math.floor(Number((config as any).segments ?? 10))),
     gap: Math.max(0, Number((config as any).gap ?? 2)),
@@ -212,7 +215,7 @@ type GoalBarLayoutOptions = {
 const GOAL_BAR_ENCODER_LIVE_FIELDS = [
   'left', 'top', 'shape', 'polygonPoints', 'slantRatio', 'color', 'bgColor',
   'variant', 'segments', 'gap', 'borderRadius', 'progress', 'padding',
-  'borderWidth', 'borderColor', 'goalProperty', 'progressDirection',
+  'borderWidth', 'borderColor', 'goalProperty', 'orientation', 'progressDirection',
   'gradientEnabled', 'gradientStartColor', 'gradientEndColor',
 ] as const
 
