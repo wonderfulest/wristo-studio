@@ -225,7 +225,7 @@ import type { FabricElement } from '@/types/element'
 import {
   HORIZONTAL_GOAL_BAR_DIRECTIONS,
   VERTICAL_GOAL_BAR_DIRECTIONS,
-  getDefaultGoalBarDirection,
+  getGoalBarOrientationPatch,
   normalizeGoalBarDirection,
   resolveGoalBarOrientation,
   type GoalBarOrientation,
@@ -407,10 +407,19 @@ const setProgressDirection = async (value: GoalBarProgressDirection) => {
 }
 
 const setOrientation = async (value: GoalBarOrientation) => {
-  const progressDirection = getDefaultGoalBarDirection(value)
-  ;(currentModel.value as any).orientation = value
-  ;(currentModel.value as any).progressDirection = progressDirection
-  await applyUpdate({ orientation: value, progressDirection })
+  const model = currentModel.value as any
+  const patch = getGoalBarOrientationPatch(
+    currentOrientation.value,
+    value,
+    Number(model.width ?? 0),
+    Number(model.height ?? 0),
+  )
+  if (!patch) return
+  model.orientation = patch.orientation
+  model.progressDirection = patch.progressDirection
+  model.width = patch.width
+  model.height = patch.height
+  await applyUpdate(patch)
 }
 
 const clearPolygonEditor = () => {
