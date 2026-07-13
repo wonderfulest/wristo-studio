@@ -90,12 +90,40 @@ decode 缺少 orientation 时根据规范化后的 `progressDirection` 推导；
 expect(source.indexOf("elementSettings.orientation")).toBeLessThan(source.indexOf("elementSettings.shape"))
 expect(source).toContain("HORIZONTAL_GOAL_BAR_DIRECTIONS")
 expect(source).toContain("VERTICAL_GOAL_BAR_DIRECTIONS")
-expect(source).toContain("applyUpdate({ orientation: value, progressDirection })")
+expect(source).toContain("getGoalBarOrientationPatch")
+```
+
+在 `goalBar.direction.test.ts` 增加尺寸交换行为：
+
+```ts
+expect(getGoalBarOrientationPatch('horizontal', 'vertical', 200, 20)).toEqual({
+  orientation: 'vertical', progressDirection: 'bottomToTop', width: 20, height: 200,
+})
+expect(getGoalBarOrientationPatch('vertical', 'horizontal', 20, 200)).toEqual({
+  orientation: 'horizontal', progressDirection: 'leftToRight', width: 200, height: 20,
+})
+expect(getGoalBarOrientationPatch('horizontal', 'horizontal', 200, 20)).toBeNull()
 ```
 
 - [ ] **Step 7: 拆分面板控件**
 
-在 Shape 上方增加 Orientation 下拉框。Progress Direction 根据 orientation 使用 `['leftToRight', 'rightToLeft']` 或 `['bottomToTop', 'topToBottom']`。切换 orientation 时同时更新 orientation 和对应默认方向，不交换宽高。
+在 Shape 上方增加 Orientation 下拉框。Progress Direction 根据 orientation 使用 `['leftToRight', 'rightToLeft']` 或 `['bottomToTop', 'topToBottom']`。
+
+新增纯函数：
+
+```ts
+export function getGoalBarOrientationPatch(current, next, width, height) {
+  if (current === next) return null
+  return {
+    orientation: next,
+    progressDirection: getDefaultGoalBarDirection(next),
+    width: height,
+    height: width,
+  }
+}
+```
+
+面板切换时只调用一次 `applyUpdate(patch)`。patch 为 null 时直接返回；否则同步更新本地 orientation、progressDirection、width、height，元素中心位置不变。
 
 - [ ] **Step 8: 运行验证并提交**
 
