@@ -10,7 +10,7 @@ export interface CanvasPanRect {
   height: number
 }
 
-export const CANVAS_LONG_PRESS_DELAY_MS = 400
+export const CANVAS_LONG_PRESS_DELAY_MS = 1500
 export const CANVAS_LONG_PRESS_TOLERANCE_PX = 6
 
 export function hasExceededCanvasLongPressTolerance(

@@ -57,7 +57,7 @@ test('pan offset keeps the configured amount of the stage visible', () => {
 })
 
 test('canvas long press uses the agreed delay and movement tolerance', () => {
-  assert.equal(CANVAS_LONG_PRESS_DELAY_MS, 400)
+  assert.equal(CANVAS_LONG_PRESS_DELAY_MS, 1500)
   assert.equal(CANVAS_LONG_PRESS_TOLERANCE_PX, 6)
 })
 
