@@ -78,7 +78,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       { label: 'Tyrian Purple', value: '0x550055' },
       { label: 'Maroon', value: '0x550000' },
       { label: 'Black', value: '0x000000' },
-      { label: 'Transparent', value: '-1' },
     ] as PropertyOption[],
   }),
 
