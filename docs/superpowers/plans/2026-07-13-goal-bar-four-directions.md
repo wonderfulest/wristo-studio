@@ -21,6 +21,75 @@
 - Modify: `wristo-apps/SuperAlpha/source/SuperAlphaView.j2.mc` — 模板参数。
 - Modify: `wristo-apps/SuperBarrel/goal/GoalBar.mc` — Monkey C 四方向 Runtime。
 
+## Task -1: 将三组方向设置改为图标按钮
+
+**Files:**
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.panel.vue`
+- Modify: `wristo-studio/src/elements/goal/goalBar/goalBar.panel.test.ts`
+
+- [ ] **Step 1: 编写图标控件失败测试**
+
+```ts
+expect(source).not.toContain('<el-select :model-value="currentOrientation"')
+expect(source).not.toContain('<el-select\n          :model-value="currentShape"')
+expect(source).not.toContain(':model-value="currentModel.progressDirection"')
+expect(source).toContain('mdi:arrow-expand-horizontal')
+expect(source).toContain('mdi:arrow-expand-vertical')
+expect(source).toContain('mdi:rectangle-outline')
+expect(source).toContain('mdi:vector-polygon')
+expect(source).toContain('mdi:arrow-right')
+expect(source).toContain('mdi:arrow-left')
+expect(source).toContain('mdi:arrow-up')
+expect(source).toContain('mdi:arrow-down')
+expect(source).toContain('aria-pressed')
+```
+
+- [ ] **Step 2: 运行测试确认仍使用下拉框**
+
+Run: `npx vitest run src/elements/goal/goalBar/goalBar.panel.test.ts`
+
+Expected: FAIL，面板仍包含 Orientation、Shape、Progress Direction 下拉框。
+
+- [ ] **Step 3: 实现紧凑图标按钮组**
+
+每组使用统一 `.goal-bar-icon-options` 容器和 `<button type="button">`。按钮包含全局 `Icon` 组件，使用上述 MDI 图标；`title` 和 `aria-label` 使用现有英文 i18n 文案，`aria-pressed` 与当前值同步。点击分别调用 `setOrientation`、`onShapeChange`、`setProgressDirection`，不改变既有业务函数。
+
+- [ ] **Step 4: 添加选中、悬停和键盘焦点样式**
+
+```css
+.goal-bar-icon-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 34px;
+  border: 1px solid var(--el-border-color);
+  background: var(--el-fill-color-blank);
+}
+.goal-bar-icon-option.is-active {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+.goal-bar-icon-option:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
+}
+```
+
+相邻按钮合并边框与圆角，hover 使用浅色背景。不得增加 canvas overlay 或新的画布事件。
+
+- [ ] **Step 5: 运行验证并提交**
+
+Run: `npx vitest run src/elements/goal/goalBar/goalBar.panel.test.ts && npx vue-tsc --noEmit && npm run build`
+
+Expected: 面板测试、类型检查和生产构建通过。
+
+```bash
+git add src/elements/goal/goalBar/goalBar.panel.vue src/elements/goal/goalBar/goalBar.panel.test.ts
+git commit -m "使用图标展示 GoalBar 方向设置"
+```
+
 ## Task 0: 拆分 Orientation 与 Progress Direction 设置
 
 **Files:**
