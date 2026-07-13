@@ -19,7 +19,7 @@ describe('Rgb565ColorSpectrum contract', () => {
   })
 
   it('emits only quantized colors', () => {
-    expect(source).toContain("defineEmits<{ change: [value: string] }>()")
+    expect(source).toContain('defineEmits<{ change: [value: string] }>()')
     expect(source).toContain("emit('change', quantizedColor.value)")
   })
 })

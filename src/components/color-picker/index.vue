@@ -56,26 +56,39 @@
         </div>
       </div>
 
-      <!-- 颜色矩阵 -->
-      <div class="color-matrix">
-        <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({hex: color, value: color})"></div>
-      </div>
-
-      <!-- 当前使用的颜色 -->
-      <div v-if="colorProperties.length > 0" class="recent-colors">
-        <div class="recent-colors-header">
-          <div class="recent-colors-title">{{ t('colorPicker.currentColors') }}</div>
+      <template v-if="pickerView === 'quick'">
+        <!-- 颜色矩阵 -->
+        <div class="color-matrix">
+          <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({hex: color, value: color})"></div>
         </div>
-        <div class="color-variables-list">
-          <div v-for="colorProperty in visibleColorProperties" :key="colorProperty.name" class="color-variable-item" @click="selectColor(colorProperty)">
-            <div class="color-preview-small" :style="{ backgroundColor: colorProperty.hex }"></div>
-            <div class="color-variable-info">
-              <div class="color-hex">{{ colorProperty.hex }}</div>
-              <div class="color-name">{{ colorProperty.name }}</div>
+
+        <button type="button" class="more-colors-button" @click="pickerView = 'rgb565'">
+          {{ t('colorPicker.moreColors') }}
+        </button>
+
+        <!-- 当前使用的颜色 -->
+        <div v-if="colorProperties.length > 0" class="recent-colors">
+          <div class="recent-colors-header">
+            <div class="recent-colors-title">{{ t('colorPicker.currentColors') }}</div>
+          </div>
+          <div class="color-variables-list">
+            <div v-for="colorProperty in visibleColorProperties" :key="colorProperty.name" class="color-variable-item" @click="selectColor(colorProperty)">
+              <div class="color-preview-small" :style="{ backgroundColor: colorProperty.hex }"></div>
+              <div class="color-variable-info">
+                <div class="color-hex">{{ colorProperty.hex }}</div>
+                <div class="color-name">{{ colorProperty.name }}</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <section v-else class="rgb565-picker-view">
+        <button type="button" class="rgb565-back-button" @click="pickerView = 'quick'">
+          {{ t('colorPicker.backToQuickColors') }}
+        </button>
+        <Rgb565ColorSpectrum :model-value="activeRgb565Color" @change="handleRgb565Change" />
+      </section>
     </div>
   </div>
 </template>
@@ -86,6 +99,7 @@ import emitter from '@/utils/eventBus.ts'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 import { toColorSelectionPayload } from './colorSelection'
+import Rgb565ColorSpectrum from './Rgb565ColorSpectrum.vue'
 
 const { t } = useI18n()
 
@@ -203,6 +217,7 @@ const isOpen = ref(false)
 const wrapperRef = ref(null)
 const pickerRef = ref(null)
 const pickerStyle = ref({})
+const pickerView = ref('quick')
 // 为每个实例生成唯一标识，用于互斥控制
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
 const settingsPopupId = `color-picker_${instanceId}`
@@ -232,6 +247,13 @@ const colorProperties = computed(() => {
 const visibleColorProperties = computed(() => isGradientMode.value
   ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex))
   : colorProperties.value)
+
+const activeRgb565Color = computed(() => {
+  if (!isGradientMode.value) return normalizeOpaqueColor(inputValue.value) || '#FFFFFF'
+  return activeGradientStop.value === 'start'
+    ? localGradientStartColor.value
+    : localGradientEndColor.value
+})
 
 // Helper: convert hex string to RGB
 const hexToRgb = (hex) => {
@@ -329,6 +351,14 @@ const selectColor = (color) => {
   emit('update:modelValue', color.hex)
   emit('change', color.hex)
   emit('property-change', toColorSelectionPayload(color))
+}
+
+const handleRgb565Change = (color) => {
+  if (isGradientMode.value) {
+    updateGradientStop(activeGradientStop.value, color)
+  } else {
+    selectColor({ hex: color, value: color })
+  }
 }
 
 // 更新颜色
@@ -537,6 +567,7 @@ const togglePicker = () => {
   const willOpen = !isOpen.value
   isOpen.value = willOpen
   if (willOpen) {
+    pickerView.value = 'quick'
     emitter.emit('settings-popup-open', settingsPopupId)
     nextTick(positionColorPicker)
   }
@@ -797,6 +828,29 @@ const togglePicker = () => {
 
 .color-variable-item:hover {
   background-color: var(--studio-surface-soft);
+}
+
+.more-colors-button,
+.rgb565-back-button {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+  color: var(--studio-primary);
+  background: var(--studio-surface-soft);
+  cursor: pointer;
+  font: inherit;
+}
+
+.more-colors-button:hover,
+.rgb565-back-button:hover {
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+}
+
+.rgb565-picker-view {
+  display: grid;
+  gap: 12px;
 }
 
 .color-preview-small {

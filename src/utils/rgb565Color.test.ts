@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  clampUnit,
-  hsvToRgb,
-  normalizeRgb565Hex,
-  parseHexColor,
-  rgbToHex,
-  rgbToHsv,
-} from './rgb565Color'
+import { clampUnit, hsvToRgb, normalizeRgb565Hex, parseHexColor, rgbToHex, rgbToHsv } from './rgb565Color'
 
 describe('rgb565Color', () => {
   it.each([
@@ -15,7 +8,7 @@ describe('rgb565Color', () => {
     ['#123456', '#103452'],
     ['0xABCDEF', '#ADCFEF'],
     ['abcdef', '#ADCFEF'],
-    ['transparent', '#FFFFFF'],
+    ['transparent', '#FFFFFF']
   ])('quantizes %s as %s', (input, expected) => {
     expect(normalizeRgb565Hex(input)).toBe(expected)
   })
@@ -34,7 +27,7 @@ describe('rgb565Color', () => {
     for (const rgb of [
       { r: 255, g: 0, b: 0 },
       { r: 0, g: 255, b: 0 },
-      { r: 0, g: 0, b: 255 },
+      { r: 0, g: 0, b: 255 }
     ]) {
       expect(hsvToRgb(rgbToHsv(rgb))).toEqual(rgb)
       expect(rgbToHex(rgb)).toMatch(/^#[0-9A-F]{6}$/)

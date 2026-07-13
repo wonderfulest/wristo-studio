@@ -15,8 +15,7 @@
       @pointermove="moveSpectrumDrag"
       @pointerup="stopSpectrumDrag"
       @pointercancel="stopSpectrumDrag"
-      @keydown="handleSpectrumKeydown"
-    >
+      @keydown="handleSpectrumKeydown">
       <span class="rgb565-spectrum-cursor" :style="spectrumCursorStyle"></span>
     </div>
     <div
@@ -32,8 +31,7 @@
       @pointermove="moveHueDrag"
       @pointerup="stopHueDrag"
       @pointercancel="stopHueDrag"
-      @keydown="handleHueKeydown"
-    >
+      @keydown="handleHueKeydown">
       <span class="rgb565-hue-cursor" :style="hueCursorStyle"></span>
     </div>
     <div class="rgb565-spectrum-result">
@@ -46,14 +44,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
-import {
-  clampUnit,
-  hsvToRgb,
-  normalizeRgb565Hex,
-  parseHexColor,
-  rgbToHex,
-  rgbToHsv,
-} from '@/utils/rgb565Color'
+import { clampUnit, hsvToRgb, normalizeRgb565Hex, parseHexColor, rgbToHex, rgbToHsv } from '@/utils/rgb565Color'
 
 const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ change: [value: string] }>()
@@ -67,20 +58,17 @@ const brightness = ref(1)
 const spectrumDragging = ref(false)
 const hueDragging = ref(false)
 
-const rawColor = computed(() =>
-  rgbToHex(hsvToRgb({ h: hue.value, s: saturation.value, v: brightness.value })),
-)
+const rawColor = computed(() => rgbToHex(hsvToRgb({ h: hue.value, s: saturation.value, v: brightness.value })))
 const quantizedColor = computed(() => normalizeRgb565Hex(rawColor.value))
 const hueColor = computed(() => rgbToHex(hsvToRgb({ h: hue.value, s: 1, v: 1 })))
 const spectrumStyle = computed(() => ({
   backgroundColor: hueColor.value,
-  backgroundImage:
-    'linear-gradient(to bottom, transparent, #000), linear-gradient(to right, #fff, transparent)',
+  backgroundImage: 'linear-gradient(to bottom, transparent, #000), linear-gradient(to right, #fff, transparent)'
 }))
 const spectrumCursorStyle = computed(() => ({
   left: `${saturation.value * 100}%`,
   top: `${(1 - brightness.value) * 100}%`,
-  backgroundColor: quantizedColor.value,
+  backgroundColor: quantizedColor.value
 }))
 const hueCursorStyle = computed(() => ({ left: `${(hue.value / 360) * 100}%` }))
 
@@ -199,7 +187,9 @@ watch(() => props.modelValue, syncFromValue, { immediate: true })
   pointer-events: none;
   transform: translate(-50%, -50%);
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1px #000, 0 1px 4px rgb(0 0 0 / 35%);
+  box-shadow:
+    0 0 0 1px #000,
+    0 1px 4px rgb(0 0 0 / 35%);
 }
 
 .rgb565-spectrum-cursor {
