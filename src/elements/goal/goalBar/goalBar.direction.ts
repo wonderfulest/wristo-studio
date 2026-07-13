@@ -22,6 +22,26 @@ export function getDefaultGoalBarDirection(orientation: GoalBarOrientation): Goa
   return orientation === 'vertical' ? 'bottomToTop' : 'leftToRight'
 }
 
+export function getGoalBarOrientationPatch(
+  current: GoalBarOrientation,
+  next: GoalBarOrientation,
+  width: number,
+  height: number,
+): {
+  orientation: GoalBarOrientation
+  progressDirection: GoalBarProgressDirection
+  width: number
+  height: number
+} | null {
+  if (current === next) return null
+  return {
+    orientation: next,
+    progressDirection: getDefaultGoalBarDirection(next),
+    width: height,
+    height: width,
+  }
+}
+
 export function normalizeGoalBarDirection(value: unknown, legacyAlign?: unknown): GoalBarProgressDirection {
   if (GOAL_BAR_DIRECTIONS.includes(value as GoalBarProgressDirection)) {
     return value as GoalBarProgressDirection

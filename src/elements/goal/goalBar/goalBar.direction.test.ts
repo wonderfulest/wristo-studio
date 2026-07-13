@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getDefaultGoalBarDirection,
+  getGoalBarOrientationPatch,
   getGoalBarProgressBounds,
   normalizeGoalBarDirection,
   resolveGoalBarDirection,
@@ -48,5 +49,27 @@ describe('goalBar direction', () => {
   it('uses an axis-specific default direction', () => {
     expect(getDefaultGoalBarDirection('horizontal')).toBe('leftToRight')
     expect(getDefaultGoalBarDirection('vertical')).toBe('bottomToTop')
+  })
+
+  it('swaps dimensions when changing from horizontal to vertical', () => {
+    expect(getGoalBarOrientationPatch('horizontal', 'vertical', 200, 20)).toEqual({
+      orientation: 'vertical',
+      progressDirection: 'bottomToTop',
+      width: 20,
+      height: 200,
+    })
+  })
+
+  it('swaps dimensions when changing from vertical to horizontal', () => {
+    expect(getGoalBarOrientationPatch('vertical', 'horizontal', 20, 200)).toEqual({
+      orientation: 'horizontal',
+      progressDirection: 'leftToRight',
+      width: 200,
+      height: 20,
+    })
+  })
+
+  it('does not update when selecting the current orientation', () => {
+    expect(getGoalBarOrientationPatch('horizontal', 'horizontal', 200, 20)).toBeNull()
   })
 })
