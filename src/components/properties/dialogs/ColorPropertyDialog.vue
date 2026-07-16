@@ -37,7 +37,10 @@
             { required: true, message: t('property.defaultValueRequired'), trigger: 'change' },
             { validator: validateDefaultValue, trigger: 'change' }
           ]">
-          <ColorPicker v-model="defaultColorHex" @change="handleDefaultColorChange" />
+          <ColorPicker
+            v-model="defaultColorHex"
+            :canvas-colors="canvasColors"
+            @change="handleDefaultColorChange" />
         </el-form-item>
 
         <div class="property-preview-panel">
@@ -109,19 +112,24 @@
 import { computed, ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { usePropertiesStore } from '@/stores/properties'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { buildColorPropertyOptions, normalizeRgb565GarminColor } from './colorPropertyOptions'
+import { collectCanvasColors } from './canvasColorPalette'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const activeOptions = ref([])
 const propertiesStore = usePropertiesStore()
+const elementDataStore = useElementDataStore()
 const isEdit = ref(false)
+
+const canvasColors = computed(() => collectCanvasColors(elementDataStore.elements))
 
 const defaultColorHex = ref('#ffffff')
 

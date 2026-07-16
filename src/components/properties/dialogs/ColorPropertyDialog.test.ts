@@ -18,4 +18,16 @@ describe('ColorPropertyDialog contract', () => {
     expect(source).toContain('option.label')
     expect(source).toContain('option.value')
   })
+
+  it('passes colors collected from canvas elements to its only ColorPicker', () => {
+    expect(source).toContain("import { useElementDataStore } from '@/stores/elementDataStore'")
+    expect(source).toContain("import { collectCanvasColors } from './canvasColorPalette'")
+    expect(source).toContain('const elementDataStore = useElementDataStore()')
+    expect(source).toContain('const canvasColors = computed(() => collectCanvasColors(elementDataStore.elements))')
+
+    const colorPickers = source.match(/<ColorPicker\b[\s\S]*?\/>/g) ?? []
+    expect(colorPickers).toHaveLength(1)
+    expect(colorPickers[0]).toContain(':canvas-colors="canvasColors"')
+    expect(source.match(/:canvas-colors="canvasColors"/g)).toHaveLength(1)
+  })
 })
