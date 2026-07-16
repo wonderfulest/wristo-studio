@@ -37,10 +37,7 @@
             { required: true, message: t('property.defaultValueRequired'), trigger: 'change' },
             { validator: validateDefaultValue, trigger: 'change' }
           ]">
-          <ColorPicker
-            v-model="defaultColorHex"
-            :canvas-colors="canvasColors"
-            @change="handleDefaultColorChange" />
+          <ColorPicker v-model="defaultColorHex" :canvas-colors="canvasColors" @change="handleDefaultColorChange" />
         </el-form-item>
 
         <div class="property-preview-panel">
