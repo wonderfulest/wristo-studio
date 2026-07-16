@@ -650,10 +650,21 @@ function needsSegmentGeometryLayout(patch: Partial<GoalArcElementConfig>) {
   ].some((key) => Object.prototype.hasOwnProperty.call(patch, key))
 }
 
+function isGoalBindingOnlyUpdate(patch: Partial<GoalArcElementConfig>) {
+  const keys = Object.keys(patch)
+  return keys.length > 0 && keys.every((key) => key === 'goalProperty')
+}
+
 export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElementConfig> = {}): void {
   const group = element as unknown as Group
   const canvas = useCanvasStore().canvas
   const elementDataStore = useElementDataStore()
+  const livePositionBefore = {
+    left: (group as any).left,
+    top: (group as any).top,
+  }
+  const updatesLeft = Object.prototype.hasOwnProperty.call(patch, 'left')
+  const updatesTop = Object.prototype.hasOwnProperty.call(patch, 'top')
 
   const ensured = ensureWidget(group)
   const currentConfig = ensured?.config
@@ -696,11 +707,14 @@ export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElem
     snapshotBeforeLayout: groupDebugSnapshot(group),
   })
 
-  const segmentPaintOnlyUpdate = Boolean(currentConfig.segmentMode)
-    && Boolean(nextConfig.segmentMode)
-    && !needsSegmentGeometryLayout(patch)
+  const paintOnlyUpdate = isGoalBindingOnlyUpdate(patch)
+    || (
+      Boolean(currentConfig.segmentMode)
+      && Boolean(nextConfig.segmentMode)
+      && !needsSegmentGeometryLayout(patch)
+    )
 
-  if (segmentPaintOnlyUpdate) {
+  if (paintOnlyUpdate) {
     group.set({
       startAngle: nextConfig.startAngle,
       endAngle: nextConfig.endAngle,
@@ -722,18 +736,34 @@ export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElem
     })
   } else {
     layoutGoalArc(group)
+    const preservedPosition: Record<string, unknown> = {}
+    if (!updatesLeft) preservedPosition.left = livePositionBefore.left
+    if (!updatesTop) preservedPosition.top = livePositionBefore.top
+    if (Object.keys(preservedPosition).length > 0) {
+      // ActiveSelection 中 left/top 是相对坐标。设置项可以重算内部几何，
+      // 但只有显式位置 patch（拖动/缩放提交）才允许改变外部位置。
+      group.set(preservedPosition as any)
+      group.setCoords()
+    }
   }
 
   canvas?.requestRenderAll?.()
 
   try {
     const encoded = encodeGoalArc(group as any)
+    const persisted = {
+      ...encoded,
+      // ActiveSelection 会临时把组内对象的 left/top 变成相对坐标。
+      // 只有显式位置 patch（拖动/缩放提交）才允许改变业务坐标。
+      left: nextConfig.left,
+      top: nextConfig.top,
+    }
     debugGoalArc('update:encoded', {
-      encoded,
+      encoded: persisted,
       before: beforeSnapshot,
       after: groupDebugSnapshot(group),
     })
-    elementDataStore.patchElement(String((group as any).id), encoded as any)
+    elementDataStore.patchElement(String((group as any).id), persisted as any)
   } catch {
     // ignore
   }

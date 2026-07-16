@@ -16,6 +16,13 @@ import { getFontSizeByStep } from '@/utils/fontSize'
 import { normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import {
+  applyStableBusinessPosition,
+  captureBusinessPosition,
+  captureRuntimePosition,
+  restoreUnpatchedRuntimePosition,
+  syncWidgetBusinessPosition,
+} from '@/engine/geometry/elementPositionStability'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -106,13 +113,52 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
     return
   }
-  await handler.update(resolved, patch)
+  const positionPatch = (patch ?? {}) as Record<string, unknown>
+  const elementDataStore = useElementDataStore()
+  // ActiveSelection can expose parent-relative runtime coordinates while the
+  // store keeps canvas/business coordinates. Preserve both coordinate planes.
+  const persistedBefore = id != null
+    ? elementDataStore.getElementConfig?.(String(id)) as unknown as Record<string, unknown> | null
+    : null
+  const runtimePositionBefore = captureRuntimePosition(resolved)
+  const businessPositionBefore = captureBusinessPosition(resolved, persistedBefore)
+
+  try {
+    await handler.update(resolved, patch)
+  } catch (error) {
+    if (restoreUnpatchedRuntimePosition(resolved, runtimePositionBefore, positionPatch)) {
+      useCanvasStore().canvas?.requestRenderAll?.()
+    }
+    throw error
+  }
 
   if (id != null) {
     const canvasStore = useCanvasStore()
     const canvas = canvasStore.canvas
-    const current = (canvas?.getObjects?.() || []).find((o: any) => o?.id != null && String(o.id) === String(id)) as FabricElement | undefined
-    if (current) registerElementInstance(current)
+    const current = ((canvas?.getObjects?.() || []).find(
+      (o: any) => o?.id != null && String(o.id) === String(id),
+    ) as FabricElement | undefined) ?? resolved
+    const positionRestored = restoreUnpatchedRuntimePosition(current, runtimePositionBefore, positionPatch)
+
+    let stableBusinessPosition = applyStableBusinessPosition({}, businessPositionBefore, positionPatch)
+    try {
+      const encoded = handler.encode?.(current)
+      if (encoded) {
+        const stableEncoded = applyStableBusinessPosition(encoded as any, businessPositionBefore, positionPatch)
+        stableBusinessPosition = stableEncoded
+        syncWidgetBusinessPosition(current, stableEncoded)
+        elementDataStore.upsertElement(stableEncoded as AnyElementConfig)
+      } else {
+        syncWidgetBusinessPosition(current, stableBusinessPosition)
+        elementDataStore.patchElement?.(String(id), stableBusinessPosition as Partial<AnyElementConfig>)
+      }
+    } catch {
+      syncWidgetBusinessPosition(current, stableBusinessPosition)
+      elementDataStore.patchElement?.(String(id), stableBusinessPosition as Partial<AnyElementConfig>)
+    }
+
+    if (positionRestored) canvas?.requestRenderAll?.()
+    registerElementInstance(current)
   }
 }
 
