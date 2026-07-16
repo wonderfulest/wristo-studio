@@ -9,7 +9,7 @@
         @blur="handleInputConfirm"
         :class="{
           'transparent-input': !isGradientMode && modelValue === 'transparent',
-          'gradient-input': isGradientMode,
+          'gradient-input': isGradientMode
         }"
         :style="inputStyle" />
     </div>
@@ -18,12 +18,7 @@
         <button type="button" class="tab" :class="{ active: activeMode === 'solid' }" @click="setMode('solid')">
           {{ t('colorPicker.solid') }}
         </button>
-        <button
-          v-if="enableGradient"
-          type="button"
-          class="tab"
-          :class="{ active: activeMode === 'gradient' }"
-          @click="setMode('gradient')">
+        <button v-if="enableGradient" type="button" class="tab" :class="{ active: activeMode === 'gradient' }" @click="setMode('gradient')">
           {{ t('colorPicker.gradient') }}
         </button>
       </div>
@@ -31,10 +26,7 @@
       <div v-if="isGradientMode" class="gradient-editor">
         <div class="gradient-preview" :style="gradientPreviewStyle" />
         <div class="gradient-stops">
-          <label
-            class="gradient-stop"
-            :class="{ active: activeGradientStop === 'start' }"
-            @click="activeGradientStop = 'start'">
+          <label class="gradient-stop" :class="{ active: activeGradientStop === 'start' }" @click="activeGradientStop = 'start'">
             <span>{{ t('colorPicker.gradientStart') }}</span>
             <input
               :value="localGradientStartColor"
@@ -42,10 +34,7 @@
               @keydown.enter.prevent="handleGradientInputConfirm('start', $event)"
               @blur="handleGradientInputConfirm('start', $event)" />
           </label>
-          <label
-            class="gradient-stop"
-            :class="{ active: activeGradientStop === 'end' }"
-            @click="activeGradientStop = 'end'">
+          <label class="gradient-stop" :class="{ active: activeGradientStop === 'end' }" @click="activeGradientStop = 'end'">
             <span>{{ t('colorPicker.gradientEnd') }}</span>
             <input
               :value="localGradientEndColor"
@@ -59,7 +48,7 @@
       <template v-if="pickerView === 'quick'">
         <!-- 颜色矩阵 -->
         <div class="color-matrix">
-          <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({hex: color, value: color})"></div>
+          <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({ hex: color, value: color })"></div>
         </div>
 
         <button type="button" class="more-colors-button" @click="pickerView = 'rgb565'">
@@ -150,15 +139,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits([
-  'update:modelValue',
-  'change',
-  'property-change',
-  'update:gradientEnabled',
-  'update:gradientStartColor',
-  'update:gradientEndColor',
-  'gradientChange',
-])
+const emit = defineEmits(['update:modelValue', 'change', 'property-change', 'update:gradientEnabled', 'update:gradientStartColor', 'update:gradientEndColor', 'gradientChange'])
 
 const propertiesStore = usePropertiesStore()
 
@@ -248,9 +229,7 @@ const activeGradientStop = ref('start')
 const localGradientStartColor = ref(normalizeOpaqueColor(props.gradientStartColor) || '#FFFFFF')
 const localGradientEndColor = ref(normalizeOpaqueColor(props.gradientEndColor) || '#00FFFF')
 const isGradientMode = computed(() => props.enableGradient && activeMode.value === 'gradient')
-const visibleColorMatrix = computed(() => isGradientMode.value
-  ? colorMatrix.filter((color) => color !== 'transparent')
-  : colorMatrix)
+const visibleColorMatrix = computed(() => (isGradientMode.value ? colorMatrix.filter((color) => color !== 'transparent') : colorMatrix))
 
 // 计算属性：获取所有颜色属性
 const colorProperties = computed(() => {
@@ -263,15 +242,11 @@ const colorProperties = computed(() => {
       propertyKey: key
     }))
 })
-const visibleColorProperties = computed(() => isGradientMode.value
-  ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex))
-  : colorProperties.value)
+const visibleColorProperties = computed(() => (isGradientMode.value ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex)) : colorProperties.value))
 
 const activeRgb565Color = computed(() => {
   if (!isGradientMode.value) return normalizeOpaqueColor(inputValue.value) || '#FFFFFF'
-  return activeGradientStop.value === 'start'
-    ? localGradientStartColor.value
-    : localGradientEndColor.value
+  return activeGradientStop.value === 'start' ? localGradientStartColor.value : localGradientEndColor.value
 })
 
 // Helper: convert hex string to RGB
@@ -280,7 +255,7 @@ const hexToRgb = (hex) => {
   if (typeof hex !== 'string') {
     hex = String(hex)
   }
-  const h = hex.startsWith('#') ? hex.slice(1) : (hex.startsWith('0x') ? hex.slice(2) : hex)
+  const h = hex.startsWith('#') ? hex.slice(1) : hex.startsWith('0x') ? hex.slice(2) : hex
   if (h.length !== 6) return null
   const r = parseInt(h.slice(0, 2), 16)
   const g = parseInt(h.slice(2, 4), 16)
@@ -291,21 +266,24 @@ const hexToRgb = (hex) => {
 // Dynamic text color for the input based on luminance of background color
 const textColor = computed(() => {
   if (props.modelValue === 'transparent') return '#222222'
-  const current = typeof props.modelValue === 'string' && props.modelValue
-    ? (props.modelValue.startsWith('#') ? props.modelValue : (props.modelValue.startsWith('0x') ? `#${props.modelValue.slice(2)}` : hexColor.value))
-    : hexColor.value
+  const current =
+    typeof props.modelValue === 'string' && props.modelValue
+      ? props.modelValue.startsWith('#')
+        ? props.modelValue
+        : props.modelValue.startsWith('0x')
+          ? `#${props.modelValue.slice(2)}`
+          : hexColor.value
+      : hexColor.value
   const rgb = hexToRgb(current)
   if (!rgb) return '#222222'
   const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255
   return luminance < 0.5 ? '#dddddd' : '#222222'
 })
 
-const displayInputValue = computed(() => isGradientMode.value
-  ? `${localGradientStartColor.value} - ${localGradientEndColor.value}`
-  : inputValue.value)
+const displayInputValue = computed(() => (isGradientMode.value ? `${localGradientStartColor.value} - ${localGradientEndColor.value}` : inputValue.value))
 
 const gradientPreviewStyle = computed(() => ({
-  background: `linear-gradient(90deg, ${localGradientStartColor.value}, ${localGradientEndColor.value})`,
+  background: `linear-gradient(90deg, ${localGradientStartColor.value}, ${localGradientEndColor.value})`
 }))
 
 const inputStyle = computed(() => {
@@ -313,12 +291,12 @@ const inputStyle = computed(() => {
     return {
       background: gradientPreviewStyle.value.background,
       color: 'transparent',
-      textShadow: 'none',
+      textShadow: 'none'
     }
   }
   return {
     backgroundColor: props.modelValue === 'transparent' ? 'transparent' : props.modelValue,
-    color: props.modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor.value,
+    color: props.modelValue === 'transparent' ? 'var(--studio-text-muted)' : textColor.value
   }
 })
 
@@ -326,7 +304,7 @@ const emitGradientChange = () => {
   emit('gradientChange', {
     enabled: isGradientMode.value,
     startColor: localGradientStartColor.value,
-    endColor: localGradientEndColor.value,
+    endColor: localGradientEndColor.value
   })
 }
 
@@ -406,7 +384,7 @@ function normalizeOpaqueColor(raw) {
   if (/^[0-9A-Fa-f]{6}$/.test(value)) return `#${value.toUpperCase()}`
   return null
 }
-  
+
 // 监听点击外部关闭
 const handleOutsideClick = (event) => {
   if (!event.target.closest('.color-picker-wrapper')) {
@@ -432,9 +410,7 @@ const positionColorPicker = () => {
   const availableHeight = openAbove ? spaceAbove : spaceBelow
   const maxHeight = Math.max(0, Math.min(naturalHeight, availableHeight || viewportHeight - viewportPadding * 2))
 
-  let top = openAbove
-    ? anchorRect.top - popupGap - maxHeight
-    : anchorRect.bottom + popupGap
+  let top = openAbove ? anchorRect.top - popupGap - maxHeight : anchorRect.bottom + popupGap
   top = Math.max(viewportPadding, Math.min(top, viewportHeight - viewportPadding - maxHeight))
 
   let left = anchorRect.left
@@ -617,10 +593,8 @@ const togglePicker = () => {
 
 .color-input input.transparent-input {
   background-image:
-    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
+    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%), linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%), linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
   background-size: 8px 8px;
   background-position:
     0 0,
@@ -746,10 +720,8 @@ const togglePicker = () => {
 
 .color-cell[style*='transparent'] {
   background-image:
-    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
+    linear-gradient(45deg, var(--studio-border-strong) 25%, transparent 25%), linear-gradient(-45deg, var(--studio-border-strong) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--studio-border-strong) 75%), linear-gradient(-45deg, transparent 75%, var(--studio-border-strong) 75%);
   background-size: 8px 8px;
   background-position:
     0 0,
