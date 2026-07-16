@@ -4,21 +4,22 @@ export interface CanvasColorSource {
   config?: unknown
 }
 
-const collectColorsFromValue = (value: unknown, colors: Set<string>): void => {
+const collectColorsFromValue = (value: unknown, colors: Set<string>, fieldName?: string): void => {
   if (typeof value === 'string') {
+    if (fieldName?.endsWith('Property')) return
     if (parseHexColor(value)) colors.add(normalizeRgb565Hex(value))
     return
   }
 
   if (Array.isArray(value)) {
-    value.forEach((item) => collectColorsFromValue(item, colors))
+    value.forEach((item) => collectColorsFromValue(item, colors, fieldName))
     return
   }
 
   if (value && typeof value === 'object') {
     const prototype = Object.getPrototypeOf(value)
     if (prototype === Object.prototype || prototype === null) {
-      Object.values(value).forEach((item) => collectColorsFromValue(item, colors))
+      Object.entries(value).forEach(([key, item]) => collectColorsFromValue(item, colors, key))
     }
   }
 }
