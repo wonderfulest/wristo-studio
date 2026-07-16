@@ -27,7 +27,10 @@ describe('ColorPropertyDialog contract', () => {
 
     const colorPickers = source.match(/<ColorPicker\b[\s\S]*?\/>/g) ?? []
     expect(colorPickers).toHaveLength(1)
-    expect(colorPickers[0]).toContain(':canvas-colors="canvasColors"')
+    const colorPicker = colorPickers[0]
+    expect(colorPicker).toContain('v-model="defaultColorHex"')
+    expect(colorPicker).toContain(':canvas-colors="canvasColors"')
+    expect(colorPicker).toContain('@change="handleDefaultColorChange"')
     expect(source.match(/:canvas-colors="canvasColors"/g)).toHaveLength(1)
   })
 })
