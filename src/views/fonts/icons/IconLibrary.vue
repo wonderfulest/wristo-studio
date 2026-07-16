@@ -329,6 +329,7 @@ import {
 } from '@/api/wristo/iconGlyph'
 import { autoIconFontBuild, getIconFontBuildStatus } from '@/api/wristo/fonts'
 import type { IconFontBuildStatusVO } from '@/types/font'
+import { hasIconFontSlugConflict } from './iconFontSlugAvailability'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -633,14 +634,7 @@ const openRenameDialog = async (glyph: IconGlyphVO) => {
   const naming = renameNamingRef.value as any
   if (!naming) return
 
-  const code = glyph.glyphCode || ''
-  const parts = code.split('-').filter(Boolean)
-  const [series, use, style, variant] = parts
-
-  if (series != null) naming.seriesPart.value = series
-  if (use != null) naming.usePart.value = use
-  if (style != null) naming.stylePart.value = style
-  if (variant != null) naming.variantPart.value = variant
+  naming.setName?.(glyph.glyphCode || '')
 }
 
 const handleRenameConfirm = async () => {
@@ -658,6 +652,10 @@ const handleRenameConfirm = async () => {
     ElMessage.error(t('font.enterValidName'))
     return
   }
+  if (await hasIconFontSlugConflict(code, renameOriginalGlyphCode.value)) {
+    ElMessage.error(t('font.iconSlugExists'))
+    return
+  }
   if (renameOriginalGlyphCode.value && code !== renameOriginalGlyphCode.value) {
     const status = await loadGlyphBuildStatusForRename(renameOriginalGlyphCode.value)
     if (hasGeneratedTtf(status)) {
@@ -670,7 +668,6 @@ const handleRenameConfirm = async () => {
   const dto: IconGlyphUpdateDTO = {
     id: renameGlyphId.value,
     glyphCode: code,
-    style: namingPayload?.variant || namingPayload?.style || '',
   }
 
   try {

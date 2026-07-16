@@ -6,9 +6,11 @@
           <span class="naming-required">*</span>
           {{ t('font.nameLabel') }}
         </div>
-        <div class="naming-subtitle">{{ t('font.nameHelper', { use: type }) }}</div>
+        <div class="naming-subtitle">
+          {{ t(isSimpleIconName ? 'font.iconNameHelper' : 'font.nameHelper', { use: type }) }}
+        </div>
       </div>
-      <el-button size="small" text class="naming-random" @click="randomizeName">
+      <el-button v-if="!isSimpleIconName" size="small" text class="naming-random" @click="randomizeName">
         <el-icon><Refresh /></el-icon>
         {{ t('font.randomName') }}
       </el-button>
@@ -18,7 +20,19 @@
       <span class="naming-preview-value">{{ namingPreview || t('font.namePlaceholder') }}</span>
     </div>
 
-    <div class="naming-bar">
+    <label v-if="isSimpleIconName" class="naming-field naming-field--simple">
+      <span>{{ t('font.iconSlugLabel') }}</span>
+      <el-input
+        v-model="fontName"
+        size="small"
+        clearable
+        :maxlength="MAX_ICON_FONT_SLUG_LENGTH"
+        :placeholder="t('font.iconNamePlaceholder')"
+        @blur="normalizeAllParts"
+      />
+    </label>
+
+    <div v-else class="naming-bar">
       <label class="naming-field">
         <span>{{ t('font.seriesLabel') }}</span>
         <el-input
@@ -74,7 +88,9 @@
     </div>
 
     <div class="naming-tip">
-      <div class="naming-tip-line">{{ t('font.namingAutoSlug') }}</div>
+      <div class="naming-tip-line">
+        {{ t(isSimpleIconName ? 'font.iconNamingAutoSlug' : 'font.namingAutoSlug') }}
+      </div>
       <div class="naming-examples">
         <button
           v-for="example in examples"
@@ -86,7 +102,7 @@
           {{ example }}
         </button>
       </div>
-      <div class="naming-tip-line naming-tip-line--muted">
+      <div v-if="!isSimpleIconName" class="naming-tip-line naming-tip-line--muted">
         {{ t('font.namingShortRule', { format: '{series}-{use}-{style}-{variant}' }) }}
       </div>
     </div>
@@ -97,6 +113,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
+import { MAX_ICON_FONT_SLUG_LENGTH, normalizeIconFontSlug } from '@/utils/iconFontSlug'
 
 const { t } = useI18n()
 
@@ -104,6 +121,8 @@ const props = defineProps<{
   type: 'number' | 'text' | 'icon'
 }>()
 
+const isSimpleIconName = computed(() => props.type === 'icon')
+const fontName = ref('')
 const seriesPart = ref('')
 const usePart = ref<string>(props.type || 'number')
 const stylePart = ref('mono')
@@ -115,7 +134,7 @@ const seriesOptions = ['aura', 'neon', 'luna', 'nova', 'pixel', 'orbit', 'zen', 
 
 const examples = computed(() => {
   if (props.type === 'icon') {
-    return ['hand-drawn-doodle-icon-round-semi-bold', 'aura-icon-mono-regular']
+    return ['animal-cute', 'ink-wash-mono', 'wristo']
   }
   if (props.type === 'text') {
     return ['luna-text-round-regular', 'muse-text-sharp-light']
@@ -134,6 +153,10 @@ const makeRandomSuffix = () => {
 }
 
 const randomizeName = () => {
+  if (isSimpleIconName.value) {
+    fontName.value = ''
+    return
+  }
   seriesPart.value = `${pickRandom(seriesOptions)}-${makeRandomSuffix()}`
   stylePart.value = pickRandom(styleOptions)
   variantPart.value = pickRandom(variantOptions)
@@ -154,6 +177,10 @@ const slugifyPart = (value: string, fallback = '') => {
 }
 
 const normalizeAllParts = () => {
+  if (isSimpleIconName.value) {
+    fontName.value = normalizeIconFontSlug(fontName.value)
+    return
+  }
   seriesPart.value = slugifyPart(seriesPart.value)
   usePart.value = slugifyPart(usePart.value, props.type || 'number')
   stylePart.value = slugifyPart(stylePart.value, 'mono')
@@ -161,6 +188,7 @@ const normalizeAllParts = () => {
 }
 
 const namingPreview = computed(() => {
+  if (isSimpleIconName.value) return normalizeIconFontSlug(fontName.value)
   const s = slugifyPart(seriesPart.value)
   if (!s) return ''
   const u = slugifyPart(usePart.value, props.type || 'number')
@@ -170,10 +198,10 @@ const namingPreview = computed(() => {
 })
 
 const normalizedParts = computed(() => ({
-  series: slugifyPart(seriesPart.value),
-  use: slugifyPart(usePart.value, props.type || 'number'),
-  style: slugifyPart(stylePart.value, 'mono'),
-  variant: slugifyPart(variantPart.value, 'regular'),
+  series: isSimpleIconName.value ? '' : slugifyPart(seriesPart.value),
+  use: isSimpleIconName.value ? 'icon' : slugifyPart(usePart.value, props.type || 'number'),
+  style: isSimpleIconName.value ? '' : slugifyPart(stylePart.value, 'mono'),
+  variant: isSimpleIconName.value ? '' : slugifyPart(variantPart.value, 'regular'),
 }))
 
 const getNamingPayload = () => ({
@@ -189,10 +217,14 @@ watch(
 )
 
 onMounted(() => {
-  randomizeName()
+  if (!isSimpleIconName.value) randomizeName()
 })
 
 const applyExample = (example: string) => {
+  if (isSimpleIconName.value) {
+    fontName.value = normalizeIconFontSlug(example)
+    return
+  }
   const suffix = `-${props.type}-`
   const index = example.indexOf(suffix)
   if (index < 0) return
@@ -205,8 +237,18 @@ const applyExample = (example: string) => {
   normalizeAllParts()
 }
 
+const setName = (value: string) => {
+  if (isSimpleIconName.value) {
+    fontName.value = String(value || '')
+    return
+  }
+  seriesPart.value = String(value || '')
+}
+
 // 暴露给父组件，如果后面需要用到命名结果
 defineExpose({
+  fontName,
+  setName,
   namingPreview,
   normalizedParts,
   seriesPart,
@@ -310,6 +352,10 @@ defineExpose({
 
 .naming-field--use :deep(.el-input__wrapper) {
   background: color-mix(in srgb, var(--studio-surface-soft) 78%, var(--studio-surface));
+}
+
+.naming-field--simple {
+  width: 100%;
 }
 
 .naming-required {

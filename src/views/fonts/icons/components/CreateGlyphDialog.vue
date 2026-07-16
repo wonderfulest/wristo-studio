@@ -19,6 +19,7 @@ import { ElMessage } from 'element-plus'
 import type { IconGlyphCreateDTO } from '@/api/wristo/iconGlyph'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
+import { hasIconFontSlugConflict } from '../iconFontSlugAvailability'
 
 const { t } = useI18n()
 
@@ -41,20 +42,21 @@ const model = computed({
 const localForm = reactive<IconGlyphCreateDTO>({ glyphCode: '', style: '', isDefault: 0, isActive: 1 })
 
 const namingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
+const checkingSlug = ref(false)
 
 watch(() => props.form, (f) => {
   if (f) Object.assign(localForm, { glyphCode: f.glyphCode ?? '', style: f.style ?? '', isDefault: 0, isActive: 1 })
 }, { immediate: true })
 
-const loading = computed(() => !!props.loading)
+const loading = computed(() => !!props.loading || checkingSlug.value)
 
 watch(model, async (visible) => {
   if (!visible) return
   await nextTick()
-  ;(namingRef.value as any)?.randomizeName?.()
+  ;(namingRef.value as any)?.setName?.('')
 })
 
-const onConfirm = () => {
+const onConfirm = async () => {
   const naming = namingRef.value as any
   naming?.normalizeAllParts?.()
   const namingPayload = naming?.getNamingPayload?.()
@@ -64,12 +66,22 @@ const onConfirm = () => {
     return
   }
 
-  const payload: IconGlyphCreateDTO = {
-    ...localForm,
-    glyphCode: code,
-    style: namingPayload?.variant || namingPayload?.style || '',
-  }
+  try {
+    checkingSlug.value = true
+    if (await hasIconFontSlugConflict(code)) {
+      ElMessage.error(t('font.iconSlugExists'))
+      return
+    }
 
-  emit('confirm', payload)
+    const payload: IconGlyphCreateDTO = {
+      ...localForm,
+      glyphCode: code,
+      style: localForm.style,
+    }
+
+    emit('confirm', payload)
+  } finally {
+    checkingSlug.value = false
+  }
 }
 </script>
