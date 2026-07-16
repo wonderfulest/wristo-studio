@@ -66,6 +66,21 @@
           {{ t('colorPicker.moreColors') }}
         </button>
 
+        <div v-if="canvasColors.length > 0" class="canvas-colors">
+          <div class="canvas-colors-title">{{ t('colorPicker.canvasColors') }}</div>
+          <div class="canvas-colors-grid">
+            <button
+              v-for="color in canvasColors"
+              :key="color"
+              type="button"
+              class="canvas-color-button"
+              :title="color"
+              :aria-label="color"
+              :style="{ backgroundColor: color }"
+              @click="selectColor({ hex: color, value: color })" />
+          </div>
+        </div>
+
         <!-- 当前使用的颜色 -->
         <div v-if="colorProperties.length > 0" class="recent-colors">
           <div class="recent-colors-header">
@@ -128,6 +143,10 @@ const props = defineProps({
   gradientEndColor: {
     type: String,
     default: '#00FFFF'
+  },
+  canvasColors: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -846,6 +865,38 @@ const togglePicker = () => {
 .rgb565-back-button:hover {
   border-color: var(--studio-primary);
   background: var(--studio-primary-soft);
+}
+
+.canvas-colors {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--studio-border);
+}
+
+.canvas-colors-title {
+  margin-bottom: 8px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.canvas-colors-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.canvas-color-button {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.canvas-color-button:hover,
+.canvas-color-button:focus-visible {
+  outline: 2px solid var(--studio-primary);
+  outline-offset: 1px;
 }
 
 .rgb565-picker-view {

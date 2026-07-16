@@ -44,3 +44,18 @@ describe('ColorPicker RGB565 extension contract', () => {
     expect(source).toContain('selectColor({ hex: color, value: color })')
   })
 })
+
+describe('ColorPicker canvas colors contract', () => {
+  const source = readFileSync(new URL('./index.vue', import.meta.url), 'utf8')
+
+  it('exposes canvas colors only when the caller provides them', () => {
+    expect(source).toContain('canvasColors:')
+    expect(source).toContain('v-if="canvasColors.length > 0"')
+  })
+
+  it('renders canvas colors through the existing static color path', () => {
+    expect(source).toContain("t('colorPicker.canvasColors')")
+    expect(source).toContain('class="canvas-colors-grid"')
+    expect(source).toContain('selectColor({ hex: color, value: color })')
+  })
+})
