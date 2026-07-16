@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest'
+// @vitest-environment jsdom
+import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { toColorSelectionPayload } from './colorSelection'
+
+vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('@/stores/properties', () => ({
+  usePropertiesStore: () => ({ properties: {}, setLastSelectedColor: vi.fn() })
+}))
+
+import ColorPicker from './index.vue'
 
 describe('toColorSelectionPayload', () => {
   it('retains the property key for a project color variable', () => {
@@ -29,7 +39,7 @@ describe('toColorSelectionPayload', () => {
 })
 
 describe('ColorPicker RGB565 extension contract', () => {
-  const source = readFileSync(new URL('./index.vue', import.meta.url), 'utf8')
+  const source = readFileSync(resolve(process.cwd(), 'src/components/color-picker/index.vue'), 'utf8')
 
   it('keeps quick colors as default and exposes RGB565 as an extension', () => {
     expect(source).toContain("const pickerView = ref('quick')")
@@ -46,16 +56,38 @@ describe('ColorPicker RGB565 extension contract', () => {
 })
 
 describe('ColorPicker canvas colors contract', () => {
-  const source = readFileSync(new URL('./index.vue', import.meta.url), 'utf8')
+  it('does not render canvas colors by default', async () => {
+    const wrapper = mount(ColorPicker)
 
-  it('exposes canvas colors only when the caller provides them', () => {
-    expect(source).toContain('canvasColors:')
-    expect(source).toContain('v-if="canvasColors.length > 0"')
+    await wrapper.find('.color-input').trigger('click')
+
+    expect(wrapper.find('.canvas-colors').exists()).toBe(false)
+    wrapper.unmount()
   })
 
-  it('renders canvas colors through the existing static color path', () => {
-    expect(source).toContain("t('colorPicker.canvasColors')")
-    expect(source).toContain('class="canvas-colors-grid"')
-    expect(source).toContain('selectColor({ hex: color, value: color })')
+  it('renders one dedicated button for each provided canvas color', async () => {
+    const canvasColors = ['#123456', '#ABCDEF']
+    const wrapper = mount(ColorPicker, { props: { canvasColors } })
+
+    await wrapper.find('.color-input').trigger('click')
+
+    expect(wrapper.find('.canvas-colors-title').text()).toBe('colorPicker.canvasColors')
+    expect(wrapper.find('.canvas-colors-grid').exists()).toBe(true)
+    const buttons = wrapper.findAll('button.canvas-color-button')
+    expect(buttons).toHaveLength(2)
+    expect(buttons.map((button) => button.attributes('aria-label'))).toEqual(canvasColors)
+    wrapper.unmount()
+  })
+
+  it('emits the selected canvas color through the static color events', async () => {
+    const wrapper = mount(ColorPicker, { props: { canvasColors: ['#123456', '#ABCDEF'] } })
+    await wrapper.find('.color-input').trigger('click')
+
+    await wrapper.findAll('button.canvas-color-button')[1].trigger('click')
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([['#ABCDEF']])
+    expect(wrapper.emitted('change')).toEqual([['#ABCDEF']])
+    expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: '' }]])
+    wrapper.unmount()
   })
 })
