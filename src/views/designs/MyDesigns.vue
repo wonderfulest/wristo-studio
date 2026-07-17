@@ -16,6 +16,7 @@
         <el-option :label="t('common.all')" value="" />
         <el-option :label="t('project.launched')" value="launched" />
         <el-option :label="t('project.notLaunched')" value="not_launched" />
+        <el-option :label="t('project.updateAvailable')" value="update_available" />
       </el-select>
 
       <el-select v-model="sortField" :placeholder="t('project.sortField')" @change="handleSortChange" class="sort-field-filter">
@@ -208,7 +209,7 @@ const isDesignStatusValue = (value: unknown): value is DesignStatus | '' => {
 }
 
 const isLaunchStatusValue = (value: unknown): value is LaunchStatus | '' => {
-  return value === '' || value === 'launched' || value === 'not_launched'
+  return value === '' || value === 'launched' || value === 'not_launched' || value === 'update_available'
 }
 
 const isDesignSortField = (value: unknown): value is DesignSortField => {
