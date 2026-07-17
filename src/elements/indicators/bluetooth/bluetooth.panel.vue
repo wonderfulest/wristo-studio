@@ -68,6 +68,15 @@ const availableFontSizes = computed(() => {
   return fontSizes.filter((size) => size <= 96)
 })
 
+watch(
+  () => currentModel.value?.fontSize,
+  (newFontSize) => {
+    if (newFontSize != null) {
+      fontSize.value = Number(newFontSize)
+    }
+  },
+)
+
 // 更新颜色
 const updateColor = (newColor: string) => {
   // 新通道：优先走 applyPatch，由上层统一更新 DataStore + Fabric
