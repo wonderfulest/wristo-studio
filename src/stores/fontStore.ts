@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
+import { cache } from 'fabric'
 import { getFontBySlug, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
 import { useUserStore } from '@/stores/user'
+import { useCanvasStore } from '@/stores/canvasStore'
 import { ApiResponse } from '@/types/api/api'
 import { DesignFontVO } from '@/types/font'
 import { DesignElement } from '@/types/api/design'
@@ -55,6 +57,27 @@ export interface FontStoreState {
 
 // 初始为空，启动后通过 getSystemFonts 动态填充
 const BUILTIN_FONTS: FontStoreState['builtinFonts'] = {}
+
+const refreshLoadedFontMetrics = (fontFamily: string): void => {
+  cache.clearFontCache(fontFamily)
+
+  const canvas = useCanvasStore().canvas as any
+  if (!canvas?.getObjects) return
+
+  const normalizedFontFamily = fontFamily.trim().toLowerCase()
+  let refreshed = false
+  canvas.getObjects().forEach((object: any) => {
+    if (String(object?.fontFamily || '').trim().toLowerCase() !== normalizedFontFamily) return
+    if (typeof object.initDimensions !== 'function') return
+
+    object.initDimensions()
+    object.setCoords?.()
+    object.dirty = true
+    refreshed = true
+  })
+
+  if (refreshed) canvas.requestRenderAll?.()
+}
 
 export const useFontStore = defineStore<'fontStore', FontStoreState, {
   // getters
@@ -221,6 +244,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           
           if (isAvailable) {
             this.loadedFonts.add(slug)
+            refreshLoadedFontMetrics(slug)
             return true
           }
           return false

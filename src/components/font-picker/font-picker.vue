@@ -462,9 +462,9 @@ const openNumberGlyphEditor = () => {
 }
 
 // 选择字体
-const ensureFontBySlug = async (slug: string, family: string) => {
+const ensureFontBySlug = async (slug: string) => {
   try {
-    if (document.fonts && (document as any).fonts.check && (document as any).fonts.check(`12px ${family}`)) return
+    if (fontStore.loadedFonts.has(slug)) return
     let url = ''
     try {
       const by = await getFontBySlug(slug)
@@ -503,16 +503,16 @@ const selectFont = async (font: FontItem) => {
       } catch {
         return
       }
-      await ensureFontBySlug(font.value, font.family)
+      await ensureFontBySlug(font.value)
       iconFontStrategyStore.updateAllIconFont(font.value)
     } else if (!current) {
       iconFontStrategyStore.setIconFontSlug(font.value)
-      await ensureFontBySlug(font.value, font.family)
+      await ensureFontBySlug(font.value)
     } else {
-      await ensureFontBySlug(font.value, font.family)
+      await ensureFontBySlug(font.value)
     }
   } else {
-    await ensureFontBySlug(font.value, font.family)
+    await ensureFontBySlug(font.value)
   }
 
   emit('update:modelValue', font.value)

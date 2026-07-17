@@ -24,9 +24,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
-import { useElementDataStore } from '@/stores/elementDataStore'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
+import { resolveLinePanelColor, resolveLinePanelWidth } from './line.panelModel'
 
 const props = defineProps<{
   element?: any
@@ -34,24 +34,16 @@ const props = defineProps<{
   applyPatch?: (patch: Record<string, any>) => void
 }>()
 
-const elementDataStore = useElementDataStore()
 const { t } = useI18n()
 
-// 优先使用 store 中的数据（响应式），其次使用传入的 element
-// store.elements 是 ElementConfigSnapshot[]，实际数据在 .config 中
 const currentModel = computed<any>(() => {
-  const id = props.element?.id
-  if (id) {
-    const fromStore = elementDataStore.elements.find((e: any) => e.id === id)
-    if (fromStore) return fromStore.config ?? {}
-  }
-  return props.element ?? {}
+  return props.config ?? props.element ?? {}
 })
 
-// 计算属性映射：Line 使用 Rect 模拟，颜色存在 fill，线宽存在 height
+// 业务配置使用 stroke/strokeWidth；没有配置快照时才回退到 Fabric Rect 的 fill/height。
 const strokeProxy = computed<string>({
   get() {
-    return (currentModel.value.fill as string) ?? '#000000'
+    return resolveLinePanelColor(currentModel.value)
   },
   set(v: string) {
     applyUpdate({ stroke: v })
@@ -60,11 +52,9 @@ const strokeProxy = computed<string>({
 
 const strokeWidthProxy = computed<number>({
   get() {
-    console.log('strokeWidthProxy get', currentModel.value.height)
-    return Math.round(Number(currentModel.value.height ?? 2))
+    return resolveLinePanelWidth(currentModel.value)
   },
   set(v: number) {
-    console.log('strokeWidthProxy set', v)
     applyUpdate({ strokeWidth: v })
   },
 })
@@ -77,16 +67,6 @@ const applyUpdate = (patch: Record<string, any>) => {
 
   if (props.element) {
     elementManager.updateElement(props.element as any, patch)
-    // 立即本地更新 store，确保面板响应式同步
-    // Line 元素使用 height 存线宽，fill 存颜色
-    const id = props.element.id
-    if (id) {
-      const storePatch: Record<string, any> = {}
-      if (patch.strokeWidth !== undefined) storePatch.height = patch.strokeWidth
-      if (patch.stroke !== undefined) storePatch.fill = patch.stroke
-      if (patch.opacity !== undefined) storePatch.opacity = patch.opacity
-      elementDataStore.patchElement(String(id), storePatch)
-    }
   }
 }
 </script>
