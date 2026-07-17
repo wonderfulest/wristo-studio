@@ -29,14 +29,6 @@
         @change="updateGoalProperty"
       />
 
-      <el-form-item v-if="isSameTypeLayer && !isTimeGroup" :label="t('elementSettings.alignment')" required>
-        <AlignXButtons
-          :options="originXOptions"
-          v-model="originX"
-          @update:modelValue="updateOriginX"
-        />
-      </el-form-item>
-
       <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.fontSize')" required>
         <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
       </el-form-item>
@@ -67,16 +59,15 @@ import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
-import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
 import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
+import { applyGroupAlignment } from './groupAlignment'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
@@ -106,8 +97,12 @@ const groupAlignOptions: Array<{ type: AlignType; icon: string; labelKey: string
 ]
 
 const handleGroupAlign = (type: AlignType) => {
-  if (props.elements.length <= 1) return
-  alignSelection(type)
+  applyGroupAlignment(
+    props.elements,
+    type,
+    alignSelection,
+    (id, patch) => elementDataStore.patchElement(id, patch as any),
+  )
 }
 
 const getElementByType = (type: string): FabricElement | undefined => {
@@ -124,7 +119,6 @@ const goalArcElement = computed(() => getElementByType('goalArc'))
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
 const fontFamily = ref<string>(props.elements[0].fontFamily || 'roboto-condensed-regular')
-const originX = ref<string>(String(props.elements[0].originX || 'center'))
 
 const dataProperty = ref<string>('')
 const goalProperty = ref<string>('')
@@ -293,10 +287,6 @@ const isUpdateColor = computed(() => {
   return true
 })
 
-const isTimeGroup = computed(() => {
-  return props.elements.every((element) => element.eleType === 'time')
-})
-
 const isSameTypeLayer = computed(() => {
   if (props.elements.length <= 1) {
     return true
@@ -361,23 +351,6 @@ const updateFontFamily = () => {
   }
   baseStore.canvas?.renderAll()
   commitHistory('font-family')
-}
-
-const updateOriginX = (originXVal: string) => {
-  switch (originXVal) {
-    case 'left':
-      alignSelection('left')
-      break
-    case 'center':
-      alignSelection('center')
-      break
-    case 'right':
-      alignSelection('right')
-      break
-    default:
-      break
-  }
-  originX.value = originXVal
 }
 
 const showDataProperty = computed(() => {
