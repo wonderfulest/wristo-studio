@@ -163,8 +163,7 @@
           type="info"
           size="small"
           @click="emit('submit', design)"
-          :loading="loadingStates.submit.has(design.id)"
-          :disabled="!!design.product?.packagingLog?.rank">
+          :loading="loadingStates.submit.has(design.id)">
           <el-icon><Box /></el-icon>
           {{ t('card.buildIq') }}
         </el-button>
@@ -199,6 +198,7 @@ import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
+import { shouldShowBuildIqButton } from './designCardActions'
 
 interface LoadingStates {
   submit: Set<number>
@@ -340,28 +340,7 @@ const showBuildPrgButton = computed(() => {
 })
 
 const showBuildIqButton = computed(() => {
-  const product = design.value.product as any
-  if (!product) return false
-
-  const hasQueue = !!product.packagingLog?.rank
-  const designStatus = design.value.designStatus
-  const productReleaseUpdatedAtRaw = (product.release as { updatedAt?: string | number } | undefined)?.updatedAt
-  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
-
-  // 没有设计更新时间时，不允许构建 IQ
-  if (!designUpdatedAtRaw) return false
-
-  const designTs = +new Date(designUpdatedAtRaw)
-  const releaseTs = productReleaseUpdatedAtRaw ? +new Date(productReleaseUpdatedAtRaw) : null
-
-  return (
-    !hasQueue &&
-    (
-      designStatus === 'draft' ||
-      // 如果还没有 release 记录，认为需要构建；否则比较时间戳
-      releaseTs === null || designTs > releaseTs
-    )
-  )
+  return shouldShowBuildIqButton(design.value.product)
 })
 
 const showPublishButton = computed(() => {
