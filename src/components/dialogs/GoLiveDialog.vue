@@ -66,7 +66,7 @@
             <ImageUpload
               v-model="form.rawImageId"
               :aspect-code="IMAGE_ASPECT_CODE.GENERAL"
-              :preview-url="form.rawImageUrl"
+              :preview-url="form.previewImageUrl || form.rawImageUrl"
               @uploaded="onRawImageUploaded"
             />
           </div>
@@ -107,7 +107,7 @@
 
       <!-- Product images -->
       <el-form-item :label="t('goLive.productImages')">
-        <ProductImagesEditor v-model="form.productImages" :max="5" />
+              <ProductImagesEditor v-model="form.productImages" :max="8" />
       </el-form-item>
 
       <!-- Garmin Store URL -->
@@ -257,6 +257,7 @@ const form = reactive({
   // Hero / raw image URLs used by goLive payload
   garminImageUrl: '',
   rawImageUrl: '',
+  previewImageUrl: '',
   bannerImageUrl: '',
   garminStoreUrl: '',
   youtubeUrl: '',
@@ -269,7 +270,7 @@ const form = reactive({
   heroImageId: undefined as number | undefined,
   rawImageId: undefined as number | undefined,
   // productImages: keep id + imageUrl, used by ProductImagesEditor and goLive payload
-  productImages: [] as { id: number; imageUrl: string }[]
+  productImages: [] as { id: number; imageUrl: string; previewUrl?: string; downloadUrl?: string }[]
 })
 
 const messageStore = useMessageStore()
@@ -309,6 +310,7 @@ const loadDesign = (design: Design) => {
   if (design.product) {
     form.garminImageUrl = design.product.garminImageUrl || ''
     form.rawImageUrl = design.product.rawImageUrl || ''
+    form.previewImageUrl = (design.product as any).previewImageUrl || ''
     form.bannerImageUrl = design.product.bannerImageUrl || ''
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.youtubeUrl = design.product.youtubeUrl || ''
@@ -342,7 +344,7 @@ const loadDesign = (design: Design) => {
             return { id: imageId, imageUrl }
           })
           .filter((item): item is { id: number; imageUrl: string } => !!item)
-          .slice(0, 5)
+          .slice(0, 8)
       : []
   } else {
     // 重置为默认值
@@ -389,6 +391,8 @@ const handleConfirm = async () => {
       description: form.description.trim(),
       heroImage: form.garminImageUrl.trim(),
       rawImage: form.rawImageUrl.trim(),
+      previewImage: form.previewImageUrl.trim(),
+      previewImageUrl: form.previewImageUrl.trim(),
       bannerImage: form.bannerImageUrl.trim(),
       appId: currentDesign.value.product.appId,
       garminStoreUrl: form.garminStoreUrl.trim(),

@@ -66,7 +66,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: ProductImageItem[]): void
 }>()
 
-const max = props.max ?? 5
+const max = props.max ?? 8
 
 // ===== Aspect ratio validation (PRODUCT) =====
 const enumStore = useEnumStore()
@@ -152,6 +152,10 @@ const ensureProductAspectValid = async (file: File) => {
   }
 }
 
+// Kept for backwards compatibility with callers that may import this component;
+// product uploads no longer enforce a fixed aspect ratio.
+void ensureProductAspectValid
+
 const beforeUpload = (file: File) => {
   const isImage = file.type.startsWith('image/')
   const isLe2M = file.size <= 2 * 1024 * 1024
@@ -177,9 +181,7 @@ const handleChange = async (file: UploadFile) => {
     return
   }
 
-  // Validate aspect ratio for PRODUCT images before uploading
-  const aspectOk = await ensureProductAspectValid(file.raw)
-  if (!aspectOk) return
+  // Product image aspect ratios are intentionally unrestricted.
 
   const loadingInstance = ElLoading.service({
     lock: true,
