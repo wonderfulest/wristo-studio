@@ -23,7 +23,14 @@
       </el-form-item>
       <el-form-item :label="t('submitDesign.description')">
         <el-input v-model="form.description" type="textarea" :rows="10" />
-        <el-button size="small" type="primary" style="margin-right: 8px;" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
+        <div class="description-actions">
+          <span class="description-language-label">{{ t('goLive.descriptionLanguage') }}</span>
+          <el-radio-group v-model="descriptionLanguage" size="small">
+            <el-radio-button value="en">{{ t('goLive.languageEnglish') }}</el-radio-button>
+            <el-radio-button value="zh">{{ t('goLive.languageChinese') }}</el-radio-button>
+          </el-radio-group>
+          <el-button size="small" type="primary" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
+        </div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
         </div>
@@ -211,9 +218,14 @@ import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useI18n } from '@/i18n'
+import {
+  buildGenerateDescriptionPayload,
+  type DescriptionTemplateLanguage,
+} from '@/utils/descriptionTemplateLanguage'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
+const descriptionLanguage = ref<DescriptionTemplateLanguage>('en')
 const currentDesign = ref<Design | null>(null)
 const formRef = ref<FormInstance | null>(null)
 type DesignerConfigDialogRef = { show: () => void | Promise<void> }
@@ -565,7 +577,8 @@ const refreshDescription = async () => {
   }
   const pid = currentDesign.value.product.id
   try {
-    const res = await productsApi.generateDescription({ userId: uid, productId: pid }) as ApiResponse<string>
+    const payload = buildGenerateDescriptionPayload(uid, pid, descriptionLanguage.value)
+    const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
       ElMessage.success(t('goLive.descriptionUpdated'))
@@ -577,6 +590,7 @@ const refreshDescription = async () => {
 
 // 定义 show 方法
 const show = (design: Design) => {
+  descriptionLanguage.value = 'en'
   loadDesign(design)
   dialogVisible.value = true
 }
@@ -613,6 +627,19 @@ defineExpose({
 .form-tip {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.description-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.description-language-label {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 .form-tip-margin {
   margin-left: 8px;

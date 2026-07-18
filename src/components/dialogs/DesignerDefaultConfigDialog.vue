@@ -23,11 +23,22 @@
         </div>
       </el-form-item>
       <el-form-item :label="t('designerSettings.descriptionTemplate')">
-        <TemplateTextEditor
-          v-model="form.descriptionTemplate"
-          :user-id="userStore.userInfo?.id || 0"
-          :placeholder="t('designerSettings.descriptionPlaceholder')"
-        />
+        <el-tabs v-model="descriptionLanguage" class="description-template-tabs">
+          <el-tab-pane :label="t('designerSettings.languageEnglish')" name="en">
+            <TemplateTextEditor
+              v-model="form.descriptionTemplate"
+              :user-id="userStore.userInfo?.id || 0"
+              :placeholder="t('designerSettings.descriptionPlaceholder')"
+            />
+          </el-tab-pane>
+          <el-tab-pane :label="t('designerSettings.languageChinese')" name="zh">
+            <TemplateTextEditor
+              v-model="form.descriptionTemplateZh"
+              :user-id="userStore.userInfo?.id || 0"
+              :placeholder="t('designerSettings.descriptionPlaceholder')"
+            />
+          </el-tab-pane>
+        </el-tabs>
       </el-form-item>
       <el-form-item :label="t('designerSettings.autoPublish')">
         <el-switch v-model="autoPublish" disabled/>
@@ -64,12 +75,14 @@ const form = reactive<DesignerDefaultConfigVO>({
   defaultPrice: null,
   defaultCurrency: 'USD',
   descriptionTemplate: null,
+  descriptionTemplateZh: null,
   enableAutoPublish: 0,
   isActive: 1
 })
 
 const autoPublish = ref(true)
 const active = ref(true)
+const descriptionLanguage = ref<'en' | 'zh'>('en')
 
 const userStore = useUserStore()
 const { t } = useI18n()
@@ -88,6 +101,7 @@ const load = async () => {
       form.defaultPrice = data.defaultPrice
       form.defaultCurrency = data.defaultCurrency
       form.descriptionTemplate = data.descriptionTemplate
+      form.descriptionTemplateZh = data.descriptionTemplateZh
       form.enableAutoPublish = data.enableAutoPublish
       form.isActive = data.isActive
       autoPublish.value = (data.enableAutoPublish ?? 0) === 1
@@ -115,6 +129,7 @@ const handleSave = async () => {
         defaultPrice: form.defaultPrice,
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
+        descriptionTemplateZh: form.descriptionTemplateZh,
         enableAutoPublish: autoPublish.value ? 1 : 0,
         isActive: active.value ? 1 : 0
       }
@@ -131,6 +146,7 @@ const handleSave = async () => {
         defaultPrice: form.defaultPrice,
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
+        descriptionTemplateZh: form.descriptionTemplateZh,
         enableAutoPublish: autoPublish.value ? 1 : 0,
         isActive: active.value ? 1 : 0
       }
@@ -145,6 +161,7 @@ const handleSave = async () => {
 }
 
 const show = async () => {
+  descriptionLanguage.value = 'en'
   await load()
   visible.value = true
 }
@@ -161,6 +178,11 @@ defineExpose({ show })
 .currency-label {
   color: var(--studio-text-muted);
   font-weight: 600;
+}
+
+.description-template-tabs {
+  width: 100%;
+  min-width: 0;
 }
 
 /* Dialog responsive layout */

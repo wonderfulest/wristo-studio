@@ -69,6 +69,11 @@
           :placeholder="t('submitDesign.enterDescription')"
         />
         <div class="description-actions">
+          <span class="description-language-label">{{ t('goLive.descriptionLanguage') }}</span>
+          <el-radio-group v-model="descriptionLanguage" size="small">
+            <el-radio-button value="en">{{ t('goLive.languageEnglish') }}</el-radio-button>
+            <el-radio-button value="zh">{{ t('goLive.languageChinese') }}</el-radio-button>
+          </el-radio-group>
           <el-button size="small" type="primary" :loading="refreshingDescription" @click="refreshDescription">
             {{ t('common.refresh') }}
           </el-button>
@@ -116,11 +121,16 @@ import CategorySelector from '@/components/common/CategorySelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
+import {
+  buildGenerateDescriptionPayload,
+  type DescriptionTemplateLanguage,
+} from '@/utils/descriptionTemplateLanguage'
 import { ElMessage } from 'element-plus'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
 const refreshingDescription = ref(false)
+const descriptionLanguage = ref<DescriptionTemplateLanguage>('en')
 const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 const dialogMode = ref<'submit' | 'prg-build'>('submit')
@@ -270,6 +280,7 @@ const handlePaymentMethodChange = (value: string) => {
 const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; deviceId?: string }) => {
   try {
     loading.value = true
+    descriptionLanguage.value = 'en'
     currentDesign.value = null
     dialogMode.value = options?.mode || 'submit'
     prgDeviceId.value = options?.deviceId || ''
@@ -348,7 +359,8 @@ const refreshDescription = async () => {
 
   try {
     refreshingDescription.value = true
-    const res = await productsApi.generateDescription({ userId: uid, productId }) as ApiResponse<string>
+    const payload = buildGenerateDescriptionPayload(uid, productId, descriptionLanguage.value)
+    const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
       ElMessage.success(t('goLive.descriptionUpdated'))
@@ -472,7 +484,16 @@ defineExpose({
 }
 
 .description-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.description-language-label {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 .dialog-footer {
