@@ -5,6 +5,7 @@ export interface DesignerDefaultConfigVO {
   defaultPrice: number | null
   defaultCurrency: string | null
   descriptionTemplate: string | null
+  descriptionTemplateZh: string | null
   enableAutoPublish: number | null
   isActive: number | null
 }
@@ -15,6 +16,7 @@ export interface DesignerDefaultConfigCreateDTO {
   defaultPrice?: number | null
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
+  descriptionTemplateZh?: string | null
   enableAutoPublish?: number | null
   isActive?: number | null
 }
@@ -26,6 +28,7 @@ export interface DesignerDefaultConfigUpdateDTO {
   defaultPrice?: number | null
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
+  descriptionTemplateZh?: string | null
   enableAutoPublish?: number | null
   isActive?: number | null
 }

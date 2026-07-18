@@ -2,6 +2,7 @@ import type { Category } from './category'
 import type { Image } from './image'
 import type { UserBase } from './user'
 import type { Bundle } from './bundle'
+import type { DescriptionTemplateLanguage } from '@/utils/descriptionTemplateLanguage'
 
 export interface ProductPaymentVo {
   paymentMethod: string
@@ -124,4 +125,5 @@ export interface Product {
 export interface GenerateDescriptionDto {
   userId: number
   productId: number
+  language: DescriptionTemplateLanguage
 }
