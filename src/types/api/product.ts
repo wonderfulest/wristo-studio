@@ -118,7 +118,7 @@ export interface Product {
   release: ProductReleaseVo
   prgRelease?: ProductReleasePrgVo
   bundles: Bundle[]
-  lastGoLive: number | null
+  lastGoLive: number | string | null
   score: number
 }
 

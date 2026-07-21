@@ -18,10 +18,14 @@
       </el-form-item>
       
       <el-form-item :label="t('submitDesign.paymentMethod')" prop="paymentMethod">
-        <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
+        <el-radio-group v-model="form.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
           <el-radio label="free">{{ t('payment.free') }}</el-radio>
           <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
+          <el-radio label="garmin" :disabled="!canPublishPaid">{{ t('payment.garminOfficial') }}</el-radio>
         </el-radio-group>
+        <span v-if="paymentMethodLocked" class="merchant-required-tip">
+          {{ t('payment.methodLockedAfterPublish') }}
+        </span>
         <span v-if="!canPublishPaid" class="merchant-required-tip">
           {{ t('submitDesign.paidMerchantOnly') }}
         </span>
@@ -30,7 +34,7 @@
       <el-form-item 
         :label="t('submitDesign.price')" 
         prop="price"
-        v-if="form.paymentMethod !== 'free'"
+        v-if="form.paymentMethod === 'wpay'"
       >
         <el-input-number 
           v-model="form.price" 
@@ -126,6 +130,7 @@ import {
   type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { ElMessage } from 'element-plus'
+import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -140,6 +145,7 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
+const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
 const CATEGORY_LIMIT = 5
@@ -267,10 +273,10 @@ const handlePaymentMethodChange = (value: string) => {
   if (value === 'free') {
     form.price = 0
     form.trialLasts = 0
-  } else if (value === 'kpay') {
+  } else if (isGarminPayment(value)) {
     form.price = form.price || 1.99
-    form.trialLasts = form.trialLasts || 0.25
-  } else if (value === 'wpay') {
+    form.trialLasts = 0
+  } else if (value === 'kpay' || value === 'wpay') {
     form.price = form.price || 1.99
     form.trialLasts = form.trialLasts || 0.25
   }
@@ -327,7 +333,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         } else {
           // Paid modes: use provided price / trialLasts with sensible defaults
           form.price = payment.price ?? 1.99
-          form.trialLasts = payment.trialLasts ?? 0.25
+          form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
       // Load category and bundle options
@@ -399,9 +405,9 @@ const handleConfirm = async () => {
       submitData.kpayId = form.kpayId
       submitData.price = form.price
       submitData.trialLasts = form.trialLasts
-    } else if (form.paymentMethod === 'wpay') {
+    } else if (form.paymentMethod !== 'free') {
       submitData.price = form.price
-      submitData.trialLasts = form.trialLasts
+      submitData.trialLasts = normalizeTrialLasts(form.paymentMethod, form.trialLasts)
     }
     // Free mode does not require extra parameters
     const response = dialogMode.value === 'prg-build'
@@ -439,7 +445,7 @@ const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiRe
     updateData.payment = {
       paymentMethod: submitData.paymentMethod,
       price: submitData.paymentMethod === 'free' ? 0 : Number(submitData.price || 0),
-      trialLasts: submitData.paymentMethod === 'free' ? 0 : Number(submitData.trialLasts || 0),
+      trialLasts: normalizeTrialLasts(submitData.paymentMethod, submitData.trialLasts),
     }
   }
 

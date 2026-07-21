@@ -56,10 +56,24 @@ const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
 
+const resolveFontSize = (): number => {
+  const configFontSize = props.config?.fontSize
+  if (configFontSize != null && Number.isFinite(Number(configFontSize))) {
+    return Number(configFontSize)
+  }
+
+  const elementFontSize = props.element?.fontSize
+  if (elementFontSize != null && Number.isFinite(Number(elementFontSize))) {
+    return Number(elementFontSize)
+  }
+
+  return 24
+}
+
 // 响应式状态
 const color = ref(currentModel.value?.fill || '#ffffff')
 const fontFamily = ref(currentModel.value?.fontFamily || 'wristo-icon')
-const fontSize = ref(currentModel.value?.fontSize || 24)
+const fontSize = ref(resolveFontSize())
 const positionX = ref(Math.round(currentModel.value?.left || 0))
 const positionY = ref(Math.round(currentModel.value?.top || 0))
 
@@ -69,11 +83,9 @@ const availableFontSizes = computed(() => {
 })
 
 watch(
-  () => currentModel.value?.fontSize,
-  (newFontSize) => {
-    if (newFontSize != null) {
-      fontSize.value = Number(newFontSize)
-    }
+  () => [props.config?.fontSize, props.element?.fontSize],
+  () => {
+    fontSize.value = resolveFontSize()
   },
 )
 

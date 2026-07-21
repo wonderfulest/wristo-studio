@@ -31,7 +31,7 @@ export interface Product {
   isDeleted: number
   status?: number
   bannerImageUrl?: string
-  lastGoLive?: number
+  lastGoLive?: number | string
   score?: AppMeterScoreVO | null
   bundles?: Bundle[] | null
 }

@@ -147,12 +147,16 @@
         <div class="payment-grid">
           <div class="form-field">
             <label class="field-label">{{ t('submitDesign.paymentMethod') }}</label>
-            <el-radio-group v-model="form.payment.paymentMethod" @change="handlePaymentMethodChange">
+            <el-radio-group v-model="form.payment.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
               <el-radio label="free">{{ t('payment.free') }}</el-radio>
               <el-radio label="wpay">WPay</el-radio>
+              <el-radio label="garmin">{{ t('payment.garminOfficial') }}</el-radio>
             </el-radio-group>
+            <span v-if="paymentMethodLocked" class="merchant-required-tip">
+              {{ t('payment.methodLockedAfterPublish') }}
+            </span>
           </div>
-          <div class="form-field" v-if="form.payment.paymentMethod !== 'free'">
+          <div class="form-field" v-if="form.payment.paymentMethod === 'wpay'">
             <label class="field-label">{{ t('editDesign.priceCny') }}</label>
             <el-input-number
               v-model="form.payment.price"
@@ -277,6 +281,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, Payment } from '@/types/api/design'
+import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import type { ProductPackagingLogVo } from '@/types/api/product'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -330,6 +335,7 @@ const messageStore = useMessageStore()
 const emit = defineEmits(['cancel', 'success'])
 
 const canManageAppDetails = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
+const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const WRISTO_STORE_BASE_URL = (import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/+$/, '')
 
 const formatDateTime = (value?: string | number | null) => {
@@ -595,6 +601,10 @@ const handlePaymentMethodChange = (value: string | number | boolean | undefined)
     return
   }
   form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 1.99
+  if (isGarminPayment(typeof value === 'string' ? value : null)) {
+    form.payment.trialLasts = 0
+    return
+  }
   form.payment.trialLasts = Number(form.payment.trialLasts || 0) >= 0 ? form.payment.trialLasts : 0.25
 }
 
@@ -682,7 +692,7 @@ const handleSave = async () => {
       payment: {
         paymentMethod: form.payment.paymentMethod,
         price: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.price || 0),
-        trialLasts: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.trialLasts || 0)
+        trialLasts: normalizeTrialLasts(form.payment.paymentMethod, form.payment.trialLasts)
       }
     }
     const response = await designApi.updateDesign(payload)

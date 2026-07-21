@@ -14,6 +14,7 @@
         <el-select v-model="form.defaultPaymentMethod" :placeholder="t('designerSettings.selectMethod')">
           <el-option :label="t('designerSettings.none')" value="none" />
           <el-option label="WPay" value="wpay" />
+          <el-option :label="t('payment.garminOfficial')" value="garmin" />
         </el-select>
       </el-form-item>
       <el-form-item :label="t('designerSettings.defaultPrice')">

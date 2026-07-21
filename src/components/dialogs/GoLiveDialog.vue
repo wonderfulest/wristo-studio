@@ -145,15 +145,19 @@
         :loadingBundles="loadingBundles"
       />
       <el-form-item :label="t('submitDesign.paymentMethod')">
-        <el-radio-group v-model="form.paymentMethod" @change="handlePaymentMethodChange">
+        <el-radio-group v-model="form.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
           <el-radio label="free">{{ t('payment.free') }}</el-radio>
           <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
+          <el-radio label="garmin" :disabled="!canPublishPaid">{{ t('payment.garminOfficial') }}</el-radio>
         </el-radio-group>
+        <span v-if="paymentMethodLocked" class="merchant-required-tip">
+          {{ t('payment.methodLockedAfterPublish') }}
+        </span>
         <span v-if="!canPublishPaid" class="merchant-required-tip">
           {{ t('submitDesign.paidMerchantOnly') }}
         </span>
       </el-form-item>
-      <el-form-item v-if="form.paymentMethod !== 'free'" :label="t('goLive.trialDurationHours')">
+      <el-form-item v-if="form.paymentMethod === 'wpay'" :label="t('goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
           :disabled="true"
@@ -222,6 +226,7 @@ import {
   buildGenerateDescriptionPayload,
   type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
+import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -277,6 +282,7 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const emit = defineEmits(['success', 'cancel'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
+const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 
 const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
@@ -287,6 +293,11 @@ const handlePaymentMethodChange = (value: string) => {
   }
   if (value === 'free') {
     form.price = 0
+    form.trialLasts = 0
+    return
+  }
+  if (isGarminPayment(value)) {
+    form.price = form.price || 2.39
     form.trialLasts = 0
     return
   }
@@ -317,7 +328,7 @@ const loadDesign = (design: Design) => {
     form.paymentMethod = canPublishPaid.value && design.product.payment?.paymentMethod !== 'free'
       ? (design.product.payment?.paymentMethod || 'wpay')
       : 'free'
-    form.trialLasts = form.paymentMethod === 'free' ? 0 : (design.product.trialLasts ?? 0.25)
+    form.trialLasts = normalizeTrialLasts(form.paymentMethod, design.product.trialLasts ?? 0.25)
     form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.39)
     // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
     const backendProductImages = (design.product as any).productImages as
@@ -400,7 +411,7 @@ const handleConfirm = async () => {
       payment: {
         paymentMethod: form.paymentMethod,
         price: form.paymentMethod === 'free' ? 0 : form.price,
-        trialLasts: form.paymentMethod === 'free' ? 0 : form.trialLasts
+        trialLasts: normalizeTrialLasts(form.paymentMethod, form.trialLasts)
       },
       categoryIds: form.categoryIds,
       bundleIds: form.bundleIds

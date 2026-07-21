@@ -41,4 +41,17 @@ describe('bluetooth settings panel', () => {
 
     expect(wrapper.get('[data-testid="font-size"]').text()).toBe('42')
   })
+
+  it('falls back to the live element font size when the restored config omits it', () => {
+    const wrapper = mount(BluetoothPanel, {
+      props: {
+        config: { id: 'bluetooth-1', eleType: 'bluetooth', left: 120, top: 160 },
+        element: { id: 'bluetooth-1', eleType: 'bluetooth', fontSize: 42 },
+        applyPatch: vi.fn(),
+      },
+      global: { stubs },
+    })
+
+    expect(wrapper.get('[data-testid="font-size"]').text()).toBe('42')
+  })
 })

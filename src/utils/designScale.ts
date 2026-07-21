@@ -2,6 +2,7 @@ import type { Canvas } from 'fabric'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizeToOption } from '@/utils/fontSize'
+import { fontSizes } from '@/config/elements/options/typography'
 
 export const STANDARD_DESIGN_SIZE = 454
 
@@ -59,6 +60,23 @@ function normalizeScaledFontSize(value: unknown): unknown {
   return normalizeFontSizeToOption(value)
 }
 
+function restoreFontSizeOptionFromStandard(value: unknown, ratio: number): unknown {
+  if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isFinite(ratio) || ratio <= 0) {
+    return normalizeScaledFontSize(value)
+  }
+
+  const storedOption = normalizeFontSizeToOption(value)
+  const scaledValue = value * ratio
+  const reversibleOptions = fontSizes.filter((option) => {
+    return normalizeFontSizeToOption(option / ratio) === storedOption
+  })
+  if (reversibleOptions.length === 0) return normalizeFontSizeToOption(scaledValue)
+
+  return reversibleOptions.reduce((best, option) => {
+    return Math.abs(option - scaledValue) < Math.abs(best - scaledValue) ? option : best
+  }, reversibleOptions[0])
+}
+
 export function scaleElementConfig(
   config: AnyElementConfig,
   from: DesignSize,
@@ -88,7 +106,11 @@ export function scaleElementConfig(
     next[key] = roundScaledNumber(next[key])
   }
   if ('fontSize' in next) {
-    next.fontSize = normalizeScaledFontSize(next.fontSize)
+    const scalingFromStandard =
+      from.width === STANDARD_DESIGN_SIZE && from.height === STANDARD_DESIGN_SIZE
+    next.fontSize = scalingFromStandard
+      ? restoreFontSizeOptionFromStandard((config as any).fontSize, ratioScalar)
+      : normalizeScaledFontSize(next.fontSize)
   }
   if ('iconSize' in next && 'fontSize' in next) {
     next.iconSize = next.fontSize
