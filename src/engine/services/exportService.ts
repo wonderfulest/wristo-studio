@@ -23,6 +23,7 @@ import {
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
 import { validateDataGoalBindings } from '@/engine/services/propertyBindingValidation'
+import { toPlainRuntimeConfig } from '@/engine/services/runtimeConfigSerialization'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -378,12 +379,12 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       width: Number(designStore.designSpec.width || 454),
       height: Number(designStore.designSpec.height || 454),
     })
-    return {
+    return toPlainRuntimeConfig({
       ...normalizedConfig,
       elements: normalizedConfig.elements.map((element) =>
         normalizeFontSizeFields(element as unknown as Record<string, unknown>) as unknown as AnyElementConfig,
       ),
-    }
+    })
   } catch (err) {
     console.error('Generate config failed:', err)
     const message = (err as Error)?.message || 'Failed to generate configuration'
