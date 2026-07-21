@@ -34,6 +34,7 @@ type VisualCenter = {
 export const DESIGNER_CONTROL_TYPES: string[] = [
   'rectangle',
   'windDirection',
+  'moon',
   'circle',
   'image',
   'centerCap',

@@ -12,6 +12,7 @@ vi.mock('@/engine/managers/layerManager', () => ({
 import {
   applyControlsToObject,
   applyLayerOrderControlsToObject,
+  DESIGNER_CONTROL_TYPES,
   INSET_CORNER_CONTROL_OFFSET,
   LAYER_ORDER_ENTRY_OFFSET,
 } from './controlManager'
@@ -195,6 +196,10 @@ describe('applyControlsToObject', () => {
   it('uses inset corner controls throughout the shared dial renderer', () => {
     expect(dialRendererSource).not.toContain("designerControlMode: 'corner4',")
     expect(dialRendererSource.match(/designerControlMode: 'corner4Inset'/g)).toHaveLength(3)
+  })
+
+  it('reapplies designer controls to moon images', () => {
+    expect(DESIGNER_CONTROL_TYPES).toContain('moon')
   })
 })
 

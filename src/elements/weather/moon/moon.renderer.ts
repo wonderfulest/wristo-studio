@@ -73,7 +73,7 @@ export async function createMoon(
   }
 
   let imgUrl = config.imageUrl ? normalizeUrl(String(config.imageUrl)) : ''
-  const imgW = config.width ?? Math.max(1, Math.round(config.fontSize ?? 42))
+  const imgW = config.width ?? 42
   const imgH = config.height ?? imgW
   if (!imgUrl) {
     imgUrl = getDefaultMoonImage()
@@ -91,6 +91,7 @@ export async function createMoon(
         hasBorders: true,
         objectCaching: false,
       } as GroupProps)
+      ;(group as unknown as { designerControlMode?: string }).designerControlMode = 'corner4'
       ;(group as unknown as { moonIsImage?: boolean }).moonIsImage = true
       if (imgUrl) (group as unknown as { moonImageUrl?: string }).moonImageUrl = imgUrl
       ;(group as unknown as { width?: number }).width = imgW
@@ -144,6 +145,7 @@ export async function createMoon(
           objectCaching: false,
           visible: true,
         } as GroupProps)
+        ;(group as unknown as { designerControlMode?: string }).designerControlMode = 'corner4'
         ;(group as unknown as { moonImageUrl?: string }).moonImageUrl = imgUrl
         ;(group as unknown as { width?: number }).width = imgW
         ;(group as unknown as { height?: number }).height = imgH

@@ -29,7 +29,7 @@
         @change="updateGoalProperty"
       />
 
-      <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.fontSize')" required>
+      <el-form-item v-if="showTypographyControls" :label="t('elementSettings.fontSize')" required>
         <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
       </el-form-item>
 
@@ -37,7 +37,7 @@
         <color-picker v-model="textColor" @change="updateTextColor" />
       </el-form-item>
 
-      <el-form-item v-if="isSameTypeLayer" :label="t('elementSettings.font')" required>
+      <el-form-item v-if="showTypographyControls" :label="t('elementSettings.font')" required>
         <font-picker
           v-model="fontFamily"
           :type="fontType"
@@ -294,6 +294,11 @@ const isSameTypeLayer = computed(() => {
   const firstType = props.elements[0]?.eleType
   if (!firstType) return false
   return props.elements.every((element) => element.eleType === firstType)
+})
+
+const showTypographyControls = computed(() => {
+  const eleType = props.elements[0]?.eleType
+  return isSameTypeLayer.value && eleType !== 'moon'
 })
 
 const fontType = computed(() => {
