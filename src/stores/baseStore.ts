@@ -14,6 +14,7 @@ import {
   validateRuntimeConfigForExport,
 } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
@@ -380,26 +381,31 @@ export const useBaseStore = defineStore('baseStore', {
       const exportConfig = await resolvePackageAssetUrls(config)
       if (!exportConfig) return false
       let designUid = this.id
-      if (!designUid) {
-        const created = await designApi.createDesign({
-          name: designStore.watchFaceName,
-          description: designStore.watchFaceName,
-        })
-        if (created.code !== 0 || !created.data?.designUid) {
-          ElMessage.error('创建设计失败！')
-          return false
+      let res: any
+      const persistedConfig = await persistAndSaveDesignConfig(exportConfig, async (saveConfig) => {
+        if (!designUid) {
+          const created = await designApi.createDesign({
+            name: designStore.watchFaceName,
+            description: designStore.watchFaceName,
+          })
+          if (created.code !== 0 || !created.data?.designUid) {
+            ElMessage.error('创建设计失败！')
+            throw new Error('创建设计失败！')
+          }
+          designUid = created.data.designUid
+          this.id = designUid
+          designStore.id = designUid
         }
-        designUid = created.data.designUid
-        this.id = designUid
-        designStore.id = designUid
-      }
 
-      const res: any = await designApi.updateDesign({
-        uid: designUid,
-        name: designStore.watchFaceName,
-        configJson: JSON.stringify(exportConfig),
+        res = await designApi.updateDesign({
+          uid: designUid,
+          name: designStore.watchFaceName,
+          configJson: JSON.stringify(saveConfig),
+        })
+        if (res.code !== 0) {
+          throw new Error(res.msg || '保存设计失败！')
+        }
       })
-      if (res.code !== 0) return false
       this.id = res.data?.designUid || designUid
       designStore.id = this.id
       designUid = res.data?.designUid || designUid
@@ -424,7 +430,7 @@ export const useBaseStore = defineStore('baseStore', {
         }
       }
       const bundleFile = await buildDesignAssetBundle(
-        { ...exportConfig, designId: designUid },
+        { ...persistedConfig, designId: designUid },
         { previewDataUrl, productImages },
       )
       if (bundleFile) {

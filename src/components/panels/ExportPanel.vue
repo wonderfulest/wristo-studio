@@ -87,6 +87,7 @@ import { isDefaultBackgroundUrl } from '@/elements/decoration/background/backgro
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -280,16 +281,16 @@ const saveConfig = async (options = {}) => {
     const exportConfig = await prepareExportConfig(config)
     if (!exportConfig) return ''
 
-    const data = {
-      uid: baseStore.id,
-      name: baseStore.watchFaceName,
-      configJson: JSON.stringify(exportConfig),
-      // userId: user.value.id
-    }
     if (!baseStore.id) {
       return ''
     }
-    await designApi.updateDesign(data)
+    await persistAndSaveDesignConfig(exportConfig, async (saveConfig) => {
+      await designApi.updateDesign({
+        uid: baseStore.id,
+        name: baseStore.watchFaceName,
+        configJson: JSON.stringify(saveConfig),
+      })
+    })
     historyStore.saveInitial()
     return baseStore.id
   } catch (error) {
@@ -340,8 +341,8 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    const configJson = await resolvePackageAssetUrls(config)
-    if (!configJson) {
+    const resolvedConfig = await resolvePackageAssetUrls(config)
+    if (!resolvedConfig) {
       throw new Error('Failed to resolve package asset URLs')
     }
     // 背景图片元数据已经包含在 config 中（backgroundImage 字段）
@@ -366,31 +367,28 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    const backgroundImage = getBackgroundImagePayload(configJson)
-
-    const data = {
-      uid: baseStore.id,
-      name: baseStore.watchFaceName,
-      description: baseStore.watchFaceName,
-      designStatus: 'draft',
-      configJson: configJson,
-      // 直接使用配置中的 backgroundImage 元信息
-      backgroundImage: backgroundImage,
-    }
-    if (screenshotUrl) { // 屏幕截图成功时，上传
-      data.coverImage = {
-        url: screenshotUrl,
-        type: 'screenshot',
-        usageType: 'screenshot'
+    let res
+    const configJson = await persistAndSaveDesignConfig(resolvedConfig, async (saveConfig) => {
+      const data = {
+        uid: baseStore.id,
+        name: baseStore.watchFaceName,
+        description: baseStore.watchFaceName,
+        designStatus: 'draft',
+        configJson: saveConfig,
+        // 直接使用配置中的 backgroundImage 元信息
+        backgroundImage: getBackgroundImagePayload(saveConfig),
       }
-    }
+      if (screenshotUrl) { // 屏幕截图成功时，上传
+        data.coverImage = {
+          url: screenshotUrl,
+          type: 'screenshot',
+          usageType: 'screenshot'
+        }
+      }
 
-    
-    // if (baseStore.id) {
-    //   data.documentId = baseStore.id
-    // }
-    // 创建或更新表盘设计
-    const res = await designApi.updateDesign(data)
+      // 创建或更新表盘设计
+      res = await designApi.updateDesign(data)
+    })
     
     // 更新 baseStore.id
     baseStore.id = res.data.documentId

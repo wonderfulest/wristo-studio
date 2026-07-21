@@ -291,6 +291,7 @@ import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import { persistBlobAssetUrls } from '@/engine/services/persistBlobAssetUrls'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -669,8 +670,9 @@ const handleSave = async () => {
 
   try {
     saving.value = true
-    const nextConfigJson = await resolvePackageAssetUrls(parsedConfigJson as any)
-    if (!nextConfigJson) return
+    const resolvedConfigJson = await resolvePackageAssetUrls(parsedConfigJson as any)
+    if (!resolvedConfigJson) return
+    const nextConfigJson = await persistBlobAssetUrls(resolvedConfigJson)
     form.configJson = nextConfigJson
     const payload = {
       uid: currentDesign.value.designUid,
