@@ -150,6 +150,7 @@ import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { downloadPackageFile } from '@/utils/packageDownload'
+import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -489,8 +490,9 @@ const openCanvas = async (design: Design) => {
     baseStore.watchFaceName = designData.name
     baseStore.appId = designData.product?.appId || -1
 
-    router.push('/design?id=' + designData.designUid)
+    await router.push('/design?id=' + designData.designUid)
   } catch (error) {
+    if (isStaleDynamicImportError(error)) return
     console.error('加载设计失败:', error)
     messageStore.error(t('project.loadDesignFailed'))
   }

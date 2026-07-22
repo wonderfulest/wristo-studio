@@ -21,7 +21,7 @@
       </div>
 
       <el-upload
-        v-if="modelValue.length < max"
+        v-if="totalCount < maxTotal"
         class="image-uploader"
         action="#"
         :auto-upload="false"
@@ -49,24 +49,22 @@ import { Plus } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/image'
 import { IMAGE_ASPECT_CODE, IMAGE_ASPECT_ENUM_NAME, useEnumStore } from '@/stores/common'
 import { useI18n } from '@/i18n'
+import type { ProductImageItem } from '@/types/product'
 
 const { t } = useI18n()
 
-export interface ProductImageItem {
-  id: number
-  imageUrl: string
-}
-
 const props = defineProps<{
   modelValue: ProductImageItem[]
-  max?: number
+  imageType: 'product' | 'social'
+  totalCount: number
+  maxTotal?: number
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: ProductImageItem[]): void
 }>()
 
-const max = props.max ?? 8
+const maxTotal = props.maxTotal ?? 20
 
 // ===== Aspect ratio validation (PRODUCT) =====
 const enumStore = useEnumStore()
@@ -168,8 +166,8 @@ const beforeUpload = (file: File) => {
     ElMessage.error(t('image.productSizeLimit'))
     return false
   }
-  if (props.modelValue.length >= max) {
-    ElMessage.error(t('image.productMax', { max }))
+  if (props.totalCount >= maxTotal) {
+    ElMessage.error(t('image.productMax', { max: maxTotal }))
     return false
   }
   return true
@@ -198,8 +196,16 @@ const handleChange = async (file: UploadFile) => {
       throw new Error(t('image.invalidResponse'))
     }
 
-    const next = [...props.modelValue, { id: image.id, imageUrl: image.url }]
-    emit('update:modelValue', next.slice(0, max))
+    const imageUrl = image.previewUrl || image.formats?.thumbnail?.url || image.url
+    const next = [...props.modelValue, {
+      id: image.id,
+      type: props.imageType,
+      imageUrl,
+      previewUrl: imageUrl,
+      downloadUrl: image.url,
+      image,
+    }]
+    emit('update:modelValue', next)
 
     ElMessage.success(t('image.productUploaded'))
   } catch (error) {

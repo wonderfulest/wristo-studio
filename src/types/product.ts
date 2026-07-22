@@ -3,6 +3,27 @@ import type { Image } from './image'
 import type { Category } from './api/category'
 import type { Bundle } from './api/bundle'
 import type { AppMeterScoreVO } from '@/types/meter'
+import type { Image as ApiImage } from './api/image'
+
+export type ProductImageType = 'product' | 'social' | 'share'
+
+export interface ProductImageItem {
+  /** 后端关系记录会把关系 ID 放在 id、真实图片 ID 放在 imageId。 */
+  imageId?: number
+  id: number
+  relationId?: number
+  type: ProductImageType
+  imageUrl: string
+  previewUrl?: string
+  downloadUrl?: string
+  image?: ApiImage
+}
+
+export interface ProductImageSelectionDto {
+  imageId: number
+  type: 'product' | 'social'
+  sortOrder: number
+}
 
 export interface Product {
   appId: number
@@ -34,6 +55,8 @@ export interface Product {
   lastGoLive?: number | string
   score?: AppMeterScoreVO | null
   bundles?: Bundle[] | null
+  previewImageUrl?: string
+  productImages?: ProductImageItem[]
 }
 
 export interface ProductRelease {
@@ -149,6 +172,8 @@ export interface GoToLiveDto {
   categoryIds: number[]
   /** Bundle ID列表 */
   bundleIds?: number[]
+  /** 按统一顺序提交的普通与 Social 图片 */
+  productImages?: ProductImageSelectionDto[]
 }
 
 /** 产品更新数据传输对象 */

@@ -107,7 +107,24 @@
 
       <!-- Product images -->
       <el-form-item :label="t('goLive.productImages')">
-              <ProductImagesEditor v-model="form.productImages" :max="8" />
+        <div class="product-image-section">
+          <ProductImagesEditor
+            v-model="productImageItems"
+            image-type="product"
+            :total-count="form.productImages.length"
+            :max-total="PRODUCT_IMAGE_LIMIT"
+          />
+          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: form.productImages.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
+        </div>
+      </el-form-item>
+
+      <el-form-item :label="t('goLive.socialImages')">
+        <ProductImagesEditor
+          v-model="socialImageItems"
+          image-type="social"
+          :total-count="form.productImages.length"
+          :max-total="PRODUCT_IMAGE_LIMIT"
+        />
       </el-form-item>
 
       <!-- Garmin Store URL -->
@@ -227,6 +244,14 @@ import {
   type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
+import type { ProductImageItem } from '@/types/product'
+import {
+  PRODUCT_IMAGE_LIMIT,
+  groupProductImages,
+  normalizeProductImage,
+  replaceProductImageGroup,
+  toProductImageSelections,
+} from '@/components/common/productImageModel'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -275,7 +300,21 @@ const form = reactive({
   heroImageId: undefined as number | undefined,
   rawImageId: undefined as number | undefined,
   // productImages: keep id + imageUrl, used by ProductImagesEditor and goLive payload
-  productImages: [] as { id: number; imageUrl: string; previewUrl?: string; downloadUrl?: string }[]
+  productImages: [] as ProductImageItem[]
+})
+
+const productImageItems = computed({
+  get: () => groupProductImages(form.productImages).product,
+  set: (items: ProductImageItem[]) => {
+    form.productImages = replaceProductImageGroup(form.productImages, 'product', items)
+  },
+})
+
+const socialImageItems = computed({
+  get: () => groupProductImages(form.productImages).social,
+  set: (items: ProductImageItem[]) => {
+    form.productImages = replaceProductImageGroup(form.productImages, 'social', items)
+  },
 })
 
 const messageStore = useMessageStore()
@@ -331,31 +370,13 @@ const loadDesign = (design: Design) => {
     form.trialLasts = normalizeTrialLasts(form.paymentMethod, design.product.trialLasts ?? 0.25)
     form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.39)
     // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
-    const backendProductImages = (design.product as any).productImages as
-      | {
-          id?: number
-          imageId?: number
-          imageUrl?: string
-          image?: {
-            url?: string
-            formats?: { thumbnail?: { url?: string } }
-          }
-        }[]
-      | undefined
+    const backendProductImages = (design.product as any).productImages as unknown[] | undefined
 
     form.productImages = Array.isArray(backendProductImages)
       ? backendProductImages
-          .map((img) => {
-            if (!img) return null
-            // 对于 goLive 的 productImages，应使用 imageId 作为前端的 id，避免用到 ProductImageVO 自身的主键 id
-            const imageId = (img.imageId ?? 0) as number
-            const urlFromImage = img.image?.formats?.thumbnail?.url || img.image?.url
-            const imageUrl = img.imageUrl || urlFromImage
-            if (!imageUrl || !imageId) return null
-            return { id: imageId, imageUrl }
-          })
-          .filter((item): item is { id: number; imageUrl: string } => !!item)
-          .slice(0, 8)
+          .map(normalizeProductImage)
+          .filter((item): item is ProductImageItem => item !== null)
+          .slice(0, PRODUCT_IMAGE_LIMIT)
       : []
   } else {
     // 重置为默认值
@@ -417,10 +438,7 @@ const handleConfirm = async () => {
       bundleIds: form.bundleIds
     }
     if (form.productImages.length > 0) {
-      // Only send image id list as required by backend GoToLiveDTO.productImages
-      data.productImages = form.productImages
-        .map((img) => img.id)
-        .filter((id) => typeof id === 'number' && id > 0)
+      data.productImages = toProductImageSelections(form.productImages)
     }
     await productsApi.publish(data)
     messageStore.success(t('goLive.productUpdated'))

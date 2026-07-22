@@ -415,15 +415,12 @@ export const useBaseStore = defineStore('baseStore', {
       } catch (error) {
         console.warn('Failed to capture preview for asset bundle:', error)
       }
-      let productImages: { heroImageUrl?: string; rawImageUrl?: string } | undefined
+      let bundleProduct: AnyObject | undefined
       if (this.appId > 0) {
         try {
           const productResponse = await getProduct(this.appId)
           if (productResponse.code === 0 && productResponse.data) {
-            productImages = {
-              heroImageUrl: productResponse.data.garminImageUrl,
-              rawImageUrl: productResponse.data.rawImageUrl,
-            }
+            bundleProduct = productResponse.data
           }
         } catch (error) {
           console.warn('Failed to load product images for asset bundle:', error)
@@ -431,7 +428,7 @@ export const useBaseStore = defineStore('baseStore', {
       }
       const bundleFile = await buildDesignAssetBundle(
         { ...persistedConfig, designId: designUid },
-        { previewDataUrl, productImages },
+        { previewDataUrl, appId: this.appId > 0 ? this.appId : undefined, product: bundleProduct },
       )
       if (bundleFile) {
         await designApi.uploadAssetBundle(designUid, bundleFile)

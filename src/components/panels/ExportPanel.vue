@@ -88,6 +88,7 @@ import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
+import { getProduct } from '@/api/products'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -167,14 +168,26 @@ const prepareExportConfig = async (config) => {
   }
 }
 
+const loadAssetBundleProduct = async () => {
+  if (!baseStore.appId || baseStore.appId <= 0) return undefined
+  const response = await getProduct(baseStore.appId)
+  if (response.code !== 0 || !response.data) {
+    throw new Error(response.msg || 'Failed to load product images')
+  }
+  return response.data
+}
+
 const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
   if (!designUid || !config) return null
   try {
+    const product = await loadAssetBundleProduct()
     const bundleFile = await buildDesignAssetBundle({
       ...config,
       designId: designUid,
     }, {
       previewDataUrl: options.previewDataUrl || null,
+      appId: baseStore.appId > 0 ? baseStore.appId : undefined,
+      product,
     })
     if (!bundleFile) return null
     const res = await designApi.uploadAssetBundle(designUid, bundleFile)
@@ -219,11 +232,14 @@ const downloadConfig = async () => {
     console.warn('Failed to capture preview for asset bundle:', error)
   }
 
+  const product = await loadAssetBundleProduct()
   const bundleFile = await buildDesignAssetBundle({
     ...exportConfig,
     designId: baseStore.id || exportConfig.designId || 'design',
   }, {
     previewDataUrl,
+    appId: baseStore.appId > 0 ? baseStore.appId : undefined,
+    product,
   })
   if (!bundleFile) return
 

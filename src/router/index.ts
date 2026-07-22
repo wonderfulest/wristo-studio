@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
 import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -148,6 +149,14 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.onError((error, to) => {
+  attemptChunkLoadRecovery(error, to.fullPath, {
+    now: Date.now,
+    storage: window.sessionStorage,
+    assign: (path) => window.location.assign(path),
+  })
 })
 
 // 导航守卫

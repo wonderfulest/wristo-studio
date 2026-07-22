@@ -8,6 +8,19 @@ import { useWeatherAmoledIconStore, type PendingWeatherAmoledIcon } from '@/stor
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
+import type { ProductImageItem } from '@/types/product'
+import type { Image } from '@/types/api/image'
+import {
+  addGalleryMarketingImage,
+  addScalarMarketingImage,
+  createMarketingAssetInputs,
+  type MarketingImageManifest,
+} from '@/engine/services/marketingAssetBundle'
+import {
+  resolveBackendImageRecord,
+  writeImageVariants,
+  type ImageVariantManifest,
+} from '@/engine/services/imageVariantBundle'
 
 type ManifestWeatherAsset = {
   condition: string
@@ -68,6 +81,7 @@ type ManifestAsset = {
   height?: number
   pivotX?: number
   pivotY?: number
+  variants?: Record<string, ImageVariantManifest>
 }
 
 type ManifestFontAsset = {
@@ -93,6 +107,7 @@ type DesignAssetManifest = {
   generatedAt: string
   designUid: string
   designName?: string
+  appId?: number
   name?: string
   slug?: string
   category?: 'watchface-kit'
@@ -122,6 +137,7 @@ type DesignAssetManifest = {
   icons?: {
     amoled: ManifestIconAsset[]
   }
+  productImages?: MarketingImageManifest[]
   studio?: {
     configPath: string
     elementsPath: string
@@ -131,6 +147,15 @@ type DesignAssetManifest = {
 
 type BuildDesignAssetBundleOptions = {
   previewDataUrl?: string | null
+  appId?: number | null
+  product?: {
+    garminImageUrl?: string | null
+    heroImageUrl?: string | null
+    rawImageUrl?: string | null
+    bannerImageUrl?: string | null
+    productImages?: ProductImageItem[]
+  }
+  /** @deprecated Use product. */
   productImages?: {
     heroImageUrl?: string | null
     rawImageUrl?: string | null
@@ -497,7 +522,7 @@ const getBundleAssetEntries = (zip: JSZip, manifest: DesignAssetManifest | null)
   }
 
   return Object.keys(zip.files)
-    .filter((path) => /^weather\/amoled\/[^/]+\.(svg|png)$/i.test(path) && !zip.files[path].dir)
+    .filter((path) => /^(?:assets\/)?weather\/amoled\/[^/]+\.(svg|png)$/i.test(path) && !zip.files[path].dir)
     .map((path) => {
       const iconUnicode = getIconUnicodeFromPath(path)
       const format = /\.png$/i.test(path) ? 'png' : 'svg'
@@ -517,7 +542,7 @@ const getBundleIconAssetEntries = (zip: JSZip, manifest: DesignAssetManifest | n
   }
 
   return Object.keys(zip.files)
-    .filter((path) => /^icons\/amoled\/[^/]+\.(svg|png)$/i.test(path) && !zip.files[path].dir)
+    .filter((path) => /^(?:assets\/)?icons\/amoled\/[^/]+\.(svg|png)$/i.test(path) && !zip.files[path].dir)
     .map((path) => {
       const iconUnicode = getIconUnicodeFromPath(path)
       const format = /\.png$/i.test(path) ? 'png' : 'svg'
@@ -618,6 +643,43 @@ const addReferencedAssetToBundle = async (
       elementType: input.elementType,
       field: input.field,
     })
+    return
+  }
+
+  const backendImage = await resolveBackendImageRecord(source)
+  if (backendImage) {
+    const group = getAssetGroupForElementRef(input)
+    const safeName = sanitizePathSegment(backendImage.name || input.field || 'image', 'image')
+      .replace(/\.[^.]+$/, '')
+    const variants = await writeImageVariants(zip, {
+      imageId: backendImage.id,
+      basePath: `assets/${group}/${backendImage.id}-${safeName}`,
+      image: backendImage,
+    })
+    variants.forEach((variant) => pushAssetGroupPath(manifest.assets, group, variant.path))
+    const original = variants.find((variant) => variant.name === 'original') || variants[0]
+    const asset: ManifestAsset = {
+      id: `asset-${sourcePathByUrl.size + 1}`,
+      category: input.category,
+      path: original.path,
+      format: original.format,
+      mimeType: original.mimeType,
+      sourceUrl: source,
+      sourceRef: source,
+      elementId: input.elementId,
+      elementType: input.elementType,
+      field: input.field,
+      role: input.role,
+      sha256: original.sha256,
+      width: original.width,
+      height: original.height,
+      pivotX: input.pivotX,
+      pivotY: input.pivotY,
+      variants: Object.fromEntries(variants.map((variant) => [variant.name, variant])),
+    }
+    sourcePathByUrl.set(source, asset)
+    contentAssetByHash.set(original.sha256, asset)
+    manifest.studio?.assetRefs.push(asset)
     return
   }
 
@@ -759,7 +821,7 @@ const addWeatherAssetToBundle = async (
   if (!iconUnicode) return
 
   const format = input.format || getFileFormat(input.file)
-  const path = `weather/amoled/${iconUnicode}.${format}`
+  const path = `assets/weather/amoled/${iconUnicode}.${format}`
   if (usedPaths.has(path)) return
   usedPaths.add(path)
 
@@ -815,7 +877,7 @@ const addAmoledIconAssetToBundle = async (
 
   if (input.file || input.source) {
     const format = input.format || getFileFormat(input.file)
-    const path = `icons/amoled/${iconUnicode}.${format}`
+    const path = `assets/icons/amoled/${iconUnicode}.${format}`
     if (!usedPaths.has(path)) {
       usedPaths.add(path)
       if (input.file) {
@@ -836,7 +898,7 @@ const addAmoledIconAssetToBundle = async (
 const buildDesignAssetArchive = async (
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
-  packageOptions: { format?: string; version?: 1; fileNameSuffix: string; mimeType: string },
+  packageOptions: { format?: string; version?: 1; fileNameSuffix: string; mimeType: string; rooted?: boolean },
 ): Promise<File> => {
   const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
@@ -852,6 +914,7 @@ const buildDesignAssetArchive = async (
     generatedAt: new Date().toISOString(),
     designUid,
     designName: config.name,
+    appId: options.appId || undefined,
     name: config.name || 'Wristo Watch Face',
     slug,
     category: 'watchface-kit',
@@ -872,6 +935,7 @@ const buildDesignAssetArchive = async (
     icons: {
       amoled: [],
     },
+    productImages: [],
     studio: {
       configPath: 'config/config.json',
       elementsPath: 'elements/',
@@ -914,16 +978,30 @@ const buildDesignAssetArchive = async (
     }
   }
 
-  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
-    category: 'product',
-    field: 'heroImage',
-    source: options.productImages?.heroImageUrl || '',
-  })
-  await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
-    category: 'product',
-    field: 'rawImage',
-    source: options.productImages?.rawImageUrl || '',
-  })
+  const marketingInputs = createMarketingAssetInputs(options.product || options.productImages)
+  for (const scalar of marketingInputs.scalars) {
+    const record = await addScalarMarketingImage(zip, scalar)
+    if (record) manifest.productImages?.push(record)
+  }
+  for (const item of marketingInputs.gallery) {
+    const imageId = Number(item.imageId ?? item.image?.id ?? item.id)
+    if (!Number.isFinite(imageId) || imageId <= 0) {
+      throw new Error(`Invalid product image id: ${String(item.imageId ?? item.id)}`)
+    }
+    const image = item.image || ({
+      id: imageId,
+      url: item.downloadUrl || item.imageUrl,
+      previewUrl: item.previewUrl,
+      name: `image-${imageId}`,
+    } as Image)
+    manifest.productImages?.push(await addGalleryMarketingImage(zip, {
+      relationId: item.relationId ?? (item.imageId ? item.id : undefined),
+      imageId,
+      type: item.type || 'product',
+      name: image.name,
+      image,
+    }))
+  }
 
   for (const slug of collectFontSlugs(config)) {
     await addFontAssetToBundle(zip, manifest, usedPaths, slug)
@@ -1044,8 +1122,21 @@ const buildDesignAssetArchive = async (
   }
   zip.file('README.md', createReadme(config, manifest))
   zip.file('manifest.json', JSON.stringify(manifest, null, 2))
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
-  return new File([blob], `${slug}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
+  let outputZip = zip
+  let fileBaseName = slug
+  if (packageOptions.rooted) {
+    const root = options.appId ? `${options.appId}-${slug}` : `design-${sanitizePathSegment(designUid, 'design')}`
+    const wrapped = new JSZip()
+    wrapped.folder(root)
+    for (const [path, entry] of Object.entries(zip.files)) {
+      if (entry.dir) wrapped.folder(`${root}/${path}`)
+      else wrapped.file(`${root}/${path}`, await entry.async('uint8array'))
+    }
+    outputZip = wrapped
+    fileBaseName = root
+  }
+  const blob = await outputZip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  return new File([blob], `${fileBaseName}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
 }
 
 export async function buildDesignAssetBundle(
@@ -1055,6 +1146,7 @@ export async function buildDesignAssetBundle(
   return buildDesignAssetArchive(config, options, {
     fileNameSuffix: '-assets.zip',
     mimeType: 'application/zip',
+    rooted: true,
   })
 }
 

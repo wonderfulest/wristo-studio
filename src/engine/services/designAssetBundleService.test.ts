@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 
+vi.mock('@/api/image', () => ({ findImageByUrl: vi.fn(async () => ({ data: null })) }))
+
 describe('design asset bundle MIME types', () => {
   it('restores SVG assets with an SVG image MIME type', () => {
     expect(getBundleAssetMimeType('assets/centerCap/center_cap.svg')).toBe('image/svg+xml')
@@ -58,5 +60,61 @@ describe('sub-dial pointer assets', () => {
       mimeType: 'image/svg+xml',
     })
     expect(refs[0].path).toMatch(/^assets\/sub-dial-pointers\/[a-f0-9]{64}\.svg$/)
+  })
+})
+
+describe('formal asset package layout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('wraps the package in appId-slug and exports typed marketing variants', async () => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() })
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      new Blob(['png'], { type: 'image/png' }),
+      { status: 200, headers: { 'content-type': 'image/png' } },
+    )))
+    const config = {
+      version: '1', properties: {}, designId: 'design-1', name: 'Tiger', textCase: 0,
+      bitmapMode: false, orderIds: [], elements: [],
+    }
+    const { buildDesignAssetBundle } = await import('@/engine/services/designAssetBundleService')
+    const file = await buildDesignAssetBundle(config as any, {
+      appId: 163910,
+      product: {
+        productImages: [{
+          id: 700,
+          imageId: 101,
+          type: 'social',
+          imageUrl: 'https://cdn/poster.png',
+          image: {
+            id: 101,
+            name: 'poster.png',
+            url: 'https://cdn/poster.png',
+            formats: { thumbnail: { url: 'https://cdn/poster-thumbnail.png' } },
+          },
+        }],
+      },
+    } as any)
+    const zip = await JSZip.loadAsync(await file!.arrayBuffer())
+    const paths = Object.keys(zip.files)
+
+    expect(paths).toEqual(expect.arrayContaining([
+      '163910-tiger/manifest.json',
+      '163910-tiger/design.json',
+      '163910-tiger/config/config.json',
+      '163910-tiger/marketing/social/101-poster/original.png',
+      '163910-tiger/marketing/social/101-poster/thumbnail.png',
+    ]))
+    expect(zip.files['163910-tiger/assets/background/']).toBeUndefined()
+    expect(zip.files['163910-tiger/assets/weather/amoled/']).toBeUndefined()
+    expect(zip.files['163910-tiger/marketing/hero/']).toBeUndefined()
+    expect(zip.files['163910-tiger/marketing/raw/']).toBeUndefined()
+    expect(zip.files['163910-tiger/marketing/banner/']).toBeUndefined()
+    expect(zip.files['163910-tiger/marketing/product/']).toBeUndefined()
+    const manifest = JSON.parse(await zip.file('163910-tiger/manifest.json')!.async('string'))
+    expect(manifest.appId).toBe(163910)
+    expect(manifest.productImages[0]).toMatchObject({ imageId: 101, relationId: 700, type: 'social' })
   })
 })
