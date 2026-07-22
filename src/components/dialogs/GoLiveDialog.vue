@@ -118,15 +118,6 @@
         </div>
       </el-form-item>
 
-      <el-form-item :label="t('goLive.socialImages')">
-        <ProductImagesEditor
-          v-model="socialImageItems"
-          image-type="social"
-          :total-count="form.productImages.length"
-          :max-total="PRODUCT_IMAGE_LIMIT"
-        />
-      </el-form-item>
-
       <!-- Garmin Store URL -->
       <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
         <el-input 
@@ -165,7 +156,7 @@
         <el-radio-group v-model="form.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
           <el-radio label="free">{{ t('payment.free') }}</el-radio>
           <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
-          <el-radio label="garmin" :disabled="!canPublishPaid">{{ t('payment.garminOfficial') }}</el-radio>
+          <el-radio v-if="userStore.isAdminUser" label="garmin">{{ t('payment.garminOfficial') }}</el-radio>
         </el-radio-group>
         <span v-if="paymentMethodLocked" class="merchant-required-tip">
           {{ t('payment.methodLockedAfterPublish') }}
@@ -307,13 +298,6 @@ const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
   set: (items: ProductImageItem[]) => {
     form.productImages = replaceProductImageGroup(form.productImages, 'product', items)
-  },
-})
-
-const socialImageItems = computed({
-  get: () => groupProductImages(form.productImages).social,
-  set: (items: ProductImageItem[]) => {
-    form.productImages = replaceProductImageGroup(form.productImages, 'social', items)
   },
 })
 

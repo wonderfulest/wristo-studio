@@ -150,7 +150,7 @@
             <el-radio-group v-model="form.payment.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
               <el-radio label="free">{{ t('payment.free') }}</el-radio>
               <el-radio label="wpay">WPay</el-radio>
-              <el-radio label="garmin">{{ t('payment.garminOfficial') }}</el-radio>
+              <el-radio v-if="userStore.isAdminUser" label="garmin">{{ t('payment.garminOfficial') }}</el-radio>
             </el-radio-group>
             <span v-if="paymentMethodLocked" class="merchant-required-tip">
               {{ t('payment.methodLockedAfterPublish') }}
