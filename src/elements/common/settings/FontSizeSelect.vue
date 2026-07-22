@@ -13,7 +13,6 @@
       class="font-size-value"
       :model-value="normalizedValue"
       popper-class="font-size-select-popper"
-      filterable
       @change="selectSize"
     >
       <el-option
