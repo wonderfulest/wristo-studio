@@ -108,6 +108,30 @@
       <!-- Product images -->
       <el-form-item :label="t('goLive.productImages')">
         <div class="product-image-section">
+          <div class="product-image-download-row">
+            <el-dropdown
+              trigger="click"
+              :disabled="form.productImages.length === 0 || downloadingImages"
+              @command="downloadAllProductImages"
+            >
+              <el-button :icon="Download" :loading="downloadingImages">
+                {{ t('goLive.downloadAllImages') }}
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="thumbnail">
+                    {{ t('goLive.downloadThumbnail') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="original">
+                    {{ t('goLive.downloadOriginal') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="all">
+                    {{ t('goLive.downloadAllSizes') }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
           <ProductImagesEditor
             v-model="productImageItems"
             image-type="product"
@@ -228,7 +252,7 @@ import { getProductTagsPage } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
-import { Plus, CopyDocument, QuestionFilled } from '@element-plus/icons-vue'
+import { Plus, CopyDocument, Download, QuestionFilled } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
@@ -248,6 +272,11 @@ import {
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import type { ProductImageItem } from '@/types/product'
+import {
+  buildProductImageArchive,
+  saveProductImageArchive,
+  type ProductImageDownloadMode,
+} from '@/components/common/productImageDownload'
 import { filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
 import {
   PRODUCT_IMAGE_LIMIT,
@@ -259,6 +288,7 @@ import {
 
 const dialogVisible = ref(false)
 const loading = ref(false)
+const downloadingImages = ref(false)
 const descriptionLanguage = ref<DescriptionTemplateLanguage>('en')
 const currentDesign = ref<Design | null>(null)
 const formRef = ref<FormInstance | null>(null)
@@ -338,6 +368,29 @@ const socialImageItems = computed({
     form.productImages = replaceProductImageGroup(form.productImages, 'social', items)
   },
 })
+
+const downloadAllProductImages = async (mode: ProductImageDownloadMode) => {
+  if (form.productImages.length === 0 || downloadingImages.value) return
+  downloadingImages.value = true
+  try {
+    const result = await buildProductImageArchive(form.productImages, mode)
+    if (!result.blob) {
+      messageStore.error(t('goLive.imageDownloadFailed'))
+      return
+    }
+    saveProductImageArchive(result.blob, form.appId)
+    if (result.failed > 0) {
+      messageStore.warning(t('goLive.imageDownloadPartial', { count: result.failed }))
+    } else {
+      messageStore.success(t('goLive.imageDownloadSuccess'))
+    }
+  } catch (error) {
+    console.error('Failed to download product images:', error)
+    messageStore.error(t('goLive.imageDownloadFailed'))
+  } finally {
+    downloadingImages.value = false
+  }
+}
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
@@ -699,6 +752,12 @@ defineExpose({
 .form-tip {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.product-image-download-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .description-actions {

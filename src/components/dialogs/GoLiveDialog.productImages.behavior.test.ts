@@ -98,6 +98,19 @@ const ProductImagesEditorStub = defineComponent({
   template: '<div class="product-images-editor" :data-type="imageType" />',
 })
 
+const ElDropdownStub = defineComponent({
+  name: 'ElDropdown',
+  props: { disabled: Boolean },
+  emits: ['command'],
+  template: `
+    <div class="download-dropdown" :data-disabled="String(disabled)">
+      <button data-download-mode="thumbnail" @click="$emit('command', 'thumbnail')">thumbnail</button>
+      <button data-download-mode="original" @click="$emit('command', 'original')">original</button>
+      <button data-download-mode="all" @click="$emit('command', 'all')">all</button>
+    </div>
+  `,
+})
+
 const stubs = {
   ElDialog: {
     props: ['modelValue'],
@@ -115,7 +128,7 @@ const stubs = {
   ElTooltip: { template: '<div><slot/></div>' },
   ElIcon: { template: '<span><slot/></span>' },
   ElUpload: true,
-  ElDropdown: { template: '<div><slot/><slot name="dropdown"/></div>' },
+  ElDropdown: ElDropdownStub,
   ElDropdownMenu: { template: '<div><slot/></div>' },
   ElDropdownItem: {
     props: ['command'],
@@ -157,5 +170,59 @@ describe('GoLiveDialog product image behavior', () => {
     expect(editors[1].props('modelValue')).toHaveLength(2)
     expect(editors.map((editor) => editor.props('totalCount'))).toEqual([3, 3])
     expect(editors.map((editor) => editor.props('maxTotal'))).toEqual([20, 20])
+  })
+
+  it('downloads all product and social sizes and reports partial failures', async () => {
+    const archive = new Blob(['zip'])
+    mocks.buildProductImageArchive.mockResolvedValue({
+      blob: archive,
+      downloaded: 6,
+      failed: 1,
+    })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+
+    await wrapper.get('[data-download-mode="all"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.buildProductImageArchive).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'product' }),
+        expect.objectContaining({ type: 'social' }),
+        expect.objectContaining({ type: 'share' }),
+      ]),
+      'all',
+    )
+    expect(mocks.saveProductImageArchive).toHaveBeenCalledWith(archive, 200)
+    expect(mocks.messageWarning).toHaveBeenCalledWith(
+      'goLive.imageDownloadPartial:{"count":1}',
+    )
+  })
+
+  it('does not save an empty archive when all downloads fail', async () => {
+    mocks.buildProductImageArchive.mockResolvedValue({
+      blob: null,
+      downloaded: 0,
+      failed: 3,
+    })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+
+    await wrapper.get('[data-download-mode="original"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.saveProductImageArchive).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('goLive.imageDownloadFailed')
+  })
+
+  it('disables the download selector when the app has no product images', async () => {
+    const wrapper = mountDialog()
+    const emptyDesign = {
+      ...design,
+      product: { ...design.product, productImages: [] },
+    } as unknown as Design
+    await showDialog(wrapper, emptyDesign)
+
+    expect(wrapper.getComponent(ElDropdownStub).props('disabled')).toBe(true)
   })
 })
