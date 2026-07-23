@@ -73,6 +73,7 @@
           :design-image-url="getDesignImageUrl(design)"
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
+          :show-package-download="true"
           @edit="editDesign"
           @delete="confirmDelete"
           @open="openCanvas"

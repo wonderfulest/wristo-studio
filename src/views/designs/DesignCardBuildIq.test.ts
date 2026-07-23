@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { shouldShowBuildIqButton } from './designCardActions'
 
 const source = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
+const workspaceSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
+const newProjectsSource = readFileSync(new URL('./RecentProjectsSection.vue', import.meta.url), 'utf8')
 
 describe('DesignCard Build IQ action', () => {
   it.each([
@@ -21,5 +23,10 @@ describe('DesignCard Build IQ action', () => {
   it('uses the packaging-only visibility rule in the card', () => {
     expect(source).toContain('shouldShowBuildIqButton(design.value.product)')
     expect(source).not.toContain(':disabled="!!design.product?.packagingLog?.rank"')
+  })
+
+  it('keeps package download visible in Workspace only', () => {
+    expect(workspaceSource).toContain(':show-package-download="true"')
+    expect(newProjectsSource).toContain(':show-package-download="false"')
   })
 })
