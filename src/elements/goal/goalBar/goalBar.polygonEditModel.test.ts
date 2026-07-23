@@ -87,7 +87,7 @@ describe('createPolygonEditModel in create mode', () => {
     expect(crossing.points).toHaveLength(3)
   })
 
-  it('allows an unfinished or initially collinear path and defers closing validation', () => {
+  it('allows an unfinished or initially collinear path and accepts a simple concave polygon', () => {
     const collinear = createPolygonEditModel({ mode: 'create', points: [] })
     expect(collinear.addPoint({ x: 0, y: 0 })).toBe(true)
     expect(collinear.addPoint({ x: 0.5, y: 0 })).toBe(true)
@@ -102,7 +102,7 @@ describe('createPolygonEditModel in create mode', () => {
       { x: 0.7, y: 0.4 }
     ]
     expect(concavePoints.map((point) => concaveOnClose.addPoint(point))).toEqual(Array(4).fill(true))
-    expect(concaveOnClose.close()).toBe(false)
+    expect(concaveOnClose.close()).toBe(true)
 
     const tooSmall = createPolygonEditModel({ mode: 'create', points: [] })
     const thinPoints = [
@@ -154,12 +154,12 @@ describe('createPolygonEditModel in create mode', () => {
 })
 
 describe('createPolygonEditModel in edit mode', () => {
-  it('keeps committed points when an invalid move preview is finished', () => {
+  it('keeps committed points when a duplicate-point move preview is finished', () => {
     const model = createPolygonEditModel({ mode: 'edit', points: square })
 
-    const preview = model.previewMove(2, { x: 0.4, y: 0.4 })
+    const preview = model.previewMove(2, { x: 0, y: 0 })
 
-    expect(preview).toMatchObject({ valid: false, reason: 'concave' })
+    expect(preview).toMatchObject({ valid: false, reason: 'duplicate' })
     expect(model.points).toEqual(square)
     expect(model.acceptMove()).toBe(false)
     model.finishMove()
@@ -212,7 +212,7 @@ describe('createPolygonEditModel in edit mode', () => {
     expect(create.preview).toBeNull()
   })
 
-  it('inserts a valid point after an edge and rejects max-count or invalid insertions atomically', () => {
+  it('inserts convex and concave points after an edge and rejects invalid insertions atomically', () => {
     const model = createPolygonEditModel({ mode: 'edit', points: square })
     expect(model.insertOnEdge(0, { x: 0.5, y: 0 })).toBe(true)
     expect(model.points).toEqual([
@@ -222,6 +222,8 @@ describe('createPolygonEditModel in edit mode', () => {
       { x: 1, y: 1 },
       { x: 0, y: 1 }
     ])
+
+    expect(model.insertOnEdge(0, { x: 0.5, y: 0.5 })).toBe(true)
 
     const beforeInvalidInsert = model.points
     expect(model.insertOnEdge(0, { x: 0.5, y: 0.5 })).toBe(false)
