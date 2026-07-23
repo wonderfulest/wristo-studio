@@ -2,9 +2,21 @@ import type { ProductImageItem, ProductImageSelectionDto, ProductImageType } fro
 
 export const PRODUCT_IMAGE_LIMIT = 20
 
+const PRODUCT_IMAGE_TYPES: readonly ProductImageType[] = [
+  'product',
+  'social',
+  'share',
+  'pinterest',
+]
+
 const normalizeType = (value: unknown): ProductImageType => {
-  return value === 'social' || value === 'share' ? value : 'product'
+  return PRODUCT_IMAGE_TYPES.includes(value as ProductImageType)
+    ? value as ProductImageType
+    : 'product'
 }
+
+const belongsToSocialGallery = (item: ProductImageItem): boolean =>
+  item.type === 'social' || item.type === 'share' || item.type === 'pinterest'
 
 export const normalizeProductImage = (input: any): ProductImageItem | null => {
   if (!input) return null
@@ -26,7 +38,7 @@ export const normalizeProductImage = (input: any): ProductImageItem | null => {
 
 export const groupProductImages = (items: ProductImageItem[]) => ({
   product: items.filter((item) => item.type === 'product'),
-  social: items.filter((item) => item.type === 'social' || item.type === 'share'),
+  social: items.filter(belongsToSocialGallery),
 })
 
 export const remainingProductImageSlots = (items: ProductImageItem[]): number => {
@@ -40,7 +52,7 @@ export const replaceProductImageGroup = (
 ): ProductImageItem[] => {
   const belongsToGroup = (item: ProductImageItem) => group === 'product'
     ? item.type === 'product'
-    : item.type === 'social' || item.type === 'share'
+    : belongsToSocialGallery(item)
   const firstGroupIndex = items.findIndex(belongsToGroup)
   const retained = items.filter((item) => !belongsToGroup(item))
   const insertAt = firstGroupIndex < 0 ? retained.length : Math.min(firstGroupIndex, retained.length)
@@ -51,7 +63,7 @@ export const replaceProductImageGroup = (
 export const toProductImageSelections = (items: ProductImageItem[]): ProductImageSelectionDto[] => {
   return items.slice(0, PRODUCT_IMAGE_LIMIT).map((item, sortOrder) => ({
     imageId: item.id,
-    type: item.type === 'product' ? 'product' : 'social',
+    type: item.type === 'share' ? 'social' : item.type,
     sortOrder,
   }))
 }

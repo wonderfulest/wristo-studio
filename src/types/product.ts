@@ -6,7 +6,7 @@ import type { AppMeterScoreVO } from '@/types/meter'
 import type { Image as ApiImage } from './api/image'
 import type { ProductTag } from './api/productTag'
 
-export type ProductImageType = 'product' | 'social' | 'share'
+export type ProductImageType = 'product' | 'social' | 'share' | 'pinterest'
 
 export interface ProductImageItem {
   /** 后端关系记录会把关系 ID 放在 id、真实图片 ID 放在 imageId。 */
@@ -22,7 +22,7 @@ export interface ProductImageItem {
 
 export interface ProductImageSelectionDto {
   imageId: number
-  type: 'product' | 'social'
+  type: 'product' | 'social' | 'pinterest'
   sortOrder: number
 }
 

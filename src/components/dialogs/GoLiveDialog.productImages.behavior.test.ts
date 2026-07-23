@@ -74,6 +74,7 @@ const design = {
       { id: 1, type: 'product', imageUrl: '/product.png' },
       { id: 2, type: 'social', imageUrl: '/social.png' },
       { id: 3, type: 'share', imageUrl: '/share.png' },
+      { id: 4, type: 'pinterest', imageUrl: '/pinterest.png' },
     ],
     lastGoLive: null,
   },
@@ -167,9 +168,32 @@ describe('GoLiveDialog product image behavior', () => {
     expect(editors[0].props('imageType')).toBe('product')
     expect(editors[0].props('modelValue')).toHaveLength(1)
     expect(editors[1].props('imageType')).toBe('social')
-    expect(editors[1].props('modelValue')).toHaveLength(2)
-    expect(editors.map((editor) => editor.props('totalCount'))).toEqual([3, 3])
+    expect(editors[1].props('modelValue')).toHaveLength(3)
+    expect(editors[1].props('modelValue')).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 4, type: 'pinterest' })]),
+    )
+    expect(editors.map((editor) => editor.props('totalCount'))).toEqual([4, 4])
     expect(editors.map((editor) => editor.props('maxTotal'))).toEqual([20, 20])
+  })
+
+  it('publishes pinterest selections without changing their type', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+
+    const submitButton = wrapper.findAll('button')
+      .find((button) => button.text() === 'common.submit')
+    expect(submitButton).toBeDefined()
+    await submitButton!.trigger('click')
+    await flushPromises()
+
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
+      productImages: [
+        { imageId: 1, type: 'product', sortOrder: 0 },
+        { imageId: 2, type: 'social', sortOrder: 1 },
+        { imageId: 3, type: 'social', sortOrder: 2 },
+        { imageId: 4, type: 'pinterest', sortOrder: 3 },
+      ],
+    }))
   })
 
   it('downloads all product and social sizes and reports partial failures', async () => {
@@ -190,6 +214,7 @@ describe('GoLiveDialog product image behavior', () => {
         expect.objectContaining({ type: 'product' }),
         expect.objectContaining({ type: 'social' }),
         expect.objectContaining({ type: 'share' }),
+        expect.objectContaining({ type: 'pinterest' }),
       ]),
       'all',
     )

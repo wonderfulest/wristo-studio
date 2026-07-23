@@ -19,6 +19,21 @@ describe('product image model', () => {
     expect(groupProductImages([item!]).social).toEqual([item])
   })
 
+  it('preserves pinterest images in the social gallery and selection payload', () => {
+    const item = normalizeProductImage({
+      id: 92,
+      imageId: 302,
+      type: 'pinterest',
+      image: { id: 302, url: '/pinterest-original.png' },
+    })
+
+    expect(item).toMatchObject({ id: 302, relationId: 92, type: 'pinterest' })
+    expect(groupProductImages([item!]).social).toEqual([item])
+    expect(toProductImageSelections([item!])).toEqual([
+      { imageId: 302, type: 'pinterest', sortOrder: 0 },
+    ])
+  })
+
   it('uses one twenty-image capacity across product and social groups', () => {
     const items = Array.from({ length: 3 }, (_, index) => ({
       id: index + 1,
