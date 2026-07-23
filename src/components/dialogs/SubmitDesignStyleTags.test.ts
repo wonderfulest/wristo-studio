@@ -53,27 +53,10 @@ describe('SubmitDesignDialog style tag integration', () => {
     'utf8',
   )
 
-  it('replaces category orchestration with a disabled-on-failure style tag selector', () => {
-    expect(source).toContain('<StyleTagSelector')
-    expect(source).toContain('v-model:tagIds="form.tagIds"')
-    expect(source).toContain(':disabled="styleTagsLoadFailed"')
+  it('removes category orchestration from this dialog only', () => {
     expect(source).not.toContain('CategorySelector')
     expect(source).not.toContain('loadCategories')
     expect(source).not.toContain('categoryIds')
-  })
-
-  it('sends tagIds through submit and PRG update payloads and guards load failures', () => {
-    expect(source).toMatch(/const submitData:[\s\S]*?tagIds: form\.tagIds/)
-    expect(source).toMatch(/const updateData:[\s\S]*?tagIds: submitData\.tagIds/)
-    expect(source).toMatch(/if \(styleTagsLoadFailed\.value\)[\s\S]*?return/)
-  })
-
-  it('uses the exact product tag API and validates its response before filtering', () => {
-    expect(source).toContain('getProductTagsPage()')
-    expect(source).toContain('response.code === 0')
-    expect(source).toContain('Array.isArray(response.data?.list)')
-    expect(source).toContain('filterEnabledStyleTags(response.data.list)')
-    expect(source).toContain("t('styleTags.loadFailed')")
   })
 })
 

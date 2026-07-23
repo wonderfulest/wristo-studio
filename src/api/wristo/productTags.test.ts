@@ -12,12 +12,12 @@ describe('getProductTagsPage', () => {
     get.mockReset()
   })
 
-  it('requests the admin product-tag page with the Studio picker defaults', async () => {
+  it('requests the Dsn product-tag page with the Studio picker defaults', async () => {
     const response = { code: 200, msg: 'success', data: { list: [] } }
     get.mockResolvedValue(response)
 
     await expect(getProductTagsPage()).resolves.toBe(response)
-    expect(get).toHaveBeenCalledWith('/admin/product-tags/page', {
+    expect(get).toHaveBeenCalledWith('/dsn/product-tags/page', {
       params: {
         pageNum: 1,
         pageSize: 200,

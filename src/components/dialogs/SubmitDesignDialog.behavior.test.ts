@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   submitDesign: vi.fn(),
   updateDesign: vi.fn(),
   submitPrgPackageTask: vi.fn(),
-  getProductTagsPage: vi.fn(),
+  getDsnProductTagsPage: vi.fn(),
   getBundles: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('@/api/wristo/design', () => ({
     submitPrgPackageTask: mocks.submitPrgPackageTask,
   },
 }))
-vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage }))
+vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getDsnProductTagsPage }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: { getBundles: mocks.getBundles, generateDescription: vi.fn() },
 }))
@@ -132,7 +132,7 @@ describe('SubmitDesignDialog style tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getDesignByUid.mockResolvedValue({ code: 0, data: designDetail })
-    mocks.getProductTagsPage.mockResolvedValue({
+    mocks.getDsnProductTagsPage.mockResolvedValue({
       code: 0,
       data: { pageNum: 1, pageSize: 20, total: apiTags.length, pages: 1, list: apiTags },
     })
@@ -142,11 +142,12 @@ describe('SubmitDesignDialog style tag behavior', () => {
     mocks.submitPrgPackageTask.mockResolvedValue({ code: 0, data: true })
   })
 
-  it('filters options, restores IDs in API order, and submits tagIds', async () => {
+  it('loads Dsn style tags for a non-admin Studio user, restores IDs, and submits tagIds', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
     expect(wrapper.find('.dialog').exists()).toBe(true)
+    expect(mocks.getDsnProductTagsPage).toHaveBeenCalledOnce()
     const selector = wrapper.getComponent(StyleTagSelectorStub)
     expect((selector.props('tags') as ProductTag[]).map((item) => item.id)).toEqual([7, 2, 9, 4, 6, 8])
     expect(selector.props('tagIds')).toEqual([7, 2, 9, 4, 6])
@@ -171,7 +172,7 @@ describe('SubmitDesignDialog style tag behavior', () => {
     ['invalid', () => Promise.resolve({ code: 0, data: { list: null } })],
   ])('keeps the dialog open and blocks requests when tag loading is %s', async (_name, response) => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    mocks.getProductTagsPage.mockImplementationOnce(response)
+    mocks.getDsnProductTagsPage.mockImplementationOnce(response)
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
