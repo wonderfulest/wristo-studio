@@ -51,6 +51,7 @@
           :design-image-url="getDesignImageUrl(design)"
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
+          :show-package-download="false"
           @open="emit('open', design)"
           @delete="emit('delete', design)"
         />

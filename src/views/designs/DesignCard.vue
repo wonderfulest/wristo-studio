@@ -138,7 +138,7 @@
               </button>
             </el-tooltip>
             <el-tooltip
-              v-if="row.canDownload"
+              v-if="showPackageDownload && row.canDownload"
               :content="t('editDesign.downloadPackage')"
               placement="top"
             >
@@ -223,6 +223,7 @@ const props = defineProps<{
   designImageUrl: string
   hasNewRelease: boolean
   hasDownloadablePackage: boolean
+  showPackageDownload?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -258,6 +259,7 @@ const creatorName = computed(() => props.creatorName)
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
+const showPackageDownload = computed(() => props.showPackageDownload !== false)
 const canEditCurrentDesign = computed(() => {
   return isAdminUser.value || currentUserId.value === 1 || design.value.user?.id === currentUserId.value
 })

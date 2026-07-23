@@ -5,6 +5,14 @@
       <!-- 当前设备展示与选择 -->
       <DeviceDisplay ref="deviceDisplayRef" />
       <el-input v-model="searchName" :placeholder="t('project.searchName')" class="name-filter" clearable @keyup.enter="handleSearch" />
+      <el-input
+        v-model="searchAppId"
+        :placeholder="t('project.searchAppId')"
+        class="app-id-filter"
+        clearable
+        inputmode="numeric"
+        @keyup.enter="handleSearch"
+      />
       <el-select v-model="selectedStatus" :placeholder="t('project.status')" clearable class="status-filter" @change="handleStatusChange">
         <el-option :label="t('common.all')" value="" />
         <el-option :label="t('status.draft')" value="draft" />
@@ -151,6 +159,7 @@ import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { downloadPackageFile } from '@/utils/packageDownload'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
+import { normalizePositiveAppId } from '@/views/designs/designSearch'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -197,6 +206,7 @@ type DesignSortOrder = 'asc' | 'desc'
 
 interface DesignSearchPreference {
   searchName: string
+  searchAppId: string
   selectedStatus: DesignStatus | ''
   selectedLaunchStatus: LaunchStatus | ''
   sortField: DesignSortField
@@ -223,6 +233,7 @@ const isDesignSortOrder = (value: unknown): value is DesignSortOrder => {
 
 const defaultDesignSearchPreference = (): DesignSearchPreference => ({
   searchName: '',
+  searchAppId: '',
   selectedStatus: '',
   selectedLaunchStatus: '',
   sortField: 'updated_at',
@@ -240,6 +251,7 @@ const readDesignSearchPreference = (): DesignSearchPreference => {
     const parsed = JSON.parse(raw) as Partial<DesignSearchPreference>
     return {
       searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
+      searchAppId: typeof parsed.searchAppId === 'string' ? parsed.searchAppId : defaults.searchAppId,
       selectedStatus: isDesignStatusValue(parsed.selectedStatus) ? parsed.selectedStatus : defaults.selectedStatus,
       selectedLaunchStatus: isLaunchStatusValue(parsed.selectedLaunchStatus) ? parsed.selectedLaunchStatus : defaults.selectedLaunchStatus,
       sortField: isDesignSortField(parsed.sortField) ? parsed.sortField : defaults.sortField,
@@ -263,6 +275,7 @@ const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
 
 const initialDesignSearch = readDesignSearchPreference()
 const searchName = ref(initialDesignSearch.searchName)
+const searchAppId = ref(initialDesignSearch.searchAppId)
 const selectedStatus = ref<DesignStatus | ''>(initialDesignSearch.selectedStatus)
 const selectedLaunchStatus = ref<LaunchStatus | ''>(initialDesignSearch.selectedLaunchStatus)
 const sortField = ref<DesignSortField>(initialDesignSearch.sortField)
@@ -366,10 +379,11 @@ watch(isAdminUser, (isAdmin) => {
 })
 
 watch(
-  [searchName, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
+  [searchName, searchAppId, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
   () => {
     writeDesignSearchPreference({
       searchName: searchName.value,
+      searchAppId: searchAppId.value,
       selectedStatus: selectedStatus.value,
       selectedLaunchStatus: selectedLaunchStatus.value,
       sortField: sortField.value,
@@ -430,6 +444,7 @@ const fetchDesigns = async () => {
       designStatus: selectedStatus.value || undefined,
       launchStatus: selectedLaunchStatus.value || undefined,
       name: searchName.value,
+      appId: normalizePositiveAppId(searchAppId.value),
       orderBy: `${sortField.value}:${sortOrder.value}`,
       scope: isAdminUser.value ? designScope.value : 'mine',
       populate: 'user,product,release,cover,package_log'
@@ -769,6 +784,10 @@ const handleGoLiveSuccess = () => {
   width: 220px;
 }
 
+.app-id-filter {
+  width: 160px;
+}
+
 .status-filter {
   width: 180px;
 }
@@ -826,6 +845,7 @@ const handleGoLiveSuccess = () => {
   }
 
   .name-filter,
+  .app-id-filter,
   .sort-field-filter,
   .sort-order-filter,
   .scope-filter {
