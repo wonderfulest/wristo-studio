@@ -118,6 +118,19 @@
         </div>
       </el-form-item>
 
+      <!-- Social images -->
+      <el-form-item :label="t('goLive.socialImages')">
+        <div class="product-image-section">
+          <ProductImagesEditor
+            v-model="socialImageItems"
+            image-type="social"
+            :total-count="form.productImages.length"
+            :max-total="PRODUCT_IMAGE_LIMIT"
+          />
+          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: form.productImages.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
+        </div>
+      </el-form-item>
+
       <!-- Garmin Store URL -->
       <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
         <el-input 
@@ -316,6 +329,13 @@ const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
   set: (items: ProductImageItem[]) => {
     form.productImages = replaceProductImageGroup(form.productImages, 'product', items)
+  },
+})
+
+const socialImageItems = computed({
+  get: () => groupProductImages(form.productImages).social,
+  set: (items: ProductImageItem[]) => {
+    form.productImages = replaceProductImageGroup(form.productImages, 'social', items)
   },
 })
 
