@@ -1,4 +1,4 @@
-type TagStatus = {
+type TagFilterFields = {
   tagGroup?: unknown
   status?: unknown
 }
@@ -8,7 +8,7 @@ export interface StyleTagSelectionResult {
   exceeded: boolean
 }
 
-export const filterEnabledStyleTags = <T extends TagStatus>(
+export const filterEnabledStyleTags = <T extends TagFilterFields>(
   items: readonly T[] | null | undefined,
 ): T[] => items?.filter(item => item.tagGroup === 'style' && item.status === 1) ?? []
 

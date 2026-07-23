@@ -5,6 +5,7 @@ const { get } = vi.hoisted(() => ({ get: vi.fn() }))
 vi.mock('@/config/axios', () => ({ default: { get } }))
 
 import { getProductTagsPage } from './productTags'
+import type { ProductTag } from '@/types/api/productTag'
 
 describe('getProductTagsPage', () => {
   beforeEach(() => {
@@ -23,5 +24,25 @@ describe('getProductTagsPage', () => {
         orderBy: 'sort:desc',
       },
     })
+  })
+
+  it('supports absent and null wire metadata fields on product tags', () => {
+    const minimalTag: ProductTag = {
+      id: 1,
+      name: 'Minimal',
+      slug: 'minimal',
+      tagGroup: 'style',
+      sort: 10,
+      status: 1,
+    }
+    const nullableTag: ProductTag = {
+      ...minimalTag,
+      description: null,
+      appCount: null,
+      createdAt: null,
+      updatedAt: null,
+    }
+
+    expect([minimalTag, nullableTag]).toHaveLength(2)
   })
 })

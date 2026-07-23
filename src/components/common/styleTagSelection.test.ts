@@ -53,4 +53,17 @@ describe('limitStyleTagSelection', () => {
       ),
     ).toEqual({ ids: [1, 2, 3, 4, 5], exceeded: true })
   })
+
+  it.each([
+    { limit: 2, expected: [9, 8] },
+    { limit: 2.9, expected: [9, 8] },
+    { limit: -1, expected: [] },
+    { limit: Number.POSITIVE_INFINITY, expected: [9, 8, 7, 6, 5] },
+    { limit: Number.NaN, expected: [9, 8, 7, 6, 5] },
+  ])('normalizes the custom limit $limit', ({ limit, expected }) => {
+    expect(limitStyleTagSelection([9, 8, 7, 6, 5, 4], [1, 2, 3, 4, 5, 6], limit)).toEqual({
+      ids: expected,
+      exceeded: true,
+    })
+  })
 })

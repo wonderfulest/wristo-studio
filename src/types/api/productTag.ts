@@ -7,10 +7,10 @@ export interface ProductTag {
   tagGroup: string
   sort: number
   status: number
-  description: string
-  appCount: number
-  createdAt: string
-  updatedAt: string
+  description?: string | null
+  appCount?: number | null
+  createdAt?: string | null
+  updatedAt?: string | null
 }
 
 export interface ProductTagPageData {
