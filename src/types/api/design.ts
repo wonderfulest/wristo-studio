@@ -31,6 +31,7 @@ export interface UpdateDesignParamsV2 {
   designStatus?: DesignStatus
   userId?: number
   payment?: ProductPaymentUpdateParams
+  tagIds?: number[]
   categoryIds?: number[]
   bundleIds?: number[]
 }
@@ -46,6 +47,7 @@ export interface DesignSubmitDTO {
   kpayId?: string
   price?: number
   trialLasts?: number
+  tagIds?: number[]
   categoryIds?: number[]
   bundleIds?: number[]
 }

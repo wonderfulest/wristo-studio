@@ -83,11 +83,11 @@
           </el-button>
         </div>
       </el-form-item>
-      <CategorySelector
-        v-model:categoryIds="form.categoryIds"
-        :categories="categories"
-        :loadingCategories="loadingCategories"
-        :hidden-category-slugs="['whole']"
+      <StyleTagSelector
+        v-model:tagIds="form.tagIds"
+        :tags="styleTags"
+        :loading="loadingStyleTags"
+        :disabled="styleTagsLoadFailed"
       />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
@@ -117,12 +117,13 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
-import { getBasicCategories } from '@/api/wristo/categories'
-import type { Category } from '@/types/api/category'
+import { getProductTagsPage } from '@/api/wristo/productTags'
+import type { ProductTag } from '@/types/api/productTag'
 import { productsApi } from '@/api/wristo/products'
 import type { Bundle } from '@/types/api/bundle'
-import CategorySelector from '@/components/common/CategorySelector.vue'
+import StyleTagSelector from '@/components/common/StyleTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
+import { filterEnabledStyleTags } from '@/components/common/styleTagSelection'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import {
@@ -131,6 +132,7 @@ import {
 } from '@/utils/descriptionTemplateLanguage'
 import { ElMessage } from 'element-plus'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
+import { restoreEnabledStyleTagIds, STYLE_TAG_LIMIT, validateStyleTagIds } from './submitDesignStyleTags'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -148,7 +150,6 @@ const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
-const CATEGORY_LIMIT = 5
 
 const getCurrentDeviceParams = () => {
   const deviceId = userStore.userInfo?.device?.deviceId
@@ -163,14 +164,9 @@ const form = reactive({
   kpayId: '',
   price: 1.99,
   trialLasts: 0.25, // default 0.25 hours
-  categoryIds: [] as number[],
+  tagIds: [] as number[],
   bundleIds: [] as number[]
 })
-
-function isWholeCategoryId(id: number) {
-  const category = categories.value.find((item) => item.id === id)
-  return category?.slug === 'whole' || id === 1
-}
 
 const rules = computed(() => ({
   paymentMethod: [
@@ -211,16 +207,13 @@ const rules = computed(() => ({
       trigger: 'blur' 
     }
   ],
-  categoryIds: [
-    { required: true, type: 'array', message: t('category.selectAtLeastOne'), trigger: 'change' },
+  tagIds: [
+    { required: true, type: 'array', message: t('styleTags.required'), trigger: 'change' },
     { 
       validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
-        const ids = Array.isArray(value) ? value : []
-        const len = ids.length
-        if (len === 0) return callback(new Error(t('category.selectAtLeastOne')))
-        if (ids.filter((id) => typeof id === 'number' && !isWholeCategoryId(id)).length > CATEGORY_LIMIT) {
-          return callback(new Error(t('category.limit', { limit: CATEGORY_LIMIT })))
-        }
+        const result = validateStyleTagIds(value)
+        if (result === 'required' || result === 'invalid') return callback(new Error(t('styleTags.required')))
+        if (result === 'limit') return callback(new Error(t('styleTags.limit', { limit: STYLE_TAG_LIMIT })))
         callback()
       },
       trigger: 'change'
@@ -230,21 +223,31 @@ const rules = computed(() => ({
 
 const emit = defineEmits(['success', 'cancel'])
 
-// Category / bundle options
-const categories = ref<Category[]>([])
-const loadingCategories = ref(false)
+// Style tag / bundle options
+const styleTags = ref<ProductTag[]>([])
+const loadingStyleTags = ref(false)
+const styleTagsLoadFailed = ref(false)
 const bundles = ref<Bundle[]>([])
 const loadingBundles = ref(false)
 
-const loadCategories = async () => {
+const loadStyleTags = async () => {
+  loadingStyleTags.value = true
+  styleTagsLoadFailed.value = false
   try {
-    loadingCategories.value = true
-    const res: Category[] = await getBasicCategories()
-    categories.value = res
-  } catch (e) {
-    console.error('Failed to load categories:', e)
+    const response = await getProductTagsPage()
+    if (response.code === 0 && Array.isArray(response.data?.list)) {
+      styleTags.value = filterEnabledStyleTags(response.data.list)
+      return
+    }
+    throw new Error(response.msg || 'Invalid style tag response')
+  } catch (error) {
+    console.error('Failed to load style tags:', error)
+    styleTags.value = []
+    form.tagIds = []
+    styleTagsLoadFailed.value = true
+    messageStore.error(t('styleTags.loadFailed'))
   } finally {
-    loadingCategories.value = false
+    loadingStyleTags.value = false
   }
 }
 
@@ -290,6 +293,9 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
     currentDesign.value = null
     dialogMode.value = options?.mode || 'submit'
     prgDeviceId.value = options?.deviceId || ''
+    styleTags.value = []
+    styleTagsLoadFailed.value = false
+    form.tagIds = []
     
     // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
@@ -308,16 +314,13 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         kpayId: '',
         price: 1.99,
         trialLasts: 0.25,
-        categoryIds: [],
+        tagIds: [],
         bundleIds: []
       })
       
       if (product) {
         form.trialLasts = product.trialLasts
-        // Initialize categories and bundles
-        if (Array.isArray(product.categories)) {
-          form.categoryIds = product.categories.map((c: Category) => c.id)
-        }
+        // Initialize bundles; style tags are restored after enabled options load.
         if (Array.isArray(product.bundles)) {
           form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)
         }
@@ -336,8 +339,11 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
           form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
-      // Load category and bundle options
-      await Promise.all([loadCategories(), loadBundles()])
+      // Load style tag and bundle options
+      await Promise.all([loadStyleTags(), loadBundles()])
+      if (!styleTagsLoadFailed.value) {
+        form.tagIds = restoreEnabledStyleTagIds(product?.tags?.map((tag) => tag.id), styleTags.value)
+      }
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || t('submitDesign.loadDetailsFailed'))
@@ -381,6 +387,10 @@ const refreshDescription = async () => {
 // Confirm submit
 const handleConfirm = async () => {
   if (!formRef.value) return
+  if (styleTagsLoadFailed.value) {
+    messageStore.error(t('styleTags.loadFailed'))
+    return
+  }
   
   try {
     await formRef.value.validate()
@@ -396,7 +406,7 @@ const handleConfirm = async () => {
       paymentMethod: form.paymentMethod,
       name: form.name,
       description: form.description,
-      categoryIds: form.categoryIds,
+      tagIds: form.tagIds,
       bundleIds: form.bundleIds
     }
     
@@ -438,7 +448,7 @@ const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiRe
     uid: submitData.designUid,
     name: submitData.name,
     description: submitData.description,
-    categoryIds: submitData.categoryIds,
+    tagIds: submitData.tagIds,
     bundleIds: submitData.bundleIds,
   }
   if (canPublishPaid.value) {

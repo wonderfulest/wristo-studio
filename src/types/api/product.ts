@@ -4,6 +4,7 @@ import type { UserBase } from './user'
 import type { Bundle } from './bundle'
 import type { DescriptionTemplateLanguage } from '@/utils/descriptionTemplateLanguage'
 import type { ProductImageItem } from '../product'
+import type { ProductTag } from './productTag'
 
 export interface ProductPaymentVo {
   paymentMethod: string
@@ -119,6 +120,7 @@ export interface Product {
   release: ProductReleaseVo
   prgRelease?: ProductReleasePrgVo
   bundles: Bundle[]
+  tags?: ProductTag[] | null
   lastGoLive: number | string | null
   score: number
   previewImageUrl?: string

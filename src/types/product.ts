@@ -4,6 +4,7 @@ import type { Category } from './api/category'
 import type { Bundle } from './api/bundle'
 import type { AppMeterScoreVO } from '@/types/meter'
 import type { Image as ApiImage } from './api/image'
+import type { ProductTag } from './api/productTag'
 
 export type ProductImageType = 'product' | 'social' | 'share'
 
@@ -55,6 +56,7 @@ export interface Product {
   lastGoLive?: number | string
   score?: AppMeterScoreVO | null
   bundles?: Bundle[] | null
+  tags?: ProductTag[] | null
   previewImageUrl?: string
   productImages?: ProductImageItem[]
 }
