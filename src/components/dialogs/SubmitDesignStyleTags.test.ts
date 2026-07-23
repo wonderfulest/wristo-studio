@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { ProductTag } from '@/types/api/productTag'
-import type { DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
+import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { Product } from '@/types/product'
 import {
   restoreEnabledStyleTagIds,
@@ -87,8 +87,8 @@ describe('style tag request and product contracts', () => {
   })
 
   it('exposes nullable product tags', () => {
-    const product = { tags: null } as Product
-    const taggedProduct = { tags: [tag(1)] } as Product
+    const product: Pick<Product, 'tags'> = { tags: null }
+    const taggedProduct: Pick<Design['product'], 'tags'> = { tags: [tag(1)] }
 
     expect(product.tags).toBeNull()
     expect(taggedProduct.tags?.[0].id).toBe(1)
