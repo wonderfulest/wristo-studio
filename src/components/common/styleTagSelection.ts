@@ -44,3 +44,5 @@ export const limitStyleTagSelection = (
     exceeded: true,
   }
 }
+
+export const limitTagSelection = limitStyleTagSelection
