@@ -170,8 +170,8 @@ export interface GoToLiveDto {
   bannerImage: string
   /** 支付信息 */
   payment: ProductPaymentDto
-  /** 分类ID列表 */
-  categoryIds: number[]
+  /** 标签ID列表 */
+  tagIds: number[]
   /** Bundle ID列表 */
   bundleIds?: number[]
   /** 按统一顺序提交的普通与 Social 图片 */

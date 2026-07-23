@@ -140,12 +140,11 @@
         </div>
       </el-form-item>
 
-      <!-- Category Selector -->
-      <CategorySelector
-        v-model:categoryIds="form.categoryIds"
-        :categories="categories"
-        :loadingCategories="loadingCategories"
-        :hidden-category-slugs="['whole']"
+      <ProductTagSelector
+        v-model:tagIds="form.tagIds"
+        :tags="productTags"
+        :loading="loadingProductTags"
+        :disabled="productTagsLoadFailed"
       />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
@@ -210,9 +209,9 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted } from 'vue'
-import { getBasicCategories } from '@/api/wristo/categories'
-import type { Category } from '@/types/api/category'
 import type { Bundle } from '@/types/api/bundle'
+import type { ProductTag } from '@/types/api/productTag'
+import { getProductTagsPage } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
@@ -225,7 +224,7 @@ import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
 import type { FormInstance, FormRules } from 'element-plus'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
-import CategorySelector from '@/components/common/CategorySelector.vue'
+import ProductTagSelector from '@/components/common/ProductTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
@@ -236,6 +235,7 @@ import {
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import type { ProductImageItem } from '@/types/product'
+import { filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
 import {
   PRODUCT_IMAGE_LIMIT,
   groupProductImages,
@@ -257,6 +257,23 @@ const rules: FormRules = {
   garminStoreUrl: [
     { required: true, message: t('goLive.garminStoreUrlRequired'), trigger: ['blur', 'change'] },
   ],
+  tagIds: [
+    {
+      validator: (_rule, value, callback) => {
+        const result = validatePublishedTagIds(value)
+        if (result === 'required') {
+          callback(new Error(t('productTags.required')))
+          return
+        }
+        if (result === 'invalid') {
+          callback(new Error(t('productTags.limit', { limit: 5 })))
+          return
+        }
+        callback()
+      },
+      trigger: 'change',
+    },
+  ],
 }
 
 const openSettings = (): void => {
@@ -265,8 +282,9 @@ const openSettings = (): void => {
   }
 }
 
-const categories = ref<Category[]>([])
-const loadingCategories = ref(false)
+const productTags = ref<ProductTag[]>([])
+const loadingProductTags = ref(false)
+const productTagsLoadFailed = ref(false)
 
 const bundles = ref<Bundle[]>([])
 const loadingBundles = ref(false)
@@ -282,7 +300,7 @@ const form = reactive({
   bannerImageUrl: '',
   garminStoreUrl: '',
   youtubeUrl: '',
-  categoryIds: [] as number[],
+  tagIds: [] as number[],
   bundleIds: [] as number[],
   paymentMethod: 'free',
   trialLasts: 0.25,
@@ -306,6 +324,11 @@ const userStore = useUserStore()
 const emit = defineEmits(['success', 'cancel'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
+
+const restoreCurrentProductTags = () => {
+  const selectedIds = currentDesign.value?.product?.tags?.map((tag) => tag.id) ?? []
+  form.tagIds = restorePublishedTagIds(productTags.value, selectedIds)
+}
 
 const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
@@ -336,8 +359,7 @@ const loadDesign = (design: Design) => {
   form.appId = design.product.appId
   form.name = design.product.name
   form.description = design.product.description
-  form.categoryIds = design.product.categories
-    .map((category: Category) => category.id)
+  restoreCurrentProductTags()
   form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
   
   // 如果已有产品信息，使用现有数据
@@ -379,6 +401,11 @@ const loadDesign = (design: Design) => {
 const handleConfirm = async () => {
   if (!currentDesign.value) return
 
+  if (productTagsLoadFailed.value) {
+    messageStore.error(t('productTags.loadFailed'))
+    return
+  }
+
   const valid = await formRef.value?.validate?.().catch(() => false)
   if (valid === false) return
   
@@ -418,7 +445,7 @@ const handleConfirm = async () => {
         price: form.paymentMethod === 'free' ? 0 : form.price,
         trialLasts: normalizeTrialLasts(form.paymentMethod, form.trialLasts)
       },
-      categoryIds: form.categoryIds,
+      tagIds: form.tagIds,
       bundleIds: form.bundleIds
     }
     if (form.productImages.length > 0) {
@@ -471,16 +498,24 @@ const onRawImageUploaded = (img: any) => {
     img.previewUrl || img.formats?.thumbnail?.url || img.url || form.rawImageUrl
 }
 
-// 加载分类数据
-const loadCategories = async () => {
+const loadProductTags = async () => {
   try {
-    loadingCategories.value = true
-    const response: Category[] = await getBasicCategories()
-    categories.value = response
+    loadingProductTags.value = true
+    const response = await getProductTagsPage()
+    if (response.code !== 0 || !Array.isArray(response.data?.list)) {
+      throw new Error('Invalid product tag response')
+    }
+    productTags.value = filterEnabledProductTags(response.data.list)
+    productTagsLoadFailed.value = false
+    restoreCurrentProductTags()
   } catch (error) {
-    console.error('Failed to load categories:', error)
+    console.error('Failed to load product tags:', error)
+    productTags.value = []
+    form.tagIds = []
+    productTagsLoadFailed.value = true
+    messageStore.error(t('productTags.loadFailed'))
   } finally {
-    loadingCategories.value = false
+    loadingProductTags.value = false
   }
 }
 
@@ -500,7 +535,7 @@ const loadBundles = async () => {
 }
 
 onMounted(() => {
-  loadCategories()
+  loadProductTags()
   loadBundles()
 })
 
