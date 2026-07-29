@@ -11,8 +11,8 @@ export default function registerLabelPlugin() {
     add: (config) => {
       return createLabel(config as LabelElementConfig)
     },
-    update: (element, patch) => {
-      updateLabel(element as any, patch as Partial<LabelElementConfig>)
+    update: (element, patch, context) => {
+      updateLabel(element as any, patch as Partial<LabelElementConfig>, context)
     },
     encode: (element) => {
       return encodeLabel(element as any) as any

@@ -8,6 +8,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 // 目前 indicators 仅支持这四种文本类指示器
 export type IndicatorTextType = 'bluetooth' | 'alarms' | 'disturb' | 'notification'
@@ -89,6 +90,7 @@ export async function updateIndicatorText(
   eleType: IndicatorTextType,
   element: FabricElement,
   patch: Partial<IndicatorElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -145,6 +147,6 @@ export async function updateIndicatorText(
       topBase: encodeTopBaseForElement(obj as unknown as FabricElement),
     } as IndicatorElementConfig
 
-    elementDataStore.patchElement(String(objId), encoded as any)
+    if (context.persist !== false) elementDataStore.patchElement(String(objId), encoded as any)
   }
 }

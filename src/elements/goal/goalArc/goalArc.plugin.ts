@@ -23,8 +23,8 @@ export default function registerGoalArcPlugin() {
 
       return element
     },
-    update: (element, patch) => {
-      return updateGoalArc(element as any, patch as Partial<GoalArcElementConfig>)
+    update: (element, patch, context) => {
+      return updateGoalArc(element as any, patch as Partial<GoalArcElementConfig>, context)
     },
     encode: (element) => {
       return encodeGoalArc(element as any)

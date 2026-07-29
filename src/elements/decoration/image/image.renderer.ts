@@ -11,6 +11,7 @@ import { encodeImage } from './image.encoder'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 const EMPTY_IMAGE_PLACEHOLDER =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
@@ -151,7 +152,7 @@ export async function createImage(
   return image as unknown as FabricElement
 }
 
-export async function updateImage(element: FabricElement, patch: Partial<ImageElementConfig>): Promise<void> {
+export async function updateImage(element: FabricElement, patch: Partial<ImageElementConfig>, context: ElementUpdateContext = {}): Promise<void> {
   const canvas = useCanvasStore().canvas
   const elementDataStore = useElementDataStore()
   if (!canvas) return
@@ -246,7 +247,7 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
   canvas.requestRenderAll?.()
 
   const id = (obj as any).id
-  if (id != null) {
+  if (context.persist !== false && id != null) {
     const encoded = encodeImage(obj as unknown as FabricElement)
     elementDataStore.patchElement(String(id), encoded as any)
   }

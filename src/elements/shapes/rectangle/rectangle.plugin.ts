@@ -11,8 +11,8 @@ export default function registerRectanglePlugin() {
     add: (config) => {
       return createRectangle(config as RectangleElementConfig)
     },
-    update: (element, patch) => {
-      updateRectangle(element as any, patch as Partial<RectangleElementConfig>)
+    update: (element, patch, context) => {
+      updateRectangle(element as any, patch as Partial<RectangleElementConfig>, context)
     },
     encode: (element) => {
       return encodeRectangle(element as any) as any

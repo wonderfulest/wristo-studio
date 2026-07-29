@@ -23,7 +23,7 @@ export function installSubDialLayoutEditor(options: SubDialLayoutEditorOptions):
 export default function registerSubDialPlugin() {
   registerElement('subDial', {
     add: (config) => createSubDial(config as SubDialElementConfig),
-    update: (element, patch) => updateSubDial(element, patch as Partial<SubDialElementConfig>),
+    update: (element, patch, context) => updateSubDial(element, patch as Partial<SubDialElementConfig>, context),
     encode: (element) => encodeSubDial(element),
     decode: (config) => decodeSubDial(config as SubDialElementConfig)
   })

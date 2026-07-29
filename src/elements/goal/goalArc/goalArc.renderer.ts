@@ -7,6 +7,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { ensureGoalElementId, clampProgress } from '@/elements/goal/goal.common'
 import { encodeGoalArc } from '@/elements/goal/goalArc/goalArc.encoder'
 import { applyControlsToObject } from '@/utils/controlManager'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 const GOAL_ARC_DEBUG = false
 const normalizeEndCap = (value: unknown): 'round' | 'butt' => value === 'round' ? 'round' : 'butt'
@@ -655,7 +656,7 @@ function isGoalBindingOnlyUpdate(patch: Partial<GoalArcElementConfig>) {
   return keys.length > 0 && keys.every((key) => key === 'goalProperty')
 }
 
-export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElementConfig> = {}): void {
+export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElementConfig> = {}, context: ElementUpdateContext = {}): void {
   const group = element as unknown as Group
   const canvas = useCanvasStore().canvas
   const elementDataStore = useElementDataStore()
@@ -763,7 +764,7 @@ export function updateGoalArc(element: FabricElement, patch: Partial<GoalArcElem
       before: beforeSnapshot,
       after: groupDebugSnapshot(group),
     })
-    elementDataStore.patchElement(String((group as any).id), persisted as any)
+    if (context.persist !== false) elementDataStore.patchElement(String((group as any).id), persisted as any)
   } catch {
     // ignore
   }

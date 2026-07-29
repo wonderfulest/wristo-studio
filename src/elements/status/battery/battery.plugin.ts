@@ -22,8 +22,8 @@ export default function registerBatteryPlugin() {
 
       return element
     },
-    update: (element, patch) => {
-      return updateBattery(element as any, patch as Partial<BatteryElementConfig>)
+    update: (element, patch, context) => {
+      return updateBattery(element as any, patch as Partial<BatteryElementConfig>, context)
     },
     encode: (element) => {
       return encodeBattery(element as any)

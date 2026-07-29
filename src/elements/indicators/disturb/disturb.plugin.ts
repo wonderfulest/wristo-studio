@@ -12,8 +12,8 @@ export default function registerDisturbPlugin() {
       // 固定 glyph '\u0021'，表示免打扰图标
       return createIndicatorText('disturb', '\u0021', config as IndicatorElementConfig)
     },
-    update: (element, patch) => {
-      return updateIndicatorText('disturb', element as any, patch as Partial<IndicatorElementConfig>)
+    update: (element, patch, context) => {
+      return updateIndicatorText('disturb', element as any, patch as Partial<IndicatorElementConfig>, context)
     },
     encode: (element) => {
       return encodeIndicatorText('disturb', element as any)

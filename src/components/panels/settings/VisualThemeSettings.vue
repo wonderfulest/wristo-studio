@@ -153,7 +153,7 @@ import {
   normalizeThemeMode,
 } from '@/engine/services/visualThemeService'
 import { createVisualThemePreviewController } from '@/engine/services/visualThemePreviewService'
-import { getElementHandler } from '@/engine/registry/elementRegistry'
+import { applyVisualThemeElementPatch } from '@/engine/services/visualThemeElementUpdater'
 import { registerElementInstance } from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
@@ -219,15 +219,7 @@ const applyPreviewElement = async (
   element: Record<string, any>,
   patch: Record<string, unknown>,
 ): Promise<void> => {
-  const assetElementTypes = ['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap']
-  if (assetElementTypes.includes(String(element.eleType))) {
-    const handler = getElementHandler(element.eleType as any)
-    await Promise.resolve(handler.update?.(element as any, patch as any, { persist: false }))
-  } else {
-    element.set?.(patch)
-    Object.assign(element, patch)
-    element.setCoords?.()
-  }
+  await applyVisualThemeElementPatch(element, patch, { persist: false })
   const current = (canvasStore.canvas?.getObjects?.() || []).find((candidate: any) =>
     candidate.id != null && element.id != null && String(candidate.id) === String(element.id)) as any
   if (!current) return

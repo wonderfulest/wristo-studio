@@ -10,6 +10,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -76,6 +77,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
 export function updateLabel(
   element: FabricElement,
   patch: Partial<LabelElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -145,6 +147,6 @@ export function updateLabel(
       topBase: encodeTopBaseForElement(text as any),
     } as LabelElementConfig
 
-    elementDataStore.patchElement(String(textId), encoded as any)
+    if (context.persist !== false) elementDataStore.patchElement(String(textId), encoded as any)
   }
 }

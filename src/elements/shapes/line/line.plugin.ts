@@ -11,8 +11,8 @@ export default function registerLinePlugin() {
     add: (config) => {
       return createLine(config as LineElementConfig)
     },
-    update: (element, patch) => {
-      updateLine(element as any, patch as Partial<LineElementConfig>)
+    update: (element, patch, context) => {
+      updateLine(element as any, patch as Partial<LineElementConfig>, context)
     },
     encode: (element) => {
       return encodeLine(element as any) as any

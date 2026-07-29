@@ -14,6 +14,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { useDesignStore } from '@/stores/designStore'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -145,7 +146,7 @@ export function createDate(config: DateElementConfig): FabricElement {
   return element as FabricElement
 }
 
-export function updateDate(element: FabricElement, patch: Partial<DateElementConfig> = {}): void {
+export function updateDate(element: FabricElement, patch: Partial<DateElementConfig> = {}, context: ElementUpdateContext = {}): void {
   const baseStore = useBaseStore()
   const propertiesStore = usePropertiesStore()
   const designStore = useDesignStore()
@@ -193,7 +194,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
 
   obj.setCoords?.()
   canvas?.requestRenderAll?.()
-  if (obj.id != null) {
+  if (context.persist !== false && obj.id != null) {
     elementDataStore.patchElement(String(obj.id), {
       left: obj.left,
       top: obj.top,

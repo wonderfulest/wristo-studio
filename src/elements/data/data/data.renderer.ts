@@ -8,6 +8,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 export async function createData(config: DataElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -75,6 +76,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
 export function updateData(
   element: FabricElement,
   patch: Partial<DataElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -141,6 +143,6 @@ export function updateData(
       topBase: encodeTopBaseForElement(obj as any),
     } satisfies DataElementConfig
 
-    elementDataStore.patchElement(String(obj.id), encoded as any)
+    if (context.persist !== false) elementDataStore.patchElement(String(obj.id), encoded as any)
   }
 }

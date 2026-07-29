@@ -7,6 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { clampNumber, getPresetZones, resolvePresetDefaults, resolveZone, type ZoneMetricZone } from './zoneMetric.common'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 type ZoneMetricResolvedConfig = {
   id: string
@@ -219,7 +220,7 @@ export function createZoneMetric(options: ZoneMetricElementConfig): FabricElemen
   return group as FabricElement
 }
 
-export function updateZoneMetric(element: FabricElement, patch: Partial<ZoneMetricElementConfig> = {}): void {
+export function updateZoneMetric(element: FabricElement, patch: Partial<ZoneMetricElementConfig> = {}, context: ElementUpdateContext = {}): void {
   if (!element) return
   const canvas = useCanvasStore().canvas as any
   const obj = (canvas?.getObjects?.() || []).find((o: any) => String(o.id) === String((element as any).id)) || element
@@ -252,7 +253,7 @@ export function updateZoneMetric(element: FabricElement, patch: Partial<ZoneMetr
   obj.setCoords?.()
   canvas?.requestRenderAll?.()
 
-  if ((obj as any).id != null) {
+  if (context.persist !== false && (obj as any).id != null) {
     useElementDataStore().patchElement(String((obj as any).id), encodeZoneMetricGroup(obj) as any)
   }
 }

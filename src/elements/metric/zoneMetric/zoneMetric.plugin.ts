@@ -9,7 +9,7 @@ import ZoneMetricSettings from './zoneMetric.panel.vue'
 export default function registerZoneMetricPlugin() {
   registerElement('zoneMetric' as ElementType, {
     add: (config) => createZoneMetric(config as ZoneMetricElementConfig),
-    update: (element, patch) => updateZoneMetric(element as any, patch as Partial<ZoneMetricElementConfig>),
+    update: (element, patch, context) => updateZoneMetric(element as any, patch as Partial<ZoneMetricElementConfig>, context),
     encode: (element) => encodeZoneMetric(element as any),
     decode: (config) => decodeZoneMetric(config as ZoneMetricElementConfig),
   })

@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 // ─── 辅助：x1/y1/x2/y2 <-> Rect left/top/width/angle 互转 ───────────────────
 
@@ -303,7 +304,7 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
 
 // ─── 更新直线属性 ────────────────────────────────────────────────────────────
 
-export function updateLine(element: FabricElement, patch: Partial<LineElementConfig> = {}): void {
+export function updateLine(element: FabricElement, patch: Partial<LineElementConfig> = {}, context: ElementUpdateContext = {}): void {
   const rect = element as any
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -349,7 +350,7 @@ export function updateLine(element: FabricElement, patch: Partial<LineElementCon
 
   // 同步更新 elementDataStore，确保设置面板响应式更新
   const id = rect.id
-  if (id != null) {
+  if (context.persist !== false && id != null) {
     const elementDataStore = useElementDataStore()
     elementDataStore.patchElement(String(id), {
       left: rect.left as number,

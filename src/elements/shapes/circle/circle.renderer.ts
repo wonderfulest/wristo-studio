@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { createRectangleGradientFill, normalizeRectangleGradientDirection } from '../rectangle/rectangle.gradient'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 export const MIN_CIRCLE_RADIUS = 3
 
@@ -164,7 +165,7 @@ export async function createCircle(config: CircleElementConfig): Promise<FabricE
   return circle as any
 }
 
-export function updateCircle(element: FabricElement, patch: Partial<CircleElementConfig> = {}): void {
+export function updateCircle(element: FabricElement, patch: Partial<CircleElementConfig> = {}, context: ElementUpdateContext = {}): void {
   const circle = element as any
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -228,7 +229,7 @@ export function updateCircle(element: FabricElement, patch: Partial<CircleElemen
   canvas.renderAll?.()
 
   const id = circle.id
-  if (id != null) {
+  if (context.persist !== false && id != null) {
     elementDataStore.patchElement(String(id), {
       left: circle.left as number,
       top: circle.top as number,

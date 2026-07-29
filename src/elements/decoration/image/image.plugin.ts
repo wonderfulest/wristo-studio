@@ -11,8 +11,8 @@ export default function registerImagePlugin() {
     add: (config, renderContext) => {
       return createImage(config as unknown as ImageElementConfig, renderContext) as Promise<any>
     },
-    update: (element, patch) => {
-      return updateImage(element as any, patch as Partial<ImageElementConfig>)
+    update: (element, patch, context) => {
+      return updateImage(element as any, patch as Partial<ImageElementConfig>, context)
     },
     encode: (element) => {
       return encodeImage(element as any) as unknown as ElementConfig

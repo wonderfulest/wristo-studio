@@ -12,8 +12,8 @@ export default function registerAlarmsPlugin() {
       // 固定 glyph '\u0024'，表示闹钟图标
       return createIndicatorText('alarms', '\u0024', config as IndicatorElementConfig)
     },
-    update: (element, patch) => {
-      return updateIndicatorText('alarms', element as any, patch as Partial<IndicatorElementConfig>)
+    update: (element, patch, context) => {
+      return updateIndicatorText('alarms', element as any, patch as Partial<IndicatorElementConfig>, context)
     },
     encode: (element) => {
       return encodeIndicatorText('alarms', element as any)

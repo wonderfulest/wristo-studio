@@ -9,6 +9,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeGoalBar } from './goalBar.encoder'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { clampProgress } from '@/elements/goal/goal.common'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import {
   denormalizePolygonPoints,
   isConvexPolygon,
@@ -787,6 +788,7 @@ export async function createGoalBar(
 export function updateGoalBar(
   element: FabricElement,
   patch: Partial<GoalBarElementConfig> = {},
+  context: ElementUpdateContext = {},
 ) {
   const group = element as unknown as Group
   const canvas = useCanvasStore().canvas
@@ -844,7 +846,7 @@ export function updateGoalBar(
    */
   const encoded = encodeGoalBar(group as FabricElement)
   const id = (group as any).id
-  if (id != null) {
+  if (context.persist !== false && id != null) {
     elementDataStore.patchElement(String(id), encoded as any)
   }
 }

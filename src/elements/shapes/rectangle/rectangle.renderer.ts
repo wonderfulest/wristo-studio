@@ -8,6 +8,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { applyControlsToObject } from '@/utils/controlManager'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { createRectangleGradientFill, normalizeRectangleGradientDirection } from './rectangle.gradient'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 function applyRectangleFill(rectangle: Rect): void {
   const rect = rectangle as any
@@ -173,6 +174,7 @@ export async function createRectangle(config: RectangleElementConfig): Promise<F
 export function updateRectangle(
   element: FabricElement,
   patch: Partial<RectangleElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): void {
   const rect = element as any
   const canvasStore = useCanvasStore()
@@ -270,7 +272,7 @@ export function updateRectangle(
   canvas.renderAll?.()
 
   const id = rect.id
-  if (id != null) {
+  if (context.persist !== false && id != null) {
     elementDataStore.patchElement(String(id), {
       left: rect.left as number,
       top: rect.top as number,

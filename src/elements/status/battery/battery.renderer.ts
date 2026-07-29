@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import * as elementManager from '@/engine/managers/elementManager'
 import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, encodeBattery, resolveBatteryParts } from '@/elements/status/battery/battery.encoder'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 function getLevelColor(
   level: number,
@@ -125,7 +126,11 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
   return group as FabricElement
 }
 
-export function updateBattery(element: FabricElement, patch: Partial<BatteryElementConfig> = {}): void {
+export function updateBattery(
+  element: FabricElement,
+  patch: Partial<BatteryElementConfig> = {},
+  _context: ElementUpdateContext = {},
+): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   if (!canvas) return

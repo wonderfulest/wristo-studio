@@ -11,6 +11,7 @@ import type { FabricElement } from '@/types/element'
 import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
@@ -263,7 +264,7 @@ export async function createTime(
   }
 }
 
-export async function updateTime(element: FabricElement, config: TimeElementConfig): Promise<void> {
+export async function updateTime(element: FabricElement, config: TimeElementConfig, context: ElementUpdateContext = {}): Promise<void> {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -284,7 +285,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
   const isGroup = (obj as any).type === 'group'
 
   const patchConfigFromObject = (target: any) => {
-    if (!target?.id) return
+    if (context.persist === false || !target?.id) return
     elementDataStore.patchElement(String(target.id), {
       left: target.left,
       top: target.top,

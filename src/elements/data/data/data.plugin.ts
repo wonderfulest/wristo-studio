@@ -12,8 +12,8 @@ export default function registerDataPlugin() {
     add: (config) => {
       return createData(config as DataElementConfig)
     },
-    update: (element, patch) => {
-      updateData(element as any, patch as Partial<DataElementConfig>)
+    update: (element, patch, context) => {
+      updateData(element as any, patch as Partial<DataElementConfig>, context)
     },
     // encoder
     encode: (element) => {

@@ -14,6 +14,7 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { applyControlsToObject } from '@/utils/controlManager'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 const iconUpdateVersionById = new Map<string, number>()
 
@@ -253,7 +254,7 @@ export async function createIcon(
   return element as unknown as FabricElement
 }
 
-export async function updateIcon(element: FabricElement, config: Partial<IconElementConfig>): Promise<void> {
+export async function updateIcon(element: FabricElement, config: Partial<IconElementConfig>, context: ElementUpdateContext = {}): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   const elementDataStore = useElementDataStore()
@@ -486,6 +487,6 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
       topBase: encodeTopBaseForElement(target as unknown as FabricElement)
     } satisfies IconElementConfig
 
-    elementDataStore.patchElement(String(objId), encoded as any)
+    if (context.persist !== false) elementDataStore.patchElement(String(objId), encoded as any)
   }
 }

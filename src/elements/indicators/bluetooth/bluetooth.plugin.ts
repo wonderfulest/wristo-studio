@@ -12,8 +12,8 @@ export default function registerBluetoothPlugin() {
       // 固定 glyph '\u0022'，表示蓝牙图标
       return createIndicatorText('bluetooth', '\u0022', config as IndicatorElementConfig)
     },
-    update: (element, patch) => {
-      return updateIndicatorText('bluetooth', element as any, patch as Partial<IndicatorElementConfig>)
+    update: (element, patch, context) => {
+      return updateIndicatorText('bluetooth', element as any, patch as Partial<IndicatorElementConfig>, context)
     },
     encode: (element) => {
       return encodeIndicatorText('bluetooth', element as any)

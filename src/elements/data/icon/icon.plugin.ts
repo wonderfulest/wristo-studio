@@ -11,8 +11,8 @@ export default function registerIconPlugin() {
     add: (config, renderContext) => {
       return createIcon(config as IconElementConfig, renderContext)
     },
-    update: (element, patch) => {
-      return updateIcon(element as any, patch as Partial<IconElementConfig>)
+    update: (element, patch, context) => {
+      return updateIcon(element as any, patch as Partial<IconElementConfig>, context)
     },
     encode: (element) => {
       return encodeIcon(element as any) as any

@@ -11,8 +11,8 @@ export default function registerCirclePlugin() {
     add: (config) => {
       return createCircle(config as CircleElementConfig)
     },
-    update: (element, patch) => {
-      updateCircle(element as any, patch as Partial<CircleElementConfig>)
+    update: (element, patch, context) => {
+      updateCircle(element as any, patch as Partial<CircleElementConfig>, context)
     },
     encode: (element) => {
       return encodeCircle(element as any) as any

@@ -12,8 +12,8 @@ export default function registerDatePlugin() {
     add: (config) => {
       return createDate(config as DateElementConfig)
     },
-    update: (element, patch) => {
-      updateDate(element as any, patch as DateElementConfig)
+    update: (element, patch, context) => {
+      updateDate(element as any, patch as DateElementConfig, context)
     },
     // encoder
     encode: (element) => {

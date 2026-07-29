@@ -11,8 +11,8 @@ export default function registerUnitPlugin() {
     add: (config) => {
       return createUnit(config as UnitElementConfig)
     },
-    update: (element, patch) => {
-      updateUnit(element as any, patch as Partial<UnitElementConfig>)
+    update: (element, patch, context) => {
+      updateUnit(element as any, patch as Partial<UnitElementConfig>, context)
     },
     encode: (element) => {
       return encodeUnit(element as any) as any

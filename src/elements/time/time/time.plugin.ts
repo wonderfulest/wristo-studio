@@ -11,8 +11,8 @@ export default function registerTimePlugin() {
     add: (config, renderContext) => {
       return createTime(config as TimeElementConfig, renderContext)
     },
-    update: (element, patch) => {
-      return updateTime(element as any, patch as TimeElementConfig)
+    update: (element, patch, context) => {
+      return updateTime(element as any, patch as TimeElementConfig, context)
     },
     encode: (element) => {
       return encodeTime(element as any) as any

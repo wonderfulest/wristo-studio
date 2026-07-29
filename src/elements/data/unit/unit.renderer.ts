@@ -10,6 +10,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveMetricUnit } from '@/utils/metricLabel'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
@@ -83,6 +84,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
 export function updateUnit(
   element: FabricElement,
   patch: Partial<UnitElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -132,7 +134,7 @@ export function updateUnit(
   obj.setCoords()
   canvas.renderAll()
 
-  if (obj.id != null) {
+  if (context.persist !== false && obj.id != null) {
     useElementDataStore().patchElement(String(obj.id), {
       eleType: 'unit',
       id: String(obj.id ?? ''),

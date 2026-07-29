@@ -51,6 +51,7 @@ import { Group, Rect, Polygon } from 'fabric'
 import {
   previewGoalBarPolygon,
   restoreGoalBarPreview,
+  updateGoalBar,
 } from './goalBar.renderer'
 
 const polygonPoints = [
@@ -130,6 +131,22 @@ describe('goal bar polygon preview', () => {
     expect(patchElement).not.toHaveBeenCalled()
     expect(upsertElement).not.toHaveBeenCalled()
     expect(requestRenderAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates and restores real group child fills without persisting preview colors', () => {
+    const { group, config } = createRectangleGoalBar()
+
+    updateGoalBar(group, { color: '#abcdef', bgColor: '#123456' }, { persist: false })
+    expect(group.__element.children.progress.fill).toBe('#abcdef')
+    expect(group.__element.children.background.fill).toBe('#123456')
+    expect(patchElement).not.toHaveBeenCalled()
+    expect(upsertElement).not.toHaveBeenCalled()
+
+    updateGoalBar(group, { color: config.color, bgColor: config.bgColor }, { persist: false })
+    expect(group.__element.children.progress.fill).toBe(config.color)
+    expect(group.__element.children.background.fill).toBe(config.bgColor)
+    expect(patchElement).not.toHaveBeenCalled()
+    expect(upsertElement).not.toHaveBeenCalled()
   })
 
   it.each([

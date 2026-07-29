@@ -12,8 +12,8 @@ export default function registerNotificationPlugin() {
       // 固定 glyph '\u0025'，表示通知图标
       return createIndicatorText('notification', '\u0025', config as IndicatorElementConfig)
     },
-    update: (element, patch) => {
-      return updateIndicatorText('notification', element as any, patch as Partial<IndicatorElementConfig>)
+    update: (element, patch, context) => {
+      return updateIndicatorText('notification', element as any, patch as Partial<IndicatorElementConfig>, context)
     },
     encode: (element) => {
       return encodeIndicatorText('notification', element as any)

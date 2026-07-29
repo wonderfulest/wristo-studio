@@ -11,6 +11,7 @@ import { clampPivot, normalizeSubDialValue, resolveSubDialAngle } from './subDia
 import { encodeSubDial } from './subDial.encoder'
 import { atomicReplaceGroupObjects } from './fabricGroupAtomicReplace'
 import { migrateSubDialConfig } from './subDial.migration'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 type SubDialChildren = {
   static: {
@@ -326,7 +327,11 @@ export async function createSubDial(input: SubDialElementConfig): Promise<Fabric
   return group
 }
 
-export async function updateSubDial(element: FabricElement, patch: Partial<SubDialElementConfig>): Promise<void> {
+export async function updateSubDial(
+  element: FabricElement,
+  patch: Partial<SubDialElementConfig>,
+  context: ElementUpdateContext = {},
+): Promise<void> {
   const group = element as unknown as Group & FabricElement
   const widget = getWidget(group)
   if (!widget?.config) throw new Error('Invalid sub-dial element')
@@ -442,5 +447,5 @@ export async function updateSubDial(element: FabricElement, patch: Partial<SubDi
   widget.config = config
   group.setCoords()
   useCanvasStore().canvas?.requestRenderAll?.()
-  useElementDataStore().upsertElement(encodeSubDial(group))
+  if (context.persist !== false) useElementDataStore().upsertElement(encodeSubDial(group))
 }

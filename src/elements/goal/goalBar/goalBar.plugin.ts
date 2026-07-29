@@ -11,8 +11,8 @@ export default function registerGoalBarPlugin() {
     add: (config) => {
       return createGoalBar(config as GoalBarElementConfig)
     },
-    update: (element, patch) => {
-      updateGoalBar(element as any, patch as Partial<GoalBarElementConfig>)
+    update: (element, patch, context) => {
+      updateGoalBar(element as any, patch as Partial<GoalBarElementConfig>, context)
     },
     encode: (element) => {
       return encodeGoalBar(element as any)
