@@ -24,6 +24,8 @@ import {
 } from '@/utils/dateFontCompatibility'
 import { validateDataGoalBindings } from '@/engine/services/propertyBindingValidation'
 import { toPlainRuntimeConfig } from '@/engine/services/runtimeConfigSerialization'
+import { validateVisualThemes } from '@/engine/services/visualThemeService'
+import type { VisualThemesConfig, VisualThemeAssetSlot } from '@/types/visualTheme'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -44,24 +46,28 @@ function readNumericAssetId(element: AnyElementConfig): number | null {
 }
 
 export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null): Promise<RuntimeDesignConfig | null> {
-  if (!config?.elements?.length) return config
+  if (!config) return config
 
-  const assetUrlById = new Map<number, string>()
+  const assetUrlById = new Map<number, Promise<string>>()
+  const resolveAnalogAssetUrl = (assetId: number): Promise<string> => {
+    let pending = assetUrlById.get(assetId)
+    if (!pending) {
+      pending = analogAssetApi.get(assetId).then((res) => {
+        const fileUrl = res.data?.file?.url || ''
+        if (!fileUrl) throw new Error(`Analog asset ${assetId} has no file URL`)
+        return fileUrl
+      })
+      assetUrlById.set(assetId, pending)
+    }
+    return pending
+  }
   const elements = await Promise.all(config.elements.map(async (element) => {
     if (!isPackageAssetElement(element)) return element
 
     const assetId = readNumericAssetId(element)
     if (!assetId) return element
 
-    let fileUrl = assetUrlById.get(assetId)
-    if (!fileUrl) {
-      const res = await analogAssetApi.get(assetId)
-      fileUrl = res.data?.file?.url || ''
-      if (!fileUrl) {
-        throw new Error(`Analog asset ${assetId} has no file URL`)
-      }
-      assetUrlById.set(assetId, fileUrl)
-    }
+    const fileUrl = await resolveAnalogAssetUrl(assetId)
 
     return {
       ...(element as any),
@@ -69,9 +75,27 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
     } as AnyElementConfig
   }))
 
+  const analogSlots: VisualThemeAssetSlot[] = ['hourHand', 'minuteHand', 'secondHand', 'centerCap']
+  const visualThemes = config.visualThemes
+    ? {
+        ...config.visualThemes,
+        themes: await Promise.all(config.visualThemes.themes.map(async (theme) => {
+          const assets = { ...theme.assets }
+          await Promise.all(analogSlots.map(async (slot) => {
+            const asset = assets[slot]
+            const assetId = readNumericAssetId(asset as AnyElementConfig)
+            if (!asset || !assetId) return
+            assets[slot] = { ...asset, imageUrl: await resolveAnalogAssetUrl(assetId) }
+          }))
+          return { ...theme, assets }
+        })),
+      }
+    : undefined
+
   return {
     ...config,
     elements,
+    ...(visualThemes ? { visualThemes } : {}),
   }
 }
 
@@ -222,6 +246,7 @@ export interface GenerateConfigOptions {
   maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
   supportsChineseContent?: boolean
+  visualThemes?: VisualThemesConfig
   validateBindings?: boolean
 }
 
@@ -230,9 +255,11 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.elements,
     Boolean(config.supportsChineseContent),
   )
-  if (dateErrors.length > 0) {
-    ElMessage.error(dateErrors.join(t('common.listSeparator')))
-    console.error('Export date validation failed:', dateErrors)
+  const visualThemeErrors = validateVisualThemes(config.visualThemes, config.properties)
+  const errors = [...dateErrors, ...visualThemeErrors]
+  if (errors.length > 0) {
+    ElMessage.error(errors.join(t('common.listSeparator')))
+    console.error('Export validation failed:', errors)
     return false
   }
   return true
@@ -250,6 +277,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     maxFieldLength,
     localization,
     supportsChineseContent,
+    visualThemes,
     validateBindings = false,
   } = options
 
@@ -272,6 +300,12 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   }
   if (localization) {
     config.localization = localization
+  }
+  if (visualThemes) {
+    config.visualThemes = toPlainRuntimeConfig({
+      ...config,
+      visualThemes,
+    }).visualThemes
   }
 
   const objects: FabricElement[] = canvas.getObjects() as FabricElement[]

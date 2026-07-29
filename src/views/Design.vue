@@ -109,6 +109,7 @@ import type { Design, DesignConfig } from '@/types/api/design'
 import { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import { useDesignStore } from '@/stores/designStore'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { useUserStore } from '@/stores/user'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import {
@@ -141,6 +142,7 @@ const router = useRouter()
 const baseStore = useBaseStore()
 const { t } = useI18n()
 const designStore = useDesignStore()
+const visualThemeStore = useVisualThemeStore()
 const userStore = useUserStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
@@ -925,6 +927,7 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
 }
 
 const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
+  visualThemeStore.hydrate(config.visualThemes)
   await fontStore.fetchFonts()
   if (!isCurrentDesignLoad(generation)) return false
   if (Array.isArray(config.elements)) {

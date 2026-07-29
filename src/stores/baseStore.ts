@@ -21,6 +21,7 @@ import { useUserStore } from '@/stores/user'
 import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO } from '@/api/device'
 import { getProduct } from '@/api/products'
 import * as elementManager from '@/engine/managers/elementManager'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -363,6 +364,7 @@ export const useBaseStore = defineStore('baseStore', {
       }
       const propertiesStore = usePropertiesStore()
       const canvasStore = useCanvasStore()
+      const visualThemeStore = useVisualThemeStore()
       const config = generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -374,6 +376,7 @@ export const useBaseStore = defineStore('baseStore', {
         maxFieldLength: propertiesStore.maxFieldLength,
         localization: designStore.getLocalizationConfig(),
         supportsChineseContent: designStore.supportsChineseContent,
+        visualThemes: visualThemeStore.config,
         validateBindings: true,
       })
       if (!config) return false
@@ -455,6 +458,7 @@ export const useBaseStore = defineStore('baseStore', {
       const canvasStore = useCanvasStore()
       const propertiesStore = usePropertiesStore()
       const designStore = useDesignStore()
+      const visualThemeStore = useVisualThemeStore()
       return generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -466,6 +470,7 @@ export const useBaseStore = defineStore('baseStore', {
         maxFieldLength: propertiesStore.maxFieldLength,
         localization: designStore.getLocalizationConfig(),
         supportsChineseContent: designStore.supportsChineseContent,
+        visualThemes: visualThemeStore.config,
         validateBindings: options.validateBindings ?? false,
       })
     },

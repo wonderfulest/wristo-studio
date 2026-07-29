@@ -21,6 +21,7 @@ import {
   writeImageVariants,
   type ImageVariantManifest,
 } from '@/engine/services/imageVariantBundle'
+import type { VisualThemesConfig } from '@/types/visualTheme'
 
 type ManifestWeatherAsset = {
   condition: string
@@ -494,6 +495,24 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
   return refs
 }
 
+export const collectVisualThemeAssetRefs = (visualThemes: VisualThemesConfig | undefined) => {
+  if (!visualThemes) return []
+  return visualThemes.themes.flatMap((theme) =>
+    (['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as const)
+      .flatMap((slot) => {
+        const source = theme.assets[slot]?.imageUrl?.trim()
+        if (!source) return []
+        return [{
+          elementId: `theme-${theme.id}-${slot}`,
+          elementType: slot === 'background' ? 'background' : slot,
+          field: slot,
+          source,
+          category: slot === 'background' ? 'background' : 'hands',
+        }]
+      }),
+  )
+}
+
 const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
   const slugs = new Set<string>()
   const walk = (value: unknown, key = '') => {
@@ -959,7 +978,6 @@ const buildDesignAssetArchive = async (
     zip.file(path, JSON.stringify(element, null, 2))
     manifest.elements?.push({ id, type, path })
   }
-
   const sourcePathByUrl = new Map<string, ManifestAsset>()
   const contentAssetByHash = new Map<string, ManifestAsset>()
   for (const [index, element] of (config.elements || []).entries()) {
@@ -976,6 +994,9 @@ const buildDesignAssetArchive = async (
         pivotY: ref.pivotY,
       })
     }
+  }
+  for (const ref of collectVisualThemeAssetRefs(config.visualThemes)) {
+    await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, ref)
   }
 
   const marketingInputs = createMarketingAssetInputs(options.product || options.productImages)
@@ -1172,7 +1193,7 @@ export async function restoreDesignAssetBundleFromZip(
   pendingStore.clearAll()
   iconPendingStore.clearAll()
 
-  if (!config?.elements?.length) return config
+  if (!config) return config
 
   const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
@@ -1215,6 +1236,7 @@ export async function restoreDesignAssetBundleFromZip(
       })
     }
     restoreElementAssetUrls(config.elements)
+    restoreElementAssetUrls(config.visualThemes)
 
     const weatherFontSlugs = Array.from(new Set(
       weatherElements

@@ -118,3 +118,97 @@ describe('formal asset package layout', () => {
     expect(manifest.productImages[0]).toMatchObject({ imageId: 101, relationId: 700, type: 'social' })
   })
 })
+
+describe('visual theme assets', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('includes themed backgrounds, hands, and caps while downloading duplicate sources once', async () => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() })
+    const fetch = vi.fn(async (input: string | URL | Request) => new Response(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="20"><title>${String(input)}</title></svg>`,
+      { status: 200, headers: { 'content-type': 'image/svg+xml' } },
+    ))
+    vi.stubGlobal('fetch', fetch)
+    const config = {
+      version: '1', properties: {}, designId: 'design-1', name: 'Themes', textCase: 0,
+      bitmapMode: false, orderIds: [], elements: [],
+      visualThemes: {
+        version: 1, enabled: true, defaultThemeId: 'classic', selectionMode: 'user',
+        themes: [{
+          id: 'classic', name: 'Classic',
+          assets: {
+            background: { assetId: 9, imageUrl: 'https://cdn/theme-background.svg' },
+            hourHand: { assetId: 11, imageUrl: 'https://cdn/shared-hand.svg' },
+            minuteHand: { assetId: 11, imageUrl: 'https://cdn/shared-hand.svg' },
+            centerCap: { assetId: 12, imageUrl: 'https://cdn/cap.svg', targetSize: 24 },
+          },
+          colors: {},
+          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        }],
+      },
+    }
+
+    const { buildWrtDesignPackage } = await import('@/engine/services/designAssetBundleService')
+    const file = await buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+    const savedConfig = JSON.parse(await zip.file('config/config.json')!.async('string'))
+
+    expect(manifest.assets.background).toHaveLength(1)
+    expect(manifest.assets.hands).toHaveLength(2)
+    expect(manifest.studio.assetRefs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ elementId: 'theme-classic-background', field: 'background' }),
+      expect.objectContaining({ elementId: 'theme-classic-hourHand', field: 'hourHand' }),
+      expect.objectContaining({ elementId: 'theme-classic-minuteHand', field: 'minuteHand' }),
+      expect.objectContaining({ elementId: 'theme-classic-centerCap', field: 'centerCap' }),
+    ]))
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(savedConfig.visualThemes).toEqual(config.visualThemes)
+  })
+
+  it('restores themed asset URLs from the archive for designs without base elements', async () => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() })
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      '<svg xmlns="http://www.w3.org/2000/svg"/>',
+      { status: 200, headers: { 'content-type': 'image/svg+xml' } },
+    )))
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:restored-theme'),
+      revokeObjectURL: vi.fn(),
+    })
+    const config = {
+      version: '1', properties: {}, designId: 'design-1', name: 'Themes', textCase: 0,
+      bitmapMode: false, orderIds: [], elements: [],
+      visualThemes: {
+        version: 1, enabled: true, defaultThemeId: 'classic', selectionMode: 'user',
+        themes: [{
+          id: 'classic', name: 'Classic',
+          assets: {
+            hourHand: { assetId: 11, imageUrl: 'https://cdn/hour.svg' },
+            minuteHand: { assetId: 12, imageUrl: 'https://cdn/minute.svg' },
+          },
+          colors: {},
+          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        }],
+      },
+    }
+    const {
+      buildWrtDesignPackage,
+      restoreDesignAssetBundleFromZip,
+    } = await import('@/engine/services/designAssetBundleService')
+    const file = await buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+
+    const restored = await restoreDesignAssetBundleFromZip(structuredClone(config) as any, zip, manifest)
+
+    expect(restored.visualThemes!.themes[0].assets.hourHand).toEqual({
+      assetId: 11,
+      imageUrl: 'blob:restored-theme',
+    })
+  })
+})
