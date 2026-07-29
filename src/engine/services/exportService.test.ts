@@ -93,6 +93,141 @@ describe('visual theme export persistence', () => {
     expect(JSON.stringify(config)).not.toContain('previewThemeId')
   })
 
+  it('exports persisted visual-theme base fields while the canvas is still previewing a theme', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    for (const type of ['background', 'hourHand', 'rectangle', 'battery', 'label']) {
+      registerElement(type as any, {
+        add: vi.fn() as any,
+        encode: (element) => ({ ...(element as any) }),
+      })
+    }
+    const canvasElements = [
+      {
+        id: 'background',
+        eleType: 'background',
+        imageUrl: 'theme-bg.png',
+        imageId: 102,
+        color: '#eeeeee',
+        colorProperty: 'Surface',
+        left: 10,
+        top: 10,
+        width: 454,
+        height: 454,
+      },
+      {
+        id: 'hour',
+        eleType: 'hourHand',
+        imageUrl: 'theme-hour.svg',
+        assetId: 202,
+        left: 230,
+        top: 227,
+      },
+      {
+        id: 'rectangle',
+        eleType: 'rectangle',
+        fill: '#abcdef',
+        fillProperty: 'Accent',
+        stroke: '#fedcba',
+        strokeProperty: 'Outline',
+        left: 44,
+        top: 55,
+      },
+      {
+        id: 'battery',
+        eleType: 'battery',
+        bodyFill: '#999999',
+        bodyFillProperty: 'Surface',
+        headFill: '#888888',
+        headFillProperty: 'Accent',
+        left: 66,
+        top: 77,
+      },
+      {
+        id: 'label',
+        eleType: 'label',
+        fill: '#777777',
+        left: 88,
+        top: 99,
+      },
+    ]
+    const baseElements = [
+      {
+        ...canvasElements[0],
+        imageUrl: 'base-bg.png',
+        imageId: 101,
+        color: '#111111',
+      },
+      {
+        ...canvasElements[1],
+        imageUrl: 'base-hour.svg',
+        assetId: 201,
+        left: 227,
+      },
+      {
+        ...canvasElements[2],
+        fill: '#222222',
+        stroke: '#333333',
+        left: 22,
+      },
+      {
+        ...canvasElements[3],
+        bodyFill: '#444444',
+        headFill: '#555555',
+        left: 33,
+      },
+      {
+        ...canvasElements[4],
+        fill: '#666666',
+        left: 44,
+      },
+    ]
+    const visualThemes = {
+      version: 1 as const,
+      enabled: true,
+      defaultThemeId: 'night',
+      selectionMode: 'user' as const,
+      themes: [{
+        id: 'night',
+        name: 'Night',
+        assets: {
+          background: { assetId: 102, imageUrl: 'theme-bg.png' },
+          hourHand: { assetId: 202, imageUrl: 'theme-hour.svg' },
+        },
+        colors: { Accent: '#abcdef', Outline: '#fedcba', Surface: '#eeeeee' },
+        fallbackHands: {
+          hourColor: '#ffffff',
+          minuteColor: '#ffffff',
+          secondColor: '#ff0000',
+        },
+      }],
+    }
+
+    const config = generateConfig({
+      canvas: { getObjects: () => canvasElements } as any,
+      baseElements: baseElements as any,
+      properties: {
+        Accent: { type: 'color', title: 'Accent', value: '#222222', themeMode: 'theme' },
+        Outline: { type: 'color', title: 'Outline', value: '#333333', themeMode: 'theme' },
+        Surface: { type: 'color', title: 'Surface', value: '#111111', themeMode: 'theme' },
+      },
+      designId: 'design-1',
+      watchFaceName: 'Theme',
+      textCase: 0,
+      bitmapMode: false,
+      visualThemes,
+    })
+
+    expect(config?.elements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'background', imageUrl: 'base-bg.png', imageId: 101, color: '#111111' }),
+      expect.objectContaining({ id: 'hour', imageUrl: 'base-hour.svg', assetId: 201, left: 230 }),
+      expect.objectContaining({ id: 'rectangle', fill: '#222222', stroke: '#333333', left: 44 }),
+      expect.objectContaining({ id: 'battery', bodyFill: '#444444', headFill: '#555555', left: 66 }),
+      expect.objectContaining({ id: 'label', fill: '#777777', left: 88 }),
+    ]))
+    expect(config?.visualThemes).toEqual(visualThemes)
+  })
+
   it('resolves every themed analog asset once while preserving background URL', async () => {
     const { resolvePackageAssetUrls } = await import('./exportService')
     getAnalogAsset.mockImplementation(async (id: number) => ({

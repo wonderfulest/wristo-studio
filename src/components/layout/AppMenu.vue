@@ -64,8 +64,9 @@
     direction="rtl"
     size="min(760px, 92vw)"
     append-to-body
+    @closed="restoreVisualThemePreview"
   >
-    <VisualThemeSettings />
+    <VisualThemeSettings ref="visualThemeSettingsRef" />
   </el-drawer>
   <input ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
 
@@ -237,6 +238,10 @@ const watchFaceName = computed(() => {
 // Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
 const visualThemeDrawerVisible = ref(false)
+const visualThemeSettingsRef = ref<{ restorePreview?: () => Promise<void> } | null>(null)
+const restoreVisualThemePreview = () => {
+  void visualThemeSettingsRef.value?.restorePreview?.()
+}
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)

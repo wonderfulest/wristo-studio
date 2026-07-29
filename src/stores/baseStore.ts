@@ -365,6 +365,7 @@ export const useBaseStore = defineStore('baseStore', {
       const propertiesStore = usePropertiesStore()
       const canvasStore = useCanvasStore()
       const visualThemeStore = useVisualThemeStore()
+      const elementDataStore = useElementDataStore()
       const config = generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -377,6 +378,7 @@ export const useBaseStore = defineStore('baseStore', {
         localization: designStore.getLocalizationConfig(),
         supportsChineseContent: designStore.supportsChineseContent,
         visualThemes: visualThemeStore.config,
+        baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
         validateBindings: true,
       })
       if (!config) return false
@@ -459,6 +461,7 @@ export const useBaseStore = defineStore('baseStore', {
       const propertiesStore = usePropertiesStore()
       const designStore = useDesignStore()
       const visualThemeStore = useVisualThemeStore()
+      const elementDataStore = useElementDataStore()
       return generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -471,6 +474,7 @@ export const useBaseStore = defineStore('baseStore', {
         localization: designStore.getLocalizationConfig(),
         supportsChineseContent: designStore.supportsChineseContent,
         visualThemes: visualThemeStore.config,
+        baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
         validateBindings: options.validateBindings ?? false,
       })
     },

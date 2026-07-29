@@ -1,6 +1,10 @@
 import { normalizeThemeMode, resolveThemeColor } from './visualThemeService'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualTheme, VisualThemeAssetSlot, VisualThemesConfig } from '@/types/visualTheme'
+import {
+  VISUAL_THEME_ASSET_ELEMENT_TYPES,
+  VISUAL_THEME_COLOR_BINDINGS,
+} from './visualThemeElementFields'
 
 type ElementConfig = Record<string, any> & { id?: string | number; eleType?: string }
 
@@ -16,43 +20,13 @@ export interface VisualThemePreviewDependencies {
   onError?: (error: unknown) => void
 }
 
-const ASSET_ELEMENT_TYPES: Record<VisualThemeAssetSlot, string> = {
-  background: 'background',
-  hourHand: 'hourHand',
-  minuteHand: 'minuteHand',
-  secondHand: 'secondHand',
-  centerCap: 'centerCap',
-}
-
-const COLOR_BINDINGS = [
-  ['color', 'colorProperty'],
-  ['bgColor', 'bgColorProperty'],
-  ['stroke', 'strokeProperty'],
-  ['borderColor', 'borderColorProperty'],
-  ['bodyStroke', 'bodyStrokeProperty'],
-  ['headFill', 'headFillProperty'],
-  ['bodyFill', 'bodyFillProperty'],
-  ['fill', 'fillProperty'],
-  ['activeColor', 'activeColorProperty'],
-  ['inactiveColor', 'inactiveColorProperty'],
-  ['pointColor', 'pointColorProperty'],
-  ['gridColor', 'gridColorProperty'],
-  ['xAxisColor', 'xAxisColorProperty'],
-  ['yAxisColor', 'yAxisColorProperty'],
-  ['xLabelColor', 'xLabelColorProperty'],
-  ['yLabelColor', 'yLabelColorProperty'],
-  ['levelColorHigh', 'levelColorHighProperty'],
-  ['levelColorMedium', 'levelColorMediumProperty'],
-  ['levelColorLow', 'levelColorLowProperty'],
-] as const
-
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 function resolveAssetPatch(
   base: ElementConfig,
   theme: VisualTheme,
 ): Record<string, unknown> {
-  const slot = (Object.entries(ASSET_ELEMENT_TYPES)
+  const slot = (Object.entries(VISUAL_THEME_ASSET_ELEMENT_TYPES)
     .find(([, eleType]) => eleType === base.eleType)?.[0]) as VisualThemeAssetSlot | undefined
   if (!slot) return {}
   const asset = theme.assets[slot]
@@ -80,7 +54,7 @@ function resolveColorPatch(
   properties: PropertiesMap,
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {}
-  for (const [colorField, propertyField] of COLOR_BINDINGS) {
+  for (const [colorField, propertyField] of VISUAL_THEME_COLOR_BINDINGS) {
     const propertyKey = base[propertyField]
     if (typeof propertyKey !== 'string') continue
     const property = properties[propertyKey]

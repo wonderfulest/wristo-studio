@@ -270,6 +270,9 @@ onBeforeUnmount(() => {
   void previewController.restore()
 })
 
+const restorePreview = () => previewController.restore()
+defineExpose({ restorePreview })
+
 const colorAsHex = (color: string) => color.startsWith('0x') ? `#${color.slice(2)}` : color
 
 const changeColorOwnership = (propertyKey: string, mode: ThemeMode) => {

@@ -26,6 +26,11 @@ import { validateDataGoalBindings } from '@/engine/services/propertyBindingValid
 import { toPlainRuntimeConfig } from '@/engine/services/runtimeConfigSerialization'
 import { validateVisualThemes } from '@/engine/services/visualThemeService'
 import type { VisualThemesConfig, VisualThemeAssetSlot } from '@/types/visualTheme'
+import {
+  VISUAL_THEME_ASSET_BASE_FIELDS,
+  VISUAL_THEME_ASSET_ELEMENT_TYPES,
+  VISUAL_THEME_COLOR_BINDINGS,
+} from './visualThemeElementFields'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -100,30 +105,8 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
 }
 
 function mapColorProperties(encodeConfig: AnyElementConfig, properties: PropertiesMap): void {
-  const colorMappings: Array<{ source: string; target: string }> = [
-    { source: 'color', target: 'colorProperty' },
-    { source: 'bgColor', target: 'bgColorProperty' },
-    { source: 'stroke', target: 'strokeProperty' },
-    { source: 'borderColor', target: 'borderColorProperty' },
-    { source: 'bodyStroke', target: 'bodyStrokeProperty' },
-    { source: 'headFill', target: 'headFillProperty' },
-    { source: 'bodyFill', target: 'bodyFillProperty' },
-    { source: 'fill', target: 'fillProperty' },
-    { source: 'activeColor', target: 'activeColorProperty' },
-    { source: 'inactiveColor', target: 'inactiveColorProperty' },
-    { source: 'pointColor', target: 'pointColorProperty' },
-    { source: 'gridColor', target: 'gridColorProperty' },
-    { source: 'xAxisColor', target: 'xAxisColorProperty' },
-    { source: 'yAxisColor', target: 'yAxisColorProperty' },
-    { source: 'xLabelColor', target: 'xLabelColorProperty' },
-    { source: 'yLabelColor', target: 'yLabelColorProperty' },
-    { source: 'levelColorHigh', target: 'levelColorHighProperty' },
-    { source: 'levelColorMedium', target: 'levelColorMediumProperty' },
-    { source: 'levelColorLow', target: 'levelColorLowProperty' },
-  ]
-
   const encRec: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
-  for (const { source, target } of colorMappings) {
+  for (const [source, target] of VISUAL_THEME_COLOR_BINDINGS) {
     const val = encRec[source]
     if (val === undefined) continue
     if (val === 'transparent') {
@@ -153,14 +136,7 @@ function validateColorBindings(
 ): string[] {
   const errors: string[] = []
 
-  const colorTargets = [
-    'colorProperty', 'bgColorProperty', 'strokeProperty', 'borderColorProperty',
-    'bodyStrokeProperty', 'headFillProperty', 'bodyFillProperty', 'fillProperty',
-    'activeColorProperty', 'inactiveColorProperty', 'pointColorProperty',
-    'gridColorProperty', 'xAxisColorProperty', 'yAxisColorProperty',
-    'xLabelColorProperty', 'yLabelColorProperty', 'levelColorHighProperty',
-    'levelColorMediumProperty', 'levelColorLowProperty',
-  ]
+  const colorTargets = VISUAL_THEME_COLOR_BINDINGS.map(([, target]) => target)
 
   for (const [key, prop] of Object.entries(properties)) {
     if (prop.type !== 'color') continue
@@ -248,6 +224,29 @@ export interface GenerateConfigOptions {
   supportsChineseContent?: boolean
   visualThemes?: VisualThemesConfig
   validateBindings?: boolean
+  baseElements?: Array<Record<string, any>>
+}
+
+function restoreVisualThemeBaseFields(
+  encoded: AnyElementConfig,
+  base: Record<string, any> | undefined,
+): AnyElementConfig {
+  if (!base) return encoded
+  const output = encoded as unknown as Record<string, any>
+  const eleType = String(output.eleType ?? base.eleType ?? '')
+  const assetSlot = (Object.entries(VISUAL_THEME_ASSET_ELEMENT_TYPES)
+    .find(([, assetElementType]) => assetElementType === eleType)?.[0]) as VisualThemeAssetSlot | undefined
+  if (assetSlot) {
+    for (const field of VISUAL_THEME_ASSET_BASE_FIELDS[assetSlot] || []) {
+      if (Object.prototype.hasOwnProperty.call(base, field)) output[field] = base[field]
+    }
+  }
+  for (const [colorField, propertyField] of VISUAL_THEME_COLOR_BINDINGS) {
+    if (typeof base[propertyField] !== 'string') continue
+    if (Object.prototype.hasOwnProperty.call(base, colorField)) output[colorField] = base[colorField]
+    output[propertyField] = base[propertyField]
+  }
+  return encoded
 }
 
 export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig): Promise<boolean> {
@@ -283,7 +282,11 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     supportsChineseContent,
     visualThemes,
     validateBindings = false,
+    baseElements = [],
   } = options
+  const baseElementById = new Map((visualThemes?.enabled ? baseElements : [])
+    .filter((element) => element?.id != null)
+    .map((element) => [String(element.id), element]))
 
   if (!canvas || !canvas.getObjects().length) {
     return null
@@ -335,6 +338,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     try {
       const encoded = encodeElementByRegistry(bgObj) as AnyElementConfig | null
       if (encoded) {
+        restoreVisualThemeBaseFields(encoded, baseElementById.get(String((encoded as any).id)))
         mapColorProperties(encoded, properties)
         config.elements.unshift(encoded)
       }
@@ -378,6 +382,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         return null
       }
 
+      restoreVisualThemeBaseFields(encodeConfig, baseElementById.get(String((encodeConfig as any).id)))
       mapColorProperties(encodeConfig, properties)
 
       const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
