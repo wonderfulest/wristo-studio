@@ -31,9 +31,9 @@ const ElButton = {
 const stubs = {
   ElButton,
   ElSwitch: {
-    props: ['modelValue', 'ariaLabel'],
+    props: ['modelValue', 'ariaLabel', 'disabled'],
     emits: ['change'],
-    template: '<button class="theme-switch" :aria-label="ariaLabel" @click="$emit(\'change\', !modelValue)">switch</button>',
+    template: '<button class="theme-switch" :disabled="disabled" :aria-label="ariaLabel" @click="$emit(\'change\', !modelValue)">switch</button>',
   },
   ElAlert: true,
   ElEmpty: true,
@@ -114,6 +114,25 @@ describe('VisualThemeSettings', () => {
 
     expect(messages.warning).toHaveBeenCalledWith('visualTheme.designRequired')
     expect(messages.warning).not.toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
+  })
+
+  it('ignores duplicate enable events while the rule lookup is pending', async () => {
+    let resolveRule!: (value: unknown) => void
+    themeApi.getThemeRuleDetail.mockReturnValue(new Promise((resolve) => {
+      resolveRule = resolve
+    }))
+    const baseStore = useBaseStore()
+    baseStore.appId = 42
+    baseStore.generateConfig = vi.fn(() => null)
+    const wrapper = mountPanel()
+
+    await wrapper.find('.theme-switch').trigger('click')
+    await wrapper.find('.theme-switch').trigger('click')
+    resolveRule({ data: { data: null } })
+    await flushPromises()
+
+    expect(baseStore.generateConfig).toHaveBeenCalledTimes(1)
+    expect(useVisualThemeStore().config).toBeUndefined()
   })
 
   it('blocks visual theme enable after a delayed active-rule load without mutating the store', async () => {

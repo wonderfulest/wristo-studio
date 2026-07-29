@@ -75,6 +75,7 @@ describe('ThemeRuleSettings conflict guard', () => {
     themeApi.activateThemeRule.mockReset()
     themeApi.activateThemeRule.mockResolvedValue({})
     themeApi.upsertThemeRule.mockReset()
+    themeApi.upsertThemeRule.mockResolvedValue({ data: { data: {} } })
     messages.error.mockClear()
     messages.warning.mockClear()
   })
@@ -182,6 +183,32 @@ describe('ThemeRuleSettings conflict guard', () => {
     expect(themeApi.activateThemeRule).toHaveBeenCalledTimes(1)
     resolveActivation({})
     await flushPromises()
+  })
+
+  it('does not save an optimistic activation until it is confirmed', async () => {
+    let resolveActivation!: (value: unknown) => void
+    themeApi.getThemeRuleDetail.mockResolvedValue({
+      data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 0 } },
+    })
+    themeApi.activateThemeRule.mockReturnValue(new Promise((resolve) => {
+      resolveActivation = resolve
+    }))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('.rule-switch').trigger('click')
+    await wrapper.find('[data-save-theme-rule]').trigger('click')
+    expect(themeApi.upsertThemeRule).not.toHaveBeenCalled()
+
+    resolveActivation({})
+    await flushPromises()
+    await wrapper.find('[data-save-theme-rule]').trigger('click')
+    await flushPromises()
+
+    expect(themeApi.upsertThemeRule).toHaveBeenCalledWith(expect.objectContaining({
+      appId: 42,
+      active: 1,
+    }))
   })
 })
 

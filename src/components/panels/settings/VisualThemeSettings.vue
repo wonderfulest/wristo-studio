@@ -7,6 +7,7 @@
       </div>
       <el-switch
         :model-value="enabled"
+        :disabled="enableOperationPending"
         :aria-label="t('visualTheme.enableAria')"
         @change="toggleEnabled"
       />
@@ -143,6 +144,7 @@ const propertiesStore = usePropertiesStore()
 const loadedDynamicRuleActive = ref(false)
 const dynamicRuleLoadFailed = ref(false)
 const checkedDynamicRuleAppId = ref<number | null>(null)
+const enableOperationPending = ref(false)
 let dynamicRuleLoad: { appId: number; promise: Promise<void> } | null = null
 const selectedThemeId = computed<string | null>({
   get: () => store.previewThemeId ?? store.config?.defaultThemeId ?? store.themes[0]?.id ?? null,
@@ -218,30 +220,36 @@ const toggleEnabled = async (value: string | number | boolean) => {
     store.disable()
     return
   }
-  const ruleState = await checkCurrentDynamicRule()
-  if (ruleState.failed) {
-    ElMessage.error(t('visualTheme.ruleCheckFailed'))
-    return
-  }
-  const decision = canEnableThemeOwner({
-    visualThemesEnabled: enabled.value,
-    dynamicRuleActive: props.dynamicRuleConflict || ruleState.active,
-    requestedOwner: 'visual',
-  })
-  if (!decision.allowed) {
-    ElMessage.warning(t(decision.messageKey))
-    return
-  }
-  if (!store.config) {
-    const design = baseStore.generateConfig()
-    if (!design) {
-      ElMessage.warning(t('visualTheme.designRequired'))
+  if (enableOperationPending.value) return
+  enableOperationPending.value = true
+  try {
+    const ruleState = await checkCurrentDynamicRule()
+    if (ruleState.failed) {
+      ElMessage.error(t('visualTheme.ruleCheckFailed'))
       return
     }
-    store.enableFromDesign(design)
-    selectedThemeId.value = store.previewThemeId
-  } else {
-    store.config.enabled = true
+    const decision = canEnableThemeOwner({
+      visualThemesEnabled: enabled.value,
+      dynamicRuleActive: props.dynamicRuleConflict || ruleState.active,
+      requestedOwner: 'visual',
+    })
+    if (!decision.allowed) {
+      ElMessage.warning(t(decision.messageKey))
+      return
+    }
+    if (!store.config) {
+      const design = baseStore.generateConfig()
+      if (!design) {
+        ElMessage.warning(t('visualTheme.designRequired'))
+        return
+      }
+      store.enableFromDesign(design)
+      selectedThemeId.value = store.previewThemeId
+    } else {
+      store.config.enabled = true
+    }
+  } finally {
+    enableOperationPending.value = false
   }
 }
 

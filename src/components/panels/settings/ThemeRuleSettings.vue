@@ -54,7 +54,7 @@
         size="small"
         type="primary"
         :loading="saving"
-        :disabled="!selectedRuleType"
+        :disabled="!selectedRuleType || activationSaving"
         @click="saveRule"
       >
         {{ t('elementSettings.saveThemeRule') }}
@@ -192,6 +192,7 @@ const handleActiveChange = async (value) => {
 }
 
 const saveRule = async () => {
+  if (activationSaving.value) return
   if (!appId.value) {
     ElMessage.error(t('elementSettings.missingThemeRuleAppId'))
     return
