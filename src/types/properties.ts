@@ -1,3 +1,5 @@
+import type { ThemeMode } from '@/types/visualTheme'
+
 export type PropertyType =
   | 'color'
   | 'number'
@@ -23,6 +25,7 @@ export interface PropertyItem {
   prompt?: string
   errorMessage?: string
   dialMode?: 'goal' | 'range'
+  themeMode?: ThemeMode
 }
 
 export type PropertiesMap = Record<string, PropertyItem>

@@ -1,6 +1,7 @@
 import type { PropertiesMap } from '@/types/properties'
 import type { AnyElementConfig } from '@/types/elements'
 import type { WatchfaceLocalizationConfig } from '@/types/localization'
+import type { VisualThemesConfig } from '@/types/visualTheme'
 
 export interface RuntimeDesignConfig {
   version: string
@@ -13,6 +14,7 @@ export interface RuntimeDesignConfig {
   maxFieldLength?: number
   supportsChineseContent?: boolean
   localization?: WatchfaceLocalizationConfig
+  visualThemes?: VisualThemesConfig
   elements: AnyElementConfig[]
   orderIds: string[]
 }
