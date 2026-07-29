@@ -9,7 +9,7 @@ import PolygonPanel from './polygon.panel.vue'
 export default function registerPolygonPlugin() {
   registerElement('polygon' as ElementType, {
     add: (config) => createPolygon(config as PolygonElementConfig),
-    update: (element, patch) => updatePolygon(element as any, patch as Partial<PolygonElementConfig>),
+    update: (element, patch, context) => updatePolygon(element as any, patch as Partial<PolygonElementConfig>, context),
     encode: (element) => encodePolygon(element as any) as any,
     decode: (config) => decodePolygon(config as PolygonElementConfig) as any,
   })

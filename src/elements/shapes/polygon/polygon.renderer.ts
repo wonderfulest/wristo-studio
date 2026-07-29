@@ -9,6 +9,7 @@ import { applyControlsToObject } from '@/utils/controlManager'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { createRectangleGradientFill, normalizeRectangleGradientDirection } from '../rectangle/rectangle.gradient'
 import { denormalizePolygonPoints, isConvexPolygonPoints, normalizePolygonPoints, type PolygonPoint } from './polygon.geometry'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 export function buildPolygonCanvasGeometry(points: PolygonPoint[], width: number, height: number) {
   const safeWidth = Math.max(1, Number(width) || 1)
@@ -51,7 +52,8 @@ function applyPolygonFill(polygon: Polygon): void {
   polygon.set('fill', gradient ?? solidFill)
 }
 
-function persistPolygon(polygon: Polygon): void {
+function persistPolygon(polygon: Polygon, context: ElementUpdateContext = {}): void {
+  if (context.persist === false) return
   const item = polygon as any
   useElementDataStore().patchElement(String(item.id), {
     left: polygon.left,
@@ -137,7 +139,11 @@ export async function createPolygon(config: PolygonElementConfig): Promise<Fabri
   return polygon as any
 }
 
-export function updatePolygon(element: FabricElement, patch: Partial<PolygonElementConfig> = {}): void {
+export function updatePolygon(
+  element: FabricElement,
+  patch: Partial<PolygonElementConfig> = {},
+  context: ElementUpdateContext = {},
+): void {
   const polygon = element as unknown as Polygon
   const item = polygon as any
   if (!polygon) return
@@ -160,7 +166,7 @@ export function updatePolygon(element: FabricElement, patch: Partial<PolygonElem
   }
   applyPolygonGeometry(polygon, points, width, height)
   applyPolygonFill(polygon)
-  persistPolygon(polygon)
+  persistPolygon(polygon, context)
   polygon.set('dirty', true)
   polygon.canvas?.requestRenderAll?.()
 }
