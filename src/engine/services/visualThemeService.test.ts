@@ -122,6 +122,20 @@ describe('createInitialVisualThemes', () => {
 })
 
 describe('validateVisualThemes', () => {
+  it('requires the version-1 user-selection schema', () => {
+    const invalid = createConfig([createTheme()])
+    ;(invalid as { version: number }).version = 2
+    ;(invalid as { selectionMode: string }).selectionMode = 'automatic'
+    ;(invalid as { enabled: unknown }).enabled = 'true'
+    expect(validateVisualThemes(invalid, properties)).toEqual(
+      expect.arrayContaining([
+        'Visual themes version must be 1.',
+        'Visual themes selectionMode must be "user".',
+        'Visual themes enabled must be a boolean.',
+      ]),
+    )
+  })
+
   it('accepts one through five valid themes', () => {
     expect(validateVisualThemes(createConfig([createTheme()]), properties)).toEqual([])
     const fiveThemes = Array.from({ length: 5 }, (_, index) =>
@@ -187,6 +201,24 @@ describe('validateVisualThemes', () => {
     )
   })
 
+  it('does not require packaging-only hand assets while visual themes are disabled', () => {
+    const config = createConfig([createTheme({ assets: {} })])
+    config.enabled = false
+    expect(validateVisualThemes(config, properties)).toEqual([])
+  })
+
+  it.each([0, -1, 1.5])('rejects invalid persistent assetId %s', (assetId) => {
+    const theme = createTheme({
+      assets: {
+        hourHand: { assetId, imageUrl: 'https://assets.example/hour.svg' },
+        minuteHand: { assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
+      },
+    })
+    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
+      'Theme "Classic" hourHand assetId must be a positive integer.',
+    )
+  })
+
   it('rejects browser blob URLs without persistent asset IDs', () => {
     const theme = createTheme({
       assets: {
@@ -199,6 +231,23 @@ describe('validateVisualThemes', () => {
     )
     expect(validateVisualThemes(createConfig([theme]), properties)).not.toContain(
       'Theme "Classic" minuteHand requires a persistent assetId.',
+    )
+  })
+
+  it.each([0, -1, 1.5])('requires a positive integer centerCap targetSize when present: %s', (targetSize) => {
+    const theme = createTheme({
+      assets: {
+        hourHand: { assetId: 101, imageUrl: 'https://assets.example/hour.svg' },
+        minuteHand: { assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
+        centerCap: {
+          assetId: 104,
+          imageUrl: 'https://assets.example/cap.svg',
+          targetSize,
+        },
+      },
+    })
+    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
+      'Theme "Classic" centerCap targetSize must be a positive integer.',
     )
   })
 

@@ -22,6 +22,9 @@ const FALLBACK_COLOR_KEYS = ['hourColor', 'minuteColor', 'secondColor'] as const
 
 const RGB565_COLOR_PATTERN = /^(?:#|0x)[0-9a-f]{6}$/i
 
+const isPositiveInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value > 0
+
 export function normalizeThemeMode(mode: unknown): ThemeMode {
   return mode === 'theme' ? 'theme' : 'user'
 }
@@ -31,14 +34,12 @@ function readAssetRef(element: unknown, slot: VisualThemeAssetSlot): VisualTheme
   const rawAssetId = slot === 'background'
     ? candidate.imageId ?? candidate.assetId
     : candidate.assetId
-  const assetId = typeof rawAssetId === 'number' && Number.isFinite(rawAssetId)
-    ? rawAssetId
-    : null
+  const assetId = isPositiveInteger(rawAssetId) ? rawAssetId : null
   const imageUrl = typeof candidate.imageUrl === 'string' && candidate.imageUrl.trim()
     ? candidate.imageUrl
     : null
   const ref: VisualThemeAssetRef = { assetId, imageUrl }
-  if (slot === 'centerCap' && typeof candidate.targetSize === 'number' && Number.isFinite(candidate.targetSize)) {
+  if (slot === 'centerCap' && isPositiveInteger(candidate.targetSize)) {
     ref.targetSize = candidate.targetSize
   }
   return ref
@@ -77,7 +78,7 @@ function hasAssetSource(asset: VisualThemeAssetRef | undefined): boolean {
   return Boolean(
     asset
     && (
-      (typeof asset.assetId === 'number' && Number.isFinite(asset.assetId))
+      isPositiveInteger(asset.assetId)
       || (typeof asset.imageUrl === 'string' && asset.imageUrl.trim())
     ),
   )
@@ -95,6 +96,16 @@ export function validateVisualThemes(
 
   const errors: string[] = []
   const themes = visualThemes.themes
+
+  if (visualThemes.version !== 1) {
+    errors.push('Visual themes version must be 1.')
+  }
+  if (visualThemes.selectionMode !== 'user') {
+    errors.push('Visual themes selectionMode must be "user".')
+  }
+  if (typeof visualThemes.enabled !== 'boolean') {
+    errors.push('Visual themes enabled must be a boolean.')
+  }
 
   if (themes.length < 1 || themes.length > 5) {
     errors.push('Visual themes must contain between 1 and 5 themes.')
@@ -124,19 +135,31 @@ export function validateVisualThemes(
   for (const theme of themes) {
     const themeName = theme.name.trim() || theme.id.trim() || 'Unnamed'
 
-    for (const slot of REQUIRED_ASSET_SLOTS) {
-      if (!hasAssetSource(theme.assets[slot])) {
-        errors.push(`Theme "${themeName}" requires a ${slot} asset.`)
+    if (visualThemes.enabled === true) {
+      for (const slot of REQUIRED_ASSET_SLOTS) {
+        if (!hasAssetSource(theme.assets[slot])) {
+          errors.push(`Theme "${themeName}" requires a ${slot} asset.`)
+        }
       }
     }
 
     for (const slot of ASSET_SLOTS) {
       const asset = theme.assets[slot]
+      if (asset?.assetId !== null && asset?.assetId !== undefined && !isPositiveInteger(asset.assetId)) {
+        errors.push(`Theme "${themeName}" ${slot} assetId must be a positive integer.`)
+      }
       if (
         asset?.imageUrl?.trim().toLocaleLowerCase().startsWith('blob:')
-        && !(typeof asset.assetId === 'number' && Number.isFinite(asset.assetId))
+        && !isPositiveInteger(asset.assetId)
       ) {
         errors.push(`Theme "${themeName}" ${slot} requires a persistent assetId.`)
+      }
+      if (
+        slot === 'centerCap'
+        && asset?.targetSize !== undefined
+        && !isPositiveInteger(asset.targetSize)
+      ) {
+        errors.push(`Theme "${themeName}" centerCap targetSize must be a positive integer.`)
       }
     }
 
