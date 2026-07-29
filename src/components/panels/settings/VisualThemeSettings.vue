@@ -5,7 +5,11 @@
         <h3>{{ t('visualTheme.title') }}</h3>
         <p>{{ t('visualTheme.description') }}</p>
       </div>
-      <el-switch :model-value="enabled" @change="toggleEnabled" />
+      <el-switch
+        :model-value="enabled"
+        :aria-label="t('visualTheme.enableAria')"
+        @change="toggleEnabled"
+      />
     </header>
 
     <el-alert
@@ -18,7 +22,7 @@
 
     <template v-if="config">
       <div class="theme-toolbar">
-        <el-button size="small" type="primary" :disabled="themes.length >= 5" @click="addTheme">
+        <el-button data-theme-add size="small" type="primary" :disabled="themes.length >= 5" @click="addTheme">
           {{ t('visualTheme.add') }}
         </el-button>
         <span>{{ t('visualTheme.limitHint', { count: themes.length }) }}</span>
@@ -26,21 +30,44 @@
 
       <div class="theme-layout">
         <aside class="theme-list">
-          <button
+          <div
             v-for="(theme, index) in themes"
             :key="theme.id"
-            type="button"
             class="theme-row"
             :class="{ active: theme.id === selectedThemeId }"
-            @click="selectTheme(theme.id)"
+            :data-theme-id="theme.id"
           >
-            <span class="theme-name">{{ theme.name }}</span>
-            <small v-if="theme.id === config.defaultThemeId">{{ t('visualTheme.defaultBadge') }}</small>
+            <button
+              type="button"
+              class="theme-select"
+              :data-theme-select="theme.id"
+              :aria-label="t('visualTheme.selectAria', { name: theme.name })"
+              @click="selectTheme(theme.id)"
+            >
+              <span class="theme-name">{{ theme.name }}</span>
+              <small v-if="theme.id === config.defaultThemeId">{{ t('visualTheme.defaultBadge') }}</small>
+            </button>
             <span class="row-actions">
-              <el-button text size="small" :disabled="index === 0" @click.stop="store.moveTheme(theme.id, index - 1)">↑</el-button>
-              <el-button text size="small" :disabled="index === themes.length - 1" @click.stop="store.moveTheme(theme.id, index + 1)">↓</el-button>
+              <el-button
+                text
+                size="small"
+                :disabled="index === 0"
+                :data-theme-move-up="theme.id"
+                :aria-label="t('visualTheme.moveUpAria', { name: theme.name })"
+                :title="t('visualTheme.moveUpAria', { name: theme.name })"
+                @click="store.moveTheme(theme.id, index - 1)"
+              >↑</el-button>
+              <el-button
+                text
+                size="small"
+                :disabled="index === themes.length - 1"
+                :data-theme-move-down="theme.id"
+                :aria-label="t('visualTheme.moveDownAria', { name: theme.name })"
+                :title="t('visualTheme.moveDownAria', { name: theme.name })"
+                @click="store.moveTheme(theme.id, index + 1)"
+              >↓</el-button>
             </span>
-          </button>
+          </div>
         </aside>
 
         <main v-if="selectedTheme" class="theme-editor">
@@ -92,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
 import { normalizeThemeMode } from '@/engine/services/visualThemeService'
@@ -108,7 +135,10 @@ const { t } = useI18n()
 const store = useVisualThemeStore()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
-const selectedThemeId = ref<string | null>(store.previewThemeId)
+const selectedThemeId = computed<string | null>({
+  get: () => store.previewThemeId ?? store.config?.defaultThemeId ?? store.themes[0]?.id ?? null,
+  set: (themeId) => store.setPreviewTheme(themeId),
+})
 
 const config = computed(() => store.config)
 const themes = computed(() => store.themes)
@@ -130,7 +160,6 @@ const colorAsHex = (color: string) => color.startsWith('0x') ? `#${color.slice(2
 
 const selectTheme = (themeId: string) => {
   selectedThemeId.value = themeId
-  store.setPreviewTheme(themeId)
 }
 
 const toggleEnabled = (value: string | number | boolean) => {
@@ -262,16 +291,13 @@ const removeTheme = async () => {
 
 .theme-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 4px;
   padding: 8px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-sm);
-  color: var(--studio-text);
   background: var(--studio-surface);
-  text-align: left;
-  cursor: pointer;
 }
 
 .theme-row.active {
@@ -279,7 +305,18 @@ const removeTheme = async () => {
   background: var(--studio-primary-soft);
 }
 
+.theme-select {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: var(--studio-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
 .theme-name {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -289,7 +326,7 @@ const removeTheme = async () => {
 }
 
 .row-actions {
-  grid-column: 1 / -1;
+  display: flex;
 }
 
 .editor-actions {
