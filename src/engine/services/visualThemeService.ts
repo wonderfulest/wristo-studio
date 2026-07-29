@@ -114,6 +114,14 @@ function hasAssetSource(asset: VisualThemeAssetRef | undefined): boolean {
   )
 }
 
+function hasPersistentAssetSource(asset: VisualThemeAssetRef | undefined): boolean {
+  if (!asset) return false
+  if (isPositiveInteger(asset.assetId)) return true
+  return typeof asset.imageUrl === 'string'
+    && Boolean(asset.imageUrl.trim())
+    && !asset.imageUrl.trim().toLocaleLowerCase().startsWith('blob:')
+}
+
 function isRgb565Color(value: unknown): boolean {
   return typeof value === 'string' && RGB565_COLOR_PATTERN.test(value.trim())
 }
@@ -121,6 +129,7 @@ function isRgb565Color(value: unknown): boolean {
 export function validateVisualThemes(
   visualThemes: VisualThemesConfig | undefined,
   properties: PropertiesMap,
+  baseElements: Array<Record<string, unknown>> = [],
 ): string[] {
   if (!visualThemes) return []
 
@@ -167,7 +176,14 @@ export function validateVisualThemes(
 
     if (visualThemes.enabled === true) {
       for (const slot of REQUIRED_ASSET_SLOTS) {
-        if (!hasAssetSource(theme.assets[slot])) {
+        const baseElement = baseElements.find((element) => element.eleType === slot)
+        const baseAsset = baseElement
+          ? {
+              assetId: isPositiveInteger(baseElement.assetId) ? baseElement.assetId : null,
+              imageUrl: typeof baseElement.imageUrl === 'string' ? baseElement.imageUrl : null,
+            }
+          : undefined
+        if (!hasAssetSource(theme.assets[slot]) && !hasPersistentAssetSource(baseAsset)) {
           errors.push(`Theme "${themeName}" requires a ${slot} asset.`)
         }
       }

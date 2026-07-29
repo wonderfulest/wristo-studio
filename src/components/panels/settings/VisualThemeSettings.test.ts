@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBaseStore } from '@/stores/baseStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import type { VisualThemesConfig } from '@/types/visualTheme'
 import VisualThemeSettings from './VisualThemeSettings.vue'
@@ -38,6 +39,11 @@ const stubs = {
   ElAlert: true,
   ElEmpty: true,
   ElColorPicker: true,
+  ElSegmented: {
+    props: ['modelValue', 'options'],
+    emits: ['change'],
+    template: '<button class="owner-segmented" @click="$emit(\'change\', modelValue === \'theme\' ? \'user\' : \'theme\')">owner</button>',
+  },
   VisualThemeAssetFields: true,
 }
 
@@ -262,5 +268,20 @@ describe('VisualThemeSettings', () => {
 
     const wrapper = mountPanel()
     expect(wrapper.find('[data-theme-add]').attributes('disabled')).toBeDefined()
+  })
+
+  it('changes color ownership through store actions and initializes theme values', async () => {
+    const store = useVisualThemeStore()
+    store.hydrate(config())
+    const propertiesStore = usePropertiesStore()
+    propertiesStore.loadProperties({
+      Accent: { type: 'color', title: 'Accent', value: '0x123456', themeMode: 'user' },
+    })
+    const wrapper = mountPanel()
+
+    await wrapper.find('[data-color-owner="Accent"]').trigger('click')
+
+    expect(propertiesStore.properties.Accent.themeMode).toBe('theme')
+    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x123456'])
   })
 })

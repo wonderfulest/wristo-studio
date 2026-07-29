@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { createInitialVisualThemes } from '@/engine/services/visualThemeService'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type {
+  ThemeMode,
   VisualTheme,
   VisualThemeAssetRef,
   VisualThemeAssetSlot,
@@ -130,6 +131,16 @@ export const useVisualThemeStore = defineStore('visualTheme', {
 
     updateColor(themeId: string, propertyKey: string, color: string): void {
       this.requireTheme(themeId).colors[propertyKey] = toMonkeyColor(color)
+    },
+
+    setColorPropertyMode(propertyKey: string, mode: ThemeMode, defaultColor: string): void {
+      for (const theme of this.themes) {
+        if (mode === 'theme') {
+          if (theme.colors[propertyKey] === undefined) theme.colors[propertyKey] = toMonkeyColor(defaultColor)
+        } else {
+          delete theme.colors[propertyKey]
+        }
+      }
     },
 
     updateFallbackColor(themeId: string, key: VisualThemeFallbackColor, color: string): void {

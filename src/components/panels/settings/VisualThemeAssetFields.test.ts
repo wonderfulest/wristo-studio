@@ -16,7 +16,10 @@ const theme: VisualTheme = {
 
 describe('VisualThemeAssetFields', () => {
   it('maps picker selections to durable asset references at the component boundary', () => {
-    const wrapper = shallowMount(VisualThemeAssetFields, { props: { theme } })
+    const wrapper = shallowMount(VisualThemeAssetFields, {
+      props: { theme },
+      global: { stubs: { ElButton: true } },
+    })
     const pickers = wrapper.findAllComponents({ name: 'AssetPicker' })
     const centerCap = pickers.find((picker) => picker.props('assetType') === 'center_cap')
 
@@ -29,5 +32,22 @@ describe('VisualThemeAssetFields', () => {
       'centerCap',
       { assetId: 42, imageUrl: 'https://cdn.example/cap.svg', targetSize: 18 },
     ])
+  })
+
+  it('emits null when an assigned asset is cleared', async () => {
+    const wrapper = shallowMount(VisualThemeAssetFields, {
+      props: { theme },
+      global: {
+        stubs: {
+          ElButton: {
+            emits: ['click'],
+            template: '<button @click="$emit(\'click\')"><slot /></button>',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('[data-clear-slot="centerCap"]').trigger('click')
+    expect(wrapper.emitted('updateAsset')?.[0]).toEqual(['centerCap', null])
   })
 })

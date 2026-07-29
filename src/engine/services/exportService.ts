@@ -255,7 +255,11 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.elements,
     Boolean(config.supportsChineseContent),
   )
-  const visualThemeErrors = validateVisualThemes(config.visualThemes, config.properties)
+  const visualThemeErrors = validateVisualThemes(
+    config.visualThemes,
+    config.properties,
+    config.elements as unknown as Array<Record<string, unknown>>,
+  )
   const errors = [...dateErrors, ...visualThemeErrors]
   if (errors.length > 0) {
     ElMessage.error(errors.join(t('common.listSeparator')))

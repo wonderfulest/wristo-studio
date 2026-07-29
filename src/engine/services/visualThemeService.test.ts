@@ -256,6 +256,26 @@ describe('validateVisualThemes', () => {
     )
   })
 
+  it.each(['hourHand', 'minuteHand'] as const)('accepts a missing %s asset when the base design has a persistent fallback', (slot) => {
+    const theme = createTheme()
+    delete theme.assets[slot]
+    expect(validateVisualThemes(
+      createConfig([theme]),
+      properties,
+      [{ id: slot, eleType: slot, assetId: 900, imageUrl: `https://assets.example/${slot}.svg` }] as any,
+    )).not.toContain(`Theme "Classic" requires a ${slot} asset.`)
+  })
+
+  it('still rejects a missing theme hand when the base fallback is not persistent', () => {
+    const theme = createTheme()
+    delete theme.assets.hourHand
+    expect(validateVisualThemes(
+      createConfig([theme]),
+      properties,
+      [{ id: 'hour', eleType: 'hourHand', assetId: null, imageUrl: 'blob:https://studio.example/hour' }] as any,
+    )).toContain('Theme "Classic" requires a hourHand asset.')
+  })
+
   it('does not require packaging-only hand assets while visual themes are disabled', () => {
     const config = createConfig([createTheme({ assets: {} })])
     config.enabled = false

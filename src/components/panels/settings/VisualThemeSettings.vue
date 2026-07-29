@@ -29,6 +29,21 @@
         <span>{{ t('visualTheme.limitHint', { count: themes.length }) }}</span>
       </div>
 
+      <section v-if="allColorProperties.length" class="color-section ownership-section">
+        <h4>{{ t('visualTheme.colorOwnership') }}</h4>
+        <p>{{ t('visualTheme.colorOwnershipHint') }}</p>
+        <div v-for="[key, property] in allColorProperties" :key="key" class="color-row">
+          <span>{{ property.title || key }}</span>
+          <el-segmented
+            :data-color-owner="key"
+            :model-value="normalizeThemeMode(property.themeMode)"
+            :options="themeModeOptions"
+            size="small"
+            @change="(mode: ThemeMode) => changeColorOwnership(key, mode)"
+          />
+        </div>
+      </section>
+
       <div class="theme-layout">
         <aside class="theme-list">
           <div
@@ -120,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
 import { getThemeRuleDetail } from '@/api/wristo/themes'
@@ -129,10 +144,16 @@ import {
   isThemeRuleActive,
   normalizeThemeMode,
 } from '@/engine/services/visualThemeService'
+import { createVisualThemePreviewController } from '@/engine/services/visualThemePreviewService'
+import { updateElement } from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useCanvasStore } from '@/stores/canvasStore'
+import { useDesignStore } from '@/stores/designStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore, type VisualThemeFallbackColor } from '@/stores/visualThemeStore'
+import type { ThemeMode } from '@/types/visualTheme'
 
 const props = withDefaults(defineProps<{ dynamicRuleConflict?: boolean }>(), {
   dynamicRuleConflict: false,
@@ -141,6 +162,9 @@ const { t } = useI18n()
 const store = useVisualThemeStore()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+const canvasStore = useCanvasStore()
+const designStore = useDesignStore()
+const elementDataStore = useElementDataStore()
 const loadedDynamicRuleActive = ref(false)
 const dynamicRuleLoadFailed = ref(false)
 const checkedDynamicRuleAppId = ref<number | null>(null)
@@ -160,6 +184,12 @@ const isDefault = computed(() => selectedTheme.value?.id === config.value?.defau
 const isPreview = computed(() => selectedTheme.value?.id === store.previewThemeId)
 const themeColorProperties = computed(() => Object.entries(propertiesStore.allProperties)
   .filter(([, property]) => property.type === 'color' && normalizeThemeMode(property.themeMode) === 'theme'))
+const allColorProperties = computed(() => Object.entries(propertiesStore.allProperties)
+  .filter(([, property]) => property.type === 'color'))
+const themeModeOptions = computed(() => [
+  { label: t('visualTheme.colorOwnerUser'), value: 'user' },
+  { label: t('visualTheme.colorOwnerTheme'), value: 'theme' },
+])
 
 const fallbackFields: Array<{ key: VisualThemeFallbackColor; label: string }> = [
   { key: 'hourColor', label: 'visualTheme.hourColor' },
@@ -167,7 +197,47 @@ const fallbackFields: Array<{ key: VisualThemeFallbackColor; label: string }> = 
   { key: 'secondColor', label: 'visualTheme.secondColor' },
 ]
 
+const previewController = createVisualThemePreviewController({
+  getBaseElements: () => elementDataStore.elements.map((snapshot) => snapshot.config as Record<string, any>),
+  getCanvasElements: () => (canvasStore.canvas?.getObjects?.() || []) as Record<string, any>[],
+  applyElement: (element, patch) => updateElement(element as any, patch),
+  restorePersistedElement: (config) => elementDataStore.upsertElement(config as any),
+  requestRender: () => canvasStore.canvas?.requestRenderAll?.(),
+})
+
+watch(
+  [
+    () => store.config,
+    () => store.previewThemeId,
+    () => propertiesStore.allProperties,
+  ],
+  () => {
+    if (store.config?.enabled) {
+      void previewController.preview(store.config, store.previewThemeId, propertiesStore.allProperties)
+    } else {
+      void previewController.restore()
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  [() => baseStore.id, () => designStore.id],
+  () => { void previewController.reset() },
+)
+
+onBeforeUnmount(() => {
+  void previewController.restore()
+})
+
 const colorAsHex = (color: string) => color.startsWith('0x') ? `#${color.slice(2)}` : color
+
+const changeColorOwnership = (propertyKey: string, mode: ThemeMode) => {
+  const property = propertiesStore.allProperties[propertyKey]
+  if (!property || property.type !== 'color') return
+  propertiesStore.setColorThemeMode(propertyKey, mode)
+  store.setColorPropertyMode(propertyKey, mode, String(property.value || '0xFFFFFF'))
+}
 
 const selectTheme = (themeId: string) => {
   selectedThemeId.value = themeId
@@ -370,6 +440,12 @@ const removeTheme = async () => {
   display: grid;
   align-content: start;
   gap: 10px;
+}
+
+.ownership-section p {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
 }
 
 .theme-row {

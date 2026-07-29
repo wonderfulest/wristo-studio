@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
+import type { ThemeMode } from '@/types/visualTheme'
 import { DataTypeOption } from '@/types/settings'
 import { DataTypeOptions } from '@/config/settings'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
@@ -149,6 +150,12 @@ export const usePropertiesStore = defineStore('propertiesStore', {
   },
 
   actions: {
+    setColorThemeMode(key: string, mode: ThemeMode) {
+      const property = this.properties[key]
+      if (!property || property.type !== 'color') return
+      this.properties[key] = { ...property, themeMode: mode }
+    },
+
     loadProperties(properties?: PropertiesMap) {
       this.properties = properties || {}
     },

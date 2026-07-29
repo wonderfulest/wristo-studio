@@ -164,4 +164,20 @@ describe('visualThemeStore', () => {
     expect(store.config?.enabled).toBe(false)
     expect(store.config?.themes.map((theme) => theme.name)).toEqual(['Default', 'Night'])
   })
+
+  it('initializes and removes per-theme colors when ownership changes', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    store.addTheme('Night', ids('night'))
+
+    store.setColorPropertyMode('Accent', 'theme', '0x123456')
+    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x123456'])
+
+    store.updateColor('night', 'Accent', '0x654321')
+    store.setColorPropertyMode('Accent', 'theme', '0xFFFFFF')
+    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x654321'])
+
+    store.setColorPropertyMode('Accent', 'user', '0xFFFFFF')
+    expect(store.themes.every((theme) => theme.colors.Accent === undefined)).toBe(true)
+  })
 })

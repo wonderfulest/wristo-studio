@@ -2,8 +2,20 @@
   <section class="asset-fields">
     <h4>{{ t('visualTheme.assets') }}</h4>
     <div class="asset-grid">
-      <label v-for="field in fields" :key="field.slot" class="asset-field">
-        <span>{{ t(field.label) }}</span>
+      <div v-for="field in fields" :key="field.slot" class="asset-field">
+        <div class="asset-field-header">
+          <span>{{ t(field.label) }}</span>
+          <el-button
+            v-if="theme.assets[field.slot]"
+            text
+            size="small"
+            :data-clear-slot="field.slot"
+            :aria-label="t('visualTheme.clearAssetAria', { name: t(field.label) })"
+            @click="emit('updateAsset', field.slot, null)"
+          >
+            {{ t('visualTheme.clearAsset') }}
+          </el-button>
+        </div>
         <AssetPicker
           :selected-url="theme.assets[field.slot]?.imageUrl || ''"
           :selected-asset-id="theme.assets[field.slot]?.assetId ?? undefined"
@@ -11,7 +23,7 @@
           :on-select="(url, asset) => selectAsset(field.slot, url, asset)"
           :on-upload="(url, asset) => selectAsset(field.slot, url, asset)"
         />
-      </label>
+      </div>
     </div>
   </section>
 </template>
@@ -24,7 +36,7 @@ import type { VisualTheme, VisualThemeAssetRef, VisualThemeAssetSlot } from '@/t
 
 const props = defineProps<{ theme: VisualTheme }>()
 const emit = defineEmits<{
-  updateAsset: [slot: VisualThemeAssetSlot, asset: VisualThemeAssetRef]
+  updateAsset: [slot: VisualThemeAssetSlot, asset: VisualThemeAssetRef | null]
 }>()
 const { t } = useI18n()
 
@@ -72,6 +84,13 @@ const selectAsset = (slot: VisualThemeAssetSlot, url: string, asset: AnalogAsset
   color: var(--studio-text-muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.asset-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 @media (max-width: 720px) {
