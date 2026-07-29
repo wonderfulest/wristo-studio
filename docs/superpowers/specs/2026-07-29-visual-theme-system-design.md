@@ -248,7 +248,11 @@ The design JSON is the source of truth for packaged themes. The API must:
 - Preserve `visualThemes` during design save, copy, fetch, and packaging fetch.
 - Preserve `themeMode` on color properties.
 - Validate persistent asset references.
-- Include theme assets in reference and deletion checks.
+- Treat analog assets as globally deactivatable, not physically deletable.
+- Hide inactive analog assets from new Studio selections while preserving
+  ID-based fetch and packaging for historical design snapshots.
+- Allow an administrator to reactivate an analog asset only through an
+  explicit active-state update.
 - Return the same configuration for a given saved design snapshot.
 
 No new Visual Theme database tables are required in the first release.
@@ -384,7 +388,10 @@ The first release has one explicit ownership rule:
 Visual Themes enabled -> Dynamic Theme Rules cannot control background/colors
 ```
 
-Studio blocks or disables the conflicting combination and explains why.
+Studio blocks or disables the conflicting combination and explains why. If
+Studio cannot verify the Dynamic Theme Rule state, it fails closed and does not
+enable Visual Themes. Deactivation remains available so an operator can always
+resolve the conflict.
 
 A future selection-policy extension may support:
 
@@ -444,7 +451,10 @@ chain.
 
 - Round-trip `visualThemes` and `themeMode`.
 - Preserve theme data when copying a design.
-- Prevent deletion of referenced assets.
+- Deactivate analog assets without deleting rows or stored files.
+- Hide inactive assets from new selection while retaining historical get and
+  packaging resolution by ID.
+- Reactivate inactive assets only through an explicit administrator update.
 - Return a reproducible snapshot for packaging.
 
 ### Scaffold
