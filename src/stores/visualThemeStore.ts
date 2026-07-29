@@ -13,6 +13,12 @@ export type VisualThemeFallbackColor = keyof VisualTheme['fallbackHands']
 
 const createId: VisualThemeIdFactory = () => crypto.randomUUID()
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const toMonkeyColor = (color: string): string => {
+  const normalized = color.trim()
+  return /^(?:#|0x)[0-9a-f]{6}$/i.test(normalized)
+    ? `0x${normalized.slice(-6).toUpperCase()}`
+    : color
+}
 
 const emptyTheme = (id: string, name: string): VisualTheme => ({
   id,
@@ -123,11 +129,11 @@ export const useVisualThemeStore = defineStore('visualTheme', {
     },
 
     updateColor(themeId: string, propertyKey: string, color: string): void {
-      this.requireTheme(themeId).colors[propertyKey] = color
+      this.requireTheme(themeId).colors[propertyKey] = toMonkeyColor(color)
     },
 
     updateFallbackColor(themeId: string, key: VisualThemeFallbackColor, color: string): void {
-      this.requireTheme(themeId).fallbackHands[key] = color
+      this.requireTheme(themeId).fallbackHands[key] = toMonkeyColor(color)
     },
 
     requireConfig(): VisualThemesConfig {

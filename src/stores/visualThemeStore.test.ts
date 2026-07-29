@@ -139,8 +139,19 @@ describe('visualThemeStore', () => {
       imageUrl: 'https://cdn.example/cap.svg',
       targetSize: 18,
     })
-    expect(store.config?.themes[0].colors.accent).toBe('#ABCDEF')
+    expect(store.config?.themes[0].colors.accent).toBe('0xABCDEF')
     expect(store.config?.themes[0].fallbackHands.secondColor).toBe('0x00FF00')
+  })
+
+  it('normalizes color picker hashes before updating theme state', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+
+    store.updateColor('default', 'accent', '#a1b2c3')
+    store.updateFallbackColor('default', 'hourColor', '#d4e5f6')
+
+    expect(store.config?.themes[0].colors.accent).toBe('0xA1B2C3')
+    expect(store.config?.themes[0].fallbackHands.hourColor).toBe('0xD4E5F6')
   })
 
   it('disables themes while retaining their definitions', () => {
