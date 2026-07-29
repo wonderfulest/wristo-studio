@@ -19,6 +19,10 @@
           <el-icon><CircleCheck /></el-icon>
           <span>{{ t('common.save') }}</span>
         </el-menu-item>
+        <el-menu-item index="actions/visualThemes">
+          <el-icon><Brush /></el-icon>
+          <span>{{ t('visualTheme.menu') }}</span>
+        </el-menu-item>
 
         <!-- Main menu divider -->
         <el-divider direction="vertical" class="menu-divider" />
@@ -54,6 +58,15 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" />
+  <el-drawer
+    v-model="visualThemeDrawerVisible"
+    :title="t('visualTheme.title')"
+    direction="rtl"
+    size="min(760px, 92vw)"
+    append-to-body
+  >
+    <VisualThemeSettings />
+  </el-drawer>
   <input ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
 
   <el-dialog
@@ -128,7 +141,7 @@ import { useElementDataStore, type ElementConfigSnapshot } from '@/stores/elemen
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { DataTypeOptions } from '@/config/settings'
-import { CircleCheck } from '@element-plus/icons-vue'
+import { Brush, CircleCheck } from '@element-plus/icons-vue'
 
 import {
   addElement,
@@ -182,6 +195,7 @@ import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'
 import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
+import VisualThemeSettings from '@/components/panels/settings/VisualThemeSettings.vue'
 import { useI18n } from '@/i18n'
 
 const route = useRoute()
@@ -222,6 +236,7 @@ const watchFaceName = computed(() => {
 
 // Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
+const visualThemeDrawerVisible = ref(false)
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
 const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
@@ -967,6 +982,8 @@ const handleSelect = (key: string) => {
   } else if (key === 'actions/viewJsonConfig') {
     // 复用设计详情打开逻辑
     handleEditDesign()
+  } else if (key === 'actions/visualThemes') {
+    visualThemeDrawerVisible.value = true
   }
 }
 
