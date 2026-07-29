@@ -927,9 +927,9 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
 }
 
 const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
-  visualThemeStore.hydrate(config.visualThemes)
   await fontStore.fetchFonts()
   if (!isCurrentDesignLoad(generation)) return false
+  visualThemeStore.hydrate(config.visualThemes)
   if (Array.isArray(config.elements)) {
     await fontStore.loadFontsForElements(config.elements as any)
     if (!isCurrentDesignLoad(generation)) return false

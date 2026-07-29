@@ -211,4 +211,54 @@ describe('visual theme assets', () => {
       imageUrl: 'blob:restored-theme',
     })
   })
+
+  it('registers one shared themed source in background and hands groups and restores both refs', async () => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() })
+    const fetch = vi.fn(async () => new Response(
+      '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>',
+      { status: 200, headers: { 'content-type': 'image/svg+xml' } },
+    ))
+    vi.stubGlobal('fetch', fetch)
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:shared-restored'),
+      revokeObjectURL: vi.fn(),
+    })
+    const sharedUrl = 'https://cdn.example/shared-theme.svg'
+    const config = {
+      version: '1', properties: {}, designId: 'design-1', name: 'Shared', textCase: 0,
+      bitmapMode: false, orderIds: [], elements: [],
+      visualThemes: {
+        version: 1, enabled: true, defaultThemeId: 'classic', selectionMode: 'user',
+        themes: [{
+          id: 'classic', name: 'Classic',
+          assets: {
+            background: { assetId: 9, imageUrl: sharedUrl },
+            hourHand: { assetId: 11, imageUrl: sharedUrl },
+          },
+          colors: {},
+          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        }],
+      },
+    }
+    const {
+      buildWrtDesignPackage,
+      restoreDesignAssetBundleFromZip,
+    } = await import('@/engine/services/designAssetBundleService')
+    const file = await buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(manifest.assets.background).toHaveLength(1)
+    expect(manifest.assets.hands).toEqual(manifest.assets.background)
+    expect(manifest.studio.assetRefs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: 'background', field: 'background' }),
+      expect.objectContaining({ category: 'hands', field: 'hourHand' }),
+    ]))
+
+    const restored = await restoreDesignAssetBundleFromZip(structuredClone(config) as any, zip, manifest)
+    expect(restored.visualThemes!.themes[0].assets.background?.imageUrl).toBe('blob:shared-restored')
+    expect(restored.visualThemes!.themes[0].assets.hourHand?.imageUrl).toBe('blob:shared-restored')
+  })
 })

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { validateDataGoalBindings } from './propertyBindingValidation'
 import type { FabricElement } from '@/types/element'
 import type { PropertiesMap } from '@/types/properties'
+import { createPinia, setActivePinia } from 'pinia'
 
 const getAnalogAsset = vi.fn()
 
@@ -34,6 +35,7 @@ describe('validateDataGoalBindings', () => {
 
 describe('visual theme export persistence', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     getAnalogAsset.mockReset()
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(),
@@ -146,5 +148,46 @@ describe('visual theme export persistence', () => {
       targetSize: 32,
     })
     expect(getAnalogAsset).toHaveBeenCalledTimes(3)
+  })
+
+  it('resolves visual themes when a legacy config omits elements', async () => {
+    const { resolvePackageAssetUrls } = await import('./exportService')
+    getAnalogAsset.mockResolvedValue({
+      data: { file: { url: 'https://cdn.example/original-21.svg' } },
+    })
+    const config = {
+      version: '1',
+      properties: {},
+      designId: 'design-1',
+      name: 'Theme',
+      textCase: 0,
+      bitmapMode: false,
+      orderIds: [],
+      visualThemes: {
+        version: 1,
+        enabled: true,
+        defaultThemeId: 'classic',
+        selectionMode: 'user',
+        themes: [{
+          id: 'classic',
+          name: 'Classic',
+          assets: {
+            hourHand: { assetId: 21, imageUrl: 'blob:hour' },
+          },
+          colors: {},
+          fallbackHands: {
+            hourColor: '0xFFFFFF',
+            minuteColor: '0xFFFFFF',
+            secondColor: '0xFF0000',
+          },
+        }],
+      },
+    }
+
+    const resolved = await resolvePackageAssetUrls(config as any)
+
+    expect(resolved?.elements).toEqual([])
+    expect(resolved?.visualThemes?.themes[0].assets.hourHand?.imageUrl)
+      .toBe('https://cdn.example/original-21.svg')
   })
 })

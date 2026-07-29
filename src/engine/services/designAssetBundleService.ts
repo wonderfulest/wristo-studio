@@ -655,12 +655,19 @@ const addReferencedAssetToBundle = async (
 
   const existing = sourcePathByUrl.get(source)
   if (existing) {
+    pushAssetGroupPath(manifest.assets, getAssetGroupForElementRef(input), existing.path)
     manifest.studio?.assetRefs.push({
       ...existing,
       id: `${existing.id}-ref-${manifest.studio?.assetRefs.length || 0}`,
+      category: input.category,
+      sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
+      sourceRef: source,
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
+      role: input.role,
+      pivotX: input.pivotX,
+      pivotY: input.pivotY,
     })
     return
   }
@@ -709,9 +716,10 @@ const addReferencedAssetToBundle = async (
     const dimensions = await readImageDimensions(blob, format)
     const duplicateContent = contentAssetByHash.get(sha256)
     if (duplicateContent) {
-      manifest.studio?.assetRefs.push({
+      const duplicateRef: ManifestAsset = {
         ...duplicateContent,
         id: `${duplicateContent.id}-ref-${manifest.studio?.assetRefs.length || 0}`,
+        category: input.category,
         sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
         sourceRef: source,
         elementId: input.elementId,
@@ -720,7 +728,10 @@ const addReferencedAssetToBundle = async (
         role: input.role,
         pivotX: input.pivotX,
         pivotY: input.pivotY,
-      })
+      }
+      sourcePathByUrl.set(source, duplicateRef)
+      pushAssetGroupPath(manifest.assets, getAssetGroupForElementRef(input), duplicateRef.path)
+      manifest.studio?.assetRefs.push(duplicateRef)
       return
     }
     const elementPart = sanitizePathSegment(input.elementId || input.category, input.category)

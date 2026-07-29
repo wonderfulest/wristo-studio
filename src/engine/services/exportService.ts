@@ -61,7 +61,7 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
     }
     return pending
   }
-  const elements = await Promise.all(config.elements.map(async (element) => {
+  const elements = await Promise.all((config.elements || []).map(async (element) => {
     if (!isPackageAssetElement(element)) return element
 
     const assetId = readNumericAssetId(element)
