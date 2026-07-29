@@ -94,6 +94,43 @@ describe('VisualThemeSettings', () => {
     expect(useVisualThemeStore().config).toBeUndefined()
   })
 
+  it.each([
+    ['integer zero', { data: { data: { active: 0 } } }],
+    ['boolean false', { data: { data: { active: false } } }],
+    ['null rule', { data: { data: null } }],
+  ])('allows visual enable past an inactive %s response', async (_label, response) => {
+    themeApi.getThemeRuleDetail.mockResolvedValue(response)
+    const baseStore = useBaseStore()
+    baseStore.appId = 42
+    baseStore.generateConfig = vi.fn(() => null)
+    const wrapper = mountPanel()
+
+    await wrapper.find('.theme-switch').trigger('click')
+    await flushPromises()
+
+    expect(messages.warning).toHaveBeenCalledWith('visualTheme.designRequired')
+    expect(messages.warning).not.toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
+  })
+
+  it.each([
+    ['integer one', { data: { data: { active: 1 } } }],
+    ['boolean true', { data: { data: { active: true } } }],
+    ['legacy missing active', { data: { data: { ruleType: 'SUN' } } }],
+    ['direct API body', { data: { active: 1 } }],
+  ])('blocks visual enable for an active %s response shape', async (_label, response) => {
+    themeApi.getThemeRuleDetail.mockResolvedValue(response)
+    const baseStore = useBaseStore()
+    baseStore.appId = 42
+    baseStore.generateConfig = vi.fn(() => null)
+    const wrapper = mountPanel()
+
+    await wrapper.find('.theme-switch').trigger('click')
+    await flushPromises()
+
+    expect(messages.warning).toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
+    expect(baseStore.generateConfig).not.toHaveBeenCalled()
+  })
+
   it('still allows disabling visual themes while a dynamic rule is reported active', async () => {
     const store = useVisualThemeStore()
     store.hydrate(config())

@@ -123,7 +123,11 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
 import { getThemeRuleDetail } from '@/api/wristo/themes'
-import { canEnableThemeOwner, normalizeThemeMode } from '@/engine/services/visualThemeService'
+import {
+  canEnableThemeOwner,
+  isThemeRuleActive,
+  normalizeThemeMode,
+} from '@/engine/services/visualThemeService'
 import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -174,7 +178,7 @@ const loadDynamicRuleActive = async () => {
     const response = await getThemeRuleDetail(Number(baseStore.appId))
     const body = response && response.data !== undefined ? response.data : response
     const rule = body && body.data !== undefined ? body.data : body
-    loadedDynamicRuleActive.value = Boolean(rule)
+    loadedDynamicRuleActive.value = isThemeRuleActive(rule)
   } catch {
     loadedDynamicRuleActive.value = false
   }

@@ -71,7 +71,7 @@ import { getThemeRuleDetail, upsertThemeRule, activateThemeRule } from '@/api/wr
 import { getEnumOptions } from '@/api/common'
 import ThemeConfigSettings from '@/components/panels/settings/ThemeConfigSettings.vue'
 import { useI18n } from '@/i18n'
-import { canEnableThemeOwner } from '@/engine/services/visualThemeService'
+import { canEnableThemeOwner, isThemeRuleActive } from '@/engine/services/visualThemeService'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 
 const baseStore = useBaseStore()
@@ -118,10 +118,10 @@ const fetchCurrentRule = async () => {
     const rule = body && body.data !== undefined ? body.data : body
 
     if (rule) {
-      // 查询有返回结果：视为规则已开启
+      // 查询结果包含停用规则，按 active 字段回显当前开关状态
       selectedRuleType.value = rule.ruleType || ''
       ruleCalculation.value = JSON.stringify(rule.ruleCalculation) || ''
-      active.value = true
+      active.value = isThemeRuleActive(rule)
       lastSavedAt.value = rule.updatedAt || rule.createdAt || ''
     } else {
       // 查询无结果：视为规则关闭，并清空本地表单

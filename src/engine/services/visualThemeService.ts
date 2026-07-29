@@ -34,6 +34,14 @@ export type ThemeOwnerDecision =
   | { allowed: true }
   | { allowed: false; messageKey: string }
 
+export function isThemeRuleActive(rule: unknown): boolean {
+  if (!rule || typeof rule !== 'object') return false
+  // Legacy detail responses omitted active and only returned rules that were considered enabled.
+  if (!Object.prototype.hasOwnProperty.call(rule, 'active')) return true
+  const active = (rule as { active?: unknown }).active
+  return active === 1 || active === true
+}
+
 export function canEnableThemeOwner(request: ThemeOwnerRequest): ThemeOwnerDecision {
   if (request.requestedOwner === 'visual' && request.dynamicRuleActive) {
     return { allowed: false, messageKey: 'visualTheme.dynamicRuleConflict' }

@@ -5,10 +5,27 @@ import type { VisualTheme, VisualThemesConfig } from '@/types/visualTheme'
 import {
   canEnableThemeOwner,
   createInitialVisualThemes,
+  isThemeRuleActive,
   normalizeThemeMode,
   resolveThemeColor,
   validateVisualThemes,
 } from './visualThemeService'
+
+describe('isThemeRuleActive', () => {
+  it.each([
+    [{ active: 1 }, true],
+    [{ active: true }, true],
+    [{ active: 0 }, false],
+    [{ active: false }, false],
+    [null, false],
+  ] as const)('maps the rule activation contract %#', (rule, expected) => {
+    expect(isThemeRuleActive(rule)).toBe(expected)
+  })
+
+  it('keeps legacy rule objects without an active field enabled', () => {
+    expect(isThemeRuleActive({ ruleType: 'SUN' })).toBe(true)
+  })
+})
 
 describe('canEnableThemeOwner', () => {
   it('blocks visual themes when a dynamic rule already owns theme selection', () => {

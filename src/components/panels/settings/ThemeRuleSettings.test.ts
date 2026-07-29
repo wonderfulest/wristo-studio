@@ -104,6 +104,19 @@ describe('ThemeRuleSettings conflict guard', () => {
     expect(themeApi.activateThemeRule).toHaveBeenCalledWith({ appId: 42, isActive: false })
   })
 
+  it('treats an inactive rule object as disabled when toggling', async () => {
+    themeApi.getThemeRuleDetail.mockResolvedValue({
+      data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 0 } },
+    })
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('.rule-switch').trigger('click')
+    await flushPromises()
+
+    expect(themeApi.activateThemeRule).toHaveBeenCalledWith({ appId: 42, isActive: true })
+  })
+
   it('blocks saving an active rule while visual themes are enabled', async () => {
     themeApi.getThemeRuleDetail.mockResolvedValue({
       data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 1 } },
