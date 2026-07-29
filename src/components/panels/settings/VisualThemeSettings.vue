@@ -20,6 +20,13 @@
       :title="t('visualTheme.dynamicRuleConflict')"
       show-icon
     />
+    <el-alert
+      v-if="config && missingRequiredLayers.length"
+      type="warning"
+      :closable="false"
+      :title="t('visualTheme.missingRequiredLayers', { layers: missingRequiredLayers.map((slot) => t(`visualTheme.${slot}`)).join(', ') })"
+      show-icon
+    />
 
     <template v-if="config">
       <div class="theme-toolbar">
@@ -103,6 +110,7 @@
 
           <VisualThemeAssetFields
             :theme="selectedTheme"
+            :available-slots="availableAssetSlots"
             @update-asset="(slot, asset) => store.updateAsset(selectedTheme!.id, slot, asset)"
           />
 
@@ -145,7 +153,8 @@ import {
   normalizeThemeMode,
 } from '@/engine/services/visualThemeService'
 import { createVisualThemePreviewController } from '@/engine/services/visualThemePreviewService'
-import { updateElement } from '@/engine/managers/elementManager'
+import { getElementHandler } from '@/engine/registry/elementRegistry'
+import { registerElementInstance } from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -154,6 +163,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore, type VisualThemeFallbackColor } from '@/stores/visualThemeStore'
 import type { ThemeMode } from '@/types/visualTheme'
+import type { VisualThemeAssetSlot } from '@/types/visualTheme'
 
 const props = withDefaults(defineProps<{ dynamicRuleConflict?: boolean }>(), {
   dynamicRuleConflict: false,
@@ -190,6 +200,14 @@ const themeModeOptions = computed(() => [
   { label: t('visualTheme.colorOwnerUser'), value: 'user' },
   { label: t('visualTheme.colorOwnerTheme'), value: 'theme' },
 ])
+const availableAssetSlots = computed<VisualThemeAssetSlot[]>(() => {
+  const elementTypes = new Set(elementDataStore.elements.map((snapshot) => snapshot.eleType))
+  return (['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as VisualThemeAssetSlot[])
+    .filter((slot) => elementTypes.has(slot as any))
+})
+const missingRequiredLayers = computed(() =>
+  (['hourHand', 'minuteHand'] as VisualThemeAssetSlot[])
+    .filter((slot) => !availableAssetSlots.value.includes(slot)))
 
 const fallbackFields: Array<{ key: VisualThemeFallbackColor; label: string }> = [
   { key: 'hourColor', label: 'visualTheme.hourColor' },
@@ -197,10 +215,32 @@ const fallbackFields: Array<{ key: VisualThemeFallbackColor; label: string }> = 
   { key: 'secondColor', label: 'visualTheme.secondColor' },
 ]
 
+const applyPreviewElement = async (
+  element: Record<string, any>,
+  patch: Record<string, unknown>,
+): Promise<void> => {
+  const handler = getElementHandler(element.eleType as any)
+  await Promise.resolve(handler.update?.(element as any, patch as any))
+  const current = (canvasStore.canvas?.getObjects?.() || []).find((candidate: any) =>
+    candidate.id != null && element.id != null && String(candidate.id) === String(element.id)) as any
+  if (!current) return
+
+  if (['hourHand', 'minuteHand', 'secondHand', 'centerCap'].includes(String(current.eleType))) {
+    if (patch.imageUrl === null) {
+      current.set?.({ imageUrl: null, assetId: null, opacity: 0 })
+      current.imageUrl = null
+      current.assetId = null
+    } else if (typeof patch.imageUrl === 'string' && patch.imageUrl) {
+      current.set?.({ opacity: 1 })
+    }
+  }
+  registerElementInstance(current)
+}
+
 const previewController = createVisualThemePreviewController({
   getBaseElements: () => elementDataStore.elements.map((snapshot) => snapshot.config as Record<string, any>),
   getCanvasElements: () => (canvasStore.canvas?.getObjects?.() || []) as Record<string, any>[],
-  applyElement: (element, patch) => updateElement(element as any, patch),
+  applyElement: applyPreviewElement,
   restorePersistedElement: (config) => elementDataStore.upsertElement(config as any),
   requestRender: () => canvasStore.canvas?.requestRenderAll?.(),
 })
@@ -224,6 +264,7 @@ watch(
 watch(
   [() => baseStore.id, () => designStore.id],
   () => { void previewController.reset() },
+  { flush: 'sync' },
 )
 
 onBeforeUnmount(() => {

@@ -50,4 +50,14 @@ describe('VisualThemeAssetFields', () => {
     await wrapper.find('[data-clear-slot="centerCap"]').trigger('click')
     expect(wrapper.emitted('updateAsset')?.[0]).toEqual(['centerCap', null])
   })
+
+  it('omits unavailable slots and explains that themes only override base layers', () => {
+    const wrapper = shallowMount(VisualThemeAssetFields, {
+      props: { theme, availableSlots: ['hourHand', 'minuteHand'] },
+      global: { stubs: { ElButton: true } },
+    })
+
+    expect(wrapper.findAllComponents({ name: 'AssetPicker' })).toHaveLength(2)
+    expect(wrapper.text()).toContain('visualTheme.unavailableAssetHint')
+  })
 })

@@ -129,12 +129,14 @@ function isRgb565Color(value: unknown): boolean {
 export function validateVisualThemes(
   visualThemes: VisualThemesConfig | undefined,
   properties: PropertiesMap,
-  baseElements: Array<Record<string, unknown>> = [],
+  baseElements?: Array<Record<string, unknown>>,
 ): string[] {
   if (!visualThemes) return []
 
   const errors: string[] = []
   const themes = visualThemes.themes
+  const hasBaseContext = baseElements !== undefined
+  const resolvedBaseElements = baseElements ?? []
 
   if (visualThemes.version !== 1) {
     errors.push('Visual themes version must be 1.')
@@ -171,12 +173,20 @@ export function validateVisualThemes(
     errors.push(`Default theme "${visualThemes.defaultThemeId}" does not exist.`)
   }
 
+  if (visualThemes.enabled && hasBaseContext) {
+    for (const slot of REQUIRED_ASSET_SLOTS) {
+      if (!resolvedBaseElements.some((element) => element.eleType === slot)) {
+        errors.push(`Visual themes require a base ${slot} element.`)
+      }
+    }
+  }
+
   for (const theme of themes) {
     const themeName = theme.name.trim() || theme.id.trim() || 'Unnamed'
 
     if (visualThemes.enabled === true) {
       for (const slot of REQUIRED_ASSET_SLOTS) {
-        const baseElement = baseElements.find((element) => element.eleType === slot)
+        const baseElement = resolvedBaseElements.find((element) => element.eleType === slot)
         const baseAsset = baseElement
           ? {
               assetId: isPositiveInteger(baseElement.assetId) ? baseElement.assetId : null,
@@ -185,6 +195,17 @@ export function validateVisualThemes(
           : undefined
         if (!hasAssetSource(theme.assets[slot]) && !hasPersistentAssetSource(baseAsset)) {
           errors.push(`Theme "${themeName}" requires a ${slot} asset.`)
+        }
+      }
+    }
+
+    if (visualThemes.enabled && hasBaseContext) {
+      for (const slot of ASSET_SLOTS) {
+        if (
+          theme.assets[slot]
+          && !resolvedBaseElements.some((element) => element.eleType === slot)
+        ) {
+          errors.push(`Theme "${themeName}" cannot override ${slot} because the base element does not exist.`)
         }
       }
     }

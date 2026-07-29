@@ -104,9 +104,11 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
     theme: VisualTheme | null,
     properties: PropertiesMap,
     runGeneration: number,
+    baseOverride?: ElementConfig[],
+    canvasOverride?: ElementConfig[],
   ): Promise<void> => {
-    const bases = ensureSnapshot()
-    const canvasElements = dependencies.getCanvasElements()
+    const bases = baseOverride ?? ensureSnapshot()
+    const canvasElements = canvasOverride ?? dependencies.getCanvasElements()
     for (const base of bases) {
       const canvasElement = canvasElements.find((element) =>
         element.id != null && base.id != null && String(element.id) === String(base.id))
@@ -114,7 +116,11 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
       const patch = theme
         ? { ...resolveAssetPatch(base, theme), ...resolveColorPatch(base, theme, properties) }
         : clone(base)
-      await dependencies.applyElement(canvasElement, patch)
+      const pendingRender = dependencies.applyElement(canvasElement, patch)
+      // Renderers may synchronously touch editor stores before their async image
+      // work completes. Put the durable snapshot back before yielding.
+      dependencies.restorePersistedElement(clone(base))
+      await pendingRender
       dependencies.restorePersistedElement(clone(base))
       if (runGeneration !== generation) return
     }
@@ -138,12 +144,17 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
 
     restore(): Promise<void> {
       if (!baseSnapshot) return Promise.resolve()
-      return enqueue((runGeneration) => applyPresentation(null, {}, runGeneration))
+      const bases = baseSnapshot
+      const canvasElements = dependencies.getCanvasElements()
+      return enqueue((runGeneration) => applyPresentation(null, {}, runGeneration, bases, canvasElements))
     },
 
-    async reset(): Promise<void> {
-      await this.restore()
+    reset(): Promise<void> {
+      if (!baseSnapshot) return Promise.resolve()
+      const bases = baseSnapshot
+      const canvasElements = dependencies.getCanvasElements()
       baseSnapshot = null
+      return enqueue((runGeneration) => applyPresentation(null, {}, runGeneration, bases, canvasElements))
     },
   }
 }

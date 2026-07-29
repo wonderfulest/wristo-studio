@@ -276,6 +276,30 @@ describe('validateVisualThemes', () => {
     )).toContain('Theme "Classic" requires a hourHand asset.')
   })
 
+  it.each(['hourHand', 'minuteHand'] as const)('requires an existing base %s draw layer even when the theme has an asset', (slot) => {
+    expect(validateVisualThemes(createConfig([createTheme()]), properties, [])).toContain(
+      `Visual themes require a base ${slot} element.`,
+    )
+  })
+
+  it('rejects overrides for optional slots that have no base draw layer', () => {
+    const theme = createTheme({
+      assets: {
+        hourHand: { assetId: 101, imageUrl: 'hour.svg' },
+        minuteHand: { assetId: 102, imageUrl: 'minute.svg' },
+        secondHand: { assetId: 103, imageUrl: 'second.svg' },
+      },
+    })
+    expect(validateVisualThemes(
+      createConfig([theme]),
+      properties,
+      [
+        { eleType: 'hourHand', assetId: 1, imageUrl: 'base-hour.svg' },
+        { eleType: 'minuteHand', assetId: 2, imageUrl: 'base-minute.svg' },
+      ],
+    )).toContain('Theme "Classic" cannot override secondHand because the base element does not exist.')
+  })
+
   it('does not require packaging-only hand assets while visual themes are disabled', () => {
     const config = createConfig([createTheme({ assets: {} })])
     config.enabled = false

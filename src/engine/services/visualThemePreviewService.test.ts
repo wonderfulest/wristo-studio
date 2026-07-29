@@ -98,4 +98,90 @@ describe('visualThemePreviewService', () => {
     expect(canvasElements[0]).toMatchObject({ assetId: 20, imageUrl: 'night.svg' })
     expect(canvasElements[1].color).toBe('0xBBBBBB')
   })
+
+  it('restores persisted base synchronously while an async renderer is pending', async () => {
+    const canvasElements = structuredClone(baseElements)
+    const persisted: Array<Record<string, any>> = structuredClone(baseElements)
+    let release!: () => void
+    let deferred = true
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: (element, patch) => {
+        const persistedIndex = persisted.findIndex((item) => item.id === element.id)
+        persisted[persistedIndex] = { ...persisted[persistedIndex], ...patch }
+        if (!deferred) {
+          Object.assign(element, patch)
+          return Promise.resolve()
+        }
+        deferred = false
+        return new Promise<void>((resolve) => {
+          release = () => {
+            Object.assign(element, patch)
+            resolve()
+          }
+        })
+      },
+      restorePersistedElement: (config) => {
+        const index = persisted.findIndex((item) => item.id === config.id)
+        persisted[index] = structuredClone(config)
+      },
+      requestRender: () => undefined,
+    })
+
+    const pending = controller.preview(visualThemes, 'night', properties)
+    await Promise.resolve()
+    expect(persisted).toEqual(baseElements)
+    release()
+    await pending
+    expect(persisted).toEqual(baseElements)
+  })
+
+  it('passes explicit null asset references when restoring an empty base slot', async () => {
+    const bases = [{ id: 'cap', eleType: 'centerCap', assetId: null, imageUrl: null }]
+    const canvas = [{ id: 'cap', eleType: 'centerCap', assetId: 42, imageUrl: 'theme-cap.svg' }]
+    const patches: Record<string, unknown>[] = []
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => bases,
+      getCanvasElements: () => canvas,
+      applyElement: async (element, patch) => {
+        patches.push(patch)
+        Object.assign(element, patch)
+      },
+      restorePersistedElement: () => undefined,
+      requestRender: () => undefined,
+    })
+
+    await controller.preview({
+      ...visualThemes,
+      themes: [{ ...visualThemes.themes[0], assets: { centerCap: { assetId: 42, imageUrl: 'theme-cap.svg' } } }],
+    }, 'day', properties)
+    await controller.restore()
+
+    expect(patches.at(-1)).toMatchObject({ assetId: null, imageUrl: null })
+    expect(canvas[0]).toMatchObject({ assetId: null, imageUrl: null })
+  })
+
+  it('restores the old canvas snapshot during a design switch without touching the new canvas', async () => {
+    const oldCanvas = structuredClone(baseElements)
+    let activeCanvas = oldCanvas
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => baseElements,
+      getCanvasElements: () => activeCanvas,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      restorePersistedElement: () => undefined,
+      requestRender: () => undefined,
+    })
+    await controller.preview(visualThemes, 'night', properties)
+    const newCanvas = structuredClone(baseElements)
+
+    const reset = controller.reset()
+    activeCanvas = newCanvas
+    await reset
+
+    expect(oldCanvas).toEqual(baseElements)
+    expect(newCanvas).toEqual(baseElements)
+  })
 })

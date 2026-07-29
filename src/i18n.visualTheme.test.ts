@@ -16,5 +16,8 @@ describe('visual theme translations', () => {
     expect(translate('visualTheme.colorOwnership', 'zh')).toBe('颜色归属')
     expect(translate('visualTheme.colorOwnership', 'zh-tw')).toBe('顏色歸屬')
     expect(translate('visualTheme.clearAsset', 'zh')).toBe('清除')
+    expect(translate('visualTheme.unavailableAssetHint', 'en')).toContain('existing base canvas element')
+    expect(translate('visualTheme.unavailableAssetHint', 'zh')).toContain('已有基础元素')
+    expect(translate('visualTheme.unavailableAssetHint', 'zh-tw')).toContain('已有基礎元素')
   })
 })

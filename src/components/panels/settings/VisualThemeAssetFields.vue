@@ -1,8 +1,11 @@
 <template>
   <section class="asset-fields">
     <h4>{{ t('visualTheme.assets') }}</h4>
+    <p v-if="visibleFields.length < fields.length" class="asset-hint">
+      {{ t('visualTheme.unavailableAssetHint') }}
+    </p>
     <div class="asset-grid">
-      <div v-for="field in fields" :key="field.slot" class="asset-field">
+      <div v-for="field in visibleFields" :key="field.slot" class="asset-field">
         <div class="asset-field-header">
           <span>{{ t(field.label) }}</span>
           <el-button
@@ -29,12 +32,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import { useI18n } from '@/i18n'
 import type { AnalogAssetType, AnalogAssetVO } from '@/types/api/analog-asset'
 import type { VisualTheme, VisualThemeAssetRef, VisualThemeAssetSlot } from '@/types/visualTheme'
 
-const props = defineProps<{ theme: VisualTheme }>()
+const props = withDefaults(defineProps<{
+  theme: VisualTheme
+  availableSlots?: VisualThemeAssetSlot[]
+}>(), {
+  availableSlots: () => ['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'],
+})
 const emit = defineEmits<{
   updateAsset: [slot: VisualThemeAssetSlot, asset: VisualThemeAssetRef | null]
 }>()
@@ -47,6 +56,7 @@ const fields: Array<{ slot: VisualThemeAssetSlot; label: string; assetType: Anal
   { slot: 'secondHand', label: 'visualTheme.secondHand', assetType: 'second' },
   { slot: 'centerCap', label: 'visualTheme.centerCap', assetType: 'center_cap' },
 ]
+const visibleFields = computed(() => fields.filter((field) => props.availableSlots.includes(field.slot)))
 
 const selectAsset = (slot: VisualThemeAssetSlot, url: string, asset: AnalogAssetVO) => {
   const originalUrl = asset?.file?.url || asset?.file?.previewUrl || url
@@ -70,6 +80,12 @@ const selectAsset = (slot: VisualThemeAssetSlot, url: string, asset: AnalogAsset
 .asset-fields h4 {
   margin: 0;
   font-size: 13px;
+}
+
+.asset-hint {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 12px;
 }
 
 .asset-grid {
