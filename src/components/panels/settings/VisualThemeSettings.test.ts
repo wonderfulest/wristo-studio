@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,6 +9,8 @@ import type { VisualThemesConfig } from '@/types/visualTheme'
 import VisualThemeSettings from './VisualThemeSettings.vue'
 
 const messages = vi.hoisted(() => ({ warning: vi.fn() }))
+const themeApi = vi.hoisted(() => ({ getThemeRuleDetail: vi.fn() }))
+vi.mock('@/api/wristo/themes', () => themeApi)
 vi.mock('@/i18n', () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) =>
@@ -68,6 +70,41 @@ describe('VisualThemeSettings', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     messages.warning.mockClear()
+    themeApi.getThemeRuleDetail.mockReset()
+    themeApi.getThemeRuleDetail.mockResolvedValue({ data: { data: null } })
+  })
+
+  it('blocks visual theme enable after a delayed active-rule load without mutating the store', async () => {
+    let resolveRule!: (value: unknown) => void
+    themeApi.getThemeRuleDetail.mockReturnValue(new Promise((resolve) => {
+      resolveRule = resolve
+    }))
+    const baseStore = useBaseStore()
+    baseStore.appId = 42
+    baseStore.generateConfig = vi.fn()
+    const wrapper = mountPanel()
+
+    const click = wrapper.find('.theme-switch').trigger('click')
+    resolveRule({ data: { data: { active: 1 } } })
+    await click
+    await flushPromises()
+
+    expect(messages.warning).toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
+    expect(baseStore.generateConfig).not.toHaveBeenCalled()
+    expect(useVisualThemeStore().config).toBeUndefined()
+  })
+
+  it('still allows disabling visual themes while a dynamic rule is reported active', async () => {
+    const store = useVisualThemeStore()
+    store.hydrate(config())
+    const wrapper = mount(VisualThemeSettings, {
+      props: { dynamicRuleConflict: true },
+      global: { stubs },
+    })
+
+    await wrapper.find('.theme-switch').trigger('click')
+
+    expect(store.config?.enabled).toBe(false)
   })
 
   it('tracks delayed hydrate and preview replacement as the active selection', async () => {
@@ -107,6 +144,7 @@ describe('VisualThemeSettings', () => {
 
     expect(wrapper.find('.theme-switch').attributes('aria-label')).toBe('visualTheme.enableAria')
     await wrapper.find('.theme-switch').trigger('click')
+    await flushPromises()
 
     expect(messages.warning).toHaveBeenCalledWith('visualTheme.designRequired')
     expect(useVisualThemeStore().config).toBeUndefined()

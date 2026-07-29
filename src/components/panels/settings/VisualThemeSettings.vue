@@ -119,10 +119,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
-import { normalizeThemeMode } from '@/engine/services/visualThemeService'
+import { getThemeRuleDetail } from '@/api/wristo/themes'
+import { canEnableThemeOwner, normalizeThemeMode } from '@/engine/services/visualThemeService'
 import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -135,6 +136,8 @@ const { t } = useI18n()
 const store = useVisualThemeStore()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+const loadedDynamicRuleActive = ref(false)
+let dynamicRuleLoad: Promise<void> | null = null
 const selectedThemeId = computed<string | null>({
   get: () => store.previewThemeId ?? store.config?.defaultThemeId ?? store.themes[0]?.id ?? null,
   set: (themeId) => store.setPreviewTheme(themeId),
@@ -162,9 +165,43 @@ const selectTheme = (themeId: string) => {
   selectedThemeId.value = themeId
 }
 
-const toggleEnabled = (value: string | number | boolean) => {
+const loadDynamicRuleActive = async () => {
+  if (!baseStore.appId) {
+    loadedDynamicRuleActive.value = false
+    return
+  }
+  try {
+    const response = await getThemeRuleDetail(Number(baseStore.appId))
+    const body = response && response.data !== undefined ? response.data : response
+    const rule = body && body.data !== undefined ? body.data : body
+    loadedDynamicRuleActive.value = Boolean(rule)
+  } catch {
+    loadedDynamicRuleActive.value = false
+  }
+}
+
+const ensureDynamicRuleLoaded = () => {
+  if (!dynamicRuleLoad) {
+    dynamicRuleLoad = loadDynamicRuleActive().finally(() => {
+      dynamicRuleLoad = null
+    })
+  }
+  return dynamicRuleLoad
+}
+
+const toggleEnabled = async (value: string | number | boolean) => {
   if (!value) {
     store.disable()
+    return
+  }
+  await ensureDynamicRuleLoaded()
+  const decision = canEnableThemeOwner({
+    visualThemesEnabled: enabled.value,
+    dynamicRuleActive: props.dynamicRuleConflict || loadedDynamicRuleActive.value,
+    requestedOwner: 'visual',
+  })
+  if (!decision.allowed) {
+    ElMessage.warning(t(decision.messageKey))
     return
   }
   if (!store.config) {
@@ -179,6 +216,10 @@ const toggleEnabled = (value: string | number | boolean) => {
     store.config.enabled = true
   }
 }
+
+onMounted(() => {
+  void ensureDynamicRuleLoaded()
+})
 
 const promptName = async (title: string, initial = ''): Promise<string | null> => {
   try {

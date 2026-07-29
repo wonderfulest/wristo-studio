@@ -3,11 +3,49 @@ import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualTheme, VisualThemesConfig } from '@/types/visualTheme'
 import {
+  canEnableThemeOwner,
   createInitialVisualThemes,
   normalizeThemeMode,
   resolveThemeColor,
   validateVisualThemes,
 } from './visualThemeService'
+
+describe('canEnableThemeOwner', () => {
+  it('blocks visual themes when a dynamic rule already owns theme selection', () => {
+    expect(canEnableThemeOwner({
+      visualThemesEnabled: false,
+      dynamicRuleActive: true,
+      requestedOwner: 'visual',
+    })).toEqual({
+      allowed: false,
+      messageKey: 'visualTheme.dynamicRuleConflict',
+    })
+  })
+
+  it('blocks a dynamic rule when visual themes already own theme selection', () => {
+    expect(canEnableThemeOwner({
+      visualThemesEnabled: true,
+      dynamicRuleActive: false,
+      requestedOwner: 'dynamic',
+    })).toEqual({
+      allowed: false,
+      messageKey: 'elementSettings.visualThemeConflict',
+    })
+  })
+
+  it('allows enabling an owner when the other owner is inactive', () => {
+    expect(canEnableThemeOwner({
+      visualThemesEnabled: false,
+      dynamicRuleActive: false,
+      requestedOwner: 'visual',
+    })).toEqual({ allowed: true })
+    expect(canEnableThemeOwner({
+      visualThemesEnabled: false,
+      dynamicRuleActive: false,
+      requestedOwner: 'dynamic',
+    })).toEqual({ allowed: true })
+  })
+})
 
 const properties: PropertiesMap = {
   PrimaryColor: {

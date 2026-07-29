@@ -22,6 +22,28 @@ const FALLBACK_COLOR_KEYS = ['hourColor', 'minuteColor', 'secondColor'] as const
 
 const RGB565_COLOR_PATTERN = /^(?:#|0x)[0-9a-f]{6}$/i
 
+export type ThemeOwner = 'visual' | 'dynamic'
+
+export interface ThemeOwnerRequest {
+  visualThemesEnabled: boolean
+  dynamicRuleActive: boolean
+  requestedOwner: ThemeOwner
+}
+
+export type ThemeOwnerDecision =
+  | { allowed: true }
+  | { allowed: false; messageKey: string }
+
+export function canEnableThemeOwner(request: ThemeOwnerRequest): ThemeOwnerDecision {
+  if (request.requestedOwner === 'visual' && request.dynamicRuleActive) {
+    return { allowed: false, messageKey: 'visualTheme.dynamicRuleConflict' }
+  }
+  if (request.requestedOwner === 'dynamic' && request.visualThemesEnabled) {
+    return { allowed: false, messageKey: 'elementSettings.visualThemeConflict' }
+  }
+  return { allowed: true }
+}
+
 const isPositiveInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value > 0
 

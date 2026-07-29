@@ -18,7 +18,7 @@
       </el-select>
 
       <el-switch
-        v-model="active"
+        :model-value="active"
         :active-text="t('elementSettings.enabled')"
         :inactive-text="t('elementSettings.disabled')"
         @change="handleActiveChange"
@@ -49,6 +49,7 @@
 
     <div class="rule-footer">
       <el-button
+        data-save-theme-rule
         size="small"
         type="primary"
         :loading="saving"
@@ -70,8 +71,11 @@ import { getThemeRuleDetail, upsertThemeRule, activateThemeRule } from '@/api/wr
 import { getEnumOptions } from '@/api/common'
 import ThemeConfigSettings from '@/components/panels/settings/ThemeConfigSettings.vue'
 import { useI18n } from '@/i18n'
+import { canEnableThemeOwner } from '@/engine/services/visualThemeService'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 
 const baseStore = useBaseStore()
+const visualThemeStore = useVisualThemeStore()
 const { t } = useI18n()
 
 const ruleTypeOptions = ref([])
@@ -152,10 +156,23 @@ const handleRuleCalculationChange = () => {
   // 仅本地更新，真正保存走 saveRule
 }
 
-const handleActiveChange = () => {
+const handleActiveChange = (value) => {
   if (!appId.value) return
+  const requestedActive = !!value
+  if (requestedActive) {
+    const decision = canEnableThemeOwner({
+      visualThemesEnabled: Boolean(visualThemeStore.config?.enabled),
+      dynamicRuleActive: active.value,
+      requestedOwner: 'dynamic',
+    })
+    if (!decision.allowed) {
+      ElMessage.warning(t(decision.messageKey))
+      return
+    }
+  }
+  active.value = requestedActive
   // 主动调用后端开关接口，单独控制规则是否生效
-  activateThemeRule({ appId: Number(appId.value), isActive: !!active.value }).catch((e) => {
+  activateThemeRule({ appId: Number(appId.value), isActive: requestedActive }).catch((e) => {
     console.error('Failed to activate theme rule', e)
     ElMessage.error(t('elementSettings.updateRuleActivationFailed'))
   })
@@ -170,7 +187,17 @@ const saveRule = async () => {
     ElMessage.warning(t('elementSettings.selectThemeRuleType'))
     return
   }
-
+  if (active.value) {
+    const decision = canEnableThemeOwner({
+      visualThemesEnabled: Boolean(visualThemeStore.config?.enabled),
+      dynamicRuleActive: active.value,
+      requestedOwner: 'dynamic',
+    })
+    if (!decision.allowed) {
+      ElMessage.warning(t(decision.messageKey))
+      return
+    }
+  }
   saving.value = true
   try {
     const payload = {
