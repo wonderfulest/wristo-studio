@@ -219,8 +219,15 @@ const applyPreviewElement = async (
   element: Record<string, any>,
   patch: Record<string, unknown>,
 ): Promise<void> => {
-  const handler = getElementHandler(element.eleType as any)
-  await Promise.resolve(handler.update?.(element as any, patch as any, { persist: false }))
+  const assetElementTypes = ['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap']
+  if (assetElementTypes.includes(String(element.eleType))) {
+    const handler = getElementHandler(element.eleType as any)
+    await Promise.resolve(handler.update?.(element as any, patch as any, { persist: false }))
+  } else {
+    element.set?.(patch)
+    Object.assign(element, patch)
+    element.setCoords?.()
+  }
   const current = (canvasStore.canvas?.getObjects?.() || []).find((candidate: any) =>
     candidate.id != null && element.id != null && String(candidate.id) === String(element.id)) as any
   if (!current) return
