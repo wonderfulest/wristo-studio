@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
 import { getThemeRuleDetail } from '@/api/wristo/themes'
@@ -141,7 +141,9 @@ const store = useVisualThemeStore()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
 const loadedDynamicRuleActive = ref(false)
-let dynamicRuleLoad: Promise<void> | null = null
+const dynamicRuleLoadFailed = ref(false)
+const checkedDynamicRuleAppId = ref<number | null>(null)
+let dynamicRuleLoad: { appId: number; promise: Promise<void> } | null = null
 const selectedThemeId = computed<string | null>({
   get: () => store.previewThemeId ?? store.config?.defaultThemeId ?? store.themes[0]?.id ?? null,
   set: (themeId) => store.setPreviewTheme(themeId),
@@ -169,28 +171,46 @@ const selectTheme = (themeId: string) => {
   selectedThemeId.value = themeId
 }
 
-const loadDynamicRuleActive = async () => {
-  if (!baseStore.appId) {
-    loadedDynamicRuleActive.value = false
-    return
-  }
+const loadDynamicRuleActive = async (requestedAppId: number) => {
   try {
-    const response = await getThemeRuleDetail(Number(baseStore.appId))
+    const response = await getThemeRuleDetail(requestedAppId)
     const body = response && response.data !== undefined ? response.data : response
     const rule = body && body.data !== undefined ? body.data : body
+    if (Number(baseStore.appId) !== requestedAppId) return
     loadedDynamicRuleActive.value = isThemeRuleActive(rule)
+    dynamicRuleLoadFailed.value = false
+    checkedDynamicRuleAppId.value = requestedAppId
   } catch {
-    loadedDynamicRuleActive.value = false
+    if (Number(baseStore.appId) !== requestedAppId) return
+    dynamicRuleLoadFailed.value = true
+    checkedDynamicRuleAppId.value = requestedAppId
   }
 }
 
-const ensureDynamicRuleLoaded = () => {
-  if (!dynamicRuleLoad) {
-    dynamicRuleLoad = loadDynamicRuleActive().finally(() => {
-      dynamicRuleLoad = null
-    })
+const ensureDynamicRuleLoaded = (requestedAppId: number) => {
+  if (dynamicRuleLoad?.appId === requestedAppId) return dynamicRuleLoad.promise
+  const request = {
+    appId: requestedAppId,
+    promise: Promise.resolve(),
   }
-  return dynamicRuleLoad
+  request.promise = loadDynamicRuleActive(requestedAppId).finally(() => {
+    if (dynamicRuleLoad === request) dynamicRuleLoad = null
+  })
+  dynamicRuleLoad = request
+  return request.promise
+}
+
+const checkCurrentDynamicRule = async () => {
+  while (baseStore.appId) {
+    const requestedAppId = Number(baseStore.appId)
+    await ensureDynamicRuleLoaded(requestedAppId)
+    if (Number(baseStore.appId) !== requestedAppId) continue
+    return {
+      failed: dynamicRuleLoadFailed.value || checkedDynamicRuleAppId.value !== requestedAppId,
+      active: loadedDynamicRuleActive.value,
+    }
+  }
+  return { failed: false, active: false }
 }
 
 const toggleEnabled = async (value: string | number | boolean) => {
@@ -198,10 +218,14 @@ const toggleEnabled = async (value: string | number | boolean) => {
     store.disable()
     return
   }
-  await ensureDynamicRuleLoaded()
+  const ruleState = await checkCurrentDynamicRule()
+  if (ruleState.failed) {
+    ElMessage.error(t('visualTheme.ruleCheckFailed'))
+    return
+  }
   const decision = canEnableThemeOwner({
     visualThemesEnabled: enabled.value,
-    dynamicRuleActive: props.dynamicRuleConflict || loadedDynamicRuleActive.value,
+    dynamicRuleActive: props.dynamicRuleConflict || ruleState.active,
     requestedOwner: 'visual',
   })
   if (!decision.allowed) {
@@ -222,7 +246,13 @@ const toggleEnabled = async (value: string | number | boolean) => {
 }
 
 onMounted(() => {
-  void ensureDynamicRuleLoaded()
+  if (baseStore.appId) void ensureDynamicRuleLoaded(Number(baseStore.appId))
+})
+
+watch(() => baseStore.appId, () => {
+  loadedDynamicRuleActive.value = false
+  dynamicRuleLoadFailed.value = false
+  checkedDynamicRuleAppId.value = null
 })
 
 const promptName = async (title: string, initial = ''): Promise<string | null> => {

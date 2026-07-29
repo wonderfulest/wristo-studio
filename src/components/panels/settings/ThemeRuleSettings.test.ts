@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBaseStore } from '@/stores/baseStore'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import type { VisualThemesConfig } from '@/types/visualTheme'
@@ -18,6 +18,7 @@ const themeApi = vi.hoisted(() => ({
   activateThemeRule: vi.fn(),
 }))
 const commonApi = vi.hoisted(() => ({ getEnumOptions: vi.fn() }))
+const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
 vi.mock('element-plus', () => ({ ElMessage: messages }))
 vi.mock('@/api/wristo/themes', () => themeApi)
@@ -48,9 +49,9 @@ const stubs = {
   },
   ElOption: true,
   ElSwitch: {
-    props: ['modelValue'],
+    props: ['modelValue', 'disabled'],
     emits: ['update:modelValue', 'change'],
-    template: `<button class="rule-switch" @click="$emit('update:modelValue', !modelValue); $emit('change', !modelValue)">switch</button>`,
+    template: `<button class="rule-switch" :disabled="disabled" :data-active="String(modelValue)" @click="$emit('update:modelValue', !modelValue); $emit('change', !modelValue)">switch</button>`,
   },
   ElInput: true,
   ElButton: {
@@ -131,4 +132,59 @@ describe('ThemeRuleSettings conflict guard', () => {
     expect(themeApi.upsertThemeRule).not.toHaveBeenCalled()
     expect(messages.warning).toHaveBeenCalledWith('elementSettings.visualThemeConflict')
   })
+
+  it('rolls back failed activation without changing visual themes', async () => {
+    themeApi.getThemeRuleDetail.mockResolvedValue({
+      data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 0 } },
+    })
+    themeApi.activateThemeRule.mockRejectedValue(new Error('offline'))
+    const visualStore = useVisualThemeStore()
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('.rule-switch').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.rule-switch').attributes('data-active')).toBe('false')
+    expect(visualStore.config).toBeUndefined()
+    expect(messages.error).toHaveBeenCalledWith('elementSettings.updateRuleActivationFailed')
+  })
+
+  it('rolls back failed deactivation', async () => {
+    themeApi.getThemeRuleDetail.mockResolvedValue({
+      data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 1 } },
+    })
+    themeApi.activateThemeRule.mockRejectedValue(new Error('offline'))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('.rule-switch').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.rule-switch').attributes('data-active')).toBe('true')
+    expect(messages.error).toHaveBeenCalledWith('elementSettings.updateRuleActivationFailed')
+  })
+
+  it('ignores a rapid second toggle while activation is pending', async () => {
+    let resolveActivation!: (value: unknown) => void
+    themeApi.getThemeRuleDetail.mockResolvedValue({
+      data: { data: { ruleType: 'SUN', ruleCalculation: {}, active: 0 } },
+    })
+    themeApi.activateThemeRule.mockReturnValue(new Promise((resolve) => {
+      resolveActivation = resolve
+    }))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('.rule-switch').trigger('click')
+    await wrapper.find('.rule-switch').trigger('click')
+
+    expect(themeApi.activateThemeRule).toHaveBeenCalledTimes(1)
+    resolveActivation({})
+    await flushPromises()
+  })
+})
+
+afterAll(() => {
+  consoleError.mockRestore()
 })

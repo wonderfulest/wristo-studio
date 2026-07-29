@@ -19,6 +19,7 @@
 
       <el-switch
         :model-value="active"
+        :disabled="loadingRule || activationSaving"
         :active-text="t('elementSettings.enabled')"
         :inactive-text="t('elementSettings.disabled')"
         @change="handleActiveChange"
@@ -82,6 +83,8 @@ const ruleTypeOptions = ref([])
 const selectedRuleType = ref('')
 const ruleCalculation = ref('')
 const active = ref(true)
+const confirmedActive = ref(true)
+const activationSaving = ref(false)
 const loadingTypes = ref(false)
 const loadingRule = ref(false)
 const saving = ref(false)
@@ -122,12 +125,14 @@ const fetchCurrentRule = async () => {
       selectedRuleType.value = rule.ruleType || ''
       ruleCalculation.value = JSON.stringify(rule.ruleCalculation) || ''
       active.value = isThemeRuleActive(rule)
+      confirmedActive.value = active.value
       lastSavedAt.value = rule.updatedAt || rule.createdAt || ''
     } else {
       // 查询无结果：视为规则关闭，并清空本地表单
       selectedRuleType.value = ''
       ruleCalculation.value = ''
       active.value = false
+      confirmedActive.value = false
       lastSavedAt.value = ''
     }
   } catch (e) {
@@ -135,6 +140,7 @@ const fetchCurrentRule = async () => {
     // 不弹错，允许没有规则时为空
     // 发生异常时，保守地视为未开启
     active.value = false
+    confirmedActive.value = false
   } finally {
     loadingRule.value = false
   }
@@ -156,8 +162,8 @@ const handleRuleCalculationChange = () => {
   // 仅本地更新，真正保存走 saveRule
 }
 
-const handleActiveChange = (value) => {
-  if (!appId.value) return
+const handleActiveChange = async (value) => {
+  if (!appId.value || activationSaving.value) return
   const requestedActive = !!value
   if (requestedActive) {
     const decision = canEnableThemeOwner({
@@ -170,12 +176,19 @@ const handleActiveChange = (value) => {
       return
     }
   }
+  const requestedAppId = Number(appId.value)
   active.value = requestedActive
-  // 主动调用后端开关接口，单独控制规则是否生效
-  activateThemeRule({ appId: Number(appId.value), isActive: requestedActive }).catch((e) => {
+  activationSaving.value = true
+  try {
+    await activateThemeRule({ appId: requestedAppId, isActive: requestedActive })
+    confirmedActive.value = requestedActive
+  } catch (e) {
+    active.value = confirmedActive.value
     console.error('Failed to activate theme rule', e)
     ElMessage.error(t('elementSettings.updateRuleActivationFailed'))
-  })
+  } finally {
+    activationSaving.value = false
+  }
 }
 
 const saveRule = async () => {
