@@ -10,6 +10,7 @@ import type { CenterCapElementConfig } from '@/elements/dials/centerCap/centerCa
 import { applyControlsToObject } from '@/utils/controlManager'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 function getCanvasCenter() {
   const canvasStore = useCanvasStore()
@@ -151,6 +152,7 @@ export async function createCenterCap(
 export async function updateCenterCap(
   element: FabricElement,
   patch: Partial<CenterCapElementConfig>,
+  _context: ElementUpdateContext = {},
 ): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas

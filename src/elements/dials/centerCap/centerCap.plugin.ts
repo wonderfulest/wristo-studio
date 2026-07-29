@@ -14,8 +14,8 @@ export default function registerCenterCapPlugin() {
         renderContext,
       ) as Promise<any>
     },
-    update: (element, patch) => {
-      return updateCenterCap(element as any, patch as Partial<CenterCapElementConfig>)
+    update: (element, patch, context) => {
+      return updateCenterCap(element as any, patch as Partial<CenterCapElementConfig>, context)
     },
     encode: (element) => {
       return encodeCenterCap(element as any) as unknown as ElementConfig

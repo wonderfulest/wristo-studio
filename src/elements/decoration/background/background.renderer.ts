@@ -12,6 +12,7 @@ import {
 } from './background.constants'
 import _ from 'lodash'
 import { resolveBackgroundImageSource } from './background.imageSource'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 function getImageNaturalSize(img: HTMLImageElement): { width: number; height: number } {
   const w = Number((img as any).naturalWidth ?? img.width ?? 0)
@@ -220,6 +221,7 @@ export async function createBackground(config: BackgroundElementConfig): Promise
 export async function updateBackground(
   element: FabricElement,
   patch: Partial<BackgroundElementConfig>,
+  _context: ElementUpdateContext = {},
 ): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas

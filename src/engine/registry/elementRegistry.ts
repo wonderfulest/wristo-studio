@@ -13,13 +13,21 @@ export type ElementHandler = {
   ) => Promise<FabricElement> | FabricElement
 
   // 可选的增量更新逻辑，由具体元素自行决定 patch 结构
-  update?: (element: FabricElement, patch: Partial<AnyElementConfig>) => void
+  update?: (
+    element: FabricElement,
+    patch: Partial<AnyElementConfig>,
+    context?: ElementUpdateContext,
+  ) => void | Promise<void>
 
   // 运行时实例 -> 业务配置
   encode?: (element: FabricElement) => AnyElementConfig | null
 
   // 业务配置 -> 运行时实例附加属性（局部字段），通常用于还原运行时额外信息
   decode?: (config: AnyElementConfig) => Partial<FabricElement>
+}
+
+export interface ElementUpdateContext {
+  persist?: boolean
 }
 
 const elementRegistry = new Map<ElementType, ElementHandler>()

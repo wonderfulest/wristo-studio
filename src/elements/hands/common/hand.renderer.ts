@@ -10,6 +10,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
+import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 
 function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
@@ -242,6 +243,7 @@ export async function createHand(
 export async function updateHand(
   element: FabricElement,
   patch: Partial<HandElementConfig> = {},
+  context: ElementUpdateContext = {},
 ): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -293,7 +295,7 @@ export async function updateHand(
   const newAngle = getAngleByType(eleType)
   rotateHand(hand, newAngle)
   hand.setCoords()
-  if (hand.id != null) {
+  if (context.persist !== false && hand.id != null) {
     useElementDataStore().patchElement(String(hand.id), {
       left: hand.left,
       top: hand.top,

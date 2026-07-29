@@ -11,9 +11,9 @@ export default function registerSecondHandPlugin() {
     add: (config, renderContext) => {
       return createHand({ ...(config as HandElementConfig), eleType: 'secondHand' }, renderContext)
     },
-    update: (element, patch) => {
+    update: (element, patch, context) => {
       // 目前只关心素材和 assetId，其他字段仍由时间驱动逻辑控制
-      return updateHand(element as any, patch as Partial<HandElementConfig>)
+      return updateHand(element as any, patch as Partial<HandElementConfig>, context)
     },
     encode: (element) => {
       return encodeHand(element as any)

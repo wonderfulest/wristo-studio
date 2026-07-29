@@ -11,8 +11,8 @@ export default function registerBackgroundPlugin() {
     add: (config) => {
       return createBackground(config as unknown as BackgroundElementConfig) as Promise<any>
     },
-    update: (element, patch) => {
-      return updateBackground(element as any, patch as Partial<BackgroundElementConfig>)
+    update: (element, patch, context) => {
+      return updateBackground(element as any, patch as Partial<BackgroundElementConfig>, context)
     },
     encode: (element) => {
       return encodeBackground(element as any) as unknown as ElementConfig

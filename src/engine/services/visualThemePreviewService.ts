@@ -7,8 +7,11 @@ type ElementConfig = Record<string, any> & { id?: string | number; eleType?: str
 export interface VisualThemePreviewDependencies {
   getBaseElements: () => ElementConfig[]
   getCanvasElements: () => ElementConfig[]
-  applyElement: (element: ElementConfig, patch: Record<string, unknown>) => Promise<void>
-  restorePersistedElement: (config: ElementConfig) => void
+  applyElement: (
+    element: ElementConfig,
+    patch: Record<string, unknown>,
+    context: { persist: false },
+  ) => Promise<void>
   requestRender: () => void
 }
 
@@ -116,12 +119,7 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
       const patch = theme
         ? { ...resolveAssetPatch(base, theme), ...resolveColorPatch(base, theme, properties) }
         : clone(base)
-      const pendingRender = dependencies.applyElement(canvasElement, patch)
-      // Renderers may synchronously touch editor stores before their async image
-      // work completes. Put the durable snapshot back before yielding.
-      dependencies.restorePersistedElement(clone(base))
-      await pendingRender
-      dependencies.restorePersistedElement(clone(base))
+      await dependencies.applyElement(canvasElement, patch, { persist: false })
       if (runGeneration !== generation) return
     }
     dependencies.requestRender()

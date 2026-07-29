@@ -53,10 +53,6 @@ describe('visualThemePreviewService', () => {
       applyElement: async (element, patch) => {
         Object.assign(element, patch)
       },
-      restorePersistedElement: (config) => {
-        const index = persisted.findIndex((item) => item.id === config.id)
-        persisted[index] = structuredClone(config)
-      },
       requestRender: () => undefined,
     })
 
@@ -83,7 +79,6 @@ describe('visualThemePreviewService', () => {
         }
         Object.assign(element, patch)
       },
-      restorePersistedElement: () => undefined,
       requestRender: () => undefined,
     })
 
@@ -107,9 +102,8 @@ describe('visualThemePreviewService', () => {
     const controller = createVisualThemePreviewController({
       getBaseElements: () => persisted,
       getCanvasElements: () => canvasElements,
-      applyElement: (element, patch) => {
-        const persistedIndex = persisted.findIndex((item) => item.id === element.id)
-        persisted[persistedIndex] = { ...persisted[persistedIndex], ...patch }
+      applyElement: (element, patch, context) => {
+        expect(context).toEqual({ persist: false })
         if (!deferred) {
           Object.assign(element, patch)
           return Promise.resolve()
@@ -121,10 +115,6 @@ describe('visualThemePreviewService', () => {
             resolve()
           }
         })
-      },
-      restorePersistedElement: (config) => {
-        const index = persisted.findIndex((item) => item.id === config.id)
-        persisted[index] = structuredClone(config)
       },
       requestRender: () => undefined,
     })
@@ -148,7 +138,6 @@ describe('visualThemePreviewService', () => {
         patches.push(patch)
         Object.assign(element, patch)
       },
-      restorePersistedElement: () => undefined,
       requestRender: () => undefined,
     })
 
@@ -171,7 +160,6 @@ describe('visualThemePreviewService', () => {
       applyElement: async (element, patch) => {
         Object.assign(element, patch)
       },
-      restorePersistedElement: () => undefined,
       requestRender: () => undefined,
     })
     await controller.preview(visualThemes, 'night', properties)

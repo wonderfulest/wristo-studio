@@ -220,7 +220,7 @@ const applyPreviewElement = async (
   patch: Record<string, unknown>,
 ): Promise<void> => {
   const handler = getElementHandler(element.eleType as any)
-  await Promise.resolve(handler.update?.(element as any, patch as any))
+  await Promise.resolve(handler.update?.(element as any, patch as any, { persist: false }))
   const current = (canvasStore.canvas?.getObjects?.() || []).find((candidate: any) =>
     candidate.id != null && element.id != null && String(candidate.id) === String(element.id)) as any
   if (!current) return
@@ -241,7 +241,6 @@ const previewController = createVisualThemePreviewController({
   getBaseElements: () => elementDataStore.elements.map((snapshot) => snapshot.config as Record<string, any>),
   getCanvasElements: () => (canvasStore.canvas?.getObjects?.() || []) as Record<string, any>[],
   applyElement: applyPreviewElement,
-  restorePersistedElement: (config) => elementDataStore.upsertElement(config as any),
   requestRender: () => canvasStore.canvas?.requestRenderAll?.(),
 })
 
