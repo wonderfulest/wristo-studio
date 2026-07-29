@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createVisualThemePreviewController } from './visualThemePreviewService'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualThemesConfig } from '@/types/visualTheme'
@@ -94,14 +94,15 @@ describe('visualThemePreviewService', () => {
     expect(canvasElements[1].color).toBe('0xBBBBBB')
   })
 
-  it('restores persisted base synchronously while an async renderer is pending', async () => {
-    const canvasElements = structuredClone(baseElements)
+  it('queues restore during a pending renderer and restores only the captured old canvas', async () => {
+    const oldCanvas = structuredClone(baseElements)
+    let activeCanvas = oldCanvas
     const persisted: Array<Record<string, any>> = structuredClone(baseElements)
     let release!: () => void
     let deferred = true
     const controller = createVisualThemePreviewController({
       getBaseElements: () => persisted,
-      getCanvasElements: () => canvasElements,
+      getCanvasElements: () => activeCanvas,
       applyElement: (element, patch, context) => {
         expect(context).toEqual({ persist: false })
         if (!deferred) {
@@ -121,10 +122,58 @@ describe('visualThemePreviewService', () => {
 
     const pending = controller.preview(visualThemes, 'night', properties)
     await Promise.resolve()
-    expect(persisted).toEqual(baseElements)
+    const restoring = controller.restore()
+    const newCanvas = structuredClone(baseElements)
+    activeCanvas = newCanvas
     release()
-    await pending
+    await Promise.all([pending, restoring])
+
+    expect(oldCanvas).toEqual(baseElements)
+    expect(newCanvas).toEqual(baseElements)
     expect(persisted).toEqual(baseElements)
+  })
+
+  it('refreshes the base from persisted elements before restore', async () => {
+    const canvasElements = structuredClone(baseElements)
+    const persisted: Array<Record<string, any>> = structuredClone(baseElements)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+
+    await controller.preview(visualThemes, 'night', properties)
+    persisted[1].color = '0x333333'
+    await controller.restore()
+
+    expect(canvasElements[1].color).toBe('0x333333')
+  })
+
+  it('contains renderer rejection, reports it, and can still restore the base', async () => {
+    const canvasElements = structuredClone(baseElements)
+    const onError = vi.fn()
+    let rejectThemeAsset = true
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => baseElements,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        if (rejectThemeAsset && element.id === 'label') throw new Error('bad image')
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+      onError,
+    })
+
+    await expect(controller.preview(visualThemes, 'night', properties)).resolves.toBeUndefined()
+    expect(canvasElements).toEqual(baseElements)
+    expect(onError).toHaveBeenCalledTimes(1)
+
+    rejectThemeAsset = false
+    await controller.restore()
+    expect(canvasElements).toEqual(baseElements)
   })
 
   it('passes explicit null asset references when restoring an empty base slot', async () => {

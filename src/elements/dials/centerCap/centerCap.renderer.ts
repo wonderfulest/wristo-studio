@@ -52,14 +52,26 @@ function configureCenterCapControls(element: any) {
     lockScalingFlip: true,
   })
   applyControlsToObject(element)
-  element.on('scaling', () => {
-    lockCenterCapToCanvasCenter(element)
-    syncCenterCapSize(element)
-  })
-  element.on('modified', () => {
-    lockCenterCapToCanvasCenter(element)
-    syncCenterCapSize(element)
-  })
+  if (element.__centerCapEventHandlers) return
+  const handlers = {
+    scaling: () => {
+      lockCenterCapToCanvasCenter(element)
+      syncCenterCapSize(element)
+    },
+    modified: () => {
+      lockCenterCapToCanvasCenter(element)
+      syncCenterCapSize(element)
+    },
+    moving: () => {
+      lockCenterCapToCanvasCenter(element)
+    },
+    selected: () => undefined,
+    deselected: () => undefined,
+  }
+  element.__centerCapEventHandlers = handlers
+  for (const [event, handler] of Object.entries(handlers)) {
+    element.on(event, handler)
+  }
 }
 
 export async function createCenterCap(
@@ -132,12 +144,6 @@ export async function createCenterCap(
   element.set({ scaleX: scale, scaleY: scale })
   configureCenterCapControls(element)
 
-  element.on('moving', () => {
-    lockCenterCapToCanvasCenter(element)
-  })
-  element.on('selected', () => {})
-  element.on('deselected', () => {})
-
   element.setCoords()
   assertElementRenderCurrent(renderContext)
   canvas.add(element)
@@ -173,8 +179,6 @@ export async function updateCenterCap(
     const prevRenderedHeight = (group.height || 0) * (group.scaleY || 1)
     const prevTargetSize = Math.max(prevRenderedWidth, prevRenderedHeight)
 
-    canvas.remove(group)
-
     const img: any = await FabricImage.fromURL(nextImageUrl as string, {
       crossOrigin: 'anonymous',
     } as any)
@@ -198,6 +202,7 @@ export async function updateCenterCap(
     group.set({ scaleX: scale, scaleY: scale, targetSize })
     configureCenterCapControls(group)
 
+    canvas.remove(objects.find((obj: any) => obj.id === (element as any).id))
     canvas.add(group)
   }
 
@@ -215,11 +220,7 @@ export async function updateCenterCap(
     group.targetSize = patch.targetSize
   }
 
-  group.on('moving', () => {
-    lockCenterCapToCanvasCenter(group)
-  })
-  group.on('selected', () => {})
-  group.on('deselected', () => {})
+  configureCenterCapControls(group)
 
   group.set({ left: center.x, top: center.y })
   group.setCoords()

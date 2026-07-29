@@ -241,6 +241,7 @@ const previewController = createVisualThemePreviewController({
   getCanvasElements: () => (canvasStore.canvas?.getObjects?.() || []) as Record<string, any>[],
   applyElement: applyPreviewElement,
   requestRender: () => canvasStore.canvas?.requestRenderAll?.(),
+  onError: () => ElMessage.error(t('visualTheme.previewFailed')),
 })
 
 watch(

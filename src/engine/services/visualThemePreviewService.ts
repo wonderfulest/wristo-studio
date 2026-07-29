@@ -13,6 +13,7 @@ export interface VisualThemePreviewDependencies {
     context: { persist: false },
   ) => Promise<void>
   requestRender: () => void
+  onError?: (error: unknown) => void
 }
 
 const ASSET_ELEMENT_TYPES: Record<VisualThemeAssetSlot, string> = {
@@ -98,11 +99,6 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
   let generation = 0
   let queue = Promise.resolve()
 
-  const ensureSnapshot = (): ElementConfig[] => {
-    if (!baseSnapshot) baseSnapshot = clone(dependencies.getBaseElements())
-    return baseSnapshot
-  }
-
   const applyPresentation = async (
     theme: VisualTheme | null,
     properties: PropertiesMap,
@@ -110,7 +106,7 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
     baseOverride?: ElementConfig[],
     canvasOverride?: ElementConfig[],
   ): Promise<void> => {
-    const bases = baseOverride ?? ensureSnapshot()
+    const bases = baseOverride ?? baseSnapshot ?? clone(dependencies.getBaseElements())
     const canvasElements = canvasOverride ?? dependencies.getCanvasElements()
     for (const base of bases) {
       const canvasElement = canvasElements.find((element) =>
@@ -127,23 +123,38 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
 
   const enqueue = (task: (runGeneration: number) => Promise<void>): Promise<void> => {
     const runGeneration = ++generation
-    const result = queue.then(() => task(runGeneration))
+    const result = queue.then(() => task(runGeneration)).catch((error) => {
+      dependencies.onError?.(error)
+    })
     queue = result.catch(() => undefined)
     return result
   }
 
   return {
     preview(config: VisualThemesConfig, themeId: string | null, properties: PropertiesMap): Promise<void> {
+      const bases = clone(dependencies.getBaseElements())
+      const canvasElements = dependencies.getCanvasElements()
+      baseSnapshot = bases
       const theme = config.enabled
         ? config.themes.find((candidate) => candidate.id === themeId) ?? null
         : null
-      return enqueue((runGeneration) => applyPresentation(theme, properties, runGeneration))
+      return enqueue(async (runGeneration) => {
+        try {
+          await applyPresentation(theme, properties, runGeneration, bases, canvasElements)
+        } catch (error) {
+          if (runGeneration === generation) {
+            await applyPresentation(null, {}, runGeneration, bases, canvasElements)
+          }
+          throw error
+        }
+      })
     },
 
     restore(): Promise<void> {
       if (!baseSnapshot) return Promise.resolve()
-      const bases = baseSnapshot
+      const bases = clone(dependencies.getBaseElements())
       const canvasElements = dependencies.getCanvasElements()
+      baseSnapshot = bases
       return enqueue((runGeneration) => applyPresentation(null, {}, runGeneration, bases, canvasElements))
     },
 
