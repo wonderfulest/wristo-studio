@@ -4,7 +4,9 @@
       <el-form-item :label="t('elementSettings.fontType')">
         <el-radio-group v-model="fontRenderType">
           <el-radio label="truetype">{{ t('elementSettings.trueTypeFont') }}</el-radio>
-          <el-radio label="bitmap">{{ t('elementSettings.bitmapFont') }}</el-radio>
+          <el-radio label="bitmap" :disabled="isHourFormat">
+            {{ t('elementSettings.bitmapFont') }}
+          </el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="t('elementSettings.font')">
@@ -51,7 +53,7 @@
       <el-form-item :label="t('elementSettings.timeFormat')">
         <el-select 
           v-model.number="currentModel.formatter" 
-          @change="(v: number) => applyUpdate({ formatter: v })"
+          @change="handleFormatterChange"
         >
           <el-option 
             v-for="{ label, value, example } in TimeFormatOptions" 
@@ -73,7 +75,7 @@ import { onMounted, computed } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { originXOptions, TimeFormatOptions } from '@/config/settings'
+import { originXOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
@@ -95,6 +97,10 @@ const { t } = useI18n()
 const currentModel = computed<any>(() => {
   return props.config ?? {}
 })
+
+const isHourFormat = computed(
+  () => Number(currentModel.value.formatter) === TimeFormatConstants.HOUR_FORMAT,
+)
 
 // 字体渲染类型：truetype / bitmap，默认 truetype
 const fontRenderType = computed({
@@ -158,6 +164,17 @@ onMounted(async () => {
 
 const applyUpdate = (patch: Record<string, any>) => {
   props.applyPatch?.(patch)
+}
+
+const handleFormatterChange = (formatter: number) => {
+  if (formatter === TimeFormatConstants.HOUR_FORMAT) {
+    const fontFamily = safeFontFamily.value || 'roboto-condensed-regular'
+    ;(currentModel.value as any).fontRenderType = 'truetype'
+    ;(currentModel.value as any).fontFamily = fontFamily
+    applyUpdate({ formatter, fontRenderType: 'truetype', fontFamily })
+    return
+  }
+  applyUpdate({ formatter })
 }
 
 const getCurrentElementId = () => {

@@ -35,6 +35,18 @@
         <el-icon><Clock /></el-icon>
         <span>{{ t('editor.amPm') }}</span>
       </el-menu-item>
+      <el-menu-item
+        index="time/hour-format"
+        @click="onAddElement('time', 'time', {
+          formatter: TimeFormatConstants.HOUR_FORMAT,
+          fontSize: 30,
+          fontRenderType: 'truetype',
+          fontFamily: 'roboto-condensed-regular',
+        })"
+      >
+        <el-icon><Clock /></el-icon>
+        <span>{{ t('editor.hourFormat') }}</span>
+      </el-menu-item>
     </div>
 
     <!-- Date subgroup -->

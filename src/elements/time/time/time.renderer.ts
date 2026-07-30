@@ -1,11 +1,10 @@
 import { nanoid } from 'nanoid'
-import moment from 'moment'
 import { FabricText, TextProps, Group, FabricImage } from 'fabric'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import { TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
+import { formatTimePreview, normalizeHourFormatRenderConfig } from './formatTimePreview'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
@@ -135,36 +134,14 @@ async function createBitmapTimeGroup(params: {
 }
 
 function formatTime(date: Date, formatter: number) {
-  let format = '--'
-  const formatterOption = TimeFormatOptions.find((option) => option.value == formatter)
-  if (formatterOption) {
-    format = formatterOption.label
-  }
-  const m = moment(date)
-  const hour = m.format('HH')
-  const minute = m.format('mm')
-
-  switch (formatter) {
-    case TimeFormatConstants.H10:
-      return hour[0]
-    case TimeFormatConstants.H:
-      return hour[1]
-    case TimeFormatConstants.M10:
-      return minute[0]
-    case TimeFormatConstants.M:
-      return minute[1]
-    case TimeFormatConstants.COLON:
-      return ':'
-    default: {
-      return moment(date).format(format)
-    }
-  }
+  return formatTimePreview(date, formatter)
 }
 
 export async function createTime(
   config: TimeElementConfig,
   renderContext?: ElementRenderContext,
 ): Promise<FabricElement> {
+  config = normalizeHourFormatRenderConfig(config)
   assertElementRenderCurrent(renderContext)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
@@ -265,6 +242,7 @@ export async function createTime(
 }
 
 export async function updateTime(element: FabricElement, config: TimeElementConfig, context: ElementUpdateContext = {}): Promise<void> {
+  config = normalizeHourFormatRenderConfig(config)
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()

@@ -1,7 +1,7 @@
 import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { DateFormatConstants, DateFormatOptions, TimeFormatConstants, TimeFormatOptions } from '@/config/settings'
+import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
 import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
 import { applyMetricTextCase, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
@@ -10,6 +10,7 @@ import { formatDataNumberDisplay } from '@/utils/dataNumberFormat'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { useDesignStore } from '@/stores/designStore'
+import { formatTimePreview } from '@/elements/time/time/formatTimePreview'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -27,29 +28,7 @@ export type DataSimulatorEngineOptions = {
 }
 
 function formatTimeValue(date: Date, formatter: number): string {
-  let format = '--'
-  const formatterOption = TimeFormatOptions.find((option) => option.value == formatter)
-  if (formatterOption) {
-    format = formatterOption.label
-  }
-  const m = moment(date)
-  const hour = m.format('HH')
-  const minute = m.format('mm')
-
-  switch (formatter) {
-    case TimeFormatConstants.H10:
-      return hour[0]
-    case TimeFormatConstants.H:
-      return hour[1]
-    case TimeFormatConstants.M10:
-      return minute[0]
-    case TimeFormatConstants.M:
-      return minute[1]
-    case TimeFormatConstants.COLON:
-      return ':'
-    default:
-      return moment(date).format(format)
-  }
+  return formatTimePreview(date, formatter)
 }
 
 function formatDateValue(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {

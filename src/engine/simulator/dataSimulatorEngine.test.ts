@@ -35,6 +35,7 @@ vi.mock('@/utils/dataSimulator', () => ({
 }))
 
 import { DataSimulatorEngine } from './dataSimulatorEngine'
+import { TimeFormatConstants } from '@/config/settings'
 
 describe('DataSimulatorEngine bitmap time refresh', () => {
   beforeEach(() => {
@@ -56,5 +57,25 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(updateElement).toHaveBeenCalledWith(bitmapTime, {
       simulatedTime: new Date('2026-07-13T12:34:00.000Z'),
     })
+  })
+
+  it('previews the hour format indicator as 24H for TrueType time elements', () => {
+    const set = vi.fn()
+    canvas.getObjects.mockReturnValue([
+      {
+        id: 'hour-format',
+        eleType: 'time',
+        type: 'text',
+        fontRenderType: 'truetype',
+        formatter: TimeFormatConstants.HOUR_FORMAT,
+        text: '',
+        set,
+      },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(set).toHaveBeenCalledWith('text', '24H')
+    expect(canvas.requestRenderAll).toHaveBeenCalled()
   })
 })

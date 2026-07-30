@@ -14,7 +14,8 @@ export enum TimeFormatConstants {
   H = 10,
   M10 = 11,
   M = 12,
-  COLON = 13
+  COLON = 13,
+  HOUR_FORMAT = 14,
 }
 
 export const TimeFormatOptions: OptionFormat<number>[] = [
@@ -32,4 +33,5 @@ export const TimeFormatOptions: OptionFormat<number>[] = [
   { value: TimeFormatConstants.M10,       label: 'M10',       example: '3' },
   { value: TimeFormatConstants.M,         label: 'M',         example: '4' },
   { value: TimeFormatConstants.COLON,     label: ':',         example: ':' },
+  { value: TimeFormatConstants.HOUR_FORMAT, label: '12H / 24H', example: '24H' },
 ]
