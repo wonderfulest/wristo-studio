@@ -3,6 +3,7 @@ import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualTheme, VisualThemesConfig } from '@/types/visualTheme'
 import {
+  backfillVisualThemeBackground,
   canEnableThemeOwner,
   createInitialVisualThemes,
   isThemeRuleActive,
@@ -174,9 +175,107 @@ describe('createInitialVisualThemes', () => {
       ],
     })
   })
+
+  it('captures the unique background independently from filtered runtime elements', () => {
+    const config = {
+      version: '1.0',
+      properties: {},
+      designId: 'design-1',
+      name: 'Filtered',
+      textCase: 0,
+      bitmapMode: false,
+      elements: [],
+      orderIds: [],
+    } as unknown as RuntimeDesignConfig
+
+    const result = createInitialVisualThemes(config, [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 41,
+      imageUrl: 'https://cdn.example/background.png',
+    }])
+
+    expect(result.themes[0].assets.background).toEqual({
+      assetId: 41,
+      imageUrl: 'https://cdn.example/background.png',
+    })
+  })
+
+  it('never treats an ordinary image as the visual theme background', () => {
+    const config = {
+      version: '1.0',
+      properties: {},
+      designId: 'design-1',
+      name: 'Image only',
+      textCase: 0,
+      bitmapMode: false,
+      elements: [],
+      orderIds: [],
+    } as unknown as RuntimeDesignConfig
+
+    const result = createInitialVisualThemes(config, [{
+      id: 'image-1',
+      eleType: 'image',
+      assetId: 52,
+      imageUrl: 'https://cdn.example/decor.png',
+    }])
+
+    expect(result.themes[0].assets.background).toBeUndefined()
+  })
+})
+
+describe('backfillVisualThemeBackground', () => {
+  it('fills only missing background slots in existing themes', () => {
+    const config = createConfig([
+      createTheme({ id: 'default', name: 'Default', assets: {} }),
+      createTheme({
+        id: 'night',
+        name: 'Night',
+        assets: {
+          background: { assetId: 99, imageUrl: 'https://cdn.example/night.png' },
+        },
+      }),
+    ])
+    config.defaultThemeId = 'default'
+
+    const migrated = backfillVisualThemeBackground(config, [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 41,
+      imageUrl: 'https://cdn.example/base.png',
+    }])
+
+    expect(migrated.themes[0].assets.background).toEqual({
+      assetId: 41,
+      imageUrl: 'https://cdn.example/base.png',
+    })
+    expect(migrated.themes[1].assets.background).toEqual({
+      assetId: 99,
+      imageUrl: 'https://cdn.example/night.png',
+    })
+    expect(config.themes[0].assets.background).toBeUndefined()
+  })
 })
 
 describe('validateVisualThemes', () => {
+  it('allows a background override when the implicit default background is filtered from elements', () => {
+    const config = createConfig([createTheme({
+      assets: {
+        background: { assetId: 100, imageUrl: 'https://assets.example/background.png' },
+        hourHand: { assetId: 101, imageUrl: 'https://assets.example/hour.svg' },
+        minuteHand: { assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
+      },
+    })])
+    const baseElements = [
+      { eleType: 'hourHand', assetId: 101, imageUrl: 'https://assets.example/hour.svg' },
+      { eleType: 'minuteHand', assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
+    ]
+
+    expect(validateVisualThemes(config, properties, baseElements)).not.toContain(
+      'Theme "Classic" cannot override background because the base element does not exist.',
+    )
+  })
+
   it('requires the version-1 user-selection schema', () => {
     const invalid = createConfig([createTheme()])
     ;(invalid as { version: number }).version = 2
@@ -248,37 +347,34 @@ describe('validateVisualThemes', () => {
     )
   })
 
-  it.each(['hourHand', 'minuteHand'] as const)('requires the %s asset', (slot) => {
-    const theme = createTheme()
-    delete theme.assets[slot]
-    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
-      `Theme "Classic" requires a ${slot} asset.`,
-    )
-  })
-
-  it.each(['hourHand', 'minuteHand'] as const)('accepts a missing %s asset when the base design has a persistent fallback', (slot) => {
-    const theme = createTheme()
-    delete theme.assets[slot]
+  it('accepts enabled visual themes without hand elements or hand overrides', () => {
     expect(validateVisualThemes(
-      createConfig([theme]),
+      createConfig([createTheme({ assets: {} })]),
       properties,
-      [{ id: slot, eleType: slot, assetId: 900, imageUrl: `https://assets.example/${slot}.svg` }] as any,
-    )).not.toContain(`Theme "Classic" requires a ${slot} asset.`)
+      [],
+    )).toEqual([])
   })
 
-  it('still rejects a missing theme hand when the base fallback is not persistent', () => {
-    const theme = createTheme()
-    delete theme.assets.hourHand
+  it('uses base hand assets when a theme does not override them', () => {
     expect(validateVisualThemes(
-      createConfig([theme]),
+      createConfig([createTheme({ assets: {} })]),
       properties,
-      [{ id: 'hour', eleType: 'hourHand', assetId: null, imageUrl: 'blob:https://studio.example/hour' }] as any,
-    )).toContain('Theme "Classic" requires a hourHand asset.')
+      [
+        { eleType: 'hourHand', assetId: 11, imageUrl: 'hour.svg' },
+        { eleType: 'minuteHand', assetId: 12, imageUrl: 'minute.svg' },
+      ],
+    )).toEqual([])
   })
 
-  it.each(['hourHand', 'minuteHand'] as const)('requires an existing base %s draw layer even when the theme has an asset', (slot) => {
-    expect(validateVisualThemes(createConfig([createTheme()]), properties, [])).toContain(
-      `Visual themes require a base ${slot} element.`,
+  it('still rejects a hand override whose base element does not exist', () => {
+    expect(validateVisualThemes(
+      createConfig([createTheme({
+        assets: { hourHand: { assetId: 11, imageUrl: 'hour.svg' } },
+      })]),
+      properties,
+      [],
+    )).toContain(
+      'Theme "Classic" cannot override hourHand because the base element does not exist.',
     )
   })
 
@@ -367,7 +463,7 @@ describe('validateVisualThemes', () => {
     )
   })
 
-  it('allows only existing theme-managed color properties', () => {
+  it('allows only existing color properties', () => {
     const theme = createTheme({
       colors: {
         PrimaryColor: '0xFFFFFF',
@@ -378,7 +474,6 @@ describe('validateVisualThemes', () => {
     })
     expect(validateVisualThemes(createConfig([theme]), properties)).toEqual(
       expect.arrayContaining([
-        'Theme "Classic" cannot override user-managed color property "CustomDataColor".',
         'Theme "Classic" color property "Label" must exist and have type color.',
         'Theme "Classic" color property "MissingColor" must exist and have type color.',
       ]),
@@ -387,7 +482,7 @@ describe('validateVisualThemes', () => {
 })
 
 describe('resolveThemeColor', () => {
-  it('uses a theme override only for theme-managed color properties', () => {
+  it('uses a theme override for any color property', () => {
     const theme = createTheme({
       colors: {
         PrimaryColor: '0x000000',
@@ -395,7 +490,7 @@ describe('resolveThemeColor', () => {
       },
     })
     expect(resolveThemeColor('PrimaryColor', theme, properties)).toBe('0x000000')
-    expect(resolveThemeColor('CustomDataColor', theme, properties)).toBe('0x00FF00')
+    expect(resolveThemeColor('CustomDataColor', theme, properties)).toBe('0xFF0000')
   })
 
   it('falls back to the color property default and ignores non-color properties', () => {

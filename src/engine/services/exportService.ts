@@ -31,6 +31,7 @@ import {
   VISUAL_THEME_ASSET_ELEMENT_TYPES,
   VISUAL_THEME_COLOR_BINDINGS,
 } from './visualThemeElementFields'
+import { validateExplicitColorBindings } from './explicitColorBindingService'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -38,6 +39,13 @@ const t = (key: string, params?: Record<string, string | number>): string => {
 }
 
 const PACKAGE_ASSET_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'centerCap'])
+
+function normalizeTransparentColors(encodeConfig: AnyElementConfig): void {
+  const record = encodeConfig as unknown as Record<string, unknown>
+  for (const [colorField] of VISUAL_THEME_COLOR_BINDINGS) {
+    if (record[colorField] === 'transparent') record[colorField] = -1
+  }
+}
 
 function isPackageAssetElement(element: AnyElementConfig): boolean {
   return PACKAGE_ASSET_ELEMENT_TYPES.has(String((element as any)?.eleType ?? (element as any)?.type ?? ''))
@@ -104,31 +112,9 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
   }
 }
 
-function mapColorProperties(encodeConfig: AnyElementConfig, properties: PropertiesMap): void {
-  const encRec: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
-  for (const [source, target] of VISUAL_THEME_COLOR_BINDINGS) {
-    const val = encRec[source]
-    if (val === undefined) continue
-    if (val === 'transparent') {
-      encRec[source] = -1
-      continue
-    }
-    const match = Object.entries(properties)
-      .find(([, colorProperty]) => {
-        if ((colorProperty as any).type !== 'color') return false
-        const propVal = String((colorProperty as any).value ?? '')
-        const srcVal = String(val ?? '')
-        return propVal.toLowerCase().slice(-6) === srcVal.toLowerCase().slice(-6)
-      })
-    if (match) {
-      encRec[target] = match[0]
-    }
-  }
-}
-
 /**
  * 校验颜色属性：每个颜色属性的值必须在至少一个元素的颜色设置中被引用
- * 需在 mapColorProperties 执行之后调用，检查编码后元素上的 *Property 目标字段
+ * 仅检查编码后元素上的显式 *Property 目标字段
  */
 function validateColorBindings(
   encodedElements: AnyElementConfig[],
@@ -339,7 +325,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       const encoded = encodeElementByRegistry(bgObj) as AnyElementConfig | null
       if (encoded) {
         restoreVisualThemeBaseFields(encoded, baseElementById.get(String((encoded as any).id)))
-        mapColorProperties(encoded, properties)
+        normalizeTransparentColors(encoded)
         config.elements.unshift(encoded)
       }
     } catch (err) {
@@ -383,8 +369,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       }
 
       restoreVisualThemeBaseFields(encodeConfig, baseElementById.get(String((encodeConfig as any).id)))
-      mapColorProperties(encodeConfig, properties)
-
+      normalizeTransparentColors(encodeConfig)
       const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
       const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
       if ((element as any).eleType === 'image') {
@@ -409,6 +394,17 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
     // ── 导出前校验：颜色属性的值必须在元素的颜色设置中被引用 ──
     if (validateBindings) {
+      const invalidBindings = validateExplicitColorBindings(config.elements, properties)
+      if (invalidBindings.length > 0) {
+        const errors = invalidBindings.map((binding) =>
+          t('export.validation.invalidColorPropertyBinding', {
+            key: binding.propertyKey,
+            elementId: binding.elementId,
+          }))
+        ElMessage.error(errors.join(t('common.listSeparator')))
+        console.error('Export validation failed:', invalidBindings)
+        return null
+      }
       const colorErrors = validateColorBindings(config.elements, properties)
       if (colorErrors.length > 0) {
         ElMessage.error(colorErrors.join(t('common.listSeparator')))

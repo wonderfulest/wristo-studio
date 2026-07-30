@@ -23,17 +23,17 @@ describe('toColorSelectionPayload', () => {
     ).toEqual({ color: '#9eea20', propertyKey: 'accentColor' })
   })
 
-  it.each(['#ffffff', 'transparent'])('uses an empty property key for static color %s', (color) => {
+  it.each(['#ffffff', 'transparent'])('clears the property key for static color %s', (color) => {
     expect(toColorSelectionPayload({ hex: color, value: color })).toEqual({
       color,
-      propertyKey: ''
+      propertyKey: null
     })
   })
 
   it('normalizes missing input to a safe static color', () => {
     expect(toColorSelectionPayload(undefined)).toEqual({
       color: '#ffffff',
-      propertyKey: ''
+      propertyKey: null
     })
   })
 })
@@ -87,7 +87,7 @@ describe('ColorPicker canvas colors contract', () => {
 
     expect(wrapper.emitted('update:modelValue')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('change')).toEqual([['#ABCDEF']])
-    expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: '' }]])
+    expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: null }]])
     wrapper.unmount()
   })
 })

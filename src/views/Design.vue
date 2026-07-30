@@ -89,8 +89,8 @@ import { useThemeStore } from '@/stores/theme'
 import { designApi } from '@/api/wristo/design'
 import { useBaseStore } from '@/stores/baseStore'
 import { useLayerStore } from '@/stores/layerStore'
-import { decodeElementConfig, getElementHandler } from '@/engine/registry/elementRegistry'
-import { syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
+import { decodeElementConfig } from '@/engine/registry/elementRegistry'
+import { addElement, syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
@@ -134,6 +134,7 @@ import {
   restoreDesignAssetBundle,
   WrtDesignPackageError,
 } from '@/engine/services/designAssetBundleService'
+import { migrateLegacyColorBindings } from '@/engine/services/explicitColorBindingService'
  
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -929,11 +930,16 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
 const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
   await fontStore.fetchFonts()
   if (!isCurrentDesignLoad(generation)) return false
-  visualThemeStore.hydrate(config.visualThemes)
   if (Array.isArray(config.elements)) {
+    ensureBackgroundElement(config as any)
+    visualThemeStore.hydrate(
+      config.visualThemes,
+      config.elements as unknown as Array<Record<string, unknown>>,
+    )
     await fontStore.loadFontsForElements(config.elements as any)
     if (!isCurrentDesignLoad(generation)) return false
   } else {
+    visualThemeStore.hydrate(config.visualThemes)
     designStore.setSupportsChineseContent(false)
     designStore.setSupportedLocales(['en-US'])
     propertiesStore.textCase = 0
@@ -969,6 +975,25 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   if (config.properties) {
     propertiesStore.loadProperties(config.properties)
   }
+  const colorBindingMigration = migrateLegacyColorBindings(
+    config.elements as AnyElementConfig[],
+    propertiesStore.allProperties,
+  )
+  const runtimeElements = colorBindingMigration.elements
+  visualThemeStore.syncColorProperties(
+    propertiesStore.allProperties,
+    runtimeElements as unknown as Array<Record<string, unknown>>,
+  )
+  if (colorBindingMigration.migratedBindings.length > 0) {
+    messageStore.success(t('visualTheme.colorBindingsMigrated', {
+      count: colorBindingMigration.migratedBindings.length,
+    }))
+  }
+  if (colorBindingMigration.ambiguousBindings.length > 0) {
+    messageStore.warning(t('visualTheme.colorBindingsAmbiguous', {
+      count: colorBindingMigration.ambiguousBindings.length,
+    }))
+  }
 
   propertiesStore.textCase = 0
   propertiesStore.bitmapMode = true
@@ -987,9 +1012,8 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   await waitCanvasReady()
   if (!isCurrentDesignLoad(generation)) return false
   elementDataStore.clearAll()
-  ensureBackgroundElement(config as any)
 
-  const scaledElements = scaleElementsFromStoredSize(config.elements as any)
+  const scaledElements = scaleElementsFromStoredSize(runtimeElements as any)
   if (!await loadElements(scaledElements, generation) || !isCurrentDesignLoad(generation)) return false
   applyLoadedElementDisplayStates(scaledElements)
   canvasRef.value?.updateZoom()
@@ -1165,8 +1189,7 @@ const loadElements = async (elements: AnyElementConfig[], generation: number): P
       elementDataStore.upsertElement(config as any)
 
       // 新版 Registry：通过 ElementHandler.add(config) 创建元素，由调用方保证 eleType 一致
-      const handler = getElementHandler(element.eleType as string)
-      const addedElement = await handler.add(config as any)
+      const addedElement = await addElement(element.eleType as any, config as any)
       if (!isCurrentDesignLoad(generation)) {
         const canvas = baseStore.canvas
         if (addedElement && canvas?.getObjects?.().includes(addedElement as any)) {

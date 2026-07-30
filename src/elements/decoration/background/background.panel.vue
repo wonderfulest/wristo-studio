@@ -17,7 +17,7 @@
       <label>{{ t('elementSettings.backgroundColor') }}</label>
       <ColorPicker
         :model-value="currentColor"
-        @change="handleColorChange"
+        @property-change="applyUpdate({ color: $event.color, colorProperty: $event.propertyKey })"
       />
     </div>
 
@@ -101,11 +101,6 @@ const handleImageUploaded = (img: any) => {
   applyUpdate({ imageUrl: url || '', imageId: img.id || null })
 }
 
-const handleColorChange = (color: any) => {
-  if (typeof color !== 'string' || !color) return
-  const normalized = color.startsWith('0x') && color.length === 8 ? `#${color.slice(2)}` : color
-  applyUpdate({ color: normalized })
-}
 </script>
 
 <style scoped>

@@ -93,6 +93,69 @@ describe('visual theme export persistence', () => {
     expect(JSON.stringify(config)).not.toContain('previewThemeId')
   })
 
+  it('exports theme backgrounds when the base default background is filtered', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    const {
+      DEFAULT_BACKGROUND_COLOR,
+      DEFAULT_BACKGROUND_IMAGE_URL,
+    } = await import('@/elements/decoration/background/background.constants')
+    registerElement('background' as any, {
+      add: vi.fn() as any,
+      encode: (element) => ({ ...(element as any) }),
+    })
+    const background = {
+      id: 'background-1',
+      eleType: 'background',
+      imageId: null,
+      imageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
+      wristoImageId: null,
+      wristoImageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
+      color: DEFAULT_BACKGROUND_COLOR,
+    }
+    const visualThemes = {
+      version: 1 as const,
+      enabled: true,
+      defaultThemeId: 'default',
+      selectionMode: 'user' as const,
+      themes: [{
+        id: 'default',
+        name: 'Default',
+        assets: {
+          background: {
+            assetId: 41,
+            imageUrl: 'https://cdn.example/theme-background.png',
+          },
+        },
+        colors: {},
+        fallbackHands: {
+          hourColor: '0xFFFFFF',
+          minuteColor: '0xFFFFFF',
+          secondColor: '0xFF0000',
+        },
+      }],
+    }
+
+    const config = generateConfig({
+      canvas: { getObjects: () => [background] } as any,
+      properties: {},
+      designId: 'design-1',
+      watchFaceName: 'Background Theme',
+      textCase: 0,
+      bitmapMode: false,
+      visualThemes,
+      baseElements: [background],
+    })
+
+    expect(config?.elements).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ eleType: 'background' }),
+    ]))
+    expect(config?.visualThemes?.themes[0].assets.background).toEqual({
+      assetId: 41,
+      imageUrl: 'https://cdn.example/theme-background.png',
+    })
+  })
+
   it('exports persisted visual-theme base fields while the canvas is still previewing a theme', async () => {
     const { generateConfig } = await import('./exportService')
     const { registerElement } = await import('@/engine/registry/elementRegistry')

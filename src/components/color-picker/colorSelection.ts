@@ -6,12 +6,12 @@ export interface ColorSelectionInput {
 
 export interface ColorSelectionPayload {
   color: string
-  propertyKey: string
+  propertyKey: string | null
 }
 
 export const toColorSelectionPayload = (
   selection?: ColorSelectionInput,
 ): ColorSelectionPayload => ({
   color: String(selection?.hex || '#ffffff'),
-  propertyKey: String(selection?.propertyKey || ''),
+  propertyKey: selection?.propertyKey ? String(selection.propertyKey) : null,
 })

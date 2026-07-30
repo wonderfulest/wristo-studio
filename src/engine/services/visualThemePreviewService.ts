@@ -1,4 +1,4 @@
-import { normalizeThemeMode, resolveThemeColor } from './visualThemeService'
+import { resolveThemeColor } from './visualThemeService'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualTheme, VisualThemeAssetSlot, VisualThemesConfig } from '@/types/visualTheme'
 import {
@@ -21,7 +21,8 @@ export interface VisualThemePreviewDependencies {
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
-
+const toCanvasColor = (color: string): string =>
+  /^0x[0-9a-f]{6}$/i.test(color) ? `#${color.slice(2)}` : color
 function resolveAssetPatch(
   base: ElementConfig,
   theme: VisualTheme,
@@ -43,27 +44,35 @@ function resolveAssetPatch(
     imageUrl: asset.imageUrl,
     assetId: asset.assetId,
   }
-  if (slot === 'background') patch.imageId = asset.assetId
+  if (slot === 'background') patch.imageId = null
   if (slot === 'centerCap' && asset.targetSize !== undefined) patch.targetSize = asset.targetSize
   return patch
 }
 
 function resolveColorPatch(
   base: ElementConfig,
+  liveElement: ElementConfig,
   theme: VisualTheme,
   properties: PropertiesMap,
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {}
   for (const [colorField, propertyField] of VISUAL_THEME_COLOR_BINDINGS) {
-    const propertyKey = base[propertyField]
-    if (typeof propertyKey !== 'string') continue
+    const livePropertyKey = liveElement[propertyField]
+    const basePropertyKey = base[propertyField]
+    const propertyKey = livePropertyKey ?? basePropertyKey
+    if (typeof propertyKey !== 'string' || !propertyKey) continue
     const property = properties[propertyKey]
-    if (!property || property.type !== 'color' || normalizeThemeMode(property.themeMode) !== 'theme') {
+    if (!property || property.type !== 'color') {
+      if (base[colorField] !== undefined) patch[colorField] = base[colorField]
+      continue
+    }
+    if (theme.colors[propertyKey] === undefined) {
       if (base[colorField] !== undefined) patch[colorField] = base[colorField]
       continue
     }
     const color = resolveThemeColor(propertyKey, theme, properties)
-    if (color !== undefined) patch[colorField] = color
+    const canvasColor = color === undefined ? undefined : toCanvasColor(color)
+    if (canvasColor !== undefined) patch[colorField] = canvasColor
   }
   return patch
 }
@@ -87,7 +96,10 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
         element.id != null && base.id != null && String(element.id) === String(base.id))
       if (!canvasElement) continue
       const patch = theme
-        ? { ...resolveAssetPatch(base, theme), ...resolveColorPatch(base, theme, properties) }
+        ? {
+            ...resolveAssetPatch(base, theme),
+            ...resolveColorPatch(base, canvasElement, theme, properties),
+          }
         : clone(base)
       await dependencies.applyElement(canvasElement, patch, { persist: false })
       if (runGeneration !== generation) return

@@ -23,6 +23,7 @@ import {
   restoreUnpatchedRuntimePosition,
   syncWidgetBusinessPosition,
 } from '@/engine/geometry/elementPositionStability'
+import { collectExplicitColorBindings } from '@/engine/services/explicitColorBindingService'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -78,6 +79,12 @@ export async function addElement(
   assertElementRenderCurrent(renderContext)
   if (element) {
     ;(element as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (config as any).displayStates)
+    const colorBindings = collectExplicitColorBindings(config as unknown as Record<string, unknown>)
+    Object.assign(element as any, colorBindings)
+    const id = (element as any).id
+    if (id != null && Object.keys(colorBindings).length > 0) {
+      useElementDataStore().patchElement(String(id), colorBindings as Partial<AnyElementConfig>)
+    }
   }
   registerElementInstance(element as any)
   return element
@@ -124,6 +131,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
   const businessPositionBefore = captureBusinessPosition(resolved, persistedBefore)
 
   try {
+    Object.assign(resolved as any, collectExplicitColorBindings(positionPatch))
     await handler.update(resolved, patch)
   } catch (error) {
     if (restoreUnpatchedRuntimePosition(resolved, runtimePositionBefore, positionPatch)) {
@@ -144,6 +152,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     try {
       const encoded = handler.encode?.(current)
       if (encoded) {
+        Object.assign(encoded as any, collectExplicitColorBindings(current as unknown as Record<string, unknown>))
         const stableEncoded = applyStableBusinessPosition(encoded as any, businessPositionBefore, positionPatch)
         stableBusinessPosition = stableEncoded
         syncWidgetBusinessPosition(current, stableEncoded)

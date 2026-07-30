@@ -2,7 +2,7 @@
   <div class="settings-section">
     <div class="setting-item">
       <label>{{ t('elementSettings.fontColor') }}</label>
-      <ColorPicker v-model="color" @update:modelValue="updateColor" />
+      <ColorPicker v-model="color" @property-change="updateColor" />
     </div>
 
     <div class="setting-item">
@@ -82,15 +82,16 @@ const availableFontSizes = computed(() => {
 })
 
 // 更新颜色
-const updateColor = (newColor: string) => {
+const updateColor = (selection: { color: string; propertyKey: string | null }) => {
+  const newColor = selection.color
   if (props.applyPatch && props.config) {
-    props.applyPatch({ fill: newColor })
+    props.applyPatch({ fill: newColor, fillProperty: selection.propertyKey })
     color.value = newColor
     return
   }
 
   if (!props.element || !baseStore.canvas) return
-  props.element.set('fill', newColor)
+  props.element.set({ fill: newColor, fillProperty: selection.propertyKey })
   baseStore.canvas.renderAll()
 }
 

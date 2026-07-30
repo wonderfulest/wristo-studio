@@ -16,11 +16,10 @@ const ASSET_SLOTS: VisualThemeAssetSlot[] = [
   'centerCap',
 ]
 
-const REQUIRED_ASSET_SLOTS: VisualThemeAssetSlot[] = ['hourHand', 'minuteHand']
-
 const FALLBACK_COLOR_KEYS = ['hourColor', 'minuteColor', 'secondColor'] as const
 
 const RGB565_COLOR_PATTERN = /^(?:#|0x)[0-9a-f]{6}$/i
+type ThemeAssetElement = Record<string, unknown>
 
 export type ThemeOwner = 'visual' | 'dynamic'
 
@@ -75,10 +74,37 @@ function readAssetRef(element: unknown, slot: VisualThemeAssetSlot): VisualTheme
   return ref
 }
 
-export function createInitialVisualThemes(config: RuntimeDesignConfig): VisualThemesConfig {
-  const assets: VisualTheme['assets'] = {}
+function findBackgroundAsset(elements: ThemeAssetElement[]): VisualThemeAssetRef | undefined {
+  const background = elements.find((element) => element.eleType === 'background')
+  return background ? readAssetRef(background, 'background') : undefined
+}
 
-  for (const slot of ASSET_SLOTS) {
+export function backfillVisualThemeBackground(
+  config: VisualThemesConfig,
+  elements: ThemeAssetElement[],
+): VisualThemesConfig {
+  const background = findBackgroundAsset(elements)
+  if (!background) return config
+  return {
+    ...config,
+    themes: config.themes.map((theme) => ({
+      ...theme,
+      assets: theme.assets.background === undefined
+        ? { ...theme.assets, background: { ...background } }
+        : theme.assets,
+    })),
+  }
+}
+
+export function createInitialVisualThemes(
+  config: RuntimeDesignConfig,
+  authoritativeElements: ThemeAssetElement[] = config.elements as unknown as ThemeAssetElement[],
+): VisualThemesConfig {
+  const assets: VisualTheme['assets'] = {}
+  const background = findBackgroundAsset(authoritativeElements)
+  if (background) assets.background = background
+
+  for (const slot of ASSET_SLOTS.filter((candidate) => candidate !== 'background')) {
     const element = config.elements.find((candidate) => candidate.eleType === slot)
     if (element) assets[slot] = readAssetRef(element, slot)
   }
@@ -102,24 +128,6 @@ export function createInitialVisualThemes(config: RuntimeDesignConfig): VisualTh
       },
     ],
   }
-}
-
-function hasAssetSource(asset: VisualThemeAssetRef | undefined): boolean {
-  return Boolean(
-    asset
-    && (
-      isPositiveInteger(asset.assetId)
-      || (typeof asset.imageUrl === 'string' && asset.imageUrl.trim())
-    ),
-  )
-}
-
-function hasPersistentAssetSource(asset: VisualThemeAssetRef | undefined): boolean {
-  if (!asset) return false
-  if (isPositiveInteger(asset.assetId)) return true
-  return typeof asset.imageUrl === 'string'
-    && Boolean(asset.imageUrl.trim())
-    && !asset.imageUrl.trim().toLocaleLowerCase().startsWith('blob:')
 }
 
 function isRgb565Color(value: unknown): boolean {
@@ -173,35 +181,14 @@ export function validateVisualThemes(
     errors.push(`Default theme "${visualThemes.defaultThemeId}" does not exist.`)
   }
 
-  if (visualThemes.enabled && hasBaseContext) {
-    for (const slot of REQUIRED_ASSET_SLOTS) {
-      if (!resolvedBaseElements.some((element) => element.eleType === slot)) {
-        errors.push(`Visual themes require a base ${slot} element.`)
-      }
-    }
-  }
-
   for (const theme of themes) {
     const themeName = theme.name.trim() || theme.id.trim() || 'Unnamed'
-
-    if (visualThemes.enabled === true) {
-      for (const slot of REQUIRED_ASSET_SLOTS) {
-        const baseElement = resolvedBaseElements.find((element) => element.eleType === slot)
-        const baseAsset = baseElement
-          ? {
-              assetId: isPositiveInteger(baseElement.assetId) ? baseElement.assetId : null,
-              imageUrl: typeof baseElement.imageUrl === 'string' ? baseElement.imageUrl : null,
-            }
-          : undefined
-        if (!hasAssetSource(theme.assets[slot]) && !hasPersistentAssetSource(baseAsset)) {
-          errors.push(`Theme "${themeName}" requires a ${slot} asset.`)
-        }
-      }
-    }
 
     if (visualThemes.enabled && hasBaseContext) {
       for (const slot of ASSET_SLOTS) {
         if (
+          slot !== 'background'
+          &&
           theme.assets[slot]
           && !resolvedBaseElements.some((element) => element.eleType === slot)
         ) {
@@ -234,8 +221,6 @@ export function validateVisualThemes(
       const property = properties[propertyKey]
       if (!property || property.type !== 'color') {
         errors.push(`Theme "${themeName}" color property "${propertyKey}" must exist and have type color.`)
-      } else if (normalizeThemeMode(property.themeMode) !== 'theme') {
-        errors.push(`Theme "${themeName}" cannot override user-managed color property "${propertyKey}".`)
       }
       if (!isRgb565Color(color)) {
         errors.push(`Theme "${themeName}" color "${propertyKey}" must be an RGB565-compatible color.`)
@@ -259,7 +244,7 @@ export function resolveThemeColor(
 ): string | undefined {
   const property = properties[propertyKey]
   if (!property || property.type !== 'color') return undefined
-  if (normalizeThemeMode(property.themeMode) === 'theme' && theme.colors[propertyKey] !== undefined) {
+  if (theme.colors[propertyKey] !== undefined) {
     return theme.colors[propertyKey]
   }
   return typeof property.value === 'string' ? property.value : undefined

@@ -66,6 +66,84 @@ describe('visualThemeStore', () => {
     expect(store.previewThemeId).toBe(store.config?.defaultThemeId)
   })
 
+  it('captures the authoritative background when enabling from a filtered design', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign({
+      ...design,
+      elements: design.elements.filter((element) => element.eleType !== 'background'),
+    }, [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 41,
+      imageUrl: 'https://cdn.example/authoritative-background.png',
+    }])
+
+    expect(store.themes[0].assets.background).toEqual({
+      assetId: 41,
+      imageUrl: 'https://cdn.example/authoritative-background.png',
+    })
+  })
+
+  it('backfills missing backgrounds during hydration without overwriting existing values', () => {
+    const store = useVisualThemeStore()
+    store.hydrate({
+      version: 1,
+      enabled: true,
+      defaultThemeId: 'default',
+      selectionMode: 'user',
+      themes: [
+        {
+          id: 'default',
+          name: 'Default',
+          assets: {},
+          colors: {},
+          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        },
+        {
+          id: 'night',
+          name: 'Night',
+          assets: {
+            background: { assetId: 99, imageUrl: 'https://cdn.example/night.png' },
+          },
+          colors: {},
+          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        },
+      ],
+    }, [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 41,
+      imageUrl: 'https://cdn.example/base.png',
+    }])
+
+    expect(store.themes[0].assets.background?.assetId).toBe(41)
+    expect(store.themes[1].assets.background?.assetId).toBe(99)
+  })
+
+  it('keeps an explicit cleared background instead of deleting the slot', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+
+    store.updateAsset('default', 'background', null)
+
+    expect(store.themes[0].assets.background).toEqual({
+      assetId: null,
+      imageUrl: null,
+    })
+  })
+
+  it('inherits an independent copy of the default background when adding a theme', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+
+    const added = store.addTheme('Night', ids('night'))
+    const defaultBackground = store.themes.find((theme) => theme.id === store.config?.defaultThemeId)
+      ?.assets.background
+
+    expect(added.assets.background).toEqual(defaultBackground)
+    expect(added.assets.background).not.toBe(defaultBackground)
+  })
+
   it('adds and duplicates themes with fresh stable ids and copied values', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)
@@ -165,19 +243,16 @@ describe('visualThemeStore', () => {
     expect(store.config?.themes.map((theme) => theme.name)).toEqual(['Default', 'Night'])
   })
 
-  it('initializes and removes per-theme colors when ownership changes', () => {
+  it('initializes missing colors from explicit element bindings and copies them into new themes', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)
+    store.syncColorProperties(
+      { Accent: { type: 'color', title: 'Accent', value: '0x123456' } },
+      [{ id: 'label', eleType: 'text', fillProperty: 'Accent' }],
+    )
+    expect(store.themes[0].colors.Accent).toBe('0x123456')
+
     store.addTheme('Night', ids('night'))
-
-    store.setColorPropertyMode('Accent', 'theme', '0x123456')
-    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x123456'])
-
-    store.updateColor('night', 'Accent', '0x654321')
-    store.setColorPropertyMode('Accent', 'theme', '0xFFFFFF')
-    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x654321'])
-
-    store.setColorPropertyMode('Accent', 'user', '0xFFFFFF')
-    expect(store.themes.every((theme) => theme.colors.Accent === undefined)).toBe(true)
+    expect(store.themes[1].colors.Accent).toBe('0x123456')
   })
 })

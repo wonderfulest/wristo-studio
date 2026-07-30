@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
-import { createInitialVisualThemes } from '@/engine/services/visualThemeService'
+import {
+  backfillVisualThemeBackground,
+  createInitialVisualThemes,
+} from '@/engine/services/visualThemeService'
+import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 import type { RuntimeDesignConfig } from '@/types/app/config'
+import type { PropertiesMap } from '@/types/properties'
 import type {
-  ThemeMode,
   VisualTheme,
   VisualThemeAssetRef,
   VisualThemeAssetSlot,
@@ -46,17 +50,30 @@ export const useVisualThemeStore = defineStore('visualTheme', {
   },
 
   actions: {
-    hydrate(config: VisualThemesConfig | undefined): void {
-      this.config = config ? clone(config) : undefined
+    hydrate(
+      config: VisualThemesConfig | undefined,
+      authoritativeElements: Array<Record<string, unknown>> = [],
+    ): void {
+      this.config = config
+        ? clone(backfillVisualThemeBackground(config, authoritativeElements))
+        : undefined
       this.previewThemeId = this.config?.defaultThemeId ?? null
     },
 
-    enableFromDesign(config: RuntimeDesignConfig): void {
+    enableFromDesign(
+      config: RuntimeDesignConfig,
+      authoritativeElements: Array<Record<string, unknown>> =
+        config.elements as unknown as Array<Record<string, unknown>>,
+    ): void {
       if (!this.config) {
-        this.config = createInitialVisualThemes(config)
+        this.config = createInitialVisualThemes(config, authoritativeElements)
       } else {
         this.config.enabled = true
       }
+      this.syncColorProperties(
+        config.properties,
+        config.elements as unknown as Array<Record<string, unknown>>,
+      )
       this.previewThemeId = this.config.defaultThemeId
     },
 
@@ -70,6 +87,11 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       const resolvedName = name?.trim() || this.nextThemeName()
       this.assertName(resolvedName)
       const theme = emptyTheme(idFactory(), resolvedName)
+      const defaultBackground = this.requireTheme(config.defaultThemeId).assets.background
+      if (defaultBackground !== undefined) {
+        theme.assets.background = clone(defaultBackground)
+      }
+      theme.colors = clone(this.requireTheme(config.defaultThemeId).colors)
       config.themes.push(theme)
       this.previewThemeId = theme.id
       return theme
@@ -126,6 +148,7 @@ export const useVisualThemeStore = defineStore('visualTheme', {
     updateAsset(themeId: string, slot: VisualThemeAssetSlot, asset: VisualThemeAssetRef | null): void {
       const theme = this.requireTheme(themeId)
       if (asset) theme.assets[slot] = clone(asset)
+      else if (slot === 'background') theme.assets.background = { assetId: null, imageUrl: null }
       else delete theme.assets[slot]
     },
 
@@ -133,12 +156,23 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       this.requireTheme(themeId).colors[propertyKey] = toMonkeyColor(color)
     },
 
-    setColorPropertyMode(propertyKey: string, mode: ThemeMode, defaultColor: string): void {
+    syncColorProperties(
+      properties: PropertiesMap,
+      elements: Array<Record<string, unknown>>,
+    ): void {
+      const propertyFields = VISUAL_THEME_COLOR_BINDINGS.map(([, propertyField]) => propertyField)
+      const keys = new Set<string>()
+      for (const element of elements) {
+        for (const propertyField of propertyFields) {
+          const key = element[propertyField]
+          if (typeof key === 'string' && properties[key]?.type === 'color') keys.add(key)
+        }
+      }
       for (const theme of this.themes) {
-        if (mode === 'theme') {
-          if (theme.colors[propertyKey] === undefined) theme.colors[propertyKey] = toMonkeyColor(defaultColor)
-        } else {
-          delete theme.colors[propertyKey]
+        for (const key of keys) {
+          if (theme.colors[key] === undefined) {
+            theme.colors[key] = toMonkeyColor(String(properties[key].value ?? '0xFFFFFF'))
+          }
         }
       }
     },

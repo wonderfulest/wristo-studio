@@ -80,7 +80,10 @@
         </div>
         <div class="text-setting-field">
       <label>{{ t('elementSettings.fontColor') }}</label>
-      <ColorPicker v-model="fill" @change="updateTextColor" />
+      <ColorPicker
+        v-model="fill"
+        @property-change="applyUpdate({ fill: $event.color, fillProperty: $event.propertyKey })"
+      />
         </div>
         <div class="text-setting-field full">
       <label>{{ t('elementSettings.font') }}</label>
@@ -196,10 +199,6 @@ const applyUpdate = (patch: Record<string, any>) => {
 
 const updateFontSize = () => {
   applyUpdate({ fontSize: fontSize.value })
-}
-
-const updateTextColor = () => {
-  applyUpdate({ fill: fill.value })
 }
 
 const updateFontFamily = async () => {

@@ -45,6 +45,7 @@ import { DataTypeOptions } from '@/config/settings'
 import { createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
+import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -114,15 +115,10 @@ const ensureChartPropertyForChartElement = (normalizedConfig: AnyElementConfig, 
   return false
 }
 
-const colorVariableBindings = [
-  { propField: 'fillProperty', styleField: 'fill' },
-  { propField: 'colorProperty', styleField: 'color' },
-  { propField: 'strokeProperty', styleField: 'stroke' },
-  { propField: 'pointColorProperty', styleField: 'pointColor' },
-  { propField: 'activeColorProperty', styleField: 'activeColor' },
-  { propField: 'bodyStrokeProperty', styleField: 'bodyStroke' },
-  { propField: 'headFillProperty', styleField: 'headFill' },
-] as const
+const colorVariableBindings = VISUAL_THEME_COLOR_BINDINGS.map(([styleField, propField]) => ({
+  propField,
+  styleField,
+}))
 
 const normalizeColorVariableValue = (value: unknown): string | null => {
   const raw = String(value ?? '').trim()

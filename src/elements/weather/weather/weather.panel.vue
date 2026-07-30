@@ -5,7 +5,14 @@
         <font-picker v-model="fontFamily" :type="FontTypes.ICON_FONT" @change="onFontChange" />
       </el-form-item>
       <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontColor')">
-        <ColorPicker v-model="fill" @change="onColorChange" />
+        <ColorPicker
+          v-model="fill"
+          @property-change="applyUpdate({
+            fill: $event.color,
+            fillProperty: $event.propertyKey,
+            weatherDisplayType: 'mip',
+          })"
+        />
       </el-form-item>
       <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontSize')">
         <FontSizeSelect v-model="fontSize" @change="onFontSizeChange" />
@@ -298,11 +305,6 @@ const onFontChange = () => {
   applyUpdate({ fontFamily: fontFamily.value, weatherDisplayType: activeTab.value })
   fetchConditions('mip')
   fetchConditions('amoled')
-}
-
-const onColorChange = () => {
-  if (activeTab.value !== 'mip') return
-  applyUpdate({ fill: fill.value, weatherDisplayType: 'mip' })
 }
 
 const onFontSizeChange = () => {

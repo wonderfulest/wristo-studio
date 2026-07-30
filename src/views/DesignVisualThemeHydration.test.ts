@@ -20,4 +20,14 @@ describe('Design visual theme hydration ordering', () => {
     expect(source).toContain('visualThemeStore.hydrate(config.visualThemes)')
     expect(source).not.toContain('if (config.visualThemes) visualThemeStore.hydrate')
   })
+
+  it('loads elements through ElementManager so explicit color bindings survive renderer snapshots', () => {
+    const loadStart = source.indexOf('const loadElements = async')
+    const loadEnd = source.indexOf('\\n}', loadStart)
+    const loadSource = source.slice(loadStart, loadEnd)
+
+    expect(source).toContain("import { addElement, syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'")
+    expect(loadSource).toContain('await addElement(element.eleType as any, config as any)')
+    expect(loadSource).not.toContain('handler.add')
+  })
 })

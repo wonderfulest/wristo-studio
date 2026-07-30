@@ -8,6 +8,10 @@ const properties: PropertiesMap = {
   UserColor: { type: 'color', title: 'User', value: '0x222222', themeMode: 'user' },
 }
 
+const propertiesWithoutMode: PropertiesMap = {
+  Accent: { type: 'color', title: 'Accent', value: '0x111111' },
+}
+
 const visualThemes: VisualThemesConfig = {
   version: 1,
   enabled: true,
@@ -44,6 +48,23 @@ const baseElements = [
 ]
 
 describe('visualThemePreviewService', () => {
+  it('applies an explicitly bound theme color without themeMode', async () => {
+    const persisted = [{ id: 'label', eleType: 'text', fill: '#111111', fillProperty: 'Accent' }]
+    const canvasElements = structuredClone(persisted)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+
+    await controller.preview(visualThemes, 'night', propertiesWithoutMode)
+
+    expect(canvasElements[0].fill).toBe('#BBBBBB')
+  })
+
   it('switches theme presentation and restores base without mutating persisted snapshots or defaults', async () => {
     const canvasElements = structuredClone(baseElements)
     const persisted: Array<Record<string, any>> = structuredClone(baseElements)
@@ -58,13 +79,132 @@ describe('visualThemePreviewService', () => {
 
     await controller.preview(visualThemes, 'night', properties)
     expect(canvasElements[0]).toMatchObject({ assetId: 20, imageUrl: 'night.svg' })
-    expect(canvasElements[1]).toMatchObject({ color: '0xBBBBBB', bgColor: '0x222222' })
+    expect(canvasElements[1]).toMatchObject({ color: '#BBBBBB', bgColor: '0x222222' })
     expect(persisted).toEqual(baseElements)
     expect(properties.Accent.value).toBe('0x111111')
 
     await controller.restore()
     expect(canvasElements).toEqual(baseElements)
     expect(persisted).toEqual(baseElements)
+  })
+
+  it('uses the live canvas color binding when the persisted snapshot has not captured it yet', async () => {
+    const config = structuredClone(visualThemes)
+    const persisted = [{
+      id: 'label',
+      eleType: 'text',
+      fill: '0x111111',
+    }]
+    const canvasElements = [{
+      ...persisted[0],
+      fillProperty: 'Accent',
+    }]
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+
+    await controller.preview(config, 'night', properties)
+
+    expect(canvasElements[0].fill).toBe('#BBBBBB')
+    expect(persisted[0].fill).toBe('0x111111')
+
+    config.themes[1].colors.Accent = '0x00FF00'
+    await controller.preview(config, 'night', properties)
+
+    expect(canvasElements[0].fill).toBe('#00FF00')
+    expect(persisted[0].fill).toBe('0x111111')
+  })
+
+  it('does not infer a color binding from an equal base color', async () => {
+    const persisted = [{
+      id: 'metric',
+      eleType: 'data',
+      fill: '#111111',
+    }]
+    const canvasElements = structuredClone(persisted)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+
+    await controller.preview(visualThemes, 'night', properties)
+
+    expect(canvasElements[0].fill).toBe('#111111')
+    expect(persisted[0].fill).toBe('#111111')
+  })
+
+  it('applies a theme background to the existing background element', async () => {
+    const persisted = [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 1,
+      assetId: 1,
+      imageUrl: 'https://cdn.example/base.png',
+    }]
+    const canvasElements = structuredClone(persisted)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+    const config = structuredClone(visualThemes)
+    config.themes[1].assets.background = {
+      assetId: 2,
+      imageUrl: 'https://cdn.example/night.png',
+    }
+
+    await controller.preview(config, 'night', properties)
+
+    expect(canvasElements).toHaveLength(1)
+    expect(canvasElements[0]).toMatchObject({
+      id: 'background-1',
+      imageId: null,
+      assetId: 2,
+      imageUrl: 'https://cdn.example/night.png',
+    })
+  })
+
+  it('clears a theme background through the existing background element', async () => {
+    const persisted = [{
+      id: 'background-1',
+      eleType: 'background',
+      imageId: 1,
+      assetId: 1,
+      imageUrl: 'https://cdn.example/base.png',
+    }]
+    const canvasElements = structuredClone(persisted)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+    const config = structuredClone(visualThemes)
+    config.themes[1].assets.background = { assetId: null, imageUrl: null }
+
+    await controller.preview(config, 'night', properties)
+
+    expect(canvasElements).toHaveLength(1)
+    expect(canvasElements[0]).toMatchObject({
+      id: 'background-1',
+      imageId: null,
+      assetId: null,
+      imageUrl: null,
+    })
   })
 
   it('serializes async theme switches so a stale asset load cannot win', async () => {
@@ -91,7 +231,7 @@ describe('visualThemePreviewService', () => {
     await Promise.all([day, night])
 
     expect(canvasElements[0]).toMatchObject({ assetId: 20, imageUrl: 'night.svg' })
-    expect(canvasElements[1].color).toBe('0xBBBBBB')
+    expect(canvasElements[1].color).toBe('#BBBBBB')
   })
 
   it('queues restore during a pending renderer and restores only the captured old canvas', async () => {

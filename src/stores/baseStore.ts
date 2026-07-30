@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import _ from 'lodash'
 import type { Canvas } from 'fabric'
 import { usePropertiesStore } from '@/stores/properties'
-import type { PropertiesMap } from '@/types/properties'
 import type { FabricElement } from '@/types/element'
 import { designApi } from '@/api/wristo/design'
 import { ElMessage } from 'element-plus'
@@ -149,49 +148,6 @@ export const useBaseStore = defineStore('baseStore', {
     },
     setInCanvasWorkarea(flag: boolean): void {
       this.inCanvasWorkarea = flag
-    },
-    // 将元素上的具体颜色值反向映射为属性 key（如 bgColor -> bgColorProperty）
-    mapColorProperties(encodeConfig: import('@/types/elements').AnyElementConfig, properties: PropertiesMap): void {
-      const colorMappings: Array<{ source: string; target: string }> = [
-        { source: 'color', target: 'colorProperty' },
-        { source: 'bgColor', target: 'bgColorProperty' },
-        { source: 'stroke', target: 'strokeProperty' },
-        { source: 'borderColor', target: 'borderColorProperty' },
-        { source: 'bodyStroke', target: 'bodyStrokeProperty' },
-        { source: 'headFill', target: 'headFillProperty' },
-        { source: 'bodyFill', target: 'bodyFillProperty' },
-        { source: 'fill', target: 'fillProperty' },
-        { source: 'activeColor', target: 'activeColorProperty' },
-        { source: 'inactiveColor', target: 'inactiveColorProperty' },
-        { source: 'gridColor', target: 'gridColorProperty' },
-        { source: 'xAxisColor', target: 'xAxisColorProperty' },
-        { source: 'yAxisColor', target: 'yAxisColorProperty' },
-        { source: 'xLabelColor', target: 'xLabelColorProperty' },
-        { source: 'yLabelColor', target: 'yLabelColorProperty' },
-        { source: 'levelColorHigh', target: 'levelColorHighProperty' },
-        { source: 'levelColorMedium', target: 'levelColorMediumProperty' },
-        { source: 'levelColorLow', target: 'levelColorLowProperty' },
-      ]
-
-      const encRec: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
-      for (const { source, target } of colorMappings) {
-        const val = encRec[source]
-        if (val === undefined) continue
-        if (val === 'transparent') {
-          encRec[source] = -1
-          continue
-        }
-        const match = Object.entries(properties)
-          .find(([, colorProperty]) => {
-            if (colorProperty.type !== 'color') return false
-            const propVal = String(colorProperty.value ?? '')
-            const srcVal = String(val ?? '')
-            return propVal.toLowerCase().slice(-6) === srcVal.toLowerCase().slice(-6)
-          })
-        if (match) {
-          encRec[target] = match[0]
-        }
-      }
     },
     // 取消所有选中对象
     deactivateObject(): void {

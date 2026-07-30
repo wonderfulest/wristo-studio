@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
@@ -8,6 +9,8 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import type { VisualThemesConfig } from '@/types/visualTheme'
 import VisualThemeSettings from './VisualThemeSettings.vue'
+
+const panelSource = readFileSync('src/components/panels/settings/VisualThemeSettings.vue', 'utf8')
 
 const messages = vi.hoisted(() => ({ warning: vi.fn(), error: vi.fn() }))
 const themeApi = vi.hoisted(() => ({ getThemeRuleDetail: vi.fn() }))
@@ -79,6 +82,23 @@ describe('VisualThemeSettings', () => {
     messages.error.mockClear()
     themeApi.getThemeRuleDetail.mockReset()
     themeApi.getThemeRuleDetail.mockResolvedValue({ data: { data: null } })
+  })
+
+  it('keeps fallback hand colors available in the full editor', () => {
+    expect(panelSource).toContain("t('visualTheme.fallbackHandColors')")
+    expect(panelSource).toContain('store.updateFallbackColor')
+  })
+
+  it('enables themes with authoritative element snapshots for the background slot', () => {
+    expect(panelSource).toContain('store.enableFromDesign(')
+    expect(panelSource).toMatch(
+      /elementDataStore\.elements\.map\(\(snapshot\)\s*=>\s*snapshot\.config/,
+    )
+  })
+
+  it('does not require hour or minute hand layers', () => {
+    expect(panelSource).not.toContain('missingRequiredLayers')
+    expect(panelSource).not.toContain('visualTheme.missingRequiredLayers')
   })
 
   it('fails closed when the dynamic-rule check rejects', async () => {
@@ -270,7 +290,7 @@ describe('VisualThemeSettings', () => {
     expect(wrapper.find('[data-theme-add]').attributes('disabled')).toBeDefined()
   })
 
-  it('changes color ownership through store actions and initializes theme values', async () => {
+  it('does not expose color ownership controls', () => {
     const store = useVisualThemeStore()
     store.hydrate(config())
     const propertiesStore = usePropertiesStore()
@@ -279,9 +299,8 @@ describe('VisualThemeSettings', () => {
     })
     const wrapper = mountPanel()
 
-    await wrapper.find('[data-color-owner="Accent"]').trigger('click')
-
-    expect(propertiesStore.properties.Accent.themeMode).toBe('theme')
-    expect(store.themes.map((theme) => theme.colors.Accent)).toEqual(['0x123456', '0x123456'])
+    expect(wrapper.find('[data-color-owner="Accent"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('visualTheme.colorOwnerUser')
+    expect(wrapper.text()).not.toContain('visualTheme.colorOwnerTheme')
   })
 })

@@ -121,14 +121,14 @@
               :gradient-enabled="gradientEnabled"
               :gradient-start-color="gradientStartColor"
               :gradient-end-color="gradientEndColor"
-              @change="onFgColorChange"
+              @property-change="onFgColorSelection"
               @gradient-change="onGradientChange" />
           </div>
           <div class="text-setting-field">
             <label>{{ t('elementSettings.backgroundColor') }}</label>
             <ColorPicker
               v-model="bgColor"
-              @change="onBgColorChange" />
+              @property-change="onBgColorSelection" />
           </div>
         </div>
       </section>
@@ -290,6 +290,10 @@ const onFgColorChange = (val: string) => {
   }
   void applyUpdate(patch)
 }
+const onFgColorSelection = (selection: { color: string; propertyKey: string | null }) => {
+  onFgColorChange(selection.color)
+  void applyUpdate({ colorProperty: selection.propertyKey })
+}
 const onGradientChange = (value: { enabled: boolean; startColor: string; endColor: string }) => {
   gradientEnabled.value = value.enabled
   gradientStartColor.value = value.startColor
@@ -309,6 +313,10 @@ const onBgColorChange = (val: string) => {
   bgColor.value = val
   ;(currentModel.value as any).bgColor = val
   void applyUpdate({ bgColor: val })
+}
+const onBgColorSelection = (selection: { color: string; propertyKey: string | null }) => {
+  onBgColorChange(selection.color)
+  void applyUpdate({ bgColorProperty: selection.propertyKey })
 }
 
 const onSegmentModeChange = (val: string | number | boolean) => {

@@ -45,7 +45,7 @@
       <el-form-item :label="t('elementSettings.fontColor')">
         <ColorPicker 
           v-model="currentModel.fill" 
-          @change="applyUpdate({ fill: $event })" 
+          @property-change="applyUpdate({ fill: $event.color, fillProperty: $event.propertyKey })"
         />
       </el-form-item>
       <el-form-item :label="t('elementSettings.timeFormat')">

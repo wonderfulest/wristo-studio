@@ -2,6 +2,7 @@ import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizeFields } from '@/utils/fontSize'
 import { normalizeDisplayStates } from '@/utils/displayStates'
+import { collectExplicitColorBindings } from '@/engine/services/explicitColorBindingService'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 
 // 统一的元素处理器：负责元素的增删改查编解码
@@ -61,6 +62,7 @@ export const encodeElementByRegistry = (
   if (!encoded) return null
 
   const normalized = normalizeFontSizeFields(encoded as unknown as Record<string, unknown>) as unknown as AnyElementConfig
+  Object.assign(normalized as any, collectExplicitColorBindings(element as unknown as Record<string, unknown>))
   ;(normalized as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (encoded as any).displayStates)
   return normalized
 }

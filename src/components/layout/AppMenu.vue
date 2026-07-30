@@ -19,10 +19,7 @@
           <el-icon><CircleCheck /></el-icon>
           <span>{{ t('common.save') }}</span>
         </el-menu-item>
-        <el-menu-item index="actions/visualThemes">
-          <el-icon><Brush /></el-icon>
-          <span>{{ t('visualTheme.menu') }}</span>
-        </el-menu-item>
+        <VisualThemeQuickSelect @edit="openVisualThemeEditor" />
 
         <!-- Main menu divider -->
         <el-divider direction="vertical" class="menu-divider" />
@@ -64,9 +61,8 @@
     direction="rtl"
     size="min(760px, 92vw)"
     append-to-body
-    @closed="restoreVisualThemePreview"
   >
-    <VisualThemeSettings ref="visualThemeSettingsRef" />
+    <VisualThemeSettings />
   </el-drawer>
   <input ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
 
@@ -142,7 +138,7 @@ import { useElementDataStore, type ElementConfigSnapshot } from '@/stores/elemen
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { DataTypeOptions } from '@/config/settings'
-import { Brush, CircleCheck } from '@element-plus/icons-vue'
+import { CircleCheck } from '@element-plus/icons-vue'
 
 import {
   addElement,
@@ -196,7 +192,9 @@ import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'
 import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
+import VisualThemeQuickSelect from '@/components/layout/app-menu/VisualThemeQuickSelect.vue'
 import VisualThemeSettings from '@/components/panels/settings/VisualThemeSettings.vue'
+import { useVisualThemePreview } from '@/composables/useVisualThemePreview'
 import { useI18n } from '@/i18n'
 
 const route = useRoute()
@@ -213,6 +211,7 @@ const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
 const { t } = useI18n()
+useVisualThemePreview()
 let shortcutDocumentGeneration = 0
 watch(
   [
@@ -238,9 +237,8 @@ const watchFaceName = computed(() => {
 // Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
 const visualThemeDrawerVisible = ref(false)
-const visualThemeSettingsRef = ref<{ restorePreview?: () => Promise<void> } | null>(null)
-const restoreVisualThemePreview = () => {
-  void visualThemeSettingsRef.value?.restorePreview?.()
+const openVisualThemeEditor = () => {
+  visualThemeDrawerVisible.value = true
 }
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
@@ -987,8 +985,6 @@ const handleSelect = (key: string) => {
   } else if (key === 'actions/viewJsonConfig') {
     // 复用设计详情打开逻辑
     handleEditDesign()
-  } else if (key === 'actions/visualThemes') {
-    visualThemeDrawerVisible.value = true
   }
 }
 
