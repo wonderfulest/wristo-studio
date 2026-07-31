@@ -117,6 +117,7 @@
             <label>{{ t('elementSettings.foregroundColor') }}</label>
             <ColorPicker
               v-model="fgColor"
+              :property-key="currentModel.colorProperty"
               enable-gradient
               :gradient-enabled="gradientEnabled"
               :gradient-start-color="gradientStartColor"
@@ -128,6 +129,7 @@
             <label>{{ t('elementSettings.backgroundColor') }}</label>
             <ColorPicker
               v-model="bgColor"
+              :property-key="currentModel.bgColorProperty"
               @property-change="onBgColorSelection" />
           </div>
         </div>

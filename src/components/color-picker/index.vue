@@ -3,6 +3,7 @@
     <div class="color-input" @click="togglePicker">
       <input
         :value="displayInputValue"
+        :title="displayInputTitle"
         :readonly="isGradientMode"
         @input="handleDisplayInput"
         @keydown.enter.prevent="handleInputConfirm"
@@ -112,6 +113,10 @@ const props = defineProps({
     // 兼容字符串和数字（有些元素用 -1 之类的数值占位）
     type: [String, Number],
     default: '#FFFFFF'
+  },
+  propertyKey: {
+    type: String,
+    default: null
   },
   popupZIndex: {
     type: Number,
@@ -243,6 +248,16 @@ const colorProperties = computed(() => {
     }))
 })
 const visibleColorProperties = computed(() => (isGradientMode.value ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex)) : colorProperties.value))
+const boundColorProperty = computed(() => {
+  const propertyKey = props.propertyKey?.trim()
+  if (!propertyKey) return null
+  const property = propertiesStore.properties?.[propertyKey]
+  if (!property || property.type !== 'color') return null
+  return {
+    key: propertyKey,
+    title: property.title || propertyKey
+  }
+})
 
 const activeRgb565Color = computed(() => {
   if (!isGradientMode.value) return normalizeOpaqueColor(inputValue.value) || '#FFFFFF'
@@ -280,7 +295,19 @@ const textColor = computed(() => {
   return luminance < 0.5 ? '#dddddd' : '#222222'
 })
 
-const displayInputValue = computed(() => (isGradientMode.value ? `${localGradientStartColor.value} - ${localGradientEndColor.value}` : inputValue.value))
+const displayInputValue = computed(() => {
+  if (isGradientMode.value) {
+    return `${localGradientStartColor.value} - ${localGradientEndColor.value}`
+  }
+  if (boundColorProperty.value) {
+    return `${boundColorProperty.value.title} · ${boundColorProperty.value.key}`
+  }
+  return inputValue.value
+})
+const displayInputTitle = computed(() => {
+  if (!boundColorProperty.value || isGradientMode.value) return undefined
+  return inputValue.value
+})
 
 const gradientPreviewStyle = computed(() => ({
   background: `linear-gradient(90deg, ${localGradientStartColor.value}, ${localGradientEndColor.value})`

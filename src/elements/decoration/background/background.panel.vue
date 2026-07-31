@@ -17,6 +17,7 @@
       <label>{{ t('elementSettings.backgroundColor') }}</label>
       <ColorPicker
         :model-value="currentColor"
+        :property-key="currentModel.colorProperty"
         @property-change="applyUpdate({ color: $event.color, colorProperty: $event.propertyKey })"
       />
     </div>

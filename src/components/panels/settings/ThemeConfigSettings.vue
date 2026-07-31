@@ -115,7 +115,7 @@ import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
-import { applyDialColorPreview } from '@/elements/dials/common/dialColor'
+import { syncColorPropertyToBoundElements } from '@/engine/services/colorPropertySyncService'
 
 const props = defineProps({
   appId: {
@@ -277,62 +277,12 @@ const handleImageUploaded = (val, img) => {
 }
 
 // 颜色变量修改：将 ColorPicker 选择的颜色写回 propertiesStore，使其作用于画布
-const handleColorChange = (propertyKey, hex) => {
+const handleColorChange = async (propertyKey, hex) => {
   if (!propertyKey) return
   if (typeof hex !== 'string') return
   const val = hex.startsWith('#') ? `0x${hex.slice(1)}` : hex
   propertiesStore.setPropertyValue(propertyKey, val)
-
-  // 同步更新画布上使用该颜色变量的元素
-  const canvas = baseStore.canvas
-  if (!canvas) return
-  const objects = canvas.getObjects() || []
-
-  objects.forEach((obj) => {
-    if (!obj || !obj.eleType) return
-    console.log('Processing object:', obj.eleType, obj.id, obj.propertyKey, propertyKey);
-
-    // 元素上可能存在的颜色属性字段，值为属性 key（如 color_1）
-    const bindings = [
-      { propField: 'colorProperty', styleField: 'color' },
-      { propField: 'bgColorProperty', styleField: 'bgColor' },
-      { propField: 'strokeProperty', styleField: 'stroke' },
-      { propField: 'borderColorProperty', styleField: 'borderColor' },
-      { propField: 'bodyStrokeProperty', styleField: 'bodyStroke' },
-      { propField: 'headFillProperty', styleField: 'headFill' },
-      { propField: 'bodyFillProperty', styleField: 'bodyFill' },
-      { propField: 'fillProperty', styleField: 'fill' },
-      { propField: 'activeColorProperty', styleField: 'activeColor' },
-      { propField: 'inactiveColorProperty', styleField: 'inactiveColor' },
-      { propField: 'gridColorProperty', styleField: 'gridColor' },
-      { propField: 'xAxisColorProperty', styleField: 'xAxisColor' },
-      { propField: 'yAxisColorProperty', styleField: 'yAxisColor' },
-      { propField: 'xLabelColorProperty', styleField: 'xLabelColor' },
-      { propField: 'yLabelColorProperty', styleField: 'yLabelColor' },
-      { propField: 'levelColorHighProperty', styleField: 'levelColorHigh' },
-      { propField: 'levelColorMediumProperty', styleField: 'levelColorMedium' },
-      { propField: 'levelColorLowProperty', styleField: 'levelColorLow' },
-    ]
-    console.log('Total bindings:', bindings.length);
-    bindings.forEach(({ propField, styleField }) => {
-      // console.log('Checking binding:', propField, styleField, obj[propField], propertyKey);
-      if (obj[propField] === propertyKey) {
-        console.log('Updating object property:', obj.eleType, propField, styleField, hex);
-        try {
-          obj.set(styleField, hex)
-          console.log('Successfully updated:', obj.eleType, styleField);
-        } catch (e) {
-          console.error('Failed to update:', obj.eleType, styleField, e);
-          // 忽略单个元素设置失败，继续其他元素
-        }
-      }
-    })
-    if (['tick12', 'tick60'].includes(obj.eleType)) {
-      applyDialColorPreview(obj, obj.fill, obj.fillProperty)
-    }
-  })
-
-  canvas.renderAll()
+  await syncColorPropertyToBoundElements(propertyKey, val)
 }
 
 // 切换默认配置

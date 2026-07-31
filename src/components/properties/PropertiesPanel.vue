@@ -247,6 +247,7 @@ import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection } from 
 import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import * as elementManager from '@/engine/managers/elementManager'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
+import { syncColorPropertyToBoundElements } from '@/engine/services/colorPropertySyncService'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -520,7 +521,7 @@ const deleteProperty = async (key) => {
 }
 
 // 处理属性确认
-const handlePropertyConfirm = (propertyData) => {
+const handlePropertyConfirm = async (propertyData) => {
   const { isEdit, ...propertyPayload } = propertyData
   if (!isEdit && propertiesStore.allProperties[propertyPayload.key]) {
     ElMessage.error(t('property.keyDuplicate'))
@@ -528,6 +529,12 @@ const handlePropertyConfirm = (propertyData) => {
   }
 
   propertiesStore.addProperty(propertyPayload)
+  if (propertyPayload.type === 'color') {
+    await syncColorPropertyToBoundElements(
+      propertyPayload.key,
+      propertiesStore.getPropertyValue(propertyPayload.key),
+    )
+  }
   commitHistory('upsert-property')
 }
 

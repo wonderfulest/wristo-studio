@@ -5,6 +5,7 @@ import type { ZoneMetricDisplayMode, ZoneMetricPreset, ZoneMetricZone } from '@/
 export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
   fill: FabricFill
+  fillProperty?: string | null
   fontFamily: string
   originX: 'left' | 'center' | 'right'
   originY: 'center'

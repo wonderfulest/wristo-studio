@@ -107,8 +107,14 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
     padding,
     headGap,
     levelColorLow: colorLow,
+    levelColorLowProperty: config.levelColorLowProperty,
     levelColorMedium: colorMedium,
+    levelColorMediumProperty: config.levelColorMediumProperty,
     levelColorHigh: colorHigh,
+    levelColorHighProperty: config.levelColorHighProperty,
+    bodyStrokeProperty: config.bodyStrokeProperty,
+    bodyFillProperty: config.bodyFillProperty,
+    headFillProperty: config.headFillProperty,
   } as any)
 
   ;(group as any)._body = batteryBody
@@ -206,8 +212,14 @@ export function updateBattery(
   if (next.left !== undefined) group.set('left', next.left)
   if (next.top !== undefined) group.set('top', next.top)
   if (next.levelColorLow !== undefined) (group as any).set('levelColorLow', nextLow)
+  if (patch.levelColorLowProperty !== undefined) (group as any).set('levelColorLowProperty', patch.levelColorLowProperty)
   if (next.levelColorMedium !== undefined) (group as any).set('levelColorMedium', nextMedium)
+  if (patch.levelColorMediumProperty !== undefined) (group as any).set('levelColorMediumProperty', patch.levelColorMediumProperty)
   if (next.levelColorHigh !== undefined) (group as any).set('levelColorHigh', nextHigh)
+  if (patch.levelColorHighProperty !== undefined) (group as any).set('levelColorHighProperty', patch.levelColorHighProperty)
+  if (patch.bodyStrokeProperty !== undefined) (group as any).set('bodyStrokeProperty', patch.bodyStrokeProperty)
+  if (patch.bodyFillProperty !== undefined) (group as any).set('bodyFillProperty', patch.bodyFillProperty)
+  if (patch.headFillProperty !== undefined) (group as any).set('headFillProperty', patch.headFillProperty)
 
   ;(group as any)._body = batteryBody
   ;(group as any)._head = batteryHead

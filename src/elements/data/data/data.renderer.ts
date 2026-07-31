@@ -26,6 +26,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     originX: (config.originX ?? 'center') as any,
     originY: (config.originY ?? 'center') as any,
     fill: config.fill as any,
+    fillProperty: config.fillProperty ?? undefined,
     fontSize: config.fontSize as any,
     fontFamily: config.fontFamily as any,
     dataProperty: config.dataProperty ?? undefined,
@@ -55,6 +56,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
       typeof (element as any).fill === 'string'
         ? ((element as any).fill as string)
         : '#ffffff',
+    fillProperty: (element as any).fillProperty ?? config.fillProperty ?? undefined,
     fontSize: Number(((element as any).fontSize as any) ?? config.fontSize ?? 14),
     fontFamily: String(
       ((element as any).fontFamily as any) ??
@@ -92,6 +94,7 @@ export function updateData(
 
   const updateProps: Record<string, any> = {
     fill: patch.fill,
+    fillProperty: patch.fillProperty,
     fontSize: patch.fontSize,
     fontFamily: patch.fontFamily,
     originX: patch.originX,
@@ -132,6 +135,7 @@ export function updateData(
         typeof (obj.fill as any) === 'string'
           ? ((obj.fill as any) as string)
           : '#ffffff',
+      fillProperty: (obj as any).fillProperty ?? undefined,
       fontSize: Number((obj.fontSize as any) ?? 14),
       fontFamily: String(
         (obj.fontFamily as any) ?? 'roboto-condensed-regular',

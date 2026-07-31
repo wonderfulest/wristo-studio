@@ -2,7 +2,7 @@
   <div class="settings-section">
     <div class="setting-item">
       <label>{{ t('elementSettings.fontColor') }}</label>
-      <ColorPicker v-model="color" @property-change="updateColor" />
+      <ColorPicker v-model="color" :property-key="currentModel.fillProperty" @property-change="updateColor" />
     </div>
 
     <div class="setting-item">

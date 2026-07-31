@@ -7,6 +7,7 @@
       <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontColor')">
         <ColorPicker
           v-model="fill"
+          :property-key="fillProperty"
           @property-change="applyUpdate({
             fill: $event.color,
             fillProperty: $event.propertyKey,
@@ -164,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive, watch } from 'vue'
+import { computed, onMounted, ref, reactive, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement } from '@/types/element'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -194,6 +195,7 @@ const weatherAmoledIconStore = useWeatherAmoledIconStore()
 
 const fontFamily = ref<string>('')
 const fill = ref<string>('')
+const fillProperty = computed<string | null>(() => props.config?.fillProperty ?? (props.element as any)?.fillProperty ?? null)
 const fontSize = ref<number>(36)
 const activeTab = ref<'mip' | 'amoled'>('amoled')
 const conditions = reactive<{ mip: WeatherConditionAssetsVO[]; amoled: WeatherConditionAssetsVO[] }>({ mip: [], amoled: [] })

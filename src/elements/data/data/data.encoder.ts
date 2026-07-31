@@ -17,6 +17,7 @@ export function encodeData(element: FabricElement): DataElementConfig {
       typeof (element as any).fill === 'string'
         ? ((element as any).fill as string)
         : '#ffffff',
+    fillProperty: (element as any).fillProperty ?? undefined,
     fontSize: Number((element.fontSize as any) ?? 14),
     fontFamily: String(
       (element.fontFamily as any) ?? 'roboto-condensed-regular',
@@ -52,6 +53,7 @@ export function decodeData(config: DataElementConfig): Partial<FabricElement> {
     originX: config.originX,
     originY: config.originY,
     fill: config.fill,
+    fillProperty: config.fillProperty ?? undefined,
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
     dataProperty: config.dataProperty ?? undefined,

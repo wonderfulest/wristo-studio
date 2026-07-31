@@ -3,6 +3,7 @@
     <el-form-item :label="t('elementSettings.tickColor')">
       <ColorPicker
         :model-value="currentModel.fill || '#ffffff'"
+        :property-key="currentModel.fillProperty"
         @property-change="handleColorSelection"
       />
     </el-form-item>

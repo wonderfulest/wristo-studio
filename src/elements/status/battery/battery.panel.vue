@@ -27,11 +27,19 @@
       <div class="text-settings-grid">
         <div class="text-setting-field">
           <label>{{ t('elementSettings.borderColor') }}</label>
-          <color-picker v-model="currentModel.bodyStroke" @change="updateElement" />
+          <color-picker
+            v-model="currentModel.bodyStroke"
+            :property-key="currentModel.bodyStrokeProperty"
+            @property-change="handleColorSelection('bodyStroke', $event)"
+          />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.fillColor') }}</label>
-          <color-picker v-model="currentModel.bodyFill" @change="updateElement" />
+          <color-picker
+            v-model="currentModel.bodyFill"
+            :property-key="currentModel.bodyFillProperty"
+            @property-change="handleColorSelection('bodyFill', $event)"
+          />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.borderWidth') }}</label>
@@ -63,7 +71,11 @@
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.fillColor') }}</label>
-          <color-picker v-model="currentModel.headFill" @change="updateElement" />
+          <color-picker
+            v-model="currentModel.headFill"
+            :property-key="currentModel.headFillProperty"
+            @property-change="handleColorSelection('headFill', $event)"
+          />
         </div>
         <div class="text-settings-pair">
           <div class="text-setting-field">
@@ -106,7 +118,8 @@
               <color-picker
                 v-model="currentModel[range.field]"
                 class="battery-color-range-picker"
-                @change="updateElement"
+                :property-key="currentModel[`${range.field}Property`]"
+                @property-change="handleColorSelection(range.field, $event)"
               />
             </div>
           </div>
@@ -145,6 +158,11 @@ const batteryColorRanges = [
   { field: 'levelColorMedium', labelKey: 'elementSettings.batteryRangeMedium' },
   { field: 'levelColorHigh', labelKey: 'elementSettings.batteryRangeHigh' },
 ] as const
+type BatteryColorField =
+  | 'bodyStroke'
+  | 'bodyFill'
+  | 'headFill'
+  | (typeof batteryColorRanges)[number]['field']
 
 const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
@@ -255,19 +273,25 @@ const updateElement = () => {
       padding: currentModel.value.padding,
       headGap: currentModel.value.headGap,
       bodyStroke: currentModel.value.bodyStroke,
+      bodyStrokeProperty: currentModel.value.bodyStrokeProperty,
       bodyFill: currentModel.value.bodyFill,
+      bodyFillProperty: currentModel.value.bodyFillProperty,
       bodyStrokeWidth: currentModel.value.bodyStrokeWidth,
       bodyRx: currentModel.value.bodyRx,
       bodyRy: currentModel.value.bodyRy,
       headWidth: currentModel.value.headWidth,
       headHeight: currentModel.value.headHeight,
       headFill: currentModel.value.headFill,
+      headFillProperty: currentModel.value.headFillProperty,
       headRx: currentModel.value.headRx,
       headRy: currentModel.value.headRy,
       level: currentModel.value.level,
       levelColorLow: currentModel.value.levelColorLow,
+      levelColorLowProperty: currentModel.value.levelColorLowProperty,
       levelColorMedium: currentModel.value.levelColorMedium,
+      levelColorMediumProperty: currentModel.value.levelColorMediumProperty,
       levelColorHigh: currentModel.value.levelColorHigh,
+      levelColorHighProperty: currentModel.value.levelColorHighProperty,
     })
     return
   }
@@ -278,24 +302,54 @@ const updateElement = () => {
     width: (props.element as any).width,
     height: (props.element as any).height,
     bodyFill: (props.element as any).bodyFill,
+    bodyFillProperty: (props.element as any).bodyFillProperty,
     bodyStroke: (props.element as any).bodyStroke,
+    bodyStrokeProperty: (props.element as any).bodyStrokeProperty,
     bodyStrokeWidth: (props.element as any).bodyStrokeWidth,
     bodyRx: (props.element as any).bodyRx,
     bodyRy: (props.element as any).bodyRy,
     headWidth: (props.element as any).headWidth,
     headHeight: (props.element as any).headHeight,
     headFill: (props.element as any).headFill,
+    headFillProperty: (props.element as any).headFillProperty,
     headRx: (props.element as any).headRx,
     headRy: (props.element as any).headRy,
     padding: (props.element as any).padding,
     level: (props.element as any).level,
     levelColorLow: (props.element as any).levelColorLow,
+    levelColorLowProperty: (props.element as any).levelColorLowProperty,
     levelColorMedium: (props.element as any).levelColorMedium,
+    levelColorMediumProperty: (props.element as any).levelColorMediumProperty,
     levelColorHigh: (props.element as any).levelColorHigh,
+    levelColorHighProperty: (props.element as any).levelColorHighProperty,
     left: (props.element as any).left,
     top: (props.element as any).top,
     headGap: (props.element as any).headGap,
   })
+}
+
+const handleColorSelection = (
+  field: BatteryColorField,
+  selection: { color: string; propertyKey: string | null },
+) => {
+  const propertyField = `${field}Property`
+  ;(currentModel.value as any)[field] = selection.color
+  ;(currentModel.value as any)[propertyField] = selection.propertyKey
+
+  if (props.applyPatch && props.config) {
+    props.applyPatch({
+      [field]: selection.color,
+      [propertyField]: selection.propertyKey,
+    })
+    return
+  }
+
+  if (props.element) {
+    elementManager.updateElement(props.element as any, {
+      [field]: selection.color,
+      [propertyField]: selection.propertyKey,
+    })
+  }
 }
 </script>
 

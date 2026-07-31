@@ -13,13 +13,19 @@ export interface BatteryElementConfig extends BaseElementConfig {
   headGap?: number
   bodyStrokeWidth?: number
   bodyStroke?: string
+  bodyStrokeProperty?: string | null
   bodyFill?: string
+  bodyFillProperty?: string | null
   bodyRx?: number
   bodyRy?: number
   headFill?: string
+  headFillProperty?: string | null
   headRx?: number
   headRy?: number
   levelColorLow?: string | null
+  levelColorLowProperty?: string | null
   levelColorMedium?: string | null
+  levelColorMediumProperty?: string | null
   levelColorHigh?: string | null
+  levelColorHighProperty?: string | null
 }

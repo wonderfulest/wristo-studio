@@ -6,8 +6,15 @@ import { resolve } from 'node:path'
 import { toColorSelectionPayload } from './colorSelection'
 
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+const propertiesState = vi.hoisted(() => ({
+  properties: {} as Record<string, { type: string; title: string; value: string }>,
+}))
+
 vi.mock('@/stores/properties', () => ({
-  usePropertiesStore: () => ({ properties: {}, setLastSelectedColor: vi.fn() })
+  usePropertiesStore: () => ({
+    properties: propertiesState.properties,
+    setLastSelectedColor: vi.fn(),
+  }),
 }))
 
 import ColorPicker from './index.vue'
@@ -89,5 +96,83 @@ describe('ColorPicker canvas colors contract', () => {
     expect(wrapper.emitted('change')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: null }]])
     wrapper.unmount()
+  })
+})
+
+describe('ColorPicker bound property display', () => {
+  it('shows the property title and key for a valid color binding', () => {
+    propertiesState.properties = {
+      accentColor: { type: 'color', title: 'Accent Color', value: '0xFFAA00' },
+    }
+
+    const wrapper = mount(ColorPicker, {
+      props: { modelValue: '#FFAA00', propertyKey: 'accentColor' },
+    })
+
+    expect(wrapper.find('input').element.value).toBe('Accent Color · accentColor')
+    expect(wrapper.find('input').attributes('title')).toBe('#FFAA00')
+    wrapper.unmount()
+  })
+
+  it('keeps the static value when no binding exists', () => {
+    propertiesState.properties = {}
+    const wrapper = mount(ColorPicker, { props: { modelValue: '#123456' } })
+
+    expect(wrapper.find('input').element.value).toBe('#123456')
+    wrapper.unmount()
+  })
+
+  it.each([
+    ['missingColor', {}],
+    ['textProperty', { textProperty: { type: 'text', title: 'Text', value: 'hello' } }],
+  ])('falls back when binding %s is invalid', (propertyKey, properties) => {
+    propertiesState.properties = properties
+    const wrapper = mount(ColorPicker, {
+      props: { modelValue: '#123456', propertyKey },
+    })
+
+    expect(wrapper.find('input').element.value).toBe('#123456')
+    wrapper.unmount()
+  })
+
+  it('keeps the gradient summary instead of the property label', () => {
+    propertiesState.properties = {
+      accentColor: { type: 'color', title: 'Accent Color', value: '0xFFAA00' },
+    }
+    const wrapper = mount(ColorPicker, {
+      props: {
+        modelValue: '#FFAA00',
+        propertyKey: 'accentColor',
+        enableGradient: true,
+        gradientEnabled: true,
+        gradientStartColor: '#000000',
+        gradientEndColor: '#FFFFFF',
+      },
+    })
+
+    expect(wrapper.find('input').element.value).toBe('#000000 - #FFFFFF')
+    wrapper.unmount()
+  })
+})
+
+describe('ColorPicker explicit binding callers', () => {
+  it.each([
+    'src/elements/decoration/background/background.panel.vue',
+    'src/elements/dials/common/TickColorSettings.vue',
+    'src/elements/goal/goalArc/goalArc.panel.vue',
+    'src/elements/indicators/alarms/alarms.panel.vue',
+    'src/elements/indicators/bluetooth/bluetooth.panel.vue',
+    'src/elements/indicators/disturb/disturb.panel.vue',
+    'src/elements/indicators/notification/notification.panel.vue',
+    'src/elements/texts/angledText/angledText.panel.vue',
+    'src/elements/texts/radialText/radialText.panel.vue',
+    'src/elements/texts/scrollableText/scrollableText.panel.vue',
+    'src/elements/texts/text/text.panel.vue',
+    'src/elements/time/date/date.panel.vue',
+    'src/elements/time/time/time.panel.vue',
+    'src/elements/weather/weather/weather.panel.vue',
+  ])('%s passes its explicit binding to ColorPicker', (file) => {
+    const source = readFileSync(resolve(process.cwd(), file), 'utf8')
+    expect(source).toContain(':property-key=')
   })
 })

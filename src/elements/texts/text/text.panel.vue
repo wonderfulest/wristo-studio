@@ -60,6 +60,7 @@
           <label>{{ t('elementSettings.fontColor') }}</label>
           <ColorPicker
             v-model="textColor"
+            :property-key="currentModel.fillProperty"
             @property-change="applyUpdate({ fill: $event.color, fillProperty: $event.propertyKey })"
           />
         </div>

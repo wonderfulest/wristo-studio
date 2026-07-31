@@ -11,6 +11,7 @@
       <el-form-item :label="t('elementSettings.fontColor')">
         <ColorPicker
           v-model="currentModel.fill"
+          :property-key="currentModel.fillProperty"
           @property-change="applyUpdate({ fill: $event.color, fillProperty: $event.propertyKey })"
         />
       </el-form-item>

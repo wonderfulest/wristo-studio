@@ -7,7 +7,11 @@
         <FontSizeSelect v-model="currentModel.fontSize" @change="handleFontSizeChange" />
       </el-form-item>
       <el-form-item :label="t('elementSettings.textColor')">
-        <color-picker v-model="currentModel.fill" @change="updateElement" />
+        <color-picker
+          v-model="currentModel.fill"
+          :property-key="currentModel.fillProperty"
+          @property-change="handleColorSelection"
+        />
       </el-form-item>
       <el-form-item :label="t('elementSettings.font')">
         <font-picker v-model="currentModel.fontFamily" :type="FontTypes.ICON_FONT" @change="updateElement" />
@@ -269,9 +273,17 @@ const updateElement = async () => {
     fontSize: model.fontSize,
     iconSize: model.fontSize,
     fill: model.fill,
+    fillProperty: model.fillProperty,
     fontFamily: model.fontFamily,
     originX: 'center',
     originY: 'center'
+  })
+}
+
+const handleColorSelection = async (selection: { color: string; propertyKey: string | null }) => {
+  await applyUpdate({
+    fill: selection.color,
+    fillProperty: selection.propertyKey,
   })
 }
 
