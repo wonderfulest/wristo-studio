@@ -18,6 +18,7 @@ export function encodeIndicatorText(eleType: IndicatorTextType, element: FabricE
     fontFamily: (anyEl.fontFamily as string) ?? '',
     fontSize: Number(anyEl.fontSize ?? 0),
     fill: (anyEl.fill as any) ?? '#ffffff',
+    fillProperty: (anyEl.fillProperty as string | undefined) ?? undefined,
     metricSymbol: anyEl.metricSymbol,
     topBase: encodeTopBaseForElement(element as any),
   }
@@ -36,6 +37,7 @@ export function decodeIndicatorText(eleType: IndicatorTextType, config: Indicato
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
     fill: config.fill as any,
+    fillProperty: config.fillProperty,
     metricSymbol: (config as any).metricSymbol,
   } as Partial<FabricElement>
 }

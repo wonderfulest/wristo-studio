@@ -8,6 +8,7 @@ export type BluetoothElementSchema = {
     fontSize: number
     fontFamily: string
     fill: string
+    fillProperty?: string
   }
   resizable: boolean
   rotatable: boolean

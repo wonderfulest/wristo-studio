@@ -52,6 +52,7 @@ export async function createIndicatorText(
     originX: config.originX as any,
     originY: config.originY as any,
     fill: config.fill,
+    fillProperty: config.fillProperty,
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
     metricSymbol: (config as any).metricSymbol,
@@ -77,6 +78,7 @@ export async function createIndicatorText(
     fontFamily: (element as any).fontFamily ?? config.fontFamily,
     fontSize: Number((element as any).fontSize ?? config.fontSize),
     fill: ((element as any).fill as string) ?? (config.fill as string),
+    fillProperty: (element as any).fillProperty ?? config.fillProperty,
     metricSymbol: (element as any).metricSymbol,
     topBase: encodeTopBaseForElement(element as unknown as FabricElement),
   } as IndicatorElementConfig
@@ -107,6 +109,7 @@ export async function updateIndicatorText(
 
   const updateProps: Partial<TextProps & IndicatorElementConfig> = {
     fill: patch.fill,
+    fillProperty: patch.fillProperty,
     fontFamily: patch.fontFamily,
     left: patch.left,
     top: patch.top,
@@ -143,6 +146,7 @@ export async function updateIndicatorText(
       fontFamily: obj.fontFamily as string,
       fontSize: Number(obj.fontSize),
       fill: obj.fill as any,
+      fillProperty: (obj as any).fillProperty,
       metricSymbol: (obj as any).metricSymbol,
       topBase: encodeTopBaseForElement(obj as unknown as FabricElement),
     } as IndicatorElementConfig
