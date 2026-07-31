@@ -941,10 +941,7 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
     visualThemeStore.hydrate(config.visualThemes)
     designStore.setSupportsChineseContent(false)
     designStore.setSupportedLocales(['en-US'])
-    propertiesStore.textCase = 0
-    propertiesStore.bitmapMode = true
-    propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
-    propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
+    propertiesStore.clearProperties()
     await waitCanvasReady()
     if (!isCurrentDesignLoad(generation)) return false
     elementDataStore.clearAll()

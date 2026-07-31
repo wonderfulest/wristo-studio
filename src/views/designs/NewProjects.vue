@@ -44,6 +44,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
+import { usePropertiesStore } from '@/stores/properties'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import type { Design, DesignPageParams } from '@/types/api/design'
 import RecentProjectsSection from '@/views/designs/RecentProjectsSection.vue'
@@ -56,6 +57,7 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const router = useRouter()
 const baseStore = useBaseStore()
+const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
 
 const getCurrentDeviceParams = () => {
@@ -176,6 +178,7 @@ const handleConfirmDialog = async (inputName: string) => {
     baseStore.watchFaceName = newDesign.name
     baseStore.appId = newDesign.product?.appId || -1
 
+    propertiesStore.clearProperties()
     router.push('/design?id=' + newDesign.designUid)
     dialogVisible.value = false
     await userStore.refreshUserInfo()

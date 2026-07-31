@@ -163,7 +163,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     // Clear all properties - call this when creating a new design
     clearProperties() {
       this.properties = {}
-      this.textCase = 0
+      this.textCase = 1
       this.bitmapMode = true
       this.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
       this.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH

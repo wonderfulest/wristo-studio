@@ -30,4 +30,15 @@ describe('Design visual theme hydration ordering', () => {
     expect(loadSource).toContain('await addElement(element.eleType as any, config as any)')
     expect(loadSource).not.toContain('handler.add')
   })
+
+  it('uses the blank-property reset when a design has no element config', () => {
+    const configStart = source.indexOf('const applyRuntimeDesignConfig = async')
+    const elementsCheck = source.indexOf('if (Array.isArray(config.elements))', configStart)
+    const blankStart = source.indexOf('} else {', elementsCheck)
+    const blankEnd = source.indexOf('return true', blankStart)
+    const blankSource = source.slice(blankStart, blankEnd)
+
+    expect(blankSource).toContain('propertiesStore.clearProperties()')
+    expect(blankSource).not.toContain('propertiesStore.textCase = 0')
+  })
 })

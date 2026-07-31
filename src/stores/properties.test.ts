@@ -26,4 +26,15 @@ describe('Dial Properties', () => {
 
     expect(store.allProperties.dial_goal_1.dialMode).toBe('goal')
   })
+
+  it('clears blank-design properties and defaults text case to uppercase', () => {
+    const store = usePropertiesStore()
+    store.addProperty({ key: 'color_1', type: 'color', title: 'Color', defaultValue: '0xFFFFFF', options: [] })
+    store.textCase = 2
+
+    store.clearProperties()
+
+    expect(store.allProperties).toEqual({})
+    expect(store.textCase).toBe(1)
+  })
 })
