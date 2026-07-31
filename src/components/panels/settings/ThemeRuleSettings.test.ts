@@ -36,8 +36,6 @@ const visualConfig = (): VisualThemesConfig => ({
     id: 'default',
     name: 'Default',
     assets: {},
-    colors: {},
-    fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
   }],
 })
 

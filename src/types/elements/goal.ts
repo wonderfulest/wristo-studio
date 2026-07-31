@@ -39,6 +39,8 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   height: number
   color: string
   bgColor: string
+  colorProperty?: string | null
+  bgColorProperty?: string | null
   variant?: 'continuous' | 'segmented'
   segments?: number
   gap?: number
@@ -49,6 +51,7 @@ export interface GoalBarElementConfig extends GoalElementConfig {
   originY: TOriginY
   borderWidth: number
   borderColor: string
+  borderColorProperty?: string | null
   goalProperty: string
   orientation: GoalBarOrientation
   progressDirection: GoalBarProgressDirection

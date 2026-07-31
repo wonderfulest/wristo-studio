@@ -10,8 +10,6 @@ const theme: VisualTheme = {
   id: 'day',
   name: 'Day',
   assets: { centerCap: { assetId: 2, imageUrl: 'old.svg', targetSize: 18 } },
-  colors: {},
-  fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
 }
 
 describe('VisualThemeAssetFields', () => {

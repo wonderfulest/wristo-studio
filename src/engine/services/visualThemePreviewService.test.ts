@@ -4,12 +4,8 @@ import type { PropertiesMap } from '@/types/properties'
 import type { VisualThemesConfig } from '@/types/visualTheme'
 
 const properties: PropertiesMap = {
-  Accent: { type: 'color', title: 'Accent', value: '0x111111', themeMode: 'theme' },
-  UserColor: { type: 'color', title: 'User', value: '0x222222', themeMode: 'user' },
-}
-
-const propertiesWithoutMode: PropertiesMap = {
   Accent: { type: 'color', title: 'Accent', value: '0x111111' },
+  UserColor: { type: 'color', title: 'User', value: '0x222222' },
 }
 
 const visualThemes: VisualThemesConfig = {
@@ -23,14 +19,12 @@ const visualThemes: VisualThemesConfig = {
       name: 'Day',
       assets: { hourHand: { assetId: 10, imageUrl: 'day.svg' } },
       colors: { Accent: '0xAAAAAA' },
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
     {
       id: 'night',
       name: 'Night',
       assets: { hourHand: { assetId: 20, imageUrl: 'night.svg' } },
       colors: { Accent: '0xBBBBBB' },
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
   ],
 }
@@ -48,7 +42,7 @@ const baseElements = [
 ]
 
 describe('visualThemePreviewService', () => {
-  it('applies an explicitly bound theme color without themeMode', async () => {
+  it('applies the current theme value for a shared color-variable binding', async () => {
     const persisted = [{ id: 'label', eleType: 'text', fill: '#111111', fillProperty: 'Accent' }]
     const canvasElements = structuredClone(persisted)
     const controller = createVisualThemePreviewController({
@@ -60,7 +54,7 @@ describe('visualThemePreviewService', () => {
       requestRender: () => undefined,
     })
 
-    await controller.preview(visualThemes, 'night', propertiesWithoutMode)
+    await controller.preview(visualThemes, 'night', properties)
 
     expect(canvasElements[0].fill).toBe('#BBBBBB')
   })
@@ -80,44 +74,12 @@ describe('visualThemePreviewService', () => {
     await controller.preview(visualThemes, 'night', properties)
     expect(canvasElements[0]).toMatchObject({ assetId: 20, imageUrl: 'night.svg' })
     expect(canvasElements[1]).toMatchObject({ color: '#BBBBBB', bgColor: '0x222222' })
-    expect(persisted).toEqual(baseElements)
     expect(properties.Accent.value).toBe('0x111111')
+    expect(persisted).toEqual(baseElements)
 
     await controller.restore()
     expect(canvasElements).toEqual(baseElements)
     expect(persisted).toEqual(baseElements)
-  })
-
-  it('uses the live canvas color binding when the persisted snapshot has not captured it yet', async () => {
-    const config = structuredClone(visualThemes)
-    const persisted = [{
-      id: 'label',
-      eleType: 'text',
-      fill: '0x111111',
-    }]
-    const canvasElements = [{
-      ...persisted[0],
-      fillProperty: 'Accent',
-    }]
-    const controller = createVisualThemePreviewController({
-      getBaseElements: () => persisted,
-      getCanvasElements: () => canvasElements,
-      applyElement: async (element, patch) => {
-        Object.assign(element, patch)
-      },
-      requestRender: () => undefined,
-    })
-
-    await controller.preview(config, 'night', properties)
-
-    expect(canvasElements[0].fill).toBe('#BBBBBB')
-    expect(persisted[0].fill).toBe('0x111111')
-
-    config.themes[1].colors.Accent = '0x00FF00'
-    await controller.preview(config, 'night', properties)
-
-    expect(canvasElements[0].fill).toBe('#00FF00')
-    expect(persisted[0].fill).toBe('0x111111')
   })
 
   it('does not infer a color binding from an equal base color', async () => {
@@ -136,7 +98,7 @@ describe('visualThemePreviewService', () => {
       requestRender: () => undefined,
     })
 
-    await controller.preview(visualThemes, 'night', properties)
+    await controller.preview(visualThemes, 'night')
 
     expect(canvasElements[0].fill).toBe('#111111')
     expect(persisted[0].fill).toBe('#111111')
@@ -165,7 +127,7 @@ describe('visualThemePreviewService', () => {
       imageUrl: 'https://cdn.example/night.png',
     }
 
-    await controller.preview(config, 'night', properties)
+    await controller.preview(config, 'night')
 
     expect(canvasElements).toHaveLength(1)
     expect(canvasElements[0]).toMatchObject({
@@ -196,7 +158,7 @@ describe('visualThemePreviewService', () => {
     const config = structuredClone(visualThemes)
     config.themes[1].assets.background = { assetId: null, imageUrl: null }
 
-    await controller.preview(config, 'night', properties)
+    await controller.preview(config, 'night')
 
     expect(canvasElements).toHaveLength(1)
     expect(canvasElements[0]).toMatchObject({
@@ -222,16 +184,16 @@ describe('visualThemePreviewService', () => {
       requestRender: () => undefined,
     })
 
-    const day = controller.preview(visualThemes, 'day', properties)
+    const day = controller.preview(visualThemes, 'day')
     await Promise.resolve()
-    const night = controller.preview(visualThemes, 'night', properties)
+    const night = controller.preview(visualThemes, 'night')
     resolvers.shift()?.()
     while (!resolvers.length) await new Promise((resolve) => setTimeout(resolve, 0))
     resolvers.shift()?.()
     await Promise.all([day, night])
 
     expect(canvasElements[0]).toMatchObject({ assetId: 20, imageUrl: 'night.svg' })
-    expect(canvasElements[1].color).toBe('#BBBBBB')
+    expect(canvasElements[1].color).toBe('0x111111')
   })
 
   it('queues restore during a pending renderer and restores only the captured old canvas', async () => {
@@ -260,7 +222,7 @@ describe('visualThemePreviewService', () => {
       requestRender: () => undefined,
     })
 
-    const pending = controller.preview(visualThemes, 'night', properties)
+    const pending = controller.preview(visualThemes, 'night')
     await Promise.resolve()
     const restoring = controller.restore()
     const newCanvas = structuredClone(baseElements)
@@ -285,7 +247,7 @@ describe('visualThemePreviewService', () => {
       requestRender: () => undefined,
     })
 
-    await controller.preview(visualThemes, 'night', properties)
+    await controller.preview(visualThemes, 'night')
     persisted[1].color = '0x333333'
     await controller.restore()
 
@@ -307,7 +269,7 @@ describe('visualThemePreviewService', () => {
       onError,
     })
 
-    await expect(controller.preview(visualThemes, 'night', properties)).resolves.toBeUndefined()
+    await expect(controller.preview(visualThemes, 'night')).resolves.toBeUndefined()
     expect(canvasElements).toEqual(baseElements)
     expect(onError).toHaveBeenCalledTimes(1)
 
@@ -333,7 +295,7 @@ describe('visualThemePreviewService', () => {
     await controller.preview({
       ...visualThemes,
       themes: [{ ...visualThemes.themes[0], assets: { centerCap: { assetId: 42, imageUrl: 'theme-cap.svg' } } }],
-    }, 'day', properties)
+    }, 'day')
     await controller.restore()
 
     expect(patches.at(-1)).toMatchObject({ assetId: null, imageUrl: null })
@@ -351,7 +313,7 @@ describe('visualThemePreviewService', () => {
       },
       requestRender: () => undefined,
     })
-    await controller.preview(visualThemes, 'night', properties)
+    await controller.preview(visualThemes, 'night')
     const newCanvas = structuredClone(baseElements)
 
     const reset = controller.reset()

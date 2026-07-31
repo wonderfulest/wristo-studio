@@ -46,8 +46,6 @@ const config = (): VisualThemesConfig => ({
     id: 'day',
     name: 'Day',
     assets: {},
-    colors: {},
-    fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
   }],
 })
 
@@ -64,14 +62,13 @@ describe('useVisualThemePreview', () => {
   it('applies enabled preview state and restores when disabled', async () => {
     const wrapper = mount(Harness)
     const store = useVisualThemeStore()
-    const propertiesStore = usePropertiesStore()
     store.hydrate(config())
     await nextTick()
 
     expect(controller.preview).toHaveBeenLastCalledWith(
       store.config,
       'day',
-      propertiesStore.allProperties,
+      usePropertiesStore().allProperties,
     )
 
     store.disable()
@@ -80,14 +77,17 @@ describe('useVisualThemePreview', () => {
     wrapper.unmount()
   })
 
-  it('reapplies the active preview when its theme color changes', async () => {
+  it('reapplies the active preview when its theme asset changes', async () => {
     const wrapper = mount(Harness)
     const store = useVisualThemeStore()
     store.hydrate(config())
     await nextTick()
     controller.preview.mockClear()
 
-    store.config!.themes[0].colors.Accent = '0x00FF00'
+    store.config!.themes[0].assets.hourHand = {
+      assetId: 12,
+      imageUrl: 'hour.svg',
+    }
     await nextTick()
 
     expect(controller.preview).toHaveBeenCalledTimes(1)

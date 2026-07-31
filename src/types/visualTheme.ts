@@ -19,12 +19,7 @@ export interface VisualTheme {
   id: string
   name: string
   assets: Partial<Record<VisualThemeAssetSlot, VisualThemeAssetRef>>
-  colors: Record<string, string>
-  fallbackHands: {
-    hourColor: string
-    minuteColor: string
-    secondColor: string
-  }
+  colors?: Record<string, string>
 }
 
 export interface VisualThemesConfig {

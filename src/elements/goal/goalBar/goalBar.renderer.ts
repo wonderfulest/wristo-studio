@@ -201,8 +201,11 @@ function normalizeGoalBarConfig(
     borderRadius: Math.max(0, Number(config.borderRadius ?? 5)),
     color: config.color ?? '#00FF00',
     bgColor: config.bgColor ?? '#333333',
+    colorProperty: config.colorProperty,
+    bgColorProperty: config.bgColorProperty,
     borderWidth: Math.max(0, Number(config.borderWidth ?? 0)),
     borderColor: config.borderColor ?? '#FFFFFF',
+    borderColorProperty: config.borderColorProperty,
     originX: 'center' as any,
     originY: 'center' as any,
     goalProperty: config.goalProperty ?? '',
@@ -244,8 +247,9 @@ type GoalBarLayoutOptions = {
 
 const GOAL_BAR_ENCODER_LIVE_FIELDS = [
   'left', 'top', 'shape', 'polygonPoints', 'slantRatio', 'color', 'bgColor',
+  'colorProperty', 'bgColorProperty',
   'variant', 'segments', 'gap', 'borderRadius', 'progress', 'padding',
-  'borderWidth', 'borderColor', 'goalProperty', 'orientation', 'progressDirection',
+  'borderWidth', 'borderColor', 'borderColorProperty', 'goalProperty', 'orientation', 'progressDirection',
   'gradientEnabled', 'gradientStartColor', 'gradientEndColor',
 ] as const
 
@@ -316,6 +320,9 @@ function layoutGoalBar(group: Group, options: GoalBarLayoutOptions = {}) {
       gradientEnabled,
       gradientStartColor,
       gradientEndColor,
+      colorProperty: config.colorProperty,
+      bgColorProperty: config.bgColorProperty,
+      borderColorProperty: config.borderColorProperty,
     } : {}
     group.set({
       left: stableLeft,
@@ -830,6 +837,15 @@ export function updateGoalBar(
       : Boolean(patchWithoutLegacySlant.gradientEnabled ?? currentConfigWithoutLegacySlant.gradientEnabled ?? false),
   }
 
+  if (context.persist === false) {
+    layoutGoalBar(group, {
+      configOverride: nextConfig,
+      syncRuntimeMetadata: false,
+    })
+    canvas?.requestRenderAll()
+    return
+  }
+
   const elementMeta = getElement(group)
   if (elementMeta) {
     elementMeta.config = nextConfig
@@ -846,7 +862,7 @@ export function updateGoalBar(
    */
   const encoded = encodeGoalBar(group as FabricElement)
   const id = (group as any).id
-  if (context.persist !== false && id != null) {
+  if (id != null) {
     elementDataStore.patchElement(String(id), encoded as any)
   }
 }

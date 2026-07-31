@@ -145,8 +145,6 @@ describe('visual theme assets', () => {
             minuteHand: { assetId: 11, imageUrl: 'https://cdn/shared-hand.svg' },
             centerCap: { assetId: 12, imageUrl: 'https://cdn/cap.svg', targetSize: 24 },
           },
-          colors: {},
-          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
         }],
       },
     }
@@ -191,8 +189,6 @@ describe('visual theme assets', () => {
             hourHand: { assetId: 11, imageUrl: 'https://cdn/hour.svg' },
             minuteHand: { assetId: 12, imageUrl: 'https://cdn/minute.svg' },
           },
-          colors: {},
-          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
         }],
       },
     }
@@ -236,8 +232,6 @@ describe('visual theme assets', () => {
             background: { assetId: 9, imageUrl: sharedUrl },
             hourHand: { assetId: 11, imageUrl: sharedUrl },
           },
-          colors: {},
-          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
         }],
       },
     }

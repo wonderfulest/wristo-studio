@@ -28,7 +28,7 @@ describe('visualThemeStore', () => {
     setActivePinia(createPinia())
   })
 
-  it('hydrates persistent config without persisting the editor preview', () => {
+  it('preserves theme colors and removes legacy fallback hands during hydration', () => {
     const store = useVisualThemeStore()
     const config = {
       version: 1 as const,
@@ -39,18 +39,29 @@ describe('visualThemeStore', () => {
         id: 'day',
         name: 'Day',
         assets: {},
-        colors: {},
-        fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
+        colors: { Accent: '0x112233' },
+        fallbackHands: {
+          hourColor: '0xFFFFFF',
+          minuteColor: '0xFFFFFF',
+          secondColor: '0xFF0000',
+        },
       }],
     }
 
     store.previewThemeId = 'old-preview'
-    store.hydrate(config)
+    store.hydrate(config as any)
 
-    expect(store.config).toEqual(config)
+    expect(store.config?.themes[0]).toEqual({
+      id: 'day',
+      name: 'Day',
+      assets: {},
+      colors: { Accent: '0x112233' },
+    })
     expect(store.config).not.toBe(config)
     expect(store.previewThemeId).toBe('day')
     expect(JSON.stringify(store.config)).not.toContain('previewThemeId')
+    expect(store.config?.themes[0].colors).toEqual({ Accent: '0x112233' })
+    expect(store.config?.themes[0]).not.toHaveProperty('fallbackHands')
   })
 
   it('enables a legacy design by creating one initial theme', () => {
@@ -96,8 +107,6 @@ describe('visualThemeStore', () => {
           id: 'default',
           name: 'Default',
           assets: {},
-          colors: {},
-          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
         },
         {
           id: 'night',
@@ -105,8 +114,6 @@ describe('visualThemeStore', () => {
           assets: {
             background: { assetId: 99, imageUrl: 'https://cdn.example/night.png' },
           },
-          colors: {},
-          fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
         },
       ],
     }, [{
@@ -144,18 +151,25 @@ describe('visualThemeStore', () => {
     expect(added.assets.background).not.toBe(defaultBackground)
   })
 
-  it('adds and duplicates themes with fresh stable ids and copied values', () => {
+  it('adds and duplicates themes with independent color-value copies', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)
 
     const added = store.addTheme('Night', ids('night-id'))
-    store.updateColor(added.id, 'accent', '0x112233')
+    store.updateColor(added.id, 'Accent', '0x112233')
+    store.updateAsset(added.id, 'hourHand', {
+      assetId: 41,
+      imageUrl: 'night-hour.svg',
+    })
     const duplicate = store.duplicateTheme(added.id, ids('night-copy-id'))
 
     expect(added.id).toBe('night-id')
     expect(duplicate.id).toBe('night-copy-id')
     expect(duplicate.name).toBe('Night copy')
-    expect(duplicate.colors).toEqual({ accent: '0x112233' })
+    expect(duplicate.assets).toEqual(added.assets)
+    expect(duplicate.assets).not.toBe(added.assets)
+    expect(duplicate.assets.hourHand).not.toBe(added.assets.hourHand)
+    expect(duplicate.colors).toEqual({ Accent: '0x112233' })
     expect(duplicate.colors).not.toBe(added.colors)
   })
 
@@ -200,7 +214,7 @@ describe('visualThemeStore', () => {
     expect(store.previewThemeId).toBe('default')
   })
 
-  it('updates assets, theme colors, and fallback hand colors', () => {
+  it('updates theme assets', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)
 
@@ -209,27 +223,93 @@ describe('visualThemeStore', () => {
       imageUrl: 'https://cdn.example/cap.svg',
       targetSize: 18,
     })
-    store.updateColor('default', 'accent', '#ABCDEF')
-    store.updateFallbackColor('default', 'secondColor', '0x00FF00')
-
     expect(store.config?.themes[0].assets.centerCap).toEqual({
       assetId: 21,
       imageUrl: 'https://cdn.example/cap.svg',
       targetSize: 18,
     })
-    expect(store.config?.themes[0].colors.accent).toBe('0xABCDEF')
-    expect(store.config?.themes[0].fallbackHands.secondColor).toBe('0x00FF00')
   })
 
-  it('normalizes color picker hashes before updating theme state', () => {
+  it('updates only the selected theme value for a shared color variable', () => {
+    const store = useVisualThemeStore()
+    const sharedProperties = {
+      Accent: { type: 'color' as const, title: 'Accent', value: '0x123456' },
+    }
+    const elements = [{ id: 'label', eleType: 'text', fillProperty: 'Accent' }]
+    store.enableFromDesign(design)
+    store.syncColorProperties(sharedProperties)
+    const night = store.addTheme('Night', ids('night'))
+
+    store.updateColor(night.id, 'Accent', '#ABCDEF')
+
+    expect(store.themes[0].colors?.Accent).toBe('0x123456')
+    expect(store.themes[1].colors?.Accent).toBe('0xABCDEF')
+    expect(sharedProperties.Accent.value).toBe('0x123456')
+    expect(elements[0].fillProperty).toBe('Accent')
+  })
+
+  it('fills only missing theme values from shared variable bindings', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)
+    const night = store.addTheme('Night', ids('night'))
+    store.updateColor(night.id, 'Accent', '0x654321')
 
-    store.updateColor('default', 'accent', '#a1b2c3')
-    store.updateFallbackColor('default', 'hourColor', '#d4e5f6')
+    store.syncColorProperties({
+      Accent: { type: 'color', title: 'Accent', value: '0x123456' },
+    })
 
-    expect(store.config?.themes[0].colors.accent).toBe('0xA1B2C3')
-    expect(store.config?.themes[0].fallbackHands.hourColor).toBe('0xD4E5F6')
+    expect(store.themes[0].colors?.Accent).toBe('0x123456')
+    expect(store.themes[1].colors?.Accent).toBe('0x654321')
+  })
+
+  it('adds every new color property to every theme without requiring a binding', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    store.addTheme('Night', ids('night'))
+
+    store.addColorProperty('Accent', '#123456')
+
+    expect(store.themes.map((theme) => theme.colors?.Accent))
+      .toEqual(['0x123456', '0x123456'])
+  })
+
+  it('syncs every color property while preserving existing theme values', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    const night = store.addTheme('Night', ids('night'))
+    store.updateColor(night.id, 'Accent', '#654321')
+
+    store.syncColorProperties({
+      Accent: { type: 'color', title: 'Accent', value: '0x123456' },
+      Label: { type: 'text', title: 'Label', value: 'Text' },
+    })
+
+    expect(store.requireTheme('default').colors?.Accent).toBe('0x123456')
+    expect(store.requireTheme('night').colors?.Accent).toBe('0x654321')
+    expect(store.requireTheme('night').colors?.Label).toBeUndefined()
+  })
+
+  it('removes a deleted color property from every theme', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    store.addTheme('Night', ids('night'))
+    store.addColorProperty('Accent', '#123456')
+
+    store.removeColorProperty('Accent')
+
+    expect(store.themes.every((theme) => theme.colors?.Accent === undefined)).toBe(true)
+  })
+
+  it('resolves the preview theme first and otherwise falls back to the default theme', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    store.addTheme('Night', ids('night'))
+
+    expect(store.currentWritableThemeId()).toBe('night')
+    store.previewThemeId = null
+    expect(store.currentWritableThemeId()).toBe('default')
+    store.previewThemeId = 'missing'
+    expect(() => store.currentWritableThemeId()).toThrow('visualTheme.themeNotFound')
   })
 
   it('disables themes while retaining their definitions', () => {
@@ -243,16 +323,4 @@ describe('visualThemeStore', () => {
     expect(store.config?.themes.map((theme) => theme.name)).toEqual(['Default', 'Night'])
   })
 
-  it('initializes missing colors from explicit element bindings and copies them into new themes', () => {
-    const store = useVisualThemeStore()
-    store.enableFromDesign(design)
-    store.syncColorProperties(
-      { Accent: { type: 'color', title: 'Accent', value: '0x123456' } },
-      [{ id: 'label', eleType: 'text', fillProperty: 'Accent' }],
-    )
-    expect(store.themes[0].colors.Accent).toBe('0x123456')
-
-    store.addTheme('Night', ids('night'))
-    expect(store.themes[1].colors.Accent).toBe('0x123456')
-  })
 })

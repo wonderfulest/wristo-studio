@@ -8,7 +8,7 @@ import {
   createInitialVisualThemes,
   isThemeRuleActive,
   normalizeThemeMode,
-  resolveThemeColor,
+  normalizeVisualThemesConfig,
   validateVisualThemes,
 } from './visualThemeService'
 
@@ -92,12 +92,7 @@ const createTheme = (overrides: Partial<VisualTheme> = {}): VisualTheme => ({
     hourHand: { assetId: 101, imageUrl: 'https://assets.example/hour.svg' },
     minuteHand: { assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
   },
-  colors: { PrimaryColor: '0xFFFFFF' },
-  fallbackHands: {
-    hourColor: '0xFFFFFF',
-    minuteColor: '0xFFFFFF',
-    secondColor: '0xFF0000',
-  },
+  colors: {},
   ...overrides,
 })
 
@@ -107,6 +102,55 @@ const createConfig = (themes: VisualTheme[]): VisualThemesConfig => ({
   defaultThemeId: themes[0]?.id ?? 'classic',
   selectionMode: 'user',
   themes,
+})
+
+describe('normalizeVisualThemesConfig', () => {
+  it('preserves theme colors and drops legacy fallback hands', () => {
+    const legacy = {
+      version: 1 as const,
+      enabled: true,
+      defaultThemeId: 'day',
+      selectionMode: 'user' as const,
+      themes: [{
+        id: 'day',
+        name: 'Day',
+        assets: {
+          background: { assetId: 11, imageUrl: 'day.png' },
+        },
+        colors: { Accent: '0xFF0000' },
+        fallbackHands: {
+          hourColor: '0xFFFFFF',
+          minuteColor: '0xFFFFFF',
+          secondColor: '0xFF0000',
+        },
+      }],
+    }
+
+    expect(normalizeVisualThemesConfig(legacy)).toEqual({
+      version: 1,
+      enabled: true,
+      defaultThemeId: 'day',
+      selectionMode: 'user',
+      themes: [{
+        id: 'day',
+        name: 'Day',
+        assets: {
+          background: { assetId: 11, imageUrl: 'day.png' },
+        },
+        colors: { Accent: '0xFF0000' },
+      }],
+    })
+  })
+
+  it('returns a detached copy for current configs', () => {
+    const config = createConfig([createTheme()])
+    const normalized = normalizeVisualThemesConfig(config)
+
+    expect(normalized).toEqual(config)
+    expect(normalized).not.toBe(config)
+    expect(normalized.themes[0]).not.toBe(config.themes[0])
+    expect(normalized.themes[0].assets).not.toBe(config.themes[0].assets)
+  })
 })
 
 describe('normalizeThemeMode', () => {
@@ -166,11 +210,6 @@ describe('createInitialVisualThemes', () => {
             },
           },
           colors: {},
-          fallbackHands: {
-            hourColor: '0xFFFFFF',
-            minuteColor: '0xFFFFFF',
-            secondColor: '0xFF0000',
-          },
         },
       ],
     })
@@ -271,7 +310,7 @@ describe('validateVisualThemes', () => {
       { eleType: 'minuteHand', assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
     ]
 
-    expect(validateVisualThemes(config, properties, baseElements)).not.toContain(
+    expect(validateVisualThemes(config, baseElements)).not.toContain(
       'Theme "Classic" cannot override background because the base element does not exist.',
     )
   })
@@ -281,7 +320,7 @@ describe('validateVisualThemes', () => {
     ;(invalid as { version: number }).version = 2
     ;(invalid as { selectionMode: string }).selectionMode = 'automatic'
     ;(invalid as { enabled: unknown }).enabled = 'true'
-    expect(validateVisualThemes(invalid, properties)).toEqual(
+    expect(validateVisualThemes(invalid)).toEqual(
       expect.arrayContaining([
         'Visual themes version must be 1.',
         'Visual themes selectionMode must be "user".',
@@ -291,21 +330,21 @@ describe('validateVisualThemes', () => {
   })
 
   it('accepts one through five valid themes', () => {
-    expect(validateVisualThemes(createConfig([createTheme()]), properties)).toEqual([])
+    expect(validateVisualThemes(createConfig([createTheme()]))).toEqual([])
     const fiveThemes = Array.from({ length: 5 }, (_, index) =>
       createTheme({ id: `theme-${index}`, name: `Theme ${index}` }),
     )
-    expect(validateVisualThemes(createConfig(fiveThemes), properties)).toEqual([])
+    expect(validateVisualThemes(createConfig(fiveThemes))).toEqual([])
   })
 
   it('rejects zero or more than five themes', () => {
-    expect(validateVisualThemes(createConfig([]), properties)).toContain(
+    expect(validateVisualThemes(createConfig([]))).toContain(
       'Visual themes must contain between 1 and 5 themes.',
     )
     const sixThemes = Array.from({ length: 6 }, (_, index) =>
       createTheme({ id: `theme-${index}`, name: `Theme ${index}` }),
     )
-    expect(validateVisualThemes(createConfig(sixThemes), properties)).toContain(
+    expect(validateVisualThemes(createConfig(sixThemes))).toContain(
       'Visual themes must contain between 1 and 5 themes.',
     )
   })
@@ -316,7 +355,7 @@ describe('validateVisualThemes', () => {
       createTheme({ id: 'classic', name: 'Modern' }),
       createTheme({ id: '', name: 'Empty ID' }),
     ])
-    expect(validateVisualThemes(duplicateIds, properties)).toEqual(
+    expect(validateVisualThemes(duplicateIds)).toEqual(
       expect.arrayContaining([
         'Theme IDs must be non-empty.',
         'Theme IDs must be unique.',
@@ -331,7 +370,7 @@ describe('validateVisualThemes', () => {
       createTheme({ id: 'empty-name', name: ' ' }),
       createTheme({ id: 'long-name', name: 'A theme name over 24 chars' }),
     ])
-    expect(validateVisualThemes(invalidNames, properties)).toEqual(
+    expect(validateVisualThemes(invalidNames)).toEqual(
       expect.arrayContaining([
         'Theme names must be non-empty and at most 24 characters.',
         'Theme names must be unique.',
@@ -342,7 +381,7 @@ describe('validateVisualThemes', () => {
   it('requires the default theme to exist', () => {
     const config = createConfig([createTheme()])
     config.defaultThemeId = 'missing'
-    expect(validateVisualThemes(config, properties)).toContain(
+    expect(validateVisualThemes(config)).toContain(
       'Default theme "missing" does not exist.',
     )
   })
@@ -350,7 +389,6 @@ describe('validateVisualThemes', () => {
   it('accepts enabled visual themes without hand elements or hand overrides', () => {
     expect(validateVisualThemes(
       createConfig([createTheme({ assets: {} })]),
-      properties,
       [],
     )).toEqual([])
   })
@@ -358,7 +396,6 @@ describe('validateVisualThemes', () => {
   it('uses base hand assets when a theme does not override them', () => {
     expect(validateVisualThemes(
       createConfig([createTheme({ assets: {} })]),
-      properties,
       [
         { eleType: 'hourHand', assetId: 11, imageUrl: 'hour.svg' },
         { eleType: 'minuteHand', assetId: 12, imageUrl: 'minute.svg' },
@@ -371,7 +408,6 @@ describe('validateVisualThemes', () => {
       createConfig([createTheme({
         assets: { hourHand: { assetId: 11, imageUrl: 'hour.svg' } },
       })]),
-      properties,
       [],
     )).toContain(
       'Theme "Classic" cannot override hourHand because the base element does not exist.',
@@ -388,7 +424,6 @@ describe('validateVisualThemes', () => {
     })
     expect(validateVisualThemes(
       createConfig([theme]),
-      properties,
       [
         { eleType: 'hourHand', assetId: 1, imageUrl: 'base-hour.svg' },
         { eleType: 'minuteHand', assetId: 2, imageUrl: 'base-minute.svg' },
@@ -399,7 +434,7 @@ describe('validateVisualThemes', () => {
   it('does not require packaging-only hand assets while visual themes are disabled', () => {
     const config = createConfig([createTheme({ assets: {} })])
     config.enabled = false
-    expect(validateVisualThemes(config, properties)).toEqual([])
+    expect(validateVisualThemes(config)).toEqual([])
   })
 
   it.each([0, -1, 1.5])('rejects invalid persistent assetId %s', (assetId) => {
@@ -409,7 +444,7 @@ describe('validateVisualThemes', () => {
         minuteHand: { assetId: 102, imageUrl: 'https://assets.example/minute.svg' },
       },
     })
-    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
+    expect(validateVisualThemes(createConfig([theme]))).toContain(
       'Theme "Classic" hourHand assetId must be a positive integer.',
     )
   })
@@ -421,10 +456,10 @@ describe('validateVisualThemes', () => {
         minuteHand: { assetId: 102, imageUrl: 'blob:https://studio.example/minute' },
       },
     })
-    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
+    expect(validateVisualThemes(createConfig([theme]))).toContain(
       'Theme "Classic" hourHand requires a persistent assetId.',
     )
-    expect(validateVisualThemes(createConfig([theme]), properties)).not.toContain(
+    expect(validateVisualThemes(createConfig([theme]))).not.toContain(
       'Theme "Classic" minuteHand requires a persistent assetId.',
     )
   })
@@ -441,62 +476,39 @@ describe('validateVisualThemes', () => {
         },
       },
     })
-    expect(validateVisualThemes(createConfig([theme]), properties)).toContain(
+    expect(validateVisualThemes(createConfig([theme]))).toContain(
       'Theme "Classic" centerCap targetSize must be a positive integer.',
     )
   })
 
-  it('requires RGB565-compatible theme and fallback colors', () => {
-    const theme = createTheme({
-      colors: { PrimaryColor: 'red' },
-      fallbackHands: {
-        hourColor: '0xFFFFFF',
-        minuteColor: '#FFFFFF',
-        secondColor: '0x12345',
-      },
-    })
-    expect(validateVisualThemes(createConfig([theme]), properties)).toEqual(
-      expect.arrayContaining([
-        'Theme "Classic" color "PrimaryColor" must be an RGB565-compatible color.',
-        'Theme "Classic" fallback secondColor must be an RGB565-compatible color.',
-      ]),
-    )
-  })
-
-  it('allows only existing color properties', () => {
+  it('validates theme values against the shared color-variable definitions', () => {
     const theme = createTheme({
       colors: {
-        PrimaryColor: '0xFFFFFF',
-        CustomDataColor: '0x00FF00',
+        PrimaryColor: 'red',
         Label: '0xFFFFFF',
         MissingColor: '0xFFFFFF',
       },
     })
+
     expect(validateVisualThemes(createConfig([theme]), properties)).toEqual(
       expect.arrayContaining([
+        'Theme "Classic" color "PrimaryColor" must be an RGB565-compatible color.',
         'Theme "Classic" color property "Label" must exist and have type color.',
         'Theme "Classic" color property "MissingColor" must exist and have type color.',
       ]),
     )
   })
+
 })
 
 describe('resolveThemeColor', () => {
-  it('uses a theme override for any color property', () => {
-    const theme = createTheme({
-      colors: {
-        PrimaryColor: '0x000000',
-        CustomDataColor: '0xFF0000',
-      },
-    })
-    expect(resolveThemeColor('PrimaryColor', theme, properties)).toBe('0x000000')
-    expect(resolveThemeColor('CustomDataColor', theme, properties)).toBe('0xFF0000')
-  })
+  it('uses the current theme value for the shared variable key', async () => {
+    const { resolveThemeColor } = await import('./visualThemeService')
+    const day = createTheme({ colors: { PrimaryColor: '0xFFFFFF' } })
+    const night = createTheme({ colors: { PrimaryColor: '0x000000' } })
 
-  it('falls back to the color property default and ignores non-color properties', () => {
-    const theme = createTheme({ colors: {} })
-    expect(resolveThemeColor('PrimaryColor', theme, properties)).toBe('0xFFFFFF')
-    expect(resolveThemeColor('Label', theme, properties)).toBeUndefined()
-    expect(resolveThemeColor('MissingColor', theme, properties)).toBeUndefined()
+    expect(resolveThemeColor('PrimaryColor', day, properties)).toBe('0xFFFFFF')
+    expect(resolveThemeColor('PrimaryColor', night, properties)).toBe('0x000000')
+    expect(properties.PrimaryColor.value).toBe('0xFFFFFF')
   })
 })

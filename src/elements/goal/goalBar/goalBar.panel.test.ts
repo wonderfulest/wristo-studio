@@ -33,4 +33,17 @@ describe('GoalBar direction panel', () => {
     expect(source).toContain(':aria-label=')
     expect(source).toContain(':title=')
   })
+
+  it('binds main, background, and border colors to shared color properties', () => {
+    expect(source).toContain(':property-key="currentModel.colorProperty"')
+    expect(source).toContain(':property-key="currentModel.bgColorProperty"')
+    expect(source).toContain(':property-key="currentModel.borderColorProperty"')
+    expect(source).toContain("@property-change=\"handleColorSelection('color', $event)\"")
+    expect(source).toContain("@property-change=\"handleColorSelection('bgColor', $event)\"")
+    expect(source).toContain("@property-change=\"handleColorSelection('borderColor', $event)\"")
+    expect(source).toContain('[field]: selection.color')
+    expect(source).toContain('[`${field}Property`]: selection.propertyKey')
+    expect(source).not.toContain('gradientStartColorProperty')
+    expect(source).not.toContain('gradientEndColorProperty')
+  })
 })

@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import {
   backfillVisualThemeBackground,
   createInitialVisualThemes,
+  normalizeVisualThemesConfig,
 } from '@/engine/services/visualThemeService'
-import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
 import type {
@@ -14,7 +14,6 @@ import type {
 } from '@/types/visualTheme'
 
 export type VisualThemeIdFactory = () => string
-export type VisualThemeFallbackColor = keyof VisualTheme['fallbackHands']
 
 const createId: VisualThemeIdFactory = () => crypto.randomUUID()
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -30,11 +29,6 @@ const emptyTheme = (id: string, name: string): VisualTheme => ({
   name,
   assets: {},
   colors: {},
-  fallbackHands: {
-    hourColor: '0xFFFFFF',
-    minuteColor: '0xFFFFFF',
-    secondColor: '0xFF0000',
-  },
 })
 
 export const useVisualThemeStore = defineStore('visualTheme', {
@@ -55,7 +49,10 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       authoritativeElements: Array<Record<string, unknown>> = [],
     ): void {
       this.config = config
-        ? clone(backfillVisualThemeBackground(config, authoritativeElements))
+        ? backfillVisualThemeBackground(
+            normalizeVisualThemesConfig(config),
+            authoritativeElements,
+          )
         : undefined
       this.previewThemeId = this.config?.defaultThemeId ?? null
     },
@@ -70,10 +67,7 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       } else {
         this.config.enabled = true
       }
-      this.syncColorProperties(
-        config.properties,
-        config.elements as unknown as Array<Record<string, unknown>>,
-      )
+      this.syncColorProperties(config.properties)
       this.previewThemeId = this.config.defaultThemeId
     },
 
@@ -91,7 +85,7 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       if (defaultBackground !== undefined) {
         theme.assets.background = clone(defaultBackground)
       }
-      theme.colors = clone(this.requireTheme(config.defaultThemeId).colors)
+      theme.colors = clone(this.requireTheme(config.defaultThemeId).colors ?? {})
       config.themes.push(theme)
       this.previewThemeId = theme.id
       return theme
@@ -153,32 +147,45 @@ export const useVisualThemeStore = defineStore('visualTheme', {
     },
 
     updateColor(themeId: string, propertyKey: string, color: string): void {
-      this.requireTheme(themeId).colors[propertyKey] = toMonkeyColor(color)
+      const theme = this.requireTheme(themeId)
+      if (!theme.colors) theme.colors = {}
+      theme.colors[propertyKey] = toMonkeyColor(color)
     },
 
-    syncColorProperties(
-      properties: PropertiesMap,
-      elements: Array<Record<string, unknown>>,
-    ): void {
-      const propertyFields = VISUAL_THEME_COLOR_BINDINGS.map(([, propertyField]) => propertyField)
-      const keys = new Set<string>()
-      for (const element of elements) {
-        for (const propertyField of propertyFields) {
-          const key = element[propertyField]
-          if (typeof key === 'string' && properties[key]?.type === 'color') keys.add(key)
+    addColorProperty(propertyKey: string, color: unknown): void {
+      for (const theme of this.themes) {
+        if (!theme.colors) theme.colors = {}
+        if (theme.colors[propertyKey] === undefined) {
+          theme.colors[propertyKey] = toMonkeyColor(String(color ?? '0xFFFFFF'))
         }
       }
+    },
+
+    removeColorProperty(propertyKey: string): void {
       for (const theme of this.themes) {
-        for (const key of keys) {
+        if (theme.colors) delete theme.colors[propertyKey]
+      }
+    },
+
+    currentWritableThemeId(): string {
+      const config = this.requireConfig()
+      const themeId = this.previewThemeId ?? config.defaultThemeId
+      this.requireTheme(themeId)
+      return themeId
+    },
+
+    syncColorProperties(properties: PropertiesMap): void {
+      const colorKeys = Object.entries(properties)
+        .filter(([, property]) => property.type === 'color')
+        .map(([key]) => key)
+      for (const theme of this.themes) {
+        if (!theme.colors) theme.colors = {}
+        for (const key of colorKeys) {
           if (theme.colors[key] === undefined) {
             theme.colors[key] = toMonkeyColor(String(properties[key].value ?? '0xFFFFFF'))
           }
         }
       }
-    },
-
-    updateFallbackColor(themeId: string, key: VisualThemeFallbackColor, color: string): void {
-      this.requireTheme(themeId).fallbackHands[key] = toMonkeyColor(color)
     },
 
     requireConfig(): VisualThemesConfig {

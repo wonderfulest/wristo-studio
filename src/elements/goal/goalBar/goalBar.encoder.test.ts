@@ -273,4 +273,45 @@ describe('goalBar encoder compatibility', () => {
     expect(decoded.gradientStartColor).toBe('#123456')
     expect(decoded.gradientEndColor).toBe('#123456')
   })
+
+  it('round-trips all color property bindings', () => {
+    const decoded = decodeGoalBar(createConfig({
+      colorProperty: 'Primary',
+      bgColorProperty: 'Surface',
+      borderColorProperty: 'Outline',
+    }))
+
+    expect(encodeGoalBar(decoded)).toMatchObject({
+      colorProperty: 'Primary',
+      bgColorProperty: 'Surface',
+      borderColorProperty: 'Outline',
+    })
+  })
+
+  it('prefers live color property bindings and preserves an explicit unlink', () => {
+    const decoded = decodeGoalBar(createConfig({
+      colorProperty: 'OldPrimary',
+      bgColorProperty: 'OldSurface',
+      borderColorProperty: 'OldOutline',
+    }))
+
+    const encoded = encodeGoalBar({
+      ...decoded,
+      colorProperty: 'Primary',
+      bgColorProperty: null,
+      borderColorProperty: 'Outline',
+    } as any)
+
+    expect(encoded.colorProperty).toBe('Primary')
+    expect(encoded.bgColorProperty).toBeNull()
+    expect(encoded.borderColorProperty).toBe('Outline')
+  })
+
+  it('keeps legacy configs without color bindings unbound', () => {
+    const decoded = decodeGoalBar(createConfig())
+
+    expect(decoded.colorProperty).toBeUndefined()
+    expect(decoded.bgColorProperty).toBeUndefined()
+    expect(decoded.borderColorProperty).toBeUndefined()
+  })
 })

@@ -40,15 +40,11 @@ const enabledConfig = (): VisualThemesConfig => ({
       id: 'day',
       name: 'Day',
       assets: {},
-      colors: {},
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
     {
       id: 'night',
       name: 'Night',
       assets: {},
-      colors: {},
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
   ],
 })

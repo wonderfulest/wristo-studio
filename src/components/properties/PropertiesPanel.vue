@@ -126,13 +126,13 @@
                             <span
                               class="color-preview"
                               :style="{
-                                border: item.prop.value === '-1' ? '1px solid var(--el-border-color)' : '0',
-                                backgroundColor: item.prop.value === '-1' ? 'transparent' : `#${String(item.prop.value).replace('0x', '')}`
+                                border: getPropertyDisplayValue(item.key, item.prop) === '-1' ? '1px solid var(--el-border-color)' : '0',
+                                backgroundColor: getPropertyDisplayValue(item.key, item.prop) === '-1' ? 'transparent' : `#${String(getPropertyDisplayValue(item.key, item.prop)).replace('0x', '')}`
                               }"
                             >
-                              <span v-if="item.prop.value === '-1'" class="transparent-pattern"></span>
+                              <span v-if="getPropertyDisplayValue(item.key, item.prop) === '-1'" class="transparent-pattern"></span>
                             </span>
-                            <span class="mono-value">{{ item.prop.value }}</span>
+                            <span class="mono-value">{{ getPropertyDisplayValue(item.key, item.prop) }}</span>
                           </template>
                           <template v-else>
                             <span>{{ getPropertyPreview(item.prop) }}</span>
@@ -240,6 +240,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
@@ -248,6 +249,10 @@ import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/
 import * as elementManager from '@/engine/managers/elementManager'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 import { syncColorPropertyToBoundElements } from '@/engine/services/colorPropertySyncService'
+import {
+  getColorPropertyValue,
+  setColorPropertyValue,
+} from '@/engine/services/colorPropertyValueService'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -264,9 +269,13 @@ const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
+const visualThemeStore = useVisualThemeStore()
 const { t } = useI18n()
 
 const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial']
+
+const getPropertyDisplayValue = (key, prop) =>
+  prop.type === 'color' ? getColorPropertyValue(key) : prop.value
 
 const typeMeta = computed(() => ({
   color: { label: t('property.colorSelect'), icon: Brush },
@@ -425,6 +434,7 @@ const editProperty = (key, prop) => {
   if (prop.type === 'color') {
     colorPropertyDialog.value?.show({
       ...prop,
+      value: getColorPropertyValue(key),
       propertyKey: key
     })
   } else if (prop.type === 'goal') {
@@ -509,6 +519,9 @@ const deleteProperty = async (key) => {
     ;(canvasStore.canvas?.getObjects?.() || []).forEach(collectBindingPatch)
     await Promise.all(Array.from(patchesById.entries())
       .map(([id, patch]) => elementManager.updateElementById(id, patch)))
+    if (propertiesStore.allProperties[key]?.type === 'color') {
+      visualThemeStore.removeColorProperty(key)
+    }
     propertiesStore.deleteProperty(key)
     commitHistory('delete-property')
     ElMessage({
@@ -528,12 +541,24 @@ const handlePropertyConfirm = async (propertyData) => {
     return
   }
 
-  propertiesStore.addProperty(propertyPayload)
+  const previous = propertiesStore.allProperties[propertyPayload.key]
+  const editedColor = isEdit && previous?.type === 'color'
+    ? propertyPayload.defaultValue
+    : undefined
+  propertiesStore.addProperty({
+    ...propertyPayload,
+    ...(editedColor !== undefined && visualThemeStore.config?.enabled
+      ? { defaultValue: previous.value }
+      : {}),
+  })
   if (propertyPayload.type === 'color') {
-    await syncColorPropertyToBoundElements(
-      propertyPayload.key,
-      propertiesStore.getPropertyValue(propertyPayload.key),
-    )
+    if (!isEdit) {
+      const initialColor = propertiesStore.getPropertyValue(propertyPayload.key)
+      visualThemeStore.addColorProperty(propertyPayload.key, initialColor)
+      await syncColorPropertyToBoundElements(propertyPayload.key, initialColor)
+    } else if (editedColor !== undefined) {
+      await setColorPropertyValue(propertyPayload.key, editedColor)
+    }
   }
   commitHistory('upsert-property')
 }

@@ -60,15 +60,11 @@ const config = (): VisualThemesConfig => ({
       id: 'day',
       name: 'Day',
       assets: {},
-      colors: {},
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
     {
       id: 'night',
       name: 'Night',
       assets: {},
-      colors: {},
-      fallbackHands: { hourColor: '0xFFFFFF', minuteColor: '0xFFFFFF', secondColor: '0xFF0000' },
     },
   ],
 })
@@ -84,9 +80,11 @@ describe('VisualThemeSettings', () => {
     themeApi.getThemeRuleDetail.mockResolvedValue({ data: { data: null } })
   })
 
-  it('keeps fallback hand colors available in the full editor', () => {
-    expect(panelSource).toContain("t('visualTheme.fallbackHandColors')")
-    expect(panelSource).toContain('store.updateFallbackColor')
+  it('edits theme color values without restoring fallback hand controls', () => {
+    expect(panelSource).toContain("t('visualTheme.themeColors')")
+    expect(panelSource).not.toContain("t('visualTheme.fallbackHandColors')")
+    expect(panelSource).toContain('store.updateColor')
+    expect(panelSource).not.toContain('store.updateFallbackColor')
   })
 
   it('enables themes with authoritative element snapshots for the background slot', () => {

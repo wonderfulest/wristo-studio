@@ -972,10 +972,7 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
     propertiesStore.loadProperties(config.properties)
   }
   const runtimeElements = config.elements as AnyElementConfig[]
-  visualThemeStore.syncColorProperties(
-    propertiesStore.allProperties,
-    runtimeElements as unknown as Array<Record<string, unknown>>,
-  )
+  visualThemeStore.syncColorProperties(propertiesStore.allProperties)
 
   propertiesStore.textCase = 0
   propertiesStore.bitmapMode = true

@@ -34,7 +34,11 @@
       </el-form-item>
 
       <el-form-item v-if="isUpdateColor" :label="t('elementSettings.textColor')" required>
-        <color-picker v-model="textColor" @change="updateTextColor" />
+        <color-picker
+          v-model="textColor"
+          :property-key="sharedFillProperty"
+          @property-change="updatePrimaryColorBinding"
+        />
       </el-form-item>
 
       <el-form-item v-if="showTypographyControls" :label="t('elementSettings.font')" required>
@@ -74,6 +78,11 @@ import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
+import type { ColorSelectionPayload } from '@/components/color-picker/colorSelection'
+import {
+  buildPrimaryColorBindingPatch,
+  resolveSharedPrimaryColorBinding,
+} from './groupPrimaryColorBinding'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
@@ -118,6 +127,7 @@ const goalArcElement = computed(() => getElementByType('goalArc'))
 
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
+const sharedFillProperty = ref('')
 const fontFamily = ref<string>(props.elements[0].fontFamily || 'roboto-condensed-regular')
 
 const dataProperty = ref<string>('')
@@ -280,11 +290,9 @@ onMounted(() => {
 })
 
 const isUpdateColor = computed(() => {
-  const eleType = props.elements[0]?.eleType
-  if (!eleType || !['time', 'date', 'icon', 'data', 'unit', 'bluetooth', 'disturb'].includes(eleType)) {
-    return false
-  }
-  return true
+  const supportedTypes = new Set(['time', 'date', 'icon', 'data', 'unit', 'bluetooth', 'disturb'])
+  return props.elements.length > 0
+    && props.elements.every((element) => supportedTypes.has(String(element.eleType ?? '')))
 })
 
 const isSameTypeLayer = computed(() => {
@@ -336,12 +344,31 @@ const updateFontSize = () => {
   commitHistory('font-size')
 }
 
-const updateTextColor = () => {
+const syncPrimaryColorState = () => {
+  const state = resolveSharedPrimaryColorBinding(props.elements)
+  textColor.value = state.color
+  sharedFillProperty.value = state.propertyKey
+}
+
+watch(
+  () => props.elements.map((element) => [
+    element.id,
+    (element as any).fill,
+    (element as any).fillProperty,
+  ]),
+  syncPrimaryColorState,
+  { immediate: true, deep: true },
+)
+
+const updatePrimaryColorBinding = (selection: ColorSelectionPayload) => {
+  const patch = buildPrimaryColorBindingPatch(selection)
+  textColor.value = patch.fill
+  sharedFillProperty.value = patch.fillProperty ?? ''
+
   for (const element of props.elements) {
-    element.set('fill', textColor.value)
-    if ((element as any).id) {
-      elementDataStore.patchElement(String((element as any).id), { fill: textColor.value } as any)
-    }
+    element.set(patch)
+    const id = String((element as any).id || '')
+    if (id) elementDataStore.patchElement(id, patch as any)
   }
   baseStore.canvas?.renderAll()
   commitHistory('text-color')

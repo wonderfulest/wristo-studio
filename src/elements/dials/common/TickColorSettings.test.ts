@@ -30,7 +30,7 @@ describe('Tick color settings integration', () => {
   it('refreshes the tick tint when a theme color variable changes', () => {
     const themeSettingsSource = readSource('../../../components/panels/settings/ThemeConfigSettings.vue')
     const rendererSource = readSource('./dial.renderer.ts')
-    expect(themeSettingsSource).toContain('syncColorPropertyToBoundElements')
+    expect(themeSettingsSource).toContain('setColorPropertyValue')
     expect(rendererSource).toContain('applyDialColorPreview(group')
   })
 })

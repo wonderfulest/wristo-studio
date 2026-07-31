@@ -69,12 +69,14 @@ function createRectangleGoalBar() {
     padding: 0, progress: 0.5, progressAlign: 'left', variant: 'continuous',
     segments: 10, gap: 2, shape: 'rectangle', polygonPoints: [], borderRadius: 5,
     color: '#0f0', bgColor: '#333', borderWidth: 0, borderColor: '#fff',
+    colorProperty: 'Primary', bgColorProperty: 'Surface', borderColorProperty: 'Outline',
     goalProperty: '', gradientEnabled: false, gradientStartColor: '#0f0',
     gradientEndColor: '#0f0', originX: 'center', originY: 'center',
   }
   const group = new Group([background, progress], {
     id: 'goal', eleType: 'goalBar', left: 17, top: 29, shape: 'rectangle',
-    polygonPoints: [], progress: 0.5,
+    polygonPoints: [], progress: 0.5, colorProperty: 'Primary',
+    bgColorProperty: 'Surface', borderColorProperty: 'Outline',
   } as any) as any
   group.__element = { kind: 'widget', type: 'goalBar', config, children: { background, progress } }
   return { group, config }
@@ -145,6 +147,40 @@ describe('goal bar polygon preview', () => {
     updateGoalBar(group, { color: config.color, bgColor: config.bgColor }, { persist: false })
     expect(group.__element.children.progress.fill).toBe(config.color)
     expect(group.__element.children.background.fill).toBe(config.bgColor)
+    expect(patchElement).not.toHaveBeenCalled()
+    expect(upsertElement).not.toHaveBeenCalled()
+  })
+
+  it('unlinks one persisted color binding without changing the others', () => {
+    const { group } = createRectangleGoalBar()
+
+    updateGoalBar(group, {
+      color: '#abcdef',
+      colorProperty: null,
+    })
+
+    expect(group.__element.config).toMatchObject({
+      color: '#abcdef',
+      colorProperty: null,
+      bgColorProperty: 'Surface',
+      borderColorProperty: 'Outline',
+    })
+  })
+
+  it('preserves color bindings during non-persistent theme preview updates', () => {
+    const { group, config } = createRectangleGoalBar()
+    const snapshot = structuredClone(config)
+
+    updateGoalBar(group, {
+      color: '#111111',
+      bgColor: '#222222',
+      borderColor: '#333333',
+    }, { persist: false })
+
+    expect(group.__element.config).toEqual(snapshot)
+    expect(group.colorProperty).toBe('Primary')
+    expect(group.bgColorProperty).toBe('Surface')
+    expect(group.borderColorProperty).toBe('Outline')
     expect(patchElement).not.toHaveBeenCalled()
     expect(upsertElement).not.toHaveBeenCalled()
   })

@@ -47,12 +47,25 @@ describe('buildBoundColorPatches', () => {
     ], 'accentColor', 'invalid')).toEqual(new Map())
   })
 
-  it.each([
-    'src/components/properties/PropertiesPanel.vue',
-    'src/components/panels/settings/ThemeConfigSettings.vue',
-  ])('%s uses the shared bound-color synchronization', (file) => {
-    const source = readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
+  it('routes Settings color creation, editing, and deletion through theme-aware APIs', () => {
+    const source = readFileSync(
+      new URL('../../../src/components/properties/PropertiesPanel.vue', import.meta.url),
+      'utf8',
+    )
 
-    expect(source).toContain('syncColorPropertyToBoundElements')
+    expect(source).toContain('setColorPropertyValue')
+    expect(source).toContain('getColorPropertyValue')
+    expect(source).toContain('addColorProperty')
+    expect(source).toContain('removeColorProperty')
+  })
+
+  it('routes the theme config color editor through the theme-aware value service', () => {
+    const source = readFileSync(
+      new URL('../../../src/components/panels/settings/ThemeConfigSettings.vue', import.meta.url),
+      'utf8',
+    )
+
+    expect(source).toContain('setColorPropertyValue')
+    expect(source).not.toContain('propertiesStore.setPropertyValue(propertyKey, val)')
   })
 })

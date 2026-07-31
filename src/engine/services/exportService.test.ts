@@ -63,12 +63,6 @@ describe('visual theme export persistence', () => {
           hourHand: { assetId: 11, imageUrl: 'blob:hour' },
           minuteHand: { assetId: 12, imageUrl: 'blob:minute' },
         },
-        colors: {},
-        fallbackHands: {
-          hourColor: '0xFFFFFF',
-          minuteColor: '0xFFFFFF',
-          secondColor: '0xFF0000',
-        },
       }],
     }
     const canvas = {
@@ -126,12 +120,6 @@ describe('visual theme export persistence', () => {
             assetId: 41,
             imageUrl: 'https://cdn.example/theme-background.png',
           },
-        },
-        colors: {},
-        fallbackHands: {
-          hourColor: '0xFFFFFF',
-          minuteColor: '0xFFFFFF',
-          secondColor: '0xFF0000',
         },
       }],
     }
@@ -257,12 +245,6 @@ describe('visual theme export persistence', () => {
           background: { assetId: 102, imageUrl: 'theme-bg.png' },
           hourHand: { assetId: 202, imageUrl: 'theme-hour.svg' },
         },
-        colors: { Accent: '#abcdef', Outline: '#fedcba', Surface: '#eeeeee' },
-        fallbackHands: {
-          hourColor: '#ffffff',
-          minuteColor: '#ffffff',
-          secondColor: '#ff0000',
-        },
       }],
     }
 
@@ -320,12 +302,6 @@ describe('visual theme export persistence', () => {
             secondHand: { assetId: 12, imageUrl: 'blob:second' },
             centerCap: { assetId: 13, imageUrl: 'blob:cap', targetSize: 32 },
           },
-          colors: {},
-          fallbackHands: {
-            hourColor: '0xFFFFFF',
-            minuteColor: '0xFFFFFF',
-            secondColor: '0xFF0000',
-          },
         }],
       },
     }
@@ -371,12 +347,6 @@ describe('visual theme export persistence', () => {
           name: 'Classic',
           assets: {
             hourHand: { assetId: 21, imageUrl: 'blob:hour' },
-          },
-          colors: {},
-          fallbackHands: {
-            hourColor: '0xFFFFFF',
-            minuteColor: '0xFFFFFF',
-            secondColor: '0xFF0000',
           },
         }],
       },

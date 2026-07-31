@@ -74,6 +74,13 @@ describe('multi-selection alignment placement', () => {
     expect(groupSettingsSource).not.toContain('updateOriginX')
   })
 
+  it('uses the color picker binding protocol for multi-selection primary colors', () => {
+    expect(groupSettingsSource).toContain(':property-key="sharedFillProperty"')
+    expect(groupSettingsSource).toContain('@property-change="updatePrimaryColorBinding"')
+    expect(groupSettingsSource).toContain('fillProperty')
+    expect(groupSettingsSource).not.toContain('@change="updateTextColor"')
+  })
+
   it('does not render alignment actions in the bottom editor bar', () => {
     expect(bottomBarSource).not.toContain('quick-align-cell')
     expect(bottomBarSource).not.toContain('quickAlignOptions')

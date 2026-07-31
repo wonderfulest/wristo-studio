@@ -16,10 +16,8 @@ const ASSET_SLOTS: VisualThemeAssetSlot[] = [
   'centerCap',
 ]
 
-const FALLBACK_COLOR_KEYS = ['hourColor', 'minuteColor', 'secondColor'] as const
-
-const RGB565_COLOR_PATTERN = /^(?:#|0x)[0-9a-f]{6}$/i
 type ThemeAssetElement = Record<string, unknown>
+const RGB565_COLOR_PATTERN = /^(?:#|0x)[0-9a-f]{6}$/i
 
 export type ThemeOwner = 'visual' | 'dynamic'
 
@@ -96,6 +94,32 @@ export function backfillVisualThemeBackground(
   }
 }
 
+const cloneAssetRef = (asset: VisualThemeAssetRef): VisualThemeAssetRef => ({
+  assetId: asset.assetId,
+  imageUrl: asset.imageUrl,
+  ...(asset.targetSize === undefined ? {} : { targetSize: asset.targetSize }),
+})
+
+export function normalizeVisualThemesConfig(config: VisualThemesConfig): VisualThemesConfig {
+  return {
+    version: config.version,
+    enabled: config.enabled,
+    defaultThemeId: config.defaultThemeId,
+    selectionMode: config.selectionMode,
+    themes: config.themes.map((theme) => ({
+      id: theme.id,
+      name: theme.name,
+      assets: Object.fromEntries(
+        Object.entries(theme.assets ?? {}).map(([slot, asset]) => [
+          slot,
+          cloneAssetRef(asset),
+        ]),
+      ) as VisualTheme['assets'],
+      colors: { ...(theme.colors ?? {}) },
+    })),
+  }
+}
+
 export function createInitialVisualThemes(
   config: RuntimeDesignConfig,
   authoritativeElements: ThemeAssetElement[] = config.elements as unknown as ThemeAssetElement[],
@@ -120,11 +144,6 @@ export function createInitialVisualThemes(
         name: 'Default',
         assets,
         colors: {},
-        fallbackHands: {
-          hourColor: '0xFFFFFF',
-          minuteColor: '0xFFFFFF',
-          secondColor: '0xFF0000',
-        },
       },
     ],
   }
@@ -136,15 +155,18 @@ function isRgb565Color(value: unknown): boolean {
 
 export function validateVisualThemes(
   visualThemes: VisualThemesConfig | undefined,
-  properties: PropertiesMap,
+  propertiesOrBaseElements: PropertiesMap | Array<Record<string, unknown>> = {},
   baseElements?: Array<Record<string, unknown>>,
 ): string[] {
   if (!visualThemes) return []
 
   const errors: string[] = []
   const themes = visualThemes.themes
-  const hasBaseContext = baseElements !== undefined
-  const resolvedBaseElements = baseElements ?? []
+  const properties = Array.isArray(propertiesOrBaseElements) ? {} : propertiesOrBaseElements
+  const resolvedBaseElements = Array.isArray(propertiesOrBaseElements)
+    ? propertiesOrBaseElements
+    : baseElements ?? []
+  const hasBaseContext = Array.isArray(propertiesOrBaseElements) || baseElements !== undefined
 
   if (visualThemes.version !== 1) {
     errors.push('Visual themes version must be 1.')
@@ -217,19 +239,13 @@ export function validateVisualThemes(
       }
     }
 
-    for (const [propertyKey, color] of Object.entries(theme.colors)) {
+    for (const [propertyKey, color] of Object.entries(theme.colors ?? {})) {
       const property = properties[propertyKey]
       if (!property || property.type !== 'color') {
         errors.push(`Theme "${themeName}" color property "${propertyKey}" must exist and have type color.`)
       }
       if (!isRgb565Color(color)) {
         errors.push(`Theme "${themeName}" color "${propertyKey}" must be an RGB565-compatible color.`)
-      }
-    }
-
-    for (const key of FALLBACK_COLOR_KEYS) {
-      if (!isRgb565Color(theme.fallbackHands[key])) {
-        errors.push(`Theme "${themeName}" fallback ${key} must be an RGB565-compatible color.`)
       }
     }
   }
@@ -244,7 +260,7 @@ export function resolveThemeColor(
 ): string | undefined {
   const property = properties[propertyKey]
   if (!property || property.type !== 'color') return undefined
-  if (theme.colors[propertyKey] !== undefined) {
+  if (theme.colors?.[propertyKey] !== undefined) {
     return theme.colors[propertyKey]
   }
   return typeof property.value === 'string' ? property.value : undefined

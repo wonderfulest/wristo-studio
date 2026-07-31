@@ -202,11 +202,12 @@
       <el-form-item :label="t('elementSettings.activeColor')">
         <color-picker 
           v-model="currentModel.color"
+          :property-key="currentModel.colorProperty"
           :enable-gradient="!isPolygonShape || isPolygonConvex"
           :gradient-enabled="Boolean(currentModel.gradientEnabled)"
           :gradient-start-color="currentModel.gradientStartColor ?? currentModel.color"
           :gradient-end-color="currentModel.gradientEndColor ?? currentModel.color"
-          @change="handleMainColorChange"
+          @property-change="handleColorSelection('color', $event)"
           @gradient-change="handleGradientChange"
         />
       </el-form-item>
@@ -221,8 +222,9 @@
 
       <el-form-item :label="t('elementSettings.backgroundColor')">
         <color-picker 
-          v-model="currentModel.bgColor" 
-          @change="handleBgColorChange" 
+          v-model="currentModel.bgColor"
+          :property-key="currentModel.bgColorProperty"
+          @property-change="handleColorSelection('bgColor', $event)"
         />
       </el-form-item>
 
@@ -237,8 +239,9 @@
 
       <el-form-item :label="t('elementSettings.borderColor')">
         <color-picker 
-          v-model="currentModel.borderColor" 
-          @change="updateElement" 
+          v-model="currentModel.borderColor"
+          :property-key="currentModel.borderColorProperty"
+          @property-change="handleColorSelection('borderColor', $event)"
         />
       </el-form-item>
 
@@ -440,8 +443,17 @@ const applyUpdate = async (patch: Record<string, any>) => {
   }
 }
 
-const handleMainColorChange = async (val: string) => {
-  await applyUpdate({ color: val })
+type GoalBarColorField = 'color' | 'bgColor' | 'borderColor'
+type ColorSelection = { color: string; propertyKey: string | null }
+
+const handleColorSelection = async (
+  field: GoalBarColorField,
+  selection: ColorSelection,
+) => {
+  await applyUpdate({
+    [field]: selection.color,
+    [`${field}Property`]: selection.propertyKey,
+  })
 }
 
 const handleGradientChange = async (value: { enabled: boolean; startColor: string; endColor: string }) => {
@@ -455,10 +467,6 @@ const handleGradientChange = async (value: { enabled: boolean; startColor: strin
     gradientStartColor: value.startColor,
     gradientEndColor: value.endColor,
   })
-}
-
-const handleBgColorChange = async (val: string) => {
-  await applyUpdate({ bgColor: val })
 }
 
 const handleProgressChange = async (val: number) => {

@@ -96,23 +96,11 @@
             <div v-for="[key, property] in themeColorProperties" :key="key" class="color-row">
               <span>{{ property.title || key }}</span>
               <el-color-picker
-                :model-value="colorAsHex(selectedTheme.colors[key] || String(property.value || '0xFFFFFF'))"
+                :model-value="colorAsHex(selectedTheme.colors?.[key] || String(property.value || '0xFFFFFF'))"
                 @change="(value: string | null) => value && store.updateColor(selectedTheme!.id, key, value)"
               />
             </div>
           </section>
-
-          <section class="color-section">
-            <h4>{{ t('visualTheme.fallbackHandColors') }}</h4>
-            <div v-for="field in fallbackFields" :key="field.key" class="color-row">
-              <span>{{ t(field.label) }}</span>
-              <el-color-picker
-                :model-value="colorAsHex(selectedTheme.fallbackHands[field.key])"
-                @change="(value: string | null) => value && store.updateFallbackColor(selectedTheme!.id, field.key, value)"
-              />
-            </div>
-          </section>
-
         </main>
       </div>
     </template>
@@ -133,7 +121,7 @@ import { useI18n } from '@/i18n'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import { useVisualThemeStore, type VisualThemeFallbackColor } from '@/stores/visualThemeStore'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import type { VisualThemeAssetSlot } from '@/types/visualTheme'
 
 const props = withDefaults(defineProps<{ dynamicRuleConflict?: boolean }>(), {
@@ -163,18 +151,12 @@ const isDefault = computed(() => selectedTheme.value?.id === config.value?.defau
 const isPreview = computed(() => selectedTheme.value?.id === store.previewThemeId)
 const themeColorProperties = computed(() => Object.entries(propertiesStore.allProperties)
   .filter(([key, property]) => property.type === 'color'
-    && selectedTheme.value?.colors[key] !== undefined))
+    && selectedTheme.value?.colors?.[key] !== undefined))
 const availableAssetSlots = computed<VisualThemeAssetSlot[]>(() => {
   const elementTypes = new Set(elementDataStore.elements.map((snapshot) => snapshot.eleType))
   return (['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as VisualThemeAssetSlot[])
     .filter((slot) => elementTypes.has(slot as any))
 })
-const fallbackFields: Array<{ key: VisualThemeFallbackColor; label: string }> = [
-  { key: 'hourColor', label: 'visualTheme.hourColor' },
-  { key: 'minuteColor', label: 'visualTheme.minuteColor' },
-  { key: 'secondColor', label: 'visualTheme.secondColor' },
-]
-
 const colorAsHex = (color: string) => color.startsWith('0x') ? `#${color.slice(2)}` : color
 
 const selectTheme = (themeId: string) => {

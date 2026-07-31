@@ -60,6 +60,12 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     height: config.height ?? background?.height,
     color: config.color ?? anyElement.color,
     bgColor: config.bgColor ?? anyElement.bgColor,
+    colorProperty: anyElement.colorProperty !== undefined
+      ? anyElement.colorProperty
+      : config.colorProperty,
+    bgColorProperty: anyElement.bgColorProperty !== undefined
+      ? anyElement.bgColorProperty
+      : config.bgColorProperty,
     variant: config.variant ?? anyElement.variant ?? 'continuous',
     segments: config.segments ?? anyElement.segments,
     gap: config.gap ?? anyElement.gap,
@@ -70,6 +76,9 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     originY: 'center' as any,
     borderWidth: config.borderWidth ?? anyElement.borderWidth,
     borderColor: config.borderColor ?? anyElement.borderColor,
+    borderColorProperty: anyElement.borderColorProperty !== undefined
+      ? anyElement.borderColorProperty
+      : config.borderColorProperty,
     goalProperty: anyElement.goalProperty ?? config.goalProperty,
     orientation: resolveGoalBarOrientation(progressDirection),
     progressDirection,
@@ -98,6 +107,8 @@ export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricEleme
     height: config.height,
     color: config.color,
     bgColor: config.bgColor,
+    colorProperty: config.colorProperty,
+    bgColorProperty: config.bgColorProperty,
     variant: config.variant,
     segments: config.segments,
     gap: config.gap,
@@ -108,6 +119,7 @@ export function decodeGoalBar(config: GoalBarElementConfig): Partial<FabricEleme
     originY: 'center' as any,
     borderWidth: config.borderWidth,
     borderColor: config.borderColor,
+    borderColorProperty: config.borderColorProperty,
     goalProperty: config.goalProperty,
     orientation: resolveGoalBarOrientation(progressDirection),
     progressDirection,

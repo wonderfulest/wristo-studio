@@ -115,7 +115,7 @@ import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
-import { syncColorPropertyToBoundElements } from '@/engine/services/colorPropertySyncService'
+import { setColorPropertyValue } from '@/engine/services/colorPropertyValueService'
 
 const props = defineProps({
   appId: {
@@ -276,13 +276,12 @@ const handleImageUploaded = (val, img) => {
   }
 }
 
-// 颜色变量修改：将 ColorPicker 选择的颜色写回 propertiesStore，使其作用于画布
+// 颜色变量修改：启用视觉主题时写入当前主题，否则写回全局默认值
 const handleColorChange = async (propertyKey, hex) => {
   if (!propertyKey) return
   if (typeof hex !== 'string') return
   const val = hex.startsWith('#') ? `0x${hex.slice(1)}` : hex
-  propertiesStore.setPropertyValue(propertyKey, val)
-  await syncColorPropertyToBoundElements(propertyKey, val)
+  await setColorPropertyValue(propertyKey, val)
 }
 
 // 切换默认配置

@@ -10,6 +10,8 @@ export type GoalBarElementSchema = {
     height: number
     color: string
     bgColor: string
+    colorProperty: string | null
+    bgColorProperty: string | null
     variant: 'continuous' | 'segmented'
     segments: number
     gap: number
@@ -18,6 +20,7 @@ export type GoalBarElementSchema = {
     padding: number
     borderWidth: number
     borderColor: string
+    borderColorProperty: string | null
     orientation: GoalBarOrientation
     progressDirection: GoalBarProgressDirection
     shape: 'rectangle' | 'customPolygon'
@@ -39,6 +42,8 @@ export const goalBarSchema: GoalBarElementSchema = {
     height: 10,
     color: '#00FF00',
     bgColor: '#333333',
+    colorProperty: null,
+    bgColorProperty: null,
     variant: 'continuous',
     segments: 10,
     gap: 2,
@@ -47,6 +52,7 @@ export const goalBarSchema: GoalBarElementSchema = {
     padding: 2,
     borderWidth: 0,
     borderColor: '#FFFFFF',
+    borderColorProperty: null,
     orientation: 'horizontal',
     progressDirection: 'leftToRight',
     shape: 'rectangle',

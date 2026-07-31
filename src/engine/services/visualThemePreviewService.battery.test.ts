@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createVisualThemePreviewController } from './visualThemePreviewService'
 import { applyVisualThemeElementPatch } from './visualThemeElementUpdater'
 import registerBatteryPlugin from '@/elements/status/battery/battery.plugin'
-import type { PropertiesMap } from '@/types/properties'
 import type { VisualThemesConfig } from '@/types/visualTheme'
 
 let registeredBattery: Record<string, any>
@@ -97,13 +96,6 @@ function createBattery() {
   return group
 }
 
-const properties: PropertiesMap = {
-  Body: { type: 'color', title: 'Body', value: '#101010', themeMode: 'theme' },
-  Stroke: { type: 'color', title: 'Stroke', value: '#202020', themeMode: 'theme' },
-  Head: { type: 'color', title: 'Head', value: '#303030', themeMode: 'theme' },
-  Level: { type: 'color', title: 'Level', value: '#606060', themeMode: 'theme' },
-}
-
 const themes: VisualThemesConfig = {
   version: 1,
   enabled: true,
@@ -113,17 +105,6 @@ const themes: VisualThemesConfig = {
     id: 'night',
     name: 'Night',
     assets: {},
-    colors: {
-      Body: '#a0a0a0',
-      Stroke: '#b0b0b0',
-      Head: '#c0c0c0',
-      Level: '#d0d0d0',
-    },
-    fallbackHands: {
-      hourColor: '#ffffff',
-      minuteColor: '#ffffff',
-      secondColor: '#ff0000',
-    },
   }],
 }
 
@@ -134,7 +115,7 @@ describe('visualThemePreviewService battery renderer integration', () => {
     registerBatteryPlugin()
   })
 
-  it('previews and restores real battery child fills without changing persisted element data', async () => {
+  it('leaves real battery child fills shared while previewing and restoring', async () => {
     const base = [{
       id: 'battery',
       eleType: 'battery',
@@ -156,10 +137,10 @@ describe('visualThemePreviewService battery renderer integration', () => {
       requestRender: requestRenderAll,
     })
 
-    await controller.preview(themes, 'night', properties)
-    expect(registeredBattery._body).toMatchObject({ fill: '#a0a0a0', stroke: '#b0b0b0' })
-    expect(registeredBattery._head.fill).toBe('#c0c0c0')
-    expect(registeredBattery._level.fill).toBe('#d0d0d0')
+    await controller.preview(themes, 'night')
+    expect(registeredBattery._body).toMatchObject({ fill: '#101010', stroke: '#202020' })
+    expect(registeredBattery._head.fill).toBe('#303030')
+    expect(registeredBattery._level.fill).toBe('#606060')
     expect(persisted).toEqual(base)
     expect(patchElement).not.toHaveBeenCalled()
     expect(upsertElement).not.toHaveBeenCalled()

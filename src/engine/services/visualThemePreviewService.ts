@@ -66,7 +66,7 @@ function resolveColorPatch(
       if (base[colorField] !== undefined) patch[colorField] = base[colorField]
       continue
     }
-    if (theme.colors[propertyKey] === undefined) {
+    if (theme.colors?.[propertyKey] === undefined) {
       if (base[colorField] !== undefined) patch[colorField] = base[colorField]
       continue
     }
@@ -117,7 +117,11 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
   }
 
   return {
-    preview(config: VisualThemesConfig, themeId: string | null, properties: PropertiesMap): Promise<void> {
+    preview(
+      config: VisualThemesConfig,
+      themeId: string | null,
+      properties: PropertiesMap = {},
+    ): Promise<void> {
       const bases = clone(dependencies.getBaseElements())
       const canvasElements = dependencies.getCanvasElements()
       baseSnapshot = bases
