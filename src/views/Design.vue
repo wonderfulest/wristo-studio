@@ -134,6 +134,7 @@ import {
   restoreDesignAssetBundle,
   WrtDesignPackageError,
 } from '@/engine/services/designAssetBundleService'
+import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'
 
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
@@ -929,16 +930,17 @@ const applyLoadedElementDisplayStates = (elements: AnyElementConfig[]): void => 
 const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
   await fontStore.fetchFonts()
   if (!isCurrentDesignLoad(generation)) return false
-  if (Array.isArray(config.elements)) {
-    ensureBackgroundElement(config as any)
+  if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
+  const loadConfig = projectDefaultVisualThemeForLoad(config)
+  if (Array.isArray(loadConfig.elements)) {
     visualThemeStore.hydrate(
-      config.visualThemes,
-      config.elements as unknown as Array<Record<string, unknown>>,
+      loadConfig.visualThemes,
+      loadConfig.elements as unknown as Array<Record<string, unknown>>,
     )
-    await fontStore.loadFontsForElements(config.elements as any)
+    await fontStore.loadFontsForElements(loadConfig.elements as any)
     if (!isCurrentDesignLoad(generation)) return false
   } else {
-    visualThemeStore.hydrate(config.visualThemes)
+    visualThemeStore.hydrate(loadConfig.visualThemes)
     designStore.setSupportsChineseContent(false)
     designStore.setSupportedLocales(['en-US'])
     propertiesStore.clearProperties()
@@ -950,9 +952,9 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
     return true
   }
 
-  designStore.setSupportsChineseContent(Boolean(config.supportsChineseContent))
-  if (config.localization) {
-      const localization = config.localization as any
+  designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))
+  if (loadConfig.localization) {
+      const localization = loadConfig.localization as any
       if (Array.isArray(localization.supportedLocales)) {
         designStore.setSupportedLocales(localization.supportedLocales)
       } else {
@@ -968,10 +970,10 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
     designStore.setSupportedLocales(['en-US'])
   }
 
-  if (config.properties) {
-    propertiesStore.loadProperties(config.properties)
+  if (loadConfig.properties) {
+    propertiesStore.loadProperties(loadConfig.properties)
   }
-  const runtimeElements = config.elements as AnyElementConfig[]
+  const runtimeElements = loadConfig.elements as AnyElementConfig[]
   visualThemeStore.syncColorProperties(propertiesStore.allProperties)
 
   propertiesStore.textCase = 0
@@ -979,14 +981,14 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
   propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
 
-  if ([0, 1, 2, 3].includes(Number(config.textCase))) {
-    propertiesStore.textCase = Number(config.textCase) === 3 ? 0 : Number(config.textCase)
+  if ([0, 1, 2, 3].includes(Number(loadConfig.textCase))) {
+    propertiesStore.textCase = Number(loadConfig.textCase) === 3 ? 0 : Number(loadConfig.textCase)
   }
-  if (typeof config.bitmapMode === 'boolean') {
-    propertiesStore.bitmapMode = config.bitmapMode
+  if (typeof loadConfig.bitmapMode === 'boolean') {
+    propertiesStore.bitmapMode = loadConfig.bitmapMode
   }
-  propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(config.dataNumberFormat)
-  propertiesStore.maxFieldLength = normalizeMaxFieldLength(config.maxFieldLength)
+  propertiesStore.dataNumberFormat = normalizeDataNumberFormatMode(loadConfig.dataNumberFormat)
+  propertiesStore.maxFieldLength = normalizeMaxFieldLength(loadConfig.maxFieldLength)
 
   await waitCanvasReady()
   if (!isCurrentDesignLoad(generation)) return false
@@ -997,7 +999,7 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   applyLoadedElementDisplayStates(scaledElements)
   canvasRef.value?.updateZoom()
 
-  if (!await restoreLayerOrder(config.orderIds, generation) || !isCurrentDesignLoad(generation)) return false
+  if (!await restoreLayerOrder(loadConfig.orderIds, generation) || !isCurrentDesignLoad(generation)) return false
   applyLoadedElementDisplayStates(scaledElements)
 
   await new Promise<void>((resolve, reject) => window.setTimeout(() => {
@@ -1008,7 +1010,7 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
           return
         }
         getDataSimulatorEngine().updateCanvas()
-        await restoreLayerOrder(config.orderIds, generation)
+        await restoreLayerOrder(loadConfig.orderIds, generation)
         resolve()
       } catch (error) {
         reject(error)
