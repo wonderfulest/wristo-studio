@@ -110,6 +110,7 @@ export interface Product {
   isActive: number
   isDeleted: number
   status: number
+  storeWeight?: number | null
   payment: ProductPaymentVo
   /** legacy packaging log */
   packageLog: ProductPackagingLogVo

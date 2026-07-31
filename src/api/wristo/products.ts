@@ -64,6 +64,10 @@ export const productsApi = {
    */
   generateDescription(data: GenerateDescriptionDto): Promise<ApiResponse<string>> {
     return instance.post('/dsn/products/generate-description', data)
+  },
+
+  updateStoreWeight(appId: number, storeWeight: number): Promise<ApiResponse<ProductVo>> {
+    return instance.post(`/admin/products/store-display/${appId}`, { storeWeight })
   }
 }
 

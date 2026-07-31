@@ -74,6 +74,7 @@
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
           :show-package-download="true"
+          :store-weight-saving="storeWeightSavingAppIds.has(design.product?.appId ?? -1)"
           @edit="editDesign"
           @delete="confirmDelete"
           @open="openCanvas"
@@ -83,6 +84,7 @@
           @download-package="downloadPackage"
           @go-live="goLive"
           @copy="copyDesign"
+          @update-store-weight="updateStoreWeight"
         />
       </el-col>
     </el-row>
@@ -144,6 +146,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
+import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
 import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
@@ -188,6 +191,7 @@ const total = ref(0)
 const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
 const noDesignDialogVisible = ref(false)
+const storeWeightSavingAppIds = ref(new Set<number>())
 
 // 添加加载状态
 const loadingStates = ref<LoadingStates>({
@@ -518,6 +522,27 @@ const openCanvas = async (design: Design) => {
 const editDesign = (design: Design) => {
   if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
     editDesignDialog.value.show(design.designUid)
+  }
+}
+
+const updateStoreWeight = async (design: Design, storeWeight: number) => {
+  const appId = design.product?.appId
+  if (!isAdminUser.value || !appId || storeWeightSavingAppIds.value.has(appId)) return
+
+  storeWeightSavingAppIds.value.add(appId)
+  try {
+    const response = await productsApi.updateStoreWeight(appId, storeWeight)
+    if (response.code === 0 && response.data) {
+      design.product.storeWeight = response.data.storeWeight ?? storeWeight
+      messageStore.success(t('common.savedSuccessfully'))
+    } else {
+      messageStore.error(response.msg || t('common.saveFailed'))
+    }
+  } catch (error: any) {
+    console.error('[MyDesigns] update Store weight failed:', error)
+    messageStore.error(error?.response?.data?.msg || t('common.saveFailed'))
+  } finally {
+    storeWeightSavingAppIds.value.delete(appId)
   }
 }
 

@@ -78,6 +78,21 @@
        
         <div v-if="design.product?.appId">
            <span v-if="canManageAppDetails">{{ t('card.appId') }}: {{ design.product?.appId }}</span>
+           <div v-if="isAdminUser" class="store-weight-editor">
+             <span>{{ t('card.storeWeight') }}</span>
+             <el-input-number
+               v-model="storeWeightDraft"
+               :min="MIN_STORE_WEIGHT"
+               :max="MAX_STORE_WEIGHT"
+               :step="1"
+               :precision="0"
+               :disabled="storeWeightSaving"
+               size="small"
+               controls-position="right"
+               @blur="submitStoreWeight"
+               @keyup.enter="submitStoreWeight"
+             />
+           </div>
            <div class="app-ops-entry" :class="{ 'is-locked': !canViewAppOperations }">
             <div class="score-pill">
               <span class="score-label">{{ t('card.score') }}</span>
@@ -187,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
@@ -199,6 +214,12 @@ import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import { shouldShowBuildIqButton } from './designCardActions'
+import {
+  MAX_STORE_WEIGHT,
+  MIN_STORE_WEIGHT,
+  normalizeStoreWeight,
+  shouldSubmitStoreWeight,
+} from './designCardStoreWeight'
 
 interface LoadingStates {
   submit: Set<number>
@@ -224,6 +245,7 @@ const props = defineProps<{
   hasNewRelease: boolean
   hasDownloadablePackage: boolean
   showPackageDownload?: boolean
+  storeWeightSaving?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -236,6 +258,7 @@ const emit = defineEmits<{
   (e: 'submit', design: Design): void
   (e: 'download-package', design: Design): void
   (e: 'go-live', design: Design): void
+  (e: 'update-store-weight', design: Design, storeWeight: number): void
 }>()
 
 const { t } = useI18n()
@@ -260,6 +283,32 @@ const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 const showPackageDownload = computed(() => props.showPackageDownload !== false)
+const storeWeightSaving = computed(() => props.storeWeightSaving === true)
+const persistedStoreWeight = computed(() => normalizeStoreWeight(design.value.product?.storeWeight))
+const storeWeightDraft = ref(persistedStoreWeight.value)
+const pendingStoreWeight = ref<number | null>(null)
+
+watch(persistedStoreWeight, (value) => {
+  storeWeightDraft.value = value
+  pendingStoreWeight.value = null
+})
+
+watch(storeWeightSaving, (saving, wasSaving) => {
+  if (wasSaving && !saving) {
+    storeWeightDraft.value = persistedStoreWeight.value
+    pendingStoreWeight.value = null
+  }
+})
+
+const submitStoreWeight = () => {
+  if (storeWeightSaving.value) return
+  const nextValue = normalizeStoreWeight(storeWeightDraft.value)
+  storeWeightDraft.value = nextValue
+  if (!shouldSubmitStoreWeight(nextValue, persistedStoreWeight.value, pendingStoreWeight.value)) return
+
+  pendingStoreWeight.value = nextValue
+  emit('update-store-weight', design.value, nextValue)
+}
 const canEditCurrentDesign = computed(() => {
   return isAdminUser.value || currentUserId.value === 1 || design.value.user?.id === currentUserId.value
 })
@@ -535,6 +584,17 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 
 .app-ops-entry:not(:first-child) {
   margin-left: 20px;
+}
+
+.store-weight-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.store-weight-editor :deep(.el-input-number) {
+  width: 92px;
 }
 
 .build-log-file-link {
