@@ -2,22 +2,6 @@ import { VISUAL_THEME_COLOR_BINDINGS } from './visualThemeElementFields'
 import type { AnyElementConfig } from '@/types/elements'
 import type { PropertiesMap } from '@/types/properties'
 
-export interface MigratedColorBinding {
-  elementId: string
-  elementType: string
-  colorField: string
-  propertyField: string
-  propertyKey: string
-}
-
-export interface AmbiguousColorBinding {
-  elementId: string
-  elementType: string
-  colorField: string
-  propertyField: string
-  candidateKeys: string[]
-}
-
 export interface ExplicitColorBindingError {
   elementId: string
   elementType: string
@@ -25,12 +9,6 @@ export interface ExplicitColorBindingError {
   propertyField: string
   propertyKey: string
   reason: 'missing' | 'not-color'
-}
-
-export interface ColorBindingMigrationResult {
-  elements: AnyElementConfig[]
-  migratedBindings: MigratedColorBinding[]
-  ambiguousBindings: AmbiguousColorBinding[]
 }
 
 export const normalizeBindingColor = (value: unknown): string | null => {
@@ -65,51 +43,6 @@ export const collectExplicitColorBindings = (
       : String(value)
   }
   return bindings
-}
-
-export function migrateLegacyColorBindings(
-  inputElements: AnyElementConfig[],
-  properties: PropertiesMap,
-): ColorBindingMigrationResult {
-  const elements = structuredClone(inputElements)
-  const migratedBindings: MigratedColorBinding[] = []
-  const ambiguousBindings: AmbiguousColorBinding[] = []
-  const colorProperties = Object.entries(properties)
-    .filter(([, property]) => property.type === 'color')
-
-  for (const element of elements) {
-    const record = element as unknown as Record<string, unknown>
-    const elementId = String(record.id ?? '')
-    const elementType = String(record.eleType ?? '')
-    for (const [colorField, propertyField] of VISUAL_THEME_COLOR_BINDINGS) {
-      if (Object.prototype.hasOwnProperty.call(record, propertyField)) continue
-      const normalized = normalizeBindingColor(record[colorField])
-      if (!normalized) continue
-      const candidateKeys = colorProperties
-        .filter(([, property]) => normalizeBindingColor(property.value) === normalized)
-        .map(([key]) => key)
-      if (candidateKeys.length === 1) {
-        record[propertyField] = candidateKeys[0]
-        migratedBindings.push({
-          elementId,
-          elementType,
-          colorField,
-          propertyField,
-          propertyKey: candidateKeys[0],
-        })
-      } else if (candidateKeys.length > 1) {
-        ambiguousBindings.push({
-          elementId,
-          elementType,
-          colorField,
-          propertyField,
-          candidateKeys,
-        })
-      }
-    }
-  }
-
-  return { elements, migratedBindings, ambiguousBindings }
 }
 
 export function validateExplicitColorBindings(

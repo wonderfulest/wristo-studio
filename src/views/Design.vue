@@ -134,8 +134,7 @@ import {
   restoreDesignAssetBundle,
   WrtDesignPackageError,
 } from '@/engine/services/designAssetBundleService'
-import { migrateLegacyColorBindings } from '@/engine/services/explicitColorBindingService'
- 
+
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
 const route = useRoute()
@@ -975,25 +974,11 @@ const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation:
   if (config.properties) {
     propertiesStore.loadProperties(config.properties)
   }
-  const colorBindingMigration = migrateLegacyColorBindings(
-    config.elements as AnyElementConfig[],
-    propertiesStore.allProperties,
-  )
-  const runtimeElements = colorBindingMigration.elements
+  const runtimeElements = config.elements as AnyElementConfig[]
   visualThemeStore.syncColorProperties(
     propertiesStore.allProperties,
     runtimeElements as unknown as Array<Record<string, unknown>>,
   )
-  if (colorBindingMigration.migratedBindings.length > 0) {
-    messageStore.success(t('visualTheme.colorBindingsMigrated', {
-      count: colorBindingMigration.migratedBindings.length,
-    }))
-  }
-  if (colorBindingMigration.ambiguousBindings.length > 0) {
-    messageStore.warning(t('visualTheme.colorBindingsAmbiguous', {
-      count: colorBindingMigration.ambiguousBindings.length,
-    }))
-  }
 
   propertiesStore.textCase = 0
   propertiesStore.bitmapMode = true
