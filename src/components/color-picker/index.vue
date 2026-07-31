@@ -104,6 +104,8 @@ import emitter from '@/utils/eventBus.ts'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 import { toColorSelectionPayload } from './colorSelection'
+import { buildColorPropertyChoices } from './colorPropertyChoices'
+import { getColorPropertyValue } from '@/engine/services/colorPropertyValueService'
 import Rgb565ColorSpectrum from './Rgb565ColorSpectrum.vue'
 
 const { t } = useI18n()
@@ -238,14 +240,10 @@ const visibleColorMatrix = computed(() => (isGradientMode.value ? colorMatrix.fi
 
 // 计算属性：获取所有颜色属性
 const colorProperties = computed(() => {
-  return Object.entries(propertiesStore.properties || {})
-    .filter(([_, prop]) => prop.type === 'color')
-    .map(([key, prop]) => ({
-      name: prop.title,
-      hex: `#${prop.value.replace('0x', '')}`,
-      value: prop.value,
-      propertyKey: key
-    }))
+  return buildColorPropertyChoices(
+    propertiesStore.properties || {},
+    getColorPropertyValue,
+  )
 })
 const visibleColorProperties = computed(() => (isGradientMode.value ? colorProperties.value.filter((color) => normalizeOpaqueColor(color.hex)) : colorProperties.value))
 const boundColorProperty = computed(() => {

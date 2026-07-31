@@ -9,12 +9,18 @@ vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 const propertiesState = vi.hoisted(() => ({
   properties: {} as Record<string, { type: string; title: string; value: string }>,
 }))
+const resolvedColorValues = vi.hoisted(() => ({
+  values: {} as Record<string, string>,
+}))
 
 vi.mock('@/stores/properties', () => ({
   usePropertiesStore: () => ({
     properties: propertiesState.properties,
     setLastSelectedColor: vi.fn(),
   }),
+}))
+vi.mock('@/engine/services/colorPropertyValueService', () => ({
+  getColorPropertyValue: (key: string) => resolvedColorValues.values[key],
 }))
 
 import ColorPicker from './index.vue'
@@ -60,6 +66,12 @@ describe('ColorPicker RGB565 extension contract', () => {
     expect(source).toContain('updateGradientStop(activeGradientStop.value, color)')
     expect(source).toContain('selectColor({ hex: color, value: color })')
   })
+
+  it('builds variable choices with the shared current-theme resolver', () => {
+    expect(source).toContain('getColorPropertyValue')
+    expect(source).toContain('buildColorPropertyChoices')
+    expect(source).not.toContain("hex: `#${prop.value.replace('0x', '')}`")
+  })
 })
 
 describe('ColorPicker canvas colors contract', () => {
@@ -95,6 +107,26 @@ describe('ColorPicker canvas colors contract', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('change')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: null }]])
+    wrapper.unmount()
+  })
+})
+
+describe('ColorPicker current theme variable choices', () => {
+  it('displays and selects the resolved current-theme color', async () => {
+    propertiesState.properties = {
+      accentColor: { type: 'color', title: 'Accent Color', value: '0xFFFFFF' },
+    }
+    resolvedColorValues.values = { accentColor: '0x112233' }
+    const wrapper = mount(ColorPicker)
+
+    await wrapper.find('.color-input').trigger('click')
+    const choice = wrapper.find('.color-variable-item')
+
+    expect(choice.find('.color-hex').text()).toBe('#112233')
+    await choice.trigger('click')
+    expect(wrapper.emitted('property-change')).toEqual([[
+      { color: '#112233', propertyKey: 'accentColor' },
+    ]])
     wrapper.unmount()
   })
 })
