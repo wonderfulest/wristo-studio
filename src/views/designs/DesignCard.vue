@@ -42,6 +42,18 @@
                   <EditPen />
                 </el-icon>
               </el-button>
+              <el-button
+                v-if="isAdminUser && appId"
+                type="primary"
+                size="small"
+                link
+                @click="emit('transfer-owner', design)"
+                :title="t('card.transferOwner.action')"
+              >
+                <el-icon>
+                  <Switch />
+                </el-icon>
+              </el-button>
               <!-- 删除（仅管理员和自己的应用可见） -->
               <el-button
                 v-if="canDeleteDesign && canDeleteCurrentDesign && (isAdminUser || design.user.id === currentUserId)"
@@ -208,7 +220,7 @@ import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
 import type { Design } from '@/types/api/design'
 import type { ProductPackagingLogVo } from '@/types/api/product'
-import { Box, Delete, DocumentCopy, Download, Edit, EditPen, Upload } from '@element-plus/icons-vue'
+import { Box, Delete, DocumentCopy, Download, Edit, EditPen, Switch, Upload } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
@@ -258,6 +270,7 @@ const emit = defineEmits<{
   (e: 'submit', design: Design): void
   (e: 'download-package', design: Design): void
   (e: 'go-live', design: Design): void
+  (e: 'transfer-owner', design: Design): void
   (e: 'update-store-weight', design: Design, storeWeight: number): void
 }>()
 

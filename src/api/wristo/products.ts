@@ -68,6 +68,10 @@ export const productsApi = {
 
   updateStoreWeight(appId: number, storeWeight: number): Promise<ApiResponse<ProductVo>> {
     return instance.post(`/admin/products/store-display/${appId}`, { storeWeight })
+  },
+
+  transferOwner(appId: number, newUserId: number): Promise<ApiResponse<boolean>> {
+    return instance.post(`/admin/products/transfer-owner/${appId}/${newUserId}`)
   }
 }
 

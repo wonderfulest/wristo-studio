@@ -85,9 +85,41 @@
           @go-live="goLive"
           @copy="copyDesign"
           @update-store-weight="updateStoreWeight"
+          @transfer-owner="openTransferOwnerDialog"
         />
       </el-col>
     </el-row>
+
+    <el-dialog
+      v-model="transferDialogVisible"
+      :title="t('card.transferOwner.title')"
+      width="480px"
+      @closed="resetTransferOwnerDialog"
+    >
+      <div v-if="transferDesign" class="transfer-owner-summary">
+        <p>
+          {{ t('card.transferOwner.currentApp') }}:
+          <strong>{{ transferDesign.name }}</strong>
+          ({{ t('card.appId') }}: {{ transferDesign.product?.appId }})
+        </p>
+        <p>
+          {{ t('card.transferOwner.currentAuthor') }}:
+          {{ getCreatorName(transferDesign) }}
+        </p>
+      </div>
+      <DesignerSelect
+        v-model="transferTargetUserId"
+        :placeholder="t('card.transferOwner.placeholder')"
+      />
+      <template #footer>
+        <el-button :disabled="transferLoading" @click="transferDialogVisible = false">
+          {{ t('common.cancel') }}
+        </el-button>
+        <el-button type="primary" :loading="transferLoading" @click="confirmTransferOwner">
+          {{ t('card.transferOwner.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 分页组件 -->
     <div class="pagination-container">
@@ -154,6 +186,7 @@ import { useUserStore } from '@/stores/user'
 import { ApiResponse, PageResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
+import DesignerSelect from '@/components/users/DesignerSelect.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
@@ -192,6 +225,10 @@ const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
 const noDesignDialogVisible = ref(false)
 const storeWeightSavingAppIds = ref(new Set<number>())
+const transferDialogVisible = ref(false)
+const transferDesign = ref<Design | null>(null)
+const transferTargetUserId = ref<number | undefined>()
+const transferLoading = ref(false)
 
 // 添加加载状态
 const loadingStates = ref<LoadingStates>({
@@ -522,6 +559,61 @@ const openCanvas = async (design: Design) => {
 const editDesign = (design: Design) => {
   if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
     editDesignDialog.value.show(design.designUid)
+  }
+}
+
+const resetTransferOwnerDialog = () => {
+  if (transferLoading.value) return
+  transferDesign.value = null
+  transferTargetUserId.value = undefined
+}
+
+const openTransferOwnerDialog = (design: Design) => {
+  const appId = design.product?.appId
+  if (!isAdminUser.value || !appId) {
+    messageStore.error(t('card.transferOwner.unavailable'))
+    return
+  }
+
+  transferDesign.value = design
+  transferTargetUserId.value = undefined
+  transferDialogVisible.value = true
+}
+
+const confirmTransferOwner = async () => {
+  const design = transferDesign.value
+  const appId = design?.product?.appId
+  if (!isAdminUser.value || !appId) {
+    messageStore.error(t('card.transferOwner.unavailable'))
+    return
+  }
+  if (!transferTargetUserId.value) {
+    messageStore.warning(t('card.transferOwner.targetRequired'))
+    return
+  }
+  if (transferTargetUserId.value === design.user?.id) {
+    messageStore.warning(t('card.transferOwner.sameDesigner'))
+    return
+  }
+
+  transferLoading.value = true
+  try {
+    const response = await productsApi.transferOwner(appId, transferTargetUserId.value)
+    if (response.code !== 0) {
+      messageStore.error(response.msg || t('card.transferOwner.failed'))
+      return
+    }
+
+    messageStore.success(t('card.transferOwner.success'))
+    transferDialogVisible.value = false
+    transferDesign.value = null
+    transferTargetUserId.value = undefined
+    await fetchDesigns()
+  } catch (error: any) {
+    console.error('[MyDesigns] transfer product owner failed:', error)
+    messageStore.error(error?.msg || error?.response?.data?.msg || t('card.transferOwner.failed'))
+  } finally {
+    transferLoading.value = false
   }
 }
 
