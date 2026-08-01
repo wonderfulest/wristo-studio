@@ -272,11 +272,11 @@ describe('VisualThemeSettings', () => {
     expect(useVisualThemeStore().config).toBeUndefined()
   })
 
-  it('disables adding when the five-theme limit is reached', async () => {
+  it('disables adding and duplicating when the ten-theme limit is reached', async () => {
     const store = useVisualThemeStore()
     const fullConfig = config()
     fullConfig.themes.push(
-      ...['sport', 'classic', 'minimal'].map((id) => ({
+      ...['sport', 'classic', 'minimal', 'modern', 'outdoor', 'formal', 'neon', 'retro'].map((id) => ({
         ...structuredClone(fullConfig.themes[0]),
         id,
         name: id,
@@ -286,6 +286,7 @@ describe('VisualThemeSettings', () => {
 
     const wrapper = mountPanel()
     expect(wrapper.find('[data-theme-add]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-theme-duplicate]').attributes('disabled')).toBeDefined()
   })
 
   it('does not expose color ownership controls', () => {

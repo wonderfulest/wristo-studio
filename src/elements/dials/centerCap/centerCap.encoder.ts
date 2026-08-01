@@ -18,7 +18,7 @@ export function encodeCenterCap(element: FabricElement): CenterCapElementConfig 
   const anyEl = element as any
   const renderedWidth = (anyEl.width || 0) * (anyEl.scaleX || 1)
   const renderedHeight = (anyEl.height || 0) * (anyEl.scaleY || 1)
-  const targetSize = Math.max(renderedWidth, renderedHeight)
+  const targetSize = Math.round(Math.max(renderedWidth, renderedHeight))
 
   return {
     id: anyEl.id,

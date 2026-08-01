@@ -6,6 +6,7 @@ import {
 } from '@/engine/services/visualThemeService'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
+import { MAX_VISUAL_THEMES } from '@/types/visualTheme'
 import type {
   VisualTheme,
   VisualThemeAssetRef,
@@ -77,7 +78,7 @@ export const useVisualThemeStore = defineStore('visualTheme', {
 
     addTheme(name?: string, idFactory: VisualThemeIdFactory = createId): VisualTheme {
       const config = this.requireConfig()
-      if (config.themes.length >= 5) throw new Error('visualTheme.themeLimit')
+      if (config.themes.length >= MAX_VISUAL_THEMES) throw new Error('visualTheme.themeLimit')
       const resolvedName = name?.trim() || this.nextThemeName()
       this.assertName(resolvedName)
       const theme = emptyTheme(idFactory(), resolvedName)
@@ -93,7 +94,7 @@ export const useVisualThemeStore = defineStore('visualTheme', {
 
     duplicateTheme(themeId: string, idFactory: VisualThemeIdFactory = createId): VisualTheme {
       const config = this.requireConfig()
-      if (config.themes.length >= 5) throw new Error('visualTheme.themeLimit')
+      if (config.themes.length >= MAX_VISUAL_THEMES) throw new Error('visualTheme.themeLimit')
       const source = this.requireTheme(themeId)
       const name = this.nextCopyName(source.name)
       const duplicate = clone(source)

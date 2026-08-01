@@ -173,6 +173,21 @@ describe('visualThemeStore', () => {
     expect(duplicate.colors).not.toBe(added.colors)
   })
 
+  it('allows ten themes and rejects adding or duplicating an eleventh theme', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+
+    for (let index = 2; index <= 9; index += 1) {
+      store.addTheme(`Theme ${index}`, ids(`theme-${index}`))
+    }
+
+    expect(store.addTheme('Theme 10', ids('theme-10')).id).toBe('theme-10')
+    expect(() => store.addTheme('Theme 11', ids('theme-11')))
+      .toThrow('visualTheme.themeLimit')
+    expect(() => store.duplicateTheme(store.themes[0].id, ids('copy-11')))
+      .toThrow('visualTheme.themeLimit')
+  })
+
   it('renames, reorders, and rejects conflicting names', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)

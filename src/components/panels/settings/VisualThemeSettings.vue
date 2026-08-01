@@ -22,7 +22,7 @@
     />
     <template v-if="config">
       <div class="theme-toolbar">
-        <el-button data-theme-add size="small" type="primary" :disabled="themes.length >= 5" @click="addTheme">
+        <el-button data-theme-add size="small" type="primary" :disabled="themes.length >= MAX_VISUAL_THEMES" @click="addTheme">
           {{ t('visualTheme.add') }}
         </el-button>
         <span>{{ t('visualTheme.limitHint', { count: themes.length }) }}</span>
@@ -73,7 +73,7 @@
         <main v-if="selectedTheme" class="theme-editor">
           <div class="editor-actions">
             <el-button size="small" @click="renameTheme">{{ t('visualTheme.rename') }}</el-button>
-            <el-button size="small" :disabled="themes.length >= 5" @click="duplicateTheme">{{ t('visualTheme.duplicate') }}</el-button>
+            <el-button data-theme-duplicate size="small" :disabled="themes.length >= MAX_VISUAL_THEMES" @click="duplicateTheme">{{ t('visualTheme.duplicate') }}</el-button>
             <el-button size="small" :type="isPreview ? 'primary' : 'default'" @click="store.setPreviewTheme(selectedTheme.id)">
               {{ t('visualTheme.preview') }}
             </el-button>
@@ -122,6 +122,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { MAX_VISUAL_THEMES } from '@/types/visualTheme'
 import type { VisualThemeAssetSlot } from '@/types/visualTheme'
 
 const props = withDefaults(defineProps<{ dynamicRuleConflict?: boolean }>(), {

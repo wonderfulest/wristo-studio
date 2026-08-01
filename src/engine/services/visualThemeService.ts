@@ -1,5 +1,6 @@
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
+import { MAX_VISUAL_THEMES } from '@/types/visualTheme'
 import type {
   ThemeMode,
   VisualTheme,
@@ -178,8 +179,8 @@ export function validateVisualThemes(
     errors.push('Visual themes enabled must be a boolean.')
   }
 
-  if (themes.length < 1 || themes.length > 5) {
-    errors.push('Visual themes must contain between 1 and 5 themes.')
+  if (themes.length < 1 || themes.length > MAX_VISUAL_THEMES) {
+    errors.push(`Visual themes must contain between 1 and ${MAX_VISUAL_THEMES} themes.`)
   }
 
   const ids = themes.map((theme) => theme.id.trim())

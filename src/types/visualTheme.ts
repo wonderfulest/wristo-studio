@@ -1,5 +1,7 @@
 export type ThemeMode = 'theme' | 'user'
 
+export const MAX_VISUAL_THEMES = 10
+
 export type VisualThemeSelectionMode = 'user'
 
 export type VisualThemeAssetSlot =

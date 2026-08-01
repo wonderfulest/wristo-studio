@@ -329,23 +329,23 @@ describe('validateVisualThemes', () => {
     )
   })
 
-  it('accepts one through five valid themes', () => {
+  it('accepts one through ten valid themes', () => {
     expect(validateVisualThemes(createConfig([createTheme()]))).toEqual([])
-    const fiveThemes = Array.from({ length: 5 }, (_, index) =>
+    const tenThemes = Array.from({ length: 10 }, (_, index) =>
       createTheme({ id: `theme-${index}`, name: `Theme ${index}` }),
     )
-    expect(validateVisualThemes(createConfig(fiveThemes))).toEqual([])
+    expect(validateVisualThemes(createConfig(tenThemes))).toEqual([])
   })
 
-  it('rejects zero or more than five themes', () => {
+  it('rejects zero or more than ten themes', () => {
     expect(validateVisualThemes(createConfig([]))).toContain(
-      'Visual themes must contain between 1 and 5 themes.',
+      'Visual themes must contain between 1 and 10 themes.',
     )
-    const sixThemes = Array.from({ length: 6 }, (_, index) =>
+    const elevenThemes = Array.from({ length: 11 }, (_, index) =>
       createTheme({ id: `theme-${index}`, name: `Theme ${index}` }),
     )
-    expect(validateVisualThemes(createConfig(sixThemes))).toContain(
-      'Visual themes must contain between 1 and 5 themes.',
+    expect(validateVisualThemes(createConfig(elevenThemes))).toContain(
+      'Visual themes must contain between 1 and 10 themes.',
     )
   })
 
