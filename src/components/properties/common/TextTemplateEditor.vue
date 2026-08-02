@@ -77,7 +77,7 @@ const variableGroups = [
   },
   {
     title: 'Device',
-    items: ['battery', 'notifications', 'alarms'],
+    items: ['battery', 'batteryDays', 'notifications', 'alarms'],
   },
   {
     title: 'Environment',
@@ -98,6 +98,7 @@ const variableLabels: Record<string, string> = {
   heart: 'Heart',
   restingHeart: 'Rest HR',
   bodyBattery: 'Body Battery',
+  batteryDays: 'Battery Days',
   weatherDesc: 'Weather Description',
   temperatureHigh: 'High Temp',
   temperatureLow: 'Low Temp',

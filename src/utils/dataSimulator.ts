@@ -17,6 +17,7 @@ type SimState = {
   steps: number
   calories: number
   floors: number
+  floorsDescended: number
   distanceKm: number
   altitudeM: number
   temperatureC: number
@@ -25,6 +26,9 @@ type SimState = {
   temperatureLowC: number
   sensorTemperatureC: number
   battery: number
+  batteryDays: number
+  runningVo2Max: number
+  cyclingVo2Max: number
   notifications: number
   alarms: number
   humidity: number
@@ -43,6 +47,7 @@ const simState: SimState = {
   steps: 8432,
   calories: 1956,
   floors: 12,
+  floorsDescended: 8,
   distanceKm: 5.2,
   altitudeM: 328,
   temperatureC: 24,
@@ -51,6 +56,9 @@ const simState: SimState = {
   temperatureLowC: 18,
   sensorTemperatureC: 23,
   battery: 84,
+  batteryDays: 8.4,
+  runningVo2Max: 52,
+  cyclingVo2Max: 55,
   notifications: 5,
   alarms: 2,
   humidity: 48,
@@ -61,7 +69,7 @@ const simState: SimState = {
   aqi: 32,
   bodyBattery: 72,
   stress: 21,
-  sedentaryMinutes: 36,
+  sedentaryMinutes: 36
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -89,6 +97,7 @@ export function tickSimulatedData(): void {
   simState.hr = clamp(simState.hr + randInt(-2, 3), 55, 165)
   simState.calories = Math.max(0, simState.calories + randInt(0, 3))
   simState.floors = Math.max(0, simState.floors + (Math.random() < 0.02 ? 1 : 0))
+  simState.floorsDescended = Math.max(0, simState.floorsDescended + (Math.random() < 0.02 ? 1 : 0))
   simState.distanceKm = Math.max(0, simState.steps / 1600)
   simState.temperatureC = clamp(simState.temperatureC + randInt(-1, 1), -30, 50)
   simState.feelsLikeC = clamp(simState.temperatureC + 3, -30, 55)
@@ -97,6 +106,7 @@ export function tickSimulatedData(): void {
   simState.sensorTemperatureC = clamp(simState.temperatureC + randInt(-2, 2), -30, 50)
 
   simState.battery = clamp(simState.battery - (Math.random() < 0.01 ? 1 : 0), 0, 100)
+  simState.batteryDays = clamp(simState.battery / 10, 0, 10)
   simState.notifications = clamp(simState.notifications + (Math.random() < 0.05 ? 1 : 0), 0, 99)
   simState.alarms = clamp(simState.alarms + (Math.random() < 0.01 ? 1 : 0), 0, 20)
 
@@ -146,6 +156,13 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     // 楼层
     case 'floors':
       return { display: String(simState.floors), numeric: simState.floors, unit: 'floors', label: 'FLOORS' }
+    case 'floorsDescended':
+      return {
+        display: String(simState.floorsDescended),
+        numeric: simState.floorsDescended,
+        unit: 'floors',
+        label: 'FLOORS DOWN'
+      }
 
     // 距离
     case 'distance':
@@ -205,7 +222,7 @@ export function getSimulatedDataByName(name: string): SimulatedData {
       return {
         display: `${simState.temperatureLowC}-${simState.temperatureHighC}`,
         unit: '°C',
-        label: 'RANGE',
+        label: 'RANGE'
       }
     case 'sensorTemperature':
     case 'sensorTemp':
@@ -213,7 +230,7 @@ export function getSimulatedDataByName(name: string): SimulatedData {
         display: String(simState.sensorTemperatureC),
         numeric: simState.sensorTemperatureC,
         unit: '°C',
-        label: 'SENSOR_TEMP',
+        label: 'SENSOR_TEMP'
       }
 
     // 湿度
@@ -246,6 +263,29 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'bodyBattery':
     case 'bb':
       return { display: String(simState.bodyBattery), numeric: simState.bodyBattery, unit: '%', label: 'BODY' }
+
+    case 'batteryDays':
+    case 'batteryInDays':
+      return {
+        display: formatFloat(simState.batteryDays, 1),
+        numeric: simState.batteryDays,
+        unit: 'd',
+        label: 'BAT DAYS'
+      }
+    case 'runningVo2Max':
+      return {
+        display: String(simState.runningVo2Max),
+        numeric: simState.runningVo2Max,
+        unit: 'ml/kg/min',
+        label: 'RUN VO2'
+      }
+    case 'cyclingVo2Max':
+      return {
+        display: String(simState.cyclingVo2Max),
+        numeric: simState.cyclingVo2Max,
+        unit: 'ml/kg/min',
+        label: 'BIKE VO2'
+      }
     case 'stress':
       return { display: String(simState.stress), numeric: simState.stress, unit: '', label: 'STRESS' }
     case 'sedentary':
@@ -267,7 +307,7 @@ export function getSimulatedDataByName(name: string): SimulatedData {
       return {
         display: "Take care of your body. It's the only place you have to live.",
         unit: '',
-        label: 'QUOTE',
+        label: 'QUOTE'
       }
 
     // 睡眠时长（示例）

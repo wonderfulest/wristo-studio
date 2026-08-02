@@ -36,7 +36,9 @@ function formatDateValue(date: Date, formatter: number, textCase: number | undef
   if (isChineseDateFormatter(normalizedFormatter)) {
     return formatChineseCulturalDate(date, normalizedFormatter, runtimeLocale)
   }
-  const normalizedLocale = String(runtimeLocale || '').trim().toLowerCase()
+  const normalizedLocale = String(runtimeLocale || '')
+    .trim()
+    .toLowerCase()
   const isChineseLocale = normalizedLocale === 'zh' || normalizedLocale === 'zh-cn' || normalizedLocale === 'zh-tw'
   if (isChineseLocale && normalizedFormatter === DateFormatConstants.WEEKDAY_LONG) {
     return formatChineseCulturalDate(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
@@ -77,6 +79,12 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'steps'
     case ':FIELD_TYPE_BATTERY':
       return 'battery'
+    case ':FIELD_TYPE_BATTERY_IN_DAYS':
+      return 'batteryDays'
+    case ':FIELD_TYPE_VO2_MAX_RUNNING':
+      return 'runningVo2Max'
+    case ':FIELD_TYPE_VO2_MAX_CYCLING':
+      return 'cyclingVo2Max'
     case ':FIELD_TYPE_BODY_BATTERY':
       return 'bodyBattery'
     case ':FIELD_TYPE_STRESS':
@@ -88,6 +96,8 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'calories'
     case ':FIELD_TYPE_FLOORS_CLIMBED':
       return 'floors'
+    case ':FIELD_TYPE_FLOORS_DESCENDED':
+      return 'floorsDescended'
     case ':FIELD_TYPE_DISTANCE':
       return 'distance'
     case ':FIELD_TYPE_ALTITUDE':
@@ -131,12 +141,7 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
 }
 
 function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
-  return formatDataNumberDisplay(
-    data.display,
-    data.numeric,
-    (propertiesStore as any).dataNumberFormat,
-    (propertiesStore as any).maxFieldLength,
-  )
+  return formatDataNumberDisplay(data.display, data.numeric, (propertiesStore as any).dataNumberFormat, (propertiesStore as any).maxFieldLength)
 }
 
 function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
@@ -231,13 +236,11 @@ export class DataSimulatorEngine {
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
-          metricSymbol: obj.metricSymbol,
+          metricSymbol: obj.metricSymbol
         })
 
         const simKey = metricSymbolToSimKey(metric?.metricSymbol)
-        const rawValue = simKey
-          ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore)
-          : String(metric?.defaultValue ?? '')
+        const rawValue = simKey ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore) : String(metric?.defaultValue ?? '')
         const textCase = (propertiesStore as any).textCase
         const display = applyTextCase(String(rawValue), textCase)
 
@@ -253,7 +256,7 @@ export class DataSimulatorEngine {
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
-          metricSymbol: obj.metricSymbol,
+          metricSymbol: obj.metricSymbol
         })
         const textCase = (propertiesStore as any).textCase
         const display = applyTextCase(resolveMetricUnit(metric as any, designStore.supportsChineseContent ? 'zh' : 'en'), textCase)
@@ -270,7 +273,7 @@ export class DataSimulatorEngine {
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
-          metricSymbol: obj.metricSymbol,
+          metricSymbol: obj.metricSymbol
         })
 
         let nextText = resolveMetricLabel(metric as any, designStore.supportsChineseContent ? 'zh' : 'en')
@@ -321,7 +324,7 @@ export class DataSimulatorEngine {
         elementManager.updateElement(obj as any, {
           __simData: series.data,
           __simGoal: series.goal,
-          __simPointCount: series.pointCount,
+          __simPointCount: series.pointCount
         })
         changed = true
         return
@@ -333,7 +336,7 @@ export class DataSimulatorEngine {
         const series = getSimulatedBarChartSeries(metricSymbol || chartProperty)
         elementManager.updateElement(obj as any, {
           __simData: series.data,
-          __simPointCount: series.pointCount,
+          __simPointCount: series.pointCount
         })
         changed = true
         return
@@ -342,7 +345,7 @@ export class DataSimulatorEngine {
       if (eleType === 'zoneMetric') {
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
-          metricSymbol: obj.metricSymbol,
+          metricSymbol: obj.metricSymbol
         })
         const fallbackKey = obj.zonePreset === 'sedentary' ? 'sedentary' : 'hr'
         const simKey = metricSymbolToSimKey(metric?.metricSymbol) || fallbackKey

@@ -1,9 +1,5 @@
 <template>
-  <el-sub-menu
-    index="datafield"
-    popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-datafield-dropdown"
-    :popper-offset="8"
-  >
+  <el-sub-menu index="datafield" popper-class="app-menu-dropdown app-menu-rich-dropdown app-menu-datafield-dropdown" :popper-offset="8">
     <template #title>
       <el-icon><DataLine /></el-icon>
       <span>{{ t('editor.dataField') }}</span>
@@ -13,46 +9,32 @@
         <el-icon><DataLine /></el-icon>
         <span>{{ t('editor.dataField') }}</span>
       </div>
-      <el-menu-item
-        index="health/heart-rate"
-        @click="onAddDataField(':FIELD_TYPE_HEART_RATE')"
-      >
+      <el-menu-item index="health/heart-rate" @click="onAddDataField(':FIELD_TYPE_HEART_RATE')">
         <el-icon><Monitor /></el-icon>
         <span>{{ t('editor.heartRate') }}</span>
       </el-menu-item>
-      <el-menu-item
-        index="health/steps"
-        @click="onAddDataField(':FIELD_TYPE_STEPS')"
-      >
+      <el-menu-item index="health/steps" @click="onAddDataField(':FIELD_TYPE_STEPS')">
         <el-icon><TrendCharts /></el-icon>
         <span>{{ t('editor.steps') }}</span>
       </el-menu-item>
-      <el-menu-item
-        index="health/calories"
-        @click="onAddDataField(':FIELD_TYPE_CALORIES')"
-      >
+      <el-menu-item index="health/calories" @click="onAddDataField(':FIELD_TYPE_CALORIES')">
         <el-icon><Aim /></el-icon>
         <span>{{ t('editor.calories') }}</span>
       </el-menu-item>
-      <el-menu-item
-        index="health/distance"
-        @click="onAddDataField(':FIELD_TYPE_DISTANCE')"
-      >
+      <el-menu-item index="health/distance" @click="onAddDataField(':FIELD_TYPE_DISTANCE')">
         <el-icon><Aim /></el-icon>
         <span>{{ t('editor.distance') }}</span>
       </el-menu-item>
-      <el-menu-item
-        index="health/floors"
-        @click="onAddDataField(':FIELD_TYPE_FLOORS_CLIMBED')"
-      >
+      <el-menu-item index="health/floors-climbed" @click="onAddDataField(':FIELD_TYPE_FLOORS_CLIMBED')">
         <el-icon><TrendCharts /></el-icon>
-        <span>{{ t('editor.floors') }}</span>
+        <span>{{ t('editor.floorsClimbed') }}</span>
+      </el-menu-item>
+      <el-menu-item index="health/floors-descended" @click="onAddDataField(':FIELD_TYPE_FLOORS_DESCENDED')">
+        <el-icon><TrendCharts /></el-icon>
+        <span>{{ t('editor.floorsDescended') }}</span>
       </el-menu-item>
     </div>
-    <AppMenuGoalGroup
-      :on-add-progress-bar="onAddGoalProgressBar"
-      :on-add-progress-arc="onAddGoalArc"
-    />
+    <AppMenuGoalGroup :on-add-progress-bar="onAddGoalProgressBar" :on-add-progress-arc="onAddGoalArc" />
     <div class="menu-group menu-group--dial">
       <div class="menu-group-title">
         <el-icon><Odometer /></el-icon>
@@ -91,12 +73,7 @@ import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
 
-const emit = defineEmits([
-  'add-data-field',
-  'add-goal-progress-bar',
-  'add-goal-arc',
-  'add-element',
-])
+const emit = defineEmits(['add-data-field', 'add-goal-progress-bar', 'add-goal-arc', 'add-element'])
 
 const onAddDataField = (metricSymbol) => {
   emit('add-data-field', metricSymbol)
