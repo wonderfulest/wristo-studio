@@ -30,8 +30,9 @@
 
       <el-form-item :label="t('elementSettings.textColor')">
         <color-picker 
-          v-model="currentModel.fill" 
-          @change="updateElement" 
+          v-model="currentModel.fill"
+          :property-key="currentModel.fillProperty"
+          @property-change="handleColorSelection"
         />
       </el-form-item>
 
@@ -106,10 +107,18 @@ const updateElement = async () => {
     goalProperty: model.goalProperty,
     fontSize: model.fontSize,
     fill: model.fill,
+    fillProperty: model.fillProperty,
     fontFamily: model.fontFamily,
     originX: model.originX,
     left: model.left,
     top: model.top,
+  })
+}
+
+const handleColorSelection = async (selection: { color: string; propertyKey: string | null }) => {
+  await applyUpdate({
+    fill: selection.color,
+    fillProperty: selection.propertyKey,
   })
 }
 
