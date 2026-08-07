@@ -13,6 +13,13 @@
         inputmode="numeric"
         @keyup.enter="handleSearch"
       />
+      <DesignerSelect
+        v-if="isAdminUser"
+        :model-value="selectedCreatorUserId"
+        :placeholder="t('project.searchDesigner')"
+        class="designer-filter"
+        @update:model-value="handleCreatorChange"
+      />
       <el-select v-model="selectedStatus" :placeholder="t('project.status')" clearable class="status-filter" @change="handleStatusChange">
         <el-option :label="t('common.all')" value="" />
         <el-option :label="t('status.draft')" value="draft" />
@@ -249,6 +256,7 @@ type DesignSortOrder = 'asc' | 'desc'
 interface DesignSearchPreference {
   searchName: string
   searchAppId: string
+  selectedCreatorUserId?: number
   selectedStatus: DesignStatus | ''
   selectedLaunchStatus: LaunchStatus | ''
   sortField: DesignSortField
@@ -273,9 +281,15 @@ const isDesignSortOrder = (value: unknown): value is DesignSortOrder => {
   return value === 'asc' || value === 'desc'
 }
 
+const normalizeCreatorUserId = (value: unknown): number | undefined => {
+  const userId = Number(value)
+  return Number.isInteger(userId) && userId > 0 ? userId : undefined
+}
+
 const defaultDesignSearchPreference = (): DesignSearchPreference => ({
   searchName: '',
   searchAppId: '',
+  selectedCreatorUserId: undefined,
   selectedStatus: '',
   selectedLaunchStatus: '',
   sortField: 'updated_at',
@@ -294,6 +308,7 @@ const readDesignSearchPreference = (): DesignSearchPreference => {
     return {
       searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
       searchAppId: typeof parsed.searchAppId === 'string' ? parsed.searchAppId : defaults.searchAppId,
+      selectedCreatorUserId: normalizeCreatorUserId(parsed.selectedCreatorUserId),
       selectedStatus: isDesignStatusValue(parsed.selectedStatus) ? parsed.selectedStatus : defaults.selectedStatus,
       selectedLaunchStatus: isLaunchStatusValue(parsed.selectedLaunchStatus) ? parsed.selectedLaunchStatus : defaults.selectedLaunchStatus,
       sortField: isDesignSortField(parsed.sortField) ? parsed.sortField : defaults.sortField,
@@ -318,6 +333,7 @@ const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
 const initialDesignSearch = readDesignSearchPreference()
 const searchName = ref(initialDesignSearch.searchName)
 const searchAppId = ref(initialDesignSearch.searchAppId)
+const selectedCreatorUserId = ref<number | undefined>(initialDesignSearch.selectedCreatorUserId)
 const selectedStatus = ref<DesignStatus | ''>(initialDesignSearch.selectedStatus)
 const selectedLaunchStatus = ref<LaunchStatus | ''>(initialDesignSearch.selectedLaunchStatus)
 const sortField = ref<DesignSortField>(initialDesignSearch.sortField)
@@ -399,6 +415,12 @@ const handleStatusChange = () => {
   fetchDesigns()
 }
 
+const handleCreatorChange = (creatorUserId?: number) => {
+  selectedCreatorUserId.value = normalizeCreatorUserId(creatorUserId)
+  currentPage.value = 1
+  fetchDesigns()
+}
+
 const handleDesignScopeChange = () => {
   currentPage.value = 1
   writeDesignScopePreference(designScope.value)
@@ -409,6 +431,9 @@ const handleDesignScopeChange = () => {
 }
 
 watch(isAdminUser, (isAdmin) => {
+  if (!isAdmin) {
+    selectedCreatorUserId.value = undefined
+  }
   const nextScope = getPreferredDesignScope(isAdmin)
   if (designScope.value === nextScope) return
 
@@ -421,11 +446,12 @@ watch(isAdminUser, (isAdmin) => {
 })
 
 watch(
-  [searchName, searchAppId, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
+  [searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
   () => {
     writeDesignSearchPreference({
       searchName: searchName.value,
       searchAppId: searchAppId.value,
+      selectedCreatorUserId: selectedCreatorUserId.value,
       selectedStatus: selectedStatus.value,
       selectedLaunchStatus: selectedLaunchStatus.value,
       sortField: sortField.value,
@@ -487,6 +513,7 @@ const fetchDesigns = async () => {
       launchStatus: selectedLaunchStatus.value || undefined,
       name: searchName.value,
       appId: normalizePositiveAppId(searchAppId.value),
+      creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
       orderBy: `${sortField.value}:${sortOrder.value}`,
       scope: isAdminUser.value ? designScope.value : 'mine',
       populate: 'user,product,release,cover,package_log'
@@ -906,6 +933,10 @@ const handleGoLiveSuccess = () => {
   width: 160px;
 }
 
+.designer-filter {
+  width: 240px;
+}
+
 .status-filter {
   width: 180px;
 }
@@ -964,6 +995,7 @@ const handleGoLiveSuccess = () => {
 
   .name-filter,
   .app-id-filter,
+  .designer-filter,
   .sort-field-filter,
   .sort-order-filter,
   .scope-filter {

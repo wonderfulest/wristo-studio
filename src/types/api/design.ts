@@ -155,6 +155,7 @@ export interface DesignPageParams {
   launchStatus?: LaunchStatus
   name?: string
   appId?: number
+  creatorUserId?: number
   scope?: 'mine' | 'all'
   device?: string
 } 
