@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync(new URL('./Design.vue', import.meta.url), 'utf8')
+const source = readFileSync(new URL('./design/useDesignLoader.ts', import.meta.url), 'utf8')
 
 describe('Design visual theme hydration ordering', () => {
   it('projects the default theme before loading themes, properties, and elements', () => {
@@ -11,17 +11,13 @@ describe('Design visual theme hydration ordering', () => {
     const properties = source.indexOf('propertiesStore.loadProperties(loadConfig.properties)', applyStart)
     const elements = source.indexOf('const runtimeElements = loadConfig.elements as AnyElementConfig[]', applyStart)
 
-    expect(source).toContain(
-      "import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'",
-    )
+    expect(source).toContain("import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'")
     expect(projection).toBeGreaterThan(applyStart)
     expect(hydrate).toBeGreaterThan(projection)
     expect(properties).toBeGreaterThan(hydrate)
     expect(elements).toBeGreaterThan(properties)
     expect(source).toContain('loadConfig.visualThemes,')
-    expect(source).toContain(
-      'loadConfig.elements as unknown as Array<Record<string, unknown>>',
-    )
+    expect(source).toContain('loadConfig.elements as unknown as Array<Record<string, unknown>>')
   })
 
   it('hydrates only after the post-font generation guard', () => {
