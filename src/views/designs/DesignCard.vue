@@ -3,10 +3,8 @@
   <el-card class="design-card" shadow="hover">
     <template #header>
       <div class="card-header">
-        <!-- 标题单独一行 -->
         <div class="title-row">
           <span class="title">{{ design.name }}</span>
-          <!-- 状态小点 + Tooltip，不占据标题高度 -->
           <el-tooltip
             v-if="isMerchantUser || isAdminUser"
             :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
@@ -17,59 +15,6 @@
               :style="{ backgroundColor: statusColor }"
             />
           </el-tooltip>
-        </div>
-        <!-- 状态和操作按钮第二行 -->
-        <div class="status-actions-row">
-          
-          <div class="header-actions">
-            <el-button-group>
-              <!-- 复制设计 -->
-              <el-button
-                type="primary"
-                size="small"
-                link
-                @click="emit('copy', design)"
-                :loading="loadingStates.copy.has(design.id)"
-                :title="t('card.duplicate')"
-              >
-                <el-icon>
-                  <DocumentCopy />
-                </el-icon>
-              </el-button>
-              <!-- 编辑设计详情 -->
-              <el-button v-if="canManageAppDetails" type="primary" size="small" link @click="emit('edit', design)" :title="t('editDesign.title')">
-                <el-icon>
-                  <EditPen />
-                </el-icon>
-              </el-button>
-              <el-button
-                v-if="isAdminUser && appId"
-                type="primary"
-                size="small"
-                link
-                @click="emit('transfer-owner', design)"
-                :title="t('card.transferOwner.action')"
-              >
-                <el-icon>
-                  <Switch />
-                </el-icon>
-              </el-button>
-              <!-- 删除（仅管理员和自己的应用可见） -->
-              <el-button
-                v-if="canDeleteDesign && canDeleteCurrentDesign && (isAdminUser || design.user.id === currentUserId)"
-                class="delete-action"
-                type="danger"
-                size="small"
-                link
-                @click="emit('delete', design)"
-                :title="t('common.delete')"
-              >
-                <el-icon>
-                  <Delete />
-                </el-icon>
-              </el-button>
-            </el-button-group>
-          </div>
         </div>
       </div>
     </template>
@@ -176,28 +121,96 @@
           </div>
         </div>
       </div>
-      <div class="actions">
-        <el-button v-if="canEditCurrentDesign" type="default" size="small" @click="emit('open', design)">
+      <div class="actions-bar">
+        <el-button v-if="canEditCurrentDesign" class="primary-edit-action" type="default" size="small" @click="emit('open', design)">
           <el-icon><Edit /></el-icon>
           {{ t('card.edit') }}
         </el-button>
-        <el-button v-if="showBuildPrgButton" type="default" size="small" @click="emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
-          <el-icon><Box /></el-icon>
-          {{ t('card.buildPrg') }}
-        </el-button>
-        <el-button
-          v-if="showBuildIqButton"
-          type="info"
-          size="small"
-          @click="emit('submit', design)"
-          :loading="loadingStates.submit.has(design.id)">
-          <el-icon><Box /></el-icon>
-          {{ t('card.buildIq') }}
-        </el-button>
-        <el-button v-if="showPublishButton" type="info" size="small" @click="emit('go-live', design)">
-          <el-icon><Upload /></el-icon>
-          {{ t('card.publish') }}
-        </el-button>
+        <el-popover
+          v-model:visible="actionsExpanded"
+          placement="bottom-end"
+          trigger="click"
+          :teleported="true"
+          :width="actionsPopoverWidth"
+          popper-class="design-card-actions-popover"
+          @show="prepareActions"
+        >
+          <template #reference>
+            <button
+              class="actions-toggle"
+              type="button"
+              :aria-expanded="actionsExpanded"
+              :aria-controls="actionsPanelId"
+            >
+              <span>{{ t('card.actions') }}</span>
+              <el-icon class="actions-toggle-icon" :class="{ 'is-expanded': actionsExpanded }"><ArrowDown /></el-icon>
+            </button>
+          </template>
+          <div :id="actionsPanelId" class="actions-panel">
+            <div class="actions-panel-grid">
+            <section v-if="hasPreviewActions" class="action-group action-group-preview">
+              <div class="action-group-title">{{ t('card.previewActions') }}</div>
+              <div class="action-group-actions">
+                <el-button
+                  v-if="showPreviewPrgButton"
+                  size="small"
+                  @click="closeActions(); emit('preview-prg', design)"
+                  :loading="loadingStates.previewPrg.has(design.id)"
+                >
+                  <Icon icon="material-symbols:play-circle-outline-rounded" />
+                  {{ t('card.previewInSimulator') }}
+                </el-button>
+              </div>
+            </section>
+
+            <section v-if="hasBuildActions" class="action-group action-group-build">
+              <div class="action-group-title">{{ t('card.buildActions') }}</div>
+              <div class="action-group-actions">
+                <el-button v-if="showBuildPrgButton" size="small" @click="closeActions(); emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
+                  <el-icon><Box /></el-icon>
+                  {{ t('card.buildPrg') }}
+                </el-button>
+                <el-button v-if="showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
+                  <el-icon><Box /></el-icon>
+                  {{ t('card.buildIq') }}
+                </el-button>
+              </div>
+            </section>
+
+            <section v-if="hasReleaseActions" class="action-group action-group-release">
+              <div class="action-group-title">{{ t('card.releaseActions') }}</div>
+              <div class="action-group-actions">
+                <el-button v-if="showPublishButton" size="small" @click="closeActions(); emit('go-live', design)">
+                  <el-icon><Upload /></el-icon>
+                  {{ t('card.publish') }}
+                </el-button>
+              </div>
+            </section>
+
+            <section class="action-group action-group-manage">
+              <div class="action-group-title">{{ t('card.manageActions') }}</div>
+              <div class="action-group-actions">
+                <el-button size="small" @click="closeActions(); emit('copy', design)" :loading="loadingStates.copy.has(design.id)">
+                  <el-icon><DocumentCopy /></el-icon>
+                  {{ t('card.duplicate') }}
+                </el-button>
+                <el-button v-if="canManageAppDetails" size="small" @click="closeActions(); emit('edit', design)">
+                  <el-icon><EditPen /></el-icon>
+                  {{ t('editDesign.title') }}
+                </el-button>
+                <el-button v-if="isAdminUser && appId" size="small" @click="closeActions(); emit('transfer-owner', design)">
+                  <el-icon><Switch /></el-icon>
+                  {{ t('card.transferOwner.action') }}
+                </el-button>
+                <el-button v-if="canDeleteCurrentAction" class="delete-action" type="danger" plain size="small" @click="closeActions(); emit('delete', design)">
+                  <el-icon><Delete /></el-icon>
+                  {{ t('common.delete') }}
+                </el-button>
+              </div>
+            </section>
+            </div>
+          </div>
+        </el-popover>
       </div>
     </div>
   </el-card>
@@ -220,12 +233,12 @@ import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
 import type { Design } from '@/types/api/design'
 import type { ProductPackagingLogVo } from '@/types/api/product'
-import { Box, Delete, DocumentCopy, Download, Edit, EditPen, Switch, Upload } from '@element-plus/icons-vue'
+import { ArrowDown, Box, Delete, DocumentCopy, Download, Edit, EditPen, Switch, Upload } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
-import { shouldShowBuildIqButton } from './designCardActions'
+import { shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
 import {
   MAX_STORE_WEIGHT,
   MIN_STORE_WEIGHT,
@@ -239,6 +252,7 @@ interface LoadingStates {
   delete: Set<number>
   favorite: Set<number>
   prgBuild: Set<number>
+  previewPrg: Set<number>
 }
 
 const props = defineProps<{
@@ -257,6 +271,7 @@ const props = defineProps<{
   hasNewRelease: boolean
   hasDownloadablePackage: boolean
   showPackageDownload?: boolean
+  showPrgPreview?: boolean
   storeWeightSaving?: boolean
 }>()
 
@@ -266,6 +281,8 @@ const emit = defineEmits<{
   (e: 'open', design: Design): void
   (e: 'copy', design: Design): void
   (e: 'build-prg', design: Design): void
+  (e: 'prepare-preview-prg', design: Design): void
+  (e: 'preview-prg', design: Design): void
   (e: 'run-prg', design: Design): void
   (e: 'submit', design: Design): void
   (e: 'download-package', design: Design): void
@@ -285,6 +302,11 @@ const isAdminUser = computed(() => props.isAdminUser)
 const canManageAppDetails = computed(() => isMerchantUser.value || isAdminUser.value)
 const canDeleteDesign = computed(() => props.canDeleteDesign)
 const canDeleteCurrentDesign = computed(() => !design.value.product?.lastGoLive)
+const canDeleteCurrentAction = computed(() => {
+  return canDeleteDesign.value
+    && canDeleteCurrentDesign.value
+    && (isAdminUser.value || design.value.user?.id === currentUserId.value)
+})
 const showCreator = computed(() => props.showCreator)
 const loadingStates = computed(() => props.loadingStates)
 const currentUserId = computed(() => props.currentUserId)
@@ -296,6 +318,7 @@ const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 const showPackageDownload = computed(() => props.showPackageDownload !== false)
+const showPrgPreview = computed(() => props.showPrgPreview !== false)
 const storeWeightSaving = computed(() => props.storeWeightSaving === true)
 const persistedStoreWeight = computed(() => normalizeStoreWeight(design.value.product?.storeWeight))
 const storeWeightDraft = ref(persistedStoreWeight.value)
@@ -332,6 +355,17 @@ const appId = computed(() => {
 })
 
 const operationsDrawerVisible = ref(false)
+const actionsExpanded = ref(false)
+const actionsPanelId = computed(() => `design-actions-${design.value.id}`)
+const actionsPopoverWidth = 'min(420px, calc(100vw - 24px))'
+const closeActions = () => {
+  actionsExpanded.value = false
+}
+const prepareActions = () => {
+  if (showPreviewPrgButton.value) {
+    emit('prepare-preview-prg', design.value)
+  }
+}
 const hasMonthlyOrAnnualMembership = computed(() => {
   const membership = userStore.studioMembership
   const level = String(membership?.level || '').trim().toLowerCase()
@@ -407,10 +441,17 @@ const showBuildIqButton = computed(() => {
   return shouldShowBuildIqButton(design.value.product)
 })
 
+const showPreviewPrgButton = computed(() => {
+  return showPrgPreview.value && shouldShowPreviewPrgButton(design.value.product)
+})
+
 const showPublishButton = computed(() => {
   const product = design.value.product
   return !!product?.release
 })
+const hasPreviewActions = computed(() => showPreviewPrgButton.value)
+const hasBuildActions = computed(() => showBuildPrgButton.value || showBuildIqButton.value)
+const hasReleaseActions = computed(() => showPublishButton.value)
 
 const lastPackageTimeText = computed(() => {
   const updatedAt = (design.value.product as any)?.release?.updatedAt as string | number | undefined
@@ -551,10 +592,6 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 }
 
 .card-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  column-gap: 8px;
   padding: 0 4px;
   position: relative;
 }
@@ -564,8 +601,6 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  grid-column: 1;
-  grid-row: 1 / span 2; /* 占两行高度 */
 }
 
 .title {
@@ -578,15 +613,6 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.status-actions-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  grid-column: 2;
-  grid-row: 1; /* 位于右上角 */
 }
 
 .app-ops-entry {
@@ -928,80 +954,148 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   }
 }
 
-.actions {
+.actions-bar {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 0;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-.actions .el-button {
-  font-size: 11px;
-  padding: 0 8px;
+.actions-bar :deep(.el-button) {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
   margin: 0;
-  flex: 0 0 auto;
-  min-width: 60px;
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  column-gap: 4px;
-}
-
-/* Actions button layout: equal width, up to 3 per row, left aligned */
-.design-info .actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-start;
-}
-
-.design-info .actions .el-button {
-  flex: 0 0 calc((100% - 12px) / 3);
-  box-sizing: border-box;
-}
-
-.header-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.header-actions .el-button-group {
-  display: flex;
-  gap: 2px;
-}
-
-.header-actions .el-button {
-  width: 30px;
-  height: 30px;
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 700;
   border-radius: var(--studio-radius-md);
 }
 
-.header-actions .el-button:hover {
-  background-color: var(--studio-primary-soft);
+.primary-edit-action {
+  color: var(--studio-text);
+  background: var(--studio-surface);
+  border-color: var(--studio-border);
 }
 
-.header-actions .el-button.el-button--primary.is-link {
-  color: var(--el-text-color-regular);
+.actions-toggle {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--studio-text);
+  background: var(--studio-surface-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
-.header-actions .el-button.el-button--primary.is-link:hover {
-  color: var(--el-color-primary);
+.actions-bar :deep(.el-popover__reference-wrapper) {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-.header-actions .el-button.el-button--danger.is-link {
-  color: var(--el-text-color-regular);
+.actions-toggle:hover,
+.actions-toggle[aria-expanded='true'] {
+  color: var(--studio-primary);
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
 }
 
-.header-actions .el-button.el-button--danger.is-link:hover {
-  color: var(--el-color-danger);
+.actions-toggle-icon {
+  flex: 0 0 auto;
+  transition: transform 0.18s ease;
 }
 
-@media screen and (max-width: 768px) {
-  .header-actions .el-button {
-    padding: 2px 6px;
+.actions-toggle-icon.is-expanded {
+  transform: rotate(180deg);
+}
+
+.actions-panel {
+  min-width: 0;
+  padding: 2px;
+}
+
+.actions-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+  align-items: start;
+  gap: 10px;
+}
+
+.action-group,
+.action-group-actions,
+.action-group-actions :deep(.el-button) {
+  width: 100%;
+  min-width: 0;
+}
+
+.action-group {
+  padding: 9px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface);
+}
+
+.action-group-title {
+  margin-bottom: 7px;
+  color: var(--studio-text-subtle);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.action-group-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.action-group-actions :deep(.el-button) {
+  height: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 8px;
+  justify-content: flex-start;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.action-group-actions :deep(.el-button > span) {
+  min-width: 0;
+  white-space: normal;
+}
+
+.action-group-actions :deep(.el-button .el-icon),
+.action-group-actions :deep(.el-button svg) {
+  flex: 0 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions-toggle,
+  .actions-toggle-icon {
+    transition: none;
   }
+}
+
+:global(.design-card-actions-popover.el-popover) {
+  max-width: calc(100vw - 24px);
+  padding: 10px;
+  border-color: var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  background: var(--studio-surface-soft);
+  box-shadow: var(--studio-shadow-lg);
 }
 </style>

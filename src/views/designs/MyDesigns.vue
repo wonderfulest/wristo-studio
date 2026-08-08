@@ -81,11 +81,14 @@
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
           :show-package-download="true"
+          :show-prg-preview="true"
           :store-weight-saving="storeWeightSavingAppIds.has(design.product?.appId ?? -1)"
           @edit="editDesign"
           @delete="confirmDelete"
           @open="openCanvas"
           @build-prg="buildPrg"
+          @prepare-preview-prg="preparePreviewPrg"
+          @preview-prg="previewPrg"
           @run-prg="runPrg"
           @submit="submitDesign"
           @download-package="downloadPackage"
@@ -202,6 +205,10 @@ import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { downloadPackageFile } from '@/utils/packageDownload'
+import {
+  buildLauncherDeepLink,
+  createLauncherTicketCache,
+} from '@/api/wristo/launcher'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
 const editDesignDialog = ref<any>(null)
@@ -221,6 +228,7 @@ interface LoadingStates {
   delete: Set<number>
   favorite: Set<number>
   prgBuild: Set<number>
+  previewPrg: Set<number>
 }
 
 const designs = ref<Design[]>([])
@@ -243,7 +251,8 @@ const loadingStates = ref<LoadingStates>({
   copy: new Set<number>(),
   delete: new Set<number>(),
   favorite: new Set<number>(),
-  prgBuild: new Set<number>()
+  prgBuild: new Set<number>(),
+  previewPrg: new Set<number>()
 })
 
 // plain loading states object for child components
@@ -785,6 +794,46 @@ const runPrg = async (design: Design) => {
   } else {
     messageStore.error(t('project.prgUnavailable'))
   }
+}
+
+const launcherTicketCache = createLauncherTicketCache()
+
+const preparePreviewPrg = async (design: Design) => {
+  const releaseId = design.product?.prgRelease?.id
+  if (!releaseId || loadingStates.value.previewPrg.has(design.id)) return
+
+  loadingStates.value.previewPrg.add(design.id)
+  try {
+    await launcherTicketCache.prepare(releaseId)
+  } catch (error) {
+    console.error('Failed to prepare simulator preview:', error)
+    messageStore.error(t('project.launcherPreviewFailed'))
+  } finally {
+    loadingStates.value.previewPrg.delete(design.id)
+  }
+}
+
+const previewPrg = (design: Design) => {
+  if (loadingStates.value.previewPrg.has(design.id)) return
+
+  const releaseId = design.product?.prgRelease?.id
+  const prgUrl = design.product?.prgRelease?.prgUrl
+  if (!releaseId || !prgUrl) {
+    messageStore.error(t('project.prgUnavailable'))
+    return
+  }
+
+  const ticket = launcherTicketCache.take(releaseId)
+  if (!ticket) {
+    void preparePreviewPrg(design)
+    messageStore.error(t('project.launcherPreviewFailed'))
+    return
+  }
+
+  void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg')
+  window.location.href = buildLauncherDeepLink(ticket)
+  messageStore.info(t('project.launcherOpening'))
+  messageStore.info(t('project.launcherInstallHint'), 8000)
 }
 
 // 检查是否有可下载的安装包

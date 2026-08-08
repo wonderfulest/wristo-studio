@@ -1,0 +1,73 @@
+<style>
+  .comparison-grid { display:grid; grid-template-columns:repeat(3,minmax(260px,1fr)); gap:18px; margin-top:20px; }
+  .concept { border:1px solid #dfe4eb; border-radius:18px; padding:16px; background:#f7f8fa; cursor:pointer; transition:.2s; }
+  .concept:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(24,34,48,.1); }
+  .watch-card { overflow:hidden; border-radius:15px; background:#fff; border:1px solid #e5e8ed; box-shadow:0 8px 24px rgba(21,31,44,.08); }
+  .wc-head { display:flex; align-items:center; gap:8px; padding:12px 13px; border-bottom:1px solid #edf0f3; }
+  .wc-title { min-width:0; flex:1; font-weight:750; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1d2734; }
+  .status { width:8px;height:8px;border-radius:50%;background:#24b26b; }
+  .icon-btn { border:1px solid #dce2e8; background:#fff; border-radius:9px; height:30px; min-width:30px; color:#445160; }
+  .preview { height:145px; display:grid; place-items:center; background:linear-gradient(145deg,#eef1f5,#dfe5eb); }
+  .dial { width:100px;height:100px;border-radius:50%;background:#15191f;box-shadow:0 8px 20px rgba(0,0,0,.25);color:#f6e5bd;display:grid;place-items:center;font:700 25px Georgia; }
+  .meta { padding:12px 13px; display:grid; gap:7px; color:#697584; font-size:12px; }
+  .build-row { padding:9px 11px; border-radius:10px; background:#f3f6f8; display:flex; justify-content:space-between; color:#405063; }
+  .footer { display:flex; align-items:center; gap:7px; padding:11px 13px 13px; }
+  .primary { border:0; border-radius:10px; padding:9px 13px; background:#222d3b;color:#fff;font-weight:650; }
+  .secondary { border:1px solid #d9e0e7;border-radius:10px;padding:8px 11px;background:#fff;color:#344252; }
+  .more { margin-left:auto;border:1px solid #d9e0e7;border-radius:10px;padding:8px 11px;background:#fff;color:#344252; }
+  .menu { margin:0 12px 12px; padding:8px; border:1px solid #dfe4e9; border-radius:12px; background:#fff; box-shadow:0 12px 26px rgba(24,34,48,.13); }
+  .menu-label { padding:6px 8px 4px; font-size:10px; letter-spacing:.1em; color:#929baa; font-weight:800; }
+  .menu-item { display:flex;justify-content:space-between; padding:8px;border-radius:8px;color:#354252;font-size:12px; }
+  .menu-item.danger { color:#c84949; }
+  .popover { position:relative; }
+  .popover .menu { position:absolute; z-index:2; right:8px; bottom:48px; width:170px; margin:0; }
+  .sheet { margin:0 10px 10px; border-radius:14px; padding:9px; background:#1d2734; color:white; }
+  .sheet-grid { display:grid;grid-template-columns:1fr 1fr;gap:7px; }
+  .sheet-item { padding:9px;border-radius:9px;background:rgba(255,255,255,.08);font-size:11px; }
+  .concept h3 { margin:14px 2px 4px; }
+  .concept p { margin:0 2px;color:#687484;font-size:13px;line-height:1.45; }
+  @media(max-width:1000px){.comparison-grid{grid-template-columns:1fr}.concept{max-width:520px}}
+</style>
+
+<h2>设计卡片的操作应该怎样收纳？</h2>
+<p class="subtitle">三种方案都保留现有事件与权限判断。重点比较：主操作是否醒目、低频操作是否清晰、窄屏是否永远可触达。</p>
+
+<div class="comparison-grid">
+  <div class="concept" data-choice="a" onclick="toggleSelect(this)">
+    <div class="watch-card">
+      <div class="wc-head"><span class="status"></span><span class="wc-title">Midnight Chronograph</span><button class="icon-btn">•••</button></div>
+      <div class="preview"><div class="dial">10:09</div></div>
+      <div class="meta"><span>App ID 165591 · Updated Aug 08</span><div class="build-row"><span>PRG ready</span><span>Download ↗</span></div><div class="build-row"><span>IQ ready</span><span>Build log ↗</span></div></div>
+      <div class="footer"><button class="primary">Edit design</button><button class="secondary">Preview</button><button class="more">More ▾</button></div>
+      <div class="menu"><div class="menu-label">BUILD & RELEASE</div><div class="menu-item"><span>Build PRG</span><span>⌘B</span></div><div class="menu-item"><span>Build IQ</span></div><div class="menu-item"><span>Publish</span></div><div class="menu-label">MANAGE</div><div class="menu-item"><span>Duplicate</span></div><div class="menu-item"><span>Edit details</span></div><div class="menu-item danger"><span>Delete</span></div></div>
+    </div>
+    <h3>A · 分层操作菜单（推荐）</h3>
+    <p>卡片固定保留 Edit、Preview 和 More。弹出菜单按 Build & Release / Manage 分组；窄屏底部按钮自动换为 Edit + More。</p>
+  </div>
+
+  <div class="concept" data-choice="b" onclick="toggleSelect(this)">
+    <div class="watch-card popover">
+      <div class="wc-head"><span class="status"></span><span class="wc-title">Midnight Chronograph</span><button class="icon-btn">•••</button></div>
+      <div class="preview"><div class="dial">10:09</div></div>
+      <div class="meta"><span>App ID 165591 · Updated Aug 08</span><div class="build-row"><span>PRG ready</span><span>Download ↗</span></div><div class="build-row"><span>IQ ready</span><span>Build log ↗</span></div></div>
+      <div class="menu"><div class="menu-label">DESIGN</div><div class="menu-item"><span>Edit design</span></div><div class="menu-item"><span>Edit details</span></div><div class="menu-label">DELIVER</div><div class="menu-item"><span>Preview simulator</span></div><div class="menu-item"><span>Build packages</span></div><div class="menu-item"><span>Publish</span></div></div>
+      <div class="footer"><button class="primary">Open design</button><button class="more">Actions ▾</button></div>
+    </div>
+    <h3>B · 极简双入口</h3>
+    <p>卡片只显示 Open design 和 Actions，最整洁、最适合小屏，但 Preview / Build 等常用动作会多一次点击。</p>
+  </div>
+
+  <div class="concept" data-choice="c" onclick="toggleSelect(this)">
+    <div class="watch-card">
+      <div class="wc-head"><span class="status"></span><span class="wc-title">Midnight Chronograph</span><button class="icon-btn">•••</button></div>
+      <div class="preview"><div class="dial">10:09</div></div>
+      <div class="meta"><span>App ID 165591 · Updated Aug 08</span><div class="build-row"><span>PRG ready</span><span>Download ↗</span></div><div class="build-row"><span>IQ ready</span><span>Build log ↗</span></div></div>
+      <div class="footer"><button class="primary">Edit design</button><button class="more">Actions ↑</button></div>
+      <div class="sheet"><div class="menu-label">AVAILABLE ACTIONS</div><div class="sheet-grid"><div class="sheet-item">▶ Preview</div><div class="sheet-item">□ Build PRG</div><div class="sheet-item">□ Build IQ</div><div class="sheet-item">↑ Publish</div><div class="sheet-item">⧉ Duplicate</div><div class="sheet-item">✎ Details</div></div></div>
+    </div>
+    <h3>C · 卡片内操作面板</h3>
+    <p>点击 Actions 后在卡片内部展开分组网格，手机触控友好；代价是展开时会改变卡片高度并推动后续卡片。</p>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:18px">点击一个方案进行选择，然后回到对话告诉我你的偏好；也可以说想混合哪些部分。</p>

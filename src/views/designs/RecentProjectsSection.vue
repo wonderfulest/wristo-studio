@@ -52,6 +52,7 @@
           :has-new-release="hasNewRelease(design)"
           :has-downloadable-package="hasDownloadablePackage(design)"
           :show-package-download="false"
+          :show-prg-preview="false"
           @open="emit('open', design)"
           @delete="emit('delete', design)"
         />
@@ -107,6 +108,7 @@ interface LoadingStates {
   delete: Set<number>
   favorite: Set<number>
   prgBuild: Set<number>
+  previewPrg: Set<number>
 }
 
 const loadingStates = computed<LoadingStates>(() => ({
@@ -115,6 +117,7 @@ const loadingStates = computed<LoadingStates>(() => ({
   delete: new Set<number>(),
   favorite: new Set<number>(),
   prgBuild: new Set<number>(),
+  previewPrg: new Set<number>(),
 }))
 
 const loadingStatesPlain = computed(() => loadingStates.value)
