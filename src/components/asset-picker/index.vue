@@ -18,7 +18,7 @@
       </span>
     </button>
     <input
-      ref="uploadInput"
+      :ref="setUploadInput"
       type="file"
       :accept="uploadAccept"
       multiple
@@ -255,31 +255,24 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, PropType, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus, Loading, Star, StarFilled, Delete, Edit, Download } from '@element-plus/icons-vue'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetVO, AnalogAssetType } from '@/types/api/analog-asset'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useUserStore } from '@/stores/user'
-import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useI18n } from '@/i18n'
-import { ensureSvgFileHasIntrinsicSize, isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
 import emitter from '@/utils/eventBus'
 import { isEditableSvgAssetSource } from './assetEditability'
-
-type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
-
-interface UploadQueueItem {
-  id: string
-  file: File
-  status: UploadQueueStatus
-}
+import { useAssetDrawerResize } from './useAssetDrawerResize'
+import { useAssetLibrary } from './useAssetLibrary'
+import { useAssetBatchManagement } from './useAssetBatchManagement'
+import { useAssetUploadQueue } from './useAssetUploadQueue'
 
 const { t } = useI18n()
 const analogAssetStore = useAnalogAssetStore()
 const userStore = useUserStore()
-const editorLayoutStore = useEditorLayoutStore()
 
 const props = defineProps({
   /** 当前选中的URL */
@@ -309,59 +302,108 @@ const props = defineProps({
   }
 })
 
-const uploadInput = ref<HTMLInputElement | null>(null)
-const assets = ref<AnalogAssetVO[]>([])
-const loading = ref(false)
-const uploading = ref(false)
-const hasMore = ref(true)
-const pageNum = ref(1)
-const pageSize = 48
-const assetScope = ref<'mine' | 'all'>('mine')
-const deletingIds = ref<Set<number>>(new Set())
-const batchDeleting = ref(false)
-const batchManageMode = ref(false)
-const selectedAssetIds = ref<number[]>([])
-const lastBatchSelectedAssetId = ref<number | null>(null)
-const deleteProgressDone = ref(0)
-const deleteProgressTotal = ref(0)
 const assetDialogVisible = ref(false)
 const settingsPopupId = `asset-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
-const assetDrawerResizeStartX = ref(0)
-const assetDrawerResizeStartWidth = ref(430)
-const assetDrawerResizing = ref(false)
 const uploadPanelVisible = ref(false)
-const uploadQueue = ref<UploadQueueItem[]>([])
-const uploadSummaryMessage = ref('')
-const uploadSummaryTone = ref<'success' | 'warning' | 'danger'>('success')
 const hoverPreviewAsset = ref<AnalogAssetVO | null>(null)
 const hoverPreviewStyle = ref<Record<string, string>>({})
-const dragOver = ref(false)
 const svgEditorVisible = ref(false)
 const svgSaving = ref(false)
 const editingSvgAsset = ref<AnalogAssetVO | null>(null)
 const editingSvgText = ref('')
-const favoritingAssetIds = ref<Set<number>>(new Set())
 
 const canViewAllAssets = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 const assetScopeOptions = computed(() => [
   { label: t('asset.scopeMine'), value: 'mine' },
   { label: t('asset.scopeAll'), value: 'all' },
 ])
-const removableAssets = computed(() => assets.value.filter((asset) => canRemoveAsset(asset)))
+const {
+  assets,
+  loading,
+  hasMore,
+  assetScope,
+  sortedAssets,
+  getAssetUrl,
+  getOriginalAssetUrl,
+  prependAsset,
+  removeAssets: removeAssetsFromLibrary,
+  loadAssets,
+  loadMore,
+  handleGridScroll: handleAssetGridScroll,
+  refresh,
+  isFavoriteAsset,
+  isFavoritingAsset,
+  toggleFavoriteAsset,
+  downloadAsset: handleDownloadAsset,
+} = useAssetLibrary({
+  assetType: () => props.assetType,
+  canViewAll: () => canViewAllAssets.value,
+  translate: t,
+})
+const {
+  batchDeleting,
+  batchManageMode,
+  selectedAssetIds,
+  deleteProgressDone,
+  deleteProgressTotal,
+  deleteProgressPercent,
+  removableAssets,
+  canRemoveAsset,
+  isDeletingAsset,
+  isBatchSelected,
+  clearSelection: clearBatchSelection,
+  toggleManageMode: toggleBatchManageMode,
+  handleSelectionClick: handleBatchSelectionClick,
+  selectAllLoaded: selectAllLoadedAssets,
+  handleRemove,
+  handleBatchRemove,
+} = useAssetBatchManagement({
+  sortedAssets,
+  isAdmin: () => userStore.isAdminUser,
+  currentUserId: () => userStore.userInfo?.id,
+  remove: analogAssetApi.remove,
+  removeAssets: removeAssetsFromLibrary,
+  translate: t,
+})
 const canManageAssets = computed(() => userStore.isAdminUser || removableAssets.value.length > 0)
-const assetDrawerSize = computed(() => `${editorLayoutStore.getWidth('assetLibraryDrawer')}px`)
-const sortedAssets = computed(() => {
-  return [...assets.value].sort((a, b) => {
-    const aFavoriteWeight = Number(a.favoriteWeight || 0)
-    const bFavoriteWeight = Number(b.favoriteWeight || 0)
-    if (aFavoriteWeight !== bFavoriteWeight) return bFavoriteWeight - aFavoriteWeight
-    return 0
-  })
+const {
+  uploading,
+  uploadQueue,
+  uploadSummaryMessage,
+  uploadSummaryTone,
+  dragOver,
+  uploadAccept,
+  completedUploadCount,
+  uploadStatusLabel,
+  uploadFile,
+  triggerUpload,
+  setUploadInput,
+  handleUpload,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+} = useAssetUploadQueue({
+  assetType: () => props.assetType,
+  getAssetUrl,
+  onAssetUploaded: (asset, url) => {
+    prependAsset(asset)
+    analogAssetStore.prependAsset(asset)
+    props.onUpload(url, asset)
+  },
+  onOpenQueue: () => {
+    emitter.emit('settings-popup-open', settingsPopupId)
+    assetDialogVisible.value = true
+    uploadPanelVisible.value = true
+  },
+  translate: t,
 })
-const deleteProgressPercent = computed(() => {
-  if (!deleteProgressTotal.value) return 0
-  return Math.round((deleteProgressDone.value / deleteProgressTotal.value) * 100)
-})
+const {
+  drawerSize: assetDrawerSize,
+  normalizeWidth: normalizeAssetDrawerWidth,
+  startResize: startAssetDrawerResize,
+  dispose: disposeAssetDrawerResize,
+} = useAssetDrawerResize()
 
 const hoverPreviewUrl = computed(() => {
   if (!hoverPreviewAsset.value) return undefined
@@ -377,49 +419,12 @@ const currentPreviewUrl = computed(() => {
   return props.selectedUrl || ''
 })
 
-const completedUploadCount = computed(() =>
-  uploadQueue.value.filter((item) => item.status === 'success' || item.status === 'failed').length
-)
-
-const uploadAccept = computed(() => {
-  if (props.assetType === 'image') return '.svg,.png,.jpg,.jpeg,.webp'
-  if (isHandAssetType(props.assetType)) return '.svg,.png'
-  return '.svg'
-})
-
-const isAllowedUploadFile = (file: File): boolean => isAllowedAnalogAssetFile(file, props.assetType)
-
-const getUploadFileTypeMessage = (): string => {
-  if (props.assetType === 'image') return t('asset.imageOnly')
-  if (isHandAssetType(props.assetType)) return t('asset.handSvgPngOnly')
-  return t('asset.svgOnly')
-}
-
-const isUploadFileAccepted = async (file: File, showMessage = false): Promise<boolean> => {
-  if (!isAllowedUploadFile(file)) {
-    if (showMessage) {
-      ElMessage.warning(getUploadFileTypeMessage())
-    }
-    return false
-  }
-
-  if (await svgFileContainsRasterImage(file)) {
-    if (showMessage) ElMessage.warning(t('asset.svgVectorOnly'))
-    return false
-  }
-
-  return true
-}
-
 const isEditableSvgAsset = (asset: AnalogAssetVO): boolean =>
   isEditableSvgAssetSource(props.assetType, asset.file?.url, asset.file?.name)
 
 const openAssetDialog = () => {
   emitter.emit('settings-popup-open', settingsPopupId)
-  editorLayoutStore.setWidth(
-    'assetLibraryDrawer',
-    clampAssetDrawerWidth(editorLayoutStore.getWidth('assetLibraryDrawer'))
-  )
+  normalizeAssetDrawerWidth()
   assetDialogVisible.value = true
 }
 
@@ -427,437 +432,14 @@ const toggleUploadPanel = () => {
   uploadPanelVisible.value = !uploadPanelVisible.value
 }
 
-const clampAssetDrawerWidth = (width: number): number => {
-  if (typeof window === 'undefined') return Math.max(360, Math.min(1040, width))
-  const viewportWidth = window.innerWidth
-  const minWidth = Math.min(360, Math.max(280, viewportWidth - 32))
-  const maxWidth = Math.max(minWidth, Math.min(1040, viewportWidth - 48))
-  return Math.round(Math.max(minWidth, Math.min(maxWidth, width)))
-}
-
-const stopAssetDrawerResize = () => {
-  if (!assetDrawerResizing.value) return
-  assetDrawerResizing.value = false
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-  window.removeEventListener('mousemove', handleAssetDrawerResize)
-  window.removeEventListener('mouseup', stopAssetDrawerResize)
-}
-
-const handleAssetDrawerResize = (event: MouseEvent) => {
-  if (!assetDrawerResizing.value) return
-  const delta = assetDrawerResizeStartX.value - event.clientX
-  editorLayoutStore.setWidth(
-    'assetLibraryDrawer',
-    clampAssetDrawerWidth(assetDrawerResizeStartWidth.value + delta)
-  )
-}
-
-const startAssetDrawerResize = (event: MouseEvent) => {
-  assetDrawerResizing.value = true
-  assetDrawerResizeStartX.value = event.clientX
-  assetDrawerResizeStartWidth.value = editorLayoutStore.getWidth('assetLibraryDrawer')
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  window.addEventListener('mousemove', handleAssetDrawerResize)
-  window.addEventListener('mouseup', stopAssetDrawerResize)
-}
-
 const isAssetSelected = (asset: AnalogAssetVO): boolean => {
   const url = getAssetUrl(asset)
   return props.selectedAssetId != null ? asset.id === props.selectedAssetId : props.selectedUrl === url
 }
 
-const isFavoriteAsset = (asset: AnalogAssetVO): boolean => {
-  return Number(asset.favoriteWeight || 0) > 0
-}
-
-const isFavoritingAsset = (id: number): boolean => favoritingAssetIds.value.has(id)
-
-const updateAssetInList = (updatedAsset: AnalogAssetVO) => {
-  const index = assets.value.findIndex((asset) => asset.id === updatedAsset.id)
-  if (index >= 0) {
-    assets.value[index] = {
-      ...assets.value[index],
-      ...updatedAsset,
-      file: updatedAsset.file || assets.value[index].file,
-    }
-  }
-}
-
-const setFavoritingAsset = (id: number, active: boolean) => {
-  const next = new Set(favoritingAssetIds.value)
-  if (active) next.add(id)
-  else next.delete(id)
-  favoritingAssetIds.value = next
-}
-
-const toggleFavoriteAsset = async (asset: AnalogAssetVO) => {
-  if (isFavoritingAsset(asset.id)) return
-
-  const nextFavorite = !isFavoriteAsset(asset)
-  const previousWeight = asset.favoriteWeight
-  asset.favoriteWeight = nextFavorite ? Math.floor(Date.now() / 1000) : null
-  setFavoritingAsset(asset.id, true)
-
-  try {
-    const res = await analogAssetApi.setFavorite(asset.id, nextFavorite)
-    if (res.data) {
-      updateAssetInList(res.data)
-    }
-  } catch (error) {
-    console.error('保存素材收藏失败:', error)
-    asset.favoriteWeight = previousWeight
-    ElMessage.error(t('asset.favoriteFailed'))
-  } finally {
-    setFavoritingAsset(asset.id, false)
-  }
-}
-
-const canRemoveAsset = (asset: AnalogAssetVO): boolean => {
-  if (asset.isSystem) return false
-  if (userStore.isAdminUser) return true
-  const currentUserId = userStore.userInfo?.id
-  return currentUserId != null && Number(asset.userId) === Number(currentUserId)
-}
-
-const isDeletingAsset = (id: number): boolean => deletingIds.value.has(id)
-
-const isBatchSelected = (id: number): boolean => selectedAssetIds.value.includes(id)
-
-const setDeletingIds = (ids: number[]) => {
-  deletingIds.value = new Set(ids)
-}
-
-const toggleBatchManageMode = () => {
-  batchManageMode.value = !batchManageMode.value
-  if (!batchManageMode.value) {
-    clearBatchSelection()
-  }
-}
-
-const clearBatchSelection = () => {
-  selectedAssetIds.value = []
-  lastBatchSelectedAssetId.value = null
-}
-
-const toggleBatchSelection = (asset: AnalogAssetVO) => {
-  if (!canRemoveAsset(asset)) return
-  if (isBatchSelected(asset.id)) {
-    selectedAssetIds.value = selectedAssetIds.value.filter((id) => id !== asset.id)
-  } else {
-    selectedAssetIds.value = [...selectedAssetIds.value, asset.id]
-  }
-  lastBatchSelectedAssetId.value = asset.id
-}
-
-const selectBatchRange = (asset: AnalogAssetVO) => {
-  if (!canRemoveAsset(asset)) return
-
-  const anchorId = lastBatchSelectedAssetId.value
-  if (anchorId == null) {
-    toggleBatchSelection(asset)
-    return
-  }
-
-  const visibleAssets = sortedAssets.value
-  const currentIndex = visibleAssets.findIndex((item) => item.id === asset.id)
-  const anchorIndex = visibleAssets.findIndex((item) => item.id === anchorId)
-  if (currentIndex < 0 || anchorIndex < 0) {
-    toggleBatchSelection(asset)
-    return
-  }
-
-  const [start, end] = currentIndex < anchorIndex
-    ? [currentIndex, anchorIndex]
-    : [anchorIndex, currentIndex]
-  const rangeIds = visibleAssets
-    .slice(start, end + 1)
-    .filter((item) => canRemoveAsset(item))
-    .map((item) => item.id)
-  selectedAssetIds.value = Array.from(new Set([...selectedAssetIds.value, ...rangeIds]))
-}
-
-const handleBatchSelectionClick = (asset: AnalogAssetVO, event?: MouseEvent) => {
-  if (event?.shiftKey) {
-    selectBatchRange(asset)
-    return
-  }
-  toggleBatchSelection(asset)
-}
-
-const selectAllLoadedAssets = () => {
-  selectedAssetIds.value = removableAssets.value.map((asset) => asset.id)
-}
-
-const removeDeletedAssetsFromList = (ids: number[]) => {
-  const idSet = new Set(ids)
-  assets.value = assets.value.filter((asset) => !idSet.has(asset.id))
-  if (lastBatchSelectedAssetId.value != null && idSet.has(lastBatchSelectedAssetId.value)) {
-    lastBatchSelectedAssetId.value = null
-  }
-  for (const id of ids) {
-    analogAssetStore.removeAsset(props.assetType, id)
-  }
-}
-
-const uploadStatusLabel = (status: UploadQueueStatus): string => {
-  if (status === 'pending') return t('asset.uploadPending')
-  if (status === 'uploading') return t('common.uploading')
-  if (status === 'success') return t('asset.uploadDone')
-  return t('asset.uploadFailed')
-}
-
-/**
- * 获取素材展示URL
- * - hand-like / windDirection：优先原始 SVG，避免固定尺寸 preview PNG 影响画布渲染
- * - 其他类型：优先 previewUrl，兼顾加载性能
- */
-const getAssetUrl = (asset: AnalogAssetVO): string | undefined => {
-  if (isHandAssetType(props.assetType) || props.assetType === 'center_cap' || props.assetType === 'windDirection') {
-    return asset.file?.url || asset.file?.previewUrl
-  }
-  return asset.file?.previewUrl || asset.file?.url
-}
-
-const getOriginalAssetUrl = (asset: AnalogAssetVO): string | undefined => {
-  return asset.file?.url
-}
-
-const getAssetDownloadName = (asset: AnalogAssetVO): string => {
-  const name = asset.file?.name?.trim()
-  return name || `asset-${asset.id}`
-}
-
-const triggerAssetDownload = (url: string, filename: string, openInNewTab = false) => {
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  if (openInNewTab) {
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-  }
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-}
-
-const handleDownloadAsset = async (asset: AnalogAssetVO) => {
-  const url = getOriginalAssetUrl(asset)
-  if (!url) return
-
-  const filename = getAssetDownloadName(asset)
-
-  try {
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`Download failed with status ${response.status}`)
-    }
-
-    const blob = await response.blob()
-    const objectUrl = URL.createObjectURL(blob)
-    triggerAssetDownload(objectUrl, filename)
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
-  } catch (error) {
-    console.warn('下载素材源文件失败，尝试打开原始链接:', error)
-    triggerAssetDownload(url, filename, true)
-  }
-}
-
-/**
- * 加载素材列表
- */
-const loadAssets = async (reset = false) => {
-  if (loading.value) return
-  
-  if (reset) {
-    pageNum.value = 1
-    assets.value = []
-    hasMore.value = true
-  }
-
-  loading.value = true
-  try {
-    const res = await analogAssetApi.page({
-      pageNum: pageNum.value,
-      pageSize,
-      analogAssetType: props.assetType,
-      isActive: true,
-      orderBy: 'createdAt:desc',
-      scope: canViewAllAssets.value ? assetScope.value : 'mine',
-    })
-    
-    if (res.data) {
-      const newAssets = res.data.list || []
-      if (reset) {
-        assets.value = newAssets
-      } else {
-        assets.value.push(...newAssets)
-      }
-      hasMore.value = assets.value.length < res.data.total
-    }
-  } catch (error) {
-    console.error('加载素材失败:', error)
-    ElMessage.error(t('asset.loadFailed'))
-  } finally {
-    loading.value = false
-  }
-}
-
-/**
- * 加载更多
- */
-const loadMore = () => {
-  if (loading.value || !hasMore.value) return
-  pageNum.value++
-  loadAssets()
-}
-
-const handleAssetGridScroll = (event: Event) => {
-  const target = event.currentTarget as HTMLElement | null
-  if (!target || loading.value || !hasMore.value) return
-
-  const preloadOffset = 120
-  const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
-  if (distanceToBottom <= preloadOffset) {
-    loadMore()
-  }
-}
-
-/**
- * 刷新列表
- */
-const refresh = () => {
-  loadAssets(true)
-}
-
 const handleScopeChange = () => {
   clearBatchSelection()
-  loadAssets(true)
-}
-
-/**
- * 触发上传
- */
-const triggerUpload = () => {
-  uploadInput.value?.click()
-}
-
-const uploadFile = async (file: File | undefined, showMessage = false): Promise<boolean> => {
-  if (!file) return false
-
-  if (!(await isUploadFileAccepted(file, showMessage))) {
-    return false
-  }
-
-  try {
-    const uploadFile = await ensureSvgFileHasIntrinsicSize(file)
-    const res = await analogAssetApi.upload(uploadFile, props.assetType)
-    
-    if (res.data) {
-      assets.value.unshift(res.data)
-      analogAssetStore.prependAsset(res.data)
-      const url = getAssetUrl(res.data)
-      if (url) {
-        props.onUpload(url, res.data)
-      }
-      if (showMessage) ElMessage.success(t('asset.uploadSuccess'))
-      return true
-    }
-    return false
-  } catch (error) {
-    console.error('上传失败:', error)
-    if (showMessage) ElMessage.error(t('asset.uploadFailed'))
-    return false
-  }
-}
-
-const processUploadFiles = async (fileList: FileList | File[] | undefined | null) => {
-  if (!fileList || uploading.value) return
-
-  const files = Array.from(fileList)
-  if (!files.length) return
-
-  const validFiles: File[] = []
-  let invalidCount = 0
-  let rasterSvgCount = 0
-  for (const file of files) {
-    if (!isAllowedUploadFile(file)) {
-      invalidCount++
-      continue
-    }
-    if (await svgFileContainsRasterImage(file)) {
-      rasterSvgCount++
-      continue
-    }
-    validFiles.push(file)
-  }
-
-  if (invalidCount > 0) {
-    ElMessage.warning(getUploadFileTypeMessage())
-  }
-  if (rasterSvgCount > 0) {
-    ElMessage.warning(t('asset.svgVectorOnly'))
-  }
-  if (!validFiles.length) return
-
-  emitter.emit('settings-popup-open', settingsPopupId)
-  assetDialogVisible.value = true
-  uploadPanelVisible.value = true
-  uploadSummaryMessage.value = ''
-  uploadQueue.value = validFiles.map((file, index) => ({
-    id: `${Date.now()}-${index}-${file.name}`,
-    file,
-    status: 'pending',
-  }))
-
-  uploading.value = true
-  let successCount = 0
-  for (const item of uploadQueue.value) {
-    item.status = 'uploading'
-    const ok = await uploadFile(item.file)
-    item.status = ok ? 'success' : 'failed'
-    if (ok) successCount++
-  }
-  uploading.value = false
-
-  if (successCount === validFiles.length) {
-    uploadSummaryTone.value = 'success'
-    uploadSummaryMessage.value = t('asset.uploadSuccessCount', { count: successCount })
-  } else if (successCount > 0) {
-    uploadSummaryTone.value = 'warning'
-    uploadSummaryMessage.value = t('asset.uploadPartialCount', { success: successCount, failed: validFiles.length - successCount })
-  } else {
-    uploadSummaryTone.value = 'danger'
-    uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: validFiles.length })
-  }
-  uploadQueue.value = []
-}
-
-/**
- * 处理上传
- */
-const handleUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  await processUploadFiles(input.files)
-  input.value = ''
-}
-
-const handleDragEnter = () => {
-  dragOver.value = true
-}
-
-const handleDragOver = () => {
-  dragOver.value = true
-}
-
-const handleDragLeave = () => {
-  dragOver.value = false
-}
-
-const handleDrop = async (event: DragEvent) => {
-  dragOver.value = false
-  await processUploadFiles(event.dataTransfer?.files)
+  void loadAssets(true)
 }
 
 /**
@@ -956,99 +538,6 @@ const saveEditedSvgAsset = async (svgText: string) => {
   }
 }
 
-/**
- * 删除素材
- */
-const handleRemove = async (asset: AnalogAssetVO) => {
-  try {
-    await ElMessageBox.confirm(t('asset.deleteConfirm'), t('common.tip'), {
-      type: 'warning',
-      confirmButtonText: t('common.delete'),
-      cancelButtonText: t('common.cancel')
-    })
-  } catch {
-    return
-  }
-
-  setDeletingIds([asset.id])
-  try {
-    const res = await analogAssetApi.remove(asset.id)
-    if (res.data) {
-      removeDeletedAssetsFromList([asset.id])
-      selectedAssetIds.value = selectedAssetIds.value.filter((id) => id !== asset.id)
-      ElMessage.success(t('common.deleteSuccess'))
-    } else {
-      ElMessage.error(t('asset.deleteFailed'))
-    }
-  } catch (e) {
-    console.error('删除素材失败:', e)
-    ElMessage.error(t('asset.deleteFailed'))
-  } finally {
-    setDeletingIds([])
-  }
-}
-
-const handleBatchRemove = async () => {
-  const ids = [...selectedAssetIds.value]
-  if (!ids.length || batchDeleting.value) return
-
-  try {
-    await ElMessageBox.confirm(
-      t('asset.batchDeleteConfirm', { count: ids.length }),
-      t('common.tip'),
-      {
-        type: 'warning',
-        confirmButtonText: t('common.delete'),
-        cancelButtonText: t('common.cancel')
-      }
-    )
-  } catch {
-    return
-  }
-
-  batchDeleting.value = true
-  deleteProgressDone.value = 0
-  deleteProgressTotal.value = ids.length
-  const removedIds: number[] = []
-  const failedIds: number[] = []
-  try {
-    for (const id of ids) {
-      setDeletingIds([id])
-      try {
-        const res = await analogAssetApi.remove(id)
-        if (res.data) {
-          removedIds.push(id)
-          removeDeletedAssetsFromList([id])
-          selectedAssetIds.value = selectedAssetIds.value.filter((selectedId) => selectedId !== id)
-        } else {
-          failedIds.push(id)
-        }
-      } catch (e) {
-        failedIds.push(id)
-        console.error('批量删除素材失败:', e)
-      } finally {
-        deleteProgressDone.value += 1
-      }
-    }
-
-    if (removedIds.length && !failedIds.length) {
-      clearBatchSelection()
-      ElMessage.success(t('asset.deleteCompleteCount', { count: removedIds.length }))
-    } else if (removedIds.length) {
-      ElMessage.warning(t('asset.deletePartialCount', { success: removedIds.length, failed: failedIds.length }))
-    } else {
-      ElMessage.error(t('asset.deleteFailed'))
-    }
-  } catch (e) {
-    console.error('批量删除素材失败:', e)
-    ElMessage.error(t('asset.deleteFailed'))
-  } finally {
-    batchDeleting.value = false
-    setDeletingIds([])
-    deleteProgressDone.value = 0
-    deleteProgressTotal.value = 0
-  }
-}
 
 const handleSettingsPopupOpen = (id: unknown) => {
   if (String(id) === settingsPopupId) return
@@ -1063,7 +552,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  stopAssetDrawerResize()
+  disposeAssetDrawerResize()
   emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 
