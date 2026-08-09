@@ -528,7 +528,6 @@ export const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
     }
     const record = value as Record<string, unknown>
     Object.entries(record).forEach(([childKey, childValue]) => {
-      if (childKey === 'fontFamily' && record.fontSource === 'system') return
       walk(childValue, childKey)
     })
   }

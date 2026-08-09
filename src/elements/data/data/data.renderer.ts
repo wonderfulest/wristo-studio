@@ -20,7 +20,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   const id = config.id || nanoid()
   const metric = usePropertiesStore().getMetricByOptions(config)
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, metric.defaultValue)
   const element = new FabricText(metric.defaultValue, {
     id,
     eleType: 'data',

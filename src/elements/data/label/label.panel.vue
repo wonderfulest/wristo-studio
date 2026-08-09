@@ -25,7 +25,7 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.fontSize')">
-        <FontSizeSelect v-model="currentModel.fontSize" :disabled="currentModel.fontSource === 'system'" @change="updateElement" />
+        <FontSizeSelect v-model="currentModel.fontSize" @change="updateElement" />
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.textColor')">
@@ -37,13 +37,7 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.font')">
-        <GarminSystemFontField
-          :font-source="currentModel.fontSource"
-          :system-font="currentModel.systemFont"
-          @change="applyUpdate"
-        />
         <font-picker 
-          v-if="currentModel.fontSource !== 'system'"
           v-model="currentModel.fontFamily" 
           :date-content-language="metricTextFontLanguage"
           @change="updateElement" 
@@ -59,7 +53,6 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import GarminSystemFontField from '@/components/font-picker/GarminSystemFontField.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { ElMessage } from 'element-plus'
@@ -116,8 +109,6 @@ const updateElement = async () => {
     fill: model.fill,
     fillProperty: model.fillProperty,
     fontFamily: model.fontFamily,
-    fontSource: model.fontSource,
-    systemFont: model.systemFont,
     originX: model.originX,
     left: model.left,
     top: model.top,

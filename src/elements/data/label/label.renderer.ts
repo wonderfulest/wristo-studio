@@ -30,7 +30,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     (propertiesStore as any).textCase,
   )
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, labelText)
 
   const element = new FabricText(labelText, {
     id,

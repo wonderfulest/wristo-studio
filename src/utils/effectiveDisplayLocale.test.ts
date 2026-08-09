@@ -1,20 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { resolveEffectiveDisplayLocale } from './effectiveDisplayLocale'
+import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from './effectiveDisplayLocale'
 
-describe('effective display locale', () => {
-  it('never changes Latin Extended locales', () => {
-    expect(resolveEffectiveDisplayLocale({ locale: 'fr-FR', nonLatinLanguageSupport: false })).toBe('fr-FR')
+describe('effective content locale', () => {
+  it('uses Simplified Chinese only when Chinese content is enabled', () => {
+    expect(resolveDesignEffectiveLocale({ supportsChineseContent: true, defaultLocale: 'en-US' })).toBe('zh-CN')
+    expect(resolveDesignContentLanguage({ supportsChineseContent: true, defaultLocale: 'en-US' })).toBe('zh')
   })
 
-  it('keeps supported non-Latin locales when system fonts are enabled', () => {
-    expect(resolveEffectiveDisplayLocale({ locale: 'zh-CN', nonLatinLanguageSupport: true, useSystemFont: true })).toBe('zh-CN')
-  })
-
-  it('falls back to English when runtime system fonts are disabled', () => {
-    expect(resolveEffectiveDisplayLocale({ locale: 'zh-TW', nonLatinLanguageSupport: true, useSystemFont: false })).toBe('en-US')
-  })
-
-  it.each(['zh', 'zh-CN', 'zh-TW', 'ja', 'ja-JP'])('falls back for disabled non-Latin locale %s', (locale) => {
-    expect(resolveEffectiveDisplayLocale({ locale, nonLatinLanguageSupport: false })).toBe('en-US')
+  it('keeps the design locale otherwise', () => {
+    expect(resolveDesignEffectiveLocale({ supportsChineseContent: false, defaultLocale: 'en-US' })).toBe('en-US')
   })
 })

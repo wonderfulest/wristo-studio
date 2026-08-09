@@ -196,7 +196,7 @@ export async function createTime(
     }
 
     // 默认：使用文本渲染
-    const previewFont = resolveCurrentElementPreviewFont(config)
+    const previewFont = resolveCurrentElementPreviewFont(config, text)
     const timeOptions: Partial<TimeElementOptions> = {
       id,
       eleType: 'time',

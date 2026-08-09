@@ -28,7 +28,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
   const id = config.id || nanoid()
   const text = resolveUnitText(config)
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, text)
 
   const element = new FabricText(text, {
     id,

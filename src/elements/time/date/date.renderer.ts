@@ -73,7 +73,7 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   const textCase = (propertiesStore as any).textCase as number | undefined
   const text = formatDate(getSimulatedNow(), formatterValue, textCase, getDatePreviewLocale(designStore))
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, text)
 
   const element: any = new FabricText(text, {
     eleType: 'date',

@@ -20,7 +20,7 @@ describe('useDesignLoader contract', () => {
     const projection = loaderSource.indexOf('const loadConfig = projectDefaultVisualThemeForLoad(config)', generationGuard)
     const hydrate = loaderSource.indexOf('visualThemeStore.hydrate(', projection)
     const properties = loaderSource.indexOf('propertiesStore.loadProperties(loadConfig.properties)', hydrate)
-    const elements = loaderSource.indexOf('const runtimeElements = loadConfig.elements as AnyElementConfig[]', properties)
+    const elements = loaderSource.indexOf('const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map', properties)
 
     expect(applyStart).toBeGreaterThan(-1)
     expect(fontFetch).toBeGreaterThan(applyStart)
@@ -46,9 +46,9 @@ describe('useDesignLoader contract', () => {
     expect(designSource).not.toContain('const loadElements = async')
   })
 
-  it('hydrates non-Latin language support through the shared normalizer', () => {
-    expect(loaderSource).toContain('normalizeNonLatinLanguageSupport')
-    expect(loaderSource).toContain('designStore.setNonLatinLanguageSupport(')
-    expect(loaderSource).toContain('localization.nonLatinLanguageSupport')
+  it('does not hydrate removed font policy', () => {
+    expect(loaderSource).not.toContain('normalizeNonLatinLanguageSupport')
+    expect(loaderSource).not.toContain('setNonLatinLanguageSupport')
+    expect(loaderSource).not.toContain('localization.fontRoles')
   })
 })

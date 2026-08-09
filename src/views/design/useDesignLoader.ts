@@ -21,12 +21,11 @@ import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberF
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { scaleElementConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
-import { loadAllBundledGarminPreviewFonts } from '@/utils/garminSystemFonts'
+import { normalizeLegacyTextFont } from '@/utils/contentFontFallback'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig, BaseElementConfig } from '@/types/elements'
-import { normalizeNonLatinLanguageSupport } from '@/types/localization'
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -269,8 +268,6 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
     await fontStore.fetchFonts()
     if (!isCurrentDesignLoad(generation)) return false
-    await loadAllBundledGarminPreviewFonts()
-    if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const loadConfig = projectDefaultVisualThemeForLoad(config)
     if (Array.isArray(loadConfig.elements)) {
@@ -281,7 +278,6 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       visualThemeStore.hydrate(loadConfig.visualThemes)
       designStore.setSupportsChineseContent(false)
       designStore.setSupportedLocales(['en-US'])
-      designStore.setNonLatinLanguageSupport(true)
       propertiesStore.clearProperties()
       await waitCanvasReady()
       if (!isCurrentDesignLoad(generation)) return false
@@ -294,9 +290,6 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))
     if (loadConfig.localization) {
       const localization = loadConfig.localization as any
-      designStore.setNonLatinLanguageSupport(
-        normalizeNonLatinLanguageSupport(localization.nonLatinLanguageSupport),
-      )
       if (Array.isArray(localization.supportedLocales)) {
         designStore.setSupportedLocales(localization.supportedLocales)
       } else {
@@ -305,18 +298,31 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       if (localization.defaultLocale) {
         designStore.setDefaultLocale(localization.defaultLocale)
       }
-      if (localization.fontRoles && typeof localization.fontRoles === 'object') {
-        designStore.fontRoles = localization.fontRoles
-      }
     } else {
       designStore.setSupportedLocales(['en-US'])
-      designStore.setNonLatinLanguageSupport(true)
     }
 
     if (loadConfig.properties) {
       propertiesStore.loadProperties(loadConfig.properties)
     }
-    const runtimeElements = loadConfig.elements as AnyElementConfig[]
+    const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map((element) => {
+      const record = element as unknown as Record<string, unknown>
+      if (record.fontSource !== 'system') return element
+      const normalized = normalizeLegacyTextFont(record, {
+        family: 'roboto-condensed-regular',
+        size: Number(record.fontSize || 18),
+      })
+      const {
+        fontSource: _fontSource,
+        systemFont: _systemFont,
+        systemFontPrecision: _systemFontPrecision,
+        previewFontSlug: _previewFontSlug,
+        assetFontFamily: _assetFontFamily,
+        assetFontSize: _assetFontSize,
+        ...rest
+      } = record
+      return { ...rest, ...normalized } as unknown as AnyElementConfig
+    })
     visualThemeStore.syncColorProperties(propertiesStore.allProperties)
 
     propertiesStore.textCase = 0

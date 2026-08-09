@@ -25,14 +25,14 @@ describe('design asset bundle MIME types', () => {
 })
 
 describe('font asset collection', () => {
-  it('does not package the fallback TTF for Garmin system-font elements', async () => {
+  it('restores and packages the custom font from legacy system-font elements', async () => {
     const { collectFontSlugs } = await import('./designAssetBundleService')
     expect(collectFontSlugs({
       elements: [
         { fontSource: 'system', systemFont: 'FONT_SMALL', fontFamily: 'fallback-font' },
         { fontSource: 'asset', fontFamily: 'packaged-font' },
       ],
-    } as any)).toEqual(['packaged-font'])
+    } as any)).toEqual(['fallback-font', 'packaged-font'])
   })
 })
 

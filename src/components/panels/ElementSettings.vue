@@ -33,8 +33,6 @@ import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/r
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
-import { resolveCurrentSystemFontUpdate } from '@/composables/useGarminSystemFont'
-import { loadBundledGarminPreviewFont } from '@/utils/garminSystemFonts'
 
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
@@ -205,17 +203,12 @@ const applyConfigPatch = computed(() => {
         id: lockedId,
         eleType: commitBase.eleType,
       } as AnyElementConfig)
-      const changesFontSource = Object.prototype.hasOwnProperty.call(queuedPatch, 'fontSource')
-        || Object.prototype.hasOwnProperty.call(queuedPatch, 'systemFont')
-      const canvasPatch = changesFontSource
-        ? resolveCurrentSystemFontUpdate({ ...(el as any), ...(commitBase as any) }, queuedPatch as any)
-        : queuedPatch
+      const canvasPatch = queuedPatch
       try {
         // 更新数据层（始终从最后一次成功提交的基线应用本次补丁）
         elementDataStore.upsertElement(commitBase)
         elementDataStore.patchElement(lockedId, queuedPatch as AnyElementConfig)
         // 更新画布元素（按 id resolve 真实对象）
-        if (changesFontSource) await loadBundledGarminPreviewFont((canvasPatch as any).fontFamily)
         await elementManager.updateElementById(lockedId, canvasPatch)
         // await 期间 panel 可能已提前修改 Store；用确定的提交结果覆盖并刷新基线。
         elementDataStore.upsertElement(nextCommittedConfig)

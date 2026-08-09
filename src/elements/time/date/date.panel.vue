@@ -4,7 +4,6 @@
       <el-form-item :label="t('elementSettings.fontSize')">
         <FontSizeSelect
           v-model="currentModel.fontSize"
-          :disabled="currentModel.fontSource === 'system'"
           @change="(v: number) => applyUpdate({ fontSize: v })"
         />
       </el-form-item>
@@ -18,13 +17,7 @@
       </el-form-item>
 
       <el-form-item :label="t('elementSettings.font')">
-        <GarminSystemFontField
-          :font-source="currentModel.fontSource"
-          :system-font="currentModel.systemFont"
-          @change="applyUpdate"
-        />
         <FontPicker
-          v-if="currentModel.fontSource !== 'system'"
           v-model="currentModel.fontFamily"
           type=""
           :exclude-icon-fonts="true"
@@ -70,7 +63,6 @@ import { useFontStore } from '@/stores/fontStore'
 import { originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import GarminSystemFontField from '@/components/font-picker/GarminSystemFontField.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
