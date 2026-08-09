@@ -51,4 +51,13 @@ describe('useDesignLoader contract', () => {
     expect(loaderSource).not.toContain('setNonLatinLanguageSupport')
     expect(loaderSource).not.toContain('localization.fontRoles')
   })
+
+  it('hydrates exclusions for populated designs and clears them for blank or legacy designs', () => {
+    const populatedStart = loaderSource.indexOf('designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))')
+    const blankStart = loaderSource.indexOf('} else {', loaderSource.indexOf('if (Array.isArray(loadConfig.elements))'))
+
+    expect(loaderSource.indexOf('designStore.setConnectIqSettingsExcludedDataTypeValues([])', blankStart)).toBeGreaterThan(blankStart)
+    expect(loaderSource.indexOf('designStore.setConnectIqSettingsExcludedDataTypeValues(', populatedStart)).toBeGreaterThan(populatedStart)
+    expect(loaderSource).toContain('loadConfig.connectIqSettingsExcludedDataTypeValues')
+  })
 })

@@ -122,6 +122,7 @@ export interface DesignConfig {
   bitmapMode?: boolean
   dataNumberFormat?: number
   maxFieldLength?: number
+  connectIqSettingsExcludedDataTypeValues?: number[]
   properties: Record<string, any>
   currentIconFontSlug: string // 当前图标字体(适用于icon、indicator元素)
   currentIconFontSize: number // 当前图标字体大小(适用于icon、indicator元素)

@@ -6,7 +6,7 @@ import type { AnyElementConfig } from '@/types/elements'
 import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
 import { normalizeFontSizeFields } from '@/utils/fontSize'
 import type { FabricElement } from '@/types/element'
-import { useDesignStore } from '@/stores/designStore'
+import { normalizeConnectIqSettingsExcludedDataTypeValues, useDesignStore } from '@/stores/designStore'
 import { useLocaleStore } from '@/stores/locale'
 import { translate } from '@/i18n'
 import { normalizeConfigToStandardSize } from '@/utils/designScale'
@@ -211,6 +211,7 @@ export interface GenerateConfigOptions {
   visualThemes?: VisualThemesConfig
   validateBindings?: boolean
   baseElements?: Array<Record<string, any>>
+  connectIqSettingsExcludedDataTypeValues?: unknown
 }
 
 function restoreVisualThemeBaseFields(
@@ -267,6 +268,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     localization,
     supportsChineseContent,
     visualThemes,
+    connectIqSettingsExcludedDataTypeValues,
     validateBindings = false,
     baseElements = [],
   } = options
@@ -288,6 +290,9 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     dataNumberFormat: normalizeDataNumberFormatMode(dataNumberFormat),
     maxFieldLength: normalizeMaxFieldLength(maxFieldLength),
     supportsChineseContent: Boolean(supportsChineseContent),
+    connectIqSettingsExcludedDataTypeValues: normalizeConnectIqSettingsExcludedDataTypeValues(
+      connectIqSettingsExcludedDataTypeValues,
+    ),
     elements: [],
     orderIds: [],
   }

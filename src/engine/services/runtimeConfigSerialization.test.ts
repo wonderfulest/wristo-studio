@@ -29,4 +29,18 @@ describe('toPlainRuntimeConfig', () => {
     expect(result).toEqual(config)
     expect(() => structuredClone(result)).not.toThrow()
   })
+
+  it('preserves the Connect IQ exclusion denylist through JSON serialization', () => {
+    const config = {
+      version: '1.0',
+      properties: {},
+      designId: 'design-1',
+      name: 'Exclusions',
+      elements: [],
+      orderIds: [],
+      connectIqSettingsExcludedDataTypeValues: [2, 31, 999],
+    } as unknown as RuntimeDesignConfig
+
+    expect(toPlainRuntimeConfig(config).connectIqSettingsExcludedDataTypeValues).toEqual([2, 31, 999])
+  })
 })

@@ -15,6 +15,7 @@ export interface RuntimeDesignConfig {
   supportsChineseContent?: boolean
   localization?: WatchfaceLocalizationConfig
   visualThemes?: VisualThemesConfig
+  connectIqSettingsExcludedDataTypeValues?: number[]
   elements: AnyElementConfig[]
   orderIds: string[]
 }

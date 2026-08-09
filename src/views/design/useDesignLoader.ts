@@ -278,6 +278,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       visualThemeStore.hydrate(loadConfig.visualThemes)
       designStore.setSupportsChineseContent(false)
       designStore.setSupportedLocales(['en-US'])
+      designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
       await waitCanvasReady()
       if (!isCurrentDesignLoad(generation)) return false
@@ -288,6 +289,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     }
 
     designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))
+    designStore.setConnectIqSettingsExcludedDataTypeValues(
+      loadConfig.connectIqSettingsExcludedDataTypeValues,
+    )
     if (loadConfig.localization) {
       const localization = loadConfig.localization as any
       if (Array.isArray(localization.supportedLocales)) {

@@ -9,6 +9,26 @@ export interface DesignSpec {
   shape: WatchShape
 }
 
+function normalizeConnectIqDataTypeValue(value: unknown): number | null {
+  const numericValue = typeof value === 'string' && /^\d+$/.test(value)
+    ? Number(value)
+    : value
+  return typeof numericValue === 'number'
+    && Number.isFinite(numericValue)
+    && Number.isInteger(numericValue)
+    && numericValue >= 0
+    ? numericValue
+    : null
+}
+
+export function normalizeConnectIqSettingsExcludedDataTypeValues(value: unknown): number[] {
+  if (!Array.isArray(value)) return []
+  const normalized = value
+    .map(normalizeConnectIqDataTypeValue)
+    .filter((item): item is number => item !== null)
+  return Array.from(new Set(normalized)).sort((left, right) => left - right)
+}
+
 export const useDesignStore = defineStore('design', {
   state: () => ({
     id: '' as string,
@@ -24,6 +44,7 @@ export const useDesignStore = defineStore('design', {
     defaultLocale: 'en-US' as WatchfaceLocale,
     supportedLocales: ['en-US'] as WatchfaceLocale[],
     supportsChineseContent: false,
+    connectIqSettingsExcludedDataTypeValues: [] as number[],
   }),
 
   actions: {
@@ -59,6 +80,19 @@ export const useDesignStore = defineStore('design', {
 
     setSupportsChineseContent(value: boolean): void {
       this.supportsChineseContent = Boolean(value)
+    },
+
+    setConnectIqSettingsExcludedDataTypeValues(value: unknown): void {
+      this.connectIqSettingsExcludedDataTypeValues = normalizeConnectIqSettingsExcludedDataTypeValues(value)
+    },
+
+    setConnectIqDataTypeSelected(value: unknown, selected: boolean): void {
+      const normalizedValue = normalizeConnectIqDataTypeValue(value)
+      if (normalizedValue === null) return
+      const exclusions = new Set(this.connectIqSettingsExcludedDataTypeValues)
+      if (selected) exclusions.delete(normalizedValue)
+      else exclusions.add(normalizedValue)
+      this.connectIqSettingsExcludedDataTypeValues = Array.from(exclusions).sort((left, right) => left - right)
     },
 
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {

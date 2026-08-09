@@ -60,6 +60,23 @@ describe('visual theme export persistence', () => {
     })
   })
 
+  it('exports only the normalized Connect IQ exclusion values', async () => {
+    const { generateConfig } = await import('./exportService')
+    const config = generateConfig({
+      canvas: { getObjects: () => [{ id: 'global', eleType: 'global' }] } as any,
+      properties: {},
+      designId: 'design-1',
+      watchFaceName: 'Exclusions',
+      textCase: 0,
+      bitmapMode: false,
+      connectIqSettingsExcludedDataTypeValues: [31, '2', 31, null, true, 4.5],
+    } as any)
+
+    expect(config?.connectIqSettingsExcludedDataTypeValues).toEqual([2, 31])
+    expect(config).not.toHaveProperty('connectIqSettingsDataTypeOptions')
+    expect(config).not.toHaveProperty('connectIqSettingsDataTypeLabels')
+  })
+
   it('copies visual themes into generated config without preview-only state', async () => {
     const { generateConfig } = await import('./exportService')
     const visualThemes = {
