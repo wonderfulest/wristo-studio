@@ -78,7 +78,7 @@ describe('data catalog store', () => {
   })
 
   it('accepts canonical data types that do not have an icon glyph', () => {
-    const catalog = validCatalog()
+    const catalog: any = validCatalog()
     catalog.dataTypeOptions[0].iconUnicode = ''
 
     const snapshot = validateDataCatalog(catalog)
@@ -188,7 +188,7 @@ describe('data catalog store', () => {
     [
       'iconUnicode',
       (catalog: any) => {
-        catalog.dataTypeOptions[0].iconUnicode = ''
+        delete catalog.dataTypeOptions[0].iconUnicode
       },
       'iconUnicode is required'
     ],

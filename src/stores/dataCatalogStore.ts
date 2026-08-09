@@ -14,6 +14,11 @@ const requiredString = (value: unknown, path: string): string => {
   return value.trim()
 }
 
+const stringValue = (value: unknown, path: string): string => {
+  if (typeof value !== 'string') throw new Error(`${path} is required`)
+  return value.trim()
+}
+
 const exactKey = (value: unknown, path: string): string => {
   const normalized = typeof value === 'string' ? value.trim() : ''
   if (!KEY_PATTERN.test(normalized)) {
@@ -235,7 +240,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     settingsLabel: localizedText(value.settingsLabel, `${prefix}: settingsLabel`),
     label: localizedText(value.label, `${prefix}: label`),
     unitKey: exactKey(value.unitKey, `${prefix}: unitKey`),
-    iconUnicode: requiredString(value.iconUnicode, `${prefix}: iconUnicode`),
+    iconUnicode: stringValue(value.iconUnicode, `${prefix}: iconUnicode`),
     defaultValue,
     isActive: active(value.isActive, `${prefix}: isActive`),
     systemDefault: binaryFlag(value.systemDefault ?? 0, `${prefix}: systemDefault`),
