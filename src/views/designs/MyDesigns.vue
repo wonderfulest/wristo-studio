@@ -219,6 +219,7 @@ const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
 const userStore = useUserStore()
+const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
 
@@ -554,6 +555,12 @@ const fetchDesigns = async () => {
     messageStore.error(t('project.getListFailed'))
   }
 }
+
+watch(currentDeviceId, (deviceId, previousDeviceId) => {
+  if (deviceId === previousDeviceId) return
+  currentPage.value = 1
+  void fetchDesigns()
+})
 
 // 引导用户前往 New Project 创建第一个应用
 const confirmGoToNewProject = () => {

@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
+import {
+  shouldShowBuildIqButton,
+  shouldShowBuildPrgButton,
+  shouldShowPreviewPrgButton,
+} from './designCardActions'
 
 const source = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
 const workspaceSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
@@ -31,16 +35,56 @@ describe('DesignCard Build IQ action', () => {
   })
 })
 
+describe('DesignCard Build PRG action', () => {
+  const designUpdatedAt = '2026-08-09T10:00:00Z'
+  const currentDeviceId = 'fenix8'
+
+  it.each([
+    ['without a release', {}, true],
+    ['with another-device release', { prgRelease: { deviceId: 'venu3', updatedAt: '2026-08-09T11:00:00Z' } }, true],
+    ['with an older matching release', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T09:00:00Z' } }, true],
+    ['with a current matching release', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:00Z' } }, false],
+    ['while the matching device is building', { prgPackagingLog: { deviceId: 'fenix8', rank: 0 } }, false],
+    ['while the matching device is queued', { prgPackagingLog: { deviceId: 'fenix8', rank: 3 } }, false],
+    ['with another device in the queue', { prgPackagingLog: { deviceId: 'venu3', rank: 0 } }, true],
+  ] as const)('%s', (_label, product, expected) => {
+    expect(shouldShowBuildPrgButton(product, designUpdatedAt, currentDeviceId)).toBe(expected)
+  })
+
+  it('requires a product, selected device, and valid design update time', () => {
+    expect(shouldShowBuildPrgButton(undefined, designUpdatedAt, currentDeviceId)).toBe(false)
+    expect(shouldShowBuildPrgButton({}, designUpdatedAt, '')).toBe(false)
+    expect(shouldShowBuildPrgButton({}, undefined, currentDeviceId)).toBe(false)
+    expect(shouldShowBuildPrgButton({}, 'invalid-date', currentDeviceId)).toBe(false)
+  })
+
+  it('uses the device-aware helper in the card', () => {
+    expect(source).toContain('shouldShowBuildPrgButton(')
+    expect(source).toContain('design.value.updatedAt')
+    expect(source).toContain('currentDeviceId.value')
+    expect(source).not.toContain('const hasQueue = !!product.prgPackagingLog?.rank')
+    expect(source).toContain('const currentPrgRelease = prgRelease?.deviceId === currentDeviceId.value')
+    expect(source).toContain('const currentPrgLog = prgLog?.deviceId === currentDeviceId.value')
+  })
+})
+
 describe('DesignCard Preview in Simulator action', () => {
-  it('is visible only for a completed downloadable PRG release', () => {
-    expect(shouldShowPreviewPrgButton({ prgRelease: { id: 9, prgUrl: 'https://cdn.wristo.io/watch.prg' } })).toBe(true)
-    expect(shouldShowPreviewPrgButton({ prgRelease: { id: 9, prgUrl: '' } })).toBe(false)
-    expect(shouldShowPreviewPrgButton({})).toBe(false)
-    expect(shouldShowPreviewPrgButton(undefined)).toBe(false)
+  it('is visible only for the selected device with a completed downloadable PRG release', () => {
+    expect(shouldShowPreviewPrgButton({
+      prgRelease: { id: 9, deviceId: 'fenix8', prgUrl: 'https://cdn.wristo.io/watch.prg' },
+    }, 'fenix8')).toBe(true)
+    expect(shouldShowPreviewPrgButton({
+      prgRelease: { id: 9, deviceId: 'venu3', prgUrl: 'https://cdn.wristo.io/watch.prg' },
+    }, 'fenix8')).toBe(false)
+    expect(shouldShowPreviewPrgButton({
+      prgRelease: { id: 9, deviceId: 'fenix8', prgUrl: '' },
+    }, 'fenix8')).toBe(false)
+    expect(shouldShowPreviewPrgButton({}, 'fenix8')).toBe(false)
+    expect(shouldShowPreviewPrgButton(undefined, 'fenix8')).toBe(false)
   })
 
   it('wires the card action to the workspace launcher flow', () => {
-    expect(source).toContain('shouldShowPreviewPrgButton(design.value.product)')
+    expect(source).toContain('shouldShowPreviewPrgButton(design.value.product, currentDeviceId.value)')
     expect(source).toContain("emit('preview-prg', design)")
     expect(workspaceSource).toContain('@preview-prg="previewPrg"')
   })
@@ -71,6 +115,16 @@ describe('DesignCard Preview in Simulator action', () => {
     expect(ticketIndex).toBeGreaterThanOrEqual(0)
     expect(downloadIndex).toBeGreaterThan(ticketIndex)
     expect(launcherIndex).toBeGreaterThan(downloadIndex)
+  })
+})
+
+describe('My Designs device-specific PRG refresh', () => {
+  it('returns to the first page and reloads designs after the selected device changes', () => {
+    expect(workspaceSource).toContain('const currentDeviceId = computed(')
+    expect(workspaceSource).toContain('watch(currentDeviceId, (deviceId, previousDeviceId) =>')
+    expect(workspaceSource).toContain('if (deviceId === previousDeviceId) return')
+    expect(workspaceSource).toContain('currentPage.value = 1')
+    expect(workspaceSource).toContain('void fetchDesigns()')
   })
 })
 

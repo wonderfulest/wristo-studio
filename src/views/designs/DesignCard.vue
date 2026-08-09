@@ -238,7 +238,11 @@ import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
-import { shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
+import {
+  shouldShowBuildIqButton,
+  shouldShowBuildPrgButton,
+  shouldShowPreviewPrgButton,
+} from './designCardActions'
 import {
   MAX_STORE_WEIGHT,
   MIN_STORE_WEIGHT,
@@ -294,6 +298,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
+const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelled', 'past_due', 'paused'])
 
 const design = computed(() => props.design)
@@ -420,21 +425,11 @@ const goToOperations = async () => {
 }
 
 const showBuildPrgButton = computed(() => {
-  const product = design.value.product as any
-  if (!product) return false
-  const hasQueue = !!product.prgPackagingLog?.rank
-  const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
-  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
-
-  // 若设计本身没有更新时间，则不允许构建
-  if (!designUpdatedAtRaw) return false
-
-  const designTs = +new Date(designUpdatedAtRaw)
-  // 如果没有 PRG release 更新时间，视为需要构建
-  if (!releaseUpdatedAtRaw) return !hasQueue
-
-  const releaseTs = +new Date(releaseUpdatedAtRaw)
-  return !hasQueue && releaseTs < designTs
+  return shouldShowBuildPrgButton(
+    design.value.product,
+    design.value.updatedAt,
+    currentDeviceId.value,
+  )
 })
 
 const showBuildIqButton = computed(() => {
@@ -442,7 +437,8 @@ const showBuildIqButton = computed(() => {
 })
 
 const showPreviewPrgButton = computed(() => {
-  return showPrgPreview.value && shouldShowPreviewPrgButton(design.value.product)
+  return showPrgPreview.value
+    && shouldShowPreviewPrgButton(design.value.product, currentDeviceId.value)
 })
 
 const showPublishButton = computed(() => {
@@ -510,19 +506,22 @@ const packageRows = computed(() => {
   }
 
   const prgLog = product.prgPackagingLog
-  const prgReleaseUpdatedAt = product.prgRelease?.updatedAt
-  if (prgLog || product.prgRelease?.prgUrl) {
-    const value = packageStatusText(prgLog) || (prgReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(prgReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
+  const currentPrgLog = prgLog?.deviceId === currentDeviceId.value ? prgLog : undefined
+  const prgRelease = product.prgRelease
+  const currentPrgRelease = prgRelease?.deviceId === currentDeviceId.value ? prgRelease : undefined
+  const prgReleaseUpdatedAt = currentPrgRelease?.updatedAt
+  if (currentPrgLog || currentPrgRelease?.prgUrl) {
+    const value = packageStatusText(currentPrgLog) || (prgReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(prgReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
     rows.push({
       key: 'prg',
       label: 'PRG',
       value,
-      tone: packageTone(prgLog, !!product.prgRelease?.prgUrl),
-      isPackaging: prgLog?.rank === 0,
-      logId: prgLog?.id,
-      canViewBuildLog: canOpenLog(prgLog),
-      canDownload: !!product.prgRelease?.prgUrl,
-      buildLogPath: prgLog?.lastBuildLogPath,
+      tone: packageTone(currentPrgLog, !!currentPrgRelease?.prgUrl),
+      isPackaging: currentPrgLog?.rank === 0,
+      logId: currentPrgLog?.id,
+      canViewBuildLog: canOpenLog(currentPrgLog),
+      canDownload: !!currentPrgRelease?.prgUrl,
+      buildLogPath: currentPrgLog?.lastBuildLogPath,
     })
   }
 
