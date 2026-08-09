@@ -33,6 +33,10 @@
           <Icon icon="material-symbols:school-outline" />
           {{ t('editor.creatorAcademy') }}
         </a>
+        <a @click="openConnectIqLauncherGuide" class="nav-link">
+          <Icon icon="material-symbols:desktop-windows-outline" />
+          {{ t('nav.connectIqLauncher') }}
+        </a>
         <!-- <a @click="showFontsConfirm" class="nav-link">
           <Icon icon="material-symbols:font-download-outline" />
           Font Preview
@@ -263,6 +267,9 @@ const openAcademy = () => {
   window.open('/academy', '_blank', 'noopener')
 }
 
+const openConnectIqLauncherGuide = () => {
+  router.push({ name: 'ConnectIqLauncherGuide' })
+}
 
 
 </script>
