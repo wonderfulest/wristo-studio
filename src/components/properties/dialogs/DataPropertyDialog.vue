@@ -47,6 +47,14 @@
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.dataOptions') }}</h3>
+          <div class="section-actions">
+            <el-button type="primary" link :disabled="addableOptions.length === 0" @click="openAddOptions">
+              {{ t('property.addOption') }}
+            </el-button>
+            <el-button type="primary" link @click="restoreSystemDefaults">
+              {{ t('property.restoreSystemDefaults') }}
+            </el-button>
+          </div>
         </div>
         <el-form-item 
           :label="t('property.defaultValue')"
@@ -60,12 +68,12 @@
             <el-option
               v-for="option in formData.options"
               :key="option.value"
-              :label="option.label + ' (' + option.metricSymbol + ')'"
+              :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
               :value="option.value"
             >
               <div class="metric-option">
                 <span class="metric-icon">{{ iconGlyph(option) }}</span>
-                <span class="metric-label">{{ option.label }} ({{ option.metricSymbol }})</span>
+                <span class="metric-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
           </el-select>
@@ -74,7 +82,7 @@
         <div v-if="selectedOption" class="selected-option-card">
           <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
           <div class="selected-option-copy">
-            <div class="selected-option-title">{{ selectedOption.label }}</div>
+            <div class="selected-option-title">{{ optionDisplayLabel(selectedOption) }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
           </div>
         </div>
@@ -92,7 +100,7 @@
                   <div class="option-content">
                     <div class="option-info">
                       <span class="metric-icon">{{ iconGlyph(option) }}</span>
-                      <span class="metric-label">{{ option.label }}</span>
+                      <span class="metric-label">{{ optionDisplayLabel(option) }}</span>
                       <span class="metric-symbol">({{ option.metricSymbol }})</span>
                     </div>
                   </div>
@@ -153,6 +161,43 @@
       </div>
     </template>
   </el-dialog>
+
+  <el-dialog
+    v-model="addOptionsVisible"
+    :title="t('property.addDataOptions')"
+    width="560px"
+    append-to-body
+    destroy-on-close
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+  >
+    <el-select
+      v-model="pendingOptionValues"
+      multiple
+      filterable
+      :placeholder="t('property.selectDataTypesToAdd')"
+      style="width: 100%"
+    >
+      <el-option
+        v-for="option in addableOptions"
+        :key="option.value"
+        :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
+        :value="option.value"
+      >
+        <div class="metric-option">
+          <span class="metric-icon">{{ iconGlyph(option) }}</span>
+          <span class="metric-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
+        </div>
+      </el-option>
+    </el-select>
+
+    <template #footer>
+      <el-button @click="addOptionsVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :disabled="pendingOptionValues.length === 0" @click="confirmAddOptions">
+        {{ t('common.confirm') }}
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -166,27 +211,38 @@ import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import {
+  createAddableDataOptions,
+  createEditDataOptions,
+  createSystemDataOptions,
+  resolveDataOptionSettingsLabel,
+  restoreSystemDataOptions
+} from './dataPropertyOptions'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
-const dataOptions = getDataTypePropertyOptions().filter(option => option.category === 'field')
-const cloneDataOptions = () => JSON.parse(JSON.stringify(dataOptions))
+const addOptionsVisible = ref(false)
+const pendingOptionValues = ref([])
+const catalogOptions = getDataTypePropertyOptions()
+const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions)
 const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
+const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
 const formData = reactive({
   title: '',
   propertyKey: '',
   type: 'data',
-  options: cloneDataOptions(),
-  value: dataOptions[0]?.value,
+  options: cloneSystemDataOptions(),
+  value: cloneSystemDataOptions()[0]?.value,
   prompt: '',
   errorMessage: ''
 })
 
 const selectedOption = computed(() => formData.options.find((option) => option.value === formData.value) || null)
+const addableOptions = computed(() => createAddableDataOptions(catalogOptions, formData.options))
 
 const initFormData = (data = null) => {
   isEdit.value = !!data
@@ -195,8 +251,8 @@ const initFormData = (data = null) => {
       title: data.title,
       propertyKey: data.propertyKey,
       type: data.type,
-      options: cloneDataOptions(),
-      value: data.value || dataOptions[0]?.value,
+      options: createEditDataOptions(data.options, catalogOptions),
+      value: data.value,
       prompt: data.prompt,
       errorMessage: data.errorMessage
     })
@@ -206,8 +262,8 @@ const initFormData = (data = null) => {
       title: defaults.title,
       propertyKey: defaults.key,
       type: 'data',
-      options: cloneDataOptions(),
-      value: dataOptions[0]?.value,
+      options: cloneSystemDataOptions(),
+      value: cloneSystemDataOptions()[0]?.value,
       prompt: '',
       errorMessage: ''
     })
@@ -256,6 +312,37 @@ const handleClose = () => {
   }).catch(() => {})
 }
 
+const restoreSystemDefaults = async () => {
+  try {
+    await ElMessageBox.confirm(
+      t('property.restoreSystemDefaultsConfirm'),
+      t('property.restoreSystemDefaults'),
+      {
+        confirmButtonText: t('common.yes'),
+        cancelButtonText: t('common.no'),
+        type: 'warning',
+      }
+    )
+    const restored = restoreSystemDataOptions(catalogOptions, formData.value)
+    formData.options = restored.options
+    formData.value = restored.defaultValue
+  } catch {
+    // Canceling keeps the current form options and default value unchanged.
+  }
+}
+
+const openAddOptions = () => {
+  pendingOptionValues.value = []
+  addOptionsVisible.value = true
+}
+
+const confirmAddOptions = () => {
+  const selectedValues = new Set(pendingOptionValues.value.map(String))
+  formData.options.push(...addableOptions.value.filter((option) => selectedValues.has(String(option.value))))
+  pendingOptionValues.value = []
+  addOptionsVisible.value = false
+}
+
 const deleteOption = (index) => {
   formData.options.splice(index, 1)
 }
@@ -281,6 +368,11 @@ defineExpose({
 </script>
 
 <style scoped>
+.section-actions {
+  display: flex;
+  align-items: center;
+}
+
 .metric-option {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);

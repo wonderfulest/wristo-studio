@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest'
 import { detectLauncherPlatform, getLauncherReleases } from './config'
 
 describe('Connect IQ Launcher configuration', () => {
+  it('provides the published Apple Silicon installer as the default fallback', () => {
+    expect(getLauncherReleases({}).mac).toEqual({
+      platform: 'mac',
+      architecture: 'arm64',
+      available: true,
+      url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg',
+      version: '0.1.0',
+      sha256: '3eeb9c35afba5e722aab8fa9ab54088e4541d04af79d65247d6c05a33714f94a',
+      requirements: 'macOS 11 or later · Apple Silicon'
+    })
+    expect(getLauncherReleases({}).windows).toMatchObject({ available: false, url: null })
+  })
+
   it.each([
     ['MacIntel', 'mac'],
     ['MacPPC', 'mac'],
@@ -23,6 +36,7 @@ describe('Connect IQ Launcher configuration', () => {
 
     expect(releases.mac).toEqual({
       platform: 'mac',
+      architecture: 'arm64',
       available: true,
       url: 'https://cdn.wristo.io/launcher.dmg',
       version: '1.0.0',

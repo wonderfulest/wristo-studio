@@ -10,7 +10,7 @@
       </el-form-item>
       <el-form-item label="Data Type" prop="value" :rules="[{ required: true, message: 'Select a data type', trigger: 'change' }]">
         <el-select v-model="formData.value" style="width: 100%">
-          <el-option v-for="option in compatibleOptions" :key="option.value" :label="option.label" :value="option.value" />
+          <el-option v-for="option in compatibleOptions" :key="option.value" :label="option.name" :value="option.value" />
         </el-select>
       </el-form-item>
       <div v-if="selectedOption" class="dial-meta">

@@ -76,6 +76,11 @@ const active = (value: unknown, path: string): 1 => {
   return 1
 }
 
+const binaryFlag = (value: unknown, path: string): 0 | 1 => {
+  if (value !== 0 && value !== 1) throw new Error(`${path} must be 0 or 1`)
+  return value
+}
+
 const nullableNumber = (value: unknown, path: string): number | null => {
   if (value === null) return null
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${path} must be a number or null`)
@@ -233,6 +238,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     iconUnicode: requiredString(value.iconUnicode, `${prefix}: iconUnicode`),
     defaultValue,
     isActive: active(value.isActive, `${prefix}: isActive`),
+    systemDefault: binaryFlag(value.systemDefault ?? 0, `${prefix}: systemDefault`),
     sortOrder: nonnegativeInteger(value.sortOrder, `${prefix}: sortOrder`),
     dialMode,
     dialMin: nullableNumber(value.dialMin, `${prefix}: dialMin`),

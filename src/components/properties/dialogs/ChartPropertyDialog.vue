@@ -60,12 +60,12 @@
             <el-option
               v-for="option in formData.options"
               :key="option.value"
-              :label="option.label + ' (' + option.metricSymbol + ')'"
+              :label="option.name + ' (' + option.metricSymbol + ')'"
               :value="option.value"
             >
               <div class="metric-option">
                 <span class="metric-icon">{{ option.icon }}</span>
-                <span class="metric-label">{{ option.label }} ({{ option.metricSymbol }})</span>
+                <span class="metric-label">{{ option.name }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
           </el-select>
@@ -74,7 +74,7 @@
         <div v-if="selectedOption" class="selected-option-card">
           <span class="selected-option-icon">{{ selectedOption.icon }}</span>
           <div class="selected-option-copy">
-            <div class="selected-option-title">{{ selectedOption.label }}</div>
+            <div class="selected-option-title">{{ selectedOption.name }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
           </div>
         </div>
@@ -92,7 +92,7 @@
                   <div class="option-content">
                     <div class="option-info">
                       <span class="metric-icon">{{ option.icon }}</span>
-                      <span class="metric-label">{{ option.label }}</span>
+                      <span class="metric-label">{{ option.name }}</span>
                       <span class="metric-symbol">({{ option.metricSymbol }})</span>
                     </div>
                   </div>

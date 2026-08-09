@@ -15,6 +15,7 @@ export interface DataTypeOption {
   readonly iconUnicode: string
   readonly defaultValue: string
   readonly isActive: 1
+  readonly systemDefault?: 0 | 1
   readonly sortOrder: number
   readonly dialMode: 'goal' | 'range' | null
   readonly dialMin: number | null

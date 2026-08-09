@@ -1,13 +1,7 @@
 <template>
   <div class="designer-font-list">
     <div class="font-list-scroll">
-      <div
-        v-for="font in visibleFonts"
-        :key="font.id"
-        class="font-item"
-        :class="{ active: modelValue === font.slug }"
-        @click="handleSelect(font)"
-      >
+      <div v-for="font in visibleFonts" :key="font.id" class="font-item" :class="{ active: modelValue === font.slug }" @click="handleSelect(font)">
         <FontListItem
           :label="font.fullName || font.family || font.slug"
           :font-family="font.slug"
@@ -24,8 +18,7 @@
           compact
           @edit-search-index="() => emit('editSearchIndex', font)"
           @favorite-changed="handleFavoriteChanged"
-          @removed="onFontRemoved"
-        />
+          @removed="onFontRemoved" />
       </div>
       <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
       <div v-else-if="!hasMore && fonts.length" class="end-tip">{{ t('common.noMore') }}</div>
@@ -42,11 +35,9 @@ import type { FontItem } from '@/types/font-picker'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
-import {
-  isFontCompatibleWithDateLanguage,
-  type DateContentLanguage,
-} from '@/utils/dateFontCompatibility'
+import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
+import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
 
 const { t } = useI18n()
 
@@ -84,11 +75,11 @@ const isVisibleFont = (font: DesignFontVO) => {
   return true
 }
 
-const visibleFonts = computed(() => fonts.value.filter(isVisibleFont))
+const visibleFonts = computed(() => sortSystemFontsFirst(fonts.value.filter(isVisibleFont)))
 
 defineExpose({
   loadNextPage,
-  loadUntilFont,
+  loadUntilFont
 })
 
 const loadPage = async () => {
@@ -102,7 +93,7 @@ const loadPage = async () => {
             pageSize: pageSize.value,
             type: props.type,
             includeAllUsers: props.includeAllUsers === true,
-            languages: languageFilter.value,
+            languages: languageFilter.value
           })
         : await searchFonts({
             pageNum: pageNum.value,
@@ -110,7 +101,7 @@ const loadPage = async () => {
             type: props.type || undefined,
             isSystem: props.canUsePremiumAssets === true ? undefined : 1,
             includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
-            languages: languageFilter.value,
+            languages: languageFilter.value
           })
     if (resp.code === 0 && resp.data) {
       const { list, total: t } = resp.data
@@ -133,25 +124,26 @@ async function loadNextPage() {
   await loadPage()
 }
 
-const waitForIdle = () => new Promise<void>((resolve) => {
-  if (!loading.value) {
-    resolve()
-    return
-  }
-
-  const timer = window.setInterval(() => {
+const waitForIdle = () =>
+  new Promise<void>((resolve) => {
     if (!loading.value) {
-      window.clearInterval(timer)
       resolve()
+      return
     }
-  }, 50)
-})
+
+    const timer = window.setInterval(() => {
+      if (!loading.value) {
+        window.clearInterval(timer)
+        resolve()
+      }
+    }, 50)
+  })
 
 async function loadUntilFont(slug: string) {
   if (!slug) return false
   await waitForIdle()
 
-  while (!fonts.value.some(font => font.slug === slug) && hasMore.value) {
+  while (!fonts.value.some((font) => font.slug === slug) && hasMore.value) {
     const previousLength = fonts.value.length
     await loadNextPage()
     await waitForIdle()
@@ -159,7 +151,7 @@ async function loadUntilFont(slug: string) {
     if (fonts.value.length === previousLength && !hasMore.value) break
   }
 
-  return fonts.value.some(font => font.slug === slug)
+  return fonts.value.some((font) => font.slug === slug)
 }
 
 const handleSelect = (font: DesignFontVO) => {
@@ -172,19 +164,17 @@ const handleSelect = (font: DesignFontVO) => {
     isSystem: font.isSystem === 1,
     favoriteWeight: font.favoriteWeight,
     language: font.language,
-    type: font.type,
+    type: font.type
   }
   emit('select', item)
 }
 
 const onFontRemoved = (id: number) => {
-  fonts.value = fonts.value.filter(f => f.id !== id)
+  fonts.value = fonts.value.filter((f) => f.id !== id)
 }
 
 const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
-  fonts.value = fonts.value
-    .map(font => font.id === id ? { ...font, favoriteWeight } : font)
-    .sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
+  fonts.value = fonts.value.map((font) => (font.id === id ? { ...font, favoriteWeight } : font)).sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
 }
 
 onMounted(() => {
@@ -235,7 +225,9 @@ watch(
 
 .font-item.active :deep(.font-main) {
   border: 2px solid var(--studio-primary);
-  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
+  box-shadow:
+    0 0 0 2px var(--studio-primary-soft),
+    var(--studio-shadow-md);
 }
 
 .font-main {

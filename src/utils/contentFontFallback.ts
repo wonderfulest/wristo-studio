@@ -1,4 +1,4 @@
-export const GARMIN_SYSTEM_PREVIEW_FONT = 'Arial, PingFang SC, Microsoft YaHei, sans-serif'
+export const GARMIN_SYSTEM_PREVIEW_FONT = 'noto-sans-sc-regular'
 
 export function containsChineseText(content: unknown): boolean {
   return /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(String(content ?? ''))

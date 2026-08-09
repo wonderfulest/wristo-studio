@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  GARMIN_SYSTEM_PREVIEW_FONT,
   containsChineseText,
   normalizeLegacyTextFont,
   resolvePreviewFontFamily,
@@ -14,8 +13,8 @@ describe('content font fallback', () => {
     expect(containsChineseText(content)).toBe(expected)
   })
 
-  it('uses a system preview stack only for Chinese content', () => {
-    expect(resolvePreviewFontFamily('步数 8,520', 'Inter')).toBe(GARMIN_SYSTEM_PREVIEW_FONT)
+  it('uses the packaged Chinese font only for Chinese content', () => {
+    expect(resolvePreviewFontFamily('步数 8,520', 'Inter')).toBe('noto-sans-sc-regular')
     expect(resolvePreviewFontFamily('8,520 STEPS', 'Inter')).toBe('Inter')
   })
 

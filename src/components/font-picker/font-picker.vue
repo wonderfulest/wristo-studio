@@ -337,6 +337,7 @@ const togglePanel = async () => {
     }
     await nextTick()
     updatePanelPosition()
+    await locateCurrentFont()
   }
 }
 

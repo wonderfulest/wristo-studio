@@ -3,28 +3,21 @@
     <div class="font-list-content">
       <div v-if="!visibleFonts.length" class="no-fonts">{{ t('font.noRecentFonts') }}</div>
       <div v-else class="font-family-group">
-        <div
-          v-for="font in visibleFonts"
-          :key="font.value"
-          class="font-item"
-          :class="{ active: modelValue === font.value }"
-          @click="$emit('select', font)"
-        >
+        <div v-for="font in visibleFonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="$emit('select', font)">
           <FontListItem
             :label="font.family"
             :font-family="font.value"
-	            :type="type"
-	            :language="font.language"
-	            :font-url="font.src"
-	            :font-id="font.id"
-	            :style-tags="font.styleTags"
-	            :favorite-weight="font.favoriteWeight"
-	            :can-edit-search-index="!!font.id"
-	            is-recent
-	            compact
-	            @edit-search-index="() => emit('editSearchIndex', font)"
-	            @favorite-changed="handleFavoriteChanged"
-	          />
+            :type="type"
+            :language="font.language"
+            :font-url="font.src"
+            :font-id="font.id"
+            :style-tags="font.styleTags"
+            :favorite-weight="font.favoriteWeight"
+            :can-edit-search-index="!!font.id"
+            is-recent
+            compact
+            @edit-search-index="() => emit('editSearchIndex', font)"
+            @favorite-changed="handleFavoriteChanged" />
         </div>
       </div>
     </div>
@@ -38,10 +31,8 @@ import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
-import {
-  isFontCompatibleWithDateLanguage,
-  type DateContentLanguage,
-} from '@/utils/dateFontCompatibility'
+import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
+import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
 
 const { t } = useI18n()
 
@@ -60,16 +51,19 @@ const emit = defineEmits<{
 }>()
 
 const fontStore = useFontStore()
-const visibleFonts = computed(() => filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true)
-  .filter((font) => {
-    if (props.dateContentLanguage) {
-      return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
-    }
-    if (props.excludeIconFonts) {
-      return String(font.type || '') !== 'icon_font'
-    }
-    return true
-  }))
+const visibleFonts = computed(() =>
+  sortSystemFontsFirst(
+    filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true).filter((font) => {
+      if (props.dateContentLanguage) {
+        return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
+      }
+      if (props.excludeIconFonts) {
+        return String(font.type || '') !== 'icon_font'
+      }
+      return true
+    })
+  )
+)
 
 const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
   fontStore.updateFontFavorite(id, favoriteWeight)
@@ -121,7 +115,9 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
 
 .font-item.active :deep(.font-main) {
   border: 2px solid var(--studio-primary);
-  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
+  box-shadow:
+    0 0 0 2px var(--studio-primary-soft),
+    var(--studio-shadow-md);
 }
 
 .preview-text {

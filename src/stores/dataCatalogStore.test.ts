@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
 import type { DataCatalogSnapshot } from '@/types/dataCatalog'
-import { getDataTypePropertyOptions, useDataCatalogStore } from './dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore, validateDataCatalog } from './dataCatalogStore'
 
 vi.mock('@/api/data-catalog', () => ({
   getDataCatalog: vi.fn()
@@ -75,6 +75,15 @@ describe('data catalog store', () => {
         unitKey: 'heart_rate'
       })
     ])
+  })
+
+  it('accepts canonical data types that do not have an icon glyph', () => {
+    const catalog = validCatalog()
+    catalog.dataTypeOptions[0].iconUnicode = ''
+
+    const snapshot = validateDataCatalog(catalog)
+
+    expect(snapshot.optionsByValueCode.get(0)?.iconUnicode).toBe('')
   })
 
   it('keeps the last valid snapshot when refresh is incomplete', async () => {

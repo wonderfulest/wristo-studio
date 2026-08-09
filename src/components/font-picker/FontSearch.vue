@@ -2,13 +2,7 @@
   <div class="font-section">
     <!-- Search bar -->
     <div class="search-container">
-      <input
-        type="text"
-        v-model="searchQuery"
-        :placeholder="t('font.searchFontsNaturalPlaceholder')"
-        class="search-input"
-        @input="onInput"
-      />
+      <input type="text" v-model="searchQuery" :placeholder="t('font.searchFontsNaturalPlaceholder')" class="search-input" @input="onInput" />
     </div>
 
     <template v-if="searchQuery">
@@ -19,46 +13,7 @@
           Local Search Results
         </div> -->
         <div class="font-list-content">
-            <div
-              v-for="font in filteredFonts"
-              :key="font.value"
-              class="font-item"
-              :class="{ active: modelValue === font.value }"
-              @click="handleSelect(font)"
-            >
-              <FontListItem
-                :label="font.label"
-                :font-family="font.value"
-                :type="font.type || props.type"
-                :language="font.language"
-                :is-monospace="(font as any).isMonospace === true"
-                :is-system="(font as any).isSystem === true"
-                :style-tags="(font as any).styleTags"
-                :favorite-weight="(font as any).favoriteWeight"
-                :font-id="font.id"
-                :can-edit-search-index="!!font.id"
-                compact
-                @edit-search-index="() => emit('editSearchIndex', font)"
-                @favorite-changed="handleFavoriteChanged"
-              />
-            </div>
-        </div>
-      </template>
-
-      <!-- Remote search results -->
-      <template v-if="remoteSearchResults.length > 0">
-        <!-- <div class="section-header">
-          <span class="arrow expanded">›</span>
-          Online Search Results
-        </div> -->
-        <div class="font-list-content">
-          <div
-            v-for="font in remoteSearchResults"
-            :key="font.value"
-            class="font-item"
-            :class="{ active: modelValue === font.value }"
-            @click="handleSelect(font)"
-          >
+          <div v-for="font in filteredFonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="handleSelect(font)">
             <FontListItem
               :label="font.label"
               :font-family="font.value"
@@ -72,8 +27,33 @@
               :can-edit-search-index="!!font.id"
               compact
               @edit-search-index="() => emit('editSearchIndex', font)"
-              @favorite-changed="handleFavoriteChanged"
-            />
+              @favorite-changed="handleFavoriteChanged" />
+          </div>
+        </div>
+      </template>
+
+      <!-- Remote search results -->
+      <template v-if="remoteSearchResults.length > 0">
+        <!-- <div class="section-header">
+          <span class="arrow expanded">›</span>
+          Online Search Results
+        </div> -->
+        <div class="font-list-content">
+          <div v-for="font in remoteSearchResults" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="handleSelect(font)">
+            <FontListItem
+              :label="font.label"
+              :font-family="font.value"
+              :type="font.type || props.type"
+              :language="font.language"
+              :is-monospace="(font as any).isMonospace === true"
+              :is-system="(font as any).isSystem === true"
+              :style-tags="(font as any).styleTags"
+              :favorite-weight="(font as any).favoriteWeight"
+              :font-id="font.id"
+              :can-edit-search-index="!!font.id"
+              compact
+              @edit-search-index="() => emit('editSearchIndex', font)"
+              @favorite-changed="handleFavoriteChanged" />
           </div>
         </div>
       </template>
@@ -105,11 +85,9 @@ import { DesignFontVO } from '@/types/font'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
-import {
-  isFontCompatibleWithDateLanguage,
-  type DateContentLanguage,
-} from '@/utils/dateFontCompatibility'
+import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
+import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
 
 const props = defineProps<{
   modelValue: string
@@ -147,13 +125,13 @@ const isVisibleFont = (font: FontItem | DesignFontVO) => {
 
 console.log('[FontSearch] setup init', {
   modelValue: props.modelValue,
-  type: props.type,
+  type: props.type
 })
 let searchTimer: number | undefined
 
 const onInput = () => {
   console.log('[FontSearch] onInput', {
-    rawQuery: searchQuery.value,
+    rawQuery: searchQuery.value
   })
   // debounce input to reduce remote requests
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -162,7 +140,7 @@ const onInput = () => {
 
 onMounted(() => {
   console.log('[FontSearch] onMounted', {
-    initialQuery: searchQuery.value,
+    initialQuery: searchQuery.value
   })
   filterFonts()
 })
@@ -178,24 +156,23 @@ watch(
 const filterFonts = async () => {
   console.log('[FontSearch] filterFonts start', {
     query: searchQuery.value,
-    type: props.type || undefined,
+    type: props.type || undefined
   })
   // local filter
-  const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true)
-    .filter(isVisibleFont)
+  const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true).filter(isVisibleFont)
   filteredFonts.value = sortByFavorite(local)
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
-    filteredLocalCount: filteredFonts.value.length,
+    filteredLocalCount: filteredFonts.value.length
   })
-  
+
   // remote search whenever query is not empty
   remoteSearchResults.value = []
   try {
     isSearching.value = true
     console.log('[FontSearch] remote search request', {
       query: searchQuery.value,
-      type: props.type || undefined,
+      type: props.type || undefined
     })
     const response = await searchFonts({
       pageNum: 1,
@@ -204,21 +181,21 @@ const filterFonts = async () => {
       type: props.type,
       isSystem: props.canUsePremiumAssets === true ? undefined : 1,
       includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
-      languages: languageFilter(),
+      languages: languageFilter()
     })
     const list = (response.data?.list ?? []) as DesignFontVO[]
     console.log('[FontSearch] remote search response', {
       listLength: list.length,
-      rawResponse: response,
+      rawResponse: response
     })
-    
+
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
     const serverList = filterAssetsByStudioAccess(list, props.canUsePremiumAssets === true).filter((font: DesignFontVO) => {
       const val = font.slug
       return !!val && !localValues.has(val) && isVisibleFont(font)
     })
     console.log('[FontSearch] remote fonts after dedupe', {
-      serverListCount: serverList.length,
+      serverListCount: serverList.length
     })
     // load fonts (register FontFace) before presenting results
     try {
@@ -235,8 +212,8 @@ const filterFonts = async () => {
       const label = font.fullName || font.family
       const family = font.family || font.fullName
       const value = font.slug || family
-      const isMonospace = (font?.isMonospace === 1)
-      const italic = (font?.italic === 1)
+      const isMonospace = font?.isMonospace === 1
+      const italic = font?.italic === 1
       const isSystem = font?.isSystem === 1
       const styleTags = font?.styleTags
       return {
@@ -248,20 +225,20 @@ const filterFonts = async () => {
         italic,
         isSystem,
         styleTags,
-	        searchKeywords: font.searchKeywords,
-	        weightClass: font.weightClass,
-	        widthClass: font.widthClass,
-	        favoriteWeight: font.favoriteWeight,
-          language: font.language,
-          type: font.type,
-	      } as FontItem
-	    })
+        searchKeywords: font.searchKeywords,
+        weightClass: font.weightClass,
+        widthClass: font.widthClass,
+        favoriteWeight: font.favoriteWeight,
+        language: font.language,
+        type: font.type
+      } as FontItem
+    })
     console.log('[FontSearch] remoteFonts mapped', {
-      remoteFontsCount: remoteFonts.length,
+      remoteFontsCount: remoteFonts.length
     })
     remoteSearchResults.value = sortByFavorite(remoteFonts)
     console.log('[FontSearch] remoteSearchResults final', {
-      remoteSearchResultsCount: remoteSearchResults.value.length,
+      remoteSearchResultsCount: remoteSearchResults.value.length
     })
   } catch (error) {
     console.error('[FontSearch] Remote font search error:', error)
@@ -270,7 +247,7 @@ const filterFonts = async () => {
     console.log('[FontSearch] filterFonts finally', {
       isSearching: isSearching.value,
       filteredFontsCount: filteredFonts.value.length,
-      remoteSearchResultsCount: remoteSearchResults.value.length,
+      remoteSearchResultsCount: remoteSearchResults.value.length
     })
     isSearching.value = false
   }
@@ -278,17 +255,17 @@ const filterFonts = async () => {
 
 const handleSelect = (font: FontItem) => {
   console.log('[FontSearch] handleSelect', {
-    font,
+    font
   })
   emit('select', font)
 }
 
 const sortByFavorite = (list: FontItem[]) => {
-  return [...list].sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
+  return sortSystemFontsFirst([...list].sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0)))
 }
 
 const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
-  const update = (font: FontItem) => font.id === id ? { ...font, favoriteWeight } : font
+  const update = (font: FontItem) => (font.id === id ? { ...font, favoriteWeight } : font)
   filteredFonts.value = sortByFavorite(filteredFonts.value.map(update))
   remoteSearchResults.value = sortByFavorite(remoteSearchResults.value.map(update))
   fontStore.updateFontFavorite(id, favoriteWeight)
@@ -329,7 +306,9 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
   margin-right: 8px;
   transition: transform 0.3s;
 }
-.arrow.expanded { transform: rotate(90deg); }
+.arrow.expanded {
+  transform: rotate(90deg);
+}
 .font-list-content {
   display: flex;
   flex-direction: column;
@@ -351,14 +330,29 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
   flex-direction: column;
   gap: 4px;
 }
-.font-item:hover { background: var(--studio-surface-soft); }
-.font-item.active { background: var(--studio-primary-soft); color: var(--studio-primary); }
+.font-item:hover {
+  background: var(--studio-surface-soft);
+}
+.font-item.active {
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+}
 .font-item.active :deep(.font-main) {
   border: 2px solid var(--studio-primary);
-  box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md);
+  box-shadow:
+    0 0 0 2px var(--studio-primary-soft),
+    var(--studio-shadow-md);
 }
-.preview-text { font-size: 18px; color: var(--studio-text); }
-.no-results { padding: 24px; text-align: center; color: var(--studio-text-subtle); font-size: 14px; }
+.preview-text {
+  font-size: 18px;
+  color: var(--studio-text);
+}
+.no-results {
+  padding: 24px;
+  text-align: center;
+  color: var(--studio-text-subtle);
+  font-size: 14px;
+}
 .search-loading {
   padding: 20px;
   text-align: center;
@@ -369,7 +363,10 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
   justify-content: center;
   gap: 8px;
 }
-.search-loading .el-icon { font-size: 16px; color: var(--studio-primary); }
+.search-loading .el-icon {
+  font-size: 16px;
+  color: var(--studio-primary);
+}
 
 /* active filter chips */
 .active-chips {

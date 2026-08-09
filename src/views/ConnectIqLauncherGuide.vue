@@ -15,22 +15,38 @@
         <section class="download-card">
           <div>
             <h2>{{ platformLabel(platform) }}</h2>
+            <select
+              v-if="platform === 'mac' && macArchitectures.length > 1"
+              v-model="activeMacArchitecture"
+              class="architecture-select"
+              data-test="launcher-mac-architecture"
+              aria-label="macOS architecture"
+            >
+              <option :value="null" disabled>Architecture</option>
+              <option v-for="arch in macArchitectures" :key="arch" :value="arch">{{ architectureLabel(arch) }}</option>
+            </select>
             <dl class="release-meta">
-              <template v-if="releases[platform].version">
+              <template v-if="releaseFor(platform).architecture">
+                <dt>Architecture</dt>
+                <dd :data-test="`launcher-${platform}-architecture-label`">
+                  {{ architectureLabel(releaseFor(platform).architecture!) }}
+                </dd>
+              </template>
+              <template v-if="releaseFor(platform).version">
                 <dt>{{ t('launcherGuide.version') }}</dt>
-                <dd>{{ releases[platform].version }}</dd>
+                <dd>{{ releaseFor(platform).version }}</dd>
               </template>
-              <template v-if="releases[platform].requirements">
+              <template v-if="releaseFor(platform).requirements">
                 <dt>{{ t('launcherGuide.requirements') }}</dt>
-                <dd>{{ releases[platform].requirements }}</dd>
+                <dd>{{ releaseFor(platform).requirements }}</dd>
               </template>
-              <template v-if="releases[platform].sha256">
+              <template v-if="releaseFor(platform).sha256">
                 <dt>{{ t('launcherGuide.sha256') }}</dt>
-                <dd class="checksum">{{ releases[platform].sha256 }}</dd>
+                <dd class="checksum">{{ releaseFor(platform).sha256 }}</dd>
               </template>
             </dl>
           </div>
-          <a v-if="releases[platform].available && releases[platform].url" :data-test="`launcher-download-${platform}`" :href="releases[platform].url!" rel="noopener noreferrer">
+          <a v-if="releaseFor(platform).available && releaseFor(platform).url" :data-test="`launcher-download-${platform}`" :href="releaseFor(platform).url!" rel="noopener noreferrer">
             <el-button type="primary" size="large">{{ t('launcherGuide.download') }}</el-button>
           </a>
           <el-button v-else :data-test="`launcher-download-${platform}-unavailable`" size="large" disabled>
@@ -90,15 +106,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from '@/i18n'
-import { detectLauncherPlatform, getLauncherReleases, type LauncherPlatform } from '@/features/connectIqLauncher/config'
+import { detectLauncherPlatform, getLauncherReleases, type LauncherPlatform, type LauncherRelease } from '@/features/connectIqLauncher/config'
+import { loadLauncherReleases, type MacLauncherArch } from '@/features/connectIqLauncher/manifest'
 
 const { t } = useI18n()
 const platforms: LauncherPlatform[] = ['mac', 'windows']
-const releases = getLauncherReleases()
+const releases = ref(getLauncherReleases())
+const macReleases = ref<Partial<Record<MacLauncherArch, LauncherRelease>>>({})
+const macArchitectures = ref<MacLauncherArch[]>([])
+const activeMacArchitecture = ref<MacLauncherArch | null>(null)
 const activePlatform = ref<LauncherPlatform>(detectLauncherPlatform(navigator.platform))
 const platformLabel = (platform: LauncherPlatform) => t(platform === 'mac' ? 'launcherGuide.platformMac' : 'launcherGuide.platformWindows')
+const architectureLabel = (arch: MacLauncherArch) => ({ arm64: 'Apple Silicon (arm64)', x64: 'Intel (x64)', universal: 'Universal' })[arch]
+const releaseFor = (platform: LauncherPlatform): LauncherRelease => {
+  if (platform !== 'mac' || macArchitectures.value.length <= 1) return releases.value[platform]
+  if (!activeMacArchitecture.value) return { ...releases.value.mac, available: false, url: null }
+  return macReleases.value[activeMacArchitecture.value] ?? { ...releases.value.mac, available: false, url: null }
+}
+
+onMounted(async () => {
+  const result = await loadLauncherReleases({ fallback: releases.value })
+  releases.value = result.releases
+  macReleases.value = result.macReleases
+  macArchitectures.value = result.macArchitectures
+  activeMacArchitecture.value = result.macArchitectures.length === 1 ? result.macArchitectures[0] : null
+})
 const steps = [
   { number: '1', title: 'launcherGuide.step1Title', body: 'launcherGuide.step1Body' },
   { number: '2', title: 'launcherGuide.step2Title', body: 'launcherGuide.step2Body' },
@@ -113,6 +147,15 @@ const steps = [
   max-width: 1120px;
   margin: 0 auto;
   padding: 64px 28px 80px;
+}
+.architecture-select {
+  min-width: 210px;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: var(--studio-surface-raised);
+  color: var(--studio-text);
 }
 .guide-hero {
   display: flex;
