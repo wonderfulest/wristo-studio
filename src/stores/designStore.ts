@@ -93,6 +93,10 @@ export const useDesignStore = defineStore('design', {
       return true
     },
 
+    replaceConnectIqDataTypeExclusions(value: unknown): boolean {
+      return this.setConnectIqSettingsExcludedDataTypeValues(value)
+    },
+
     setConnectIqDataTypeSelected(value: unknown, selected: boolean): boolean {
       const normalizedValue = normalizeConnectIqDataTypeValue(value)
       if (normalizedValue === null) return false

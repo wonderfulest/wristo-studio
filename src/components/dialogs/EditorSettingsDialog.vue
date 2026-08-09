@@ -49,6 +49,8 @@
         <span>{{ t('editorSettings.chineseContent') }}</span>
       </label>
 
+      <ConnectIqDataTypeSelector />
+
     </div>
 
     <div class="bar-group right-group">
@@ -224,6 +226,7 @@ import {
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
+import ConnectIqDataTypeSelector from './ConnectIqDataTypeSelector.vue'
 
 const props = defineProps<{
   canvasRef?: {

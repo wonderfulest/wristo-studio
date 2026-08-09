@@ -83,4 +83,13 @@ describe('designStore Connect IQ data exclusions', () => {
 
     expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([31])
   })
+
+  it('bulk-replaces normalized exclusions and reports whether history should be saved', () => {
+    const store = useDesignStore()
+    store.setConnectIqSettingsExcludedDataTypeValues([2, 999])
+
+    expect(store.replaceConnectIqDataTypeExclusions([999])).toBe(true)
+    expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([999])
+    expect(store.replaceConnectIqDataTypeExclusions(['999', 999])).toBe(false)
+  })
 })
