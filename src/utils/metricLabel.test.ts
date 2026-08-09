@@ -97,4 +97,26 @@ describe('canonical metric label and unit resolvers', () => {
       'data type option 8: canonical definition is missing',
     )
   })
+
+  it('validates a provided value before considering a valid symbol', () => {
+    expect(() => requireCanonicalMetric({ value: 'bad', metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option valueCode "bad": must be a finite integer',
+    )
+    expect(() => requireCanonicalMetric({ value: 7.5, metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option valueCode "7.5": must be a finite integer',
+    )
+    expect(() => requireCanonicalMetric({ value: Number.NaN, metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option valueCode "NaN": must be a finite integer',
+    )
+    expect(() => requireCanonicalMetric({ value: '   ', metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option valueCode "   ": must be a finite integer',
+    )
+  })
+
+  it('accepts trimmed strict decimal integer strings as legacy value codes', () => {
+    expect(requireCanonicalMetric({ value: ' 7 ', metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toBe(option)
+    expect(() => requireCanonicalMetric({ value: '7.0', metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option valueCode "7.0": must be a finite integer',
+    )
+  })
 })

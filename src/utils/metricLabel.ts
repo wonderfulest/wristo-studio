@@ -8,14 +8,23 @@ export function requireCanonicalMetric(
 ): DataTypeOption {
   const identity = metric as { readonly value?: unknown; readonly valueCode?: unknown; readonly metricSymbol?: unknown } | null | undefined
   const rawValueCode = identity?.valueCode ?? identity?.value
-  const hasValueCode = rawValueCode !== undefined && rawValueCode !== null && rawValueCode !== ''
-  const valueCode = Number(rawValueCode)
+  const hasValueCode = rawValueCode !== undefined && rawValueCode !== null
+  let valueCode: number | undefined
+  if (hasValueCode) {
+    const validNumber = typeof rawValueCode === 'number' && Number.isFinite(rawValueCode) && Number.isInteger(rawValueCode)
+    const normalizedString = typeof rawValueCode === 'string' ? rawValueCode.trim() : ''
+    const validString = typeof rawValueCode === 'string' && /^(0|[1-9]\d*)$/.test(normalizedString)
+    if (!validNumber && !validString) {
+      throw new Error(`data type option valueCode "${String(rawValueCode)}": must be a finite integer`)
+    }
+    valueCode = validNumber ? rawValueCode as number : Number(normalizedString)
+  }
   const symbol = typeof identity?.metricSymbol === 'string' ? identity.metricSymbol : ''
-  const option = hasValueCode && Number.isInteger(valueCode)
+  const option = hasValueCode
     ? catalog.dataTypeOptions.find((candidate) => candidate.valueCode === valueCode && (!symbol || candidate.metricSymbol === symbol))
     : catalog.dataTypeOptions.find((candidate) => symbol !== '' && candidate.metricSymbol === symbol)
   if (option) return option
-  const identityText = hasValueCode ? String(rawValueCode) : symbol || 'unknown'
+  const identityText = hasValueCode ? String(valueCode) : symbol || 'unknown'
   throw new Error(`data type option ${identityText}: canonical definition is missing`)
 }
 
