@@ -4,6 +4,17 @@ import type { FabricElement } from '@/types/element'
 import type { PropertiesMap } from '@/types/properties'
 import { createPinia, setActivePinia } from 'pinia'
 
+vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 },
+  })
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 },
+  })
+})
+
 const getAnalogAsset = vi.fn()
 
 vi.mock('@/api/wristo/analogAsset', () => ({
@@ -29,6 +40,20 @@ describe('validateDataGoalBindings', () => {
 
     expect(validateDataGoalBindings(objects, properties, translate)).toEqual([
       'Data element references missing data property (data_6)',
+    ])
+  })
+})
+
+describe('Garmin system font export validation', () => {
+  it('rejects missing and non-whitelisted Graphics font symbols', async () => {
+    const { validateSystemFontSelections } = await import('./exportService')
+    expect(validateSystemFontSelections([
+      { eleType: 'time', fontSource: 'system', systemFont: 'FONT_SMALL' },
+      { eleType: 'date', fontSource: 'system', systemFont: 'Graphics.FONT_SMALL;evil()' },
+      { eleType: 'text', fontSource: 'system' },
+    ] as any)).toEqual([
+      'Invalid Garmin system font for date: Graphics.FONT_SMALL;evil()',
+      'Invalid Garmin system font for text: (missing)',
     ])
   })
 })

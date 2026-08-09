@@ -3,6 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 
+vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 },
+  })
+})
+
 vi.mock('@/api/image', () => ({ findImageByUrl: vi.fn(async () => ({ data: null })) }))
 
 describe('design asset bundle MIME types', () => {
@@ -14,6 +21,18 @@ describe('design asset bundle MIME types', () => {
     expect(getBundleAssetMimeType('assets/background.png')).toBe('image/png')
     expect(getBundleAssetMimeType('assets/photo.jpg')).toBe('image/jpeg')
     expect(getBundleAssetMimeType('assets/photo.webp')).toBe('image/webp')
+  })
+})
+
+describe('font asset collection', () => {
+  it('does not package the fallback TTF for Garmin system-font elements', async () => {
+    const { collectFontSlugs } = await import('./designAssetBundleService')
+    expect(collectFontSlugs({
+      elements: [
+        { fontSource: 'system', systemFont: 'FONT_SMALL', fontFamily: 'fallback-font' },
+        { fontSource: 'asset', fontFamily: 'packaged-font' },
+      ],
+    } as any)).toEqual(['packaged-font'])
   })
 })
 

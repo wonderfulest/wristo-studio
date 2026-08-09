@@ -513,7 +513,7 @@ export const collectVisualThemeAssetRefs = (visualThemes: VisualThemesConfig | u
   )
 }
 
-const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
+export const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
   const slugs = new Set<string>()
   const walk = (value: unknown, key = '') => {
     if (typeof value === 'string') {
@@ -526,7 +526,9 @@ const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
       value.forEach((item) => walk(item, key))
       return
     }
-    Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) => {
+    const record = value as Record<string, unknown>
+    Object.entries(record).forEach(([childKey, childValue]) => {
+      if (childKey === 'fontFamily' && record.fontSource === 'system') return
       walk(childValue, childKey)
     })
   }
