@@ -28,7 +28,7 @@ export function formatTimePreview(date: Date, formatter: number): string {
   }
 }
 
-export function normalizeHourFormatRenderConfig<T extends { formatter: number; fontRenderType?: 'truetype' | 'bitmap'; fontFamily?: string }>(config: T): T {
+export function normalizeHourFormatRenderConfig<T extends { formatter: number; fontRenderType?: 'system' | 'truetype' | 'bitmap'; fontFamily?: string }>(config: T): T {
   if (config.formatter !== TimeFormatConstants.HOUR_FORMAT || config.fontRenderType !== 'bitmap') {
     return config
   }

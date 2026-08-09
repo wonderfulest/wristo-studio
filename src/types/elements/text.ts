@@ -1,7 +1,8 @@
 import type { BaseElementConfig } from './base'
 import type { ElementLocalizationConfig, WatchfaceLocale } from '@/types/localization'
+import type { GarminSystemFontSelection } from '@/types/garminSystemFont'
 
-export interface TextElementConfig extends BaseElementConfig {
+export interface TextElementConfig extends BaseElementConfig, GarminSystemFontSelection {
   fontFamily: string
   fontRole?: string
   fontSize: number

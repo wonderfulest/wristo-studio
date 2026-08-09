@@ -20,6 +20,8 @@ export function encodeUnit(element: FabricElement): UnitElementConfig {
     fontFamily: String(
       (element.fontFamily as any) ?? 'roboto-condensed-regular',
     ),
+    fontSource: (element as any).fontSource,
+    systemFont: (element as any).systemFont,
     dataProperty: (element as any).dataProperty ?? undefined,
     goalProperty: (element as any).goalProperty ?? undefined,
     metricSymbol: String((element as any).metricSymbol ?? ''),
@@ -50,6 +52,8 @@ export function decodeUnit(config: UnitElementConfig): Partial<FabricElement> {
     fill: config.fill,
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
+    fontSource: config.fontSource,
+    systemFont: config.systemFont,
     dataProperty: config.dataProperty ?? undefined,
     goalProperty: config.goalProperty ?? undefined,
     metricSymbol: config.metricSymbol ?? '',

@@ -4,7 +4,7 @@ export interface TimeElementConfig extends TextElementConfig {
   eleType: 'time'
   formatter: number
   // 字体渲染类型：truetype / bitmap
-  fontRenderType?: 'truetype' | 'bitmap'
+  fontRenderType?: 'system' | 'truetype' | 'bitmap'
   // bitmap 字体 ID，仅在 fontRenderType === 'bitmap' 时使用
   bitmapFontId?: number | null
   // bitmap 字体字符间距（像素），仅在 fontRenderType === 'bitmap' 时使用
