@@ -433,23 +433,27 @@ const packageRows = computed(() => {
     logId?: number
     canViewBuildLog: boolean
   }> = []
-  const prgRank = product.prgPackagingLog?.rank
   const iqRank = product.packagingLog?.rank
 
-  const prgUrl = product.prgRelease?.prgUrl
-  if (product.prgPackagingLog || prgUrl) {
+  const prgReleases = product.prgReleases?.length
+    ? product.prgReleases
+    : (product.prgRelease ? [product.prgRelease] : [])
+  for (const release of prgReleases) {
+    const isCurrentDevice = release.deviceId === userStore.userInfo?.device?.deviceId
+    const packagingLog = isCurrentDevice ? product.prgPackagingLog : undefined
+    const prgRank = packagingLog?.rank
     rows.push({
-      key: 'prg-release',
-      label: 'PRG',
+      key: `prg-release-${release.id || release.deviceId}`,
+      label: `PRG · ${release.deviceDisplayName || release.deviceId}`,
       packageDate: prgRank !== null && prgRank !== undefined
         ? queueText(prgRank)
-        : releaseText(product.prgRelease?.updatedAt),
-      version: product.prgRelease?.releaseVersion ? `v${product.prgRelease.releaseVersion}` : '-',
-      size: formatPackageSize(product.prgRelease?.packageSize) || '-',
-      downloadUrl: prgUrl || undefined,
+        : releaseText(release.completedAt || release.updatedAt),
+      version: release.releaseVersion ? `v${release.releaseVersion}` : '-',
+      size: formatPackageSize(release.packageSize) || '-',
+      downloadUrl: release.prgUrl || undefined,
       fileType: 'prg',
-      logId: product.prgPackagingLog?.id,
-      canViewBuildLog: !!(canManageAppDetails.value && canOpenBuildLog(product.prgPackagingLog))
+      logId: packagingLog?.id,
+      canViewBuildLog: !!(canManageAppDetails.value && canOpenBuildLog(packagingLog))
     })
   }
 

@@ -84,6 +84,10 @@ export interface ProductReleasePrgVo {
   createdAt: number
   updatedAt: number
   version: number
+  deviceDisplayName?: string
+  completedAt?: string | number | null
+  canRebuild?: boolean
+  rebuildAvailableAt?: string | number | null
 }
 
 export interface Product {
@@ -120,6 +124,7 @@ export interface Product {
   prgPackagingLog?: ProductPackagingLogVo
   release: ProductReleaseVo
   prgRelease?: ProductReleasePrgVo
+  prgReleases?: ProductReleasePrgVo[]
   bundles: Bundle[]
   tags?: ProductTag[] | null
   lastGoLive: number | string | null
