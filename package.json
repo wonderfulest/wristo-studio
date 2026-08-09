@@ -1,10 +1,10 @@
 {
   "name": "wristo-studio",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.5.8",
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
     "version:bump": "node scripts/bump-version.mjs",

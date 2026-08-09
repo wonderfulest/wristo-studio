@@ -5,7 +5,9 @@ import { decodeLabel, encodeLabel } from './label.encoder'
 
 vi.hoisted(() => {
   const storage = new Map<string, string>()
-  globalThis.localStorage = {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => storage.set(key, value),
     removeItem: (key: string) => storage.delete(key),
@@ -14,7 +16,8 @@ vi.hoisted(() => {
     get length() {
       return storage.size
     },
-  }
+    },
+  })
 })
 
 describe('label color property binding', () => {
