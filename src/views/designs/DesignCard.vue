@@ -170,6 +170,12 @@
                   <el-icon><Box /></el-icon>
                   {{ t('card.buildPrg') }}
                 </el-button>
+                <el-button v-if="prgCardAction === 'cancel'" size="small" type="danger" plain @click="closeActions(); emit('cancel-prg', design)">
+                  {{ t('card.cancelPrgBuild') }}
+                </el-button>
+                <el-button v-else-if="prgCardAction === 'cancelling'" size="small" disabled loading>
+                  {{ t('card.cancellingPrgBuild') }}
+                </el-button>
                 <el-button v-if="showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
                   <el-icon><Box /></el-icon>
                   {{ t('card.buildIq') }}
@@ -238,7 +244,7 @@ import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
-import { shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
+import { getPrgCardAction, shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
 import {
   MAX_STORE_WEIGHT,
   MIN_STORE_WEIGHT,
@@ -273,6 +279,7 @@ const props = defineProps<{
   showPackageDownload?: boolean
   showPrgPreview?: boolean
   storeWeightSaving?: boolean
+  nowMs?: number
 }>()
 
 const emit = defineEmits<{
@@ -281,6 +288,7 @@ const emit = defineEmits<{
   (e: 'open', design: Design): void
   (e: 'copy', design: Design): void
   (e: 'build-prg', design: Design): void
+  (e: 'cancel-prg', design: Design): void
   (e: 'prepare-preview-prg', design: Design): void
   (e: 'preview-prg', design: Design): void
   (e: 'run-prg', design: Design): void
@@ -294,6 +302,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
+const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelled', 'past_due', 'paused'])
 
 const design = computed(() => props.design)
@@ -419,23 +428,13 @@ const goToOperations = async () => {
   operationsDrawerVisible.value = true
 }
 
-const showBuildPrgButton = computed(() => {
-  const product = design.value.product as any
-  if (!product) return false
-  const hasQueue = !!product.prgPackagingLog?.rank
-  const releaseUpdatedAtRaw = product.prgRelease?.updatedAt as string | number | undefined
-  const designUpdatedAtRaw = design.value.updatedAt as string | number | undefined
-
-  // 若设计本身没有更新时间，则不允许构建
-  if (!designUpdatedAtRaw) return false
-
-  const designTs = +new Date(designUpdatedAtRaw)
-  // 如果没有 PRG release 更新时间，视为需要构建
-  if (!releaseUpdatedAtRaw) return !hasQueue
-
-  const releaseTs = +new Date(releaseUpdatedAtRaw)
-  return !hasQueue && releaseTs < designTs
-})
+const prgCardAction = computed(() => getPrgCardAction(
+  design.value.product,
+  design.value.updatedAt,
+  currentDeviceId.value,
+  props.nowMs ?? Date.now(),
+))
+const showBuildPrgButton = computed(() => prgCardAction.value === 'build')
 
 const showBuildIqButton = computed(() => {
   return shouldShowBuildIqButton(design.value.product)
@@ -450,7 +449,7 @@ const showPublishButton = computed(() => {
   return !!product?.release
 })
 const hasPreviewActions = computed(() => showPreviewPrgButton.value)
-const hasBuildActions = computed(() => showBuildPrgButton.value || showBuildIqButton.value)
+const hasBuildActions = computed(() => prgCardAction.value !== 'none' || showBuildIqButton.value)
 const hasReleaseActions = computed(() => showPublishButton.value)
 
 const lastPackageTimeText = computed(() => {

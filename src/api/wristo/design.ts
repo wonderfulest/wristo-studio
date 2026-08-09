@@ -190,6 +190,12 @@ export const designApi = {
     return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
   },
 
+  cancelPrgPackageTask(designUid: string, deviceId: string, taskId: number): Promise<ApiResponse<{ taskId: number; status: string }>> {
+    return instance.delete(`/dsn/design/${encodeURIComponent(designUid)}/prg-package-tasks/${taskId}`, {
+      params: { deviceId },
+    })
+  },
+
   uploadAssetBundle(designUid: string, file: File): Promise<ApiResponse<DesignAssetBundleVO>> {
     const form = new FormData()
     form.append('file', file)

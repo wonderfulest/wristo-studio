@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
+import { getPrgCardAction, shouldShowBuildIqButton, shouldShowPreviewPrgButton } from './designCardActions'
 
 const source = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
 const workspaceSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
@@ -28,6 +28,22 @@ describe('DesignCard Build IQ action', () => {
   it('keeps package download visible in Workspace only', () => {
     expect(workspaceSource).toContain(':show-package-download="true"')
     expect(newProjectsSource).toContain(':show-package-download="false"')
+  })
+})
+
+describe('DesignCard PRG action', () => {
+  const now = Date.parse('2026-08-09T10:10:00Z')
+  const designUpdatedAt = '2026-08-09T09:00:00Z'
+
+  it.each([
+    ['release younger than ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:01Z' } }, 'none'],
+    ['release at ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:00Z' } }, 'build'],
+    ['queued task younger than ten minutes', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T10:00:01Z'), rank: 2 } }, 'none'],
+    ['queued task at ten minutes', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T10:00:00Z'), rank: 2 } }, 'cancel'],
+    ['running cancellation', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'cancel_requested', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'cancelling'],
+    ['another device task', { prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'build'],
+  ] as const)('%s', (_label, product, expected) => {
+    expect(getPrgCardAction(product, designUpdatedAt, 'fenix8', now)).toBe(expected)
   })
 })
 
