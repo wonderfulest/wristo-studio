@@ -275,13 +275,13 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       await fontStore.loadFontsForElements(loadConfig.elements as any)
       if (!isCurrentDesignLoad(generation)) return false
     } else {
+      await waitCanvasReady()
+      if (!isCurrentDesignLoad(generation)) return false
       visualThemeStore.hydrate(loadConfig.visualThemes)
       designStore.setSupportsChineseContent(false)
       designStore.setSupportedLocales(['en-US'])
       designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
-      await waitCanvasReady()
-      if (!isCurrentDesignLoad(generation)) return false
       elementDataStore.clearAll()
       baseStore.canvas?.requestRenderAll()
       historyStore.saveInitial()

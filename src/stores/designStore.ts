@@ -15,7 +15,7 @@ function normalizeConnectIqDataTypeValue(value: unknown): number | null {
     : value
   return typeof numericValue === 'number'
     && Number.isFinite(numericValue)
-    && Number.isInteger(numericValue)
+    && Number.isSafeInteger(numericValue)
     && numericValue >= 0
     ? numericValue
     : null
@@ -27,6 +27,10 @@ export function normalizeConnectIqSettingsExcludedDataTypeValues(value: unknown)
     .map(normalizeConnectIqDataTypeValue)
     .filter((item): item is number => item !== null)
   return Array.from(new Set(normalized)).sort((left, right) => left - right)
+}
+
+function hasSameNumericValues(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
 export const useDesignStore = defineStore('design', {
@@ -82,17 +86,23 @@ export const useDesignStore = defineStore('design', {
       this.supportsChineseContent = Boolean(value)
     },
 
-    setConnectIqSettingsExcludedDataTypeValues(value: unknown): void {
-      this.connectIqSettingsExcludedDataTypeValues = normalizeConnectIqSettingsExcludedDataTypeValues(value)
+    setConnectIqSettingsExcludedDataTypeValues(value: unknown): boolean {
+      const normalized = normalizeConnectIqSettingsExcludedDataTypeValues(value)
+      if (hasSameNumericValues(this.connectIqSettingsExcludedDataTypeValues, normalized)) return false
+      this.connectIqSettingsExcludedDataTypeValues = normalized
+      return true
     },
 
-    setConnectIqDataTypeSelected(value: unknown, selected: boolean): void {
+    setConnectIqDataTypeSelected(value: unknown, selected: boolean): boolean {
       const normalizedValue = normalizeConnectIqDataTypeValue(value)
-      if (normalizedValue === null) return
+      if (normalizedValue === null) return false
       const exclusions = new Set(this.connectIqSettingsExcludedDataTypeValues)
       if (selected) exclusions.delete(normalizedValue)
       else exclusions.add(normalizedValue)
-      this.connectIqSettingsExcludedDataTypeValues = Array.from(exclusions).sort((left, right) => left - right)
+      const normalized = Array.from(exclusions).sort((left, right) => left - right)
+      if (hasSameNumericValues(this.connectIqSettingsExcludedDataTypeValues, normalized)) return false
+      this.connectIqSettingsExcludedDataTypeValues = normalized
+      return true
     },
 
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {

@@ -24,23 +24,54 @@ describe('designStore Connect IQ data exclusions', () => {
       ' 3',
       '4.0',
       'bad',
+      Number.MAX_SAFE_INTEGER + 1,
+      String(Number.MAX_SAFE_INTEGER + 1),
+      '999999999999999999999999999999999999999999999999',
     ])
 
     expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([2, 31])
+  })
+
+  it('keeps the maximum safe value without allowing unsafe numbers to collide with it', () => {
+    const store = useDesignStore()
+
+    store.setConnectIqSettingsExcludedDataTypeValues([
+      Number.MAX_SAFE_INTEGER,
+      String(Number.MAX_SAFE_INTEGER),
+      Number.MAX_SAFE_INTEGER + 1,
+      '9007199254740992',
+      '9007199254740993',
+    ])
+
+    expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([Number.MAX_SAFE_INTEGER])
   })
 
   it('keeps stale numeric exclusions and adds or removes exactly the selected value', () => {
     const store = useDesignStore()
     store.setConnectIqSettingsExcludedDataTypeValues([999, 31])
 
-    store.setConnectIqDataTypeSelected(31, true)
+    expect(store.setConnectIqDataTypeSelected(31, true)).toBe(true)
     expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([999])
 
-    store.setConnectIqDataTypeSelected(2, false)
+    expect(store.setConnectIqDataTypeSelected(2, false)).toBe(true)
     expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([2, 999])
 
-    store.setConnectIqDataTypeSelected(2, false)
+    expect(store.setConnectIqDataTypeSelected(2, false)).toBe(false)
     expect(store.connectIqSettingsExcludedDataTypeValues).toEqual([2, 999])
+  })
+
+  it('preserves the array reference when normalization or selection makes no change', () => {
+    const store = useDesignStore()
+    store.setConnectIqSettingsExcludedDataTypeValues([2, 31])
+    const reference = store.connectIqSettingsExcludedDataTypeValues
+
+    store.setConnectIqSettingsExcludedDataTypeValues([31, '2', 31])
+    expect(store.connectIqSettingsExcludedDataTypeValues).toBe(reference)
+
+    expect(store.setConnectIqDataTypeSelected(31, false)).toBe(false)
+    expect(store.connectIqSettingsExcludedDataTypeValues).toBe(reference)
+    expect(store.setConnectIqDataTypeSelected('bad', false)).toBe(false)
+    expect(store.connectIqSettingsExcludedDataTypeValues).toBe(reference)
   })
 
   it('ignores invalid values in the single-selection action', () => {
