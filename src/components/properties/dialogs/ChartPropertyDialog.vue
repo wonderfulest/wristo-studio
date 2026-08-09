@@ -162,7 +162,7 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
-import { DataTypeOptions } from '@/config/settings'
+import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 
 const { t } = useI18n()
@@ -170,7 +170,7 @@ const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
-const chartOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':CHART_TYPE_'))
+const chartOptions = getDataTypePropertyOptions().filter(option => option.category === 'chart')
 const cloneChartOptions = () => JSON.parse(JSON.stringify(chartOptions))
 
 const formData = reactive({

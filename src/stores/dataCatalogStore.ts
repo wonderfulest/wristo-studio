@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
-import { reportDataTypeOptionsLoadError, replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
 import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
@@ -46,6 +45,23 @@ const readonlyLookup = <K, V>(source: Map<K, V>): ReadonlyLookup<K, V> => Object
 const EMPTY_UNITS = readonlyLookup(new Map<string, DataUnitDefinition>())
 const EMPTY_ALIASES = readonlyLookup(new Map<string, UnitVariantOwner>())
 const EMPTY_OPTIONS = Object.freeze([]) as readonly DataTypeOption[]
+
+export type DataTypePropertyOption = Omit<DataTypeOption, 'label'> & {
+  readonly value: number
+  readonly label: string
+  readonly dataLabel: LocalizedText
+  readonly icon: string
+}
+
+export function getDataTypePropertyOptions(): DataTypePropertyOption[] {
+  return useDataCatalogStore().options.map((option) => ({
+    ...option,
+    value: option.valueCode,
+    label: option.label.eng,
+    dataLabel: option.label,
+    icon: option.iconUnicode,
+  }))
+}
 const EMPTY_UNIT_DEFINITIONS = Object.freeze([]) as readonly DataUnitDefinition[]
 
 const nonnegativeInteger = (value: unknown, path: string): number => {
@@ -246,14 +262,12 @@ export const useDataCatalogStore = defineStore('dataCatalog', {
       const request = getDataCatalog()
         .then((result) => validateDataCatalog(result.data))
         .then((snapshot) => {
-          replaceDataTypeOptionsFromCatalog(snapshot.dataTypeOptions, snapshot.unitsByKey)
           this.snapshot = snapshot
           return snapshot
         })
         .catch((error: unknown) => {
           const normalized = error instanceof Error ? error : new Error(String(error))
           this.error = normalized.message
-          reportDataTypeOptionsLoadError(normalized)
           throw normalized
         })
         .finally(() => {

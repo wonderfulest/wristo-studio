@@ -108,7 +108,7 @@ const availableDateFormatOptions = computed(() => DateFormatOptions.filter((opti
 
 const getDateFormatOptionLabel = (option: OptionFormat<number>) => {
   if (designStore.supportsChineseContent && isChineseDateFormatter(option.value)) {
-    return option.labelCn || option.label
+    return option.zhsLabel || option.label
   }
   return option.label
 }

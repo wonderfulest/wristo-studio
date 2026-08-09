@@ -29,7 +29,7 @@
             @click="insertVariable(name)"
           >
             <span>{{ variableLabel(name) }}</span>
-            <code>{{ tokenLabel(name) }}</code>
+            <code>{{ formatToken(name) }}</code>
           </button>
         </div>
       </section>
@@ -106,7 +106,7 @@ const variableLabels: Record<string, string> = {
 }
 
 const variableLabel = (name: string) => variableLabels[name] || name
-const tokenLabel = (name: string) => `{{${name}}}`
+const formatToken = (name: string) => `{{${name}}}`
 
 watch(
   () => props.modelValue,

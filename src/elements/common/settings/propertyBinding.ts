@@ -1,4 +1,3 @@
-import { DataTypeOptions } from '@/config/settings'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -6,9 +5,9 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
-import type { DataTypeOption, DialProgressMode } from '@/types/settings'
+import type { DialProgressMode } from '@/types/settings'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
-import { useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore, type DataTypePropertyOption } from '@/stores/dataCatalogStore'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 
@@ -21,9 +20,9 @@ export const isMetricBindableElement = (type: BindableMetricPropertyType, eleTyp
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
-const metricOptionsByType = (type: BindableMetricPropertyType): DataTypeOption[] => {
-  const prefix = type === 'goal' ? ':GOAL_TYPE_' : ':FIELD_TYPE_'
-  return DataTypeOptions.filter((option) => option.metricSymbol.startsWith(prefix))
+const metricOptionsByType = (type: BindableMetricPropertyType): DataTypePropertyOption[] => {
+  const category = type === 'data' ? 'field' : 'goal'
+  return getDataTypePropertyOptions().filter((option) => option.category === category)
 }
 
 const getNextPropertyIndex = (type: BindableMetricPropertyType): number => {
@@ -107,7 +106,7 @@ export const createQuickDialProperty = (mode: DialProgressMode): string => {
   let index = 1
   while (propertiesStore.allProperties[`dial_${mode}_${index}`]) index += 1
   const key = `dial_${mode}_${index}`
-  const options = DataTypeOptions.filter(option => option.dialMode === mode)
+  const options = getDataTypePropertyOptions().filter(option => option.dialMode === mode)
   propertiesStore.addProperty({
     key,
     type: 'dial',

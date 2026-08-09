@@ -162,7 +162,7 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
-import { DataTypeOptions } from '@/config/settings'
+import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -173,7 +173,7 @@ const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
 // 获取目标数据项作为选项
-const goalOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':GOAL_TYPE_'))
+const goalOptions = getDataTypePropertyOptions().filter(option => option.category === 'goal')
 const cloneGoalOptions = () => JSON.parse(JSON.stringify(goalOptions))
 const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
 

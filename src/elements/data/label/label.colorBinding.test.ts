@@ -2,8 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { decodeLabel, encodeLabel } from './label.encoder'
-import { useDataCatalogStore, validateDataCatalog } from '@/stores/dataCatalogStore'
-import { DataTypeOptions, replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
+import { getDataTypePropertyOptions, useDataCatalogStore, validateDataCatalog } from '@/stores/dataCatalogStore'
 import { usePropertiesStore } from '@/stores/properties'
 
 vi.hoisted(() => {
@@ -32,8 +31,7 @@ describe('label color property binding', () => {
       unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
-    replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
-    usePropertiesStore().addProperty({ key: 'data_1', type: 'data', title: 'Data 1', options: [...DataTypeOptions], defaultValue: 0 })
+    usePropertiesStore().addProperty({ key: 'data_1', type: 'data', title: 'Data 1', options: getDataTypePropertyOptions(), defaultValue: 0 })
     const encoded = encodeLabel({
       id: 'label-1',
       eleType: 'label',
@@ -61,7 +59,6 @@ describe('label color property binding', () => {
       unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
-    replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
 
     expect(() => decodeLabel({ id: 'unknown', eleType: 'label', metricSymbol: ':FIELD_TYPE_UNKNOWN' } as any))
       .toThrow('data type option :FIELD_TYPE_UNKNOWN: canonical definition is missing')

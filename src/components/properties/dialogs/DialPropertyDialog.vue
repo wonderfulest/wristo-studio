@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { DataTypeOptions } from '@/config/settings'
+import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import type { DialProgressMode } from '@/types/settings'
 import { usePropertiesStore } from '@/stores/properties'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
@@ -41,7 +41,7 @@ const formRef = ref<any>(null)
 const modeOptions = [{ label: 'Goal', value: 'goal' }, { label: 'Range', value: 'range' }]
 const formData = reactive({ title: '', propertyKey: '', dialMode: 'goal' as DialProgressMode, value: undefined as number | undefined })
 
-const compatibleOptions = computed(() => DataTypeOptions.filter(option => option.dialMode === formData.dialMode))
+const compatibleOptions = computed(() => getDataTypePropertyOptions().filter(option => option.dialMode === formData.dialMode))
 const selectedOption = computed(() => compatibleOptions.value.find(option => option.value === formData.value) || null)
 
 function nextKey(mode: DialProgressMode) {

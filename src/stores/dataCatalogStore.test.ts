@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
-import { DataTypeOptions } from '@/config/elements/options/dataTypes'
 import type { DataCatalogSnapshot } from '@/types/dataCatalog'
-import { useDataCatalogStore } from './dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore } from './dataCatalogStore'
 
 vi.mock('@/api/data-catalog', () => ({
   getDataCatalog: vi.fn()
@@ -54,7 +53,7 @@ describe('data catalog store', () => {
     mockedGetDataCatalog.mockReset()
   })
 
-  it('replaces items, indexes and compatibility options atomically after strict validation', async () => {
+  it('replaces items and indexes atomically after strict validation', async () => {
     mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: validCatalog() })
 
     const store = useDataCatalogStore()
@@ -67,19 +66,17 @@ describe('data catalog store', () => {
     expect(store.snapshot?.optionsByValueCode.get(0)?.metricSymbol).toBe(':FIELD_TYPE_HEART_RATE')
     expect(store.snapshot?.optionsByMetricSymbol.get(':FIELD_TYPE_HEART_RATE')?.valueCode).toBe(0)
     expect(() => (store.snapshot?.optionsByValueCode as any).set(1, {})).toThrow()
-    expect(DataTypeOptions).toEqual([
+    expect(getDataTypePropertyOptions()).toEqual([
       expect.objectContaining({
         value: 0,
         metricSymbol: ':FIELD_TYPE_HEART_RATE',
         label: 'HR',
-        labelCn: '心率',
-        unitKey: 'heart_rate',
-        unit: 'bpm'
+        unitKey: 'heart_rate'
       })
     ])
   })
 
-  it('keeps the last valid snapshot and compatibility options when refresh is incomplete', async () => {
+  it('keeps the last valid snapshot when refresh is incomplete', async () => {
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
     const store = useDataCatalogStore()
     await store.load()
@@ -91,7 +88,7 @@ describe('data catalog store', () => {
 
     expect(store.catalogVersion).toBe(12)
     expect(store.options[0].label.zhs).toBe('心率')
-    expect(DataTypeOptions[0].labelCn).toBe('心率')
+    expect(getDataTypePropertyOptions()[0].dataLabel.zhs).toBe('心率')
     expect(store.error).toContain('valueCode 0: label.zhs is required')
   })
 
@@ -417,47 +414,6 @@ describe('data catalog store', () => {
     expect(() => (unit.variants.bpm.aliases as any).push('mutated')).toThrow()
     expect(store.options[0].label.eng).toBe('HR')
     expect(store.unitsByKey.get('heart_rate')?.variants.bpm.aliases).toEqual(['bpm'])
-  })
-
-  it('keeps a stable runtime-readonly compatibility array while atomically replacing its snapshot', async () => {
-    const compatibilityReference = DataTypeOptions
-    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
-    const store = useDataCatalogStore()
-    await store.load()
-
-    expect(() => (DataTypeOptions as any).push({})).toThrow()
-    expect(() => ((DataTypeOptions as any)[0] = {})).toThrow()
-    expect(() => ((DataTypeOptions[0] as any).label = 'mutated')).toThrow()
-    expect(Object.isFrozen(DataTypeOptions[0])).toBe(true)
-    const next: any = validCatalog(13)
-    next.dataTypeOptions[0].label.eng = 'Pulse'
-    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: next })
-    await store.load(true)
-
-    expect(DataTypeOptions).toBe(compatibilityReference)
-    expect(DataTypeOptions[0].label).toBe('Pulse')
-  })
-
-  it('rejects proxy target poisoning without breaking reads, keys, or later refreshes', async () => {
-    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
-    const store = useDataCatalogStore()
-    await store.load()
-
-    expect(() => Object.preventExtensions(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
-    expect(() => Object.freeze(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
-    expect(() => Object.seal(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
-    expect(() => Object.setPrototypeOf(DataTypeOptions, null)).toThrow('DataTypeOptions is readonly')
-    expect(Reflect.isExtensible(DataTypeOptions)).toBe(true)
-    expect(Object.keys(DataTypeOptions)).toEqual(['0'])
-    expect(DataTypeOptions[0].label).toBe('HR')
-
-    const next: any = validCatalog(13)
-    next.dataTypeOptions[0].label.eng = 'Pulse after poison attempt'
-    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: next })
-    await store.load(true)
-
-    expect(Object.keys(DataTypeOptions)).toEqual(['0'])
-    expect(DataTypeOptions[0].label).toBe('Pulse after poison attempt')
   })
 
   it('normalizes canonical text and aliases without mutating the API response', async () => {

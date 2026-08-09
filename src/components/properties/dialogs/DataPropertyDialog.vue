@@ -162,7 +162,7 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
-import { DataTypeOptions } from '@/config/settings'
+import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -172,7 +172,7 @@ const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
-const dataOptions = DataTypeOptions.filter(option => option.metricSymbol.startsWith(':FIELD_TYPE_'))
+const dataOptions = getDataTypePropertyOptions().filter(option => option.category === 'field')
 const cloneDataOptions = () => JSON.parse(JSON.stringify(dataOptions))
 const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
 

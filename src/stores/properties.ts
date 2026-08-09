@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
 import type { ThemeMode } from '@/types/visualTheme'
-import { DataTypeOption } from '@/types/settings'
-import { DataTypeOptions } from '@/config/settings'
+import type { DataTypeOption } from '@/types/dataCatalog'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
 import type { DialProgressMode } from '@/types/settings'
 
@@ -137,9 +137,9 @@ export const usePropertiesStore = defineStore('propertiesStore', {
           if (found) return found as unknown as DataTypeOption
         }
 
-        // 3) 最后根据 metricSymbol 在全局 DataTypeOptions 中匹配
+        // 3) 最后根据 metricSymbol 在 canonical catalog 中匹配
         if (metricSymbol) {
-          const bySymbol = DataTypeOptions.find((opt) => opt.metricSymbol === metricSymbol)
+          const bySymbol = useDataCatalogStore().options.find((opt) => opt.metricSymbol === metricSymbol)
           if (bySymbol) return bySymbol
         }
 

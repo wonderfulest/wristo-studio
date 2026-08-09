@@ -41,7 +41,7 @@ import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { DataTypeOptions } from '@/config/settings'
+import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import { createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
@@ -85,7 +85,7 @@ const ensureNextChartProperty = (metricSymbol: string) => {
   const propertyKey = `chart_${nextIndex}`
   const title = `Chart ${nextIndex}`
 
-  const chartOptions = DataTypeOptions.filter((opt) => String((opt as any).metricSymbol || '').startsWith(':CHART_TYPE_'))
+  const chartOptions = getDataTypePropertyOptions().filter((opt) => opt.category === 'chart')
   let defaultOption: any = chartOptions[0]
   if (!defaultOption) throw new Error('chart data type options: canonical definitions are missing')
   if (metricSymbol) {
