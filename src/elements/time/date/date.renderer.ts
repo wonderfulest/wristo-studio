@@ -16,6 +16,7 @@ import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '
 import { useDesignStore } from '@/stores/designStore'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -47,7 +48,7 @@ function formatDate(date: Date, formatter: number, textCase: number | undefined,
 }
 
 function getDatePreviewLocale(designStore: ReturnType<typeof useDesignStore>): string {
-  return designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+  return resolveDesignEffectiveLocale(designStore)
 }
 
 export function createDate(config: DateElementConfig): FabricElement {

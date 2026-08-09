@@ -11,6 +11,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { useDesignStore } from '@/stores/designStore'
 import { formatTimePreview } from '@/elements/time/time/formatTimePreview'
+import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -63,7 +64,7 @@ function formatDateValue(date: Date, formatter: number, textCase: number | undef
 }
 
 function getDatePreviewLocale(designStore: ReturnType<typeof useDesignStore>): string {
-  return designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+  return resolveDesignEffectiveLocale(designStore)
 }
 
 function applyTextCase(text: string, textCase: number | undefined): string {
@@ -259,7 +260,7 @@ export class DataSimulatorEngine {
           metricSymbol: obj.metricSymbol
         })
         const textCase = (propertiesStore as any).textCase
-        const display = applyTextCase(resolveMetricUnit(metric as any, designStore.supportsChineseContent ? 'zh' : 'en'), textCase)
+        const display = applyTextCase(resolveMetricUnit(metric as any, resolveDesignContentLanguage(designStore)), textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
@@ -276,7 +277,7 @@ export class DataSimulatorEngine {
           metricSymbol: obj.metricSymbol
         })
 
-        let nextText = resolveMetricLabel(metric as any, designStore.supportsChineseContent ? 'zh' : 'en')
+        let nextText = resolveMetricLabel(metric as any, resolveDesignContentLanguage(designStore))
 
         nextText = applyTextCase(nextText, (propertiesStore as any).textCase)
         if (String(obj.text ?? '') !== nextText) {

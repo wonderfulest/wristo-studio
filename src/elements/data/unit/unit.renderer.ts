@@ -12,11 +12,12 @@ import { resolveMetricUnit } from '@/utils/metricLabel'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
   const designStore = useDesignStore()
-  return resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+  return resolveMetricUnit(metric, resolveDesignContentLanguage(designStore))
 }
 
 export async function createUnit(config: UnitElementConfig): Promise<FabricElement> {

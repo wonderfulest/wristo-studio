@@ -49,6 +49,18 @@
         <span>{{ t('editorSettings.chineseContent') }}</span>
       </label>
 
+      <label
+        class="bar-cell check-cell non-latin-language-cell"
+        :title="t('editorSettings.nonLatinLanguageSupportHelp')"
+      >
+        <el-switch
+          :model-value="nonLatinLanguageSupport"
+          size="small"
+          @change="handleNonLatinLanguageSupportChange"
+        />
+        <span>{{ t('editorSettings.nonLatinLanguageSupport') }}</span>
+      </label>
+
     </div>
 
     <div class="bar-group right-group">
@@ -222,6 +234,7 @@ import {
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
 import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 
 const props = defineProps<{
   canvasRef?: {
@@ -302,6 +315,7 @@ const selectedElementLabel = computed(() => {
 })
 
 const chineseContentEnabled = computed(() => designStore.supportsChineseContent)
+const nonLatinLanguageSupport = computed(() => designStore.nonLatinLanguageSupport)
 
 const handleLightCanvasBackgroundColorChange = (color: string) => {
   lightCanvasBackgroundColor.value = color
@@ -345,7 +359,7 @@ const resolveFontForDateCheck = async (slug: string) => {
 const warnIncompatibleDateFonts = async () => {
   const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
     .filter((object) => (object as any).eleType === 'date')
-  const datePreviewLocale = designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale
+  const datePreviewLocale = resolveDesignEffectiveLocale(designStore)
   for (const element of dateElements) {
     const fontFamily = String((element as any).fontFamily || '')
     if (!fontFamily) continue
@@ -359,7 +373,7 @@ const warnIncompatibleDateFonts = async () => {
 }
 
 const refreshMetricTextElementsForContentLanguage = () => {
-  const language = designStore.supportsChineseContent ? 'zh' : 'en'
+  const language = resolveDesignContentLanguage(designStore)
   const metricTextElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
     .filter((object) => ['label', 'unit'].includes(String((object as any).eleType ?? '')))
 
@@ -399,6 +413,16 @@ const refreshDateElementsForContentLanguage = async () => {
       await elementManager.updateElementById(id, { formatter: (element as any).formatter })
     }
   }
+}
+
+const handleNonLatinLanguageSupportChange = async (value: boolean | string | number) => {
+  const nextEnabled = Boolean(value)
+  designStore.setNonLatinLanguageSupport(nextEnabled)
+  refreshMetricTextElementsForContentLanguage()
+  await refreshDateElementsForContentLanguage()
+  historyStore.saveState(nextEnabled
+    ? 'settings:enable-non-latin-language-support'
+    : 'settings:disable-non-latin-language-support')
 }
 
 const handleChineseContentChange = async (value: boolean | string | number) => {

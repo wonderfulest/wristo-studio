@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { LabelElementConfig } from '@/types/elements/data'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useDesignStore } from '@/stores/designStore'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { usePropertiesStore } from '@/stores/properties'
 import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
@@ -55,7 +56,7 @@ export function decodeLabel(config: LabelElementConfig): Partial<FabricElement> 
   })
   const designStore = useDesignStore()
   const text = applyMetricTextCase(
-    resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en'),
+    resolveMetricLabel(metric, resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
 

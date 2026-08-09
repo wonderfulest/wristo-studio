@@ -12,6 +12,7 @@ import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -24,7 +25,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   const propertiesStore = usePropertiesStore()
   const designStore = useDesignStore()
   const labelText = applyMetricTextCase(
-    resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en'),
+    resolveMetricLabel(metric, resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
   const displayStates = normalizeDisplayStates(config.displayStates)
