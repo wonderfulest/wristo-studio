@@ -20,4 +20,13 @@ describe('FontSizeSelect', () => {
     expect(wrapper.get('.el-select__wrapper').classes()).not.toContain('is-filterable')
     expect(wrapper.get('.el-select__placeholder').text()).toContain('42px')
   })
+
+  it('disables size controls for device-controlled system fonts', () => {
+    const wrapper = mount(FontSizeSelect, {
+      props: { modelValue: 42, options: [24, 42, 48], disabled: true },
+      global: { plugins: [ElementPlus] },
+    })
+    expect(wrapper.findAll('button').every(button => button.attributes('disabled') !== undefined)).toBe(true)
+    expect(wrapper.getComponent({ name: 'ElSelect' }).props('disabled')).toBe(true)
+  })
 })

@@ -3,7 +3,7 @@
     <button
       class="font-size-step"
       type="button"
-      :disabled="!canDecrease"
+      :disabled="disabled || !canDecrease"
       :aria-label="t('shortcuts.decreaseFontSize')"
       @click="step(-1)"
     >
@@ -12,6 +12,7 @@
     <el-select
       class="font-size-value"
       :model-value="normalizedValue"
+      :disabled="disabled"
       popper-class="font-size-select-popper"
       @change="selectSize"
     >
@@ -30,7 +31,7 @@
     <button
       class="font-size-step"
       type="button"
-      :disabled="!canIncrease"
+      :disabled="disabled || !canIncrease"
       :aria-label="t('shortcuts.increaseFontSize')"
       @click="step(1)"
     >
@@ -47,8 +48,10 @@ import { useI18n } from '@/i18n'
 const props = withDefaults(defineProps<{
   modelValue?: number | string | null
   options?: number[]
+  disabled?: boolean
 }>(), {
   options: () => defaultFontSizes,
+  disabled: false,
 })
 
 const emit = defineEmits<{
@@ -79,6 +82,7 @@ const canDecrease = computed(() => currentIndex.value > 0)
 const canIncrease = computed(() => currentIndex.value >= 0 && currentIndex.value < sortedOptions.value.length - 1)
 
 const commit = (value: number) => {
+  if (props.disabled) return
   emit('update:modelValue', value)
   emit('change', value)
 }
