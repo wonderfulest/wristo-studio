@@ -310,6 +310,52 @@ describe('data catalog store', () => {
     await expect(useDataCatalogStore().load()).rejects.toThrow("duplicate alias 'bpm'")
   })
 
+  it.each([
+    [
+      'none default variant',
+      (catalog: any) => {
+        catalog.unitDefinitions[0].unitKey = 'none'
+      },
+      'unitDefinitions[0].defaultVariant must be null for unitKey none'
+    ],
+    [
+      'none variants',
+      (catalog: any) => {
+        catalog.unitDefinitions[0].unitKey = 'none'
+        catalog.unitDefinitions[0].defaultVariant = null
+      },
+      'unitDefinitions[0].variants must be empty for unitKey none'
+    ],
+    [
+      'active non-none variants',
+      (catalog: any) => {
+        catalog.unitDefinitions[0].variants = {}
+        catalog.unitDefinitions[0].defaultVariant = null
+      },
+      'unitDefinitions[0].variants must contain at least one variant for active unit heart_rate'
+    ],
+    [
+      'active non-none default',
+      (catalog: any) => {
+        catalog.unitDefinitions[0].defaultVariant = null
+      },
+      'unitDefinitions[0].defaultVariant is required for active unit heart_rate'
+    ],
+    [
+      'active non-none default key',
+      (catalog: any) => {
+        catalog.unitDefinitions[0].defaultVariant = ' BPM '
+      },
+      'unitDefinitions[0].defaultVariant must match ^[a-z][a-z0-9_]*$'
+    ]
+  ])('enforces the strict %s rule with an exact path', async (_name, mutate, message) => {
+    const catalog: any = clone(validCatalog())
+    mutate(catalog)
+    mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: catalog })
+
+    await expect(useDataCatalogStore().load()).rejects.toThrow(message)
+  })
+
   it('rejects missing and inactive unit references and malformed API result shapes', async () => {
     const missing = clone(validCatalog())
     missing.dataTypeOptions[0].unitKey = 'missing'

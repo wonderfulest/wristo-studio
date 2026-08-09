@@ -18,7 +18,7 @@ import '@/assets/styles/element-variables.scss'
 import emitter from '@/utils/eventBus'
 import { loadPlugins } from '@/engine/plugins'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
-import { startWithDataCatalog } from '@/startup/dataCatalogStartup'
+import { createDataCatalogStartup } from '@/startup/dataCatalogStartup'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
@@ -53,11 +53,18 @@ app.config.errorHandler = (err, _vm, info) => {
 app.config.globalProperties.$emitter = emitter as any
 
 const dataCatalogStore = useDataCatalogStore(pinia)
-void startWithDataCatalog(
-  () => dataCatalogStore.load(),
-  () => app.mount('#app'),
-  (error) => {
+const appRoot = document.querySelector('#app')
+if (!appRoot) throw new Error('Studio root element #app is required')
+const dataCatalogStartup = createDataCatalogStartup({
+  load: (force) => dataCatalogStore.load(force),
+  mount: () => {
+    delete document.documentElement.dataset.dataCatalogStartup
+    return app.mount(appRoot)
+  },
+  report: (error) => {
     console.error('[data-catalog] startup blocked because the canonical catalog failed to load', error)
     document.documentElement.dataset.dataCatalogStartup = 'failed'
   },
-).catch(() => undefined)
+  root: appRoot,
+})
+void dataCatalogStartup.start().catch(() => undefined)

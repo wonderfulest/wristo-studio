@@ -73,19 +73,31 @@ const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, Un
   if (!isRecord(value)) throw new Error(`${path} is required`)
   const unitKey = exactKey(value.unitKey, `${path}.unitKey`)
   const name = requiredString(value.name, `${path}.name`)
+  const isActive = active(value.isActive, `${path}.isActive`)
+  const sortOrder = nonnegativeInteger(value.sortOrder, `${path}.sortOrder`)
   if (!isRecord(value.variants)) throw new Error(`${path}.variants must be an object`)
+  const variantEntries = Object.entries(value.variants)
+  let defaultVariant: string | null
+  if (unitKey === 'none') {
+    if (value.defaultVariant !== null) throw new Error(`${path}.defaultVariant must be null for unitKey none`)
+    if (variantEntries.length !== 0) throw new Error(`${path}.variants must be empty for unitKey none`)
+    defaultVariant = null
+  } else {
+    if (variantEntries.length === 0) {
+      throw new Error(`${path}.variants must contain at least one variant for active unit ${unitKey}`)
+    }
+    if (value.defaultVariant === null) {
+      throw new Error(`${path}.defaultVariant is required for active unit ${unitKey}`)
+    }
+    defaultVariant = exactKey(value.defaultVariant, `${path}.defaultVariant`)
+  }
   const variants: Record<string, DataUnitVariant> = {}
-  for (const [variantKey, variant] of Object.entries(value.variants)) {
+  for (const [variantKey, variant] of variantEntries) {
     exactKey(variantKey, `${path}.variantKey`)
     variants[variantKey] = validateVariant(variant, `${path}.variants.${variantKey}`, unitKey, variantKey, aliasOwners)
   }
-  let defaultVariant: string | null
-  if (value.defaultVariant === null) {
-    defaultVariant = null
-    if (Object.keys(variants).length !== 0) throw new Error(`${path}.defaultVariant is required when variants are defined`)
-  } else {
-    defaultVariant = exactKey(value.defaultVariant, `${path}.defaultVariant`)
-    if (!variants[defaultVariant]) throw new Error(`${path}.defaultVariant '${defaultVariant}' is not defined`)
+  if (defaultVariant !== null && !variants[defaultVariant]) {
+    throw new Error(`${path}.defaultVariant '${defaultVariant}' is not defined`)
   }
   if (value.description !== null && typeof value.description !== 'string') {
     throw new Error(`${path}.description must be a string or null`)
@@ -95,8 +107,8 @@ const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, Un
     name,
     defaultVariant,
     variants,
-    isActive: active(value.isActive, `${path}.isActive`),
-    sortOrder: nonnegativeInteger(value.sortOrder, `${path}.sortOrder`),
+    isActive,
+    sortOrder,
     description: value.description as string | null
   }
 }
