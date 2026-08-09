@@ -163,10 +163,15 @@
               </div>
             </section>
 
-            <section v-if="hasBuildActions" class="action-group action-group-build">
+            <section class="action-group action-group-build">
               <div class="action-group-title">{{ t('card.buildActions') }}</div>
               <div class="action-group-actions">
-                <el-button v-if="showBuildPrgButton" size="small" @click="closeActions(); emit('build-prg', design)" :loading="loadingStates.prgBuild.has(design.id)">
+                <el-button
+                  size="small"
+                  :disabled="prgCardAction !== 'build'"
+                  @click="closeActions(); emit('build-prg', design)"
+                  :loading="loadingStates.prgBuild.has(design.id)"
+                >
                   <el-icon><Box /></el-icon>
                   {{ t('card.buildPrg') }}
                 </el-button>
@@ -438,8 +443,6 @@ const prgCardAction = computed(() => getPrgCardAction(
   currentDeviceId.value,
   props.nowMs ?? Date.now(),
 ))
-const showBuildPrgButton = computed(() => prgCardAction.value === 'build')
-
 const showBuildIqButton = computed(() => {
   return shouldShowBuildIqButton(design.value.product)
 })
@@ -454,7 +457,6 @@ const showPublishButton = computed(() => {
   return !!product?.release
 })
 const hasPreviewActions = computed(() => showPreviewPrgButton.value)
-const hasBuildActions = computed(() => prgCardAction.value !== 'none' || showBuildIqButton.value)
 const hasReleaseActions = computed(() => showPublishButton.value)
 
 const lastPackageTimeText = computed(() => {
