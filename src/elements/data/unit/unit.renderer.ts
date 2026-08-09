@@ -11,6 +11,7 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveMetricUnit } from '@/utils/metricLabel'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
@@ -25,6 +26,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
   const id = config.id || nanoid()
   const text = resolveUnitText(config)
   const displayStates = normalizeDisplayStates(config.displayStates)
+  const previewFont = resolveCurrentElementPreviewFont(config)
 
   const element = new FabricText(text, {
     id,
@@ -34,8 +36,9 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     originX: (config.originX ?? 'left') as any,
     originY: (config.originY ?? 'center') as any,
     fill: (config.fill ?? '#ffffff') as any,
-    fontSize: (config.fontSize ?? 16) as any,
-    fontFamily: (config.fontFamily ?? 'roboto-condensed-regular') as any,
+    fontSize: (previewFont.fontSize ?? 16) as any,
+    fontFamily: (previewFont.fontFamily ?? 'roboto-condensed-regular') as any,
+    ...previewFont,
     dataProperty: config.dataProperty ?? undefined,
     goalProperty: config.goalProperty ?? undefined,
     metricSymbol: config.metricSymbol ?? '',

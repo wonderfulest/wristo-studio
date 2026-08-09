@@ -1,6 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeDate(element: FabricElement): DateElementConfig {
   const config: DateElementConfig = {
@@ -10,8 +11,8 @@ export function encodeDate(element: FabricElement): DateElementConfig {
     top: Math.round(element.top),
     originX: (element.originX as unknown) as any,
     originY: (element.originY as unknown) as any,
-    fontFamily: element.fontFamily || 'roboto-condensed-regular',
-    fontSize: element.fontSize || 14,
+    fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
+    fontSize: getSavedFontSize(element, 14),
     fontSource: (element as any).fontSource,
     systemFont: (element as any).systemFont,
     fill: (element.fill as string) ?? '#ffffff',

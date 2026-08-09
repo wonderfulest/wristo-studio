@@ -66,4 +66,19 @@ describe('Garmin system font encoding', () => {
     expect(decoded.systemFont).toBeUndefined()
     expect(decoded.fontFamily).toBe('roboto-condensed-regular')
   })
+
+  it('encodes retained asset values instead of effective preview metrics', () => {
+    const encoded = encodeText({
+      ...base,
+      eleType: 'text',
+      textTemplate: 'Preview',
+      fontFamily: 'Noto Sans SC',
+      fontSize: 69,
+      assetFontFamily: 'roboto-condensed-regular',
+      assetFontSize: 36,
+    } as any)
+
+    expect(encoded.fontFamily).toBe('roboto-condensed-regular')
+    expect(encoded.fontSize).toBe(36)
+  })
 })

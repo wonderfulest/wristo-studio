@@ -11,6 +11,7 @@ import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wrist
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
@@ -194,6 +195,7 @@ export async function createTime(
     }
 
     // 默认：使用文本渲染
+    const previewFont = resolveCurrentElementPreviewFont(config)
     const timeOptions: Partial<TimeElementOptions> = {
       id,
       eleType: 'time',
@@ -202,8 +204,9 @@ export async function createTime(
       originX: config.originX as any,
       originY: config.originY as any,
       fill: config.fill ?? '#ffffff',
-      fontSize: Number(config.fontSize),
-      fontFamily: config.fontFamily ?? 'roboto-condensed-regular',
+      fontSize: Number(previewFont.fontSize),
+      fontFamily: String(previewFont.fontFamily ?? 'roboto-condensed-regular'),
+      ...previewFont,
       formatter: config.formatter,
       fontRenderType: config.fontRenderType ?? 'truetype',
       bitmapFontId: config.bitmapFontId ?? null,

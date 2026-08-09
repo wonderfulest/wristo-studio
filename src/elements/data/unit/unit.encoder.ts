@@ -1,6 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { UnitElementConfig } from '@/types/elements/data'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeUnit(element: FabricElement): UnitElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -16,10 +17,8 @@ export function encodeUnit(element: FabricElement): UnitElementConfig {
       typeof (element as any).fill === 'string'
         ? ((element as any).fill as string)
         : '#ffffff',
-    fontSize: Number((element.fontSize as any) ?? 14),
-    fontFamily: String(
-      (element.fontFamily as any) ?? 'roboto-condensed-regular',
-    ),
+    fontSize: getSavedFontSize(element, 14),
+    fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSource: (element as any).fontSource,
     systemFont: (element as any).systemFont,
     dataProperty: (element as any).dataProperty ?? undefined,

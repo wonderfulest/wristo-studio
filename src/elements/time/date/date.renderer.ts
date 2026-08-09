@@ -15,6 +15,7 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { useDesignStore } from '@/stores/designStore'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -70,6 +71,7 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   const textCase = (propertiesStore as any).textCase as number | undefined
   const text = formatDate(getSimulatedNow(), formatterValue, textCase, getDatePreviewLocale(designStore))
+  const previewFont = resolveCurrentElementPreviewFont(config)
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -78,9 +80,10 @@ export function createDate(config: DateElementConfig): FabricElement {
     top: config.top,
     originX: config.originX as any,
     originY: config.originY as any,
-    fontSize: Number(config.fontSize),
+    fontSize: Number(previewFont.fontSize),
     fill: config.fill,
-    fontFamily: config.fontFamily,
+    fontFamily: previewFont.fontFamily,
+    ...previewFont,
     formatter: config.formatter,
     hasControls: false,
   } as any)

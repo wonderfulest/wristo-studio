@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeText(element: FabricElement): TextElementConfig {
   const fabricAny = element as any
@@ -20,8 +21,8 @@ export function encodeText(element: FabricElement): TextElementConfig {
     originX: (element as any).originX ?? 'center',
     originY: 'center',
     fill: (element as any).fill ?? '#FFFFFF',
-    fontFamily: fabricAny.fontFamily ?? '',
-    fontSize: typeof fabricAny.fontSize === 'number' ? fabricAny.fontSize : 18,
+    fontFamily: getSavedFontFamily(fabricAny),
+    fontSize: getSavedFontSize(fabricAny, 18),
     fontSource: fabricAny.fontSource,
     systemFont: fabricAny.systemFont,
     textProperty: fabricAny.textProperty,

@@ -92,6 +92,7 @@ import { useI18n } from '@/i18n'
 import { useResizableEditorPanels } from '@/views/design/useResizableEditorPanels'
 import { RULER_OFFSET, useCanvasPan } from '@/views/design/useCanvasPan'
 import { useDesignLoader } from '@/views/design/useDesignLoader'
+import { refreshGarminSystemFontPreviews } from '@/composables/useGarminSystemFont'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,8 +162,27 @@ const syncDesignSizeFromSelectedDevice = (): void => {
 }
 
 watch(
-  () => [userStore.userInfo?.device?.deviceId, userStore.userInfo?.device?.resolutionWidth, userStore.userInfo?.device?.resolutionHeight],
-  () => syncDesignSizeFromSelectedDevice(),
+  () => [
+    userStore.userInfo?.device?.deviceId,
+    userStore.userInfo?.device?.hardwarePartNumber,
+    userStore.userInfo?.device?.partNumber,
+    userStore.userInfo?.device?.resolutionWidth,
+    userStore.userInfo?.device?.resolutionHeight,
+    designStore.defaultLocale,
+  ],
+  () => {
+    syncDesignSizeFromSelectedDevice()
+    const device = userStore.userInfo?.device
+    const canvas = baseStore.canvas
+    if (!canvas) return
+    const changed = refreshGarminSystemFontPreviews(canvas.getObjects() as any[], {
+      deviceId: device?.deviceId || '',
+      hardwarePartNumber: device?.hardwarePartNumber,
+      partNumber: device?.partNumber,
+      locale: designStore.defaultLocale,
+    })
+    if (changed > 0) canvas.requestRenderAll?.()
+  },
   { immediate: true }
 )
 

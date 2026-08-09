@@ -4,6 +4,7 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useDesignStore } from '@/stores/designStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeLabel(element: FabricElement): LabelElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -17,8 +18,8 @@ export function encodeLabel(element: FabricElement): LabelElementConfig {
     originY: element.originY as any,
     fill: ((element.fill as any) as string) ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? undefined,
-    fontSize: Number(element.fontSize ?? 14),
-    fontFamily: (element.fontFamily as string) ?? '',
+    fontSize: getSavedFontSize(element, 14),
+    fontFamily: getSavedFontFamily(element),
     fontSource: (element as any).fontSource,
     systemFont: (element as any).systemFont,
     dataProperty: (element as any).dataProperty ?? undefined,

@@ -2,6 +2,7 @@ import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeTime(element: FabricElement): TimeElementConfig {
   const formatter = Number((element as any).formatter ?? 0)
@@ -13,8 +14,8 @@ export function encodeTime(element: FabricElement): TimeElementConfig {
     top: element.top,
     originX: element.originX,
     originY: element.originY,
-    fontFamily: element.fontFamily || 'roboto-condensed-regular',
-    fontSize: element.fontSize || 14,
+    fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
+    fontSize: getSavedFontSize(element, 14),
     fontSource: (element as any).fontSource,
     systemFont: (element as any).systemFont,
     fill: element.fill as string,

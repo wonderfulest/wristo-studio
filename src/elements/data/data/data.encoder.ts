@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { DataElementConfig } from '@/types/elements/data'
 import { nanoid } from 'nanoid'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
+import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeData(element: FabricElement): DataElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -18,10 +19,8 @@ export function encodeData(element: FabricElement): DataElementConfig {
         ? ((element as any).fill as string)
         : '#ffffff',
     fillProperty: (element as any).fillProperty ?? undefined,
-    fontSize: Number((element.fontSize as any) ?? 14),
-    fontFamily: String(
-      (element.fontFamily as any) ?? 'roboto-condensed-regular',
-    ),
+    fontSize: getSavedFontSize(element, 14),
+    fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSource: (element as any).fontSource,
     systemFont: (element as any).systemFont,
     dataProperty: (element as any).dataProperty ?? undefined,

@@ -7,6 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 // import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { usePropertiesStore } from '@/stores/properties'
+import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 export function createText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
@@ -28,15 +29,17 @@ export function createText(config: TextElementConfig): FabricElement {
       : config.textTemplate ?? '') || 'New Text'
 
   const resolvedText = resolveDataTextTemplate(template)
+  const previewFont = resolveCurrentElementPreviewFont(config)
 
   const element = new FabricText(resolvedText || 'New Text', {
     id: config.id || nanoid(),
     eleType: 'text',
     left: config.left,
     top: config.top,
-    fontSize: Number(config.fontSize) || 36,
+    fontSize: Number(previewFont.fontSize) || 36,
     fill: config.fill || '#FFFFFF',
-    fontFamily: config.fontFamily,
+    fontFamily: previewFont.fontFamily,
+    ...previewFont,
     selectable: true,
     hasControls: false,
     hasBorders: true,
