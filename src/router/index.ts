@@ -37,6 +37,19 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/connect-iq-launcher',
+    component: Layout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'ConnectIqLauncherGuide',
+        component: () => import('@/views/ConnectIqLauncherGuide.vue'),
+        meta: { requiresAuth: false },
+      },
+    ],
+  },
+  {
     path: '/',
     name: 'Home',
     component: Layout,
