@@ -17,7 +17,8 @@ import '@/assets/styles/element-variables.scss'
 
 import emitter from '@/utils/eventBus'
 import { loadPlugins } from '@/engine/plugins'
-import { loadDataTypeOptions } from '@/config/elements/options/dataTypes'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { startWithDataCatalog } from '@/startup/dataCatalogStartup'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
@@ -51,10 +52,12 @@ app.config.errorHandler = (err, _vm, info) => {
 
 app.config.globalProperties.$emitter = emitter as any
 
-loadDataTypeOptions()
-  .catch((err) => {
-    console.error('[data-type-options] failed to load', err)
-  })
-  .finally(() => {
-    app.mount('#app')
-  })
+const dataCatalogStore = useDataCatalogStore(pinia)
+void startWithDataCatalog(
+  () => dataCatalogStore.load(),
+  () => app.mount('#app'),
+  (error) => {
+    console.error('[data-catalog] startup blocked because the canonical catalog failed to load', error)
+    document.documentElement.dataset.dataCatalogStartup = 'failed'
+  },
+).catch(() => undefined)

@@ -866,7 +866,7 @@ const handleAddDataField = async (metricSymbol?: string) => {
         defaultOption = DataTypeOptions.find((option) => option.metricSymbol === metricSymbol) || defaultOption
       }
       if (!allProps[propertyKey]) {
-        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: DataTypeOptions, defaultValue: defaultOption.value })
+        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: [...DataTypeOptions], defaultValue: defaultOption.value })
         trackCreatedProperty(propertyKey)
       }
 

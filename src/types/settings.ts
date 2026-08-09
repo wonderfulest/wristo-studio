@@ -24,6 +24,7 @@ export interface DataTypeOption {
   iconUnicode?: string
   sortOrder?: number
   unit?: string
+  unitKey: string
   label: string
   enLabel: string
   dialMode?: 'goal' | 'range' | null
