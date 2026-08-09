@@ -26,6 +26,18 @@ interface SystemFontCanvasObject extends GarminSystemFontSelection {
   dirty?: boolean
 }
 
+// simulator.json stores the fractional point size passed to Garmin's TTF
+// renderer. Garmin device pixels are approximately 3.3 pixels per font point.
+// Keep this separate from the Device Reference line height in `size`.
+const GARMIN_SIMULATOR_POINT_TO_PIXEL_SCALE = 3.3
+const FABRIC_FONT_SIZE_MULTIPLIER = 1.13
+
+export const toFabricSystemFontSize = (simulatorPointSize: number): number =>
+  Math.max(1, Math.round(simulatorPointSize * GARMIN_SIMULATOR_POINT_TO_PIXEL_SCALE))
+
+const fallbackFabricSystemFontSize = (garminFontHeight: number): number =>
+  Math.max(1, Math.round(garminFontHeight / FABRIC_FONT_SIZE_MULTIPLIER))
+
 export const resolveElementPreviewFont = (
   config: GarminSystemFontPreviewConfig,
   context: GarminSystemFontPreviewContext,
@@ -45,7 +57,9 @@ export const resolveElementPreviewFont = (
   }
   return {
     fontFamily: resolved.browserFamily,
-    fontSize: resolved.size,
+    fontSize: resolved.simulatorPointSize != null
+      ? toFabricSystemFontSize(resolved.simulatorPointSize)
+      : fallbackFabricSystemFontSize(resolved.size),
     assetFontFamily: config.fontFamily,
     assetFontSize: config.fontSize,
     fontSource: 'system',

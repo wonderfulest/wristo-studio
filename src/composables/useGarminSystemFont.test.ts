@@ -3,6 +3,7 @@ import {
   refreshGarminSystemFontPreviews,
   resolveElementPreviewFont,
   resolveSystemFontUpdate,
+  toFabricSystemFontSize,
 } from './useGarminSystemFont'
 
 vi.hoisted(() => {
@@ -20,6 +21,11 @@ vi.hoisted(() => {
 })
 
 describe('system font preview', () => {
+  it('converts Garmin simulator TTF point size to canvas pixels', () => {
+    expect(toFabricSystemFontSize(9.4018)).toBe(31)
+    expect(toFabricSystemFontSize(9.9777)).toBe(33)
+  })
+
   it('uses resolved device font while retaining asset values', () => {
     expect(resolveElementPreviewFont({
       fontSource: 'system' as const,
@@ -32,7 +38,7 @@ describe('system font preview', () => {
       locale: 'zh-CN',
     })).toMatchObject({
       fontFamily: 'Noto Sans SC',
-      fontSize: 69,
+      fontSize: 34,
       assetFontFamily: 'roboto-condensed-regular',
       assetFontSize: 36,
       fontSource: 'system',
@@ -91,7 +97,7 @@ describe('system font preview', () => {
       fontSource: 'system',
       systemFont: 'FONT_SMALL',
       fontFamily: 'Noto Sans SC',
-      fontSize: 69,
+      fontSize: 34,
       assetFontFamily: 'inter',
       assetFontSize: 36,
     })

@@ -21,6 +21,7 @@ import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberF
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { scaleElementConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
+import { loadAllBundledGarminPreviewFonts } from '@/utils/garminSystemFonts'
 import type { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { RuntimeDesignConfig } from '@/types/app/config'
@@ -267,6 +268,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
 
   const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
     await fontStore.fetchFonts()
+    if (!isCurrentDesignLoad(generation)) return false
+    await loadAllBundledGarminPreviewFonts()
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const loadConfig = projectDefaultVisualThemeForLoad(config)

@@ -10,6 +10,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getPersistedTextFont } from '@/utils/systemFontElement'
 
 export async function createData(config: DataElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -60,12 +61,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
         ? ((element as any).fill as string)
         : '#ffffff',
     fillProperty: (element as any).fillProperty ?? config.fillProperty ?? undefined,
-    fontSize: Number(((element as any).fontSize as any) ?? config.fontSize ?? 14),
-    fontFamily: String(
-      ((element as any).fontFamily as any) ??
-        config.fontFamily ??
-        'roboto-condensed-regular',
-    ),
+    ...getPersistedTextFont(config, element),
     dataProperty: (element as any).dataProperty ?? null,
     goalProperty: (element as any).goalProperty ?? null,
     metricSymbol: String(

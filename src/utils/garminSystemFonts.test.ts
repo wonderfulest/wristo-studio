@@ -1,13 +1,28 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   bundledGarminPreviewFamilies,
   isAllowedGarminFontSymbol,
   listGarminSystemFonts,
+  loadAllBundledGarminPreviewFonts,
   resolveGarminSystemFont,
   toGarminFontLiteral,
 } from './garminSystemFonts'
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('Garmin system font resolver', () => {
+  it('waits for every bundled Garmin preview family before canvas initialization', async () => {
+    const load = vi.fn().mockResolvedValue([])
+    vi.stubGlobal('document', { fonts: { load } })
+
+    await loadAllBundledGarminPreviewFonts()
+
+    expect(load).toHaveBeenCalledTimes(bundledGarminPreviewFamilies.size)
+    expect(load).toHaveBeenCalledWith('16px "Yantramanav"')
+  })
+
   it('bundles every browser family returned by the resolver', () => {
     const families = listGarminSystemFonts({
       deviceId: 'venu3',
@@ -22,14 +37,26 @@ describe('Garmin system font resolver', () => {
       partNumber: '006-B4260-00',
       locale: 'zh-CN',
       symbol: 'FONT_SMALL',
-    })).toMatchObject({ supported: true, face: 'Noto Sans SC', size: 69, precision: 'exact' })
+    })).toMatchObject({
+      supported: true,
+      face: 'Noto Sans SC',
+      size: 69,
+      simulatorPointSize: 10.2801,
+      precision: 'exact',
+    })
 
     expect(resolveGarminSystemFont({
       deviceId: 'venu3',
       partNumber: '006-B4260-00',
       locale: 'en-US',
       symbol: 'FONT_SMALL',
-    })).toMatchObject({ supported: true, face: 'Roboto', size: 50, precision: 'exact' })
+    })).toMatchObject({
+      supported: true,
+      face: 'Roboto',
+      size: 50,
+      simulatorPointSize: 9.373,
+      precision: 'exact',
+    })
   })
 
   it.each(['venu441mm', 'venu445mm'])('lists system fonts for Venu 4 device id %s', (deviceId) => {

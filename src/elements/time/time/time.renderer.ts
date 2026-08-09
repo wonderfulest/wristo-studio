@@ -12,6 +12,7 @@ import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getPersistedTextFont } from '@/utils/systemFontElement'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
@@ -231,8 +232,7 @@ export async function createTime(
       originX: (element as any).originX,
       originY: (element as any).originY,
       fill: (element as any).fill,
-      fontSize: (element as any).fontSize,
-      fontFamily: (element as any).fontFamily,
+      ...getPersistedTextFont(config, element),
       formatter: config.formatter,
       fontRenderType: (element as any).fontRenderType,
       bitmapFontId: config.bitmapFontId ?? null,

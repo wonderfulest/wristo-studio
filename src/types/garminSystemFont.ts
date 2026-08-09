@@ -21,6 +21,7 @@ export interface ResolvedGarminSystemFont {
   browserFamily?: string
   previewFontSlug?: string
   size?: number
+  simulatorPointSize?: number
   precision?: GarminSystemFontPrecision
   reason?: 'unknown-device' | 'unsupported-font' | 'invalid-symbol'
 }
@@ -31,6 +32,7 @@ export interface GarminSdkFontRow {
   size: number
   font: string
   languages: string[]
+  simulatorPointSize?: number
 }
 
 export interface GarminSdkDeviceRecord {

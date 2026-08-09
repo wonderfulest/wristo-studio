@@ -28,6 +28,12 @@ export const loadBundledGarminPreviewFont = async (family: unknown): Promise<voi
   await document.fonts.load(`16px "${normalized}"`)
 }
 
+export const loadAllBundledGarminPreviewFonts = async (): Promise<void> => {
+  await Promise.allSettled(
+    [...bundledGarminPreviewFamilies].map(family => loadBundledGarminPreviewFont(family)),
+  )
+}
+
 const localeLanguage = (locale: string): string => {
   const normalized = locale.toLowerCase()
   if (normalized.startsWith('zh')) return normalized.includes('tw') || normalized.includes('hk') ? 'zht' : 'zhs'
@@ -82,6 +88,7 @@ export const resolveGarminSystemFont = (input: GarminSystemFontResolveInput): Re
     symbol: input.symbol,
     face: row.face,
     size: row.size,
+    simulatorPointSize: row.simulatorPointSize,
     ...previewInfo(row),
     precision: deviceDefault ? 'device-default' : exactLanguage ? 'exact' : 'approximate',
   }
