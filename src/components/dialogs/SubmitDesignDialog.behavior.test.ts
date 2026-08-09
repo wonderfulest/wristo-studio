@@ -164,6 +164,15 @@ describe('SubmitDesignDialog style tag behavior', () => {
 
     expect(mocks.updateDesign).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [7, 2, 9, 4, 6] }))
     expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
+    expect(wrapper.emitted('success')).toEqual([[{ mode: 'prg-build' }]])
+  })
+
+  it('identifies ordinary submissions separately from PRG builds', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+
+    expect(wrapper.emitted('success')).toEqual([[{ mode: 'submit' }]])
   })
 
   it.each([

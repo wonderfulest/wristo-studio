@@ -111,6 +111,29 @@ describe('DesignCard Preview in Simulator action', () => {
     expect(ticketIndex).toBeGreaterThanOrEqual(0)
     expect(downloadIndex).toBeGreaterThan(ticketIndex)
     expect(launcherIndex).toBeGreaterThan(downloadIndex)
+    expect(previewHandler.slice(ticketIndex, launcherIndex)).not.toContain('await ')
+  })
+
+  it('offers an actionable guide after the synchronous launcher handoff', () => {
+    const previewHandler = workspaceSource.slice(
+      workspaceSource.indexOf('const previewPrg ='),
+      workspaceSource.indexOf('// 检查是否有可下载的安装包'),
+    )
+    const launcherIndex = previewHandler.indexOf('window.location.href = buildLauncherDeepLink(ticket)')
+    const notificationIndex = previewHandler.indexOf('showLauncherGuideNotification(')
+
+    expect(notificationIndex).toBeGreaterThan(launcherIndex)
+    expect(workspaceSource).toContain("name: 'ConnectIqLauncherGuide'")
+    expect(workspaceSource).toContain("t('project.launcherTroubleshoot')")
+  })
+})
+
+describe('My Designs Launcher build hint', () => {
+  it('shows once only after a successful PRG submission', () => {
+    expect(workspaceSource).toContain("payload.mode !== 'prg-build'")
+    expect(workspaceSource).toContain('launcherPromptState.takeBuildHint()')
+    expect(workspaceSource).toContain("t('project.launcherBuildHint')")
+    expect(workspaceSource).toContain("name: 'ConnectIqLauncherGuide'")
   })
 })
 

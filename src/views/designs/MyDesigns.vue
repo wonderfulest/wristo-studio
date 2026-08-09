@@ -155,7 +155,7 @@
           <el-button 
             type="danger" 
             @click="confirmDeleteDesign"
-            :loading="designToDelete && loadingStates.delete.has(designToDelete.id)"
+            :loading="!!designToDelete && loadingStates.delete.has(designToDelete.id)"
           >
             {{ t('project.confirmDeleteButton') }}
           </el-button>
@@ -186,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, h, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
 import { designApi } from '@/api/wristo/design'
@@ -213,7 +213,8 @@ import {
 } from '@/api/wristo/launcher'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
-import { ElMessageBox } from 'element-plus'
+import { createLauncherPromptState } from '@/features/connectIqLauncher/promptState'
+import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -225,6 +226,13 @@ const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
+let launcherPromptStorage: Pick<Storage, 'getItem' | 'setItem'> | undefined
+try {
+  launcherPromptStorage = window.localStorage
+} catch {
+  launcherPromptStorage = undefined
+}
+const launcherPromptState = createLauncherPromptState(launcherPromptStorage)
 const nowMs = ref(Date.now())
 let prgClockTimer: ReturnType<typeof setInterval> | undefined
 let cancellationPollTimer: ReturnType<typeof setInterval> | undefined
@@ -838,6 +846,21 @@ const runPrg = async (design: Design) => {
 
 const launcherTicketCache = createLauncherTicketCache()
 
+const showLauncherGuideNotification = (message: string) => {
+  ElNotification({
+    title: t('launcherGuide.title'),
+    message: h('div', { class: 'launcher-guide-notification' }, [
+      h('p', message),
+      h(ElButton, {
+        link: true,
+        type: 'primary',
+        onClick: () => { void router.push({ name: 'ConnectIqLauncherGuide' }) },
+      }, () => t('project.launcherGuideAction')),
+    ]),
+    duration: 8000,
+  })
+}
+
 const preparePreviewPrg = async (design: Design) => {
   const releaseId = design.product?.prgRelease?.id
   if (!releaseId || loadingStates.value.previewPrg.has(design.id)) return
@@ -873,7 +896,7 @@ const previewPrg = (design: Design) => {
   void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg')
   window.location.href = buildLauncherDeepLink(ticket)
   messageStore.info(t('project.launcherOpening'))
-  messageStore.info(t('project.launcherInstallHint'), 8000)
+  showLauncherGuideNotification(t('project.launcherTroubleshoot'))
 }
 
 // 检查是否有可下载的安装包
@@ -896,8 +919,10 @@ const hasNewRelease = (design: Design): boolean => {
 }
 
 // 处理提交成功
-const handleSubmitSuccess = () => {
+const handleSubmitSuccess = (payload: { mode: 'submit' | 'prg-build' }) => {
   fetchDesigns() // 刷新设计列表
+  if (payload.mode !== 'prg-build' || !launcherPromptState.takeBuildHint()) return
+  showLauncherGuideNotification(t('project.launcherBuildHint'))
 }
 
 // 处理刷新事件

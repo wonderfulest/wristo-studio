@@ -221,7 +221,11 @@ const rules = computed(() => ({
   ]
 }))
 
-const emit = defineEmits(['success', 'cancel'])
+type SubmitSuccessPayload = { mode: 'submit' | 'prg-build' }
+const emit = defineEmits<{
+  success: [payload: SubmitSuccessPayload]
+  cancel: []
+}>()
 
 // Style tag / bundle options
 const styleTags = ref<ProductTag[]>([])
@@ -420,13 +424,14 @@ const handleConfirm = async () => {
       submitData.trialLasts = normalizeTrialLasts(form.paymentMethod, form.trialLasts)
     }
     // Free mode does not require extra parameters
-    const response = dialogMode.value === 'prg-build'
+    const completedMode = dialogMode.value
+    const response = completedMode === 'prg-build'
       ? await handlePrgBuildConfirm(submitData)
       : await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
-      messageStore.success(dialogMode.value === 'prg-build' ? t('project.prgBuildSubmitted') : t('submitDesign.submittedSuccessfully'))
-      emit('success')
+      messageStore.success(completedMode === 'prg-build' ? t('project.prgBuildSubmitted') : t('submitDesign.submittedSuccessfully'))
+      emit('success', { mode: completedMode })
       dialogVisible.value = false
     } else {
       messageStore.error(response.msg || t('submitDesign.submitFailed'))
