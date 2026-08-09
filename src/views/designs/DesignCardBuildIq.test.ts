@@ -39,6 +39,12 @@ describe('DesignCard PRG action', () => {
   const now = Date.parse('2026-08-09T10:10:00Z')
   const designUpdatedAt = '2026-08-09T09:00:00Z'
 
+  it('always renders Build PRG and disables it while unavailable', () => {
+    expect(source).not.toContain('v-if="showBuildPrgButton"')
+    expect(source).toContain(':disabled="prgCardAction !== \'build\'"')
+    expect(source).toContain("{{ t('card.buildPrg') }}")
+  })
+
   it.each([
     ['release younger than ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:01Z' } }, 'none'],
     ['release at ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:00Z' } }, 'build'],
