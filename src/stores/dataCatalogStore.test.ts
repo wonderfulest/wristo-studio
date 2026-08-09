@@ -64,6 +64,9 @@ describe('data catalog store', () => {
     expect(store.options[0].settingsLabel).toEqual({ eng: 'Heart Rate', zhs: '心率' })
     expect(store.unitsByKey.get('heart_rate')?.defaultVariant).toBe('bpm')
     expect(store.aliasOwners.get('bpm')).toEqual({ unitKey: 'heart_rate', variantKey: 'bpm' })
+    expect(store.snapshot?.optionsByValueCode.get(0)?.metricSymbol).toBe(':FIELD_TYPE_HEART_RATE')
+    expect(store.snapshot?.optionsByMetricSymbol.get(':FIELD_TYPE_HEART_RATE')?.valueCode).toBe(0)
+    expect(() => (store.snapshot?.optionsByValueCode as any).set(1, {})).toThrow()
     expect(DataTypeOptions).toEqual([
       expect.objectContaining({
         value: 0,

@@ -60,4 +60,6 @@ export interface ReadonlyLookup<K, V> extends Iterable<readonly [K, V]> {
 export interface ValidatedDataCatalog extends DataCatalogSnapshot {
   readonly unitsByKey: ReadonlyLookup<string, DataUnitDefinition>
   readonly aliasOwners: ReadonlyLookup<string, UnitVariantOwner>
+  readonly optionsByValueCode: ReadonlyLookup<number, DataTypeOption>
+  readonly optionsByMetricSymbol: ReadonlyLookup<string, DataTypeOption>
 }

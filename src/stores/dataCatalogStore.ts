@@ -194,12 +194,16 @@ export const validateDataCatalog = (value: unknown): ValidatedDataCatalog => {
   })
   const valueCodes = new Set<number>()
   const symbols = new Set<string>()
+  const optionsByValueCode = new Map<number, DataTypeOption>()
+  const optionsByMetricSymbol = new Map<string, DataTypeOption>()
   const dataTypeOptions = value.dataTypeOptions.map((option, index) => {
     const validated = validateOption(option, index)
     if (valueCodes.has(validated.valueCode)) throw new Error(`duplicate valueCode ${validated.valueCode}`)
     if (symbols.has(validated.metricSymbol)) throw new Error(`duplicate metricSymbol ${validated.metricSymbol}`)
     valueCodes.add(validated.valueCode)
     symbols.add(validated.metricSymbol)
+    optionsByValueCode.set(validated.valueCode, validated)
+    optionsByMetricSymbol.set(validated.metricSymbol, validated)
     if (!unitsByKey.has(validated.unitKey)) {
       throw new Error(`unitKey '${validated.unitKey}' does not reference an active unit`)
     }
@@ -210,7 +214,9 @@ export const validateDataCatalog = (value: unknown): ValidatedDataCatalog => {
     dataTypeOptions: Object.freeze(dataTypeOptions),
     unitDefinitions: Object.freeze(unitDefinitions),
     unitsByKey: readonlyLookup(unitsByKey),
-    aliasOwners: readonlyLookup(aliasOwners)
+    aliasOwners: readonlyLookup(aliasOwners),
+    optionsByValueCode: readonlyLookup(optionsByValueCode),
+    optionsByMetricSymbol: readonlyLookup(optionsByMetricSymbol)
   })
 }
 

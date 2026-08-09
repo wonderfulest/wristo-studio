@@ -156,6 +156,19 @@ function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeo
 export class DataSimulatorEngine {
   private timer: number | null = null
   private intervalMs: number = 1000
+  private readonly objectErrorSignatures = new WeakMap<object, string>()
+
+  private reportObjectError(object: object, error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error))
+    const signature = `${normalized.name}:${normalized.message}`
+    if (this.objectErrorSignatures.get(object) === signature) return
+    this.objectErrorSignatures.set(object, signature)
+    console.error('[DataSimulatorEngine] object update failed', {
+      id: String((object as any).id ?? ''),
+      eleType: String((object as any).eleType ?? ''),
+      error: normalized,
+    })
+  }
 
   start(options: DataSimulatorEngineOptions = {}): void {
     if (typeof options.intervalMs === 'number' && options.intervalMs > 0) {
@@ -203,6 +216,8 @@ export class DataSimulatorEngine {
 
     objects.forEach((obj) => {
       if (!obj) return
+      let failed = false
+      try {
       const eleType = String(obj.eleType ?? '')
 
       if (eleType === 'time') {
@@ -235,14 +250,17 @@ export class DataSimulatorEngine {
       }
 
       if (eleType === 'data') {
+        const catalogSnapshot = useDataCatalogStore().snapshot
+        if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
           metricSymbol: obj.metricSymbol
         })
 
-        const simKey = metricSymbolToSimKey(metric?.metricSymbol)
-        const rawValue = simKey ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore) : String(metric?.defaultValue ?? '')
+        const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
+        const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
+        const rawValue = simKey ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore) : canonicalMetric.defaultValue
         const textCase = (propertiesStore as any).textCase
         const display = applyTextCase(String(rawValue), textCase)
 
@@ -365,6 +383,12 @@ export class DataSimulatorEngine {
           changed = true
         }
         return
+      }
+      } catch (error) {
+        failed = true
+        this.reportObjectError(obj, error)
+      } finally {
+        if (!failed) this.objectErrorSignatures.delete(obj)
       }
     })
 

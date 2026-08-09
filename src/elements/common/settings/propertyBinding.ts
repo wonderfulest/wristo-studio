@@ -14,6 +14,11 @@ import { normalizeIconUnicode } from '@/types/amoledIcons'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
+export const isMetricBindableElement = (type: BindableMetricPropertyType, eleType: string): boolean =>
+  type === 'data'
+    ? ['data', 'icon', 'label', 'unit'].includes(eleType)
+    : ['data', 'icon', 'label', 'unit', 'goalBar', 'goalArc'].includes(eleType)
+
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
 const metricOptionsByType = (type: BindableMetricPropertyType): DataTypeOption[] => {
@@ -139,6 +144,8 @@ const getActiveElements = (): any[] => {
 }
 
 const getPatchForElement = (element: any, propertyKey: string, type: BindableMetricPropertyType) => {
+  const eleType = String(element?.eleType ?? '')
+  if (!isMetricBindableElement(type, eleType)) return null
   const propertiesStore = usePropertiesStore()
   const designStore = useDesignStore()
   const metric = propertiesStore.getMetricByOptions(
@@ -149,7 +156,6 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
-  const eleType = String(element?.eleType ?? '')
 
   if (type === 'data') {
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
@@ -200,7 +206,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
 
 export const canBindMetricPropertyToSelection = (type: PropertyType): boolean => {
   if (type !== 'data' && type !== 'goal') return false
-  return getActiveElements().some((element) => getPatchForElement(element, '', type))
+  return getActiveElements().some((element) => isMetricBindableElement(type, String(element?.eleType ?? '')))
 }
 
 export const bindMetricPropertyToSelection = async (

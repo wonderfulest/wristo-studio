@@ -4,7 +4,7 @@ export type MetricLabelLanguage = 'en' | 'zh'
 
 export function requireCanonicalMetric(
   metric: object | null | undefined,
-  catalog: Pick<ValidatedDataCatalog, 'dataTypeOptions'>,
+  catalog: Pick<ValidatedDataCatalog, 'optionsByValueCode' | 'optionsByMetricSymbol'>,
 ): DataTypeOption {
   const identity = metric as { readonly value?: unknown; readonly valueCode?: unknown; readonly metricSymbol?: unknown } | null | undefined
   const rawValueCode = identity?.valueCode ?? identity?.value
@@ -21,9 +21,10 @@ export function requireCanonicalMetric(
   }
   const symbol = typeof identity?.metricSymbol === 'string' ? identity.metricSymbol : ''
   const option = hasValueCode
-    ? catalog.dataTypeOptions.find((candidate) => candidate.valueCode === valueCode && (!symbol || candidate.metricSymbol === symbol))
-    : catalog.dataTypeOptions.find((candidate) => symbol !== '' && candidate.metricSymbol === symbol)
-  if (option) return option
+    ? catalog.optionsByValueCode.get(valueCode as number)
+    : catalog.optionsByMetricSymbol.get(symbol)
+  const identityMatches = option && (!symbol || option.metricSymbol === symbol)
+  if (identityMatches) return option
   const identityText = hasValueCode ? String(valueCode) : symbol || 'unknown'
   throw new Error(`data type option ${identityText}: canonical definition is missing`)
 }

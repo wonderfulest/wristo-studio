@@ -53,6 +53,8 @@ for (const unit of catalog.unitDefinitions) {
 }
 ;(catalog as any).unitsByKey = unitsByKey
 ;(catalog as any).aliasOwners = aliasOwners
+;(catalog as any).optionsByValueCode = new Map(catalog.dataTypeOptions.map((item) => [item.valueCode, item]))
+;(catalog as any).optionsByMetricSymbol = new Map(catalog.dataTypeOptions.map((item) => [item.metricSymbol, item]))
 
 const option = catalog.dataTypeOptions[0]
 

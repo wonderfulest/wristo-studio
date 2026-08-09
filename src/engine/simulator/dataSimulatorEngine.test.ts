@@ -2,13 +2,14 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, updateElement, getMetricByOptions } = vi.hoisted(() => ({
+const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName } = vi.hoisted(() => ({
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
   },
   updateElement: vi.fn(() => Promise.resolve()),
   getMetricByOptions: vi.fn(),
+  getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
@@ -23,6 +24,8 @@ vi.mock('@/stores/dataCatalogStore', () => ({
   useDataCatalogStore: () => ({
     snapshot: {
       dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+      optionsByValueCode: new Map([[0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
+      optionsByMetricSymbol: new Map([[':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
       unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, variants: {} }]]),
       aliasOwners: new Map(),
     },
@@ -41,7 +44,7 @@ vi.mock('@/engine/simulator/simulatedClock', () => ({
 
 vi.mock('@/utils/dataSimulator', () => ({
   getSimulatedBarChartSeries: vi.fn(),
-  getSimulatedDataByName: vi.fn(),
+  getSimulatedDataByName,
   tickSimulatedData: vi.fn(),
 }))
 
@@ -92,12 +95,40 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
   it('rejects an unknown label symbol instead of rendering the catalog first item', () => {
     const set = vi.fn()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     getMetricByOptions.mockReturnValue(undefined)
     canvas.getObjects.mockReturnValue([{ id: 'unknown-label', eleType: 'label', metricSymbol: ':FIELD_TYPE_UNKNOWN', text: '', set }])
 
-    expect(() => new DataSimulatorEngine().updateCanvas()).toThrow(
-      'data type option :FIELD_TYPE_UNKNOWN: canonical definition is missing',
-    )
+    new DataSimulatorEngine().updateCanvas()
     expect(set).not.toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalledOnce()
+    expect(String(errorSpy.mock.calls[0][1].error?.message)).toBe('data type option :FIELD_TYPE_UNKNOWN: canonical definition is missing')
+    errorSpy.mockRestore()
+  })
+
+  it('isolates unknown data errors, deduplicates them across ticks, and reports again after recovery', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const badSet = vi.fn()
+    const goodSet = vi.fn()
+    const bad: any = { id: 'bad-data', eleType: 'data', metricSymbol: ':FIELD_TYPE_UNKNOWN', text: '', set: badSet }
+    const good = { id: 'good-time', eleType: 'time', formatter: TimeFormatConstants.HOUR_FORMAT, text: '', set: goodSet }
+    getMetricByOptions.mockReturnValue(undefined)
+    canvas.getObjects.mockReturnValue([bad, good])
+    const engine = new DataSimulatorEngine()
+
+    engine.updateCanvas()
+    engine.updateCanvas()
+    expect(badSet).not.toHaveBeenCalled()
+    expect(goodSet).toHaveBeenCalledWith('text', '24H')
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+
+    bad.metricSymbol = ':FIELD_TYPE_HEART_RATE'
+    getMetricByOptions.mockReturnValue({ value: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE' })
+    engine.updateCanvas()
+    bad.metricSymbol = ':FIELD_TYPE_UNKNOWN'
+    getMetricByOptions.mockReturnValue(undefined)
+    engine.updateCanvas()
+    expect(errorSpy).toHaveBeenCalledTimes(2)
+    errorSpy.mockRestore()
   })
 })
