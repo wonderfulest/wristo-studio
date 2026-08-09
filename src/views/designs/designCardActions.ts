@@ -17,6 +17,7 @@ type PackagingState = {
 }
 
 export type PrgCardAction = 'none' | 'build' | 'cancel' | 'cancelling'
+export type PrgBuildDisabledReason = 'queued' | 'building' | 'cancelling' | 'cooldown' | null
 export const PRG_REBUILD_DELAY_MS = 10 * 60 * 1000
 
 const isSameDevice = (deviceId: string | null | undefined, selectedDeviceId: string) => {
@@ -57,6 +58,29 @@ export const getPrgCardAction = (
   const releaseAt = toTimestamp(release?.updatedAt)
   if (releaseAt === null) return 'build'
   return designAt > releaseAt || nowMs >= releaseAt + PRG_REBUILD_DELAY_MS ? 'build' : 'none'
+}
+
+export const getPrgBuildDisabledReason = (
+  product: PackagingState | null | undefined,
+  designUpdatedAt: Timestamp,
+  selectedDeviceId: string,
+  nowMs = Date.now(),
+): PrgBuildDisabledReason => {
+  const designAt = toTimestamp(designUpdatedAt)
+  if (!product || !selectedDeviceId || designAt === null) return null
+
+  const task = product.prgPackagingLog
+  if (isSameDevice(task?.deviceId, selectedDeviceId)
+    && ['init', 'pending', 'cancel_requested'].includes(task?.packagingStatus || '')) {
+    if (task?.packagingStatus === 'cancel_requested') return 'cancelling'
+    return typeof task?.rank === 'number' && task.rank > 0 ? 'queued' : 'building'
+  }
+
+  const release = product.prgRelease
+  if (!isSameDevice(release?.deviceId, selectedDeviceId)) return null
+  const releaseAt = toTimestamp(release?.updatedAt)
+  if (releaseAt === null) return null
+  return designAt <= releaseAt && nowMs < releaseAt + PRG_REBUILD_DELAY_MS ? 'cooldown' : null
 }
 
 export const shouldShowPreviewPrgButton = (

@@ -166,15 +166,23 @@
             <section class="action-group action-group-build">
               <div class="action-group-title">{{ t('card.buildActions') }}</div>
               <div class="action-group-actions">
-                <el-button
-                  size="small"
-                  :disabled="prgCardAction !== 'build'"
-                  @click="closeActions(); emit('build-prg', design)"
-                  :loading="loadingStates.prgBuild.has(design.id)"
+                <el-tooltip
+                  :content="buildPrgDisabledTooltip"
+                  placement="top"
+                  :disabled="!buildPrgDisabledTooltip"
                 >
-                  <el-icon><Box /></el-icon>
-                  {{ t('card.buildPrg') }}
-                </el-button>
+                  <span class="build-prg-tooltip-trigger">
+                    <el-button
+                      size="small"
+                      :disabled="prgCardAction !== 'build'"
+                      @click="closeActions(); emit('build-prg', design)"
+                      :loading="loadingStates.prgBuild.has(design.id)"
+                    >
+                      <el-icon><Box /></el-icon>
+                      {{ t('card.buildPrg') }}
+                    </el-button>
+                  </span>
+                </el-tooltip>
                 <el-button v-if="prgCardAction === 'cancel'" size="small" type="danger" plain @click="closeActions(); emit('cancel-prg', design)">
                   {{ t('card.cancelPrgBuild') }}
                 </el-button>
@@ -250,6 +258,7 @@ import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import {
+  getPrgBuildDisabledReason,
   getPrgCardAction,
   shouldShowBuildIqButton,
   shouldShowPreviewPrgButton,
@@ -443,6 +452,22 @@ const prgCardAction = computed(() => getPrgCardAction(
   currentDeviceId.value,
   props.nowMs ?? Date.now(),
 ))
+const buildPrgDisabledTooltip = computed(() => {
+  const reason = getPrgBuildDisabledReason(
+    design.value.product,
+    design.value.updatedAt,
+    currentDeviceId.value,
+    props.nowMs ?? Date.now(),
+  )
+  if (!reason) return ''
+  const keys = {
+    queued: 'card.buildPrgDisabledQueued',
+    building: 'card.buildPrgDisabledBuilding',
+    cancelling: 'card.buildPrgDisabledCancelling',
+    cooldown: 'card.buildPrgDisabledCooldown',
+  } as const
+  return t(keys[reason])
+})
 const showBuildIqButton = computed(() => {
   return shouldShowBuildIqButton(design.value.product)
 })
@@ -1069,6 +1094,11 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .action-group-actions {
   display: grid;
   gap: 6px;
+}
+
+.build-prg-tooltip-trigger {
+  display: block;
+  width: 100%;
 }
 
 .action-group-actions :deep(.el-button) {
