@@ -12,6 +12,11 @@ export interface WatchfaceLocalizationConfig {
   defaultLocale: WatchfaceLocale
   supportedLocales: WatchfaceLocale[]
   fontRoles: Record<string, FontRoleBindings>
+  nonLatinLanguageSupport: boolean
+}
+
+export function normalizeNonLatinLanguageSupport(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : true
 }
 
 export interface ElementLocalizationConfig {

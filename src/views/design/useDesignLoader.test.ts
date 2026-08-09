@@ -45,4 +45,10 @@ describe('useDesignLoader contract', () => {
     expect(designSource).not.toContain('const applyRuntimeDesignConfig = async')
     expect(designSource).not.toContain('const loadElements = async')
   })
+
+  it('hydrates non-Latin language support through the shared normalizer', () => {
+    expect(loaderSource).toContain('normalizeNonLatinLanguageSupport')
+    expect(loaderSource).toContain('designStore.setNonLatinLanguageSupport(')
+    expect(loaderSource).toContain('localization.nonLatinLanguageSupport')
+  })
 })

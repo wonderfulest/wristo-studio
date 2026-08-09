@@ -25,6 +25,7 @@ import type { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig, BaseElementConfig } from '@/types/elements'
+import { normalizeNonLatinLanguageSupport } from '@/types/localization'
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -277,6 +278,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       visualThemeStore.hydrate(loadConfig.visualThemes)
       designStore.setSupportsChineseContent(false)
       designStore.setSupportedLocales(['en-US'])
+      designStore.setNonLatinLanguageSupport(true)
       propertiesStore.clearProperties()
       await waitCanvasReady()
       if (!isCurrentDesignLoad(generation)) return false
@@ -289,6 +291,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))
     if (loadConfig.localization) {
       const localization = loadConfig.localization as any
+      designStore.setNonLatinLanguageSupport(
+        normalizeNonLatinLanguageSupport(localization.nonLatinLanguageSupport),
+      )
       if (Array.isArray(localization.supportedLocales)) {
         designStore.setSupportedLocales(localization.supportedLocales)
       } else {
@@ -302,6 +307,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       }
     } else {
       designStore.setSupportedLocales(['en-US'])
+      designStore.setNonLatinLanguageSupport(true)
     }
 
     if (loadConfig.properties) {

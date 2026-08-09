@@ -29,6 +29,7 @@ export const useDesignStore = defineStore('design', {
     defaultLocale: 'en-US' as WatchfaceLocale,
     supportedLocales: ['en-US'] as WatchfaceLocale[],
     supportsChineseContent: false,
+    nonLatinLanguageSupport: true,
     fontRoles: {} as Record<string, FontRoleBindings>,
   }),
 
@@ -67,6 +68,10 @@ export const useDesignStore = defineStore('design', {
       this.supportsChineseContent = Boolean(value)
     },
 
+    setNonLatinLanguageSupport(value: boolean): void {
+      this.nonLatinLanguageSupport = Boolean(value)
+    },
+
     setLocaleFontRole(role: string, locale: WatchfaceLocale, binding: LocaleFontBinding): void {
       if (!this.fontRoles[role]) {
         this.fontRoles[role] = {}
@@ -75,11 +80,11 @@ export const useDesignStore = defineStore('design', {
     },
 
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {
-      if (!this.supportedLocales.length || !Object.keys(this.fontRoles).length) return undefined
       return {
         defaultLocale: this.defaultLocale,
         supportedLocales: [...this.supportedLocales],
         fontRoles: this.fontRoles,
+        nonLatinLanguageSupport: this.nonLatinLanguageSupport,
       }
     },
 
