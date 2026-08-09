@@ -1,54 +1,63 @@
 export interface LocalizedText {
-  eng: string
-  zhs: string
+  readonly eng: string
+  readonly zhs: string
 }
 
 export type DataTypeCategory = 'field' | 'goal' | 'chart' | 'indicator' | 'date' | 'weather'
 
 export interface DataTypeOption {
-  valueCode: number
-  metricSymbol: string
-  category: DataTypeCategory
-  settingsLabel: LocalizedText
-  label: LocalizedText
-  unitKey: string
-  iconUnicode: string
-  defaultValue: string
-  isActive: 1
-  sortOrder: number
-  dialMode: 'goal' | 'range' | null
-  dialMin: number | null
-  dialMax: number | null
-  dialGoalSource: 'garmin' | 'fixed' | null
+  readonly valueCode: number
+  readonly metricSymbol: string
+  readonly category: DataTypeCategory
+  readonly settingsLabel: LocalizedText
+  readonly label: LocalizedText
+  readonly unitKey: string
+  readonly iconUnicode: string
+  readonly defaultValue: string
+  readonly isActive: 1
+  readonly sortOrder: number
+  readonly dialMode: 'goal' | 'range' | null
+  readonly dialMin: number | null
+  readonly dialMax: number | null
+  readonly dialGoalSource: 'garmin' | 'fixed' | null
 }
 
 export interface DataUnitVariant {
-  aliases: string[]
-  label: LocalizedText
+  readonly aliases: readonly string[]
+  readonly label: LocalizedText
 }
 
 export interface DataUnitDefinition {
-  unitKey: string
-  name: string
-  defaultVariant: string | null
-  variants: Record<string, DataUnitVariant>
-  isActive: 1
-  sortOrder: number
-  description: string | null
+  readonly unitKey: string
+  readonly name: string
+  readonly defaultVariant: string | null
+  readonly variants: Readonly<Record<string, DataUnitVariant>>
+  readonly isActive: 1
+  readonly sortOrder: number
+  readonly description: string | null
 }
 
 export interface DataCatalogSnapshot {
-  catalogVersion: number
-  dataTypeOptions: DataTypeOption[]
-  unitDefinitions: DataUnitDefinition[]
+  readonly catalogVersion: number
+  readonly dataTypeOptions: readonly DataTypeOption[]
+  readonly unitDefinitions: readonly DataUnitDefinition[]
 }
 
 export interface UnitVariantOwner {
-  unitKey: string
-  variantKey: string
+  readonly unitKey: string
+  readonly variantKey: string
+}
+
+export interface ReadonlyLookup<K, V> extends Iterable<readonly [K, V]> {
+  readonly size: number
+  get(key: K): V | undefined
+  has(key: K): boolean
+  entries(): IterableIterator<[K, V]>
+  keys(): IterableIterator<K>
+  values(): IterableIterator<V>
 }
 
 export interface ValidatedDataCatalog extends DataCatalogSnapshot {
-  unitsByKey: Map<string, DataUnitDefinition>
-  aliasOwners: Map<string, UnitVariantOwner>
+  readonly unitsByKey: ReadonlyLookup<string, DataUnitDefinition>
+  readonly aliasOwners: ReadonlyLookup<string, UnitVariantOwner>
 }

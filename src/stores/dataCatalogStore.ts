@@ -1,33 +1,52 @@
 import { defineStore } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
 import { reportDataTypeOptionsLoadError, replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
-import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitVariant, LocalizedText, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
+import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 const SYMBOL_PATTERN = /^:[A-Z][A-Z0-9_]*$/
 const CATEGORIES = new Set<DataTypeCategory>(['field', 'goal', 'chart', 'indicator', 'date', 'weather'])
+const hasOwn = (Object as unknown as { hasOwn(object: object, property: PropertyKey): boolean }).hasOwn
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const requiredString = (value: unknown, path: string): string => {
   if (typeof value !== 'string' || value.trim() === '') throw new Error(`${path} is required`)
-  return value
+  return value.trim()
 }
 
 const exactKey = (value: unknown, path: string): string => {
-  if (typeof value !== 'string' || !KEY_PATTERN.test(value)) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (!KEY_PATTERN.test(normalized)) {
     throw new Error(`${path} must match ^[a-z][a-z0-9_]*$`)
   }
-  return value
+  return normalized
 }
 
 const localizedText = (value: unknown, path: string): LocalizedText => {
   if (!isRecord(value)) throw new Error(`${path}.eng is required`)
-  return {
+  return Object.freeze({
     eng: requiredString(value.eng, `${path}.eng`),
     zhs: requiredString(value.zhs, `${path}.zhs`)
-  }
+  })
 }
+
+const readonlyLookup = <K, V>(source: Map<K, V>): ReadonlyLookup<K, V> => Object.freeze({
+  get: (key: K) => source.get(key),
+  has: (key: K) => source.has(key),
+  entries: () => source.entries(),
+  keys: () => source.keys(),
+  values: () => source.values(),
+  get size() {
+    return source.size
+  },
+  [Symbol.iterator]: () => source[Symbol.iterator]()
+})
+
+const EMPTY_UNITS = readonlyLookup(new Map<string, DataUnitDefinition>())
+const EMPTY_ALIASES = readonlyLookup(new Map<string, UnitVariantOwner>())
+const EMPTY_OPTIONS = Object.freeze([]) as readonly DataTypeOption[]
+const EMPTY_UNIT_DEFINITIONS = Object.freeze([]) as readonly DataUnitDefinition[]
 
 const nonnegativeInteger = (value: unknown, path: string): number => {
   if (!Number.isInteger(value) || (value as number) < 0) {
@@ -55,17 +74,20 @@ const validateVariant = (value: unknown, path: string, unitKey: string, variantK
   const variantAliases = new Set<string>()
   const aliases = value.aliases.map((alias, index) => {
     const raw = requiredString(alias, `${path}.aliases[${index}]`)
-    const normalized = raw.trim().toLocaleLowerCase('en-US')
+    const normalized = raw.toLowerCase()
     if (variantAliases.has(normalized)) throw new Error(`duplicate alias '${normalized}'`)
     variantAliases.add(normalized)
     const owner = aliasOwners.get(normalized)
     if (owner && (owner.unitKey !== unitKey || owner.variantKey !== variantKey)) {
       throw new Error(`alias '${normalized}' is owned by both ${owner.unitKey}/${owner.variantKey} and ${unitKey}/${variantKey}`)
     }
-    aliasOwners.set(normalized, { unitKey, variantKey })
-    return raw
+    aliasOwners.set(normalized, Object.freeze({ unitKey, variantKey }))
+    return normalized
   })
-  return { aliases, label: localizedText(value.label, `${path}.label`) }
+  return Object.freeze({
+    aliases: Object.freeze(aliases),
+    label: localizedText(value.label, `${path}.label`)
+  })
 }
 
 const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, UnitVariantOwner>): DataUnitDefinition => {
@@ -91,26 +113,28 @@ const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, Un
     }
     defaultVariant = exactKey(value.defaultVariant, `${path}.defaultVariant`)
   }
-  const variants: Record<string, DataUnitVariant> = {}
-  for (const [variantKey, variant] of variantEntries) {
-    exactKey(variantKey, `${path}.variantKey`)
+  const variants = Object.create(null) as Record<string, DataUnitVariant>
+  for (const [rawVariantKey, variant] of variantEntries) {
+    const variantKey = exactKey(rawVariantKey, `${path}.variantKey`)
+    if (hasOwn(variants, variantKey)) throw new Error(`${path}.duplicate variantKey '${variantKey}'`)
     variants[variantKey] = validateVariant(variant, `${path}.variants.${variantKey}`, unitKey, variantKey, aliasOwners)
   }
-  if (defaultVariant !== null && !variants[defaultVariant]) {
+  if (defaultVariant !== null && !hasOwn(variants, defaultVariant)) {
     throw new Error(`${path}.defaultVariant '${defaultVariant}' is not defined`)
   }
   if (value.description !== null && typeof value.description !== 'string') {
     throw new Error(`${path}.description must be a string or null`)
   }
-  return {
+  const description = value.description === null ? null : (value.description as string).trim()
+  return Object.freeze({
     unitKey,
     name,
     defaultVariant,
-    variants,
+    variants: Object.freeze(variants),
     isActive,
     sortOrder,
-    description: value.description as string | null
-  }
+    description
+  })
 }
 
 const validateOption = (value: unknown, index: number): DataTypeOption => {
@@ -120,23 +144,24 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
   const prefix = `valueCode ${valueCode}`
   const metricSymbol = requiredString(value.metricSymbol, `${prefix}: metricSymbol`)
   if (!SYMBOL_PATTERN.test(metricSymbol)) throw new Error(`${prefix}: metricSymbol must match ^:[A-Z][A-Z0-9_]*$`)
-  if (typeof value.category !== 'string' || !CATEGORIES.has(value.category as DataTypeCategory)) {
+  const category = typeof value.category === 'string' ? value.category.trim() : ''
+  if (!CATEGORIES.has(category as DataTypeCategory)) {
     throw new Error(`${prefix}: category is unsupported`)
   }
-  const defaultValue = value.defaultValue
+  const defaultValue = typeof value.defaultValue === 'string' ? value.defaultValue.trim() : value.defaultValue
   if (typeof defaultValue !== 'string') throw new Error(`${prefix}: defaultValue is required`)
-  const dialMode = value.dialMode
+  const dialMode = typeof value.dialMode === 'string' ? value.dialMode.trim() : value.dialMode
   if (dialMode !== null && dialMode !== 'goal' && dialMode !== 'range') {
     throw new Error(`${prefix}: dialMode must be goal, range, or null`)
   }
-  const dialGoalSource = value.dialGoalSource
+  const dialGoalSource = typeof value.dialGoalSource === 'string' ? value.dialGoalSource.trim() : value.dialGoalSource
   if (dialGoalSource !== null && dialGoalSource !== 'garmin' && dialGoalSource !== 'fixed') {
     throw new Error(`${prefix}: dialGoalSource must be garmin, fixed, or null`)
   }
-  return {
+  return Object.freeze({
     valueCode,
     metricSymbol,
-    category: value.category as DataTypeCategory,
+    category: category as DataTypeCategory,
     settingsLabel: localizedText(value.settingsLabel, `${prefix}: settingsLabel`),
     label: localizedText(value.label, `${prefix}: label`),
     unitKey: exactKey(value.unitKey, `${prefix}: unitKey`),
@@ -148,7 +173,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     dialMin: nullableNumber(value.dialMin, `${prefix}: dialMin`),
     dialMax: nullableNumber(value.dialMax, `${prefix}: dialMax`),
     dialGoalSource
-  }
+  })
 }
 
 export const validateDataCatalog = (value: unknown): ValidatedDataCatalog => {
@@ -180,13 +205,13 @@ export const validateDataCatalog = (value: unknown): ValidatedDataCatalog => {
     }
     return validated
   })
-  return {
+  return Object.freeze({
     catalogVersion: value.catalogVersion as number,
-    dataTypeOptions,
-    unitDefinitions,
-    unitsByKey,
-    aliasOwners
-  }
+    dataTypeOptions: Object.freeze(dataTypeOptions),
+    unitDefinitions: Object.freeze(unitDefinitions),
+    unitsByKey: readonlyLookup(unitsByKey),
+    aliasOwners: readonlyLookup(aliasOwners)
+  })
 }
 
 const pendingLoads = new WeakMap<object, Promise<ValidatedDataCatalog>>()
@@ -199,10 +224,10 @@ export const useDataCatalogStore = defineStore('dataCatalog', {
   }),
   getters: {
     catalogVersion: (state) => state.snapshot?.catalogVersion ?? null,
-    options: (state) => state.snapshot?.dataTypeOptions ?? [],
-    unitDefinitions: (state) => state.snapshot?.unitDefinitions ?? [],
-    unitsByKey: (state) => state.snapshot?.unitsByKey ?? new Map<string, DataUnitDefinition>(),
-    aliasOwners: (state) => state.snapshot?.aliasOwners ?? new Map<string, UnitVariantOwner>()
+    options: (state) => state.snapshot?.dataTypeOptions ?? EMPTY_OPTIONS,
+    unitDefinitions: (state) => state.snapshot?.unitDefinitions ?? EMPTY_UNIT_DEFINITIONS,
+    unitsByKey: (state) => state.snapshot?.unitsByKey ?? EMPTY_UNITS,
+    aliasOwners: (state) => state.snapshot?.aliasOwners ?? EMPTY_ALIASES
   },
   actions: {
     load(force = false): Promise<ValidatedDataCatalog> {

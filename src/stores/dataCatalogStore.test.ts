@@ -80,7 +80,7 @@ describe('data catalog store', () => {
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
     const store = useDataCatalogStore()
     await store.load()
-    const invalid = clone(validCatalog(13))
+    const invalid: any = clone(validCatalog(13))
     invalid.dataTypeOptions[0].label.zhs = ''
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: invalid })
 
@@ -303,7 +303,7 @@ describe('data catalog store', () => {
   })
 
   it('rejects a normalized alias repeated inside the same variant', async () => {
-    const catalog = clone(validCatalog())
+    const catalog: any = clone(validCatalog())
     catalog.unitDefinitions[0].variants.bpm.aliases.push(' BPM ')
     mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: catalog })
 
@@ -357,12 +357,125 @@ describe('data catalog store', () => {
   })
 
   it('rejects missing and inactive unit references and malformed API result shapes', async () => {
-    const missing = clone(validCatalog())
+    const missing: any = clone(validCatalog())
     missing.dataTypeOptions[0].unitKey = 'missing'
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: missing })
     await expect(useDataCatalogStore().load()).rejects.toThrow("unitKey 'missing' does not reference an active unit")
 
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok' })
     await expect(useDataCatalogStore().load(true)).rejects.toThrow('catalog response data is required')
+  })
+
+  it('requires defaultVariant to be an own variant key and safely supports constructor', async () => {
+    const inheritedToString: any = clone(validCatalog())
+    inheritedToString.unitDefinitions[0].defaultVariant = 'toString'
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: inheritedToString })
+    await expect(useDataCatalogStore().load()).rejects.toThrow(
+      'unitDefinitions[0].defaultVariant must match ^[a-z][a-z0-9_]*$',
+    )
+
+    const inheritedConstructor: any = clone(validCatalog())
+    inheritedConstructor.unitDefinitions[0].defaultVariant = 'constructor'
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: inheritedConstructor })
+    await expect(useDataCatalogStore().load(true)).rejects.toThrow(
+      "unitDefinitions[0].defaultVariant 'constructor' is not defined",
+    )
+
+    const ownConstructor: any = clone(validCatalog(13))
+    ownConstructor.unitDefinitions[0].defaultVariant = 'constructor'
+    ownConstructor.unitDefinitions[0].variants = {
+      constructor: {
+        aliases: ['ctor'],
+        label: { eng: 'constructor', zhs: '构造器' },
+      },
+    }
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: ownConstructor })
+
+    await expect(useDataCatalogStore().load(true)).resolves.toBeDefined()
+    expect(useDataCatalogStore().unitsByKey.get('heart_rate')?.variants['constructor'].label.eng).toBe('constructor')
+  })
+
+  it('publishes a deeply immutable snapshot and readonly lookup facades', async () => {
+    mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: validCatalog() })
+    const store = useDataCatalogStore()
+    await store.load()
+
+    expect(Object.isFrozen(store.options)).toBe(true)
+    expect(Object.isFrozen(store.options[0])).toBe(true)
+    expect(Object.isFrozen(store.options[0].label)).toBe(true)
+    const unit = store.unitsByKey.get('heart_rate')!
+    expect(Object.getPrototypeOf(unit.variants)).toBeNull()
+    expect(Object.isFrozen(unit.variants)).toBe(true)
+    expect(Object.isFrozen(unit.variants.bpm.aliases)).toBe(true)
+    expect((store.unitsByKey as any).set).toBeUndefined()
+    expect((store.aliasOwners as any).delete).toBeUndefined()
+
+    expect(() => ((store.options[0].label as any).eng = 'mutated')).toThrow()
+    expect(() => (unit.variants.bpm.aliases as any).push('mutated')).toThrow()
+    expect(store.options[0].label.eng).toBe('HR')
+    expect(store.unitsByKey.get('heart_rate')?.variants.bpm.aliases).toEqual(['bpm'])
+  })
+
+  it('keeps a stable runtime-readonly compatibility array while atomically replacing its snapshot', async () => {
+    const compatibilityReference = DataTypeOptions
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
+    const store = useDataCatalogStore()
+    await store.load()
+
+    expect(() => (DataTypeOptions as any).push({})).toThrow()
+    expect(() => ((DataTypeOptions as any)[0] = {})).toThrow()
+    expect(() => ((DataTypeOptions[0] as any).label = 'mutated')).toThrow()
+    expect(Object.isFrozen(DataTypeOptions[0])).toBe(true)
+    const next: any = validCatalog(13)
+    next.dataTypeOptions[0].label.eng = 'Pulse'
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: next })
+    await store.load(true)
+
+    expect(DataTypeOptions).toBe(compatibilityReference)
+    expect(DataTypeOptions[0].label).toBe('Pulse')
+  })
+
+  it('normalizes canonical text and aliases without mutating the API response', async () => {
+    const response: any = validCatalog()
+    response.dataTypeOptions[0].metricSymbol = '  :FIELD_TYPE_HEART_RATE  '
+    response.dataTypeOptions[0].category = '  field  '
+    response.dataTypeOptions[0].settingsLabel = { eng: ' Heart Rate ', zhs: ' 心率 ' }
+    response.dataTypeOptions[0].label = { eng: ' HR ', zhs: ' 心率 ' }
+    response.dataTypeOptions[0].unitKey = ' heart_rate '
+    response.dataTypeOptions[0].iconUnicode = ' 0061 '
+    response.dataTypeOptions[0].defaultValue = ' 0 '
+    response.unitDefinitions[0].unitKey = ' heart_rate '
+    response.unitDefinitions[0].name = ' Heart rate '
+    response.unitDefinitions[0].defaultVariant = ' bpm '
+    response.unitDefinitions[0].variants.bpm.aliases = [' BPM ', ' Beats/Min ']
+    response.unitDefinitions[0].variants.bpm.label = { eng: ' bpm ', zhs: ' 次/分 ' }
+    const original = clone(response)
+    mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: response })
+
+    const store = useDataCatalogStore()
+    await store.load()
+
+    expect(store.options[0]).toEqual(expect.objectContaining({
+      metricSymbol: ':FIELD_TYPE_HEART_RATE',
+      category: 'field',
+      unitKey: 'heart_rate',
+      iconUnicode: '0061',
+      defaultValue: '0',
+      settingsLabel: { eng: 'Heart Rate', zhs: '心率' },
+      label: { eng: 'HR', zhs: '心率' },
+    }))
+    expect(store.unitsByKey.get('heart_rate')?.defaultVariant).toBe('bpm')
+    expect(store.unitsByKey.get('heart_rate')?.variants.bpm.aliases).toEqual(['bpm', 'beats/min'])
+    expect(response).toEqual(original)
+  })
+
+  it('trims keys but never lowercases them implicitly', async () => {
+    const response: any = validCatalog()
+    response.unitDefinitions[0].unitKey = ' Heart_Rate '
+    mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: response })
+
+    await expect(useDataCatalogStore().load()).rejects.toThrow(
+      'unitDefinitions[0].unitKey must match ^[a-z][a-z0-9_]*$',
+    )
   })
 })
