@@ -32,7 +32,6 @@ import {
   VISUAL_THEME_COLOR_BINDINGS,
 } from './visualThemeElementFields'
 import { validateExplicitColorBindings } from './explicitColorBindingService'
-import { isAllowedGarminFontSymbol } from '@/utils/garminSystemFonts'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -178,8 +177,6 @@ async function validateDateContentAndFonts(
       continue
     }
 
-    if ((element as any).fontSource === 'system') continue
-
     const fontFamily = String((element as any).fontFamily || '')
     if (!fontFamily) {
       errors.push('A date element is missing a font.')
@@ -198,16 +195,6 @@ async function validateDateContentAndFonts(
   }
 
   return Array.from(new Set(errors))
-}
-
-export function validateSystemFontSelections(elements: AnyElementConfig[]): string[] {
-  return elements.flatMap((element) => {
-    if ((element as any).fontSource !== 'system') return []
-    const symbol = String((element as any).systemFont || '')
-    if (isAllowedGarminFontSymbol(symbol)) return []
-    const eleType = String((element as any).eleType ?? (element as any).type ?? 'element')
-    return [`Invalid Garmin system font for ${eleType}: ${symbol || '(missing)'}`]
-  })
 }
 
 export interface GenerateConfigOptions {
@@ -258,8 +245,7 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.properties,
     config.elements as unknown as Array<Record<string, unknown>>,
   )
-  const systemFontErrors = validateSystemFontSelections(config.elements)
-  const errors = [...dateErrors, ...systemFontErrors, ...visualThemeErrors]
+  const errors = [...dateErrors, ...visualThemeErrors]
   if (errors.length > 0) {
     ElMessage.error(errors.join(t('common.listSeparator')))
     console.error('Export validation failed:', errors)

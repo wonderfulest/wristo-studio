@@ -122,8 +122,6 @@ export async function updateElement(element: FabricElement, patch: any): Promise
   }
   const positionPatch = (patch ?? {}) as Record<string, unknown>
   for (const field of [
-    'fontSource', 'systemFont', 'assetFontFamily', 'assetFontSize',
-    'systemFontPrecision', 'previewFontSlug',
   ]) {
     if (Object.prototype.hasOwnProperty.call(positionPatch, field)) {
       ;(resolved as any)[field] = positionPatch[field]

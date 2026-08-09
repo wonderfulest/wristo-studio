@@ -17,6 +17,7 @@ import { useDesignStore } from '@/stores/designStore'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
+import { getPersistedTextFont } from '@/utils/systemFontElement'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -72,7 +73,7 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   const textCase = (propertiesStore as any).textCase as number | undefined
   const text = formatDate(getSimulatedNow(), formatterValue, textCase, getDatePreviewLocale(designStore))
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, text)
 
   const element: any = new FabricText(text, {
     eleType: 'date',
@@ -140,8 +141,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     originX: element.originX as any,
     originY: element.originY as any,
     fill: element.fill as any,
-    fontSize: element.fontSize as any,
-    fontFamily: element.fontFamily as any,
+    ...getPersistedTextFont(config, element),
     formatter: (element as any).formatter,
     topBase: encodeTopBaseForElement(element as any),
   } as any)

@@ -29,7 +29,7 @@ export function createText(config: TextElementConfig): FabricElement {
       : config.textTemplate ?? '') || 'New Text'
 
   const resolvedText = resolveDataTextTemplate(template)
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, resolvedText)
 
   const element = new FabricText(resolvedText || 'New Text', {
     id: config.id || nanoid(),

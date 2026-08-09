@@ -13,6 +13,7 @@ import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
+import { getPersistedTextFont } from '@/utils/systemFontElement'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -29,7 +30,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     (propertiesStore as any).textCase,
   )
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config)
+  const previewFont = resolveCurrentElementPreviewFont(config, labelText)
 
   const element = new FabricText(labelText, {
     id,
@@ -67,8 +68,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     originY: ((element as any).originY as any) ?? 'center',
     fill: (element.fill as any) ?? config.fill ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? config.fillProperty ?? undefined,
-    fontSize: Number((element.fontSize as any) ?? config.fontSize ?? 14),
-    fontFamily: (element.fontFamily as any) ?? config.fontFamily ?? 'roboto-condensed-regular',
+    ...getPersistedTextFont(config, element),
     dataProperty: (element as any).dataProperty ?? config.dataProperty ?? null,
     goalProperty: (element as any).goalProperty ?? config.goalProperty ?? null,
     metricSymbol: (element as any).metricSymbol ?? (config as any).metricSymbol ?? undefined,

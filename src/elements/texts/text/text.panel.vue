@@ -54,7 +54,7 @@
       <div class="text-settings-grid">
         <div class="text-setting-field">
           <label>{{ t('elementSettings.fontSize') }}</label>
-          <FontSizeSelect v-model="fontSize" :disabled="currentModel.fontSource === 'system'" @change="updateFontSize" />
+          <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.fontColor') }}</label>
@@ -66,12 +66,7 @@
         </div>
         <div class="text-setting-field full">
           <label>{{ t('elementSettings.font') }}</label>
-          <GarminSystemFontField
-            :font-source="currentModel.fontSource"
-            :system-font="currentModel.systemFont"
-            @change="applyUpdate"
-          />
-          <font-picker v-if="currentModel.fontSource !== 'system'" v-model="fontFamily" @change="updateFontFamily" />
+          <font-picker v-model="fontFamily" @change="updateFontFamily" />
         </div>
       </div>
     </section>
@@ -87,7 +82,6 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
-import GarminSystemFontField from '@/components/font-picker/GarminSystemFontField.vue'
 import TextVariableEditor from '@/elements/common/settings/TextVariableEditor.vue'
 import { useI18n } from '@/i18n'
 

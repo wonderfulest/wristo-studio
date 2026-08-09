@@ -1,9 +1,8 @@
 import type { BaseElementConfig } from './base'
 import type { FabricFill } from '@/types/fabric'
 import type { ZoneMetricDisplayMode, ZoneMetricPreset, ZoneMetricZone } from '@/elements/metric/zoneMetric/zoneMetric.common'
-import type { GarminSystemFontSelection } from '@/types/garminSystemFont'
 
-export interface BaseTextConfig extends BaseElementConfig, GarminSystemFontSelection {
+export interface BaseTextConfig extends BaseElementConfig {
   fontSize: number
   fill: FabricFill
   fillProperty?: string | null

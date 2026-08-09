@@ -9,7 +9,7 @@ describe('Design visual theme hydration ordering', () => {
     const projection = source.indexOf('const loadConfig = projectDefaultVisualThemeForLoad(config)', applyStart)
     const hydrate = source.indexOf('visualThemeStore.hydrate(', applyStart)
     const properties = source.indexOf('propertiesStore.loadProperties(loadConfig.properties)', applyStart)
-    const elements = source.indexOf('const runtimeElements = loadConfig.elements as AnyElementConfig[]', applyStart)
+    const elements = source.indexOf('const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map', applyStart)
 
     expect(source).toContain("import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'")
     expect(projection).toBeGreaterThan(applyStart)

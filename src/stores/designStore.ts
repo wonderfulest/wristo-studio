@@ -1,10 +1,5 @@
 import { defineStore } from 'pinia'
-import type {
-  FontRoleBindings,
-  LocaleFontBinding,
-  WatchfaceLocale,
-  WatchfaceLocalizationConfig,
-} from '@/types/localization'
+import type { WatchfaceLocale, WatchfaceLocalizationConfig } from '@/types/localization'
 
 export type WatchShape = 'circle' | 'rectangle'
 
@@ -29,8 +24,6 @@ export const useDesignStore = defineStore('design', {
     defaultLocale: 'en-US' as WatchfaceLocale,
     supportedLocales: ['en-US'] as WatchfaceLocale[],
     supportsChineseContent: false,
-    nonLatinLanguageSupport: true,
-    fontRoles: {} as Record<string, FontRoleBindings>,
   }),
 
   actions: {
@@ -68,23 +61,10 @@ export const useDesignStore = defineStore('design', {
       this.supportsChineseContent = Boolean(value)
     },
 
-    setNonLatinLanguageSupport(value: boolean): void {
-      this.nonLatinLanguageSupport = Boolean(value)
-    },
-
-    setLocaleFontRole(role: string, locale: WatchfaceLocale, binding: LocaleFontBinding): void {
-      if (!this.fontRoles[role]) {
-        this.fontRoles[role] = {}
-      }
-      this.fontRoles[role][locale] = binding
-    },
-
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {
       return {
         defaultLocale: this.defaultLocale,
         supportedLocales: [...this.supportedLocales],
-        fontRoles: this.fontRoles,
-        nonLatinLanguageSupport: this.nonLatinLanguageSupport,
       }
     },
 

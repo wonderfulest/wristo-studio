@@ -49,18 +49,6 @@
         <span>{{ t('editorSettings.chineseContent') }}</span>
       </label>
 
-      <label
-        class="bar-cell check-cell non-latin-language-cell"
-        :title="t('editorSettings.nonLatinLanguageSupportHelp')"
-      >
-        <el-switch
-          :model-value="nonLatinLanguageSupport"
-          size="small"
-          @change="handleNonLatinLanguageSupportChange"
-        />
-        <span>{{ t('editorSettings.nonLatinLanguageSupport') }}</span>
-      </label>
-
     </div>
 
     <div class="bar-group right-group">
@@ -315,7 +303,6 @@ const selectedElementLabel = computed(() => {
 })
 
 const chineseContentEnabled = computed(() => designStore.supportsChineseContent)
-const nonLatinLanguageSupport = computed(() => designStore.nonLatinLanguageSupport)
 
 const handleLightCanvasBackgroundColorChange = (color: string) => {
   lightCanvasBackgroundColor.value = color
@@ -413,16 +400,6 @@ const refreshDateElementsForContentLanguage = async () => {
       await elementManager.updateElementById(id, { formatter: (element as any).formatter })
     }
   }
-}
-
-const handleNonLatinLanguageSupportChange = async (value: boolean | string | number) => {
-  const nextEnabled = Boolean(value)
-  designStore.setNonLatinLanguageSupport(nextEnabled)
-  refreshMetricTextElementsForContentLanguage()
-  await refreshDateElementsForContentLanguage()
-  historyStore.saveState(nextEnabled
-    ? 'settings:enable-non-latin-language-support'
-    : 'settings:disable-non-latin-language-support')
 }
 
 const handleChineseContentChange = async (value: boolean | string | number) => {

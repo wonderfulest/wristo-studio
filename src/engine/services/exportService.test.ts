@@ -44,20 +44,6 @@ describe('validateDataGoalBindings', () => {
   })
 })
 
-describe('Garmin system font export validation', () => {
-  it('rejects missing and non-whitelisted Graphics font symbols', async () => {
-    const { validateSystemFontSelections } = await import('./exportService')
-    expect(validateSystemFontSelections([
-      { eleType: 'time', fontSource: 'system', systemFont: 'FONT_SMALL' },
-      { eleType: 'date', fontSource: 'system', systemFont: 'Graphics.FONT_SMALL;evil()' },
-      { eleType: 'text', fontSource: 'system' },
-    ] as any)).toEqual([
-      'Invalid Garmin system font for date: Graphics.FONT_SMALL;evil()',
-      'Invalid Garmin system font for text: (missing)',
-    ])
-  })
-})
-
 describe('visual theme export persistence', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

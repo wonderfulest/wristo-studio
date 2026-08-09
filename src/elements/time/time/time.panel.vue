@@ -4,7 +4,6 @@
       <el-form-item :label="t('elementSettings.fontType')">
         <el-radio-group v-model="fontRenderType">
           <el-radio label="truetype">{{ t('elementSettings.trueTypeFont') }}</el-radio>
-          <el-radio label="system">System</el-radio>
           <el-radio label="bitmap" :disabled="isHourFormat">
             {{ t('elementSettings.bitmapFont') }}
           </el-radio>
@@ -24,17 +23,10 @@
             @change="(fontId: number) => void handleBitmapFontChange(fontId)"
           />
         </template>
-        <GarminSystemFontField
-          v-else
-          :font-source="currentModel.fontSource"
-          :system-font="currentModel.systemFont"
-          @change="applyUpdate"
-        />
       </el-form-item>
       <el-form-item :label="t('elementSettings.fontSize')">
         <FontSizeSelect
           v-model="currentModel.fontSize"
-          :disabled="fontRenderType === 'system'"
           @change="(v: number) => applyUpdate({ fontSize: v })"
         />
       </el-form-item>
@@ -88,7 +80,6 @@ import { originXOptions, TimeFormatConstants, TimeFormatOptions } from '@/config
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
-import GarminSystemFontField from '@/components/font-picker/GarminSystemFontField.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { FontTypes } from '@/config/fonts'
@@ -116,7 +107,7 @@ const isHourFormat = computed(
 const fontRenderType = computed({
   get() {
     const v = (currentModel.value as any).fontRenderType
-    return v === 'bitmap' || v === 'system' ? v : 'truetype'
+    return v === 'bitmap' ? v : 'truetype'
   },
   set(v) {
     ;(currentModel.value as any).fontRenderType = v
@@ -124,9 +115,7 @@ const fontRenderType = computed({
       if (!(currentModel.value as any).fontFamily) {
         ;(currentModel.value as any).fontFamily = 'roboto-condensed-regular'
       }
-      applyUpdate({ fontRenderType: 'truetype', fontSource: 'asset', systemFont: undefined, fontFamily: (currentModel.value as any).fontFamily })
-    } else if (v === 'system') {
-      applyUpdate({ fontRenderType: 'system', fontSource: 'system' })
+      applyUpdate({ fontRenderType: 'truetype', fontFamily: (currentModel.value as any).fontFamily })
     } else {
       const existingBitmapId = (currentModel.value as any).bitmapFontId
       if (existingBitmapId) {

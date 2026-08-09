@@ -16,13 +16,9 @@ export function encodeTime(element: FabricElement): TimeElementConfig {
     originY: element.originY,
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSize: getSavedFontSize(element, 14),
-    fontSource: (element as any).fontSource,
-    systemFont: (element as any).systemFont,
     fill: element.fill as string,
     formatter,
-    fontRenderType: (element as any).fontSource === 'system'
-      ? 'system'
-      : requiresTrueType
+    fontRenderType: requiresTrueType
       ? 'truetype'
       : ((element as any).fontRenderType ?? 'truetype'),
     bitmapFontId: (element as any).bitmapFontId ?? null,
@@ -40,8 +36,6 @@ export function decodeTime(config: TimeElementConfig): Partial<FabricElement> {
     top: config.top,
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
-    fontSource: config.fontSource,
-    systemFont: config.systemFont,
     fill: config.fill,
     originX: config.originX,
     originY: config.originY,
