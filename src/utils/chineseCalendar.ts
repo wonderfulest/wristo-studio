@@ -215,6 +215,20 @@ export function getChineseFestival(date: Date) {
   return LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || ''
 }
 
+interface UpcomingChineseFestival {
+  name: string
+  days: number
+}
+
+export function getNextChineseFestival(date: Date): UpcomingChineseFestival | null {
+  for (let days = 0; days <= 32; days += 1) {
+    const candidate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, 12)
+    const name = getChineseFestival(candidate)
+    if (name) return { name, days }
+  }
+  return null
+}
+
 export function getEnglishFestivalOrSolarTerm(date: Date) {
   const solarKey = key(date.getMonth() + 1, date.getDate())
   if (EN_SOLAR_FESTIVALS[solarKey]) return EN_SOLAR_FESTIVALS[solarKey]
@@ -263,8 +277,11 @@ export function formatChineseCulturalDate(date: Date, formatter: number, locale:
       return lunar.ganzhiYear
     case 22:
       return lunar.zodiacYear
-    case 23:
-      return getChineseFestival(date) || `${lunar.monthName}${lunar.dayName}`
+    case 23: {
+      const nextEvent = getNextChineseFestival(date)
+      if (!nextEvent) return `${lunar.monthName}${lunar.dayName}`
+      return nextEvent.days === 0 ? nextEvent.name : `${nextEvent.name}+${nextEvent.days}`
+    }
     case 24:
       return getChineseYi(date)
     case 25:
