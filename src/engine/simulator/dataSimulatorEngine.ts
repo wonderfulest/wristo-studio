@@ -3,7 +3,8 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
 import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
-import { applyMetricTextCase, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
 import { formatDataNumberDisplay } from '@/utils/dataNumberFormat'
@@ -254,13 +255,18 @@ export class DataSimulatorEngine {
       }
 
       if (eleType === 'unit') {
+        const catalogSnapshot = useDataCatalogStore().snapshot
+        if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
           metricSymbol: obj.metricSymbol
         })
         const textCase = (propertiesStore as any).textCase
-        const display = applyTextCase(resolveMetricUnit(metric as any, resolveDesignContentLanguage(designStore)), textCase)
+        const canonicalMetric = requireCanonicalMetric(metric, catalogSnapshot)
+        const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
+        const runtimeUnit = simKey ? getSimulatedDataByName(simKey).unit : undefined
+        const display = applyTextCase(resolveMetricUnit(canonicalMetric, resolveDesignContentLanguage(designStore), catalogSnapshot, runtimeUnit || undefined), textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
@@ -271,13 +277,15 @@ export class DataSimulatorEngine {
       }
 
       if (eleType === 'label') {
+        const catalogSnapshot = useDataCatalogStore().snapshot
+        if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
         const metric = propertiesStore.getMetricByOptions({
           dataProperty: obj.dataProperty,
           goalProperty: obj.goalProperty,
           metricSymbol: obj.metricSymbol
         })
 
-        let nextText = resolveMetricLabel(metric as any, resolveDesignContentLanguage(designStore))
+        let nextText = resolveMetricLabel(requireCanonicalMetric(metric, catalogSnapshot), resolveDesignContentLanguage(designStore))
 
         nextText = applyTextCase(nextText, (propertiesStore as any).textCase)
         if (String(obj.text ?? '') !== nextText) {

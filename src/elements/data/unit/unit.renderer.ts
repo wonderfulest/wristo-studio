@@ -8,7 +8,8 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { resolveMetricUnit } from '@/utils/metricLabel'
+import { requireCanonicalMetric, resolveMetricUnit } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
@@ -18,7 +19,9 @@ import { getPersistedTextFont } from '@/utils/systemFontElement'
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
   const designStore = useDesignStore()
-  return resolveMetricUnit(metric, resolveDesignContentLanguage(designStore))
+  const catalog = useDataCatalogStore().snapshot
+  if (!catalog) throw new Error('data catalog: snapshot is missing')
+  return resolveMetricUnit(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore), catalog)
 }
 
 export async function createUnit(config: UnitElementConfig): Promise<FabricElement> {

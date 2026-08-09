@@ -8,7 +8,8 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
+import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
@@ -25,8 +26,10 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   const metric = usePropertiesStore().getMetricByOptions(config)
   const propertiesStore = usePropertiesStore()
   const designStore = useDesignStore()
+  const catalog = useDataCatalogStore().snapshot
+  if (!catalog) throw new Error('data catalog: snapshot is missing')
   const labelText = applyMetricTextCase(
-    resolveMetricLabel(metric, resolveDesignContentLanguage(designStore)),
+    resolveMetricLabel(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
   const displayStates = normalizeDisplayStates(config.displayStates)

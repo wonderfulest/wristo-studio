@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { decodeLabel, encodeLabel } from './label.encoder'
+import { useDataCatalogStore, validateDataCatalog } from '@/stores/dataCatalogStore'
+import { replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
 
 vi.hoisted(() => {
   const storage = new Map<string, string>()
@@ -23,6 +25,13 @@ vi.hoisted(() => {
 describe('label color property binding', () => {
   it('round-trips fillProperty through encode and decode', () => {
     setActivePinia(createPinia())
+    const catalog = validateDataCatalog({
+      catalogVersion: 1,
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+    })
+    useDataCatalogStore().snapshot = catalog
+    replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
     const encoded = encodeLabel({
       id: 'label-1',
       eleType: 'label',

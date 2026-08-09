@@ -74,7 +74,8 @@ import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
 import { applyGroupAlignment } from './groupAlignment'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
-import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
@@ -88,6 +89,7 @@ const baseStore = useBaseStore()
 const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
+const dataCatalog = useDataCatalogStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const amoledIconAssetStore = useAmoledIconAssetStore()
@@ -197,7 +199,8 @@ const updateDataProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
+        const labelText = resolveMetricLabel(requireCanonicalMetric(metric, dataCatalog.snapshot), designStore.supportsChineseContent ? 'zh' : 'en')
         labelElement.value.set('dataProperty', dataProperty.value)
         labelElement.value.set('goalProperty', null)
         labelElement.value.set('text', labelText)
@@ -205,7 +208,8 @@ const updateDataProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
+        const unitText = resolveMetricUnit(requireCanonicalMetric(metric, dataCatalog.snapshot), designStore.supportsChineseContent ? 'zh' : 'en', dataCatalog.snapshot)
         unitElement.value.set('dataProperty', dataProperty.value)
         unitElement.value.set('goalProperty', null)
         unitElement.value.set('text', unitText)
@@ -246,7 +250,8 @@ const updateGoalProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
+        const labelText = resolveMetricLabel(requireCanonicalMetric(metric, dataCatalog.snapshot), designStore.supportsChineseContent ? 'zh' : 'en')
         labelElement.value.set('goalProperty', goalProperty.value)
         labelElement.value.set('dataProperty', null)
         labelElement.value.set('text', labelText)
@@ -254,7 +259,8 @@ const updateGoalProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+        if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
+        const unitText = resolveMetricUnit(requireCanonicalMetric(metric, dataCatalog.snapshot), designStore.supportsChineseContent ? 'zh' : 'en', dataCatalog.snapshot)
         unitElement.value.set('goalProperty', goalProperty.value)
         unitElement.value.set('dataProperty', null)
         unitElement.value.set('text', unitText)

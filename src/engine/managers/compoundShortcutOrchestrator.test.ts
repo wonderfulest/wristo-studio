@@ -176,8 +176,8 @@ describe('compound shortcut production orchestrator', () => {
   it('builds Data Field with and without unit and preserves schema roles', () => {
     const factory = (_category: string, elementType: string, overrides: Record<string, any>, key: string) => ({ key, elementType, config: overrides })
     const base = { propertyKey: 'data_1', metricSymbol: ':DATA_TYPE_STEPS', left: 227, top: 227, fontSize: 36 }
-    expect(buildDataFieldDrafts(factory, { ...base, unit: 'steps' }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value', 'data-unit'])
-    expect(buildDataFieldDrafts(factory, { ...base, unit: '' }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value'])
+    expect(buildDataFieldDrafts(factory, { ...base, hasUnit: true }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value', 'data-unit'])
+    expect(buildDataFieldDrafts(factory, { ...base, hasUnit: false }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value'])
   })
 
   it('builds Goal Arc keys, types, and centered relative coordinates', () => {

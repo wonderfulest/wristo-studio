@@ -221,7 +221,8 @@ import {
   isChineseDateFormatter,
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
-import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 
 const props = defineProps<{
@@ -242,6 +243,7 @@ const userStore = useUserStore()
 const fontStore = useFontStore()
 const historyStore = useHistoryStore()
 const propertiesStore = usePropertiesStore()
+const dataCatalog = useDataCatalogStore()
 const { t } = useI18n()
 
 const lightCanvasBackgroundColor = ref<string>(editorStore.lightCanvasBackgroundColor)
@@ -370,9 +372,11 @@ const refreshMetricTextElementsForContentLanguage = () => {
       goalProperty: (element as any).goalProperty,
       metricSymbol: (element as any).metricSymbol,
     })
+    if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
+    const canonicalMetric = requireCanonicalMetric(metric, dataCatalog.snapshot)
     const nextText = (element as any).eleType === 'unit'
-      ? resolveMetricUnit(metric, language)
-      : resolveMetricLabel(metric, language)
+      ? resolveMetricUnit(canonicalMetric, language, dataCatalog.snapshot)
+      : resolveMetricLabel(canonicalMetric, language)
     ;(element as any).set?.('text', nextText)
     if ((element as any).eleType === 'unit') {
       ;(element as any).metricValue = nextText

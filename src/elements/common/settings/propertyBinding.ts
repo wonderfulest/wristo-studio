@@ -7,7 +7,8 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
 import type { DataTypeOption, DialProgressMode } from '@/types/settings'
-import { resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 
@@ -144,6 +145,9 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       ? { goalProperty: propertyKey }
       : { dataProperty: propertyKey }
   )
+  const catalog = useDataCatalogStore().snapshot
+  if (!catalog) throw new Error('data catalog: snapshot is missing')
+  const canonicalMetric = requireCanonicalMetric(metric, catalog)
   const eleType = String(element?.eleType ?? '')
 
   if (type === 'data') {
@@ -160,9 +164,9 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
         amoledIconUnicode: iconUnicode || null
       }
     }
-    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
+    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en') }
     if (eleType === 'unit') {
-      const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+      const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
     return { dataProperty: propertyKey, goalProperty: null, text: metric.defaultValue }
@@ -183,10 +187,10 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       amoledIconUnicode: iconUnicode || null
     }
   }
-  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(metric, designStore.supportsChineseContent ? 'zh' : 'en') }
+  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en') }
   if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: metric.defaultValue }
   if (eleType === 'unit') {
-    const unitText = resolveMetricUnit(metric, designStore.supportsChineseContent ? 'zh' : 'en')
+    const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }
   }
 

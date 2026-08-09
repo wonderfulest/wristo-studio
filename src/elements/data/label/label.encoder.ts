@@ -4,7 +4,8 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useDesignStore } from '@/stores/designStore'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { usePropertiesStore } from '@/stores/properties'
-import { applyMetricTextCase, resolveMetricLabel } from '@/utils/metricLabel'
+import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
 
 export function encodeLabel(element: FabricElement): LabelElementConfig {
@@ -53,8 +54,10 @@ export function decodeLabel(config: LabelElementConfig): Partial<FabricElement> 
     metricSymbol: config.metricSymbol,
   })
   const designStore = useDesignStore()
+  const catalog = useDataCatalogStore().snapshot
+  if (!catalog) throw new Error('data catalog: snapshot is missing')
   const text = applyMetricTextCase(
-    resolveMetricLabel(metric, resolveDesignContentLanguage(designStore)),
+    resolveMetricLabel(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
 

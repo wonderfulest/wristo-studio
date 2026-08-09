@@ -138,6 +138,8 @@ import { useElementDataStore, type ElementConfigSnapshot } from '@/stores/elemen
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { DataTypeOptions } from '@/config/settings'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { requireCanonicalMetric } from '@/utils/metricLabel'
 import { CircleCheck } from '@element-plus/icons-vue'
 
 import {
@@ -874,8 +876,11 @@ const handleAddDataField = async (metricSymbol?: string) => {
       const baseLeft = baseConfig.left ?? 227
       const baseTop = baseConfig.top ?? 227
       const dataFontSize = baseConfig.fontSize ?? 36
+      const catalog = useDataCatalogStore().snapshot
+      if (!catalog) throw new Error('data catalog: snapshot is missing')
+      const canonicalMetric = requireCanonicalMetric(defaultOption, catalog)
       const drafts = buildDataFieldDrafts(shortcutDraft, {
-        propertyKey, metricSymbol: defaultOption.metricSymbol, unit: String(defaultOption.unit ?? ''),
+        propertyKey, metricSymbol: defaultOption.metricSymbol, hasUnit: canonicalMetric.unitKey !== 'none',
         left: baseLeft, top: baseTop, fontSize: dataFontSize,
       })
       return { kind: 'dataField', drafts, successName: title, errorMessageKey: 'editor.addDataFieldFailed' }
