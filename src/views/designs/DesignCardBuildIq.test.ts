@@ -52,6 +52,8 @@ describe('DesignCard PRG action', () => {
     ['queued task at ten minutes', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T10:00:00Z'), rank: 2 } }, 'cancel'],
     ['running cancellation', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'cancel_requested', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'cancelling'],
     ['another device task', { prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'build'],
+    ['server permits rebuild despite legacy future time', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T18:00:00Z', canRebuild: true } }, 'build'],
+    ['server keeps rebuild in cooldown', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T09:00:00Z', canRebuild: false } }, 'none'],
   ] as const)('%s', (_label, product, expected) => {
     expect(getPrgCardAction(product, designUpdatedAt, 'fenix8', now)).toBe(expected)
   })

@@ -13,6 +13,8 @@ type PackagingState = {
     deviceId?: string | null
     prgUrl?: string | null
     updatedAt?: Timestamp
+    canRebuild?: boolean | null
+    rebuildAvailableAt?: Timestamp
   }
 }
 
@@ -55,6 +57,8 @@ export const getPrgCardAction = (
 
   const release = product.prgRelease
   if (!isSameDevice(release?.deviceId, selectedDeviceId)) return 'build'
+  if (release?.canRebuild === true) return 'build'
+  if (release?.canRebuild === false) return 'none'
   const releaseAt = toTimestamp(release?.updatedAt)
   if (releaseAt === null) return 'build'
   return designAt > releaseAt || nowMs >= releaseAt + PRG_REBUILD_DELAY_MS ? 'build' : 'none'
@@ -78,6 +82,8 @@ export const getPrgBuildDisabledReason = (
 
   const release = product.prgRelease
   if (!isSameDevice(release?.deviceId, selectedDeviceId)) return null
+  if (release?.canRebuild === true) return null
+  if (release?.canRebuild === false) return 'cooldown'
   const releaseAt = toTimestamp(release?.updatedAt)
   if (releaseAt === null) return null
   return designAt <= releaseAt && nowMs < releaseAt + PRG_REBUILD_DELAY_MS ? 'cooldown' : null
