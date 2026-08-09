@@ -32,6 +32,12 @@ describe('Garmin system font resolver', () => {
     })).toMatchObject({ supported: true, face: 'Roboto', size: 50, precision: 'exact' })
   })
 
+  it.each(['venu441mm', 'venu445mm'])('lists system fonts for Venu 4 device id %s', (deviceId) => {
+    const fonts = listGarminSystemFonts({ deviceId, locale: 'en-US' })
+    expect(fonts.length).toBeGreaterThan(0)
+    expect(fonts.map(font => font.symbol)).toContain('FONT_SMALL')
+  })
+
   it('resolves Japanese, Korean, Thai, and numeric faces', () => {
     expect(resolveGarminSystemFont({ deviceId: 'venu3', locale: 'ja-JP', symbol: 'FONT_SMALL' }).face).toBe('MotoyaLCedar')
     expect(resolveGarminSystemFont({ deviceId: 'venu3', locale: 'ko-KR', symbol: 'FONT_SMALL' }).face).toBe('NanumGothic')
