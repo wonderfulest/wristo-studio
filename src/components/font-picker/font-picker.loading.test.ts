@@ -7,6 +7,8 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import FontPicker from './font-picker.vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { FontTypes } from '@/config/fonts'
 
 vi.mock('opentype.js', () => ({
   default: {},
@@ -98,5 +100,75 @@ describe('font picker loading', () => {
         `${location.origin}/fonts/large-time-font.ttf`,
       )
     })
+  })
+
+  it('selects an icon font without mutating the global strategy when disabled', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const fontStore = useFontStore()
+    fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
+    vi.spyOn(fontStore, 'loadFont').mockResolvedValue(true)
+    useUserStore().setUserInfo({
+      roles: [{ roleCode: 'ROLE_ADMIN' }],
+    } as any)
+    const iconFontStrategyStore = useIconFontStrategyStore()
+    const setIconFontSlug = vi.spyOn(iconFontStrategyStore, 'setIconFontSlug')
+    const updateAllIconFont = vi.spyOn(iconFontStrategyStore, 'updateAllIconFont')
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<div />' } },
+        { path: '/fonts', component: { template: '<div />' } },
+      ],
+    })
+
+    const wrapper = mount(FontPicker, {
+      props: {
+        modelValue: 'weather-font',
+        type: FontTypes.ICON_FONT,
+        useGlobalIconFontStrategy: false,
+      },
+      global: {
+        plugins: [router],
+        stubs: {
+          Teleport: true,
+          FontPreviewText: true,
+          RecentFontList: true,
+          DesignerFontList: true,
+          FontImportDialog: true,
+          NumberGlyphEditorDialog: true,
+          'el-icon': true,
+          'el-segmented': true,
+          'el-form-item': true,
+          'el-option': true,
+          'el-select': true,
+          'el-input': true,
+          'el-switch': true,
+          'el-form': true,
+          'el-button': true,
+          'el-dialog': true,
+          FontSearch: {
+            template: '<button class="select-test-font" @click="$emit(\'select\', font)">select</button>',
+            data: () => ({
+              font: {
+                value: 'independent-weather-font',
+                family: 'Independent Weather Font',
+                isSystem: 1,
+              },
+            }),
+          },
+        },
+      },
+    })
+
+    await wrapper.get('.font-preview').trigger('click')
+    await wrapper.get('.select-test-font').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.emitted('update:modelValue')).toContainEqual(['independent-weather-font'])
+    })
+    expect(setIconFontSlug).not.toHaveBeenCalled()
+    expect(updateAllIconFont).not.toHaveBeenCalled()
   })
 })

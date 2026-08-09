@@ -2,7 +2,12 @@
   <div class="weather-properties">
     <el-form label-position="left" label-width="120px">
       <el-form-item :label="t('elementSettings.weatherFont')">
-        <font-picker v-model="fontFamily" :type="FontTypes.ICON_FONT" @change="onFontChange" />
+        <font-picker
+          v-model="fontFamily"
+          :type="FontTypes.ICON_FONT"
+          :use-global-icon-font-strategy="false"
+          @change="onFontChange"
+        />
       </el-form-item>
       <el-form-item v-if="activeTab === 'mip'" :label="t('elementSettings.fontColor')">
         <ColorPicker

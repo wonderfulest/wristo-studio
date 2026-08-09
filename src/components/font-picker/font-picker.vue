@@ -203,6 +203,11 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: false
+  },
+  useGlobalIconFontStrategy: {
+    type: Boolean,
+    required: false,
+    default: true
   }
 })
 
@@ -491,7 +496,7 @@ const selectFont = async (font: FontItem) => {
   }
 
   // If selecting icon font, enforce single set per watch face
-  if (props.type === FontTypes.ICON_FONT) {
+  if (props.type === FontTypes.ICON_FONT && props.useGlobalIconFontStrategy) {
     const current = iconFontStrategyStore.currentIconFontSlug
     if (current && current !== font.value) {
       try {
