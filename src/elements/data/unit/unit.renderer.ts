@@ -21,7 +21,7 @@ const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const designStore = useDesignStore()
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
-  return resolveMetricUnit(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore), catalog)
+  return resolveMetricUnit(requireCanonicalMetric(metric ?? config, catalog), resolveDesignContentLanguage(designStore), catalog)
 }
 
 export async function createUnit(config: UnitElementConfig): Promise<FabricElement> {

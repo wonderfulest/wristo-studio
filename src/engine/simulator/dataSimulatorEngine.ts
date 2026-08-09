@@ -263,7 +263,7 @@ export class DataSimulatorEngine {
           metricSymbol: obj.metricSymbol
         })
         const textCase = (propertiesStore as any).textCase
-        const canonicalMetric = requireCanonicalMetric(metric, catalogSnapshot)
+        const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
         const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
         const runtimeUnit = simKey ? getSimulatedDataByName(simKey).unit : undefined
         const display = applyTextCase(resolveMetricUnit(canonicalMetric, resolveDesignContentLanguage(designStore), catalogSnapshot, runtimeUnit || undefined), textCase)
@@ -285,7 +285,7 @@ export class DataSimulatorEngine {
           metricSymbol: obj.metricSymbol
         })
 
-        let nextText = resolveMetricLabel(requireCanonicalMetric(metric, catalogSnapshot), resolveDesignContentLanguage(designStore))
+        let nextText = resolveMetricLabel(requireCanonicalMetric(metric ?? obj, catalogSnapshot), resolveDesignContentLanguage(designStore))
 
         nextText = applyTextCase(nextText, (propertiesStore as any).textCase)
         if (String(obj.text ?? '') !== nextText) {

@@ -122,7 +122,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     },
     // 根据属性获取指标（getter 返回一个可接收参数的函数）
     getMetricByOptions: (state) => {
-      return ({ dataProperty, goalProperty, metricSymbol }: { dataProperty?: string; goalProperty?: string; metricSymbol?: string }): DataTypeOption => {
+      return ({ dataProperty, goalProperty, metricSymbol }: { dataProperty?: string; goalProperty?: string; metricSymbol?: string }): DataTypeOption | undefined => {
         // 1) 优先使用 goalProperty 从 store 中已选择的值映射到对应选项
         if (goalProperty && state.properties[goalProperty]?.options && state.properties[goalProperty]?.value !== undefined) {
           const sel = state.properties[goalProperty].value
@@ -143,8 +143,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
           if (bySymbol) return bySymbol
         }
 
-        // 兜底返回默认项
-        return DataTypeOptions[0]
+        return undefined
       }
     }
   },

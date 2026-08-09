@@ -3,7 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { decodeLabel, encodeLabel } from './label.encoder'
 import { useDataCatalogStore, validateDataCatalog } from '@/stores/dataCatalogStore'
-import { replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
+import { DataTypeOptions, replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
+import { usePropertiesStore } from '@/stores/properties'
 
 vi.hoisted(() => {
   const storage = new Map<string, string>()
@@ -32,6 +33,7 @@ describe('label color property binding', () => {
     })
     useDataCatalogStore().snapshot = catalog
     replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
+    usePropertiesStore().addProperty({ key: 'data_1', type: 'data', title: 'Data 1', options: [...DataTypeOptions], defaultValue: 0 })
     const encoded = encodeLabel({
       id: 'label-1',
       eleType: 'label',
@@ -49,6 +51,20 @@ describe('label color property binding', () => {
 
     expect(encoded.fillProperty).toBe('accentColor')
     expect(decodeLabel(encoded).fillProperty).toBe('accentColor')
+  })
+
+  it('rejects an unknown metric symbol instead of rendering the catalog first label', () => {
+    setActivePinia(createPinia())
+    const catalog = validateDataCatalog({
+      catalogVersion: 1,
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+    })
+    useDataCatalogStore().snapshot = catalog
+    replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
+
+    expect(() => decodeLabel({ id: 'unknown', eleType: 'label', metricSymbol: ':FIELD_TYPE_UNKNOWN' } as any))
+      .toThrow('data type option :FIELD_TYPE_UNKNOWN: canonical definition is missing')
   })
 
   it('uses the property-change event in the panel', () => {

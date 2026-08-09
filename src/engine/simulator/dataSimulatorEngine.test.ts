@@ -2,12 +2,13 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, updateElement } = vi.hoisted(() => ({
+const { canvas, updateElement, getMetricByOptions } = vi.hoisted(() => ({
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
   },
   updateElement: vi.fn(() => Promise.resolve()),
+  getMetricByOptions: vi.fn(),
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
@@ -15,7 +16,17 @@ vi.mock('@/stores/canvasStore', () => ({
 }))
 
 vi.mock('@/stores/properties', () => ({
-  usePropertiesStore: () => ({ allProperties: {}, getMetricByOptions: vi.fn() }),
+  usePropertiesStore: () => ({ allProperties: {}, getMetricByOptions }),
+}))
+
+vi.mock('@/stores/dataCatalogStore', () => ({
+  useDataCatalogStore: () => ({
+    snapshot: {
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+      unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, variants: {} }]]),
+      aliasOwners: new Map(),
+    },
+  }),
 }))
 
 vi.mock('@/stores/designStore', () => ({
@@ -77,5 +88,16 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(set).toHaveBeenCalledWith('text', '24H')
     expect(canvas.requestRenderAll).toHaveBeenCalled()
+  })
+
+  it('rejects an unknown label symbol instead of rendering the catalog first item', () => {
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue(undefined)
+    canvas.getObjects.mockReturnValue([{ id: 'unknown-label', eleType: 'label', metricSymbol: ':FIELD_TYPE_UNKNOWN', text: '', set }])
+
+    expect(() => new DataSimulatorEngine().updateCanvas()).toThrow(
+      'data type option :FIELD_TYPE_UNKNOWN: canonical definition is missing',
+    )
+    expect(set).not.toHaveBeenCalled()
   })
 })

@@ -320,10 +320,12 @@ const ensureNextChartProperty = (metricSymbol?: string) => {
   const title = `Chart ${nextIndex}`
 
   const chartOptions = DataTypeOptions.filter((opt) => String(opt.metricSymbol || '').startsWith(':CHART_TYPE_'))
-  let defaultOption = chartOptions[0] || DataTypeOptions[0]
+  let defaultOption = chartOptions[0]
+  if (!defaultOption) throw new Error('chart data type options: canonical definitions are missing')
   if (metricSymbol) {
     const found = chartOptions.find((opt) => opt.metricSymbol === metricSymbol)
-    if (found) defaultOption = found
+    if (!found) throw new Error(`data type option ${metricSymbol}: canonical definition is missing`)
+    defaultOption = found
   }
 
   if (!allProps[propertyKey]) {
@@ -863,12 +865,16 @@ const handleAddDataField = async (metricSymbol?: string) => {
       const nextIndex = maxIndex + 1
       const propertyKey = `data_${nextIndex}`
       const title = `Data ${nextIndex}`
-      let defaultOption = DataTypeOptions[0]
+      const fieldOptions = DataTypeOptions.filter((option) => String(option.metricSymbol || '').startsWith(':FIELD_TYPE_'))
+      let defaultOption = fieldOptions[0]
+      if (!defaultOption) throw new Error('field data type options: canonical definitions are missing')
       if (metricSymbol) {
-        defaultOption = DataTypeOptions.find((option) => option.metricSymbol === metricSymbol) || defaultOption
+        const requested = fieldOptions.find((option) => option.metricSymbol === metricSymbol)
+        if (!requested) throw new Error(`data type option ${metricSymbol}: canonical definition is missing`)
+        defaultOption = requested
       }
       if (!allProps[propertyKey]) {
-        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: [...DataTypeOptions], defaultValue: defaultOption.value })
+        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: fieldOptions, defaultValue: defaultOption.value })
         trackCreatedProperty(propertyKey)
       }
 
@@ -905,7 +911,8 @@ const handleAddGoalProgressBarField = async () => {
       const propertyKey = `goal_${nextIndex}`
       const title = `Goal ${nextIndex}`
       const goalOptions = DataTypeOptions.filter((option) => String(option.metricSymbol || '').startsWith(':GOAL_TYPE_'))
-      const defaultOption = goalOptions.find((option) => option.metricSymbol === ':GOAL_TYPE_STEPS') || goalOptions[0] || DataTypeOptions[0]
+      const defaultOption = goalOptions.find((option) => option.metricSymbol === ':GOAL_TYPE_STEPS') || goalOptions[0]
+      if (!defaultOption) throw new Error('goal data type options: canonical definitions are missing')
       if (!allProps[propertyKey]) {
         propertiesStore.addProperty({ key: propertyKey, type: 'goal', title, options: goalOptions, defaultValue: defaultOption?.value })
         trackCreatedProperty(propertyKey)
@@ -940,7 +947,8 @@ const handleAddGoalArcField = async () => {
       const propertyKey = `goal_${nextIndex}`
       const title = `Goal ${nextIndex}`
       const goalOptions = DataTypeOptions.filter((option) => String(option.metricSymbol || '').startsWith(':GOAL_TYPE_'))
-      const defaultOption = goalOptions[0] || DataTypeOptions[0]
+      const defaultOption = goalOptions[0]
+      if (!defaultOption) throw new Error('goal data type options: canonical definitions are missing')
       if (!allProps[propertyKey]) {
         propertiesStore.addProperty({ key: propertyKey, type: 'goal', title, options: goalOptions, defaultValue: defaultOption?.value })
         trackCreatedProperty(propertyKey)

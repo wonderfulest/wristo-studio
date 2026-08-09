@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePropertiesStore } from './properties'
+import { replaceDataTypeOptionsFromCatalog } from '@/config/elements/options/dataTypes'
+import { validateDataCatalog } from './dataCatalogStore'
 
 describe('Dial Properties', () => {
   beforeEach(() => {
@@ -36,5 +38,16 @@ describe('Dial Properties', () => {
 
     expect(store.allProperties).toEqual({})
     expect(store.textCase).toBe(1)
+  })
+
+  it('returns undefined for an unknown metric instead of the catalog first item', () => {
+    const catalog = validateDataCatalog({
+      catalogVersion: 1,
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+    })
+    replaceDataTypeOptionsFromCatalog(catalog.dataTypeOptions, catalog.unitsByKey)
+
+    expect(usePropertiesStore().getMetricByOptions({ metricSymbol: ':FIELD_TYPE_UNKNOWN' })).toBeUndefined()
   })
 })

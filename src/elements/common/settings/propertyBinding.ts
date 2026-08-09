@@ -46,14 +46,15 @@ export const createQuickMetricProperty = (type: BindableMetricPropertyType): str
   const propertiesStore = usePropertiesStore()
   const options = metricOptionsByType(type)
   const defaults = getNextMetricPropertyDefaults(type)
-  const fallback = options[0] ?? DataTypeOptions[0]
+  const fallback = options[0]
+  if (!fallback) throw new Error(`${type} data type options: canonical definitions are missing`)
 
   propertiesStore.addProperty({
     key: defaults.key,
     type,
     title: defaults.title,
     options: clone(options),
-    defaultValue: fallback?.value ?? '',
+    defaultValue: fallback.value,
   })
 
   useHistoryStore().saveState(`properties:quick-add-${type}`)
@@ -153,11 +154,11 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   if (type === 'data') {
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
     if (eleType === 'icon') {
-      const iconUnicode = normalizeIconUnicode((metric as any).iconUnicode || metric.icon)
+      const iconUnicode = normalizeIconUnicode(canonicalMetric.iconUnicode)
       return {
         dataProperty: propertyKey,
         goalProperty: null,
-        metricSymbol: metric.metricSymbol,
+        metricSymbol: canonicalMetric.metricSymbol,
         text: resolveIconGlyphText(iconUnicode),
         iconDisplayType: 'mip',
         amoledImageUrl: null,
@@ -169,18 +170,18 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
-    return { dataProperty: propertyKey, goalProperty: null, text: metric.defaultValue }
+    return { dataProperty: propertyKey, goalProperty: null, text: canonicalMetric.defaultValue }
   }
 
   if (['goalBar', 'goalArc'].includes(eleType)) {
     return { goalProperty: propertyKey }
   }
   if (eleType === 'icon') {
-    const iconUnicode = normalizeIconUnicode((metric as any).iconUnicode || metric.icon)
+    const iconUnicode = normalizeIconUnicode(canonicalMetric.iconUnicode)
     return {
       goalProperty: propertyKey,
       dataProperty: null,
-      metricSymbol: metric.metricSymbol,
+      metricSymbol: canonicalMetric.metricSymbol,
       text: resolveIconGlyphText(iconUnicode),
       iconDisplayType: 'mip',
       amoledImageUrl: null,
@@ -188,7 +189,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
     }
   }
   if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en') }
-  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: metric.defaultValue }
+  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: canonicalMetric.defaultValue }
   if (eleType === 'unit') {
     const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }

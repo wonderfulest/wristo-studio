@@ -29,7 +29,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const labelText = applyMetricTextCase(
-    resolveMetricLabel(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore)),
+    resolveMetricLabel(requireCanonicalMetric(metric ?? config, catalog), resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
   const displayStates = normalizeDisplayStates(config.displayStates)

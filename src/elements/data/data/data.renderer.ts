@@ -11,6 +11,8 @@ import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { requireCanonicalMetric } from '@/utils/metricLabel'
 
 export async function createData(config: DataElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -19,9 +21,12 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
 
   const id = config.id || nanoid()
   const metric = usePropertiesStore().getMetricByOptions(config)
+  const catalog = useDataCatalogStore().snapshot
+  if (!catalog) throw new Error('data catalog: snapshot is missing')
+  const canonicalMetric = requireCanonicalMetric(metric ?? config, catalog)
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config, metric.defaultValue)
-  const element = new FabricText(metric.defaultValue, {
+  const previewFont = resolveCurrentElementPreviewFont(config, canonicalMetric.defaultValue)
+  const element = new FabricText(canonicalMetric.defaultValue, {
     id,
     eleType: 'data',
     left: config.left,

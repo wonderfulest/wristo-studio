@@ -57,7 +57,7 @@ export function decodeLabel(config: LabelElementConfig): Partial<FabricElement> 
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const text = applyMetricTextCase(
-    resolveMetricLabel(requireCanonicalMetric(metric, catalog), resolveDesignContentLanguage(designStore)),
+    resolveMetricLabel(requireCanonicalMetric(metric ?? config, catalog), resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )
 

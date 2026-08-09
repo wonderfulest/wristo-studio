@@ -93,5 +93,8 @@ describe('canonical metric label and unit resolvers', () => {
     expect(requireCanonicalMetric({ value: 7, label: 'legacy' }, catalog)).toBe(option)
     expect(requireCanonicalMetric({ metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toBe(option)
     expect(() => requireCanonicalMetric({ value: 8 }, catalog)).toThrow('data type option 8: canonical definition is missing')
+    expect(() => requireCanonicalMetric({ value: 8, metricSymbol: ':FIELD_TYPE_DISTANCE' }, catalog)).toThrow(
+      'data type option 8: canonical definition is missing',
+    )
   })
 })

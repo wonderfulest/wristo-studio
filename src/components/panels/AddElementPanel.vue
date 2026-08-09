@@ -86,10 +86,12 @@ const ensureNextChartProperty = (metricSymbol: string) => {
   const title = `Chart ${nextIndex}`
 
   const chartOptions = DataTypeOptions.filter((opt) => String((opt as any).metricSymbol || '').startsWith(':CHART_TYPE_'))
-  let defaultOption: any = chartOptions[0] || DataTypeOptions[0]
+  let defaultOption: any = chartOptions[0]
+  if (!defaultOption) throw new Error('chart data type options: canonical definitions are missing')
   if (metricSymbol) {
     const found = chartOptions.find((opt: any) => (opt as any).metricSymbol === metricSymbol)
-    if (found) defaultOption = found
+    if (!found) throw new Error(`data type option ${metricSymbol}: canonical definition is missing`)
+    defaultOption = found
   }
 
   if (!allProps[propertyKey]) {

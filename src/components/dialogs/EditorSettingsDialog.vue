@@ -373,7 +373,7 @@ const refreshMetricTextElementsForContentLanguage = () => {
       metricSymbol: (element as any).metricSymbol,
     })
     if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
-    const canonicalMetric = requireCanonicalMetric(metric, dataCatalog.snapshot)
+    const canonicalMetric = requireCanonicalMetric(metric ?? element, dataCatalog.snapshot)
     const nextText = (element as any).eleType === 'unit'
       ? resolveMetricUnit(canonicalMetric, language, dataCatalog.snapshot)
       : resolveMetricLabel(canonicalMetric, language)
