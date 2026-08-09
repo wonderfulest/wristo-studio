@@ -83,10 +83,12 @@
           :show-package-download="true"
           :show-prg-preview="true"
           :store-weight-saving="storeWeightSavingAppIds.has(design.product?.appId ?? -1)"
+          :now-ms="nowMs"
           @edit="editDesign"
           @delete="confirmDelete"
           @open="openCanvas"
           @build-prg="buildPrg"
+          @cancel-prg="cancelPrg"
           @prepare-preview-prg="preparePreviewPrg"
           @preview-prg="previewPrg"
           @run-prg="runPrg"
@@ -211,6 +213,7 @@ import {
 } from '@/api/wristo/launcher'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
+import { ElMessageBox } from 'element-plus'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
@@ -222,6 +225,9 @@ const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
+const nowMs = ref(Date.now())
+let prgClockTimer: ReturnType<typeof setInterval> | undefined
+let cancellationPollTimer: ReturnType<typeof setInterval> | undefined
 
 interface LoadingStates {
   submit: Set<number>
@@ -538,6 +544,10 @@ const fetchDesigns = async () => {
     
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
+      if (cancellationPollTimer && !designs.value.some(item => item.product?.prgPackagingLog?.packagingStatus === 'cancel_requested')) {
+        clearInterval(cancellationPollTimer)
+        cancellationPollTimer = undefined
+      }
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
@@ -781,6 +791,29 @@ const buildPrg = async (design: Design) => {
   }
 }
 
+const cancelPrg = async (design: Design) => {
+  const deviceId = userStore.userInfo?.device?.deviceId
+  const task = design.product?.prgPackagingLog
+  if (!deviceId || !task?.id) return
+  try {
+    await ElMessageBox.confirm(t('project.cancelPrgBuildConfirm'), t('card.cancelPrgBuild'), {
+      confirmButtonText: t('card.cancelPrgBuild'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+    })
+    const response = await designApi.cancelPrgPackageTask(design.designUid, deviceId, task.id)
+    if (response.code !== 0) throw new Error(response.msg || t('project.cancelPrgBuildFailed'))
+    messageStore.success(t('project.cancelPrgBuildSubmitted'))
+    await fetchDesigns()
+    if (response.data?.status === 'cancel_requested' && !cancellationPollTimer) {
+      cancellationPollTimer = setInterval(() => { void fetchDesigns() }, 2000)
+    }
+  } catch (error: any) {
+    if (error === 'cancel' || error === 'close') return
+    messageStore.error(error?.message || t('project.cancelPrgBuildFailed'))
+  }
+}
+
 // 下载安装包
 const downloadPackage = async (design: Design) => {
   if (!membershipGate.requireExport()) return
@@ -877,11 +910,13 @@ const handleRefresh = (event: any ) => {
 
 // 首次挂载时加载数据
 onMounted(() => {
-  
+  prgClockTimer = setInterval(() => { nowMs.value = Date.now() }, 30000)
   fetchDesigns()
 })
 
 onUnmounted(() => {
+  if (prgClockTimer) clearInterval(prgClockTimer)
+  if (cancellationPollTimer) clearInterval(cancellationPollTimer)
   // 清理事件监听
   window.removeEventListener('refresh-list', handleRefresh)
 })

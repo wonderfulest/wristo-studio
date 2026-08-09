@@ -170,6 +170,12 @@
                   <el-icon><Box /></el-icon>
                   {{ t('card.buildPrg') }}
                 </el-button>
+                <el-button v-if="prgCardAction === 'cancel'" size="small" type="danger" plain @click="closeActions(); emit('cancel-prg', design)">
+                  {{ t('card.cancelPrgBuild') }}
+                </el-button>
+                <el-button v-else-if="prgCardAction === 'cancelling'" size="small" disabled loading>
+                  {{ t('card.cancellingPrgBuild') }}
+                </el-button>
                 <el-button v-if="showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
                   <el-icon><Box /></el-icon>
                   {{ t('card.buildIq') }}
@@ -239,8 +245,8 @@ import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import {
+  getPrgCardAction,
   shouldShowBuildIqButton,
-  shouldShowBuildPrgButton,
   shouldShowPreviewPrgButton,
 } from './designCardActions'
 import {
@@ -277,6 +283,7 @@ const props = defineProps<{
   showPackageDownload?: boolean
   showPrgPreview?: boolean
   storeWeightSaving?: boolean
+  nowMs?: number
 }>()
 
 const emit = defineEmits<{
@@ -285,6 +292,7 @@ const emit = defineEmits<{
   (e: 'open', design: Design): void
   (e: 'copy', design: Design): void
   (e: 'build-prg', design: Design): void
+  (e: 'cancel-prg', design: Design): void
   (e: 'prepare-preview-prg', design: Design): void
   (e: 'preview-prg', design: Design): void
   (e: 'run-prg', design: Design): void
@@ -424,13 +432,13 @@ const goToOperations = async () => {
   operationsDrawerVisible.value = true
 }
 
-const showBuildPrgButton = computed(() => {
-  return shouldShowBuildPrgButton(
-    design.value.product,
-    design.value.updatedAt,
-    currentDeviceId.value,
-  )
-})
+const prgCardAction = computed(() => getPrgCardAction(
+  design.value.product,
+  design.value.updatedAt,
+  currentDeviceId.value,
+  props.nowMs ?? Date.now(),
+))
+const showBuildPrgButton = computed(() => prgCardAction.value === 'build')
 
 const showBuildIqButton = computed(() => {
   return shouldShowBuildIqButton(design.value.product)
@@ -446,7 +454,7 @@ const showPublishButton = computed(() => {
   return !!product?.release
 })
 const hasPreviewActions = computed(() => showPreviewPrgButton.value)
-const hasBuildActions = computed(() => showBuildPrgButton.value || showBuildIqButton.value)
+const hasBuildActions = computed(() => prgCardAction.value !== 'none' || showBuildIqButton.value)
 const hasReleaseActions = computed(() => showPublishButton.value)
 
 const lastPackageTimeText = computed(() => {

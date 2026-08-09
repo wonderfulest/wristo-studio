@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
+  getPrgCardAction,
   shouldShowBuildIqButton,
-  shouldShowBuildPrgButton,
   shouldShowPreviewPrgButton,
 } from './designCardActions'
 
@@ -35,36 +35,24 @@ describe('DesignCard Build IQ action', () => {
   })
 })
 
-describe('DesignCard Build PRG action', () => {
-  const designUpdatedAt = '2026-08-09T10:00:00Z'
-  const currentDeviceId = 'fenix8'
+describe('DesignCard PRG action', () => {
+  const now = Date.parse('2026-08-09T10:10:00Z')
+  const designUpdatedAt = '2026-08-09T09:00:00Z'
 
   it.each([
-    ['without a release', {}, true],
-    ['with another-device release', { prgRelease: { deviceId: 'venu3', updatedAt: '2026-08-09T11:00:00Z' } }, true],
-    ['with an older matching release', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T09:00:00Z' } }, true],
-    ['with a current matching release', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:00Z' } }, false],
-    ['while the matching device is building', { prgPackagingLog: { deviceId: 'fenix8', rank: 0 } }, false],
-    ['while the matching device is queued', { prgPackagingLog: { deviceId: 'fenix8', rank: 3 } }, false],
-    ['with another device in the queue', { prgPackagingLog: { deviceId: 'venu3', rank: 0 } }, true],
+    ['release younger than ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:01Z' } }, 'none'],
+    ['release at ten minutes', { prgRelease: { deviceId: 'fenix8', updatedAt: '2026-08-09T10:00:00Z' } }, 'build'],
+    ['queued task younger than ten minutes', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T10:00:01Z'), rank: 2 } }, 'none'],
+    ['queued task at ten minutes', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T10:00:00Z'), rank: 2 } }, 'cancel'],
+    ['running cancellation', { prgPackagingLog: { deviceId: 'fenix8', packagingStatus: 'cancel_requested', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'cancelling'],
+    ['another device task', { prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'pending', createdAt: Date.parse('2026-08-09T09:00:00Z'), rank: 0 } }, 'build'],
   ] as const)('%s', (_label, product, expected) => {
-    expect(shouldShowBuildPrgButton(product, designUpdatedAt, currentDeviceId)).toBe(expected)
+    expect(getPrgCardAction(product, designUpdatedAt, 'fenix8', now)).toBe(expected)
   })
 
-  it('requires a product, selected device, and valid design update time', () => {
-    expect(shouldShowBuildPrgButton(undefined, designUpdatedAt, currentDeviceId)).toBe(false)
-    expect(shouldShowBuildPrgButton({}, designUpdatedAt, '')).toBe(false)
-    expect(shouldShowBuildPrgButton({}, undefined, currentDeviceId)).toBe(false)
-    expect(shouldShowBuildPrgButton({}, 'invalid-date', currentDeviceId)).toBe(false)
-  })
-
-  it('uses the device-aware helper in the card', () => {
-    expect(source).toContain('shouldShowBuildPrgButton(')
-    expect(source).toContain('design.value.updatedAt')
+  it('uses the device-aware timed action helper in the card', () => {
+    expect(source).toContain('getPrgCardAction(')
     expect(source).toContain('currentDeviceId.value')
-    expect(source).not.toContain('const hasQueue = !!product.prgPackagingLog?.rank')
-    expect(source).toContain('const currentPrgRelease = prgRelease?.deviceId === currentDeviceId.value')
-    expect(source).toContain('const currentPrgLog = prgLog?.deviceId === currentDeviceId.value')
   })
 })
 
