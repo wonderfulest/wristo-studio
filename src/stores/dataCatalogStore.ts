@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
-import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
+import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitSelectionPolicy, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 const SYMBOL_PATTERN = /^:[A-Z][A-Z0-9_]*$/
@@ -138,6 +138,7 @@ const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, Un
   if (defaultVariant !== null && !hasOwn(variants, defaultVariant)) {
     throw new Error(`${path}.defaultVariant '${defaultVariant}' is not defined`)
   }
+  const selectionPolicy = validateSelectionPolicy(value.selectionPolicy, path, unitKey, variants)
   if (value.description !== null && typeof value.description !== 'string') {
     throw new Error(`${path}.description must be a string or null`)
   }
@@ -146,11 +147,59 @@ const validateUnit = (value: unknown, index: number, aliasOwners: Map<string, Un
     unitKey,
     name,
     defaultVariant,
+    selectionPolicy,
     variants: Object.freeze(variants),
     isActive,
     sortOrder,
     description
   })
+}
+
+const validateSelectionPolicy = (
+  value: unknown,
+  unitPath: string,
+  unitKey: string,
+  variants: Readonly<Record<string, DataUnitVariant>>,
+): DataUnitSelectionPolicy => {
+  const path = `${unitPath}.selectionPolicy`
+  if (!isRecord(value)) throw new Error(`${path} is required`)
+  const type = requiredString(value.type, `${path}.type`)
+  if (type === 'none') {
+    if (unitKey !== 'none') throw new Error(`${path}.type none is only valid for unitKey none`)
+    return Object.freeze({ type })
+  }
+  if (unitKey === 'none') throw new Error(`${path}.type must be none for unitKey none`)
+  if (type === 'fixed') {
+    const variant = exactKey(value.variant, `${path}.variant`)
+    if (!hasOwn(variants, variant)) throw new Error(`${path}.variant ${variant} does not exist`)
+    return Object.freeze({ type, variant })
+  }
+  if (type === 'deviceSetting') {
+    if (value.setting !== 'distanceUnits' && value.setting !== 'temperatureUnits') {
+      throw new Error(`${path}.setting is unsupported`)
+    }
+    if (!isRecord(value.mapping)) throw new Error(`${path}.mapping is required`)
+    const metric = exactKey(value.mapping.metric, `${path}.mapping.metric`)
+    const statute = exactKey(value.mapping.statute, `${path}.mapping.statute`)
+    if (!hasOwn(variants, metric)) throw new Error(`${path}.mapping.metric variant ${metric} does not exist`)
+    if (!hasOwn(variants, statute)) throw new Error(`${path}.mapping.statute variant ${statute} does not exist`)
+    return Object.freeze({
+      type,
+      setting: value.setting,
+      mapping: Object.freeze({ metric, statute }),
+    })
+  }
+  if (type === 'provider') {
+    if (value.fallbackVariant === undefined || value.fallbackVariant === null) {
+      return Object.freeze({ type })
+    }
+    const fallbackVariant = exactKey(value.fallbackVariant, `${path}.fallbackVariant`)
+    if (!hasOwn(variants, fallbackVariant)) {
+      throw new Error(`${path}.fallbackVariant ${fallbackVariant} does not exist`)
+    }
+    return Object.freeze({ type, fallbackVariant })
+  }
+  throw new Error(`${path}.type is unsupported`)
 }
 
 const validateOption = (value: unknown, index: number): DataTypeOption => {

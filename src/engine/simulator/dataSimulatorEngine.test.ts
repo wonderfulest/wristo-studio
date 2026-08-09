@@ -26,7 +26,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
       dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
       optionsByValueCode: new Map([[0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
       optionsByMetricSymbol: new Map([[':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
-      unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, variants: {} }]]),
+      unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }]]),
       aliasOwners: new Map(),
     },
   }),
@@ -34,6 +34,14 @@ vi.mock('@/stores/dataCatalogStore', () => ({
 
 vi.mock('@/stores/designStore', () => ({
   useDesignStore: () => ({ supportsChineseContent: false, defaultLocale: 'en' }),
+}))
+
+vi.mock('@/stores/previewDeviceContextStore', () => ({
+  usePreviewDeviceContextStore: () => ({
+    toContext: (language: 'eng' | 'zhs') => ({
+      language, distanceUnits: 'metric', temperatureUnits: 'metric',
+    }),
+  }),
 }))
 
 vi.mock('@/engine/managers/elementManager', () => ({ updateElement }))

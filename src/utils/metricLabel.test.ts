@@ -26,6 +26,7 @@ const catalog = {
     unitKey: 'distance',
     name: 'Distance',
     defaultVariant: 'km',
+    selectionPolicy: { type: 'provider', fallbackVariant: 'km' },
     variants: {
       km: { aliases: ['km'], label: { eng: 'km', zhs: '公里' } },
       mi: { aliases: ['mi', 'mile'], label: { eng: 'mi', zhs: '英里' } },
@@ -37,6 +38,7 @@ const catalog = {
     unitKey: 'temperature',
     name: 'Temperature',
     defaultVariant: 'celsius',
+    selectionPolicy: { type: 'provider', fallbackVariant: 'celsius' },
     variants: {
       celsius: { aliases: ['c'], label: { eng: '°C', zhs: '℃' } },
     },

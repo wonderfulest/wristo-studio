@@ -35,6 +35,7 @@ const validCatalog = (catalogVersion = 12): DataCatalogSnapshot => ({
       unitKey: 'heart_rate',
       name: 'Heart rate',
       defaultVariant: 'bpm',
+      selectionPolicy: { type: 'fixed', variant: 'bpm' },
       variants: {
         bpm: { aliases: ['bpm'], label: { eng: 'bpm', zhs: '次/分' } }
       },
@@ -383,6 +384,7 @@ describe('data catalog store', () => {
 
     const ownConstructor: any = clone(validCatalog(13))
     ownConstructor.unitDefinitions[0].defaultVariant = 'constructor'
+    ownConstructor.unitDefinitions[0].selectionPolicy = { type: 'fixed', variant: 'constructor' }
     ownConstructor.unitDefinitions[0].variants = {
       constructor: {
         aliases: ['ctor'],

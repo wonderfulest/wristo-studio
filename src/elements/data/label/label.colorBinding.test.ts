@@ -28,7 +28,7 @@ describe('label color property binding', () => {
     const catalog = validateDataCatalog({
       catalogVersion: 1,
       dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
-      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
     usePropertiesStore().addProperty({ key: 'data_1', type: 'data', title: 'Data 1', options: getDataTypePropertyOptions(), defaultValue: 0 })
@@ -56,7 +56,7 @@ describe('label color property binding', () => {
     const catalog = validateDataCatalog({
       catalogVersion: 1,
       dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
-      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
 

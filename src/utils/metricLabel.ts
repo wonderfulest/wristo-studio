@@ -1,4 +1,5 @@
 import type { DataTypeOption, ValidatedDataCatalog } from '@/types/dataCatalog'
+import { resolveUnitLabel, resolveUnitVariant, type PreviewDeviceContext } from '@/utils/unitResolver'
 
 export type MetricLabelLanguage = 'en' | 'zh'
 
@@ -38,22 +39,17 @@ export function resolveMetricUnit(
   language: MetricLabelLanguage,
   catalog: Pick<ValidatedDataCatalog, 'unitsByKey' | 'aliasOwners'>,
   rawAlias?: string,
+  previewContext?: Omit<PreviewDeviceContext, 'language'>,
 ): string {
   const unit = catalog.unitsByKey.get(metric.unitKey)
   if (!unit) throw new Error(`unitKey ${metric.unitKey}: definition is missing`)
-  if (metric.unitKey === 'none') return ''
-
-  let variantKey = unit.defaultVariant
-  if (rawAlias !== undefined) {
-    const normalizedAlias = rawAlias.trim().toLowerCase()
-    const owner = catalog.aliasOwners.get(normalizedAlias)
-    variantKey = owner?.unitKey === metric.unitKey ? owner.variantKey : null
+  const context: PreviewDeviceContext = {
+    language: language === 'zh' ? 'zhs' : 'eng',
+    distanceUnits: previewContext?.distanceUnits ?? 'metric',
+    temperatureUnits: previewContext?.temperatureUnits ?? 'metric',
   }
-  const variant = variantKey ? unit.variants[variantKey] : undefined
-  if (!variant) {
-    throw new Error(`unitKey ${metric.unitKey}: unknown runtime unit alias "${rawAlias}"`)
-  }
-  return language === 'zh' ? variant.label.zhs : variant.label.eng
+  const variantKey = resolveUnitVariant(unit, context, rawAlias)
+  return resolveUnitLabel(unit, variantKey, context.language)
 }
 
 export function applyMetricTextCase(text: string, textCase: number | undefined): string {

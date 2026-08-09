@@ -27,10 +27,21 @@ export interface DataUnitVariant {
   readonly label: LocalizedText
 }
 
+export type DataUnitSelectionPolicy =
+  | { readonly type: 'none' }
+  | { readonly type: 'fixed'; readonly variant: string }
+  | {
+      readonly type: 'deviceSetting'
+      readonly setting: 'distanceUnits' | 'temperatureUnits'
+      readonly mapping: { readonly metric: string; readonly statute: string }
+    }
+  | { readonly type: 'provider'; readonly fallbackVariant?: string }
+
 export interface DataUnitDefinition {
   readonly unitKey: string
   readonly name: string
   readonly defaultVariant: string | null
+  readonly selectionPolicy: DataUnitSelectionPolicy
   readonly variants: Readonly<Record<string, DataUnitVariant>>
   readonly isActive: 1
   readonly sortOrder: number

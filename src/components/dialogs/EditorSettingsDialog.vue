@@ -49,6 +49,22 @@
         <span>{{ t('editorSettings.chineseContent') }}</span>
       </label>
 
+      <div class="bar-cell unit-preview-cell" title="Simulated Garmin distance units">
+        <span>D</span>
+        <el-select v-model="previewDevice.distanceUnits" size="small" @change="refreshMetricPreview">
+          <el-option label="km / m" value="metric" />
+          <el-option label="mi / ft" value="statute" />
+        </el-select>
+      </div>
+
+      <div class="bar-cell unit-preview-cell" title="Simulated Garmin temperature units">
+        <span>T</span>
+        <el-select v-model="previewDevice.temperatureUnits" size="small" @change="refreshMetricPreview">
+          <el-option label="°C" value="metric" />
+          <el-option label="°F" value="statute" />
+        </el-select>
+      </div>
+
       <ConnectIqDataTypeSelector />
 
     </div>
@@ -227,6 +243,8 @@ import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import ConnectIqDataTypeSelector from './ConnectIqDataTypeSelector.vue'
+import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
+import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 
 const props = defineProps<{
   canvasRef?: {
@@ -247,6 +265,7 @@ const fontStore = useFontStore()
 const historyStore = useHistoryStore()
 const propertiesStore = usePropertiesStore()
 const dataCatalog = useDataCatalogStore()
+const previewDevice = usePreviewDeviceContextStore()
 const { t } = useI18n()
 
 const lightCanvasBackgroundColor = ref<string>(editorStore.lightCanvasBackgroundColor)
@@ -308,6 +327,10 @@ const selectedElementLabel = computed(() => {
 })
 
 const chineseContentEnabled = computed(() => designStore.supportsChineseContent)
+
+const refreshMetricPreview = () => {
+  getDataSimulatorEngine().updateCanvas()
+}
 
 const handleLightCanvasBackgroundColorChange = (color: string) => {
   lightCanvasBackgroundColor.value = color

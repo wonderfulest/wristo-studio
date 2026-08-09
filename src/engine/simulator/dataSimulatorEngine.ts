@@ -3,7 +3,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
 import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
-import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
@@ -13,6 +13,8 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { useDesignStore } from '@/stores/designStore'
 import { formatTimePreview } from '@/elements/time/time/formatTimePreview'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
+import { resolveMetricDisplayResult } from '@/engine/simulator/metricDisplayResult'
+import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -207,12 +209,39 @@ export class DataSimulatorEngine {
 
     const propertiesStore = usePropertiesStore()
     const designStore = useDesignStore()
+    const previewDevice = usePreviewDeviceContextStore()
 
     const objects = (canvas.getObjects?.() || []) as any[]
     if (!objects.length) return
 
     const now = getSimulatedNow()
     let changed = false
+    const metricResults = new Map<string, ReturnType<typeof resolveMetricDisplayResult>>()
+    const metricResultFor = (obj: any) => {
+      const cacheKey = `${String(obj.dataProperty ?? '')}|${String(obj.goalProperty ?? '')}|${String(obj.metricSymbol ?? '')}`
+      const cached = metricResults.get(cacheKey)
+      if (cached) return cached
+      const catalogSnapshot = useDataCatalogStore().snapshot
+      if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
+      const metric = propertiesStore.getMetricByOptions({
+        dataProperty: obj.dataProperty,
+        goalProperty: obj.goalProperty,
+        metricSymbol: obj.metricSymbol,
+      })
+      const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
+      const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
+      const simulated = simKey ? getSimulatedDataByName(simKey) : null
+      const displayValue = simulated
+        ? String(formatSimulatedDisplay(simulated, propertiesStore))
+        : canonicalMetric.defaultValue
+      const result = resolveMetricDisplayResult(canonicalMetric, {
+        rawValue: simulated?.numeric ?? displayValue,
+        displayValue,
+        providerUnit: simulated?.unit || undefined,
+      }, previewDevice.toContext(resolveDesignContentLanguage(designStore) === 'zh' ? 'zhs' : 'eng'), catalogSnapshot)
+      metricResults.set(cacheKey, result)
+      return result
+    }
 
     objects.forEach((obj) => {
       if (!obj) return
@@ -250,19 +279,8 @@ export class DataSimulatorEngine {
       }
 
       if (eleType === 'data') {
-        const catalogSnapshot = useDataCatalogStore().snapshot
-        if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
-        const metric = propertiesStore.getMetricByOptions({
-          dataProperty: obj.dataProperty,
-          goalProperty: obj.goalProperty,
-          metricSymbol: obj.metricSymbol
-        })
-
-        const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
-        const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
-        const rawValue = simKey ? formatSimulatedDisplay(getSimulatedDataByName(simKey), propertiesStore) : canonicalMetric.defaultValue
         const textCase = (propertiesStore as any).textCase
-        const display = applyTextCase(String(rawValue), textCase)
+        const display = applyTextCase(metricResultFor(obj).displayValue, textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
@@ -273,18 +291,8 @@ export class DataSimulatorEngine {
       }
 
       if (eleType === 'unit') {
-        const catalogSnapshot = useDataCatalogStore().snapshot
-        if (!catalogSnapshot) throw new Error('data catalog: snapshot is missing')
-        const metric = propertiesStore.getMetricByOptions({
-          dataProperty: obj.dataProperty,
-          goalProperty: obj.goalProperty,
-          metricSymbol: obj.metricSymbol
-        })
         const textCase = (propertiesStore as any).textCase
-        const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
-        const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
-        const runtimeUnit = simKey ? getSimulatedDataByName(simKey).unit : undefined
-        const display = applyTextCase(resolveMetricUnit(canonicalMetric, resolveDesignContentLanguage(designStore), catalogSnapshot, runtimeUnit || undefined), textCase)
+        const display = applyTextCase(metricResultFor(obj).unitLabel, textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
