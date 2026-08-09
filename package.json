@@ -7,6 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
+    "version:bump": "node scripts/bump-version.mjs",
     "dev:demo": "vite demo --port 4173",
     "dev": "vite --mode development",
     "dev:prod": "vite --mode prod",
