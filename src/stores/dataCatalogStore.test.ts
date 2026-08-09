@@ -435,6 +435,28 @@ describe('data catalog store', () => {
     expect(DataTypeOptions[0].label).toBe('Pulse')
   })
 
+  it('rejects proxy target poisoning without breaking reads, keys, or later refreshes', async () => {
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
+    const store = useDataCatalogStore()
+    await store.load()
+
+    expect(() => Object.preventExtensions(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
+    expect(() => Object.freeze(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
+    expect(() => Object.seal(DataTypeOptions)).toThrow('DataTypeOptions is readonly')
+    expect(() => Object.setPrototypeOf(DataTypeOptions, null)).toThrow('DataTypeOptions is readonly')
+    expect(Reflect.isExtensible(DataTypeOptions)).toBe(true)
+    expect(Object.keys(DataTypeOptions)).toEqual(['0'])
+    expect(DataTypeOptions[0].label).toBe('HR')
+
+    const next: any = validCatalog(13)
+    next.dataTypeOptions[0].label.eng = 'Pulse after poison attempt'
+    mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: next })
+    await store.load(true)
+
+    expect(Object.keys(DataTypeOptions)).toEqual(['0'])
+    expect(DataTypeOptions[0].label).toBe('Pulse after poison attempt')
+  })
+
   it('normalizes canonical text and aliases without mutating the API response', async () => {
     const response: any = validCatalog()
     response.dataTypeOptions[0].metricSymbol = '  :FIELD_TYPE_HEART_RATE  '

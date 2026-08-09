@@ -26,7 +26,9 @@ export const DataTypeOptions: readonly DataTypeOption[] = new Proxy(compatibilit
   },
   set: readonlyMutation,
   deleteProperty: readonlyMutation,
-  defineProperty: readonlyMutation
+  defineProperty: readonlyMutation,
+  preventExtensions: readonlyMutation,
+  setPrototypeOf: readonlyMutation
 })
 
 export let dataTypeOptionsLoaded = false
