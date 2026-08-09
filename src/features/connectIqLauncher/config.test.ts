@@ -7,7 +7,7 @@ describe('Connect IQ Launcher configuration', () => {
     ['MacPPC', 'mac'],
     ['Win32', 'windows'],
     ['Windows', 'windows'],
-    ['Linux x86_64', 'mac'],
+    ['Linux x86_64', 'mac']
   ] as const)('maps %s to %s', (platform, expected) => {
     expect(detectLauncherPlatform(platform)).toBe(expected)
   })
@@ -18,7 +18,7 @@ describe('Connect IQ Launcher configuration', () => {
       VITE_CONNECT_IQ_LAUNCHER_WINDOWS_URL: '',
       VITE_CONNECT_IQ_LAUNCHER_MAC_VERSION: ' 1.0.0 ',
       VITE_CONNECT_IQ_LAUNCHER_MAC_SHA256: ' abc123 ',
-      VITE_CONNECT_IQ_LAUNCHER_MAC_REQUIREMENTS: ' macOS 11 or later ',
+      VITE_CONNECT_IQ_LAUNCHER_MAC_REQUIREMENTS: ' macOS 11 or later '
     })
 
     expect(releases.mac).toEqual({
@@ -27,17 +27,12 @@ describe('Connect IQ Launcher configuration', () => {
       url: 'https://cdn.wristo.io/launcher.dmg',
       version: '1.0.0',
       sha256: 'abc123',
-      requirements: 'macOS 11 or later',
+      requirements: 'macOS 11 or later'
     })
     expect(releases.windows).toMatchObject({ available: false, url: null })
   })
 
-  it.each([
-    'http://cdn.wristo.io/launcher.dmg',
-    'file:///tmp/launcher.dmg',
-    '/downloads/launcher.dmg',
-    'not a url',
-  ])('rejects non-HTTPS release link %s', (url) => {
+  it.each(['http://cdn.wristo.io/launcher.dmg', 'file:///tmp/launcher.dmg', '/downloads/launcher.dmg', 'not a url'])('rejects non-HTTPS release link %s', (url) => {
     expect(getLauncherReleases({ VITE_CONNECT_IQ_LAUNCHER_MAC_URL: url }).mac.available).toBe(false)
   })
 })

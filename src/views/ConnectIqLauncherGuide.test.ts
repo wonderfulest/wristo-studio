@@ -12,7 +12,7 @@ vi.mock('@/features/connectIqLauncher/config', () => ({
       url: 'https://cdn.wristo.io/launcher.dmg',
       version: '1.0.0',
       sha256: 'abc123',
-      requirements: 'macOS 11+',
+      requirements: 'macOS 11+'
     },
     windows: {
       platform: 'windows',
@@ -20,23 +20,24 @@ vi.mock('@/features/connectIqLauncher/config', () => ({
       url: null,
       version: null,
       sha256: null,
-      requirements: null,
-    },
-  }),
+      requirements: null
+    }
+  })
 }))
 
 import ConnectIqLauncherGuide from './ConnectIqLauncherGuide.vue'
 
-const wrapper = () => mount(ConnectIqLauncherGuide, {
-  global: {
-    stubs: {
-      ElTabs: { props: ['modelValue'], template: '<div><slot /></div>' },
-      ElTabPane: { template: '<section><slot /></section>' },
-      ElButton: { template: '<button><slot /></button>' },
-      RouterLink: { template: '<a><slot /></a>' },
-    },
-  },
-})
+const wrapper = () =>
+  mount(ConnectIqLauncherGuide, {
+    global: {
+      stubs: {
+        ElTabs: { props: ['modelValue'], template: '<div><slot /></div>' },
+        ElTabPane: { template: '<section><slot /></section>' },
+        ElButton: { template: '<button><slot /></button>' },
+        RouterLink: { template: '<a><slot /></a>' }
+      }
+    }
+  })
 
 describe('Connect IQ Launcher guide', () => {
   it('shows both platforms and the shared five-step workflow', () => {

@@ -33,13 +33,7 @@ const httpsUrl = (value: string | undefined): string | null => {
   }
 }
 
-const release = (
-  platform: LauncherPlatform,
-  url: string | undefined,
-  version: string | undefined,
-  sha256: string | undefined,
-  requirements: string | undefined,
-): LauncherRelease => {
+const release = (platform: LauncherPlatform, url: string | undefined, version: string | undefined, sha256: string | undefined, requirements: string | undefined): LauncherRelease => {
   const normalizedUrl = httpsUrl(url)
   return {
     platform,
@@ -47,29 +41,28 @@ const release = (
     url: normalizedUrl,
     version: optionalText(version),
     sha256: optionalText(sha256),
-    requirements: optionalText(requirements),
+    requirements: optionalText(requirements)
   }
 }
 
-export const detectLauncherPlatform = (platform: string): LauncherPlatform =>
-  /win/i.test(platform) ? 'windows' : 'mac'
+export const detectLauncherPlatform = (platform: string): LauncherPlatform => (/win/i.test(platform) ? 'windows' : 'mac')
 
 export const getLauncherReleases = (env?: LauncherEnv): Record<LauncherPlatform, LauncherRelease> => {
   const source = env ?? (import.meta.env as unknown as LauncherEnv)
   return {
     mac: release(
-    'mac',
+      'mac',
       source.VITE_CONNECT_IQ_LAUNCHER_MAC_URL,
       source.VITE_CONNECT_IQ_LAUNCHER_MAC_VERSION,
       source.VITE_CONNECT_IQ_LAUNCHER_MAC_SHA256,
-      source.VITE_CONNECT_IQ_LAUNCHER_MAC_REQUIREMENTS,
+      source.VITE_CONNECT_IQ_LAUNCHER_MAC_REQUIREMENTS
     ),
     windows: release(
       'windows',
       source.VITE_CONNECT_IQ_LAUNCHER_WINDOWS_URL,
       source.VITE_CONNECT_IQ_LAUNCHER_WINDOWS_VERSION,
       source.VITE_CONNECT_IQ_LAUNCHER_WINDOWS_SHA256,
-      source.VITE_CONNECT_IQ_LAUNCHER_WINDOWS_REQUIREMENTS,
-    ),
+      source.VITE_CONNECT_IQ_LAUNCHER_WINDOWS_REQUIREMENTS
+    )
   }
 }

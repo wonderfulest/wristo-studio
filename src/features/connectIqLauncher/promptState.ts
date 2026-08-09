@@ -21,6 +21,6 @@ export const createLauncherPromptState = (storage?: PromptStorage) => {
 
       sessionTaken = true
       return true
-    },
+    }
   }
 }
