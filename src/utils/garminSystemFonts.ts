@@ -17,6 +17,17 @@ const STANDARD_ORDER = [
   'FONT_GLANCE', 'FONT_GLANCE_NUMBER',
 ]
 
+export const bundledGarminPreviewFamilies = new Set([
+  'Roboto Condensed', 'Roboto', 'Noto Sans SC', 'Nanum Gothic',
+  'Kosugi', 'Pridi', 'Yantramanav',
+])
+
+export const loadBundledGarminPreviewFont = async (family: unknown): Promise<void> => {
+  const normalized = String(family || '').trim()
+  if (!bundledGarminPreviewFamilies.has(normalized) || typeof document === 'undefined' || !document.fonts) return
+  await document.fonts.load(`16px "${normalized}"`)
+}
+
 const localeLanguage = (locale: string): string => {
   const normalized = locale.toLowerCase()
   if (normalized.startsWith('zh')) return normalized.includes('tw') || normalized.includes('hk') ? 'zht' : 'zhs'

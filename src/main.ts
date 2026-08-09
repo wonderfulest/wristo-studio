@@ -7,6 +7,7 @@ import '@iconify/iconify'
 
 import '@/assets/styles/main.css'
 import '@/assets/styles/settings.css'
+import '@/assets/styles/garmin-system-fonts.css'
 import '@/assets/iconfont/iconfont.css'
 
 import ElementPlus from 'element-plus'

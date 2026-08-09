@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bundledGarminPreviewFamilies,
   isAllowedGarminFontSymbol,
   listGarminSystemFonts,
   resolveGarminSystemFont,
@@ -7,6 +8,14 @@ import {
 } from './garminSystemFonts'
 
 describe('Garmin system font resolver', () => {
+  it('bundles every browser family returned by the resolver', () => {
+    const families = listGarminSystemFonts({
+      deviceId: 'venu3',
+      partNumber: '006-B4260-00',
+      locale: 'zh-CN',
+    }).map(font => font.browserFamily).filter(Boolean)
+    expect(families.every(family => bundledGarminPreviewFamilies.has(family!))).toBe(true)
+  })
   it('resolves Venu 3 Chinese and English faces from SDK language sections', () => {
     expect(resolveGarminSystemFont({
       deviceId: 'venu3',

@@ -66,6 +66,55 @@ export const resolveCurrentElementPreviewFont = (config: GarminSystemFontPreview
   })
 }
 
+export const resolveSystemFontUpdate = (
+  current: GarminSystemFontPreviewConfig & { assetFontFamily?: string; assetFontSize?: number },
+  patch: Partial<GarminSystemFontPreviewConfig>,
+  context: GarminSystemFontPreviewContext,
+): Record<string, unknown> => {
+  const next = { ...current, ...patch }
+  if (next.fontSource !== 'system') {
+    return {
+      ...patch,
+      fontSource: 'asset',
+      systemFont: undefined,
+      fontFamily: current.assetFontFamily ?? current.fontFamily,
+      fontSize: current.assetFontSize ?? current.fontSize,
+      assetFontFamily: undefined,
+      assetFontSize: undefined,
+      systemFontPrecision: undefined,
+      previewFontSlug: undefined,
+    }
+  }
+
+  const assetFontFamily = current.fontSource === 'system'
+    ? current.assetFontFamily ?? current.fontFamily
+    : current.fontFamily
+  const assetFontSize = current.fontSource === 'system'
+    ? current.assetFontSize ?? current.fontSize
+    : current.fontSize
+  return {
+    ...patch,
+    ...resolveElementPreviewFont({
+      ...next,
+      fontFamily: assetFontFamily,
+      fontSize: assetFontSize,
+    }, context),
+  }
+}
+
+export const resolveCurrentSystemFontUpdate = (
+  current: GarminSystemFontPreviewConfig & { assetFontFamily?: string; assetFontSize?: number },
+  patch: Partial<GarminSystemFontPreviewConfig>,
+) => {
+  const device = useUserStore().userInfo?.device
+  return resolveSystemFontUpdate(current, patch, {
+    deviceId: device?.deviceId || '',
+    hardwarePartNumber: device?.hardwarePartNumber,
+    partNumber: device?.partNumber,
+    locale: useDesignStore().defaultLocale,
+  })
+}
+
 export const refreshGarminSystemFontPreviews = (
   objects: SystemFontCanvasObject[],
   context: GarminSystemFontPreviewContext,

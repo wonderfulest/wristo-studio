@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { refreshGarminSystemFontPreviews, resolveElementPreviewFont } from './useGarminSystemFont'
+import {
+  refreshGarminSystemFontPreviews,
+  resolveElementPreviewFont,
+  resolveSystemFontUpdate,
+} from './useGarminSystemFont'
 
 vi.hoisted(() => {
   Object.defineProperty(globalThis, 'localStorage', {
@@ -69,5 +73,48 @@ describe('system font preview', () => {
     expect(systemObject.initDimensions).toHaveBeenCalled()
     expect(systemObject.setCoords).toHaveBeenCalled()
     expect(assetObject.set).not.toHaveBeenCalled()
+  })
+
+  it('turns a system-font selection into an immediate Fabric preview update', () => {
+    expect(resolveSystemFontUpdate({
+      fontFamily: 'inter',
+      fontSize: 36,
+      fontSource: 'asset',
+    }, {
+      fontSource: 'system',
+      systemFont: 'FONT_SMALL',
+    }, {
+      deviceId: 'venu3',
+      partNumber: '006-B4260-00',
+      locale: 'zh-CN',
+    })).toMatchObject({
+      fontSource: 'system',
+      systemFont: 'FONT_SMALL',
+      fontFamily: 'Noto Sans SC',
+      fontSize: 69,
+      assetFontFamily: 'inter',
+      assetFontSize: 36,
+    })
+  })
+
+  it('restores the retained asset font when leaving system-font mode', () => {
+    expect(resolveSystemFontUpdate({
+      fontFamily: 'Noto Sans SC',
+      fontSize: 69,
+      fontSource: 'system',
+      systemFont: 'FONT_SMALL',
+      assetFontFamily: 'inter',
+      assetFontSize: 36,
+    }, {
+      fontSource: 'asset',
+      systemFont: undefined,
+    }, {
+      deviceId: 'venu3',
+      locale: 'zh-CN',
+    })).toMatchObject({
+      fontSource: 'asset',
+      fontFamily: 'inter',
+      fontSize: 36,
+    })
   })
 })

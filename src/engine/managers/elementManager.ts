@@ -121,6 +121,14 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     return
   }
   const positionPatch = (patch ?? {}) as Record<string, unknown>
+  for (const field of [
+    'fontSource', 'systemFont', 'assetFontFamily', 'assetFontSize',
+    'systemFontPrecision', 'previewFontSlug',
+  ]) {
+    if (Object.prototype.hasOwnProperty.call(positionPatch, field)) {
+      ;(resolved as any)[field] = positionPatch[field]
+    }
+  }
   const elementDataStore = useElementDataStore()
   // ActiveSelection can expose parent-relative runtime coordinates while the
   // store keeps canvas/business coordinates. Preserve both coordinate planes.
