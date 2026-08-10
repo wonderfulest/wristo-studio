@@ -18,7 +18,7 @@ import '@/assets/styles/element-variables.scss'
 import emitter from '@/utils/eventBus'
 import { loadPlugins } from '@/engine/plugins'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
-import { createDataCatalogStartup } from '@/startup/dataCatalogStartup'
+import { createDataCatalogStartup, shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
@@ -67,4 +67,8 @@ const dataCatalogStartup = createDataCatalogStartup({
   },
   root: appRoot,
 })
-void dataCatalogStartup.start().catch(() => undefined)
+if (shouldLoadDataCatalog(window.location.pathname)) {
+  void dataCatalogStartup.start().catch(() => undefined)
+} else {
+  app.mount(appRoot)
+}

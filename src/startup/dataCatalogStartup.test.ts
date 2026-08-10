@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createDataCatalogStartup, renderDataCatalogStartupError } from './dataCatalogStartup'
+import { createDataCatalogStartup, renderDataCatalogStartupError, shouldLoadDataCatalog } from './dataCatalogStartup'
 
 describe('data catalog startup gate', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>'
+  })
+
+  it('skips the protected catalog for the public PRG installer route', () => {
+    expect(shouldLoadDataCatalog('/prg-installer')).toBe(false)
+    expect(shouldLoadDataCatalog('/prg-installer/')).toBe(false)
+    expect(shouldLoadDataCatalog('/designs/new-projects')).toBe(true)
   })
 
   it('mounts only after the complete catalog has loaded', async () => {

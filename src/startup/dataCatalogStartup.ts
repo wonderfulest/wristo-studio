@@ -7,6 +7,8 @@ export interface DataCatalogStartupOptions {
 
 const errorMessage = (error: unknown) => (error instanceof Error && error.message.trim() ? error.message : 'Unknown startup error')
 
+export const shouldLoadDataCatalog = (pathname: string) => !/^\/prg-installer\/?$/.test(pathname)
+
 export function renderDataCatalogStartupError(root: Element, error: unknown, retry: () => void) {
   const alert = document.createElement('section')
   alert.setAttribute('role', 'alert')

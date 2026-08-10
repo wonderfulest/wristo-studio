@@ -6,6 +6,7 @@ import { useUserStore } from '../stores/user'
 import { useLocaleStore } from '@/stores/locale'
 import { translate } from '@/i18n'
 import { cancelPendingSsoRedirect, clearLocalAuthState, redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { forbiddenRedirectPath } from './authFailureRedirect'
 
 type FallbackMessageKey = 'auth.sessionExpired' | 'auth.forbidden' | 'auth.requestFailed' | 'auth.networkError'
 
@@ -32,9 +33,7 @@ const exitOnForbidden = (message = getFallbackMessage('auth.forbidden')) => {
   clearLocalAuthState()
   ElMessage.error(message)
 
-  if (window.location.pathname !== '/auth/signed-out') {
-    window.location.replace('/auth/signed-out?reason=forbidden')
-  }
+  window.location.replace(forbiddenRedirectPath())
 }
 
 const instance = axios.create({
