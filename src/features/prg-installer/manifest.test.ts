@@ -35,7 +35,7 @@ const manifest = () => ({
 const response = (body: unknown, ok = true) => ({ ok, json: vi.fn(async () => body) }) as unknown as Response
 
 describe('PrgInstaller release manifest', () => {
-  it('keeps the default Apple Silicon download available when the manifest request fails', async () => {
+  it('keeps the default macOS and Windows downloads available when the manifest request fails', async () => {
     const result = await loadPrgInstallerReleases({
       fallback: getPrgInstallerReleases({}),
       fetchFn: vi.fn(async () => response({}, false)) as typeof fetch
@@ -49,7 +49,18 @@ describe('PrgInstaller release manifest', () => {
           available: true,
           url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
         },
-        windows: { available: false, url: null }
+        windows: {
+          available: true,
+          url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe'
+        }
+      },
+      windowsInstallers: {
+        exe: { available: true, sha256: 'a0c75a285938462d71fcc57e1d2e8040b4f00af084029391a1ec7993609fd777' },
+        msi: {
+          available: true,
+          url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
+          sha256: '28020044a3f6765c4ebac216224552afa032a417fcaefeb4c770d4c8dd60958d'
+        }
       }
     })
   })

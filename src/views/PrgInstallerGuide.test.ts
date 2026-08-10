@@ -19,11 +19,11 @@ vi.mock('@/features/prg-installer/config', () => ({
     },
     windows: {
       platform: 'windows',
-      available: false,
-      url: null,
-      version: null,
-      sha256: null,
-      requirements: null
+      available: true,
+      url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
+      version: '0.1.0',
+      sha256: 'a0c75a285938462d71fcc57e1d2e8040b4f00af084029391a1ec7993609fd777',
+      requirements: 'Windows 10 or later · x64'
     }
   })
 }))
@@ -49,7 +49,18 @@ beforeEach(() => {
     releases: fallback,
     macReleases: {},
     macArchitectures: [],
-    windowsInstallers: {},
+    windowsInstallers: {
+      exe: fallback.windows,
+      msi: {
+        platform: 'windows',
+        architecture: 'x64',
+        available: true,
+        url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
+        version: '0.1.0',
+        sha256: '28020044a3f6765c4ebac216224552afa032a417fcaefeb4c770d4c8dd60958d',
+        requirements: 'Windows 10 or later · x64'
+      }
+    },
     source: 'fallback'
   }))
 })
@@ -62,14 +73,20 @@ describe('PRG Installer guide', () => {
     expect(page.findAll('[data-test="prg-installer-step"]')).toHaveLength(5)
   })
 
-  it('shows a safe download link or an unavailable action per release', () => {
+  it('shows safe fallback download links for each published installer', async () => {
     const page = wrapper()
+    await flushPromises()
     expect(page.get('[data-test="prg-installer-download-mac"]').attributes('href')).toBe(
       'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
     )
     expect(page.get('[data-test="prg-installer-download-mac"]').attributes('rel')).toBe('noopener noreferrer')
     expect(page.get('[data-test="prg-installer-mac-architecture-label"]').text()).toBe('Apple Silicon (arm64)')
-    expect(page.get('[data-test="prg-installer-download-windows-unavailable"]').attributes('disabled')).toBeDefined()
+    expect(page.get('[data-test="prg-installer-download-windows-exe"]').attributes('href')).toBe(
+      'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe'
+    )
+    expect(page.get('[data-test="prg-installer-download-windows-msi"]').attributes('href')).toBe(
+      'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi'
+    )
   })
 
   it('replaces fallback metadata and requires a choice when multiple macOS architectures exist', async () => {

@@ -1,5 +1,5 @@
 import type { PrgInstallerArchitecture, PrgInstallerPlatform, PrgInstallerRelease } from './config'
-import { getPrgInstallerReleases } from './config'
+import { DEFAULT_WINDOWS_MSI_RELEASE, getPrgInstallerReleases } from './config'
 
 export const DEFAULT_PRG_INSTALLER_MANIFEST_URL = 'https://cdn.wristo.io/prg-installer/releases/latest.json'
 export type MacPrgInstallerArch = 'arm64' | 'x64' | 'universal'
@@ -24,13 +24,21 @@ export interface PrgInstallerManifestLoadResult {
   source: 'manifest' | 'fallback'
 }
 
-const fallbackResult = (fallback: Record<PrgInstallerPlatform, PrgInstallerRelease>): PrgInstallerManifestLoadResult => ({
-  releases: fallback,
-  macReleases: {},
-  macArchitectures: [],
-  windowsInstallers: {},
-  source: 'fallback'
-})
+const fallbackResult = (fallback: Record<PrgInstallerPlatform, PrgInstallerRelease>): PrgInstallerManifestLoadResult => {
+  const msi: PrgInstallerRelease = {
+    platform: 'windows',
+    architecture: 'x64',
+    available: true,
+    ...DEFAULT_WINDOWS_MSI_RELEASE
+  }
+  return {
+    releases: fallback,
+    macReleases: {},
+    macArchitectures: [],
+    windowsInstallers: fallback.windows.available ? { exe: fallback.windows, msi } : {},
+    source: 'fallback'
+  }
+}
 
 const safeCdnUrl = (value: unknown, expectedFilenames: string | string[]): string => {
   if (typeof value !== 'string') throw new Error('artifact URL must be a string')

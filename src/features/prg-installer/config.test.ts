@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { detectPrgInstallerPlatform, getPrgInstallerReleases } from './config'
 
 describe('PRG Installer configuration', () => {
-  it('provides the published Apple Silicon installer as the default fallback', () => {
+  it('provides the published macOS and Windows installers as default fallbacks', () => {
     expect(getPrgInstallerReleases({}).mac).toEqual({
       platform: 'mac',
       architecture: 'arm64',
@@ -12,7 +12,14 @@ describe('PRG Installer configuration', () => {
       sha256: 'e9a3651764be5cda7ea1dba706400864915c35387fd831f2456660aaa5977ff4',
       requirements: 'macOS 11 or later · Apple Silicon'
     })
-    expect(getPrgInstallerReleases({}).windows).toMatchObject({ available: false, url: null })
+    expect(getPrgInstallerReleases({}).windows).toEqual({
+      platform: 'windows',
+      available: true,
+      url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
+      version: '0.1.0',
+      sha256: 'a0c75a285938462d71fcc57e1d2e8040b4f00af084029391a1ec7993609fd777',
+      requirements: 'Windows 10 or later · x64'
+    })
   })
 
   it.each([

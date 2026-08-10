@@ -29,6 +29,20 @@ const DEFAULT_MAC_RELEASE = {
   requirements: 'macOS 11 or later · Apple Silicon'
 } as const
 
+export const DEFAULT_WINDOWS_RELEASE = {
+  url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
+  version: '0.1.0',
+  sha256: 'a0c75a285938462d71fcc57e1d2e8040b4f00af084029391a1ec7993609fd777',
+  requirements: 'Windows 10 or later · x64'
+} as const
+
+export const DEFAULT_WINDOWS_MSI_RELEASE = {
+  url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
+  version: '0.1.0',
+  sha256: '28020044a3f6765c4ebac216224552afa032a417fcaefeb4c770d4c8dd60958d',
+  requirements: DEFAULT_WINDOWS_RELEASE.requirements
+} as const
+
 const optionalText = (value: string | undefined): string | null => value?.trim() || null
 const configuredValue = (value: string | undefined, fallback: string): string => value === undefined ? fallback : value
 
@@ -72,10 +86,10 @@ export const getPrgInstallerReleases = (env?: PrgInstallerEnv): Record<PrgInstal
     },
     windows: release(
       'windows',
-      source.VITE_PRG_INSTALLER_WINDOWS_URL,
-      source.VITE_PRG_INSTALLER_WINDOWS_VERSION,
-      source.VITE_PRG_INSTALLER_WINDOWS_SHA256,
-      source.VITE_PRG_INSTALLER_WINDOWS_REQUIREMENTS
+      configuredValue(source.VITE_PRG_INSTALLER_WINDOWS_URL, DEFAULT_WINDOWS_RELEASE.url),
+      configuredValue(source.VITE_PRG_INSTALLER_WINDOWS_VERSION, DEFAULT_WINDOWS_RELEASE.version),
+      configuredValue(source.VITE_PRG_INSTALLER_WINDOWS_SHA256, DEFAULT_WINDOWS_RELEASE.sha256),
+      configuredValue(source.VITE_PRG_INSTALLER_WINDOWS_REQUIREMENTS, DEFAULT_WINDOWS_RELEASE.requirements)
     )
   }
 }
