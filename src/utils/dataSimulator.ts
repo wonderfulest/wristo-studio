@@ -310,9 +310,11 @@ export function getSimulatedDataByName(name: string): SimulatedData {
         label: 'QUOTE'
       }
 
-    // 睡眠时长（示例）
+    // 用户配置的入睡时间
     case 'sleep':
-      return { display: '7.5', numeric: 7.5, unit: 'h', label: 'SLEEP' }
+      return { display: '22:30', numeric: 81000, unit: '', label: 'BDTM' }
+    case 'sleepScore':
+      return { display: '86', numeric: 86, unit: '', label: 'SLPS' }
 
     // 日期 / 时间相关
     case 'year':

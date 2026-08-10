@@ -93,6 +93,10 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'bodyBattery'
     case ':FIELD_TYPE_STRESS':
       return 'stress'
+    case ':FIELD_TYPE_SLEEP_TIME':
+      return 'sleep'
+    case ':FIELD_TYPE_SLEEP_SCORE':
+      return 'sleepScore'
     case ':FIELD_TYPE_MOVE_BAR':
     case ':INDICATOR_TYPE_MOVE_BAR':
       return 'sedentary'

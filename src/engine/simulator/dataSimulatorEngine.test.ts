@@ -23,9 +23,18 @@ vi.mock('@/stores/properties', () => ({
 vi.mock('@/stores/dataCatalogStore', () => ({
   useDataCatalogStore: () => ({
     snapshot: {
-      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
-      optionsByValueCode: new Map([[0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
-      optionsByMetricSymbol: new Map([[':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }]]),
+      dataTypeOptions: [
+        { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' },
+        { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' },
+      ],
+      optionsByValueCode: new Map([
+        [0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+        [1004, { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
+      ]),
+      optionsByMetricSymbol: new Map([
+        [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+        [':FIELD_TYPE_SLEEP_SCORE', { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
+      ]),
       unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }]]),
       aliasOwners: new Map(),
     },
@@ -99,6 +108,23 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(set).toHaveBeenCalledWith('text', '24H')
     expect(canvas.requestRenderAll).toHaveBeenCalled()
+  })
+
+  it('maps the sleep score symbol to the distinct sleep score simulation', () => {
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue({
+      valueCode: 1004,
+      metricSymbol: ':FIELD_TYPE_SLEEP_SCORE',
+      label: { eng: 'SLPS', zhs: '睡眠' },
+      unitKey: 'none',
+    })
+    canvas.getObjects.mockReturnValue([
+      { id: 'sleep-score', eleType: 'data', metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', text: '', set },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(getSimulatedDataByName).toHaveBeenCalledWith('sleepScore')
   })
 
   it('rejects an unknown label symbol instead of rendering the catalog first item', () => {
