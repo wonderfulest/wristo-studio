@@ -1,14 +1,14 @@
-import type { LauncherArchitecture, LauncherPlatform, LauncherRelease } from './config'
-import { getLauncherReleases } from './config'
+import type { PrgInstallerArchitecture, PrgInstallerPlatform, PrgInstallerRelease } from './config'
+import { getPrgInstallerReleases } from './config'
 
-export const DEFAULT_LAUNCHER_MANIFEST_URL = 'https://cdn.wristo.io/launcher/releases/latest.json'
-export type MacLauncherArch = 'arm64' | 'x64' | 'universal'
+export const DEFAULT_PRG_INSTALLER_MANIFEST_URL = 'https://cdn.wristo.io/prg-installer/releases/latest.json'
+export type MacPrgInstallerArch = 'arm64' | 'x64' | 'universal'
 export type WindowsInstallerKind = 'exe' | 'msi'
 
 const allowedHosts = new Set(['cdn.wristo.io', 'cdn.wristo.cn'])
 const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 const sha256Pattern = /^[a-f0-9]{64}$/
-const macArchitectures: MacLauncherArch[] = ['arm64', 'x64', 'universal']
+const macArchitectures: MacPrgInstallerArch[] = ['arm64', 'x64', 'universal']
 
 interface ArtifactRecord {
   url: string
@@ -16,15 +16,15 @@ interface ArtifactRecord {
   size: number
 }
 
-export interface LauncherManifestLoadResult {
-  releases: Record<LauncherPlatform, LauncherRelease>
-  macReleases: Partial<Record<MacLauncherArch, LauncherRelease>>
-  macArchitectures: MacLauncherArch[]
-  windowsInstallers: Partial<Record<WindowsInstallerKind, LauncherRelease>>
+export interface PrgInstallerManifestLoadResult {
+  releases: Record<PrgInstallerPlatform, PrgInstallerRelease>
+  macReleases: Partial<Record<MacPrgInstallerArch, PrgInstallerRelease>>
+  macArchitectures: MacPrgInstallerArch[]
+  windowsInstallers: Partial<Record<WindowsInstallerKind, PrgInstallerRelease>>
   source: 'manifest' | 'fallback'
 }
 
-const fallbackResult = (fallback: Record<LauncherPlatform, LauncherRelease>): LauncherManifestLoadResult => ({
+const fallbackResult = (fallback: Record<PrgInstallerPlatform, PrgInstallerRelease>): PrgInstallerManifestLoadResult => ({
   releases: fallback,
   macReleases: {},
   macArchitectures: [],
@@ -78,7 +78,7 @@ const validateManifestUrl = (value: string): string => {
   return parsed.toString()
 }
 
-const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, LauncherRelease>): LauncherManifestLoadResult => {
+const parseManifest = (value: unknown, fallback: Record<PrgInstallerPlatform, PrgInstallerRelease>): PrgInstallerManifestLoadResult => {
   const root = requireRecord(value)
   if (typeof root.version !== 'string' || !versionPattern.test(root.version)) throw new Error('invalid manifest version')
   const version = root.version
@@ -86,14 +86,14 @@ const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, Launch
   const platforms = requireRecord(root.platforms)
   const mac = requireRecord(platforms.mac)
   const availableMacArchitectures = macArchitectures.filter((arch) => arch in mac)
-  if (availableMacArchitectures.length === 0 || Object.keys(mac).some((arch) => !macArchitectures.includes(arch as MacLauncherArch))) {
+  if (availableMacArchitectures.length === 0 || Object.keys(mac).some((arch) => !macArchitectures.includes(arch as MacPrgInstallerArch))) {
     throw new Error('invalid macOS architecture set')
   }
-  const parsedMac: Partial<Record<MacLauncherArch, LauncherRelease>> = {}
+  const parsedMac: Partial<Record<MacPrgInstallerArch, PrgInstallerRelease>> = {}
   for (const arch of availableMacArchitectures) {
     const filenames = [
       `Wristo_PRG_Installer_${version}_macos_${arch}.dmg`,
-      `Wristo_Connect_IQ_Launcher_${version}_macos_${arch}.dmg`
+      `Wristo_PRG_Installer_${version}_macos_${arch}.dmg`
     ]
     const artifact = parseArtifact(mac[arch], filenames)
     parsedMac[arch] = {
@@ -111,19 +111,19 @@ const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, Launch
   const windows = requireRecord(windowsRoot.x64)
   const nsis = parseArtifact(windows, [
     `Wristo_PRG_Installer_${version}_windows_x64_setup.exe`,
-    `Wristo_Connect_IQ_Launcher_${version}_windows_x64_setup.exe`
+    `Wristo_PRG_Installer_${version}_windows_x64_setup.exe`
   ])
   const msi = parseArtifact(
     { url: windows.msiUrl, sha256: windows.msiSha256, size: windows.msiSize },
     [
       `Wristo_PRG_Installer_${version}_windows_x64.msi`,
-      `Wristo_Connect_IQ_Launcher_${version}_windows_x64.msi`
+      `Wristo_PRG_Installer_${version}_windows_x64.msi`
     ]
   )
   const preferredMacArch = availableMacArchitectures.includes('universal') ? 'universal' : availableMacArchitectures[0]
-  const windowsRelease = (artifact: ArtifactRecord): LauncherRelease => ({
+  const windowsRelease = (artifact: ArtifactRecord): PrgInstallerRelease => ({
     platform: 'windows',
-    architecture: 'x64' as LauncherArchitecture,
+    architecture: 'x64' as PrgInstallerArchitecture,
     available: true,
     url: artifact.url,
     version,
@@ -145,19 +145,19 @@ const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, Launch
   }
 }
 
-export async function loadLauncherReleases(options: {
+export async function loadPrgInstallerReleases(options: {
   manifestUrl?: string
   fetchFn?: typeof fetch
-  fallback?: Record<LauncherPlatform, LauncherRelease>
+  fallback?: Record<PrgInstallerPlatform, PrgInstallerRelease>
   timeoutMs?: number
-} = {}): Promise<LauncherManifestLoadResult> {
-  const fallback = options.fallback ?? getLauncherReleases()
+} = {}): Promise<PrgInstallerManifestLoadResult> {
+  const fallback = options.fallback ?? getPrgInstallerReleases()
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 5000)
   try {
     const fetchFn = options.fetchFn ?? globalThis.fetch
     if (!fetchFn) throw new Error('Fetch API is unavailable')
-    const manifestUrl = validateManifestUrl(options.manifestUrl ?? DEFAULT_LAUNCHER_MANIFEST_URL)
+    const manifestUrl = validateManifestUrl(options.manifestUrl ?? DEFAULT_PRG_INSTALLER_MANIFEST_URL)
     const response = await fetchFn(manifestUrl, { signal: controller.signal, cache: 'no-cache' })
     if (!response.ok) throw new Error(`manifest request failed: ${response.status}`)
     return parseManifest(await response.json(), fallback)

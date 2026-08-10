@@ -37,14 +37,14 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/connect-iq-launcher',
+    path: '/prg-installer',
     component: Layout,
     meta: { requiresAuth: false },
     children: [
       {
         path: '',
-        name: 'ConnectIqLauncherGuide',
-        component: () => import('@/views/ConnectIqLauncherGuide.vue'),
+        name: 'PrgInstallerGuide',
+        component: () => import('@/views/PrgInstallerGuide.vue'),
         meta: { requiresAuth: false },
       },
     ],

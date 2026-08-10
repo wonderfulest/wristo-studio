@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getLauncherReleases, type LauncherRelease } from './config'
-import { loadLauncherReleases } from './manifest'
+import { getPrgInstallerReleases, type PrgInstallerRelease } from './config'
+import { loadPrgInstallerReleases } from './manifest'
 
 const hash = 'a'.repeat(64)
-const fallback: Record<'mac' | 'windows', LauncherRelease> = {
+const fallback: Record<'mac' | 'windows', PrgInstallerRelease> = {
   mac: { platform: 'mac', available: true, url: 'https://cdn.wristo.io/fallback.dmg', version: '0.0.9', sha256: 'fallback', requirements: 'macOS 11+' },
   windows: { platform: 'windows', available: false, url: null, version: null, sha256: null, requirements: 'Windows 10+' }
 }
@@ -14,17 +14,17 @@ const manifest = () => ({
   platforms: {
     mac: {
       arm64: {
-        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg',
+        url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg',
         sha256: hash,
         size: 10
       }
     },
     windows: {
       x64: {
-        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
+        url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
         sha256: hash,
         size: 20,
-        msiUrl: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
+        msiUrl: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
         msiSha256: hash,
         msiSize: 30
       }
@@ -34,10 +34,10 @@ const manifest = () => ({
 
 const response = (body: unknown, ok = true) => ({ ok, json: vi.fn(async () => body) }) as unknown as Response
 
-describe('Launcher release manifest', () => {
+describe('PrgInstaller release manifest', () => {
   it('keeps the default Apple Silicon download available when the manifest request fails', async () => {
-    const result = await loadLauncherReleases({
-      fallback: getLauncherReleases({}),
+    const result = await loadPrgInstallerReleases({
+      fallback: getPrgInstallerReleases({}),
       fetchFn: vi.fn(async () => response({}, false)) as typeof fetch
     })
 
@@ -47,7 +47,7 @@ describe('Launcher release manifest', () => {
         mac: {
           architecture: 'arm64',
           available: true,
-          url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
+          url: 'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
         },
         windows: { available: false, url: null }
       }
@@ -55,7 +55,7 @@ describe('Launcher release manifest', () => {
   })
 
   it('converts a valid manifest and prefers the Windows NSIS installer', async () => {
-    const result = await loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response(manifest())) as typeof fetch })
+    const result = await loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => response(manifest())) as typeof fetch })
     expect(result.source).toBe('manifest')
     expect(result.releases.mac).toMatchObject({ version: '0.1.0', architecture: 'arm64', sha256: hash })
     expect(result.releases.windows.url).toMatch(/_setup\.exe$/)
@@ -83,27 +83,27 @@ describe('Launcher release manifest', () => {
   ])('falls back for %s', async (_label, mutate) => {
     const value = manifest()
     mutate(value)
-    const result = await loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
+    const result = await loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
     expect(result).toMatchObject({ source: 'fallback', releases: fallback })
   })
 
-  it('accepts the published 0.1.0 legacy Launcher artifact names', async () => {
+  it('accepts the published 0.1.0 legacy PrgInstaller artifact names', async () => {
     const value = manifest()
-    value.platforms.mac.arm64.url = value.platforms.mac.arm64.url.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
-    value.platforms.windows.x64.url = value.platforms.windows.x64.url.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
-    value.platforms.windows.x64.msiUrl = value.platforms.windows.x64.msiUrl.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
+    value.platforms.mac.arm64.url = value.platforms.mac.arm64.url.replace('Wristo_PRG_Installer', 'Wristo_PRG_Installer')
+    value.platforms.windows.x64.url = value.platforms.windows.x64.url.replace('Wristo_PRG_Installer', 'Wristo_PRG_Installer')
+    value.platforms.windows.x64.msiUrl = value.platforms.windows.x64.msiUrl.replace('Wristo_PRG_Installer', 'Wristo_PRG_Installer')
 
-    const result = await loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
+    const result = await loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
 
     expect(result.source).toBe('manifest')
-    expect(result.windowsInstallers.exe?.url).toContain('Wristo_Connect_IQ_Launcher')
-    expect(result.windowsInstallers.msi?.url).toContain('Wristo_Connect_IQ_Launcher')
+    expect(result.windowsInstallers.exe?.url).toContain('Wristo_PRG_Installer')
+    expect(result.windowsInstallers.msi?.url).toContain('Wristo_PRG_Installer')
   })
 
   it('falls back for request, response, and JSON failures', async () => {
-    await expect(loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => { throw new Error('offline') }) as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
-    await expect(loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response({}, false)) as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
-    await expect(loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => ({ ok: true, json: async () => { throw new Error('bad json') } })) as unknown as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
+    await expect(loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => { throw new Error('offline') }) as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
+    await expect(loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => response({}, false)) as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
+    await expect(loadPrgInstallerReleases({ fallback, fetchFn: vi.fn(async () => ({ ok: true, json: async () => { throw new Error('bad json') } })) as unknown as typeof fetch })).resolves.toMatchObject({ source: 'fallback' })
   })
 
   it('aborts a timed-out request and falls back', async () => {
@@ -111,7 +111,7 @@ describe('Launcher release manifest', () => {
       init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
     }))
 
-    await expect(loadLauncherReleases({ fallback, fetchFn: fetchMock as typeof fetch, timeoutMs: 1 })).resolves.toMatchObject({ source: 'fallback' })
+    await expect(loadPrgInstallerReleases({ fallback, fetchFn: fetchMock as typeof fetch, timeoutMs: 1 })).resolves.toMatchObject({ source: 'fallback' })
     expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
   })
 })

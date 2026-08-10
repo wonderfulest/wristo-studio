@@ -208,12 +208,12 @@ import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { downloadPackageFile } from '@/utils/packageDownload'
 import {
-  buildLauncherDeepLink,
-  createLauncherTicketCache,
-} from '@/api/wristo/launcher'
+  buildPrgInstallerDeepLink,
+  createPrgInstallerTicketCache,
+} from '@/api/wristo/prg-installer'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
-import { createLauncherPromptState } from '@/features/connectIqLauncher/promptState'
+import { createPrgInstallerPromptState } from '@/features/prg-installer/promptState'
 import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
 const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
@@ -226,13 +226,13 @@ const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
-let launcherPromptStorage: Pick<Storage, 'getItem' | 'setItem'> | undefined
+let prgInstallerPromptStorage: Pick<Storage, 'getItem' | 'setItem'> | undefined
 try {
-  launcherPromptStorage = window.localStorage
+  prgInstallerPromptStorage = window.localStorage
 } catch {
-  launcherPromptStorage = undefined
+  prgInstallerPromptStorage = undefined
 }
-const launcherPromptState = createLauncherPromptState(launcherPromptStorage)
+const prgInstallerPromptState = createPrgInstallerPromptState(prgInstallerPromptStorage)
 const nowMs = ref(Date.now())
 let prgClockTimer: ReturnType<typeof setInterval> | undefined
 let cancellationPollTimer: ReturnType<typeof setInterval> | undefined
@@ -844,18 +844,18 @@ const runPrg = async (design: Design) => {
   }
 }
 
-const launcherTicketCache = createLauncherTicketCache()
+const prgInstallerTicketCache = createPrgInstallerTicketCache()
 
-const showLauncherGuideNotification = (message: string) => {
+const showPrgInstallerGuideNotification = (message: string) => {
   ElNotification({
-    title: t('launcherGuide.title'),
-    message: h('div', { class: 'launcher-guide-notification' }, [
+    title: t('prgInstallerGuide.title'),
+    message: h('div', { class: 'prg-installer-guide-notification' }, [
       h('p', message),
       h(ElButton, {
         link: true,
         type: 'primary',
-        onClick: () => { void router.push({ name: 'ConnectIqLauncherGuide' }) },
-      }, () => t('project.launcherGuideAction')),
+        onClick: () => { void router.push({ name: 'PrgInstallerGuide' }) },
+      }, () => t('project.prgInstallerGuideAction')),
     ]),
     duration: 8000,
   })
@@ -867,10 +867,10 @@ const preparePreviewPrg = async (design: Design) => {
 
   loadingStates.value.previewPrg.add(design.id)
   try {
-    await launcherTicketCache.prepare(releaseId)
+    await prgInstallerTicketCache.prepare(releaseId)
   } catch (error) {
     console.error('Failed to prepare simulator preview:', error)
-    messageStore.error(t('project.launcherPreviewFailed'))
+    messageStore.error(t('project.prgInstallerPreviewFailed'))
   } finally {
     loadingStates.value.previewPrg.delete(design.id)
   }
@@ -886,17 +886,17 @@ const previewPrg = (design: Design) => {
     return
   }
 
-  const ticket = launcherTicketCache.take(releaseId)
+  const ticket = prgInstallerTicketCache.take(releaseId)
   if (!ticket) {
     void preparePreviewPrg(design)
-    messageStore.error(t('project.launcherPreviewFailed'))
+    messageStore.error(t('project.prgInstallerPreviewFailed'))
     return
   }
 
   void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg')
-  window.location.href = buildLauncherDeepLink(ticket)
-  messageStore.info(t('project.launcherOpening'))
-  showLauncherGuideNotification(t('project.launcherTroubleshoot'))
+  window.location.href = buildPrgInstallerDeepLink(ticket)
+  messageStore.info(t('project.prgInstallerOpening'))
+  showPrgInstallerGuideNotification(t('project.prgInstallerTroubleshoot'))
 }
 
 // 检查是否有可下载的安装包
@@ -921,8 +921,8 @@ const hasNewRelease = (design: Design): boolean => {
 // 处理提交成功
 const handleSubmitSuccess = (payload: { mode: 'submit' | 'prg-build' }) => {
   fetchDesigns() // 刷新设计列表
-  if (payload.mode !== 'prg-build' || !launcherPromptState.takeBuildHint()) return
-  showLauncherGuideNotification(t('project.launcherBuildHint'))
+  if (payload.mode !== 'prg-build' || !prgInstallerPromptState.takeBuildHint()) return
+  showPrgInstallerGuideNotification(t('project.prgInstallerBuildHint'))
 }
 
 // 处理刷新事件

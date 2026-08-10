@@ -1,8 +1,8 @@
-const BUILD_HINT_KEY = 'wristo:connect-iq-launcher:build-hint:v1'
+const BUILD_HINT_KEY = 'wristo:prg-installer:build-hint:v1'
 
 type PromptStorage = Pick<Storage, 'getItem' | 'setItem'>
 
-export const createLauncherPromptState = (storage?: PromptStorage) => {
+export const createPrgInstallerPromptState = (storage?: PromptStorage) => {
   let sessionTaken = false
 
   return {

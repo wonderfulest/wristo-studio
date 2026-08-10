@@ -4,9 +4,9 @@ const { post } = vi.hoisted(() => ({ post: vi.fn() }))
 
 vi.mock('@/config/axios', () => ({ default: { post } }))
 
-import { buildLauncherDeepLink, createLauncherTicket, createLauncherTicketCache } from './launcher'
+import { buildPrgInstallerDeepLink, createPrgInstallerTicket, createPrgInstallerTicketCache } from './prg-installer'
 
-describe('Studio launcher client', () => {
+describe('Studio prgInstaller client', () => {
   beforeEach(() => {
     post.mockReset()
   })
@@ -18,27 +18,27 @@ describe('Studio launcher client', () => {
       data: { ticket: 'abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE', expiresInSeconds: 300 },
     })
 
-    await expect(createLauncherTicket(123)).resolves.toEqual({
+    await expect(createPrgInstallerTicket(123)).resolves.toEqual({
       ticket: 'abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE',
       expiresInSeconds: 300,
     })
-    expect(post).toHaveBeenCalledWith('/dsn/products/launcher/tickets', { releaseId: 123 })
+    expect(post).toHaveBeenCalledWith('/dsn/products/prg-installer/tickets', { releaseId: 123 })
   })
 
-  it('builds only the native launchers supported ticket deep link', () => {
-    expect(buildLauncherDeepLink('abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE')).toBe(
-      'wristo-ciq://run?ticket=abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE',
+  it('builds only the native prgInstallers supported ticket deep link', () => {
+    expect(buildPrgInstallerDeepLink('abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE')).toBe(
+      'wristo-prg-installer://run?ticket=abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE',
     )
-    expect(() => buildLauncherDeepLink('short')).toThrow('Invalid launcher ticket')
-    expect(() => buildLauncherDeepLink('abcdefghijklmnopqrstuvwxyz123456/unsafe')).toThrow(
-      'Invalid launcher ticket',
+    expect(() => buildPrgInstallerDeepLink('short')).toThrow('Invalid prgInstaller ticket')
+    expect(() => buildPrgInstallerDeepLink('abcdefghijklmnopqrstuvwxyz123456/unsafe')).toThrow(
+      'Invalid prgInstaller ticket',
     )
   })
 
   it('rejects a successful envelope that does not contain a ticket payload', async () => {
     post.mockResolvedValue({ code: 0, msg: 'success' })
 
-    await expect(createLauncherTicket(123)).rejects.toThrow('Launcher ticket response is missing')
+    await expect(createPrgInstallerTicket(123)).rejects.toThrow('PrgInstaller ticket response is missing')
   })
 
   it('prepares a ticket before click and consumes it synchronously once', async () => {
@@ -46,7 +46,7 @@ describe('Studio launcher client', () => {
       ticket: 'abcdefghijklmnopqrstuvwxyz_1234567890-ABCDE',
       expiresInSeconds: 300,
     })
-    const cache = createLauncherTicketCache(createTicket, () => 1_000)
+    const cache = createPrgInstallerTicketCache(createTicket, () => 1_000)
 
     await cache.prepare(9)
 

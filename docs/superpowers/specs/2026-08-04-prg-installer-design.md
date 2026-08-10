@@ -4,9 +4,9 @@
 
 Wristo Studio 已支持按 Garmin 设备生成 PRG，并在产品发布数据中保留 `prgUrl`、`deviceId`、版本、文件大小和校验值。当前用户仍需自行下载文件、安装和配置 Connect IQ SDK，并通过命令行启动 Simulator 和 `monkeydo`。这对普通设计师门槛过高。
 
-本功能面向不熟悉终端的普通设计师，提供 macOS 和 Windows 双平台的一键测试流程：用户首次安装 Wristo Connect IQ Launcher，此后从 Studio 点击“在模拟器中测试”，即可自动下载目标设备 PRG、启动 Garmin Connect IQ Simulator 并运行表盘。
+本功能面向不熟悉终端的普通设计师，提供 macOS 和 Windows 双平台的一键测试流程：用户首次安装 Wristo PRG Installer，此后从 Studio 点击“在模拟器中测试”，即可自动下载目标设备 PRG、启动 Garmin Connect IQ Simulator 并运行表盘。
 
-Garmin 官方运行链路仍是 `connectiq` 启动 Simulator，再由 `monkeydo <prg> <deviceId>` 加载程序。Launcher 只封装该链路，不替代 Garmin SDK，也不改变 PRG 与目标设备一一对应的约束。
+Garmin 官方运行链路仍是 `connectiq` 启动 Simulator，再由 `monkeydo <prg> <deviceId>` 加载程序。PrgInstaller 只封装该链路，不替代 Garmin SDK，也不改变 PRG 与目标设备一一对应的约束。
 
 ## 范围
 
@@ -15,11 +15,11 @@ Garmin 官方运行链路仍是 `connectiq` 启动 Simulator，再由 `monkeydo 
 - Studio 增加“在模拟器中测试”主操作，保留“下载 PRG”高级操作。
 - Studio 增加 macOS 和 Windows 安装、检测及使用说明。
 - API 提供短时、一次性启动票据的创建与兑换。
-- 提供 macOS 和 Windows 版 Wristo Connect IQ Launcher。
-- Launcher 自动检测当前激活的 Garmin Connect IQ SDK。
-- Launcher 下载、校验并缓存 PRG。
-- Launcher 启动或复用 Simulator，并调用 `monkeydo` 加载正确设备。
-- Launcher 展示运行状态、可操作错误和可复制诊断信息。
+- 提供 macOS 和 Windows 版 Wristo PRG Installer。
+- PrgInstaller 自动检测当前激活的 Garmin Connect IQ SDK。
+- PrgInstaller 下载、校验并缓存 PRG。
+- PrgInstaller 启动或复用 Simulator，并调用 `monkeydo` 加载正确设备。
+- PrgInstaller 展示运行状态、可操作错误和可复制诊断信息。
 - 提供已签名的双平台安装包。
 
 ### 第一阶段不包含
@@ -34,16 +34,16 @@ Garmin 官方运行链路仍是 `connectiq` 启动 Simulator，再由 `monkeydo 
 
 ## 总体架构
 
-系统由 Studio、Wristo API、Launcher 和 Garmin Connect IQ SDK 四部分组成。
+系统由 Studio、Wristo API、PrgInstaller 和 Garmin Connect IQ SDK 四部分组成。
 
 1. Studio 请求 API 创建一次性启动票据。
-2. Studio 通过 `wristo-ciq://run?ticket=<ticket>` 唤起 Launcher。
-3. Launcher 使用票据向 API 兑换本次运行所需的发布信息。
-4. Launcher 下载 PRG并校验文件完整性。
-5. Launcher检测当前激活 SDK及目标设备支持情况。
-6. Launcher启动或复用 Connect IQ Simulator。
-7. Launcher执行 `monkeydo <local-prg-path> <deviceId>`。
-8. Launcher窗口展示执行状态和诊断输出。
+2. Studio 通过 `wristo-prg-installer://run?ticket=<ticket>` 唤起 PrgInstaller。
+3. PrgInstaller 使用票据向 API 兑换本次运行所需的发布信息。
+4. PrgInstaller 下载 PRG并校验文件完整性。
+5. PrgInstaller检测当前激活 SDK及目标设备支持情况。
+6. PrgInstaller启动或复用 Connect IQ Simulator。
+7. PrgInstaller执行 `monkeydo <local-prg-path> <deviceId>`。
+8. PrgInstaller窗口展示执行状态和诊断输出。
 
 网页不直接访问本地文件，也不执行本机命令。自定义协议是网页与本地助手之间唯一的启动入口。
 
@@ -61,12 +61,12 @@ PRG尚未生成时禁用一键测试，并提示：`请先选择设备并生成�
 
 点击主按钮后，Studio先创建启动票据，再打开自定义协议，同时显示非阻塞启动弹窗：
 
-- 初始状态：`正在打开 Wristo Connect IQ Launcher…`
+- 初始状态：`正在打开 Wristo PRG Installer…`
 - 辅助操作：`重新打开`
-- 故障入口：`没有反应？安装或检查 Launcher`
+- 故障入口：`没有反应？安装或检查 PrgInstaller`
 - 高级操作：`下载 PRG`
 
-浏览器无法可靠判断用户是否取消了外部应用确认，因此不能仅依赖超时宣称 Launcher 未安装。超时后只展示排查入口，不覆盖用户已经开始的本地运行。
+浏览器无法可靠判断用户是否取消了外部应用确认，因此不能仅依赖超时宣称 PrgInstaller 未安装。超时后只展示排查入口，不覆盖用户已经开始的本地运行。
 
 ### 安装与使用说明
 
@@ -82,7 +82,7 @@ macOS与 Windows均采用五步主流程：
 
 1. 安装 Garmin Connect IQ SDK Manager。
 2. 在 SDK Manager 中下载并激活一个 SDK。
-3. 下载并安装 Wristo Connect IQ Launcher。
+3. 下载并安装 Wristo PRG Installer。
 4. 完成系统对外部应用和自定义协议的首次确认。
 5. 返回 Studio，点击“在模拟器中测试”。
 
@@ -92,11 +92,11 @@ macOS与 Windows均采用五步主流程：
 - PRG只适用于生成时选择的 Garmin 设备。
 - 更换测试设备后必须重新生成对应设备的 PRG。
 - Simulator测试通过不等于真机通过，发布前仍需真机验证。
-- 显示当前 Launcher版本、支持系统和说明更新时间。
+- 显示当前 PrgInstaller版本、支持系统和说明更新时间。
 
-### Launcher检测
+### PrgInstaller检测
 
-安装说明提供 `检测 Launcher` 按钮，通过 `wristo-ciq://health` 唤起助手。检测成功以 Launcher自身展示“已就绪”为第一阶段的可靠反馈。Studio页面不把浏览器协议唤起超时作为准确安装状态。
+安装说明提供 `检测 PrgInstaller` 按钮，通过 `wristo-prg-installer://health` 唤起助手。检测成功以 PrgInstaller自身展示“已就绪”为第一阶段的可靠反馈。Studio页面不把浏览器协议唤起超时作为准确安装状态。
 
 若后续确需在网页内显示检测结果，可扩展为带随机 nonce 的 localhost 回调；该扩展不属于第一阶段，避免引入本地端口、CORS和防火墙复杂度。
 
@@ -111,11 +111,11 @@ Studio使用当前登录态请求创建票据。API必须验证用户对设计�
 - 有效期建议为两分钟。
 - 只能成功兑换一次。
 - 使用高熵随机值，不在票据文本中暴露发布信息。
-- 只能用于 Launcher运行用途，不能复用为通用下载凭证。
+- 只能用于 PrgInstaller运行用途，不能复用为通用下载凭证。
 
 ### 兑换启动信息
 
-Launcher兑换后获得：
+PrgInstaller兑换后获得：
 
 ```json
 {
@@ -129,15 +129,15 @@ Launcher兑换后获得：
 }
 ```
 
-下载地址应使用短时签名 HTTPS URL。现有 `packageMd5` 可用于兼容已有发布数据，但新打包和新接口应增加 SHA-256，Launcher优先校验 SHA-256。
+下载地址应使用短时签名 HTTPS URL。现有 `packageMd5` 可用于兼容已有发布数据，但新打包和新接口应增加 SHA-256，PrgInstaller优先校验 SHA-256。
 
 兑换接口必须区分无效、过期、已使用和无权访问，但对客户端错误文案不泄露其他用户或发布记录是否存在。
 
-## Launcher 设计
+## PrgInstaller 设计
 
 ### 技术选型
 
-推荐使用 Tauri 构建 Launcher，以一套前端界面配合 Rust原生层支持 macOS和 Windows。该工具职责单一，不需要 Electron完整运行时。最终选型仍需在实施计划中验证 Tauri 对双平台自定义协议注册、代码签名和子进程控制的支持版本。
+推荐使用 Tauri 构建 PrgInstaller，以一套前端界面配合 Rust原生层支持 macOS和 Windows。该工具职责单一，不需要 Electron完整运行时。最终选型仍需在实施计划中验证 Tauri 对双平台自定义协议注册、代码签名和子进程控制的支持版本。
 
 ### 内部模块
 
@@ -149,11 +149,11 @@ Launcher兑换后获得：
 - Simulator控制：启动或复用 `connectiq`，等待就绪后调用 `monkeydo`。
 - 状态窗口：展示检测、下载、校验、启动和运行状态。
 - 诊断日志：显示经过脱敏的输出，并支持一键复制。
-- 设置：显示 Launcher版本、当前 SDK、缓存位置和新版下载入口。
+- 设置：显示 PrgInstaller版本、当前 SDK、缓存位置和新版下载入口。
 
 ### SDK检测
 
-Launcher应优先读取 SDK Manager维护的当前 SDK配置，而不是要求用户设置环境变量。
+PrgInstaller应优先读取 SDK Manager维护的当前 SDK配置，而不是要求用户设置环境变量。
 
 macOS候选配置位置：
 
@@ -175,20 +175,20 @@ Windows候选配置位置：
 - 若 Simulator已运行，直接复用，不创建重复进程。
 - 就绪后以独立参数调用 `monkeydo`，不通过 shell拼接命令。
 - 同一时间只处理一个前台运行任务；新任务到达时明确提示替换或等待，第一阶段默认串行。
-- `monkeydo`输出保留在本次运行详情中，关闭 Launcher后无需长期保存敏感日志。
+- `monkeydo`输出保留在本次运行详情中，关闭 PrgInstaller后无需长期保存敏感日志。
 
 ## 安全设计
 
 - 自定义协议只接受固定命令和 ticket，不接受可执行路径、命令文本、PRG URL或 deviceId。
 - ticket短时有效、一次使用并绑定用途。
-- Launcher只连接 Wristo配置的 HTTPS API。
+- PrgInstaller只连接 Wristo配置的 HTTPS API。
 - PRG只从 API签发的 HTTPS地址下载。
 - PRG完整性校验失败时立即停止，不调用 `monkeydo`。
 - SDK可执行文件路径只能来自已验证的 SDK目录。
 - 子进程调用使用参数数组，不经过 shell。
 - `deviceId`来自已授权发布记录，并同时校验格式及当前 SDK中的设备定义。
 - 日志隐藏 ticket、Authorization、签名 URL参数及用户身份信息。
-- 缓存目录由 Launcher独占管理，不执行用户任意选择的 PRG。
+- 缓存目录由 PrgInstaller独占管理，不执行用户任意选择的 PRG。
 
 ## 错误处理
 
@@ -210,7 +210,7 @@ Windows候选配置位置：
 
 - macOS提供适配 Apple Silicon和 Intel的正式安装包，使用 Developer ID签名并完成 notarization。
 - Windows支持 Windows 10和 Windows 11，安装包使用 Authenticode代码签名。
-- 安装和卸载必须正确注册或移除 `wristo-ciq://` 协议。
+- 安装和卸载必须正确注册或移除 `wristo-prg-installer://` 协议。
 - Studio下载页必须通过 HTTPS提供安装包、版本号、支持系统和校验信息。
 - 未完成签名的构建只能用于内部测试，不能作为普通设计师正式安装包。
 
@@ -233,7 +233,7 @@ Windows候选配置位置：
 - 兑换结果中的 release、device和校验值来自同一发布记录。
 - 下载 URL短时有效，日志不记录敏感完整参数。
 
-### Launcher
+### PrgInstaller
 
 - 已安装并激活 SDK的用户无需 VS Code或终端即可运行 PRG。
 - macOS Intel、macOS Apple Silicon、Windows 10和 Windows 11均完成安装、协议唤起、SDK检测和 PRG运行验证。
@@ -247,4 +247,4 @@ Windows候选配置位置：
 
 ## 完成边界
 
-自动化测试、Studio构建、API测试和 Launcher单元测试只能证明对应代码路径。最终完成必须包含签名安装包在真实 macOS与 Windows环境中的安装测试，以及由 Studio点击、浏览器确认、Launcher下载、真实 Garmin Simulator启动并运行目标 PRG的端到端验证。Simulator通过仍不能替代 Garmin真机验证。
+自动化测试、Studio构建、API测试和 PrgInstaller单元测试只能证明对应代码路径。最终完成必须包含签名安装包在真实 macOS与 Windows环境中的安装测试，以及由 Studio点击、浏览器确认、PrgInstaller下载、真实 Garmin Simulator启动并运行目标 PRG的端到端验证。Simulator通过仍不能替代 Garmin真机验证。

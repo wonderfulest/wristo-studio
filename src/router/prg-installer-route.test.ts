@@ -5,14 +5,14 @@ const source = readFileSync(new URL('./index.ts', import.meta.url), 'utf8')
 
 describe('PRG Installer guide route', () => {
   it('registers the guide as a public lazy-loaded route', () => {
-    const start = source.indexOf("path: '/connect-iq-launcher'")
+    const start = source.indexOf("path: '/prg-installer'")
     const end = source.indexOf("path: '/'", start)
     const routeSource = source.slice(start, end)
 
     expect(start).toBeGreaterThanOrEqual(0)
     expect(routeSource).toContain('component: Layout')
-    expect(routeSource).toContain("name: 'ConnectIqLauncherGuide'")
-    expect(routeSource).toContain("import('@/views/ConnectIqLauncherGuide.vue')")
+    expect(routeSource).toContain("name: 'PrgInstallerGuide'")
+    expect(routeSource).toContain("import('@/views/PrgInstallerGuide.vue')")
     expect(routeSource).toContain('requiresAuth: false')
   })
 })

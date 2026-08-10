@@ -1,30 +1,30 @@
 import instance from '@/config/axios'
 import type { ApiResponse } from '@/types/api/api'
 
-export interface LauncherTicket {
+export interface PrgInstallerTicket {
   ticket: string
   expiresInSeconds: number
 }
 
 const TICKET_PATTERN = /^[A-Za-z0-9_-]{32,128}$/
 
-export async function createLauncherTicket(releaseId: number): Promise<LauncherTicket> {
-  const response = await instance.post('/dsn/products/launcher/tickets', { releaseId }) as ApiResponse<LauncherTicket>
+export async function createPrgInstallerTicket(releaseId: number): Promise<PrgInstallerTicket> {
+  const response = await instance.post('/dsn/products/prg-installer/tickets', { releaseId }) as ApiResponse<PrgInstallerTicket>
   if (!response.data) {
-    throw new Error('Launcher ticket response is missing')
+    throw new Error('PrgInstaller ticket response is missing')
   }
   return response.data
 }
 
-export function buildLauncherDeepLink(ticket: string): string {
+export function buildPrgInstallerDeepLink(ticket: string): string {
   if (!TICKET_PATTERN.test(ticket)) {
-    throw new Error('Invalid launcher ticket')
+    throw new Error('Invalid prgInstaller ticket')
   }
-  return `wristo-ciq://run?ticket=${ticket}`
+  return `wristo-prg-installer://run?ticket=${ticket}`
 }
 
-export function createLauncherTicketCache(
-  createTicket: (releaseId: number) => Promise<LauncherTicket> = createLauncherTicket,
+export function createPrgInstallerTicketCache(
+  createTicket: (releaseId: number) => Promise<PrgInstallerTicket> = createPrgInstallerTicket,
   now: () => number = Date.now,
 ) {
   const tickets = new Map<number, { ticket: string; expiresAt: number }>()

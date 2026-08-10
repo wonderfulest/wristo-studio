@@ -1,12 +1,12 @@
 <template>
-  <div class="launcher-guide">
+  <div class="prg-installer-guide">
     <header class="guide-hero">
       <div class="hero-mark">CIQ</div>
       <div>
         <p class="eyebrow">Wristo Studio</p>
-        <h1>{{ t('launcherGuide.title') }}</h1>
-        <p class="subtitle">{{ t('launcherGuide.subtitle') }}</p>
-        <p class="no-terminal">{{ t('launcherGuide.noTerminal') }}</p>
+        <h1>{{ t('prgInstallerGuide.title') }}</h1>
+        <p class="subtitle">{{ t('prgInstallerGuide.subtitle') }}</p>
+        <p class="no-terminal">{{ t('prgInstallerGuide.noTerminal') }}</p>
       </div>
     </header>
 
@@ -19,7 +19,7 @@
               v-if="macArchitectures.length > 1"
               v-model="activeMacArchitecture"
               class="architecture-select"
-              data-test="launcher-mac-architecture"
+              data-test="prg-installer-mac-architecture"
               aria-label="macOS architecture"
             >
               <option :value="null" disabled>Architecture</option>
@@ -28,29 +28,29 @@
             <dl class="release-meta">
               <template v-if="releaseFor(platform).architecture">
                 <dt>Architecture</dt>
-                <dd :data-test="`launcher-${platform}-architecture-label`">
+                <dd :data-test="`prg-installer-${platform}-architecture-label`">
                   {{ architectureLabel(releaseFor(platform).architecture!) }}
                 </dd>
               </template>
               <template v-if="releaseFor(platform).version">
-                <dt>{{ t('launcherGuide.version') }}</dt>
+                <dt>{{ t('prgInstallerGuide.version') }}</dt>
                 <dd>{{ releaseFor(platform).version }}</dd>
               </template>
               <template v-if="releaseFor(platform).requirements">
-                <dt>{{ t('launcherGuide.requirements') }}</dt>
+                <dt>{{ t('prgInstallerGuide.requirements') }}</dt>
                 <dd>{{ releaseFor(platform).requirements }}</dd>
               </template>
               <template v-if="releaseFor(platform).sha256">
-                <dt>{{ t('launcherGuide.sha256') }}</dt>
+                <dt>{{ t('prgInstallerGuide.sha256') }}</dt>
                 <dd class="checksum">{{ releaseFor(platform).sha256 }}</dd>
               </template>
             </dl>
           </div>
-          <a v-if="releaseFor(platform).available && releaseFor(platform).url" :data-test="`launcher-download-${platform}`" :href="releaseFor(platform).url!" rel="noopener noreferrer">
-            <el-button type="primary" size="large">{{ t('launcherGuide.download') }}</el-button>
+          <a v-if="releaseFor(platform).available && releaseFor(platform).url" :data-test="`prg-installer-download-${platform}`" :href="releaseFor(platform).url!" rel="noopener noreferrer">
+            <el-button type="primary" size="large">{{ t('prgInstallerGuide.download') }}</el-button>
           </a>
-          <el-button v-else :data-test="`launcher-download-${platform}-unavailable`" size="large" disabled>
-            {{ t('launcherGuide.downloadUnavailable') }}
+          <el-button v-else :data-test="`prg-installer-download-${platform}-unavailable`" size="large" disabled>
+            {{ t('prgInstallerGuide.downloadUnavailable') }}
           </el-button>
         </section>
         <section v-else class="download-card windows-download-card">
@@ -59,35 +59,35 @@
             <article v-for="kind in hasWindowsInstaller ? windowsInstallerKinds : []" :key="kind" class="installer-option">
               <div class="installer-details">
                 <div class="installer-heading">
-                  <h3>{{ t(kind === 'exe' ? 'launcherGuide.windowsExe' : 'launcherGuide.windowsMsi') }}</h3>
-                  <span v-if="kind === 'exe'" class="recommended">{{ t('launcherGuide.recommended') }}</span>
+                  <h3>{{ t(kind === 'exe' ? 'prgInstallerGuide.windowsExe' : 'prgInstallerGuide.windowsMsi') }}</h3>
+                  <span v-if="kind === 'exe'" class="recommended">{{ t('prgInstallerGuide.recommended') }}</span>
                 </div>
-                <p>{{ t(kind === 'exe' ? 'launcherGuide.windowsExeDescription' : 'launcherGuide.windowsMsiDescription') }}</p>
+                <p>{{ t(kind === 'exe' ? 'prgInstallerGuide.windowsExeDescription' : 'prgInstallerGuide.windowsMsiDescription') }}</p>
                 <dl v-if="windowsInstallerFor(kind).available" class="release-meta installer-meta">
                   <template v-if="windowsInstallerFor(kind).version">
-                    <dt>{{ t('launcherGuide.version') }}</dt>
+                    <dt>{{ t('prgInstallerGuide.version') }}</dt>
                     <dd>{{ windowsInstallerFor(kind).version }}</dd>
                   </template>
                   <template v-if="windowsInstallerFor(kind).sha256">
-                    <dt>{{ t('launcherGuide.sha256') }}</dt>
-                    <dd :data-test="`launcher-windows-${kind}-sha256`" class="checksum">{{ windowsInstallerFor(kind).sha256 }}</dd>
+                    <dt>{{ t('prgInstallerGuide.sha256') }}</dt>
+                    <dd :data-test="`prg-installer-windows-${kind}-sha256`" class="checksum">{{ windowsInstallerFor(kind).sha256 }}</dd>
                   </template>
                 </dl>
               </div>
               <a
                 v-if="windowsInstallerFor(kind).available && windowsInstallerFor(kind).url"
-                :data-test="`launcher-download-windows-${kind}`"
+                :data-test="`prg-installer-download-windows-${kind}`"
                 :href="windowsInstallerFor(kind).url!"
                 rel="noopener noreferrer"
               >
-                <el-button :type="kind === 'exe' ? 'primary' : 'default'" size="large">{{ t('launcherGuide.download') }}</el-button>
+                <el-button :type="kind === 'exe' ? 'primary' : 'default'" size="large">{{ t('prgInstallerGuide.download') }}</el-button>
               </a>
-              <el-button v-else :data-test="`launcher-download-windows-${kind}-unavailable`" size="large" disabled>
-                {{ t('launcherGuide.downloadUnavailable') }}
+              <el-button v-else :data-test="`prg-installer-download-windows-${kind}-unavailable`" size="large" disabled>
+                {{ t('prgInstallerGuide.downloadUnavailable') }}
               </el-button>
             </article>
-            <el-button v-if="!hasWindowsInstaller" data-test="launcher-download-windows-unavailable" size="large" disabled>
-              {{ t('launcherGuide.downloadUnavailable') }}
+            <el-button v-if="!hasWindowsInstaller" data-test="prg-installer-download-windows-unavailable" size="large" disabled>
+              {{ t('prgInstallerGuide.downloadUnavailable') }}
             </el-button>
           </div>
         </section>
@@ -97,10 +97,10 @@
     <section class="guide-section">
       <div class="section-heading">
         <span>01</span>
-        <h2>{{ t('launcherGuide.getReady') }}</h2>
+        <h2>{{ t('prgInstallerGuide.getReady') }}</h2>
       </div>
       <ol class="steps">
-        <li v-for="step in steps" :key="step.title" data-test="launcher-step">
+        <li v-for="step in steps" :key="step.title" data-test="prg-installer-step">
           <div class="step-number">{{ step.number }}</div>
           <div>
             <h3>{{ t(step.title) }}</h3>
@@ -108,36 +108,36 @@
           </div>
         </li>
       </ol>
-      <a class="sdk-link" href="https://developer.garmin.com/connect-iq/sdk/" target="_blank" rel="noopener noreferrer">{{ t('launcherGuide.garminSdk') }} ↗</a>
+      <a class="sdk-link" href="https://developer.garmin.com/connect-iq/sdk/" target="_blank" rel="noopener noreferrer">{{ t('prgInstallerGuide.garminSdk') }} ↗</a>
     </section>
 
     <div class="info-grid">
       <section class="guide-section compact">
         <div class="section-heading">
           <span>02</span>
-          <h2>{{ t('launcherGuide.limitationsTitle') }}</h2>
+          <h2>{{ t('prgInstallerGuide.limitationsTitle') }}</h2>
         </div>
         <ul>
-          <li>{{ t('launcherGuide.deviceLimit') }}</li>
-          <li>{{ t('launcherGuide.simulatorLimit') }}</li>
+          <li>{{ t('prgInstallerGuide.deviceLimit') }}</li>
+          <li>{{ t('prgInstallerGuide.simulatorLimit') }}</li>
         </ul>
       </section>
       <section class="guide-section compact">
         <div class="section-heading">
           <span>03</span>
-          <h2>{{ t('launcherGuide.troubleshootingTitle') }}</h2>
+          <h2>{{ t('prgInstallerGuide.troubleshootingTitle') }}</h2>
         </div>
         <ul>
-          <li>{{ t('launcherGuide.troubleLauncher') }}</li>
-          <li>{{ t('launcherGuide.troubleSdk') }}</li>
-          <li>{{ t('launcherGuide.troubleSimulator') }}</li>
+          <li>{{ t('prgInstallerGuide.troublePrgInstaller') }}</li>
+          <li>{{ t('prgInstallerGuide.troubleSdk') }}</li>
+          <li>{{ t('prgInstallerGuide.troubleSimulator') }}</li>
         </ul>
       </section>
     </div>
 
     <footer>
       <router-link to="/designs">
-        <el-button>{{ t('launcherGuide.returnStudio') }}</el-button>
+        <el-button>{{ t('prgInstallerGuide.returnStudio') }}</el-button>
       </router-link>
     </footer>
   </div>
@@ -146,26 +146,26 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from '@/i18n'
-import { detectLauncherPlatform, getLauncherReleases, type LauncherPlatform, type LauncherRelease } from '@/features/connectIqLauncher/config'
-import { loadLauncherReleases, type MacLauncherArch, type WindowsInstallerKind } from '@/features/connectIqLauncher/manifest'
+import { detectPrgInstallerPlatform, getPrgInstallerReleases, type PrgInstallerPlatform, type PrgInstallerRelease } from '@/features/prg-installer/config'
+import { loadPrgInstallerReleases, type MacPrgInstallerArch, type WindowsInstallerKind } from '@/features/prg-installer/manifest'
 
 const { t } = useI18n()
-const platforms: LauncherPlatform[] = ['mac', 'windows']
-const releases = ref(getLauncherReleases())
-const macReleases = ref<Partial<Record<MacLauncherArch, LauncherRelease>>>({})
-const macArchitectures = ref<MacLauncherArch[]>([])
-const windowsInstallers = ref<Partial<Record<WindowsInstallerKind, LauncherRelease>>>({})
+const platforms: PrgInstallerPlatform[] = ['mac', 'windows']
+const releases = ref(getPrgInstallerReleases())
+const macReleases = ref<Partial<Record<MacPrgInstallerArch, PrgInstallerRelease>>>({})
+const macArchitectures = ref<MacPrgInstallerArch[]>([])
+const windowsInstallers = ref<Partial<Record<WindowsInstallerKind, PrgInstallerRelease>>>({})
 const windowsInstallerKinds: WindowsInstallerKind[] = ['exe', 'msi']
-const activeMacArchitecture = ref<MacLauncherArch | null>(null)
-const activePlatform = ref<LauncherPlatform>(detectLauncherPlatform(navigator.platform))
-const platformLabel = (platform: LauncherPlatform) => t(platform === 'mac' ? 'launcherGuide.platformMac' : 'launcherGuide.platformWindows')
-const architectureLabel = (arch: MacLauncherArch) => ({ arm64: 'Apple Silicon (arm64)', x64: 'Intel (x64)', universal: 'Universal' })[arch]
-const releaseFor = (platform: LauncherPlatform): LauncherRelease => {
+const activeMacArchitecture = ref<MacPrgInstallerArch | null>(null)
+const activePlatform = ref<PrgInstallerPlatform>(detectPrgInstallerPlatform(navigator.platform))
+const platformLabel = (platform: PrgInstallerPlatform) => t(platform === 'mac' ? 'prgInstallerGuide.platformMac' : 'prgInstallerGuide.platformWindows')
+const architectureLabel = (arch: MacPrgInstallerArch) => ({ arm64: 'Apple Silicon (arm64)', x64: 'Intel (x64)', universal: 'Universal' })[arch]
+const releaseFor = (platform: PrgInstallerPlatform): PrgInstallerRelease => {
   if (platform !== 'mac' || macArchitectures.value.length <= 1) return releases.value[platform]
   if (!activeMacArchitecture.value) return { ...releases.value.mac, available: false, url: null }
   return macReleases.value[activeMacArchitecture.value] ?? { ...releases.value.mac, available: false, url: null }
 }
-const windowsInstallerFor = (kind: WindowsInstallerKind): LauncherRelease => {
+const windowsInstallerFor = (kind: WindowsInstallerKind): PrgInstallerRelease => {
   if (windowsInstallers.value[kind]) return windowsInstallers.value[kind]!
   if (kind === 'exe') return releases.value.windows
   return { ...releases.value.windows, available: false, url: null, sha256: null }
@@ -173,7 +173,7 @@ const windowsInstallerFor = (kind: WindowsInstallerKind): LauncherRelease => {
 const hasWindowsInstaller = computed(() => windowsInstallerKinds.some((kind) => windowsInstallerFor(kind).available))
 
 onMounted(async () => {
-  const result = await loadLauncherReleases({ fallback: releases.value })
+  const result = await loadPrgInstallerReleases({ fallback: releases.value })
   releases.value = result.releases
   macReleases.value = result.macReleases
   macArchitectures.value = result.macArchitectures
@@ -181,16 +181,16 @@ onMounted(async () => {
   activeMacArchitecture.value = result.macArchitectures.length === 1 ? result.macArchitectures[0] : null
 })
 const steps = [
-  { number: '1', title: 'launcherGuide.step1Title', body: 'launcherGuide.step1Body' },
-  { number: '2', title: 'launcherGuide.step2Title', body: 'launcherGuide.step2Body' },
-  { number: '3', title: 'launcherGuide.step3Title', body: 'launcherGuide.step3Body' },
-  { number: '4', title: 'launcherGuide.step4Title', body: 'launcherGuide.step4Body' },
-  { number: '5', title: 'launcherGuide.step5Title', body: 'launcherGuide.step5Body' }
+  { number: '1', title: 'prgInstallerGuide.step1Title', body: 'prgInstallerGuide.step1Body' },
+  { number: '2', title: 'prgInstallerGuide.step2Title', body: 'prgInstallerGuide.step2Body' },
+  { number: '3', title: 'prgInstallerGuide.step3Title', body: 'prgInstallerGuide.step3Body' },
+  { number: '4', title: 'prgInstallerGuide.step4Title', body: 'prgInstallerGuide.step4Body' },
+  { number: '5', title: 'prgInstallerGuide.step5Title', body: 'prgInstallerGuide.step5Body' }
 ]
 </script>
 
 <style scoped>
-.launcher-guide {
+.prg-installer-guide {
   max-width: 1120px;
   margin: 0 auto;
   padding: 64px 28px 80px;
@@ -408,7 +408,7 @@ footer {
   text-align: center;
 }
 @media (max-width: 720px) {
-  .launcher-guide {
+  .prg-installer-guide {
     padding: 36px 18px 56px;
   }
   .guide-hero {

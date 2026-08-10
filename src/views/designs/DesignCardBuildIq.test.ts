@@ -79,7 +79,7 @@ describe('DesignCard Preview in Simulator action', () => {
     expect(shouldShowPreviewPrgButton(undefined, 'fenix8')).toBe(false)
   })
 
-  it('wires the card action to the workspace launcher flow', () => {
+  it('wires the card action to the workspace prgInstaller flow', () => {
     expect(source).toContain('shouldShowPreviewPrgButton(design.value.product, currentDeviceId.value)')
     expect(source).toContain("emit('preview-prg', design)")
     expect(workspaceSource).toContain('@preview-prg="previewPrg"')
@@ -92,7 +92,7 @@ describe('DesignCard Preview in Simulator action', () => {
     )
     const downloadHandler = workspaceSource.slice(
       workspaceSource.indexOf('const runPrg ='),
-      workspaceSource.indexOf('const launcherTicketCache'),
+      workspaceSource.indexOf('const prgInstallerTicketCache'),
     )
 
     expect(previewHandler).not.toContain('membershipGate.requireExport()')
@@ -106,34 +106,34 @@ describe('DesignCard Preview in Simulator action', () => {
     )
     const ticketIndex = previewHandler.indexOf('if (!ticket)')
     const downloadIndex = previewHandler.indexOf('downloadPackageFile(')
-    const launcherIndex = previewHandler.indexOf('window.location.href = buildLauncherDeepLink(ticket)')
+    const prgInstallerIndex = previewHandler.indexOf('window.location.href = buildPrgInstallerDeepLink(ticket)')
 
     expect(ticketIndex).toBeGreaterThanOrEqual(0)
     expect(downloadIndex).toBeGreaterThan(ticketIndex)
-    expect(launcherIndex).toBeGreaterThan(downloadIndex)
-    expect(previewHandler.slice(ticketIndex, launcherIndex)).not.toContain('await ')
+    expect(prgInstallerIndex).toBeGreaterThan(downloadIndex)
+    expect(previewHandler.slice(ticketIndex, prgInstallerIndex)).not.toContain('await ')
   })
 
-  it('offers an actionable guide after the synchronous launcher handoff', () => {
+  it('offers an actionable guide after the synchronous prgInstaller handoff', () => {
     const previewHandler = workspaceSource.slice(
       workspaceSource.indexOf('const previewPrg ='),
       workspaceSource.indexOf('// 检查是否有可下载的安装包'),
     )
-    const launcherIndex = previewHandler.indexOf('window.location.href = buildLauncherDeepLink(ticket)')
-    const notificationIndex = previewHandler.indexOf('showLauncherGuideNotification(')
+    const prgInstallerIndex = previewHandler.indexOf('window.location.href = buildPrgInstallerDeepLink(ticket)')
+    const notificationIndex = previewHandler.indexOf('showPrgInstallerGuideNotification(')
 
-    expect(notificationIndex).toBeGreaterThan(launcherIndex)
-    expect(workspaceSource).toContain("name: 'ConnectIqLauncherGuide'")
-    expect(workspaceSource).toContain("t('project.launcherTroubleshoot')")
+    expect(notificationIndex).toBeGreaterThan(prgInstallerIndex)
+    expect(workspaceSource).toContain("name: 'PrgInstallerGuide'")
+    expect(workspaceSource).toContain("t('project.prgInstallerTroubleshoot')")
   })
 })
 
-describe('My Designs Launcher build hint', () => {
+describe('My Designs PrgInstaller build hint', () => {
   it('shows once only after a successful PRG submission', () => {
     expect(workspaceSource).toContain("payload.mode !== 'prg-build'")
-    expect(workspaceSource).toContain('launcherPromptState.takeBuildHint()')
-    expect(workspaceSource).toContain("t('project.launcherBuildHint')")
-    expect(workspaceSource).toContain("name: 'ConnectIqLauncherGuide'")
+    expect(workspaceSource).toContain('prgInstallerPromptState.takeBuildHint()')
+    expect(workspaceSource).toContain("t('project.prgInstallerBuildHint')")
+    expect(workspaceSource).toContain("name: 'PrgInstallerGuide'")
   })
 })
 
