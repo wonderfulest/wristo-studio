@@ -62,6 +62,7 @@ export interface SubDialElementConfig extends BaseElementConfig {
   needsDialMigration?: boolean
   content: SubDialContentConfig
   previewValue: number
+  previewGoal: number
   outOfRangeBehavior: SubDialOutOfRangeBehavior
   startAngle: number
   endAngle: number

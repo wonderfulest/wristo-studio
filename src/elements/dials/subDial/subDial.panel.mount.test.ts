@@ -2,6 +2,7 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import { subDialSchema } from './subDial.schema'
 
 let registryListener: ((editor: any) => void) | null = null
@@ -34,7 +35,8 @@ const stubs = {
   ElButton: { props: ['disabled'], emits: ['click'], template: '<button class="el-button" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>' },
   DialPropertyField: { emits: ['change'], template: '<button class="dial-property" @click="$emit(\'change\',\'\')">dial</button>' },
   ColorPicker: { template: '<button class="color">color</button>' },
-  AssetPicker: true
+  AssetPicker: true,
+  ElAlert: { props: ['title'], template: '<div class="binding-alert">{{title}}</div>' }
 }
 
 const createEditor = () => {
@@ -65,6 +67,7 @@ const createEditor = () => {
 
 describe('subDial panel mounted interactions', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     registryListener = null
     stopRegistry.mockClear()
   })

@@ -59,6 +59,7 @@ export const subDialSchema: SubDialElementSchema = {
       percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
     },
     previewValue: 50,
+    previewGoal: 100,
     outOfRangeBehavior: 'clamp',
     startAngle: 150,
     endAngle: 390,

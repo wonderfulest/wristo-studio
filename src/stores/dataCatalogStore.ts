@@ -230,8 +230,8 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     throw new Error(`${prefix}: dialMode must be goal, range, or null`)
   }
   const dialGoalSource = typeof value.dialGoalSource === 'string' ? value.dialGoalSource.trim() : value.dialGoalSource
-  if (dialGoalSource !== null && dialGoalSource !== 'garmin' && dialGoalSource !== 'fixed') {
-    throw new Error(`${prefix}: dialGoalSource must be garmin, fixed, or null`)
+  if (dialGoalSource !== null && dialGoalSource !== 'garmin') {
+    throw new Error(`${prefix}: dialGoalSource must be garmin or null`)
   }
   return Object.freeze({
     valueCode,

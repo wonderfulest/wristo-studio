@@ -14,8 +14,8 @@ const { add, addLayer, requestRenderAll, setActiveObject, upsertElement } = vi.h
 
 vi.mock('@/stores/properties', () => ({
   usePropertiesStore: () => ({ allProperties: {
-    dial_goal_1: { type: 'dial', dialMode: 'goal', title: 'Steps', value: 1, options: [{ value: 1, label: 'steps', dialMode: 'goal' }] },
-    dial_goal_2: { type: 'dial', dialMode: 'goal', title: 'Calories', value: 2, options: [{ value: 2, label: 'calories', dialMode: 'goal' }] },
+    dial_goal_1: { type: 'dial', dialMode: 'goal', title: 'Steps', value: 1, options: [{ value: 1, label: 'steps', dialMode: 'goal', dialGoalSource: 'garmin' }] },
+    dial_goal_2: { type: 'dial', dialMode: 'goal', title: 'Calories', value: 2, options: [{ value: 2, label: 'calories', dialMode: 'goal', dialGoalSource: 'garmin' }] },
     dial_range_1: { type: 'dial', dialMode: 'range', title: 'Temperature', value: 3, options: [{ value: 3, label: 'temperature', dialMode: 'range', dialMin: 20, dialMax: 60 }] }
   } })
 }))
@@ -241,11 +241,19 @@ describe('subDial renderer', () => {
   })
 
   it.each([
-    { name: 'goal progress', config: { previewValue: 50 }, expected: '50%' },
+    { name: 'goal progress', config: { previewValue: 5000, previewGoal: 10000 }, expected: '50%' },
     { name: 'backend range midpoint', config: { progressMode: 'range', dialProperty: 'dial_range_1', previewValue: 40 }, expected: '50%' }
   ])('formats normalized progress for $name', async ({ config, expected }) => {
     const dial = await createSubDial(makeConfig(config) as any)
     expect((dial as any).__element.children.content.percentage.text).toBe(expected)
+  })
+
+  it('uses the preview goal for goal tick labels and hides progress when the goal is invalid', async () => {
+    const dial = await createSubDial(makeConfig({ previewValue: 5000, previewGoal: 10000, showTickLabels: true, majorTicks: 3 }) as any)
+    expect((dial as any).__element.children.static.tickLabels.getObjects().map((label: any) => label.text)).toEqual(['0', '5000', '10000'])
+    await updateSubDial(dial as any, { previewGoal: 0 } as any)
+    expect((dial as any).__element.children.static.pointer.visible).toBe(false)
+    expect((dial as any).__element.children.content.percentage.visible).toBe(false)
   })
 
   it('repositions content in place when radius changes and only rebuilds static geometry', async () => {

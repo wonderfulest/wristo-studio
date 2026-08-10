@@ -32,6 +32,7 @@ const config: SubDialElementConfig = {
     percentage: textItem(true, 0.35, 0.72, 9, { suffix: '%' })
   },
   previewValue: 50,
+  previewGoal: 100,
   outOfRangeBehavior: 'clamp',
   startAngle: 150,
   endAngle: 390,
@@ -89,6 +90,11 @@ function textItem(visible: boolean, x: number, y: number, fontSize: number, over
 }
 
 describe('subDial encoder', () => {
+  it('preserves the goal preview denominator', () => {
+    const stored = { ...config, previewValue: 5000, previewGoal: 10000 }
+    const encoded = encodeSubDial({ ...stored, __element: { config: stored } } as any)
+    expect(encoded.previewGoal).toBe(10000)
+  })
   it('provides the classic content layout by default', () => {
     const encoded = encodeSubDial({})
 

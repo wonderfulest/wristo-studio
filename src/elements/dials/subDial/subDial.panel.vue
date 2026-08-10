@@ -7,8 +7,12 @@
           <el-segmented :model-value="model.progressMode" :options="progressOptions" @change="changeProgressMode($event)" />
         </el-form-item>
         <DialPropertyField :model-value="model.dialProperty" :mode="model.progressMode" :required="false" @change="patch({ dialProperty: $event })" />
+        <el-alert v-if="bindingIssue" :title="bindingIssue" type="error" :closable="false" show-icon />
         <el-form-item :label="t('subDial.previewValue')">
           <el-input-number :model-value="model.previewValue" @change="patch({ previewValue: Number($event) })" />
+        </el-form-item>
+        <el-form-item v-if="model.progressMode === 'goal'" :label="t('subDial.previewGoal')">
+          <el-input-number :model-value="model.previewGoal" :min="0" @change="patch({ previewGoal: Number($event) })" />
         </el-form-item>
         <el-form-item :label="t('subDial.outOfRange')">
           <el-select :model-value="model.outOfRangeBehavior" @change="patch({ outOfRangeBehavior: $event })">
@@ -160,7 +164,9 @@ import { useI18n } from '@/i18n'
 import { buildContentItemPatch, buildLayoutPresetPatch, buildSubDialPointerAssetPatch } from './subDial.panelModel'
 import type { SubDialLayoutPreset } from './subDial.layout'
 import { subscribeSubDialLayoutEditor } from './subDial.plugin'
+import { resolveSubDialBindingIssue } from './subDial.binding'
 import type { SubDialLayoutEditor } from './SubDialLayoutEditor'
+import { usePropertiesStore } from '@/stores/properties'
 
 const props = defineProps<{
   element?: any
@@ -170,6 +176,11 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const model = computed(() => (props.config ?? props.element) as SubDialElementConfig)
+const propertiesStore = usePropertiesStore()
+const bindingIssue = computed(() => resolveSubDialBindingIssue(
+  model.value,
+  propertiesStore.allProperties[model.value.dialProperty] as any,
+))
 const selectedKey = ref<SubDialContentKey>('value')
 const layoutEditor = ref<SubDialLayoutEditor | null>(null)
 const editorSelectedKey = ref<SubDialContentKey | null>(null)

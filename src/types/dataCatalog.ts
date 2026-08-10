@@ -20,7 +20,7 @@ export interface DataTypeOption {
   readonly dialMode: 'goal' | 'range' | null
   readonly dialMin: number | null
   readonly dialMax: number | null
-  readonly dialGoalSource: 'garmin' | 'fixed' | null
+  readonly dialGoalSource: 'garmin' | null
 }
 
 export interface DataUnitVariant {

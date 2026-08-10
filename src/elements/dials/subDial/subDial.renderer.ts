@@ -11,6 +11,7 @@ import { clampPivot, normalizeSubDialValue, resolveSubDialAngle } from './subDia
 import { encodeSubDial } from './subDial.encoder'
 import { atomicReplaceGroupObjects } from './fabricGroupAtomicReplace'
 import { migrateSubDialConfig } from './subDial.migration'
+import { resolveSubDialBindingIssue } from './subDial.binding'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 type SubDialChildren = {
@@ -39,13 +40,14 @@ function hasOwn(value: object, key: PropertyKey): boolean {
 function resolveDialPreview(config: SubDialElementConfig) {
   const property = usePropertiesStore().allProperties[config.dialProperty]
   const option = property?.options?.find(item => item.value === property.value) as any
+  const bindingIssue = resolveSubDialBindingIssue(config, property as any)
   const rangeMin = Number(option?.dialMin)
   const rangeMax = Number(option?.dialMax)
   return {
     label: option?.label || property?.title || 'Progress',
-    bound: property?.type === 'dial' && property.dialMode === config.progressMode,
+    bound: bindingIssue === null && Boolean(config.dialProperty),
     min: config.progressMode === 'range' && Number.isFinite(rangeMin) ? rangeMin : 0,
-    max: config.progressMode === 'range' && Number.isFinite(rangeMax) ? rangeMax : 100,
+    max: config.progressMode === 'range' && Number.isFinite(rangeMax) ? rangeMax : config.previewGoal,
   }
 }
 
@@ -416,7 +418,8 @@ export async function updateSubDial(
       'endAngle',
       'counterClockwise',
       'progressMode',
-      'dialProperty'
+      'dialProperty',
+      'previewGoal'
     ])
   ) {
     replaceStatic('tickLabels', buildTickLabels(config))

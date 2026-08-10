@@ -54,6 +54,14 @@ describe('data catalog store', () => {
     mockedGetDataCatalog.mockReset()
   })
 
+  it('rejects fixed goal sources that the generated runtime cannot execute', () => {
+    const catalog = clone(validCatalog()) as any
+    catalog.dataTypeOptions[0].dialMode = 'goal'
+    catalog.dataTypeOptions[0].dialGoalSource = 'fixed'
+
+    expect(() => validateDataCatalog(catalog)).toThrow('dialGoalSource must be garmin or null')
+  })
+
   it('replaces items and indexes atomically after strict validation', async () => {
     mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: validCatalog() })
 
