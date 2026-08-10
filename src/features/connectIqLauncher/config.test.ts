@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { detectLauncherPlatform, getLauncherReleases } from './config'
 
-describe('Connect IQ Launcher configuration', () => {
+describe('PRG Installer configuration', () => {
   it('provides the published Apple Silicon installer as the default fallback', () => {
     expect(getLauncherReleases({}).mac).toEqual({
       platform: 'mac',
       architecture: 'arm64',
       available: true,
-      url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg',
+      url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg',
       version: '0.1.0',
-      sha256: '3eeb9c35afba5e722aab8fa9ab54088e4541d04af79d65247d6c05a33714f94a',
+      sha256: 'e9a3651764be5cda7ea1dba706400864915c35387fd831f2456660aaa5977ff4',
       requirements: 'macOS 11 or later · Apple Silicon'
     })
     expect(getLauncherReleases({}).windows).toMatchObject({ available: false, url: null })

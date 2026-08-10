@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const source = readFileSync(new URL('./index.ts', import.meta.url), 'utf8')
 
-describe('Connect IQ Launcher guide route', () => {
+describe('PRG Installer guide route', () => {
   it('registers the guide as a public lazy-loaded route', () => {
     const start = source.indexOf("path: '/connect-iq-launcher'")
     const end = source.indexOf("path: '/'", start)

@@ -3,6 +3,7 @@ import { getLauncherReleases } from './config'
 
 export const DEFAULT_LAUNCHER_MANIFEST_URL = 'https://cdn.wristo.io/launcher/releases/latest.json'
 export type MacLauncherArch = 'arm64' | 'x64' | 'universal'
+export type WindowsInstallerKind = 'exe' | 'msi'
 
 const allowedHosts = new Set(['cdn.wristo.io', 'cdn.wristo.cn'])
 const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
@@ -19,6 +20,7 @@ export interface LauncherManifestLoadResult {
   releases: Record<LauncherPlatform, LauncherRelease>
   macReleases: Partial<Record<MacLauncherArch, LauncherRelease>>
   macArchitectures: MacLauncherArch[]
+  windowsInstallers: Partial<Record<WindowsInstallerKind, LauncherRelease>>
   source: 'manifest' | 'fallback'
 }
 
@@ -26,10 +28,11 @@ const fallbackResult = (fallback: Record<LauncherPlatform, LauncherRelease>): La
   releases: fallback,
   macReleases: {},
   macArchitectures: [],
+  windowsInstallers: {},
   source: 'fallback'
 })
 
-const safeCdnUrl = (value: unknown, expectedFilename: string): string => {
+const safeCdnUrl = (value: unknown, expectedFilenames: string | string[]): string => {
   if (typeof value !== 'string') throw new Error('artifact URL must be a string')
   if (/^https:\/\/[^/]+:\d+(?:\/|$)/.test(value)) throw new Error('artifact URL must not include an explicit port')
   const parsed = new URL(value)
@@ -37,7 +40,8 @@ const safeCdnUrl = (value: unknown, expectedFilename: string): string => {
     throw new Error('artifact URL is not an allowed Wristo CDN URL')
   }
   const filename = decodeURIComponent(parsed.pathname.split('/').pop() || '')
-  if (filename !== expectedFilename) throw new Error(`artifact filename mismatch: ${filename}`)
+  const allowedFilenames = Array.isArray(expectedFilenames) ? expectedFilenames : [expectedFilenames]
+  if (!allowedFilenames.includes(filename)) throw new Error(`artifact filename mismatch: ${filename}`)
   return parsed.toString()
 }
 
@@ -56,10 +60,10 @@ const requireRecord = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>
 }
 
-const parseArtifact = (value: unknown, expectedFilename: string): ArtifactRecord => {
+const parseArtifact = (value: unknown, expectedFilenames: string | string[]): ArtifactRecord => {
   const record = requireRecord(value)
   return {
-    url: safeCdnUrl(record.url, expectedFilename),
+    url: safeCdnUrl(record.url, expectedFilenames),
     sha256: requireHash(record.sha256),
     size: requireSize(record.size)
   }
@@ -87,8 +91,11 @@ const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, Launch
   }
   const parsedMac: Partial<Record<MacLauncherArch, LauncherRelease>> = {}
   for (const arch of availableMacArchitectures) {
-    const filename = `Wristo_Connect_IQ_Launcher_${version}_macos_${arch}.dmg`
-    const artifact = parseArtifact(mac[arch], filename)
+    const filenames = [
+      `Wristo_PRG_Installer_${version}_macos_${arch}.dmg`,
+      `Wristo_Connect_IQ_Launcher_${version}_macos_${arch}.dmg`
+    ]
+    const artifact = parseArtifact(mac[arch], filenames)
     parsedMac[arch] = {
       platform: 'mac',
       architecture: arch,
@@ -102,26 +109,38 @@ const parseManifest = (value: unknown, fallback: Record<LauncherPlatform, Launch
   const windowsRoot = requireRecord(platforms.windows)
   if (Object.keys(windowsRoot).length !== 1 || !('x64' in windowsRoot)) throw new Error('invalid Windows architecture set')
   const windows = requireRecord(windowsRoot.x64)
-  const nsis = parseArtifact(windows, `Wristo_Connect_IQ_Launcher_${version}_windows_x64_setup.exe`)
-  safeCdnUrl(windows.msiUrl, `Wristo_Connect_IQ_Launcher_${version}_windows_x64.msi`)
-  requireHash(windows.msiSha256)
-  requireSize(windows.msiSize)
+  const nsis = parseArtifact(windows, [
+    `Wristo_PRG_Installer_${version}_windows_x64_setup.exe`,
+    `Wristo_Connect_IQ_Launcher_${version}_windows_x64_setup.exe`
+  ])
+  const msi = parseArtifact(
+    { url: windows.msiUrl, sha256: windows.msiSha256, size: windows.msiSize },
+    [
+      `Wristo_PRG_Installer_${version}_windows_x64.msi`,
+      `Wristo_Connect_IQ_Launcher_${version}_windows_x64.msi`
+    ]
+  )
   const preferredMacArch = availableMacArchitectures.includes('universal') ? 'universal' : availableMacArchitectures[0]
+  const windowsRelease = (artifact: ArtifactRecord): LauncherRelease => ({
+    platform: 'windows',
+    architecture: 'x64' as LauncherArchitecture,
+    available: true,
+    url: artifact.url,
+    version,
+    sha256: artifact.sha256,
+    requirements: fallback.windows.requirements
+  })
   return {
     releases: {
       mac: parsedMac[preferredMacArch]!,
-      windows: {
-        platform: 'windows',
-        architecture: 'x64' as LauncherArchitecture,
-        available: true,
-        url: nsis.url,
-        version,
-        sha256: nsis.sha256,
-        requirements: fallback.windows.requirements
-      }
+      windows: windowsRelease(nsis)
     },
     macReleases: parsedMac,
     macArchitectures: availableMacArchitectures,
+    windowsInstallers: {
+      exe: windowsRelease(nsis),
+      msi: windowsRelease(msi)
+    },
     source: 'manifest'
   }
 }

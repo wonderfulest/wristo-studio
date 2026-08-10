@@ -12,11 +12,11 @@
 
     <el-tabs v-model="activePlatform" class="platform-tabs">
       <el-tab-pane v-for="platform in platforms" :key="platform" :name="platform" :label="platformLabel(platform)">
-        <section class="download-card">
+        <section v-if="platform === 'mac'" class="download-card">
           <div>
             <h2>{{ platformLabel(platform) }}</h2>
             <select
-              v-if="platform === 'mac' && macArchitectures.length > 1"
+              v-if="macArchitectures.length > 1"
               v-model="activeMacArchitecture"
               class="architecture-select"
               data-test="launcher-mac-architecture"
@@ -52,6 +52,44 @@
           <el-button v-else :data-test="`launcher-download-${platform}-unavailable`" size="large" disabled>
             {{ t('launcherGuide.downloadUnavailable') }}
           </el-button>
+        </section>
+        <section v-else class="download-card windows-download-card">
+          <div class="windows-downloads">
+            <h2>{{ platformLabel(platform) }}</h2>
+            <article v-for="kind in hasWindowsInstaller ? windowsInstallerKinds : []" :key="kind" class="installer-option">
+              <div class="installer-details">
+                <div class="installer-heading">
+                  <h3>{{ t(kind === 'exe' ? 'launcherGuide.windowsExe' : 'launcherGuide.windowsMsi') }}</h3>
+                  <span v-if="kind === 'exe'" class="recommended">{{ t('launcherGuide.recommended') }}</span>
+                </div>
+                <p>{{ t(kind === 'exe' ? 'launcherGuide.windowsExeDescription' : 'launcherGuide.windowsMsiDescription') }}</p>
+                <dl v-if="windowsInstallerFor(kind).available" class="release-meta installer-meta">
+                  <template v-if="windowsInstallerFor(kind).version">
+                    <dt>{{ t('launcherGuide.version') }}</dt>
+                    <dd>{{ windowsInstallerFor(kind).version }}</dd>
+                  </template>
+                  <template v-if="windowsInstallerFor(kind).sha256">
+                    <dt>{{ t('launcherGuide.sha256') }}</dt>
+                    <dd :data-test="`launcher-windows-${kind}-sha256`" class="checksum">{{ windowsInstallerFor(kind).sha256 }}</dd>
+                  </template>
+                </dl>
+              </div>
+              <a
+                v-if="windowsInstallerFor(kind).available && windowsInstallerFor(kind).url"
+                :data-test="`launcher-download-windows-${kind}`"
+                :href="windowsInstallerFor(kind).url!"
+                rel="noopener noreferrer"
+              >
+                <el-button :type="kind === 'exe' ? 'primary' : 'default'" size="large">{{ t('launcherGuide.download') }}</el-button>
+              </a>
+              <el-button v-else :data-test="`launcher-download-windows-${kind}-unavailable`" size="large" disabled>
+                {{ t('launcherGuide.downloadUnavailable') }}
+              </el-button>
+            </article>
+            <el-button v-if="!hasWindowsInstaller" data-test="launcher-download-windows-unavailable" size="large" disabled>
+              {{ t('launcherGuide.downloadUnavailable') }}
+            </el-button>
+          </div>
         </section>
       </el-tab-pane>
     </el-tabs>
@@ -106,16 +144,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from '@/i18n'
 import { detectLauncherPlatform, getLauncherReleases, type LauncherPlatform, type LauncherRelease } from '@/features/connectIqLauncher/config'
-import { loadLauncherReleases, type MacLauncherArch } from '@/features/connectIqLauncher/manifest'
+import { loadLauncherReleases, type MacLauncherArch, type WindowsInstallerKind } from '@/features/connectIqLauncher/manifest'
 
 const { t } = useI18n()
 const platforms: LauncherPlatform[] = ['mac', 'windows']
 const releases = ref(getLauncherReleases())
 const macReleases = ref<Partial<Record<MacLauncherArch, LauncherRelease>>>({})
 const macArchitectures = ref<MacLauncherArch[]>([])
+const windowsInstallers = ref<Partial<Record<WindowsInstallerKind, LauncherRelease>>>({})
+const windowsInstallerKinds: WindowsInstallerKind[] = ['exe', 'msi']
 const activeMacArchitecture = ref<MacLauncherArch | null>(null)
 const activePlatform = ref<LauncherPlatform>(detectLauncherPlatform(navigator.platform))
 const platformLabel = (platform: LauncherPlatform) => t(platform === 'mac' ? 'launcherGuide.platformMac' : 'launcherGuide.platformWindows')
@@ -125,12 +165,19 @@ const releaseFor = (platform: LauncherPlatform): LauncherRelease => {
   if (!activeMacArchitecture.value) return { ...releases.value.mac, available: false, url: null }
   return macReleases.value[activeMacArchitecture.value] ?? { ...releases.value.mac, available: false, url: null }
 }
+const windowsInstallerFor = (kind: WindowsInstallerKind): LauncherRelease => {
+  if (windowsInstallers.value[kind]) return windowsInstallers.value[kind]!
+  if (kind === 'exe') return releases.value.windows
+  return { ...releases.value.windows, available: false, url: null, sha256: null }
+}
+const hasWindowsInstaller = computed(() => windowsInstallerKinds.some((kind) => windowsInstallerFor(kind).available))
 
 onMounted(async () => {
   const result = await loadLauncherReleases({ fallback: releases.value })
   releases.value = result.releases
   macReleases.value = result.macReleases
   macArchitectures.value = result.macArchitectures
+  windowsInstallers.value = result.windowsInstallers
   activeMacArchitecture.value = result.macArchitectures.length === 1 ? result.macArchitectures[0] : null
 })
 const steps = [
@@ -223,6 +270,47 @@ h1 {
 .download-card h2 {
   margin: 0 0 16px;
   font-size: 25px;
+}
+.windows-download-card {
+  display: block;
+}
+.windows-downloads {
+  width: 100%;
+}
+.installer-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 0;
+  border-top: 1px solid #e2e8f0;
+}
+.installer-details {
+  min-width: 0;
+}
+.installer-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.installer-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.recommended {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.installer-details p {
+  margin: 6px 0 12px;
+  color: #64748b;
+}
+.installer-meta {
+  font-size: 13px;
 }
 .release-meta {
   display: grid;
@@ -336,6 +424,10 @@ footer {
   .download-card a,
   .download-card :deep(.el-button) {
     width: 100%;
+  }
+  .installer-option {
+    align-items: stretch;
+    flex-direction: column;
   }
   .release-meta {
     grid-template-columns: 1fr;

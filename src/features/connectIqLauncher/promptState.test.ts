@@ -11,7 +11,7 @@ const createMemoryStorage = () => {
   }
 }
 
-describe('Connect IQ Launcher prompt state', () => {
+describe('PRG Installer prompt state', () => {
   it('shows the build hint only once across controllers sharing storage', () => {
     const storage = createMemoryStorage()
     const first = createLauncherPromptState(storage)

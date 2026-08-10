@@ -12,9 +12,9 @@ vi.mock('@/features/connectIqLauncher/config', () => ({
       platform: 'mac',
       architecture: 'arm64',
       available: true,
-      url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg',
+      url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg',
       version: '0.1.0',
-      sha256: '3eeb9c35afba5e722aab8fa9ab54088e4541d04af79d65247d6c05a33714f94a',
+      sha256: 'e9a3651764be5cda7ea1dba706400864915c35387fd831f2456660aaa5977ff4',
       requirements: 'macOS 11 or later · Apple Silicon'
     },
     windows: {
@@ -49,11 +49,12 @@ beforeEach(() => {
     releases: fallback,
     macReleases: {},
     macArchitectures: [],
+    windowsInstallers: {},
     source: 'fallback'
   }))
 })
 
-describe('Connect IQ Launcher guide', () => {
+describe('PRG Installer guide', () => {
   it('shows both platforms and the shared five-step workflow', () => {
     const page = wrapper()
     expect(page.text()).toContain('launcherGuide.platformMac')
@@ -64,7 +65,7 @@ describe('Connect IQ Launcher guide', () => {
   it('shows a safe download link or an unavailable action per release', () => {
     const page = wrapper()
     expect(page.get('[data-test="launcher-download-mac"]').attributes('href')).toBe(
-      'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg'
+      'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
     )
     expect(page.get('[data-test="launcher-download-mac"]').attributes('rel')).toBe('noopener noreferrer')
     expect(page.get('[data-test="launcher-mac-architecture-label"]').text()).toBe('Apple Silicon (arm64)')
@@ -82,6 +83,10 @@ describe('Connect IQ Launcher guide', () => {
         x64: { platform: 'mac', architecture: 'x64', available: true, url: 'https://cdn.wristo.io/intel.dmg', version: '2.0.0', sha256: 'intel', requirements: 'macOS 11+' }
       },
       macArchitectures: ['arm64', 'x64'],
+      windowsInstallers: {
+        exe: { platform: 'windows', architecture: 'x64', available: true, url: 'https://cdn.wristo.io/setup.exe', version: '2.0.0', sha256: 'exe-hash', requirements: 'Windows 10+' },
+        msi: { platform: 'windows', architecture: 'x64', available: true, url: 'https://cdn.wristo.io/launcher.msi', version: '2.0.0', sha256: 'msi-hash', requirements: 'Windows 10+' }
+      },
       source: 'manifest'
     })
     const page = wrapper()
@@ -90,6 +95,9 @@ describe('Connect IQ Launcher guide', () => {
     expect(page.get('[data-test="launcher-download-mac-unavailable"]').attributes('disabled')).toBeDefined()
     await page.get('[data-test="launcher-mac-architecture"]').setValue('arm64')
     expect(page.get('[data-test="launcher-download-mac"]').attributes('href')).toBe('https://cdn.wristo.io/arm.dmg')
-    expect(page.get('[data-test="launcher-download-windows"]').attributes('href')).toBe('https://cdn.wristo.io/setup.exe')
+    expect(page.get('[data-test="launcher-download-windows-exe"]').attributes('href')).toBe('https://cdn.wristo.io/setup.exe')
+    expect(page.get('[data-test="launcher-download-windows-msi"]').attributes('href')).toBe('https://cdn.wristo.io/launcher.msi')
+    expect(page.get('[data-test="launcher-windows-exe-sha256"]').text()).toBe('exe-hash')
+    expect(page.get('[data-test="launcher-windows-msi-sha256"]').text()).toBe('msi-hash')
   })
 })

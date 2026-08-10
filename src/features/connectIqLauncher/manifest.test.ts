@@ -14,17 +14,17 @@ const manifest = () => ({
   platforms: {
     mac: {
       arm64: {
-        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg',
+        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg',
         sha256: hash,
         size: 10
       }
     },
     windows: {
       x64: {
-        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_windows_x64_setup.exe',
+        url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe',
         sha256: hash,
         size: 20,
-        msiUrl: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_windows_x64.msi',
+        msiUrl: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi',
         msiSha256: hash,
         msiSize: 30
       }
@@ -47,7 +47,7 @@ describe('Launcher release manifest', () => {
         mac: {
           architecture: 'arm64',
           available: true,
-          url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_Connect_IQ_Launcher_0.1.0_macos_arm64.dmg'
+          url: 'https://cdn.wristo.io/launcher/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
         },
         windows: { available: false, url: null }
       }
@@ -59,6 +59,10 @@ describe('Launcher release manifest', () => {
     expect(result.source).toBe('manifest')
     expect(result.releases.mac).toMatchObject({ version: '0.1.0', architecture: 'arm64', sha256: hash })
     expect(result.releases.windows.url).toMatch(/_setup\.exe$/)
+    expect(result.windowsInstallers).toEqual({
+      exe: expect.objectContaining({ url: expect.stringMatching(/_setup\.exe$/), sha256: hash }),
+      msi: expect.objectContaining({ url: expect.stringMatching(/\.msi$/), sha256: hash })
+    })
     expect(result.releases.mac.requirements).toBe('macOS 11+')
     expect(result.macArchitectures).toEqual(['arm64'])
   })
@@ -72,12 +76,28 @@ describe('Launcher release manifest', () => {
     ['short hash', (value: any) => { value.platforms.mac.arm64.sha256 = 'abc' }],
     ['uppercase hash', (value: any) => { value.platforms.mac.arm64.sha256 = 'A'.repeat(64) }],
     ['zero size', (value: any) => { value.platforms.mac.arm64.size = 0 }],
+    ['invalid MSI URL', (value: any) => { value.platforms.windows.x64.msiUrl = value.platforms.windows.x64.msiUrl.replace('https:', 'http:') }],
+    ['invalid MSI hash', (value: any) => { value.platforms.windows.x64.msiSha256 = 'abc' }],
+    ['invalid MSI size', (value: any) => { value.platforms.windows.x64.msiSize = 0 }],
     ['missing Windows', (value: any) => { delete value.platforms.windows }]
   ])('falls back for %s', async (_label, mutate) => {
     const value = manifest()
     mutate(value)
     const result = await loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
     expect(result).toMatchObject({ source: 'fallback', releases: fallback })
+  })
+
+  it('accepts the published 0.1.0 legacy Launcher artifact names', async () => {
+    const value = manifest()
+    value.platforms.mac.arm64.url = value.platforms.mac.arm64.url.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
+    value.platforms.windows.x64.url = value.platforms.windows.x64.url.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
+    value.platforms.windows.x64.msiUrl = value.platforms.windows.x64.msiUrl.replace('Wristo_PRG_Installer', 'Wristo_Connect_IQ_Launcher')
+
+    const result = await loadLauncherReleases({ fallback, fetchFn: vi.fn(async () => response(value)) as typeof fetch })
+
+    expect(result.source).toBe('manifest')
+    expect(result.windowsInstallers.exe?.url).toContain('Wristo_Connect_IQ_Launcher')
+    expect(result.windowsInstallers.msi?.url).toContain('Wristo_Connect_IQ_Launcher')
   })
 
   it('falls back for request, response, and JSON failures', async () => {
