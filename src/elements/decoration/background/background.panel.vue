@@ -32,6 +32,7 @@ import type { FabricElement } from '@/types/element'
 import * as elementManager from '@/engine/managers/elementManager'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useBaseStore } from '@/stores/baseStore'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import ThemeRuleSettings from '@/components/panels/settings/ThemeRuleSettings.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
@@ -39,6 +40,7 @@ import { useI18n } from '@/i18n'
 import { DEFAULT_BACKGROUND_COLOR, isDefaultBackgroundUrl } from './background.constants'
 
 const baseStore = useBaseStore()
+const visualThemeStore = useVisualThemeStore()
 const { t } = useI18n()
 
 const props = defineProps<{
@@ -92,6 +94,10 @@ const currentColor = computed(() => {
 const handleImageIdChange = (id: any) => {
   if (!id) {
     applyUpdate({ imageId: null, imageUrl: '' })
+    const defaultThemeId = visualThemeStore.config?.defaultThemeId
+    if (defaultThemeId) {
+      visualThemeStore.updateAsset(defaultThemeId, 'background', null)
+    }
   }
 }
 
@@ -100,6 +106,13 @@ const handleImageUploaded = (img: any) => {
   const url =
     img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
   applyUpdate({ imageUrl: url || '', imageId: img.id || null })
+  const defaultThemeId = visualThemeStore.config?.defaultThemeId
+  if (defaultThemeId) {
+    visualThemeStore.updateAsset(defaultThemeId, 'background', {
+      assetId: img.id || null,
+      imageUrl: url || null,
+    })
+  }
 }
 
 </script>
