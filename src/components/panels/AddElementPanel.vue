@@ -3,7 +3,7 @@
     <div class="panel-content" :class="{ collapsed: isCollapsed }">
       <div v-for="(category, categoryKey) in elementConfigs" :key="categoryKey" class="element-section">
         <div class="section-header">
-          <h2>{{ formatCategory(categoryKey) }}</h2>
+          <h2>{{ t(`addElement.category.${categoryKey}`) }}</h2>
           <div class="header-line"></div>
         </div>
         <div class="element-grid">
@@ -21,7 +21,7 @@
                 :icon="config.icon as string"
                 class="element-icon"
               />
-              <span class="element-label">{{ config.label }}</span>
+              <span class="element-label">{{ t(`addElement.type.${type}`) }}</span>
             </button>
           </template>
         </div>
@@ -46,6 +46,7 @@ import { createQuickDialProperty, createQuickMetricProperty, getUnusedMetricProp
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
+import { useI18n } from '@/i18n'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -53,14 +54,10 @@ const isCollapsed = ref(false)
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
+const { t } = useI18n()
 const emit = defineEmits<{
   (e: 'switch-to-layer'): void
 }>()
-
-const formatCategory = (key: string): string => {
-  if (!key) return ''
-  return key.charAt(0).toUpperCase() + key.slice(1)
-}
 
 const loadElementFont = async (config: AnyElementConfig) => {
   if (config.fontFamily) {

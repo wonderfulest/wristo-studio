@@ -10,7 +10,25 @@ export interface StyleTagSelectionResult {
 
 export const filterEnabledStyleTags = <T extends TagFilterFields>(
   items: readonly T[] | null | undefined,
-): T[] => items?.filter(item => item.tagGroup === 'style' && item.status === 1) ?? []
+): T[] => items?.filter(item => typeof item.tagGroup === 'string' && item.status === 1) ?? []
+
+export interface StyleTagGroup<T> {
+  name: string
+  tags: T[]
+}
+
+export const groupStyleTags = <T extends TagFilterFields>(items: readonly T[]): StyleTagGroup<T>[] => {
+  const groups = new Map<string, T[]>()
+
+  for (const item of items) {
+    if (typeof item.tagGroup !== 'string') continue
+    const tags = groups.get(item.tagGroup) ?? []
+    tags.push(item)
+    groups.set(item.tagGroup, tags)
+  }
+
+  return Array.from(groups, ([name, tags]) => ({ name, tags }))
+}
 
 const uniqueNumericIds = (values: readonly unknown[]): number[] => {
   const ids: number[] = []

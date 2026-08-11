@@ -9,6 +9,7 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useMessageStore } from '@/stores/message'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useUserStore } from '@/stores/user'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { decodeElementConfig } from '@/engine/registry/elementRegistry'
@@ -17,6 +18,7 @@ import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { clearRestoredDesignAssetUrls, readWrtDesignPackage, restoreDesignAssetBundle, WrtDesignPackageError } from '@/engine/services/designAssetBundleService'
 import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'
+import { normalizeDataPropertyConfig } from '@/engine/services/dataPropertyConfig'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { scaleElementConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
@@ -49,6 +51,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const layerStore = useLayerStore()
   const messageStore = useMessageStore()
   const propertiesStore = usePropertiesStore()
+  const dataCatalogStore = useDataCatalogStore()
   const userStore = useUserStore()
   const visualThemeStore = useVisualThemeStore()
   const canvasRef = options.canvasRef
@@ -307,7 +310,14 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     }
 
     if (loadConfig.properties) {
-      propertiesStore.loadProperties(loadConfig.properties)
+      const normalizedDataProperties = normalizeDataPropertyConfig(loadConfig, dataCatalogStore.options)
+      propertiesStore.loadDataPropertyConfig(
+        normalizedDataProperties.properties,
+        normalizedDataProperties.dataOptions,
+      )
+      if (normalizedDataProperties.issues.length > 0) {
+        console.warn('Design data property normalization issues:', normalizedDataProperties.issues)
+      }
     }
     const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map((element) => {
       const record = element as unknown as Record<string, unknown>

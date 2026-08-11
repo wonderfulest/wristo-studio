@@ -1,13 +1,17 @@
 <template>
   <div ref="pickerRef" class="font-picker">
     <!-- Current selected font preview -->
-    <div class="font-preview" @click="togglePanel">
+    <div v-if="usesBuiltInChineseFont" class="built-in-chinese-font">
+      <span>{{ t('font.chineseSystemFont') }}</span>
+      <strong>{{ GARMIN_SYSTEM_PREVIEW_FONT }}</strong>
+    </div>
+    <div v-else class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
       <FontPreviewText :font-family="selectedFontFamily" :type="selectedFontType" :language="selectedFontLanguage" />
     </div>
 
     <!-- Font selection panel -->
-    <Teleport to="body">
+    <Teleport v-if="!usesBuiltInChineseFont" to="body">
       <div v-if="isOpen" ref="panelRef" class="font-panel" :style="panelStyle" @scroll.passive="onPanelScroll">
         <div class="font-panel-toolbar">
           <button
@@ -90,7 +94,7 @@
       </div>
     </Teleport>
     <!-- Add font dialog -->
-    <FontImportDialog v-if="canUsePremiumAssets && type !== FontTypes.ICON_FONT" v-model:visible="dialogVisible" @selected="onFontUploaded" />
+    <FontImportDialog v-if="!usesBuiltInChineseFont && canUsePremiumAssets && type !== FontTypes.ICON_FONT" v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
     <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
 
@@ -182,6 +186,7 @@ import type { DesignFontVO } from '@/types/font'
 import { useI18n } from '@/i18n'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import emitter from '@/utils/eventBus'
+import { GARMIN_SYSTEM_PREVIEW_FONT } from '@/utils/contentFontFallback'
 
 const props = defineProps({
   modelValue: {
@@ -283,6 +288,7 @@ const selectedFontOption = computed(() => {
 })
 const selectedFontLanguage = computed(() => selectedFontOption.value?.language)
 const selectedFontType = computed(() => selectedFontOption.value?.type || props.type)
+const usesBuiltInChineseFont = computed(() => props.dateContentLanguage === 'zh')
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 const includeAllUsers = computed(() => canUsePremiumAssets.value === true && fontScope.value === 'all')
 const fontScopeOptions = computed(() => [
@@ -346,7 +352,7 @@ const onPanelScroll = () => {
   if (!panel) return
   const threshold = 120
   if (panel.scrollTop + panel.clientHeight + threshold >= panel.scrollHeight) {
-    designerFontListRef.value?.loadNextPage()
+    designerFontListRef.value?.loadNextPage?.()
   }
 }
 
@@ -367,11 +373,11 @@ const locateCurrentFont = async () => {
   await nextTick()
   if (scrollActiveFontIntoView()) return
 
-  const loaded = await designerFontListRef.value?.loadUntilFont(props.modelValue)
+  const loaded = await designerFontListRef.value?.loadUntilFont?.(props.modelValue)
   if (!loaded && canUsePremiumAssets.value && fontScope.value === 'mine') {
     fontScope.value = 'all'
     await nextTick()
-    const loadedInAll = await designerFontListRef.value?.loadUntilFont(props.modelValue)
+    const loadedInAll = await designerFontListRef.value?.loadUntilFont?.(props.modelValue)
     if (!loadedInAll) return
   } else if (!loaded) {
     return

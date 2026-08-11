@@ -1,4 +1,4 @@
-import type { PropertiesMap } from '@/types/properties'
+import type { DataOptionsMap, PropertiesMap } from '@/types/properties'
 import type { AnyElementConfig } from '@/types/elements'
 import type { WatchfaceLocalizationConfig } from '@/types/localization'
 import type { VisualThemesConfig } from '@/types/visualTheme'
@@ -6,6 +6,7 @@ import type { VisualThemesConfig } from '@/types/visualTheme'
 export interface RuntimeDesignConfig {
   version: string
   properties: PropertiesMap
+  dataOptions?: DataOptionsMap
   designId: string
   name: string
   textCase: number

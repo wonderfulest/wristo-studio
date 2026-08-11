@@ -35,6 +35,8 @@
             <el-input v-model="formData.title" :placeholder="t('property.goalSelect')" />
           </el-form-item>
 
+          <LocalizedPropertyTitleField v-model="formData.titleCn" />
+
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -164,6 +166,8 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
+import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 
@@ -174,11 +178,12 @@ const isEdit = ref(false)
 const activeOptions = ref([])
 // 获取目标数据项作为选项
 const goalOptions = getDataTypePropertyOptions().filter(option => option.category === 'goal')
-const cloneGoalOptions = () => JSON.parse(JSON.stringify(goalOptions))
+const cloneGoalOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(goalOptions)))
 const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
 
 const formData = reactive({
   title: '',
+  titleCn: '',
   propertyKey: '',
   type: 'goal',
   options: cloneGoalOptions(),
@@ -194,6 +199,7 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
+      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: cloneGoalOptions(),
@@ -205,6 +211,7 @@ const initFormData = (data = null) => {
     const defaults = getNextMetricPropertyDefaults('goal')
     Object.assign(formData, {
       title: defaults.title,
+      titleCn: '',
       propertyKey: defaults.key,
       type: 'goal',
       options: cloneGoalOptions(),
@@ -226,7 +233,8 @@ const handleConfirm = async () => {
       type: 'goal',
       key: formData.propertyKey,
       title: formData.title,
-      options: formData.options,
+      titleCn: formData.titleCn.trim() || undefined,
+      options: withSimplifiedChineseOptionLabels(formData.options),
       defaultValue: formData.value,
       prompt: formData.prompt,
       errorMessage: formData.errorMessage,

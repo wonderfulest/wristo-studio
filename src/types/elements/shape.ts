@@ -1,7 +1,7 @@
 import type { BaseElementConfig } from './base'
 
 export interface ShapeElementConfig extends BaseElementConfig {
-  eleType: 'rectangle' | 'circle' | 'line' | 'polygon'
+  eleType: 'rectangle' | 'circle' | 'line' | 'polygon' | 'triangle'
   fill?: string
   stroke: string
   strokeWidth: number
@@ -40,6 +40,13 @@ export interface PolygonElementConfig extends ShapeElementConfig, ShapeGradientC
   width: number
   height: number
   polygonPoints: Array<{ x: number; y: number }>
+}
+
+export interface TriangleElementConfig extends ShapeElementConfig, ShapeGradientConfig {
+  eleType: 'triangle'
+  width: number
+  height: number
+  rotation?: number
 }
 
 export interface LineElementConfig extends ShapeElementConfig {

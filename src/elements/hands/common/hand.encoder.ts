@@ -9,8 +9,8 @@ export function encodeHand(element: FabricElement): HandElementConfig {
   const config: HandElementConfig = {
     eleType: (hand.eleType as any) || 'hourHand',
     id: String(hand.id ?? ''),
-    left: Number(hand.left ?? 0),
-    top: Number(hand.top ?? 0),
+    left: Number(hand.centerX ?? hand.left ?? 0),
+    top: Number(hand.centerY ?? hand.top ?? 0),
     originX: (hand.originX as any) ?? 'center',
     originY: (hand.originY as any) ?? 'center',
     angle: Number(hand.angle ?? 0),
@@ -24,6 +24,11 @@ export function encodeHand(element: FabricElement): HandElementConfig {
     targetHeight: Number(hand.targetHeight ?? hand.height ?? 0),
     moveDy: Number(hand.moveDy ?? 0),
     height: Number(hand.height ?? 0),
+    centerX: Number(hand.centerX ?? hand.left ?? 0),
+    centerY: Number(hand.centerY ?? hand.top ?? 0),
+    pivotOffsetX: Number(hand.pivotOffsetX ?? 0),
+    pivotOffsetY: Number(hand.pivotOffsetY ?? 0),
+    scalePercent: Number(hand.scalePercent ?? 100),
   }
 
   return config
@@ -40,5 +45,10 @@ export function decodeHand(config: HandElementConfig): Partial<FabricElement> {
     angle: config.angle,
     imageUrl: config.imageUrl ?? undefined,
     assetId: config.assetId ?? undefined,
+    centerX: config.centerX ?? config.left,
+    centerY: config.centerY ?? config.top,
+    pivotOffsetX: config.pivotOffsetX ?? 0,
+    pivotOffsetY: config.pivotOffsetY ?? 0,
+    scalePercent: config.scalePercent ?? 100,
   } as Partial<FabricElement>
 }

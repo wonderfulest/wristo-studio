@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { filterEnabledStyleTags, limitStyleTagSelection } from './styleTagSelection'
+import { filterEnabledStyleTags, groupStyleTags, limitStyleTagSelection } from './styleTagSelection'
 
 describe('filterEnabledStyleTags', () => {
-  it('keeps enabled style tags in API order', () => {
+  it('keeps enabled tags from every group in API order', () => {
     const items = [
       { id: 4, tagGroup: 'style', status: 1 },
       { id: 2, tagGroup: 'feature', status: 1 },
@@ -10,12 +10,29 @@ describe('filterEnabledStyleTags', () => {
       { id: 1, tagGroup: 'style', status: 1 },
     ]
 
-    expect(filterEnabledStyleTags(items)).toEqual([items[0], items[3]])
+    expect(filterEnabledStyleTags(items)).toEqual([items[0], items[1], items[3]])
   })
 
   it('returns an empty list for nullish input', () => {
     expect(filterEnabledStyleTags(null)).toEqual([])
     expect(filterEnabledStyleTags(undefined)).toEqual([])
+  })
+})
+
+describe('groupStyleTags', () => {
+  it('groups tags by tagGroup while preserving group and tag order', () => {
+    const items = [
+      { id: 1, tagGroup: 'style', status: 1 },
+      { id: 2, tagGroup: 'function', status: 1 },
+      { id: 3, tagGroup: 'style', status: 1 },
+      { id: 4, tagGroup: 'scene', status: 1 },
+    ]
+
+    expect(groupStyleTags(items)).toEqual([
+      { name: 'style', tags: [items[0], items[2]] },
+      { name: 'function', tags: [items[1]] },
+      { name: 'scene', tags: [items[3]] },
+    ])
   })
 })
 

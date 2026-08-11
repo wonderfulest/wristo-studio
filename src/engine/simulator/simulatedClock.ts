@@ -2,6 +2,7 @@ type ClockSnapshot = {
   currentTime: Date
   speedMultiplier: number
   offsetMs: number
+  isRunning: boolean
 }
 
 let anchorRealMs = Date.now()
@@ -37,6 +38,17 @@ export function setSimulatedSpeed(nextSpeedMultiplier: number): ClockSnapshot {
   return getSimulatedClockSnapshot()
 }
 
+export function pauseSimulatedClock(): ClockSnapshot {
+  return setSimulatedSpeed(0)
+}
+
+export function resumeSimulatedClock(nextSpeedMultiplier: number): ClockSnapshot {
+  const safeMultiplier = Number.isFinite(nextSpeedMultiplier) && nextSpeedMultiplier > 0
+    ? nextSpeedMultiplier
+    : 1
+  return setSimulatedSpeed(safeMultiplier)
+}
+
 export function resetSimulatedClock(): ClockSnapshot {
   speedMultiplier = 1
   setAnchor(Date.now())
@@ -49,5 +61,6 @@ export function getSimulatedClockSnapshot(): ClockSnapshot {
     currentTime,
     speedMultiplier,
     offsetMs: currentTime.getTime() - Date.now(),
+    isRunning: speedMultiplier > 0,
   }
 }

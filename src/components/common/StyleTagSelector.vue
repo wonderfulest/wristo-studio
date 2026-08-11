@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
 import type { ProductTag } from '@/types/api/productTag'
-import { limitStyleTagSelection } from './styleTagSelection'
+import { groupStyleTags, limitStyleTagSelection } from './styleTagSelection'
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const tagGroups = computed(() => groupStyleTags(props.tags))
 
 const handleChange = (next: number[]) => {
   const result = limitStyleTagSelection(props.tagIds, next, props.limit)
@@ -38,7 +40,13 @@ const handleChange = (next: number[]) => {
 <template>
   <el-form-item :label="t('styleTags.label')" prop="tagIds">
     <el-select :model-value="tagIds" multiple filterable class="style-tag-select" :placeholder="t('styleTags.placeholder')" :loading="loading" :disabled="disabled" @change="handleChange">
-      <el-option v-for="tag in tags" :key="tag.id" :value="tag.id" :label="tag.name" />
+      <el-option-group
+        v-for="group in tagGroups"
+        :key="group.name"
+        :label="t(`styleTags.group.${group.name}`)"
+      >
+        <el-option v-for="tag in group.tags" :key="tag.id" :value="tag.id" :label="tag.name" />
+      </el-option-group>
     </el-select>
     <div class="style-tag-tip">{{ t('styleTags.tip', { limit }) }}</div>
   </el-form-item>

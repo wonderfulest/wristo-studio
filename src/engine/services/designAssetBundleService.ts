@@ -203,6 +203,7 @@ export const clearRestoredDesignAssetUrls = (): void => {
 
 const ASSET_URL_FIELDS = new Set([
   'imageUrl',
+  'imageSvg',
   'amoledImageUrl',
   'weatherImageUrl',
   'moonImageUrl',

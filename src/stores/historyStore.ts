@@ -243,6 +243,7 @@ export const useHistoryStore = defineStore('history', () => {
       const propertiesStore = usePropertiesStore()
       return JSON.stringify({
         properties: propertiesStore.allProperties,
+        dataOptions: propertiesStore.dataOptions,
         textCase: propertiesStore.textCase,
         bitmapMode: propertiesStore.bitmapMode,
         dataNumberFormat: propertiesStore.dataNumberFormat,
@@ -323,7 +324,7 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       const parsed = JSON.parse(snap.propertiesJSON)
       const propertiesStore = usePropertiesStore()
-      propertiesStore.loadProperties(parsed?.properties || {})
+      propertiesStore.loadDataPropertyConfig(parsed?.properties || {}, parsed?.dataOptions || {})
       const textCase = Number(parsed?.textCase ?? 0)
       propertiesStore.textCase = [0, 1, 2, 3].includes(textCase) ? (textCase === 3 ? 0 : textCase) : 0
       propertiesStore.bitmapMode = typeof parsed?.bitmapMode === 'boolean' ? parsed.bitmapMode : true

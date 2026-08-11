@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
+import type { DataOptionsMap, PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
 import type { ThemeMode } from '@/types/visualTheme'
 import type { DataTypeOption } from '@/types/dataCatalog'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
@@ -9,6 +9,7 @@ import type { DialProgressMode } from '@/types/settings'
 export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
+    dataOptions: {} as DataOptionsMap,
     textCase: 0 as number,
     bitmapMode: true as boolean,
     dataNumberFormat: DATA_NUMBER_FORMAT_AUTO as number,
@@ -16,69 +17,13 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     lastSelectedColor: '' as string,
     defaultColorOptions: [
       { label: 'White', value: '0xFFFFFF' },
-      { label: 'Dark Gray', value: '0x555555' },
-      { label: 'Light Gray', value: '0xAAAAAA' },
-      { label: 'Yellow', value: '0xFFFF00' },
-      { label: 'Lime', value: '0xAAFF00' },
-      { label: 'Bright Green', value: '0x55FF00' },
-      { label: 'Green', value: '0x00FF00' },
-      { label: 'Spring Green', value: '0x00FF55' },
-      { label: 'Bright Aquamarine', value: '0x00FFAA' },
-      { label: 'Cyan', value: '0x00FFFF' },
-      { label: 'Azure', value: '0x00AAFF' },
-      { label: 'Denim Blue', value: '0x0055FF' },
-      { label: 'Blue', value: '0x0000FF' },
-      { label: 'Electric Indigo', value: '0x5500FF' },
-      { label: 'Violet', value: '0xAA00FF' },
-      { label: 'Magenta', value: '0xFF00FF' },
-      { label: 'Pink', value: '0xFF00AA' },
-      { label: 'Torch Red', value: '0xFF0055' },
+      { label: 'Black', value: '0x000000' },
       { label: 'Red', value: '0xFF0000' },
-      { label: 'Strong Orange', value: '0xFF5500' },
+      { label: 'Green', value: '0x00FF00' },
+      { label: 'Blue', value: '0x0000FF' },
+      { label: 'Yellow', value: '0xFFFF00' },
       { label: 'Orange', value: '0xFFAA00' },
-      { label: 'Olive Green', value: '0xAAAA55' },
-      { label: 'Fruit Salad', value: '0x55AA55' },
-      { label: 'Tradewind Blue', value: '0x55AAAA' },
-      { label: 'Rich Blue', value: '0x5555AA' },
-      { label: 'Tapestry Purple', value: '0xAA55AA' },
-      { label: 'Blossom Red', value: '0xAA5555' },
-      { label: 'Lemon', value: '0xFFFF55' },
-      { label: 'Green Yellow', value: '0xAAFF55' },
-      { label: 'Screamin Green', value: '0x55FF55' },
-      { label: 'Aquamarine', value: '0x55FFAA' },
-      { label: 'Baby Blue', value: '0x55FFFF' },
-      { label: 'Maya Blue', value: '0x55AAFF' },
-      { label: 'Neon Blue', value: '0x5555FF' },
-      { label: 'Pale Violet', value: '0xAA55FF' },
-      { label: 'Flamingo', value: '0xFF55FF' },
-      { label: 'Brilliant Rose', value: '0xFF55AA' },
-      { label: 'Tomato', value: '0xFF5555' },
-      { label: 'Pale Orange', value: '0xFFAA55' },
-      { label: 'Canary', value: '0xFFFFAA' },
-      { label: 'Mint', value: '0xAAFFAA' },
-      { label: 'Pale Blue', value: '0xAAFFFF' },
-      { label: 'Lavender', value: '0xAAAAFF' },
-      { label: 'Rose', value: '0xFFAAFF' },
-      { label: 'Lilac', value: '0xFFAAAA' },
-      { label: 'Citrus', value: '0xAAAA00' },
-      { label: 'Limeade', value: '0x55AA00' },
-      { label: 'Dark Green', value: '0x00AA00' },
-      { label: 'Green Haze', value: '0x00AA55' },
-      { label: 'Persian Green', value: '0x00AAAA' },
-      { label: 'Cobalt', value: '0x0055AA' },
-      { label: 'Dark Blue', value: '0x0000AA' },
-      { label: 'Purple', value: '0x5500AA' },
-      { label: 'Dark Magenta', value: '0xAA00AA' },
-      { label: 'Lipstick', value: '0xAA0055' },
-      { label: 'Dark Red', value: '0xAA0000' },
-      { label: 'Tawny Orange', value: '0xAA5500' },
-      { label: 'Verdun Green', value: '0x555500' },
-      { label: 'Darkest Green', value: '0x005500' },
-      { label: 'Sherpa Blue', value: '0x005555' },
-      { label: 'Navy Blue', value: '0x000055' },
-      { label: 'Tyrian Purple', value: '0x550055' },
-      { label: 'Maroon', value: '0x550000' },
-      { label: 'Black', value: '0x000000' }
+      { label: 'Purple', value: '0x5500AA' }
     ] as PropertyOption[]
   }),
 
@@ -130,11 +75,15 @@ export const usePropertiesStore = defineStore('propertiesStore', {
           if (found) return found as unknown as DataTypeOption
         }
 
-        // 2) 其次使用 dataProperty
-        if (dataProperty && state.properties[dataProperty]?.options && state.properties[dataProperty]?.value !== undefined) {
-          const sel = state.properties[dataProperty].value
-          const found = state.properties[dataProperty].options!.find((opt) => opt.value === sel)
-          if (found) return found as unknown as DataTypeOption
+        // 2) 其次使用 dataProperty 的 symbol 引用和顶层快照
+        if (dataProperty && state.properties[dataProperty]?.type === 'data') {
+          const selected = state.properties[dataProperty].value
+          if (typeof selected === 'string') {
+            const snapshot = state.dataOptions[selected]
+            if (snapshot) return snapshot
+            const canonical = useDataCatalogStore().options.find((opt) => opt.metricSymbol === selected)
+            if (canonical) return canonical
+          }
         }
 
         // 3) 最后根据 metricSymbol 在 canonical catalog 中匹配
@@ -159,9 +108,41 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties = properties || {}
     },
 
+    loadDataPropertyConfig(properties?: PropertiesMap, dataOptions?: DataOptionsMap) {
+      this.properties = properties || {}
+      this.dataOptions = dataOptions || {}
+    },
+
+    resolveDataOption(metricSymbol: string): DataTypeOption | undefined {
+      if (!metricSymbol) return undefined
+      return this.dataOptions[metricSymbol]
+        || useDataCatalogStore().options.find((option) => option.metricSymbol === metricSymbol)
+    },
+
+    resolveDataPropertyOptions(propertyKey: string): DataTypeOption[] {
+      const property = this.properties[propertyKey]
+      if (!property || property.type !== 'data') return []
+      return (property.metricSymbols || [])
+        .map((symbol) => this.resolveDataOption(symbol))
+        .filter((option): option is DataTypeOption => Boolean(option))
+    },
+
+    resolveSelectedDataOption(propertyKey: string): DataTypeOption | undefined {
+      const property = this.properties[propertyKey]
+      if (!property || property.type !== 'data' || typeof property.value !== 'string') return undefined
+      return this.resolveDataOption(property.value)
+    },
+
+    registerDataOptions(options: readonly DataTypeOption[]) {
+      for (const option of options) {
+        this.dataOptions[option.metricSymbol] = JSON.parse(JSON.stringify(option)) as DataTypeOption
+      }
+    },
+
     // Clear all properties - call this when creating a new design
     clearProperties() {
       this.properties = {}
+      this.dataOptions = {}
       this.textCase = 1
       this.bitmapMode = true
       this.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
@@ -197,11 +178,13 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       key: string
       type: PropertyType
       title: string
-      options: PropertyOption[]
+      titleCn?: string
+      options?: PropertyOption[]
       defaultValue?: unknown
       prompt?: string
       errorMessage?: string
       dialMode?: DialProgressMode
+      metricSymbols?: string[]
     }) {
       const defaultValue =
         propertyData.defaultValue !== undefined ? propertyData.defaultValue : this.properties[propertyData.key]?.value || propertyData.options?.[0]?.value || this.getDefaultValue(propertyData.type)
@@ -209,12 +192,15 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties[propertyData.key] = {
         type: propertyData.type,
         title: propertyData.title,
+        titleCn: propertyData.titleCn,
         options: propertyData.options,
         value: defaultValue,
         prompt: propertyData.prompt,
         errorMessage: propertyData.errorMessage,
-        dialMode: propertyData.dialMode
+        dialMode: propertyData.dialMode,
+        metricSymbols: propertyData.metricSymbols
       } as PropertyItem
+      if (propertyData.type === 'data') this.pruneDataOptions()
     },
 
     editProperty(key: string, propertyData: Partial<Omit<PropertyItem, 'value'>> & { type?: PropertyType; defaultValue?: unknown; options?: PropertyOption[] }) {
@@ -235,7 +221,19 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     deleteProperty(key: string) {
       if (this.properties[key]) {
         delete this.properties[key]
+        this.pruneDataOptions()
       }
+    },
+
+    pruneDataOptions() {
+      const referenced = new Set<string>()
+      Object.values(this.properties).forEach((property) => {
+        if (property.type !== 'data') return
+        ;(property.metricSymbols || []).forEach((symbol) => referenced.add(symbol))
+      })
+      Object.keys(this.dataOptions).forEach((symbol) => {
+        if (!referenced.has(symbol)) delete this.dataOptions[symbol]
+      })
     },
 
     setPropertyValue(key: string, value: unknown) {

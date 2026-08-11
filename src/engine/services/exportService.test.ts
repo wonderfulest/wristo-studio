@@ -77,6 +77,50 @@ describe('visual theme export persistence', () => {
     expect(config).not.toHaveProperty('connectIqSettingsDataTypeLabels')
   })
 
+  it('exports data properties as symbol references with a deduplicated top-level map', async () => {
+    const { generateConfig } = await import('./exportService')
+    const steps = {
+      valueCode: 1, metricSymbol: ':FIELD_TYPE_STEPS', category: 'field',
+      settingsLabel: { eng: 'Steps', zhs: '步数' }, label: { eng: 'STEPS', zhs: '步数' },
+      unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1,
+      sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null,
+    } as const
+    const config = generateConfig({
+      canvas: { getObjects: () => [{ id: 'global', eleType: 'global' }] } as any,
+      properties: {
+        data_1: { type: 'data', title: 'Primary', metricSymbols: [steps.metricSymbol], value: steps.metricSymbol },
+      },
+      dataOptions: { [steps.metricSymbol]: steps },
+      catalogOptions: [steps],
+      designId: 'design-1', watchFaceName: 'Normalized', textCase: 0, bitmapMode: true,
+    } as any)
+
+    expect(config?.properties.data_1).toEqual({
+      type: 'data', title: 'Primary', metricSymbols: [steps.metricSymbol], value: steps.metricSymbol,
+    })
+    expect(config?.dataOptions).toEqual({ [steps.metricSymbol]: steps })
+    expect(config?.properties.data_1).not.toHaveProperty('options')
+  })
+
+  it('rejects a data property whose selected symbol is outside its options', async () => {
+    const { generateConfig } = await import('./exportService')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const config = generateConfig({
+        canvas: { getObjects: () => [{ id: 'global', eleType: 'global' }] } as any,
+        properties: {
+          data_1: { type: 'data', title: 'Primary', metricSymbols: [':FIELD_TYPE_STEPS'], value: ':FIELD_TYPE_BATTERY' },
+        },
+        dataOptions: {}, catalogOptions: [],
+        designId: 'design-1', watchFaceName: 'Invalid', textCase: 0, bitmapMode: true,
+      } as any)
+
+      expect(config).toBeNull()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('copies visual themes into generated config without preview-only state', async () => {
     const { generateConfig } = await import('./exportService')
     const visualThemes = {

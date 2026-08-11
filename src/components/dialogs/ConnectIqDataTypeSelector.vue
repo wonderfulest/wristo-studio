@@ -16,7 +16,7 @@
         aria-label="Connect IQ data options"
       >
         <Icon icon="material-symbols:data-usage-rounded" width="17" height="17" />
-        <span>Data options</span>
+        <span v-if="!compact">Data options</span>
         <span v-if="snapshot" class="selection-count">{{ selectedValues.length }}/{{ eligibleOptions.length }}</span>
       </button>
     </template>
@@ -69,6 +69,12 @@ import {
   getConnectIqSelectedDataTypeValues,
   selectAllConnectIqDataTypes,
 } from '@/domain/connectIqDataTypeSelection'
+
+withDefaults(defineProps<{
+  compact?: boolean
+}>(), {
+  compact: false,
+})
 
 const catalog = useDataCatalogStore()
 const design = useDesignStore()

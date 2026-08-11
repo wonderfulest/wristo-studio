@@ -41,7 +41,7 @@
       />
         </div>
         <div class="text-setting-field">
-          <label>{{ t('elementSettings.angle') }}</label>
+          <AngleHelpLabel :label="t('elementSettings.angle')" />
           <input type="number" v-model.number="angle" @change="updateAngle" />
         </div>
         <div class="text-setting-field">
@@ -101,6 +101,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { useFontStore } from '@/stores/fontStore'
 import { originXOptions } from '@/config/settings'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
+import AngleHelpLabel from '@/elements/common/settings/AngleHelpLabel.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'

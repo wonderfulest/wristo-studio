@@ -149,7 +149,7 @@ describe('SubmitDesignDialog style tag behavior', () => {
     expect(wrapper.find('.dialog').exists()).toBe(true)
     expect(mocks.getDsnProductTagsPage).toHaveBeenCalledOnce()
     const selector = wrapper.getComponent(StyleTagSelectorStub)
-    expect((selector.props('tags') as ProductTag[]).map((item) => item.id)).toEqual([7, 2, 9, 4, 6, 8])
+    expect((selector.props('tags') as ProductTag[]).map((item) => item.id)).toEqual([7, 2, 100, 9, 4, 6, 8])
     expect(selector.props('tagIds')).toEqual([7, 2, 9, 4, 6])
     expect(selector.props('disabled')).toBe(false)
 

@@ -86,4 +86,46 @@ describe('hand renderer preview persistence', () => {
     expect(mocks.patchElement).not.toHaveBeenCalled()
     expect(mocks.upsertElement).not.toHaveBeenCalled()
   })
+
+  it('applies geometry center, pivot offset, and scale updates to the rendered hand', async () => {
+    vi.useFakeTimers()
+    const hand = {
+      id: 'minute',
+      eleType: 'minuteHand',
+      imageUrl: 'base.svg',
+      assetId: 1,
+      width: 20,
+      height: 100,
+      left: 227,
+      top: 227,
+      angle: 0,
+      set(values: Record<string, unknown>) { Object.assign(this, values) },
+      setCoords: vi.fn(),
+    } as any
+
+    await updateHand(hand, {
+      centerX: 210,
+      centerY: 220,
+      pivotOffsetX: 10,
+      pivotOffsetY: -20,
+      scalePercent: 50,
+    })
+
+    expect(hand).toMatchObject({
+      centerX: 210,
+      centerY: 220,
+      pivotOffsetX: 10,
+      pivotOffsetY: -20,
+      scalePercent: 50,
+      scaleX: 2.27,
+      scaleY: 2.27,
+    })
+    expect(mocks.patchElement).toHaveBeenCalledWith('minute', expect.objectContaining({
+      centerX: 210,
+      centerY: 220,
+      pivotOffsetX: 10,
+      pivotOffsetY: -20,
+      scalePercent: 50,
+    }))
+  })
 })

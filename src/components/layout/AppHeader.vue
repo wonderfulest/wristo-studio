@@ -50,10 +50,13 @@
         >
           <span>{{ t('dialog.saveAndOpenWorkspace') }}</span>
           <template #footer>
-            <span class="dialog-footer">
-              <el-button @click="designsListDialogVisible = false">{{ t('common.cancel') }}</el-button>
-              <el-button type="primary" @click="confirmOpenDesignsList">{{ t('common.confirm') }}</el-button>
-            </span>
+            <div class="dialog-footer workspace-confirm-footer">
+              <el-button type="danger" @click="discardAndOpenDesignsList">{{ t('dialog.discardAndExit') }}</el-button>
+              <span class="workspace-confirm-actions">
+                <el-button @click="designsListDialogVisible = false">{{ t('common.cancel') }}</el-button>
+                <el-button type="primary" @click="confirmOpenDesignsList">{{ t('common.confirm') }}</el-button>
+              </span>
+            </div>
           </template>
         </el-dialog>
         <el-dialog
@@ -224,6 +227,12 @@ const confirmNewDesign = () => {
   designerDialogVisible.value = false
   baseStore.$reset()
   router.push('/designs/new-projects')
+}
+
+const discardAndOpenDesignsList = () => {
+  designsListDialogVisible.value = false
+  baseStore.$reset()
+  router.push('/designs')
 }
 
 const confirmOpenDesignsList = async () => {
@@ -397,6 +406,17 @@ const openPrgInstallerGuide = () => {
 .actions {
   display: flex;
   gap: 12px;
+}
+
+.workspace-confirm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workspace-confirm-actions {
+  display: inline-flex;
 }
 
 .action-btn {

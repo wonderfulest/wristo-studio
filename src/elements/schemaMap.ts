@@ -30,6 +30,7 @@ import { rectangleSchema } from '@/elements/shapes/rectangle/rectangle.schema'
 import { circleSchema } from '@/elements/shapes/circle/circle.schema'
 import { lineSchema } from '@/elements/shapes/line/line.schema'
 import { polygonSchema } from '@/elements/shapes/polygon/polygon.schema'
+import { triangleSchema } from '@/elements/shapes/triangle/triangle.schema'
 
 // common
 import { imageSchema } from '@/elements/decoration/image/image.schema'
@@ -60,6 +61,8 @@ import { goalArcSchema } from '@/elements/goal/goalArc/goalArc.schema'
 // charts
 import { barChartSchema } from '@/elements/charts/barChart/barChart.schema'
 import { lineChartSchema } from '@/elements/charts/lineChart/lineChart.schema'
+import { arcSunEventsSchema } from '@/elements/sunEvents/arcSunEvents/arcSunEvents.schema'
+import { lineSunEventsSchema } from '@/elements/sunEvents/lineSunEvents/lineSunEvents.schema'
 
 export type ElementConfigs = Record<string, Record<string, AnyElementConfig & EDITOR_ELEMENT>>
 
@@ -118,6 +121,10 @@ export const elementConfigs: ElementConfigs = {
     moon: buildConfigFromSchema(moonSchema as AnySchema),
     windDirection: buildConfigFromSchema(windDirectionSchema as AnySchema),
   },
+  sun: {
+    arcSunEvents: buildConfigFromSchema(arcSunEventsSchema as AnySchema),
+    lineSunEvents: buildConfigFromSchema(lineSunEventsSchema as AnySchema),
+  },
   dials: {
     tick12: buildConfigFromSchema(tick12Schema as AnySchema),
     tick60: buildConfigFromSchema(tick60Schema as AnySchema),
@@ -135,6 +142,7 @@ export const elementConfigs: ElementConfigs = {
     circle: buildConfigFromSchema(circleSchema as AnySchema),
     line: buildConfigFromSchema(lineSchema as AnySchema),
     polygon: buildConfigFromSchema(polygonSchema as AnySchema),
+    triangle: buildConfigFromSchema(triangleSchema as AnySchema),
   },
   goal: {
     goalBar: buildConfigFromSchema(goalBarSchema as AnySchema),

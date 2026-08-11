@@ -873,7 +873,17 @@ const handleAddDataField = async (metricSymbol?: string) => {
         defaultOption = requested
       }
       if (!allProps[propertyKey]) {
-        propertiesStore.addProperty({ key: propertyKey, type: 'data', title, options: fieldOptions, defaultValue: defaultOption.value })
+        propertiesStore.addProperty({
+          key: propertyKey,
+          type: 'data',
+          title,
+          metricSymbols: fieldOptions.map((option) => option.metricSymbol),
+          defaultValue: defaultOption.metricSymbol,
+        })
+        const fieldSymbols = new Set(fieldOptions.map((option) => option.metricSymbol))
+        propertiesStore.registerDataOptions(
+          useDataCatalogStore().options.filter((option) => fieldSymbols.has(option.metricSymbol)),
+        )
         trackCreatedProperty(propertyKey)
       }
 

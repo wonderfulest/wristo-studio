@@ -4,11 +4,11 @@
       <div class="display-tabs" role="tablist" aria-label="Layer display state">
         <button class="display-tab" :class="{ active: previewMode === 'active' }" type="button" role="tab" :aria-selected="previewMode === 'active'" @click="previewMode = 'active'">
           <Icon icon="material-symbols:brightness-5-outline" />
-          <span>ACTIVE</span>
+          <span>{{ t('layer.active') }}</span>
         </button>
         <button class="display-tab" :class="{ active: previewMode === 'ambient' }" type="button" role="tab" :aria-selected="previewMode === 'ambient'" @click="previewMode = 'ambient'">
           <Icon icon="material-symbols:contrast" />
-          <span>AMBIENT</span>
+          <span>{{ t('layer.ambient') }}</span>
         </button>
       </div>
       <draggable
@@ -53,7 +53,7 @@
                       <Icon :icon="getElementIcon(layer.eleType)" />
                     </span>
                     <span class="layer-text">
-                      <span class="layer-name">{{ layer.eleType }}</span>
+                      <span class="layer-name">{{ getLayerTypeLabel(layer.eleType) }}</span>
                     </span>
                   </div>
                   <div class="layer-actions">
@@ -92,7 +92,7 @@
                   <Icon :icon="getElementIcon(item.layer.eleType)" />
                 </span>
                 <span class="layer-text">
-                  <span class="layer-name">{{ item.layer.eleType }}</span>
+                  <span class="layer-name">{{ getLayerTypeLabel(item.layer.eleType) }}</span>
                 </span>
               </div>
               <div class="layer-actions">
@@ -495,6 +495,12 @@ const getElementIcon = (eleType: string): string => {
     }
   }
   return 'material-symbols:circle'
+}
+
+const getLayerTypeLabel = (eleType: string): string => {
+  const key = `addElement.type.${eleType}`
+  const label = t(key)
+  return label === key ? eleType : label
 }
 
 const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {

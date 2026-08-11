@@ -1,6 +1,7 @@
 import { ElMessage } from 'element-plus'
 import type { Canvas } from 'fabric'
-import type { PropertiesMap } from '@/types/properties'
+import type { DataOptionsMap, PropertiesMap } from '@/types/properties'
+import type { DataTypeOption } from '@/types/dataCatalog'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
 import { encodeElementByRegistry } from '@/engine/registry/elementRegistry'
@@ -32,6 +33,8 @@ import {
   VISUAL_THEME_COLOR_BINDINGS,
 } from './visualThemeElementFields'
 import { validateExplicitColorBindings } from './explicitColorBindingService'
+import { serializeDataPropertyConfig } from './dataPropertyConfig'
+import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.validation'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -200,6 +203,8 @@ async function validateDateContentAndFonts(
 export interface GenerateConfigOptions {
   canvas: Canvas | null
   properties: PropertiesMap
+  dataOptions?: DataOptionsMap
+  catalogOptions?: readonly DataTypeOption[]
   designId: string
   watchFaceName: string
   textCase: number
@@ -248,7 +253,9 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
   )
   const errors = [...dateErrors, ...visualThemeErrors]
   if (errors.length > 0) {
-    ElMessage.error(errors.join(t('common.listSeparator')))
+    if (typeof document !== 'undefined') {
+      ElMessage.error(errors.join(t('common.listSeparator')))
+    }
     console.error('Export validation failed:', errors)
     return false
   }
@@ -259,6 +266,8 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   const {
     canvas,
     properties,
+    dataOptions = {},
+    catalogOptions = [],
     designId,
     watchFaceName,
     textCase,
@@ -280,9 +289,26 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     return null
   }
 
+  const normalizedDataProperties = serializeDataPropertyConfig(
+    properties,
+    dataOptions,
+    catalogOptions,
+  )
+  if (normalizedDataProperties.issues.length > 0) {
+    const errors = normalizedDataProperties.issues.map((issue) => (
+      `${issue.path}: ${issue.code}${issue.metricSymbol ? ` (${issue.metricSymbol})` : ''}`
+    ))
+    if (typeof document !== 'undefined') {
+      ElMessage.error(errors.join(t('common.listSeparator')))
+    }
+    console.error('Export validation failed:', normalizedDataProperties.issues)
+    return null
+  }
+
   const config: RuntimeDesignConfig = {
     version: '1.0',
-    properties,
+    properties: normalizedDataProperties.properties,
+    dataOptions: normalizedDataProperties.dataOptions,
     designId: designId || '',
     name: watchFaceName,
     textCase,
@@ -370,6 +396,13 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       }
       if (!encodeConfig) {
         console.error('Failed to encode element:', element)
+        return null
+      }
+
+      const sunEventsError = validateSunEventsElement(encodeConfig as unknown as Record<string, any>)
+      if (sunEventsError) {
+        ElMessage.error(sunEventsError)
+        console.error('Export validation failed:', sunEventsError)
         return null
       }
 

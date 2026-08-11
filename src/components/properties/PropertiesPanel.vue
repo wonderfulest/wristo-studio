@@ -535,7 +535,7 @@ const deleteProperty = async (key) => {
 
 // 处理属性确认
 const handlePropertyConfirm = async (propertyData) => {
-  const { isEdit, ...propertyPayload } = propertyData
+  const { isEdit, dataOptions = [], ...propertyPayload } = propertyData
   if (!isEdit && propertiesStore.allProperties[propertyPayload.key]) {
     ElMessage.error(t('property.keyDuplicate'))
     return
@@ -551,6 +551,9 @@ const handlePropertyConfirm = async (propertyData) => {
       ? { defaultValue: previous.value }
       : {}),
   })
+  if (propertyPayload.type === 'data') {
+    propertiesStore.registerDataOptions(dataOptions)
+  }
   if (propertyPayload.type === 'color') {
     if (!isEdit) {
       const initialColor = propertiesStore.getPropertyValue(propertyPayload.key)

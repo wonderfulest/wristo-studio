@@ -35,6 +35,8 @@
             <el-input v-model="formData.title" :placeholder="t('property.chartSelect')" />
           </el-form-item>
 
+          <LocalizedPropertyTitleField v-model="formData.titleCn" />
+
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -164,6 +166,8 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
+import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -171,10 +175,11 @@ const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
 const chartOptions = getDataTypePropertyOptions().filter(option => option.category === 'chart')
-const cloneChartOptions = () => JSON.parse(JSON.stringify(chartOptions))
+const cloneChartOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(chartOptions)))
 
 const formData = reactive({
   title: '',
+  titleCn: '',
   propertyKey: '',
   type: 'chart',
   options: cloneChartOptions(),
@@ -190,6 +195,7 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
+      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: cloneChartOptions(),
@@ -200,6 +206,7 @@ const initFormData = (data = null) => {
   } else {
     Object.assign(formData, {
       title: 'Chart 1',
+      titleCn: '',
       propertyKey: 'chart_1',
       type: 'chart',
       options: cloneChartOptions(),
@@ -227,7 +234,8 @@ const handleConfirm = async () => {
       type: 'chart',
       key: formData.propertyKey,
       title: formData.title,
-      options: formData.options,
+      titleCn: formData.titleCn.trim() || undefined,
+      options: withSimplifiedChineseOptionLabels(formData.options),
       defaultValue: selectedOption.value,
       prompt: formData.prompt,
       errorMessage: formData.errorMessage,

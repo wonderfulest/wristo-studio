@@ -27,17 +27,14 @@
       <section class="text-settings-card progress-arc-card">
         <div class="progress-arc-inline-label">
           <label>{{ t('elementSettings.angleSettings') }}</label>
-          <el-tooltip :content="tooltipContent" placement="top" effect="light" :show-after="0" raw-content>
-            <el-icon class="help-icon"><Warning /></el-icon>
-          </el-tooltip>
         </div>
         <div class="text-settings-grid">
           <div class="text-setting-field">
-            <label>{{ t('elementSettings.startAngle') }}</label>
+            <AngleHelpLabel :label="t('elementSettings.startAngle')" />
             <el-input type="number" v-model="startAngleLocal" @change="onStartAngleChange" />
           </div>
           <div class="text-setting-field">
-            <label>{{ t('elementSettings.endAngle') }}</label>
+            <AngleHelpLabel :label="t('elementSettings.endAngle')" />
             <el-input type="number" v-model="endAngleLocal" @change="onEndAngleChange" />
           </div>
         </div>
@@ -157,9 +154,8 @@
 import { ref, computed, watchEffect } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { ElTooltip } from 'element-plus'
-import { Warning } from '@element-plus/icons-vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import AngleHelpLabel from '@/elements/common/settings/AngleHelpLabel.vue'
 import { useI18n } from '@/i18n'
 
 const emit = defineEmits(['close'])
@@ -253,16 +249,6 @@ watchEffect(() => {
     model.endCap = normalizeEndCap(model.endCap)
   }
 })
-
-// 定义提示内容，使用 HTML 格式
-const tooltipContent = computed(() => `
-  <div class="tooltip-content">
-    <p>1. ${t('elementSettings.angleTip1')}</p>
-    <p>2. ${t('elementSettings.angleTip2')}</p>
-    <p>3. ${t('elementSettings.angleTip3')}</p>
-    <p>4. ${t('elementSettings.angleTip4')}</p>
-  </div>
-`)
 
 const rules = {
   goalProperty: [{ required: true, message: 'Please select a goal property', trigger: 'change' }]
@@ -513,19 +499,6 @@ defineExpose({
   line-height: 1.25;
 }
 
-.help-icon {
-  color: var(--studio-text-subtle);
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.2s;
-  display: flex;
-  align-items: center;
-}
-
-.help-icon:hover {
-  color: var(--studio-primary);
-}
-
 .progress-arc-direction {
   margin-top: 12px;
 }
@@ -686,27 +659,4 @@ defineExpose({
   text-align: right;
 }
 
-/* 调整提示框样式 */
-:deep(.el-tooltip__trigger) {
-  display: flex;
-  align-items: center;
-}
-
-:deep(.el-tooltip__popper) {
-  max-width: 300px;
-}
-
-:deep(.tooltip-content) {
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-:deep(.tooltip-content p) {
-  margin: 0;
-  padding: 2px 0;
-}
-
-:deep(.tooltip-content p:not(:last-child)) {
-  margin-bottom: 4px;
-}
 </style>

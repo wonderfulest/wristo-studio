@@ -21,6 +21,7 @@ import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO 
 import { getProduct } from '@/api/products'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 // Local minimal types to keep migration safe
 // For stricter typing, define interfaces in src/types and import them here later.
 type AnyObject = Record<string, any>
@@ -319,12 +320,15 @@ export const useBaseStore = defineStore('baseStore', {
         return false
       }
       const propertiesStore = usePropertiesStore()
+      const dataCatalogStore = useDataCatalogStore()
       const canvasStore = useCanvasStore()
       const visualThemeStore = useVisualThemeStore()
       const elementDataStore = useElementDataStore()
       const config = generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
+        dataOptions: propertiesStore.dataOptions,
+        catalogOptions: dataCatalogStore.options,
         designId: this.id || '',
         watchFaceName: designStore.watchFaceName,
         textCase: propertiesStore.textCase,
@@ -416,12 +420,15 @@ export const useBaseStore = defineStore('baseStore', {
     generateConfig(options: GenerateConfigStoreOptions = {}): import('@/types/app/config').RuntimeDesignConfig | null {
       const canvasStore = useCanvasStore()
       const propertiesStore = usePropertiesStore()
+      const dataCatalogStore = useDataCatalogStore()
       const designStore = useDesignStore()
       const visualThemeStore = useVisualThemeStore()
       const elementDataStore = useElementDataStore()
       return generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
+        dataOptions: propertiesStore.dataOptions,
+        catalogOptions: dataCatalogStore.options,
         designId: this.id || designStore.id || '',
         watchFaceName: designStore.watchFaceName || this.watchFaceName,
         textCase: propertiesStore.textCase,

@@ -1,22 +1,21 @@
 <template>
   <section class="editor-settings-bar" :aria-label="t('editor.editorSettings')">
-    <div class="bar-group left-group">
-      <div class="bar-cell device-cell" :title="deviceCodeLabel">
-        <Icon icon="material-symbols:watch-outline-rounded" width="17" height="17" />
-        <span>{{ deviceCodeLabel }}</span>
+    <div class="editor-settings-primary">
+      <div class="editor-status">
+        <div class="status-item" :title="deviceCodeLabel">
+          <Icon icon="material-symbols:watch-outline-rounded" width="17" height="17" />
+          <span>{{ deviceCodeLabel }}</span>
+        </div>
+        <div class="status-item" :title="selectedElementLabel">
+          <Icon icon="material-symbols:ads-click-rounded" width="17" height="17" />
+          <span>{{ selectedElementLabel }}</span>
+        </div>
+        <div class="status-item canvas-size-status" :title="t('editorSettings.canvasSize')">
+          <Icon icon="material-symbols:crop-square-rounded" width="17" height="17" />
+          <span>{{ canvasSizeLabel }}</span>
+        </div>
       </div>
-
-      <div class="bar-cell selected-cell" :title="selectedElementLabel">
-        <Icon icon="material-symbols:ads-click-rounded" width="17" height="17" />
-        <span>{{ selectedElementLabel }}</span>
-      </div>
-
-      <div class="bar-cell canvas-size-cell" :title="canvasSizeLabel">
-        <Icon icon="material-symbols:crop-square-rounded" width="17" height="17" />
-        <span>{{ canvasSizeLabel }}</span>
-      </div>
-
-      <div class="bar-cell zoom-cell">
+      <div class="zoom-controls" :aria-label="t('editorSettings.zoomControls')">
         <el-button circle class="icon-button" @click="handleZoomOut" :title="t('canvas.zoomOut')">
           <Icon icon="material-symbols:remove-rounded" width="18" height="18" />
         </el-button>
@@ -28,184 +27,111 @@
           <Icon icon="material-symbols:refresh-rounded" width="18" height="18" />
         </el-button>
       </div>
-
-    </div>
-
-    <div class="bar-group center-group">
-      <label class="bar-cell check-cell time-simulator-cell">
-        <el-checkbox
-          v-model="showTimeSimulator"
-          @change="handleTimeSimulatorChange"
-        />
-        <span>{{ t('editorSettings.timeSimulator') }}</span>
-      </label>
-
-      <label class="bar-cell check-cell chinese-content-cell">
-        <el-switch
-          :model-value="chineseContentEnabled"
-          size="small"
-          @change="handleChineseContentChange"
-        />
-        <span>{{ t('editorSettings.chineseContent') }}</span>
-      </label>
-
-      <div class="bar-cell unit-preview-cell" title="Simulated Garmin distance units">
-        <span>D</span>
-        <el-select v-model="previewDevice.distanceUnits" size="small" @change="refreshMetricPreview">
-          <el-option label="km / m" value="metric" />
-          <el-option label="mi / ft" value="statute" />
-        </el-select>
+      <div class="bottom-view-toggles">
+        <el-button
+          circle
+          class="icon-button toggle-button bottom-time-simulator-toggle"
+          :class="{ active: showTimeSimulator }"
+          :aria-pressed="showTimeSimulator"
+          :title="t('editorSettings.timeSimulator')"
+          @click="handleTimeSimulatorChange(!showTimeSimulator)">
+          <Icon icon="material-symbols:schedule-rounded" width="18" height="18" />
+        </el-button>
+        <el-button
+          circle
+          class="icon-button toggle-button bottom-device-frame-toggle"
+          :class="{ active: showDeviceFrame }"
+          :aria-pressed="showDeviceFrame"
+          :title="t('editorSettings.deviceFrame')"
+          @click="handleDeviceFrameChange(!showDeviceFrame)">
+          <Icon icon="material-symbols:watch-outline-rounded" width="18" height="18" />
+        </el-button>
+        <el-button
+          circle
+          class="icon-button toggle-button bottom-ruler-guides-toggle"
+          :class="{ active: showRulerGuides }"
+          :aria-pressed="showRulerGuides"
+          :title="t('editorSettings.rulerGuides')"
+          @click="handleRulerGuidesChange(!showRulerGuides)">
+          <Icon icon="material-symbols:grid-4x4-rounded" width="18" height="18" />
+        </el-button>
       </div>
-
-      <div class="bar-cell unit-preview-cell" title="Simulated Garmin temperature units">
-        <span>T</span>
-        <el-select v-model="previewDevice.temperatureUnits" size="small" @change="refreshMetricPreview">
-          <el-option label="°C" value="metric" />
-          <el-option label="°F" value="statute" />
-        </el-select>
-      </div>
-
-      <ConnectIqDataTypeSelector />
-
-    </div>
-
-    <div class="bar-group right-group">
-      <div class="bar-cell key-guides-cell">
-        <label class="check-cell compact-check">
-          <el-checkbox
-            v-model="showKeyGuidelines"
-            @change="handleKeyGuidelinesToggle"
-          />
-          <span>{{ t('editorSettings.keyGuidelines') }}</span>
-        </label>
-        <el-select
-          v-model="keyGuidelineDivisions"
-          :disabled="!showKeyGuidelines"
-          size="small"
-          class="divisions-select"
-          :placeholder="t('editorSettings.divisions')"
-          @change="handleKeyGuidelinesDivisionsChange"
-        >
-          <el-option :label="'2'" :value="2" />
-          <el-option :label="'3'" :value="3" />
-          <el-option :label="'4'" :value="4" />
-          <el-option :label="'5'" :value="5" />
-          <el-option :label="'6'" :value="6" />
-          <el-option :label="'8'" :value="8" />
-        </el-select>
-      </div>
-
-      <el-button
-        circle
-        class="bar-cell icon-button toggle-button device-frame-toggle"
-        :class="{ active: showDeviceFrame }"
-        @click="toggleDeviceFrame"
-        :title="t('editorSettings.deviceFrame')"
-      >
-        <Icon icon="material-symbols:watch-outline-rounded" width="18" height="18" />
-      </el-button>
-
-      <el-button
-        circle
-        class="bar-cell icon-button toggle-button ruler-toggle"
-        :class="{ active: showRulerGuides }"
-        @click="toggleRulerGuides"
-        :title="t('editorSettings.rulerGuides')"
-      >
-        <Icon icon="material-symbols:grid-4x4-rounded" width="18" height="18" />
-      </el-button>
-
-      <div class="bar-cell grid-color-cell">
-        <span class="cell-label">{{ t('editorSettings.gridColor') }}</span>
-        <el-color-picker
-          v-model="rulerGuidesColor"
-          size="small"
-          @change="applyRulerGuidesStyle"
-        />
-      </div>
-
-      <div v-if="themeStore.currentTheme === 'light'" class="bar-cell canvas-bg-cell">
-        <span class="cell-label">{{ t('editorSettings.lightCanvasBackground') }}</span>
-        <el-color-picker
-          v-model="lightCanvasBackgroundColor"
-          size="small"
-          show-alpha
-          @change="handleLightCanvasBackgroundColorChange"
-        />
-      </div>
-
-      <div v-if="themeStore.currentTheme === 'dark'" class="bar-cell canvas-bg-cell">
-        <span class="cell-label">{{ t('editorSettings.darkCanvasBackground') }}</span>
-        <el-color-picker
-          v-model="darkCanvasBackgroundColor"
-          size="small"
-          show-alpha
-          @change="handleDarkCanvasBackgroundColorChange"
-        />
-      </div>
-
-      <el-popover
-        v-model:visible="opacityPopoverVisible"
-        placement="top-end"
-        trigger="click"
-        :width="280"
-        popper-class="editor-opacity-popover"
-      >
+      <el-popover placement="top-end" trigger="click" :width="340" popper-class="editor-settings-more-popover">
         <template #reference>
-          <button
-            type="button"
-            class="bar-cell opacity-trigger"
-            :class="{ active: opacityPopoverVisible }"
-            :title="t('editorSettings.opacity')"
-          >
-            <span class="cell-label">{{ t('editorSettings.opacity') }}</span>
-            <span class="opacity-summary">{{ rulerGuidesMajor.toFixed(2) }} / {{ rulerGuidesMinor.toFixed(2) }}</span>
-          </button>
+          <el-button class="more-settings-trigger" :title="t('common.more')">
+            <Icon icon="material-symbols:more-horiz-rounded" width="20" height="20" />
+            <span>{{ t('common.more') }}</span>
+          </el-button>
         </template>
-
-        <div class="opacity-popover-content">
-          <div class="opacity-popover-header">
-            <span>{{ t('editorSettings.opacity') }}</span>
-            <el-button
-              circle
-              size="small"
-              class="opacity-close-button"
-              :title="t('common.confirm')"
-              @click="opacityPopoverVisible = false"
-            >
-              <Icon icon="material-symbols:close-rounded" width="16" height="16" />
-            </el-button>
-          </div>
-
-          <div class="opacity-row">
-            <div class="opacity-row-label">
-              <span>{{ t('editorSettings.majorOpacity') }}</span>
-              <span>{{ rulerGuidesMajor.toFixed(2) }}</span>
+        <div class="more-settings-panel">
+          <div class="more-settings-heading">{{ t('editor.editorSettings') }}</div>
+          <section class="more-settings-section">
+            <h3>{{ t('editorSettings.previewSection') }}</h3>
+            <div class="settings-toggle-row">
+              <span>{{ t('editorSettings.timeSimulator') }}</span>
+              <el-switch v-model="showTimeSimulator" size="small" @change="handleTimeSimulatorChange" />
             </div>
-            <el-slider
-              v-model="rulerGuidesMajor"
-              :min="0"
-              :max="1"
-              :step="0.01"
-              @input="applyRulerGuidesStyle"
-              @change="applyRulerGuidesStyle"
-            />
-          </div>
-
-          <div class="opacity-row">
-            <div class="opacity-row-label">
-              <span>{{ t('editorSettings.minorOpacity') }}</span>
-              <span>{{ rulerGuidesMinor.toFixed(2) }}</span>
+            <div class="settings-toggle-row">
+              <span>{{ t('editorSettings.chineseContent') }}</span>
+              <el-switch :model-value="chineseContentEnabled" size="small" @change="handleChineseContentChange" />
             </div>
-            <el-slider
-              v-model="rulerGuidesMinor"
-              :min="0"
-              :max="1"
-              :step="0.01"
-              @input="applyRulerGuidesStyle"
-              @change="applyRulerGuidesStyle"
-            />
-          </div>
+            <div class="more-settings-row unit-settings-row">
+              <span>D</span>
+              <el-select v-model="previewDevice.distanceUnits" size="small" @change="refreshMetricPreview">
+                <el-option label="km / m" value="metric" />
+                <el-option label="mi / ft" value="statute" />
+              </el-select>
+              <span>T</span>
+              <el-select v-model="previewDevice.temperatureUnits" size="small" @change="refreshMetricPreview">
+                <el-option label="°C" value="metric" />
+                <el-option label="°F" value="statute" />
+              </el-select>
+            </div>
+            <ConnectIqDataTypeSelector />
+          </section>
+
+          <section class="more-settings-section">
+            <h3>{{ t('editorSettings.canvasAidsSection') }}</h3>
+            <div class="settings-toggle-row">
+              <span>{{ t('editorSettings.deviceFrame') }}</span>
+              <el-switch v-model="showDeviceFrame" size="small" @change="handleDeviceFrameChange" />
+            </div>
+            <div class="settings-toggle-row">
+              <span>{{ t('editorSettings.rulerGuides') }}</span>
+              <el-switch v-model="showRulerGuides" size="small" @change="handleRulerGuidesChange" />
+            </div>
+            <div class="more-settings-row">
+              <el-checkbox v-model="showKeyGuidelines" @change="handleKeyGuidelinesToggle">{{ t('editorSettings.keyGuidelines') }}</el-checkbox>
+              <el-select v-model="keyGuidelineDivisions" :disabled="!showKeyGuidelines" size="small" class="more-divisions-select" @change="handleKeyGuidelinesDivisionsChange">
+                <el-option v-for="division in [2, 3, 4, 5, 6, 8]" :key="division" :label="String(division)" :value="division" />
+              </el-select>
+            </div>
+          </section>
+
+          <section class="more-settings-section">
+            <h3>{{ t('editorSettings.appearanceSection') }}</h3>
+            <div class="more-settings-row">
+              <span>{{ t('editorSettings.gridColor') }}</span>
+              <el-color-picker v-model="rulerGuidesColor" size="small" @change="applyRulerGuidesStyle" />
+            </div>
+            <div class="more-settings-row">
+              <span>{{ themeStore.currentTheme === 'light' ? t('editorSettings.lightCanvasBackground') : t('editorSettings.darkCanvasBackground') }}</span>
+              <el-color-picker v-if="themeStore.currentTheme === 'light'" v-model="lightCanvasBackgroundColor" size="small" show-alpha @change="handleLightCanvasBackgroundColorChange" />
+              <el-color-picker v-else v-model="darkCanvasBackgroundColor" size="small" show-alpha @change="handleDarkCanvasBackgroundColorChange" />
+            </div>
+            <div class="more-opacity-section">
+              <div class="opacity-row-label">
+                <span>{{ t('editorSettings.majorOpacity') }}</span>
+                <span>{{ rulerGuidesMajor.toFixed(2) }}</span>
+              </div>
+              <el-slider v-model="rulerGuidesMajor" :min="0" :max="1" :step="0.01" @input="applyRulerGuidesStyle" @change="applyRulerGuidesStyle" />
+              <div class="opacity-row-label">
+                <span>{{ t('editorSettings.minorOpacity') }}</span>
+                <span>{{ rulerGuidesMinor.toFixed(2) }}</span>
+              </div>
+              <el-slider v-model="rulerGuidesMinor" :min="0" :max="1" :step="0.01" @input="applyRulerGuidesStyle" @change="applyRulerGuidesStyle" />
+            </div>
+          </section>
         </div>
       </el-popover>
     </div>
@@ -237,7 +163,7 @@ import {
   getDateContentLanguageForRuntimeLocale,
   getDateFontRequirementLabel,
   isChineseDateFormatter,
-  isFontCompatibleWithDateLanguage,
+  isFontCompatibleWithDateLanguage
 } from '@/utils/dateFontCompatibility'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
@@ -276,35 +202,30 @@ const showRulerGuides = ref<boolean>(editorStore.showRulerGuides)
 const rulerGuidesColor = ref<string>(editorStore.rulerGuidesColor)
 const rulerGuidesMajor = ref<number>(editorStore.rulerGuidesMajor)
 const rulerGuidesMinor = ref<number>(editorStore.rulerGuidesMinor)
-const opacityPopoverVisible = ref<boolean>(false)
 const showKeyGuidelines = ref<boolean>(editorStore.showKeyGuidelines)
 const keyGuidelineDivisions = ref<2 | 3 | 4 | 5 | 6 | 8>(editorStore.keyGuidelineDivisions)
+
+const zoomPercentLabel = computed(() => `${Math.round(editorStore.zoomLevel * 100)}%`)
 
 const canvasSizeLabel = computed(() => {
   const width = Number(designStore.designSpec.width || 0)
   const height = Number(designStore.designSpec.height || 0)
-  return `${width} x ${height}`
+  return `${width} × ${height}`
 })
-
-const zoomPercentLabel = computed(() => `${Math.round(editorStore.zoomLevel * 100)}%`)
 
 const selectedElements = computed<FabricElement[]>(() => {
   if (!canvasStore.canvas) return []
   const idSet = new Set(canvasStore.activeIds)
-  return canvasStore.canvas
-    .getObjects()
-    .filter((object) => {
-      const id = (object as FabricElement).id
-      return id && idSet.has(String(id))
-    }) as FabricElement[]
+  return canvasStore.canvas.getObjects().filter((object) => {
+    const id = (object as FabricElement).id
+    return id && idSet.has(String(id))
+  }) as FabricElement[]
 })
 
-const currentDeviceCode = computed(() => {
+const deviceCodeLabel = computed(() => {
   const device = userStore.userInfo?.device
-  return device?.deviceId || device?.partNumber || device?.hardwarePartNumber || device?.displayName || ''
+  return device?.deviceId || device?.partNumber || device?.hardwarePartNumber || device?.displayName || '-'
 })
-
-const deviceCodeLabel = computed(() => currentDeviceCode.value || '-')
 
 const getElementName = (element: FabricElement | null): string => {
   const elementType = element?.eleType
@@ -317,12 +238,8 @@ const getElementName = (element: FabricElement | null): string => {
 }
 
 const selectedElementLabel = computed(() => {
-  if (selectedElements.value.length === 1) {
-    return getElementName(selectedElements.value[0])
-  }
-  if (selectedElements.value.length > 1) {
-    return `${selectedElements.value.length} Elements`
-  }
+  if (selectedElements.value.length === 1) return getElementName(selectedElements.value[0])
+  if (selectedElements.value.length > 1) return `${selectedElements.value.length} Elements`
   return '-'
 })
 
@@ -349,15 +266,11 @@ const handleTimeSimulatorChange = (value: boolean) => {
 
 const getDateElementsUsingChineseFormats = () => {
   const canvas = canvasStore.canvas
-  return ((canvas?.getObjects?.() || []) as FabricElement[])
-    .filter((object) => (object as any).eleType === 'date' && isChineseDateFormatter((object as any).formatter))
+  return ((canvas?.getObjects?.() || []) as FabricElement[]).filter((object) => (object as any).eleType === 'date' && isChineseDateFormatter((object as any).formatter))
 }
 
 const resolveFontForDateCheck = async (slug: string) => {
-  const local = [
-    ...(fontStore.allFonts as any[]),
-    ...(fontStore.recentFonts as any[]),
-  ].find((font) => font?.value === slug || font?.slug === slug)
+  const local = [...(fontStore.allFonts as any[]), ...(fontStore.recentFonts as any[])].find((font) => font?.value === slug || font?.slug === slug)
   if (local) return local
   const cached = fontStore.serverFonts.get(slug)
   if (cached) return cached
@@ -372,8 +285,7 @@ const resolveFontForDateCheck = async (slug: string) => {
 }
 
 const warnIncompatibleDateFonts = async () => {
-  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
-    .filter((object) => (object as any).eleType === 'date')
+  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[]).filter((object) => (object as any).eleType === 'date')
   const datePreviewLocale = resolveDesignEffectiveLocale(designStore)
   for (const element of dateElements) {
     const fontFamily = String((element as any).fontFamily || '')
@@ -389,20 +301,17 @@ const warnIncompatibleDateFonts = async () => {
 
 const refreshMetricTextElementsForContentLanguage = () => {
   const language = resolveDesignContentLanguage(designStore)
-  const metricTextElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
-    .filter((object) => ['label', 'unit'].includes(String((object as any).eleType ?? '')))
+  const metricTextElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[]).filter((object) => ['label', 'unit'].includes(String((object as any).eleType ?? '')))
 
   for (const element of metricTextElements) {
     const metric = propertiesStore.getMetricByOptions({
       dataProperty: (element as any).dataProperty,
       goalProperty: (element as any).goalProperty,
-      metricSymbol: (element as any).metricSymbol,
+      metricSymbol: (element as any).metricSymbol
     })
     if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
     const canonicalMetric = requireCanonicalMetric(metric ?? element, dataCatalog.snapshot)
-    const nextText = (element as any).eleType === 'unit'
-      ? resolveMetricUnit(canonicalMetric, language, dataCatalog.snapshot)
-      : resolveMetricLabel(canonicalMetric, language)
+    const nextText = (element as any).eleType === 'unit' ? resolveMetricUnit(canonicalMetric, language, dataCatalog.snapshot) : resolveMetricLabel(canonicalMetric, language)
     ;(element as any).set?.('text', nextText)
     if ((element as any).eleType === 'unit') {
       ;(element as any).metricValue = nextText
@@ -421,8 +330,7 @@ const refreshMetricTextElementsForContentLanguage = () => {
 }
 
 const refreshDateElementsForContentLanguage = async () => {
-  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[])
-    .filter((object) => (object as any).eleType === 'date')
+  const dateElements = ((canvasStore.canvas?.getObjects?.() || []) as FabricElement[]).filter((object) => (object as any).eleType === 'date')
 
   for (const element of dateElements) {
     const id = (element as any).id
@@ -446,15 +354,11 @@ const handleChineseContentChange = async (value: boolean | string | number) => {
   const affectedDates = getDateElementsUsingChineseFormats()
   if (affectedDates.length > 0) {
     try {
-      await ElMessageBox.confirm(
-        t('editorSettings.disableChineseContentConfirm', { count: affectedDates.length }),
-        t('editorSettings.disableChineseContentTitle'),
-        {
-          type: 'warning',
-          confirmButtonText: t('common.confirm'),
-          cancelButtonText: t('common.cancel'),
-        },
-      )
+      await ElMessageBox.confirm(t('editorSettings.disableChineseContentConfirm', { count: affectedDates.length }), t('editorSettings.disableChineseContentTitle'), {
+        type: 'warning',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel')
+      })
     } catch {
       return
     }
@@ -480,17 +384,9 @@ const handleDeviceFrameChange = (value: boolean) => {
   editorStore.updateSetting('showDeviceFrame', showDeviceFrame.value)
 }
 
-const toggleDeviceFrame = () => {
-  handleDeviceFrameChange(!showDeviceFrame.value)
-}
-
 const handleRulerGuidesChange = (value: boolean) => {
   showRulerGuides.value = Boolean(value)
   editorStore.updateSetting('showRulerGuides', showRulerGuides.value)
-}
-
-const toggleRulerGuides = () => {
-  handleRulerGuidesChange(!showRulerGuides.value)
 }
 
 const handleZoomIn = () => {
@@ -510,7 +406,7 @@ const applyRulerGuidesStyle = () => {
   editorStore.updateSettings({
     rulerGuidesColor: rulerGuidesColor.value,
     rulerGuidesMajor: Number(rulerGuidesMajor.value),
-    rulerGuidesMinor: Number(rulerGuidesMinor.value),
+    rulerGuidesMinor: Number(rulerGuidesMinor.value)
   })
 }
 
@@ -528,7 +424,6 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   keyGuidelineDivisions.value = value as 2 | 3 | 4 | 5 | 6 | 8
   editorStore.updateSetting('keyGuidelineDivisions', keyGuidelineDivisions.value)
 }
-
 </script>
 
 <style scoped>
@@ -538,13 +433,177 @@ const handleKeyGuidelinesDivisionsChange = (value: number) => {
   height: 34px;
   display: flex;
   align-items: center;
-  overflow-x: auto;
+  overflow: hidden;
   overflow-y: hidden;
   border-top: 1px solid var(--studio-border);
   background: var(--studio-surface);
   color: var(--studio-text);
   box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.02);
   white-space: nowrap;
+}
+
+.editor-settings-primary {
+  width: 100%;
+  height: 34px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.editor-status {
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.status-item {
+  min-width: 0;
+  max-width: 180px;
+  height: 34px;
+  display: flex;
+  flex: 1 1 140px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-right: 1px solid var(--studio-border);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.status-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-item :deep(svg) {
+  flex: 0 0 auto;
+}
+
+.more-settings-trigger {
+  flex: 0 0 auto;
+  height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+
+:global(.editor-settings-more-popover) {
+  padding: 14px;
+}
+
+:global(.editor-settings-more-popover .more-settings-panel) {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  color: var(--studio-text);
+}
+
+:global(.editor-settings-more-popover .more-settings-heading) {
+  font-size: 13px;
+  font-weight: 750;
+  padding: 0 2px 12px;
+}
+
+:global(.editor-settings-more-popover .more-settings-section) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 2px;
+  border-top: 1px solid var(--studio-border);
+}
+
+:global(.editor-settings-more-popover .more-settings-section h3) {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:global(.editor-settings-more-popover .settings-toggle-row) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  font-size: 12px;
+}
+
+:global(.editor-settings-more-popover .more-settings-row) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.canvas-size-status {
+  flex-basis: 112px;
+  max-width: 132px;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.editor-settings-more-popover .more-settings-row .el-select) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+:global(.editor-settings-more-popover .more-divisions-select) {
+  max-width: 84px;
+  margin-left: auto;
+}
+
+:global(.editor-settings-more-popover .more-settings-row .el-color-picker) {
+  margin-left: auto;
+}
+
+:global(.editor-settings-more-popover .more-opacity-section) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+@media (max-width: 520px) {
+  .more-settings-trigger span {
+    display: none;
+  }
+
+  .more-settings-trigger {
+    width: 34px;
+    padding: 0;
+  }
+}
+
+.zoom-controls {
+  height: 34px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-left: 1px solid var(--studio-border);
+}
+
+.bottom-view-toggles {
+  height: 34px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-left: 1px solid var(--studio-border);
+}
+
+.bottom-view-toggles .el-button + .el-button {
+  margin-left: 0;
 }
 
 .bar-group {

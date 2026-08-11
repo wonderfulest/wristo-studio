@@ -4,6 +4,7 @@
       <el-form-item label="Title" prop="title" :rules="[{ required: true, message: 'Enter a title', trigger: 'blur' }]">
         <el-input v-model="formData.title" />
       </el-form-item>
+      <LocalizedPropertyTitleField v-model="formData.titleCn" />
       <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="dial_goal_1" placeholder="dial_goal_1" />
       <el-form-item label="Progress Mode">
         <el-segmented v-model="formData.dialMode" :options="modeOptions" :disabled="isEdit" @change="selectFirstCompatible" />
@@ -32,6 +33,8 @@ import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import type { DialProgressMode } from '@/types/settings'
 import { usePropertiesStore } from '@/stores/properties'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
+import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 
 const emit = defineEmits<{ confirm: [payload: Record<string, unknown>] }>()
 const store = usePropertiesStore()
@@ -39,7 +42,7 @@ const visible = ref(false)
 const isEdit = ref(false)
 const formRef = ref<any>(null)
 const modeOptions = [{ label: 'Goal', value: 'goal' }, { label: 'Range', value: 'range' }]
-const formData = reactive({ title: '', propertyKey: '', dialMode: 'goal' as DialProgressMode, value: undefined as number | undefined })
+const formData = reactive({ title: '', titleCn: '', propertyKey: '', dialMode: 'goal' as DialProgressMode, value: undefined as number | undefined })
 
 const compatibleOptions = computed(() => getDataTypePropertyOptions().filter(option => option.dialMode === formData.dialMode))
 const selectedOption = computed(() => compatibleOptions.value.find(option => option.value === formData.value) || null)
@@ -61,6 +64,7 @@ function show(data?: any) {
   formData.dialMode = data?.dialMode === 'range' ? 'range' : 'goal'
   formData.propertyKey = data?.propertyKey || nextKey(formData.dialMode)
   formData.title = data?.title || (formData.dialMode === 'goal' ? 'Goal Dial' : 'Range Dial')
+  formData.titleCn = data?.titleCn || ''
   formData.value = data?.value
   selectFirstCompatible()
   visible.value = true
@@ -72,8 +76,9 @@ async function confirm() {
     type: 'dial',
     key: formData.propertyKey,
     title: formData.title,
+    titleCn: formData.titleCn.trim() || undefined,
     dialMode: formData.dialMode,
-    options: compatibleOptions.value.map(option => ({ ...option })),
+    options: withSimplifiedChineseOptionLabels(compatibleOptions.value),
     defaultValue: formData.value,
     isEdit: isEdit.value,
   })

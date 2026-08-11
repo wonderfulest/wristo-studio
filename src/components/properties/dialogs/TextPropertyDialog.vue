@@ -28,6 +28,8 @@
             <el-input v-model="formData.title" :placeholder="t('property.textProperty')" />
           </el-form-item>
 
+          <LocalizedPropertyTitleField v-model="formData.titleCn" />
+
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -84,6 +86,7 @@
 <script setup>
 import { computed, ref, reactive } from 'vue'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import DefaultTextField from '@/components/properties/common/DefaultTextField.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
@@ -96,6 +99,7 @@ const isEdit = ref(false)
 
 const formData = reactive({
   title: '',
+  titleCn: '',
   propertyKey: '',
   type: 'text',
   options: [],
@@ -114,6 +118,7 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
+      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: [],
@@ -124,6 +129,7 @@ const initFormData = (data = null) => {
   } else {
     Object.assign(formData, {
       title: 'Text 1',
+      titleCn: '',
       propertyKey: 'text_1',
       type: 'text',
       options: [],
@@ -145,6 +151,7 @@ const handleConfirm = async () => {
       type: 'text',
       key: formData.propertyKey,
       title: formData.title,
+      titleCn: formData.titleCn.trim() || undefined,
       options: [],
       defaultValue: formData.value,
       prompt: formData.prompt,

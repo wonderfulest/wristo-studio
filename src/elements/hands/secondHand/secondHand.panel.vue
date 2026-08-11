@@ -12,6 +12,7 @@
           :on-upload="handleAssetUpload"
         />
       </div>
+      <HandGeometrySettings :model="config || element" @update="applyUpdate" />
     </el-form>
   </div>
 </template>
@@ -20,6 +21,7 @@
 import * as elementManager from '@/engine/managers/elementManager'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import { useI18n } from '@/i18n'
+import HandGeometrySettings from '@/elements/hands/common/HandGeometrySettings.vue'
 
 const { t } = useI18n()
 

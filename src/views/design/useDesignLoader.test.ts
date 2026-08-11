@@ -19,7 +19,8 @@ describe('useDesignLoader contract', () => {
     const generationGuard = loaderSource.indexOf('if (!isCurrentDesignLoad(generation)) return false', fontFetch)
     const projection = loaderSource.indexOf('const loadConfig = projectDefaultVisualThemeForLoad(config)', generationGuard)
     const hydrate = loaderSource.indexOf('visualThemeStore.hydrate(', projection)
-    const properties = loaderSource.indexOf('propertiesStore.loadProperties(loadConfig.properties)', hydrate)
+    const normalization = loaderSource.indexOf('normalizeDataPropertyConfig(loadConfig, dataCatalogStore.options)', hydrate)
+    const properties = loaderSource.indexOf('propertiesStore.loadDataPropertyConfig(', normalization)
     const elements = loaderSource.indexOf('const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map', properties)
 
     expect(applyStart).toBeGreaterThan(-1)
@@ -27,7 +28,8 @@ describe('useDesignLoader contract', () => {
     expect(generationGuard).toBeGreaterThan(fontFetch)
     expect(projection).toBeGreaterThan(generationGuard)
     expect(hydrate).toBeGreaterThan(projection)
-    expect(properties).toBeGreaterThan(hydrate)
+    expect(normalization).toBeGreaterThan(hydrate)
+    expect(properties).toBeGreaterThan(normalization)
     expect(elements).toBeGreaterThan(properties)
   })
 

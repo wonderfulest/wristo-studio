@@ -12,15 +12,33 @@ describe('getProductTagsPage', () => {
     get.mockReset()
   })
 
-  it('requests the Dsn product-tag page with the Studio picker defaults', async () => {
-    const response = { code: 200, msg: 'success', data: { list: [] } }
-    get.mockResolvedValue(response)
+  it('loads and merges every Dsn product-tag page', async () => {
+    get
+      .mockResolvedValueOnce({
+        code: 0,
+        msg: 'success',
+        data: { pageNum: 1, pageSize: 50, total: 56, pages: 2, list: [{ id: 1 }] },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        msg: 'success',
+        data: { pageNum: 2, pageSize: 50, total: 56, pages: 2, list: [{ id: 56 }] },
+      })
 
-    await expect(getProductTagsPage()).resolves.toBe(response)
-    expect(get).toHaveBeenCalledWith('/dsn/product-tags/page', {
+    const response = await getProductTagsPage()
+
+    expect(response.data?.list).toEqual([{ id: 1 }, { id: 56 }])
+    expect(get).toHaveBeenNthCalledWith(1, '/dsn/product-tags/page', {
       params: {
         pageNum: 1,
-        pageSize: 200,
+        pageSize: 50,
+        orderBy: 'sort:desc',
+      },
+    })
+    expect(get).toHaveBeenNthCalledWith(2, '/dsn/product-tags/page', {
+      params: {
+        pageNum: 2,
+        pageSize: 50,
         orderBy: 'sort:desc',
       },
     })

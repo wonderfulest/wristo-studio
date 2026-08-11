@@ -115,6 +115,7 @@ import { uploadFontFile, getFontByName, getSystemFonts, increaseFontUsage } from
 import type { DesignFontVO } from '@/types/font'
 import { getEnumOptions, type EnumOption } from '@/api/common'
 import { useI18n } from '@/i18n'
+import { filterUploadFontTypes, getUploadFontLanguageOptions } from './fontUploadPolicy'
 
 const { t } = useI18n()
 
@@ -166,9 +167,10 @@ const selectedFontType = ref<string>('')
 const selectedFontLanguage = ref<string>('en')
 
 const fontLanguageOptions = computed(() => [
-  { name: t('font.languageEnglish'), value: 'en' },
-  { name: t('font.languageChinese'), value: 'zh' },
-  { name: t('font.languageMultilingual'), value: 'multi' },
+  ...getUploadFontLanguageOptions().map(value => ({
+    name: t('font.languageEnglish'),
+    value,
+  })),
 ])
 
 const previewFontFamily = computed(() => {
@@ -177,9 +179,6 @@ const previewFontFamily = computed(() => {
 })
 
 const uploadPreviewPrimaryText = computed(() => {
-  if (selectedFontLanguage.value === 'zh' || selectedFontLanguage.value === 'multi' || selectedFontType.value === 'text_font_zh') {
-    return '12:34 晴 25°C 周二 六月 农历五月十六'
-  }
   return '0123456789,:°F Sunny'
 })
 
@@ -188,8 +187,9 @@ onMounted(async () => {
     loadingFontTypes.value = true
     const res: any = await getEnumOptions('DesignFontType')
     const list: EnumOption[] = res?.data ?? res ?? []
-    fontTypeOptions.value = Array.isArray(list) && list.length
-      ? list
+    const uploadableTypes = filterUploadFontTypes(Array.isArray(list) ? list : [])
+    fontTypeOptions.value = uploadableTypes.length
+      ? uploadableTypes
       : [ { name: 'ratio', value: 'ratio' } ]
     if (!selectedFontType.value && fontTypeOptions.value.length) {
       selectedFontType.value = fontTypeOptions.value[0].value
@@ -198,12 +198,6 @@ onMounted(async () => {
     fontTypeOptions.value = [ { name: 'ratio', value: 'ratio' } ]
   } finally {
     loadingFontTypes.value = false
-  }
-})
-
-watch(selectedFontType, (type) => {
-  if (type === 'text_font_zh') {
-    selectedFontLanguage.value = 'zh'
   }
 })
 
@@ -354,7 +348,7 @@ const confirmUpload = async () => {
     selectedFile.value = null
     fontForm.value = { name: '', family: '' }
     parsedInfo.value = null
-    selectedFontLanguage.value = selectedFontType.value === 'text_font_zh' ? 'zh' : 'en'
+    selectedFontLanguage.value = 'en'
   }
 }
 </script>

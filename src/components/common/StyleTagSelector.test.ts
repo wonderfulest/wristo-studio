@@ -34,6 +34,10 @@ const stubs = {
   ElOption: {
     props: ['value', 'label'],
     template: '<span class="option" :data-value="value" :data-label="label" />'
+  },
+  ElOptionGroup: {
+    props: ['label'],
+    template: '<section class="option-group" :data-label="label"><slot /></section>'
   }
 }
 
@@ -44,6 +48,20 @@ const mountSelector = (props: Record<string, unknown> = {}) =>
   })
 
 describe('StyleTagSelector', () => {
+  it('renders every tag under its localized tag group', () => {
+    const groupedTags = [tags[0], { ...tags[1], tagGroup: 'scene' }]
+    const wrapper = mountSelector({ tags: groupedTags })
+
+    expect(wrapper.findAll('.option-group').map((group) => group.attributes('data-label'))).toEqual([
+      'styleTags.group.style',
+      'styleTags.group.scene'
+    ])
+    expect(wrapper.findAll('.option').map((option) => option.attributes('data-label'))).toEqual([
+      'Minimal',
+      'Sport'
+    ])
+  })
+
   it('renders the localized form field and select contract with API option order', () => {
     const wrapper = mountSelector()
     const formItem = wrapper.get('.form-item')

@@ -108,6 +108,16 @@ describe('applyControlsToObject', () => {
     expect(getControlPosition(target, 'br', new Point(800, 800))).toMatchObject({ x: 700, y: 700 })
   })
 
+  it('adds a rotation handle to rotatable resize controls', () => {
+    const target = createTarget('resize8Rotate') as any
+
+    applyControlsToObject(target)
+
+    expect(target.controls.mtr).toBeDefined()
+    expect(target.controls.mtr.actionName).toBe('rotate')
+    expect(target.controls.mt).toBeDefined()
+  })
+
   it('keeps the oversized ticks action entry above the bottom-right resize control', () => {
     const target = createTarget('corner4Inset') as any
     target.canvas = { getWidth: () => 600, getHeight: () => 600 }

@@ -53,13 +53,27 @@ export const createQuickMetricProperty = (type: BindableMetricPropertyType): str
   const fallback = options[0]
   if (!fallback) throw new Error(`${type} data type options: canonical definitions are missing`)
 
-  propertiesStore.addProperty({
-    key: defaults.key,
-    type,
-    title: defaults.title,
-    options: clone(options),
-    defaultValue: fallback.value,
-  })
+  if (type === 'data') {
+    propertiesStore.addProperty({
+      key: defaults.key,
+      type,
+      title: defaults.title,
+      metricSymbols: options.map((option) => option.metricSymbol),
+      defaultValue: fallback.metricSymbol,
+    })
+    const symbols = new Set(options.map((option) => option.metricSymbol))
+    propertiesStore.registerDataOptions(
+      useDataCatalogStore().options.filter((option) => symbols.has(option.metricSymbol)),
+    )
+  } else {
+    propertiesStore.addProperty({
+      key: defaults.key,
+      type,
+      title: defaults.title,
+      options: clone(options),
+      defaultValue: fallback.value,
+    })
+  }
 
   useHistoryStore().saveState(`properties:quick-add-${type}`)
   return defaults.key

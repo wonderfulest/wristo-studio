@@ -25,10 +25,12 @@
       <section class="settings-card">
         <h3>{{ t('subDial.dial') }}</h3>
         <div class="settings-grid">
-          <el-form-item :label="t('elementSettings.startAngle')">
+          <el-form-item>
+            <template #label><AngleHelpLabel :label="t('elementSettings.startAngle')" /></template>
             <el-input-number :model-value="model.startAngle" @change="patch({ startAngle: Number($event) })" />
           </el-form-item>
-          <el-form-item :label="t('elementSettings.endAngle')">
+          <el-form-item>
+            <template #label><AngleHelpLabel :label="t('elementSettings.endAngle')" /></template>
             <el-input-number :model-value="model.endAngle" @change="patch({ endAngle: Number($event) })" />
           </el-form-item>
           <el-form-item :label="t('elementSettings.direction')">
@@ -159,6 +161,7 @@ import * as elementManager from '@/engine/managers/elementManager'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import DialPropertyField from '@/elements/common/settings/DialPropertyField.vue'
+import AngleHelpLabel from '@/elements/common/settings/AngleHelpLabel.vue'
 import type { SubDialContentKey, SubDialElementConfig, SubDialPointerConfig } from '@/types/elements/subDial'
 import { useI18n } from '@/i18n'
 import { buildContentItemPatch, buildLayoutPresetPatch, buildSubDialPointerAssetPatch } from './subDial.panelModel'

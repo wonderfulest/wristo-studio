@@ -1,25 +1,14 @@
 <template>
   <div class="designer-font-list">
     <div class="font-list-scroll">
-      <div v-for="font in visibleFonts" :key="font.id" class="font-item" :class="{ active: modelValue === font.slug }" @click="handleSelect(font)">
-        <FontListItem
-          :label="font.fullName || font.family || font.slug"
-          :font-family="font.slug"
-          :type="type"
-          :language="font.language"
-          :is-system="font.isSystem === 1"
-          :is-monospace="font.isMonospace === 1"
-          :subfamily="font.subfamily || ''"
-          :font-id="font.id"
-          :font-url="font.ttfFile?.url"
-          :style-tags="font.styleTags"
-          :favorite-weight="font.favoriteWeight"
-          :can-edit-search-index="!!font.id"
-          compact
-          @edit-search-index="() => emit('editSearchIndex', font)"
-          @favorite-changed="handleFavoriteChanged"
-          @removed="onFontRemoved" />
-      </div>
+      <FontFamilyList
+        :fonts="visibleFontItems"
+        :model-value="modelValue"
+        :type="type"
+        @select="handleSelect"
+        @edit-search-index="(font) => emit('editSearchIndex', font)"
+        @favorite-changed="handleFavoriteChanged"
+        @removed="onFontRemoved" />
       <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
       <div v-else-if="!hasMore && fonts.length" class="end-tip">{{ t('common.noMore') }}</div>
     </div>
@@ -32,7 +21,7 @@ import type { DesignFontVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import { getDesignerUsageFontsPage, searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
-import FontListItem from '@/components/fonts/FontListItem.vue'
+import FontFamilyList from '@/components/font-picker/FontFamilyList.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
 import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
@@ -53,7 +42,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', font: FontItem): void
-  (e: 'editSearchIndex', font: DesignFontVO): void
+  (e: 'editSearchIndex', font: FontItem): void
 }>()
 
 const fonts = ref<DesignFontVO[]>([])
@@ -76,6 +65,25 @@ const isVisibleFont = (font: DesignFontVO) => {
 }
 
 const visibleFonts = computed(() => sortSystemFontsFirst(fonts.value.filter(isVisibleFont)))
+const visibleFontItems = computed<FontItem[]>(() =>
+  visibleFonts.value.map((font) => ({
+    id: font.id,
+    label: font.fullName || font.family || font.slug,
+    value: font.slug,
+    family: font.family || font.fullName || font.slug,
+    src: font.ttfFile?.url,
+    isMonospace: font.isMonospace === 1,
+    italic: font.italic === 1,
+    isSystem: font.isSystem === 1,
+    styleTags: font.styleTags,
+    searchKeywords: font.searchKeywords,
+    weightClass: font.weightClass,
+    widthClass: font.widthClass,
+    favoriteWeight: font.favoriteWeight,
+    language: font.language,
+    type: font.type
+  }))
+)
 
 defineExpose({
   loadNextPage,
@@ -154,20 +162,7 @@ async function loadUntilFont(slug: string) {
   return fonts.value.some((font) => font.slug === slug)
 }
 
-const handleSelect = (font: DesignFontVO) => {
-  const item: FontItem = {
-    label: font.fullName || font.family || font.slug,
-    value: font.slug,
-    family: font.family || font.fullName || font.slug,
-    isMonospace: font.isMonospace === 1,
-    italic: font.italic === 1,
-    isSystem: font.isSystem === 1,
-    favoriteWeight: font.favoriteWeight,
-    language: font.language,
-    type: font.type
-  }
-  emit('select', item)
-}
+const handleSelect = (font: FontItem) => emit('select', font)
 
 const onFontRemoved = (id: number) => {
   fonts.value = fonts.value.filter((f) => f.id !== id)
@@ -203,55 +198,6 @@ watch(
   flex-direction: column;
   gap: 8px;
   padding: var(--font-picker-list-y, 8px) var(--font-picker-list-x, 12px);
-}
-
-.font-item {
-  width: 100%;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.font-item:hover {
-  background: var(--studio-surface-soft);
-}
-
-.font-item.active {
-  background: var(--studio-primary-soft);
-  color: var(--studio-primary);
-}
-
-.font-item.active :deep(.font-main) {
-  border: 2px solid var(--studio-primary);
-  box-shadow:
-    0 0 0 2px var(--studio-primary-soft),
-    var(--studio-shadow-md);
-}
-
-.font-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.font-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.font-name {
-  font-size: 12px;
-  color: var(--studio-text-subtle);
-}
-
-.font-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
 }
 
 .loading,

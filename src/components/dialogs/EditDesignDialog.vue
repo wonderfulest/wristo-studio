@@ -974,37 +974,58 @@ defineExpose({
 }
 
 .package-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 12px;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 150px);
+  align-items: center;
+  gap: 16px;
+  padding: 13px 12px 13px 15px;
+  overflow: hidden;
   border: 1px solid var(--studio-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--studio-surface-soft);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.package-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--studio-primary);
+}
+
+.package-card:hover {
+  border-color: var(--studio-primary-border);
+  box-shadow: var(--studio-shadow-sm);
 }
 
 .package-card-main {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .package-type-badge {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
   color: var(--studio-primary);
   background: var(--studio-primary-soft);
   border: 1px solid var(--studio-primary-border);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .package-detail-list {
@@ -1039,7 +1060,7 @@ defineExpose({
 
 .package-card-actions {
   display: flex;
-  flex: 0 0 150px;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
@@ -1049,6 +1070,7 @@ defineExpose({
 .package-action-button {
   min-height: 32px;
   width: 100%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1060,8 +1082,11 @@ defineExpose({
   background: var(--studio-primary);
   font-size: 12px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.25;
   text-decoration: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
   cursor: pointer;
   transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
@@ -1538,6 +1563,17 @@ defineExpose({
   }
 }
 
+@media (max-width: 920px) {
+  .package-card {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .package-card-actions {
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .dialog-content {
     padding: 12px;
@@ -1568,7 +1604,7 @@ defineExpose({
   }
 
   .package-card {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .package-card-actions {

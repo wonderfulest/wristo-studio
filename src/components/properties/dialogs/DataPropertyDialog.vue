@@ -35,6 +35,8 @@
             <el-input v-model="formData.title" :placeholder="t('property.dataSelect')" />
           </el-form-item>
 
+          <LocalizedPropertyTitleField v-model="formData.titleCn" />
+
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -62,11 +64,12 @@
         >
           <el-select 
             v-model="formData.value" 
+            filterable
             :placeholder="t('property.selectDataType')"
             style="width: 100%"
           >
             <el-option
-              v-for="option in formData.options"
+              v-for="option in defaultValueOptions"
               :key="option.value"
               :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
               :value="option.value"
@@ -88,15 +91,18 @@
         </div>
 
         <el-collapse v-model="activeOptions" class="options-collapse">
-          <el-collapse-item :title="t('property.dataOptions')" name="options">
+          <el-collapse-item name="options">
+            <template #title>
+              <span>{{ t('property.dataOptions') }}（{{ formData.metricSymbols.length }}）</span>
+            </template>
             <el-form-item 
-              prop="options"
+              prop="metricSymbols"
               :rules="[
                 { required: true, message: t('property.atLeastOneOption'), trigger: 'change' }
               ]"
             >
               <div class="options-list">
-                <div v-for="(option, index) in formData.options" :key="index" class="option-item">
+                <div v-for="(option, index) in resolvedOptions" :key="option.metricSymbol" class="option-item">
                   <div class="option-content">
                     <div class="option-info">
                       <span class="metric-icon">{{ iconGlyph(option) }}</span>
@@ -110,8 +116,8 @@
                         <el-icon><ArrowUp /></el-icon>
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === formData.options.length - 1">
-                      <el-button type="primary" link :disabled="index === formData.options.length - 1" @click="moveOption(index, 'down')">
+                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === formData.metricSymbols.length - 1">
+                      <el-button type="primary" link :disabled="index === formData.metricSymbols.length - 1" @click="moveOption(index, 'down')">
                         <el-icon><ArrowDown /></el-icon>
                       </el-button>
                     </el-tooltip>
@@ -180,9 +186,9 @@
     >
       <el-option
         v-for="option in addableOptions"
-        :key="option.value"
+        :key="option.metricSymbol"
         :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
-        :value="option.value"
+        :value="option.metricSymbol"
       >
         <div class="metric-option">
           <span class="metric-icon">{{ iconGlyph(option) }}</span>
@@ -207,15 +213,20 @@ import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
-import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { usePropertiesStore } from '@/stores/properties'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import {
   createAddableDataOptions,
+  createDefaultDataOptions,
   createEditDataOptions,
   createSystemDataOptions,
+  resolveDefaultDataOptionValue,
   resolveDataOptionSettingsLabel,
+  resolveDataOptionsBySymbols,
   restoreSystemDataOptions
 } from './dataPropertyOptions'
 
@@ -226,6 +237,8 @@ const isEdit = ref(false)
 const activeOptions = ref([])
 const addOptionsVisible = ref(false)
 const pendingOptionValues = ref([])
+const dataCatalogStore = useDataCatalogStore()
+const propertiesStore = usePropertiesStore()
 const catalogOptions = getDataTypePropertyOptions()
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions)
 const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
@@ -233,37 +246,53 @@ const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, lo
 
 const formData = reactive({
   title: '',
+  titleCn: '',
   propertyKey: '',
   type: 'data',
-  options: cloneSystemDataOptions(),
-  value: cloneSystemDataOptions()[0]?.value,
+  metricSymbols: cloneSystemDataOptions().map(option => option.metricSymbol),
+  value: cloneSystemDataOptions()[0]?.metricSymbol,
   prompt: '',
   errorMessage: ''
 })
 
-const selectedOption = computed(() => formData.options.find((option) => option.value === formData.value) || null)
-const addableOptions = computed(() => createAddableDataOptions(catalogOptions, formData.options))
+const resolvedOptions = computed(() => resolveDataOptionsBySymbols(
+  catalogOptions,
+  propertiesStore.dataOptions,
+  formData.metricSymbols
+))
+const defaultValueOptions = computed(() => createDefaultDataOptions(resolvedOptions.value))
+const selectedOption = computed(() => defaultValueOptions.value.find((option) => option.value === formData.value) || null)
+const addableOptions = computed(() => createAddableDataOptions(catalogOptions, resolvedOptions.value))
 
 const initFormData = (data = null) => {
   isEdit.value = !!data
   if (data) {
+    const legacyOptions = createEditDataOptions(data.options, catalogOptions)
+    const metricSymbols = Array.isArray(data.metricSymbols)
+      ? [...data.metricSymbols]
+      : legacyOptions.map(option => option.metricSymbol)
+    const options = resolveDataOptionsBySymbols(catalogOptions, propertiesStore.dataOptions, metricSymbols)
     Object.assign(formData, {
       title: data.title,
+      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
-      options: createEditDataOptions(data.options, catalogOptions),
-      value: data.value,
+      metricSymbols,
+      value: resolveDefaultDataOptionValue(options, data.value),
       prompt: data.prompt,
       errorMessage: data.errorMessage
     })
   } else {
     const defaults = getNextMetricPropertyDefaults('data')
+    const options = cloneSystemDataOptions()
+    const metricSymbols = options.map(option => option.metricSymbol)
     Object.assign(formData, {
       title: defaults.title,
+      titleCn: '',
       propertyKey: defaults.key,
       type: 'data',
-      options: cloneSystemDataOptions(),
-      value: cloneSystemDataOptions()[0]?.value,
+      metricSymbols,
+      value: metricSymbols[0],
       prompt: '',
       errorMessage: ''
     })
@@ -277,7 +306,7 @@ const handleConfirm = async () => {
   
   try {
     await formRef.value.validate()
-    const selectedOption = formData.options.find(opt => opt.value === formData.value)
+    const selectedOption = defaultValueOptions.value.find(opt => opt.value === formData.value)
     if (!selectedOption) {
       ElMessage.error(t('property.selectValidOption'))
       return
@@ -286,8 +315,13 @@ const handleConfirm = async () => {
       type: 'data',
       key: formData.propertyKey,
       title: formData.title,
-      options: formData.options,
-      defaultValue: selectedOption.value,
+      titleCn: formData.titleCn.trim() || undefined,
+      metricSymbols: [...formData.metricSymbols],
+      dataOptions: formData.metricSymbols
+        .map(symbol => propertiesStore.resolveDataOption(symbol)
+          || dataCatalogStore.options.find(option => option.metricSymbol === symbol))
+        .filter(Boolean),
+      defaultValue: selectedOption.metricSymbol,
       prompt: formData.prompt,
       errorMessage: formData.errorMessage,
       isEdit: isEdit.value
@@ -324,8 +358,10 @@ const restoreSystemDefaults = async () => {
       }
     )
     const restored = restoreSystemDataOptions(catalogOptions, formData.value)
-    formData.options = restored.options
-    formData.value = restored.defaultValue
+    formData.metricSymbols = restored.options.map(option => option.metricSymbol)
+    formData.value = formData.metricSymbols.includes(formData.value)
+      ? formData.value
+      : formData.metricSymbols[0]
   } catch {
     // Canceling keeps the current form options and default value unchanged.
   }
@@ -338,24 +374,29 @@ const openAddOptions = () => {
 
 const confirmAddOptions = () => {
   const selectedValues = new Set(pendingOptionValues.value.map(String))
-  formData.options.push(...addableOptions.value.filter((option) => selectedValues.has(String(option.value))))
+  formData.metricSymbols.push(...addableOptions.value
+    .filter((option) => selectedValues.has(option.metricSymbol))
+    .map((option) => option.metricSymbol))
   pendingOptionValues.value = []
   addOptionsVisible.value = false
 }
 
 const deleteOption = (index) => {
-  formData.options.splice(index, 1)
+  const [removed] = formData.metricSymbols.splice(index, 1)
+  if (removed === formData.value) {
+    formData.value = createDefaultDataOptions(resolvedOptions.value)[0]?.metricSymbol
+  }
 }
 
 const moveOption = (index, direction) => {
   if (direction === 'up' && index > 0) {
-    const temp = formData.options[index]
-    formData.options[index] = formData.options[index - 1]
-    formData.options[index - 1] = temp
-  } else if (direction === 'down' && index < formData.options.length - 1) {
-    const temp = formData.options[index]
-    formData.options[index] = formData.options[index + 1]
-    formData.options[index + 1] = temp
+    const temp = formData.metricSymbols[index]
+    formData.metricSymbols[index] = formData.metricSymbols[index - 1]
+    formData.metricSymbols[index - 1] = temp
+  } else if (direction === 'down' && index < formData.metricSymbols.length - 1) {
+    const temp = formData.metricSymbols[index]
+    formData.metricSymbols[index] = formData.metricSymbols[index + 1]
+    formData.metricSymbols[index + 1] = temp
   }
 }
 

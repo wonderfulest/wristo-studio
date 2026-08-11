@@ -115,7 +115,7 @@ function renderDefaultControl(ctx: CanvasRenderingContext2D, left: number, top: 
 }
 
 type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
-type ControlSetMode = 'default' | 'resize8' | 'corner4' | 'corner4Inset'
+type ControlSetMode = 'default' | 'resize8' | 'resize8Rotate' | 'corner4' | 'corner4Inset'
 
 type ObjectActionDescriptor = {
   key: string
@@ -610,9 +610,9 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     ...layerOrderControls,
   }
 
-  if (mode !== 'resize8') return base
+  if (mode !== 'resize8' && mode !== 'resize8Rotate') return base
 
-  return {
+  const resizeControls = {
     ...base,
     mt: new Control({
       x: 0,
@@ -647,6 +647,22 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
       render: renderDefaultControl,
     }),
   }
+
+  if (mode !== 'resize8Rotate') return resizeControls
+
+  return {
+    ...resizeControls,
+    mtr: new Control({
+      x: 0,
+      y: -0.5,
+      offsetY: -32,
+      cursorStyleHandler: controlsUtils.rotationStyleHandler,
+      actionHandler: controlsUtils.rotationWithSnapping,
+      actionName: 'rotate',
+      withConnection: true,
+      render: renderDefaultControl,
+    }),
+  }
 }
 
 export function applyControlsToObject(target: FabricObject | null | undefined): void {
@@ -655,7 +671,9 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   if (!isManageableTarget(t)) return
 
   const mode =
-    (t as any).designerControlMode === 'resize8'
+    (t as any).designerControlMode === 'resize8Rotate'
+      ? 'resize8Rotate'
+      : (t as any).designerControlMode === 'resize8'
       ? 'resize8'
       : (t as any).designerControlMode === 'corner4Inset'
         ? 'corner4Inset'

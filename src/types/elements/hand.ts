@@ -13,4 +13,9 @@ export interface HandElementConfig extends BaseElementConfig {
   moveDy: number
   angle: number
   height: number
+  centerX?: number
+  centerY?: number
+  pivotOffsetX?: number
+  pivotOffsetY?: number
+  scalePercent?: number
 }

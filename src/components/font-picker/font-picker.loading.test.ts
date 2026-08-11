@@ -102,6 +102,38 @@ describe('font picker loading', () => {
     })
   })
 
+  it('replaces Chinese font selection with the built-in Studio preview font', () => {
+    const fontStore = useFontStore()
+    fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
+    useUserStore().setUserInfo({
+      roles: [{ roleCode: 'ROLE_ADMIN' }],
+    } as any)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<div />' } },
+        { path: '/fonts', component: { template: '<div />' } },
+      ],
+    })
+
+    const wrapper = mount(FontPicker, {
+      props: {
+        modelValue: 'legacy-chinese-font',
+        dateContentLanguage: 'zh',
+      },
+      global: {
+        plugins: [router],
+        stubs: {
+          FontPreviewText: true,
+          NumberGlyphEditorDialog: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('.font-preview').exists()).toBe(false)
+    expect(wrapper.get('.built-in-chinese-font').text()).toContain('noto-sans-sc-regular')
+  })
+
   it('selects an icon font without mutating the global strategy when disabled', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.spyOn(console, 'error').mockImplementation(() => undefined)

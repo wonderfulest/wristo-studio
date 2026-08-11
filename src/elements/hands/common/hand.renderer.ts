@@ -12,6 +12,7 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import { getHandGeometry, getRotatedHandCenter } from './hand.geometry'
 
 function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
   if (eleType === 'minuteHand') return 'minute'
@@ -54,19 +55,41 @@ function getAngleByType(eleType: ElementType, time?: Date): number {
 }
 
 function rotateHand(element: any, angle: number) {
-  element.set({ angle })
+  const position = getRotatedHandCenter(element, angle)
+  element.set({ angle, ...position })
   element.setCoords()
 }
 
-function scaleHandImage(hand: any) {
+function applyHandGeometry(hand: any, input: Partial<HandElementConfig> = {}) {
   const iw = hand.width || 0
   const ih = hand.height || 0
   if (iw <= 0 || ih <= 0) return
 
   const designStore = useDesignStore()
   const scaleBase = designStore.watchSize || designStore.designSpec.width
-  const scale = scaleBase / Math.max(iw, ih)
-  hand.set({ scaleX: scale, scaleY: scale })
+  const centerX = input.centerX ?? hand.centerX ?? input.left ?? hand.left ?? designStore.designSpec.centerX
+  const centerY = input.centerY ?? hand.centerY ?? input.top ?? hand.top ?? designStore.designSpec.centerY
+  const legacyRotationCenter = input.rotationCenter ?? hand.rotationCenter
+  const geometry = getHandGeometry({
+    left: centerX,
+    top: centerY,
+    centerX,
+    centerY,
+    pivotOffsetX: input.pivotOffsetX ?? hand.pivotOffsetX ?? (
+      legacyRotationCenter ? Number(legacyRotationCenter.x) - Number(centerX) : 0
+    ),
+    pivotOffsetY: input.pivotOffsetY ?? hand.pivotOffsetY ?? (
+      legacyRotationCenter ? Number(legacyRotationCenter.y) - Number(centerY) : 0
+    ),
+    scalePercent: input.scalePercent ?? hand.scalePercent,
+  }, scaleBase, iw, ih)
+
+  hand.set({
+    ...geometry,
+    scaleX: geometry.imageScale,
+    scaleY: geometry.imageScale,
+    rotationCenter: { x: geometry.pivotX, y: geometry.pivotY },
+  })
 }
 
 function removeExistingHandsByType(eleType: ElementType, exceptId?: string | number | null) {
@@ -212,7 +235,8 @@ export async function createHand(
 
   img.set(commonOptions)
 
-  scaleHandImage(img)
+  applyHandGeometry(img, config)
+  rotateHand(img, commonOptions.angle)
 
   img.setCoords()
   assertElementRenderCurrent(renderContext)
@@ -230,6 +254,12 @@ export async function createHand(
     angle: img.angle,
     imageUrl: url,
     assetId,
+    centerX: img.centerX,
+    centerY: img.centerY,
+    pivotOffsetX: img.pivotOffsetX,
+    pivotOffsetY: img.pivotOffsetY,
+    scalePercent: img.scalePercent,
+    rotationCenter: img.rotationCenter,
   } as HandElementConfig)
   canvas.requestRenderAll()
   canvas.discardActiveObject?.()
@@ -257,6 +287,14 @@ export async function updateHand(
     const prevTop = hand.top
     const prevAngle = hand.angle
     const nextAssetId = patch.assetId ?? hand.assetId
+    const previousGeometry = {
+      centerX: hand.centerX,
+      centerY: hand.centerY,
+      pivotOffsetX: hand.pivotOffsetX,
+      pivotOffsetY: hand.pivotOffsetY,
+      scalePercent: hand.scalePercent,
+      rotationCenter: hand.rotationCenter,
+    }
 
     const img: any = await FabricImage.fromURL(patch.imageUrl, { crossOrigin: 'anonymous' } as any)
     canvas.remove(hand)
@@ -280,9 +318,10 @@ export async function updateHand(
       lockScalingX: true,
       lockScalingY: true,
       lockRotation: true,
+      ...previousGeometry,
     })
 
-    scaleHandImage(hand)
+    applyHandGeometry(hand, patch)
 
     canvas.add(hand)
     useLayerStore().addLayer(hand)
@@ -291,6 +330,8 @@ export async function updateHand(
   if (patch.assetId !== undefined) {
     hand.assetId = patch.assetId
   }
+
+  applyHandGeometry(hand, patch)
 
   const newAngle = getAngleByType(eleType)
   rotateHand(hand, newAngle)
@@ -304,6 +345,12 @@ export async function updateHand(
       angle: newAngle,
       imageUrl: hand.imageUrl,
       assetId: hand.assetId,
+      centerX: hand.centerX,
+      centerY: hand.centerY,
+      pivotOffsetX: hand.pivotOffsetX,
+      pivotOffsetY: hand.pivotOffsetY,
+      scalePercent: hand.scalePercent,
+      rotationCenter: hand.rotationCenter,
     } as Partial<HandElementConfig>)
   }
   canvas.requestRenderAll?.()

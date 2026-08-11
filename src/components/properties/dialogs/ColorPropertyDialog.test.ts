@@ -10,11 +10,14 @@ describe('ColorPropertyDialog contract', () => {
     expect(source).not.toContain('ensureOptionForColorValue')
   })
 
-  it('renders color options as read-only values', () => {
+  it('renders color options as manageable values', () => {
     expect(source).not.toContain('@click="addOption"')
     expect(source).not.toContain('v-model="option.label"')
     expect(source).not.toContain('v-model="option.value"')
-    expect(source).not.toContain('@click="deleteOption(index)"')
+    expect(source).toContain('@click="deleteOption(index)"')
+    expect(source).toContain('@click="moveOption(index, \'up\')"')
+    expect(source).toContain('@click="moveOption(index, \'down\')"')
+    expect(source).toContain('@click="restoreSystemDefaults"')
     expect(source).toContain('option.label')
     expect(source).toContain('option.value')
   })

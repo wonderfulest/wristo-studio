@@ -25,12 +25,20 @@
         <el-icon><Compass /></el-icon>
         <span>{{ t('editor.windDirection') }}</span>
       </el-menu-item>
+      <el-menu-item index="sun/arcSunEvents" @click="onAddElement('sun', 'arcSunEvents')">
+        <el-icon><Sunny /></el-icon>
+        <span>{{ t('sunEvents.arcName') }}</span>
+      </el-menu-item>
+      <el-menu-item index="sun/lineSunEvents" @click="onAddElement('sun', 'lineSunEvents')">
+        <el-icon><Minus /></el-icon>
+        <span>{{ t('sunEvents.lineName') }}</span>
+      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>
 
 <script setup>
-import { Cloudy, Compass, MoonNight, Sunny } from '@element-plus/icons-vue'
+import { Cloudy, Compass, Minus, MoonNight, Sunny } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

@@ -4,18 +4,36 @@
       <Icon icon="material-symbols:timer-outline-rounded" width="18" height="18" />
       <div class="time-readout">
         <span class="panel-title">{{ t('timeSimulator.title') }}</span>
-        <strong>{{ timeLabel }}</strong>
+        <el-date-picker
+          v-model="currentTime"
+          class="date-time-picker"
+          type="datetime"
+          :clearable="false"
+          :editable="false"
+          :teleported="true"
+          format="MM/DD HH:mm:ss"
+          @change="handleDateTimeChange"
+        />
       </div>
     </div>
+
+    <el-segmented
+      v-model="clockMode"
+      class="mode-control"
+      :options="modeOptions"
+      size="small"
+      @change="handleModeChange"
+    />
 
     <div class="speed-control">
       <span>{{ t('timeSimulator.speed') }}</span>
       <el-slider
         v-model="speedSliderValue"
         class="speed-slider"
-        :min="SPEED_SLIDER_MIN"
-        :max="SPEED_SLIDER_MAX"
+        :min="0"
+        :max="TIME_SIMULATOR_SPEEDS.length - 1"
         :step="1"
+        :show-stops="true"
         :show-tooltip="false"
         @input="handleSpeedInput"
       />
@@ -34,51 +52,41 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from '@/i18n'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
-import { getSimulatedClockSnapshot, resetSimulatedClock, setSimulatedSpeed } from '@/engine/simulator/simulatedClock'
+import {
+  getSimulatedClockSnapshot,
+  pauseSimulatedClock,
+  resetSimulatedClock,
+  resumeSimulatedClock,
+  setSimulatedSpeed,
+  setSimulatedTime,
+} from '@/engine/simulator/simulatedClock'
+import { TIME_SIMULATOR_SPEEDS, getSliderIndexForSpeed, getSpeedAtSliderIndex } from './timeSimulatorSpeed'
 
 const { t } = useI18n()
 const currentTime = ref<Date>(getSimulatedClockSnapshot().currentTime)
 
-const SPEED_MIN = 1
-const SPEED_MAX = 1000
-const SPEED_SLIDER_MIN = 1
-const SPEED_SLIDER_MAX = 1000
-const SPEED_CURVE_EXPONENT = 2.4
+type ClockMode = 'fixed' | 'running'
 
-const clampSpeedMultiplier = (value: number): number => {
-  if (!Number.isFinite(value)) return SPEED_MIN
-  return Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(value)))
-}
-
-const speedMultiplier = ref<number>(clampSpeedMultiplier(getSimulatedClockSnapshot().speedMultiplier))
-const speedSliderValue = ref<number>(SPEED_SLIDER_MIN)
+const initialSnapshot = getSimulatedClockSnapshot()
+const initialSpeed = initialSnapshot.isRunning ? initialSnapshot.speedMultiplier : 1
+const speedMultiplier = ref<number>(getSpeedAtSliderIndex(getSliderIndexForSpeed(initialSpeed)))
+const speedSliderValue = ref<number>(getSliderIndexForSpeed(speedMultiplier.value))
+const clockMode = ref<ClockMode>(initialSnapshot.isRunning ? 'running' : 'fixed')
 let timer: number | null = null
 
-const pad2 = (value: number) => String(value).padStart(2, '0')
-
-const formatTimeLabel = (date: Date) => `${pad2(date.getMonth() + 1)}/${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
-
-const normalizeSliderValue = (value: number): number => (value - SPEED_SLIDER_MIN) / (SPEED_SLIDER_MAX - SPEED_SLIDER_MIN)
-
-const denormalizeSliderValue = (value: number): number => SPEED_SLIDER_MIN + value * (SPEED_SLIDER_MAX - SPEED_SLIDER_MIN)
-
-const speedFromSliderValue = (value: number): number => {
-  const normalizedValue = Math.min(1, Math.max(0, normalizeSliderValue(value)))
-  const curvedValue = Math.pow(normalizedValue, SPEED_CURVE_EXPONENT)
-  return clampSpeedMultiplier(SPEED_MIN + curvedValue * (SPEED_MAX - SPEED_MIN))
-}
-
-const sliderValueFromSpeed = (value: number): number => {
-  const normalizedSpeed = (clampSpeedMultiplier(value) - SPEED_MIN) / (SPEED_MAX - SPEED_MIN)
-  const curvedValue = Math.pow(normalizedSpeed, 1 / SPEED_CURVE_EXPONENT)
-  return Math.round(denormalizeSliderValue(curvedValue))
-}
+const modeOptions = computed(() => [
+  { label: t('timeSimulator.fixed'), value: 'fixed' },
+  { label: t('timeSimulator.running'), value: 'running' },
+])
 
 const syncFromClock = () => {
   const snapshot = getSimulatedClockSnapshot()
   currentTime.value = snapshot.currentTime
-  speedMultiplier.value = clampSpeedMultiplier(snapshot.speedMultiplier)
-  speedSliderValue.value = sliderValueFromSpeed(speedMultiplier.value)
+  clockMode.value = snapshot.isRunning ? 'running' : 'fixed'
+  if (snapshot.isRunning) {
+    speedMultiplier.value = getSpeedAtSliderIndex(getSliderIndexForSpeed(snapshot.speedMultiplier))
+    speedSliderValue.value = getSliderIndexForSpeed(speedMultiplier.value)
+  }
 }
 
 const refreshCanvas = () => {
@@ -87,19 +95,40 @@ const refreshCanvas = () => {
 }
 
 const handleSpeedInput = (value: number) => {
-  const nextSpeedMultiplier = speedFromSliderValue(Number(value))
+  const nextSpeedMultiplier = getSpeedAtSliderIndex(Number(value))
   speedMultiplier.value = nextSpeedMultiplier
-  speedSliderValue.value = sliderValueFromSpeed(nextSpeedMultiplier)
-  setSimulatedSpeed(nextSpeedMultiplier)
+  speedSliderValue.value = getSliderIndexForSpeed(nextSpeedMultiplier)
+  if (clockMode.value === 'running') {
+    setSimulatedSpeed(nextSpeedMultiplier)
+    refreshCanvas()
+  }
+}
+
+const handleDateTimeChange = (value: Date | string | number | null) => {
+  if (value == null) return
+  const date = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(date.getTime())) return
+  setSimulatedTime(date)
+  refreshCanvas()
+}
+
+const handleModeChange = (value: string | number | boolean) => {
+  clockMode.value = value === 'fixed' ? 'fixed' : 'running'
+  if (clockMode.value === 'fixed') {
+    pauseSimulatedClock()
+  } else {
+    resumeSimulatedClock(speedMultiplier.value)
+  }
   refreshCanvas()
 }
 
 const resetClock = () => {
   resetSimulatedClock()
+  clockMode.value = 'running'
+  speedMultiplier.value = 1
+  speedSliderValue.value = 0
   refreshCanvas()
 }
-
-const timeLabel = computed(() => formatTimeLabel(currentTime.value))
 
 onMounted(() => {
   syncFromClock()
@@ -143,7 +172,7 @@ onBeforeUnmount(() => {
 
 .simulator-main {
   gap: 8px;
-  min-width: 158px;
+  min-width: 182px;
 }
 
 .time-readout {
@@ -159,9 +188,30 @@ onBeforeUnmount(() => {
   color: var(--studio-text-muted);
 }
 
-.time-readout strong {
+.date-time-picker {
+  width: 152px;
+}
+
+.date-time-picker :deep(.el-input__wrapper) {
+  min-height: 24px;
+  padding: 0 6px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.date-time-picker :deep(.el-input__prefix) {
+  display: none;
+}
+
+.date-time-picker :deep(.el-input__inner) {
+  color: var(--studio-text);
   font-size: 13px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.mode-control {
+  flex: 0 0 auto;
 }
 
 .speed-control {

@@ -87,6 +87,19 @@ describe('history saveState result', () => {
     ).toBe(true)
   })
 
+  it('captures top-level data options as property history state', () => {
+    const canvas = createCanvas()
+    const historyStore = useHistoryStore()
+    historyStore.attachCanvas(canvas as any, baseStore as any)
+    historyStore.saveInitial()
+
+    usePropertiesStore().dataOptions = {
+      ':FIELD_TYPE_STEPS': { metricSymbol: ':FIELD_TYPE_STEPS' } as any,
+    }
+
+    expect(historyStore.saveState('data-options', { coalesceIfSameFabric: true })).toBe(true)
+  })
+
   it('exposes restore activity and rejects saves while a restore overlaps', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     let releaseRestore!: () => void

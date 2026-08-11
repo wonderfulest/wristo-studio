@@ -5,7 +5,7 @@
 // base & common
 export type { BaseElementConfig } from './base'
 export type { TextElementConfig } from './text'
-export type { ShapeElementConfig, CircleElementConfig, RectangleElementConfig, PolygonElementConfig, LineElementConfig } from './shape'
+export type { ShapeElementConfig, CircleElementConfig, RectangleElementConfig, PolygonElementConfig, TriangleElementConfig, LineElementConfig } from './shape'
 export type { RotationCenter, HandElementConfig } from './hand'
 
 // time & date
@@ -40,6 +40,7 @@ export type {
   SubDialPointerConfig,
   SubDialPointerStyle,
 } from './subDial'
+export type { ArcSunEventsElementConfig, LineSunEventsElementConfig } from './sunEvents'
 
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
@@ -47,7 +48,7 @@ import type { TextElementConfig as _Text } from './text'
 import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './time'
 import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, UnitElementConfig as _Unit, ZoneMetricElementConfig as _ZoneMetric, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
-import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, PolygonElementConfig as _Polygon, LineElementConfig as _Line } from './shape'
+import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, PolygonElementConfig as _Polygon, TriangleElementConfig as _Triangle, LineElementConfig as _Line } from './shape'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc } from './goal'
 import type { BarChartElementConfig as _BarChart, LineChartElementConfig as _LineChart } from './charts'
 import type { MoveBarElementConfig as _MoveBar } from './status'
@@ -57,6 +58,7 @@ import type { TickElementConfig as _Tick } from './tick'
 import type { ImageElementConfig as _Image } from './image'
 import type { BackgroundElementConfig as _Background } from './background'
 import type { SubDialElementConfig as _SubDial } from './subDial'
+import type { ArcSunEventsElementConfig as _ArcSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
 
 export type AnyElementConfig =
   | _Time
@@ -86,6 +88,9 @@ export type AnyElementConfig =
   | _LineChart
   | _SubDial
   | _Polygon
+  | _Triangle
+  | _ArcSunEvents
+  | _LineSunEvents
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {
@@ -114,6 +119,7 @@ export interface ElementConfigMap {
   'circle': _Circle
   'rectangle': _Rectangle
   'polygon': _Polygon
+  'triangle': _Triangle
   'line': _Line
   'hourHand': _Hand
   'minuteHand': _Hand
@@ -130,6 +136,8 @@ export interface ElementConfigMap {
   'battery': _Battery
   'moveBar': _MoveBar
   'subDial': _SubDial
+  'arcSunEvents': _ArcSunEvents
+  'lineSunEvents': _LineSunEvents
   [key: string]: _Base
 }
 

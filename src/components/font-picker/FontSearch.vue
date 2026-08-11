@@ -13,22 +13,13 @@
           Local Search Results
         </div> -->
         <div class="font-list-content">
-          <div v-for="font in filteredFonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="handleSelect(font)">
-            <FontListItem
-              :label="font.label"
-              :font-family="font.value"
-              :type="font.type || props.type"
-              :language="font.language"
-              :is-monospace="(font as any).isMonospace === true"
-              :is-system="(font as any).isSystem === true"
-              :style-tags="(font as any).styleTags"
-              :favorite-weight="(font as any).favoriteWeight"
-              :font-id="font.id"
-              :can-edit-search-index="!!font.id"
-              compact
-              @edit-search-index="() => emit('editSearchIndex', font)"
-              @favorite-changed="handleFavoriteChanged" />
-          </div>
+          <FontFamilyList
+            :fonts="filteredFonts"
+            :model-value="modelValue"
+            :type="type"
+            @select="handleSelect"
+            @edit-search-index="(font) => emit('editSearchIndex', font)"
+            @favorite-changed="handleFavoriteChanged" />
         </div>
       </template>
 
@@ -39,22 +30,13 @@
           Online Search Results
         </div> -->
         <div class="font-list-content">
-          <div v-for="font in remoteSearchResults" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="handleSelect(font)">
-            <FontListItem
-              :label="font.label"
-              :font-family="font.value"
-              :type="font.type || props.type"
-              :language="font.language"
-              :is-monospace="(font as any).isMonospace === true"
-              :is-system="(font as any).isSystem === true"
-              :style-tags="(font as any).styleTags"
-              :favorite-weight="(font as any).favoriteWeight"
-              :font-id="font.id"
-              :can-edit-search-index="!!font.id"
-              compact
-              @edit-search-index="() => emit('editSearchIndex', font)"
-              @favorite-changed="handleFavoriteChanged" />
-          </div>
+          <FontFamilyList
+            :fonts="remoteSearchResults"
+            :model-value="modelValue"
+            :type="type"
+            @select="handleSelect"
+            @edit-search-index="(font) => emit('editSearchIndex', font)"
+            @favorite-changed="handleFavoriteChanged" />
         </div>
       </template>
 
@@ -82,7 +64,7 @@ import { useMessageStore } from '@/stores/message'
 import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import { DesignFontVO } from '@/types/font'
-import FontListItem from '@/components/fonts/FontListItem.vue'
+import FontFamilyList from '@/components/font-picker/FontFamilyList.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
 import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
@@ -321,27 +303,6 @@ const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undef
   padding: 8px 12px;
   background: var(--studio-surface-soft);
   border-bottom: 1px solid var(--studio-border);
-}
-.font-item {
-  width: 100%;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.font-item:hover {
-  background: var(--studio-surface-soft);
-}
-.font-item.active {
-  background: var(--studio-primary-soft);
-  color: var(--studio-primary);
-}
-.font-item.active :deep(.font-main) {
-  border: 2px solid var(--studio-primary);
-  box-shadow:
-    0 0 0 2px var(--studio-primary-soft),
-    var(--studio-shadow-md);
 }
 .preview-text {
   font-size: 18px;

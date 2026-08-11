@@ -22,6 +22,8 @@
             <el-input v-model="formData.title" :placeholder="t('property.colorSelect')" />
           </el-form-item>
 
+          <LocalizedPropertyTitleField v-model="formData.titleCn" />
+
           <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="color_1" placeholder="color_1" />
         </div>
       </div>
@@ -29,6 +31,11 @@
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.colorOptions') }}</h3>
+          <div class="section-actions">
+            <el-button type="primary" link @click="restoreSystemDefaults">
+              {{ t('property.restoreSystemDefaults') }}
+            </el-button>
+          </div>
         </div>
         <el-form-item
           :label="t('property.defaultValue')"
@@ -67,13 +74,30 @@
                 { validator: validateOptions, trigger: 'change' }
               ]">
               <div class="options-list">
-                <div v-for="option in formData.options" :key="`${option.label}-${option.value}`" class="option-item">
+                <div v-for="(option, index) in formData.options" :key="`${option.label}-${option.value}`" class="option-item">
                   <div class="option-content color-option-content">
                     <span class="color-preview" :style="getOptionPreviewStyle(option.value)">
                       <span v-if="option.value === '-1'" class="transparent-pattern"></span>
                     </span>
-                    <span class="option-label">{{ option.label }}</span>
+                    <span class="option-label">{{ displayColorOptionLabel(option.label) }}</span>
                     <code class="option-value">{{ option.value }}</code>
+                  </div>
+                  <div class="option-actions">
+                    <el-tooltip :content="t('common.moveUp')" placement="top" :disabled="index <= 1">
+                      <el-button type="primary" link :disabled="index <= 1" @click="moveOption(index, 'up')">
+                        <el-icon><ArrowUp /></el-icon>
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === 0 || index === formData.options.length - 1">
+                      <el-button type="primary" link :disabled="index === 0 || index === formData.options.length - 1" @click="moveOption(index, 'down')">
+                        <el-icon><ArrowDown /></el-icon>
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip :content="t('common.delete')" placement="top" :disabled="index === 0">
+                      <el-button type="danger" link :disabled="index === 0" @click="deleteOption(index)">
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </el-tooltip>
                   </div>
                 </div>
               </div>
@@ -107,6 +131,7 @@
 
 <script setup>
 import { computed, ref, reactive } from 'vue'
+import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -114,11 +139,20 @@ import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
+import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { buildColorPropertyOptions, normalizeRgb565GarminColor } from './colorPropertyOptions'
+import {
+  buildColorPropertyOptions,
+  getColorPropertyOptionDisplayLabel,
+  moveColorPropertyOption,
+  normalizeRgb565GarminColor,
+  removeColorPropertyOption,
+  updateColorPropertyDefault
+} from './colorPropertyOptions'
+import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { collectCanvasColors } from './canvasColorPalette'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const activeOptions = ref([])
@@ -132,6 +166,7 @@ const defaultColorHex = ref('#ffffff')
 
 const formData = reactive({
   title: '',
+  titleCn: '',
   propertyKey: '',
   type: 'color',
   options: [],
@@ -142,8 +177,10 @@ const formData = reactive({
 
 const selectedColorLabel = computed(() => {
   const selected = formData.options.find((option) => String(option.value || '').toUpperCase() === String(formData.value || '').toUpperCase())
-  return selected?.label || t('common.noData')
+  return selected ? getColorPropertyOptionDisplayLabel(selected.label, locale.value) : t('common.noData')
 })
+
+const displayColorOptionLabel = (label) => getColorPropertyOptionDisplayLabel(label, locale.value)
 
 const getNextColorPropertyDefaults = () => {
   let maxIndex = 0
@@ -161,8 +198,12 @@ const getNextColorPropertyDefaults = () => {
 
 // 表单验证规则
 const validateOptions = (rule, value, callback) => {
-  const expected = buildColorPropertyOptions(formData.value, propertiesStore.getDefaultColorOptions)
-  if (JSON.stringify(value) !== JSON.stringify(expected)) {
+  const valid = Array.isArray(value)
+    && value.length > 0
+    && value[0]?.label === 'Default'
+    && value[0]?.value === formData.value
+    && value.every((option) => option?.label && propertiesStore.isValidColorValue(String(option.value)))
+  if (!valid) {
     callback(new Error(t('property.validLabelColorRequired')))
   } else {
     callback()
@@ -190,7 +231,9 @@ const syncDefaultColor = (value) => {
   const normalized = normalizeRgb565GarminColor(value)
   formData.value = normalized
   defaultColorHex.value = garminToHex(normalized)
-  formData.options = buildColorPropertyOptions(normalized, propertiesStore.getDefaultColorOptions)
+  formData.options = formData.options.length
+    ? updateColorPropertyDefault(formData.options, normalized)
+    : buildColorPropertyOptions(normalized, propertiesStore.getDefaultColorOptions)
 }
 
 const handleDefaultColorChange = (hex) => {
@@ -202,6 +245,7 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
+      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: JSON.parse(JSON.stringify(data.options)),
@@ -214,6 +258,7 @@ const initFormData = (data = null) => {
     const defaultValue = propertiesStore.lastSelectedColor || '0xffffff'
     Object.assign(formData, {
       title: defaults.title,
+      titleCn: '',
       propertyKey: defaults.key,
       type: 'color',
       options: [],
@@ -224,6 +269,27 @@ const initFormData = (data = null) => {
   }
 
   syncDefaultColor(formData.value)
+}
+
+const restoreSystemDefaults = async () => {
+  try {
+    await ElMessageBox.confirm(t('property.restoreColorDefaultsConfirm'), t('property.restoreSystemDefaults'), {
+      confirmButtonText: t('common.yes'),
+      cancelButtonText: t('common.no'),
+      type: 'warning'
+    })
+    formData.options = buildColorPropertyOptions(formData.value, propertiesStore.getDefaultColorOptions)
+  } catch {
+    // Canceling keeps the current options and ordering unchanged.
+  }
+}
+
+const deleteOption = (index) => {
+  formData.options = removeColorPropertyOption(formData.options, index)
+}
+
+const moveOption = (index, direction) => {
+  formData.options = moveColorPropertyOption(formData.options, index, direction)
 }
 
 const getOptionPreviewStyle = (value) => ({
@@ -243,7 +309,8 @@ const handleConfirm = async () => {
       type: 'color',
       key: formData.propertyKey,
       title: formData.title,
-      options: formData.options,
+      titleCn: formData.titleCn.trim() || undefined,
+      options: withSimplifiedChineseOptionLabels(formData.options),
       defaultValue: formData.value,
       prompt: formData.prompt,
       errorMessage: formData.errorMessage,
@@ -280,6 +347,11 @@ defineExpose({
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr) auto;
   gap: 10px;
+  align-items: center;
+}
+
+.section-actions {
+  display: flex;
   align-items: center;
 }
 
