@@ -4,6 +4,7 @@ import { normalizeIconUnicode } from '@/types/amoledIcons'
 import type { AnyElementConfig } from '@/types/elements'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
+import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import type { DataTypeOption } from '@/types/dataCatalog'
 
 const findDataOption = (input: { metricSymbol?: string; iconUnicode?: string }) => {
@@ -27,7 +28,7 @@ export const getAmoledIconCandidateFromElement = (element: Partial<AnyElementCon
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const canonicalOption = requireCanonicalMetric(option, catalog)
-  const iconUnicode = normalizeIconUnicode(canonicalOption.iconUnicode || (element as any).iconUnicode || (element as any).text)
+  const iconUnicode = resolveMetricIconUnicode(canonicalOption, (element as any).iconUnicode, (element as any).text)
   if (!iconUnicode) return null
   return {
     iconUnicode,

@@ -78,7 +78,7 @@ import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
-import { normalizeIconUnicode } from '@/types/amoledIcons'
+import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import type { ColorSelectionPayload } from '@/components/color-picker/colorSelection'
 import {
   buildPrimaryColorBindingPatch,
@@ -146,7 +146,7 @@ const commitHistory = (reason: string) => {
 }
 
 const buildIconMetricPatch = (element: FabricElement, metric: any, propertyPatch: Record<string, any>) => {
-  const iconUnicode = normalizeIconUnicode(metric?.iconUnicode || metric?.icon)
+  const iconUnicode = resolveMetricIconUnicode(metric)
   const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
   const amoledImageUrl = iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : ''
   const keepAmoled = String((element as any).iconDisplayType || 'mip') === 'amoled' && Boolean(amoledImageUrl)

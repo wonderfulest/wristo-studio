@@ -169,7 +169,7 @@ import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vu
 import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
-import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -179,7 +179,7 @@ const activeOptions = ref([])
 // 获取目标数据项作为选项
 const goalOptions = getDataTypePropertyOptions().filter(option => option.category === 'goal')
 const cloneGoalOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(goalOptions)))
-const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
+const iconGlyph = (option) => resolveMetricIconGlyph(option)
 
 const formData = reactive({
   title: '',

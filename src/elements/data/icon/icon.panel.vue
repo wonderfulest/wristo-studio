@@ -124,6 +124,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 
 const emit = defineEmits(['close'])
 
@@ -218,7 +219,7 @@ const currentMetricSignature = computed(() => {
     model.dataProperty || '',
     model.goalProperty || '',
     (metric as any)?.metricSymbol || '',
-    normalizeIconUnicode((metric as any)?.iconUnicode || (metric as any)?.icon),
+    resolveMetricIconUnicode(metric as any),
   ].join('|')
 })
 
@@ -246,7 +247,7 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
     goalProperty: model.goalProperty,
     metricSymbol: model.metricSymbol
   })
-  const iconUnicode = normalizeIconUnicode((metric as any)?.iconUnicode || (metric as any)?.icon || model.iconUnicode || model.text)
+  const iconUnicode = resolveMetricIconUnicode(metric as any, model.iconUnicode, model.text)
   const fontSlug = String(model.fontFamily || model.iconFont || currentAmoledFontSlug.value || '').trim()
   const existingUnicode = normalizeIconUnicode(model.amoledIconUnicode || model.iconUnicode || model.text)
   const existingImageUrl = iconUnicode && existingUnicode === iconUnicode ? String(model.amoledImageUrl || '') : ''

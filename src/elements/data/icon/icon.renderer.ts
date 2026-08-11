@@ -12,6 +12,7 @@ import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { applyControlsToObject } from '@/utils/controlManager'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
@@ -218,7 +219,7 @@ export async function createIcon(
   }
   assertElementRenderCurrent(renderContext)
   if (!element) {
-    element = createMipText((metric as any)?.icon, iconOptions as any) as unknown as FabricElement
+    element = createMipText(resolveMetricIconGlyph(metric), iconOptions as any) as unknown as FabricElement
   }
 
   assertElementRenderCurrent(renderContext)
@@ -419,7 +420,7 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
       goalProperty: baseProps.goalProperty,
       metricSymbol: baseProps.metricSymbol
     } as any)
-    target = replaceObject(createMipText((metric as any)?.icon, {
+    target = replaceObject(createMipText(resolveMetricIconGlyph(metric), {
       ...baseProps,
       fontFamily: resolveIconFontFamily(config as any, obj as any, baseProps)
     }) as unknown as FabricObject & FabricElement)

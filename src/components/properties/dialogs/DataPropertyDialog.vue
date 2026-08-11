@@ -218,7 +218,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
-import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import {
   createAddableDataOptions,
   createDefaultDataOptions,
@@ -241,7 +241,7 @@ const dataCatalogStore = useDataCatalogStore()
 const propertiesStore = usePropertiesStore()
 const catalogOptions = getDataTypePropertyOptions()
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions)
-const iconGlyph = (option) => resolveIconGlyphText(option?.iconUnicode || option?.icon)
+const iconGlyph = (option) => resolveMetricIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
 const formData = reactive({
