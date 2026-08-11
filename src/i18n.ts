@@ -3737,7 +3737,7 @@ const zh: Messages = {
   'card.lastUpdated': '最后更新',
   'card.lastPackage': '最后打包',
   'card.lastGoLive': '最后发布',
-  'card.newRelease': '有新版本可上传',
+  'card.newRelease': '有新版本需要上传',
   'card.iqBuildQueue': 'IQ 构建队列',
   'card.prgBuildQueue': 'PRG 构建队列',
   'card.position': '第 {rank} 位',
