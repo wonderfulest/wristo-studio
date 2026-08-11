@@ -1,12 +1,48 @@
 import { describe, expect, it } from 'vitest'
 import {
   getHandGeometry,
+  getHandPivot,
   getRotatedHandCenter,
   handScalePercentToSlider,
   handScaleSliderToPercent,
+  moveHandCenterKeepingPivot,
+  moveHandPivotKeepingCenter,
 } from './hand.geometry'
 
 describe('hand geometry', () => {
+  it('moves the hand material while keeping the rotation pivot fixed', () => {
+    expect(moveHandCenterKeepingPivot(
+      { centerX: 220, centerY: 200, pivotOffsetX: 7, pivotOffsetY: 27 },
+      { x: 225, y: 198 },
+    )).toEqual({
+      centerX: 225,
+      centerY: 198,
+      pivotOffsetX: 2,
+      pivotOffsetY: 29,
+      pivotX: 227,
+      pivotY: 227,
+    })
+  })
+
+  it('moves the rotation pivot while keeping the hand material fixed', () => {
+    expect(moveHandPivotKeepingCenter(
+      { centerX: 220, centerY: 200 },
+      { x: 230, y: 240 },
+    )).toEqual({
+      centerX: 220,
+      centerY: 200,
+      pivotOffsetX: 10,
+      pivotOffsetY: 40,
+      pivotX: 230,
+      pivotY: 240,
+    })
+  })
+
+  it('resolves the persisted rotation pivot from center and offset', () => {
+    expect(getHandPivot({ centerX: 210, centerY: 215, pivotOffsetX: 17, pivotOffsetY: 12 }))
+      .toEqual({ x: 227, y: 227 })
+  })
+
   it('keeps legacy hands centered with the existing automatic scale', () => {
     expect(getHandGeometry({ left: 227, top: 227 }, 454, 20, 100)).toEqual({
       centerX: 227,

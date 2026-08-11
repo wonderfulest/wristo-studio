@@ -19,6 +19,46 @@ export interface HandGeometry {
   imageScale: number
 }
 
+type HandCenter = Pick<HandGeometry, 'centerX' | 'centerY'>
+type HandCenterWithOffset = HandCenter & Pick<HandGeometry, 'pivotOffsetX' | 'pivotOffsetY'>
+type CanvasPoint = { x: number; y: number }
+
+export function getHandPivot(geometry: HandCenterWithOffset): CanvasPoint {
+  return {
+    x: geometry.centerX + geometry.pivotOffsetX,
+    y: geometry.centerY + geometry.pivotOffsetY,
+  }
+}
+
+export function moveHandCenterKeepingPivot(
+  geometry: HandCenterWithOffset,
+  nextCenter: CanvasPoint,
+): HandCenterWithOffset & { pivotX: number; pivotY: number } {
+  const pivot = getHandPivot(geometry)
+  return {
+    centerX: nextCenter.x,
+    centerY: nextCenter.y,
+    pivotOffsetX: pivot.x - nextCenter.x,
+    pivotOffsetY: pivot.y - nextCenter.y,
+    pivotX: pivot.x,
+    pivotY: pivot.y,
+  }
+}
+
+export function moveHandPivotKeepingCenter(
+  geometry: HandCenter,
+  nextPivot: CanvasPoint,
+): HandCenterWithOffset & { pivotX: number; pivotY: number } {
+  return {
+    centerX: geometry.centerX,
+    centerY: geometry.centerY,
+    pivotOffsetX: nextPivot.x - geometry.centerX,
+    pivotOffsetY: nextPivot.y - geometry.centerY,
+    pivotX: nextPivot.x,
+    pivotY: nextPivot.y,
+  }
+}
+
 function finiteOr(value: unknown, fallback: number): number {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : fallback
