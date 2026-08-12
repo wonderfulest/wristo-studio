@@ -69,4 +69,27 @@ describe('background.panel', () => {
       imageUrl: 'https://cdn.example/night-background.png',
     })
   })
+
+  it('applies a selected background color to the background element', async () => {
+    const applyPatch = vi.fn()
+    const wrapper = shallowMount(BackgroundPanel, {
+      props: {
+        config: {
+          id: 'background',
+          eleType: 'background',
+          color: '#000000',
+          imageUrl: '',
+        },
+        applyPatch,
+      },
+    })
+
+    wrapper.findComponent({ name: 'ColorPicker' }).vm.$emit('property-change', {
+      color: '#123456',
+      propertyKey: null,
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(applyPatch).toHaveBeenCalledWith({ color: '#123456', colorProperty: null })
+  })
 })

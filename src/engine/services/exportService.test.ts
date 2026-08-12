@@ -216,6 +216,53 @@ describe('visual theme export persistence', () => {
     })
   })
 
+  it('exports a solid-color background even when it uses the default transparent image', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    const { DEFAULT_BACKGROUND_IMAGE_URL } = await import('@/elements/decoration/background/background.constants')
+    registerElement('background' as any, {
+      add: vi.fn() as any,
+      encode: (element) => ({
+        id: (element as any).id,
+        eleType: 'background',
+        left: 227,
+        top: 227,
+        originX: 'center',
+        originY: 'center',
+        imageUrl: '',
+        imageId: null,
+        color: (element as any).color,
+      }),
+    })
+    const background = {
+      id: 'background-solid',
+      eleType: 'background',
+      wristoImageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
+      color: '#123456',
+    }
+
+    const config = generateConfig({
+      canvas: { getObjects: () => [background] } as any,
+      properties: {},
+      designId: 'design-1',
+      watchFaceName: 'Solid Background',
+      textCase: 0,
+      bitmapMode: false,
+    })
+
+    expect(config?.elements[0]).toEqual(expect.objectContaining({
+      id: 'background-solid',
+      eleType: 'background',
+      left: 227,
+      top: 227,
+      originX: 'center',
+      originY: 'center',
+      imageUrl: '',
+      imageId: null,
+      color: '#123456',
+    }))
+  })
+
   it('exports persisted visual-theme base fields while the canvas is still previewing a theme', async () => {
     const { generateConfig } = await import('./exportService')
     const { registerElement } = await import('@/engine/registry/elementRegistry')
