@@ -17,7 +17,10 @@ import { addElement, syncElementInstancesFromCanvas } from '@/engine/managers/el
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { clearRestoredDesignAssetUrls, readWrtDesignPackage, restoreDesignAssetBundle, WrtDesignPackageError } from '@/engine/services/designAssetBundleService'
-import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'
+import {
+  projectDefaultVisualThemeForLoad,
+  restoreVisualThemeBaseFieldsForPersistence,
+} from '@/engine/services/defaultVisualThemeLoadService'
 import { normalizeDataPropertyConfig } from '@/engine/services/dataPropertyConfig'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
@@ -274,7 +277,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const loadConfig = projectDefaultVisualThemeForLoad(config)
     if (Array.isArray(loadConfig.elements)) {
-      visualThemeStore.hydrate(loadConfig.visualThemes, loadConfig.elements as unknown as Array<Record<string, unknown>>)
+      visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)
       await fontStore.loadFontsForElements(loadConfig.elements as any)
       if (!isCurrentDesignLoad(generation)) return false
     } else {
@@ -359,6 +362,10 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
 
     const scaledElements = scaleElementsFromStoredSize(runtimeElements as any)
     if (!(await loadElements(scaledElements, generation)) || !isCurrentDesignLoad(generation)) return false
+    restoreVisualThemeBaseFieldsForPersistence(
+      scaledElements,
+      config.elements,
+    ).forEach(element => elementDataStore.upsertElement(element))
     applyLoadedElementDisplayStates(scaledElements)
     canvasRef.value?.updateZoom?.()
 

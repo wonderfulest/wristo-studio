@@ -33,6 +33,11 @@ import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/r
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
+import {
+  handCalibrationState,
+  startHandCalibration,
+  stopHandCalibration,
+} from '@/elements/hands/common/handCalibration'
 
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
@@ -125,6 +130,17 @@ watch(
   },
   { immediate: true, flush: 'sync' },
 )
+
+watch(activeElement, (element) => {
+  if (!handCalibrationState.active) return
+  const id = (element as any)?.id
+  const type = String((element as any)?.eleType ?? '')
+  if (id != null && ['hourHand', 'minuteHand', 'secondHand'].includes(type)) {
+    startHandCalibration(String(id))
+    return
+  }
+  stopHandCalibration()
+})
 
 // 获取元素图标
 const getElementIcon = (type: string) => {

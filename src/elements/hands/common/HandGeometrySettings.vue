@@ -1,5 +1,15 @@
 <template>
   <div class="hand-geometry-settings">
+    <div class="calibration-controls">
+      <el-button
+        size="small"
+        class="hand-calibration-button"
+        :type="isCalibrating ? 'primary' : 'default'"
+        @click="toggleCalibration"
+      >
+        {{ t(isCalibrating ? 'hand.finishCalibration' : 'hand.calibrateOnCanvas') }}
+      </el-button>
+    </div>
     <div class="field-grid">
       <label v-for="control in positionControls" :key="control.field" class="geometry-field">
         <span>{{ t(control.label) }}</span>
@@ -45,11 +55,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useI18n } from '@/i18n'
 import { handScalePercentToSlider, handScaleSliderToPercent } from './hand.geometry'
+import {
+  handCalibrationState,
+  startHandCalibration,
+  stopHandCalibration,
+  syncHandCalibrationMarker,
+} from './handCalibration'
 
-type HandGeometryField = 'centerX' | 'centerY' | 'pivotOffsetX' | 'pivotOffsetY' | 'scalePercent'
+type HandGeometryField = 'centerX' | 'centerY' | 'pivotX' | 'pivotY' | 'scalePercent'
 
 const props = defineProps<{
   model?: Record<string, any> | null
@@ -70,20 +86,40 @@ const controls: Array<{
 }> = [
   { field: 'centerX', label: 'hand.geometryCenterX', min: -9999, max: 9999, step: 1 },
   { field: 'centerY', label: 'hand.geometryCenterY', min: -9999, max: 9999, step: 1 },
-  { field: 'pivotOffsetX', label: 'hand.pivotOffsetX', min: -9999, max: 9999, step: 1 },
-  { field: 'pivotOffsetY', label: 'hand.pivotOffsetY', min: -9999, max: 9999, step: 1 },
+  { field: 'pivotX', label: 'hand.pivotX', min: -9999, max: 9999, step: 1 },
+  { field: 'pivotY', label: 'hand.pivotY', min: -9999, max: 9999, step: 1 },
   { field: 'scalePercent', label: 'hand.scalePercent', min: 1, max: 1000, step: 1 },
 ]
 
 const normalizedModel = computed(() => props.model ?? {})
 const positionControls = controls.filter(control => control.field !== 'scalePercent')
 const scaleSliderValue = computed(() => handScalePercentToSlider(valueFor('scalePercent')))
+const handId = computed(() => String(normalizedModel.value.id ?? ''))
+const isCalibrating = computed(() => handCalibrationState.active
+  && handCalibrationState.selectedHandId === handId.value)
+watch(
+  () => [handId.value, valueFor('pivotX'), valueFor('pivotY')] as const,
+  ([id, x, y]) => {
+    if (id) syncHandCalibrationMarker(id, { x, y })
+  },
+  { flush: 'post' },
+)
+
+function toggleCalibration(): void {
+  if (isCalibrating.value) {
+    stopHandCalibration()
+    return
+  }
+  if (handId.value) startHandCalibration(handId.value)
+}
 
 function valueFor(field: HandGeometryField): number {
   if (field === 'centerX') return Number(normalizedModel.value.centerX ?? normalizedModel.value.left ?? 0)
   if (field === 'centerY') return Number(normalizedModel.value.centerY ?? normalizedModel.value.top ?? 0)
+  if (field === 'pivotX') return valueFor('centerX') + Number(normalizedModel.value.pivotOffsetX ?? 0)
+  if (field === 'pivotY') return valueFor('centerY') + Number(normalizedModel.value.pivotOffsetY ?? 0)
   if (field === 'scalePercent') return Number(normalizedModel.value.scalePercent ?? 100)
-  return Number(normalizedModel.value[field] ?? 0)
+  return 0
 }
 
 function update(field: HandGeometryField, value: number | undefined): void {
@@ -96,6 +132,14 @@ function update(field: HandGeometryField, value: number | undefined): void {
   }
   if (field === 'centerY') {
     emit('update', { centerY: normalized, top: normalized })
+    return
+  }
+  if (field === 'pivotX') {
+    emit('update', { pivotOffsetX: normalized - valueFor('centerX') })
+    return
+  }
+  if (field === 'pivotY') {
+    emit('update', { pivotOffsetY: normalized - valueFor('centerY') })
     return
   }
   emit('update', { [field]: normalized })
@@ -114,6 +158,16 @@ function formatScaleTooltip(value: number): string {
 <style scoped>
 .hand-geometry-settings {
   margin-top: 12px;
+}
+
+.calibration-controls {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.hand-calibration-button {
+  width: 100%;
 }
 
 .field-grid {

@@ -10,7 +10,6 @@
           type="datetime"
           :clearable="false"
           :editable="false"
-          :disabled="handCalibrationState.active"
           :teleported="true"
           format="MM/DD HH:mm:ss"
           @change="handleDateTimeChange"
@@ -23,7 +22,6 @@
       class="mode-control"
       :options="modeOptions"
       size="small"
-      :disabled="handCalibrationState.active"
       @change="handleModeChange"
     />
 
@@ -37,26 +35,16 @@
         :step="1"
         :show-stops="true"
         :show-tooltip="false"
-        :disabled="handCalibrationState.active"
         @input="handleSpeedInput"
       />
       <strong class="speed-value">{{ speedMultiplier }}x</strong>
     </div>
 
-    <el-button size="small" class="reset-button" :disabled="handCalibrationState.active" @click="resetClock">
+    <el-button size="small" class="reset-button" @click="resetClock">
       <Icon icon="material-symbols:restart-alt-rounded" width="16" height="16" />
       <span>{{ t('timeSimulator.reset') }}</span>
     </el-button>
 
-    <el-button
-      size="small"
-      class="calibration-button"
-      :type="handCalibrationState.active ? 'primary' : 'default'"
-      @click="toggleHandCalibration"
-    >
-      <Icon icon="material-symbols:my-location-rounded" width="16" height="16" />
-      <span>{{ t(handCalibrationState.active ? 'timeSimulator.finishCalibration' : 'timeSimulator.calibrateHands') }}</span>
-    </el-button>
   </section>
 </template>
 
@@ -74,11 +62,6 @@ import {
   setSimulatedTime,
 } from '@/engine/simulator/simulatedClock'
 import { TIME_SIMULATOR_SPEEDS, getSliderIndexForSpeed, getSpeedAtSliderIndex } from './timeSimulatorSpeed'
-import {
-  handCalibrationState,
-  startHandCalibration,
-  stopHandCalibration,
-} from '@/elements/hands/common/handCalibration'
 
 const { t } = useI18n()
 const currentTime = ref<Date>(getSimulatedClockSnapshot().currentTime)
@@ -91,7 +74,6 @@ const speedMultiplier = ref<number>(getSpeedAtSliderIndex(getSliderIndexForSpeed
 const speedSliderValue = ref<number>(getSliderIndexForSpeed(speedMultiplier.value))
 const clockMode = ref<ClockMode>(initialSnapshot.isRunning ? 'running' : 'fixed')
 let timer: number | null = null
-let calibrationClockSnapshot: ReturnType<typeof getSimulatedClockSnapshot> | null = null
 
 const modeOptions = computed(() => [
   { label: t('timeSimulator.fixed'), value: 'fixed' },
@@ -149,43 +131,12 @@ const resetClock = () => {
   refreshCanvas()
 }
 
-const finishHandCalibration = () => {
-  if (!handCalibrationState.active) return
-  stopHandCalibration()
-  if (calibrationClockSnapshot) {
-    setSimulatedTime(calibrationClockSnapshot.currentTime)
-    if (calibrationClockSnapshot.isRunning) {
-      resumeSimulatedClock(calibrationClockSnapshot.speedMultiplier)
-    } else {
-      pauseSimulatedClock()
-    }
-  }
-  calibrationClockSnapshot = null
-  refreshCanvas()
-}
-
-const toggleHandCalibration = () => {
-  if (handCalibrationState.active) {
-    finishHandCalibration()
-    return
-  }
-  const snapshot = getSimulatedClockSnapshot()
-  if (!startHandCalibration()) return
-  calibrationClockSnapshot = snapshot
-  const noon = new Date(snapshot.currentTime)
-  noon.setHours(12, 0, 0, 0)
-  setSimulatedTime(noon)
-  pauseSimulatedClock()
-  refreshCanvas()
-}
-
 onMounted(() => {
   syncFromClock()
   timer = window.setInterval(syncFromClock, 500)
 })
 
 onBeforeUnmount(() => {
-  finishHandCalibration()
   if (timer) {
     window.clearInterval(timer)
     timer = null
@@ -215,8 +166,7 @@ onBeforeUnmount(() => {
 
 .simulator-main,
 .speed-control,
-.reset-button,
-.calibration-button {
+.reset-button {
   display: flex;
   align-items: center;
 }

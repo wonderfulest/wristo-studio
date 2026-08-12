@@ -245,6 +245,25 @@ describe('visualThemeStore', () => {
     })
   })
 
+  it('clears only the selected theme hand override so it inherits the base hand', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    const night = store.addTheme('Night', ids('night'))
+    store.updateAsset(night.id, 'hourHand', {
+      assetId: 41,
+      imageUrl: 'night-hour.svg',
+    })
+
+    store.updateAsset(night.id, 'hourHand', null)
+
+    expect(store.themes.find(theme => theme.id === night.id)?.assets).not.toHaveProperty('hourHand')
+    expect(store.themes.find(theme => theme.id === store.config?.defaultThemeId)?.assets.hourHand)
+      .toEqual({
+        assetId: 12,
+        imageUrl: 'https://cdn.example/hour.svg',
+      })
+  })
+
   it('updates only the selected theme value for a shared color variable', () => {
     const store = useVisualThemeStore()
     const sharedProperties = {

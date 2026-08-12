@@ -4,20 +4,21 @@ import { describe, expect, it } from 'vitest'
 const source = readFileSync(new URL('./design/useDesignLoader.ts', import.meta.url), 'utf8')
 
 describe('Design visual theme hydration ordering', () => {
-  it('projects the default theme before loading themes, properties, and elements', () => {
+  it('projects the default theme for display while hydrating themes from authoritative base elements', () => {
     const applyStart = source.indexOf('const applyRuntimeDesignConfig = async')
     const projection = source.indexOf('const loadConfig = projectDefaultVisualThemeForLoad(config)', applyStart)
     const hydrate = source.indexOf('visualThemeStore.hydrate(', applyStart)
-    const properties = source.indexOf('propertiesStore.loadProperties(loadConfig.properties)', applyStart)
+    const properties = source.indexOf('propertiesStore.loadDataPropertyConfig(', applyStart)
     const elements = source.indexOf('const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map', applyStart)
 
-    expect(source).toContain("import { projectDefaultVisualThemeForLoad } from '@/engine/services/defaultVisualThemeLoadService'")
+    expect(source).toContain('projectDefaultVisualThemeForLoad,')
     expect(projection).toBeGreaterThan(applyStart)
     expect(hydrate).toBeGreaterThan(projection)
     expect(properties).toBeGreaterThan(hydrate)
     expect(elements).toBeGreaterThan(properties)
-    expect(source).toContain('loadConfig.visualThemes,')
-    expect(source).toContain('loadConfig.elements as unknown as Array<Record<string, unknown>>')
+    expect(source).toContain('config.visualThemes,')
+    expect(source).toContain('config.elements as unknown as Array<Record<string, unknown>>')
+    expect(source).toContain('restoreVisualThemeBaseFieldsForPersistence(')
   })
 
   it('hydrates only after the post-font generation guard', () => {

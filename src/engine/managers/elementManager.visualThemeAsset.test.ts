@@ -38,7 +38,7 @@ describe('ElementManager visual-theme asset persistence', () => {
     runtime.upsertElement.mockReset()
   })
 
-  it('persists an uploaded hand into the currently previewed visual theme', async () => {
+  it('keeps an uploaded base hand out of the currently previewed visual theme', async () => {
     const element = {
       id: 'hour-hand',
       eleType: 'hourHand',
@@ -78,9 +78,13 @@ describe('ElementManager visual-theme asset persistence', () => {
       assetId: 99,
     })
 
-    expect(store.themes.find(theme => theme.id === 'night')?.assets.hourHand).toEqual({
+    expect(runtime.upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({
       assetId: 99,
       imageUrl: 'uploaded-hour.svg',
+    }))
+    expect(store.themes.find(theme => theme.id === 'night')?.assets.hourHand).toEqual({
+      assetId: 22,
+      imageUrl: 'night-hour.svg',
     })
     expect(store.themes.find(theme => theme.id === 'day')?.assets.hourHand).toEqual({
       assetId: 12,

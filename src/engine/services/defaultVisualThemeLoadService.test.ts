@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { RuntimeDesignConfig } from '@/types/app/config'
-import { projectDefaultVisualThemeForLoad } from './defaultVisualThemeLoadService'
+import * as defaultVisualThemeLoadService from './defaultVisualThemeLoadService'
+
+const { projectDefaultVisualThemeForLoad } = defaultVisualThemeLoadService
 
 const createConfig = (): RuntimeDesignConfig => ({
   version: '1.0',
@@ -71,6 +73,27 @@ const createConfig = (): RuntimeDesignConfig => ({
 })
 
 describe('projectDefaultVisualThemeForLoad', () => {
+  it('restores base hand assets for persistence after projecting the default theme for display', () => {
+    const restoreBaseFields = (defaultVisualThemeLoadService as any)
+      .restoreVisualThemeBaseFieldsForPersistence
+
+    expect(restoreBaseFields).toBeTypeOf('function')
+    if (!restoreBaseFields) return
+
+    const source = createConfig()
+    const projected = projectDefaultVisualThemeForLoad(source)
+    const persistedElements = restoreBaseFields(projected.elements, source.elements)
+
+    expect(projected.elements.find(element => element.eleType === 'hourHand')).toMatchObject({
+      imageUrl: 'default-hour.png',
+      assetId: 12,
+    })
+    expect(persistedElements.find((element: any) => element.eleType === 'hourHand')).toMatchObject({
+      imageUrl: 'base-hour.png',
+      assetId: 92,
+    })
+  })
+
   it('projects default assets and bound colors without changing the source or other themes', () => {
     const config = createConfig()
     const alternateTheme = structuredClone(config.visualThemes!.themes[1])

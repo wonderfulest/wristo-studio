@@ -43,15 +43,42 @@ vi.mock('@/stores/elementDataStore', () => ({
   }),
 }))
 vi.mock('@/api/wristo/analogAsset', () => ({ analogAssetApi: {} }))
-vi.mock('@/engine/simulator/simulatedClock', () => ({ getSimulatedNow: () => new Date(0) }))
+vi.mock('@/engine/simulator/simulatedClock', () => ({
+  getSimulatedNow: () => new Date('2026-08-12T00:15:00.000Z'),
+}))
 
 import { updateHand } from './hand.renderer'
+import { handCalibrationState } from './handCalibration'
 
 describe('hand renderer preview persistence', () => {
   afterEach(() => {
+    handCalibrationState.active = false
+    handCalibrationState.selectedHandId = null
     vi.clearAllMocks()
     vi.clearAllTimers()
     vi.useRealTimers()
+  })
+
+  it('keeps the calibrated hand pointing at 12 while settings update', async () => {
+    const hand = {
+      id: 'minute',
+      eleType: 'minuteHand',
+      width: 20,
+      height: 100,
+      centerX: 227,
+      centerY: 227,
+      pivotOffsetX: 0,
+      pivotOffsetY: 0,
+      angle: 90,
+      set(values: Record<string, unknown>) { Object.assign(this, values) },
+      setCoords: vi.fn(),
+    } as any
+    handCalibrationState.active = true
+    handCalibrationState.selectedHandId = 'minute'
+
+    await updateHand(hand, { pivotOffsetX: 8 })
+
+    expect(hand.angle).toBe(0)
   })
 
   it('never writes elementDataStore while a deferred preview image resolves or restores', async () => {

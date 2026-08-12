@@ -16,12 +16,12 @@ describe('hand settings panels', () => {
     }
   })
 
-  it('exposes geometry center, pivot offset, and scale controls', () => {
+  it('exposes geometry center, absolute pivot, and scale controls', () => {
     const source = fs.readFileSync(
       path.join(root, 'src/elements/hands/common/HandGeometrySettings.vue'),
       'utf8',
     )
-    for (const field of ['centerX', 'centerY', 'pivotOffsetX', 'pivotOffsetY', 'scalePercent']) {
+    for (const field of ['centerX', 'centerY', 'pivotX', 'pivotY', 'scalePercent']) {
       expect(source).toContain(`field: '${field}'`)
     }
     expect(source).toContain('<el-slider')

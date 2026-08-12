@@ -16,9 +16,6 @@ const clock = vi.hoisted(() => ({
   setSpeed: vi.fn(),
   setTime: vi.fn(),
   updateCanvas: vi.fn(),
-  calibrationActive: false,
-  startCalibration: vi.fn(),
-  stopCalibration: vi.fn(),
 }))
 
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
@@ -33,14 +30,6 @@ vi.mock('@/engine/simulator/simulatedClock', () => ({
   setSimulatedSpeed: clock.setSpeed,
   setSimulatedTime: clock.setTime,
 }))
-vi.mock('@/elements/hands/common/handCalibration', () => ({
-  handCalibrationState: {
-    get active() { return clock.calibrationActive },
-  },
-  startHandCalibration: clock.startCalibration,
-  stopHandCalibration: clock.stopCalibration,
-}))
-
 import TimeSimulatorPanel from './TimeSimulatorPanel.vue'
 
 const mountPanel = () => mount(TimeSimulatorPanel, {
@@ -85,8 +74,6 @@ describe('TimeSimulatorPanel', () => {
       }
       return clock.snapshot
     })
-    clock.calibrationActive = false
-    clock.startCalibration.mockReturnValue(true)
   })
 
   it('sets an exact simulated date and time and refreshes the canvas', async () => {
@@ -125,16 +112,8 @@ describe('TimeSimulatorPanel', () => {
     expect(wrapper.text()).toContain('1x')
   })
 
-  it('starts hand calibration at exactly 12:00:00', async () => {
+  it('keeps hand calibration controls out of the time simulator', () => {
     const wrapper = mountPanel()
-
-    await wrapper.get('.calibration-button').trigger('click')
-
-    const expected = new Date('2026-08-11T08:31:38.000Z')
-    expected.setHours(12, 0, 0, 0)
-    expect(clock.setTime).toHaveBeenCalledWith(expected)
-    expect(clock.pause).toHaveBeenCalled()
-    expect(clock.startCalibration).toHaveBeenCalled()
-    expect(clock.updateCanvas).toHaveBeenCalled()
+    expect(wrapper.find('.calibration-button').exists()).toBe(false)
   })
 })

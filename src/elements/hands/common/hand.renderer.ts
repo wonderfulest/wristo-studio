@@ -13,6 +13,7 @@ import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import { getHandGeometry, getRotatedHandCenter } from './hand.geometry'
+import { handCalibrationState } from './handCalibration'
 
 function getAssetType(eleType: ElementType): 'hour' | 'minute' | 'second' {
   if (eleType === 'minuteHand') return 'minute'
@@ -142,7 +143,10 @@ function ensureTimer(eleType: ElementType) {
     if (!elements.length) return
 
     const angle = getAngleByType(targetType, getSimulatedNow())
-    elements.forEach((el: any) => rotateHand(el, angle))
+    elements.forEach((el: any) => {
+      if (handCalibrationState.active && String(el.id) === handCalibrationState.selectedHandId) return
+      rotateHand(el, angle)
+    })
     canvas.requestRenderAll?.()
   }
 
@@ -333,7 +337,9 @@ export async function updateHand(
 
   applyHandGeometry(hand, patch)
 
-  const newAngle = getAngleByType(eleType)
+  const isCalibratingThisHand = handCalibrationState.active
+    && String(hand.id) === handCalibrationState.selectedHandId
+  const newAngle = isCalibratingThisHand ? 0 : getAngleByType(eleType)
   rotateHand(hand, newAngle)
   hand.setCoords()
   if (context.persist !== false && hand.id != null) {

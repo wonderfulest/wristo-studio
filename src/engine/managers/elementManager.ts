@@ -12,7 +12,6 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { getFontSizeByStep } from '@/utils/fontSize'
 import { normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
@@ -25,33 +24,6 @@ import {
   syncWidgetBusinessPosition,
 } from '@/engine/geometry/elementPositionStability'
 import { collectExplicitColorBindings } from '@/engine/services/explicitColorBindingService'
-import type { VisualThemeAssetSlot } from '@/types/visualTheme'
-
-const VISUAL_THEME_HAND_SLOT_BY_TYPE: Partial<Record<ElementType, VisualThemeAssetSlot>> = {
-  hourHand: 'hourHand',
-  minuteHand: 'minuteHand',
-  secondHand: 'secondHand',
-}
-
-function syncActiveVisualThemeHandAsset(type: ElementType, patch: Record<string, unknown>): void {
-  const slot = VISUAL_THEME_HAND_SLOT_BY_TYPE[type]
-  if (!slot || !Object.prototype.hasOwnProperty.call(patch, 'imageUrl')) return
-
-  const store = useVisualThemeStore()
-  const config = store.config
-  if (!config?.enabled) return
-
-  const themeId = store.previewThemeId ?? config.defaultThemeId
-  if (!config.themes.some(theme => theme.id === themeId)) return
-
-  const imageUrl = typeof patch.imageUrl === 'string' ? patch.imageUrl.trim() : ''
-  store.updateAsset(themeId, slot, imageUrl
-    ? {
-        assetId: Number.isInteger(patch.assetId) ? Number(patch.assetId) : null,
-        imageUrl,
-      }
-    : null)
-}
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -204,7 +176,6 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     registerElementInstance(current)
   }
 
-  syncActiveVisualThemeHandAsset(type, positionPatch)
 }
 
 export async function updateElementById(id: string | number | null | undefined, patch: any): Promise<void> {

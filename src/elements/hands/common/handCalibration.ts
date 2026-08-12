@@ -1,9 +1,9 @@
-import { Circle, Group, Line } from 'fabric'
+import { Group, Line } from 'fabric'
 import { reactive } from 'vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { getHandPivot, moveHandCenterKeepingPivot, moveHandPivotKeepingCenter } from './hand.geometry'
+import { getHandPivot, getRotatedHandCenter, moveHandCenterKeepingPivot } from './hand.geometry'
 
 const HAND_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
 const PIVOT_MARKER_TYPE = 'handCalibrationPivot'
@@ -17,6 +17,7 @@ type HandInteractionState = {
   hasControls: boolean
   borderColor: string
   hoverCursor: string
+  angle: number
 }
 
 export const handCalibrationState = reactive({
@@ -27,7 +28,7 @@ export const handCalibrationState = reactive({
 const priorInteraction = new Map<any, HandInteractionState>()
 let pivotMarker: any = null
 let attachedCanvas: any = null
-let draggingPivot = false
+let priorPreserveObjectStacking: boolean | undefined
 
 function isHand(target: any): boolean {
   return HAND_TYPES.has(String(target?.eleType ?? ''))
@@ -47,7 +48,6 @@ function findSelectedHand(canvas: any): any | null {
 function markerFor(hand: any): any {
   const pivot = getHandPivot(hand)
   const marker = new Group([
-    new Circle({ radius: 7, fill: 'rgba(255,255,255,0.92)', stroke: '#ef4444', strokeWidth: 2 }),
     new Line([-12, 0, 12, 0], { stroke: '#ef4444', strokeWidth: 2 }),
     new Line([0, -12, 0, 12], { stroke: '#ef4444', strokeWidth: 2 }),
   ], {
@@ -56,12 +56,13 @@ function markerFor(hand: any): any {
     originX: 'center',
     originY: 'center',
     selectable: false,
-    evented: true,
+    evented: false,
     hasControls: false,
     hasBorders: false,
+    objectCaching: false,
     excludeFromExport: true,
   } as any)
-  marker.set({ eleType: PIVOT_MARKER_TYPE, handId: String(hand.id), hoverCursor: 'crosshair' })
+  marker.set({ eleType: PIVOT_MARKER_TYPE, handId: String(hand.id), hoverCursor: 'default' })
   return marker
 }
 
@@ -101,9 +102,44 @@ function showMarkerFor(hand: any): void {
   attachedCanvas.requestRenderAll?.()
 }
 
-function handleSelection(event: any): void {
-  const target = event?.selected?.find?.(isHand) ?? event?.target
-  if (isHand(target)) showMarkerFor(target)
+function restoreHandAngle(hand: any): void {
+  const state = priorInteraction.get(hand)
+  if (!state) return
+  const position = getRotatedHandCenter(hand, state.angle)
+  hand.set?.({ angle: state.angle, ...position })
+  hand.setCoords?.()
+}
+
+function pointHandAtNoon(hand: any): void {
+  hand.set?.({
+    angle: 0,
+    left: Number(hand.centerX ?? hand.left ?? 0),
+    top: Number(hand.centerY ?? hand.top ?? 0),
+  })
+  hand.setCoords?.()
+}
+
+function applyCalibrationInteraction(): void {
+  if (!attachedCanvas) return
+  const selected = findSelectedHand(attachedCanvas)
+  for (const hand of (attachedCanvas.getObjects?.() || []).filter(isHand)) {
+    const isTarget = hand === selected
+    hand.set?.({
+      selectable: isTarget,
+      evented: isTarget,
+      lockMovementX: !isTarget,
+      lockMovementY: !isTarget,
+      hasControls: false,
+      hasBorders: isTarget,
+      borderColor: '#2563eb',
+      hoverCursor: isTarget ? 'move' : 'default',
+    })
+    hand.setCoords?.()
+  }
+  pivotMarker?.set?.({ evented: false, hoverCursor: 'default' })
+  if (selected) attachedCanvas.setActiveObject?.(selected)
+  if (pivotMarker) attachedCanvas.bringObjectToFront?.(pivotMarker)
+  attachedCanvas.requestRenderAll?.()
 }
 
 function handleObjectMoving(event: any): void {
@@ -114,8 +150,6 @@ function handleObjectMoving(event: any): void {
     y: Number(hand.top ?? hand.centerY ?? 0),
   })
   patchHand(hand, geometry)
-  pivotMarker?.set?.({ left: geometry.pivotX, top: geometry.pivotY })
-  pivotMarker?.setCoords?.()
 }
 
 function handleObjectModified(event: any): void {
@@ -123,36 +157,39 @@ function handleObjectModified(event: any): void {
   useHistoryStore().saveState('hand:calibration-drag', { captureConfig: true })
 }
 
-function handleMouseDown(event: any): void {
-  draggingPivot = event?.target?.eleType === PIVOT_MARKER_TYPE
-}
-
-function handleMouseMove(event: any): void {
-  if (!draggingPivot || !attachedCanvas || !pivotMarker) return
-  const hand = findSelectedHand(attachedCanvas)
-  const pointer = attachedCanvas.getScenePoint?.(event.e) ?? attachedCanvas.getPointer?.(event.e)
-  if (!hand || !pointer) return
-  const geometry = moveHandPivotKeepingCenter(hand, { x: Number(pointer.x), y: Number(pointer.y) })
-  patchHand(hand, geometry)
-  pivotMarker.set({ left: geometry.pivotX, top: geometry.pivotY })
+export function syncHandCalibrationMarker(handId: string, pivot: { x: number; y: number }): void {
+  if (!attachedCanvas || !pivotMarker || handCalibrationState.selectedHandId !== String(handId)) return
+  pivotMarker.set?.({ left: Number(pivot.x), top: Number(pivot.y) })
   pivotMarker.setCoords?.()
+  attachedCanvas.bringObjectToFront?.(pivotMarker)
   attachedCanvas.requestRenderAll?.()
 }
 
-function handleMouseUp(): void {
-  if (!draggingPivot) return
-  draggingPivot = false
-  useHistoryStore().saveState('hand:calibration-pivot', { captureConfig: true })
-}
-
-export function startHandCalibration(): boolean {
-  if (handCalibrationState.active) return true
+export function startHandCalibration(handId?: string): boolean {
   const canvas = useCanvasStore().canvas as any
   if (!canvas) return false
   const hands = (canvas.getObjects?.() || []).filter(isHand)
   if (!hands.length) return false
 
+  const requested = handId
+    ? hands.find((hand: any) => String(hand.id) === String(handId))
+    : findSelectedHand(canvas)
+  const selected = requested ?? hands[0]
+  if (!selected) return false
+
+  if (handCalibrationState.active) {
+    attachedCanvas = canvas
+    const previous = findSelectedHand(canvas)
+    if (previous && previous !== selected) restoreHandAngle(previous)
+    showMarkerFor(selected)
+    pointHandAtNoon(selected)
+    applyCalibrationInteraction()
+    return true
+  }
+
   attachedCanvas = canvas
+  priorPreserveObjectStacking = Boolean(canvas.preserveObjectStacking)
+  canvas.preserveObjectStacking = true
   hands.forEach((hand: any) => {
     priorInteraction.set(hand, {
       selectable: Boolean(hand.selectable),
@@ -163,13 +200,13 @@ export function startHandCalibration(): boolean {
       hasControls: Boolean(hand.hasControls),
       borderColor: String(hand.borderColor ?? ''),
       hoverCursor: String(hand.hoverCursor ?? ''),
+      angle: Number(hand.angle ?? 0),
     })
     hand.set({
-      angle: 0,
-      selectable: true,
-      evented: true,
-      lockMovementX: false,
-      lockMovementY: false,
+      selectable: false,
+      evented: false,
+      lockMovementX: true,
+      lockMovementY: true,
       hasControls: false,
       hasBorders: true,
       borderColor: '#2563eb',
@@ -179,18 +216,13 @@ export function startHandCalibration(): boolean {
   })
 
   handCalibrationState.active = true
-  const selected = findSelectedHand(canvas)
   if (selected) {
-    canvas.setActiveObject?.(selected)
     showMarkerFor(selected)
+    pointHandAtNoon(selected)
   }
-  canvas.on?.('selection:created', handleSelection)
-  canvas.on?.('selection:updated', handleSelection)
+  applyCalibrationInteraction()
   canvas.on?.('object:moving', handleObjectMoving)
   canvas.on?.('object:modified', handleObjectModified)
-  canvas.on?.('mouse:down', handleMouseDown)
-  canvas.on?.('mouse:move', handleMouseMove)
-  canvas.on?.('mouse:up', handleMouseUp)
   canvas.requestRenderAll?.()
   return true
 }
@@ -198,24 +230,24 @@ export function startHandCalibration(): boolean {
 export function stopHandCalibration(): void {
   const canvas = attachedCanvas
   if (canvas) {
-    canvas.off?.('selection:created', handleSelection)
-    canvas.off?.('selection:updated', handleSelection)
     canvas.off?.('object:moving', handleObjectMoving)
     canvas.off?.('object:modified', handleObjectModified)
-    canvas.off?.('mouse:down', handleMouseDown)
-    canvas.off?.('mouse:move', handleMouseMove)
-    canvas.off?.('mouse:up', handleMouseUp)
     priorInteraction.forEach((state, hand) => {
       hand.set?.(state)
+      const position = getRotatedHandCenter(hand, state.angle)
+      hand.set?.(position)
       hand.setCoords?.()
     })
     if (pivotMarker) void useHistoryStore().runWithoutRecording(() => canvas.remove?.(pivotMarker))
+    if (priorPreserveObjectStacking !== undefined) {
+      canvas.preserveObjectStacking = priorPreserveObjectStacking
+    }
     canvas.requestRenderAll?.()
   }
   priorInteraction.clear()
   pivotMarker = null
   attachedCanvas = null
-  draggingPivot = false
+  priorPreserveObjectStacking = undefined
   handCalibrationState.active = false
   handCalibrationState.selectedHandId = null
 }

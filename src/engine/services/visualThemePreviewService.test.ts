@@ -42,6 +42,32 @@ const baseElements = [
 ]
 
 describe('visualThemePreviewService', () => {
+  it('inherits the base hand when the selected theme has no hand override', async () => {
+    const persisted = structuredClone(baseElements)
+    const canvasElements = structuredClone(baseElements)
+    const controller = createVisualThemePreviewController({
+      getBaseElements: () => persisted,
+      getCanvasElements: () => canvasElements,
+      applyElement: async (element, patch) => {
+        Object.assign(element, patch)
+      },
+      requestRender: () => undefined,
+    })
+    const config = structuredClone(visualThemes)
+    delete config.themes[1].assets.hourHand
+
+    await controller.preview(config, 'night')
+
+    expect(canvasElements[0]).toMatchObject({
+      assetId: 1,
+      imageUrl: 'base.svg',
+    })
+    expect(persisted[0]).toMatchObject({
+      assetId: 1,
+      imageUrl: 'base.svg',
+    })
+  })
+
   it('applies the current theme value for a shared color-variable binding', async () => {
     const persisted = [{ id: 'label', eleType: 'text', fill: '#111111', fillProperty: 'Accent' }]
     const canvasElements = structuredClone(persisted)
