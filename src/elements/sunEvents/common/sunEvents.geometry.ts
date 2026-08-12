@@ -1,5 +1,5 @@
 import { timeFractionToArcAngle } from './sunEvents.model'
-import type { ArcSunEventsElementConfig, SunEventIndicatorBase } from '@/types/elements/sunEvents'
+import type { ArcSunEventsElementConfig, LineSunEventsElementConfig, SunEventIndicatorBase } from '@/types/elements/sunEvents'
 
 export type ArcIndicatorOrientation = 'fixed' | 'inward' | 'outward'
 
@@ -26,6 +26,28 @@ export function scaleArcSunEventsConfig(
       width: scaled(config.indicator.width, 1),
       height: scaled(config.indicator.height, 1),
       radialOffset: Math.round(Number(config.indicator.radialOffset || 0) * safeScale),
+    },
+  }
+}
+
+export function scaleLineSunEventsConfig(
+  config: LineSunEventsElementConfig,
+  scaleX: number,
+  scaleY: number,
+  left: number,
+  top: number,
+): LineSunEventsElementConfig {
+  const safeScaleX = Number.isFinite(scaleX) ? Math.max(0.0001, Math.abs(scaleX)) : 1
+  const safeScaleY = Number.isFinite(scaleY) ? Math.max(0.0001, Math.abs(scaleY)) : 1
+  return {
+    ...config,
+    left: Math.round(left),
+    top: Math.round(top),
+    length: Math.max(1, Math.round(Number(config.length || 0) * safeScaleX)),
+    strokeWidth: Math.max(1, Math.round(Number(config.strokeWidth || 0) * safeScaleY)),
+    indicator: {
+      ...config.indicator,
+      offset: Math.round(Number(config.indicator.offset || 0) * safeScaleY),
     },
   }
 }

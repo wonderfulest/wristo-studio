@@ -1,8 +1,9 @@
-import { Group, Image as FabricImage, Path, Rect, type FabricObject } from 'fabric'
+import { Circle, Group, Image as FabricImage, Line, Path, Rect, type FabricObject } from 'fabric'
 import type { ArcSunEventsElementConfig, LineSunEventsElementConfig } from '@/types/elements/sunEvents'
 import { normalizeSunEventSegments, timeFractionToArcAngle } from './sunEvents.model'
 import { arcIndicatorTransform, lineIndicatorTransform, resolveSunEventIndicatorSource } from './sunEvents.geometry'
 import { currentLocalDayFraction, SUN_EVENTS_PREVIEW_TIMES } from './sunEvents.preview'
+import { DEFAULT_SUN_EVENT_INDICATOR_SVG } from './sunEvents.defaults'
 
 type Point = { x: number; y: number }
 
@@ -41,8 +42,42 @@ function loadHtmlImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-async function createIndicator(url: string | undefined, width: number, height: number): Promise<FabricImage | null> {
+function createDefaultSunIndicator(width: number, height: number): Group {
+  const color = '#FFD54A'
+  const rayOptions = {
+    stroke: color,
+    strokeWidth: 2.4,
+    strokeLineCap: 'round' as const,
+    selectable: false,
+    evented: false,
+  }
+  const rayPoints: [number, number, number, number][] = [
+    [15, 2.5, 15, 5.5], [15, 24.5, 15, 27.5],
+    [2.5, 15, 5.5, 15], [24.5, 15, 27.5, 15],
+    [6.16, 6.16, 8.28, 8.28], [21.72, 21.72, 23.84, 23.84],
+    [23.84, 6.16, 21.72, 8.28], [8.28, 21.72, 6.16, 23.84],
+  ]
+  const rays = rayPoints.map((points) => new Line(points, rayOptions))
+  const sun = new Group([
+    ...rays,
+    new Circle({
+      left: 15, top: 15, radius: 6.5, fill: color,
+      originX: 'center', originY: 'center', selectable: false, evented: false,
+    }),
+  ], {
+    originX: 'center', originY: 'center', selectable: false, evented: false,
+    objectCaching: false,
+  })
+  sun.set({
+    scaleX: Math.max(1, width) / Math.max(1, sun.width),
+    scaleY: Math.max(1, height) / Math.max(1, sun.height),
+  })
+  return sun
+}
+
+async function createIndicator(url: string | undefined, width: number, height: number): Promise<FabricObject | null> {
   if (!url) return null
+  if (url === DEFAULT_SUN_EVENT_INDICATOR_SVG) return createDefaultSunIndicator(width, height)
   const htmlImage = await loadHtmlImage(url)
   const naturalWidth = Math.max(1, htmlImage.naturalWidth || htmlImage.width || 1)
   const naturalHeight = Math.max(1, htmlImage.naturalHeight || htmlImage.height || 1)

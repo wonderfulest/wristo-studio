@@ -7,6 +7,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { buildArcSunEventObjects, createSunEventsGroup, setArcSunEventsCenterOffset } from '../common/sunEvents.renderer'
 import { encodeArcSunEvents } from './arcSunEvents.encoder'
 import { scaleArcSunEventsConfig } from '../common/sunEvents.geometry'
+import { normalizeSunEventIndicator } from '../common/sunEvents.defaults'
 
 function attachScaleHandler(group: any): void {
   if (group.__sunEventsScaleHandlerBound) return
@@ -48,7 +49,7 @@ function attachScaleHandler(group: any): void {
 export async function createArcSunEvents(input: ArcSunEventsElementConfig): Promise<FabricElement> {
   const canvas = useCanvasStore().canvas
   if (!canvas) throw new Error('Canvas not initialized')
-  const config = { ...input, id: input.id || nanoid(), indicator: { ...input.indicator }, phases: input.phases.map((phase) => ({ ...phase })) }
+  const config = { ...input, id: input.id || nanoid(), indicator: normalizeSunEventIndicator(input.indicator), phases: input.phases.map((phase) => ({ ...phase })) }
   const group = createSunEventsGroup(await buildArcSunEventObjects(config), config)
   attachScaleHandler(group)
   canvas.add(group)
