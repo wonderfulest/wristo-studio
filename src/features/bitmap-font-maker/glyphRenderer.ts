@@ -203,7 +203,7 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
   const baseline = Math.ceil(source.ascender * scale)
   const lineHeight = Math.ceil((source.ascender - source.descender) * scale)
   const shear = Math.tan((recipe.italicAngle * Math.PI) / 180)
-  const outlineRadius = recipe.outlineWidthEm * size
+  const outlineRadius = recipe.outlineMode === 'fill' ? 0 : recipe.outlineWidthEm * size
   const weightRadius = recipe.fontWeight > source.sourceWeight ? ((recipe.fontWeight - source.sourceWeight) / 500) * size * 0.04 : 0
   const strokeRadius = outlineRadius + weightRadius
 

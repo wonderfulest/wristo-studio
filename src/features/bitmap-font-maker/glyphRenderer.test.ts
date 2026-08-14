@@ -62,6 +62,32 @@ describe('renderGlyphs', () => {
     expect(coverage(outlineOnly.alpha)).toBeLessThan(outlineOnly.width * outlineOnly.height)
   })
 
+  it('keeps fill, fill-outline, and outline-only rendering semantics distinct', async () => {
+    const parsed = await source()
+    const plain = renderGlyphs(parsed, [79], 128, recipe()).glyphs[0]
+    const fillWithIgnoredOutlineWidth = renderGlyphs(parsed, [79], 128, recipe({ outlineWidthEm: 0.04, outlineMode: 'fill' })).glyphs[0]
+    const fillOutline = renderGlyphs(parsed, [79], 128, recipe({ outlineWidthEm: 0.04, outlineMode: 'fill-outline' })).glyphs[0]
+    const outlineOnly = renderGlyphs(parsed, [79], 128, recipe({ outlineWidthEm: 0.04, outlineMode: 'outline-only' })).glyphs[0]
+
+    expect(fillWithIgnoredOutlineWidth).toEqual(plain)
+    expect(fillOutline.width).toBeGreaterThan(plain.width)
+    expect(fillOutline.height).toBeGreaterThan(plain.height)
+
+    const alphaAtWorldPoint = (glyph: typeof plain, worldX: number, worldY: number) => {
+      const x = worldX - glyph.xoffset
+      const y = worldY - glyph.yoffset
+      if (x < 0 || y < 0 || x >= glyph.width || y >= glyph.height) return 0
+      return glyph.alpha[y * glyph.width + x]
+    }
+    const hasRemovedFillPixel = plain.alpha.some((alpha, index) => {
+      if (alpha === 0) return false
+      const worldX = plain.xoffset + (index % plain.width)
+      const worldY = plain.yoffset + Math.floor(index / plain.width)
+      return alphaAtWorldPoint(outlineOnly, worldX, worldY) === 0
+    })
+    expect(hasRemovedFillPixel).toBe(true)
+  })
+
   it('rejects a missing uploaded-font glyph with a stable error', async () => {
     const parsed = await source()
     expect(() => renderGlyphs(parsed, [0x4e2d], 32, recipe())).toThrowError(expect.objectContaining<Partial<GlyphRenderError>>({ code: 'GLYPH_MISSING' }))
