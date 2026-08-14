@@ -41,6 +41,9 @@ type BitmapFontRecipeInput = Omit<BitmapFontRecipe, 'lineJoin' | 'antialias'> &
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value))
 
+const finiteOrDefault = (value: number, fallback: number): number =>
+  Number.isFinite(value) ? value : fallback
+
 export function charsetForType(type: BitmapFontType | string): BitmapFontCharset {
   if (type === 'number_font') {
     return {
@@ -63,11 +66,23 @@ export function charsetForType(type: BitmapFontType | string): BitmapFontCharset
 }
 
 export function normalizeBitmapFontRecipe(input: BitmapFontRecipeInput): BitmapFontRecipe {
+  if (input.schemaVersion !== 1) {
+    throw new Error(`Unsupported bitmap font recipe schema version: ${input.schemaVersion}`)
+  }
+  if (input.rendererVersion !== '1') {
+    throw new Error(`Unsupported bitmap font renderer version: ${input.rendererVersion}`)
+  }
+  if (!(['fill', 'fill-outline', 'outline-only'] as const).includes(input.outlineMode)) {
+    throw new Error(`Unsupported bitmap font outline mode: ${input.outlineMode}`)
+  }
+
   return {
-    ...input,
-    fontWeight: clamp(input.fontWeight, 100, 900),
-    italicAngle: clamp(input.italicAngle, -20, 20),
-    outlineWidthEm: clamp(input.outlineWidthEm, 0, 0.5),
+    schemaVersion: 1,
+    rendererVersion: '1',
+    fontWeight: clamp(finiteOrDefault(input.fontWeight, 400), 100, 900),
+    italicAngle: clamp(finiteOrDefault(input.italicAngle, 0), -20, 20),
+    outlineWidthEm: clamp(finiteOrDefault(input.outlineWidthEm, 0), 0, 0.5),
+    outlineMode: input.outlineMode,
     lineJoin: 'round',
     antialias: true,
   }

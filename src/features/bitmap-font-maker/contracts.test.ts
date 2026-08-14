@@ -44,6 +44,85 @@ describe('bitmap font contracts', () => {
       italicAngle: -40,
       outlineWidthEm: -1,
       outlineMode: 'fill',
-    })).toMatchObject({ fontWeight: 900, italicAngle: -20, outlineWidthEm: 0 })
+    })).toEqual({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 900,
+      italicAngle: -20,
+      outlineWidthEm: 0,
+      outlineMode: 'fill',
+      lineJoin: 'round',
+      antialias: true,
+    })
+  })
+
+  it('uses canonical defaults for non-finite numeric values', () => {
+    expect(normalizeBitmapFontRecipe({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: Number.NaN,
+      italicAngle: Number.POSITIVE_INFINITY,
+      outlineWidthEm: Number.NEGATIVE_INFINITY,
+      outlineMode: 'fill-outline',
+    })).toEqual({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 400,
+      italicAngle: 0,
+      outlineWidthEm: 0,
+      outlineMode: 'fill-outline',
+      lineJoin: 'round',
+      antialias: true,
+    })
+  })
+
+  it('rejects unsupported recipe versions and outline modes at runtime', () => {
+    const valid = {
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 400,
+      italicAngle: 0,
+      outlineWidthEm: 0,
+      outlineMode: 'fill',
+    }
+
+    expect(() => normalizeBitmapFontRecipe({
+      ...valid,
+      schemaVersion: 2,
+    } as unknown as Parameters<typeof normalizeBitmapFontRecipe>[0]))
+      .toThrow('Unsupported bitmap font recipe schema version')
+    expect(() => normalizeBitmapFontRecipe({
+      ...valid,
+      rendererVersion: '2',
+    } as unknown as Parameters<typeof normalizeBitmapFontRecipe>[0]))
+      .toThrow('Unsupported bitmap font renderer version')
+    expect(() => normalizeBitmapFontRecipe({
+      ...valid,
+      outlineMode: 'shadow',
+    } as unknown as Parameters<typeof normalizeBitmapFontRecipe>[0]))
+      .toThrow('Unsupported bitmap font outline mode')
+  })
+
+  it('strips unknown fields from the canonical recipe', () => {
+    const recipe = normalizeBitmapFontRecipe({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 400,
+      italicAngle: 0,
+      outlineWidthEm: 0,
+      outlineMode: 'outline-only',
+      injected: 'not-canonical',
+    } as unknown as Parameters<typeof normalizeBitmapFontRecipe>[0])
+
+    expect(recipe).toEqual({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 400,
+      italicAngle: 0,
+      outlineWidthEm: 0,
+      outlineMode: 'outline-only',
+      lineJoin: 'round',
+      antialias: true,
+    })
   })
 })
