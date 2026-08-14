@@ -2,7 +2,7 @@ import type { PathCommand } from 'opentype.js'
 import type { BitmapFontRecipe } from './contracts'
 import type { ParsedFontSource } from './fontSource'
 
-export type GlyphRenderErrorCode = 'GLYPH_MISSING' | 'GLYPH_RENDER_FAILED'
+export type GlyphRenderErrorCode = 'GLYPH_MISSING' | 'GLYPH_RENDER_EMPTY' | 'GLYPH_RENDER_FAILED'
 
 export class GlyphRenderError extends Error {
   readonly code: GlyphRenderErrorCode
@@ -213,7 +213,10 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
     if (glyph.index === 0 && codepoint !== 0) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
     const xadvance = Math.max(1, Math.round((glyph.advanceWidth ?? source.unitsPerEm) * scale + weightRadius))
     const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, baseline)
-    if (contours.length === 0) return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }
+    if (contours.length === 0) {
+      if (codepoint !== 0x20) throw new GlyphRenderError('GLYPH_RENDER_EMPTY', codepoint)
+      return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }
+    }
 
     const points = contours.flat()
     const margin = Math.ceil(strokeRadius) + 1

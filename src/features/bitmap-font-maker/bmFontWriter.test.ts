@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { writeBmFontText } from './bmFontWriter'
+import { bmFontDescriptorFilename, writeBmFontText } from './bmFontWriter'
 
 describe('writeBmFontText', () => {
   it('writes one deterministic Unicode page with sorted chars and kernings', () => {
@@ -21,7 +21,7 @@ describe('writeBmFontText', () => {
       ]
     })
 
-    expect(text).toContain('info face="A \\"quoted\\" face\\\\name" size=24 unicode=1')
+    expect(text).toContain('info face="A \\"quoted\\" face\\\\name" size=-24 unicode=1')
     expect(text).toContain('common lineHeight=29 base=22 scaleW=64 scaleH=32 pages=1')
     expect(text).toContain('page id=0 file="demo-g_0.png"')
     expect(text.indexOf('char id=65')).toBeLessThan(text.indexOf('char id=66'))
@@ -33,7 +33,7 @@ describe('writeBmFontText', () => {
     const text = writeBmFontText({
       slug: 'numbers',
       face: 'Fixture',
-      size: -48,
+      size: 48,
       lineHeight: 50,
       base: 40,
       scaleW: 128,
@@ -45,5 +45,25 @@ describe('writeBmFontText', () => {
     expect(text).toContain('chars count=3')
     expect(text).toMatch(/char id=48[\s\S]*char id=49[\s\S]*char id=58/)
     expect(text).not.toContain('kernings count=')
+  })
+
+  it('rejects invalid pixel sizes instead of emitting ambiguous descriptors', () => {
+    const input = {
+      slug: 'numbers',
+      face: 'Fixture',
+      lineHeight: 50,
+      base: 40,
+      scaleW: 128,
+      scaleH: 64,
+      chars: []
+    }
+    for (const size of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => writeBmFontText({ ...input, size })).toThrowError(RangeError)
+    }
+  })
+
+  it('uses the Wristo descriptor filename and rejects unsafe slugs', () => {
+    expect(bmFontDescriptorFilename('roboto-outline')).toBe('roboto-outline-g.fnt')
+    expect(() => bmFontDescriptorFilename('../roboto')).toThrowError(TypeError)
   })
 })

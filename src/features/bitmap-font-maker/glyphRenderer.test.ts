@@ -67,6 +67,15 @@ describe('renderGlyphs', () => {
     expect(() => renderGlyphs(parsed, [0x4e2d], 32, recipe())).toThrowError(expect.objectContaining<Partial<GlyphRenderError>>({ code: 'GLYPH_MISSING' }))
   })
 
+  it('rejects a mapped non-space glyph whose uploaded outline is empty', async () => {
+    const parsed = await source()
+    const spaceGlyph = parsed.font.charToGlyph(' ')
+    parsed.supportedCodepoints.add(0xe000)
+    parsed.font.charToGlyph = () => spaceGlyph
+
+    expect(() => renderGlyphs(parsed, [0xe000], 32, recipe())).toThrowError(expect.objectContaining<Partial<GlyphRenderError>>({ code: 'GLYPH_RENDER_EMPTY' }))
+  })
+
   it('does not claim a FontFace renderer when worker font APIs are unavailable', async () => {
     expect(await registerUploadedFontFace(await source(), 700, {})).toBeUndefined()
   })
