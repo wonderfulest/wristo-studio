@@ -58,12 +58,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { defineAsyncComponent, ref, reactive } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO, DesignerDefaultConfigUpdateDTO, DesignerDefaultConfigCreateDTO } from '@/types/api/designer-default-config'
-import TemplateTextEditor from '@/components/inputs/TemplateTextEditor.vue'
 import { useI18n } from '@/i18n'
+
+const TemplateTextEditor = defineAsyncComponent(() => import('@/components/inputs/TemplateTextEditor.vue'))
 
 const visible = ref(false)
 const loading = ref(false)

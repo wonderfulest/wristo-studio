@@ -142,20 +142,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
-import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import { useI18n } from '@/i18n'
 import { cancelPendingSsoRedirect, clearLocalAuthState } from '@/utils/ssoRedirect'
+
+const DesignerDefaultConfigDialog = defineAsyncComponent(() => import('@/components/dialogs/DesignerDefaultConfigDialog.vue'))
 
 const router = useRouter()
 const userStore = useUserStore()
 const { t } = useI18n()
 
 const showDropdown = ref(false)
-const designerConfigDialogRef = ref<InstanceType<typeof DesignerDefaultConfigDialog> | null>(null)
+const designerConfigDialogRef = ref<{ show: () => void } | null>(null)
 
 const ticketNudgeVisible = ref(false)
 const pendingCount = ref<number>(0)

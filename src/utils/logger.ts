@@ -5,6 +5,5 @@ export const DEBUG_LOG_ENABLED: boolean = true
 
 export function debug(tag: string, ...args: unknown[]): void {
   if (!DEBUG_LOG_ENABLED) return
-  // eslint-disable-next-line no-console
   console.debug(`[${tag}]`, ...args)
 }

@@ -84,6 +84,10 @@ export const usePropertiesStore = defineStore('propertiesStore', {
             const canonical = useDataCatalogStore().options.find((opt) => opt.metricSymbol === selected)
             if (canonical) return canonical
           }
+          if (typeof selected === 'number' && Number.isInteger(selected)) {
+            const canonical = useDataCatalogStore().options.find((opt) => opt.valueCode === selected)
+            if (canonical) return canonical
+          }
         }
 
         // 3) 最后根据 metricSymbol 在 canonical catalog 中匹配

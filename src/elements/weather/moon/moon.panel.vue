@@ -4,10 +4,10 @@
     <el-form label-position="left" label-width="120px">
       <el-form-item :label="t('elementSettings.asset')">
         <el-select
-          v-model="element.imageUrl"
+          v-model="model.imageUrl"
           :placeholder="t('elementSettings.selectMoonImage')"
           filterable
-          @change="() => applyUpdate({ imageUrl: element.imageUrl })"
+          @change="() => applyUpdate({ imageUrl: model.imageUrl })"
           style="width: 100%"
         >
           <el-option
@@ -98,7 +98,7 @@ const applyUpdate = (patch: Record<string, any>): void => {
   }
 }
 
-const element = computed<any>(() => currentModel.value)
+const model = computed<any>(() => currentModel.value)
 </script>
 
 <style scoped>

@@ -1,8 +1,19 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { redirectToSsoLogin } from '@/utils/ssoRedirect'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
+import { initializeEditorRuntime } from '@/startup/editorRuntime'
+import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
+import { createDataCatalogRouteGuard } from '@/startup/dataCatalogRouteGuard'
+
+const loadDesignDataCatalog = createDataCatalogRouteGuard({
+  load: (force) => useDataCatalogStore().load(force),
+})
+
+const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
+  shouldLoadDataCatalog(to.path) ? loadDesignDataCatalog(to.fullPath) : true
 
 const routes: RouteRecordRaw[] = [
   {
@@ -57,9 +68,15 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: 'data-catalog-unavailable',
+        name: 'DataCatalogUnavailable',
+        component: () => import('@/views/DataCatalogUnavailable.vue'),
+      },
+      {
         path: 'design',
         name: 'Design',
         component: () => import('@/views/Design.vue'),
+        beforeEnter: [ensureDesignDataCatalog, initializeEditorRuntime],
         props: (route) => ({ designKey: (route.query as Record<string, any>).new }),
         meta: { requiresAuth: true },
       },

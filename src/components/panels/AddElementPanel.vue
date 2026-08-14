@@ -171,7 +171,7 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
     }
     return
   }
-  if (['data', 'icon', 'label', 'zoneMetric'].includes(elementType)) {
+  if (['data', 'icon', 'label', 'unit', 'zoneMetric'].includes(elementType)) {
     const curDataKey = String((normalizedConfig as any).dataProperty ?? '').trim()
     const curGoalKey = String((normalizedConfig as any).goalProperty ?? '').trim()
     if (!curDataKey && !curGoalKey) {

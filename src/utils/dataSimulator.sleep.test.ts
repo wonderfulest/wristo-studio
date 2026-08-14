@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getSimulatedDataByName } from './dataSimulator'
+import { getSimulatedDataByName, setDataSimulatorScenario } from './dataSimulator'
 
 describe('sleep data simulation', () => {
   it('keeps configured bedtime distinct from sleep score', () => {
@@ -16,5 +16,19 @@ describe('sleep data simulation', () => {
       unit: '',
       label: 'SLPS',
     })
+  })
+})
+
+describe('verification data scenarios', () => {
+  it('uses a low battery value while the low-battery scenario is selected', () => {
+    setDataSimulatorScenario('low-battery')
+    expect(getSimulatedDataByName('battery')).toMatchObject({ display: '12', numeric: 12 })
+    setDataSimulatorScenario('default')
+  })
+
+  it('shows unavailable values while the missing-data scenario is selected', () => {
+    setDataSimulatorScenario('missing-data')
+    expect(getSimulatedDataByName('hr')).toMatchObject({ display: '--', numeric: null })
+    setDataSimulatorScenario('default')
   })
 })

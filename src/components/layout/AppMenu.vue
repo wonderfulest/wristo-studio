@@ -11,6 +11,7 @@
         <AppMenuActions
           :on-screenshot="handleScreenshot"
           :on-record-gif="handleRecordGif"
+          :on-verify="() => verificationDrawerVisible = true"
           :on-export-wrt="handleExportWrt"
           :on-import-wrt="handleImportWrt"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
@@ -55,6 +56,7 @@
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
   <EditDesignDialog ref="editDesignDialog" />
+  <DesignVerificationDrawer v-model="verificationDrawerVisible" />
   <el-drawer
     v-model="visualThemeDrawerVisible"
     :title="t('visualTheme.title')"
@@ -186,6 +188,7 @@ import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
+import DesignVerificationDrawer from '@/components/dialogs/DesignVerificationDrawer.vue'
 import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
 import AppMenuDataFieldGroup from '@/components/layout/app-menu/AppMenuDataFieldGroup.vue'
 import AppMenuActions from '@/components/layout/app-menu/AppMenuActions.vue'
@@ -237,6 +240,7 @@ const watchFaceName = computed(() => {
 
 // Shortcuts dialog visibility
 const shortcutsDialogVisible = ref(false)
+const verificationDrawerVisible = ref(false)
 const visualThemeDrawerVisible = ref(false)
 const openVisualThemeEditor = () => {
   visualThemeDrawerVisible.value = true
@@ -984,7 +988,7 @@ const handleEditDesign = () => {
   console.log('[AppMenu] handleEditDesign called, designId =', designId)
   const id = Array.isArray(designId) ? designId[0] : designId
   if (typeof id === 'string' && id) {
-    if (!editDesignDialog || !editDesignDialog.value) {
+    if (!editDesignDialog.value) {
       console.warn('[AppMenu] editDesignDialog ref is not ready', editDesignDialog)
       return
     }

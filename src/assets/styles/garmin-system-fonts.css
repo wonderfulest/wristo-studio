@@ -1,13 +1,17 @@
-@import '@fontsource/roboto-condensed/400.css';
-@import '@fontsource/roboto/400.css';
-@import '@fontsource/nanum-gothic/400.css';
-@import '@fontsource/kosugi/400.css';
-@import '@fontsource/pridi/400.css';
-@import '@fontsource/yantramanav/400.css';
+@import '@fontsource/roboto-condensed/latin-400.css';
+@import '@fontsource/roboto-condensed/latin-ext-400.css';
+@import '@fontsource/roboto/latin-400.css';
+@import '@fontsource/roboto/latin-ext-400.css';
+@import '@fontsource/nanum-gothic/korean-400.css';
+@import '@fontsource/kosugi/japanese-400.css';
+@import '@fontsource/pridi/latin-400.css';
+@import '@fontsource/pridi/thai-400.css';
+@import '@fontsource/yantramanav/latin-400.css';
+@import '@fontsource/yantramanav/devanagari-400.css';
 
 @font-face {
   font-family: 'noto-sans-sc-regular';
-  src: url('../fonts/noto-sans-sc-regular.ttf') format('truetype');
+  src: url('../fonts/noto-sans-sc-regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
   font-display: block;

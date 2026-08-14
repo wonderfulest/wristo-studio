@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
-    <AppHeader v-if="!isAcademyPage" />
+    <AppHeader v-if="isDesignPage" />
+    <GlobalHeader v-else-if="!isAcademyPage" />
     <AppMenu v-if="showMenu" />
     <main class="app-main">
       <div class="app-content">
@@ -11,16 +12,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import AppHeader from './AppHeader.vue'
-import AppMenu from './AppMenu.vue'
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
+import { useRoute } from 'vue-router'
+import GlobalHeader from './GlobalHeader.vue'
 
-const router = useRouter()
+const AppHeader = defineAsyncComponent(() => import('./AppHeader.vue'))
+const AppMenu = defineAsyncComponent(() => import('./AppMenu.vue'))
 const route = useRoute()
 
 const isAcademyPage = computed(() => route.path === '/academy')
+const isDesignPage = computed(() => route.path === '/design')
 
 // 添加一个计算属性来控制菜单的显示
 const showMenu = computed(() => {

@@ -16,8 +16,8 @@
         @dragleave.prevent="onDragLeave"
         @drop.prevent="onDrop"
       >
-        <div v-if="previewUrl" class="img">
-          <el-image :src="previewUrl" fit="cover" style="width: 100%; height: 100%" />
+        <div v-if="displayPreviewUrl" class="img">
+          <el-image :src="displayPreviewUrl" fit="cover" style="width: 100%; height: 100%" />
         </div>
         <div v-else class="placeholder">+</div>
 
@@ -25,7 +25,7 @@
 
         <div v-if="uploading" class="mask">{{ t('image.uploading') }}</div>
         <el-button
-          v-if="previewUrl"
+          v-if="displayPreviewUrl"
           class="clear"
           type="danger"
           circle
@@ -83,7 +83,7 @@ const uploading = ref(false)
 const preview = ref('')
 const dragOver = ref(false)
 
-const previewUrl = computed(() => preview.value)
+const displayPreviewUrl = computed(() => preview.value || props.previewUrl)
 
 const aspectRatioMap = ref({})
 const aspectEnumCodes = ref([])

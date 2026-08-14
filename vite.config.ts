@@ -1,5 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import * as path from 'path'
 
 const joinUrl = (baseUrl: string | undefined, childPath: string) => `${(baseUrl || '').replace(/\/$/, '')}/${childPath}`
@@ -42,6 +44,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       vue(),
+      Components({
+        resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+      }),
       // removeConsolePlugin
     ],
     base: '/', // Ensure base URL is set to root
@@ -73,6 +78,15 @@ export default defineConfig(({ mode }) => {
     assetsInclude: ['**/*.woff2'],
     build: {
       minify: 'terser',
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return
+            if (/node_modules\/(vue|vue-router|pinia|pinia-plugin-persistedstate|@vueuse)\//.test(id)) return 'vue-vendor'
+            if (id.includes('node_modules/fabric/')) return 'fabric'
+          }
+        }
+      },
       terserOptions: {
         compress: {
           // drop_console: true,

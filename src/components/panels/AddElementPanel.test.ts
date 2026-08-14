@@ -7,6 +7,10 @@ const source = readFileSync(`${process.cwd()}/src/components/panels/AddElementPa
 const appMenuSource = readFileSync(`${process.cwd()}/src/components/layout/AppMenu.vue`, 'utf8')
 
 describe('AddElementPanel metric property assignment', () => {
+  it('binds standalone unit elements to a canonical metric property', () => {
+    expect(source).toContain("['data', 'icon', 'label', 'unit', 'zoneMetric'].includes(elementType)")
+  })
+
   it('assigns mode-compatible Dial Properties to subDial elements', () => {
     expect(source).toContain("elementType === 'subDial'")
     expect(source).toContain('createQuickDialProperty(mode)')

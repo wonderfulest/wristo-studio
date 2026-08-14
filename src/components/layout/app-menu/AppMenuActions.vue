@@ -18,6 +18,10 @@
       <el-icon><VideoCamera /></el-icon>
       <span>{{ t('editor.recordGif') }}</span>
     </el-menu-item>
+    <el-menu-item index="actions/verify" @click="onVerify">
+      <el-icon><CircleCheck /></el-icon>
+      <span>Verify design</span>
+    </el-menu-item>
     <el-menu-item index="actions/exportWrt" @click="onExportWrt">
       <el-icon><Download /></el-icon>
       <span>{{ t('editor.exportWrt') }}</span>
@@ -38,7 +42,7 @@
 </template>
 
 <script setup>
-import { Operation, View, Upload, Picture, VideoCamera, Download, Setting } from '@element-plus/icons-vue'
+import { Operation, View, Upload, Picture, VideoCamera, Download, Setting, CircleCheck } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -49,6 +53,10 @@ const props = defineProps({
     required: true,
   },
   onRecordGif: {
+    type: Function,
+    required: true,
+  },
+  onVerify: {
     type: Function,
     required: true,
   },
@@ -72,6 +80,10 @@ const onScreenshot = () => {
 
 const onRecordGif = () => {
   props.onRecordGif && props.onRecordGif()
+}
+
+const onVerify = () => {
+  props.onVerify && props.onVerify()
 }
 
 const onExportWrt = () => {

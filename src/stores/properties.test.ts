@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePropertiesStore } from './properties'
-import { useDataCatalogStore, validateDataCatalog } from './dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore, validateDataCatalog } from './dataCatalogStore'
 
 describe('Dial Properties', () => {
   beforeEach(() => {
@@ -84,6 +84,25 @@ describe('Dial Properties', () => {
     expect(store.resolveDataPropertyOptions('data_1').map(option => option.metricSymbol)).toEqual([':FIELD_TYPE_STEPS'])
     expect(store.resolveSelectedDataOption('data_1')?.settingsLabel.eng).toBe('Stored Steps')
     expect(store.getMetricByOptions({ dataProperty: 'data_1' })?.metricSymbol).toBe(':FIELD_TYPE_STEPS')
+  })
+
+  it('resolves a newly-created data property selected by its numeric option value', () => {
+    const catalog = validateDataCatalog({
+      catalogVersion: 1,
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
+    })
+    useDataCatalogStore().snapshot = catalog
+    const store = usePropertiesStore()
+    store.addProperty({
+      key: 'data_1',
+      type: 'data',
+      title: 'Heart Rate',
+      options: getDataTypePropertyOptions(),
+      defaultValue: 0,
+    })
+
+    expect(store.getMetricByOptions({ dataProperty: 'data_1' })).toBe(catalog.dataTypeOptions[0])
   })
 
   it('clears top-level data options with the properties', () => {

@@ -8,10 +8,11 @@ describe('data catalog startup gate', () => {
     document.body.innerHTML = '<div id="app"></div>'
   })
 
-  it('skips the protected catalog for the public PRG installer route', () => {
+  it('requires the protected catalog only for the editor route', () => {
+    expect(shouldLoadDataCatalog('/design')).toBe(true)
+    expect(shouldLoadDataCatalog('/design?new=blank')).toBe(true)
+    expect(shouldLoadDataCatalog('/designs/new-projects')).toBe(false)
     expect(shouldLoadDataCatalog('/prg-installer')).toBe(false)
-    expect(shouldLoadDataCatalog('/prg-installer/')).toBe(false)
-    expect(shouldLoadDataCatalog('/designs/new-projects')).toBe(true)
   })
 
   it('mounts only after the complete catalog has loaded', async () => {

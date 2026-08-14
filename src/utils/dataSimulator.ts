@@ -12,6 +12,29 @@ export interface SimulatedData {
   label?: string
 }
 
+export type DataSimulatorScenario = 'default' | 'long-text' | 'missing-data' | 'low-battery'
+
+let activeScenario: DataSimulatorScenario = 'default'
+
+export function setDataSimulatorScenario(scenario: DataSimulatorScenario): void {
+  activeScenario = scenario
+}
+
+function scenarioData(key: string): SimulatedData | null {
+  if (activeScenario === 'low-battery' && (key === 'battery' || key === 'batteryDays' || key === 'batteryInDays')) {
+    return key === 'battery'
+      ? { display: '12', numeric: 12, unit: '%', label: 'BAT' }
+      : { display: '1.2', numeric: 1.2, unit: 'd', label: 'BAT DAYS' }
+  }
+  if (activeScenario === 'missing-data' && ['heart', 'hr', 'weather', 'wthr', 'temperature', 'temp', 'weatherDescription', 'weatherDesc'].includes(key)) {
+    return { display: '--', numeric: null, unit: '', label: 'UNAVAILABLE' }
+  }
+  if (activeScenario === 'long-text' && ['quote', 'qt', 'location', 'loc', 'weatherDescription', 'weatherDesc'].includes(key)) {
+    return { display: 'A very long localized preview value for layout verification', unit: '', label: 'LONG TEXT' }
+  }
+  return null
+}
+
 type SimState = {
   hr: number
   steps: number
@@ -130,6 +153,8 @@ export function tickSimulatedData(): void {
  */
 export function getSimulatedDataByName(name: string): SimulatedData {
   const key = name.trim()
+  const scenarioValue = scenarioData(key)
+  if (scenarioValue) return scenarioValue
 
   switch (key) {
     // 心率
