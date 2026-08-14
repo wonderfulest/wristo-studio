@@ -5,7 +5,9 @@ import {
   FONT_SOURCE_MAX_BYTES,
   FontSourceError,
   checkRequiredGlyphs,
+  detectFontSourceItalic,
   parseFontSource,
+  selectLocalizedName,
 } from './fontSource'
 
 const fixtureUrl = new URL('./__fixtures__/minimal-latin.ttf', import.meta.url)
@@ -47,7 +49,7 @@ describe('parseFontSource', () => {
     ).toEqual({ profile: 'test', missing: [0x4e2d] })
   })
 
-  it('accepts case-insensitive TTF and OTF file extensions', async () => {
+  it('treats the supported filename extensions case-insensitively', async () => {
     await expect(parseFontSource(await fixtureFile('font.TTF'))).resolves.toBeDefined()
     await expect(parseFontSource(await fixtureFile('font.OtF'))).resolves.toBeDefined()
   })
@@ -97,5 +99,25 @@ describe('parseFontSource', () => {
 
     expect(error).toBeInstanceOf(Error)
     expect(error.code).toBe('FONT_SOURCE_INVALID')
+  })
+})
+
+describe('font metadata helpers', () => {
+  it.each([
+    { tables: { os2: { fsSelection: 0x01 } }, label: 'OS/2 italic' },
+    { tables: { os2: { fsSelection: 0x0200 } }, label: 'OS/2 oblique' },
+    { tables: { head: { macStyle: 0x02 } }, label: 'head italic' },
+  ])('recognizes $label flags without relying on style names', ({ tables }) => {
+    expect(detectFontSourceItalic(tables, {})).toBe(true)
+  })
+
+  it('uses post angle and subfamily only after formal flags', () => {
+    expect(detectFontSourceItalic({ post: { italicAngle: -12 } }, {})).toBe(true)
+    expect(detectFontSourceItalic({}, { en: 'Regular', fr: 'Oblique' })).toBe(false)
+    expect(detectFontSourceItalic({}, { en: 'Italic' })).toBe(true)
+  })
+
+  it('trims localized names and skips an empty English value', () => {
+    expect(selectLocalizedName({ en: '   ', fr: '  Famille  ' })).toBe('Famille')
   })
 })

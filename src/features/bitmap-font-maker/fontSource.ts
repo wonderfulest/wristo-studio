@@ -1,7 +1,4 @@
-import type { Font, FontNames, LocalizedName } from 'opentype.js'
-// opentype.js ships this browser-safe ESM build without a matching declaration entry.
-// @ts-expect-error The runtime API is typed by the adjacent opentype.js type imports.
-import opentype from 'opentype.js/dist/opentype.module.js'
+import opentype, { type Font, type FontNames, type LocalizedName } from 'opentype.js'
 import type { BitmapFontCharset } from './contracts'
 
 export const FONT_SOURCE_MAX_BYTES = 20 * 1024 * 1024
@@ -40,9 +37,13 @@ export interface RequiredGlyphCheck {
   missing: number[]
 }
 
-function englishOrFirst(values: LocalizedName | undefined): string | undefined {
+export function selectLocalizedName(values: LocalizedName | undefined): string | undefined {
   if (!values) return undefined
-  return values.en ?? Object.values(values).find((value) => value.length > 0)
+  const english = values.en?.trim()
+  if (english) return english
+  return Object.values(values)
+    .map((value) => value.trim())
+    .find((value) => value.length > 0)
 }
 
 function buildSupportedCodepoints(font: Font): Set<number> {
@@ -62,12 +63,34 @@ function sourceWeight(font: Font): number {
   return typeof os2?.usWeightClass === 'number' ? os2.usWeightClass : 400
 }
 
-function sourceItalic(font: Font): boolean {
-  const post = font.tables.post as { italicAngle?: unknown } | undefined
-  if (typeof post?.italicAngle === 'number' && post.italicAngle !== 0) return true
+type FontMetadataTables = Record<string, unknown>
 
-  const subfamily = englishOrFirst(font.names.fontSubfamily)
-  return subfamily ? /italic|oblique/i.test(subfamily) : false
+function numericTableField(
+  tables: FontMetadataTables,
+  tableName: string,
+  fieldName: string,
+): number | undefined {
+  const table = tables[tableName]
+  if (!table || typeof table !== 'object') return undefined
+  const value = (table as Record<string, unknown>)[fieldName]
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+export function detectFontSourceItalic(
+  tables: FontMetadataTables,
+  subfamily: LocalizedName | undefined,
+): boolean {
+  const fsSelection = numericTableField(tables, 'os2', 'fsSelection')
+  if (fsSelection !== undefined && (fsSelection & (0x01 | 0x0200)) !== 0) return true
+
+  const macStyle = numericTableField(tables, 'head', 'macStyle')
+  if (macStyle !== undefined && (macStyle & 0x02) !== 0) return true
+
+  const italicAngle = numericTableField(tables, 'post', 'italicAngle')
+  if (italicAngle !== undefined && italicAngle !== 0) return true
+
+  const subfamilyName = selectLocalizedName(subfamily)
+  return subfamilyName ? /italic|oblique/i.test(subfamilyName) : false
 }
 
 export async function parseFontSource(file: File): Promise<ParsedFontSource> {
@@ -82,13 +105,15 @@ export async function parseFontSource(file: File): Promise<ParsedFontSource> {
   }
 
   try {
+    // Keep owned source bytes for hashing/worker transfer; parse a separate buffer so
+    // transferring either one later cannot detach the other.
     const bytes = new Uint8Array(await file.arrayBuffer())
     const parseBuffer = bytes.buffer.slice(
       bytes.byteOffset,
       bytes.byteOffset + bytes.byteLength,
     ) as ArrayBuffer
     const font = opentype.parse(parseBuffer)
-    const family = englishOrFirst(font.names.fontFamily)
+    const family = selectLocalizedName(font.names.fontFamily)
     if (!family) throw new Error('Font family metadata is missing')
 
     return {
@@ -100,7 +125,7 @@ export async function parseFontSource(file: File): Promise<ParsedFontSource> {
       descender: font.descender,
       glyphCount: font.glyphs.length,
       sourceWeight: sourceWeight(font),
-      sourceItalic: sourceItalic(font),
+      sourceItalic: detectFontSourceItalic(font.tables, font.names.fontSubfamily),
       supportedCodepoints: buildSupportedCodepoints(font),
       font,
     }
