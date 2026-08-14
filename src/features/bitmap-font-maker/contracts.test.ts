@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  BITMAP_FONT_SIZES,
+  charsetForType,
+  normalizeBitmapFontRecipe,
+} from './contracts'
+
+describe('bitmap font contracts', () => {
+  it('keeps the exact 38-size Wristo contract', () => {
+    expect(BITMAP_FONT_SIZES).toHaveLength(38)
+    expect(BITMAP_FONT_SIZES).toEqual([
+      6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 21, 24, 30, 36, 42, 48, 54,
+      60, 66, 72, 78, 84, 96, 108, 120, 132, 144, 156, 168, 180, 192, 204,
+      216, 228, 240, 264, 288, 312,
+    ])
+  })
+
+  it('maps only supported v1 font types', () => {
+    expect(charsetForType('number_font').codepoints).toEqual([
+      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 176,
+    ])
+    expect(charsetForType('text_font').profile).toBe('wristo-text-en-v1')
+    expect(() => charsetForType('icon_font')).toThrow('Unsupported bitmap font type')
+  })
+
+  it('normalizes a bounded recipe', () => {
+    expect(normalizeBitmapFontRecipe({
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 1200,
+      italicAngle: -40,
+      outlineWidthEm: -1,
+      outlineMode: 'fill',
+    })).toMatchObject({ fontWeight: 900, italicAngle: -20, outlineWidthEm: 0 })
+  })
+})

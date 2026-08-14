@@ -1,3 +1,5 @@
+import type { BitmapFontRecipe } from '@/features/bitmap-font-maker/contracts'
+
 // 提交表单字段（后端 @ModelAttribute DTO）
 export interface UploadFontMeta {
   type: string // 后端为枚举，这里用字符串，示例：'text_font'
@@ -38,6 +40,7 @@ export interface DesignFontVO {
   ttf: number
   ttfFile: FileVO
   favoriteWeight?: number | null
+  bitmapRecipe?: BitmapFontRecipe | null
 }
 
 export interface IconFontBuildStatusVO {
