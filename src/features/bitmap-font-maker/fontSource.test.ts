@@ -58,8 +58,22 @@ describe('parseFontSource', () => {
     })
   })
 
-  it('rejects files larger than 20 MiB while defining the boundary as inclusive', async () => {
+  it('accepts a valid font whose file size is exactly 20 MiB', async () => {
     expect(FONT_SOURCE_MAX_BYTES).toBe(20 * 1024 * 1024)
+    const fixture = await readFile(fileURLToPath(fixtureUrl))
+    const boundary = new File(
+      [fixture, new Uint8Array(FONT_SOURCE_MAX_BYTES - fixture.byteLength)],
+      'boundary.ttf',
+    )
+
+    const source = await parseFontSource(boundary)
+
+    expect(boundary.size).toBe(FONT_SOURCE_MAX_BYTES)
+    expect(source.family).toBe('Noto Sans')
+    expect(source.supportedCodepoints.has(65)).toBe(true)
+  })
+
+  it('rejects files larger than 20 MiB', async () => {
     const oversized = new File([new Uint8Array(FONT_SOURCE_MAX_BYTES + 1)], 'large.ttf')
 
     await expect(parseFontSource(oversized)).rejects.toMatchObject({
