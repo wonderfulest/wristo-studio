@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   dispose: vi.fn(),
   validate: vi.fn(),
+  repack: vi.fn(),
 }))
 
 vi.mock('@/features/bitmap-font-maker/fontSource', () => ({
@@ -31,7 +32,7 @@ vi.mock('@/api/wristo/bitmapFontBuild', () => ({
   isBitmapFontSlugConflict: (error: any) => error?.response?.status === 409,
 }))
 vi.mock('./bitmapPackageRepack', () => ({
-  repackageBitmapFontSlug: (zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip, manifest: { ...current, slug } }),
+  repackageBitmapFontSlug: mocks.repack,
 }))
 vi.mock('./localPackageValidation', () => ({ validateLocalBitmapPackage: mocks.validate }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
@@ -76,6 +77,7 @@ describe('BitmapFontMaker', () => {
     })
     mocks.publish.mockResolvedValue({ code: 0, data: { id: 7, slug: 'precision-sans' } })
     mocks.validate.mockResolvedValue(undefined)
+    mocks.repack.mockImplementation((zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip, manifest: { ...current, slug } }))
     Object.defineProperty(File.prototype, 'arrayBuffer', {
       configurable: true,
       value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
@@ -97,6 +99,10 @@ describe('BitmapFontMaker', () => {
     expect(wrapper.text()).toContain('Missing required glyphs')
     expect(wrapper.text()).toContain('U+003A')
     expect(wrapper.get('[data-test="build-button"]').attributes('disabled')).toBeDefined()
+    const download = wrapper.get('[data-test="download-button"]')
+    expect(download.attributes('disabled')).toBeDefined()
+    expect(download.attributes('aria-describedby')).toBe('bitmap-download-help')
+    expect(wrapper.get('#bitmap-download-help').text()).toContain('Build and locally validate')
   })
 
   it('validates outline-only recipes and makes raster changes stale but metadata changes do not', async () => {
@@ -138,12 +144,41 @@ describe('BitmapFontMaker', () => {
     expect(mocks.cancel).toHaveBeenCalled()
     resolveResult({ zip: new Uint8Array([80, 75]).buffer, manifest })
     await promise
-    vm.downloadPackage()
+    await vm.downloadPackage()
     expect(click).toHaveBeenCalled()
     expect(URL.createObjectURL).toHaveBeenCalled()
     expect(URL.revokeObjectURL).toHaveBeenCalled()
     wrapper.unmount()
     expect(mocks.dispose).toHaveBeenCalled()
+  })
+
+  it('repackages a renamed slug before download without calling the raster worker again', async () => {
+    const downloadBytes = new Uint8Array([9, 8, 7]).buffer
+    mocks.repack.mockImplementationOnce((_zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip: downloadBytes, manifest: { ...current, slug } }))
+    const clicked: HTMLAnchorElement[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { clicked.push(this) })
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    vm.metadata.slug = 'precision-renamed'
+    await nextTick()
+    await vm.downloadPackage()
+    expect(mocks.build).toHaveBeenCalledTimes(1)
+    expect(mocks.repack).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.objectContaining({ slug: 'precision-sans' }), 'precision-renamed')
+    expect(mocks.validate).toHaveBeenLastCalledWith(expect.objectContaining({ manifest: expect.objectContaining({ slug: 'precision-renamed' }) }), expect.objectContaining({ slug: 'precision-renamed' }))
+    expect(clicked.at(-1)?.download).toBe('precision-renamed.zip')
+    const downloadedBlob = (URL.createObjectURL as any).mock.calls.at(-1)[0] as Blob
+    const downloaded = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as ArrayBuffer)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsArrayBuffer(downloadedBlob)
+    })
+    expect(new Uint8Array(downloaded)).toEqual(new Uint8Array(downloadBytes))
+    const button = wrapper.get('[data-test="download-button"]')
+    expect(button.attributes('aria-describedby')).toBe('bitmap-download-help')
+    expect(wrapper.get('#bitmap-download-help').text()).toContain('current slug')
   })
 
   it('publishes exact fresh artifacts, preserves freshness on slug conflict, and retries without rasterizing', async () => {

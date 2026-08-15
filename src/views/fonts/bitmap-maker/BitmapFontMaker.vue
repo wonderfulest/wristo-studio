@@ -90,15 +90,17 @@
         </div>
         <p v-if="buildError" class="validation-error" role="alert">{{ buildError }}</p>
         <p v-if="packageValidationError" class="validation-error" role="alert">{{ packageValidationError }}</p>
+        <p v-if="downloadError" class="validation-error" role="alert">{{ downloadError }}</p>
         <p v-if="publishError" class="validation-error" role="alert">{{ publishError }}</p>
         <div class="action-bar">
           <button v-if="buildRunning" class="button secondary" type="button" @click="cancelBuild">{{ t('common.cancel') }}</button>
           <button v-else data-test="build-button" class="button primary" type="button" :disabled="!sourceValid || !recipeValid" aria-describedby="bitmap-build-help" @click="buildPackage">{{ t('bitmapMaker.buildAll') }}</button>
-          <button class="button secondary" type="button" :disabled="!buildFresh" @click="downloadPackage">{{ t('bitmapMaker.downloadZip') }}</button>
+          <button data-test="download-button" class="button secondary" type="button" :disabled="!buildFresh || !slugValid || downloading" aria-describedby="bitmap-download-help" @click="downloadPackage">{{ downloading ? t('bitmapMaker.preparingDownload') : t('bitmapMaker.downloadZip') }}</button>
           <button data-test="publish-button" class="button publish" type="button" :disabled="!canPublish" aria-describedby="bitmap-publish-help" @click="publishPackage">{{ publishing ? t('bitmapMaker.publishing') : t('bitmapMaker.publishFont') }}</button>
         </div>
         <div class="action-help" role="status" aria-live="polite">
           <p id="bitmap-build-help">{{ buildActionDescription }}</p>
+          <p id="bitmap-download-help">{{ downloadActionDescription }}</p>
           <p id="bitmap-publish-help">{{ publishActionDescription }}</p>
         </div>
       </section>
@@ -127,6 +129,7 @@ const sourceParsed = shallowRef<ParsedFontSource | null>(null)
 const sourceError = ref('')
 const buildError = ref('')
 const publishError = ref('')
+const downloadError = ref('')
 const packageValidationError = ref('')
 const missingGlyphs = ref<number[]>([])
 const fontType = ref<BitmapFontType>('number_font')
@@ -139,6 +142,7 @@ const builtRasterKey = ref('')
 const buildArtifact = ref<{ zip: ArrayBuffer; manifest: BitmapFontManifest } | null>(null)
 const localValidationPassed = ref(false)
 const publishing = ref(false)
+const downloading = ref(false)
 const slugConflict = ref(false)
 const slugInput = ref<HTMLInputElement | null>(null)
 const currentSize = ref<number>(48)
@@ -152,7 +156,8 @@ let activeBuild: BitmapFontBuildHandle | null = null
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const sourceValid = computed(() => !!sourceFile.value && !!sourceParsed.value && !sourceError.value && missingGlyphs.value.length === 0)
 const recipeValid = computed(() => !(recipe.outlineMode === 'outline-only' && recipe.outlineWidthEm <= 0))
-const metadataValid = computed(() => metadata.fullName.length > 0 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(metadata.slug))
+const slugValid = computed(() => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(metadata.slug))
+const metadataValid = computed(() => metadata.fullName.length > 0 && slugValid.value)
 const rasterKey = computed(() => JSON.stringify({ source: sourceRevision.value, type: fontType.value, recipe: { ...recipe } }))
 const buildFresh = computed(() => !!buildArtifact.value && builtRasterKey.value === rasterKey.value && localValidationPassed.value)
 const canPublish = computed(() => sourceValid.value && recipeValid.value && buildFresh.value && localValidationPassed.value && metadataValid.value && !buildRunning.value && !publishing.value)
@@ -163,6 +168,7 @@ const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAng
 const previewTextStyle = computed(() => ({ fontWeight: recipe.fontWeight, fontStyle: recipe.italicAngle ? 'italic' : 'normal', WebkitTextStroke: recipe.outlineWidthEm ? `${Math.max(1, recipe.outlineWidthEm * 8)}px currentColor` : undefined, color: recipe.outlineMode === 'outline-only' ? 'transparent' : undefined }))
 const buildStateLabel = computed(() => buildRunning.value ? t('bitmapMaker.building') : buildFresh.value ? t('bitmapMaker.ready') : buildArtifact.value ? t('bitmapMaker.stale') : t('bitmapMaker.notBuilt'))
 const buildActionDescription = computed(() => !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
+const downloadActionDescription = computed(() => !buildFresh.value ? t('bitmapMaker.downloadBuildRequired') : !slugValid.value ? t('bitmapMaker.downloadSlugRequired') : downloading.value ? t('bitmapMaker.preparingCurrentSlug') : t('bitmapMaker.downloadReady'))
 const publishActionDescription = computed(() => packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : t('bitmapMaker.publishReady'))
 
 function invalidateBuild() {
@@ -181,6 +187,7 @@ async function onSourceInput(event: Event) {
   sourceError.value = ''
   buildError.value = ''
   publishError.value = ''
+  downloadError.value = ''
   sourceFile.value = file
   sourceParsed.value = null
   sourceRevision.value += 1
@@ -263,14 +270,42 @@ async function loadAtlasPreview() {
   } catch { /* A fresh package remains downloadable even if its preview cannot be decoded. */ }
 }
 
-function downloadPackage() {
-  if (!buildFresh.value || !buildArtifact.value) return
-  const url = URL.createObjectURL(new Blob([buildArtifact.value.zip], { type: 'application/zip' }))
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `${metadata.slug}.zip`
-  anchor.click()
-  URL.revokeObjectURL(url)
+async function ensureCurrentArtifact(targetSlug: string) {
+  if (!buildArtifact.value || !sourceFile.value) throw new Error('PACKAGE_MISSING')
+  if (buildArtifact.value.manifest.slug === targetSlug) return buildArtifact.value
+  const packaged = await repackageBitmapFontSlug(buildArtifact.value.zip, buildArtifact.value.manifest, targetSlug)
+  await validateLocalBitmapPackage(packaged, {
+    slug: targetSlug,
+    fontType: fontType.value,
+    sourceFileName: sourceFile.value.name,
+    recipe: JSON.parse(JSON.stringify(recipe)),
+    charset: charsetForType(fontType.value),
+  })
+  return packaged
+}
+
+async function downloadPackage() {
+  if (!buildFresh.value || !slugValid.value || !buildArtifact.value || downloading.value) return
+  const targetSlug = metadata.slug
+  downloading.value = true
+  downloadError.value = ''
+  packageValidationError.value = ''
+  try {
+    const artifact = await ensureCurrentArtifact(targetSlug)
+    if (metadata.slug !== targetSlug) throw new Error('SLUG_CHANGED_DURING_DOWNLOAD')
+    const url = URL.createObjectURL(new Blob([artifact.zip], { type: 'application/zip' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${targetSlug}.zip`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    if (metadata.slug !== targetSlug) downloadError.value = t('bitmapMaker.slugChangedRetry')
+    else {
+      localValidationPassed.value = false
+      packageValidationError.value = error instanceof Error ? error.message : t('bitmapMaker.packageInvalid')
+    }
+  } finally { downloading.value = false }
 }
 
 async function publishPackage() {
@@ -280,23 +315,19 @@ async function publishPackage() {
   packageValidationError.value = ''
   slugConflict.value = false
   let packagePrepared = false
+  const targetSlug = metadata.slug
   try {
-    const packaged = await repackageBitmapFontSlug(buildArtifact.value.zip, buildArtifact.value.manifest, metadata.slug)
+    const packaged = await ensureCurrentArtifact(targetSlug)
     const recipeSnapshot = JSON.parse(JSON.stringify(recipe)) as BitmapFontRecipe
-    await validateLocalBitmapPackage(packaged, {
-      slug: metadata.slug,
-      fontType: fontType.value,
-      sourceFileName: sourceFile.value.name,
-      recipe: recipeSnapshot,
-      charset: charsetForType(fontType.value),
-    })
+    if (metadata.slug !== targetSlug) throw new Error('SLUG_CHANGED_DURING_PUBLISH')
     localValidationPassed.value = true
     packagePrepared = true
-    const packageFile = new File([packaged.zip], `${metadata.slug}.zip`, { type: 'application/zip' })
+    const packageFile = new File([packaged.zip], `${targetSlug}.zip`, { type: 'application/zip' })
     await publishBitmapFontBuild({ sourceFont: sourceFile.value, packageFile, manifest: packaged.manifest, recipe: recipeSnapshot, metadata: { ...metadata, type: fontType.value } })
     await router.push({ name: 'Fonts' })
   } catch (error) {
-    if (isBitmapFontSlugConflict(error)) {
+    if (metadata.slug !== targetSlug) publishError.value = t('bitmapMaker.slugChangedPublishRetry')
+    else if (isBitmapFontSlugConflict(error)) {
       slugConflict.value = true
       await nextTick()
       slugInput.value?.focus()
@@ -312,7 +343,7 @@ watch(recipe, invalidateBuild, { deep: true })
 watch(currentSize, loadAtlasPreview)
 onBeforeUnmount(() => { if (activeBuild) activeBuild.cancel(); workerClient?.dispose(); revokeAtlasUrl() })
 
-defineExpose({ sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, recipe, metadata, buildProgress, slugConflict, buildError, publishError, packageValidationError, buildPackage, cancelBuild, downloadPackage, publishPackage })
+defineExpose({ sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, downloading, recipe, metadata, buildProgress, slugConflict, buildError, publishError, downloadError, packageValidationError, buildPackage, cancelBuild, downloadPackage, publishPackage })
 </script>
 
 <style scoped>
