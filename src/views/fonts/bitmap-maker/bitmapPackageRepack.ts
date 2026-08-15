@@ -28,12 +28,14 @@ export async function repackageBitmapFontSlug(
   manifest: BitmapFontManifest,
   nextSlug: string,
 ): Promise<{ zip: ArrayBuffer; manifest: BitmapFontManifest }> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(nextSlug)) throw new Error('SLUG_INVALID')
   if (manifest.slug === nextSlug) return { zip: bytes.slice(0), manifest }
   const input = await JSZip.loadAsync(bytes)
   const output = new JSZip()
   const hashes = new Map<string, string>()
   const oldSlug = manifest.slug
-  const extension = manifest.source.fileName.endsWith('.otf') ? 'otf' : 'ttf'
+  const extension = /\.otf$/i.test(manifest.source.fileName) ? 'otf' : /\.ttf$/i.test(manifest.source.fileName) ? 'ttf' : null
+  if (!extension) throw new Error('SOURCE_EXTENSION_INVALID')
 
   for (const [path, entry] of Object.entries(input.files)) {
     if (entry.dir || path === 'manifest.json') continue

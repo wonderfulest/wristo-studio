@@ -17,7 +17,7 @@ async function packageFixture(pageFile = 'old-g_0.png') {
   }
   const source = new Uint8Array([1, 2, 3])
   const recipeText = canonicalJson(recipe)
-  const png = new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0,73,69,78,68,174,66,96,130])
+  const png = new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,16,0,0,0,16,8,6,0,0,0,0,0,0,0,0,0,0,0,73,69,78,68,174,66,96,130])
   await add('old.ttf', source)
   await add('recipe.json', recipeText)
   for (const size of BITMAP_FONT_SIZES) {

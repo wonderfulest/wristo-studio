@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   dispose: vi.fn(),
   validate: vi.fn(),
   repack: vi.fn(),
+  construct: vi.fn(),
+  loadZip: vi.fn(),
 }))
 
 vi.mock('@/features/bitmap-font-maker/fontSource', () => ({
@@ -23,6 +25,7 @@ vi.mock('@/features/bitmap-font-maker/fontSource', () => ({
 }))
 vi.mock('@/features/bitmap-font-maker/workerClient', () => ({
   BitmapFontWorkerClient: class {
+    constructor() { mocks.construct() }
     build = mocks.build
     dispose = mocks.dispose
   },
@@ -35,6 +38,7 @@ vi.mock('./bitmapPackageRepack', () => ({
   repackageBitmapFontSlug: mocks.repack,
 }))
 vi.mock('./localPackageValidation', () => ({ validateLocalBitmapPackage: mocks.validate }))
+vi.mock('jszip', () => ({ default: { loadAsync: mocks.loadZip } }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 
 import BitmapFontMaker from './BitmapFontMaker.vue'
@@ -78,6 +82,7 @@ describe('BitmapFontMaker', () => {
     mocks.publish.mockResolvedValue({ code: 0, data: { id: 7, slug: 'precision-sans' } })
     mocks.validate.mockResolvedValue(undefined)
     mocks.repack.mockImplementation((zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip, manifest: { ...current, slug } }))
+    mocks.loadZip.mockRejectedValue(new Error('preview unavailable'))
     Object.defineProperty(File.prototype, 'arrayBuffer', {
       configurable: true,
       value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
@@ -228,5 +233,96 @@ describe('BitmapFontMaker', () => {
     await vm.publishPackage()
     expect(vm.sourceValid).toBe(true)
     expect(vm.publishError).toContain('network retry')
+  })
+
+  it('discards a slow first upload after a faster second font is selected', async () => {
+    let resolveFirst!: (value: any) => void
+    mocks.parse
+      .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve }))
+      .mockResolvedValueOnce({ ...parsed, family: 'Second Font', glyphCount: 222 })
+    const wrapper = mountMaker()
+    const input = wrapper.get('[data-test="source-input"]').element as HTMLInputElement
+    const first = new File([new Uint8Array([1])], 'First.ttf')
+    const second = new File([new Uint8Array([2])], 'Second.ttf')
+    Object.defineProperty(input, 'files', { value: [first], configurable: true })
+    input.dispatchEvent(new Event('change'))
+    Object.defineProperty(input, 'files', { value: [second], configurable: true })
+    input.dispatchEvent(new Event('change'))
+    await vi.waitFor(() => expect((wrapper.vm as any).metadata.fullName).toBe('Second Font'))
+    resolveFirst({ ...parsed, family: 'First Font', glyphCount: 111 })
+    await Promise.resolve()
+    expect((wrapper.vm as any).metadata.fullName).toBe('Second Font')
+    expect((wrapper.vm as any).sourceFile.name).toBe('Second.ttf')
+  })
+
+  it('creates a fresh worker client after a fatal worker failure', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    mocks.build.mockReturnValueOnce({ requestId: 'fatal', cancel: mocks.cancel, result: Promise.reject(Object.assign(new Error('fatal'), { code: 'WORKER_FAILED' })) })
+    await vm.buildPackage()
+    mocks.build.mockReturnValueOnce({ requestId: 'retry', cancel: mocks.cancel, result: Promise.resolve({ zip: new ArrayBuffer(2), manifest }) })
+    await vm.buildPackage()
+    expect(mocks.construct).toHaveBeenCalledTimes(2)
+    expect(mocks.dispose).toHaveBeenCalled()
+    expect(vm.buildFresh).toBe(true)
+  })
+
+  it('keeps only the newest size preview when ZIP reads finish out of order', async () => {
+    let resolveSlow!: (value: any) => void
+    const zipFor = (label: string) => ({ file: (path: string) => path.endsWith('.png')
+      ? { async: () => Promise.resolve(new Blob([label])) }
+      : { async: () => Promise.resolve('common scaleW=16 scaleH=16\nchar id=48 x=0 y=0 width=1 height=1') } })
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    mocks.loadZip.mockReset()
+    mocks.loadZip
+      .mockImplementationOnce(() => new Promise(resolve => { resolveSlow = resolve }))
+      .mockResolvedValueOnce(zipFor('new'))
+    ;(URL.createObjectURL as any).mockImplementation((blob: Blob) => `blob:${blob.size}:${Math.random()}`)
+    const slow = vm.loadAtlasPreview()
+    vm.currentSize = 54
+    await nextTick()
+    await vi.waitFor(() => expect(vm.atlasUrl).toContain('blob:'))
+    const newestUrl = vm.atlasUrl
+    resolveSlow(zipFor('old'))
+    await slow
+    expect(vm.atlasUrl).toBe(newestUrl)
+  })
+
+  it('does not create a preview URL when an in-flight ZIP read finishes after unmount', async () => {
+    let resolveZip!: (value: any) => void
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    mocks.loadZip.mockReset()
+    mocks.loadZip.mockImplementationOnce(() => new Promise(resolve => { resolveZip = resolve }))
+    const pending = vm.loadAtlasPreview()
+    const before = (URL.createObjectURL as any).mock.calls.length
+    wrapper.unmount()
+    resolveZip({ file: () => ({ async: () => Promise.resolve(new Blob(['late'])) }) })
+    await pending
+    expect((URL.createObjectURL as any).mock.calls.length).toBe(before)
+  })
+
+  it('serializes package preparation and discards a download when metadata changes', async () => {
+    let resolveRepack!: (value: any) => void
+    mocks.repack.mockImplementationOnce(() => new Promise(resolve => { resolveRepack = resolve }))
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    vm.metadata.slug = 'first-download'
+    const first = vm.downloadPackage()
+    const second = vm.downloadPackage()
+    expect(mocks.repack).toHaveBeenCalledTimes(1)
+    vm.metadata.slug = 'changed-during-download'
+    resolveRepack({ zip: new ArrayBuffer(2), manifest: { ...manifest, slug: 'first-download' } })
+    await Promise.all([first, second])
+    expect(vm.downloadError).toContain('changed while')
+    expect(vm.downloading).toBe(false)
   })
 })

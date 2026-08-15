@@ -6,7 +6,7 @@ import { validateLocalBitmapPackage } from './localPackageValidation'
 
 const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true }
 const source = new Uint8Array([1, 2, 3])
-const png = new Uint8Array([137,80,78,71,13,10,26,10, 0,0,0,0,73,69,78,68,174,66,96,130])
+const png = new Uint8Array([137,80,78,71,13,10,26,10, 0,0,0,13,73,72,68,82, 0,0,0,16,0,0,0,16,8,6,0,0,0, 0,0,0,0, 0,0,0,0,73,69,78,68,174,66,96,130])
 
 async function packageFixture(mutate?: (zip: JSZip) => void) {
   const zip = new JSZip()
@@ -47,7 +47,21 @@ describe('validateLocalBitmapPackage', () => {
   })
 
   it('rejects descriptor pages or PNGs that are not structurally complete', async () => {
-    const fixture = await packageFixture(zip => zip.file('6/precision-g.fnt', 'page id=0 file="wrong.png"\nchars count=0\n', { createFolders: false }))
+    const fixture = await packageFixture(zip => zip.file('6/precision-g.fnt', 'info face="Precision" size=6\ncommon lineHeight=6 base=6 scaleW=16 scaleH=16 pages=1 packed=0\npage id=0 file="wrong.png"\nchars count=0\n', { createFolders: false }))
     await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).rejects.toThrow('FNT_PAGE_INVALID')
+  })
+
+  it.each([
+    ['FNT_SCALE_MISMATCH', 'common lineHeight=6 base=6 scaleW=15 scaleH=16 pages=1 packed=0'],
+    ['FNT_PAGES_INVALID', 'common lineHeight=6 base=6 scaleW=16 scaleH=16 pages=2 packed=0'],
+    ['FNT_CHAR_BOUNDS_INVALID', 'char id=48 x=16 y=0 width=1 height=1 xoffset=0 yoffset=0 xadvance=1 page=0 chnl=15'],
+    ['FNT_CHAR_PAGE_INVALID', 'char id=48 x=0 y=0 width=1 height=1 xoffset=0 yoffset=0 xadvance=1 page=1 chnl=15'],
+  ])('rejects %s descriptor metrics', async (code, replacement) => {
+    const fixture = await packageFixture(zip => {
+      const base = `info face="Precision" size=6\ncommon lineHeight=6 base=6 scaleW=16 scaleH=16 pages=1 packed=0\npage id=0 file="precision-g_0.png"\nchars count=1\nchar id=48 x=0 y=0 width=1 height=1 xoffset=0 yoffset=0 xadvance=1 page=0 chnl=15\n`
+      const linePrefix = replacement.startsWith('common') ? 'common' : 'char id='
+      zip.file('6/precision-g.fnt', base.split('\n').map(line => line.startsWith(linePrefix) ? replacement : line).join('\n'), { createFolders: false })
+    })
+    await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).rejects.toThrow(code)
   })
 })
