@@ -190,7 +190,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
 
     if (positionRestored) canvas?.requestRenderAll?.()
     registerElementInstance(current)
-    useLayerStore().applyPreviewVisibility()
+    useLayerStore().applyPreviewVisibility?.()
   }
 
 }
