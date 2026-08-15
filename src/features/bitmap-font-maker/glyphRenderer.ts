@@ -1,19 +1,39 @@
 import type { PathCommand } from 'opentype.js'
 import type { BitmapFontRecipe } from './contracts'
+import { BITMAP_FONT_SIZES } from './contracts'
 import type { ParsedFontSource } from './fontSource'
 
-export type GlyphRenderErrorCode = 'GLYPH_MISSING' | 'GLYPH_RENDER_EMPTY' | 'GLYPH_RENDER_FAILED'
+export type GlyphRenderErrorCode = 'GLYPH_MISSING' | 'GLYPH_RENDER_EMPTY' | 'GLYPH_RENDER_FAILED' | 'GLYPH_RENDER_INVALID_INPUT' | 'GLYPH_RENDER_TOO_LARGE' | 'GLYPH_OUTLINE_REQUIRED'
 
 export class GlyphRenderError extends Error {
   readonly code: GlyphRenderErrorCode
   readonly codepoint: number
 
-  constructor(code: GlyphRenderErrorCode, codepoint: number) {
+  constructor(code: GlyphRenderErrorCode, codepoint = 0) {
     super(`${code}: U+${codepoint.toString(16).toUpperCase().padStart(4, '0')}`)
     this.name = 'GlyphRenderError'
     this.code = code
     this.codepoint = codepoint
   }
+}
+
+const ALLOWED_SIZES = new Set<number>(BITMAP_FONT_SIZES)
+const MAX_GLYPH_DIMENSION = 8192
+const MAX_GLYPH_AREA = MAX_GLYPH_DIMENSION * MAX_GLYPH_DIMENSION
+
+function validateRasterRequest(source: ParsedFontSource, size: number, recipe: BitmapFontRecipe): void {
+  if (!Number.isSafeInteger(size) || !ALLOWED_SIZES.has(size)) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
+  if (!Number.isFinite(source.unitsPerEm) || source.unitsPerEm <= 0 || !Number.isFinite(source.ascender) || !Number.isFinite(source.descender)) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
+  const baseline = Math.ceil(source.ascender * (size / source.unitsPerEm))
+  const lineHeight = Math.ceil((source.ascender - source.descender) * (size / source.unitsPerEm))
+  if (!Number.isSafeInteger(baseline) || !Number.isSafeInteger(lineHeight) || lineHeight <= 0) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
+  const syntheticWeight = recipe.fontWeight > source.sourceWeight
+  if (recipe.outlineMode === 'outline-only' && recipe.outlineWidthEm === 0 && !syntheticWeight) throw new GlyphRenderError('GLYPH_OUTLINE_REQUIRED')
+}
+
+function validateGlyphAllocation(width: number, height: number, codepoint: number): void {
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 0 || height < 0) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT', codepoint)
+  if (width > MAX_GLYPH_DIMENSION || height > MAX_GLYPH_DIMENSION || width * height > MAX_GLYPH_AREA) throw new GlyphRenderError('GLYPH_RENDER_TOO_LARGE', codepoint)
 }
 
 export interface RenderedGlyph {
@@ -87,8 +107,13 @@ export async function registerUploadedFontFace(
   const family = `WristoUploaded-${sourceBytesHash(source.bytes)}`
   const buffer = source.bytes.buffer.slice(source.bytes.byteOffset, source.bytes.byteOffset + source.bytes.byteLength) as ArrayBuffer
   const face = new environment.FontFace(family, buffer, { weight: String(source.sourceWeight) })
-  await face.load()
-  environment.fonts.add(face)
+  try {
+    await face.load()
+    environment.fonts.add(face)
+  } catch (error) {
+    environment.fonts.delete(face)
+    throw error
+  }
   let disposed = false
   return {
     family,
@@ -255,6 +280,8 @@ export function rasterizeFallbackContours(
   fill: boolean,
   strokeRadius: number
 ): Uint8Array {
+  if (!Number.isSafeInteger(bounds.left) || !Number.isSafeInteger(bounds.top)) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
+  validateGlyphAllocation(bounds.width, bounds.height, 0)
   const alpha = new Uint8Array(bounds.width * bounds.height)
   const segments = buildSegments(contours)
   const fillRows = fill ? rowBuckets(segments, bounds, 0) : []
@@ -310,19 +337,16 @@ function alphaFromRgba(rgba: Uint8ClampedArray): Uint8Array {
   return alpha
 }
 
-export async function renderGlyphsPreferWorkerCanvas(
+function renderGlyphsWithWorkerCanvas(
   source: ParsedFontSource,
   codepoints: number[],
   size: number,
   recipe: BitmapFontRecipe,
-  environment: WorkerFontEnvironment = globalThis as unknown as WorkerFontEnvironment
-): Promise<RenderedGlyphSet> {
-  if (!environment.FontFace || !environment.fonts?.delete || !environment.OffscreenCanvas) {
-    return renderGlyphs(source, codepoints, size, recipe)
-  }
-  const registration = await registerUploadedFontFace(source, recipe.fontWeight, environment)
-  if (!registration) return renderGlyphs(source, codepoints, size, recipe)
-  const CanvasConstructor = environment.OffscreenCanvas
+  environment: WorkerFontEnvironment,
+  registration: RegisteredUploadedFontFace
+): RenderedGlyphSet {
+  validateRasterRequest(source, size, recipe)
+  const CanvasConstructor = environment.OffscreenCanvas!
 
   const scale = size / source.unitsPerEm
   const baseline = Math.ceil(source.ascender * scale)
@@ -331,7 +355,7 @@ export async function renderGlyphsPreferWorkerCanvas(
   const italic = recipe.italicAngle === 0 ? 'normal' : `oblique ${recipe.italicAngle}deg`
   const cssFont = `${italic} ${Math.round(recipe.fontWeight)} ${size}px "${registration.family}"`
 
-  try {
+  {
     const measureContext = new CanvasConstructor(1, 1).getContext('2d', { willReadFrequently: true })
     if (!measureContext) throw new Error('GLYPH_RENDER_FAILED: Canvas 2D context unavailable')
     measureContext.font = cssFont
@@ -347,6 +371,7 @@ export async function renderGlyphsPreferWorkerCanvas(
       const padding = Math.ceil(outlineRadius) + 2
       const width = Math.max(1, Math.ceil(metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight) + padding * 2)
       const height = Math.max(1, Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) + padding * 2)
+      validateGlyphAllocation(width, height, codepoint)
       const originX = padding + Math.ceil(metrics.actualBoundingBoxLeft)
       const originY = padding + Math.ceil(metrics.actualBoundingBoxAscent)
       const context = new CanvasConstructor(width, height).getContext('2d', { willReadFrequently: true })
@@ -372,12 +397,57 @@ export async function renderGlyphsPreferWorkerCanvas(
       }
     })
     return { glyphs, lineHeight, baseline, diagnostics: { rendererPath: 'font-face-canvas', rendererVersion: '1' } }
+  }
+}
+
+export interface GlyphRendererSession {
+  readonly rendererPath: 'opentype-path' | 'font-face-canvas'
+  render(size: number, recipe: BitmapFontRecipe, codepoints: number[]): RenderedGlyphSet
+  dispose(): void
+}
+
+export async function createGlyphRendererSession(source: ParsedFontSource, environment: WorkerFontEnvironment = globalThis as unknown as WorkerFontEnvironment): Promise<GlyphRendererSession> {
+  let registration: RegisteredUploadedFontFace | undefined
+  if (environment.FontFace && environment.fonts?.delete && environment.OffscreenCanvas) {
+    try {
+      registration = await registerUploadedFontFace(source, source.sourceWeight, environment)
+    } catch {
+      registration = undefined
+    }
+  }
+  let disposed = false
+  return {
+    rendererPath: registration ? 'font-face-canvas' : 'opentype-path',
+    render: (size, recipe, codepoints) => {
+      if (disposed) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
+      return registration ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration) : renderGlyphs(source, codepoints, size, recipe)
+    },
+    dispose: () => {
+      if (disposed) return
+      disposed = true
+      registration?.dispose()
+    }
+  }
+}
+
+/** Convenience wrapper for one render. Batch generation should reuse createGlyphRendererSession. */
+export async function renderGlyphsPreferWorkerCanvas(
+  source: ParsedFontSource,
+  codepoints: number[],
+  size: number,
+  recipe: BitmapFontRecipe,
+  environment: WorkerFontEnvironment = globalThis as unknown as WorkerFontEnvironment
+): Promise<RenderedGlyphSet> {
+  const session = await createGlyphRendererSession(source, environment)
+  try {
+    return session.render(size, recipe, codepoints)
   } finally {
-    registration.dispose()
+    session.dispose()
   }
 }
 
 export function renderGlyphs(source: ParsedFontSource, codepoints: number[], size: number, recipe: BitmapFontRecipe): RenderedGlyphSet {
+  validateRasterRequest(source, size, recipe)
   const scale = size / source.unitsPerEm
   const baseline = Math.ceil(source.ascender * scale)
   const lineHeight = Math.ceil((source.ascender - source.descender) * scale)
@@ -397,14 +467,26 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
       return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }
     }
 
-    const points = contours.flat()
+    let minimumX = Number.POSITIVE_INFINITY
+    let minimumY = Number.POSITIVE_INFINITY
+    let maximumX = Number.NEGATIVE_INFINITY
+    let maximumY = Number.NEGATIVE_INFINITY
+    for (const contour of contours) {
+      for (const point of contour) {
+        minimumX = Math.min(minimumX, point.x)
+        minimumY = Math.min(minimumY, point.y)
+        maximumX = Math.max(maximumX, point.x)
+        maximumY = Math.max(maximumY, point.y)
+      }
+    }
     const margin = Math.ceil(strokeRadius) + 1
     const italicMargin = Math.ceil(Math.abs(shear) * 2)
-    const left = Math.floor(Math.min(...points.map((point) => point.x))) - margin - (shear < 0 ? italicMargin : 0)
-    const top = Math.floor(Math.min(...points.map((point) => point.y))) - margin
-    const right = Math.ceil(Math.max(...points.map((point) => point.x))) + margin + (shear > 0 ? italicMargin : 0)
-    const bottom = Math.ceil(Math.max(...points.map((point) => point.y))) + margin
+    const left = Math.floor(minimumX) - margin - (shear < 0 ? italicMargin : 0)
+    const top = Math.floor(minimumY) - margin
+    const right = Math.ceil(maximumX) + margin + (shear > 0 ? italicMargin : 0)
+    const bottom = Math.ceil(maximumY) + margin
     const bounds = { left, top, width: right - left, height: bottom - top }
+    validateGlyphAllocation(bounds.width, bounds.height, codepoint)
     const fill = recipe.outlineMode !== 'outline-only'
     const cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius), bounds)
     if (!cropped) throw new GlyphRenderError('GLYPH_RENDER_FAILED', codepoint)
