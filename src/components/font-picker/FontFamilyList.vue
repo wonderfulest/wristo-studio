@@ -7,14 +7,15 @@
           :class="{ active: modelValue === group.fonts[0].value }"
           :data-font-slug="group.fonts[0].value"
           :data-bitmap-recipe-preview="hasRecipe(group.fonts[0]) ? '' : undefined"
-          :style="recipeCardStyle(group.fonts[0])"
           @click="emit('select', group.fonts[0])">
           <span v-if="hasRecipe(group.fonts[0])" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
-          <FontListItem
-            v-bind="itemProps(group.fonts[0])"
-            @edit-search-index="emit('editSearchIndex', group.fonts[0])"
-            @favorite-changed="(id, weight) => emit('favoriteChanged', id, weight)"
-            @removed="emit('removed', $event)" />
+          <div class="bitmap-recipe-preview-surface" :style="recipeCardStyle(group.fonts[0])">
+            <FontListItem
+              v-bind="itemProps(group.fonts[0])"
+              @edit-search-index="emit('editSearchIndex', group.fonts[0])"
+              @favorite-changed="(id, weight) => emit('favoriteChanged', id, weight)"
+              @removed="emit('removed', $event)" />
+          </div>
         </div>
       </template>
       <template v-else>
@@ -31,14 +32,15 @@
             :class="{ active: modelValue === font.value }"
             :data-font-slug="font.value"
             :data-bitmap-recipe-preview="hasRecipe(font) ? '' : undefined"
-            :style="recipeCardStyle(font)"
             @click="emit('select', font)">
             <span v-if="hasRecipe(font)" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
-            <FontListItem
-              v-bind="itemProps(font)"
-              @edit-search-index="emit('editSearchIndex', font)"
-              @favorite-changed="(id, weight) => emit('favoriteChanged', id, weight)"
-              @removed="emit('removed', $event)" />
+            <div class="bitmap-recipe-preview-surface" :style="recipeCardStyle(font)">
+              <FontListItem
+                v-bind="itemProps(font)"
+                @edit-search-index="emit('editSearchIndex', font)"
+                @favorite-changed="(id, weight) => emit('favoriteChanged', id, weight)"
+                @removed="emit('removed', $event)" />
+            </div>
           </div>
         </div>
       </template>
@@ -91,9 +93,10 @@ const recipeCardStyle = (font: FontItem) => {
   const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
   return {
     fontWeight: recipe.fontWeight,
-    fontStyle: recipe.italicAngle === 0 ? 'normal' : 'italic',
+    transform: `skewX(${recipe.italicAngle}deg)`,
+    transformOrigin: 'center',
     '--bitmap-preview-stroke': outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * 24))}px currentColor` : '0',
-    textShadow: outlined ? '0 0 1px var(--studio-surface)' : undefined
+    '--bitmap-preview-fill': recipe.outlineMode === 'outline-only' ? 'transparent' : 'currentColor'
   }
 }
 
@@ -200,6 +203,11 @@ const summaryProps = (font: FontItem, family: string) => ({
   cursor: pointer;
 }
 
+.bitmap-recipe-preview-surface {
+  width: 100%;
+  transform-origin: center;
+}
+
 .bitmap-recipe-preview-badge {
   position: absolute;
   z-index: 2;
@@ -219,8 +227,9 @@ const summaryProps = (font: FontItem, family: string) => ({
   pointer-events: none;
 }
 
-.font-item[data-bitmap-recipe-preview] :deep(.preview-text) {
+.font-item[data-bitmap-recipe-preview] .bitmap-recipe-preview-surface :deep(.preview-text) {
   -webkit-text-stroke: var(--bitmap-preview-stroke);
+  -webkit-text-fill-color: var(--bitmap-preview-fill);
 }
 
 .font-item:hover {

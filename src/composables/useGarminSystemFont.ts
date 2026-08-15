@@ -2,6 +2,7 @@ import { resolvePreviewFontFamily } from '@/utils/contentFontFallback'
 import { useFontStore } from '@/stores/fontStore'
 import { applyFabricRecipePreviewPropsToObject, recipeToFabricProps, savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import type { FabricRecipePreviewProps } from '@/features/bitmap-font-maker/recipePreview'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 
 export interface TextFontPreviewConfig {
   fontFamily?: string
@@ -21,7 +22,7 @@ export const resolveCurrentElementPreviewFont = (config: TextFontPreviewConfig, 
     fontFamily: resolvePreviewFontFamily(content, slug),
     fontSize: config.fontSize
   }
-  const recipe = useFontStore().serverFonts.get(slug)?.bitmapRecipe
+  const recipe = useFontStore().serverFonts.get(canonicalFontSlug(slug))?.bitmapRecipe
   const preview = recipeToFabricProps(recipe, config.fontSize, config.fill)
   Object.defineProperty(base, 'bitmapRecipePreview', {
     configurable: false,

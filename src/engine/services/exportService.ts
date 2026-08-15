@@ -17,6 +17,7 @@ import type { WatchfaceLocalizationConfig } from '@/types/localization'
 import { normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { useFontStore } from '@/stores/fontStore'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import {
   getDateContentLanguage,
   getDateFontRequirementLabel,
@@ -151,13 +152,14 @@ async function resolveFontForValidation(slug: string) {
   ].find((font) => font?.value === slug || font?.slug === slug)
   if (local) return local
 
-  const cached = fontStore.serverFonts.get(slug)
+  const cacheKey = canonicalFontSlug(slug)
+  const cached = fontStore.serverFonts.get(cacheKey)
   if (cached) return cached
 
   try {
     const res = await getFontBySlug(slug)
     if (res.data) {
-      fontStore.serverFonts.set(slug, res.data)
+      fontStore.serverFonts.set(cacheKey, res.data)
       return res.data
     }
   } catch {}

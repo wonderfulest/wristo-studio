@@ -41,6 +41,14 @@ describe('resolveCurrentElementPreviewFont', () => {
     expect(resolved.bitmapRecipePreview).toBeUndefined()
   })
 
+  it('looks up server font recipes with trimmed case-insensitive slugs', () => {
+    useFontStore().serverFonts.set('case-font', {
+      slug: 'Case-Font',
+      bitmapRecipe: { schemaVersion: 1, rendererVersion: '1', fontWeight: 700, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true },
+    } as any)
+    expect(resolveCurrentElementPreviewFont({ fontFamily: ' CASE-FONT ', fontSize: 20, fill: '#fff' }).bitmapRecipePreview?.fontWeight).toBe(700)
+  })
+
   it('applies and removes recipe display props on radial child text without changing its business color', () => {
     useFontStore().serverFonts.set('radial-outline', {
       slug: 'radial-outline',

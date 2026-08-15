@@ -158,6 +158,7 @@ import type { FabricElement } from '@/types/element'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getFontBySlug } from '@/api/wristo/fonts'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import {
   DEFAULT_NON_CHINESE_DATE_FORMATTER,
   getDateContentLanguageForRuntimeLocale,
@@ -272,12 +273,13 @@ const getDateElementsUsingChineseFormats = () => {
 const resolveFontForDateCheck = async (slug: string) => {
   const local = [...(fontStore.allFonts as any[]), ...(fontStore.recentFonts as any[])].find((font) => font?.value === slug || font?.slug === slug)
   if (local) return local
-  const cached = fontStore.serverFonts.get(slug)
+  const cacheKey = canonicalFontSlug(slug)
+  const cached = fontStore.serverFonts.get(cacheKey)
   if (cached) return cached
   try {
     const res = await getFontBySlug(slug)
     if (res.data) {
-      fontStore.serverFonts.set(slug, res.data)
+      fontStore.serverFonts.set(cacheKey, res.data)
       return res.data
     }
   } catch {}

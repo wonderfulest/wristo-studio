@@ -77,10 +77,25 @@ describe('FontFamilyList', () => {
     const wrapper = mountList()
     const recipeCard = wrapper.find('[data-font-slug="inter-regular"]')
     expect(recipeCard.find('.bitmap-recipe-preview-badge').text()).toBe('Preview')
-    expect(recipeCard.attributes('style')).toContain('font-weight: 700')
-    expect(recipeCard.attributes('style')).toContain('font-style: italic')
-    expect((recipeCard.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
-    expect(recipeCard.attributes('style')).not.toContain('color: transparent')
+    const surface = recipeCard.find('.bitmap-recipe-preview-surface')
+    expect(surface.attributes('style')).toContain('font-weight: 700')
+    expect(surface.attributes('style')).toContain('transform: skewX(-12deg)')
+    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
+    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe('transparent')
     expect(wrapper.find('[data-font-slug="kode-regular"] .bitmap-recipe-preview-badge').exists()).toBe(false)
+  })
+
+  it.each([
+    ['fill-outline', 12, 'currentColor', '1px currentColor'],
+    ['fill', 0, 'currentColor', '0'],
+  ] as const)('styles %s mode and italic angle on the inner preview surface', (outlineMode, angle, fill, stroke) => {
+    const font = { ...fonts[2], value: `mode-${outlineMode}`, family: `Mode ${outlineMode}`, bitmapRecipe: {
+      ...(fonts[2].bitmapRecipe as any), outlineMode, italicAngle: angle,
+    } } as FontItem
+    const wrapper = mount(FontFamilyList, { props: { fonts: [font], modelValue: '' } })
+    const surface = wrapper.find('.bitmap-recipe-preview-surface')
+    expect(surface.attributes('style')).toContain(`transform: skewX(${angle}deg)`)
+    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe(fill)
+    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe(stroke)
   })
 })

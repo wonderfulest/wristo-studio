@@ -153,6 +153,8 @@ describe('font metrics refresh', () => {
 
   it('refreshes radial child text even when the matching group has no initDimensions', async () => {
     const child: any = {
+      fontFamily: 'radial-recipe',
+      fontSize: 50,
       fill: '#bada55',
       fontWeight: 400,
       skewX: 0,
@@ -168,6 +170,7 @@ describe('font metrics refresh', () => {
       fontSize: 50,
       fill: '#bada55',
       _objects: [child],
+      updateRadialLayout: vi.fn(),
       setCoords: vi.fn(),
       set(props: Record<string, unknown>) {
         Object.assign(this, props)
@@ -182,7 +185,32 @@ describe('font metrics refresh', () => {
 
     expect(child).toMatchObject({ fill: 'rgba(0,0,0,0)', stroke: '#bada55', strokeWidth: 2 })
     expect(child.initDimensions).toHaveBeenCalledOnce()
+    expect(group.updateRadialLayout).toHaveBeenCalledOnce()
     expect(group.setCoords).toHaveBeenCalledOnce()
+    expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
+  })
+
+  it('recursively refreshes matching nested text and relayouts only changed ancestor groups', async () => {
+    const matching: any = {
+      fontFamily: '  Mixed-Case-Slug ', fontSize: 50, fill: '#fff',
+      initDimensions: vi.fn(), setCoords: vi.fn(),
+      set(props: any) { Object.assign(this, props) },
+    }
+    const other: any = { fontFamily: 'other', initDimensions: vi.fn(), setCoords: vi.fn() }
+    const inner: any = { fontFamily: 'group-font', _objects: [matching, other], updateRadialLayout: vi.fn(), setCoords: vi.fn() }
+    const outer: any = { fontFamily: 'unrelated-root', _objects: [inner], updateRadialLayout: vi.fn(), setCoords: vi.fn() }
+    outer._objects.push(outer)
+    const canvas = { getObjects: () => [outer], requestRenderAll: vi.fn() }
+    ;(useCanvasStore() as any).canvas = canvas
+    const store = useFontStore()
+    store.serverFonts.set('mixed-case-slug', { slug: 'Mixed-Case-Slug', bitmapRecipe } as any)
+
+    await store.refreshFontPreview(' MIXED-CASE-SLUG ')
+
+    expect(matching.strokeWidth).toBe(2)
+    expect(other.initDimensions).not.toHaveBeenCalled()
+    expect(inner.updateRadialLayout).toHaveBeenCalledOnce()
+    expect(outer.updateRadialLayout).toHaveBeenCalledOnce()
     expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
   })
 })
