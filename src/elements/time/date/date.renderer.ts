@@ -15,7 +15,8 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
 import { useDesignStore } from '@/stores/designStore'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
 
@@ -85,10 +86,10 @@ export function createDate(config: DateElementConfig): FabricElement {
     fontSize: Number(previewFont.fontSize),
     fill: config.fill,
     fontFamily: previewFont.fontFamily,
-    ...previewFont,
     formatter: config.formatter,
     hasControls: false,
   } as any)
+  applyCurrentElementPreviewFont(element, config, text)
 
   const updateTextCase = () => {
     try {
@@ -140,7 +141,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     top: element.top,
     originX: element.originX as any,
     originY: element.originY as any,
-    fill: element.fill as any,
+    fill: savedTextStyle(element).fill as any,
     ...getPersistedTextFont(config, element),
     formatter: (element as any).formatter,
     topBase: encodeTopBaseForElement(element as any),
@@ -196,6 +197,10 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     obj.set('top', currentTop)
   }
 
+  applyCurrentElementPreviewFont(obj, {
+    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+  }, obj.text)
+
   obj.setCoords?.()
   canvas?.requestRenderAll?.()
   if (context.persist !== false && obj.id != null) {
@@ -204,7 +209,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       top: obj.top,
       originX: obj.originX,
       originY: obj.originY,
-      fill: obj.fill,
+      fill: savedTextStyle(obj).fill,
       fontSize: obj.fontSize,
       fontFamily: obj.fontFamily,
       formatter: obj.formatter,

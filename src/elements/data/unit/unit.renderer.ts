@@ -12,7 +12,8 @@ import { requireCanonicalMetric, resolveMetricUnit } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
 
@@ -43,7 +44,6 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     fill: (config.fill ?? '#ffffff') as any,
     fontSize: (previewFont.fontSize ?? 16) as any,
     fontFamily: (previewFont.fontFamily ?? 'roboto-condensed-regular') as any,
-    ...previewFont,
     dataProperty: config.dataProperty ?? undefined,
     goalProperty: config.goalProperty ?? undefined,
     metricSymbol: config.metricSymbol ?? '',
@@ -54,6 +54,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     hasControls: false,
     hasBorders: true,
   } as any)
+  applyCurrentElementPreviewFont(element, config, text)
 
   const canvas = canvasStore.canvas
   canvas?.add(element as any)
@@ -68,10 +69,7 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     top: Math.round((element as any).top ?? config.top ?? 0),
     originX: ((element as any).originX as any) ?? 'left',
     originY: ((element as any).originY as any) ?? 'center',
-    fill:
-      typeof (element as any).fill === 'string'
-        ? ((element as any).fill as string)
-        : '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     ...getPersistedTextFont(config, element),
     dataProperty: (element as any).dataProperty ?? undefined,
     goalProperty: (element as any).goalProperty ?? undefined,
@@ -134,6 +132,10 @@ export function updateUnit(
   obj.set('text', nextText)
   obj.metricValue = nextText
 
+  applyCurrentElementPreviewFont(obj, {
+    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+  }, nextText)
+
   obj.setCoords()
   canvas.renderAll()
 
@@ -145,10 +147,7 @@ export function updateUnit(
       top: Math.round(obj.top),
       originX: (obj.originX as any) ?? 'left',
       originY: (obj.originY as any) ?? 'center',
-      fill:
-        typeof (obj.fill as any) === 'string'
-          ? ((obj.fill as any) as string)
-          : '#ffffff',
+      fill: (savedTextStyle(obj).fill as string) ?? '#ffffff',
       fontSize: Number((obj.fontSize as any) ?? 16),
       fontFamily: String(
         (obj.fontFamily as any) ?? 'roboto-condensed-regular',

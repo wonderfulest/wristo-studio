@@ -3,6 +3,7 @@ import type { DataElementConfig } from '@/types/elements/data'
 import { nanoid } from 'nanoid'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeData(element: FabricElement): DataElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -14,10 +15,7 @@ export function encodeData(element: FabricElement): DataElementConfig {
     top: Math.round(element.top),
     originX: (element.originX as any) ?? 'center',
     originY: (element.originY as any) ?? 'center',
-    fill:
-      typeof (element as any).fill === 'string'
-        ? ((element as any).fill as string)
-        : '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? undefined,
     fontSize: getSavedFontSize(element, 14),
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),

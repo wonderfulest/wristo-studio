@@ -7,6 +7,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeLabel(element: FabricElement): LabelElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -18,7 +19,7 @@ export function encodeLabel(element: FabricElement): LabelElementConfig {
     top: element.top,
     originX: element.originX as any,
     originY: element.originY as any,
-    fill: ((element.fill as any) as string) ?? '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? undefined,
     fontSize: getSavedFontSize(element, 14),
     fontFamily: getSavedFontFamily(element),

@@ -3,6 +3,7 @@ import type { FabricElement } from '@/types/element'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeTime(element: FabricElement): TimeElementConfig {
   const formatter = Number((element as any).formatter ?? 0)
@@ -16,7 +17,7 @@ export function encodeTime(element: FabricElement): TimeElementConfig {
     originY: element.originY,
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSize: getSavedFontSize(element, 14),
-    fill: element.fill as string,
+    fill: savedTextStyle(element).fill as string,
     formatter,
     fontRenderType: requiresTrueType
       ? 'truetype'

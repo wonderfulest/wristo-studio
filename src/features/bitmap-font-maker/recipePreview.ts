@@ -133,8 +133,16 @@ export function savedTextStyle(object: any): SavedTextStyle {
 }
 
 export function applyRecipePreviewToFabricObject(object: any, value: unknown, fontSize: unknown = object?.fontSize, elementColor: unknown = object?.fill): void {
-  if (!object) return
   const props = recipeToFabricProps(value, fontSize, elementColor)
+  applyFabricRecipePreviewPropsToObject(object, props, elementColor)
+}
+
+export function applyFabricRecipePreviewPropsToObject(
+  object: any,
+  props: FabricRecipePreviewProps | undefined,
+  elementColor: unknown = object?.fill,
+): void {
+  if (!object) return
   const baseline = object[previewBaseline] as SavedTextStyle | undefined
   if (!props) {
     if (baseline) {

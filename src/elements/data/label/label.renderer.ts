@@ -12,7 +12,8 @@ import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from 
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
 
@@ -46,7 +47,6 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     fillProperty: config.fillProperty ?? undefined,
     fontSize: (previewFont.fontSize ?? 14) as any,
     fontFamily: (previewFont.fontFamily ?? 'roboto-condensed-regular') as any,
-    ...previewFont,
     dataProperty: config.dataProperty ?? null,
     goalProperty: config.goalProperty ?? null,
     displayStates,
@@ -55,6 +55,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     hasControls: false,
     hasBorders: true,
   } as any)
+  applyCurrentElementPreviewFont(element, config, labelText)
 
   canvas?.add(element as any)
   layerStore.addLayer(element as any)
@@ -69,7 +70,7 @@ export async function createLabel(config: LabelElementConfig): Promise<FabricEle
     top: Math.round((element as any).top ?? config.top ?? 0),
     originX: ((element as any).originX as any) ?? 'center',
     originY: ((element as any).originY as any) ?? 'center',
-    fill: (element.fill as any) ?? config.fill ?? '#ffffff',
+    fill: (savedTextStyle(element).fill as any) ?? config.fill ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? config.fillProperty ?? undefined,
     ...getPersistedTextFont(config, element),
     dataProperty: (element as any).dataProperty ?? config.dataProperty ?? null,
@@ -133,6 +134,10 @@ export function updateLabel(
   if (patch.left === undefined) (text as any).set('left', currentLeft)
   if (patch.top === undefined) (text as any).set('top', currentTop)
 
+  applyCurrentElementPreviewFont(text, {
+    fontFamily: (text as any).fontFamily, fontSize: (text as any).fontSize, fill: patch.fill,
+  }, (text as any).text)
+
   ;(text as any).setCoords()
   canvas.requestRenderAll?.()
 
@@ -146,7 +151,7 @@ export function updateLabel(
       top: (text as any).top,
       originX: (text as any).originX as any,
       originY: (text as any).originY as any,
-      fill: ((text as any).fill as string) ?? '#ffffff',
+      fill: (savedTextStyle(text).fill as string) ?? '#ffffff',
       fillProperty: (text as any).fillProperty ?? undefined,
       fontSize: Number((text as any).fontSize ?? 14),
       fontFamily: ((text as any).fontFamily as string) ?? '',

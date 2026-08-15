@@ -9,7 +9,8 @@ import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
@@ -37,7 +38,6 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     fillProperty: config.fillProperty ?? undefined,
     fontSize: previewFont.fontSize as any,
     fontFamily: previewFont.fontFamily as any,
-    ...previewFont,
     dataProperty: config.dataProperty ?? undefined,
     goalProperty: config.goalProperty ?? undefined,
     metricSymbol: (config as any).metricSymbol ?? '',
@@ -47,6 +47,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     hasControls: false,
     hasBorders: true,
   } as any)
+  applyCurrentElementPreviewFont(element, config, canonicalMetric.defaultValue)
 
   const canvas = canvasStore.canvas
   canvas?.add(element as any)
@@ -61,10 +62,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     top: Math.round((element as any).top ?? config.top ?? 0),
     originX: ((element as any).originX as any) ?? 'center',
     originY: ((element as any).originY as any) ?? 'center',
-    fill:
-      typeof (element as any).fill === 'string'
-        ? ((element as any).fill as string)
-        : '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     fillProperty: (element as any).fillProperty ?? config.fillProperty ?? undefined,
     ...getPersistedTextFont(config, element),
     dataProperty: (element as any).dataProperty ?? null,
@@ -123,6 +121,10 @@ export function updateData(
   if (patch.left === undefined) obj.set('left', currentLeft)
   if (patch.top === undefined) obj.set('top', currentTop)
 
+  applyCurrentElementPreviewFont(obj, {
+    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+  }, obj.text)
+
   obj.setCoords()
   canvas.renderAll()
 
@@ -135,10 +137,7 @@ export function updateData(
       top: Math.round(obj.top),
       originX: (obj.originX as any) ?? 'center',
       originY: (obj.originY as any) ?? 'center',
-      fill:
-        typeof (obj.fill as any) === 'string'
-          ? ((obj.fill as any) as string)
-          : '#ffffff',
+      fill: (savedTextStyle(obj).fill as string) ?? '#ffffff',
       fillProperty: (obj as any).fillProperty ?? undefined,
       fontSize: Number((obj.fontSize as any) ?? 14),
       fontFamily: String(

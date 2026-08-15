@@ -53,7 +53,7 @@ export function createRadialText(config: TextElementConfig): FabricElement {
   element.direction = (config as any).direction || 'clockwise'
   element.justification = (config as any).justification || 'center'
 
-  element.fill = (previewFont.fill ?? config.fill) as any
+  element.fill = config.fill as any
   element.fontFamily = previewFont.fontFamily
   element.fontSize = previewFont.fontSize
   element.textTemplate = textTemplate
