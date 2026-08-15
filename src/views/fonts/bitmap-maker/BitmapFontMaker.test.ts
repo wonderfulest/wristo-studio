@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   build: vi.fn(),
   cancel: vi.fn(),
   dispose: vi.fn(),
+  validate: vi.fn(),
 }))
 
 vi.mock('@/features/bitmap-font-maker/fontSource', () => ({
@@ -32,6 +33,7 @@ vi.mock('@/api/wristo/bitmapFontBuild', () => ({
 vi.mock('./bitmapPackageRepack', () => ({
   repackageBitmapFontSlug: (zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip, manifest: { ...current, slug } }),
 }))
+vi.mock('./localPackageValidation', () => ({ validateLocalBitmapPackage: mocks.validate }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 
 import BitmapFontMaker from './BitmapFontMaker.vue'
@@ -73,6 +75,7 @@ describe('BitmapFontMaker', () => {
       result: Promise.resolve({ zip: new Uint8Array([80, 75]).buffer, manifest }),
     })
     mocks.publish.mockResolvedValue({ code: 0, data: { id: 7, slug: 'precision-sans' } })
+    mocks.validate.mockResolvedValue(undefined)
     Object.defineProperty(File.prototype, 'arrayBuffer', {
       configurable: true,
       value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
@@ -158,5 +161,37 @@ describe('BitmapFontMaker', () => {
     expect(mocks.build).toHaveBeenCalledTimes(1)
     expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ sourceFont: source }))
     expect(mocks.push).toHaveBeenCalledWith({ name: 'Fonts' })
+  })
+
+  it('locks publish on local package validation failure without invalidating the source', async () => {
+    mocks.validate.mockRejectedValueOnce(new Error('PACKAGE_HASH_MISMATCH'))
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    expect(vm.sourceValid).toBe(true)
+    expect(vm.localValidationPassed).toBe(false)
+    expect(vm.packageValidationError).toContain('PACKAGE_HASH_MISMATCH')
+    const publish = wrapper.get('[data-test="publish-button"]')
+    expect(publish.attributes('disabled')).toBeDefined()
+    expect(publish.attributes('aria-describedby')).toBe('bitmap-publish-help')
+    expect(wrapper.get('#bitmap-publish-help').text()).toContain('local validation')
+  })
+
+  it('keeps source validity separate from retryable build and publish failures', async () => {
+    mocks.build.mockReturnValueOnce({ requestId: 'failed', cancel: mocks.cancel, result: Promise.reject(new Error('worker retry')) })
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    expect(vm.sourceValid).toBe(true)
+    expect(vm.buildError).toContain('worker retry')
+    mocks.build.mockReturnValueOnce({ requestId: 'ok', cancel: mocks.cancel, result: Promise.resolve({ zip: new ArrayBuffer(2), manifest }) })
+    await vm.buildPackage()
+    expect(vm.buildError).toBe('')
+    mocks.publish.mockRejectedValueOnce(new Error('network retry'))
+    await vm.publishPackage()
+    expect(vm.sourceValid).toBe(true)
+    expect(vm.publishError).toContain('network retry')
   })
 })

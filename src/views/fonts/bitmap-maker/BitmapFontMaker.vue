@@ -88,11 +88,18 @@
           <div><span>{{ t('bitmapMaker.building') }} {{ buildProgress.completed }}/{{ buildProgress.total }}</span><span>{{ buildProgress.size }} px</span></div>
           <progress :value="buildProgress.completed" :max="buildProgress.total" />
         </div>
+        <p v-if="buildError" class="validation-error" role="alert">{{ buildError }}</p>
+        <p v-if="packageValidationError" class="validation-error" role="alert">{{ packageValidationError }}</p>
+        <p v-if="publishError" class="validation-error" role="alert">{{ publishError }}</p>
         <div class="action-bar">
           <button v-if="buildRunning" class="button secondary" type="button" @click="cancelBuild">{{ t('common.cancel') }}</button>
-          <button v-else data-test="build-button" class="button primary" type="button" :disabled="!sourceValid || !recipeValid" :title="buildDisabledReason" @click="buildPackage">{{ t('bitmapMaker.buildAll') }}</button>
+          <button v-else data-test="build-button" class="button primary" type="button" :disabled="!sourceValid || !recipeValid" aria-describedby="bitmap-build-help" @click="buildPackage">{{ t('bitmapMaker.buildAll') }}</button>
           <button class="button secondary" type="button" :disabled="!buildFresh" @click="downloadPackage">{{ t('bitmapMaker.downloadZip') }}</button>
-          <button class="button publish" type="button" :disabled="!canPublish" :title="publishDisabledReason" @click="publishPackage">{{ publishing ? t('bitmapMaker.publishing') : t('bitmapMaker.publishFont') }}</button>
+          <button data-test="publish-button" class="button publish" type="button" :disabled="!canPublish" aria-describedby="bitmap-publish-help" @click="publishPackage">{{ publishing ? t('bitmapMaker.publishing') : t('bitmapMaker.publishFont') }}</button>
+        </div>
+        <div class="action-help" role="status" aria-live="polite">
+          <p id="bitmap-build-help">{{ buildActionDescription }}</p>
+          <p id="bitmap-publish-help">{{ publishActionDescription }}</p>
         </div>
       </section>
     </div>
@@ -109,6 +116,7 @@ import { checkRequiredGlyphs, parseFontSource, type ParsedFontSource } from '@/f
 import { BitmapFontWorkerClient, type BitmapFontBuildHandle } from '@/features/bitmap-font-maker/workerClient'
 import { isBitmapFontSlugConflict, publishBitmapFontBuild, type BitmapFontPublishMetadata } from '@/api/wristo/bitmapFontBuild'
 import { repackageBitmapFontSlug } from './bitmapPackageRepack'
+import { validateLocalBitmapPackage } from './localPackageValidation'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -117,6 +125,9 @@ const stages = computed(() => [t('bitmapMaker.source'), t('bitmapMaker.style'), 
 const sourceFile = ref<File | null>(null)
 const sourceParsed = shallowRef<ParsedFontSource | null>(null)
 const sourceError = ref('')
+const buildError = ref('')
+const publishError = ref('')
+const packageValidationError = ref('')
 const missingGlyphs = ref<number[]>([])
 const fontType = ref<BitmapFontType>('number_font')
 const sourceRevision = ref(0)
@@ -151,10 +162,13 @@ const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(c
 const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewTextStyle = computed(() => ({ fontWeight: recipe.fontWeight, fontStyle: recipe.italicAngle ? 'italic' : 'normal', WebkitTextStroke: recipe.outlineWidthEm ? `${Math.max(1, recipe.outlineWidthEm * 8)}px currentColor` : undefined, color: recipe.outlineMode === 'outline-only' ? 'transparent' : undefined }))
 const buildStateLabel = computed(() => buildRunning.value ? t('bitmapMaker.building') : buildFresh.value ? t('bitmapMaker.ready') : buildArtifact.value ? t('bitmapMaker.stale') : t('bitmapMaker.notBuilt'))
-const buildDisabledReason = computed(() => !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : '')
-const publishDisabledReason = computed(() => !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : '')
+const buildActionDescription = computed(() => !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
+const publishActionDescription = computed(() => packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : t('bitmapMaker.publishReady'))
 
-function invalidateBuild() { localValidationPassed.value = false }
+function invalidateBuild() {
+  localValidationPassed.value = false
+  packageValidationError.value = ''
+}
 
 async function validateGlyphs() {
   if (!sourceParsed.value) { missingGlyphs.value = []; return }
@@ -165,6 +179,8 @@ async function onSourceInput(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   sourceError.value = ''
+  buildError.value = ''
+  publishError.value = ''
   sourceFile.value = file
   sourceParsed.value = null
   sourceRevision.value += 1
@@ -185,6 +201,8 @@ async function onSourceInput(event: Event) {
 async function buildPackage() {
   if (!sourceValid.value || !recipeValid.value || !sourceFile.value) return
   buildRunning.value = true
+  buildError.value = ''
+  packageValidationError.value = ''
   localValidationPassed.value = false
   buildProgress.completed = 0
   buildProgress.size = 0
@@ -197,10 +215,22 @@ async function buildPackage() {
     const artifact = await activeBuild.result
     buildArtifact.value = artifact
     builtRasterKey.value = key
-    localValidationPassed.value = artifact.zip.byteLength > 0 && artifact.manifest.sizes.length === BITMAP_FONT_SIZES.length
-    await loadAtlasPreview()
+    try {
+      await validateLocalBitmapPackage(artifact, {
+        slug: artifact.manifest.slug,
+        fontType: fontType.value,
+        sourceFileName: sourceFile.value.name,
+        recipe: snapshot,
+        charset: charsetForType(fontType.value),
+      })
+      localValidationPassed.value = true
+      await loadAtlasPreview()
+    } catch (error) {
+      localValidationPassed.value = false
+      packageValidationError.value = error instanceof Error ? error.message : t('bitmapMaker.packageInvalid')
+    }
   } catch (error) {
-    if ((error as { code?: string })?.code !== 'BUILD_CANCELLED') sourceError.value = error instanceof Error ? error.message : t('bitmapMaker.buildFailed')
+    if ((error as { code?: string })?.code !== 'BUILD_CANCELLED') buildError.value = error instanceof Error ? error.message : t('bitmapMaker.buildFailed')
   } finally {
     activeBuild = null
     buildRunning.value = false
@@ -222,7 +252,7 @@ async function loadAtlasPreview() {
     const zip = await JSZip.loadAsync(buildArtifact.value.zip)
     const slug = buildArtifact.value.manifest.slug
     const png = zip.file(`${currentSize.value}/${slug}-g_0.png`)
-    const fnt = zip.file(`${currentSize.value}/${slug}.fnt`)
+    const fnt = zip.file(`${currentSize.value}/${slug}-g.fnt`)
     if (!png || !fnt) return
     atlasUrl.value = URL.createObjectURL(await png.async('blob'))
     const text = await fnt.async('string')
@@ -246,18 +276,34 @@ function downloadPackage() {
 async function publishPackage() {
   if (!canPublish.value || !sourceFile.value || !buildArtifact.value) return
   publishing.value = true
+  publishError.value = ''
+  packageValidationError.value = ''
   slugConflict.value = false
+  let packagePrepared = false
   try {
     const packaged = await repackageBitmapFontSlug(buildArtifact.value.zip, buildArtifact.value.manifest, metadata.slug)
+    const recipeSnapshot = JSON.parse(JSON.stringify(recipe)) as BitmapFontRecipe
+    await validateLocalBitmapPackage(packaged, {
+      slug: metadata.slug,
+      fontType: fontType.value,
+      sourceFileName: sourceFile.value.name,
+      recipe: recipeSnapshot,
+      charset: charsetForType(fontType.value),
+    })
+    localValidationPassed.value = true
+    packagePrepared = true
     const packageFile = new File([packaged.zip], `${metadata.slug}.zip`, { type: 'application/zip' })
-    await publishBitmapFontBuild({ sourceFont: sourceFile.value, packageFile, manifest: packaged.manifest, recipe: JSON.parse(JSON.stringify(recipe)), metadata: { ...metadata, type: fontType.value } })
+    await publishBitmapFontBuild({ sourceFont: sourceFile.value, packageFile, manifest: packaged.manifest, recipe: recipeSnapshot, metadata: { ...metadata, type: fontType.value } })
     await router.push({ name: 'Fonts' })
   } catch (error) {
     if (isBitmapFontSlugConflict(error)) {
       slugConflict.value = true
       await nextTick()
       slugInput.value?.focus()
-    } else sourceError.value = error instanceof Error ? error.message : t('bitmapMaker.publishFailed')
+    } else if (!packagePrepared) {
+      localValidationPassed.value = false
+      packageValidationError.value = error instanceof Error ? error.message : t('bitmapMaker.packageInvalid')
+    } else publishError.value = error instanceof Error ? error.message : t('bitmapMaker.publishFailed')
   } finally { publishing.value = false }
 }
 
@@ -266,7 +312,7 @@ watch(recipe, invalidateBuild, { deep: true })
 watch(currentSize, loadAtlasPreview)
 onBeforeUnmount(() => { if (activeBuild) activeBuild.cancel(); workerClient?.dispose(); revokeAtlasUrl() })
 
-defineExpose({ sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, recipe, metadata, buildProgress, slugConflict, buildPackage, cancelBuild, downloadPackage, publishPackage })
+defineExpose({ sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, recipe, metadata, buildProgress, slugConflict, buildError, publishError, packageValidationError, buildPackage, cancelBuild, downloadPackage, publishPackage })
 </script>
 
 <style scoped>
@@ -279,5 +325,6 @@ defineExpose({ sourceValid, recipeValid, buildFresh, buildRunning, localValidati
 .range-row,.field-label{display:grid;gap:7px;margin-top:13px;color:var(--studio-text-muted);font-size:12px}.range-row span{display:flex;justify-content:space-between}.range-row output{font:600 11px ui-monospace,monospace;color:var(--studio-text)}input[type=range]{accent-color:var(--studio-primary)}input[type=text],select{width:100%;box-sizing:border-box;border:1px solid var(--studio-border);border-radius:7px;padding:9px 10px;background:var(--studio-input-bg,var(--studio-surface));color:var(--studio-text)}input.invalid{border-color:var(--studio-danger,#d75b5b)}.validation-error{margin:9px 0 0;color:var(--studio-danger,#d75b5b);font-size:11px;line-height:1.45}
 .preview-stage{display:flex;flex-direction:column;min-height:720px;padding:18px}.preview-toolbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px}.preview-toolbar label{display:flex;align-items:center;gap:8px;color:var(--studio-text-muted);font-size:12px}.preview-toolbar select{width:105px}.atlas-frame{display:grid;place-items:center;min-height:390px;overflow:auto;border:1px solid #303943;border-radius:10px;background-color:#0c1015;background-image:linear-gradient(45deg,#111820 25%,transparent 25%),linear-gradient(-45deg,#111820 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#111820 75%),linear-gradient(-45deg,transparent 75%,#111820 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}.atlas-image-wrap{position:relative;line-height:0}.atlas-image-wrap img{max-width:100%;image-rendering:pixelated}.glyph-overlay{position:absolute;inset:0;width:100%;height:100%}.glyph-overlay rect{fill:none;stroke:rgba(44,217,207,.75);stroke-width:.5}.atlas-empty{text-align:center;color:#44505d}.atlas-empty span{font:56px Georgia,serif;letter-spacing:-.08em}.atlas-empty p{font:12px var(--studio-font-ui);letter-spacing:.04em}
 .device-preview{display:flex;align-items:center;gap:18px;margin-top:14px;padding:14px;border:1px solid var(--studio-border);border-radius:9px;background:var(--studio-surface-subtle)}.watch-ring{display:grid;place-items:center;width:96px;height:96px;flex:0 0 auto;border:8px solid #1a2129;border-radius:50%;background:#070a0d;color:white;box-shadow:inset 0 0 0 1px #46505a}.watch-ring span{font-size:20px}.device-preview strong{font-size:12px}.device-preview p{margin:5px 0 0;color:var(--studio-text-muted);font:11px ui-monospace,monospace}.progress-block{margin-top:14px;font-size:11px}.progress-block div{display:flex;justify-content:space-between}.progress-block progress{width:100%;height:5px;accent-color:var(--studio-primary)}.action-bar{display:flex;justify-content:flex-end;gap:8px;margin-top:auto;padding-top:18px}.button{border:1px solid var(--studio-border);border-radius:7px;padding:10px 14px;background:var(--studio-surface);color:var(--studio-text);font-weight:650;cursor:pointer}.button.primary,.button.publish{border-color:var(--studio-primary);background:var(--studio-primary);color:white}.button.publish{background:#111820;border-color:#111820}.button:disabled{opacity:.42;cursor:not-allowed}
+.action-help{margin-top:8px;text-align:right;color:var(--studio-text-muted);font-size:11px;line-height:1.4}.action-help p{margin:2px 0}
 @media(max-width:900px){.bitmap-workbench{padding:16px}.workbench-grid{grid-template-columns:1fr}.preview-stage{min-height:600px}.stage-rail span{padding:10px;font-size:10px}.stage-rail span b{display:none}.workbench-header{align-items:start}.subtitle{max-width:52ch}}@media(max-width:560px){.workbench-header{display:block}.build-state{margin-top:14px;width:max-content}.stage-rail{grid-template-columns:1fr 1fr}.stage-rail span:nth-child(2){border-right:0}.stage-rail span:nth-child(-n+2){border-bottom:1px solid var(--studio-border)}.workbench-grid{display:block}.control-stack{margin-bottom:14px}.preview-stage{min-height:540px}.atlas-frame{min-height:280px}.action-bar{display:grid;grid-template-columns:1fr 1fr}.button.publish{grid-column:1/-1}}
 </style>
