@@ -63,6 +63,15 @@ export function getElementById(id: string | number | null | undefined): FabricEl
   return undefined
 }
 
+export function applySharedElementPatch(
+  element: FabricElement | Record<string, unknown>,
+  patch: Partial<AnyElementConfig> | Record<string, unknown>,
+): void {
+  if (Object.prototype.hasOwnProperty.call(patch, 'visibility')) {
+    ;(element as any).visibility = (patch as any).visibility
+  }
+}
+
 export async function addElement(
   type: ElementType,
   config: AnyElementConfig,
@@ -79,6 +88,7 @@ export async function addElement(
   assertElementRenderCurrent(renderContext)
   if (element) {
     ;(element as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (config as any).displayStates)
+    applySharedElementPatch(element, config)
     const colorBindings = collectExplicitColorBindings(config as unknown as Record<string, unknown>)
     Object.assign(element as any, colorBindings)
     const id = (element as any).id
@@ -116,8 +126,13 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     return
   }
   const handler = getElementHandler(type)
+  applySharedElementPatch(resolved, patch)
   if (!handler || !handler.update) {
     console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
+    if (id != null) {
+      useElementDataStore().patchElement(String(id), patch as Partial<AnyElementConfig>)
+      useLayerStore().applyPreviewVisibility()
+    }
     return
   }
   const positionPatch = (patch ?? {}) as Record<string, unknown>
@@ -158,6 +173,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     try {
       const encoded = handler.encode?.(current)
       if (encoded) {
+        applySharedElementPatch(encoded as any, current as any)
         Object.assign(encoded as any, collectExplicitColorBindings(current as unknown as Record<string, unknown>))
         const stableEncoded = applyStableBusinessPosition(encoded as any, businessPositionBefore, positionPatch)
         stableBusinessPosition = stableEncoded
@@ -174,6 +190,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
 
     if (positionRestored) canvas?.requestRenderAll?.()
     registerElementInstance(current)
+    useLayerStore().applyPreviewVisibility()
   }
 
 }

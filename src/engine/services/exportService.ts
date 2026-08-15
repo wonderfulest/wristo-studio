@@ -35,6 +35,7 @@ import {
 import { validateExplicitColorBindings } from './explicitColorBindingService'
 import { serializeDataPropertyConfig } from './dataPropertyConfig'
 import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.validation'
+import { validateVisibilityExpression } from '@/engine/expression/validation'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -396,6 +397,15 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       }
       if (!encodeConfig) {
         console.error('Failed to encode element:', element)
+        return null
+      }
+
+      const visibilityErrors = validateVisibilityExpression((encodeConfig as any).visibility)
+      if (visibilityErrors.length > 0) {
+        if (typeof document !== 'undefined') {
+          ElMessage.error(visibilityErrors.join(t('common.listSeparator')))
+        }
+        console.error('Export validation failed:', visibilityErrors)
         return null
       }
 

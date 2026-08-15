@@ -60,6 +60,48 @@ describe('visual theme export persistence', () => {
     })
   })
 
+  it('rejects an invalid dynamic visibility expression before export', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    const eleType = 'invalid-visibility-export-test'
+    registerElement(eleType as any, {
+      add: vi.fn() as any,
+      encode: (element) => ({ ...(element as any) }),
+    })
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const config = generateConfig({
+        canvas: {
+          getObjects: () => [{
+            id: 'warning',
+            eleType,
+            left: 10,
+            top: 20,
+            visibility: {
+              mode: 'expression',
+              expression: {
+                source: '(ds999) <= 20',
+                ast: {},
+                resultType: 'boolean',
+                version: 1,
+              },
+              fallback: true,
+            },
+          }],
+        } as any,
+        properties: {},
+        designId: 'design-1',
+        watchFaceName: 'Invalid visibility',
+        textCase: 0,
+        bitmapMode: false,
+      })
+
+      expect(config).toBeNull()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('exports only the normalized Connect IQ exclusion values', async () => {
     const { generateConfig } = await import('./exportService')
     const config = generateConfig({

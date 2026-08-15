@@ -18,6 +18,7 @@
       @update="handleUpdate"
       ref="settingsComponent"
     />
+    <VisibilityExpressionField :config="activeConfig" :apply-patch="applyConfigPatch" />
   </div>
 </template>
 
@@ -29,6 +30,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
+import VisibilityExpressionField from '@/components/panels/settings/VisibilityExpressionField.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
