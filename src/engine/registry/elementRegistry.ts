@@ -64,6 +64,9 @@ export const encodeElementByRegistry = (
   const normalized = normalizeFontSizeFields(encoded as unknown as Record<string, unknown>) as unknown as AnyElementConfig
   Object.assign(normalized as any, collectExplicitColorBindings(element as unknown as Record<string, unknown>))
   ;(normalized as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (encoded as any).displayStates)
+  if ((element as any).visibility !== undefined) {
+    ;(normalized as any).visibility = (element as any).visibility
+  }
   return normalized
 }
 

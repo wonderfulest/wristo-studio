@@ -4,6 +4,8 @@ import { markRaw } from 'vue'
 import type { LayerElement } from '@/types/layer'
 import type { MinimalFabricLike } from '@/types/layer'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { resolveElementVisibility } from '@/engine/expression/visibility'
+import { useExpressionPreviewStore } from '@/stores/expressionPreviewStore'
 import {
   getDisplayState,
   normalizeDisplayStates,
@@ -41,9 +43,15 @@ export const useLayerStore = defineStore('layerStore', {
       this.layers.forEach((layer) => {
         const displayStates = normalizeDisplayStates(layer.displayStates)
         layer.displayStates = displayStates
+        const tokenValues = useExpressionPreviewStore().tokenValues
         layer.visible = String(layer.eleType ?? '') === 'background' && this.previewMode === 'ambient'
           ? false
-          : getDisplayState(displayStates, this.previewMode)
+          : resolveElementVisibility({
+              displayStates,
+              previewMode: this.previewMode,
+              visibility: layer.visibility ?? (layer.element as any)?.visibility,
+              tokenValues,
+            })
         if (layer.element) {
           ;(layer.element as any).displayStates = displayStates
           if (typeof layer.element.set === 'function') {
@@ -71,12 +79,14 @@ export const useLayerStore = defineStore('layerStore', {
       const id = String(element.id)
       const storedConfig = useElementDataStore().getElementConfig(id) as any
       const displayStates = normalizeDisplayStates((element as any).displayStates ?? storedConfig?.displayStates)
+      const visibility = (element as any).visibility ?? storedConfig?.visibility
       ;(element as any).displayStates = displayStates
+      ;(element as any).visibility = visibility
       const existing = this.layers.find((l) => l.id === id)
       if (existing) {
         existing.eleType = element.eleType
         existing.displayStates = displayStates
-        existing.visible = getDisplayState(displayStates, this.previewMode)
+        existing.visibility = visibility
         existing.element = markRaw(element)
         this.applyPreviewVisibility()
         return
@@ -84,21 +94,24 @@ export const useLayerStore = defineStore('layerStore', {
 
       const layerElement: LayerElement = {
         id,
-        visible: getDisplayState(displayStates, this.previewMode),
+        visible: true,
         displayStates,
+        visibility,
         locked: false,
         selectable: true,
         eleType: element.eleType,
         element: markRaw(element),
       }
       this.layers.push(layerElement)
+      this.applyPreviewVisibility()
     },
 
     setLayers(nextLayers: LayerElement[]): void {
       this.layers = nextLayers.map((l) => ({
         ...l,
         displayStates: normalizeDisplayStates(l.displayStates ?? (l.element as any)?.displayStates),
-        visible: getDisplayState(l.displayStates ?? (l.element as any)?.displayStates, this.previewMode),
+        visibility: l.visibility ?? (l.element as any)?.visibility,
+        visible: true,
         element: markRaw(l.element),
       }))
       this.applyPreviewVisibility()
