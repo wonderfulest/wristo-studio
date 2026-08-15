@@ -2,9 +2,15 @@
 import { buildBitmapFontPackage, BuildCancelledError } from './packageBuilder'
 import type { BitmapFontWorkerRequest, BitmapFontWorkerResponse } from './workerProtocol'
 
-const cancelled = new Set<string>()
+type BuildPackage = typeof buildBitmapFontPackage
+type PostResponse = (response: BitmapFontWorkerResponse, transfer: Transferable[]) => void
 
-function safeDetails(error: unknown): Record<string, string | number | boolean> | undefined {
+export interface BitmapFontWorkerHandlerDependencies {
+  build: BuildPackage
+  post: PostResponse
+}
+
+export function sanitizeWorkerErrorDetails(error: unknown): Record<string, string | number | boolean> | undefined {
   if (!error || typeof error !== 'object') return undefined
   const details: Record<string, string | number | boolean> = {}
   for (const key of ['codepoint', 'size'] as const) {
@@ -14,25 +20,46 @@ function safeDetails(error: unknown): Record<string, string | number | boolean> 
   return Object.keys(details).length ? details : undefined
 }
 
-self.onmessage = async (event: MessageEvent<BitmapFontWorkerRequest>) => {
-  const request = event.data
-  if (request.type === 'cancel') {
-    cancelled.add(request.requestId)
-    return
+export function createBitmapFontWorkerHandler(
+  dependencies: BitmapFontWorkerHandlerDependencies,
+): (event: MessageEvent<BitmapFontWorkerRequest>) => Promise<void> {
+  const cancelled = new Set<string>()
+  return async (event) => {
+    const request = event.data
+    if (request.type === 'cancel') {
+      cancelled.add(request.requestId)
+      return
+    }
+    try {
+      const result = await dependencies.build(request, undefined, (progress) => {
+        if (cancelled.has(request.requestId)) return
+        dependencies.post({ type: 'progress', requestId: request.requestId, ...progress }, [])
+      }, () => cancelled.has(request.requestId))
+      if (cancelled.has(request.requestId)) throw new BuildCancelledError()
+      dependencies.post({ type: 'complete', requestId: request.requestId, ...result }, [result.zip])
+    } catch (error) {
+      const code = error instanceof BuildCancelledError
+        ? error.code
+        : typeof error === 'object' && error && 'code' in error && typeof error.code === 'string'
+          ? error.code
+          : 'BUILD_FAILED'
+      const message = error instanceof Error ? error.message : code
+      dependencies.post({
+        type: 'error',
+        requestId: request.requestId,
+        code,
+        message,
+        details: sanitizeWorkerErrorDetails(error),
+      }, [])
+    } finally {
+      cancelled.delete(request.requestId)
+    }
   }
-  try {
-    const result = await buildBitmapFontPackage(request, undefined, (progress) => {
-      const response: BitmapFontWorkerResponse = { type: 'progress', requestId: request.requestId, ...progress }
-      self.postMessage(response)
-    }, () => cancelled.has(request.requestId))
-    const response: BitmapFontWorkerResponse = { type: 'complete', requestId: request.requestId, ...result }
-    self.postMessage(response, { transfer: [result.zip] })
-  } catch (error) {
-    const code = error instanceof BuildCancelledError ? error.code : typeof error === 'object' && error && 'code' in error && typeof error.code === 'string' ? error.code : 'BUILD_FAILED'
-    const message = error instanceof Error ? error.message : code
-    const response: BitmapFontWorkerResponse = { type: 'error', requestId: request.requestId, code, message, details: safeDetails(error) }
-    self.postMessage(response)
-  } finally {
-    cancelled.delete(request.requestId)
-  }
+}
+
+if (typeof self !== 'undefined') {
+  self.onmessage = createBitmapFontWorkerHandler({
+    build: buildBitmapFontPackage,
+    post: (response, transfer) => self.postMessage(response, { transfer }),
+  })
 }

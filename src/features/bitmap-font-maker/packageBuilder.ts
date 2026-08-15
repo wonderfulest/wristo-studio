@@ -35,7 +35,7 @@ export interface BitmapFontBuildResult {
   manifest: BitmapFontManifest
 }
 
-interface AtlasPixels {
+export interface AtlasPixels {
   width: number
   height: number
   rgba: Uint8ClampedArray
@@ -45,6 +45,8 @@ export interface PackageBuilderAdapters {
   parseSource(source: ArrayBuffer, fileName: string): Promise<ParsedFontSource>
   createRendererSession(source: ParsedFontSource): Promise<GlyphRendererSession>
   encodePng(atlas: AtlasPixels): Promise<Uint8Array>
+  hash?(value: ArrayBuffer | Uint8Array<ArrayBufferLike>): Promise<string>
+  generateZip?(archive: JSZip): Promise<ArrayBuffer>
   releaseSizeArtifacts?(): void
 }
 
@@ -119,9 +121,22 @@ async function defaultParseSource(source: ArrayBuffer, fileName: string): Promis
   return parseFontSource(new File([source], fileName))
 }
 
-async function encodePngWithOffscreenCanvas(atlas: AtlasPixels): Promise<Uint8Array> {
-  if (typeof OffscreenCanvas === 'undefined') throw new PackageBuildError('BROWSER_UNSUPPORTED')
-  const canvas = new OffscreenCanvas(atlas.width, atlas.height)
+interface PngCanvasEnvironment {
+  OffscreenCanvas?: new (width: number, height: number) => {
+    getContext(type: '2d'): {
+      createImageData(width: number, height: number): { data: Uint8ClampedArray }
+      putImageData(image: { data: Uint8ClampedArray }, x: number, y: number): void
+    } | null
+    convertToBlob(options: { type: 'image/png' }): Promise<Blob>
+  }
+}
+
+export async function encodePngWithOffscreenCanvas(
+  atlas: AtlasPixels,
+  environment: PngCanvasEnvironment = globalThis as unknown as PngCanvasEnvironment,
+): Promise<Uint8Array> {
+  if (!environment.OffscreenCanvas) throw new PackageBuildError('BROWSER_UNSUPPORTED')
+  const canvas = new environment.OffscreenCanvas(atlas.width, atlas.height)
   const context = canvas.getContext('2d')
   if (!context) throw new PackageBuildError('BROWSER_UNSUPPORTED')
   const pixels = context.createImageData(atlas.width, atlas.height)
@@ -147,27 +162,43 @@ export async function buildBitmapFontPackage(
   onProgress: (progress: BitmapFontBuildProgress) => void = () => undefined,
   isCancelled: () => boolean = () => false,
 ): Promise<BitmapFontBuildResult> {
+  assertNotCancelled(isCancelled)
   const extension = sourceExtension(request.fileName)
   const descriptorName = bmFontDescriptorFilename(request.slug)
   const sourceName = `${request.slug}.${extension}`
   const sourceBytes = new Uint8Array(request.source)
+  assertNotCancelled(isCancelled)
   const source = await adapters.parseSource(request.source.slice(0), request.fileName)
+  assertNotCancelled(isCancelled)
   const charset = charsetForType(request.fontType)
+  assertNotCancelled(isCancelled)
   const recipeText = canonicalJson(request.recipe)
+  assertNotCancelled(isCancelled)
   const recipeBytes = new TextEncoder().encode(recipeText)
   const archive = new JSZip()
   const contentHashes = new Map<string, string>()
+  const hash = adapters.hash ?? sha256Hex
+  const generateZip = adapters.generateZip ?? ((zip: JSZip) => zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' }))
 
   async function add(path: string, bytes: Uint8Array | string): Promise<void> {
+    assertNotCancelled(isCancelled)
     const material = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes
     archive.file(path, material)
-    contentHashes.set(path, await sha256Hex(material))
+    assertNotCancelled(isCancelled)
+    const digest = await hash(material)
+    assertNotCancelled(isCancelled)
+    contentHashes.set(path, digest)
+    assertNotCancelled(isCancelled)
   }
 
+  assertNotCancelled(isCancelled)
   await add(sourceName, sourceBytes)
+  assertNotCancelled(isCancelled)
   await add('recipe.json', recipeBytes)
+  assertNotCancelled(isCancelled)
   const session = await adapters.createRendererSession(source)
   try {
+    assertNotCancelled(isCancelled)
     for (let index = 0; index < BITMAP_FONT_SIZES.length; index += 1) {
       assertNotCancelled(isCancelled)
       const size = BITMAP_FONT_SIZES[index]
@@ -176,13 +207,18 @@ export async function buildBitmapFontPackage(
       let atlas: AtlasPixels | undefined
       let png: Uint8Array | undefined
       try {
+        assertNotCancelled(isCancelled)
         rendered = session.render(size, request.recipe, charset.codepoints)
+        assertNotCancelled(isCancelled)
         packed = packGlyphAtlas(rendered.glyphs, { padding: 0 })
+        assertNotCancelled(isCancelled)
         atlas = composeAtlas(rendered, packed)
+        assertNotCancelled(isCancelled)
         png = await adapters.encodePng(atlas)
         assertNotCancelled(isCancelled)
         const prefix = `${size}/`
         await add(`${prefix}${request.slug}-g_0.png`, png)
+        assertNotCancelled(isCancelled)
         const placements = new Map(packed.placements.map((placement) => [placement.codepoint, placement]))
         const descriptor = writeBmFontText({
           slug: request.slug,
@@ -198,7 +234,9 @@ export async function buildBitmapFontPackage(
             return { id: glyph.codepoint, x: placement.x, y: placement.y, width: glyph.width, height: glyph.height, xoffset: glyph.xoffset, yoffset: glyph.yoffset, xadvance: glyph.xadvance }
           }),
         })
+        assertNotCancelled(isCancelled)
         await add(`${prefix}${descriptorName}`, descriptor)
+        assertNotCancelled(isCancelled)
       } finally {
         rendered = undefined
         packed = undefined
@@ -208,27 +246,42 @@ export async function buildBitmapFontPackage(
       }
       assertNotCancelled(isCancelled)
       onProgress({ completed: index + 1, size, total: 38 })
+      assertNotCancelled(isCancelled)
     }
   } finally {
     session.dispose()
   }
 
+  assertNotCancelled(isCancelled)
   const contentMaterial = [...contentHashes]
     .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([path, hash]) => `${path}\0${hash.toLowerCase()}\n`)
     .join('')
+  assertNotCancelled(isCancelled)
+  const sourceSha256 = await hash(sourceBytes)
+  assertNotCancelled(isCancelled)
+  const recipeSha256 = await hash(recipeBytes)
+  assertNotCancelled(isCancelled)
+  const packageContentSha256 = await hash(new TextEncoder().encode(contentMaterial))
+  assertNotCancelled(isCancelled)
   const manifest: BitmapFontManifest = {
     schemaVersion: 1,
     slug: request.slug,
     type: request.fontType,
     language: 'en',
-    source: { fileName: sourceName, sha256: await sha256Hex(sourceBytes) },
+    source: { fileName: sourceName, sha256: sourceSha256 },
     sizes: [...BITMAP_FONT_SIZES],
     charset,
-    recipeSha256: await sha256Hex(recipeBytes),
-    packageContentSha256: await sha256Hex(new TextEncoder().encode(contentMaterial)),
+    recipeSha256,
+    packageContentSha256,
   }
-  archive.file('manifest.json', canonicalJson(manifest))
-  const zip = await archive.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' })
+  assertNotCancelled(isCancelled)
+  const manifestText = canonicalJson(manifest)
+  assertNotCancelled(isCancelled)
+  archive.file('manifest.json', manifestText)
+  assertNotCancelled(isCancelled)
+  const zip = await generateZip(archive)
+  assertNotCancelled(isCancelled)
+  assertNotCancelled(isCancelled)
   return { zip, manifest }
 }

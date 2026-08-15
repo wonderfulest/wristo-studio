@@ -7,6 +7,7 @@ import {
   BuildCancelledError,
   buildBitmapFontPackage,
   canonicalJson,
+  encodePngWithOffscreenCanvas,
   sha256Hex,
 } from './packageBuilder'
 
@@ -40,7 +41,13 @@ function rendered(size: number): RenderedGlyphSet {
   }
 }
 
-function adapters(options?: { onRender?: (size: number) => void; onRelease?: () => void }) {
+function adapters(options?: {
+  onRender?: (size: number) => void
+  onRelease?: () => void
+  encodePng?: () => Promise<Uint8Array>
+  hash?: typeof sha256Hex
+  generateZip?: () => Promise<ArrayBuffer>
+}) {
   const dispose = vi.fn()
   const session: GlyphRendererSession = {
     rendererPath: 'opentype-path',
@@ -55,7 +62,9 @@ function adapters(options?: { onRender?: (size: number) => void; onRelease?: () 
     value: {
       parseSource: vi.fn(async () => parsedSource),
       createRendererSession: vi.fn(async () => session),
-      encodePng: vi.fn(async () => png.slice()),
+      encodePng: vi.fn(options?.encodePng ?? (async () => png.slice())),
+      hash: options?.hash,
+      generateZip: options?.generateZip,
       releaseSizeArtifacts: vi.fn(options?.onRelease ?? (() => undefined)),
     },
   }
@@ -146,6 +155,91 @@ describe('buildBitmapFontPackage', () => {
     expect(peak).toBe(1)
     expect(retained).toBe(0)
     expect(fixture.value.releaseSizeArtifacts).toHaveBeenCalledTimes(38)
+  })
+
+  it('cancels immediately after an awaited PNG encode without progress', async () => {
+    let cancelled = false
+    let release!: () => void
+    const fixture = adapters({ encodePng: () => new Promise((resolve) => { release = () => resolve(png.slice()) }) })
+    const progress = vi.fn()
+    const build = buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+    }, fixture.value, progress, () => cancelled)
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    cancelled = true
+    release()
+    await expect(build).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
+    expect(progress).not.toHaveBeenCalled()
+    expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('cancels immediately after an awaited size-entry hash/add', async () => {
+    let cancelled = false
+    let hashes = 0
+    const fixture = adapters({
+      hash: async (value) => {
+        hashes += 1
+        const result = await sha256Hex(value)
+        if (hashes === 3) cancelled = true
+        return result
+      },
+    })
+    const progress = vi.fn()
+    await expect(buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+    }, fixture.value, progress, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
+    expect(hashes).toBe(3)
+    expect(progress).not.toHaveBeenCalled()
+    expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('cancels after the last size progress and before manifest completion', async () => {
+    let cancelled = false
+    const fixture = adapters()
+    const progress = vi.fn((event: { completed: number }) => { if (event.completed === 38) cancelled = true })
+    await expect(buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+    }, fixture.value, progress, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
+    expect(progress).toHaveBeenCalledTimes(38)
+    expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('cancels immediately after ZIP generation resolves', async () => {
+    let cancelled = false
+    const fixture = adapters({ generateZip: async () => { cancelled = true; return new ArrayBuffer(4) } })
+    await expect(buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+    }, fixture.value, undefined, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
+    expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('encodePngWithOffscreenCanvas', () => {
+  it('writes RGBA pixels at the requested dimensions and converts to PNG', async () => {
+    const putImageData = vi.fn()
+    const createImageData = vi.fn((width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }))
+    const convertToBlob = vi.fn(async (options: { type: string }) => {
+      expect(options).toEqual({ type: 'image/png' })
+      return new Blob([png], { type: 'image/png' })
+    })
+    const canvas = { getContext: vi.fn(() => ({ createImageData, putImageData })), convertToBlob }
+    const Canvas = vi.fn(() => canvas)
+    const result = await encodePngWithOffscreenCanvas(
+      { width: 2, height: 1, rgba: new Uint8ClampedArray([255, 255, 255, 1, 255, 255, 255, 2]) },
+      { OffscreenCanvas: Canvas },
+    )
+    expect(Canvas).toHaveBeenCalledWith(2, 1)
+    expect(createImageData).toHaveBeenCalledWith(2, 1)
+    expect(putImageData).toHaveBeenCalledOnce()
+    expect(putImageData.mock.calls[0][0].data).toEqual(new Uint8ClampedArray([255, 255, 255, 1, 255, 255, 255, 2]))
+    expect(result).toEqual(png)
+  })
+
+  it('returns a stable unsupported error when canvas APIs are missing', async () => {
+    await expect(encodePngWithOffscreenCanvas(
+      { width: 1, height: 1, rgba: new Uint8ClampedArray(4) },
+      {},
+    )).rejects.toMatchObject({ code: 'BROWSER_UNSUPPORTED' })
   })
 })
 
