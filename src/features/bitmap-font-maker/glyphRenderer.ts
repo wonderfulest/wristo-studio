@@ -30,46 +30,100 @@ export interface RenderedGlyphSet {
   glyphs: RenderedGlyph[]
   lineHeight: number
   baseline: number
-  diagnostics: { rendererPath: 'opentype-path'; rendererVersion: '1' }
+  diagnostics: { rendererPath: 'opentype-path' | 'font-face-canvas'; rendererVersion: '1' }
+}
+
+interface FontFaceLike {
+  load(): Promise<FontFaceLike>
+}
+
+interface CanvasTextMetricsLike {
+  width: number
+  actualBoundingBoxLeft: number
+  actualBoundingBoxRight: number
+  actualBoundingBoxAscent: number
+  actualBoundingBoxDescent: number
+}
+
+interface WorkerCanvasContext {
+  font: string
+  textBaseline: string
+  lineJoin: string
+  lineWidth: number
+  measureText(text: string): CanvasTextMetricsLike
+  fillText(text: string, x: number, y: number): void
+  strokeText(text: string, x: number, y: number): void
+  getImageData(x: number, y: number, width: number, height: number): { data: Uint8ClampedArray }
 }
 
 interface WorkerFontEnvironment {
-  FontFace?: typeof FontFace
-  fonts?: { add(font: FontFace): void }
+  FontFace?: new (family: string, source: ArrayBuffer, descriptors: { weight: string }) => FontFaceLike
+  fonts?: { add(font: FontFaceLike): void; delete?(font: FontFaceLike): boolean }
+  OffscreenCanvas?: new (width: number, height: number) => { getContext(type: '2d', options?: { willReadFrequently: boolean }): WorkerCanvasContext | null }
 }
 
 export interface RegisteredUploadedFontFace {
   family: string
   cssFont: string
   rendererPath: 'font-face'
+  dispose(): void
+}
+
+function sourceBytesHash(bytes: Uint8Array): string {
+  let hash = 0xcbf29ce484222325n
+  for (const byte of bytes) {
+    hash ^= BigInt(byte)
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n)
+  }
+  return hash.toString(16).padStart(16, '0')
 }
 
 export async function registerUploadedFontFace(
   source: ParsedFontSource,
   requestedWeight: number,
-  environment: WorkerFontEnvironment = globalThis as WorkerFontEnvironment
+  environment: WorkerFontEnvironment = globalThis as unknown as WorkerFontEnvironment
 ): Promise<RegisteredUploadedFontFace | undefined> {
-  if (!environment.FontFace || !environment.fonts) return undefined
-  const family = `WristoUploaded-${source.bytes.byteLength}-${source.glyphCount}`
+  if (!environment.FontFace || !environment.fonts?.delete) return undefined
+  const family = `WristoUploaded-${sourceBytesHash(source.bytes)}`
   const buffer = source.bytes.buffer.slice(source.bytes.byteOffset, source.bytes.byteOffset + source.bytes.byteLength) as ArrayBuffer
   const face = new environment.FontFace(family, buffer, { weight: String(source.sourceWeight) })
   await face.load()
   environment.fonts.add(face)
+  let disposed = false
   return {
     family,
     cssFont: `${Math.round(requestedWeight)} 1px "${family}"`,
-    rendererPath: 'font-face'
+    rendererPath: 'font-face',
+    dispose: () => {
+      if (disposed) return
+      disposed = true
+      environment.fonts?.delete?.(face)
+    }
   }
 }
 
-interface Point {
+export interface RasterPoint {
   x: number
   y: number
 }
+type Point = RasterPoint
 type Contour = Point[]
 
-function interpolateCurve(command: PathCommand, start: Point, steps = 12): Point[] {
+type CurveCommand = Extract<PathCommand, { type: 'Q' | 'C' }>
+
+function curveSteps(command: CurveCommand, start: Point): number {
+  const points =
+    command.type === 'C'
+      ? [start, { x: command.x1, y: command.y1 }, { x: command.x2, y: command.y2 }, { x: command.x, y: command.y }]
+      : [start, { x: command.x1, y: command.y1 }, { x: command.x, y: command.y }]
+  let controlLength = 0
+  for (let index = 1; index < points.length; index += 1) controlLength += Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y)
+  return Math.max(4, Math.min(64, Math.ceil(controlLength / 2)))
+}
+
+function interpolateCurve(command: CurveCommand, start: Point): Point[] {
   const points: Point[] = []
+  const steps = curveSteps(command, start)
   for (let index = 1; index <= steps; index += 1) {
     const t = index / steps
     const inverse = 1 - t
@@ -123,49 +177,99 @@ function flatten(commands: PathCommand[], shear: number, baseline: number): Cont
   return contours
 }
 
-function inside(contours: Contour[], x: number, y: number): boolean {
-  let crossings = 0
+interface Segment {
+  ax: number
+  ay: number
+  bx: number
+  by: number
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+function buildSegments(contours: ReadonlyArray<ReadonlyArray<RasterPoint>>): Segment[] {
+  const segments: Segment[] = []
   for (const contour of contours) {
     for (let index = 0; index < contour.length - 1; index += 1) {
-      const a = contour[index]
-      const b = contour[index + 1]
-      if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) crossings += 1
+      const start = contour[index]
+      const end = contour[index + 1]
+      segments.push({
+        ax: start.x,
+        ay: start.y,
+        bx: end.x,
+        by: end.y,
+        minX: Math.min(start.x, end.x),
+        maxX: Math.max(start.x, end.x),
+        minY: Math.min(start.y, end.y),
+        maxY: Math.max(start.y, end.y)
+      })
     }
   }
-  return crossings % 2 === 1
+  return segments
 }
 
-function segmentDistance(point: Point, start: Point, end: Point): number {
-  const dx = end.x - start.x
-  const dy = end.y - start.y
+function segmentDistanceSquared(x: number, y: number, segment: Segment): number {
+  const dx = segment.bx - segment.ax
+  const dy = segment.by - segment.ay
   const lengthSquared = dx * dx + dy * dy
-  const factor = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
-  return Math.hypot(point.x - (start.x + factor * dx), point.y - (start.y + factor * dy))
+  const factor = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - segment.ax) * dx + (y - segment.ay) * dy) / lengthSquared))
+  const distanceX = x - (segment.ax + factor * dx)
+  const distanceY = y - (segment.ay + factor * dy)
+  return distanceX * distanceX + distanceY * distanceY
 }
 
-function nearPath(contours: Contour[], point: Point, radius: number): boolean {
+function rowBuckets(segments: Segment[], bounds: { top: number; height: number }, expansion: number): Segment[][] {
+  const rows = Array.from({ length: bounds.height }, () => [] as Segment[])
+  for (const segment of segments) {
+    const first = Math.max(0, Math.floor(segment.minY - expansion - bounds.top))
+    const last = Math.min(bounds.height - 1, Math.floor(segment.maxY + expansion - bounds.top))
+    for (let row = first; row <= last; row += 1) rows[row].push(segment)
+  }
+  return rows
+}
+
+function nonZeroInside(segments: Segment[], x: number, y: number): boolean {
+  let winding = 0
+  for (const segment of segments) {
+    const cross = (segment.bx - segment.ax) * (y - segment.ay) - (x - segment.ax) * (segment.by - segment.ay)
+    if (segment.ay <= y && segment.by > y && cross > 0) winding += 1
+    else if (segment.ay > y && segment.by <= y && cross < 0) winding -= 1
+  }
+  return winding !== 0
+}
+
+function nearPath(segments: Segment[], x: number, y: number, radius: number): boolean {
   if (radius <= 0) return false
-  return contours.some((contour) => contour.slice(0, -1).some((start, index) => segmentDistance(point, start, contour[index + 1]) <= radius))
+  const squaredRadius = radius * radius
+  for (const segment of segments) {
+    if (x < segment.minX - radius || x > segment.maxX + radius || y < segment.minY - radius || y > segment.maxY + radius) continue
+    if (segmentDistanceSquared(x, y, segment) <= squaredRadius) return true
+  }
+  return false
 }
 
-function rasterize(contours: Contour[], bounds: { left: number; top: number; width: number; height: number }, fill: boolean, strokeRadius: number): Uint8Array {
+export function rasterizeFallbackContours(
+  contours: ReadonlyArray<ReadonlyArray<RasterPoint>>,
+  bounds: { left: number; top: number; width: number; height: number },
+  fill: boolean,
+  strokeRadius: number
+): Uint8Array {
   const alpha = new Uint8Array(bounds.width * bounds.height)
-  const samples = [
-    [0.25, 0.25],
-    [0.75, 0.25],
-    [0.25, 0.75],
-    [0.75, 0.75]
-  ]
+  const segments = buildSegments(contours)
+  const fillRows = fill ? rowBuckets(segments, bounds, 0) : []
+  const strokeRows = strokeRadius > 0 ? rowBuckets(segments, bounds, strokeRadius) : []
   for (let y = 0; y < bounds.height; y += 1) {
     for (let x = 0; x < bounds.width; x += 1) {
       let covered = 0
-      for (const [sx, sy] of samples) {
-        const point = { x: bounds.left + x + sx, y: bounds.top + y + sy }
-        const isInside = inside(contours, point.x, point.y)
-        const onStroke = nearPath(contours, point, strokeRadius)
+      for (let sample = 0; sample < 4; sample += 1) {
+        const sampleX = bounds.left + x + (sample % 2 === 0 ? 0.25 : 0.75)
+        const sampleY = bounds.top + y + (sample < 2 ? 0.25 : 0.75)
+        const isInside = fill && nonZeroInside(fillRows[y], sampleX, sampleY)
+        const onStroke = strokeRadius > 0 && nearPath(strokeRows[y], sampleX, sampleY, strokeRadius)
         if ((fill && isInside) || onStroke) covered += 1
       }
-      alpha[y * bounds.width + x] = Math.round((covered / samples.length) * 255)
+      alpha[y * bounds.width + x] = Math.round((covered / 4) * 255)
     }
   }
   return alpha
@@ -198,6 +302,81 @@ function cropAlpha(
   return { alpha: cropped, left: bounds.left + firstX, top: bounds.top + firstY, width, height }
 }
 
+function alphaFromRgba(rgba: Uint8ClampedArray): Uint8Array {
+  const alpha = new Uint8Array(rgba.length / 4)
+  for (let sourceIndex = 3, alphaIndex = 0; sourceIndex < rgba.length; sourceIndex += 4, alphaIndex += 1) {
+    alpha[alphaIndex] = rgba[sourceIndex]
+  }
+  return alpha
+}
+
+export async function renderGlyphsPreferWorkerCanvas(
+  source: ParsedFontSource,
+  codepoints: number[],
+  size: number,
+  recipe: BitmapFontRecipe,
+  environment: WorkerFontEnvironment = globalThis as unknown as WorkerFontEnvironment
+): Promise<RenderedGlyphSet> {
+  if (!environment.FontFace || !environment.fonts?.delete || !environment.OffscreenCanvas) {
+    return renderGlyphs(source, codepoints, size, recipe)
+  }
+  const registration = await registerUploadedFontFace(source, recipe.fontWeight, environment)
+  if (!registration) return renderGlyphs(source, codepoints, size, recipe)
+  const CanvasConstructor = environment.OffscreenCanvas
+
+  const scale = size / source.unitsPerEm
+  const baseline = Math.ceil(source.ascender * scale)
+  const lineHeight = Math.ceil((source.ascender - source.descender) * scale)
+  const outlineRadius = recipe.outlineMode === 'fill' ? 0 : recipe.outlineWidthEm * size
+  const italic = recipe.italicAngle === 0 ? 'normal' : `oblique ${recipe.italicAngle}deg`
+  const cssFont = `${italic} ${Math.round(recipe.fontWeight)} ${size}px "${registration.family}"`
+
+  try {
+    const measureContext = new CanvasConstructor(1, 1).getContext('2d', { willReadFrequently: true })
+    if (!measureContext) throw new Error('GLYPH_RENDER_FAILED: Canvas 2D context unavailable')
+    measureContext.font = cssFont
+    measureContext.textBaseline = 'alphabetic'
+
+    const glyphs = codepoints.map((codepoint): RenderedGlyph => {
+      if (!source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
+      const text = String.fromCodePoint(codepoint)
+      const metrics = measureContext.measureText(text)
+      const xadvance = Math.max(1, Math.round(metrics.width))
+      if (codepoint === 0x20) return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }
+
+      const padding = Math.ceil(outlineRadius) + 2
+      const width = Math.max(1, Math.ceil(metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight) + padding * 2)
+      const height = Math.max(1, Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) + padding * 2)
+      const originX = padding + Math.ceil(metrics.actualBoundingBoxLeft)
+      const originY = padding + Math.ceil(metrics.actualBoundingBoxAscent)
+      const context = new CanvasConstructor(width, height).getContext('2d', { willReadFrequently: true })
+      if (!context) throw new GlyphRenderError('GLYPH_RENDER_FAILED', codepoint)
+      context.font = cssFont
+      context.textBaseline = 'alphabetic'
+      context.lineJoin = 'round'
+      context.lineWidth = outlineRadius * 2
+      if (recipe.outlineMode !== 'fill' && outlineRadius > 0) context.strokeText(text, originX, originY)
+      if (recipe.outlineMode !== 'outline-only') context.fillText(text, originX, originY)
+
+      const bounds = { left: 0, top: 0, width, height }
+      const cropped = cropAlpha(alphaFromRgba(context.getImageData(0, 0, width, height).data), bounds)
+      if (!cropped) throw new GlyphRenderError('GLYPH_RENDER_EMPTY', codepoint)
+      return {
+        codepoint,
+        width: cropped.width,
+        height: cropped.height,
+        xoffset: cropped.left - originX,
+        yoffset: cropped.top - originY + baseline,
+        xadvance,
+        alpha: cropped.alpha
+      }
+    })
+    return { glyphs, lineHeight, baseline, diagnostics: { rendererPath: 'font-face-canvas', rendererVersion: '1' } }
+  } finally {
+    registration.dispose()
+  }
+}
+
 export function renderGlyphs(source: ParsedFontSource, codepoints: number[], size: number, recipe: BitmapFontRecipe): RenderedGlyphSet {
   const scale = size / source.unitsPerEm
   const baseline = Math.ceil(source.ascender * scale)
@@ -227,7 +406,7 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
     const bottom = Math.ceil(Math.max(...points.map((point) => point.y))) + margin
     const bounds = { left, top, width: right - left, height: bottom - top }
     const fill = recipe.outlineMode !== 'outline-only'
-    const cropped = cropAlpha(rasterize(contours, bounds, fill, strokeRadius), bounds)
+    const cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius), bounds)
     if (!cropped) throw new GlyphRenderError('GLYPH_RENDER_FAILED', codepoint)
     return {
       codepoint,

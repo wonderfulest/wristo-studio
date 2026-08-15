@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { normalizeBitmapFontRecipe } from './contracts'
+import { charsetForType, normalizeBitmapFontRecipe } from './contracts'
 import { parseFontSource } from './fontSource'
-import { GlyphRenderError, registerUploadedFontFace, renderGlyphs } from './glyphRenderer'
+import { GlyphRenderError, rasterizeFallbackContours, registerUploadedFontFace, renderGlyphs, renderGlyphsPreferWorkerCanvas } from './glyphRenderer'
 
 const fixtureUrl = new URL('./__fixtures__/minimal-latin.ttf', import.meta.url)
 
@@ -86,7 +86,48 @@ describe('renderGlyphs', () => {
       return alphaAtWorldPoint(outlineOnly, worldX, worldY) === 0
     })
     expect(hasRemovedFillPixel).toBe(true)
+
+    const outlinedStem = renderGlyphs(parsed, [73], 128, recipe({ outlineWidthEm: 0.02, outlineMode: 'outline-only' })).glyphs[0]
+    expect(outlinedStem.alpha[Math.floor(outlinedStem.height / 2) * outlinedStem.width + Math.floor(outlinedStem.width / 2)]).toBe(0)
   })
+
+  it('uses non-zero winding for overlapping and reversed contours', () => {
+    const clockwise = [
+      { x: 1, y: 1 },
+      { x: 7, y: 1 },
+      { x: 7, y: 7 },
+      { x: 1, y: 7 },
+      { x: 1, y: 1 }
+    ]
+    const bounds = { left: 0, top: 0, width: 9, height: 9 }
+    const sameDirection = rasterizeFallbackContours([clockwise, clockwise], bounds, true, 0)
+    const reversedInner = rasterizeFallbackContours(
+      [
+        clockwise,
+        [
+          { x: 2, y: 2 },
+          { x: 2, y: 6 },
+          { x: 6, y: 6 },
+          { x: 6, y: 2 },
+          { x: 2, y: 2 }
+        ]
+      ],
+      bounds,
+      true,
+      0
+    )
+
+    expect(sameDirection[4 * bounds.width + 4]).toBe(255)
+    expect(reversedInner[4 * bounds.width + 4]).toBe(0)
+  })
+
+  it('renders the English text charset at a representative large size within a broad budget', async () => {
+    const startedAt = performance.now()
+    const result = renderGlyphs(await source(), charsetForType('text_font').codepoints, 144, recipe())
+
+    expect(result.glyphs.length).toBe(charsetForType('text_font').codepoints.length)
+    expect(performance.now() - startedAt).toBeLessThan(8_000)
+  }, 10_000)
 
   it('rejects a missing uploaded-font glyph with a stable error', async () => {
     const parsed = await source()
@@ -104,5 +145,88 @@ describe('renderGlyphs', () => {
 
   it('does not claim a FontFace renderer when worker font APIs are unavailable', async () => {
     expect(await registerUploadedFontFace(await source(), 700, {})).toBeUndefined()
+    class NoCleanupFontFace {
+      async load() {
+        return this
+      }
+    }
+    expect(
+      await registerUploadedFontFace(await source(), 700, {
+        FontFace: NoCleanupFontFace,
+        fonts: { add: () => undefined }
+      })
+    ).toBeUndefined()
+  })
+
+  it('uses a source-byte family identity and cleans up repeated FontFace registrations', async () => {
+    const faces = new Set<object>()
+    class TestFontFace {
+      constructor(
+        public family: string,
+        public source: ArrayBuffer,
+        public descriptors: { weight: string }
+      ) {}
+      async load() {
+        return this
+      }
+    }
+    const environment = {
+      FontFace: TestFontFace,
+      fonts: { add: (face: object) => faces.add(face), delete: (face: object) => faces.delete(face) }
+    }
+    const parsed = await source()
+    const first = await registerUploadedFontFace(parsed, 700, environment)
+    const second = await registerUploadedFontFace(parsed, 700, environment)
+
+    expect(first?.family).toMatch(/^WristoUploaded-[0-9a-f]{16}$/)
+    expect(second?.family).toBe(first?.family)
+    expect(faces.size).toBe(2)
+    first?.dispose()
+    first?.dispose()
+    second?.dispose()
+    expect(faces.size).toBe(0)
+  })
+
+  it('selects the worker FontFace canvas path when every required API is available', async () => {
+    class TestFontFace {
+      constructor(public family: string) {}
+      async load() {
+        return this
+      }
+    }
+    class TestCanvas {
+      width: number
+      height: number
+      constructor(width: number, height: number) {
+        this.width = width
+        this.height = height
+      }
+      getContext() {
+        return {
+          font: '',
+          textBaseline: 'alphabetic',
+          lineJoin: 'round',
+          lineWidth: 0,
+          measureText: () => ({ width: 30, actualBoundingBoxLeft: 0, actualBoundingBoxRight: 30, actualBoundingBoxAscent: 35, actualBoundingBoxDescent: 5 }),
+          fillText: () => undefined,
+          strokeText: () => undefined,
+          getImageData: (_x: number, _y: number, width: number, height: number) => {
+            const data = new Uint8ClampedArray(width * height * 4)
+            for (let index = 3; index < data.length; index += 4) data[index] = 255
+            return { data }
+          }
+        }
+      }
+    }
+    const faces = new Set<object>()
+    const result = await renderGlyphsPreferWorkerCanvas(await source(), [65], 48, recipe({ fontWeight: 700 }), {
+      FontFace: TestFontFace,
+      OffscreenCanvas: TestCanvas,
+      fonts: { add: (face: object) => faces.add(face), delete: (face: object) => faces.delete(face) }
+    })
+
+    expect(result.diagnostics).toEqual({ rendererPath: 'font-face-canvas', rendererVersion: '1' })
+    expect(result.glyphs[0].alpha.some((alpha) => alpha > 0)).toBe(true)
+    expect(faces.size).toBe(0)
   })
 })

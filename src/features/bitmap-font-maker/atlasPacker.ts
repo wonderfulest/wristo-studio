@@ -8,6 +8,14 @@ export class AtlasPackingError extends Error {
   }
 }
 
+export class AtlasInputError extends TypeError {
+  readonly code = 'ATLAS_INVALID_INPUT' as const
+  constructor(detail: string) {
+    super(`ATLAS_INVALID_INPUT: ${detail}`)
+    this.name = 'AtlasInputError'
+  }
+}
+
 export interface AtlasGlyphRect {
   codepoint: number
   width: number
@@ -53,7 +61,16 @@ function packAtWidth(glyphs: AtlasGlyphRect[], width: number, padding: number, g
 
 export function packGlyphAtlas(input: AtlasGlyphRect[], options: AtlasPackingOptions): PackedGlyphAtlas {
   const maxDimension = options.maxDimension ?? MAX_ATLAS_DIMENSION
-  const padding = Math.max(0, Math.ceil(options.padding))
+  if (!Number.isSafeInteger(options.padding) || options.padding < 0) throw new AtlasInputError('padding')
+  if (!Number.isSafeInteger(maxDimension) || maxDimension < 1 || maxDimension > MAX_ATLAS_DIMENSION) throw new AtlasInputError('maxDimension')
+  const codepoints = new Set<number>()
+  for (const glyph of input) {
+    if (!Number.isSafeInteger(glyph.codepoint) || glyph.codepoint < 0 || glyph.codepoint > 0x10ffff || (glyph.codepoint >= 0xd800 && glyph.codepoint <= 0xdfff)) throw new AtlasInputError('codepoint')
+    if (codepoints.has(glyph.codepoint)) throw new AtlasInputError('duplicate codepoint')
+    codepoints.add(glyph.codepoint)
+    if (!Number.isSafeInteger(glyph.width) || glyph.width < 0 || !Number.isSafeInteger(glyph.height) || glyph.height < 0) throw new AtlasInputError('glyph dimensions')
+  }
+  const padding = options.padding
   const gap = input.length > 1 ? 1 : 0
   const glyphs = [...input].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height) || a.codepoint - b.codepoint)
   if (glyphs.some((glyph) => glyph.width + padding * 2 > maxDimension || glyph.height + padding * 2 > maxDimension)) throw new AtlasPackingError()

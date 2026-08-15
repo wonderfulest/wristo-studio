@@ -66,4 +66,55 @@ describe('writeBmFontText', () => {
     expect(bmFontDescriptorFilename('roboto-outline')).toBe('roboto-outline-g.fnt')
     expect(() => bmFontDescriptorFilename('../roboto')).toThrowError(TypeError)
   })
+
+  it('rejects face control characters and invalid common metrics', () => {
+    const valid = {
+      slug: 'safe',
+      face: 'Fixture',
+      size: 24,
+      lineHeight: 30,
+      base: 22,
+      scaleW: 64,
+      scaleH: 64,
+      chars: [{ id: 65, x: 0, y: 0, width: 10, height: 10, xoffset: 0, yoffset: 0, xadvance: 11 }]
+    }
+    for (const face of ['bad\nface', 'bad\rface', 'bad\u0000face']) {
+      expect(() => writeBmFontText({ ...valid, face })).toThrowError('BMFONT_INVALID_INPUT')
+    }
+    for (const change of [{ lineHeight: 1.5 }, { lineHeight: 8193 }, { base: -1 }, { scaleW: Number.NaN }, { scaleH: 0 }]) {
+      expect(() => writeBmFontText({ ...valid, ...change })).toThrowError('BMFONT_INVALID_INPUT')
+    }
+  })
+
+  it('rejects invalid or duplicate chars and out-of-atlas rectangles', () => {
+    const base = { slug: 'safe', face: 'Fixture', size: 24, lineHeight: 30, base: 22, scaleW: 64, scaleH: 64 }
+    const validChar = { id: 65, x: 0, y: 0, width: 10, height: 10, xoffset: 0, yoffset: 0, xadvance: 11 }
+    for (const char of [
+      { ...validChar, id: 0x110000 },
+      { ...validChar, x: -1 },
+      { ...validChar, width: 1.5 },
+      { ...validChar, xadvance: Number.POSITIVE_INFINITY },
+      { ...validChar, xoffset: 8193 },
+      { ...validChar, x: 60, width: 10 }
+    ]) {
+      expect(() => writeBmFontText({ ...base, chars: [char] })).toThrowError('BMFONT_INVALID_INPUT')
+    }
+    expect(() => writeBmFontText({ ...base, chars: [validChar, validChar] })).toThrowError('BMFONT_INVALID_INPUT')
+  })
+
+  it('rejects duplicate, invalid, or dangling kerning pairs', () => {
+    const chars = [65, 66].map((id) => ({ id, x: 0, y: 0, width: 1, height: 1, xoffset: 0, yoffset: 0, xadvance: 2 }))
+    const base = { slug: 'safe', face: 'Fixture', size: 24, lineHeight: 30, base: 22, scaleW: 64, scaleH: 64, chars }
+    expect(() => writeBmFontText({ ...base, kernings: [{ first: 65, second: 67, amount: -1 }] })).toThrowError('BMFONT_INVALID_INPUT')
+    expect(() => writeBmFontText({ ...base, kernings: [{ first: 65, second: 66, amount: 0.5 }] })).toThrowError('BMFONT_INVALID_INPUT')
+    expect(() =>
+      writeBmFontText({
+        ...base,
+        kernings: [
+          { first: 65, second: 66, amount: -1 },
+          { first: 65, second: 66, amount: -2 }
+        ]
+      })
+    ).toThrowError('BMFONT_INVALID_INPUT')
+  })
 })

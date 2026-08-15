@@ -38,4 +38,45 @@ describe('packGlyphAtlas', () => {
   it('fails with ATLAS_TOO_LARGE instead of creating another page', () => {
     expect(() => packGlyphAtlas([{ codepoint: 65, width: 8193, height: 1 }], { padding: 0 })).toThrowError(expect.objectContaining<Partial<AtlasPackingError>>({ code: 'ATLAS_TOO_LARGE' }))
   })
+
+  it('rejects invalid glyph records and packing options without coercion', () => {
+    const invalidGlyphs = [
+      { codepoint: -1, width: 1, height: 1 },
+      { codepoint: 65.5, width: 1, height: 1 },
+      { codepoint: 0x110000, width: 1, height: 1 },
+      { codepoint: 65, width: -1, height: 1 },
+      { codepoint: 65, width: Number.NaN, height: 1 }
+    ]
+    for (const glyph of invalidGlyphs) {
+      expect(() => packGlyphAtlas([glyph], { padding: 0 })).toThrowError('ATLAS_INVALID_INPUT')
+    }
+    expect(() =>
+      packGlyphAtlas(
+        [
+          { codepoint: 65, width: 1, height: 1 },
+          { codepoint: 65, width: 1, height: 1 }
+        ],
+        { padding: 0 }
+      )
+    ).toThrowError('ATLAS_INVALID_INPUT')
+    for (const options of [{ padding: -1 }, { padding: 0.5 }, { padding: 0, maxDimension: 0 }, { padding: 0, maxDimension: 8193 }]) {
+      expect(() => packGlyphAtlas([{ codepoint: 65, width: 1, height: 1 }], options)).toThrowError('ATLAS_INVALID_INPUT')
+    }
+  })
+
+  it('retains a zero-sized space placement and separates expanded rectangles', () => {
+    const packed = packGlyphAtlas(
+      [
+        { codepoint: 32, width: 0, height: 0 },
+        { codepoint: 65, width: 10, height: 10 },
+        { codepoint: 66, width: 10, height: 10 }
+      ],
+      { padding: 2, maxDimension: 64 }
+    )
+    expect(packed.placements.find((placement) => placement.codepoint === 32)).toMatchObject({ width: 0, height: 0 })
+    const visible = packed.placements.filter((placement) => placement.width > 0)
+    const [a, b] = visible
+    const expandedOverlap = a.x - 2 < b.x + b.width + 2 + 1 && a.x + a.width + 2 + 1 > b.x - 2 && a.y - 2 < b.y + b.height + 2 + 1 && a.y + a.height + 2 + 1 > b.y - 2
+    expect(expandedOverlap).toBe(false)
+  })
 })
