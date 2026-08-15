@@ -21,6 +21,7 @@ import {
   getSsoRedirectUri,
   redirectToSsoLogin,
 } from '@/utils/ssoRedirect'
+import { rejectStudioSession } from '@/auth/studioAccess'
 
 const loading = ref(true)
 const error = ref('')
@@ -31,6 +32,16 @@ const { t } = useI18n()
 
 const clientId = 'studio'
 const redirectUri = getSsoRedirectUri()
+
+const rejectAccess = () => {
+  const forbiddenPath = rejectStudioSession({
+    cancelPendingRedirect: cancelPendingSsoRedirect,
+    clearStoreAuth: () => userStore.clearAuth(),
+    clearLocalAuth: clearLocalAuthState,
+    clearPendingPath: clearPendingStudioPath,
+  })
+  router.replace(forbiddenPath)
+}
 
 const getCallbackNextPath = () => {
   const raw = route.query.next
@@ -68,24 +79,18 @@ onMounted(async () => {
         
         if (userRes.code === 0 && userRes.data) {
           userStore.setUserInfo(userRes.data)
-          
-          
-          
+
+          if (!userStore.hasFullStudioAccess) {
+            rejectAccess()
+            return
+          }
         } else {
-          cancelPendingSsoRedirect()
-          userStore.clearAuth()
-          clearLocalAuthState()
-          clearPendingStudioPath()
-          router.replace('/auth/signed-out?reason=forbidden')
+          rejectAccess()
           return
         }
       } catch (e) {
         console.error('Failed to get user info', e)
-        cancelPendingSsoRedirect()
-        userStore.clearAuth()
-        clearLocalAuthState()
-        clearPendingStudioPath()
-        router.replace('/auth/signed-out?reason=forbidden')
+        rejectAccess()
         return
       }
       

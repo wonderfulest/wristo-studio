@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getUserInfo, logout as logoutApi, updateMyInfo } from '@/api/wristo/auth'
 import { type UserInfo, type GarminDeviceVO } from '@/types/user'
+import { hasStudioAccess } from '@/auth/studioAccess'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -20,10 +21,7 @@ export const useUserStore = defineStore('user', {
       return hasToken && hasUserInfo
     },
     studioMembership: (state) => state.userInfo?.studioMembership || null,
-    hasFullStudioAccess: (state) => {
-      const roles = state.userInfo?.roles || []
-      return roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')
-    },
+    hasFullStudioAccess: (state) => hasStudioAccess(state.userInfo),
     canUsePremiumStudioAssets: (state) => {
       const roles = state.userInfo?.roles || []
       const hasFullStudioAccess = roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')

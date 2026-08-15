@@ -8,7 +8,7 @@ import type { DialProgressMode } from '@/types/settings'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { getDataTypePropertyOptions, useDataCatalogStore, type DataTypePropertyOption } from '@/stores/dataCatalogStore'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
-import { normalizeIconUnicode } from '@/types/amoledIcons'
+import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -171,7 +171,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   if (type === 'data') {
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
     if (eleType === 'icon') {
-      const iconUnicode = normalizeIconUnicode(canonicalMetric.iconUnicode)
+      const iconUnicode = resolveMetricIconUnicode(canonicalMetric)
       return {
         dataProperty: propertyKey,
         goalProperty: null,
@@ -194,7 +194,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
     return { goalProperty: propertyKey }
   }
   if (eleType === 'icon') {
-    const iconUnicode = normalizeIconUnicode(canonicalMetric.iconUnicode)
+    const iconUnicode = resolveMetricIconUnicode(canonicalMetric)
     return {
       goalProperty: propertyKey,
       dataProperty: null,

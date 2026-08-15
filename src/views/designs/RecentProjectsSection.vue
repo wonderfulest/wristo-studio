@@ -36,26 +36,35 @@
         :lg="4"
         :xl="4"
       >
-        <DesignCard
-          :design="design"
-          :is-merchant-user="isMerchantUser"
-          :is-admin-user="isAdminUser"
-          :can-delete-design="canDeleteDesign"
-          :show-creator="false"
-          :loading-states="loadingStatesPlain"
-          :current-user-id="userStore.userInfo?.id ?? null"
-          :status-text="getStatusText(design.designStatus)"
-          :status-color="getStatusColor(design.designStatus)"
-          :last-go-live-text="formatDateNullable(design.product?.lastGoLive ?? null)"
-          :creator-name="getCreatorName(design)"
-          :design-image-url="getDesignImageUrl(design)"
-          :has-new-release="hasNewRelease(design)"
-          :has-downloadable-package="hasDownloadablePackage(design)"
-          :show-package-download="false"
-          :show-prg-preview="false"
-          @open="emit('open', design)"
-          @delete="emit('delete', design)"
-        />
+        <div
+          class="recent-design-card"
+          role="button"
+          tabindex="0"
+          @click="handleOpenDesign($event, design)"
+          @keydown.enter="emit('open', design)"
+          @keydown.space.prevent="emit('open', design)"
+        >
+          <DesignCard
+            :design="design"
+            :is-merchant-user="isMerchantUser"
+            :is-admin-user="isAdminUser"
+            :can-delete-design="canDeleteDesign"
+            :show-creator="false"
+            :loading-states="loadingStatesPlain"
+            :current-user-id="userStore.userInfo?.id ?? null"
+            :status-text="getStatusText(design.designStatus)"
+            :status-color="getStatusColor(design.designStatus)"
+            :last-go-live-text="formatDateNullable(design.product?.lastGoLive ?? null)"
+            :creator-name="getCreatorName(design)"
+            :design-image-url="getDesignImageUrl(design)"
+            :has-new-release="hasNewRelease(design)"
+            :has-downloadable-package="hasDownloadablePackage(design)"
+            :show-package-download="false"
+            :show-prg-preview="false"
+            @open="emit('open', design)"
+            @delete="emit('delete', design)"
+          />
+        </div>
       </el-col>
     </el-row>
   </div>
@@ -186,6 +195,12 @@ const hasNewRelease = (design: Design): boolean => {
 const handleCreateNewProject = () => {
   emitter.emit('open-new-project-dialog')
 }
+
+const handleOpenDesign = (event: MouseEvent, design: Design) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('button, input, a, select, textarea')) return
+  emit('open', design)
+}
 </script>
 
 <style scoped>
@@ -205,8 +220,19 @@ const handleCreateNewProject = () => {
   margin-top: 16px;
 }
 
-/* 在最近项目区仅保留 DesignCard 底部操作区中的第一个按钮，隐藏其余按钮 */
-.design-grid :deep(.actions .el-button:nth-child(n + 2)) {
+.recent-design-card {
+  height: 100%;
+  cursor: pointer;
+  border-radius: var(--studio-radius-lg);
+}
+
+.recent-design-card:focus-visible {
+  outline: 2px solid var(--studio-primary);
+  outline-offset: 3px;
+}
+
+/* 最近项目卡片仅用于展示概览，不显示 DesignCard 底部操作区 */
+.design-grid :deep(.actions-bar) {
   display: none;
 }
 

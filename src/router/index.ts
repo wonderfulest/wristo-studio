@@ -2,7 +2,13 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
-import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import {
+  cancelPendingSsoRedirect,
+  clearLocalAuthState,
+  clearPendingStudioPath,
+  redirectToSsoLogin,
+} from '@/utils/ssoRedirect'
+import { guardStudioRoute, rejectStudioSession } from '@/auth/studioAccess'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 import { initializeEditorRuntime } from '@/startup/editorRuntime'
 import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
@@ -207,10 +213,21 @@ router.beforeEach(async (to) => {
   // 检查路由是否需要认证
   const requiresAuth = to.matched.some((record) => (record.meta as any).requiresAuth)
 
-  // 如果路由需要认证且用户未登录，重定向到登录页面
-  if (requiresAuth && !userStore.isAuthenticated) {
-    redirectToSsoLogin('studio', 1000, to.fullPath)
-    return false
+  const accessResult = guardStudioRoute({
+    requiresAuth,
+    isAuthenticated: userStore.isAuthenticated,
+    hasAccess: userStore.hasFullStudioAccess,
+    fullPath: to.fullPath,
+    redirectToLogin: (fullPath) => redirectToSsoLogin('studio', 1000, fullPath),
+    rejectForbidden: () => rejectStudioSession({
+      cancelPendingRedirect: cancelPendingSsoRedirect,
+      clearStoreAuth: () => userStore.clearAuth(),
+      clearLocalAuth: clearLocalAuthState,
+      clearPendingPath: clearPendingStudioPath,
+    }),
+  })
+  if (accessResult !== undefined) {
+    return accessResult
   }
 
   if ((to.meta as any).hideForMerchant && userStore.isMerchantUser) {

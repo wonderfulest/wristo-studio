@@ -42,6 +42,7 @@ import { computed } from 'vue'
 import { usePropertiesStore } from '@/stores/properties'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
+import { resolveDataOptionSettingsLabel } from '@/components/properties/dialogs/dataPropertyOptions'
 import PropertySelectOption from './PropertySelectOption.vue'
 
 const props = withDefaults(defineProps<{
@@ -63,7 +64,7 @@ const emit = defineEmits<{
 }>()
 
 const propertiesStore = usePropertiesStore()
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const dataOptions = computed(() => Object.entries(propertiesStore.allProperties).filter(([_, p]) => p.type === 'data'))
 const resolvedLabel = computed(() => props.label || t('property.dataSelect'))
 const resolvedPlaceholder = computed(() => props.placeholder || t('property.selectDataType'))
@@ -71,8 +72,11 @@ const resolvedPlaceholder = computed(() => props.placeholder || t('property.sele
 const getTypeLabel = (key: string): string => {
   const item = propertiesStore.allProperties[key]
   if (!item) return ''
-  const cur = item.options?.find(opt => opt.value === item.value)
-  return cur?.label || ''
+  const selected = propertiesStore.resolveSelectedDataOption(key)
+  if (selected) return resolveDataOptionSettingsLabel(selected, locale.value)
+
+  const legacySelected = item.options?.find(opt => opt.value === item.value)
+  return legacySelected?.label || ''
 }
 
 const localValue = computed({
