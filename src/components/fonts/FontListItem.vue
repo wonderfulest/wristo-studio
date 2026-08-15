@@ -86,6 +86,7 @@
       :section-name="sectionName"
       :font-url="fontUrl"
       :preview-text="previewText"
+      :preview-text-style="previewTextStyle"
     />
   </div>
   <div v-else class="font-main" :class="{ 'font-main-compact': compact }">
@@ -96,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
 import { CollectionTag, Edit, Delete, Clock, Star, StarFilled } from '@element-plus/icons-vue'
@@ -124,6 +125,7 @@ const props = defineProps<{
   styleTags?: string | string[]
   canEditSearchIndex?: boolean
   previewText?: string
+  previewTextStyle?: CSSProperties
   isRecent?: boolean
   compact?: boolean
   favoriteWeight?: number | null

@@ -2,14 +2,14 @@
   <span
     class="preview-text"
     :class="{ 'preview-text-icon': isIcon }"
-    :style="{ fontFamily: effectiveFontFamily }"
+    :style="[{ fontFamily: effectiveFontFamily }, previewTextStyle]"
   >
     {{ sampleText }}
   </span>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { FontTypes } from '@/config/fonts'
 
 const ICON_FONT_UNICODES = [
@@ -29,6 +29,7 @@ const props = defineProps<{
   sectionName?: string
   fontUrl?: string
   previewText?: string
+  previewTextStyle?: CSSProperties
 }>()
 
 const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')

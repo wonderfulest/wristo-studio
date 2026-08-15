@@ -7,8 +7,8 @@ import type { FontItem } from '@/types/font-picker'
 
 vi.mock('@/components/fonts/FontListItem.vue', () => ({
   default: {
-    props: ['label'],
-    template: '<div class="font-main">{{ label }}</div>'
+    props: ['label', 'previewTextStyle'],
+    template: '<div class="font-main"><span class="preview-text" :style="previewTextStyle">Aa</span><span class="font-label">{{ label }}</span><button class="manage-font">Manage</button></div>'
   }
 }))
 
@@ -78,10 +78,16 @@ describe('FontFamilyList', () => {
     const recipeCard = wrapper.find('[data-font-slug="inter-regular"]')
     expect(recipeCard.find('.bitmap-recipe-preview-badge').text()).toBe('Preview')
     const surface = recipeCard.find('.bitmap-recipe-preview-surface')
-    expect(surface.attributes('style')).toContain('font-weight: 700')
-    expect(surface.attributes('style')).toContain('transform: skewX(-12deg)')
-    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
-    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe('transparent')
+    expect((surface.element as HTMLElement).style.fontWeight).toBe('')
+    const preview = recipeCard.find('.preview-text')
+    expect((surface.element as HTMLElement).style.transform).toBe('')
+    expect((preview.element as HTMLElement).style.transform).toBe('skewX(-12deg)')
+    expect((preview.element as HTMLElement).style.fontWeight).toBe('700')
+    expect(getComputedStyle(recipeCard.find('.font-label').element).transform).toBe('')
+    expect(getComputedStyle(recipeCard.find('.font-label').element).fontWeight).not.toBe('var(--bitmap-preview-weight)')
+    expect(getComputedStyle(recipeCard.find('.manage-font').element).transform).toBe('')
+    expect((preview.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
+    expect((preview.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe('transparent')
     expect(wrapper.find('[data-font-slug="kode-regular"] .bitmap-recipe-preview-badge').exists()).toBe(false)
   })
 
@@ -94,8 +100,10 @@ describe('FontFamilyList', () => {
     } } as FontItem
     const wrapper = mount(FontFamilyList, { props: { fonts: [font], modelValue: '' } })
     const surface = wrapper.find('.bitmap-recipe-preview-surface')
-    expect(surface.attributes('style')).toContain(`transform: skewX(${angle}deg)`)
-    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe(fill)
-    expect((surface.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe(stroke)
+    expect((surface.element as HTMLElement).style.transform).toBe('')
+    const preview = wrapper.find('.preview-text').element as HTMLElement
+    expect(preview.style.transform).toBe(`skewX(${angle}deg)`)
+    expect(preview.style.getPropertyValue('--bitmap-preview-fill')).toBe(fill)
+    expect(preview.style.getPropertyValue('--bitmap-preview-stroke')).toBe(stroke)
   })
 })

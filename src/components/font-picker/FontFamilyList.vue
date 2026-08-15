@@ -9,7 +9,7 @@
           :data-bitmap-recipe-preview="hasRecipe(group.fonts[0]) ? '' : undefined"
           @click="emit('select', group.fonts[0])">
           <span v-if="hasRecipe(group.fonts[0])" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
-          <div class="bitmap-recipe-preview-surface" :style="recipeCardStyle(group.fonts[0])">
+          <div class="bitmap-recipe-preview-surface">
             <FontListItem
               v-bind="itemProps(group.fonts[0])"
               @edit-search-index="emit('editSearchIndex', group.fonts[0])"
@@ -34,7 +34,7 @@
             :data-bitmap-recipe-preview="hasRecipe(font) ? '' : undefined"
             @click="emit('select', font)">
             <span v-if="hasRecipe(font)" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
-            <div class="bitmap-recipe-preview-surface" :style="recipeCardStyle(font)">
+            <div class="bitmap-recipe-preview-surface">
               <FontListItem
                 v-bind="itemProps(font)"
                 @edit-search-index="emit('editSearchIndex', font)"
@@ -117,7 +117,8 @@ const itemProps = (font: FontItem) => ({
   styleTags: font.styleTags,
   favoriteWeight: font.favoriteWeight,
   canEditSearchIndex: !!font.id,
-  isRecent: props.isRecent
+  isRecent: props.isRecent,
+  previewTextStyle: recipeCardStyle(font)
 })
 
 const summaryProps = (font: FontItem, family: string) => ({
@@ -205,7 +206,11 @@ const summaryProps = (font: FontItem, family: string) => ({
 
 .bitmap-recipe-preview-surface {
   width: 100%;
-  transform-origin: center;
+}
+
+.font-item[data-bitmap-recipe-preview] .bitmap-recipe-preview-surface :deep(.preview-text) {
+  -webkit-text-stroke: var(--bitmap-preview-stroke);
+  -webkit-text-fill-color: var(--bitmap-preview-fill);
 }
 
 .bitmap-recipe-preview-badge {
@@ -225,11 +230,6 @@ const summaryProps = (font: FontItem, family: string) => ({
   letter-spacing: 0.04em;
   -webkit-text-stroke: 0;
   pointer-events: none;
-}
-
-.font-item[data-bitmap-recipe-preview] .bitmap-recipe-preview-surface :deep(.preview-text) {
-  -webkit-text-stroke: var(--bitmap-preview-stroke);
-  -webkit-text-fill-color: var(--bitmap-preview-fill);
 }
 
 .font-item:hover {
