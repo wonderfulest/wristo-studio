@@ -11,6 +11,7 @@ type TokenInput = {
   nullable?: boolean
   unit?: string
   exampleValue: unknown
+  enumValues?: ExpressionTokenDefinition['enumValues']
   source: ExpressionTokenDefinition['source']
   updateFrequency?: ExpressionTokenDefinition['updateFrequency']
   providerKey: string
@@ -32,6 +33,7 @@ const token = (input: TokenInput): ExpressionTokenDefinition => ({
   nullable: input.nullable ?? false,
   unit: input.unit,
   exampleValue: input.exampleValue,
+  enumValues: input.enumValues,
   source: input.source,
   supportedTargets: ['visibility'],
   updateFrequency: input.updateFrequency || 'minute',
@@ -63,6 +65,23 @@ const weather = (id: string, code: string, label: string, labelCn: string, examp
   source: 'weather', updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
   requirement: 'Toybox.Weather current conditions and synced weather data',
 })
+
+const WRISTO_WEATHER_CODE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Clear', labelCn: '晴天' },
+  { value: 1, label: 'Few Clouds', labelCn: '少云' },
+  { value: 2, label: 'Light Rain', labelCn: '小雨' },
+  { value: 3, label: 'Clear Night', labelCn: '晴朗夜间' },
+  { value: 4, label: 'Few Clouds Night', labelCn: '少云夜间' },
+  { value: 5, label: 'Light Rain Night', labelCn: '小雨夜间' },
+  { value: 6, label: 'Thunderstorm', labelCn: '雷暴' },
+  { value: 7, label: 'Drizzle', labelCn: '细雨' },
+  { value: 8, label: 'Freezing Rain', labelCn: '冰雨' },
+  { value: 9, label: 'Heavy Rain', labelCn: '大雨' },
+  { value: 10, label: 'Snow', labelCn: '雪' },
+  { value: 11, label: 'Mist', labelCn: '雾或霾' },
+  { value: 12, label: 'Scattered Clouds', labelCn: '散云' },
+  { value: 13, label: 'Broken Clouds', labelCn: '破云' },
+]
 
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   time('year', 'tm1', 'Year', '年份', 2026),
@@ -113,6 +132,14 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   sensor('bodyBattery', 'ds330', 'Body Battery', '身体电量', 68, '%'),
   sensor('stress', 'ds331', 'Stress', '压力', 31),
 
+  token({
+    id: 'weather.current.conditionCode', code: 'w01', label: 'Weather Code', labelCn: '天气代码',
+    category: 'weather', exampleValue: 2, enumValues: WRISTO_WEATHER_CODE_VALUES, source: 'weather',
+    description: 'Current weather normalized to the Wristo weather code.',
+    descriptionCn: '当前天气归一化后的 Wristo 精简天气代码。',
+    updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
+    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+  }),
   weather('conditionText', 'w02', 'Condition Text', '天气状况', 'Partly Cloudy', 'string'),
   weather('feelsLikeTemperature', 'w03', 'Feels Like Temperature', '体感温度', 28, 'number', '°C'),
   weather('highTemperature', 'w04', 'High Temperature', '最高温度', 31, 'number', '°C'),

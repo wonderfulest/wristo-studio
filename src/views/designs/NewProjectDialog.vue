@@ -16,6 +16,12 @@
         show-word-limit
       />
 
+      <div class="field-label size-label">{{ t('project.appLanguage') }}</div>
+      <el-radio-group v-model="appLanguage">
+        <el-radio-button value="en">English</el-radio-button>
+        <el-radio-button value="zh">中文</el-radio-button>
+      </el-radio-group>
+
       <div class="field-label size-label">{{ t('project.device') }}</div>
       <button
         class="device-size-card"
@@ -63,6 +69,7 @@ import { useUserStore } from '@/stores/user'
 import { useDesignStore } from '@/stores/designStore'
 import type { GarminDeviceVO } from '@/api/device'
 import { Icon } from '@iconify/vue'
+import type { AppLanguage } from '@/types/localization'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -75,12 +82,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirm', name: string): void
+  (e: 'confirm', value: { name: string; appLanguage: AppLanguage }): void
   (e: 'cancel'): void
 }>()
 
 const internalVisible = ref(props.modelValue)
 const localName = ref(props.initialName)
+const appLanguage = ref<AppLanguage>('en')
 const deviceSelectorVisible = ref(false)
 
 const currentDevice = computed(() => userStore.userInfo?.device ?? null)
@@ -106,6 +114,7 @@ watch(
     if (val) {
       // 每次打开时重置为传入的初始名称
       localName.value = props.initialName
+      appLanguage.value = 'en'
     }
   }
 )
@@ -141,7 +150,7 @@ const handleOk = () => {
     openDeviceSelector()
     return
   }
-  emit('confirm', localName.value)
+  emit('confirm', { name: localName.value, appLanguage: appLanguage.value })
   emit('update:modelValue', false)
 }
 </script>

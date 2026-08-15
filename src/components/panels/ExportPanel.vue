@@ -75,7 +75,7 @@ import { designApi } from '@/api/wristo/design'
 import _ from 'lodash'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
-import { ElMessage, ElProgress, ElLoading, ElTag } from 'element-plus'
+import { ElMessage, ElProgress, ElLoading, ElTag, ElMessageBox } from 'element-plus'
 import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
@@ -89,6 +89,7 @@ import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engin
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
 import { getProduct } from '@/api/products'
+import { resolveCoverImageSaveChoice } from './coverImageSaveChoice'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -275,6 +276,33 @@ const uploadScreenshot = async () => {
   }
 }
 
+const requestCoverImageSaveChoice = async () => {
+  try {
+    await ElMessageBox.confirm(
+      t('export.existingCoverPrompt'),
+      t('export.existingCoverTitle'),
+      {
+        confirmButtonText: t('export.updateCover'),
+        cancelButtonText: t('export.keepExistingCover'),
+        distinguishCancelAndClose: true,
+        type: 'warning',
+      },
+    )
+    return 'update'
+  } catch (action) {
+    return action === 'cancel' ? 'keep' : 'abort'
+  }
+}
+
+const getCoverImageSaveChoice = async () => {
+  if (!baseStore.id) return 'update'
+  const response = await designApi.getDesignByUid(baseStore.id)
+  if (response.code !== 0 || !response.data) {
+    throw new Error(response.msg || t('export.loadDesignFailed'))
+  }
+  return resolveCoverImageSaveChoice(Boolean(response.data.cover), requestCoverImageSaveChoice)
+}
+
 // 添加一个互斥锁
 const isOperationLocked = ref(false)
 
@@ -331,6 +359,16 @@ const uploadApp = async () => {
     return -1
   }
 
+  let coverImageSaveChoice
+  try {
+    coverImageSaveChoice = await getCoverImageSaveChoice()
+  } catch (error) {
+    console.error('Failed to check the existing cover image:', error)
+    messageStore.error(error?.message || t('export.loadDesignFailed'))
+    return -1
+  }
+  if (coverImageSaveChoice === 'abort') return -1
+
   // 开始上传，显示进度条
   uploading.value = true
   currentProgress = 0
@@ -369,7 +407,9 @@ const uploadApp = async () => {
     }
     // 上传表盘截图 - 对画布进行实时截图
     currentStatus = t('export.uploadingScreenshot')
-    const screenshotResult = await uploadScreenshot()
+    const screenshotResult = coverImageSaveChoice === 'update'
+      ? await uploadScreenshot()
+      : { url: '', dataUrl: '' }
     const screenshotUrl = screenshotResult.url
     currentProgress = 40
     if (loadingInstance) {

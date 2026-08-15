@@ -114,4 +114,12 @@ describe('VisualThemeQuickSelect', () => {
     expect(appMenuSource).not.toContain('index="actions/visualThemes"')
     expect(appMenuSource).not.toContain('@closed="restoreVisualThemePreview"')
   })
+
+  it('keeps the canvas unobscured while editing visual themes', () => {
+    const drawerStart = appMenuSource.indexOf('v-model="visualThemeDrawerVisible"')
+    const drawerEnd = appMenuSource.indexOf('>', drawerStart)
+    const drawerOpeningTag = appMenuSource.slice(drawerStart, drawerEnd)
+
+    expect(drawerOpeningTag).toContain(':modal="false"')
+  })
 })

@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 
-export const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'pl', 'ja', 'ko', 'zh', 'zh-tw'] as const
-export type SupportedLocale = typeof SUPPORTED_LOCALES[number]
+const TRANSLATED_LOCALES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'pl', 'ja', 'ko', 'zh', 'zh-tw'] as const
+export type SupportedLocale = typeof TRANSLATED_LOCALES[number]
+
+export const SUPPORTED_LOCALES = ['en', 'zh'] as const satisfies readonly SupportedLocale[]
 
 export const DEFAULT_LOCALE: SupportedLocale = 'en'
 
@@ -22,7 +24,7 @@ const DOCUMENT_LANG_BY_LOCALE: Record<SupportedLocale, string> = {
 
 export function normalizeLocale(value: unknown): SupportedLocale {
   const locale = String(value || '').toLowerCase()
-  return SUPPORTED_LOCALES.includes(locale as SupportedLocale)
+  return (SUPPORTED_LOCALES as readonly string[]).includes(locale)
     ? (locale as SupportedLocale)
     : DEFAULT_LOCALE
 }

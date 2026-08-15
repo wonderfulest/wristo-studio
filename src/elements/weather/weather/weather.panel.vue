@@ -51,10 +51,16 @@
             <div class="assets">
               <el-tooltip :content="fontFamily" placement="top">
                 <div class="asset mip-asset">
+                  <img
+                    v-if="getAssetPreviewSource(c.asset)"
+                    class="mip-weather-preview"
+                    :src="getAssetPreviewSource(c.asset)"
+                    alt=""
+                  />
                   <span
-                    v-if="c.iconUnicode"
+                    v-else-if="c.iconUnicode"
                     class="mip-weather-glyph"
-                    :style="{ fontFamily }"
+                    :style="getMipGlyphStyle(c.iconUnicode)"
                   >
                     {{ getMipGlyph(c.iconUnicode) }}
                   </span>
@@ -188,6 +194,7 @@ import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { useWeatherAmoledIconStore, type PendingWeatherAmoledIcon } from '@/stores/weatherAmoledIconStore'
+import { getWeatherGlyphHorizontalOffset, isWeatherIconCode, normalizeWeatherIconCode } from './weatherCodes'
 const props = defineProps<{ 
   element?: FabricElement
   config?: any
@@ -298,7 +305,7 @@ const fetchConditions = async (displayType: 'mip' | 'amoled') => {
   loading[displayType] = true
   try {
     const res = await getWeatherConditions(fontFamily.value, displayType)
-    conditions[displayType] = res.data || []
+    conditions[displayType] = (res.data || []).filter((item) => isWeatherIconCode(item.iconUnicode))
     applyDefaultSelection(displayType)
   } finally {
     loading[displayType] = false
@@ -536,6 +543,14 @@ function getMipGlyph(iconUnicode?: string): string {
   return resolveIconGlyphText(iconUnicode)
 }
 
+function getMipGlyphStyle(iconUnicode?: string): Record<string, string> {
+  const offset = getWeatherGlyphHorizontalOffset(iconUnicode)
+  return {
+    fontFamily: fontFamily.value,
+    ...(offset ? { transform: `translateX(${offset}em)` } : {}),
+  }
+}
+
 function getPendingAmoledIcon(c: WeatherConditionAssetsVO): PendingWeatherAmoledIcon | null {
   if (!c?.iconUnicode) return null
   return weatherAmoledIconStore.getPending(fontFamily.value, c.iconUnicode)
@@ -586,8 +601,8 @@ function applyDefaultSelection(dt: 'mip' | 'amoled') {
 function onSelect(dt: 'mip' | 'amoled', c: any) {
   selected[dt] = c?.condition ?? null
   if (dt === 'mip') {
-    const unicode = c?.iconUnicode as string | undefined
-    if (!unicode) return
+    if (!isWeatherIconCode(c?.iconUnicode)) return
+    const unicode = normalizeWeatherIconCode(c.iconUnicode)
     const el = props.element as unknown as { mipUnicode?: string }
     el.mipUnicode = unicode
     console.log('[WeatherPanel] onSelect MIP', {
@@ -641,6 +656,12 @@ function onSelect(dt: 'mip' | 'amoled', c: any) {
 .asset .svg :deep(svg) { width: 72px; height: 72px; }
 .mip-asset {
   min-height: 72px;
+}
+.mip-weather-preview {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 .mip-weather-glyph {
   color: #111827;

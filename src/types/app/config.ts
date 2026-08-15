@@ -13,7 +13,6 @@ export interface RuntimeDesignConfig {
   bitmapMode: boolean
   dataNumberFormat?: number
   maxFieldLength?: number
-  supportsChineseContent?: boolean
   localization?: WatchfaceLocalizationConfig
   visualThemes?: VisualThemesConfig
   connectIqSettingsExcludedDataTypeValues?: number[]

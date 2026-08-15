@@ -45,6 +45,7 @@ import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import type { Design, DesignPageParams } from '@/types/api/design'
 import RecentProjectsSection from '@/views/designs/RecentProjectsSection.vue'
@@ -52,12 +53,14 @@ import SampleProjectsSection from '@/views/designs/SampleProjectsSection.vue'
 import NewProjectDialog from '@/views/designs/NewProjectDialog.vue'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
+import type { AppLanguage } from '@/types/localization'
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 const router = useRouter()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+const designStore = useDesignStore()
 const { t } = useI18n()
 
 const getCurrentDeviceParams = () => {
@@ -123,9 +126,19 @@ const handleOpenFromTemplate = (design: Design) => {
 // 确认创建：
 // - 如果选择了 sample（currentTemplate 有值），复制模板并打开画布
 // - 如果没有选择 sample，创建一个全新的应用并打开画布
-const handleConfirmDialog = async (inputName: string) => {
+const withAppLanguage = (config: unknown, appLanguage: AppLanguage) => {
+  let base: Record<string, any> = {}
+  if (config && typeof config === 'object') base = structuredClone(config as Record<string, any>)
+  if (typeof config === 'string') {
+    try { base = JSON.parse(config) } catch { base = {} }
+  }
+  return { ...base, localization: { appLanguage } }
+}
+
+const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage }) => {
   if (!canCreateProject()) return
-  const name = (inputName || projectName.value).trim() || generateRandomProjectName()
+  const name = (input.name || projectName.value).trim() || generateRandomProjectName()
+  const appLanguage = input.appLanguage
 
   try {
     // 情况一：从 Sample 复制
@@ -140,10 +153,15 @@ const handleConfirmDialog = async (inputName: string) => {
 
       // 更新新设计名称
       if (name) {
-        await designApi.updateDesign({
+        const copyUpdateRes = await designApi.updateDesign({
           uid: newDesignUid,
           name,
+          configJson: withAppLanguage(copyRes.data.configJson, appLanguage),
         } as any)
+        if (!copyUpdateRes || copyUpdateRes.code !== 0) {
+          messageStore.error(copyUpdateRes?.msg || t('project.createProjectFailed'))
+          return
+        }
       }
 
       const detailRes = await designApi.getDesignByUid(newDesignUid, getCurrentDeviceParams()) as ApiResponse<Design>
@@ -155,6 +173,7 @@ const handleConfirmDialog = async (inputName: string) => {
       const designData = detailRes.data
       baseStore.watchFaceName = designData.name
       baseStore.appId = designData.product?.appId || -1
+      designStore.setAppLanguage(appLanguage)
 
       router.push('/design?id=' + designData.designUid)
       dialogVisible.value = false
@@ -175,10 +194,19 @@ const handleConfirmDialog = async (inputName: string) => {
     }
 
     const newDesign = createRes.data
+    const initializeRes = await designApi.updateDesign({
+      uid: newDesign.designUid,
+      configJson: withAppLanguage(newDesign.configJson, appLanguage),
+    } as any) as ApiResponse<Design>
+    if (!initializeRes || initializeRes.code !== 0) {
+      messageStore.error(initializeRes?.msg || t('project.createProjectFailed'))
+      return
+    }
     baseStore.watchFaceName = newDesign.name
     baseStore.appId = newDesign.product?.appId || -1
 
     propertiesStore.clearProperties()
+    designStore.setAppLanguage(appLanguage)
     router.push('/design?id=' + newDesign.designUid)
     dialogVisible.value = false
     await userStore.refreshUserInfo()

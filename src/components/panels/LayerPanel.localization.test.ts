@@ -9,8 +9,9 @@ describe('LayerPanel localization', () => {
   it('renders display states and layer types through i18n', () => {
     expect(source).toContain("t('layer.active')")
     expect(source).toContain("t('layer.ambient')")
-    expect(source).toContain('getLayerTypeLabel(item.layer.eleType)')
-    expect(source).toContain('getLayerTypeLabel(layer.eleType)')
+    expect(source).toContain('getLayerDisplayName(item.layer)')
+    expect(source).toContain('getLayerDisplayName(layer)')
+    expect(source).toContain('resolveLayerName(layer.layerName, getLayerTypeLabel(layer.eleType))')
   })
 
   it('provides Simplified Chinese labels for the requested layer panel items', () => {

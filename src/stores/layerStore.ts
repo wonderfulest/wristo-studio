@@ -49,7 +49,7 @@ export const useLayerStore = defineStore('layerStore', {
           : resolveElementVisibility({
               displayStates,
               previewMode: this.previewMode,
-              visibility: layer.visibility ?? (layer.element as any)?.visibility,
+              visibility: (layer.element as any)?.visibility ?? layer.visibility,
               tokenValues,
             })
         if (layer.element) {
@@ -85,6 +85,7 @@ export const useLayerStore = defineStore('layerStore', {
       const existing = this.layers.find((l) => l.id === id)
       if (existing) {
         existing.eleType = element.eleType
+        existing.layerName = storedConfig?.layerName
         existing.displayStates = displayStates
         existing.visibility = visibility
         existing.element = markRaw(element)
@@ -94,6 +95,7 @@ export const useLayerStore = defineStore('layerStore', {
 
       const layerElement: LayerElement = {
         id,
+        layerName: storedConfig?.layerName,
         visible: true,
         displayStates,
         visibility,

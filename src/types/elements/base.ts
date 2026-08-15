@@ -8,6 +8,7 @@ import type { DynamicValue } from '@/engine/expression/types'
 export interface BaseElementConfig {
   id: string
   eleType: string
+  layerName?: string
   left: number
   top: number
   originX: TOriginX

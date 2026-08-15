@@ -9,6 +9,12 @@
         <el-input v-model="form.description" type="textarea" :rows="4" :placeholder="t('createDesign.enterDescription')"
           maxlength="200" show-word-limit />
       </el-form-item>
+      <el-form-item :label="t('project.appLanguage')" prop="appLanguage">
+        <el-radio-group v-model="form.appLanguage">
+          <el-radio-button value="en">English</el-radio-button>
+          <el-radio-button value="zh">中文</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
     </el-form>
 
     <template #footer>
@@ -33,10 +39,13 @@ import type { Design } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
 import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
+import { useDesignStore } from '@/stores/designStore'
+import type { AppLanguage } from '@/types/localization'
 
 const router = useRouter()
 const baseStore = useBaseStore()
 const propertiesStore = usePropertiesStore()
+const designStore = useDesignStore()
 const { t } = useI18n()
 
 const dialogVisible = ref<boolean>(false)
@@ -46,11 +55,13 @@ const formRef = ref<FormInstance | null>(null)
 interface CreateDesignForm {
   name: string
   description: string
+  appLanguage: AppLanguage
 }
 
 const form = reactive<CreateDesignForm>({
   name: '',
-  description: ''
+  description: '',
+  appLanguage: 'en',
 })
 
 const rules: FormRules = {
@@ -78,11 +89,17 @@ const handleConfirm = async (): Promise<void> => {
     })
 
     if (response.code === 0 && response.data && response.data.designUid) {
+      const initialized = await designApi.updateDesign({
+        uid: response.data.designUid,
+        configJson: { localization: { appLanguage: form.appLanguage } },
+      } as any)
+      if (initialized.code !== 0) throw new Error(initialized.msg || 'Failed to persist application language')
       ElMessage.success(t('createDesign.createdSuccessfully'))
       // set base info
       baseStore.watchFaceName = form.name
       // reset properties after creating a new design
       propertiesStore.clearProperties()
+      designStore.setAppLanguage(form.appLanguage)
       // navigate to design page
       router.push({
         path: '/design',
@@ -108,6 +125,7 @@ const handleCancel = (): void => {
 const resetForm = (): void => {
   form.name = ''
   form.description = ''
+  form.appLanguage = 'en'
   if (formRef.value) {
     formRef.value.resetFields()
   }

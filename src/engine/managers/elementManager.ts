@@ -24,6 +24,8 @@ import {
   syncWidgetBusinessPosition,
 } from '@/engine/geometry/elementPositionStability'
 import { collectExplicitColorBindings } from '@/engine/services/explicitColorBindingService'
+import { parseExpression } from '@/engine/expression/parser'
+import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -68,7 +70,16 @@ export function applySharedElementPatch(
   patch: Partial<AnyElementConfig> | Record<string, unknown>,
 ): void {
   if (Object.prototype.hasOwnProperty.call(patch, 'visibility')) {
-    ;(element as any).visibility = (patch as any).visibility
+    const visibility = (patch as any).visibility
+    ;(element as any).visibility = visibility?.mode === 'expression' && typeof visibility.expression?.source === 'string'
+      ? {
+          ...visibility,
+          expression: parseExpression(visibility.expression.source, DEFAULT_EXPRESSION_TOKEN_CATALOG),
+        }
+      : visibility
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'layerName')) {
+    ;(element as any).layerName = (patch as any).layerName
   }
 }
 

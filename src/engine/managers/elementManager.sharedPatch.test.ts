@@ -27,4 +27,23 @@ describe('applySharedElementPatch', () => {
 
     expect(element.visibility).toEqual(visibility)
   })
+
+  it('rebuilds a stale visibility AST from its editable source', () => {
+    const element: Record<string, unknown> = {}
+    const staleExpression = parseExpression('(w01) == 1', DEFAULT_EXPRESSION_TOKEN_CATALOG)
+
+    applySharedElementPatch(element, {
+      visibility: {
+        mode: 'expression',
+        expression: { ...staleExpression, source: '(w01) == 10' },
+        fallback: false,
+      },
+    } as any)
+
+    expect(element.visibility).toEqual({
+      mode: 'expression',
+      expression: parseExpression('(w01) == 10', DEFAULT_EXPRESSION_TOKEN_CATALOG),
+      fallback: false,
+    })
+  })
 })

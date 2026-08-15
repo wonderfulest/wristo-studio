@@ -90,9 +90,7 @@ const selectedValues = computed(() => getConnectIqSelectedDataTypeValues(
 ))
 const selectedSet = computed(() => new Set(selectedValues.value))
 
-const labelFor = (option: DataTypeOption) => design.supportsChineseContent
-  ? option.settingsLabel.zhs
-  : option.settingsLabel.eng
+const labelFor = (option: DataTypeOption) => option.settingsLabel.eng
 
 const persist = (next: readonly number[]) => {
   if (design.replaceConnectIqDataTypeExclusions(next)) {

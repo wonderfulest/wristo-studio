@@ -59,7 +59,6 @@ import { Icon } from '@iconify/vue'
 import type { FormInstance } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
@@ -88,7 +87,6 @@ import {
 const baseStore = useBaseStore()
 const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
-const designStore = useDesignStore()
 const dataCatalog = useDataCatalogStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
@@ -202,7 +200,7 @@ const updateDataProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en')
+        const labelText = resolveMetricLabel(canonicalMetric, 'en')
         labelElement.value.set('dataProperty', dataProperty.value)
         labelElement.value.set('goalProperty', null)
         labelElement.value.set('text', labelText)
@@ -210,7 +208,7 @@ const updateDataProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
+        const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
         unitElement.value.set('dataProperty', dataProperty.value)
         unitElement.value.set('goalProperty', null)
         unitElement.value.set('text', unitText)
@@ -254,7 +252,7 @@ const updateGoalProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en')
+        const labelText = resolveMetricLabel(canonicalMetric, 'en')
         labelElement.value.set('goalProperty', goalProperty.value)
         labelElement.value.set('dataProperty', null)
         labelElement.value.set('text', labelText)
@@ -262,7 +260,7 @@ const updateGoalProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
+        const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
         unitElement.value.set('goalProperty', goalProperty.value)
         unitElement.value.set('dataProperty', null)
         unitElement.value.set('text', unitText)
@@ -335,10 +333,10 @@ const fontType = computed(() => {
 
 const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
   const eleType = props.elements[0]?.eleType
-  if (!designStore.supportsChineseContent || !['label', 'unit'].includes(String(eleType ?? ''))) {
+  if (!['label', 'unit'].includes(String(eleType ?? ''))) {
     return undefined
   }
-  return 'zh'
+  return undefined
 })
 
 const updateFontSize = () => {

@@ -215,7 +215,6 @@ export interface GenerateConfigOptions {
   dataNumberFormat?: number
   maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
-  supportsChineseContent?: boolean
   visualThemes?: VisualThemesConfig
   validateBindings?: boolean
   baseElements?: Array<Record<string, any>>
@@ -247,7 +246,7 @@ function restoreVisualThemeBaseFields(
 export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig): Promise<boolean> {
   const dateErrors = await validateDateContentAndFonts(
     config.elements,
-    Boolean(config.supportsChineseContent),
+    false,
   )
   const visualThemeErrors = validateVisualThemes(
     config.visualThemes,
@@ -278,7 +277,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     dataNumberFormat,
     maxFieldLength,
     localization,
-    supportsChineseContent,
     visualThemes,
     connectIqSettingsExcludedDataTypeValues,
     validateBindings = false,
@@ -318,7 +316,6 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     bitmapMode,
     dataNumberFormat: normalizeDataNumberFormatMode(dataNumberFormat),
     maxFieldLength: normalizeMaxFieldLength(maxFieldLength),
-    supportsChineseContent: Boolean(supportsChineseContent),
     connectIqSettingsExcludedDataTypeValues: normalizeConnectIqSettingsExcludedDataTypeValues(
       connectIqSettingsExcludedDataTypeValues,
     ),

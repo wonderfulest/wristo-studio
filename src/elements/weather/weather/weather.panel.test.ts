@@ -11,9 +11,11 @@ vi.mock('opentype.js', () => ({
   parse: vi.fn(),
 }))
 
-vi.mock('@/api/wristo/weather', () => ({
-  getWeatherConditions: vi.fn().mockResolvedValue({ data: [] }),
+const { getWeatherConditions } = vi.hoisted(() => ({
+  getWeatherConditions: vi.fn(),
 }))
+
+vi.mock('@/api/wristo/weather', () => ({ getWeatherConditions }))
 
 vi.mock('@/api/wristo/iconGlyph', () => ({
   getIconGlyphByCode: vi.fn().mockResolvedValue({ data: null }),
@@ -22,6 +24,7 @@ vi.mock('@/api/wristo/iconGlyph', () => ({
 describe('weather settings panel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    getWeatherConditions.mockResolvedValue({ data: [] })
   })
 
   it('opts out of the global icon font strategy', () => {
@@ -48,5 +51,63 @@ describe('weather settings panel', () => {
     })
 
     expect(wrapper.getComponent(FontPicker).props('useGlobalIconFontStrategy')).toBe(false)
+  })
+
+  it('uses the bound MIP asset preview so the icon is centered independently of font metrics', async () => {
+    getWeatherConditions.mockImplementation(async (_fontSlug: string, displayType: string) => ({
+      data: displayType === 'mip' ? [{
+        condition: 'clear_sky',
+        iconUnicode: '101d',
+        asset: { id: 1, iconId: 1, sourceType: 'system', format: 'svg', displayType: 'mip', imageUrl: '/weather/101d.svg' },
+      }] : [],
+    }))
+
+    const wrapper = shallowMount(WeatherPanel, {
+      props: { config: { fontFamily: 'weather-font' }, applyPatch: vi.fn() },
+      global: {
+        stubs: {
+          'font-picker': true,
+          'el-form': { template: '<form><slot /></form>' },
+          'el-form-item': { template: '<div><slot /></div>' },
+          'el-icon': true,
+          'el-button': true,
+          'el-tooltip': { template: '<div><slot /></div>' },
+          'el-tabs': { template: '<div><slot /></div>' },
+          'el-tab-pane': { template: '<div><slot /></div>' },
+          'el-dialog': true,
+        },
+        directives: { loading: {} },
+      },
+    })
+
+    await vi.waitFor(() => expect(wrapper.find('img.mip-weather-preview').exists()).toBe(true))
+    expect(wrapper.get('img.mip-weather-preview').attributes('src')).toBe('/weather/101d.svg')
+  })
+
+  it('optically centers cloud glyph fallbacks with known asymmetric ink bounds', async () => {
+    getWeatherConditions.mockImplementation(async (_fontSlug: string, displayType: string) => ({
+      data: displayType === 'mip' ? [{ condition: 'few_clouds', iconUnicode: '102d' }] : [],
+    }))
+
+    const wrapper = shallowMount(WeatherPanel, {
+      props: { config: { fontFamily: 'weather-font' }, applyPatch: vi.fn() },
+      global: {
+        stubs: {
+          'font-picker': true,
+          'el-form': { template: '<form><slot /></form>' },
+          'el-form-item': { template: '<div><slot /></div>' },
+          'el-icon': true,
+          'el-button': true,
+          'el-tooltip': { template: '<div><slot /></div>' },
+          'el-tabs': { template: '<div><slot /></div>' },
+          'el-tab-pane': { template: '<div><slot /></div>' },
+          'el-dialog': true,
+        },
+        directives: { loading: {} },
+      },
+    })
+
+    await vi.waitFor(() => expect(wrapper.find('.mip-weather-glyph').exists()).toBe(true))
+    expect(wrapper.get('.mip-weather-glyph').attributes('style')).toContain('translateX(0.56em)')
   })
 })

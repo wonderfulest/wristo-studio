@@ -92,7 +92,12 @@
           />
 
           <section v-if="themeColorProperties.length" class="color-section">
-            <h4>{{ t('visualTheme.themeColors') }}</h4>
+            <div class="color-section-header">
+              <h4>{{ t('visualTheme.themeColors') }}</h4>
+              <el-button size="small" plain @click="store.randomizeColors(selectedTheme.id)">
+                {{ t('visualTheme.randomizeColors') }}
+              </el-button>
+            </div>
             <div v-for="[key, property] in themeColorProperties" :key="key" class="color-row">
               <span>{{ property.title || key }}</span>
               <el-color-picker
@@ -333,6 +338,7 @@ const removeTheme = async () => {
 .panel-header,
 .theme-toolbar,
 .editor-actions,
+.color-section-header,
 .color-row {
   display: flex;
   align-items: center;

@@ -1,13 +1,14 @@
 import type { FabricElement } from '@/types/element'
 import type { WeatherElementConfig } from '@/types/elements/data'
 import { weatherSchema } from './weather.schema'
+import { normalizeWeatherIconCode } from './weatherCodes'
 
 export function encodeWeather(element: FabricElement): WeatherElementConfig {
   const anyEl = element as any
   const weatherDisplayType = anyEl.weatherDisplayType as WeatherElementConfig['weatherDisplayType'] | undefined
   const amoledImageUrl = anyEl.amoledImageUrl ?? anyEl.weatherImageUrl ?? anyEl.imageUrl
   const amoledIconUnicode = anyEl.amoledIconUnicode
-  const mipUnicode = anyEl.mipUnicode
+  const mipUnicode = normalizeWeatherIconCode(anyEl.mipUnicode)
   const fontFamily = anyEl.fontFamily
   const fill = anyEl.fill || '#ffffff'
   const fontSize = anyEl.fontSize != null ? Number(anyEl.fontSize) : undefined
@@ -48,7 +49,7 @@ export function decodeWeather(config: WeatherElementConfig): Partial<FabricEleme
     weatherDisplayType: config.weatherDisplayType,
     amoledImageUrl: config.amoledImageUrl,
     amoledIconUnicode: config.amoledIconUnicode,
-    mipUnicode: config.mipUnicode,
+    mipUnicode: normalizeWeatherIconCode(config.mipUnicode),
     fontSize: config.fontSize,
     imageUrl: config.amoledImageUrl ?? config.imageUrl,
     width: config.width,

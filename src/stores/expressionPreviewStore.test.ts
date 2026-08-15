@@ -46,4 +46,28 @@ describe('expression preview visibility', () => {
     expect(layerStore.layers[0].visible).toBe(true)
     expect(set).toHaveBeenLastCalledWith(expect.objectContaining({ visible: true }))
   })
+
+  it('uses the latest element visibility after saving a new expression', () => {
+    const previewStore = useExpressionPreviewStore()
+    const layerStore = useLayerStore()
+    const set = vi.fn()
+    const weatherCodeVisibility = {
+      mode: 'expression' as const,
+      expression: parseExpression('(w01) == 0', DEFAULT_EXPRESSION_TOKEN_CATALOG),
+      fallback: true,
+    }
+    layerStore.addLayer({
+      id: 'weather-image',
+      eleType: 'image',
+      displayStates: { active: true, ambient: true },
+      visibility: { mode: 'literal', value: true },
+      set,
+    } as any)
+    layerStore.layers[0].element.visibility = weatherCodeVisibility
+
+    previewStore.setTokenValue('weather.current.conditionCode', 1)
+
+    expect(layerStore.layers[0].visible).toBe(false)
+    expect(set).toHaveBeenLastCalledWith(expect.objectContaining({ visible: false }))
+  })
 })

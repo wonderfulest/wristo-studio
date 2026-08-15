@@ -14,6 +14,7 @@ export interface ExpressionTokenDefinition {
   nullable: boolean
   unit?: string
   exampleValue: unknown
+  enumValues?: Array<{ value: number; label: string; labelCn?: string }>
   source: 'time' | 'activity' | 'sensor' | 'system' | 'weather' | 'wristo'
   supportedTargets: DynamicTarget[]
   updateFrequency: 'second' | 'minute' | 'event' | 'network'

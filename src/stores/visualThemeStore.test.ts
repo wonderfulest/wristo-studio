@@ -282,6 +282,23 @@ describe('visualThemeStore', () => {
     expect(elements[0].fillProperty).toBe('Accent')
   })
 
+  it('randomizes the complete color set for only the selected theme', () => {
+    const store = useVisualThemeStore()
+    store.enableFromDesign(design)
+    store.syncColorProperties({
+      Background: { type: 'color', title: 'Background', value: '0x050505' },
+      Text: { type: 'color', title: 'Text', value: '0xF5F5F5' },
+    })
+    const night = store.addTheme('Night', ids('night'))
+    const defaultColors = { ...store.requireTheme('default').colors }
+
+    store.randomizeColors(night.id, () => 0.2)
+
+    expect(store.requireTheme('night').colors).not.toEqual(defaultColors)
+    expect(Object.keys(store.requireTheme('night').colors ?? {})).toEqual(['Background', 'Text'])
+    expect(store.requireTheme('default').colors).toEqual(defaultColors)
+  })
+
   it('fills only missing theme values from shared variable bindings', () => {
     const store = useVisualThemeStore()
     store.enableFromDesign(design)

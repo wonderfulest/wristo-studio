@@ -52,12 +52,10 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
-import { useDesignStore } from '@/stores/designStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
-const designStore = useDesignStore()
 const props = defineProps<{
   // 旧通道：直接传入 FabricElement
   element?: any
@@ -74,11 +72,7 @@ const currentModel = computed<any>(() => {
 })
 
 const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
-  const eleType = String(currentModel.value?.eleType ?? props.element?.eleType ?? '')
-  if (!designStore.supportsChineseContent || !['label', 'unit'].includes(eleType)) {
-    return undefined
-  }
-  return 'zh'
+  return undefined
 })
 
 // 统一更新：先校验，再通过 applyPatch 或 elementManager 下发补丁

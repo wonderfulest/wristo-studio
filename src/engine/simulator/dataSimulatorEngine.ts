@@ -242,7 +242,7 @@ export class DataSimulatorEngine {
         rawValue: simulated?.numeric ?? displayValue,
         displayValue,
         providerUnit: simulated?.unit || undefined,
-      }, previewDevice.toContext(resolveDesignContentLanguage(designStore) === 'zh' ? 'zhs' : 'eng'), catalogSnapshot)
+      }, previewDevice.toContext('eng'), catalogSnapshot)
       metricResults.set(cacheKey, result)
       return result
     }

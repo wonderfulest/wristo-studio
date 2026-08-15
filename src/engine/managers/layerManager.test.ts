@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const state = vi.hoisted(() => ({
   canvas: null as any,
   objectsById: new Map<string, any>(),
+  elementConfigs: new Map<string, any>(),
+  setLayers: vi.fn(),
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
@@ -12,19 +14,19 @@ vi.mock('@/stores/canvasStore', () => ({
 vi.mock('@/stores/layerStore', () => ({
   useLayerStore: () => ({
     previewMode: 'active',
-    setLayers: vi.fn(),
+    setLayers: state.setLayers,
   }),
 }))
 
 vi.mock('@/stores/elementDataStore', () => ({
-  useElementDataStore: () => ({ getElementConfig: vi.fn() }),
+  useElementDataStore: () => ({ getElementConfig: (id: string) => state.elementConfigs.get(String(id)) ?? null }),
 }))
 
 vi.mock('@/engine/managers/elementManager', () => ({
   getElementById: (id: string) => state.objectsById.get(String(id)) ?? null,
 }))
 
-import { bringForward, bringToFront, sendBackward, sendToBack } from './layerManager'
+import { bringForward, bringToFront, sendBackward, sendToBack, syncLayersFromCanvas } from './layerManager'
 
 type TestObject = { id: string; eleType: string }
 
@@ -59,6 +61,8 @@ describe('layerManager reorder results', () => {
   beforeEach(() => {
     state.canvas = null
     state.objectsById = new Map()
+    state.elementConfigs = new Map()
+    state.setLayers.mockReset()
   })
 
   it('moves an object to front and reports a repeated move as unchanged', () => {
@@ -82,5 +86,17 @@ describe('layerManager reorder results', () => {
     expect(sendToBack('bottom')).toBe(false)
     expect(sendToBack('top')).toBe(true)
     expect(objects.map((item) => item.id)).toEqual(['global', 'background', 'top', 'bottom', 'middle'])
+  })
+
+  it('restores persisted custom names while syncing layers from canvas', () => {
+    createFixture()
+    state.elementConfigs.set('middle', { layerName: 'Release date' })
+
+    syncLayersFromCanvas()
+
+    const syncedLayers = state.setLayers.mock.calls[0][0]
+    expect(syncedLayers.find((layer: any) => layer.id === 'middle')).toMatchObject({
+      layerName: 'Release date',
+    })
   })
 })

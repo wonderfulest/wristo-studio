@@ -87,6 +87,12 @@ describe('VisualThemeSettings', () => {
     expect(panelSource).not.toContain('store.updateFallbackColor')
   })
 
+  it('offers coordinated randomization only inside a non-empty theme color section', () => {
+    expect(panelSource).toContain("t('visualTheme.randomizeColors')")
+    expect(panelSource).toContain('store.randomizeColors(selectedTheme.id)')
+    expect(panelSource).toMatch(/v-if="themeColorProperties\.length" class="color-section"/)
+  })
+
   it('enables themes with authoritative element snapshots for the background slot', () => {
     expect(panelSource).toContain('store.enableFromDesign(')
     expect(panelSource).toMatch(

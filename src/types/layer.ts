@@ -11,6 +11,7 @@ export type MinimalFabricLike = {
 }
 export interface LayerElement {
   id: string
+  layerName?: string
   visible: boolean
   displayStates: ElementDisplayStates
   visibility?: DynamicValue<boolean>

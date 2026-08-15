@@ -43,6 +43,11 @@
 
       <AppMenuWeatherGroup @add-element="handleAddElement" />
 
+      <el-menu-item index="navigation/tokens" @click="handleOpenTokens">
+        <Icon icon="material-symbols:data-object" />
+        <span>{{ t('tokens.nav') }}</span>
+      </el-menu-item>
+
       <AppMenuHelp
         :on-open-shortcuts="() => shortcutsDialogVisible = true"
         :on-open-academy="handleOpenCreatorAcademy"
@@ -64,6 +69,7 @@
     direction="rtl"
     size="min(760px, 92vw)"
     append-to-body
+    :modal="false"
   >
     <VisualThemeSettings />
   </el-drawer>

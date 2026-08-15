@@ -15,4 +15,14 @@ describe('weather decoder compatibility', () => {
 
     expect(decoded.fontFamily).toBe(weatherSchema.defaultConfig.fontFamily)
   })
+
+  it('replaces a non-weather MIP code with the default weather icon', () => {
+    const decoded = decodeWeather({
+      eleType: 'weather',
+      id: 'invalid-weather-icon',
+      mipUnicode: '0030',
+    } as any)
+
+    expect(decoded.mipUnicode).toBe('101d')
+  })
 })

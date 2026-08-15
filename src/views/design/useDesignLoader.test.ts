@@ -55,11 +55,17 @@ describe('useDesignLoader contract', () => {
   })
 
   it('hydrates exclusions for populated designs and clears them for blank or legacy designs', () => {
-    const populatedStart = loaderSource.indexOf('designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))')
+    const populatedStart = loaderSource.indexOf("designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)")
     const blankStart = loaderSource.indexOf('} else {', loaderSource.indexOf('if (Array.isArray(loadConfig.elements))'))
 
     expect(loaderSource.indexOf('designStore.setConnectIqSettingsExcludedDataTypeValues([])', blankStart)).toBeGreaterThan(blankStart)
     expect(loaderSource.indexOf('designStore.setConnectIqSettingsExcludedDataTypeValues(', populatedStart)).toBeGreaterThan(populatedStart)
     expect(loaderSource).toContain('loadConfig.connectIqSettingsExcludedDataTypeValues')
+  })
+
+  it('loads only the single application-language metadata field', () => {
+    expect(loaderSource).toContain("designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)")
+    expect(loaderSource).not.toContain('supportedLocales')
+    expect(loaderSource).not.toContain('supportsChineseContent')
   })
 })

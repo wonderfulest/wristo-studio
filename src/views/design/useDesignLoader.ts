@@ -284,8 +284,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       await waitCanvasReady()
       if (!isCurrentDesignLoad(generation)) return false
       visualThemeStore.hydrate(loadConfig.visualThemes)
-      designStore.setSupportsChineseContent(false)
-      designStore.setSupportedLocales(['en-US'])
+      designStore.setAppLanguage('en')
       designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
       elementDataStore.clearAll()
@@ -294,23 +293,10 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       return true
     }
 
-    designStore.setSupportsChineseContent(Boolean(loadConfig.supportsChineseContent))
+    designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     designStore.setConnectIqSettingsExcludedDataTypeValues(
       loadConfig.connectIqSettingsExcludedDataTypeValues,
     )
-    if (loadConfig.localization) {
-      const localization = loadConfig.localization as any
-      if (Array.isArray(localization.supportedLocales)) {
-        designStore.setSupportedLocales(localization.supportedLocales)
-      } else {
-        designStore.setSupportedLocales(['en-US'])
-      }
-      if (localization.defaultLocale) {
-        designStore.setDefaultLocale(localization.defaultLocale)
-      }
-    } else {
-      designStore.setSupportedLocales(['en-US'])
-    }
 
     if (loadConfig.properties) {
       const normalizedDataProperties = normalizeDataPropertyConfig(loadConfig, dataCatalogStore.options)

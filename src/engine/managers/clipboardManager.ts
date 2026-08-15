@@ -25,6 +25,10 @@ let clipboardSelectionCenter: { x: number; y: number } | null = null
 // 连续粘贴计数，用于实现 Figma 风格的递增偏移
 let pasteCount = 0
 
+export function hasClipboardSelection(): boolean {
+  return selectionClipboard.length > 0 && clipboardSelectionCenter != null
+}
+
 export function commitPastedSelection(canvas: any, pastedObjects: FabricElement[]): void {
   canvas.discardActiveObject?.()
 

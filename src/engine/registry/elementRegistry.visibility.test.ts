@@ -37,4 +37,23 @@ describe('element registry dynamic visibility', () => {
     expect((encoded as any).visibility).toEqual(visibility)
     expect((decoded as any).visibility).toEqual(visibility)
   })
+
+  it('preserves a custom layer name through the shared encoder', () => {
+    const eleType = 'named-layer-test'
+    registerElement(eleType, {
+      add: () => ({}) as any,
+      encode: (element) => ({
+        id: String(element.id),
+        eleType,
+        left: 0,
+        top: 0,
+        originX: 'center',
+        originY: 'center',
+      }),
+    })
+
+    expect(encodeElementByRegistry({ id: 'snow', eleType, layerName: 'Snow' } as any)).toMatchObject({
+      layerName: 'Snow',
+    })
+  })
 })

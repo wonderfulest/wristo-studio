@@ -59,12 +59,10 @@ import { ElMessage } from 'element-plus'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
-import { useDesignStore } from '@/stores/designStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
-const designStore = useDesignStore()
 
 const props = defineProps<{
   element?: any
@@ -79,7 +77,7 @@ const currentModel = computed<any>(() => {
 })
 
 const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
-  return designStore.supportsChineseContent ? 'zh' : undefined
+  return undefined
 })
 
 const applyUpdate = async (patch: Record<string, any>) => {

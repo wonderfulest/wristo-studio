@@ -52,8 +52,18 @@
                     <span class="layer-icon">
                       <Icon :icon="getElementIcon(layer.eleType)" />
                     </span>
-                    <span class="layer-text">
-                      <span class="layer-name">{{ getLayerTypeLabel(layer.eleType) }}</span>
+                    <span class="layer-text" @dblclick.stop="startRenaming(layer)">
+                      <input
+                        v-if="renamingLayerId === layer.id"
+                        v-model="layerNameDraft"
+                        class="layer-name-input no-drag"
+                        type="text"
+                        @click.stop
+                        @dblclick.stop
+                        @blur="commitLayerName(layer)"
+                        @keydown.enter.prevent="commitLayerName(layer)"
+                        @keydown.esc.prevent="cancelRenaming" />
+                      <span v-else class="layer-name">{{ getLayerDisplayName(layer) }}</span>
                     </span>
                   </div>
                   <div class="layer-actions">
@@ -91,8 +101,18 @@
                 <span class="layer-icon">
                   <Icon :icon="getElementIcon(item.layer.eleType)" />
                 </span>
-                <span class="layer-text">
-                  <span class="layer-name">{{ getLayerTypeLabel(item.layer.eleType) }}</span>
+                <span class="layer-text" @dblclick.stop="startRenaming(item.layer)">
+                  <input
+                    v-if="renamingLayerId === item.layer.id"
+                    v-model="layerNameDraft"
+                    class="layer-name-input no-drag"
+                    type="text"
+                    @click.stop
+                    @dblclick.stop
+                    @blur="commitLayerName(item.layer)"
+                    @keydown.enter.prevent="commitLayerName(item.layer)"
+                    @keydown.esc.prevent="cancelRenaming" />
+                  <span v-else class="layer-name">{{ getLayerDisplayName(item.layer) }}</span>
                 </span>
               </div>
               <div class="layer-actions">
@@ -131,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, watch, computed } from 'vue'
 import { ActiveSelection } from 'fabric'
 import { debounce } from 'lodash-es'
 import emitter from '@/utils/eventBus'
@@ -139,6 +159,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useHistoryStore } from '@/stores/historyStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -151,17 +172,21 @@ import { getDisplayState, type DisplayStateMode } from '@/utils/displayStates'
 import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
 import { toPanelLayers } from './layerPanelOrder'
 import { buildLayerPanelItems, findCollapsedGroupsForLayerIds, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
+import { normalizeLayerName, resolveLayerName } from './layerName'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
+const elementDataStore = useElementDataStore()
 const { t } = useI18n()
 
 const panelLayers = ref<LayerElement[]>([])
 const panelItems = ref<LayerPanelItem[]>([])
 const expandedGroupKeys = ref(new Set<string>())
 const isDraggingLayers = ref(false)
+const renamingLayerId = ref<string | null>(null)
+const layerNameDraft = ref('')
 const layers = computed(() => panelLayers.value)
 const previewMode = computed<DisplayStateMode>({
   get: () => layerStore.previewMode,
@@ -503,6 +528,40 @@ const getLayerTypeLabel = (eleType: string): string => {
   return label === key ? eleType : label
 }
 
+const getLayerDisplayName = (layer: LayerElement): string => {
+  return resolveLayerName(layer.layerName, getLayerTypeLabel(layer.eleType))
+}
+
+const startRenaming = (layer: LayerElement): void => {
+  renamingLayerId.value = String(layer.id)
+  layerNameDraft.value = layer.layerName ?? ''
+  nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>('.layer-name-input')
+    input?.focus()
+    input?.select()
+  })
+}
+
+const cancelRenaming = (): void => {
+  renamingLayerId.value = null
+  layerNameDraft.value = ''
+}
+
+const commitLayerName = (layer: LayerElement): void => {
+  if (renamingLayerId.value !== String(layer.id)) return
+  const layerName = normalizeLayerName(layerNameDraft.value)
+  cancelRenaming()
+  if (layerName === normalizeLayerName(layer.layerName)) return
+
+  layer.layerName = layerName
+  const storedLayer = layerStore.layers.find((item) => item.id === String(layer.id))
+  if (storedLayer) storedLayer.layerName = layerName
+  const element = getElementById(layer.id) ?? layer.element
+  if (element) element.layerName = layerName
+  elementDataStore.patchElement(String(layer.id), { layerName } as any)
+  historyStore.saveState('layer:rename', { captureConfig: true })
+}
+
 const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {
   // locked layers: force gray background
   if (layer.locked) {
@@ -770,6 +829,7 @@ onUnmounted((): void => {
 .layer-text {
   display: flex;
   min-width: 0;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
 }
@@ -798,6 +858,23 @@ onUnmounted((): void => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.layer-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 3px 7px;
+  border: 1px solid var(--studio-primary);
+  border-radius: var(--studio-radius-sm);
+  outline: none;
+  background: #ffffff;
+  color: var(--studio-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: text;
+  box-shadow: 0 0 0 2px var(--studio-focus-ring);
 }
 
 .layer-actions {

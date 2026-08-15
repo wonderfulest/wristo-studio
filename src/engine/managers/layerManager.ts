@@ -57,10 +57,12 @@ export function syncLayersFromCanvas(): void {
 
   const nextLayers: LayerElement[] = userObjects.map((obj) => {
     const id = String(obj.id)
-    const displayStates = normalizeDisplayStates(obj.displayStates ?? (elementDataStore.getElementConfig(id) as any)?.displayStates)
+    const storedConfig = elementDataStore.getElementConfig(id) as any
+    const displayStates = normalizeDisplayStates(obj.displayStates ?? storedConfig?.displayStates)
     obj.displayStates = displayStates
     return {
       id,
+      layerName: storedConfig?.layerName,
       visible: getDisplayState(displayStates, layerStore.previewMode),
       displayStates,
       locked: obj.locked ?? false,
@@ -72,12 +74,14 @@ export function syncLayersFromCanvas(): void {
 
   if (backgroundObj) {
     const bgId = String(backgroundObj.id ?? 'background')
+    const storedConfig = elementDataStore.getElementConfig(bgId) as any
     const locked = Boolean(backgroundObj.locked ?? isDefaultBackgroundElement(backgroundObj))
     const selectable = Boolean(backgroundObj.selectable ?? !locked)
-    const displayStates = normalizeDisplayStates(backgroundObj.displayStates ?? (elementDataStore.getElementConfig(bgId) as any)?.displayStates)
+    const displayStates = normalizeDisplayStates(backgroundObj.displayStates ?? storedConfig?.displayStates)
     backgroundObj.displayStates = displayStates
     nextLayers.unshift({
       id: bgId,
+      layerName: storedConfig?.layerName,
       visible: getDisplayState(displayStates, layerStore.previewMode),
       displayStates,
       locked,

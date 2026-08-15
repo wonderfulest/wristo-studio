@@ -3,7 +3,6 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { useDesignStore } from '@/stores/designStore'
 import type { PropertyType } from '@/types/properties'
 import type { DialProgressMode } from '@/types/settings'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
@@ -160,7 +159,6 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   const eleType = String(element?.eleType ?? '')
   if (!isMetricBindableElement(type, eleType)) return null
   const propertiesStore = usePropertiesStore()
-  const designStore = useDesignStore()
   const metric = propertiesStore.getMetricByOptions(
     type === 'goal'
       ? { goalProperty: propertyKey }
@@ -184,9 +182,9 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
         amoledIconUnicode: iconUnicode || null
       }
     }
-    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en') }
+    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(canonicalMetric, 'en') }
     if (eleType === 'unit') {
-      const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
+      const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
     return { dataProperty: propertyKey, goalProperty: null, text: canonicalMetric.defaultValue }
@@ -207,10 +205,10 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       amoledIconUnicode: iconUnicode || null
     }
   }
-  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en') }
+  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, 'en') }
   if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: canonicalMetric.defaultValue }
   if (eleType === 'unit') {
-    const unitText = resolveMetricUnit(canonicalMetric, designStore.supportsChineseContent ? 'zh' : 'en', catalog)
+    const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }
   }
 

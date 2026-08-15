@@ -68,11 +68,9 @@ import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
-import { useDesignStore } from '@/stores/designStore'
 import {
   getDateContentLanguageForRuntimeLocale,
   getDateFontRequirementLabel,
-  isChineseDateFormatter,
   isDateFormatAllowedByChineseSupport,
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
@@ -86,7 +84,6 @@ const props = defineProps<{
 }>()
 
 const fontStore = useFontStore()
-const designStore = useDesignStore()
 const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
@@ -104,17 +101,14 @@ const originXProxy = computed<string>({
 })
 
 const availableDateFormatOptions = computed(() => DateFormatOptions.filter((option) =>
-  isDateFormatAllowedByChineseSupport(option.value, designStore.supportsChineseContent)
+  isDateFormatAllowedByChineseSupport(option.value, false)
 ))
 
 const getDateFormatOptionLabel = (option: OptionFormat<number>) => {
-  if (designStore.supportsChineseContent && isChineseDateFormatter(option.value)) {
-    return option.zhsLabel || option.label
-  }
   return option.label
 }
 
-const datePreviewLocale = computed(() => designStore.supportsChineseContent ? 'zh' : designStore.defaultLocale)
+const datePreviewLocale = computed(() => 'en-US')
 const currentDateLanguage = computed(() => getDateContentLanguageForRuntimeLocale(currentModel.value.formatter, datePreviewLocale.value))
 const getFontCompatibilityNotice = (fontFamily: string, language = currentDateLanguage.value) => {
   if (!fontFamily) return ''

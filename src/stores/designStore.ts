@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { WatchfaceLocale, WatchfaceLocalizationConfig } from '@/types/localization'
+import { normalizeAppLanguage, type AppLanguage, type WatchfaceLocalizationConfig } from '@/types/localization'
 
 export type WatchShape = 'circle' | 'rectangle'
 
@@ -45,9 +45,7 @@ export const useDesignStore = defineStore('design', {
       centerY: 227,
       shape: 'circle' as WatchShape,
     } as DesignSpec & { centerX: number; centerY: number },
-    defaultLocale: 'en-US' as WatchfaceLocale,
-    supportedLocales: ['en-US'] as WatchfaceLocale[],
-    supportsChineseContent: false,
+    appLanguage: 'en' as AppLanguage,
     connectIqSettingsExcludedDataTypeValues: [] as number[],
   }),
 
@@ -67,23 +65,8 @@ export const useDesignStore = defineStore('design', {
       this.designSpec.centerY = Math.round(nextHeight / 2)
     },
 
-    setSupportedLocales(locales: WatchfaceLocale[]): void {
-      const uniqueLocales = Array.from(new Set(locales))
-      this.supportedLocales = uniqueLocales.length ? uniqueLocales : ['en-US']
-      if (!this.supportedLocales.includes(this.defaultLocale)) {
-        this.defaultLocale = this.supportedLocales[0]
-      }
-    },
-
-    setDefaultLocale(locale: WatchfaceLocale): void {
-      this.defaultLocale = locale
-      if (!this.supportedLocales.includes(locale)) {
-        this.supportedLocales = [locale, ...this.supportedLocales]
-      }
-    },
-
-    setSupportsChineseContent(value: boolean): void {
-      this.supportsChineseContent = Boolean(value)
+    setAppLanguage(value: unknown): void {
+      this.appLanguage = normalizeAppLanguage(value)
     },
 
     setConnectIqSettingsExcludedDataTypeValues(value: unknown): boolean {
@@ -111,8 +94,7 @@ export const useDesignStore = defineStore('design', {
 
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {
       return {
-        defaultLocale: this.defaultLocale,
-        supportedLocales: [...this.supportedLocales],
+        appLanguage: this.appLanguage,
       }
     },
 

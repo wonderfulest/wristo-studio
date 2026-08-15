@@ -42,7 +42,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
 }))
 
 vi.mock('@/stores/designStore', () => ({
-  useDesignStore: () => ({ supportsChineseContent: false, defaultLocale: 'en' }),
+  useDesignStore: () => ({ appLanguage: 'zh' }),
 }))
 
 vi.mock('@/stores/previewDeviceContextStore', () => ({

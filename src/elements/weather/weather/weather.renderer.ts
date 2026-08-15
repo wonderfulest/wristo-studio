@@ -5,6 +5,8 @@ import {
   type FabricObject,
   Image as FabricImage,
   type ImageProps,
+  Rect as FabricRect,
+  type RectProps,
   Text as FabricText,
   type TextProps,
 } from 'fabric'
@@ -16,6 +18,7 @@ import type { WeatherElementConfig } from '@/types/elements/data'
 import { applyControlsToObject } from '@/utils/controlManager'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
+import { getWeatherGlyphHorizontalOffset, normalizeWeatherIconCode } from './weatherCodes'
 
 function getDefaultWeatherImage(): string {
   return 'https://cdn.wristo.io/product/0ead49628f08435497e54594ad08b8f3/original.png'
@@ -170,7 +173,8 @@ export async function createWeather(
   const fontSize = config.fontSize ?? 36
   const fontFamily = config.fontFamily
   const fill = config.fill || '#ffffff'
-  const mipChar = unicodeToChar(config.mipUnicode)
+  const mipUnicode = normalizeWeatherIconCode(config.mipUnicode)
+  const mipChar = unicodeToChar(mipUnicode)
   if (dt === 'amoled' && !imgUrl) imgUrl = getDefaultWeatherImage()
 
   return await new Promise<FabricElement>((resolve, reject) => {
@@ -193,7 +197,7 @@ export async function createWeather(
       g.amoledImageUrl = imgUrl
       g.amoledIconUnicode = config.amoledIconUnicode
       g.weatherImageUrl = imgUrl
-      g.mipUnicode = config.mipUnicode
+      g.mipUnicode = mipUnicode
       g.fontFamily = fontFamily
       g.fill = fill
       g.fontSize = fontSize
@@ -209,10 +213,23 @@ export async function createWeather(
 
     if (dt === 'mip') {
       const glyph = mipChar || '?'
-      const text = new FabricText(glyph, {
+      const glyphBounds = new FabricRect({
         originX: 'center',
         originY: 'center',
         left: 0,
+        top: 0,
+        width: fontSize,
+        height: fontSize,
+        fill: 'rgba(0,0,0,0)',
+        strokeWidth: 0,
+        selectable: false,
+        evented: false,
+      } as RectProps)
+      ;(glyphBounds as any).role = 'glyphBounds'
+      const text = new FabricText(glyph, {
+        originX: 'center',
+        originY: 'center',
+        left: fontSize * getWeatherGlyphHorizontalOffset(mipUnicode),
         top: 0,
         fill,
         fontFamily,
@@ -224,7 +241,7 @@ export async function createWeather(
       } as TextProps)
       ;(text as any).role = 'glyph'
 
-      const group = new FabricGroup([text as unknown as FabricObject], {
+      const group = new FabricGroup([glyphBounds as unknown as FabricObject, text as unknown as FabricObject], {
         left: cx,
         top: cy,
         originX: 'center',
@@ -239,7 +256,7 @@ export async function createWeather(
 
       const g = group as unknown as WeatherGroupLike
       g.weatherDisplayType = 'mip'
-      g.mipUnicode = config.mipUnicode
+      g.mipUnicode = mipUnicode
       g.fontFamily = fontFamily
       g.fill = fill
       g.fontSize = fontSize
@@ -348,7 +365,7 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
   if (config.fontFamily !== undefined) g.fontFamily = config.fontFamily
   if (config.fill !== undefined) g.fill = config.fill
   if (config.fontSize !== undefined) g.fontSize = Number(config.fontSize)
-  if (config.mipUnicode !== undefined) g.mipUnicode = String(config.mipUnicode)
+  if (config.mipUnicode !== undefined) g.mipUnicode = normalizeWeatherIconCode(config.mipUnicode)
   if ((config as any).amoledIconUnicode !== undefined) g.amoledIconUnicode = String((config as any).amoledIconUnicode)
 
   const incomingAmoledUrl = config.amoledImageUrl ?? config.imageUrl
@@ -362,6 +379,7 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
   const children = obj.getObjects() as FabricObject[]
   const imageObj = children.find((c) => (c as any)?.role === 'image') as unknown as FabricImage | undefined
   const glyphObj = children.find((c) => (c as any)?.role === 'glyph') as unknown as FabricText | undefined
+  const glyphBoundsObj = children.find((c) => (c as any)?.role === 'glyphBounds') as unknown as FabricRect | undefined
 
   const ensureAmoledImage = (url: string | undefined) => {
     const resolved = url ? normalizeUrl(String(url)) : undefined
@@ -438,17 +456,39 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
   }
 
   const ensureMipGlyph = () => {
-    const glyph = unicodeToChar(g.mipUnicode) || '?'
+    const glyph = unicodeToChar(normalizeWeatherIconCode(g.mipUnicode))
     const fontFamily = g.fontFamily
     const fill = g.fill || '#ffffff'
     const fontSize = g.fontSize ?? 36
+    const horizontalOffset = fontSize * getWeatherGlyphHorizontalOffset(g.mipUnicode)
+    let bounds = glyphBoundsObj
+    if (!bounds) {
+      bounds = new FabricRect({
+        originX: 'center', originY: 'center', left: 0, top: 0,
+        width: fontSize, height: fontSize, fill: 'rgba(0,0,0,0)', strokeWidth: 0,
+        selectable: false, evented: false,
+      } as RectProps)
+      ;(bounds as any).role = 'glyphBounds'
+      obj.add(bounds as unknown as FabricObject)
+    } else {
+      bounds.set({ width: fontSize, height: fontSize, left: 0, top: 0 } as RectProps)
+    }
+    const relayoutGlyph = (text: FabricText) => {
+      const position = { left: obj.left, top: obj.top }
+      text.initDimensions()
+      text.set({ left: horizontalOffset, top: 0 } as TextProps)
+      obj.triggerLayout({ bubbles: false })
+      obj.set(position as Partial<GroupProps>)
+      text.setCoords?.()
+      obj.setCoords()
+    }
 
     if (!glyphObj) {
       const text = new FabricText(glyph, {
         originX: 'center',
         originY: 'center',
-        left: obj.left ?? 0,
-        top: obj.top ?? 0,
+        left: 0,
+        top: 0,
         fill,
         fontFamily,
         fontSize,
@@ -461,17 +501,14 @@ export function updateWeather(element: FabricElement, config: Partial<WeatherEle
       children.forEach((ch) => obj.remove(ch))
       obj.add(text as unknown as FabricObject)
       obj.set({ hasControls: false, hasBorders: true, lockRotation: true } as unknown as GroupProps)
-      obj.setCoords()
+      relayoutGlyph(text)
       canvas.requestRenderAll()
       return
     }
 
     glyphObj.set({ text: glyph, fontFamily, fill, fontSize } as any)
-    glyphObj.setCoords?.()
-    obj.remove(glyphObj as unknown as FabricObject)
-    obj.add(glyphObj as unknown as FabricObject)
     obj.set({ hasControls: false, hasBorders: true, lockRotation: true } as unknown as GroupProps)
-    obj.setCoords()
+    relayoutGlyph(glyphObj)
     canvas.requestRenderAll()
   }
 

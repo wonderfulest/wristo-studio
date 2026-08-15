@@ -30,6 +30,7 @@
         @pointercancel="handleCanvasPanPointerEnd"
         @lostpointercapture="handleCanvasPanPointerEnd"
         @pointerleave="handleCanvasPanPointerLeave"
+        @contextmenu.prevent="openElementContextMenu"
       >
         <!-- 画布 -->
         <div ref="canvasStageRef" class="canvas-stage" :style="canvasStageStyle">
@@ -59,6 +60,13 @@
       </div>
     </div>
     <EditorSettingsDialog :canvas-ref="canvasRef" />
+    <ElementContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :availability="contextMenu.availability"
+      @action="runContextAction"
+    />
     <!-- 导出面板 -->
     <ExportPanel ref="exportPanelRef" :isDialogVisible="isDialogVisible"
       @update:isDialogVisible="isDialogVisible = $event" />
@@ -86,12 +94,24 @@ import SidePanel from '@/components/panels/SidePanel.vue'
 import ExportPanel from '@/components/panels/ExportPanel.vue'
 import HistoryControls from '@/components/canvas/HistoryControls.vue'
 import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
+import ElementContextMenu from '@/components/canvas/ElementContextMenu.vue'
 import { useDesignStore } from '@/stores/designStore'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { useResizableEditorPanels } from '@/views/design/useResizableEditorPanels'
 import { RULER_OFFSET, useCanvasPan } from '@/views/design/useCanvasPan'
 import { useDesignLoader } from '@/views/design/useDesignLoader'
+import {
+  copySelectedElements,
+  deleteSelectedElements,
+  duplicateSelectedElements,
+  flipSelectedElements,
+  getCurrentElementActionAvailability,
+  moveSelectedElements,
+  pasteElements,
+  roundSelectedElementPositions,
+} from '@/engine/managers/elementContextActions'
+import type { ElementActionAvailability } from '@/engine/managers/elementContextActionModel'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +130,39 @@ const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
 const themeStore = useThemeStore()
 let saveTimer: number | null = null
+const emptyAvailability: ElementActionAvailability = { canCopy: false, canPaste: false, canDelete: false, canBringForward: false, canSendBackward: false, canBringToFront: false, canSendToBack: false, canFlip: false, canRound: false }
+const contextMenu = ref({ visible: false, x: 0, y: 0, availability: emptyAvailability })
+
+const closeContextMenu = (): void => { contextMenu.value.visible = false }
+const openElementContextMenu = (event: MouseEvent): void => {
+  const canvas = baseStore.canvas
+  const target = canvas?.findTarget?.(event as any) as any
+  if (!canvas || !target || target.eleType === 'global' || target.eleType === 'background') {
+    closeContextMenu()
+    return
+  }
+  const selected = canvas.getActiveObjects?.() || []
+  if (!selected.includes(target)) {
+    canvas.discardActiveObject?.()
+    canvas.setActiveObject?.(target)
+    canvas.requestRenderAll?.()
+  }
+  contextMenu.value = { visible: true, x: event.clientX, y: event.clientY, availability: getCurrentElementActionAvailability() }
+}
+
+const runContextAction = (action: string): void => {
+  closeContextMenu()
+  if (action === 'copy') copySelectedElements()
+  else if (action === 'paste') pasteElements()
+  else if (action === 'duplicate') duplicateSelectedElements()
+  else if (action === 'delete') void deleteSelectedElements()
+  else if (action === 'forward' || action === 'backward' || action === 'front' || action === 'back') moveSelectedElements(action)
+  else if (action === 'flip-horizontal') flipSelectedElements('horizontal')
+  else if (action === 'flip-vertical') flipSelectedElements('vertical')
+  else if (action === 'round') roundSelectedElementPositions()
+}
+
+const closeContextMenuOnEscape = (event: KeyboardEvent): void => { if (event.key === 'Escape') closeContextMenu() }
 
 const {
   leftPanelWidth,
@@ -167,7 +220,7 @@ watch(
     userStore.userInfo?.device?.partNumber,
     userStore.userInfo?.device?.resolutionWidth,
     userStore.userInfo?.device?.resolutionHeight,
-    designStore.defaultLocale,
+    designStore.appLanguage,
   ],
   () => {
     syncDesignSizeFromSelectedDevice()
@@ -243,6 +296,9 @@ onMounted(() => {
 
   // 添加 App Properties 快捷键
   document.addEventListener('keydown', handleAppPropertiesShortcut)
+  document.addEventListener('keydown', closeContextMenuOnEscape)
+  document.addEventListener('pointerdown', closeContextMenu)
+  window.addEventListener('scroll', closeContextMenu, true)
 
   exportStore.setExportPanelRef(exportPanelRef.value as any)
   baseStore.setInCanvasWorkarea(true)
@@ -262,6 +318,9 @@ onBeforeUnmount(() => {
   }
   // 移除快捷键事件监听
   document.removeEventListener('keydown', handleAppPropertiesShortcut)
+  document.removeEventListener('keydown', closeContextMenuOnEscape)
+  document.removeEventListener('pointerdown', closeContextMenu)
+  window.removeEventListener('scroll', closeContextMenu, true)
   baseStore.setInCanvasWorkarea(false)
 })
 

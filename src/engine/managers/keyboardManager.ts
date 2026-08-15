@@ -2,6 +2,12 @@ import Mousetrap from 'mousetrap'
 import emitter from '@/utils/eventBus'
 import { nudgeSelection, changeSelectionFontSize } from '@/engine/managers/elementManager'
 import { copySelection, pasteSelection } from '@/engine/managers/clipboardManager'
+import {
+  deleteSelectedElements,
+  duplicateSelectedElements,
+  flipSelectedElements,
+  moveSelectedElements,
+} from '@/engine/managers/elementContextActions'
 
 // 记录 Mousetrap 原始 stopCallback，便于还原
 let originalStop: ((e: KeyboardEvent, element: Element, combo: string) => boolean) | null = null
@@ -116,6 +122,21 @@ export function attachKeyboardShortcuts({ isInEditor }: KeyboardManagerDeps): vo
     }
   })
 
+  Mousetrap.bind(['command+d', 'ctrl+d'], () => {
+    if (isInEditor()) duplicateSelectedElements()
+    return false as unknown as void
+  })
+  Mousetrap.bind(['del', 'backspace'], () => {
+    if (isInEditor()) void deleteSelectedElements()
+    return false as unknown as void
+  })
+  Mousetrap.bind('alt+up', () => { if (isInEditor()) moveSelectedElements('forward') })
+  Mousetrap.bind('alt+down', () => { if (isInEditor()) moveSelectedElements('backward') })
+  Mousetrap.bind('alt+shift+up', () => { if (isInEditor()) moveSelectedElements('front') })
+  Mousetrap.bind('alt+shift+down', () => { if (isInEditor()) moveSelectedElements('back') })
+  Mousetrap.bind('shift+h', () => { if (isInEditor()) flipSelectedElements('horizontal') })
+  Mousetrap.bind('shift+v', () => { if (isInEditor()) flipSelectedElements('vertical') })
+
   // 撤销 / 重做，通过事件总线通知画布
   Mousetrap.bind(['command+z', 'ctrl+z'], (e?: KeyboardEvent) => {
     if (isInEditor()) {
@@ -166,6 +187,16 @@ export function detachKeyboardShortcuts(): void {
     'ctrl+c',
     'command+v',
     'ctrl+v',
+    'command+d',
+    'ctrl+d',
+    'del',
+    'backspace',
+    'alt+up',
+    'alt+down',
+    'alt+shift+up',
+    'alt+shift+down',
+    'shift+h',
+    'shift+v',
     'command+z',
     'ctrl+z',
     'shift+command+z',
