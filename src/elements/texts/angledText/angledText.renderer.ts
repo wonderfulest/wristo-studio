@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 export function createAngledText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
@@ -18,22 +19,19 @@ export function createAngledText(config: TextElementConfig): FabricElement {
   }
 
   const propertyKey = typeof (config as any).textProperty === 'string' ? (config as any).textProperty : ''
-  const propertyValue = propertyKey
-    ? propertiesStore?.allProperties?.[propertyKey]?.value
-    : undefined
-  const textTemplate =
-    (typeof propertyValue === 'string' && propertyValue !== ''
-      ? propertyValue
-      : ((config as any).textTemplate as string)) || 'Angled Text'
+  const propertyValue = propertyKey ? propertiesStore?.allProperties?.[propertyKey]?.value : undefined
+  const textTemplate = (typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : ((config as any).textTemplate as string)) || 'Angled Text'
 
-  const element = new FabricText(resolveDataTextTemplate(textTemplate) || 'Angled Text', {
+  const resolvedText = resolveDataTextTemplate(textTemplate) || 'Angled Text'
+  const previewFont = resolveCurrentElementPreviewFont(config, resolvedText)
+  const element = new FabricText(resolvedText, {
     id: config.id || nanoid(),
     eleType: 'angledText',
     left: config.left,
     top: config.top,
-    fontSize: Number(config.fontSize) || 36,
+    fontSize: Number(previewFont.fontSize) || 36,
     fill: config.fill || '#FFFFFF',
-    fontFamily: config.fontFamily,
+    fontFamily: previewFont.fontFamily,
     selectable: true,
     hasControls: true,
     hasBorders: true,
@@ -41,8 +39,9 @@ export function createAngledText(config: TextElementConfig): FabricElement {
     originY: config.originY || 'center',
     angle: typeof (config as any).angle === 'number' ? (config as any).angle : -45,
     textTemplate,
-    textProperty: (config as any).textProperty,
+    textProperty: (config as any).textProperty
   } as any)
+  applyCurrentElementPreviewFont(element, config, resolvedText)
 
   canvas.add(element as any)
   ;(element as any).elementId = (element as any).id
@@ -53,10 +52,7 @@ export function createAngledText(config: TextElementConfig): FabricElement {
   return element as FabricElement
 }
 
-export function updateAngledText(
-  element: FabricElement,
-  patch: Partial<TextElementConfig> & { angle?: number; textTemplate?: string },
-): void {
+export function updateAngledText(element: FabricElement, patch: Partial<TextElementConfig> & { angle?: number; textTemplate?: string }): void {
   const anyEl = element as any
 
   if (patch.left != null) anyEl.set('left', patch.left)
@@ -71,6 +67,16 @@ export function updateAngledText(
     anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
   }
   if ((patch as any).angle != null) anyEl.set('angle', (patch as any).angle)
+
+  applyCurrentElementPreviewFont(
+    anyEl,
+    {
+      fontFamily: anyEl.fontFamily,
+      fontSize: anyEl.fontSize,
+      fill: patch.fill
+    },
+    anyEl.text
+  )
 
   anyEl.setCoords?.()
   anyEl.canvas?.renderAll()

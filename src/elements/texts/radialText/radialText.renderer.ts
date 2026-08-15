@@ -5,6 +5,7 @@ import type { TextElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 export function createRadialText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
@@ -23,29 +24,26 @@ export function createRadialText(config: TextElementConfig): FabricElement {
   const directionFlag = (config as any).direction === 'counterClockwise' ? -1 : 1
 
   const propertyKey = typeof (config as any).textProperty === 'string' ? (config as any).textProperty : ''
-  const propertyValue = propertyKey
-    ? propertiesStore?.allProperties?.[propertyKey]?.value
-    : undefined
-  const textTemplate =
-    (typeof propertyValue === 'string' && propertyValue !== ''
-      ? propertyValue
-      : (config as any).textTemplate) || 'Radial Text'
+  const propertyValue = propertyKey ? propertiesStore?.allProperties?.[propertyKey]?.value : undefined
+  const textTemplate = (typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : (config as any).textTemplate) || 'Radial Text'
+  const previewFont = resolveCurrentElementPreviewFont(config, textTemplate)
 
   const radial = new FabricRadialText({
     text: textTemplate,
     cx,
     cy,
     radius,
-    fontSize: Number(config.fontSize),
-    fontFamily: config.fontFamily,
+    fontSize: Number(previewFont.fontSize),
+    fontFamily: String(previewFont.fontFamily),
     startAngle: angle,
     direction: directionFlag,
     inner: false,
     charSpacing: 0,
-    fill: config.fill,
+    fill: config.fill
   })
 
   const element = radial.render() as any
+  applyCurrentElementPreviewFont(element, config, textTemplate)
 
   element.id = config.id || nanoid()
   element.eleType = 'radialText'
@@ -55,9 +53,9 @@ export function createRadialText(config: TextElementConfig): FabricElement {
   element.direction = (config as any).direction || 'clockwise'
   element.justification = (config as any).justification || 'center'
 
-  element.fill = config.fill
-  element.fontFamily = config.fontFamily
-  element.fontSize = config.fontSize
+  element.fill = config.fill as any
+  element.fontFamily = previewFont.fontFamily
+  element.fontSize = previewFont.fontSize
   element.textTemplate = textTemplate
   element.text = textTemplate
   if ((config as any).textProperty) {
@@ -80,7 +78,7 @@ export function updateRadialText(
     radius?: number
     direction?: string
     justification?: string
-  },
+  }
 ): void {
   const anyEl = element as any
 
@@ -107,6 +105,16 @@ export function updateRadialText(
       anyEl.text = textTemplate
     }
   }
+
+  applyCurrentElementPreviewFont(
+    anyEl,
+    {
+      fontFamily: anyEl.fontFamily,
+      fontSize: anyEl.fontSize,
+      fill: patch.fill
+    },
+    anyEl.text
+  )
 
   if (typeof anyEl.updateRadialLayout === 'function') {
     anyEl.updateRadialLayout()

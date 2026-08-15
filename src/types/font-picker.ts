@@ -16,6 +16,7 @@ export type FontItem = {
   favoriteWeight?: number | null
   language?: string
   type?: string
+  bitmapRecipe?: import('@/features/bitmap-font-maker/contracts').BitmapFontRecipe | string | null
 }
 
 export type Section = {

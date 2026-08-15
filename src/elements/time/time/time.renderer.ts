@@ -11,7 +11,8 @@ import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wrist
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
 
 type TimeElementOptions = TimeElementConfig & TextProps
@@ -207,7 +208,6 @@ export async function createTime(
       fill: config.fill ?? '#ffffff',
       fontSize: Number(previewFont.fontSize),
       fontFamily: String(previewFont.fontFamily ?? 'roboto-condensed-regular'),
-      ...previewFont,
       formatter: config.formatter,
       fontRenderType: config.fontRenderType ?? 'truetype',
       bitmapFontId: config.bitmapFontId ?? null,
@@ -219,6 +219,7 @@ export async function createTime(
     }
 
     const element = new FabricText(text, timeOptions as TimeElementOptions)
+    applyCurrentElementPreviewFont(element, config, text)
     assertElementRenderCurrent(renderContext)
     canvas.add(element as FabricText)
     layerStore.addLayer(element as any)
@@ -231,7 +232,7 @@ export async function createTime(
       top: (element as any).top,
       originX: (element as any).originX,
       originY: (element as any).originY,
-      fill: (element as any).fill,
+      fill: savedTextStyle(element).fill,
       ...getPersistedTextFont(config, element),
       formatter: config.formatter,
       fontRenderType: (element as any).fontRenderType,
@@ -272,7 +273,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
       top: target.top,
       originX: target.originX,
       originY: target.originY,
-      fill: target.fill,
+      fill: savedTextStyle(target).fill,
       fontSize: target.fontSize,
       fontFamily: target.fontFamily,
       formatter: target.formatter,
@@ -310,6 +311,11 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
       }
 
       const newText: any = new FabricText(text, timeOptions as TimeElementOptions)
+      applyCurrentElementPreviewFont(newText, {
+        fontFamily: timeOptions.fontFamily,
+        fontSize: timeOptions.fontSize,
+        fill: timeOptions.fill,
+      }, text)
       newText.id = (timeOptions as any).id
       newText.eleType = 'time'
       newText.fontRenderType = 'truetype'
@@ -516,6 +522,13 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
       ;(obj as any).set(updateProps)
     } else {
       Object.assign(obj as any, updateProps)
+    }
+    if (!isGroup) {
+      applyCurrentElementPreviewFont(obj, {
+        fontFamily: (obj as any).fontFamily,
+        fontSize: (obj as any).fontSize,
+        fill: config.fill,
+      }, (obj as any).text)
     }
     obj.setCoords?.()
     canvas.renderAll?.()

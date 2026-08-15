@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeAngledText(element: FabricElement): TextElementConfig {
   if (!element) {
@@ -7,12 +8,7 @@ export function encodeAngledText(element: FabricElement): TextElementConfig {
   }
 
   const anyEl = element as any
-  const textTemplate: string =
-    typeof anyEl.textTemplate === 'string'
-      ? anyEl.textTemplate
-      : typeof anyEl.text === 'string'
-        ? anyEl.text
-        : ''
+  const textTemplate: string = typeof anyEl.textTemplate === 'string' ? anyEl.textTemplate : typeof anyEl.text === 'string' ? anyEl.text : ''
 
   const config: TextElementConfig = {
     id: anyEl.id ?? '',
@@ -21,14 +17,14 @@ export function encodeAngledText(element: FabricElement): TextElementConfig {
     top: typeof anyEl.top === 'number' ? anyEl.top : 0,
     originX: anyEl.originX ?? 'center',
     originY: anyEl.originY ?? 'center',
-    fill: anyEl.fill || '#FFFFFF',
+    fill: (savedTextStyle(anyEl).fill as string) || '#FFFFFF',
     fontFamily: anyEl.fontFamily || '',
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 36,
     textTemplate,
     localizedText: anyEl.localizedText,
     localization: anyEl.localization,
     textProperty: anyEl.textProperty,
-    angle: typeof anyEl.angle === 'number' ? anyEl.angle : -45,
+    angle: typeof anyEl.angle === 'number' ? anyEl.angle : -45
   }
 
   return config
@@ -52,7 +48,7 @@ export function decodeAngledText(config: TextElementConfig): Partial<FabricEleme
     localization: config.localization,
     textProperty: (config as any).textProperty,
     text: textTemplate,
-    angle: typeof (config as any).angle === 'number' ? (config as any).angle : -45,
+    angle: typeof (config as any).angle === 'number' ? (config as any).angle : -45
   } as any
 
   return element

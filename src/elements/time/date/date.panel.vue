@@ -67,6 +67,7 @@ import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 import { getFontBySlug } from '@/api/wristo/fonts'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import { useDesignStore } from '@/stores/designStore'
 import {
   getDateContentLanguageForRuntimeLocale,
@@ -146,7 +147,7 @@ const findKnownFont = (slug: string): (FontItem | DesignFontVO) | null => {
   ]
   const local = allFonts.find((font) => font.value === slug)
   if (local) return local
-  return fontStore.serverFonts.get(slug) || null
+  return fontStore.serverFonts.get(canonicalFontSlug(slug)) || null
 }
 
 const loadFontMetadata = async (slug: string): Promise<FontItem | DesignFontVO | null> => {
@@ -155,7 +156,7 @@ const loadFontMetadata = async (slug: string): Promise<FontItem | DesignFontVO |
   try {
     const res = await getFontBySlug(slug)
     if (res.data) {
-      fontStore.serverFonts.set(slug, res.data)
+      fontStore.serverFonts.set(canonicalFontSlug(slug), res.data)
       return res.data
     }
   } catch {}

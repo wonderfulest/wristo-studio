@@ -7,7 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 // import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { usePropertiesStore } from '@/stores/properties'
-import { resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 export function createText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
@@ -20,13 +20,8 @@ export function createText(config: TextElementConfig): FabricElement {
   }
 
   const propertyKey = typeof config.textProperty === 'string' ? config.textProperty : ''
-  const propertyValue = propertyKey
-    ? propertiesStore?.allProperties?.[propertyKey]?.value
-    : undefined
-  const template =
-    (typeof propertyValue === 'string' && propertyValue !== ''
-      ? propertyValue
-      : config.textTemplate ?? '') || 'New Text'
+  const propertyValue = propertyKey ? propertiesStore?.allProperties?.[propertyKey]?.value : undefined
+  const template = (typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : (config.textTemplate ?? '')) || 'New Text'
 
   const resolvedText = resolveDataTextTemplate(template)
   const previewFont = resolveCurrentElementPreviewFont(config, resolvedText)
@@ -39,15 +34,15 @@ export function createText(config: TextElementConfig): FabricElement {
     fontSize: Number(previewFont.fontSize) || 36,
     fill: config.fill || '#FFFFFF',
     fontFamily: previewFont.fontFamily,
-    ...previewFont,
     selectable: true,
     hasControls: false,
     hasBorders: true,
     originX: config.originX || 'center',
     originY: config.originY || 'center',
     textProperty: config.textProperty,
-    textTemplate: template,
+    textTemplate: template
   } as any)
+  applyCurrentElementPreviewFont(element, config, resolvedText)
 
   canvas.add(element as any)
   ;(element as any).elementId = (element as any).id
@@ -76,6 +71,16 @@ export function updateText(element: FabricElement, patch: Partial<TextElementCon
     anyEl.textTemplate = patch.textTemplate
     anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
   }
+
+  applyCurrentElementPreviewFont(
+    anyEl,
+    {
+      fontFamily: anyEl.fontFamily,
+      fontSize: anyEl.fontSize,
+      fill: patch.fill
+    },
+    anyEl.text
+  )
 
   anyEl.setCoords?.()
   canvas.renderAll()

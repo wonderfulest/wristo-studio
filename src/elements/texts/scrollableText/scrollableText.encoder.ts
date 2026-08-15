@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeScrollableText(element: FabricElement): TextElementConfig {
   const anyEl = element as any
@@ -13,29 +14,18 @@ export function encodeScrollableText(element: FabricElement): TextElementConfig 
     top: typeof element.top === 'number' ? element.top : 0,
     originX: anyEl.originX ?? 'center',
     originY: anyEl.originY ?? 'center',
-    fill: anyEl.fill ?? '#FFFFFF',
+    fill: (savedTextStyle(anyEl).fill as string) ?? '#FFFFFF',
     fontFamily: anyEl.fontFamily ?? '',
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 18,
     scrollAreaWidth: typeof anyEl.scrollAreaWidth === 'number' ? anyEl.scrollAreaWidth : 454,
-    scrollAreaLeft:
-      typeof anyEl.scrollAreaLeft === 'number'
-        ? anyEl.scrollAreaLeft
-        : (typeof element.left === 'number' ? element.left : 227),
-    scrollAreaTop:
-      typeof anyEl.scrollAreaTop === 'number'
-        ? anyEl.scrollAreaTop
-        : (typeof element.top === 'number' ? element.top : 0),
+    scrollAreaLeft: typeof anyEl.scrollAreaLeft === 'number' ? anyEl.scrollAreaLeft : typeof element.left === 'number' ? element.left : 227,
+    scrollAreaTop: typeof anyEl.scrollAreaTop === 'number' ? anyEl.scrollAreaTop : typeof element.top === 'number' ? element.top : 0,
     scrollAreaBackground: anyEl.scrollAreaBackground,
     textProperty: anyEl.textProperty,
     localizedText: anyEl.localizedText,
     localization: anyEl.localization,
-    textTemplate:
-      typeof anyEl.textTemplate === 'string'
-        ? anyEl.textTemplate
-        : typeof anyEl.text === 'string'
-          ? anyEl.text
-          : '',
-    topBase: encodeTopBaseForElement(element),
+    textTemplate: typeof anyEl.textTemplate === 'string' ? anyEl.textTemplate : typeof anyEl.text === 'string' ? anyEl.text : '',
+    topBase: encodeTopBaseForElement(element)
   }
 
   return config
@@ -45,8 +35,7 @@ export function decodeScrollableText(config: TextElementConfig): Partial<FabricE
   const propertyValue = '' // propertiesStore 无法在此处直接访问，由调用方传入时已决策
 
   const fallbackTemplate = (config as any).textTemplate ?? ''
-  const baseTemplate =
-    typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : fallbackTemplate
+  const baseTemplate = typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : fallbackTemplate
 
   const textTemplate = baseTemplate ?? ''
   const resolvedText = resolveDataTextTemplate(textTemplate)
@@ -69,7 +58,7 @@ export function decodeScrollableText(config: TextElementConfig): Partial<FabricE
     localizedText: config.localizedText,
     localization: config.localization,
     textTemplate,
-    text: resolvedText,
+    text: resolvedText
   } as any
 
   return element

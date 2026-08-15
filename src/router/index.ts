@@ -119,6 +119,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'fonts/bitmap-maker',
+        name: 'BitmapFontMaker',
+        component: () => import('@/views/fonts/bitmap-maker/BitmapFontMaker.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'number-font-library',
         name: 'NumberFontLibrary',
         component: () => import('@/views/fonts/number/NumberFontLibrary.vue'),

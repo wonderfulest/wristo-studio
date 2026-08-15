@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeDate(element: FabricElement): DateElementConfig {
   const config: DateElementConfig = {
@@ -13,7 +14,7 @@ export function encodeDate(element: FabricElement): DateElementConfig {
     originY: (element.originY as unknown) as any,
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSize: getSavedFontSize(element, 14),
-    fill: (element.fill as string) ?? '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     formatter: Number((element as any).formatter ?? 0),
     topBase: encodeTopBaseForElement(element),
   }

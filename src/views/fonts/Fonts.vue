@@ -1,5 +1,8 @@
 <template>
   <div class="fonts-preview">
+    <div class="font-library-actions">
+      <BitmapFontMakerEntry />
+    </div>
     <!-- 搜索栏 -->
     <FontsSearchPanel
       v-model:search-query="searchQuery"
@@ -156,6 +159,7 @@ import { getEnumOptions, type EnumOption } from '@/api/common'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
+import BitmapFontMakerEntry from './bitmap-maker/BitmapFontMakerEntry.vue'
 
 const { t } = useI18n()
 
@@ -462,6 +466,12 @@ onMounted(() => {
   background:
     linear-gradient(180deg, rgba(15, 107, 104, 0.04), transparent 280px),
     var(--studio-bg);
+}
+
+.font-library-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .search-panel {

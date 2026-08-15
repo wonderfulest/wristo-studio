@@ -3,15 +3,11 @@ import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeText(element: FabricElement): TextElementConfig {
   const fabricAny = element as any
-  const textTemplate: string =
-    typeof fabricAny.textTemplate === 'string'
-      ? fabricAny.textTemplate
-      : typeof fabricAny.text === 'string'
-        ? fabricAny.text
-        : ''
+  const textTemplate: string = typeof fabricAny.textTemplate === 'string' ? fabricAny.textTemplate : typeof fabricAny.text === 'string' ? fabricAny.text : ''
 
   return {
     id: fabricAny.id ?? '',
@@ -20,14 +16,14 @@ export function encodeText(element: FabricElement): TextElementConfig {
     top: typeof element.top === 'number' ? element.top : 0,
     originX: (element as any).originX ?? 'center',
     originY: 'center',
-    fill: (element as any).fill ?? '#FFFFFF',
+    fill: (savedTextStyle(fabricAny).fill as string) ?? '#FFFFFF',
     fontFamily: getSavedFontFamily(fabricAny),
     fontSize: getSavedFontSize(fabricAny, 18),
     textProperty: fabricAny.textProperty,
     textTemplate,
     localizedText: fabricAny.localizedText,
     localization: fabricAny.localization,
-    topBase: encodeTopBaseForElement(element),
+    topBase: encodeTopBaseForElement(element)
   }
 }
 
@@ -49,7 +45,7 @@ export function decodeText(config: TextElementConfig): Partial<FabricElement> {
     textTemplate,
     localizedText: config.localizedText,
     localization: config.localization,
-    text: resolvedText,
+    text: resolvedText
   } as any
 
   return element

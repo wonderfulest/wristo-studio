@@ -2,6 +2,7 @@ import type { FabricElement } from '@/types/element'
 import type { UnitElementConfig } from '@/types/elements/data'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { getSavedFontFamily, getSavedFontSize } from '@/utils/systemFontElement'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeUnit(element: FabricElement): UnitElementConfig {
   if (!element) throw new Error('Invalid element')
@@ -13,10 +14,7 @@ export function encodeUnit(element: FabricElement): UnitElementConfig {
     top: Math.round(element.top),
     originX: (element.originX as any) ?? 'center',
     originY: (element.originY as any) ?? 'center',
-    fill:
-      typeof (element as any).fill === 'string'
-        ? ((element as any).fill as string)
-        : '#ffffff',
+    fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     fontSize: getSavedFontSize(element, 14),
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     dataProperty: (element as any).dataProperty ?? undefined,
