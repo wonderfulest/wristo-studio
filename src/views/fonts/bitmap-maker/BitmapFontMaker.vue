@@ -57,8 +57,13 @@
           <label class="field-label">{{ t('bitmapMaker.fullName') }}<input v-model.trim="metadata.fullName" type="text" :disabled="actionsLocked" /></label>
           <label class="field-label">{{ t('bitmapMaker.slug') }}<input ref="slugInput" v-model.trim="metadata.slug" type="text" :disabled="actionsLocked" :class="{ invalid: slugConflict }" @input="slugConflict = false" /></label>
           <p v-if="slugConflict" class="validation-error" role="alert">{{ t('bitmapMaker.slugConflict') }}</p>
-          <label class="field-label">{{ t('bitmapMaker.styleTags') }}<input v-model.trim="metadata.styleTags" type="text" :disabled="actionsLocked" :placeholder="t('bitmapMaker.tagsPlaceholder')" /></label>
+          <label class="field-label">{{ t('bitmapMaker.styleTags') }}<input v-model="styleTagsInput" type="text" :disabled="actionsLocked" :placeholder="t('bitmapMaker.tagsPlaceholder')" /></label>
           <label class="field-label">{{ t('bitmapMaker.keywords') }}<input v-model.trim="metadata.searchKeywords" type="text" :disabled="actionsLocked" /></label>
+          <label class="rights-attestation">
+            <input v-model="metadata.redistributionRightsAttested" data-test="rights-attestation" type="checkbox" :disabled="actionsLocked" aria-describedby="bitmap-rights-help" />
+            <span>{{ t('bitmapMaker.rightsAttestation') }}</span>
+          </label>
+          <p id="bitmap-rights-help" class="field-help">{{ t('bitmapMaker.rightsAttestationHelp') }}</p>
         </article>
       </section>
 
@@ -135,7 +140,8 @@ const missingGlyphs = ref<number[]>([])
 const fontType = ref<BitmapFontType>('number_font')
 const sourceRevision = ref(0)
 const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true })
-const metadata = reactive<BitmapFontPublishMetadata>({ fullName: '', slug: '', type: 'number_font', language: 'en', styleTags: '', searchKeywords: '' })
+const metadata = reactive<BitmapFontPublishMetadata>({ fullName: '', slug: '', type: 'number_font', language: 'en', styleTags: [], searchKeywords: '', redistributionRightsAttested: false, rightsAttestationVersion: 'v1' })
+const styleTagsInput = ref('')
 const buildRunning = ref(false)
 const buildProgress = reactive({ completed: 0, size: 0, total: 38 })
 const builtRasterKey = ref('')
@@ -161,10 +167,12 @@ const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]
 const sourceValid = computed(() => !!sourceFile.value && !!sourceParsed.value && !sourceError.value && missingGlyphs.value.length === 0)
 const recipeValid = computed(() => !(recipe.outlineMode === 'outline-only' && recipe.outlineWidthEm <= 0))
 const slugValid = computed(() => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(metadata.slug))
-const metadataValid = computed(() => metadata.fullName.length > 0 && slugValid.value)
+const normalizedStyleTags = computed(() => [...new Set(styleTagsInput.value.split(',').map(tag => tag.trim()).filter(Boolean))])
+const styleTagsValid = computed(() => normalizedStyleTags.value.length <= 16 && normalizedStyleTags.value.every(tag => tag.length <= 32) && normalizedStyleTags.value.join(',').length <= 512)
+const metadataValid = computed(() => metadata.fullName.length > 0 && slugValid.value && styleTagsValid.value)
 const rasterKey = computed(() => JSON.stringify({ source: sourceRevision.value, type: fontType.value, recipe: { ...recipe } }))
 const buildFresh = computed(() => !!buildArtifact.value && builtRasterKey.value === rasterKey.value && localValidationPassed.value)
-const canPublish = computed(() => sourceValid.value && recipeValid.value && buildFresh.value && localValidationPassed.value && metadataValid.value && !buildRunning.value && !publishing.value && !downloading.value)
+const canPublish = computed(() => sourceValid.value && recipeValid.value && buildFresh.value && localValidationPassed.value && metadataValid.value && metadata.redistributionRightsAttested && !buildRunning.value && !publishing.value && !downloading.value)
 const actionsLocked = computed(() => buildRunning.value || downloading.value || publishing.value)
 const canBuild = computed(() => !actionsLocked.value && sourceValid.value && recipeValid.value)
 const canDownload = computed(() => !actionsLocked.value && buildFresh.value && slugValid.value)
@@ -176,7 +184,7 @@ const previewTextStyle = computed(() => ({ fontWeight: recipe.fontWeight, fontSt
 const buildStateLabel = computed(() => buildRunning.value ? t('bitmapMaker.building') : buildFresh.value ? t('bitmapMaker.ready') : buildArtifact.value ? t('bitmapMaker.stale') : t('bitmapMaker.notBuilt'))
 const buildActionDescription = computed(() => actionsLocked.value ? t('common.processing') : !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
 const downloadActionDescription = computed(() => downloading.value ? t('bitmapMaker.preparingCurrentSlug') : actionsLocked.value ? t('common.processing') : !buildFresh.value ? t('bitmapMaker.downloadBuildRequired') : !slugValid.value ? t('bitmapMaker.downloadSlugRequired') : t('bitmapMaker.downloadReady'))
-const publishActionDescription = computed(() => actionsLocked.value ? t('common.processing') : packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : t('bitmapMaker.publishReady'))
+const publishActionDescription = computed(() => actionsLocked.value ? t('common.processing') : packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : !metadata.redistributionRightsAttested ? t('bitmapMaker.rightsRequired') : t('bitmapMaker.publishReady'))
 
 function invalidateBuild() {
   localValidationPassed.value = false
@@ -309,7 +317,7 @@ async function loadAtlasPreview() {
 function captureOperationSnapshot() {
   if (!buildArtifact.value || !sourceFile.value) throw new Error('PACKAGE_MISSING')
   const recipeSnapshot = normalizeBitmapFontRecipe(JSON.parse(JSON.stringify(recipe)))
-  const metadataSnapshot = { ...metadata, type: fontType.value }
+  const metadataSnapshot = { ...metadata, type: fontType.value, styleTags: normalizedStyleTags.value }
   return {
     sourceFile: sourceFile.value,
     sourceRevision: sourceRevision.value,
@@ -327,7 +335,7 @@ function operationIsCurrent(snapshot: ReturnType<typeof captureOperationSnapshot
     && sourceRevision.value === snapshot.sourceRevision
     && rasterKey.value === snapshot.rasterKey
     && buildArtifact.value === snapshot.artifact
-    && JSON.stringify({ ...metadata, type: fontType.value }) === snapshot.metadataToken
+    && JSON.stringify({ ...metadata, type: fontType.value, styleTags: normalizedStyleTags.value }) === snapshot.metadataToken
 }
 
 async function ensureCurrentArtifact(snapshot: ReturnType<typeof captureOperationSnapshot>) {
@@ -423,7 +431,7 @@ onBeforeUnmount(() => {
   revokeAtlasUrl()
 })
 
-defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, downloading, recipe, metadata, currentSize, atlasUrl, buildProgress, slugConflict, buildError, publishError, downloadError, packageValidationError, loadAtlasPreview, buildPackage, cancelBuild, downloadPackage, publishPackage })
+defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, downloading, recipe, metadata, styleTagsInput, normalizedStyleTags, currentSize, atlasUrl, buildProgress, slugConflict, buildError, publishError, downloadError, packageValidationError, loadAtlasPreview, buildPackage, cancelBuild, downloadPackage, publishPackage })
 </script>
 
 <style scoped>
@@ -434,6 +442,7 @@ defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeVali
 .workbench-grid{display:grid;grid-template-columns:minmax(340px,430px) minmax(520px,1fr);gap:14px;max-width:1500px;margin:auto}.control-stack{display:grid;gap:14px}.panel{border:1px solid var(--studio-border);border-radius:var(--studio-radius-md);background:color-mix(in srgb,var(--studio-surface) 96%,transparent);box-shadow:var(--studio-shadow-sm)}.control-stack .panel{padding:18px}.panel-heading{display:flex;gap:12px;margin-bottom:16px}.panel-heading>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--studio-border);border-radius:50%;color:var(--studio-primary);font:700 10px ui-monospace,monospace}.panel-heading h2,.preview-toolbar h2{margin:0;font-size:15px}.panel-heading p{margin:4px 0 0;color:var(--studio-text-muted);font-size:12px}
 .file-drop{position:relative;display:flex;align-items:center;gap:13px;padding:14px;border:1px dashed var(--studio-border-strong);border-radius:var(--studio-radius-sm);cursor:pointer;background:var(--studio-surface-subtle)}.file-drop:focus-within{outline:2px solid var(--studio-primary);outline-offset:2px}.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}.file-mark{display:grid;place-items:center;width:42px;height:42px;background:#111820;color:#f4f7f8;border-radius:7px;font-family:Georgia,serif;font-size:18px}.file-drop strong,.file-drop small{display:block;overflow:hidden;text-overflow:ellipsis}.file-drop small{margin-top:3px;color:var(--studio-text-muted);font-size:11px}.segmented{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:14px;padding:3px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.segmented input{position:absolute;opacity:0}.segmented span{display:block;padding:8px;text-align:center;border-radius:5px;color:var(--studio-text-muted);font-size:12px;cursor:pointer}.segmented input:checked+span{background:var(--studio-surface);color:var(--studio-text);box-shadow:var(--studio-shadow-sm)}
 .range-row,.field-label{display:grid;gap:7px;margin-top:13px;color:var(--studio-text-muted);font-size:12px}.range-row span{display:flex;justify-content:space-between}.range-row output{font:600 11px ui-monospace,monospace;color:var(--studio-text)}input[type=range]{accent-color:var(--studio-primary)}input[type=text],select{width:100%;box-sizing:border-box;border:1px solid var(--studio-border);border-radius:7px;padding:9px 10px;background:var(--studio-input-bg,var(--studio-surface));color:var(--studio-text)}input.invalid{border-color:var(--studio-danger,#d75b5b)}.validation-error{margin:9px 0 0;color:var(--studio-danger,#d75b5b);font-size:11px;line-height:1.45}
+.rights-attestation{display:flex;align-items:flex-start;gap:9px;margin-top:16px;color:var(--studio-text);font-size:12px;line-height:1.45}.rights-attestation input{margin-top:2px;accent-color:var(--studio-primary)}.field-help{margin:5px 0 0 25px;color:var(--studio-text-muted);font-size:11px;line-height:1.45}
 .preview-stage{display:flex;flex-direction:column;min-height:720px;padding:18px}.preview-toolbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px}.preview-toolbar label{display:flex;align-items:center;gap:8px;color:var(--studio-text-muted);font-size:12px}.preview-toolbar select{width:105px}.atlas-frame{display:grid;place-items:center;min-height:390px;overflow:auto;border:1px solid #303943;border-radius:10px;background-color:#0c1015;background-image:linear-gradient(45deg,#111820 25%,transparent 25%),linear-gradient(-45deg,#111820 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#111820 75%),linear-gradient(-45deg,transparent 75%,#111820 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}.atlas-image-wrap{position:relative;line-height:0}.atlas-image-wrap img{max-width:100%;image-rendering:pixelated}.glyph-overlay{position:absolute;inset:0;width:100%;height:100%}.glyph-overlay rect{fill:none;stroke:rgba(44,217,207,.75);stroke-width:.5}.atlas-empty{text-align:center;color:#44505d}.atlas-empty span{font:56px Georgia,serif;letter-spacing:-.08em}.atlas-empty p{font:12px var(--studio-font-ui);letter-spacing:.04em}
 .device-preview{display:flex;align-items:center;gap:18px;margin-top:14px;padding:14px;border:1px solid var(--studio-border);border-radius:9px;background:var(--studio-surface-subtle)}.watch-ring{display:grid;place-items:center;width:96px;height:96px;flex:0 0 auto;border:8px solid #1a2129;border-radius:50%;background:#070a0d;color:white;box-shadow:inset 0 0 0 1px #46505a}.watch-ring span{font-size:20px}.device-preview strong{font-size:12px}.device-preview p{margin:5px 0 0;color:var(--studio-text-muted);font:11px ui-monospace,monospace}.progress-block{margin-top:14px;font-size:11px}.progress-block div{display:flex;justify-content:space-between}.progress-block progress{width:100%;height:5px;accent-color:var(--studio-primary)}.action-bar{display:flex;justify-content:flex-end;gap:8px;margin-top:auto;padding-top:18px}.button{border:1px solid var(--studio-border);border-radius:7px;padding:10px 14px;background:var(--studio-surface);color:var(--studio-text);font-weight:650;cursor:pointer}.button.primary,.button.publish{border-color:var(--studio-primary);background:var(--studio-primary);color:white}.button.publish{background:#111820;border-color:#111820}.button:disabled{opacity:.42;cursor:not-allowed}
 .action-help{margin-top:8px;text-align:right;color:var(--studio-text-muted);font-size:11px;line-height:1.4}.action-help p{margin:2px 0}

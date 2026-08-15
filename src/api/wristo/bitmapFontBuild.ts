@@ -8,8 +8,10 @@ export interface BitmapFontPublishMetadata {
   slug: string
   type: BitmapFontType
   language: 'en'
-  styleTags: string
+  styleTags: string[]
   searchKeywords: string
+  redistributionRightsAttested: boolean
+  rightsAttestationVersion: 'v1'
 }
 
 export interface BitmapFontPublishInput {
@@ -42,8 +44,13 @@ export const publishBitmapFontBuild = ({
 }
 
 export function isBitmapFontSlugConflict(error: unknown): boolean {
-  const candidate = error as { code?: unknown; response?: { status?: unknown; data?: { code?: unknown } } }
+  const candidate = error as { code?: unknown; data?: { code?: unknown }; response?: { status?: unknown; data?: { code?: unknown; data?: { code?: unknown } } } }
   return candidate?.response?.status === 409
+    || candidate?.code === 411
+    || candidate?.data?.code === 411
+    || candidate?.response?.data?.code === 411
+    || candidate?.response?.data?.data?.code === 411
     || candidate?.code === 'FONT_SLUG_CONFLICT'
+    || candidate?.data?.code === 'FONT_SLUG_CONFLICT'
     || candidate?.response?.data?.code === 'FONT_SLUG_CONFLICT'
 }

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { post } = vi.hoisted(() => ({ post: vi.fn() }))
 vi.mock('@/config/axios', () => ({ default: { post } }))
 
-import { publishBitmapFontBuild } from './bitmapFontBuild'
+import { isBitmapFontSlugConflict, publishBitmapFontBuild } from './bitmapFontBuild'
 
 describe('bitmap font publish client', () => {
   beforeEach(() => post.mockReset())
@@ -14,7 +14,7 @@ describe('bitmap font publish client', () => {
     const packageFile = new File([new Uint8Array([3, 4])], 'precision-numerals.zip', { type: 'application/zip' })
     const manifest = { schemaVersion: 1, slug: 'precision-numerals' } as any
     const recipe = { schemaVersion: 1, rendererVersion: '1' } as any
-    const metadata = { fullName: 'Precision Numerals', slug: 'precision-numerals', type: 'number_font', language: 'en' } as any
+    const metadata = { fullName: 'Precision Numerals', slug: 'precision-numerals', type: 'number_font', language: 'en', styleTags: ['outline', 'sport'], searchKeywords: '', redistributionRightsAttested: true, rightsAttestationVersion: 'v1' } as import('./bitmapFontBuild').BitmapFontPublishMetadata
 
     await publishBitmapFontBuild({ sourceFont, packageFile, manifest, recipe, metadata })
 
@@ -28,5 +28,15 @@ describe('bitmap font publish client', () => {
     await expect((form.get('manifest') as Blob).text()).resolves.toBe(JSON.stringify(manifest))
     await expect((form.get('recipe') as Blob).text()).resolves.toBe(JSON.stringify(recipe))
     await expect((form.get('metadata') as Blob).text()).resolves.toBe(JSON.stringify(metadata))
+  })
+
+  it('recognizes HTTP and wrapped business-code slug conflicts', () => {
+    expect(isBitmapFontSlugConflict({ response: { status: 409 } })).toBe(true)
+    expect(isBitmapFontSlugConflict({ code: 411 })).toBe(true)
+    expect(isBitmapFontSlugConflict({ data: { code: 411 } })).toBe(true)
+    expect(isBitmapFontSlugConflict({ response: { status: 200, data: { code: 411 } } })).toBe(true)
+    expect(isBitmapFontSlugConflict({ response: { data: { data: { code: 411 } } } })).toBe(true)
+    expect(isBitmapFontSlugConflict({ response: { data: { code: 'FONT_SLUG_CONFLICT' } } })).toBe(true)
+    expect(isBitmapFontSlugConflict({ response: { data: { code: 500 } } })).toBe(false)
   })
 })

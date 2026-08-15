@@ -32,7 +32,7 @@ vi.mock('@/features/bitmap-font-maker/workerClient', () => ({
 }))
 vi.mock('@/api/wristo/bitmapFontBuild', () => ({
   publishBitmapFontBuild: mocks.publish,
-  isBitmapFontSlugConflict: (error: any) => error?.response?.status === 409,
+  isBitmapFontSlugConflict: (error: any) => error?.response?.status === 409 || error?.code === 411 || error?.data?.code === 411 || error?.response?.data?.code === 411,
 }))
 vi.mock('./bitmapPackageRepack', () => ({
   repackageBitmapFontSlug: mocks.repack,
@@ -191,7 +191,9 @@ describe('BitmapFontMaker', () => {
     const source = await upload(wrapper)
     const vm = wrapper.vm as any
     await vm.buildPackage()
-    mocks.publish.mockRejectedValueOnce({ response: { status: 409 } })
+    vm.metadata.redistributionRightsAttested = true
+    vm.styleTagsInput = ' outline, sport, outline,  '
+    mocks.publish.mockRejectedValueOnce({ response: { status: 200, data: { code: 411 } } })
     await vm.publishPackage()
     expect(vm.buildFresh).toBe(true)
     expect(vm.slugConflict).toBe(true)
@@ -200,6 +202,7 @@ describe('BitmapFontMaker', () => {
     await vm.publishPackage()
     expect(mocks.build).toHaveBeenCalledTimes(1)
     expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ sourceFont: source }))
+    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ metadata: expect.objectContaining({ styleTags: ['outline', 'sport'], redistributionRightsAttested: true, rightsAttestationVersion: 'v1' }) }))
     expect(mocks.push).toHaveBeenCalledWith({ name: 'Fonts' })
   })
 
@@ -229,10 +232,32 @@ describe('BitmapFontMaker', () => {
     mocks.build.mockReturnValueOnce({ requestId: 'ok', cancel: mocks.cancel, result: Promise.resolve({ zip: new ArrayBuffer(2), manifest }) })
     await vm.buildPackage()
     expect(vm.buildError).toBe('')
+    vm.metadata.redistributionRightsAttested = true
     mocks.publish.mockRejectedValueOnce(new Error('network retry'))
     await vm.publishPackage()
     expect(vm.sourceValid).toBe(true)
     expect(vm.publishError).toContain('network retry')
+  })
+
+  it('requires redistribution attestation only for publish and enforces tag contract bounds', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    expect(wrapper.get('[data-test="download-button"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-test="publish-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('#bitmap-publish-help').text()).toContain('redistribution rights')
+    vm.styleTagsInput = Array.from({ length: 17 }, (_, index) => `tag-${index}`).join(',')
+    vm.metadata.redistributionRightsAttested = true
+    await nextTick()
+    expect(wrapper.get('[data-test="publish-button"]').attributes('disabled')).toBeDefined()
+    vm.styleTagsInput = Array.from({ length: 16 }, (_, index) => `${String(index).padStart(2, '0')}${'x'.repeat(30)}`).join(',')
+    await nextTick()
+    expect(wrapper.get('[data-test="publish-button"]').attributes('disabled')).toBeDefined()
+    vm.styleTagsInput = ` ${'x'.repeat(32)}, ${'x'.repeat(32)}, sport `
+    await nextTick()
+    expect(vm.normalizedStyleTags).toEqual(['x'.repeat(32), 'sport'])
+    expect(wrapper.get('[data-test="publish-button"]').attributes('disabled')).toBeUndefined()
   })
 
   it('discards a slow first upload after a faster second font is selected', async () => {
