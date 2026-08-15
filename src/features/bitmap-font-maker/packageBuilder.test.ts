@@ -157,6 +157,17 @@ describe('buildBitmapFontPackage', () => {
     expect(fixture.value.releaseSizeArtifacts).toHaveBeenCalledTimes(38)
   })
 
+  it('produces byte-identical ZIPs for identical inputs', async () => {
+    const request = { source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font' as const, recipe }
+    const first = await buildBitmapFontPackage(request, adapters().value)
+    const second = await buildBitmapFontPackage({ ...request, source: request.source.slice(0) }, adapters().value)
+    expect(new Uint8Array(first.zip)).toEqual(new Uint8Array(second.zip))
+    const archive = await JSZip.loadAsync(first.zip)
+    const pngEntry = archive.file('6/fixture-g_0.png') as unknown as { _data: { compression: { magic: string } } }
+    expect(pngEntry._data.compression.magic).toBe('\x00\x00')
+    expect(archive.file('6/fixture-g_0.png')?.date.getUTCFullYear()).toBe(1980)
+  })
+
   it('cancels immediately after an awaited PNG encode without progress', async () => {
     let cancelled = false
     let release!: () => void
@@ -246,5 +257,32 @@ describe('encodePngWithOffscreenCanvas', () => {
 describe('canonicalJson', () => {
   it('sorts object keys recursively without reordering arrays', () => {
     expect(canonicalJson({ z: [{ b: 1, a: 2 }], a: 1 })).toBe('{"a":1,"z":[{"a":2,"b":1}]}')
+  })
+
+  it.each([undefined, () => undefined, Symbol('x'), 1n, Number.NaN, Number.POSITIVE_INFINITY])('rejects unsupported JSON value %s', (value) => {
+    expect(() => canonicalJson({ value })).toThrowError(expect.objectContaining({ code: 'PACKAGE_INVALID_JSON' }))
+  })
+
+  it('rejects cyclic objects', () => {
+    const value: Record<string, unknown> = {}
+    value.self = value
+    expect(() => canonicalJson(value)).toThrowError(expect.objectContaining({ code: 'PACKAGE_INVALID_JSON' }))
+  })
+})
+
+describe('builder validation', () => {
+  it('normalizes the runtime recipe before hashing and rendering', async () => {
+    const fixture = adapters()
+    const dirtyRecipe = { ...recipe, fontWeight: 2000, italicAngle: 99, lineJoin: undefined } as unknown as BitmapFontRecipe
+    const result = await buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe: dirtyRecipe }, fixture.value)
+    expect(fixture.value.createRendererSession).toHaveBeenCalledOnce()
+    const archive = await JSZip.loadAsync(result.zip)
+    expect(JSON.parse(await archive.file('recipe.json')!.async('string'))).toMatchObject({ fontWeight: 900, italicAngle: 20, lineJoin: 'round' })
+  })
+
+  it('rejects PNG encoder output without a valid PNG signature', async () => {
+    const fixture = adapters({ encodePng: async () => new Uint8Array([1, 2, 3]) })
+    await expect(buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe }, fixture.value)).rejects.toMatchObject({ code: 'PNG_INVALID' })
+    expect(fixture.dispose).toHaveBeenCalledOnce()
   })
 })

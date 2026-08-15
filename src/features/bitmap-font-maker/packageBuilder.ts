@@ -4,6 +4,7 @@ import { bmFontDescriptorFilename, writeBmFontText } from './bmFontWriter'
 import {
   BITMAP_FONT_SIZES,
   charsetForType,
+  normalizeBitmapFontRecipe,
   type BitmapFontManifest,
   type BitmapFontRecipe,
   type BitmapFontType,
@@ -59,26 +60,36 @@ export class BuildCancelledError extends Error {
 }
 
 export class PackageBuildError extends Error {
-  constructor(readonly code: 'UNSAFE_SOURCE_FILENAME' | 'BROWSER_UNSUPPORTED', message = code) {
+  constructor(readonly code: 'UNSAFE_SOURCE_FILENAME' | 'BROWSER_UNSUPPORTED' | 'PACKAGE_INVALID_JSON' | 'PNG_INVALID', message = code) {
     super(message)
     this.name = 'PackageBuildError'
   }
 }
 
-function stable(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stable)
-  if (value && typeof value === 'object') {
+function stable(value: unknown, ancestors: Set<object>): unknown {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new PackageBuildError('PACKAGE_INVALID_JSON')
+    return value
+  }
+  if (typeof value !== 'object') throw new PackageBuildError('PACKAGE_INVALID_JSON')
+  if (ancestors.has(value)) throw new PackageBuildError('PACKAGE_INVALID_JSON')
+  ancestors.add(value)
+  try {
+    if (Array.isArray(value)) return value.map((child) => stable(child, ancestors))
+    if (Object.getPrototypeOf(value) !== Object.prototype) throw new PackageBuildError('PACKAGE_INVALID_JSON')
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
-        .map(([key, child]) => [key, stable(child)]),
+        .map(([key, child]) => [key, stable(child, ancestors)]),
     )
+  } finally {
+    ancestors.delete(value)
   }
-  return value
 }
 
 export function canonicalJson(value: unknown): string {
-  return JSON.stringify(stable(value))
+  return JSON.stringify(stable(value, new Set()))
 }
 
 export async function sha256Hex(value: ArrayBuffer | Uint8Array<ArrayBufferLike>): Promise<string> {
@@ -152,6 +163,15 @@ const defaultAdapters: PackageBuilderAdapters = {
   encodePng: encodePngWithOffscreenCanvas,
 }
 
+const ZIP_ENTRY_DATE = new Date(Date.UTC(1980, 0, 1))
+const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
+
+function assertPng(bytes: Uint8Array): void {
+  if (bytes.length < PNG_SIGNATURE.length || PNG_SIGNATURE.some((byte, index) => bytes[index] !== byte)) {
+    throw new PackageBuildError('PNG_INVALID')
+  }
+}
+
 function assertNotCancelled(isCancelled: () => boolean): void {
   if (isCancelled()) throw new BuildCancelledError()
 }
@@ -172,7 +192,8 @@ export async function buildBitmapFontPackage(
   assertNotCancelled(isCancelled)
   const charset = charsetForType(request.fontType)
   assertNotCancelled(isCancelled)
-  const recipeText = canonicalJson(request.recipe)
+  const normalizedRecipe = normalizeBitmapFontRecipe(request.recipe)
+  const recipeText = canonicalJson(normalizedRecipe)
   assertNotCancelled(isCancelled)
   const recipeBytes = new TextEncoder().encode(recipeText)
   const archive = new JSZip()
@@ -183,7 +204,11 @@ export async function buildBitmapFontPackage(
   async function add(path: string, bytes: Uint8Array | string): Promise<void> {
     assertNotCancelled(isCancelled)
     const material = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes
-    archive.file(path, material)
+    archive.file(path, material, {
+      date: ZIP_ENTRY_DATE,
+      createFolders: false,
+      compression: path.endsWith('.png') ? 'STORE' : 'DEFLATE',
+    })
     assertNotCancelled(isCancelled)
     const digest = await hash(material)
     assertNotCancelled(isCancelled)
@@ -208,7 +233,7 @@ export async function buildBitmapFontPackage(
       let png: Uint8Array | undefined
       try {
         assertNotCancelled(isCancelled)
-        rendered = session.render(size, request.recipe, charset.codepoints)
+        rendered = session.render(size, normalizedRecipe, charset.codepoints)
         assertNotCancelled(isCancelled)
         packed = packGlyphAtlas(rendered.glyphs, { padding: 0 })
         assertNotCancelled(isCancelled)
@@ -216,6 +241,7 @@ export async function buildBitmapFontPackage(
         assertNotCancelled(isCancelled)
         png = await adapters.encodePng(atlas)
         assertNotCancelled(isCancelled)
+        assertPng(png)
         const prefix = `${size}/`
         await add(`${prefix}${request.slug}-g_0.png`, png)
         assertNotCancelled(isCancelled)
@@ -278,7 +304,7 @@ export async function buildBitmapFontPackage(
   assertNotCancelled(isCancelled)
   const manifestText = canonicalJson(manifest)
   assertNotCancelled(isCancelled)
-  archive.file('manifest.json', manifestText)
+  archive.file('manifest.json', manifestText, { date: ZIP_ENTRY_DATE, createFolders: false, compression: 'DEFLATE' })
   assertNotCancelled(isCancelled)
   const zip = await generateZip(archive)
   assertNotCancelled(isCancelled)

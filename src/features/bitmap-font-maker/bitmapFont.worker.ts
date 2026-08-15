@@ -24,12 +24,18 @@ export function createBitmapFontWorkerHandler(
   dependencies: BitmapFontWorkerHandlerDependencies,
 ): (event: MessageEvent<BitmapFontWorkerRequest>) => Promise<void> {
   const cancelled = new Set<string>()
+  let activeRequestId: string | undefined
   return async (event) => {
     const request = event.data
     if (request.type === 'cancel') {
-      cancelled.add(request.requestId)
+      if (activeRequestId === request.requestId) cancelled.add(request.requestId)
       return
     }
+    if (activeRequestId) {
+      dependencies.post({ type: 'error', requestId: request.requestId, code: 'BUILD_IN_PROGRESS', message: 'BUILD_IN_PROGRESS' }, [])
+      return
+    }
+    activeRequestId = request.requestId
     try {
       const result = await dependencies.build(request, undefined, (progress) => {
         if (cancelled.has(request.requestId)) return
@@ -53,6 +59,7 @@ export function createBitmapFontWorkerHandler(
       }, [])
     } finally {
       cancelled.delete(request.requestId)
+      if (activeRequestId === request.requestId) activeRequestId = undefined
     }
   }
 }

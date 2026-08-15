@@ -35,17 +35,21 @@ export class BitmapFontWorkerClient {
   private readonly worker: Worker
   private readonly pending = new Map<string, PendingBuild>()
   private disposed = false
+  private terminalError: WorkerClientError | undefined
   private sequence = 0
 
   constructor(environment: WorkerClientEnvironment = defaultEnvironment) {
     if (!environment.supportsOffscreenCanvas()) throw new WorkerClientError('BROWSER_UNSUPPORTED')
     this.worker = environment.createWorker()
     this.worker.onmessage = (event: MessageEvent<BitmapFontWorkerResponse>) => this.receive(event.data)
-    this.worker.onerror = () => this.failAll(new WorkerClientError('WORKER_FAILED'))
+    this.worker.onerror = () => this.transitionFatal()
+    this.worker.onmessageerror = () => this.transitionFatal()
   }
 
   build(request: BitmapFontBuildRequest, onProgress?: (progress: BitmapFontBuildProgress) => void): BitmapFontBuildHandle {
+    if (this.terminalError) throw this.terminalError
     if (this.disposed) throw new WorkerClientError('WORKER_DISPOSED')
+    if (this.pending.size > 0) throw new WorkerClientError('BUILD_IN_PROGRESS')
     const requestId = `bitmap-font-${Date.now()}-${this.sequence += 1}`
     const source = request.source.slice(0)
     let resolve!: PendingBuild['resolve']
@@ -55,17 +59,27 @@ export class BitmapFontWorkerClient {
       reject = rejectPromise
     })
     this.pending.set(requestId, { resolve, reject, onProgress })
-    this.worker.postMessage({ type: 'build', requestId, ...request, source }, [source])
+    try {
+      this.worker.postMessage({ type: 'build', requestId, ...request, source }, [source])
+    } catch {
+      this.transitionFatal()
+    }
     return { requestId, result, cancel: () => this.cancel(requestId) }
   }
 
   cancel(requestId: string): void {
-    if (!this.pending.has(requestId) || this.disposed) return
-    this.worker.postMessage({ type: 'cancel', requestId })
+    if (this.terminalError) throw this.terminalError
+    if (this.disposed) throw new WorkerClientError('WORKER_DISPOSED')
+    if (!this.pending.has(requestId)) return
+    try {
+      this.worker.postMessage({ type: 'cancel', requestId })
+    } catch {
+      this.transitionFatal()
+    }
   }
 
   dispose(): void {
-    if (this.disposed) return
+    if (this.disposed || this.terminalError) return
     this.disposed = true
     this.worker.terminate()
     this.failAll(new WorkerClientError('WORKER_DISPOSED'))
@@ -86,5 +100,12 @@ export class BitmapFontWorkerClient {
   private failAll(error: WorkerClientError): void {
     for (const pending of this.pending.values()) pending.reject(error)
     this.pending.clear()
+  }
+
+  private transitionFatal(): void {
+    if (this.terminalError || this.disposed) return
+    this.terminalError = new WorkerClientError('WORKER_FAILED')
+    this.worker.terminate()
+    this.failAll(this.terminalError)
   }
 }

@@ -7,9 +7,11 @@ const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontW
 class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
+  onmessageerror: ((event: MessageEvent) => void) | null = null
   posts: Array<{ message: unknown; transfer?: Transferable[] }> = []
   terminated = false
-  postMessage(message: unknown, transfer?: Transferable[]) { this.posts.push({ message, transfer }) }
+  postError: Error | undefined
+  postMessage(message: unknown, transfer?: Transferable[]) { if (this.postError) throw this.postError; this.posts.push({ message, transfer }) }
   terminate() { this.terminated = true }
   emit(data: unknown) { this.onmessage?.({ data } as MessageEvent) }
 }
@@ -32,16 +34,15 @@ describe('BitmapFontWorkerClient', () => {
     expect(progress).toHaveBeenCalledWith({ completed: 1, size: 6, total: 38 })
   })
 
-  it('isolates requests and ignores late messages', async () => {
+  it('allows only one active build and accepts a new build after completion', async () => {
     const worker = new FakeWorker()
     const client = new BitmapFontWorkerClient({ createWorker: () => worker as unknown as Worker, supportsOffscreenCanvas: () => true })
     const first = client.build({ source: new ArrayBuffer(1), fileName: 'a.ttf', slug: 'a', fontType: 'number_font', recipe })
+    expect(() => client.build({ source: new ArrayBuffer(1), fileName: 'b.ttf', slug: 'b', fontType: 'number_font', recipe })).toThrowError(expect.objectContaining({ code: 'BUILD_IN_PROGRESS' }))
+    worker.emit({ type: 'complete', requestId: first.requestId, zip: new ArrayBuffer(2), manifest: { slug: 'a' } })
+    await first.result
     const second = client.build({ source: new ArrayBuffer(1), fileName: 'b.ttf', slug: 'b', fontType: 'number_font', recipe })
-    const [firstId, secondId] = worker.posts.map(({ message }) => (message as { requestId: string }).requestId)
-    worker.emit({ type: 'complete', requestId: secondId, zip: new ArrayBuffer(2), manifest: { slug: 'b' } })
-    worker.emit({ type: 'complete', requestId: secondId, zip: new ArrayBuffer(99), manifest: { slug: 'late' } })
-    worker.emit({ type: 'error', requestId: firstId, code: 'FAILED', message: 'safe', details: { size: 6 } })
-    await expect(first.result).rejects.toMatchObject({ code: 'FAILED', message: 'safe', details: { size: 6 } })
+    worker.emit({ type: 'complete', requestId: second.requestId, zip: new ArrayBuffer(2), manifest: { slug: 'b' } })
     await expect(second.result).resolves.toMatchObject({ manifest: { slug: 'b' } })
   })
 
@@ -64,5 +65,29 @@ describe('BitmapFontWorkerClient', () => {
     expect(() => new BitmapFontWorkerClient({ createWorker: () => { throw new Error('must not create') }, supportsOffscreenCanvas: () => false })).toThrowError(
       expect.objectContaining<Partial<WorkerClientError>>({ code: 'BROWSER_UNSUPPORTED' }),
     )
+  })
+
+  it.each(['error', 'messageerror'] as const)('enters a unified fatal state on worker %s', async (kind) => {
+    const worker = new FakeWorker()
+    const client = new BitmapFontWorkerClient({ createWorker: () => worker as unknown as Worker, supportsOffscreenCanvas: () => true })
+    const active = client.build({ source: new ArrayBuffer(1), fileName: 'a.ttf', slug: 'a', fontType: 'number_font', recipe })
+    if (kind === 'error') worker.onerror?.({} as ErrorEvent)
+    else worker.onmessageerror?.({} as MessageEvent)
+    await expect(active.result).rejects.toMatchObject({ code: 'WORKER_FAILED' })
+    expect(worker.terminated).toBe(true)
+    expect(() => client.build({ source: new ArrayBuffer(1), fileName: 'b.ttf', slug: 'b', fontType: 'number_font', recipe })).toThrowError(expect.objectContaining({ code: 'WORKER_FAILED' }))
+    expect(() => client.cancel(active.requestId)).toThrowError(expect.objectContaining({ code: 'WORKER_FAILED' }))
+    expect(worker.posts).toHaveLength(1)
+    client.dispose()
+  })
+
+  it('transitions fatal and clears pending work when postMessage throws', async () => {
+    const worker = new FakeWorker()
+    worker.postError = new Error('clone failed')
+    const client = new BitmapFontWorkerClient({ createWorker: () => worker as unknown as Worker, supportsOffscreenCanvas: () => true })
+    const active = client.build({ source: new ArrayBuffer(1), fileName: 'a.ttf', slug: 'a', fontType: 'number_font', recipe })
+    await expect(active.result).rejects.toMatchObject({ code: 'WORKER_FAILED' })
+    expect(worker.terminated).toBe(true)
+    expect(() => client.build({ source: new ArrayBuffer(1), fileName: 'b.ttf', slug: 'b', fontType: 'number_font', recipe })).toThrowError(expect.objectContaining({ code: 'WORKER_FAILED' }))
   })
 })

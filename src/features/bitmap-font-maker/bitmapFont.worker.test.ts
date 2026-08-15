@@ -51,4 +51,28 @@ describe('createBitmapFontWorkerHandler', () => {
     expect(JSON.stringify(response)).not.toContain('secret')
     expect(posts[0][1]).toEqual([])
   })
+
+  it('rejects a concurrent build without starting it and allows a new build after cancellation', async () => {
+    let finish!: () => void
+    let calls = 0
+    const build = vi.fn(async (_request, _adapters, _progress, isCancelled) => {
+      calls += 1
+      if (calls > 1) return { zip: new ArrayBuffer(1), manifest: {} } as BitmapFontBuildResult
+      await new Promise<void>((resolve) => { finish = resolve })
+      if (isCancelled()) throw new BuildCancelledError()
+      return { zip: new ArrayBuffer(1), manifest: {} } as BitmapFontBuildResult
+    })
+    const post = vi.fn()
+    const handle = createBitmapFontWorkerHandler({ build, post })
+    const first = handle({ data: buildRequest } as MessageEvent)
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    await handle({ data: { ...buildRequest, requestId: 'request-2' } } as MessageEvent)
+    expect(build).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', requestId: 'request-2', code: 'BUILD_IN_PROGRESS' }), [])
+    await handle({ data: { type: 'cancel', requestId: 'request-1' } } as MessageEvent)
+    finish()
+    await first
+    await handle({ data: { ...buildRequest, requestId: 'request-3' } } as MessageEvent)
+    expect(build).toHaveBeenCalledTimes(2)
+  })
 })
