@@ -1,0 +1,23 @@
+import { describe, expect, it } from 'vitest'
+import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import { filterExpressionTokens, getReferencedTokenDefinitions } from './tokenPickerModel'
+
+describe('expression token picker model', () => {
+  it('searches by code, English, Chinese, description, and unit', () => {
+    expect(filterExpressionTokens('ds9').map(({ code }) => code)).toContain('ds9')
+    expect(filterExpressionTokens('heart rate').map(({ code }) => code)).toContain('ds9')
+    expect(filterExpressionTokens('心率').map(({ code }) => code)).toContain('ds9')
+    expect(filterExpressionTokens('当前天气').map(({ code }) => code)).toContain('w10')
+    expect(filterExpressionTokens('m/s').map(({ code }) => code)).toContain('w12')
+  })
+
+  it('returns referenced definitions once in source order', () => {
+    expect(getReferencedTokenDefinitions('(ai12) >= (ai13) && (ai12) > 0').map(({ code }) => code))
+      .toEqual(['ai12', 'ai13'])
+  })
+
+  it('ignores unknown codes while an expression is being edited', () => {
+    expect(getReferencedTokenDefinitions('(ds999) > 0')).toEqual([])
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds999')).toBeUndefined()
+  })
+})

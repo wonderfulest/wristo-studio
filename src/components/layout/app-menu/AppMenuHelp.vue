@@ -25,12 +25,16 @@
         <el-icon><ChatLineSquare /></el-icon>
         <span>{{ t('editor.sendFeedback') }}</span>
       </el-menu-item>
+      <el-menu-item index="help/tokens" @click="onOpenTokens">
+        <el-icon><DataAnalysis /></el-icon>
+        <span>{{ t('tokens.nav') }}</span>
+      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>
 
 <script setup>
-import { QuestionFilled, Mouse, ChatLineSquare, Document } from '@element-plus/icons-vue'
+import { QuestionFilled, Mouse, ChatLineSquare, Document, DataAnalysis } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -48,6 +52,10 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  onOpenTokens: {
+    type: Function,
+    required: true,
+  },
 })
 
 const onOpenShortcuts = () => {
@@ -61,4 +69,5 @@ const onOpenFeedback = () => {
 const onOpenAcademy = () => {
   props.onOpenAcademy && props.onOpenAcademy()
 }
+const onOpenTokens = () => { props.onOpenTokens && props.onOpenTokens() }
 </script>

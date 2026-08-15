@@ -1,0 +1,131 @@
+import type { ExpressionTokenCategory, ExpressionTokenDefinition, ExpressionValueType } from './types'
+
+type ScalarType = Extract<ExpressionValueType, 'number' | 'string' | 'boolean'>
+type TokenInput = {
+  id: string
+  code: string
+  label: string
+  labelCn: string
+  category: ExpressionTokenCategory
+  valueType?: ScalarType
+  nullable?: boolean
+  unit?: string
+  exampleValue: unknown
+  source: ExpressionTokenDefinition['source']
+  updateFrequency?: ExpressionTokenDefinition['updateFrequency']
+  providerKey: string
+  requirement?: string
+  description?: string
+  descriptionCn?: string
+  wfbEquivalent?: string
+}
+
+const token = (input: TokenInput): ExpressionTokenDefinition => ({
+  id: input.id,
+  code: input.code,
+  label: input.label,
+  labelCn: input.labelCn,
+  description: input.description || input.label,
+  descriptionCn: input.descriptionCn || input.labelCn,
+  category: input.category,
+  valueType: input.valueType || 'number',
+  nullable: input.nullable ?? false,
+  unit: input.unit,
+  exampleValue: input.exampleValue,
+  source: input.source,
+  supportedTargets: ['visibility'],
+  updateFrequency: input.updateFrequency || 'minute',
+  providerKey: input.providerKey,
+  deviceRequirements: [input.requirement || 'All supported Connect IQ devices'],
+  exampleExpression: `(${input.code})`,
+  wfbEquivalent: input.wfbEquivalent === undefined && !input.code.startsWith('wr.') ? input.code : input.wfbEquivalent,
+})
+
+const time = (id: string, code: string, label: string, labelCn: string, exampleValue: number) => token({
+  id: `time.${id}`, code, label, labelCn, category: 'date-time', exampleValue, source: 'time',
+  updateFrequency: code === 'tm9' ? 'second' : 'minute', providerKey: 'clock',
+})
+
+const activity = (id: string, code: string, label: string, labelCn: string, exampleValue: number, unit?: string) => token({
+  id: `activity.${id}`, code, label, labelCn, category: 'activity', exampleValue, unit, source: 'activity',
+  providerKey: 'activityInfo', nullable: true, requirement: 'Activity Monitor support and available activity data',
+})
+
+const sensor = (id: string, code: string, label: string, labelCn: string, exampleValue: number, unit?: string) => token({
+  id: `sensor.${id}`, code, label, labelCn, category: 'sensor', exampleValue, unit, source: 'sensor',
+  providerKey: `sensorHistory.${id}`, nullable: true, requirement: `Sensor history support for ${label}`,
+})
+
+const weather = (id: string, code: string, label: string, labelCn: string, exampleValue: unknown, valueType: ScalarType = 'number', unit?: string) => token({
+  id: `weather.current.${id}`, code, label, labelCn, category: 'weather', exampleValue, valueType, unit,
+  description: `Current Garmin weather: ${label}`,
+  descriptionCn: `当前天气（Garmin）：${labelCn}`,
+  source: 'weather', updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
+  requirement: 'Toybox.Weather current conditions and synced weather data',
+})
+
+export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
+  time('year', 'tm1', 'Year', '年份', 2026),
+  time('shortYear', 'tm1.1', 'Short Year', '两位年份', 26),
+  time('month', 'tm2', 'Month', '月份', 8),
+  time('dayOfMonth', 'tm3', 'Day of Month', '日期', 15),
+  time('isoWeek', 'tm4', 'ISO Week', 'ISO 周数', 33),
+  time('dayOfWeek', 'tm5', 'Day of Week', '星期', 7),
+  time('hour24', 'tm6', 'Hour (24-hour)', '小时（24 小时制）', 14),
+  time('hour12', 'tm7.3', 'Hour (12-hour)', '小时（12 小时制）', 2),
+  time('deviceHour', 'tm7.4', 'Hour (Device Format)', '小时（设备格式）', 14),
+  time('minute', 'tm8', 'Minute', '分钟', 30),
+  time('second', 'tm9', 'Second', '秒', 45),
+  time('amPm', 'tm10', 'AM/PM', '上午/下午', 1),
+  time('dayOfYear', 'tm11', 'Day of Year', '年内天数', 227),
+
+  activity('activeMinutesToday', 'ai1', 'Active Minutes Today', '今日活跃分钟', 42, 'min'),
+  activity('moderateMinutesToday', 'ai1.1', 'Moderate Minutes Today', '今日中等强度分钟', 24, 'min'),
+  activity('vigorousMinutesToday', 'ai1.2', 'Vigorous Minutes Today', '今日高强度分钟', 9, 'min'),
+  activity('caloriesToday', 'ai4', 'Total Calories', '今日总热量', 1680, 'kcal'),
+  token({
+    id: 'activity.activeCaloriesToday', code: 'ai4.1', label: 'Active Calories (Compatible)', labelCn: '活动热量（兼容值）',
+    category: 'activity', exampleValue: 430, unit: 'kcal', source: 'activity', providerKey: 'activityInfo', nullable: true,
+    description: 'Uses daily calories because Connect IQ does not expose Garmin’s distinct active-calorie total.',
+    descriptionCn: 'Connect IQ 未公开 Garmin 独立的活动热量数值，因此返回今日热量兼容值。',
+    requirement: 'Activity Monitor support; value falls back to documented daily calories',
+  }),
+  activity('distanceToday', 'ai5', 'Distance Today', '今日距离', 645000, 'cm'),
+  activity('floorsClimbedToday', 'ai6', 'Floors Climbed', '今日爬楼层数', 7),
+  activity('floorsDescendedToday', 'ai8', 'Floors Descended', '今日下楼层数', 6),
+  activity('moveBarLevel', 'ai11', 'Move Bar', '久坐提醒等级', 2),
+  activity('stepsToday', 'ai12', 'Steps', '今日步数', 8240, 'steps'),
+  activity('stepsGoal', 'ai13', 'Steps Goal', '步数目标', 10000, 'steps'),
+  activity('respirationRate', 'ai14', 'Respiration Rate', '呼吸频率', 15, 'brpm'),
+
+  token({ id: 'system.alarm.count', code: 'ds1', label: 'Alarm Count', labelCn: '闹钟数量', category: 'system', exampleValue: 1, source: 'system', providerKey: 'deviceSettings', nullable: true, requirement: 'Alarm access support' }),
+  token({ id: 'system.notification.count', code: 'ds2', label: 'Notification Count', labelCn: '通知数量', category: 'system', exampleValue: 3, source: 'system', providerKey: 'deviceSettings', nullable: true, requirement: 'Notification count support' }),
+  token({ id: 'system.battery.level', code: 'ds3', label: 'Battery Level', labelCn: '电池电量', category: 'system', exampleValue: 76, unit: '%', source: 'system', providerKey: 'systemStats' }),
+  token({ id: 'system.memory.free', code: 'ds4', label: 'Free Memory', labelCn: '可用内存', category: 'system', exampleValue: 65536, unit: 'bytes', source: 'system', providerKey: 'systemStats' }),
+  token({ id: 'system.memory.total', code: 'ds6', label: 'Total Memory', labelCn: '总内存', category: 'system', exampleValue: 262144, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total memory exposed by the device' }),
+  token({ id: 'system.memory.used', code: 'ds7', label: 'Used Memory', labelCn: '已用内存', category: 'system', exampleValue: 196608, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total and free memory exposed by the device' }),
+  sensor('elevation', 'ds8', 'Elevation', '海拔', 32, 'm'),
+  sensor('heartRate', 'ds9', 'Heart Rate', '心率', 72, 'bpm'),
+  sensor('oxygenSaturation', 'ds10', 'Oxygen Saturation', '血氧饱和度', 97, '%'),
+  sensor('pressure', 'ds11', 'Pressure', '气压', 101325, 'Pa'),
+  sensor('temperature', 'ds12', 'Temperature', '温度', 24, '°C'),
+  token({ id: 'user.restingHeartRate7DayAverage', code: 'ds14', label: '7-day Average Resting HR', labelCn: '七日平均静息心率', category: 'sensor', exampleValue: 58, unit: 'bpm', source: 'sensor', providerKey: 'userProfile', nullable: true, requirement: 'User profile resting heart-rate data' }),
+  sensor('bodyBattery', 'ds330', 'Body Battery', '身体电量', 68, '%'),
+  sensor('stress', 'ds331', 'Stress', '压力', 31),
+
+  weather('conditionText', 'w02', 'Condition Text', '天气状况', 'Partly Cloudy', 'string'),
+  weather('feelsLikeTemperature', 'w03', 'Feels Like Temperature', '体感温度', 28, 'number', '°C'),
+  weather('highTemperature', 'w04', 'High Temperature', '最高温度', 31, 'number', '°C'),
+  weather('lowTemperature', 'w05', 'Low Temperature', '最低温度', 23, 'number', '°C'),
+  weather('observationLocationName', 'w06', 'Observation Location', '观测地点', 'Shanghai', 'string'),
+  weather('precipitationChance', 'w08', 'Precipitation', '降水概率', 35, 'number', '%'),
+  weather('humidity', 'w09', 'Humidity', '湿度', 63, 'number', '%'),
+  weather('temperature', 'w10', 'Temperature', '当前温度', 27, 'number', '°C'),
+  weather('windBearing', 'w11', 'Wind Bearing', '风向角度', 135, 'number', '°'),
+  weather('windSpeed', 'w12', 'Wind Speed', '风速', 4.2, 'number', 'm/s'),
+
+  token({ id: 'status.charging', code: 'wr.charging', label: 'Charging', labelCn: '正在充电', category: 'status', valueType: 'boolean', exampleValue: false, source: 'wristo', updateFrequency: 'event', providerKey: 'systemStats', nullable: true, requirement: 'Charging status exposed by the device', wfbEquivalent: undefined }),
+  token({ id: 'status.phoneConnected', code: 'wr.phoneConnected', label: 'Phone Connected', labelCn: '手机已连接', category: 'status', valueType: 'boolean', exampleValue: true, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Phone connection status exposed by the device', wfbEquivalent: undefined }),
+  token({ id: 'status.bluetoothConnected', code: 'wr.bluetoothConnected', label: 'Bluetooth Connected', labelCn: '蓝牙已连接', category: 'status', valueType: 'boolean', exampleValue: true, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Bluetooth indicator support', wfbEquivalent: undefined }),
+  token({ id: 'status.doNotDisturb', code: 'wr.dnd', label: 'Do Not Disturb', labelCn: '勿扰模式', category: 'status', valueType: 'boolean', exampleValue: false, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Do Not Disturb status exposed by the device', wfbEquivalent: undefined }),
+]

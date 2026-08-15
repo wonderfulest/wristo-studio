@@ -2,6 +2,7 @@
   <el-select
     value=""
     filterable
+    :filter-method="handleFilter"
     :placeholder="t('expression.insertToken')"
     @change="insertToken"
   >
@@ -20,12 +21,14 @@
 </template>
 
 <script setup lang="ts">
-import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import { ref } from 'vue'
+import { filterExpressionTokens } from './tokenPickerModel'
 import { useI18n } from '@/i18n'
 
 const emit = defineEmits<{ insert: [value: string] }>()
 const { t } = useI18n()
-const tokens = DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions
+const tokens = ref(filterExpressionTokens(''))
+const handleFilter = (query: string) => { tokens.value = filterExpressionTokens(query) }
 const insertToken = (code: string) => emit('insert', `(${code})`)
 </script>
 

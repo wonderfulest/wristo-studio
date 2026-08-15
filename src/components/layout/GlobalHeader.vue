@@ -22,6 +22,10 @@
           <Icon icon="material-symbols:desktop-windows-outline" />
           {{ t('nav.prgInstaller') }}
         </button>
+        <button type="button" class="nav-link" @click="openTokens">
+          <Icon icon="material-symbols:data-object" />
+          {{ t('tokens.nav') }}
+        </button>
       </nav>
     </div>
 
@@ -57,6 +61,7 @@ const openAcademy = (): void => {
 const openPrgInstallerGuide = (): void => {
   void router.push({ name: 'PrgInstallerGuide' })
 }
+const openTokens = (): void => { void router.push({ name: 'Tokens' }) }
 </script>
 
 <style scoped>

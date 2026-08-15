@@ -113,6 +113,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'tokens',
+        name: 'Tokens',
+        component: () => import('@/views/Tokens.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'number-font-library',
         name: 'NumberFontLibrary',
         component: () => import('@/views/fonts/number/NumberFontLibrary.vue'),

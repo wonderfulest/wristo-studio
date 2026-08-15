@@ -6,6 +6,7 @@
     </div>
     <template v-if="enabled">
       <ExpressionEditor v-model="source" :error="error" />
+      <TokenPreviewControls :tokens="referencedTokens" />
       <div class="visibility-footer">
         <el-checkbox v-model="fallback">{{ t('expression.fallbackVisible') }}</el-checkbox>
         <el-button type="primary" size="small" @click="save">{{ t('common.save') }}</el-button>
@@ -15,9 +16,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { AnyElementConfig } from '@/types/elements'
 import ExpressionEditor from '@/components/expression/ExpressionEditor.vue'
+import TokenPreviewControls from '@/components/expression/TokenPreviewControls.vue'
+import { getReferencedTokenDefinitions } from '@/components/expression/tokenPickerModel'
 import { createVisibilityExpression } from '@/components/expression/visibilityExpressionModel'
 import { useLayerStore } from '@/stores/layerStore'
 import { useI18n } from '@/i18n'
@@ -32,6 +35,7 @@ const enabled = ref(false)
 const source = ref('(ds3) <= 20')
 const fallback = ref(true)
 const error = ref('')
+const referencedTokens = computed(() => getReferencedTokenDefinitions(source.value))
 
 watch(
   () => (props.config as any)?.visibility,

@@ -1,18 +1,25 @@
 export type ExpressionValueType = 'number' | 'string' | 'boolean' | 'color' | 'asset' | 'theme' | 'null'
 export type DynamicTarget = 'visibility' | 'color' | 'content' | 'image' | 'theme'
+export type ExpressionTokenCategory = 'date-time' | 'activity' | 'sensor' | 'system' | 'weather' | 'status'
 
 export interface ExpressionTokenDefinition {
   id: string
   code: string
   label: string
   labelCn: string
+  description: string
+  descriptionCn: string
+  category: ExpressionTokenCategory
   valueType: Exclude<ExpressionValueType, 'null'>
   nullable: boolean
   unit?: string
   exampleValue: unknown
-  source: 'metric' | 'system' | 'property' | 'wristo'
+  source: 'time' | 'activity' | 'sensor' | 'system' | 'weather' | 'wristo'
   supportedTargets: DynamicTarget[]
   updateFrequency: 'second' | 'minute' | 'event' | 'network'
+  providerKey: string
+  deviceRequirements: string[]
+  exampleExpression: string
   wfbEquivalent?: string
 }
 

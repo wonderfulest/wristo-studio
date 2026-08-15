@@ -46,6 +46,7 @@
       <AppMenuHelp
         :on-open-shortcuts="() => shortcutsDialogVisible = true"
         :on-open-academy="handleOpenCreatorAcademy"
+        :on-open-tokens="handleOpenTokens"
         :on-open-feedback="showFeedbackDialog"
       />
     </el-menu>
@@ -1160,6 +1161,7 @@ const showFeedbackDialog = () => {
 const handleOpenCreatorAcademy = () => {
   window.open('/academy', '_blank', 'noopener')
 }
+const handleOpenTokens = () => { void router.push({ name: 'Tokens' }) }
 
 </script>
 

@@ -1,4 +1,5 @@
 import type { ExpressionTokenDefinition } from './types'
+import { PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS } from './practicalTokenDefinitions'
 
 export interface ExpressionTokenCatalog {
   readonly definitions: readonly ExpressionTokenDefinition[]
@@ -18,19 +19,6 @@ export function createExpressionTokenCatalog(
   }
 }
 
-export const DEFAULT_EXPRESSION_TOKEN_CATALOG = createExpressionTokenCatalog([
-  {
-    id: 'system.battery.level',
-    code: 'ds3',
-    label: 'Battery Level',
-    labelCn: '电池电量',
-    valueType: 'number',
-    nullable: false,
-    unit: '%',
-    exampleValue: 76,
-    source: 'system',
-    supportedTargets: ['visibility'],
-    updateFrequency: 'minute',
-    wfbEquivalent: 'ds3',
-  },
-])
+export const DEFAULT_EXPRESSION_TOKEN_CATALOG = createExpressionTokenCatalog(
+  PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS,
+)
