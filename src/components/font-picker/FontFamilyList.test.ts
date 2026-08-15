@@ -15,7 +15,22 @@ vi.mock('@/components/fonts/FontListItem.vue', () => ({
 const fonts: FontItem[] = [
   { value: 'kode-regular', family: 'Kode Mono', label: 'Kode Mono Regular', weightClass: 400 },
   { value: 'kode-bold', family: 'Kode Mono', label: 'Kode Mono Bold', weightClass: 700 },
-  { value: 'inter-regular', family: 'Inter', label: 'Inter Regular', weightClass: 400 }
+  {
+    value: 'inter-regular',
+    family: 'Inter',
+    label: 'Inter Regular',
+    weightClass: 400,
+    bitmapRecipe: {
+      schemaVersion: 1,
+      rendererVersion: '1',
+      fontWeight: 700,
+      italicAngle: -12,
+      outlineWidthEm: 0.04,
+      outlineMode: 'outline-only',
+      lineJoin: 'round',
+      antialias: true
+    }
+  }
 ]
 
 const mountList = (modelValue = '') =>
@@ -56,5 +71,16 @@ describe('FontFamilyList', () => {
     await wrapper.findAll('.font-item')[1].trigger('click')
 
     expect(wrapper.emitted('select')?.[0]).toEqual([fonts[1]])
+  })
+
+  it('marks and styles recipe cards as a non-destructive preview', () => {
+    const wrapper = mountList()
+    const recipeCard = wrapper.find('[data-font-slug="inter-regular"]')
+    expect(recipeCard.find('.bitmap-recipe-preview-badge').text()).toBe('Preview')
+    expect(recipeCard.attributes('style')).toContain('font-weight: 700')
+    expect(recipeCard.attributes('style')).toContain('font-style: italic')
+    expect((recipeCard.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
+    expect(recipeCard.attributes('style')).not.toContain('color: transparent')
+    expect(wrapper.find('[data-font-slug="kode-regular"] .bitmap-recipe-preview-badge').exists()).toBe(false)
   })
 })

@@ -2,7 +2,14 @@
   <div class="font-family-list">
     <div v-for="group in groups" :key="group.key" class="font-family-group" :data-family="group.key">
       <template v-if="group.fonts.length === 1">
-        <div class="font-item" :class="{ active: modelValue === group.fonts[0].value }" @click="emit('select', group.fonts[0])">
+        <div
+          class="font-item"
+          :class="{ active: modelValue === group.fonts[0].value }"
+          :data-font-slug="group.fonts[0].value"
+          :data-bitmap-recipe-preview="hasRecipe(group.fonts[0]) ? '' : undefined"
+          :style="recipeCardStyle(group.fonts[0])"
+          @click="emit('select', group.fonts[0])">
+          <span v-if="hasRecipe(group.fonts[0])" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
           <FontListItem
             v-bind="itemProps(group.fonts[0])"
             @edit-search-index="emit('editSearchIndex', group.fonts[0])"
@@ -17,7 +24,16 @@
           <FontListItem v-bind="summaryProps(group.representative, group.family)" />
         </button>
         <div v-show="isExpanded(group.key)" class="font-family-weights">
-          <div v-for="font in group.fonts" :key="font.value" class="font-item" :class="{ active: modelValue === font.value }" @click="emit('select', font)">
+          <div
+            v-for="font in group.fonts"
+            :key="font.value"
+            class="font-item"
+            :class="{ active: modelValue === font.value }"
+            :data-font-slug="font.value"
+            :data-bitmap-recipe-preview="hasRecipe(font) ? '' : undefined"
+            :style="recipeCardStyle(font)"
+            @click="emit('select', font)">
+            <span v-if="hasRecipe(font)" class="bitmap-recipe-preview-badge" aria-label="Bitmap recipe preview">Preview</span>
             <FontListItem
               v-bind="itemProps(font)"
               @edit-search-index="emit('editSearchIndex', font)"
@@ -35,6 +51,7 @@ import { computed, reactive, watch } from 'vue'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import type { FontItem } from '@/types/font-picker'
 import { groupFontsByFamily } from './fontFamilyGroups'
+import { parseBitmapFontRecipe } from '@/features/bitmap-font-maker/recipePreview'
 
 const props = defineProps<{
   fonts: FontItem[]
@@ -64,6 +81,20 @@ const isExpanded = (key: string) => expandedFamilies.has(key)
 const toggle = (key: string) => {
   if (expandedFamilies.has(key)) expandedFamilies.delete(key)
   else expandedFamilies.add(key)
+}
+
+const recipeFor = (font: FontItem) => parseBitmapFontRecipe(font.bitmapRecipe)
+const hasRecipe = (font: FontItem) => recipeFor(font) !== null
+const recipeCardStyle = (font: FontItem) => {
+  const recipe = recipeFor(font)
+  if (!recipe) return undefined
+  const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
+  return {
+    fontWeight: recipe.fontWeight,
+    fontStyle: recipe.italicAngle === 0 ? 'normal' : 'italic',
+    '--bitmap-preview-stroke': outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * 24))}px currentColor` : '0',
+    textShadow: outlined ? '0 0 1px var(--studio-surface)' : undefined
+  }
 }
 
 const commonProps = (font: FontItem) => ({
@@ -163,9 +194,33 @@ const summaryProps = (font: FontItem, family: string) => ({
 }
 
 .font-item {
+  position: relative;
   width: 100%;
   padding: 0;
   cursor: pointer;
+}
+
+.bitmap-recipe-preview-badge {
+  position: absolute;
+  z-index: 2;
+  right: 9px;
+  bottom: 7px;
+  padding: 1px 6px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  color: var(--studio-text-subtle);
+  background: var(--studio-surface);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  -webkit-text-stroke: 0;
+  pointer-events: none;
+}
+
+.font-item[data-bitmap-recipe-preview] :deep(.preview-text) {
+  -webkit-text-stroke: var(--bitmap-preview-stroke);
 }
 
 .font-item:hover {

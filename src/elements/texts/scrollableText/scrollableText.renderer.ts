@@ -6,12 +6,13 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { usePropertiesStore } from '@/stores/properties'
+import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 export function createScrollableText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const propertiesStore = usePropertiesStore()
-  
+
   const canvas = canvasStore.canvas
 
   if (!canvas) {
@@ -19,41 +20,34 @@ export function createScrollableText(config: TextElementConfig): FabricElement {
   }
 
   const propertyKey = typeof config.textProperty === 'string' ? config.textProperty : ''
-  const propertyValue = propertyKey
-    ? propertiesStore?.allProperties?.[propertyKey]?.value
-    : undefined
+  const propertyValue = propertyKey ? propertiesStore?.allProperties?.[propertyKey]?.value : undefined
 
-  const template =
-    (typeof propertyValue === 'string' && propertyValue !== ''
-      ? propertyValue
-      : (config as any).textTemplate ?? (config as any).text) ?? 'New Text'
+  const template = (typeof propertyValue === 'string' && propertyValue !== '' ? propertyValue : ((config as any).textTemplate ?? (config as any).text)) ?? 'New Text'
 
   const resolvedText = resolveDataTextTemplate(template)
+  const previewFont = resolveCurrentElementPreviewFont(config, resolvedText)
 
   const element = new FabricText(resolvedText || 'New Text', {
     id: config.id || nanoid(),
     eleType: 'scrollableText',
     left: config.left,
     top: config.top,
-    fontSize: Number(config.fontSize) || 36,
+    fontSize: Number(previewFont.fontSize) || 36,
     fill: config.fill || '#FFFFFF',
-    fontFamily: config.fontFamily,
+    fontFamily: previewFont.fontFamily,
     selectable: true,
     hasControls: false,
     hasBorders: true,
     originX: 'center',
     originY: config.originY || 'center',
     scrollAreaWidth: (config as any).scrollAreaWidth,
-    scrollAreaLeft:
-      typeof (config as any).scrollAreaLeft === 'number'
-        ? (config as any).scrollAreaLeft
-        : config.left,
-    scrollAreaTop:
-      typeof (config as any).scrollAreaTop === 'number' ? (config as any).scrollAreaTop : config.top,
+    scrollAreaLeft: typeof (config as any).scrollAreaLeft === 'number' ? (config as any).scrollAreaLeft : config.left,
+    scrollAreaTop: typeof (config as any).scrollAreaTop === 'number' ? (config as any).scrollAreaTop : config.top,
     scrollAreaBackground: (config as any).scrollAreaBackground,
     textProperty: config.textProperty,
-    textTemplate: template,
+    textTemplate: template
   } as any)
+  applyCurrentElementPreviewFont(element, config, resolvedText)
 
   canvas.add(element as any)
   ;(element as any).elementId = (element as any).id
@@ -73,7 +67,7 @@ export function updateScrollableText(
     scrollAreaLeft?: number
     scrollAreaTop?: number
     scrollAreaBackground?: string
-  },
+  }
 ): void {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
@@ -95,6 +89,16 @@ export function updateScrollableText(
     anyEl.textTemplate = patch.textTemplate
     anyEl.set('text', resolveDataTextTemplate(patch.textTemplate))
   }
+
+  applyCurrentElementPreviewFont(
+    anyEl,
+    {
+      fontFamily: anyEl.fontFamily,
+      fontSize: anyEl.fontSize,
+      fill: patch.fill
+    },
+    anyEl.text
+  )
 
   anyEl.setCoords?.()
   canvas.renderAll()
@@ -158,7 +162,7 @@ export function showScrollRegion(element: FabricElement) {
     fill: hasBg ? bg : 'rgba(0,0,0,0)',
     selectable: false,
     evented: false,
-    excludeFromExport: true,
+    excludeFromExport: true
   }) as any
 
   if (t.__scrollRegionRect) {
@@ -244,7 +248,7 @@ export function startScrollableAnimation(element: FabricElement) {
         top: regionTop,
         width: configuredAreaWidth,
         height: textHeight,
-        absolutePositioned: true,
+        absolutePositioned: true
       })
       if (typeof tt.clipPath.setCoords === 'function') {
         tt.clipPath.setCoords()
@@ -257,7 +261,7 @@ export function startScrollableAnimation(element: FabricElement) {
         left: regionStart,
         top: regionTop,
         width: areaWidth,
-        height: textHeight,
+        height: textHeight
       })
       if (typeof rect.setCoords === 'function') {
         rect.setCoords()
@@ -286,10 +290,7 @@ export function startScrollableAnimation(element: FabricElement) {
       const regionEnd = regionStart + areaWidth
       const width = Number((t as any).width ?? 0)
 
-      const nextLeft = Math.min(
-        Math.max(baseX, regionStart),
-        Math.max(regionEnd - Math.min(width, areaWidth), regionStart),
-      )
+      const nextLeft = Math.min(Math.max(baseX, regionStart), Math.max(regionEnd - Math.min(width, areaWidth), regionStart))
       ;(t as any).set('left', nextLeft)
       ;(t as any).set('top', baseY)
       ;(t as any).setCoords()
@@ -357,7 +358,7 @@ export function startScrollableAnimation(element: FabricElement) {
         top: clipTop,
         width: configuredAreaWidth,
         height: textHeight,
-        absolutePositioned: true,
+        absolutePositioned: true
       }) as any
 
       t.clipPath = clipRect

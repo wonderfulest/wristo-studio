@@ -40,7 +40,7 @@ export interface DesignFontVO {
   ttf: number
   ttfFile: FileVO
   favoriteWeight?: number | null
-  bitmapRecipe?: BitmapFontRecipe | null
+  bitmapRecipe?: BitmapFontRecipe | string | null
 }
 
 export interface IconFontBuildStatusVO {

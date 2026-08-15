@@ -6,6 +6,11 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { ApiResponse } from '@/types/api/api'
 import { DesignFontVO } from '@/types/font'
 import { DesignElement } from '@/types/api/design'
+import {
+  applyRecipePreviewToFabricObject,
+  parseBitmapFontRecipe,
+  savedTextStyle,
+} from '@/features/bitmap-font-maker/recipePreview'
 // Types
 export interface FontOption {
   id?: number
@@ -27,6 +32,7 @@ export interface FontOption {
   widthClass?: number
   language?: string
   type?: string
+  bitmapRecipe?: DesignFontVO['bitmapRecipe']
 }
 
 interface FontSectionsState {
@@ -58,7 +64,12 @@ export interface FontStoreState {
 // 初始为空，启动后通过 getSystemFonts 动态填充
 const BUILTIN_FONTS: FontStoreState['builtinFonts'] = {}
 
-const refreshLoadedFontMetrics = (fontFamily: string): void => {
+const normalizeServerFont = (font: DesignFontVO): DesignFontVO => ({
+  ...font,
+  bitmapRecipe: parseBitmapFontRecipe(font.bitmapRecipe),
+})
+
+const refreshLoadedFontMetrics = (fontFamily: string, recipe: unknown): void => {
   cache.clearFontCache(fontFamily)
 
   const canvas = useCanvasStore().canvas as any
@@ -68,9 +79,18 @@ const refreshLoadedFontMetrics = (fontFamily: string): void => {
   let refreshed = false
   canvas.getObjects().forEach((object: any) => {
     if (String(object?.fontFamily || '').trim().toLowerCase() !== normalizedFontFamily) return
-    if (typeof object.initDimensions !== 'function') return
 
-    object.initDimensions()
+    const elementColor = savedTextStyle(object).fill
+    applyRecipePreviewToFabricObject(object, recipe, object.fontSize, elementColor)
+    if (Array.isArray(object._objects)) {
+      object._objects.forEach((child: any) => {
+        applyRecipePreviewToFabricObject(child, recipe, object.fontSize, elementColor)
+        child.initDimensions?.()
+        child.setCoords?.()
+        child.dirty = true
+      })
+    }
+    object.initDimensions?.()
     object.setCoords?.()
     object.dirty = true
     refreshed = true
@@ -91,6 +111,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   fetchFonts(): Promise<void>
   initRecentFonts(type?: string): Promise<void>
   loadFont(slug: string, url?: string): Promise<boolean>
+  refreshFontPreview(slug: string): Promise<void>
   loadFonts(fontNames: string[]): Promise<boolean>
   loadFontsForElements(elements: Array<DesignElement>): Promise<boolean>
   loadSystemFonts(type?: string): Promise<DesignFontVO[]>
@@ -206,7 +227,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             if (!fontInfo) {
               const response: ApiResponse<DesignFontVO> = await getFontBySlug(slug)
               
-              fontInfo = response?.data
+              fontInfo = response?.data ? normalizeServerFont(response.data) : undefined
               if (!fontInfo) {
                 console.warn(`No attributes for font: ${slug}`)
                 return false
@@ -244,7 +265,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           
           if (isAvailable) {
             this.loadedFonts.add(slug)
-            refreshLoadedFontMetrics(slug)
+            refreshLoadedFontMetrics(slug, this.serverFonts.get(slug)?.bitmapRecipe)
             return true
           }
           return false
@@ -254,6 +275,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         } finally {
           this.loadingFonts.delete(slug)
         }
+      },
+
+      async refreshFontPreview(slug: string): Promise<void> {
+        refreshLoadedFontMetrics(slug, this.serverFonts.get(slug)?.bitmapRecipe)
       },
 
       /**
@@ -280,10 +305,11 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         
         const userStore = useUserStore()
         const response: ApiResponse<DesignFontVO[]> = await getSystemFonts(type, userStore.userInfo?.id)
-        const sysFonts = (response.data ?? []) as DesignFontVO[]
+        const sysFonts = ((response.data ?? []) as DesignFontVO[]).map(normalizeServerFont)
         // 以 slug 为别名注册字体，绑定 ttf 文件
         const tasks: Promise<void>[] = []
         sysFonts.forEach((font) => {
+          if (font.slug) this.serverFonts.set(font.slug, font)
           const rawUrl: string | undefined = (font as any)?.ttfFile?.url
           if (!rawUrl || !font.slug) return
           const url = rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`
@@ -312,10 +338,11 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         try {
           const userStore = useUserStore()
           const sysFonts: ApiResponse<DesignFontVO[]> = await getSystemFonts(type, userStore.userInfo?.id)
-          const list: Array<DesignFontVO> = sysFonts?.data ?? []
+          const list: Array<DesignFontVO> = (sysFonts?.data ?? []).map(normalizeServerFont)
           const groups: Record<string, FontOption[]> = {}
           const pendingLoads: Promise<boolean>[] = []
           for (const f of list) {
+            if (f.slug) this.serverFonts.set(f.slug, f)
             const subfamily = f.subfamily || 'Others'
             const label = f.fullName || f.family || f.postscriptName || f.slug
             const family = f.family || f.fullName || f.postscriptName || f.slug
@@ -331,6 +358,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 	              favoriteWeight: f.favoriteWeight,
               language: f.language,
               type: f.type,
+	              bitmapRecipe: f.bitmapRecipe,
 	            }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
@@ -354,7 +382,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         try {
           const userStore = useUserStore()
           const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id)
-          const list: DesignFontVO[] = recentFonts?.data ?? []
+          const list: DesignFontVO[] = (recentFonts?.data ?? []).map(normalizeServerFont)
+          list.forEach((font) => { if (font.slug) this.serverFonts.set(font.slug, font) })
           const mapped: FontOption[] = list.map((f) => ({
 	            label: f.fullName,
 	            id: f.id,
@@ -367,6 +396,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 	            favoriteWeight: f.favoriteWeight,
             language: f.language,
             type: f.type,
+	            bitmapRecipe: f.bitmapRecipe,
 	          }))
           // 去重并只保留 5 个
           const seen = new Set<string>()

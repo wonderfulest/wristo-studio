@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
+import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 export function encodeRadialText(element: FabricElement): TextElementConfig {
   if (!element) {
@@ -7,12 +8,7 @@ export function encodeRadialText(element: FabricElement): TextElementConfig {
   }
 
   const anyEl = element as any
-  const textTemplate: string =
-    typeof anyEl.textTemplate === 'string'
-      ? anyEl.textTemplate
-      : typeof anyEl.text === 'string'
-        ? anyEl.text
-        : ''
+  const textTemplate: string = typeof anyEl.textTemplate === 'string' ? anyEl.textTemplate : typeof anyEl.text === 'string' ? anyEl.text : ''
 
   const config: TextElementConfig = {
     id: anyEl.id ?? '',
@@ -21,23 +17,18 @@ export function encodeRadialText(element: FabricElement): TextElementConfig {
     top: typeof anyEl.top === 'number' ? anyEl.top : 0,
     originX: anyEl.originX ?? 'center',
     originY: anyEl.originY ?? 'center',
-    fill: anyEl.fill ?? '#FFFFFF',
+    fill: (savedTextStyle(anyEl).fill as string) ?? '#FFFFFF',
     fontFamily: anyEl.fontFamily ?? 'Noto Sans SC',
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 36,
     textTemplate,
     localizedText: anyEl.localizedText,
     localization: anyEl.localization,
     textProperty: anyEl.textProperty,
-    angle:
-      typeof anyEl.startAngle === 'number'
-        ? anyEl.startAngle
-        : typeof anyEl.radialMeta?.startAngle === 'number'
-          ? anyEl.radialMeta.startAngle
-          : 0,
+    angle: typeof anyEl.startAngle === 'number' ? anyEl.startAngle : typeof anyEl.radialMeta?.startAngle === 'number' ? anyEl.radialMeta.startAngle : 0,
     radius: typeof anyEl.radius === 'number' ? anyEl.radius : 100,
     direction: anyEl.direction || 'clockwise',
     justification: anyEl.justification || 'center',
-    topBase: -1,
+    topBase: -1
   }
 
   return config
@@ -64,7 +55,7 @@ export function decodeRadialText(config: TextElementConfig): Partial<FabricEleme
     angle: typeof (config as any).angle === 'number' ? (config as any).angle : 0,
     radius: typeof (config as any).radius === 'number' ? (config as any).radius : 100,
     direction: (config as any).direction || 'clockwise',
-    justification: (config as any).justification || 'center',
+    justification: (config as any).justification || 'center'
   } as any
 
   return element
