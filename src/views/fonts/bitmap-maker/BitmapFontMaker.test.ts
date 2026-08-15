@@ -325,4 +325,18 @@ describe('BitmapFontMaker', () => {
     expect(vm.downloadError).toContain('changed while')
     expect(vm.downloading).toBe(false)
   })
+
+  it('does not write package validation errors after an in-flight build is unmounted', async () => {
+    let rejectValidation!: (error: Error) => void
+    mocks.validate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectValidation = reject }))
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    const build = vm.buildPackage()
+    await vi.waitFor(() => expect(mocks.validate).toHaveBeenCalled())
+    wrapper.unmount()
+    rejectValidation(new Error('late validation failure'))
+    await build
+    expect(vm.packageValidationError).toBe('')
+  })
 })

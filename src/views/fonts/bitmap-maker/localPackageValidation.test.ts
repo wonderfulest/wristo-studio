@@ -64,4 +64,21 @@ describe('validateLocalBitmapPackage', () => {
     })
     await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).rejects.toThrow(code)
   })
+
+  it.each([20, 21, 23, 32])('maps a %i-byte truncated PNG to stable IHDR validation', async (length) => {
+    const truncated = new Uint8Array(length)
+    truncated.set([137,80,78,71,13,10,26,10])
+    const fixture = await packageFixture(zip => zip.file('6/precision-g_0.png', truncated, { createFolders: false }))
+    await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).rejects.toThrow('PNG_IHDR_INVALID')
+  })
+
+  it.each([
+    ['length', (bytes: Uint8Array) => { bytes[11] = 12 }],
+    ['type', (bytes: Uint8Array) => { bytes[12] = 88 }],
+  ])('rejects a bad IHDR %s without leaking a DataView error', async (_label, mutate) => {
+    const invalid = png.slice()
+    mutate(invalid)
+    const fixture = await packageFixture(zip => zip.file('6/precision-g_0.png', invalid, { createFolders: false }))
+    await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).rejects.toThrow('PNG_IHDR_INVALID')
+  })
 })

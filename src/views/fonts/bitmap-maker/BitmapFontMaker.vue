@@ -94,8 +94,8 @@
         <p v-if="publishError" class="validation-error" role="alert">{{ publishError }}</p>
         <div class="action-bar">
           <button v-if="buildRunning" class="button secondary" type="button" @click="cancelBuild">{{ t('common.cancel') }}</button>
-          <button v-else data-test="build-button" class="button primary" type="button" :disabled="!sourceValid || !recipeValid" aria-describedby="bitmap-build-help" @click="buildPackage">{{ t('bitmapMaker.buildAll') }}</button>
-          <button data-test="download-button" class="button secondary" type="button" :disabled="!buildFresh || !slugValid || downloading" aria-describedby="bitmap-download-help" @click="downloadPackage">{{ downloading ? t('bitmapMaker.preparingDownload') : t('bitmapMaker.downloadZip') }}</button>
+          <button v-else data-test="build-button" class="button primary" type="button" :disabled="!canBuild" aria-describedby="bitmap-build-help" @click="buildPackage">{{ t('bitmapMaker.buildAll') }}</button>
+          <button data-test="download-button" class="button secondary" type="button" :disabled="!canDownload" aria-describedby="bitmap-download-help" @click="downloadPackage">{{ downloading ? t('bitmapMaker.preparingDownload') : t('bitmapMaker.downloadZip') }}</button>
           <button data-test="publish-button" class="button publish" type="button" :disabled="!canPublish" aria-describedby="bitmap-publish-help" @click="publishPackage">{{ publishing ? t('bitmapMaker.publishing') : t('bitmapMaker.publishFont') }}</button>
         </div>
         <div class="action-help" role="status" aria-live="polite">
@@ -166,15 +166,17 @@ const rasterKey = computed(() => JSON.stringify({ source: sourceRevision.value, 
 const buildFresh = computed(() => !!buildArtifact.value && builtRasterKey.value === rasterKey.value && localValidationPassed.value)
 const canPublish = computed(() => sourceValid.value && recipeValid.value && buildFresh.value && localValidationPassed.value && metadataValid.value && !buildRunning.value && !publishing.value && !downloading.value)
 const actionsLocked = computed(() => buildRunning.value || downloading.value || publishing.value)
+const canBuild = computed(() => !actionsLocked.value && sourceValid.value && recipeValid.value)
+const canDownload = computed(() => !actionsLocked.value && buildFresh.value && slugValid.value)
 const activeStage = computed(() => publishing.value || buildFresh.value ? 3 : buildRunning.value ? 2 : sourceValid.value ? 1 : 0)
 const sourceSummary = computed(() => sourceParsed.value ? `${sourceParsed.value.family} · ${sourceParsed.value.glyphCount} glyphs · ${(sourceFile.value!.size / 1024).toFixed(1)} KB` : t('bitmapMaker.localOnly'))
 const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(code => `U+${code.toString(16).toUpperCase().padStart(4, '0')}`).join(', '))
 const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewTextStyle = computed(() => ({ fontWeight: recipe.fontWeight, fontStyle: recipe.italicAngle ? 'italic' : 'normal', WebkitTextStroke: recipe.outlineWidthEm ? `${Math.max(1, recipe.outlineWidthEm * 8)}px currentColor` : undefined, color: recipe.outlineMode === 'outline-only' ? 'transparent' : undefined }))
 const buildStateLabel = computed(() => buildRunning.value ? t('bitmapMaker.building') : buildFresh.value ? t('bitmapMaker.ready') : buildArtifact.value ? t('bitmapMaker.stale') : t('bitmapMaker.notBuilt'))
-const buildActionDescription = computed(() => !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
-const downloadActionDescription = computed(() => !buildFresh.value ? t('bitmapMaker.downloadBuildRequired') : !slugValid.value ? t('bitmapMaker.downloadSlugRequired') : downloading.value ? t('bitmapMaker.preparingCurrentSlug') : t('bitmapMaker.downloadReady'))
-const publishActionDescription = computed(() => packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : t('bitmapMaker.publishReady'))
+const buildActionDescription = computed(() => actionsLocked.value ? t('common.processing') : !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
+const downloadActionDescription = computed(() => downloading.value ? t('bitmapMaker.preparingCurrentSlug') : actionsLocked.value ? t('common.processing') : !buildFresh.value ? t('bitmapMaker.downloadBuildRequired') : !slugValid.value ? t('bitmapMaker.downloadSlugRequired') : t('bitmapMaker.downloadReady'))
+const publishActionDescription = computed(() => actionsLocked.value ? t('common.processing') : packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : t('bitmapMaker.publishReady'))
 
 function invalidateBuild() {
   localValidationPassed.value = false
@@ -217,7 +219,7 @@ async function onSourceInput(event: Event) {
 }
 
 async function buildPackage() {
-  if (actionsLocked.value || !sourceValid.value || !recipeValid.value || !sourceFile.value) return
+  if (!canBuild.value || !sourceFile.value) return
   const token = ++buildToken
   buildRunning.value = true
   buildError.value = ''
@@ -249,6 +251,7 @@ async function buildPackage() {
       localValidationPassed.value = true
       await loadAtlasPreview()
     } catch (error) {
+      if (!mounted || token !== buildToken || key !== rasterKey.value) return
       localValidationPassed.value = false
       packageValidationError.value = error instanceof Error ? error.message : t('bitmapMaker.packageInvalid')
     }
@@ -344,7 +347,7 @@ async function ensureCurrentArtifact(snapshot: ReturnType<typeof captureOperatio
 }
 
 async function downloadPackage() {
-  if (actionsLocked.value || !buildFresh.value || !slugValid.value || !buildArtifact.value) return
+  if (!canDownload.value || !buildArtifact.value) return
   const token = ++operationToken
   const snapshot = captureOperationSnapshot()
   const targetSlug = snapshot.metadata.slug

@@ -69,13 +69,20 @@ function parseDescriptor(text: string, expectedPage: string, codepoints: number[
 function parsePng(bytes: Uint8Array): { width: number; height: number } {
   const signature = new Uint8Array([137,80,78,71,13,10,26,10])
   const iend = new Uint8Array([0,0,0,0,73,69,78,68,174,66,96,130])
-  if (bytes.length < signature.length + iend.length || !bytesEqual(bytes.slice(0, 8), signature) || !bytesEqual(bytes.slice(-12), iend)) fail('PNG_INVALID')
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-  if (view.getUint32(8) !== 13 || new TextDecoder().decode(bytes.slice(12, 16)) !== 'IHDR') fail('PNG_IHDR_INVALID')
-  const width = view.getUint32(16)
-  const height = view.getUint32(20)
-  if (width < 1 || height < 1 || width > 8192 || height > 8192) fail('PNG_DIMENSIONS_INVALID')
-  return { width, height }
+  if (bytes.length < signature.length || !bytesEqual(bytes.slice(0, 8), signature)) fail('PNG_INVALID')
+  if (bytes.length < 33) fail('PNG_IHDR_INVALID')
+  try {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    if (view.getUint32(8) !== 13 || new TextDecoder().decode(bytes.slice(12, 16)) !== 'IHDR') fail('PNG_IHDR_INVALID')
+    const width = view.getUint32(16)
+    const height = view.getUint32(20)
+    if (width < 1 || height < 1 || width > 8192 || height > 8192) fail('PNG_DIMENSIONS_INVALID')
+    if (!bytesEqual(bytes.slice(-12), iend)) fail('PNG_INVALID')
+    return { width, height }
+  } catch (error) {
+    if (error instanceof LocalPackageValidationError) throw error
+    return fail('PNG_IHDR_INVALID')
+  }
 }
 
 function parseManifest(text: string): BitmapFontManifest {
@@ -89,14 +96,6 @@ export async function validateLocalBitmapPackage(
   let archive: JSZip
   try { archive = await JSZip.loadAsync(artifact.zip) } catch { fail('ZIP_INVALID') }
   const entries = Object.entries(archive!.files)
-  const bytesCache = new Map<string, Uint8Array>()
-  const read = async (path: string, entry: JSZip.JSZipObject): Promise<Uint8Array> => {
-    const cached = bytesCache.get(path)
-    if (cached) return cached
-    const bytes = await entry.async('uint8array')
-    bytesCache.set(path, bytes)
-    return bytes
-  }
   if (entries.some(([, entry]) => entry.dir)) fail('PACKAGE_DIRECTORY_ENTRY')
   if (entries.length !== 79) fail('PACKAGE_ENTRY_COUNT')
 
@@ -112,7 +111,7 @@ export async function validateLocalBitmapPackage(
   const manifestEntry = archive!.file('manifest.json') ?? fail('MANIFEST_MISSING')
   const recipeEntry = archive!.file('recipe.json') ?? fail('RECIPE_MISSING')
   const sourceEntry = archive!.file(sourcePath) ?? fail('SOURCE_MISSING')
-  const manifest = parseManifest(new TextDecoder().decode(await read('manifest.json', manifestEntry)))
+  const manifest = parseManifest(new TextDecoder().decode(await manifestEntry.async('uint8array')))
   if (canonicalJson(manifest) !== canonicalJson(artifact.manifest)) fail('MANIFEST_ARTIFACT_MISMATCH')
   if (manifest.schemaVersion !== 1) fail('MANIFEST_SCHEMA_INVALID')
   if (manifest.slug !== expected.slug || manifest.type !== expected.fontType || manifest.language !== 'en') fail('MANIFEST_METADATA_MISMATCH')
@@ -120,26 +119,34 @@ export async function validateLocalBitmapPackage(
   if (canonicalJson(manifest.sizes) !== canonicalJson([...BITMAP_FONT_SIZES])) fail('MANIFEST_SIZES_MISMATCH')
   if (canonicalJson(manifest.charset) !== canonicalJson(expected.charset)) fail('MANIFEST_CHARSET_MISMATCH')
 
-  const recipeBytes = await read('recipe.json', recipeEntry)
+  const hashes: Array<[string, string]> = []
+  let recipeBytes: Uint8Array | undefined = await recipeEntry.async('uint8array')
   if (new TextDecoder().decode(recipeBytes) !== canonicalJson(expected.recipe)) fail('RECIPE_CONTENT_MISMATCH')
-  if (await sha256Hex(recipeBytes) !== manifest.recipeSha256) fail('RECIPE_HASH_MISMATCH')
-  const sourceBytes = await read(sourcePath, sourceEntry)
-  if (await sha256Hex(sourceBytes) !== manifest.source.sha256) fail('SOURCE_HASH_MISMATCH')
+  const recipeHash = await sha256Hex(recipeBytes)
+  if (recipeHash !== manifest.recipeSha256) fail('RECIPE_HASH_MISMATCH')
+  hashes.push(['recipe.json', recipeHash])
+  recipeBytes = undefined
+  let sourceBytes: Uint8Array | undefined = await sourceEntry.async('uint8array')
+  const sourceHash = await sha256Hex(sourceBytes)
+  if (sourceHash !== manifest.source.sha256) fail('SOURCE_HASH_MISMATCH')
+  hashes.push([sourcePath, sourceHash])
+  sourceBytes = undefined
 
   for (const size of BITMAP_FONT_SIZES) {
     const image = archive!.file(`${size}/${expected.slug}-g_0.png`) ?? fail('PNG_MISSING')
     const imagePath = `${size}/${expected.slug}-g_0.png`
-    const dimensions = parsePng(await read(imagePath, image))
+    let imageBytes: Uint8Array | undefined = await image.async('uint8array')
+    const dimensions = parsePng(imageBytes)
+    hashes.push([imagePath, await sha256Hex(imageBytes)])
+    imageBytes = undefined
     const descriptor = archive!.file(`${size}/${expected.slug}-g.fnt`) ?? fail('FNT_MISSING')
     const descriptorPath = `${size}/${expected.slug}-g.fnt`
-    parseDescriptor(new TextDecoder().decode(await read(descriptorPath, descriptor)), `${expected.slug}-g_0.png`, expected.charset.codepoints, dimensions.width, dimensions.height)
+    let descriptorBytes: Uint8Array | undefined = await descriptor.async('uint8array')
+    parseDescriptor(new TextDecoder().decode(descriptorBytes), `${expected.slug}-g_0.png`, expected.charset.codepoints, dimensions.width, dimensions.height)
+    hashes.push([descriptorPath, await sha256Hex(descriptorBytes)])
+    descriptorBytes = undefined
   }
 
-  const hashes: Array<[string, string]> = []
-  for (const [path, entry] of entries) {
-    if (path === 'manifest.json') continue
-    hashes.push([path, await sha256Hex(await read(path, entry))])
-  }
   const material = hashes.sort(([a], [b]) => utf8Compare(a, b)).map(([path, hash]) => `${path}\0${hash.toLowerCase()}\n`).join('')
   if (await sha256Hex(new TextEncoder().encode(material)) !== manifest.packageContentSha256) fail('PACKAGE_HASH_MISMATCH')
 }
