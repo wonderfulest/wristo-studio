@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLayerPanelItems, expandPanelItemsToLayerIds, findCollapsedGroupsForLayerIds, getLayerGroupKey, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups } from './layerPanelGrouping'
+import { areAllGroupMembersVisible, buildLayerPanelItems, expandPanelItemsToLayerIds, findCollapsedGroupsForLayerIds, getGroupVisibilityTarget, getLayerGroupKey, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups } from './layerPanelGrouping'
 import type { LayerElement } from '@/types/layer'
 
 const layer = (id: string, group = ''): LayerElement => ({
@@ -63,5 +63,22 @@ describe('layerPanelGrouping', () => {
     const moved = [items[1], items[0], items[2]]
 
     expect(resolvePanelItemsToCanvasIds(moved)).toEqual(['date', 'time', 'steps-value', 'steps-label'])
+  })
+
+  it('treats a group as visible only when every member is visible in the current mode', () => {
+    const members = [layer('visible'), layer('hidden')]
+    members[1].displayStates = { active: false, ambient: true }
+
+    expect(areAllGroupMembersVisible(members, 'active')).toBe(false)
+    expect(areAllGroupMembersVisible(members, 'ambient')).toBe(true)
+  })
+
+  it('shows every member when group visibility is mixed or fully hidden', () => {
+    expect(getGroupVisibilityTarget([true, false])).toBe(true)
+    expect(getGroupVisibilityTarget([false, false])).toBe(true)
+  })
+
+  it('hides every member only when the whole group is visible', () => {
+    expect(getGroupVisibilityTarget([true, true])).toBe(false)
   })
 })

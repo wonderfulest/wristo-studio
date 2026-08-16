@@ -22,6 +22,10 @@ describe('ColorPropertyDialog contract', () => {
     expect(source).toContain('option.value')
   })
 
+  it('shows the number of supported color options in the collapse title', () => {
+    expect(source).toContain("{{ t('property.colorOptions') }}（{{ formData.options.length }}）")
+  })
+
   it('passes colors collected from canvas elements to its only ColorPicker', () => {
     expect(source).toContain("import { useElementDataStore } from '@/stores/elementDataStore'")
     expect(source).toContain("import { collectCanvasColors } from './canvasColorPalette'")

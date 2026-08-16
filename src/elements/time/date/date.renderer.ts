@@ -87,6 +87,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     fill: config.fill,
     fontFamily: previewFont.fontFamily,
     formatter: config.formatter,
+    formatterOptions: config.formatterOptions ? [...config.formatterOptions] : undefined,
     hasControls: false,
   } as any)
   applyCurrentElementPreviewFont(element, config, text)
@@ -144,6 +145,9 @@ export function createDate(config: DateElementConfig): FabricElement {
     fill: savedTextStyle(element).fill as any,
     ...getPersistedTextFont(config, element),
     formatter: (element as any).formatter,
+    formatterOptions: Array.isArray((element as any).formatterOptions)
+      ? [...(element as any).formatterOptions]
+      : undefined,
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
@@ -171,6 +175,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     fill: patch.fill,
     fontFamily: patch.fontFamily,
     formatter: patch.formatter,
+    formatterOptions: patch.formatterOptions,
     originX: patch.originX,
     originY: patch.originY,
   }
@@ -213,6 +218,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       fontSize: obj.fontSize,
       fontFamily: obj.fontFamily,
       formatter: obj.formatter,
+      formatterOptions: Array.isArray(obj.formatterOptions) ? [...obj.formatterOptions] : undefined,
       topBase: encodeTopBaseForElement(obj as any),
     } as any)
   }

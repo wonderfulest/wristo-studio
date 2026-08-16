@@ -66,7 +66,8 @@
         </div>
 
         <el-collapse v-model="activeOptions" class="options-collapse">
-          <el-collapse-item :title="t('property.colorOptions')" name="options">
+          <el-collapse-item name="options">
+            <template #title>{{ t('property.colorOptions') }}（{{ formData.options.length }}）</template>
             <el-form-item
               prop="options"
               :rules="[

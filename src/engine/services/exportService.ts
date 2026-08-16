@@ -38,6 +38,7 @@ import { serializeDataPropertyConfig } from './dataPropertyConfig'
 import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.validation'
 import { validateVisibilityExpression } from '@/engine/expression/validation'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
+import { calculateConnectIqSettingsBudget } from './connectIqSettingsBudget'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -254,6 +255,18 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.properties,
     config.elements as unknown as Array<Record<string, unknown>>,
   )
+  const settingsBudget = calculateConnectIqSettingsBudget({
+    properties: config.properties,
+    dataOptions: config.dataOptions,
+    elements: config.elements as unknown as Array<Record<string, unknown>>,
+    appLanguage: config.localization?.appLanguage,
+    visualThemes: config.visualThemes,
+  })
+  if (settingsBudget.status === 'exceeded') {
+    if (typeof document !== 'undefined') {
+      ElMessage.warning(t('property.budgetExceeded'))
+    }
+  }
   const errors = [...dateErrors, ...visualThemeErrors]
   if (errors.length > 0) {
     if (typeof document !== 'undefined') {

@@ -33,6 +33,7 @@ export const DEFAULT_NON_CHINESE_DATE_FORMATTER = DateFormatConstants.MMM_D_DDD
 
 export function getDateContentLanguage(formatter: number | string | null | undefined): DateContentLanguage {
   const value = Number(formatter)
+  if (value >= DateFormatConstants.SOLAR_YEAR_LABEL && value <= DateFormatConstants.FOUR_PILLAR_HOUR) return 'zh'
   if (CHINESE_DATE_FORMATTERS.has(value)) return 'zh'
   if (NUMERIC_DATE_FORMATTERS.has(value)) return 'numeric'
   return 'en'

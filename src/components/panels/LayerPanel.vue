@@ -23,19 +23,31 @@
         :prevent-on-filter="false">
         <template #item="{ element: item }">
           <div v-if="item.kind === 'group'" class="layer-group-block">
-            <button
+            <div
               class="layer-group-summary layer-content"
               :class="{ 'layer-group-selected': isGroupActived(item) }"
-              type="button"
+              role="button"
+              tabindex="0"
               :aria-expanded="item.isExpanded"
               @click.stop="selectLayerGroup(item)"
+              @keydown.enter.prevent="selectLayerGroup(item)"
+              @keydown.space.prevent="selectLayerGroup(item)"
               @dblclick.stop="toggleGroup(item.key)">
               <span class="layer-group-toggle" :title="item.isExpanded ? 'Collapse group' : 'Expand group'" @click.stop="toggleGroup(item.key)">
                 <Icon :icon="item.isExpanded ? 'material-symbols:expand-more' : 'material-symbols:chevron-right'" />
               </span>
-              <span class="layer-group-summary-name">{{ item.label }}</span>
+              <span class="layer-group-summary-name">{{ getGroupDisplayName(item) }}</span>
               <span class="layer-group-count">{{ item.members.length }} items</span>
-            </button>
+              <button
+                class="layer-btn layer-group-visibility no-drag"
+                type="button"
+                :aria-pressed="isGroupVisibleInPreview(item)"
+                :title="isGroupVisibleInPreview(item) ? t('editorSettings.hide') : t('editorSettings.show')"
+                @click.stop="toggleGroupVisibility(item)">
+                <el-icon v-if="isGroupVisibleInPreview(item)"><View /></el-icon>
+                <el-icon v-else><Hide /></el-icon>
+              </button>
+            </div>
             <div v-if="item.isExpanded" class="layer-group-members">
               <div
                 v-for="layer in item.members"
@@ -160,6 +172,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { usePropertiesStore } from '@/stores/properties'
 import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -168,18 +181,20 @@ import { removeElement, getElementById } from '@/engine/managers/elementManager'
 import { syncLayersFromCanvas, applyOrder } from '@/engine/managers/layerManager'
 import { useI18n } from '@/i18n'
 import type { LayerElement } from '@/types/layer'
-import { getDisplayState, type DisplayStateMode } from '@/utils/displayStates'
+import { getDisplayState, setDisplayState, type DisplayStateMode } from '@/utils/displayStates'
 import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
 import { toPanelLayers } from './layerPanelOrder'
-import { buildLayerPanelItems, findCollapsedGroupsForLayerIds, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
-import { normalizeLayerName, resolveLayerName } from './layerName'
+import { areAllGroupMembersVisible, buildLayerPanelItems, findCollapsedGroupsForLayerIds, getGroupVisibilityTarget, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
+import { normalizeLayerName } from './layerName'
+import { resolveLayerDisplayName, resolveLayerGroupDisplayName, type LayerBindingSummaryContext } from './layerBindingSummary'
 
 const layerStore = useLayerStore()
 const baseStore = useBaseStore()
 const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
 const elementDataStore = useElementDataStore()
-const { t } = useI18n()
+const propertiesStore = usePropertiesStore()
+const { locale, t } = useI18n()
 
 const panelLayers = ref<LayerElement[]>([])
 const panelItems = ref<LayerPanelItem[]>([])
@@ -409,6 +424,20 @@ const isLayerVisibleInPreview = (layer: LayerElement | any): boolean => {
   return getDisplayState(currentLayer?.displayStates ?? layer?.displayStates, previewMode.value)
 }
 
+const isGroupVisibleInPreview = (item: LayerPanelGroupItem): boolean => {
+  return areAllGroupMembersVisible(item.members, previewMode.value)
+}
+
+const toggleGroupVisibility = (item: LayerPanelGroupItem): void => {
+  const visibility = item.members.map((member) => isLayerVisibleInPreview(member))
+  const targetVisible = getGroupVisibilityTarget(visibility)
+  item.members.forEach((member) => {
+    layerStore.setLayerDisplayStates(String(member.id), setDisplayState(member.displayStates, previewMode.value, targetVisible))
+  })
+  baseStore.canvas?.renderAll?.()
+  debouncedUpdateElements()
+}
+
 const toggleLock = (layer: any): void => {
   if (!layer?.id) return
   if (String(layer?.eleType ?? '') === 'global') return
@@ -523,13 +552,31 @@ const getElementIcon = (eleType: string): string => {
 }
 
 const getLayerTypeLabel = (eleType: string): string => {
+  if (eleType === 'goal') return t('subDial.goal')
   const key = `addElement.type.${eleType}`
   const label = t(key)
   return label === key ? eleType : label
 }
 
+const getBindingSummaryContext = (): LayerBindingSummaryContext => ({
+  language: locale.value === 'zh' || locale.value === 'zh-tw' ? 'zh' : 'en',
+  properties: propertiesStore.allProperties,
+  typeLabel: getLayerTypeLabel,
+  metricLabel: (identity) => {
+    const metric = propertiesStore.getMetricByOptions(identity)
+    if (!metric) return ''
+    return locale.value === 'zh' || locale.value === 'zh-tw'
+      ? metric.settingsLabel.zhs
+      : metric.settingsLabel.eng
+  }
+})
+
 const getLayerDisplayName = (layer: LayerElement): string => {
-  return resolveLayerName(layer.layerName, getLayerTypeLabel(layer.eleType))
+  return resolveLayerDisplayName(layer, getBindingSummaryContext())
+}
+
+const getGroupDisplayName = (item: LayerPanelGroupItem): string => {
+  return resolveLayerGroupDisplayName(item.key, getBindingSummaryContext())
 }
 
 const startRenaming = (layer: LayerElement): void => {
@@ -787,6 +834,10 @@ onUnmounted((): void => {
   color: var(--studio-text-muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.layer-group-visibility {
+  flex: 0 0 30px;
 }
 
 .layer-group-members {

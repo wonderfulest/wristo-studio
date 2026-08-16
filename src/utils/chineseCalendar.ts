@@ -29,18 +29,11 @@ const MONTHS = ['正月', '二月', '三月', '四月', '五月', '六月', '七
 const DAY_PREFIX = ['初', '十', '廿', '卅']
 const DAY_NUMBERS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 const SHICHEN_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+const CHINESE_DIGITS = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九']
 const WEEKDAYS_SHORT = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 const WEEKDAYS_LONG = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const EN_ZODIACS = ['Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat', 'Monkey', 'Rooster', 'Dog', 'Pig']
 const EN_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const SOLAR_TERMS: Record<string, string> = {
-  '01-05': '小寒', '01-20': '大寒', '02-04': '立春', '02-19': '雨水',
-  '03-06': '惊蛰', '03-21': '春分', '04-05': '清明', '04-20': '谷雨',
-  '05-06': '立夏', '05-21': '小满', '06-06': '芒种', '06-21': '夏至',
-  '07-07': '小暑', '07-23': '大暑', '08-08': '立秋', '08-23': '处暑',
-  '09-08': '白露', '09-23': '秋分', '10-08': '寒露', '10-23': '霜降',
-  '11-07': '立冬', '11-22': '小雪', '12-07': '大雪', '12-22': '冬至',
-}
 const SOLAR_FESTIVALS: Record<string, string> = {
   '01-01': '元旦',
   '05-01': '劳动节',
@@ -80,15 +73,36 @@ const EN_LUNAR_FESTIVALS: Record<string, string> = {
 const YI = ['祭祀', '出行', '交易', '嫁娶', '入宅', '动土', '安床', '开市']
 const JI = ['动土', '远行', '嫁娶', '开市', '安葬', '入宅', '交易', '安床']
 
-interface LunarDate {
+const SOLAR_TERM_NAMES = [
+  '小寒', '大寒', '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
+  '立夏', '小满', '芒种', '夏至', '小暑', '大暑', '立秋', '处暑',
+  '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至',
+]
+const SOLAR_TERM_MINUTES = [
+  0, 21208, 42467, 63836, 85337, 107014, 128867, 150921,
+  173149, 195551, 218072, 240693, 263343, 285989, 308563, 331033,
+  353350, 375494, 397447, 419210, 440795, 462224, 483532, 504758,
+]
+const SOLAR_YEAR_MS = 31556925974.7
+const SOLAR_TERM_EPOCH_MS = Date.UTC(1900, 0, 6, 2, 5)
+
+export interface LunarDate {
   year: number
   month: number
   day: number
   isLeapMonth: boolean
+  yearName: string
   monthName: string
   dayName: string
   ganzhiYear: string
   zodiacYear: string
+}
+
+export interface FourPillars {
+  year: string
+  month: string
+  day: string
+  hour: string
 }
 
 function lunarInfo(year: number) {
@@ -119,6 +133,14 @@ function key(month: number, day: number) {
   return `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+function chineseNumber(value: number): string {
+  if (value < 10) return CHINESE_DIGITS[value]
+  if (value === 10) return '十'
+  if (value < 20) return `十${CHINESE_DIGITS[value % 10]}`
+  const tens = Math.floor(value / 10)
+  return `${CHINESE_DIGITS[tens]}十${value % 10 ? CHINESE_DIGITS[value % 10] : ''}`
+}
+
 function lunarDayName(day: number) {
   if (day === 10) return '初十'
   if (day === 20) return '二十'
@@ -147,7 +169,9 @@ function fallbackEnglishDate(date: Date) {
   return `${EN_MONTHS_SHORT[date.getMonth()]} ${date.getDate()}`
 }
 
-export function getChineseLunarDate(date: Date): LunarDate {
+export function getChineseLunarDate(date: Date): LunarDate | null {
+  const solarYear = date.getFullYear()
+  if (solarYear < 1900 || solarYear > 2099) return null
   let offset = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(1900, 0, 31)) / 86400000)
   let lunarYear = 1900
   let yearDays = 0
@@ -200,6 +224,7 @@ export function getChineseLunarDate(date: Date): LunarDate {
     month: lunarMonth,
     day: lunarDay,
     isLeapMonth,
+    yearName: `${String(lunarYear).split('').map((digit) => CHINESE_DIGITS[Number(digit)]).join('')}年`,
     monthName: `${isLeapMonth ? '闰' : ''}${MONTHS[lunarMonth - 1]}`,
     dayName: lunarDayName(lunarDay),
     ganzhiYear: ganzhiYear(lunarYear),
@@ -207,12 +232,133 @@ export function getChineseLunarDate(date: Date): LunarDate {
   }
 }
 
+function solarTermMoment(year: number, index: number): Date {
+  let timestamp = SOLAR_TERM_EPOCH_MS + SOLAR_YEAR_MS * (year - 1900) + SOLAR_TERM_MINUTES[index] * 60000
+  const targetLongitude = (285 + index * 15) % 360
+  for (let iteration = 0; iteration < 6; iteration += 1) {
+    const longitude = apparentSolarLongitude(timestamp)
+    const error = ((longitude - targetLongitude + 540) % 360) - 180
+    timestamp -= error / 0.98564736 * 86400000
+  }
+  return new Date(timestamp)
+}
+
+function apparentSolarLongitude(timestamp: number): number {
+  const julianDate = timestamp / 86400000 + 2440587.5
+  const centuries = (julianDate - 2451545) / 36525
+  const meanLongitude = 280.46646 + 36000.76983 * centuries + 0.0003032 * centuries * centuries
+  const meanAnomaly = 357.52911 + 35999.05029 * centuries - 0.0001537 * centuries * centuries
+  const anomalyRadians = meanAnomaly * Math.PI / 180
+  const center = Math.sin(anomalyRadians) * (1.914602 - 0.004817 * centuries - 0.000014 * centuries * centuries)
+    + Math.sin(2 * anomalyRadians) * (0.019993 - 0.000101 * centuries)
+    + Math.sin(3 * anomalyRadians) * 0.000289
+  const omega = (125.04 - 1934.136 * centuries) * Math.PI / 180
+  const longitude = meanLongitude + center - 0.00569 - 0.00478 * Math.sin(omega)
+  return ((longitude % 360) + 360) % 360
+}
+
+function sameLocalDay(date: Date, other: Date): boolean {
+  return date.getFullYear() === other.getFullYear()
+    && date.getMonth() === other.getMonth()
+    && date.getDate() === other.getDate()
+}
+
+export function getSolarTerm(date: Date): string {
+  const year = date.getFullYear()
+  for (let index = 0; index < SOLAR_TERM_NAMES.length; index += 1) {
+    if (sameLocalDay(date, solarTermMoment(year, index))) return SOLAR_TERM_NAMES[index]
+  }
+  return ''
+}
+
+export function getNextSolarTerm(date: Date): UpcomingChineseFestival | null {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12)
+  for (let days = 0; days <= 366; days += 1) {
+    const candidate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + days, 12)
+    const name = getSolarTerm(candidate)
+    if (name) return { name, days }
+  }
+  return null
+}
+
+function ganzhiByIndex(index: number): string {
+  const normalized = ((index % 60) + 60) % 60
+  return `${STEMS[normalized % 10]}${BRANCHES[normalized % 12]}`
+}
+
+function julianDayNumber(year: number, month: number, day: number): number {
+  const a = Math.floor((14 - month) / 12)
+  const adjustedYear = year + 4800 - a
+  const adjustedMonth = month + 12 * a - 3
+  return day
+    + Math.floor((153 * adjustedMonth + 2) / 5)
+    + 365 * adjustedYear
+    + Math.floor(adjustedYear / 4)
+    - Math.floor(adjustedYear / 100)
+    + Math.floor(adjustedYear / 400)
+    - 32045
+}
+
+function monthPillarIndex(date: Date): number {
+  const year = date.getFullYear()
+  const boundaryTerms = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+  let monthIndex = 11
+  for (let index = 0; index < boundaryTerms.length; index += 1) {
+    if (date.getTime() >= solarTermMoment(year, boundaryTerms[index]).getTime()) monthIndex = index
+  }
+  return monthIndex
+}
+
+export function getFourPillars(date: Date): FourPillars {
+  const year = date.getFullYear()
+  const lichun = solarTermMoment(year, 2)
+  const pillarYear = date.getTime() < lichun.getTime() ? year - 1 : year
+  const yearIndex = pillarYear - 4
+  const yearPillar = ganzhiByIndex(yearIndex)
+  const monthIndex = monthPillarIndex(date)
+  const monthStem = (((yearIndex % 10 + 10) % 10) % 5 * 2 + 2 + monthIndex) % 10
+  const monthBranch = (2 + monthIndex) % 12
+  const monthPillar = `${STEMS[monthStem]}${BRANCHES[monthBranch]}`
+  const dayIndex = julianDayNumber(year, date.getMonth() + 1, date.getDate()) + 49
+  const dayPillar = ganzhiByIndex(dayIndex)
+  const dayStem = ((dayIndex % 10) + 10) % 10
+  const hourBranch = Math.floor(((date.getHours() + 1) % 24) / 2)
+  const hourStem = (dayStem % 5 * 2 + hourBranch) % 10
+  const hourPillar = `${STEMS[hourStem]}${BRANCHES[hourBranch]}`
+  return {
+    year: yearPillar,
+    month: monthPillar,
+    day: dayPillar,
+    hour: hourPillar,
+  }
+}
+
 export function getChineseFestival(date: Date) {
   const solarKey = key(date.getMonth() + 1, date.getDate())
   if (SOLAR_FESTIVALS[solarKey]) return SOLAR_FESTIVALS[solarKey]
-  if (SOLAR_TERMS[solarKey]) return SOLAR_TERMS[solarKey]
+  const solarTerm = getSolarTerm(date)
+  if (solarTerm) return solarTerm
   const lunar = getChineseLunarDate(date)
+  if (!lunar) return ''
   return LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || ''
+}
+
+export function getSolarFestival(date: Date): string {
+  return SOLAR_FESTIVALS[key(date.getMonth() + 1, date.getDate())] || ''
+}
+
+export function getLunarFestival(date: Date): string {
+  const lunar = getChineseLunarDate(date)
+  return lunar ? (LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || '') : ''
+}
+
+export function getNextFestival(date: Date): UpcomingChineseFestival | null {
+  for (let days = 0; days <= 366; days += 1) {
+    const candidate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, 12)
+    const name = getSolarFestival(candidate) || getLunarFestival(candidate)
+    if (name) return { name, days }
+  }
+  return null
 }
 
 interface UpcomingChineseFestival {
@@ -234,6 +380,7 @@ export function getEnglishFestivalOrSolarTerm(date: Date) {
   if (EN_SOLAR_FESTIVALS[solarKey]) return EN_SOLAR_FESTIVALS[solarKey]
   if (EN_SOLAR_TERMS[solarKey]) return EN_SOLAR_TERMS[solarKey]
   const lunar = getChineseLunarDate(date)
+  if (!lunar) return ''
   return EN_LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || ''
 }
 
@@ -257,6 +404,7 @@ export function getChineseWeekday(date: Date, longFormat = false) {
 
 export function formatChineseCulturalDate(date: Date, formatter: number, locale: string | null | undefined = 'zh') {
   const lunar = getChineseLunarDate(date)
+  if (!lunar) return ''
   if (!isChineseLocale(locale)) {
     switch (formatter) {
       case 20:
@@ -292,6 +440,58 @@ export function formatChineseCulturalDate(date: Date, formatter: number, locale:
       return getChineseWeekday(date)
     case 28:
       return getChineseWeekday(date, true)
+    case 33:
+      return `${date.getFullYear()}年`
+    case 34:
+      return `${date.getMonth() + 1}月`
+    case 35:
+      return `${chineseNumber(date.getMonth() + 1)}月`
+    case 36:
+      return `${date.getDate()}日`
+    case 37:
+      return `${chineseNumber(date.getDate())}日`
+    case 38:
+      return `${date.getMonth() + 1}月${date.getDate()}日`
+    case 39:
+      return `${chineseNumber(date.getMonth() + 1)}月${chineseNumber(date.getDate())}日`
+    case 40:
+      return lunar.yearName
+    case 41:
+      return lunar.monthName
+    case 42:
+      return lunar.dayName
+    case 43:
+      return `农历${lunar.monthName}`
+    case 44:
+      return getSolarFestival(date)
+    case 45:
+      return getLunarFestival(date)
+    case 46:
+      return getSolarTerm(date)
+    case 47:
+      return getNextFestival(date)?.name || ''
+    case 48: {
+      const event = getNextFestival(date)
+      return event ? (event.days === 0 ? event.name : `${event.name} ${event.days}天`) : ''
+    }
+    case 49:
+      return getNextSolarTerm(date)?.name || ''
+    case 50: {
+      const event = getNextSolarTerm(date)
+      return event ? (event.days === 0 ? event.name : `${event.name} ${event.days}天`) : ''
+    }
+    case 51:
+      return lunar.zodiacYear.replace(/年$/, '')
+    case 52:
+      return SHICHEN_BRANCHES[Math.floor(((date.getHours() + 1) % 24) / 2)]
+    case 53:
+      return getFourPillars(date).year
+    case 54:
+      return getFourPillars(date).month
+    case 55:
+      return getFourPillars(date).day
+    case 56:
+      return getFourPillars(date).hour
     default:
       return ''
   }

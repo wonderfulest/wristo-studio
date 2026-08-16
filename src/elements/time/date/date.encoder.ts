@@ -16,6 +16,9 @@ export function encodeDate(element: FabricElement): DateElementConfig {
     fontSize: getSavedFontSize(element, 14),
     fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
     formatter: Number((element as any).formatter ?? 0),
+    formatterOptions: Array.isArray((element as any).formatterOptions)
+      ? [...(element as any).formatterOptions]
+      : undefined,
     topBase: encodeTopBaseForElement(element),
   }
   return config
@@ -33,6 +36,7 @@ export function decodeDate(config: DateElementConfig): Partial<FabricElement> {
     fontSize: config.fontSize,
     fill: config.fill,
     formatter: config.formatter,
+    formatterOptions: config.formatterOptions ? [...config.formatterOptions] : undefined,
   }
   return elementConfig
 }

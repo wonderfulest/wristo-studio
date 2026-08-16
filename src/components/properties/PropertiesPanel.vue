@@ -24,6 +24,33 @@
         </div>
       </section>
 
+      <section class="settings-budget" :class="`settings-budget-${settingsBudget.status}`">
+        <div class="settings-budget-heading">
+          <div>
+            <strong>{{ t('property.connectIqBudget') }}</strong>
+            <span>{{ t('property.connectIqBudgetHint') }}</span>
+          </div>
+          <b>{{ formatBudgetBytes(settingsBudget.usedBytes) }} / {{ formatBudgetBytes(settingsBudget.limitBytes) }}</b>
+        </div>
+        <el-progress
+          :percentage="settingsBudget.percentage"
+          :status="settingsBudget.status === 'exceeded' ? 'exception' : (settingsBudget.status === 'warning' ? 'warning' : 'success')"
+          :stroke-width="8"
+        />
+        <div class="settings-budget-details">
+          <span>{{ t('property.settingsCount', { count: settingsBudget.totalSettings }) }}</span>
+          <span>{{ t('property.optionCount', { count: settingsBudget.listOptions }) }}</span>
+          <span>{{ t('property.remainingBudget', { size: formatBudgetBytes(settingsBudget.remainingBytes) }) }}</span>
+        </div>
+        <el-alert
+          v-if="settingsBudget.status !== 'normal'"
+          :type="settingsBudget.status === 'exceeded' ? 'error' : 'warning'"
+          :title="t(settingsBudget.status === 'exceeded' ? 'property.budgetExceeded' : 'property.budgetWarning')"
+          :closable="false"
+          show-icon
+        />
+      </section>
+
       <div class="properties-layout">
         <section class="properties-main" :aria-label="t('property.drawerTitle')">
           <div class="settings-stack">
@@ -122,7 +149,22 @@
                           <code>{{ item.key }}</code>
                         </div>
                         <div class="property-preview">
-                          <template v-if="item.prop.type === 'color'">
+                          <template v-if="item.prop.type === 'date'">
+                            <el-select
+                              :model-value="item.prop.value"
+                              class="date-format-select"
+                              @click.stop
+                              @change="updateDateFormatter(item.elementId, $event)"
+                            >
+                              <el-option
+                                v-for="option in item.prop.options"
+                                :key="option.value"
+                                :label="getDateFormatOptionLabel(option)"
+                                :value="option.value"
+                              />
+                            </el-select>
+                          </template>
+                          <template v-else-if="item.prop.type === 'color'">
                             <span
                               class="color-preview"
                               :style="{
@@ -139,16 +181,20 @@
                           </template>
                         </div>
                       </div>
+                      <el-tag v-if="getPropertyOptionCount(item.prop) !== null" class="property-option-count" size="small" round>
+                        {{ t('property.propertyCount', { count: getPropertyOptionCount(item.prop) }) }}
+                      </el-tag>
                       <div class="property-actions">
                         <el-tooltip :content="t('common.edit')" placement="top">
                           <el-button
                             :aria-label="t('common.edit')"
                             circle
-                            @click.stop="editProperty(item.key, item.prop)"
+                            @click.stop="editProperty(item.key, item.prop, item.elementId)"
                           >
                             <el-icon><Edit /></el-icon>
                           </el-button>
                         </el-tooltip>
+                        <template v-if="item.prop.type !== 'date'">
                         <el-tooltip :content="getBindTooltip(item.prop.type)" placement="top">
                           <el-button
                             :aria-label="t('property.bindToSelection')"
@@ -172,6 +218,7 @@
                             <el-icon><Delete /></el-icon>
                           </el-button>
                         </el-tooltip>
+                        </template>
                       </div>
                     </article>
                   </div>
@@ -213,6 +260,7 @@
     <ChartPropertyDialog ref="chartPropertyDialog" @confirm="handlePropertyConfirm" />
     <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
     <DialPropertyDialog ref="dialPropertyDialog" @confirm="handlePropertyConfirm" />
+    <DatePropertyDialog ref="datePropertyDialog" @confirm="handleDatePropertyConfirm" />
   </el-drawer>
 </template>
 
@@ -226,7 +274,8 @@ import {
   Delete,
   DataLine,
   TrendCharts,
-  Link
+  Link,
+  Calendar
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ColorPropertyDialog from '@/components/properties/dialogs/ColorPropertyDialog.vue'
@@ -235,12 +284,14 @@ import DataPropertyDialog from '@/components/properties/dialogs/DataPropertyDial
 import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDialog.vue'
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import DialPropertyDialog from '@/components/properties/dialogs/DialPropertyDialog.vue'
+import DatePropertyDialog from '@/components/properties/dialogs/DatePropertyDialog.vue'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { useDesignStore } from '@/stores/designStore'
 import emitter from '@/utils/eventBus'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { useI18n } from '@/i18n'
@@ -253,6 +304,10 @@ import {
   getColorPropertyValue,
   setColorPropertyValue,
 } from '@/engine/services/colorPropertyValueService'
+import { calculateConnectIqSettingsBudget } from '@/engine/services/connectIqSettingsBudget'
+import { DateFormatOptions } from '@/config/elements/options/dateFormats'
+import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
+import { resolveDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -264,18 +319,28 @@ const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const dialPropertyDialog = ref(null)
+const datePropertyDialog = ref(null)
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
 const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const visualThemeStore = useVisualThemeStore()
+const designStore = useDesignStore()
 const { t } = useI18n()
 
-const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial']
+const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial', 'date']
+const addablePropertyTypes = typeOrder.filter((type) => type !== 'date')
 
 const getPropertyDisplayValue = (key, prop) =>
   prop.type === 'color' ? getColorPropertyValue(key) : prop.value
+
+const getPropertyOptionCount = (prop) => {
+  if (prop.type === 'data') return prop.metricSymbols?.length || 0
+  if (prop.type === 'date') return prop.options?.length || 0
+  if (prop.type === 'color' || prop.type === 'goal') return prop.options?.length || 0
+  return null
+}
 
 const typeMeta = computed(() => ({
   color: { label: t('property.colorSelect'), icon: Brush },
@@ -284,9 +349,10 @@ const typeMeta = computed(() => ({
   chart: { label: t('property.chartSelect'), icon: TrendCharts },
   text: { label: t('property.textString'), icon: Document },
   dial: { label: 'Dial', icon: Histogram },
+  date: { label: t('editor.date'), icon: Calendar },
 }))
 
-const addPropertyTypes = computed(() => typeOrder.map((type) => ({
+const addPropertyTypes = computed(() => addablePropertyTypes.map((type) => ({
   type,
   ...typeMeta.value[type],
 })))
@@ -329,9 +395,43 @@ const startPropertiesDrawerResize = (event) => {
   window.addEventListener('mouseup', stopPropertiesDrawerResize)
 }
 
-const propertyEntries = computed(() =>
-  Object.entries(propertiesStore.allProperties).map(([key, prop]) => ({ key, prop }))
-)
+const availableDateFormatOptions = computed(() => {
+  const allowed = new Set(getAllowedDateFormatters(designStore.appLanguage))
+  return DateFormatOptions.filter((option) => allowed.has(option.value))
+})
+
+const getDateFormatOptionLabel = (option) =>
+  designStore.appLanguage === 'zhs' ? (option.zhsLabel || option.label) : option.label
+
+const derivedDateEntries = computed(() => {
+  const dateSnapshots = elementDataStore.elements.filter((snapshot) => snapshot.eleType === 'date')
+  const snapshotsById = new Map(dateSnapshots.map((snapshot) => [String(snapshot.id), snapshot]))
+  const canvasDateIds = (canvasStore.canvas?.getObjects?.() || [])
+    .filter((element) => element?.eleType === 'date' && element?.id != null)
+    .map((element) => String(element.id))
+  const orderedSnapshots = canvasDateIds.length > 0
+    ? canvasDateIds.map((id) => snapshotsById.get(id)).filter(Boolean)
+    : dateSnapshots
+
+  return orderedSnapshots.map((snapshot, index) => ({
+    key: `DateFormatter${index}`,
+    elementId: snapshot.id,
+    prop: {
+      type: 'date',
+      title: `${t('editor.date')} ${index + 1}`,
+      value: Number(snapshot.config.formatter ?? 0),
+      options: resolveDateFormatterValues(
+        snapshot.config.formatterOptions,
+        designStore.appLanguage,
+      ).map(value => availableDateFormatOptions.value.find(option => option.value === value)).filter(Boolean),
+    },
+  }))
+})
+
+const propertyEntries = computed(() => [
+  ...Object.entries(propertiesStore.allProperties).map(([key, prop]) => ({ key, prop })),
+  ...derivedDateEntries.value,
+])
 
 const propertyCount = computed(() => propertyEntries.value.length)
 
@@ -341,7 +441,7 @@ const propertyStats = computed(() =>
     label: typeMeta.value[type].label,
     icon: typeMeta.value[type].icon,
     count: propertyEntries.value.filter((item) => item.prop.type === type).length,
-  }))
+  })).filter((stat) => stat.count > 0)
 )
 
 const groupedProperties = computed(() =>
@@ -355,8 +455,36 @@ const groupedProperties = computed(() =>
     .filter((group) => group.items.length > 0)
 )
 
+const budgetElements = computed(() => elementDataStore.elements.map((snapshot) => snapshot.config || {}))
+const settingsBudget = computed(() => calculateConnectIqSettingsBudget({
+  properties: propertiesStore.allProperties,
+  dataOptions: propertiesStore.dataOptions,
+  elements: budgetElements.value,
+  appLanguage: designStore.appLanguage,
+  visualThemes: visualThemeStore.config,
+  textCase: propertiesStore.textCase,
+  dataNumberFormat: propertiesStore.dataNumberFormat,
+  maxFieldLength: propertiesStore.maxFieldLength,
+  bitmapMode: propertiesStore.bitmapMode,
+}))
+const formatBudgetBytes = (bytes) => bytes >= 1024
+  ? `${(bytes / 1024).toFixed(1)} KB`
+  : `${bytes} B`
+
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
+}
+
+const updateDateFormatter = async (elementId, formatter) => {
+  await elementManager.updateElementById(elementId, { formatter: Number(formatter) })
+  getDataSimulatorEngine().updateCanvas()
+  commitHistory('date-formatter')
+}
+
+const handleDatePropertyConfirm = async ({ elementId, formatter, formatterOptions }) => {
+  await elementManager.updateElementById(elementId, { formatter, formatterOptions })
+  getDataSimulatorEngine().updateCanvas()
+  commitHistory('date-options')
 }
 
 const textCase = computed({
@@ -430,7 +558,7 @@ const addProperty = (type) => {
   }
 }
 // 编辑属性
-const editProperty = (key, prop) => {
+const editProperty = (key, prop, elementId = null) => {
   if (prop.type === 'color') {
     colorPropertyDialog.value?.show({
       ...prop,
@@ -461,6 +589,13 @@ const editProperty = (key, prop) => {
     dialPropertyDialog.value?.show({
       ...prop,
       propertyKey: key
+    })
+  } else if (prop.type === 'date') {
+    datePropertyDialog.value?.show({
+      elementId,
+      title: prop.title,
+      formatter: prop.value,
+      formatterOptions: prop.options?.map(option => option.value),
     })
   }
 }
@@ -728,6 +863,32 @@ defineExpose({
   text-align: center;
 }
 
+.settings-budget {
+  padding: 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.settings-budget-warning { border-color: var(--el-color-warning-light-5); }
+.settings-budget-exceeded { border-color: var(--el-color-danger-light-5); }
+
+.settings-budget-heading,
+.settings-budget-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-budget-heading { margin-bottom: 10px; }
+.settings-budget-heading strong { display: block; font-size: 14px; }
+.settings-budget-heading span,
+.settings-budget-details { color: var(--el-text-color-secondary); font-size: 12px; }
+.settings-budget-heading b { white-space: nowrap; font-size: 14px; }
+.settings-budget-details { justify-content: flex-start; margin-top: 8px; }
+.settings-budget :deep(.el-alert) { margin-top: 10px; }
+
 .properties-layout {
   display: flex;
   align-items: flex-start;
@@ -953,7 +1114,7 @@ defineExpose({
 
 .property-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 68px;
@@ -992,6 +1153,10 @@ defineExpose({
 
 .property-value {
   min-width: 0;
+}
+
+.property-option-count {
+  white-space: nowrap;
 }
 
 .property-title-line {

@@ -1,5 +1,6 @@
 // 简单数据模拟引擎：根据数据名称返回一个模拟值
 // 参考 Monkey C 中的 DataFetcher/DataProvider，但这里不做缓存和复杂逻辑
+import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 
 export interface SimulatedData {
   /** 用于界面显示的字符串 */
@@ -393,10 +394,7 @@ export function getDataValueByName(name: string): string {
 }
 
 export function resolveDataTextTemplate(template: string): string {
-  return String(template ?? '').replace(/\{\{([^}]+)\}\}/g, (_m, p1: string) => {
-    const key = String(p1 || '').trim()
-    return key ? getDataValueByName(key) : ''
-  })
+  return resolveTokenTemplate(template)
 }
 
 export type SimulatedBarChartSeries = {

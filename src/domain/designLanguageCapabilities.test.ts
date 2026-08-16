@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DateFormatConstants } from '@/config/elements/options/dateFormats'
+import { DateFormatConstants, DateFormatOptions } from '@/config/elements/options/dateFormats'
 import {
   getAllowedDateFormatters,
   getDefaultDateFormatterForAppLanguage,
@@ -10,6 +10,17 @@ import {
 } from './designLanguageCapabilities'
 
 describe('design language capabilities', () => {
+  it('does not offer redundant composite Chinese date formats', () => {
+    expect(DateFormatOptions.map(({ zhsLabel }) => zhsLabel)).not.toEqual(expect.arrayContaining([
+      '公历完整日期',
+      '公历中文完整日期',
+      '公历月日与星期',
+      '公历完整日期与星期',
+      '完整农历日期',
+      '完整四柱',
+    ]))
+  })
+
   it('uses Noto Sans SC as the default font for Chinese applications', () => {
     expect(getDefaultFontFamilyForAppLanguage('zhs', 'roboto-condensed-regular'))
       .toBe('noto-sans-sc-regular')
@@ -43,6 +54,30 @@ describe('design language capabilities', () => {
       DateFormatConstants.LUNAR_SHICHEN,
       DateFormatConstants.CHINESE_WEEKDAY_SHORT,
       DateFormatConstants.CHINESE_WEEKDAY_LONG,
+      DateFormatConstants.SOLAR_YEAR_LABEL,
+      DateFormatConstants.SOLAR_MONTH_LABEL,
+      DateFormatConstants.SOLAR_MONTH_ZH,
+      DateFormatConstants.SOLAR_DAY_LABEL,
+      DateFormatConstants.SOLAR_DAY_ZH,
+      DateFormatConstants.SOLAR_MONTH_DAY,
+      DateFormatConstants.SOLAR_MONTH_DAY_ZH,
+      DateFormatConstants.LUNAR_YEAR,
+      DateFormatConstants.LUNAR_MONTH,
+      DateFormatConstants.LUNAR_DAY,
+      DateFormatConstants.LUNAR_MONTH_PREFIX,
+      DateFormatConstants.SOLAR_FESTIVAL,
+      DateFormatConstants.LUNAR_FESTIVAL,
+      DateFormatConstants.SOLAR_TERM,
+      DateFormatConstants.NEXT_FESTIVAL,
+      DateFormatConstants.NEXT_FESTIVAL_WITH_DAYS,
+      DateFormatConstants.NEXT_SOLAR_TERM,
+      DateFormatConstants.NEXT_SOLAR_TERM_WITH_DAYS,
+      DateFormatConstants.ZODIAC,
+      DateFormatConstants.SHICHEN_BRANCH,
+      DateFormatConstants.FOUR_PILLAR_YEAR,
+      DateFormatConstants.FOUR_PILLAR_MONTH,
+      DateFormatConstants.FOUR_PILLAR_DAY,
+      DateFormatConstants.FOUR_PILLAR_HOUR,
     ])
     expect(getAllowedDateFormatters('eng')).not.toContain(DateFormatConstants.LUNAR_DATE)
   })

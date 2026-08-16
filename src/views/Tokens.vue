@@ -35,6 +35,7 @@
           <div class="token-badges">
             <span>{{ token.valueType }}</span><span v-if="token.unit">{{ token.unit }}</span>
             <span v-if="token.nullable">nullable</span>
+            <span v-if="model.isChineseOnly(token)" class="language-badge">{{ t('tokens.chineseOnly') }}</span>
           </div>
         </header>
         <h2>{{ localized(token, 'label') }}</h2>
@@ -70,10 +71,8 @@ import type { ExpressionTokenDefinition } from '@/engine/expression/types'
 import { useMessageStore } from '@/stores/message'
 import { useI18n } from '@/i18n'
 import { createTokenCatalogPageModel, type TokenCategoryFilter } from './tokens/tokenCatalogPageModel'
-import { useDesignStore } from '@/stores/designStore'
 
-const designStore = useDesignStore()
-const model = computed(() => createTokenCatalogPageModel(designStore.appLanguage))
+const model = computed(() => createTokenCatalogPageModel())
 const query = ref('')
 const selectedCategory = ref<TokenCategoryFilter>('all')
 const { locale, t } = useI18n()
@@ -118,6 +117,7 @@ const copyToken = async (code: string) => {
 .category-button span { margin-left: 5px; color: var(--studio-text-subtle); font-size: 11px; }
 .category-button.active { color: var(--studio-primary); border-color: var(--studio-primary-border); background: var(--studio-primary-soft); }
 .category-button.active span { color: currentColor; opacity: .72; }
+.token-badges .language-badge { color: var(--el-color-warning-dark-2); border-color: var(--el-color-warning-light-5); background: var(--el-color-warning-light-9); }
 .tokens-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
 .token-card { min-width: 0; padding: 18px; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-lg); background: var(--studio-surface); box-shadow: var(--studio-shadow-sm); transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
 .token-card:hover { border-color: var(--studio-border-strong); box-shadow: var(--studio-shadow-md); transform: translateY(-1px); }

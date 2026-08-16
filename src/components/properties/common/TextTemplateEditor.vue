@@ -6,8 +6,11 @@
       type="textarea"
       class="template-input"
       :rows="rows"
+      :maxlength="128"
+      show-word-limit
       @input="onInput"
     />
+    <div v-if="templateError" class="template-error">{{ templateError }}</div>
     <div v-if="showVariableHelper" class="variable-helper">
       <span>{{ helperText || t('templateEditor.variableHelper') }}</span>
       <el-button size="small" text type="primary" @click="variablesOpen = !variablesOpen">
@@ -38,10 +41,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
+import { useDesignStore } from '@/stores/designStore'
+import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import { validateTokenTemplate } from '@/engine/expression/textTemplateTokens'
 
 const { t } = useI18n()
+const designStore = useDesignStore()
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -65,48 +72,30 @@ const textareaRef = ref<any>(null)
 const localValue = ref(props.modelValue || '')
 const variablesOpen = ref(props.variablesInitiallyOpen)
 const showVariableHelper = ref(props.showVariables)
+const templateError = computed(() => {
+  return validateTokenTemplate(localValue.value)[0] || ''
+})
 
-const variableGroups = [
-  {
-    title: 'Activity',
-    items: ['steps', 'calories', 'distance', 'floors', 'altitude'],
-  },
-  {
-    title: 'Health',
-    items: ['hr', 'heart', 'restingHeart', 'bodyBattery', 'stress', 'sleep', 'respiration'],
-  },
-  {
-    title: 'Device',
-    items: ['battery', 'batteryDays', 'notifications', 'alarms'],
-  },
-  {
-    title: 'Environment',
-    items: ['weatherDesc', 'temperatureHigh', 'temperatureLow', 'location', 'aqi', 'pm25', 'sunrise', 'sunset'],
-  },
-  {
-    title: 'Calendar',
-    items: ['year', 'month', 'day', 'weekday', 'week'],
-  },
-  {
-    title: 'Text',
-    items: ['quote', 'push'],
-  },
-]
-
-const variableLabels: Record<string, string> = {
-  hr: 'HR',
-  heart: 'Heart',
-  restingHeart: 'Rest HR',
-  bodyBattery: 'Body Battery',
-  batteryDays: 'Battery Days',
-  weatherDesc: 'Weather Description',
-  temperatureHigh: 'High Temp',
-  temperatureLow: 'Low Temp',
-  pm25: 'PM2.5',
+const categoryTitles: Record<string, string> = {
+  'date-time': 'Calendar', activity: 'Activity', sensor: 'Health', system: 'Device', weather: 'Environment', status: 'Status',
 }
+const variableGroups = computed(() => {
+  const groups = new Map<string, string[]>()
+  for (const definition of DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions) {
+    if (definition.appLanguages && !definition.appLanguages.includes(designStore.appLanguage)) continue
+    const items = groups.get(definition.category) || []
+    items.push(definition.code)
+    groups.set(definition.category, items)
+  }
+  return [...groups.entries()].map(([category, items]) => ({ title: categoryTitles[category] || category, items }))
+})
 
-const variableLabel = (name: string) => variableLabels[name] || name
-const formatToken = (name: string) => `{{${name}}}`
+const variableLabel = (code: string) => {
+  const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)
+  if (!definition) return code
+  return designStore.appLanguage === 'zhs' ? definition.labelCn : definition.label
+}
+const formatToken = (name: string) => `(${name})`
 
 watch(
   () => props.modelValue,
@@ -126,7 +115,7 @@ const insertVariable = (name: string) => {
   const root = textareaRef.value as any
   // Element Plus 的 ElInput 组件实例上通常有 textarea 属性指向真实的 HTMLTextAreaElement
   const textarea: HTMLTextAreaElement | null = (root && root.textarea) || root || null
-  const token = `{{${name}}}`
+  const token = `(${name})`
 
   if (!textarea || typeof (textarea as any).setSelectionRange !== 'function') {
     localValue.value += token
@@ -172,6 +161,12 @@ const insertVariable = (name: string) => {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.template-error {
+  color: var(--el-color-danger);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .variable-helper {

@@ -15,6 +15,7 @@ import { formatTimePreview } from '@/elements/time/time/formatTimePreview'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import { resolveMetricDisplayResult } from '@/engine/simulator/metricDisplayResult'
 import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
+import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -159,9 +160,9 @@ function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>,
 }
 
 function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
-  return (template || '').replace(/\{\{([^}]+)\}\}/g, (_m, p1: string) => {
-    const key = String(p1 || '').trim()
-    return key ? formatSimulatedDisplay(getSimulatedDataByName(key), propertiesStore) : ''
+  return resolveTokenTemplate(template, new Date(), (code, format) => {
+    const data = getSimulatedDataByName(code)
+    return format ? (data.numeric ?? data.display) : formatSimulatedDisplay(data, propertiesStore)
   })
 }
 
@@ -333,7 +334,7 @@ export class DataSimulatorEngine {
 
       if (eleType === 'text' || eleType === 'scrollableText' || eleType === 'angledText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
-        if (!template.includes('{{')) return
+        if (!/\([A-Za-z][A-Za-z0-9_.]*\)/.test(template)) return
         const nextText = resolveTextTemplate(template, propertiesStore)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
@@ -344,7 +345,7 @@ export class DataSimulatorEngine {
 
       if (eleType === 'radialText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
-        if (!template.includes('{{')) return
+        if (!/\([A-Za-z][A-Za-z0-9_.]*\)/.test(template)) return
         const nextText = resolveTextTemplate(template, propertiesStore)
         if (String(obj.text ?? '') !== nextText) {
           if (typeof obj.updateRadialText === 'function') {

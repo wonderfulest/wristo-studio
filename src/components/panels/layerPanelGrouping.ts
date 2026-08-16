@@ -1,4 +1,5 @@
 import type { LayerElement } from '@/types/layer'
+import { getDisplayState, type DisplayStateMode } from '@/utils/displayStates'
 import { toCanvasLayerIds } from './layerPanelOrder'
 
 export type LayerPanelLayerItem = {
@@ -73,3 +74,11 @@ export const findCollapsedGroupsForLayerIds = (items: LayerPanelItem[], ids: str
 }
 
 export const resolvePanelItemsToCanvasIds = (items: LayerPanelItem[]): string[] => toCanvasLayerIds(expandPanelItemsToLayerIds(items))
+
+export const areAllGroupMembersVisible = (members: LayerElement[], mode: DisplayStateMode): boolean => {
+  return members.length > 0 && members.every((member) => getDisplayState(member.displayStates, mode))
+}
+
+export const getGroupVisibilityTarget = (memberVisibility: boolean[]): boolean => {
+  return !memberVisibility.every(Boolean)
+}

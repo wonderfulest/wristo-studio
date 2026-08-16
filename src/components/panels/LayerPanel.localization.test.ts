@@ -11,7 +11,8 @@ describe('LayerPanel localization', () => {
     expect(source).toContain("t('layer.ambient')")
     expect(source).toContain('getLayerDisplayName(item.layer)')
     expect(source).toContain('getLayerDisplayName(layer)')
-    expect(source).toContain('resolveLayerName(layer.layerName, getLayerTypeLabel(layer.eleType))')
+    expect(source).toContain('resolveLayerDisplayName(layer, getBindingSummaryContext())')
+    expect(source).toContain('resolveLayerGroupDisplayName(item.key, getBindingSummaryContext())')
   })
 
   it('provides Simplified Chinese labels for the requested layer panel items', () => {

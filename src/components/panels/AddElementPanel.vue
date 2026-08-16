@@ -51,6 +51,7 @@ import {
   getDefaultDateFormatterForAppLanguage,
   getDefaultFontFamilyForAppLanguage,
 } from '@/domain/designLanguageCapabilities'
+import { getCommonDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -229,12 +230,16 @@ const addElementByType = async (_category: string, elementType: string, config: 
         normalizedConfig.fontFamily,
       )
     }
-    const normalizedRecord = normalizedConfig as AnyElementConfig & { formatter?: number }
+    const normalizedRecord = normalizedConfig as AnyElementConfig & { formatter?: number; formatterOptions?: number[] }
     if (elementType === 'date' && typeof normalizedRecord.formatter === 'number') {
       normalizedRecord.formatter = getDefaultDateFormatterForAppLanguage(
         designStore.appLanguage,
         normalizedRecord.formatter,
       )
+      normalizedRecord.formatterOptions = getCommonDateFormatterValues(designStore.appLanguage)
+      if (!normalizedRecord.formatterOptions.includes(normalizedRecord.formatter)) {
+        normalizedRecord.formatter = normalizedRecord.formatterOptions[0]
+      }
     }
     await loadElementFont(normalizedConfig)
 

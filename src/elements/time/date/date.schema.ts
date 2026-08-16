@@ -11,6 +11,7 @@ export type DateElementSchema = {
     fontFamily: string
     fill: string
     formatter: number
+    formatterOptions: number[]
   }
   resizable: boolean
   rotatable: boolean
@@ -25,6 +26,7 @@ export const dateSchema: DateElementSchema = {
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',
     formatter: DateFormatConstants.MMM_D_DDD,
+    formatterOptions: [],
   },
   resizable: false,
   rotatable: false,
