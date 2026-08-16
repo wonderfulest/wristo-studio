@@ -34,6 +34,7 @@ import { triangleSchema } from '@/elements/shapes/triangle/triangle.schema'
 
 // common
 import { imageSchema } from '@/elements/decoration/image/image.schema'
+import { dynamicImageSchema } from '@/elements/decoration/dynamicImage/dynamicImage.schema'
 
 // decoration
 import { backgroundSchema } from '@/elements/decoration/background/background.schema'
@@ -88,6 +89,7 @@ export const elementConfigs: ElementConfigs = {
   decoration: {
     background: buildConfigFromSchema(backgroundSchema as AnySchema),
     image: buildConfigFromSchema(imageSchema as AnySchema),
+    dynamicImage: buildConfigFromSchema(dynamicImageSchema as AnySchema),
   },
   time: {
     time: buildConfigFromSchema(timeSchema as AnySchema),

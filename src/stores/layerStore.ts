@@ -59,6 +59,10 @@ export const useLayerStore = defineStore('layerStore', {
           } else {
             ;(layer.element as any).visible = layer.visible
           }
+          if (String(layer.eleType ?? '') === 'dynamicImage') {
+            void import('@/elements/decoration/dynamicImage/dynamicImage.renderer')
+              .then(({ refreshDynamicImage }) => refreshDynamicImage(layer.element as any))
+          }
         }
       })
       this.baseStore.canvas?.renderAll?.()

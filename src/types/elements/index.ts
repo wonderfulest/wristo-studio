@@ -18,6 +18,7 @@ export type { IndicatorElementConfig } from './indicator'
 
 // common
 export type { ImageElementConfig } from './image'
+export type { DynamicImageElementConfig, DynamicImageAsset, DynamicImageItem } from './dynamicImage'
 
 // decoration
 export type { BackgroundElementConfig } from './background'
@@ -56,6 +57,7 @@ import type { BatteryElementConfig as _Battery } from './battery'
 import type { HandElementConfig as _Hand } from './hand'
 import type { TickElementConfig as _Tick } from './tick'
 import type { ImageElementConfig as _Image } from './image'
+import type { DynamicImageElementConfig as _DynamicImage } from './dynamicImage'
 import type { BackgroundElementConfig as _Background } from './background'
 import type { SubDialElementConfig as _SubDial } from './subDial'
 import type { ArcSunEventsElementConfig as _ArcSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
@@ -73,6 +75,7 @@ export type AnyElementConfig =
   | _WindDirection
   | _Background
   | _Image
+  | _DynamicImage
   | _Indicator
   | _Hand
   | _Shape
@@ -110,6 +113,7 @@ export interface ElementConfigMap {
   'windDirection': _WindDirection
   'background': _Background
   'image': _Image
+  'dynamicImage': _DynamicImage
   'indicator': _Indicator
   'bluetooth': _Indicator
   'alarms': _Indicator

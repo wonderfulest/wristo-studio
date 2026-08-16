@@ -43,6 +43,11 @@
 
       <AppMenuWeatherGroup @add-element="handleAddElement" />
 
+      <el-menu-item index="add/dynamic-image" @click="handleAddElement('decoration', 'dynamicImage')">
+        <Icon icon="mdi:image-sync" />
+        <span>{{ t('dynamicImage.title') }}</span>
+      </el-menu-item>
+
       <el-menu-item index="navigation/tokens" @click="handleOpenTokens">
         <Icon icon="material-symbols:data-object" />
         <span>{{ t('tokens.nav') }}</span>
@@ -803,6 +808,8 @@ const handleAddElement = async (category: string, elementType: string, overrides
         }),
         ...overrides,
       }
+    } else if (category === 'decoration' && elementType === 'dynamicImage') {
+      baseConfig = { ...elementConfigs.decoration.dynamicImage, ...overrides }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
       baseConfig = { ...elementConfigs[category][elementType], ...overrides }
     } else {

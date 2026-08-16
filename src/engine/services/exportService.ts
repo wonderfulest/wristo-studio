@@ -37,6 +37,7 @@ import { validateExplicitColorBindings } from './explicitColorBindingService'
 import { serializeDataPropertyConfig } from './dataPropertyConfig'
 import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.validation'
 import { validateVisibilityExpression } from '@/engine/expression/validation'
+import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -407,6 +408,14 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         console.error('Export validation failed:', visibilityErrors)
         return null
       }
+      if (eleType === 'dynamicImage') {
+        const errors = validateDynamicImage(encodeConfig as any)
+        if (errors.length) {
+          if (typeof document !== 'undefined') ElMessage.error(errors.join(t('common.listSeparator')))
+          console.error('Export validation failed:', errors)
+          return null
+        }
+      }
 
       const sunEventsError = validateSunEventsElement(encodeConfig as unknown as Record<string, any>)
       if (sunEventsError) {
@@ -419,8 +428,12 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       normalizeTransparentColors(encodeConfig)
       const mutable: Record<string, unknown> = encodeConfig as unknown as Record<string, unknown>
       const idCarrier = mutable as Partial<Record<'imageId' | 'timeId' | 'dateId' | 'subItemId', number>>
-      if ((element as any).eleType === 'image') {
+      if ((element as any).eleType === 'image' || (element as any).eleType === 'dynamicImage') {
         idCarrier.imageId = imageId++
+      }
+      if ((element as any).eleType === 'dynamicImage') {
+        const dynamic = encodeConfig as any
+        dynamic.items = dynamic.items.map((item: any) => ({ ...item, imageId: imageId++ }))
       }
       if ((element as any).eleType === 'time') {
         idCarrier.timeId = timeId++

@@ -18,7 +18,11 @@
       @update="handleUpdate"
       ref="settingsComponent"
     />
-    <VisibilityExpressionField :config="activeConfig" :apply-patch="applyConfigPatch" />
+    <VisibilityExpressionField
+      v-if="activeElement?.eleType !== 'dynamicImage'"
+      :config="activeConfig"
+      :apply-patch="applyConfigPatch"
+    />
   </div>
 </template>
 

@@ -4,13 +4,27 @@
       <span>{{ t('expression.previewValues') }}</span>
       <small>{{ t('expression.previewValuesHint') }}</small>
     </div>
-    <div v-for="token in tokens" :key="token.id" class="token-preview-row">
+    <div v-for="token in tokens" :key="token.id" class="token-preview-row" :class="{ 'enum-preview-row': token.enumValues?.length }">
       <label :for="`token-preview-${token.id}`">
         <span>{{ token.labelCn }} / {{ token.label }}</span>
         <code>({{ token.code }})</code>
       </label>
+      <div v-if="token.enumValues?.length" class="enum-preview-tags" role="radiogroup">
+        <el-tag
+          v-for="option in enumOptions(token)"
+          :key="option.value"
+          class="enum-preview-tag"
+          :type="previewStore.tokenValues[token.id] === option.value ? 'primary' : 'info'"
+          :effect="previewStore.tokenValues[token.id] === option.value ? 'dark' : 'plain'"
+          role="radio"
+          :aria-checked="previewStore.tokenValues[token.id] === option.value"
+          @click="previewStore.setTokenValue(token.id, option.value)"
+        >
+          {{ option.text }}
+        </el-tag>
+      </div>
       <el-switch
-        v-if="token.valueType === 'boolean'"
+        v-else-if="token.valueType === 'boolean'"
         :id="`token-preview-${token.id}`"
         :model-value="Boolean(previewStore.tokenValues[token.id])"
         @update:model-value="previewStore.setTokenValue(token.id, Boolean($event))"
@@ -36,10 +50,13 @@
 import type { ExpressionTokenDefinition } from '@/engine/expression/types'
 import { useExpressionPreviewStore } from '@/stores/expressionPreviewStore'
 import { useI18n } from '@/i18n'
+import { resolveEnumPreviewOptions } from './tokenPreviewModel'
 
 defineProps<{ tokens: readonly ExpressionTokenDefinition[] }>()
 const previewStore = useExpressionPreviewStore()
-const { t } = useI18n()
+const { locale, t } = useI18n()
+const enumOptions = (token: ExpressionTokenDefinition) =>
+  resolveEnumPreviewOptions(token.enumValues || [], locale.value)
 </script>
 
 <style scoped>
@@ -51,4 +68,8 @@ const { t } = useI18n()
 .token-preview-row label { min-width: 0; }
 .token-preview-row code { color: var(--el-text-color-secondary); }
 .token-preview-row :deep(.el-input), .token-preview-row :deep(.el-input-number) { width: 150px; }
+.enum-preview-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.enum-preview-tag { cursor: pointer; user-select: none; }
+.enum-preview-row { display: grid; justify-content: stretch; }
+.enum-preview-row .enum-preview-tags { justify-content: flex-start; }
 </style>
