@@ -62,7 +62,7 @@ describe('SubmitDesignDialog style tag integration', () => {
 
 describe('style tag request and product contracts', () => {
   it('accepts tag IDs in both design request DTOs', () => {
-    const submit = { designUid: 'design', paymentMethod: 'free', tagIds: [1] } satisfies DesignSubmitDTO
+    const submit = { designUid: 'design', paymentMethod: 'free', originalType: 'original', tagIds: [1] } satisfies DesignSubmitDTO
     const update = { uid: 'design', tagIds: [1] } satisfies UpdateDesignParamsV2
 
     expect(submit.tagIds).toEqual([1])

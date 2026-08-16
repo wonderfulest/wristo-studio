@@ -42,7 +42,6 @@ const isChineseTextFont = computed(() => (
   props.type === 'text_font_zh'
   || normalizedLanguage.value === 'zh'
   || normalizedLanguage.value === 'zh-cn'
-  || normalizedLanguage.value === 'multi'
 ))
 
 const sampleText = computed(() => {

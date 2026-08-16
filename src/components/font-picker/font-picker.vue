@@ -62,7 +62,7 @@
           :type="type"
           :can-use-premium-assets="canUsePremiumAssets"
           :include-all-users="includeAllUsers"
-          :date-content-language="dateContentLanguage"
+          :date-content-language="effectiveContentLanguage"
           :exclude-icon-fonts="excludeIconFonts"
           @select="selectFont"
           @edit-search-index="openSearchIndexDialog"
@@ -73,7 +73,7 @@
             :model-value="modelValue"
             :type="type"
             :can-use-premium-assets="canUsePremiumAssets"
-            :date-content-language="dateContentLanguage"
+            :date-content-language="effectiveContentLanguage"
             :exclude-icon-fonts="excludeIconFonts"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
@@ -86,7 +86,7 @@
             :can-use-premium-assets="canUsePremiumAssets"
             :include-all-users="includeAllUsers"
             :excluded-font-values="recentFontValues"
-            :date-content-language="dateContentLanguage"
+            :date-content-language="effectiveContentLanguage"
             :exclude-icon-fonts="excludeIconFonts"
             @select="selectFont"
             @edit-search-index="openSearchIndexDialog"
@@ -170,6 +170,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Aim } from '@element-plus/icons-vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
+import { useDesignStore } from '@/stores/designStore'
 import { getFontBySlug, getFontStyleTags, getSystemFonts, updateMyFontSearchIndex } from '@/api/wristo/fonts'
 import { FontTypes } from '@/config/fonts'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
@@ -185,6 +186,7 @@ import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
 import { useI18n } from '@/i18n'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import emitter from '@/utils/eventBus'
 import { GARMIN_SYSTEM_PREVIEW_FONT } from '@/utils/contentFontFallback'
 
@@ -204,6 +206,11 @@ const props = defineProps({
     required: false,
     default: undefined
   },
+  allowAnyLanguage: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
   excludeIconFonts: {
     type: Boolean,
     required: false,
@@ -219,6 +226,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 const fontStore = useFontStore()
 const userStore = useUserStore()
+const designStore = useDesignStore()
 const iconFontStrategyStore = useIconFontStrategyStore()
 const membershipGate = useStudioMembershipGate()
 const { t } = useI18n()
@@ -288,7 +296,11 @@ const selectedFontOption = computed(() => {
 })
 const selectedFontLanguage = computed(() => selectedFontOption.value?.language)
 const selectedFontType = computed(() => selectedFontOption.value?.type || props.type)
-const usesBuiltInChineseFont = computed(() => props.dateContentLanguage === 'zh')
+const effectiveContentLanguage = computed<DateContentLanguage | undefined>(() => {
+  if (props.allowAnyLanguage || props.type === FontTypes.ICON_FONT) return undefined
+  return props.dateContentLanguage || resolveDesignContentLanguage(designStore)
+})
+const usesBuiltInChineseFont = computed(() => false)
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
 const includeAllUsers = computed(() => canUsePremiumAssets.value === true && fontScope.value === 'all')
 const fontScopeOptions = computed(() => [

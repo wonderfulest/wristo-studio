@@ -10,10 +10,12 @@ const searchableText = (definition: ExpressionTokenDefinition) => [
   definition.unit || '',
 ].join(' ').toLocaleLowerCase()
 
-export const filterExpressionTokens = (query: string): readonly ExpressionTokenDefinition[] => {
+export const filterExpressionTokens = (query: string, appLanguage?: import('@/types/localization').AppLanguage): readonly ExpressionTokenDefinition[] => {
   const normalized = query.trim().toLocaleLowerCase()
-  if (!normalized) return DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions
-  return DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.filter((definition) => searchableText(definition).includes(normalized))
+  return DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.filter((definition) => {
+    if (appLanguage && definition.appLanguages && !definition.appLanguages.includes(appLanguage)) return false
+    return !normalized || searchableText(definition).includes(normalized)
+  })
 }
 
 export const getReferencedTokenDefinitions = (source: string): ExpressionTokenDefinition[] => {

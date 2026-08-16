@@ -11,6 +11,7 @@ const EXPECTED_CODES = [
   'ai1', 'ai1.1', 'ai1.2', 'ai4', 'ai4.1', 'ai5', 'ai6', 'ai8', 'ai11', 'ai12', 'ai13', 'ai14',
   'ds1', 'ds2', 'ds3', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'ds14', 'ds330', 'ds331',
   'w01', 'w02', 'w03', 'w04', 'w05', 'w06', 'w08', 'w09', 'w10', 'w11', 'w12',
+  'cn1', 'cn2', 'cn3', 'cn4', 'cn5', 'cn6', 'cn7',
   'wr.charging', 'wr.phoneConnected', 'wr.bluetoothConnected', 'wr.dnd',
 ]
 
@@ -35,6 +36,15 @@ describe('default expression token catalog', () => {
       expect(definition.deviceRequirements.length).toBeGreaterThan(0)
       expect(typeof definition.exampleExpression).toBe('string')
     })
+  })
+
+  it('marks all Chinese calendar tokens as Chinese-only strings', () => {
+    for (const code of ['cn1', 'cn2', 'cn3', 'cn4', 'cn5', 'cn6', 'cn7']) {
+      expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)).toMatchObject({
+        valueType: 'string',
+        appLanguages: ['zhs'],
+      })
+    }
   })
 
   it('preserves the canonical battery identity', () => {

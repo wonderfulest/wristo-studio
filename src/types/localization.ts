@@ -1,10 +1,11 @@
-export type AppLanguage = 'en' | 'zh'
+export type AppLanguage = 'eng' | 'zhs'
 export interface WatchfaceLocalizationConfig {
   appLanguage: AppLanguage
 }
 
 export function normalizeAppLanguage(value: unknown): AppLanguage {
-  return value === 'zh' ? 'zh' : 'en'
+  if (value === 'zhs' || value === 'zh') return 'zhs'
+  return 'eng'
 }
 
 export type WatchfaceLocale = 'en-US' | 'zh-CN'

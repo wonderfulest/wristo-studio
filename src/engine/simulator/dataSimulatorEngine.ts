@@ -139,6 +139,12 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'windDeg'
     case ':FIELD_TYPE_WEATHER_CLOUDS':
       return 'clouds'
+    case ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT':
+      return 'precipitationChanceCurrent'
+    case ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR':
+      return 'precipitationChanceNextHour'
+    case ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY':
+      return 'precipitationChanceToday'
     case ':FIELD_TYPE_SUN_RISE':
       return 'sunrise'
     case ':FIELD_TYPE_SUN_SET':
@@ -242,7 +248,7 @@ export class DataSimulatorEngine {
         rawValue: simulated?.numeric ?? displayValue,
         displayValue,
         providerUnit: simulated?.unit || undefined,
-      }, previewDevice.toContext('eng'), catalogSnapshot)
+      }, previewDevice.toContext(designStore.appLanguage), catalogSnapshot)
       metricResults.set(cacheKey, result)
       return result
     }

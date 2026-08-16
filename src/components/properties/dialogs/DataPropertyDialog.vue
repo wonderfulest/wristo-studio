@@ -215,6 +215,7 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
@@ -238,9 +239,10 @@ const activeOptions = ref([])
 const addOptionsVisible = ref(false)
 const pendingOptionValues = ref([])
 const dataCatalogStore = useDataCatalogStore()
+const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
-const catalogOptions = getDataTypePropertyOptions()
-const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions)
+const catalogOptions = computed(() => getDataTypePropertyOptions(designStore.appLanguage))
+const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions.value)
 const iconGlyph = (option) => resolveMetricIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
@@ -256,22 +258,22 @@ const formData = reactive({
 })
 
 const resolvedOptions = computed(() => resolveDataOptionsBySymbols(
-  catalogOptions,
+  catalogOptions.value,
   propertiesStore.dataOptions,
   formData.metricSymbols
 ))
 const defaultValueOptions = computed(() => createDefaultDataOptions(resolvedOptions.value))
 const selectedOption = computed(() => defaultValueOptions.value.find((option) => option.value === formData.value) || null)
-const addableOptions = computed(() => createAddableDataOptions(catalogOptions, resolvedOptions.value))
+const addableOptions = computed(() => createAddableDataOptions(catalogOptions.value, resolvedOptions.value))
 
 const initFormData = (data = null) => {
   isEdit.value = !!data
   if (data) {
-    const legacyOptions = createEditDataOptions(data.options, catalogOptions)
+    const legacyOptions = createEditDataOptions(data.options, catalogOptions.value)
     const metricSymbols = Array.isArray(data.metricSymbols)
       ? [...data.metricSymbols]
       : legacyOptions.map(option => option.metricSymbol)
-    const options = resolveDataOptionsBySymbols(catalogOptions, propertiesStore.dataOptions, metricSymbols)
+    const options = resolveDataOptionsBySymbols(catalogOptions.value, propertiesStore.dataOptions, metricSymbols)
     Object.assign(formData, {
       title: data.title,
       titleCn: data.titleCn || '',
@@ -357,7 +359,7 @@ const restoreSystemDefaults = async () => {
         type: 'warning',
       }
     )
-    const restored = restoreSystemDataOptions(catalogOptions, formData.value)
+    const restored = restoreSystemDataOptions(catalogOptions.value, formData.value)
     formData.metricSymbols = restored.options.map(option => option.metricSymbol)
     formData.value = formData.metricSymbols.includes(formData.value)
       ? formData.value

@@ -276,6 +276,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const loadConfig = projectDefaultVisualThemeForLoad(config)
+    designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     if (Array.isArray(loadConfig.elements)) {
       visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)
       await fontStore.loadFontsForElements(loadConfig.elements as any)
@@ -284,7 +285,6 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       await waitCanvasReady()
       if (!isCurrentDesignLoad(generation)) return false
       visualThemeStore.hydrate(loadConfig.visualThemes)
-      designStore.setAppLanguage('en')
       designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
       elementDataStore.clearAll()
@@ -293,7 +293,6 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       return true
     }
 
-    designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     designStore.setConnectIqSettingsExcludedDataTypeValues(
       loadConfig.connectIqSettingsExcludedDataTypeValues,
     )

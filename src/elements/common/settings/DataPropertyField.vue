@@ -73,7 +73,7 @@ const getTypeLabel = (key: string): string => {
   const item = propertiesStore.allProperties[key]
   if (!item) return ''
   const selected = propertiesStore.resolveSelectedDataOption(key)
-  if (selected) return resolveDataOptionSettingsLabel(selected, locale.value)
+  if (selected) return resolveDataOptionSettingsLabel(selected as any, locale.value)
 
   const legacySelected = item.options?.find(opt => opt.value === item.value)
   return legacySelected?.label || ''

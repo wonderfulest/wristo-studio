@@ -70,16 +70,18 @@ import type { ExpressionTokenDefinition } from '@/engine/expression/types'
 import { useMessageStore } from '@/stores/message'
 import { useI18n } from '@/i18n'
 import { createTokenCatalogPageModel, type TokenCategoryFilter } from './tokens/tokenCatalogPageModel'
+import { useDesignStore } from '@/stores/designStore'
 
-const model = createTokenCatalogPageModel()
+const designStore = useDesignStore()
+const model = computed(() => createTokenCatalogPageModel(designStore.appLanguage))
 const query = ref('')
 const selectedCategory = ref<TokenCategoryFilter>('all')
 const { locale, t } = useI18n()
 const messageStore = useMessageStore()
-const filteredTokens = computed(() => model.filter({ category: selectedCategory.value, query: query.value }))
+const filteredTokens = computed(() => model.value.filter({ category: selectedCategory.value, query: query.value }))
 const categoryOptions = computed(() => [
-  { value: 'all' as const, count: model.total, label: t('tokens.category.all') },
-  ...model.categories.map((category) => ({ ...category, label: t(`tokens.category.${category.value}`) })),
+  { value: 'all' as const, count: model.value.total, label: t('tokens.category.all') },
+  ...model.value.categories.map((category) => ({ ...category, label: t(`tokens.category.${category.value}`) })),
 ])
 const localized = (token: ExpressionTokenDefinition, field: 'label' | 'description') =>
   locale.value.startsWith('zh') ? token[`${field}Cn`] : token[field]
@@ -89,7 +91,7 @@ const expressionExample = (token: ExpressionTokenDefinition) => token.valueType 
   ? `(${token.code}) == true`
   : token.valueType === 'number' ? `(${token.code}) > 0` : `(${token.code}) != ""`
 const copyToken = async (code: string) => {
-  await navigator.clipboard.writeText(model.copyText(code))
+  await navigator.clipboard.writeText(model.value.copyText(code))
   messageStore.success(t('tokens.copied'))
 }
 </script>

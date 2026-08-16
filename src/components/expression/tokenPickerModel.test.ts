@@ -11,6 +11,11 @@ describe('expression token picker model', () => {
     expect(filterExpressionTokens('m/s').map(({ code }) => code)).toContain('w12')
   })
 
+  it('hides Chinese-only tokens from English designs', () => {
+    expect(filterExpressionTokens('', 'zhs').map(({ code }) => code)).toContain('cn1')
+    expect(filterExpressionTokens('', 'eng').map(({ code }) => code)).not.toContain('cn1')
+  })
+
   it('returns referenced definitions once in source order', () => {
     expect(getReferencedTokenDefinitions('(ai12) >= (ai13) && (ai12) > 0').map(({ code }) => code))
       .toEqual(['ai12', 'ai13'])

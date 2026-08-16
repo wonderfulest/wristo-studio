@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
 import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitSelectionPolicy, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
+import type { AppLanguage } from '@/types/localization'
+import { filterDataOptionsForAppLanguage } from '@/domain/designLanguageCapabilities'
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 const SYMBOL_PATTERN = /^:[A-Z][A-Z0-9_]*$/
@@ -58,8 +60,10 @@ export type DataTypePropertyOption = Omit<DataTypeOption, 'label'> & {
   readonly icon: string
 }
 
-export function getDataTypePropertyOptions(): DataTypePropertyOption[] {
-  return useDataCatalogStore().options.map((option) => ({
+export function getDataTypePropertyOptions(appLanguage?: AppLanguage): DataTypePropertyOption[] {
+  const source = useDataCatalogStore().options
+  const options = appLanguage ? filterDataOptionsForAppLanguage(source, appLanguage) : source
+  return options.map((option) => ({
     ...option,
     value: option.valueCode,
     label: option.label.eng,
@@ -233,6 +237,13 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
   if (dialGoalSource !== null && dialGoalSource !== 'garmin') {
     throw new Error(`${prefix}: dialGoalSource must be garmin or null`)
   }
+  const rawAppLanguage = value.appLanguage == null ? null : String(value.appLanguage).trim()
+  if (rawAppLanguage !== null && !['eng', 'zhs', 'en', 'zh'].includes(rawAppLanguage)) {
+    throw new Error(`${prefix}: appLanguage must be eng, zhs, or null`)
+  }
+  const appLanguage = rawAppLanguage === 'zhs' || rawAppLanguage === 'zh'
+    ? 'zhs'
+    : rawAppLanguage === null ? null : 'eng'
   return Object.freeze({
     valueCode,
     metricSymbol,
@@ -248,7 +259,8 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     dialMode,
     dialMin: nullableNumber(value.dialMin, `${prefix}: dialMin`),
     dialMax: nullableNumber(value.dialMax, `${prefix}: dialMax`),
-    dialGoalSource
+    dialGoalSource,
+    appLanguage
   })
 }
 

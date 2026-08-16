@@ -2,6 +2,8 @@ export type ExpressionValueType = 'number' | 'string' | 'boolean' | 'color' | 'a
 export type DynamicTarget = 'visibility' | 'color' | 'content' | 'image' | 'theme'
 export type ExpressionTokenCategory = 'date-time' | 'activity' | 'sensor' | 'system' | 'weather' | 'status'
 
+import type { AppLanguage } from '@/types/localization'
+
 export interface ExpressionTokenDefinition {
   id: string
   code: string
@@ -22,6 +24,7 @@ export interface ExpressionTokenDefinition {
   deviceRequirements: string[]
   exampleExpression: string
   wfbEquivalent?: string
+  appLanguages?: AppLanguage[]
 }
 
 export type ExpressionNode =

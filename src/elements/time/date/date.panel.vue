@@ -60,6 +60,7 @@
 import { onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
+import { useDesignStore } from '@/stores/designStore'
 import { originXOptions, DateFormatOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
@@ -69,14 +70,14 @@ import { useI18n } from '@/i18n'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import {
-  getDateContentLanguageForRuntimeLocale,
   getDateFontRequirementLabel,
-  isDateFormatAllowedByChineseSupport,
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
 import type { OptionFormat } from '@/types/settings'
 import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
+import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 
 const props = defineProps<{
   config?: Record<string, any> | null
@@ -84,6 +85,7 @@ const props = defineProps<{
 }>()
 
 const fontStore = useFontStore()
+const designStore = useDesignStore()
 const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
@@ -100,16 +102,16 @@ const originXProxy = computed<string>({
   },
 })
 
-const availableDateFormatOptions = computed(() => DateFormatOptions.filter((option) =>
-  isDateFormatAllowedByChineseSupport(option.value, false)
-))
+const availableDateFormatOptions = computed(() => {
+  const allowed = new Set(getAllowedDateFormatters(designStore.appLanguage))
+  return DateFormatOptions.filter((option) => allowed.has(option.value))
+})
 
 const getDateFormatOptionLabel = (option: OptionFormat<number>) => {
-  return option.label
+  return designStore.appLanguage === 'zhs' ? option.zhsLabel : option.label
 }
 
-const datePreviewLocale = computed(() => 'en-US')
-const currentDateLanguage = computed(() => getDateContentLanguageForRuntimeLocale(currentModel.value.formatter, datePreviewLocale.value))
+const currentDateLanguage = computed(() => resolveDesignContentLanguage(designStore))
 const getFontCompatibilityNotice = (fontFamily: string, language = currentDateLanguage.value) => {
   if (!fontFamily) return ''
   const font = findKnownFont(fontFamily)
@@ -170,7 +172,7 @@ const warnIfFontIncompatible = async (
 
 const handleFormatterChange = async (formatter: number) => {
   applyUpdate({ formatter })
-  await warnIfFontIncompatible(String(currentModel.value.fontFamily || ''), getDateContentLanguageForRuntimeLocale(formatter, datePreviewLocale.value))
+  await warnIfFontIncompatible(String(currentModel.value.fontFamily || ''))
 }
 
 const handleFontChange = async (fontFamily: string) => {

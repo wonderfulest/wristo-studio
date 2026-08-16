@@ -25,24 +25,40 @@ vi.mock('@/stores/dataCatalogStore', () => ({
     snapshot: {
       dataTypeOptions: [
         { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' },
+        { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' },
         { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' },
+        { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' },
+        { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' },
+        { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' },
       ],
       optionsByValueCode: new Map([
         [0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+        [20, { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
         [1004, { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
+        [1201, { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' }],
+        [1202, { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' }],
+        [1203, { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' }],
       ]),
       optionsByMetricSymbol: new Map([
         [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
+        [':FIELD_TYPE_DISTANCE', { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
         [':FIELD_TYPE_SLEEP_SCORE', { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
+        [':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' }],
+        [':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' }],
+        [':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' }],
       ]),
-      unitsByKey: new Map([['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }]]),
+      unitsByKey: new Map([
+        ['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }],
+        ['distance', { unitKey: 'distance', defaultVariant: 'km', selectionPolicy: { type: 'fixed', variant: 'km' }, variants: { km: { label: { eng: 'km', zhs: '公里' } } } }],
+        ['percentage', { unitKey: 'percentage', defaultVariant: 'percent', selectionPolicy: { type: 'fixed', variant: 'percent' }, variants: { percent: { label: { eng: '%', zhs: '%' } } } }],
+      ]),
       aliasOwners: new Map(),
     },
   }),
 }))
 
 vi.mock('@/stores/designStore', () => ({
-  useDesignStore: () => ({ appLanguage: 'zh' }),
+  useDesignStore: () => ({ appLanguage: 'zhs' }),
 }))
 
 vi.mock('@/stores/previewDeviceContextStore', () => ({
@@ -125,6 +141,45 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     new DataSimulatorEngine().updateCanvas()
 
     expect(getSimulatedDataByName).toHaveBeenCalledWith('sleepScore')
+  })
+
+  it('keeps Chinese unit labels when the simulator refreshes a Chinese application', () => {
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue({
+      valueCode: 20,
+      metricSymbol: ':FIELD_TYPE_DISTANCE',
+      label: { eng: 'DIST', zhs: '距离' },
+      unitKey: 'distance',
+      defaultValue: '8.5',
+    })
+    canvas.getObjects.mockReturnValue([
+      { id: 'distance-unit', eleType: 'unit', metricSymbol: ':FIELD_TYPE_DISTANCE', text: '', set },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(set).toHaveBeenCalledWith('text', '公里')
+  })
+
+  it.each([
+    [':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', 'precipitationChanceCurrent'],
+    [':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', 'precipitationChanceNextHour'],
+    [':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', 'precipitationChanceToday'],
+  ])('maps %s to its precipitation simulation', (metricSymbol, simulationKey) => {
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue({
+      valueCode: metricSymbol.endsWith('CURRENT') ? 1201 : metricSymbol.endsWith('NEXT_HOUR') ? 1202 : 1203,
+      metricSymbol,
+      label: { eng: 'Precipitation', zhs: '降水概率' },
+      unitKey: 'percentage',
+    })
+    canvas.getObjects.mockReturnValue([
+      { id: simulationKey, eleType: 'data', metricSymbol, text: '', set },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(getSimulatedDataByName).toHaveBeenCalledWith(simulationKey)
   })
 
   it('rejects an unknown label symbol instead of rendering the catalog first item', () => {

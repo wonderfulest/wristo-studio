@@ -19,6 +19,7 @@ type TokenInput = {
   description?: string
   descriptionCn?: string
   wfbEquivalent?: string
+  appLanguages?: ExpressionTokenDefinition['appLanguages']
 }
 
 const token = (input: TokenInput): ExpressionTokenDefinition => ({
@@ -41,6 +42,7 @@ const token = (input: TokenInput): ExpressionTokenDefinition => ({
   deviceRequirements: [input.requirement || 'All supported Connect IQ devices'],
   exampleExpression: `(${input.code})`,
   wfbEquivalent: input.wfbEquivalent === undefined && !input.code.startsWith('wr.') ? input.code : input.wfbEquivalent,
+  appLanguages: input.appLanguages,
 })
 
 const time = (id: string, code: string, label: string, labelCn: string, exampleValue: number) => token({
@@ -162,6 +164,14 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   weather('temperature', 'w10', 'Temperature', '当前温度', 27, 'number', '°C'),
   weather('windBearing', 'w11', 'Wind Bearing', '风向角度', 135, 'number', '°'),
   weather('windSpeed', 'w12', 'Wind Speed', '风速', 4.2, 'number', 'm/s'),
+
+  token({ id: 'chinaCalendar.lunarDate', code: 'cn1', label: 'Lunar Date', labelCn: '农历日期', category: 'date-time', valueType: 'string', exampleValue: '五月十五', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined }),
+  token({ id: 'chinaCalendar.solarTerm', code: 'cn2', label: 'Solar Term', labelCn: '节气', category: 'date-time', valueType: 'string', exampleValue: '立秋', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined }),
+  token({ id: 'chinaCalendar.ganzhiYear', code: 'cn3', label: 'Ganzhi Year', labelCn: '干支年', category: 'date-time', valueType: 'string', exampleValue: '丙午', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined }),
+  token({ id: 'chinaCalendar.zodiacYear', code: 'cn4', label: 'Zodiac Year', labelCn: '生肖年', category: 'date-time', valueType: 'string', exampleValue: '马年', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined }),
+  token({ id: 'chinaCalendar.huangliSuitable', code: 'cn5', label: 'Huangli Suitable', labelCn: '黄历宜', category: 'date-time', valueType: 'string', exampleValue: '宜 出行', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined, descriptionCn: '按北京时间日期稳定生成的娱乐性单项宜。' }),
+  token({ id: 'chinaCalendar.huangliAvoid', code: 'cn6', label: 'Huangli Avoid', labelCn: '黄历忌', category: 'date-time', valueType: 'string', exampleValue: '忌 动土', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined, descriptionCn: '按北京时间日期稳定生成的娱乐性单项忌。' }),
+  token({ id: 'chinaCalendar.lunarShichen', code: 'cn7', label: 'Lunar Shichen', labelCn: '农历时辰', category: 'date-time', valueType: 'string', exampleValue: '午时', source: 'wristo', providerKey: 'chineseCalendar', appLanguages: ['zhs'], wfbEquivalent: undefined }),
 
   token({ id: 'status.charging', code: 'wr.charging', label: 'Charging', labelCn: '正在充电', category: 'status', valueType: 'boolean', exampleValue: false, source: 'wristo', updateFrequency: 'event', providerKey: 'systemStats', nullable: true, requirement: 'Charging status exposed by the device', wfbEquivalent: undefined }),
   token({ id: 'status.phoneConnected', code: 'wr.phoneConnected', label: 'Phone Connected', labelCn: '手机已连接', category: 'status', valueType: 'boolean', exampleValue: true, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Phone connection status exposed by the device', wfbEquivalent: undefined }),

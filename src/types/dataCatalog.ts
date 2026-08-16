@@ -21,6 +21,7 @@ export interface DataTypeOption {
   readonly dialMin: number | null
   readonly dialMax: number | null
   readonly dialGoalSource: 'garmin' | null
+  readonly appLanguage?: import('@/types/localization').AppLanguage | null
 }
 
 export interface DataUnitVariant {

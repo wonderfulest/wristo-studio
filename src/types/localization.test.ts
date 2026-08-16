@@ -7,14 +7,20 @@ describe('single application language persistence', () => {
     setActivePinia(createPinia())
   })
 
-  it('stores one application language and defaults invalid legacy values to English', () => {
+  it('stores three-letter application languages and normalizes legacy two-letter values', () => {
     const store = useDesignStore()
-    store.setAppLanguage('zh')
+    store.setAppLanguage('zhs')
     expect(store.getLocalizationConfig()).toEqual({
-      appLanguage: 'zh',
+      appLanguage: 'zhs',
     })
 
-    store.setAppLanguage('zhs' as any)
-    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'en' })
+    store.setAppLanguage('zh' as any)
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'zhs' })
+
+    store.setAppLanguage('en' as any)
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng' })
+
+    store.setAppLanguage('invalid' as any)
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng' })
   })
 })

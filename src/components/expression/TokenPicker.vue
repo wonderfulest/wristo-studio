@@ -23,12 +23,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { filterExpressionTokens } from './tokenPickerModel'
+import { useDesignStore } from '@/stores/designStore'
 import { useI18n } from '@/i18n'
 
 const emit = defineEmits<{ insert: [value: string] }>()
 const { t } = useI18n()
-const tokens = ref(filterExpressionTokens(''))
-const handleFilter = (query: string) => { tokens.value = filterExpressionTokens(query) }
+const designStore = useDesignStore()
+const tokens = ref(filterExpressionTokens('', designStore.appLanguage))
+const handleFilter = (query: string) => { tokens.value = filterExpressionTokens(query, designStore.appLanguage) }
 const insertToken = (code: string) => emit('insert', `(${code})`)
 </script>
 

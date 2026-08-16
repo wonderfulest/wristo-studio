@@ -9,6 +9,8 @@ import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@
 import { getDataTypePropertyOptions, useDataCatalogStore, type DataTypePropertyOption } from '@/stores/dataCatalogStore'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
+import { useDesignStore } from '@/stores/designStore'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -167,6 +169,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
+  const contentLanguage = resolveDesignContentLanguage(useDesignStore())
 
   if (type === 'data') {
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
@@ -182,9 +185,9 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
         amoledIconUnicode: iconUnicode || null
       }
     }
-    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(canonicalMetric, 'en') }
+    if (eleType === 'label') return { dataProperty: propertyKey, goalProperty: null, text: resolveMetricLabel(canonicalMetric, contentLanguage) }
     if (eleType === 'unit') {
-      const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
+      const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
     return { dataProperty: propertyKey, goalProperty: null, text: canonicalMetric.defaultValue }
@@ -205,10 +208,10 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       amoledIconUnicode: iconUnicode || null
     }
   }
-  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, 'en') }
+  if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, contentLanguage) }
   if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: canonicalMetric.defaultValue }
   if (eleType === 'unit') {
-    const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
+    const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }
   }
 

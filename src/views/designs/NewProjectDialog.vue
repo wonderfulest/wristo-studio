@@ -18,9 +18,28 @@
 
       <div class="field-label size-label">{{ t('project.appLanguage') }}</div>
       <el-radio-group v-model="appLanguage">
-        <el-radio-button value="en">English</el-radio-button>
-        <el-radio-button value="zh">中文</el-radio-button>
+        <el-radio-button value="eng">English</el-radio-button>
+        <el-radio-button value="zhs">中文</el-radio-button>
       </el-radio-group>
+
+      <template v-if="!inheritSource && canSelectDesignSource">
+        <div class="field-label size-label">{{ t('designSource.originalType') }}</div>
+        <el-radio-group v-model="originalType">
+          <el-radio value="original">{{ t('designSource.original') }}</el-radio>
+          <el-radio value="non_original">{{ t('designSource.nonOriginal') }}</el-radio>
+        </el-radio-group>
+      </template>
+
+      <template v-if="!inheritSource && canSelectDesignSource && originalType === 'non_original'">
+        <div class="field-label size-label">{{ t('designSource.platform') }}</div>
+        <el-select v-model="sourcePlatform" :placeholder="t('designSource.selectPlatform')" :teleported="false">
+          <el-option v-for="option in DESIGN_SOURCE_PLATFORM_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+        </el-select>
+        <template v-if="requiresDesignSourceId(sourcePlatform)">
+          <div class="field-label size-label">{{ t('designSource.sourceId') }}</div>
+          <el-input v-model="sourceId" :placeholder="t('designSource.enterSourceId')" />
+        </template>
+      </template>
 
       <div class="field-label size-label">{{ t('project.device') }}</div>
       <button
@@ -70,6 +89,8 @@ import { useDesignStore } from '@/stores/designStore'
 import type { GarminDeviceVO } from '@/api/device'
 import { Icon } from '@iconify/vue'
 import type { AppLanguage } from '@/types/localization'
+import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
+import { ElMessage } from 'element-plus'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -78,18 +99,23 @@ const designStore = useDesignStore()
 const props = defineProps<{
   modelValue: boolean
   initialName: string
+  inheritSource?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirm', value: { name: string; appLanguage: AppLanguage }): void
+  (e: 'confirm', value: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string }): void
   (e: 'cancel'): void
 }>()
 
 const internalVisible = ref(props.modelValue)
 const localName = ref(props.initialName)
-const appLanguage = ref<AppLanguage>('en')
+const appLanguage = ref<AppLanguage>('eng')
+const originalType = ref<DesignOriginalType>('original')
+const sourcePlatform = ref<DesignSourcePlatform | ''>('')
+const sourceId = ref('')
 const deviceSelectorVisible = ref(false)
+const canSelectDesignSource = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 
 const currentDevice = computed(() => userStore.userInfo?.device ?? null)
 
@@ -114,7 +140,10 @@ watch(
     if (val) {
       // 每次打开时重置为传入的初始名称
       localName.value = props.initialName
-      appLanguage.value = 'en'
+      appLanguage.value = 'eng'
+      originalType.value = 'original'
+      sourcePlatform.value = ''
+      sourceId.value = ''
     }
   }
 )
@@ -150,7 +179,22 @@ const handleOk = () => {
     openDeviceSelector()
     return
   }
-  emit('confirm', { name: localName.value, appLanguage: appLanguage.value })
+  const resolvedOriginalType = canSelectDesignSource.value ? originalType.value : 'original'
+  if (resolvedOriginalType === 'non_original' && !sourcePlatform.value) {
+    ElMessage.warning(t('designSource.selectPlatform'))
+    return
+  }
+  if (resolvedOriginalType === 'non_original' && requiresDesignSourceId(sourcePlatform.value) && !sourceId.value.trim()) {
+    ElMessage.warning(t('designSource.enterSourceId'))
+    return
+  }
+  emit('confirm', {
+    name: localName.value,
+    appLanguage: appLanguage.value,
+    originalType: resolvedOriginalType,
+    sourcePlatform: resolvedOriginalType === 'non_original' ? sourcePlatform.value || undefined : undefined,
+    sourceId: resolvedOriginalType === 'non_original' ? sourceId.value.trim() || undefined : undefined,
+  })
   emit('update:modelValue', false)
 }
 </script>

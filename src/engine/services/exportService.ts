@@ -246,7 +246,7 @@ function restoreVisualThemeBaseFields(
 export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig): Promise<boolean> {
   const dateErrors = await validateDateContentAndFonts(
     config.elements,
-    false,
+    config.localization?.appLanguage === 'zhs',
   )
   const visualThemeErrors = validateVisualThemes(
     config.visualThemes,

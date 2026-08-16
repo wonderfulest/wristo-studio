@@ -16,6 +16,23 @@
       <el-form-item :label="t('submitDesign.designName')">
         <el-input v-model="form.name" />
       </el-form-item>
+
+      <el-form-item v-if="canSelectDesignSource" :label="t('designSource.originalType')" prop="originalType">
+        <el-radio-group v-model="form.originalType">
+          <el-radio value="original">{{ t('designSource.original') }}</el-radio>
+          <el-radio value="non_original">{{ t('designSource.nonOriginal') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <template v-if="canSelectDesignSource && form.originalType === 'non_original'">
+        <el-form-item :label="t('designSource.platform')" prop="sourcePlatform">
+          <el-select v-model="form.sourcePlatform" :placeholder="t('designSource.selectPlatform')" style="width: 100%">
+            <el-option v-for="option in DESIGN_SOURCE_PLATFORM_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="requiresDesignSourceId(form.sourcePlatform)" :label="t('designSource.sourceId')" prop="sourceId">
+          <el-input v-model="form.sourceId" :placeholder="t('designSource.enterSourceId')" />
+        </el-form-item>
+      </template>
       
       <el-form-item :label="t('submitDesign.paymentMethod')" prop="paymentMethod">
         <el-radio-group v-model="form.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
@@ -133,6 +150,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import { restoreEnabledStyleTagIds, STYLE_TAG_LIMIT, validateStyleTagIds } from './submitDesignStyleTags'
+import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -147,6 +165,7 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
+const canSelectDesignSource = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
@@ -160,6 +179,9 @@ const form = reactive({
   designUid: '',
   name: '',
   description: '',
+  originalType: 'original' as DesignOriginalType,
+  sourcePlatform: '' as DesignSourcePlatform | '',
+  sourceId: '',
   paymentMethod: 'free',
   kpayId: '',
   price: 1.99,
@@ -169,6 +191,23 @@ const form = reactive({
 })
 
 const rules = computed(() => ({
+  originalType: [{ required: true, message: t('designSource.selectOriginalType'), trigger: 'change' }],
+  sourcePlatform: [{
+    validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
+      if (canSelectDesignSource.value && form.originalType === 'non_original' && !value) return callback(new Error(t('designSource.selectPlatform')))
+      callback()
+    },
+    trigger: 'change'
+  }],
+  sourceId: [{
+    validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
+      if (canSelectDesignSource.value && form.originalType === 'non_original' && requiresDesignSourceId(form.sourcePlatform) && !String(value || '').trim()) {
+        return callback(new Error(t('designSource.enterSourceId')))
+      }
+      callback()
+    },
+    trigger: 'blur'
+  }],
   paymentMethod: [
     { required: true, message: t('submitDesign.selectPaymentMethod'), trigger: 'change' }
   ],
@@ -314,6 +353,9 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         designUid: designDetail.designUid,
         name: designDetail.name,
         description: designDetail.description || '',
+        originalType: designDetail.originalType || 'original',
+        sourcePlatform: designDetail.sourcePlatform || '',
+        sourceId: designDetail.sourceId || '',
         paymentMethod: 'free',
         kpayId: '',
         price: 1.99,
@@ -405,9 +447,13 @@ const handleConfirm = async () => {
     
     loading.value = true
     
+    const resolvedOriginalType = canSelectDesignSource.value ? form.originalType : 'original'
     const submitData: DesignSubmitDTO = {
       designUid: form.designUid,
       paymentMethod: form.paymentMethod,
+      originalType: resolvedOriginalType,
+      sourcePlatform: resolvedOriginalType === 'non_original' ? form.sourcePlatform || undefined : undefined,
+      sourceId: resolvedOriginalType === 'non_original' ? form.sourceId.trim() || undefined : undefined,
       name: form.name,
       description: form.description,
       tagIds: form.tagIds,

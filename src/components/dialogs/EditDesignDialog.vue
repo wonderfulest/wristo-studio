@@ -141,6 +141,29 @@
         </div>
       </div>
 
+      <div v-if="canManageAppDetails" class="form-section">
+        <div class="section-title">{{ t('designSource.title') }}</div>
+        <div class="payment-grid">
+          <div class="form-field">
+            <label class="field-label">{{ t('designSource.originalType') }}</label>
+            <el-radio-group v-model="form.originalType">
+              <el-radio value="original">{{ t('designSource.original') }}</el-radio>
+              <el-radio value="non_original">{{ t('designSource.nonOriginal') }}</el-radio>
+            </el-radio-group>
+          </div>
+          <div v-if="form.originalType === 'non_original'" class="form-field">
+            <label class="field-label">{{ t('designSource.platform') }}</label>
+            <el-select v-model="form.sourcePlatform" :placeholder="t('designSource.selectPlatform')">
+              <el-option v-for="option in DESIGN_SOURCE_PLATFORM_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </div>
+          <div v-if="form.originalType === 'non_original' && requiresDesignSourceId(form.sourcePlatform)" class="form-field">
+            <label class="field-label">{{ t('designSource.sourceId') }}</label>
+            <el-input v-model="form.sourceId" :placeholder="t('designSource.enterSourceId')" />
+          </div>
+        </div>
+      </div>
+
       <!-- Payment Section -->
       <div v-if="canManageAppDetails" class="form-section">
         <div class="section-title">{{ t('editDesign.paymentSettings') }}</div>
@@ -297,6 +320,7 @@ import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownlo
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { persistBlobAssetUrls } from '@/engine/services/persistBlobAssetUrls'
+import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -323,6 +347,9 @@ const form = reactive({
   name: '',
   designStatus: '',
   description: '',
+  originalType: 'original' as DesignOriginalType,
+  sourcePlatform: '' as DesignSourcePlatform | '',
+  sourceId: '',
   configJson: {},
   configJsonString: '',
   payment: { 
@@ -628,6 +655,9 @@ const loadDesign = async (designUid: string) => {
           name: designData.name,
           designStatus: designData.designStatus,
           description: designData.description,
+          originalType: designData.originalType || 'original',
+          sourcePlatform: designData.sourcePlatform || '',
+          sourceId: designData.sourceId || '',
           configJson: realtimeConfig,
           configJsonString: stringifyConfig(realtimeConfig),
           payment: {
@@ -644,6 +674,9 @@ const loadDesign = async (designUid: string) => {
           name: designData.name,
           designStatus: designData.designStatus,
           description: designData.description,
+          originalType: designData.originalType || 'original',
+          sourcePlatform: designData.sourcePlatform || '',
+          sourceId: designData.sourceId || '',
           configJson: serverConfig,
           configJsonString: stringifyConfig(serverConfig),
           payment: {
@@ -677,6 +710,14 @@ const handleSave = async () => {
     messageStore.error(t('submitDesign.priceRange'))
     return
   }
+  if (form.originalType === 'non_original' && !form.sourcePlatform) {
+    messageStore.error(t('designSource.selectPlatform'))
+    return
+  }
+  if (form.originalType === 'non_original' && requiresDesignSourceId(form.sourcePlatform) && !form.sourceId.trim()) {
+    messageStore.error(t('designSource.enterSourceId'))
+    return
+  }
   const parsedConfigJson = parseConfigJson()
   if (parsedConfigJson === null) return
 
@@ -690,6 +731,9 @@ const handleSave = async () => {
       uid: currentDesign.value.designUid,
       name: form.name,
       description: form.description,
+      originalType: form.originalType,
+      sourcePlatform: form.sourcePlatform || undefined,
+      sourceId: form.sourceId.trim() || undefined,
       configJson: nextConfigJson,
       payment: {
         paymentMethod: form.payment.paymentMethod,

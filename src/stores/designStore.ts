@@ -45,7 +45,7 @@ export const useDesignStore = defineStore('design', {
       centerY: 227,
       shape: 'circle' as WatchShape,
     } as DesignSpec & { centerX: number; centerY: number },
-    appLanguage: 'en' as AppLanguage,
+    appLanguage: 'eng' as AppLanguage,
     connectIqSettingsExcludedDataTypeValues: [] as number[],
   }),
 

@@ -94,6 +94,15 @@ describe('data catalog store', () => {
     expect(snapshot.optionsByValueCode.get(0)?.iconUnicode).toBe('')
   })
 
+  it('preserves an optional application language gate', () => {
+    const catalog: any = validCatalog()
+    catalog.dataTypeOptions[0].appLanguage = 'zhs'
+
+    const snapshot = validateDataCatalog(catalog)
+
+    expect(snapshot.optionsByValueCode.get(0)?.appLanguage).toBe('zhs')
+  })
+
   it('keeps the last valid snapshot when refresh is incomplete', async () => {
     mockedGetDataCatalog.mockResolvedValueOnce({ code: 0, msg: 'ok', data: validCatalog(12) })
     const store = useDataCatalogStore()

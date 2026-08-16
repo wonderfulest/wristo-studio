@@ -13,7 +13,7 @@ describe('font upload policy', () => {
     ])
   })
 
-  it('only permits English for uploaded text fonts', () => {
-    expect(getUploadFontLanguageOptions()).toEqual(['en'])
+  it('permits only English and Chinese font languages', () => {
+    expect(getUploadFontLanguageOptions()).toEqual(['en', 'zh'])
   })
 })

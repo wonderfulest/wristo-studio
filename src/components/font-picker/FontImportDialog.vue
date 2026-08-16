@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useDesignStore } from '@/stores/designStore'
 import { Upload, Close } from '@element-plus/icons-vue'
 import opentype, { Font, FontNames } from 'opentype.js'
 import type { ParsedFontInfo } from '@/types/font-parse'
@@ -118,6 +119,7 @@ import { useI18n } from '@/i18n'
 import { filterUploadFontTypes, getUploadFontLanguageOptions } from './fontUploadPolicy'
 
 const { t } = useI18n()
+const designStore = useDesignStore()
 
 const props = defineProps<{
   visible: boolean
@@ -146,6 +148,7 @@ watch(() => props.visible, v => {
     blockPremiumUpload()
     return
   }
+  if (v) selectedFontLanguage.value = designStore.appLanguage
   visibleRef.value = v
 })
 watch(visibleRef, v => {
@@ -168,7 +171,7 @@ const selectedFontLanguage = ref<string>('en')
 
 const fontLanguageOptions = computed(() => [
   ...getUploadFontLanguageOptions().map(value => ({
-    name: t('font.languageEnglish'),
+    name: t(value === 'zh' ? 'font.languageChinese' : 'font.languageEnglish'),
     value,
   })),
 ])
@@ -348,7 +351,7 @@ const confirmUpload = async () => {
     selectedFile.value = null
     fontForm.value = { name: '', family: '' }
     parsedInfo.value = null
-    selectedFontLanguage.value = 'en'
+    selectedFontLanguage.value = designStore.appLanguage
   }
 }
 </script>

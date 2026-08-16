@@ -11,6 +11,12 @@ const { activeObjects, addProperty, getMetricByOptions, registerDataOptions, sav
 vi.mock('@/stores/canvasStore', () => ({
   useCanvasStore: () => ({ activeIds: [], canvas: { getObjects: () => [], getActiveObjects: () => activeObjects } }),
 }))
+vi.mock('@/engine/managers/elementManager', () => ({
+  updateElementById: async (id: string, patch: Record<string, unknown>) => {
+    const element = activeObjects.find((item) => String(item.id) === id)
+    if (element) Object.assign(element, patch)
+  },
+}))
 vi.mock('@/stores/properties', () => ({ usePropertiesStore: () => ({ allProperties: {}, addProperty, getMetricByOptions, registerDataOptions }) }))
 vi.mock('@/stores/historyStore', () => ({ useHistoryStore: () => ({ saveState }) }))
 vi.mock('@/stores/dataCatalogStore', () => {
@@ -19,15 +25,32 @@ vi.mock('@/stores/dataCatalogStore', () => {
     valueCode: 1,
     metricSymbol: ':FIELD_TYPE_STEPS',
     category: 'field',
-    unitKey: 'none',
+    unitKey: 'distance',
+    label: { eng: 'DIST', zhs: '距离' },
+    defaultValue: '8.5',
+  }
+  const distance = {
+    unitKey: 'distance',
+    defaultVariant: 'km',
+    selectionPolicy: { type: 'fixed', variant: 'km' },
+    variants: { km: { aliases: ['km'], label: { eng: 'km', zhs: '公里' } } },
   }
   return {
     getDataTypePropertyOptions: () => [canonical],
-    useDataCatalogStore: () => ({ options: [canonical] }),
+    useDataCatalogStore: () => ({
+      options: [canonical],
+      snapshot: {
+        optionsByValueCode: new Map([[1, canonical]]),
+        optionsByMetricSymbol: new Map([[canonical.metricSymbol, canonical]]),
+        unitsByKey: new Map([['distance', distance]]),
+        aliasOwners: new Map(),
+      },
+    }),
   }
 })
+vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ appLanguage: 'zhs' }) }))
 
-import { canBindMetricPropertyToSelection, createQuickMetricProperty, isMetricBindableElement } from './propertyBinding'
+import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection, createQuickMetricProperty, isMetricBindableElement } from './propertyBinding'
 
 describe('metric property binding support', () => {
   it('checks element structure without resolving a metric property', () => {
@@ -59,6 +82,16 @@ describe('metric property binding support', () => {
     expect(registerDataOptions).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ metricSymbol: ':FIELD_TYPE_STEPS' }),
     ]))
+  })
+
+  it('applies the Chinese unit label when binding a metric in a Chinese application', async () => {
+    const unit = { id: 'unit-1', eleType: 'unit', text: '' }
+    activeObjects.splice(0, activeObjects.length, unit)
+    getMetricByOptions.mockReturnValue({ metricSymbol: ':FIELD_TYPE_STEPS' })
+
+    await bindMetricPropertyToSelection('data_1', 'data')
+
+    expect(unit.text).toBe('公里')
   })
 })
 // @vitest-environment jsdom

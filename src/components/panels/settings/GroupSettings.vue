@@ -75,10 +75,12 @@ import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { useDesignStore } from '@/stores/designStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import type { ColorSelectionPayload } from '@/components/color-picker/colorSelection'
+import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import {
   buildPrimaryColorBindingPatch,
   resolveSharedPrimaryColorBinding,
@@ -88,6 +90,7 @@ const baseStore = useBaseStore()
 const { t } = useI18n()
 const propertiesStore = usePropertiesStore()
 const dataCatalog = useDataCatalogStore()
+const designStore = useDesignStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const amoledIconAssetStore = useAmoledIconAssetStore()
@@ -181,6 +184,7 @@ const updateDataProperty = () => {
   if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
   const catalog = dataCatalog.snapshot
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
+  const contentLanguage = resolveDesignContentLanguage(designStore)
   if (dataProperty.value) {
     nextTick(async () => {
       if (dataElement.value) {
@@ -200,7 +204,7 @@ const updateDataProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(canonicalMetric, 'en')
+        const labelText = resolveMetricLabel(canonicalMetric, contentLanguage)
         labelElement.value.set('dataProperty', dataProperty.value)
         labelElement.value.set('goalProperty', null)
         labelElement.value.set('text', labelText)
@@ -208,7 +212,7 @@ const updateDataProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { dataProperty: dataProperty.value, goalProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
+        const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
         unitElement.value.set('dataProperty', dataProperty.value)
         unitElement.value.set('goalProperty', null)
         unitElement.value.set('text', unitText)
@@ -233,6 +237,7 @@ const updateGoalProperty = () => {
   if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
   const catalog = dataCatalog.snapshot
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
+  const contentLanguage = resolveDesignContentLanguage(designStore)
   if (goalProperty.value) {
     nextTick(async () => {
       if (dataElement.value) {
@@ -252,7 +257,7 @@ const updateGoalProperty = () => {
         }
       }
       if (labelElement.value) {
-        const labelText = resolveMetricLabel(canonicalMetric, 'en')
+        const labelText = resolveMetricLabel(canonicalMetric, contentLanguage)
         labelElement.value.set('goalProperty', goalProperty.value)
         labelElement.value.set('dataProperty', null)
         labelElement.value.set('text', labelText)
@@ -260,7 +265,7 @@ const updateGoalProperty = () => {
         if (labelId) elementDataStore.patchElement(labelId, { goalProperty: goalProperty.value, dataProperty: null, text: labelText } as any)
       }
       if (unitElement.value) {
-        const unitText = resolveMetricUnit(canonicalMetric, 'en', catalog)
+        const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
         unitElement.value.set('goalProperty', goalProperty.value)
         unitElement.value.set('dataProperty', null)
         unitElement.value.set('text', unitText)

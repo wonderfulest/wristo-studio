@@ -352,6 +352,7 @@ export const useBaseStore = defineStore('baseStore', {
           const created = await designApi.createDesign({
             name: designStore.watchFaceName,
             description: designStore.watchFaceName,
+            originalType: 'original',
           })
           if (created.code !== 0 || !created.data?.designUid) {
             ElMessage.error('创建设计失败！')

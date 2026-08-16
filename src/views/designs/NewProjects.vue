@@ -16,6 +16,7 @@
     <NewProjectDialog
       v-model="dialogVisible"
       :initial-name="projectName"
+      :inherit-source="Boolean(currentTemplate)"
       @confirm="handleConfirmDialog"
     />
 
@@ -54,6 +55,7 @@ import NewProjectDialog from '@/views/designs/NewProjectDialog.vue'
 import emitter from '@/utils/eventBus'
 import { useI18n } from '@/i18n'
 import type { AppLanguage } from '@/types/localization'
+import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
@@ -135,7 +137,7 @@ const withAppLanguage = (config: unknown, appLanguage: AppLanguage) => {
   return { ...base, localization: { appLanguage } }
 }
 
-const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage }) => {
+const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string }) => {
   if (!canCreateProject()) return
   const name = (input.name || projectName.value).trim() || generateRandomProjectName()
   const appLanguage = input.appLanguage
@@ -186,6 +188,9 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     const createRes = await designApi.createDesign({
       name,
       description: '',
+      originalType: input.originalType,
+      sourcePlatform: input.sourcePlatform,
+      sourceId: input.sourceId,
     } as any) as ApiResponse<Design>
 
     if (!createRes || !createRes.data) {

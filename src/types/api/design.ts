@@ -2,6 +2,7 @@ import type { UserBase } from './user'
 import type { Image, ImageBase } from './image'
 import type { Product } from './product'
 import { Category } from './category'
+import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
 
 /**
  * 创建设计的请求参数
@@ -9,6 +10,9 @@ import { Category } from './category'
 export interface CreateDesignParams {
   name: string
   description: string
+  originalType: DesignOriginalType
+  sourcePlatform?: DesignSourcePlatform
+  sourceId?: string
 }
 
 /**
@@ -25,6 +29,9 @@ export interface UpdateDesignParamsV2 {
   uid: string
   name?: string
   description?: string
+  originalType?: DesignOriginalType
+  sourcePlatform?: DesignSourcePlatform
+  sourceId?: string
   coverImage?: ImageBase
   backgroundImage?: ImageBase
   configJson?: any
@@ -42,6 +49,9 @@ export interface UpdateDesignParamsV2 {
 export interface DesignSubmitDTO {
   designUid: string
   paymentMethod: string
+  originalType: DesignOriginalType
+  sourcePlatform?: DesignSourcePlatform
+  sourceId?: string
   name?: string
   description?: string
   kpayId?: string
@@ -68,6 +78,9 @@ export interface Design {
   designUid: string
   name: string
   description: string
+  originalType: DesignOriginalType
+  sourcePlatform?: DesignSourcePlatform | null
+  sourceId?: string | null
   configJson: DesignConfig | null
   assetBundleUrl?: string | null
   assetBundleHash?: string | null

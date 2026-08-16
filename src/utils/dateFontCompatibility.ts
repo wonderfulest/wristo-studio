@@ -99,14 +99,14 @@ export function isFontCompatibleWithDateLanguage(
   if (language === 'numeric') return true
 
   const fontLanguage = normalizeLanguage((font as any).language)
-  if (language === 'en') return fontLanguage === 'en' || fontLanguage === 'multi'
-  if (language === 'zh') return fontLanguage === 'zh' || fontLanguage === 'multi'
-  return fontLanguage === 'multi'
+  if (language === 'en') return fontLanguage === 'en'
+  if (language === 'zh') return fontLanguage === 'zh'
+  return false
 }
 
 export function getDateFontRequirementLabel(language: DateContentLanguage): string {
   if (language === 'numeric') return 'number or text font'
-  if (language === 'en') return 'English or multilingual font'
-  if (language === 'zh') return 'Chinese or multilingual font'
-  return 'multilingual font'
+  if (language === 'en') return 'English font'
+  if (language === 'zh') return 'Chinese font'
+  return 'single-language font'
 }

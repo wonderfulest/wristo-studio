@@ -10,9 +10,10 @@ const readSource = (relativePath: string) => readFileSync(
 describe('single application language creation', () => {
   it('offers exactly English and Chinese and returns the selected metadata', () => {
     const source = readSource('./NewProjectDialog.vue')
-    expect(source).toContain('<el-radio-button value="en">English</el-radio-button>')
-    expect(source).toContain('<el-radio-button value="zh">中文</el-radio-button>')
-    expect(source).toContain("emit('confirm', { name: localName.value, appLanguage: appLanguage.value })")
+    expect(source).toContain('<el-radio-button value="eng">English</el-radio-button>')
+    expect(source).toContain('<el-radio-button value="zhs">中文</el-radio-button>')
+    expect(source).toContain("emit('confirm', {")
+    expect(source).toContain('appLanguage: appLanguage.value,')
   })
 
   it('persists the selected metadata for blank and copied applications', () => {

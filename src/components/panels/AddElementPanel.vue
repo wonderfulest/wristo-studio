@@ -47,6 +47,10 @@ import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 import { useI18n } from '@/i18n'
+import {
+  getDefaultDateFormatterForAppLanguage,
+  getDefaultFontFamilyForAppLanguage,
+} from '@/domain/designLanguageCapabilities'
 
 const fontStore = useFontStore()
 const messageStore = useMessageStore()
@@ -207,9 +211,6 @@ const addElementByType = async (_category: string, elementType: string, config: 
       return
     }
 
-    // 加载字体
-    await loadElementFont(config)
-    
     // 基于 schema 默认配置，补齐位置与对齐：如果没有显式传 left/top/originX/originY，默认放在表盘中心
     const designSpec = designStore?.designSpec as { centerX?: number; centerY?: number } | undefined
     const centerX = designSpec?.centerX
@@ -222,6 +223,20 @@ const addElementByType = async (_category: string, elementType: string, config: 
       originY: (config as any).originY ?? 'center',
       displayStates: DEFAULT_DISPLAY_STATES,
     }
+    if (typeof normalizedConfig.fontFamily === 'string') {
+      normalizedConfig.fontFamily = getDefaultFontFamilyForAppLanguage(
+        designStore.appLanguage,
+        normalizedConfig.fontFamily,
+      )
+    }
+    const normalizedRecord = normalizedConfig as AnyElementConfig & { formatter?: number }
+    if (elementType === 'date' && typeof normalizedRecord.formatter === 'number') {
+      normalizedRecord.formatter = getDefaultDateFormatterForAppLanguage(
+        designStore.appLanguage,
+        normalizedRecord.formatter,
+      )
+    }
+    await loadElementFont(normalizedConfig)
 
     const colorBindings = applyDefaultColorVariable(normalizedConfig)
 

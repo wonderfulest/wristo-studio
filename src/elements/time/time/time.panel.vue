@@ -14,6 +14,7 @@
           <FontPicker 
             v-model="safeFontFamily" 
             :type="FontTypes.TEXT_FONT"
+            :allow-any-language="true"
             @change="applyUpdate({ fontFamily: $event })" 
           />
         </template>

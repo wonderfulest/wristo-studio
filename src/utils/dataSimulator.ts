@@ -55,6 +55,9 @@ type SimState = {
   notifications: number
   alarms: number
   humidity: number
+  precipitationChanceCurrent: number
+  precipitationChanceNextHour: number
+  precipitationChanceToday: number
   windSpeed: number
   windDeg: number
   pm25: number
@@ -85,6 +88,9 @@ const simState: SimState = {
   notifications: 5,
   alarms: 2,
   humidity: 48,
+  precipitationChanceCurrent: 35,
+  precipitationChanceNextHour: 42,
+  precipitationChanceToday: 55,
   windSpeed: 3.6,
   windDeg: 135,
   pm25: 18,
@@ -134,6 +140,9 @@ export function tickSimulatedData(): void {
   simState.alarms = clamp(simState.alarms + (Math.random() < 0.01 ? 1 : 0), 0, 20)
 
   simState.humidity = clamp(simState.humidity + randInt(-1, 1), 0, 100)
+  simState.precipitationChanceCurrent = clamp(simState.precipitationChanceCurrent + randInt(-2, 2), 0, 100)
+  simState.precipitationChanceNextHour = clamp(simState.precipitationChanceNextHour + randInt(-2, 2), 0, 100)
+  simState.precipitationChanceToday = clamp(simState.precipitationChanceToday + randInt(-1, 1), 0, 100)
   simState.windSpeed = clamp(simState.windSpeed + randInt(-1, 1) * 0.1, 0, 20)
   simState.windDeg = (simState.windDeg + randInt(-5, 5) + 360) % 360
 
@@ -262,6 +271,13 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'humidity':
     case 'hum':
       return { display: String(simState.humidity), numeric: simState.humidity, unit: '%', label: 'HUM' }
+
+    case 'precipitationChanceCurrent':
+      return { display: String(simState.precipitationChanceCurrent), numeric: simState.precipitationChanceCurrent, unit: '%', label: 'PRECIP' }
+    case 'precipitationChanceNextHour':
+      return { display: String(simState.precipitationChanceNextHour), numeric: simState.precipitationChanceNextHour, unit: '%', label: 'NEXT PRECIP' }
+    case 'precipitationChanceToday':
+      return { display: String(simState.precipitationChanceToday), numeric: simState.precipitationChanceToday, unit: '%', label: 'TODAY PRECIP' }
 
     // 风速 / 风向（角度）
     case 'windSpeed':
