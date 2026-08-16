@@ -34,3 +34,29 @@ describe('design font-size round trip', () => {
     expect(restored.fontSize).toBe(30)
   })
 })
+
+describe('analog hand design-size scaling', () => {
+  it('keeps the hand pivot and relative length stable when reopening a smaller design at 454', () => {
+    const scaled = scaleElementConfig({
+      id: 'minute-hand',
+      eleType: 'minuteHand',
+      centerX: 195,
+      centerY: 190,
+      pivotOffsetX: 10,
+      pivotOffsetY: 5,
+      scalePercent: 72,
+    } as any, {
+      width: 390,
+      height: 390,
+    }, {
+      width: STANDARD_DESIGN_SIZE,
+      height: STANDARD_DESIGN_SIZE,
+    }) as any
+
+    expect(scaled.centerX).toBe(227)
+    expect(scaled.centerY).toBe(221.179)
+    expect(scaled.pivotOffsetX).toBe(11.641)
+    expect(scaled.pivotOffsetY).toBe(5.821)
+    expect(scaled.scalePercent).toBe(72)
+  })
+})

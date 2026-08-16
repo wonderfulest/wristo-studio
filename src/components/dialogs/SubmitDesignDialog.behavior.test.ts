@@ -8,6 +8,7 @@ import type { ProductTag } from '@/types/api/productTag'
 const mocks = vi.hoisted(() => ({
   getDesignByUid: vi.fn(),
   submitDesign: vi.fn(),
+  checkSourceDuplicate: vi.fn(),
   updateDesign: vi.fn(),
   submitPrgPackageTask: vi.fn(),
   getDsnProductTagsPage: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('@/api/wristo/design', () => ({
   designApi: {
     getDesignByUid: mocks.getDesignByUid,
     submitDesign: mocks.submitDesign,
+    checkSourceDuplicate: mocks.checkSourceDuplicate,
     updateDesign: mocks.updateDesign,
     submitPrgPackageTask: mocks.submitPrgPackageTask,
   },
@@ -138,6 +140,7 @@ describe('SubmitDesignDialog style tag behavior', () => {
     })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.submitDesign.mockResolvedValue({ code: 0, data: true })
+    mocks.checkSourceDuplicate.mockResolvedValue({ code: 0, data: false })
     mocks.updateDesign.mockResolvedValue({ code: 0, data: true })
     mocks.submitPrgPackageTask.mockResolvedValue({ code: 0, data: true })
   })
@@ -173,6 +176,31 @@ describe('SubmitDesignDialog style tag behavior', () => {
     await confirm(wrapper)
 
     expect(wrapper.emitted('success')).toEqual([[{ mode: 'submit' }]])
+  })
+
+  it('blocks submission when the source platform and source ID already exist', async () => {
+    mocks.getDesignByUid.mockResolvedValueOnce({
+      code: 0,
+      data: {
+        ...designDetail,
+        originalType: 'non_original',
+        sourcePlatform: 'facer',
+        sourceId: 'https://facer.io/watchface/123',
+      },
+    })
+    mocks.checkSourceDuplicate.mockResolvedValueOnce({ code: 0, data: true })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+
+    await confirm(wrapper)
+
+    expect(mocks.checkSourceDuplicate).toHaveBeenCalledWith({
+      sourcePlatform: 'facer',
+      sourceId: 'https://facer.io/watchface/123',
+      designUid: 'design-uid',
+    })
+    expect(mocks.messageError).toHaveBeenCalledWith('designSource.duplicate')
+    expect(mocks.submitDesign).not.toHaveBeenCalled()
   })
 
   it.each([

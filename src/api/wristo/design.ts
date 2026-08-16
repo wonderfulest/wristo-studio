@@ -13,6 +13,7 @@ import type {
 } from '@/types/api/design'
 import type { Image } from '@/types/image'
 import type { ProductPackagingBuildLogVo } from '@/types/api/product'
+import type { DesignSourcePlatform } from '@/domain/designSource'
 
 export interface DesignAssetBundleVO {
   designUid: string
@@ -179,6 +180,14 @@ export const designApi = {
       description: normalizeWhitespace(data.description),
     }
     return instance.post(`/dsn/design/submit`, cleanedData)
+  },
+
+  checkSourceDuplicate(params: {
+    sourcePlatform: DesignSourcePlatform
+    sourceId: string
+    designUid?: string
+  }): Promise<ApiResponse<boolean>> {
+    return instance.get('/dsn/design/source-duplicate', { params })
   },
 
   /**

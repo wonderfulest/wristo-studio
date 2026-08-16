@@ -11,8 +11,8 @@ export interface DesignSize {
   height: number
 }
 
-const X_FIELDS = new Set(['left', 'x', 'x1', 'x2', 'scrollAreaLeft'])
-const Y_FIELDS = new Set(['top', 'y', 'y1', 'y2', 'topBase', 'scrollAreaTop'])
+const X_FIELDS = new Set(['left', 'x', 'x1', 'x2', 'scrollAreaLeft', 'centerX', 'pivotOffsetX'])
+const Y_FIELDS = new Set(['top', 'y', 'y1', 'y2', 'topBase', 'scrollAreaTop', 'centerY', 'pivotOffsetY'])
 const WIDTH_FIELDS = new Set(['width', 'scrollAreaWidth', 'headWidth', 'barWidth'])
 const HEIGHT_FIELDS = new Set(['height', 'headHeight'])
 const SCALAR_FIELDS = new Set([

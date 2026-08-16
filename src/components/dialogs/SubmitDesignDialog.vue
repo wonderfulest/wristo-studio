@@ -459,6 +459,22 @@ const handleConfirm = async () => {
       tagIds: form.tagIds,
       bundleIds: form.bundleIds
     }
+
+    if (submitData.sourcePlatform && submitData.sourceId) {
+      const duplicateResponse = await designApi.checkSourceDuplicate({
+        sourcePlatform: submitData.sourcePlatform,
+        sourceId: submitData.sourceId,
+        designUid: submitData.designUid,
+      })
+      if (duplicateResponse.code !== 0) {
+        messageStore.error(duplicateResponse.msg || t('submitDesign.submitFailed'))
+        return
+      }
+      if (duplicateResponse.data) {
+        messageStore.error(t('designSource.duplicate'))
+        return
+      }
+    }
     
     // Add parameters based on payment method
     if (form.paymentMethod === 'kpay') {
