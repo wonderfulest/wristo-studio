@@ -191,6 +191,7 @@ import { buildWrtDesignPackage } from '@/engine/services/designAssetBundleServic
 import type { FabricElement } from '@/types/element'
 import type { LayerElement } from '@/types/layer'
 import emitter from '@/utils/eventBus'
+import { openRouteInNewTab } from '@/utils/openRouteInNewTab'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
@@ -1167,7 +1168,7 @@ const showFeedbackDialog = () => {
 const handleOpenCreatorAcademy = () => {
   window.open('/academy', '_blank', 'noopener')
 }
-const handleOpenTokens = () => { void router.push({ name: 'Tokens' }) }
+const handleOpenTokens = () => openRouteInNewTab(router, { name: 'Tokens' })
 
 </script>
 

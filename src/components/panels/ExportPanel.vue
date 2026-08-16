@@ -90,6 +90,7 @@ import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleServi
 import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
 import { getProduct } from '@/api/products'
 import { resolveCoverImageSaveChoice } from './coverImageSaveChoice'
+import emitter from '@/utils/eventBus'
 const messageStore = useMessageStore()
 const router = useRouter()
 const userStore = useUserStore()
@@ -336,6 +337,7 @@ const saveConfig = async (options = {}) => {
       })
     })
     historyStore.saveInitial()
+    emitter.emit('design-saved', baseStore.id)
     return baseStore.id
   } catch (error) {
     console.error('Auto save failed', error)

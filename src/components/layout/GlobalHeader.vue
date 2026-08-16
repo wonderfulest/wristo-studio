@@ -43,6 +43,7 @@ import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 import { useI18n } from '@/i18n'
+import { openRouteInNewTab } from '@/utils/openRouteInNewTab'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -61,7 +62,7 @@ const openAcademy = (): void => {
 const openPrgInstallerGuide = (): void => {
   void router.push({ name: 'PrgInstallerGuide' })
 }
-const openTokens = (): void => { void router.push({ name: 'Tokens' }) }
+const openTokens = (): void => openRouteInNewTab(router, { name: 'Tokens' })
 </script>
 
 <style scoped>

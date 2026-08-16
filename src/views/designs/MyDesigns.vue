@@ -13,13 +13,13 @@
         inputmode="numeric"
         @keyup.enter="handleSearch"
       />
-      <DesignerSelect
-        v-if="isAdminUser"
-        :model-value="selectedCreatorUserId"
-        :placeholder="t('project.searchDesigner')"
-        class="designer-filter"
-        @update:model-value="handleCreatorChange"
-      />
+      <div v-if="isAdminUser" class="designer-filter">
+        <DesignerSelect
+          :model-value="selectedCreatorUserId"
+          :placeholder="t('project.searchDesigner')"
+          @update:model-value="handleCreatorChange"
+        />
+      </div>
       <el-select v-model="selectedStatus" :placeholder="t('project.status')" clearable class="status-filter" @change="handleStatusChange">
         <el-option :label="t('common.all')" value="" />
         <el-option :label="t('status.draft')" value="draft" />
@@ -1050,7 +1050,8 @@ const handleGoLiveSuccess = () => {
 }
 
 .designer-filter {
-  width: 240px;
+  flex: 0 0 200px;
+  width: 200px;
 }
 
 .status-filter {

@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import emitter from '@/utils/eventBus'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
@@ -87,7 +88,6 @@ import { useBaseStore } from '@/stores/baseStore'
 import CanvasRulers from '@/components/canvas/CanvasRulers.vue'
 import EditorSettingsDialog from '@/components/dialogs/EditorSettingsDialog.vue'
 import ChangelogDialog from '@/components/dialogs/ChangelogDialog.vue'
-import appConfig from '@/config/appConfig.ts'
 import CanvasView from '@/views/Canvas.vue'
 import ElementSettings from '@/components/panels/ElementSettings.vue'
 import SidePanel from '@/components/panels/SidePanel.vue'
@@ -96,6 +96,7 @@ import HistoryControls from '@/components/canvas/HistoryControls.vue'
 import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import ElementContextMenu from '@/components/canvas/ElementContextMenu.vue'
 import { useDesignStore } from '@/stores/designStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { useResizableEditorPanels } from '@/views/design/useResizableEditorPanels'
@@ -112,12 +113,19 @@ import {
   roundSelectedElementPositions,
 } from '@/engine/managers/elementContextActions'
 import type { ElementActionAvailability } from '@/engine/managers/elementContextActionModel'
+import {
+  createLocalDesignDraftAutosave,
+  removeLocalDesignDraft,
+  resolveLocalDesignDraft,
+  writeLocalDesignDraft,
+} from '@/engine/services/localDesignDraft'
 
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
 const { t } = useI18n()
 const designStore = useDesignStore()
+const elementDataStore = useElementDataStore()
 const userStore = useUserStore()
 const exportStore = useExportStore()
 const { waitCanvasReady } = useCanvas()
@@ -130,6 +138,66 @@ const isDialogVisible = ref<boolean>(false)
 const editorStore = useEditorStore()
 const themeStore = useThemeStore()
 let saveTimer: number | null = null
+let stopElementDataSubscription: (() => void) | null = null
+let loadedDesignId = ''
+const getDraftDeviceKey = (): string => String(
+  userStore.userInfo?.device?.deviceId
+  || userStore.userInfo?.device?.hardwarePartNumber
+  || userStore.userInfo?.device?.partNumber
+  || `${designStore.designSpec.width}x${designStore.designSpec.height}`,
+)
+const persistLocalDraft = (): void => {
+  if (!loadedDesignId) return
+  const config = baseStore.generateConfig({ validateBindings: false })
+  if (!config) return
+  writeLocalDesignDraft(window.localStorage, {
+    designId: loadedDesignId,
+    deviceKey: getDraftDeviceKey(),
+    savedAt: Date.now(),
+    config,
+  })
+}
+const draftAutosave = createLocalDesignDraftAutosave(persistLocalDraft)
+const saveDirtyDraft = (): void => {
+  try {
+    draftAutosave.saveIfDirty()
+  } catch (error) {
+    console.error('Failed to save local design draft:', error)
+  }
+}
+const startDraftTracking = (designId: string): void => {
+  loadedDesignId = designId
+  stopElementDataSubscription?.()
+  stopElementDataSubscription = elementDataStore.$subscribe(
+    () => draftAutosave.markDirty(),
+    { detached: true, flush: 'sync' },
+  )
+}
+const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<any> => resolveLocalDesignDraft({
+  storage: window.localStorage,
+  designId,
+  deviceKey: getDraftDeviceKey(),
+  serverConfig,
+  confirmRestore: async () => {
+    try {
+      await ElMessageBox.confirm(
+        t('editor.localDraft.message'),
+        t('editor.localDraft.title'),
+        {
+          confirmButtonText: t('editor.localDraft.restore'),
+          cancelButtonText: t('editor.localDraft.useServer'),
+          distinguishCancelAndClose: true,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          type: 'warning',
+        },
+      )
+      return true
+    } catch {
+      return false
+    }
+  },
+})
 const emptyAvailability: ElementActionAvailability = { canCopy: false, canPaste: false, canDelete: false, canBringForward: false, canSendBackward: false, canBringToFront: false, canSendToBack: false, canFlip: false, canRound: false }
 const contextMenu = ref({ visible: false, x: 0, y: 0, availability: emptyAvailability })
 
@@ -244,21 +312,21 @@ const {
   translate: t,
   redirectToDesigns: () => {
     void router.push('/designs')
-  }
+  },
+  resolveLoadedConfig: resolveLoadedDraft,
+  onDesignLoaded: startDraftTracking,
 })
 
 // 设置自动保存
 const setupAutoSave = () => {
-  if (appConfig.autoSave.enabled) {
-    // 使用 window.setInterval 强制使用 DOM 重载，返回值为 number
-    saveTimer = window.setInterval(() => {
-      try {
-        exportStore.saveConfig({ validateBindings: false })
-      } catch (error) {
-        console.error('自动保存失败:', error)
-      }
-    }, appConfig.autoSave.interval)
-  }
+  saveTimer = window.setInterval(saveDirtyDraft, 10_000)
+}
+
+const handleBeforeUnload = (): void => saveDirtyDraft()
+const handleDesignSaved = (designId: unknown): void => {
+  if (!loadedDesignId || String(designId) !== loadedDesignId) return
+  draftAutosave.markClean()
+  removeLocalDesignDraft(window.localStorage, loadedDesignId, getDraftDeviceKey())
 }
 
 // 替换元素加载逻辑
@@ -290,6 +358,8 @@ onMounted(() => {
 
   // 设置自动保存
   setupAutoSave()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  emitter.on('design-saved', handleDesignSaved as any)
 
   window.addEventListener('resize', handleWorkspaceResize)
   persistNormalizedPanelWidths()
@@ -309,7 +379,12 @@ onBeforeUnmount(() => {
   disposeCanvasPan()
   disposeDesignLoader()
   disposeResizablePanels()
+  saveDirtyDraft()
+  stopElementDataSubscription?.()
+  stopElementDataSubscription = null
   emitter.off('import-wrt-design', importWrtDesign as any)
+  emitter.off('design-saved', handleDesignSaved as any)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 
   // 清除自动保存定时器
   if (saveTimer) {

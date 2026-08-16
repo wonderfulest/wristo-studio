@@ -43,6 +43,8 @@ export interface UseDesignLoaderOptions {
   waitCanvasReady: (timeout?: number) => Promise<void>
   translate: (key: string) => string
   redirectToDesigns: () => void
+  resolveLoadedConfig?: (designId: string, config: RuntimeDesignConfig) => Promise<RuntimeDesignConfig>
+  onDesignLoaded?: (designId: string) => void
 }
 
 export function useDesignLoader(options: UseDesignLoaderOptions) {
@@ -479,7 +481,13 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         baseStore.setWatchFaceName(designData.name)
         designStore.setWatchFaceName(designData.name)
         baseStore.appId = designData.product?.appId || -1
-        await applyRuntimeDesignConfig(restoredConfig, generation)
+        const selectedConfig = options.resolveLoadedConfig
+          ? await options.resolveLoadedConfig(designUid, restoredConfig)
+          : restoredConfig
+        if (!isCurrentDesignLoad(generation)) return
+        if (await applyRuntimeDesignConfig(selectedConfig, generation)) {
+          options.onDesignLoaded?.(designUid)
+        }
       })
     } catch (error) {
       if (!isCurrentDesignLoad(generation)) return
