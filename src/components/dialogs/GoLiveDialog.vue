@@ -24,11 +24,6 @@
       <el-form-item :label="t('submitDesign.description')">
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
-          <span class="description-language-label">{{ t('goLive.descriptionLanguage') }}</span>
-          <el-radio-group v-model="descriptionLanguage" size="small">
-            <el-radio-button value="en">{{ t('goLive.languageEnglish') }}</el-radio-button>
-            <el-radio-button value="zh">{{ t('goLive.languageChinese') }}</el-radio-button>
-          </el-radio-group>
           <el-button size="small" type="primary" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
         </div>
         <div class="form-tip">
@@ -268,7 +263,7 @@ import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useI18n } from '@/i18n'
 import {
   buildGenerateDescriptionPayload,
-  type DescriptionTemplateLanguage,
+  resolveDescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import type { ProductImageItem } from '@/types/product'
@@ -289,7 +284,6 @@ import {
 const dialogVisible = ref(false)
 const loading = ref(false)
 const downloadingImages = ref(false)
-const descriptionLanguage = ref<DescriptionTemplateLanguage>('en')
 const currentDesign = ref<Design | null>(null)
 const formRef = ref<FormInstance | null>(null)
 type DesignerConfigDialogRef = { show: () => void | Promise<void> }
@@ -702,7 +696,8 @@ const refreshDescription = async () => {
   }
   const pid = currentDesign.value.product.id
   try {
-    const payload = buildGenerateDescriptionPayload(uid, pid, descriptionLanguage.value)
+    const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
+    const payload = buildGenerateDescriptionPayload(uid, pid, language)
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
@@ -715,7 +710,6 @@ const refreshDescription = async () => {
 
 // 定义 show 方法
 const show = (design: Design) => {
-  descriptionLanguage.value = 'en'
   loadDesign(design)
   dialogVisible.value = true
 }
@@ -768,10 +762,6 @@ defineExpose({
   margin-top: 8px;
 }
 
-.description-language-label {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
 .form-tip-margin {
   margin-left: 8px;
   font-size: 12px;

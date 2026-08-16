@@ -90,11 +90,6 @@
           :placeholder="t('submitDesign.enterDescription')"
         />
         <div class="description-actions">
-          <span class="description-language-label">{{ t('goLive.descriptionLanguage') }}</span>
-          <el-radio-group v-model="descriptionLanguage" size="small">
-            <el-radio-button value="en">{{ t('goLive.languageEnglish') }}</el-radio-button>
-            <el-radio-button value="zh">{{ t('goLive.languageChinese') }}</el-radio-button>
-          </el-radio-group>
           <el-button size="small" type="primary" :loading="refreshingDescription" @click="refreshDescription">
             {{ t('common.refresh') }}
           </el-button>
@@ -145,7 +140,7 @@ import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import {
   buildGenerateDescriptionPayload,
-  type DescriptionTemplateLanguage,
+  resolveDescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { ElMessage } from 'element-plus'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
@@ -155,7 +150,6 @@ import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOrig
 const dialogVisible = ref(false)
 const loading = ref(false)
 const refreshingDescription = ref(false)
-const descriptionLanguage = ref<DescriptionTemplateLanguage>('en')
 const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 const dialogMode = ref<'submit' | 'prg-build'>('submit')
@@ -332,7 +326,6 @@ const handlePaymentMethodChange = (value: string) => {
 const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; deviceId?: string }) => {
   try {
     loading.value = true
-    descriptionLanguage.value = 'en'
     currentDesign.value = null
     dialogMode.value = options?.mode || 'submit'
     prgDeviceId.value = options?.deviceId || ''
@@ -417,7 +410,8 @@ const refreshDescription = async () => {
 
   try {
     refreshingDescription.value = true
-    const payload = buildGenerateDescriptionPayload(uid, productId, descriptionLanguage.value)
+    const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
+    const payload = buildGenerateDescriptionPayload(uid, productId, language)
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
@@ -574,10 +568,6 @@ defineExpose({
   margin-top: 8px;
 }
 
-.description-language-label {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
 
 .dialog-footer {
   display: flex;
