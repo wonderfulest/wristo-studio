@@ -103,6 +103,23 @@
     </el-row>
 
     <el-dialog
+      v-model="duplicateLanguageDialogVisible"
+      :title="t('project.duplicateLanguageTitle')"
+      width="400px"
+      append-to-body
+    >
+      <p class="duplicate-language-hint">{{ t('project.duplicateLanguageHint') }}</p>
+      <el-radio-group v-model="duplicateLanguage">
+        <el-radio-button value="eng">English</el-radio-button>
+        <el-radio-button value="zhs">中文</el-radio-button>
+      </el-radio-group>
+      <template #footer>
+        <el-button @click="duplicateLanguageDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmDuplicateLanguage">{{ t('card.duplicate') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="transferDialogVisible"
       :title="t('card.transferOwner.title')"
       width="480px"
@@ -213,6 +230,12 @@ import {
 } from '@/api/wristo/prg-installer'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
+import {
+  canChooseDuplicateLanguage,
+  getDuplicateSourceLanguage,
+  withDuplicateLanguage,
+} from '@/views/designs/designDuplicateLanguage'
+import type { AppLanguage } from '@/types/localization'
 import { createPrgInstallerPromptState } from '@/features/prg-installer/promptState'
 import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
 const editDesignDialog = ref<any>(null)
@@ -259,6 +282,9 @@ const transferDialogVisible = ref(false)
 const transferDesign = ref<Design | null>(null)
 const transferTargetUserId = ref<number | undefined>()
 const transferLoading = ref(false)
+const duplicateLanguageDialogVisible = ref(false)
+const duplicateSourceDesign = ref<Design | null>(null)
+const duplicateLanguage = ref<AppLanguage>('eng')
 
 // 添加加载状态
 const loadingStates = ref<LoadingStates>({
@@ -699,24 +725,27 @@ const updateStoreWeight = async (design: Design, storeWeight: number) => {
   }
 }
 
-// 复制设计
-const copyDesign = async (design: Design) => {
+const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguage) => {
   if (loadingStates.value.copy.has(design.id)) return
-  if (!userStore.canCreateDesign) {
-    const max = userStore.studioMembership?.maxDesigns
-    messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
-    router.push('/pricing')
-    return
-  }
-  
+
   try {
     loadingStates.value.copy.add(design.id)
-    const newDesignData = {
-      uid: design.designUid
-    } as CreateCopyDesignParams
+    const newDesignData = { uid: design.designUid } as CreateCopyDesignParams
     const createResponse = await designApi.createDesignByCopy(newDesignData) as ApiResponse<Design>
-    
+
     if (createResponse.code === 0 && createResponse.data) {
+      const sourceLanguage = getDuplicateSourceLanguage(design.configJson)
+      if (targetLanguage !== sourceLanguage) {
+        const updateResponse = await designApi.updateDesign({
+          uid: createResponse.data.designUid,
+          configJson: withDuplicateLanguage(createResponse.data.configJson ?? design.configJson, targetLanguage),
+        })
+        if (!updateResponse || updateResponse.code !== 0) {
+          messageStore.error(updateResponse?.msg || t('project.copyLanguageFailed'))
+          return
+        }
+      }
+
       messageStore.success(t('project.copySuccessful'))
       await fetchDesigns()
       await userStore.refreshUserInfo()
@@ -729,6 +758,49 @@ const copyDesign = async (design: Design) => {
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
+}
+
+// Studio 卡片的 Duplicate：英文应用可选择保留英文或创建中文版。
+const copyDesign = async (design: Design) => {
+  if (loadingStates.value.copy.has(design.id)) return
+  if (!userStore.canCreateDesign) {
+    const max = userStore.studioMembership?.maxDesigns
+    messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
+    router.push('/pricing')
+    return
+  }
+
+  loadingStates.value.copy.add(design.id)
+  try {
+    const detailResponse = await designApi.getDesignByUid(design.designUid)
+    if (!detailResponse || detailResponse.code !== 0 || !detailResponse.data) {
+      messageStore.error(detailResponse?.msg || t('project.loadDesignFailed'))
+      return
+    }
+
+    if (canChooseDuplicateLanguage(detailResponse.data.configJson)) {
+      duplicateSourceDesign.value = detailResponse.data
+      duplicateLanguage.value = 'eng'
+      duplicateLanguageDialogVisible.value = true
+      return
+    }
+
+    loadingStates.value.copy.delete(design.id)
+    await executeDuplicateDesign(detailResponse.data, getDuplicateSourceLanguage(detailResponse.data.configJson))
+  } catch (error) {
+    console.error('加载待复制应用失败:', error)
+    messageStore.error((error as any)?.response?.data?.msg || t('project.loadDesignFailed'))
+  } finally {
+    loadingStates.value.copy.delete(design.id)
+  }
+}
+
+const confirmDuplicateLanguage = async () => {
+  const source = duplicateSourceDesign.value
+  if (!source) return
+  duplicateLanguageDialogVisible.value = false
+  duplicateSourceDesign.value = null
+  await executeDuplicateDesign(source, duplicateLanguage.value)
 }
 
 // 确认删除
