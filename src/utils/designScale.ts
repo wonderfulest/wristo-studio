@@ -39,6 +39,7 @@ const SCALAR_FIELDS = new Set([
   'headGap',
 ])
 const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image'])
+const HAND_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
 
 function safeRatio(next: number, prev: number): number {
   if (!Number.isFinite(next) || !Number.isFinite(prev) || prev === 0) return 1
@@ -104,6 +105,21 @@ export function scaleElementConfig(
 
   for (const key of Object.keys(next)) {
     next[key] = roundScaledNumber(next[key])
+  }
+  if (HAND_ELEMENT_TYPES.has(String(next.eleType ?? ''))) {
+    for (const key of ['left', 'top', 'centerX', 'centerY', 'pivotOffsetX', 'pivotOffsetY']) {
+      if (typeof next[key] === 'number' && Number.isFinite(next[key])) {
+        next[key] = Math.round(next[key])
+      }
+    }
+    if (next.rotationCenter && typeof next.rotationCenter === 'object') {
+      const rotationCenter = next.rotationCenter as Record<string, unknown>
+      next.rotationCenter = {
+        ...rotationCenter,
+        x: Math.round(Number(next.centerX ?? 0) + Number(next.pivotOffsetX ?? 0)),
+        y: Math.round(Number(next.centerY ?? 0) + Number(next.pivotOffsetY ?? 0)),
+      }
+    }
   }
   if ('fontSize' in next) {
     const scalingFromStandard =
@@ -200,6 +216,37 @@ function scaleBackgroundObject(obj: any, from: DesignSize, to: DesignSize): void
   }
 }
 
+function scaleHandObject(obj: any, from: DesignSize, to: DesignSize): void {
+  const ratioX = safeRatio(to.width, from.width)
+  const ratioY = safeRatio(to.height, from.height)
+  const ratioScalar = Math.min(ratioX, ratioY)
+  const centerX = Math.round(Number(obj.centerX ?? obj.left ?? 0) * ratioX)
+  const centerY = Math.round(Number(obj.centerY ?? obj.top ?? 0) * ratioY)
+  const pivotOffsetX = Math.round(Number(obj.pivotOffsetX ?? 0) * ratioX)
+  const pivotOffsetY = Math.round(Number(obj.pivotOffsetY ?? 0) * ratioY)
+  const angle = Number(obj.angle ?? 0) * Math.PI / 180
+  const pivotX = centerX + pivotOffsetX
+  const pivotY = centerY + pivotOffsetY
+  const dx = -pivotOffsetX
+  const dy = -pivotOffsetY
+
+  obj.set?.({
+    centerX,
+    centerY,
+    pivotOffsetX,
+    pivotOffsetY,
+    left: Math.round(pivotX + dx * Math.cos(angle) - dy * Math.sin(angle)),
+    top: Math.round(pivotY + dx * Math.sin(angle) + dy * Math.cos(angle)),
+    scaleX: Number(obj.scaleX ?? 1) * ratioScalar,
+    scaleY: Number(obj.scaleY ?? 1) * ratioScalar,
+    rotationCenter: { x: pivotX, y: pivotY },
+  })
+
+  if (obj?.__element?.config) {
+    obj.__element.config = scaleElementConfig(obj.__element.config, from, to)
+  }
+}
+
 export function scaleFabricCanvasForDesignSize(
   canvas: Canvas | null,
   from: DesignSize,
@@ -222,6 +269,12 @@ export function scaleFabricCanvasForDesignSize(
 
     if (obj.eleType === 'image') {
       scaleImageObject(obj, from, to)
+      obj.setCoords?.()
+      continue
+    }
+
+    if (HAND_ELEMENT_TYPES.has(String(obj.eleType ?? ''))) {
+      scaleHandObject(obj, from, to)
       obj.setCoords?.()
       continue
     }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { RuntimeDesignConfig } from '@/types/app/config'
-import { normalizeConfigToStandardSize, scaleElementConfig, STANDARD_DESIGN_SIZE } from './designScale'
+import {
+  normalizeConfigToStandardSize,
+  scaleElementConfig,
+  scaleFabricCanvasForDesignSize,
+  STANDARD_DESIGN_SIZE,
+} from './designScale'
 
 describe('design font-size round trip', () => {
   it('keeps a data font size of 30 after save normalization and reload scaling', () => {
@@ -54,9 +59,46 @@ describe('analog hand design-size scaling', () => {
     }) as any
 
     expect(scaled.centerX).toBe(227)
-    expect(scaled.centerY).toBe(221.179)
-    expect(scaled.pivotOffsetX).toBe(11.641)
-    expect(scaled.pivotOffsetY).toBe(5.821)
+    expect(scaled.centerY).toBe(221)
+    expect(scaled.pivotOffsetX).toBe(12)
+    expect(scaled.pivotOffsetY).toBe(6)
     expect(scaled.scalePercent).toBe(72)
+  })
+
+  it('recalculates the rotated hand position and display scale when the live canvas size changes', () => {
+    const hand: any = {
+      eleType: 'minuteHand',
+      centerX: 195,
+      centerY: 190,
+      pivotOffsetX: 10,
+      pivotOffsetY: 5,
+      left: 190,
+      top: 200,
+      angle: 90,
+      scaleX: 0.8,
+      scaleY: 0.8,
+      set(keyOrPatch: string | Record<string, unknown>, value?: unknown) {
+        if (typeof keyOrPatch === 'string') this[keyOrPatch] = value
+        else Object.assign(this, keyOrPatch)
+      },
+      setCoords() {},
+    }
+    const canvas: any = {
+      getObjects: () => [hand],
+      requestRenderAll() {},
+    }
+
+    scaleFabricCanvasForDesignSize(canvas, { width: 390, height: 390 }, { width: 454, height: 454 })
+
+    expect(hand).toMatchObject({
+      centerX: 227,
+      centerY: 221,
+      pivotOffsetX: 12,
+      pivotOffsetY: 6,
+      left: 245,
+      top: 215,
+    })
+    expect(hand.scaleX).toBeCloseTo(0.93128, 5)
+    expect(hand.scaleY).toBeCloseTo(0.93128, 5)
   })
 })
