@@ -25,6 +25,26 @@ describe('validateVisibilityExpression', () => {
     expect(validateVisibilityExpression(visibility)).toContain('Visibility source and AST do not match')
   })
 
+  it('accepts an equivalent AST whose object keys were reordered by serialization', () => {
+    const visibility = {
+      mode: 'expression',
+      expression: {
+        source: '(ds3) <= 20',
+        ast: {
+          right: { value: 20, valueType: 'number', type: 'literal' },
+          left: { code: 'ds3', tokenId: 'system.battery.level', type: 'token' },
+          operator: '<=',
+          type: 'binary',
+        },
+        resultType: 'boolean',
+        version: 1,
+      },
+      fallback: true,
+    }
+
+    expect(validateVisibilityExpression(visibility)).toEqual([])
+  })
+
   it('rejects a missing boolean fallback', () => {
     const visibility = {
       mode: 'expression',
