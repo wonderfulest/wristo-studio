@@ -302,6 +302,8 @@ nullable Token 未显式处理时给出警告，不直接阻止构建；运行�
 
 Canvas 提供 Default、Live Sample、Minimum、Maximum、No Data 和 Custom 模式。Custom 模式只列出当前设计实际依赖的 Token，可修改示例值并立即重新计算主题、可见性、颜色、图片和内容。
 
+Token 预览控件根据定义类型选择编辑方式：boolean 使用开关，普通 number 使用数字输入，string 使用文本输入；当 Token 定义包含 `enumValues` 时，使用可换行的单选 Tag 字典完全替代数字输入。每个 Tag 同时显示本地化名称和原始值，当前值高亮，点击后立即更新模拟值；不允许通过该控件输入字典之外的值。
+
 预览必须执行同一份 AST 及同一类型语义，不另写一套规则逻辑。
 
 ## 17. WFB 兼容策略
