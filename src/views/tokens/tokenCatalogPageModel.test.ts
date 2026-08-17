@@ -4,8 +4,8 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(98)
-    expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(32)
+    expect(model.total).toBe(95)
+    expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(29)
     expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(11)
     expect(model.categories.find(({ value }) => value === 'status')?.count).toBe(4)
   })
@@ -20,8 +20,8 @@ describe('token catalog page model', () => {
     const model = createTokenCatalogPageModel()
     const tokens = model.filter({ category: 'chinese-calendar', query: '' })
 
-    expect(model.categories.find(({ value }) => value === 'chinese-calendar')?.count).toBe(32)
-    expect(tokens).toHaveLength(32)
+    expect(model.categories.find(({ value }) => value === 'chinese-calendar')?.count).toBe(29)
+    expect(tokens).toHaveLength(29)
     expect(tokens.every(({ code }) => code.startsWith('cn'))).toBe(true)
   })
 

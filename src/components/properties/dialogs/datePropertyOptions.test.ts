@@ -25,9 +25,21 @@ describe('date property options', () => {
       DateFormatConstants.LUNAR_DATE,
       DateFormatConstants.LUNAR_MONTH,
       DateFormatConstants.LUNAR_DAY,
-      DateFormatConstants.CHINESE_WEEKDAY_SHORT,
-      DateFormatConstants.SOLAR_FESTIVAL,
-      DateFormatConstants.SOLAR_TERM,
+      DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
+      DateFormatConstants.NEXT_GREGORIAN_FESTIVAL,
+      DateFormatConstants.NEXT_SOLAR_TERM,
+    ])
+  })
+
+  it('exposes exactly three festival and solar-term options', () => {
+    expect(DateFormatOptions.filter(option => [
+      '下一个公历节日',
+      '节日节气',
+      '下一个节气',
+    ].includes(option.zhsLabel || '')).map(option => option.value)).toEqual([
+      DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
+      DateFormatConstants.NEXT_GREGORIAN_FESTIVAL,
+      DateFormatConstants.NEXT_SOLAR_TERM,
     ])
   })
 

@@ -15,10 +15,6 @@ const CHINESE_FORMATTERS: Record<string, number> = {
   'chinaCalendar.lunar.monthText': DateFormatConstants.LUNAR_MONTH,
   'chinaCalendar.lunar.dayText': DateFormatConstants.LUNAR_DAY,
   'chinaCalendar.festival.today': DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
-  'chinaCalendar.festival.solar': DateFormatConstants.SOLAR_FESTIVAL,
-  'chinaCalendar.festival.lunar': DateFormatConstants.LUNAR_FESTIVAL,
-  'chinaCalendar.festival.next': DateFormatConstants.NEXT_FESTIVAL,
-  'chinaCalendar.solarTerm.today': DateFormatConstants.SOLAR_TERM,
   'chinaCalendar.solarTerm.next': DateFormatConstants.NEXT_SOLAR_TERM,
   'chinaCalendar.ganzhi.year': DateFormatConstants.GANZHI_YEAR,
   'chinaCalendar.pillar.year': DateFormatConstants.FOUR_PILLAR_YEAR,
@@ -53,14 +49,14 @@ function tokenValue(definition: ExpressionTokenDefinition, date: Date): unknown 
     case 'chinaCalendar.lunar.month': return lunar?.month ?? null
     case 'chinaCalendar.lunar.day': return lunar?.day ?? null
     case 'chinaCalendar.lunar.leap': return lunar?.isLeapMonth ?? null
-    case 'chinaCalendar.festival.days': {
-      const text = formatChineseCulturalDate(date, DateFormatConstants.NEXT_FESTIVAL_WITH_DAYS)
-      return Number(text.match(/ (\d+)天$/)?.[1] ?? 0)
-    }
-    case 'chinaCalendar.solarTerm.days': {
-      const text = formatChineseCulturalDate(date, DateFormatConstants.NEXT_SOLAR_TERM_WITH_DAYS)
-      return Number(text.match(/ (\d+)天$/)?.[1] ?? 0)
-    }
+    case 'chinaCalendar.festival.gregorian.next':
+      return formatChineseCulturalDate(date, DateFormatConstants.NEXT_GREGORIAN_FESTIVAL).replace(/\+\d+$/, '')
+    case 'chinaCalendar.festival.gregorian.suffix':
+      return formatChineseCulturalDate(date, DateFormatConstants.NEXT_GREGORIAN_FESTIVAL).match(/\+\d+$/)?.[0] ?? ''
+    case 'chinaCalendar.solarTerm.next':
+      return formatChineseCulturalDate(date, DateFormatConstants.NEXT_SOLAR_TERM).replace(/\+\d+$/, '')
+    case 'chinaCalendar.solarTerm.suffix':
+      return formatChineseCulturalDate(date, DateFormatConstants.NEXT_SOLAR_TERM).match(/\+\d+$/)?.[0] ?? ''
     default: {
       const formatter = CHINESE_FORMATTERS[definition.id]
       return formatter === undefined ? definition.exampleValue : formatChineseCulturalDate(date, formatter)

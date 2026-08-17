@@ -336,11 +336,9 @@ export function getFourPillars(date: Date): FourPillars {
 export function getChineseFestival(date: Date) {
   const solarKey = key(date.getMonth() + 1, date.getDate())
   if (SOLAR_FESTIVALS[solarKey]) return SOLAR_FESTIVALS[solarKey]
-  const solarTerm = getSolarTerm(date)
-  if (solarTerm) return solarTerm
   const lunar = getChineseLunarDate(date)
-  if (!lunar) return ''
-  return LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || ''
+  const lunarFestival = lunar ? (LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || '') : ''
+  return lunarFestival || getSolarTerm(date)
 }
 
 export function getSolarFestival(date: Date): string {
@@ -355,7 +353,7 @@ export function getLunarFestival(date: Date): string {
 export function getNextFestival(date: Date): UpcomingChineseFestival | null {
   for (let days = 0; days <= 366; days += 1) {
     const candidate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, 12)
-    const name = getSolarFestival(candidate) || getLunarFestival(candidate)
+    const name = getSolarFestival(candidate)
     if (name) return { name, days }
   }
   return null
@@ -426,9 +424,7 @@ export function formatChineseCulturalDate(date: Date, formatter: number, locale:
     case 22:
       return lunar.zodiacYear
     case 23: {
-      const nextEvent = getNextChineseFestival(date)
-      if (!nextEvent) return `${lunar.monthName}${lunar.dayName}`
-      return nextEvent.days === 0 ? nextEvent.name : `${nextEvent.name}+${nextEvent.days}`
+      return getChineseFestival(date)
     }
     case 24:
       return getChineseYi(date)
@@ -462,23 +458,15 @@ export function formatChineseCulturalDate(date: Date, formatter: number, locale:
       return lunar.dayName
     case 43:
       return `农历${lunar.monthName}`
-    case 44:
-      return getSolarFestival(date)
-    case 45:
-      return getLunarFestival(date)
-    case 46:
-      return getSolarTerm(date)
-    case 47:
-      return getNextFestival(date)?.name || ''
     case 48: {
       const event = getNextFestival(date)
-      return event ? (event.days === 0 ? event.name : `${event.name} ${event.days}天`) : ''
+      if (!event) return ''
+      const name = event.name.replace(/节$/, '')
+      return event.days === 0 ? name : `${name}+${event.days}`
     }
-    case 49:
-      return getNextSolarTerm(date)?.name || ''
     case 50: {
       const event = getNextSolarTerm(date)
-      return event ? (event.days === 0 ? event.name : `${event.name} ${event.days}天`) : ''
+      return event ? (event.days === 0 ? event.name : `${event.name}+${event.days}`) : ''
     }
     case 51:
       return lunar.zodiacYear.replace(/年$/, '')

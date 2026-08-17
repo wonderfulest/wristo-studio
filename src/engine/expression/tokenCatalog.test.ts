@@ -12,7 +12,7 @@ const EXPECTED_CODES = [
   'ds1', 'ds2', 'ds3', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'ds14', 'ds330', 'ds331',
   'w01', 'w02', 'w03', 'w04', 'w05', 'w06', 'w08', 'w09', 'w10', 'w11', 'w12',
   'cn1', 'cn1.1', 'cn1.2', 'cn1.3', 'cn1.4', 'cn1.5', 'cn1.6', 'cn1.7',
-  'cn2', 'cn2.1', 'cn2.2', 'cn2.3', 'cn2.4', 'cn2.5', 'cn2.6', 'cn2.7',
+  'cn2', 'cn2.1', 'cn2.2', 'cn2.3', 'cn2.4',
   'cn3', 'cn3.1', 'cn3.2', 'cn3.3', 'cn3.4',
   'cn4', 'cn4.1', 'cn4.2', 'cn4.3',
   'cn5', 'cn5.1', 'cn5.2', 'cn5.3', 'cn5.4', 'cn5.5', 'cn5.6',
@@ -54,8 +54,15 @@ describe('default expression token catalog', () => {
     }
     expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn1.3')?.valueType).toBe('number')
     expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn1.7')?.valueType).toBe('boolean')
-    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.5')?.valueType).toBe('string')
-    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.5')?.nullable).toBe(true)
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.2')).toMatchObject({
+      valueType: 'string',
+      exampleValue: '+10',
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.4')).toMatchObject({
+      valueType: 'string',
+      exampleValue: '+6',
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.5')).toBeUndefined()
   })
 
   it('preserves the canonical battery identity', () => {

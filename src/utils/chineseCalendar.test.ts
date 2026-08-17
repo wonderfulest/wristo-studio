@@ -19,13 +19,15 @@ describe('Chinese festival or solar-term formatter', () => {
     expect(formatChineseCulturalDate(localDate(2025, 1, 29), 23, 'zh-CN')).toBe('春节')
   })
 
-  it('shows the nearest combined event with a one-based day distance', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 9, 6), 23, 'zh-CN')).toBe('白露+1')
+  it('does not project a future event into the today-only formatter', () => {
+    expect(formatChineseCulturalDate(localDate(2026, 9, 6), 23, 'zh-CN')).toBe('')
   })
 
-  it('crosses month and year boundaries', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 4, 30), 23, 'zh-CN')).toBe('劳动节+1')
-    expect(formatChineseCulturalDate(localDate(2025, 12, 31), 23, 'zh-CN')).toBe('元旦+1')
+  it('formats next Gregorian festivals and solar terms as content plus distance', () => {
+    expect(formatChineseCulturalDate(localDate(2026, 9, 21), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆+10')
+    expect(formatChineseCulturalDate(localDate(2026, 10, 1), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆')
+    expect(formatChineseCulturalDate(localDate(2026, 8, 17), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑+6')
+    expect(formatChineseCulturalDate(localDate(2026, 8, 7), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('立秋')
   })
 
   it('preserves Gregorian-festival priority and existing English output', () => {
@@ -92,9 +94,7 @@ describe('expanded Chinese date formatters', () => {
   })
 
   it('formats festivals, solar terms, and four pillars independently', () => {
-    expect(formatChineseCulturalDate(date, DateFormatConstants.LUNAR_FESTIVAL)).toBe('春节')
-    expect(formatChineseCulturalDate(localDate(2026, 8, 7), DateFormatConstants.SOLAR_TERM)).toBe('立秋')
-    expect(formatChineseCulturalDate(localDate(2026, 8, 8), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑')
-    expect(formatChineseCulturalDate(localDate(2026, 8, 8), DateFormatConstants.NEXT_SOLAR_TERM_WITH_DAYS)).toBe('处暑 15天')
+    expect(formatChineseCulturalDate(date, DateFormatConstants.FESTIVAL_OR_SOLAR_TERM)).toBe('春节')
+    expect(formatChineseCulturalDate(localDate(2026, 8, 8), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑+15')
   })
 })

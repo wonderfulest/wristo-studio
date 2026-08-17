@@ -25,9 +25,9 @@ const COMMON_DATE_FORMATTERS: Record<AppLanguage, readonly number[]> = {
     DateFormatConstants.LUNAR_DATE,
     DateFormatConstants.LUNAR_MONTH,
     DateFormatConstants.LUNAR_DAY,
-    DateFormatConstants.CHINESE_WEEKDAY_SHORT,
-    DateFormatConstants.SOLAR_FESTIVAL,
-    DateFormatConstants.SOLAR_TERM,
+    DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
+    DateFormatConstants.NEXT_GREGORIAN_FESTIVAL,
+    DateFormatConstants.NEXT_SOLAR_TERM,
   ],
 }
 
