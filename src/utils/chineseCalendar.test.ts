@@ -13,7 +13,7 @@ const localDate = (year: number, month: number, day: number) => new Date(year, m
 
 describe('Chinese festival or solar-term formatter', () => {
   it('shows only the name on Gregorian festival, solar-term, and lunar festival dates', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 1, 1), 23, 'zh-CN')).toBe('元旦')
+    expect(formatChineseCulturalDate(localDate(2026, 1, 1), 23, 'zh-CN')).toBe('元旦节')
     expect(formatChineseCulturalDate(localDate(2026, 9, 7), 23, 'zh-CN')).toBe('白露')
     expect(getChineseFestival(localDate(2025, 1, 29))).toBe('春节')
     expect(formatChineseCulturalDate(localDate(2025, 1, 29), 23, 'zh-CN')).toBe('春节')
@@ -24,8 +24,8 @@ describe('Chinese festival or solar-term formatter', () => {
   })
 
   it('formats next Gregorian festivals and solar terms as content plus distance', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 9, 21), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆+10')
-    expect(formatChineseCulturalDate(localDate(2026, 10, 1), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆')
+    expect(formatChineseCulturalDate(localDate(2026, 9, 21), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆节+10')
+    expect(formatChineseCulturalDate(localDate(2026, 10, 1), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆节')
     expect(formatChineseCulturalDate(localDate(2026, 8, 17), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑+6')
     expect(formatChineseCulturalDate(localDate(2026, 8, 7), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('立秋')
   })

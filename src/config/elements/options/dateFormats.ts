@@ -100,7 +100,7 @@ export const DateFormatOptions: OptionFormat<number>[] = [
   { value: DateFormatConstants.LUNAR_MONTH, label: 'Lunar month', zhsLabel: '农历月', example: '七月' },
   { value: DateFormatConstants.LUNAR_DAY, label: 'Lunar day', zhsLabel: '农历日', example: '初四' },
   { value: DateFormatConstants.LUNAR_MONTH_PREFIX, label: 'Prefixed lunar month', zhsLabel: '带前缀农历月', example: '农历七月' },
-  { value: DateFormatConstants.NEXT_GREGORIAN_FESTIVAL, label: 'Next Gregorian festival', zhsLabel: '下一个公历节日', example: '国庆+10' },
+  { value: DateFormatConstants.NEXT_GREGORIAN_FESTIVAL, label: 'Next Gregorian festival', zhsLabel: '下一个公历节日', example: '国庆节+10' },
   { value: DateFormatConstants.NEXT_SOLAR_TERM, label: 'Next solar term', zhsLabel: '下一个节气', example: '处暑+6' },
   { value: DateFormatConstants.ZODIAC, label: 'Zodiac', zhsLabel: '生肖', example: '马' },
   { value: DateFormatConstants.SHICHEN_BRANCH, label: 'Shichen branch', zhsLabel: '时支', example: '申' },

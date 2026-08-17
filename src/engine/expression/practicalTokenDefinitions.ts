@@ -187,7 +187,7 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   chineseCalendar('lunar.dayText', 'cn1.6', 'Lunar Day Text', '农历日文本', '初四'),
   chineseCalendar('lunar.leap', 'cn1.7', 'Leap Month', '是否闰月', false, 'boolean'),
   chineseCalendar('festival.today', 'cn2', 'Festival / Solar Term Today', '节日节气', '中秋节', 'string', true),
-  chineseCalendar('festival.gregorian.next', 'cn2.1', 'Next Gregorian Festival', '下一个公历节日', '国庆'),
+  chineseCalendar('festival.gregorian.next', 'cn2.1', 'Next Gregorian Festival', '下一个公历节日', '国庆节'),
   chineseCalendar('festival.gregorian.suffix', 'cn2.2', 'Gregorian Festival Distance Suffix', '公历节日距离后缀', '+10', 'string', true),
   chineseCalendar('solarTerm.next', 'cn2.3', 'Next Solar Term', '下一个节气', '处暑'),
   chineseCalendar('solarTerm.suffix', 'cn2.4', 'Solar-Term Distance Suffix', '节气距离后缀', '+6', 'string', true),

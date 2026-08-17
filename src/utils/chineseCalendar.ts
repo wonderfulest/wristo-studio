@@ -35,7 +35,7 @@ const WEEKDAYS_LONG = ['星期日', '星期一', '星期二', '星期三', '星�
 const EN_ZODIACS = ['Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat', 'Monkey', 'Rooster', 'Dog', 'Pig']
 const EN_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const SOLAR_FESTIVALS: Record<string, string> = {
-  '01-01': '元旦',
+  '01-01': '元旦节',
   '05-01': '劳动节',
   '10-01': '国庆节',
 }

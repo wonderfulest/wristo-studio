@@ -14,8 +14,8 @@ describe('token text templates', () => {
   })
 
   it('composes upcoming Gregorian festivals and solar terms without a +0 suffix', () => {
-    expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 8, 21, 12))).toBe('国庆+10')
-    expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 9, 1, 12))).toBe('国庆')
+    expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 8, 21, 12))).toBe('国庆节+10')
+    expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 9, 1, 12))).toBe('国庆节')
     expect(resolveTokenTemplate('(cn2.3) + (cn2.4)', new Date(2026, 7, 17, 12))).toBe('处暑+6')
     expect(resolveTokenTemplate('(cn2.3) + (cn2.4)', new Date(2026, 7, 7, 12))).toBe('立秋')
   })
