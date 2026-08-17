@@ -189,7 +189,6 @@ import { getIconGlyphByCode, type DisplayType } from '@/api/wristo/iconGlyph'
 import WeatherBindingDialog from './WeatherBindingDialog.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -202,7 +201,6 @@ const props = defineProps<{
 }>()
 const canvasStore = useCanvasStore()
 const { t } = useI18n()
-const iconFontStrategyStore = useIconFontStrategyStore()
 const weatherAmoledIconStore = useWeatherAmoledIconStore()
 
 const fontFamily = ref<string>('')
@@ -272,7 +270,7 @@ const loadBindingFontId = async () => {
 onMounted(() => {
   initElementProperties()
   if (!fontFamily.value) {
-    fontFamily.value = iconFontStrategyStore.currentIconFontSlug || 'yoghurt-one'
+    fontFamily.value = 'yoghurt-one'
   }
   // load current font's id for binding
   loadBindingFontId()

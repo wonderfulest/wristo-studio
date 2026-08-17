@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { ElMessageBox } from 'element-plus'
 import { hasIconFont } from '@/utils/elementUtils'
 import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -82,43 +81,14 @@ export const useIconFontStrategyStore = defineStore('iconFontStrategy', {
     },
 
     async requestUpdateIconFontSize(element: any, newSize: number): Promise<boolean> {
-      const canvasStore = useCanvasStore()
-      const canvas = canvasStore.canvas
-      // Initialize global size if not set
-      if (this.currentIconFontSize == null) {
-        if (element && 'fontSize' in element) {
-          ;(element as any).set('fontSize', newSize)
-          this.currentIconFontSize = newSize
-          canvas?.renderAll()
-          return true
-        }
-        return false
+      if (!element) return false
+      ;(element as any).set?.({ fontSize: newSize, iconSize: newSize })
+      const id = (element as any).id
+      if (id != null) {
+        useElementDataStore().patchElement(String(id), { fontSize: newSize, iconSize: newSize } as any)
       }
-      // If same as current, just apply to the element
-      if (this.currentIconFontSize === newSize) {
-        if (element && 'fontSize' in element) {
-          ;(element as any).set('fontSize', newSize)
-          canvas?.renderAll()
-          return true
-        }
-        return false
-      }
-      // Ask user to confirm updating all icons
-      try {
-        await ElMessageBox.confirm(`当前表盘只允许一个图标字体大小。是否将所有图标元素大小统一为 ${newSize}px?`, '统一图标字体大小', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
-        this.updateAllIconFontSize(newSize)
-        return true
-      } catch {
-        if (element && 'fontSize' in element) {
-          ;(element as any).set('fontSize', this.currentIconFontSize)
-          canvas?.renderAll()
-        }
-        return false
-      }
+      useCanvasStore().canvas?.renderAll()
+      return true
     }
   }
 })

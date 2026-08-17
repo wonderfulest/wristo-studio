@@ -6,7 +6,7 @@ import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
 import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
-import { getSimulatedBarChartSeries, getSimulatedDataByName, tickSimulatedData } from '@/utils/dataSimulator'
+import { getSimulatedBarChartSeries, getSimulatedDataByName, getSimulatedDataByTokenCode, tickSimulatedData } from '@/utils/dataSimulator'
 import { formatDataNumberDisplay } from '@/utils/dataNumberFormat'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
@@ -161,7 +161,8 @@ function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>,
 
 function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
   return resolveTokenTemplate(template, new Date(), (code, format) => {
-    const data = getSimulatedDataByName(code)
+    const data = getSimulatedDataByTokenCode(code)
+    if (!data) return undefined
     return format ? (data.numeric ?? data.display) : formatSimulatedDisplay(data, propertiesStore)
   })
 }

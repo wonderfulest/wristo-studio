@@ -8,7 +8,6 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -79,7 +78,7 @@ const resolveIconFontFamily = (...sources: Array<Record<string, any> | undefined
     const font = String(source?.fontFamily || source?.iconFont || '').trim()
     if (font) return font
   }
-  return useIconFontStrategyStore().currentIconFontSlug || 'wristo-icon'
+  return 'wristo-icon'
 }
 
 const createAmoledImage = async (config: Partial<IconElementConfig> & Record<string, any>, base: Record<string, any>) => {
@@ -168,7 +167,6 @@ export async function createIcon(
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
-  const iconFontStrategyStore = useIconFontStrategyStore()
 
   const canvas = canvasStore.canvas
   if (!canvas) {
@@ -177,11 +175,10 @@ export async function createIcon(
 
   type IconProps = TextProps & IconElementConfig
   const metric = usePropertiesStore().getMetricByOptions(config)
-  const strategy = iconFontStrategyStore
-  const resolvedFontFamily = resolveIconFontFamily(config as any, { fontFamily: strategy.currentIconFontSlug })
+  const resolvedFontFamily = resolveIconFontFamily(config as any)
 
   const fallbackSize = Number((config as any).iconSize ?? (config as any).fontSize ?? 24)
-  const resolvedFontSize = strategy.currentIconFontSize === -1 ? (Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 24) : strategy.currentIconFontSize
+  const resolvedFontSize = Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 24
   const displayStates = normalizeDisplayStates(config.displayStates)
 
   const iconOptions: Partial<IconProps> = {

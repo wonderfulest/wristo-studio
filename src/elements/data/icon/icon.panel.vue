@@ -14,7 +14,7 @@
         />
       </el-form-item>
       <el-form-item :label="t('elementSettings.font')">
-        <font-picker v-model="currentModel.fontFamily" :type="FontTypes.ICON_FONT" @change="updateElement" />
+        <font-picker v-model="currentModel.fontFamily" :type="FontTypes.ICON_FONT" :use-global-icon-font-strategy="false" @change="updateElement" />
       </el-form-item>
     </el-form>
 
@@ -115,11 +115,9 @@ import { Edit, Upload } from '@element-plus/icons-vue'
 import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { FontTypes } from '@/config/fonts'
-import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { useI18n } from '@/i18n'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { useElementDataStore } from '@/stores/elementDataStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
@@ -135,11 +133,9 @@ const props = defineProps<{
 }>()
 
 const formRef = ref<any>(null)
-const iconFontStrategyStore = useIconFontStrategyStore()
 const { t } = useI18n()
 const amoledIconAssetStore = useAmoledIconAssetStore()
 const historyStore = useHistoryStore()
-const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
 const amoledFileInputRef = ref<HTMLInputElement | null>(null)
 const activeTab = ref<'mip' | 'amoled'>('mip')
@@ -163,10 +159,10 @@ const currentModel = computed<any>(() => {
 })
 
 const currentAmoledCandidate = computed(() => getAmoledIconCandidateFromElement(currentModel.value))
-const currentAmoledFontSlug = computed(() => iconFontStrategyStore.currentIconFontSlug || currentModel.value?.fontFamily || currentModel.value?.iconFont || '')
+const currentAmoledFontSlug = computed(() => currentModel.value?.fontFamily || currentModel.value?.iconFont || '')
 const mipIconFontFamily = computed(() => {
   const model = currentModel.value as any
-  return String(model?.fontFamily || model?.iconFont || iconFontStrategyStore.currentIconFontSlug || 'wristo-icon').trim()
+  return String(model?.fontFamily || model?.iconFont || 'wristo-icon').trim()
 })
 const currentGlyph = computed(() => glyph(currentAmoledCandidate.value?.iconUnicode || (currentModel.value as any)?.text || ''))
 const currentAmoledPreviewSource = computed(() => {
@@ -199,11 +195,10 @@ const desiredActiveTab = computed<'mip' | 'amoled'>(() => {
 })
 const currentAmoledImageSize = computed(() => {
   const model = currentModel.value as any
-  const candidates = [model.iconSize, model.fontSize, iconFontStrategyStore.currentIconFontSize, 42]
+  const candidates = [model.iconSize, model.fontSize, 42]
   const size = candidates.map((value) => Number(value)).find((value) => Number.isFinite(value) && value > 0)
   return size || 42
 })
-const allIconConfigs = computed(() => elementDataStore.elements.filter((snapshot) => snapshot.eleType === 'icon').map((snapshot) => snapshot.config as any))
 const uploadDialogTitle = computed(() =>
   `Upload ${currentAmoledCandidate.value?.label || currentAmoledCandidate.value?.iconUnicode || 'AMOLED Icon'}`
 )
@@ -288,35 +283,18 @@ const handleColorSelection = async (selection: { color: string; propertyKey: str
   })
 }
 
-const applyUpdateToAllIcons = async (buildPatch: (config: any) => Record<string, any> | null | undefined) => {
-  const iconConfigs = allIconConfigs.value
-  if (!iconConfigs.length) {
-    await applyUpdate(buildPatch(currentModel.value as any) || {})
-    return
-  }
-
-  for (const config of iconConfigs) {
-    const id = String(config?.id || '')
-    if (!id) continue
-    const patch = buildPatch(config)
-    if (!patch) continue
-    await elementManager.updateElementById(id, patch)
-  }
-}
-
 const handleFontSizeChange = async (newSize: number) => {
   const model = currentModel.value as any
-  iconFontStrategyStore.setIconFontSize(newSize)
   model.fontSize = newSize
-  await applyUpdateToAllIcons((config) => ({
+  await applyUpdate({
     fontSize: newSize,
     iconSize: newSize,
-    width: config.iconDisplayType === 'amoled' ? newSize : config.width,
-    height: config.iconDisplayType === 'amoled' ? newSize : config.height,
+    width: model.iconDisplayType === 'amoled' ? newSize : model.width,
+    height: model.iconDisplayType === 'amoled' ? newSize : model.height,
     originX: 'center',
     originY: 'center'
-  }))
-  historyStore.saveState('icon-size-sync')
+  })
+  historyStore.saveState('icon-size-change')
 }
 
 const applyMipDisplay = async () => {

@@ -8,6 +8,11 @@ describe('token text templates', () => {
     expect(resolveTokenTemplate('(tm1).format("%04d") + "/" + (tm2).format("%02d") + "/" + (tm3).format("%02d")', now)).toBe('2025/01/29')
   })
 
+  it('falls back to the standard token value when a preview resolver has no override', () => {
+    const now = new Date(2025, 0, 29, 12)
+    expect(resolveTokenTemplate('(tm1) + "-" + (tm2).format("%02d")', now, () => undefined)).toBe('2025-01')
+  })
+
   it('composes upcoming Gregorian festivals and solar terms without a +0 suffix', () => {
     expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 8, 21, 12))).toBe('国庆+10')
     expect(resolveTokenTemplate('(cn2.1) + (cn2.2)', new Date(2026, 9, 1, 12))).toBe('国庆')

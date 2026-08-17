@@ -5,7 +5,6 @@ import type { IndicatorElementConfig } from '@/types/elements'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
-import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
@@ -21,7 +20,6 @@ export async function createIndicatorText(
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
-  const iconFontStrategyStore = useIconFontStrategyStore()
 
   const canvas = canvasStore.canvas
   if (!canvas) {
@@ -29,18 +27,6 @@ export async function createIndicatorText(
   }
 
   type IndicatorTextProps = TextProps & IndicatorElementConfig
-
-  const strategy = iconFontStrategyStore
-  if (strategy.currentIconFontSize === -1) {
-    strategy.setIconFontSize(config.fontSize)
-  } else {
-    config.fontSize = strategy.currentIconFontSize
-  }
-  if (!strategy.currentIconFontSlug) {
-    strategy.setIconFontSlug(config.fontFamily)
-  } else {
-    config.fontFamily = strategy.currentIconFontSlug
-  }
 
   const id = config.id || nanoid()
 
@@ -97,7 +83,6 @@ export async function updateIndicatorText(
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   const elementDataStore = useElementDataStore()
-  const iconFontStrategyStore = useIconFontStrategyStore()
   if (!canvas) return
 
   const objects = canvas.getObjects() as FabricText[]
@@ -125,7 +110,7 @@ export async function updateIndicatorText(
   })
 
   if (patch.fontSize !== undefined) {
-    void iconFontStrategyStore.requestUpdateIconFontSize(obj as any, patch.fontSize)
+    obj.set('fontSize', patch.fontSize)
   }
 
   if (patch.left === undefined) obj.set('left', currentLeft)

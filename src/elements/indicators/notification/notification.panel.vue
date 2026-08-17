@@ -7,7 +7,7 @@
 
     <div class="setting-item">
       <label>{{ t('elementSettings.font') }}</label>
-      <FontPicker v-model="fontFamily" :type="FontTypes.ICON_FONT" @update:modelValue="updateFontFamily" />
+      <FontPicker v-model="fontFamily" :type="FontTypes.ICON_FONT" :use-global-icon-font-strategy="false" @update:modelValue="updateFontFamily" />
     </div>
 
     <div class="setting-item">

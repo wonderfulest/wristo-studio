@@ -1,6 +1,7 @@
 // 简单数据模拟引擎：根据数据名称返回一个模拟值
 // 参考 Monkey C 中的 DataFetcher/DataProvider，但这里不做缓存和复杂逻辑
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
+import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 
 export interface SimulatedData {
   /** 用于界面显示的字符串 */
@@ -381,6 +382,52 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     default:
       // 未知字段：返回占位符，方便在画布上察觉问题
       return { display: `{{${key}}}`, unit: '', label: 'UNKNOWN' }
+  }
+}
+
+const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
+  ai4: 'calories',
+  'ai4.1': 'calories',
+  ai5: 'distance',
+  ai6: 'floors',
+  ai8: 'floorsDescended',
+  ai11: 'sedentary',
+  ai12: 'steps',
+  ai14: 'respiration',
+  ds1: 'alarms',
+  ds2: 'notifications',
+  ds3: 'battery',
+  ds8: 'altitude',
+  ds9: 'hr',
+  ds12: 'sensorTemperature',
+  ds14: 'restingHeart',
+  ds330: 'bodyBattery',
+  ds331: 'stress',
+  w02: 'weatherDesc',
+  w03: 'feelsLikeTemperature',
+  w04: 'temperatureHigh',
+  w05: 'temperatureLow',
+  w06: 'location',
+  w08: 'precipitationChanceCurrent',
+  w09: 'humidity',
+  w10: 'temperature',
+  w11: 'windDeg',
+  w12: 'windSpeed',
+}
+
+export function getSimulatedDataByTokenCode(code: string): SimulatedData | undefined {
+  const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)
+  if (!definition || definition.source === 'time' || code.startsWith('cn')) return undefined
+
+  const simulationKey = COMPACT_TOKEN_SIMULATION_KEYS[code]
+  if (simulationKey) return getSimulatedDataByName(simulationKey)
+
+  const value = definition.exampleValue
+  return {
+    display: value == null ? '' : String(value),
+    numeric: typeof value === 'number' ? value : null,
+    unit: definition.unit || '',
+    label: definition.label,
   }
 }
 

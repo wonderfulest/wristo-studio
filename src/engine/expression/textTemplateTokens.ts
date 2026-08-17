@@ -146,7 +146,8 @@ export function resolveTokenTemplate(
       if (part.type === 'literal') return part.value
       const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(part.code)
       if (!definition) return ''
-      return applyFormat(resolver ? resolver(part.code, part.format) : tokenValue(definition, date), part.format)
+      const resolved = resolver?.(part.code, part.format)
+      return applyFormat(resolved === undefined ? tokenValue(definition, date) : resolved, part.format)
     }).join('')
   } catch {
     return source

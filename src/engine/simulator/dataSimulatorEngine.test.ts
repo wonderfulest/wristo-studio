@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName } = vi.hoisted(() => ({
+const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode } = vi.hoisted(() => ({
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
@@ -10,6 +10,7 @@ const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName } = vi
   updateElement: vi.fn(() => Promise.resolve()),
   getMetricByOptions: vi.fn(),
   getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
+  getSimulatedDataByTokenCode: vi.fn(() => ({ display: '80', numeric: 80, unit: 'bpm' })),
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
@@ -78,6 +79,7 @@ vi.mock('@/engine/simulator/simulatedClock', () => ({
 vi.mock('@/utils/dataSimulator', () => ({
   getSimulatedBarChartSeries: vi.fn(),
   getSimulatedDataByName,
+  getSimulatedDataByTokenCode,
   tickSimulatedData: vi.fn(),
 }))
 
@@ -141,6 +143,18 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     new DataSimulatorEngine().updateCanvas()
 
     expect(getSimulatedDataByName).toHaveBeenCalledWith('sleepScore')
+  })
+
+  it('renders the resolved compact token value for text templates', () => {
+    const set = vi.fn()
+    canvas.getObjects.mockReturnValue([
+      { id: 'heart-rate-template', eleType: 'angledText', textTemplate: '(ds9)', text: '{{ds9}}', set },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(getSimulatedDataByTokenCode).toHaveBeenCalledWith('ds9')
+    expect(set).toHaveBeenCalledWith('text', '80')
   })
 
   it('keeps Chinese unit labels when the simulator refreshes a Chinese application', () => {
