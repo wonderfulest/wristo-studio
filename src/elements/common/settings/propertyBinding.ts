@@ -11,8 +11,8 @@ import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import { useDesignStore } from '@/stores/designStore'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
-import { DateFormatOptions } from '@/config/elements/options/dateFormats'
 import { getCommonDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
+import { getCatalogDateFormatOptions } from '@/domain/dateFormatCatalog'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -156,14 +156,17 @@ export const createQuickDateProperty = (): string => {
   while (propertiesStore.allProperties[`date_${index}`]) index += 1
   const key = `date_${index}`
   const appLanguage = useDesignStore().appLanguage
-  const values = getCommonDateFormatterValues(appLanguage)
+  const catalogOptions = useDataCatalogStore().options
+  const dateOptions = getCatalogDateFormatOptions(catalogOptions, appLanguage)
+  const values = getCommonDateFormatterValues(appLanguage, catalogOptions)
+  if (dateOptions.length === 0) throw new Error(`${appLanguage} date format catalog is missing`)
   propertiesStore.addProperty({
     key,
     type: 'date',
     title: `Date ${index}`,
     titleCn: `日期 ${index}`,
     options: values.map(value => {
-      const option = DateFormatOptions.find(candidate => candidate.value === value)
+      const option = dateOptions.find(candidate => candidate.value === value)
       return { label: option?.label || String(value), labelCn: option?.zhsLabel, value }
     }),
     defaultValue: values[0],

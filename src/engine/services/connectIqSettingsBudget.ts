@@ -1,6 +1,5 @@
 import type { AppLanguage } from '@/types/localization'
 import type { DataOptionsMap, PropertiesMap, PropertyItem } from '@/types/properties'
-import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
 
 export const CONNECT_IQ_SETTINGS_BUDGET_BYTES = 20 * 1024
 export const CONNECT_IQ_SETTINGS_WARNING_BYTES = Math.ceil(CONNECT_IQ_SETTINGS_BUDGET_BYTES * 0.8)
@@ -99,14 +98,12 @@ export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetI
       formatterOptions: Array.isArray(element.formatterOptions) ? element.formatterOptions : undefined,
     })
   }
-  const allowedDateFormatters = [...getAllowedDateFormatters(appLanguage)]
   const dateEntries = [...dateIds.entries()].map(([key, date]) => ({
     key,
     type: 'list',
     title: date.title,
     value: date.formatter,
-    options: date.formatterOptions?.filter(value => allowedDateFormatters.includes(Number(value)))
-      ?? allowedDateFormatters,
+    options: date.formatterOptions ?? [],
   }))
   const themes = input.visualThemes?.enabled && Array.isArray(input.visualThemes.themes)
     ? input.visualThemes.themes

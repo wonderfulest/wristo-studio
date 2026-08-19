@@ -1,56 +1,20 @@
-import {
-  DateFormatConstants,
-  DateFormatOptions,
-} from '@/config/elements/options/dateFormats'
-import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
+import type { DataTypeOption } from '@/types/dataCatalog'
+import { getCatalogDateFormatterDefaults, resolveCatalogDateFormatterValues } from '@/domain/dateFormatCatalog'
 import type { AppLanguage } from '@/types/localization'
 import type { OptionFormat } from '@/types/settings'
 
 export type DateOptionLengthBand = 'all' | 'short' | 'medium' | 'long'
 
-const COMMON_DATE_FORMATTERS: Record<AppLanguage, readonly number[]> = {
-  eng: [
-    DateFormatConstants.DD,
-    DateFormatConstants.DDD,
-    DateFormatConstants.MMM_D,
-    DateFormatConstants.MMMM_D,
-    DateFormatConstants.MMM_D_YYYY,
-    DateFormatConstants.DD_MM_YYYY,
-    DateFormatConstants.MM_DD_YYYY,
-    DateFormatConstants.YYYY_MM_DD,
-  ],
-  zhs: [
-    DateFormatConstants.SOLAR_MONTH_DAY,
-    DateFormatConstants.SOLAR_MONTH_DAY_ZH,
-    DateFormatConstants.LUNAR_DATE,
-    DateFormatConstants.LUNAR_MONTH,
-    DateFormatConstants.LUNAR_DAY,
-    DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
-    DateFormatConstants.NEXT_GREGORIAN_FESTIVAL,
-    DateFormatConstants.NEXT_SOLAR_TERM,
-  ],
-}
-
-export const getCommonDateFormatterValues = (appLanguage: AppLanguage): number[] => (
-  [...COMMON_DATE_FORMATTERS[appLanguage]]
+export const getCommonDateFormatterValues = (appLanguage: AppLanguage, options: readonly DataTypeOption[] = []): number[] => (
+  getCatalogDateFormatterDefaults(options, appLanguage)
 )
 
 export const resolveDateFormatterValues = (
   values: readonly unknown[] | null | undefined,
   appLanguage: AppLanguage,
+  options: readonly DataTypeOption[] = [],
 ): number[] => {
-  const allowed = new Set(getAllowedDateFormatters(appLanguage))
-  if (!Array.isArray(values)) return DateFormatOptions
-    .map(option => option.value)
-    .filter(value => allowed.has(value))
-
-  const result: number[] = []
-  for (const rawValue of values) {
-    const value = Number(rawValue)
-    if (!allowed.has(value) || result.includes(value)) continue
-    result.push(value)
-  }
-  return result.length > 0 ? result : getCommonDateFormatterValues(appLanguage)
+  return resolveCatalogDateFormatterValues(values, options, appLanguage)
 }
 
 export const getDateOptionLengthBand = (
@@ -66,12 +30,10 @@ export const filterDateFormatOptions = (
   options: readonly OptionFormat<number>[],
   query: string,
   lengthBand: DateOptionLengthBand,
-  appLanguage: AppLanguage,
+  _appLanguage: AppLanguage,
 ): OptionFormat<number>[] => {
-  const allowed = new Set(getAllowedDateFormatters(appLanguage))
   const normalizedQuery = query.trim().toLocaleLowerCase()
   return options.filter((option) => {
-    if (!allowed.has(option.value)) return false
     if (lengthBand !== 'all' && getDateOptionLengthBand(option) !== lengthBand) return false
     if (!normalizedQuery) return true
     return [option.label, option.zhsLabel, option.example]

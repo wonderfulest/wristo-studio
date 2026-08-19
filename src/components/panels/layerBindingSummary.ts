@@ -1,4 +1,3 @@
-import { DateFormatOptions } from '@/config/elements/options/dateFormats'
 import { TimeFormatOptions } from '@/config/elements/options/timeFormats'
 import type { LayerElement } from '@/types/layer'
 import type { PropertiesMap } from '@/types/properties'
@@ -48,7 +47,14 @@ const resolveBindingDetail = (layer: LayerElement, context: LayerBindingSummaryC
   }
   if (layer.eleType === 'date') {
     const formatter = Number(readLayerValue(layer, 'formatter'))
-    return DateFormatOptions.find((option) => option.value === formatter)?.label ?? ''
+    const propertyKey = readText(readLayerValue(layer, 'dateProperty'))
+    const property = context.properties[propertyKey]
+    const option = property?.type === 'date'
+      ? property.options?.find(candidate => Number(candidate.value) === formatter)
+      : undefined
+    return context.language === 'zh'
+      ? readText(option?.labelCn) || readText(option?.label)
+      : readText(option?.label)
   }
   if (layer.eleType === 'time') {
     const formatter = Number(readLayerValue(layer, 'formatter'))

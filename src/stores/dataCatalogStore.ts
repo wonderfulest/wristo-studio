@@ -6,7 +6,7 @@ import { filterDataOptionsForAppLanguage } from '@/domain/designLanguageCapabili
 
 const KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 const SYMBOL_PATTERN = /^:[A-Z][A-Z0-9_]*$/
-const CATEGORIES = new Set<DataTypeCategory>(['field', 'goal', 'chart', 'indicator', 'date', 'weather'])
+const CATEGORIES = new Set<DataTypeCategory>(['field', 'goal', 'chart', 'indicator', 'date', 'date_cn', 'weather'])
 const hasOwn = (Object as unknown as { hasOwn(object: object, property: PropertyKey): boolean }).hasOwn
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -62,7 +62,8 @@ export type DataTypePropertyOption = Omit<DataTypeOption, 'label'> & {
 
 export function getDataTypePropertyOptions(appLanguage?: AppLanguage): DataTypePropertyOption[] {
   const source = useDataCatalogStore().options
-  const options = appLanguage ? filterDataOptionsForAppLanguage(source, appLanguage) : source
+  const metricOptions = source.filter(option => option.category !== 'date' && option.category !== 'date_cn')
+  const options = appLanguage ? filterDataOptionsForAppLanguage(metricOptions, appLanguage) : metricOptions
   return options.map((option) => ({
     ...option,
     value: option.valueCode,
@@ -227,6 +228,11 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
   if (!CATEGORIES.has(category as DataTypeCategory)) {
     throw new Error(`${prefix}: category is unsupported`)
   }
+  const rawFormatterCode = value.formatterCode
+  const formatterCode = rawFormatterCode == null ? null : nonnegativeInteger(rawFormatterCode, `${prefix}: formatterCode`)
+  const isDateCategory = category === 'date' || category === 'date_cn'
+  if (isDateCategory && formatterCode == null) throw new Error(`${prefix}: formatterCode is required for date categories`)
+  if (!isDateCategory && formatterCode != null) throw new Error(`${prefix}: formatterCode is only allowed for date categories`)
   const defaultValue = typeof value.defaultValue === 'string' ? value.defaultValue.trim() : value.defaultValue
   if (typeof defaultValue !== 'string') throw new Error(`${prefix}: defaultValue is required`)
   const dialMode = typeof value.dialMode === 'string' ? value.dialMode.trim() : value.dialMode
@@ -246,6 +252,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     : rawAppLanguage === null ? null : 'eng'
   return Object.freeze({
     valueCode,
+    formatterCode,
     metricSymbol,
     category: category as DataTypeCategory,
     settingsLabel: localizedText(value.settingsLabel, `${prefix}: settingsLabel`),

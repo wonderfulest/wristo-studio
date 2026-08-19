@@ -110,10 +110,10 @@ import { computed, reactive, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
-import { DateFormatOptions } from '@/config/elements/options/dateFormats'
-import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
+import { getCatalogDateFormatOptions, type CatalogDateFormatOption } from '@/domain/dateFormatCatalog'
 import { useDesignStore } from '@/stores/designStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useI18n } from '@/i18n'
 import type { OptionFormat } from '@/types/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
@@ -124,6 +124,7 @@ type DatePayload = { type: 'date'; key: string; title: string; titleCn?: string;
 const emit = defineEmits<{ confirm: [payload: DatePayload] }>()
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
+const dataCatalogStore = useDataCatalogStore()
 const { locale } = useI18n()
 const dialogVisible = ref(false)
 const addOptionsVisible = ref(false)
@@ -141,14 +142,14 @@ const uiText = computed(() => isChineseUi.value ? {
   editTitle: 'Date selection', basicInformation: 'Basic information', title: 'Title', titleRequired: 'Enter a title', defaultValue: 'Default value', dateOptions: 'Date options', addOption: 'Add option', restoreDefaults: 'Restore system defaults', addDateOptions: 'Add date options', selectDateOptions: 'Select date formats to add', selectByLength: 'Select all by length', lengthOneTwo: '1–2 chars', lengthThreeFour: '3–4 chars', lengthFiveSix: '5–6 chars', lengthSevenPlus: '≥7 chars', selectAll: 'Select all', deleteSelected: 'Delete selected', keepOne: 'Keep at least one date option', messages: 'Messages', promptOptional: 'Prompt (optional)', promptPlaceholder: 'Enter a property prompt', errorMessageOptional: 'Error message (optional)', errorPlaceholder: 'Enter an error message', moveUp: 'Move up', moveDown: 'Move down', delete: 'Delete', cancel: 'Cancel', confirm: 'Confirm', closeConfirm: 'Close without saving your changes?', warning: 'Warning', yes: 'Yes', no: 'No', restoreConfirm: 'Restore the system date options?', formError: 'Please check the form',
 })
 
-const allowedValues = computed(() => new Set(getAllowedDateFormatters(designStore.appLanguage)))
-const selectedOptions = computed(() => selectedValues.value.map(value => DateFormatOptions.find(option => option.value === value)).filter((option): option is OptionFormat<number> => Boolean(option)))
+const catalogDateOptions = computed(() => getCatalogDateFormatOptions(dataCatalogStore.options, designStore.appLanguage))
+const selectedOptions = computed(() => selectedValues.value.map(value => catalogDateOptions.value.find(option => option.value === value)).filter((option): option is CatalogDateFormatOption => Boolean(option)))
 const allOptionsSelected = computed({
   get: () => selectedValues.value.length > 0 && selectedForDeletion.value.length === selectedValues.value.length,
   set: (selected: boolean) => { selectedForDeletion.value = selected ? [...selectedValues.value] : [] },
 })
 const someOptionsSelected = computed(() => selectedForDeletion.value.length > 0 && !allOptionsSelected.value)
-const addableOptions = computed(() => DateFormatOptions.filter(option => allowedValues.value.has(option.value) && !selectedValues.value.includes(option.value)))
+const addableOptions = computed(() => catalogDateOptions.value.filter(option => !selectedValues.value.includes(option.value)))
 const lengthGroups = computed(() => [
   { value: 'oneTwo' as const, label: uiText.value.lengthOneTwo },
   { value: 'threeFour' as const, label: uiText.value.lengthThreeFour },
@@ -160,14 +161,18 @@ const nextKey = () => { let index = 1; while (propertiesStore.allProperties[`dat
 
 const initFormData = (data: any = null) => {
   isEdit.value = Boolean(data?.propertyKey)
-  const defaults = getCommonDateFormatterValues(designStore.appLanguage)
+  const defaults = getCommonDateFormatterValues(designStore.appLanguage, dataCatalogStore.options)
+  if (catalogDateOptions.value.length === 0) {
+    ElMessage.error(dataCatalogStore.error || 'Date format catalog is unavailable')
+    return
+  }
   const propertyKey = data?.propertyKey || nextKey()
   Object.assign(formData, data ? {
     title: data.title, titleCn: data.titleCn || '', propertyKey, defaultValue: Number(data.value), prompt: data.prompt || '', errorMessage: data.errorMessage || '',
   } : {
     title: `Date ${propertyKey.slice(5)}`, titleCn: '', propertyKey, defaultValue: defaults[0], prompt: '', errorMessage: '',
   })
-  selectedValues.value = resolveDateFormatterValues(data?.options?.map((option: any) => option.value), designStore.appLanguage)
+  selectedValues.value = resolveDateFormatterValues(data?.options?.map((option: any) => option.value), designStore.appLanguage, dataCatalogStore.options)
   if (!selectedValues.value.includes(formData.defaultValue)) formData.defaultValue = selectedValues.value[0]
   activeOptions.value = []
   pendingOptionValues.value = []
@@ -222,7 +227,7 @@ const moveOption = (index: number, direction: 'up' | 'down') => {
 const restoreSystemDefaults = async () => {
   try {
     await ElMessageBox.confirm(uiText.value.restoreConfirm, uiText.value.restoreDefaults, { confirmButtonText: uiText.value.yes, cancelButtonText: uiText.value.no, type: 'warning' })
-    selectedValues.value = getCommonDateFormatterValues(designStore.appLanguage)
+    selectedValues.value = getCommonDateFormatterValues(designStore.appLanguage, dataCatalogStore.options)
     if (!selectedValues.value.includes(formData.defaultValue)) formData.defaultValue = selectedValues.value[0]
   } catch { /* Keep current options. */ }
 }

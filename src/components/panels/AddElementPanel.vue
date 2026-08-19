@@ -41,7 +41,7 @@ import { useMessageStore } from '@/stores/message'
 import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
+import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { createQuickDateProperty, createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
@@ -58,6 +58,7 @@ const messageStore = useMessageStore()
 const isCollapsed = ref(false)
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
+const dataCatalogStore = useDataCatalogStore()
 const historyStore = useHistoryStore()
 const { t } = useI18n()
 const emit = defineEmits<{
@@ -236,7 +237,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
         designStore.appLanguage,
         normalizedRecord.formatter,
       )
-      normalizedRecord.formatterOptions = getCommonDateFormatterValues(designStore.appLanguage)
+      normalizedRecord.formatterOptions = getCommonDateFormatterValues(designStore.appLanguage, dataCatalogStore.options)
       if (!normalizedRecord.formatterOptions.includes(normalizedRecord.formatter)) {
         normalizedRecord.formatter = normalizedRecord.formatterOptions[0]
       }

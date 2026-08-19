@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DateFormatConstants, DateFormatOptions } from '@/config/elements/options/dateFormats'
+import type { DataTypeOption } from '@/types/dataCatalog'
 import {
   filterDateFormatOptions,
   getCommonDateFormatterValues,
@@ -7,27 +8,34 @@ import {
   resolveDateFormatterValues,
 } from './datePropertyOptions'
 
+const catalogOption = (formatterCode: number, category: 'date' | 'date_cn', systemDefault = 0): DataTypeOption => ({
+  valueCode: 2000 + formatterCode,
+  formatterCode,
+  category,
+  metricSymbol: `:DATE_FORMAT_${formatterCode}`,
+  settingsLabel: { eng: `Format ${formatterCode}`, zhs: `格式 ${formatterCode}` },
+  label: { eng: `Format ${formatterCode}`, zhs: `格式 ${formatterCode}` },
+  unitKey: 'none', iconUnicode: '', defaultValue: String(formatterCode), isActive: 1,
+  systemDefault: systemDefault as 0 | 1, sortOrder: formatterCode,
+  dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null,
+})
+
+const catalog = [
+  catalogOption(DateFormatConstants.DD, 'date', 1),
+  catalogOption(DateFormatConstants.DDD, 'date', 1),
+  catalogOption(DateFormatConstants.YYYY_MM_DD, 'date'),
+  catalogOption(DateFormatConstants.LUNAR_DATE, 'date_cn', 1),
+  catalogOption(DateFormatConstants.NEXT_SOLAR_TERM, 'date_cn'),
+]
+
 describe('date property options', () => {
-  it('provides no more than eight curated defaults per application language', () => {
-    expect(getCommonDateFormatterValues('eng')).toEqual([
+  it('uses catalog system defaults per application language', () => {
+    expect(getCommonDateFormatterValues('eng', catalog)).toEqual([
       DateFormatConstants.DD,
       DateFormatConstants.DDD,
-      DateFormatConstants.MMM_D,
-      DateFormatConstants.MMMM_D,
-      DateFormatConstants.MMM_D_YYYY,
-      DateFormatConstants.DD_MM_YYYY,
-      DateFormatConstants.MM_DD_YYYY,
-      DateFormatConstants.YYYY_MM_DD,
     ])
-    expect(getCommonDateFormatterValues('zhs')).toEqual([
-      DateFormatConstants.SOLAR_MONTH_DAY,
-      DateFormatConstants.SOLAR_MONTH_DAY_ZH,
+    expect(getCommonDateFormatterValues('zhs', catalog)).toEqual([
       DateFormatConstants.LUNAR_DATE,
-      DateFormatConstants.LUNAR_MONTH,
-      DateFormatConstants.LUNAR_DAY,
-      DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
-      DateFormatConstants.NEXT_GREGORIAN_FESTIVAL,
-      DateFormatConstants.NEXT_SOLAR_TERM,
     ])
   })
 
@@ -44,10 +52,10 @@ describe('date property options', () => {
   })
 
   it('keeps legacy dates compatible with all language-allowed formats', () => {
-    expect(resolveDateFormatterValues(undefined, 'eng')).toContain(DateFormatConstants.YYYY_MM_DD)
-    expect(resolveDateFormatterValues(undefined, 'eng')).not.toContain(DateFormatConstants.LUNAR_DATE)
-    expect(resolveDateFormatterValues(undefined, 'zhs')).toContain(DateFormatConstants.LUNAR_DATE)
-    expect(resolveDateFormatterValues(undefined, 'zhs')).not.toContain(DateFormatConstants.YYYY_MM_DD)
+    expect(resolveDateFormatterValues(undefined, 'eng', catalog)).toContain(DateFormatConstants.YYYY_MM_DD)
+    expect(resolveDateFormatterValues(undefined, 'eng', catalog)).not.toContain(DateFormatConstants.LUNAR_DATE)
+    expect(resolveDateFormatterValues(undefined, 'zhs', catalog)).toContain(DateFormatConstants.LUNAR_DATE)
+    expect(resolveDateFormatterValues(undefined, 'zhs', catalog)).not.toContain(DateFormatConstants.YYYY_MM_DD)
   })
 
   it('normalizes stored values to unique language-allowed formats', () => {
@@ -55,7 +63,7 @@ describe('date property options', () => {
       DateFormatConstants.LUNAR_DATE,
       DateFormatConstants.DD,
       DateFormatConstants.DD,
-    ], 'eng')).toEqual([DateFormatConstants.DD])
+    ], 'eng', catalog)).toEqual([DateFormatConstants.DD])
   })
 
   it('classifies and filters options by example character length', () => {

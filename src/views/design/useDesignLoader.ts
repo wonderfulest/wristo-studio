@@ -282,6 +282,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     const migratedDates = migrateLegacyDateProperties(
       { properties: projectedConfig.properties, elements: projectedConfig.elements as any[] },
       (projectedConfig.localization as any)?.appLanguage || 'eng',
+      dataCatalogStore.options,
     )
     const loadConfig = {
       ...projectedConfig,

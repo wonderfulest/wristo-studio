@@ -1,6 +1,6 @@
 import type { DataTypeOption } from '@/types/dataCatalog'
 
-const ELIGIBLE_CATEGORIES = new Set<DataTypeOption['category']>(['field', 'indicator', 'date', 'weather'])
+const ELIGIBLE_CATEGORIES = new Set<DataTypeOption['category']>(['field', 'indicator', 'weather'])
 
 export function getConnectIqEligibleDataTypes(options: readonly DataTypeOption[]): DataTypeOption[] {
   return options.filter((option) => option.isActive === 1 && ELIGIBLE_CATEGORIES.has(option.category))

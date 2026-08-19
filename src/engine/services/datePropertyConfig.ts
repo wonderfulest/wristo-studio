@@ -1,4 +1,5 @@
-import { DateFormatOptions } from '@/config/elements/options/dateFormats'
+import { getCatalogDateFormatOptions } from '@/domain/dateFormatCatalog'
+import type { DataTypeOption } from '@/types/dataCatalog'
 import type { AppLanguage } from '@/types/localization'
 import type { PropertiesMap, PropertyItem, PropertyOption } from '@/types/properties'
 
@@ -55,9 +56,10 @@ export function resolveDatePropertyConfig(
   }
 }
 
-function createDateOptions(values: number[], appLanguage: AppLanguage): PropertyOption[] {
+function createDateOptions(values: number[], appLanguage: AppLanguage, catalog: readonly DataTypeOption[]): PropertyOption[] {
+  const dateOptions = getCatalogDateFormatOptions(catalog, appLanguage)
   return values.map((value) => {
-    const option = DateFormatOptions.find(candidate => candidate.value === value)
+    const option = dateOptions.find(candidate => candidate.value === value)
     return {
       label: option?.label || String(value),
       labelCn: option?.zhsLabel || option?.label || String(value),
@@ -77,6 +79,7 @@ function nextDatePropertyKey(properties: PropertiesMap, start: number): string {
 export function migrateLegacyDateProperties(
   input: DatePropertyMigrationInput,
   appLanguage: AppLanguage,
+  catalog: readonly DataTypeOption[] = [],
 ): { properties: PropertiesMap; elements: DateElementRecord[] } {
   const properties: PropertiesMap = { ...(input.properties || {}) }
   let nextIndex = 1
@@ -101,7 +104,7 @@ export function migrateLegacyDateProperties(
       title: `Date ${sequence}`,
       titleCn: `日期 ${sequence}`,
       value: formatter,
-      options: createDateOptions(values, appLanguage),
+      options: createDateOptions(values, appLanguage, catalog),
     }
     return {
       ...element,

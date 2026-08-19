@@ -3,10 +3,11 @@ export interface LocalizedText {
   readonly zhs: string
 }
 
-export type DataTypeCategory = 'field' | 'goal' | 'chart' | 'indicator' | 'date' | 'weather'
+export type DataTypeCategory = 'field' | 'goal' | 'chart' | 'indicator' | 'date' | 'date_cn' | 'weather'
 
 export interface DataTypeOption {
   readonly valueCode: number
+  readonly formatterCode?: number | null
   readonly metricSymbol: string
   readonly category: DataTypeCategory
   readonly settingsLabel: LocalizedText

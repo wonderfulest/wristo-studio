@@ -32,12 +32,12 @@ describe('Connect IQ data type selection domain', () => {
   ]
 
   it('derives eligible active canonical options in catalog order', () => {
-    expect(getConnectIqEligibleDataTypes(options).map(({ valueCode }) => valueCode)).toEqual([1, 2, 3, 4])
+    expect(getConnectIqEligibleDataTypes(options).map(({ valueCode }) => valueCode)).toEqual([1, 2, 4])
   })
 
   it('defaults newly active eligible options to selected while preserving stale exclusions', () => {
-    expect(getConnectIqSelectedDataTypeValues(options, [2, 999])).toEqual([1, 3, 4])
-    expect(getConnectIqSelectedDataTypeValues([...options, option(7, 'field')], [2, 999])).toEqual([1, 3, 4, 7])
+    expect(getConnectIqSelectedDataTypeValues(options, [2, 999])).toEqual([1, 4])
+    expect(getConnectIqSelectedDataTypeValues([...options, option(7, 'field')], [2, 999])).toEqual([1, 4, 7])
   })
 
   it('select all removes only eligible exclusions and preserves stale values', () => {
@@ -45,6 +45,6 @@ describe('Connect IQ data type selection domain', () => {
   })
 
   it('clear all adds all eligible exclusions and preserves stale values', () => {
-    expect(clearAllConnectIqDataTypes(options, [2, 999])).toEqual([1, 2, 3, 4, 999])
+    expect(clearAllConnectIqDataTypes(options, [2, 999])).toEqual([1, 2, 4, 999])
   })
 })
