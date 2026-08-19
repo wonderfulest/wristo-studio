@@ -12,22 +12,26 @@ describe('DatePropertyDialog contract', () => {
     expect(source).toContain('defaultValue')
   })
 
-  it('uses three direct short, medium, and long filter tags', () => {
-    expect(source).toContain('filterDateFormatOptions')
-    expect(source).toContain('<el-check-tag')
-    expect(source).toContain("value: 'short'")
-    expect(source).toContain("value: 'medium'")
-    expect(source).toContain("value: 'long'")
-    expect(source).not.toContain("value: 'all'")
-    expect(source).toContain("const lengthBand = ref<DateOptionLengthBand>('short')")
-    expect(source).toContain('option.example')
-    expect(source).toContain('exampleLength(option)')
+  it('uses the shared property dialog layout', () => {
+    expect(source).toContain('class="property-dialog"')
+    expect(source).toContain('class="property-form"')
+    expect(source).toContain('class="property-hero"')
+    expect(source).toContain('class="form-section"')
+    expect(source).toContain('class="message-grid"')
   })
 
-  it('keeps option editing focused on add, remove, and restore', () => {
-    expect(source).not.toContain('const moveOption')
-    expect(source).toContain('removeOption(index)')
-    expect(source).toContain('addOption(option.value)')
+  it('manages date options like data and color properties', () => {
+    expect(source).toContain('openAddOptions')
+    expect(source).toContain('confirmAddOptions')
+    expect(source).toContain('deleteOption(index)')
+    expect(source).toContain("moveOption(index, 'up')")
+    expect(source).toContain("moveOption(index, 'down')")
     expect(source).toContain('getCommonDateFormatterValues')
+    expect(source).not.toContain('<el-check-tag')
+  })
+
+  it('does not duplicate the selected default value below the selector', () => {
+    expect(source).not.toContain('class="selected-option-card"')
+    expect(source).not.toContain('const selectedOption = computed')
   })
 })
