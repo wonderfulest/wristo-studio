@@ -94,6 +94,19 @@ describe('default expression token catalog', () => {
     })
   })
 
+  it('documents the Connect IQ day-of-week values for tm5', () => {
+    const dayOfWeek = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('tm5')
+    expect(dayOfWeek?.enumValues).toEqual([
+      { value: 1, label: 'Sunday', labelCn: '周日' },
+      { value: 2, label: 'Monday', labelCn: '周一' },
+      { value: 3, label: 'Tuesday', labelCn: '周二' },
+      { value: 4, label: 'Wednesday', labelCn: '周三' },
+      { value: 5, label: 'Thursday', labelCn: '周四' },
+      { value: 6, label: 'Friday', labelCn: '周五' },
+      { value: 7, label: 'Saturday', labelCn: '周六' },
+    ])
+  })
+
   it('exposes w01 as the normalized Wristo weather condition code', () => {
     const weatherCode = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w01')
     expect(weatherCode).toMatchObject({

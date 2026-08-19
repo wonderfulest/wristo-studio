@@ -98,13 +98,28 @@ const WRISTO_WEATHER_CODE_VALUES: NonNullable<ExpressionTokenDefinition['enumVal
   { value: 13, label: 'Broken Clouds', labelCn: '破云' },
 ]
 
+const DAY_OF_WEEK_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 1, label: 'Sunday', labelCn: '周日' },
+  { value: 2, label: 'Monday', labelCn: '周一' },
+  { value: 3, label: 'Tuesday', labelCn: '周二' },
+  { value: 4, label: 'Wednesday', labelCn: '周三' },
+  { value: 5, label: 'Thursday', labelCn: '周四' },
+  { value: 6, label: 'Friday', labelCn: '周五' },
+  { value: 7, label: 'Saturday', labelCn: '周六' },
+]
+
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   time('year', 'tm1', 'Year', '年份', 2026),
   time('shortYear', 'tm1.1', 'Short Year', '两位年份', 26),
   time('month', 'tm2', 'Month', '月份', 8),
   time('dayOfMonth', 'tm3', 'Day of Month', '日期', 15),
   time('isoWeek', 'tm4', 'ISO Week', 'ISO 周数', 33),
-  time('dayOfWeek', 'tm5', 'Day of Week', '星期', 7),
+  token({
+    id: 'time.dayOfWeek', code: 'tm5', label: 'Day of Week', labelCn: '星期', category: 'date-time',
+    exampleValue: 7, enumValues: DAY_OF_WEEK_VALUES, source: 'time', providerKey: 'clock',
+    description: 'Day of week using Connect IQ values: Sunday is 1 through Saturday is 7.',
+    descriptionCn: 'Connect IQ 星期枚举值：周日为 1，周一为 2，依次至周六为 7。',
+  }),
   time('hour24', 'tm6', 'Hour (24-hour)', '小时（24 小时制）', 14),
   token({ id: 'time.hour24FirstDigit', code: 'tm6.1', label: 'First Hour Digit (24-hour)', labelCn: '小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock' }),
   token({ id: 'time.hour24FirstDigitNullable', code: 'tm6.0', label: 'Optional First Hour Digit (24-hour)', labelCn: '可空小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock', nullable: true, description: 'First digit of the 24-hour value; null before 10:00.', descriptionCn: '24 小时制小时十位；小于 10 点时返回空值。' }),

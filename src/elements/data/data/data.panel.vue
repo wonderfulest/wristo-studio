@@ -33,6 +33,7 @@
         <font-picker
           v-model="currentModel.fontFamily"
           :date-content-language="metricTextFontLanguage"
+          :allow-any-language="true"
           @change="updateElement"
         />
       </el-form-item>
