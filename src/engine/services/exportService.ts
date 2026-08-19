@@ -39,6 +39,7 @@ import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.
 import { validateVisibilityExpression } from '@/engine/expression/validation'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import { calculateConnectIqSettingsBudget } from './connectIqSettingsBudget'
+import { resolveDatePropertyConfig } from './datePropertyConfig'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -411,6 +412,9 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       if (!encodeConfig) {
         console.error('Failed to encode element:', element)
         return null
+      }
+      if (eleType === 'date') {
+        Object.assign(encodeConfig, resolveDatePropertyConfig(encodeConfig as any, properties))
       }
 
       const visibilityErrors = validateVisibilityExpression((encodeConfig as any).visibility)

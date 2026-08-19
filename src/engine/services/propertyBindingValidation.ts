@@ -25,6 +25,14 @@ export function validateDataGoalBindings(
     errors.push(t('export.validation.missingDataProperty', { key }))
   }
 
+  const missingDateProperties = new Set<string>()
+  for (const element of elements) {
+    const key = String((element as any).dateProperty ?? '').trim()
+    if (!key || properties[key]?.type === 'date' || missingDateProperties.has(key)) continue
+    missingDateProperties.add(key)
+    errors.push(t('export.validation.missingDateProperty', { key }))
+  }
+
   for (const [key, prop] of Object.entries(properties)) {
     if (prop.type === 'data') {
       const bound = elements.some((o) => (o as any).dataProperty === key)
@@ -48,6 +56,12 @@ export function validateDataGoalBindings(
       const bound = elements.some((o) => (o as any).textProperty === key)
       if (!bound) {
         errors.push(t('export.validation.unboundTextProperty', { title: prop.title, key }))
+      }
+    }
+    if (prop.type === 'date') {
+      const bound = elements.some((o) => (o as any).dateProperty === key)
+      if (!bound) {
+        errors.push(t('export.validation.unboundDateProperty', { title: prop.title, key }))
       }
     }
   }

@@ -22,6 +22,7 @@ import {
   restoreVisualThemeBaseFieldsForPersistence,
 } from '@/engine/services/defaultVisualThemeLoadService'
 import { normalizeDataPropertyConfig } from '@/engine/services/dataPropertyConfig'
+import { migrateLegacyDateProperties } from '@/engine/services/datePropertyConfig'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { scaleElementConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
@@ -277,7 +278,16 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     await fontStore.fetchFonts()
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
-    const loadConfig = projectDefaultVisualThemeForLoad(config)
+    const projectedConfig = projectDefaultVisualThemeForLoad(config)
+    const migratedDates = migrateLegacyDateProperties(
+      { properties: projectedConfig.properties, elements: projectedConfig.elements as any[] },
+      (projectedConfig.localization as any)?.appLanguage || 'eng',
+    )
+    const loadConfig = {
+      ...projectedConfig,
+      properties: migratedDates.properties,
+      elements: migratedDates.elements,
+    } as RuntimeDesignConfig
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     if (Array.isArray(loadConfig.elements)) {
       visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)

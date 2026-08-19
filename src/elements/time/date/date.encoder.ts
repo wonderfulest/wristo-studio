@@ -15,6 +15,7 @@ export function encodeDate(element: FabricElement): DateElementConfig {
     fontFamily: getSavedFontFamily(element, 'roboto-condensed-regular'),
     fontSize: getSavedFontSize(element, 14),
     fill: (savedTextStyle(element).fill as string) ?? '#ffffff',
+    dateProperty: String((element as any).dateProperty ?? '') || undefined,
     formatter: Number((element as any).formatter ?? 0),
     formatterOptions: Array.isArray((element as any).formatterOptions)
       ? [...(element as any).formatterOptions]
@@ -35,6 +36,7 @@ export function decodeDate(config: DateElementConfig): Partial<FabricElement> {
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
     fill: config.fill,
+    dateProperty: config.dateProperty,
     formatter: config.formatter,
     formatterOptions: config.formatterOptions ? [...config.formatterOptions] : undefined,
   }

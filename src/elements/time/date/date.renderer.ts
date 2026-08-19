@@ -19,6 +19,7 @@ import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -66,7 +67,8 @@ export function createDate(config: DateElementConfig): FabricElement {
 
 
   const elementId = config.id || nanoid()
-  const formatterValue = parseInt(String(config.formatter))
+  const resolvedDate = resolveDatePropertyConfig(config as any, propertiesStore.allProperties)
+  const formatterValue = resolvedDate.formatter
   const formatterOption = DateFormatOptions.find((o) => o.value === formatterValue)
   if (!formatterOption) {
     throw new Error('Invalid date formatter')
@@ -86,15 +88,22 @@ export function createDate(config: DateElementConfig): FabricElement {
     fontSize: Number(previewFont.fontSize),
     fill: config.fill,
     fontFamily: previewFont.fontFamily,
-    formatter: config.formatter,
-    formatterOptions: config.formatterOptions ? [...config.formatterOptions] : undefined,
+    dateProperty: resolvedDate.dateProperty,
+    formatter: resolvedDate.formatter,
+    formatterOptions: [...resolvedDate.formatterOptions],
     hasControls: false,
   } as any)
   applyCurrentElementPreviewFont(element, config, text)
 
   const updateTextCase = () => {
     try {
-      const currentFormatter = parseInt(String((element as any).formatter))
+      const current = resolveDatePropertyConfig(element as any, propertiesStore.allProperties)
+      const currentFormatter = current.formatter
+      element.set({
+        dateProperty: current.dateProperty,
+        formatter: current.formatter,
+        formatterOptions: [...current.formatterOptions],
+      })
       const option2 = DateFormatOptions.find((o) => o.value === currentFormatter)
       const now = getSimulatedNow()
       const nextText = formatDate(
@@ -118,17 +127,8 @@ export function createDate(config: DateElementConfig): FabricElement {
 
   ;(element as any).updateTextCase = updateTextCase
 
-  const unwatch = propertiesStore.$subscribe((mutation: any) => {
-    if (
-      mutation.type === 'direct' &&
-      mutation.storeId === 'propertiesStore' &&
-      mutation.payload &&
-      'textCase' in mutation.payload
-    ) {
-      setTimeout(() => {
-        updateTextCase()
-      }, 0)
-    }
+  const unwatch = propertiesStore.$subscribe(() => {
+    setTimeout(() => updateTextCase(), 0)
   })
 
   ;(element as any).textCaseUnwatch = unwatch
@@ -144,6 +144,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     originY: element.originY as any,
     fill: savedTextStyle(element).fill as any,
     ...getPersistedTextFont(config, element),
+    dateProperty: (element as any).dateProperty,
     formatter: (element as any).formatter,
     formatterOptions: Array.isArray((element as any).formatterOptions)
       ? [...(element as any).formatterOptions]
@@ -176,6 +177,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     fontFamily: patch.fontFamily,
     formatter: patch.formatter,
     formatterOptions: patch.formatterOptions,
+    dateProperty: patch.dateProperty,
     originX: patch.originX,
     originY: patch.originY,
   }
@@ -186,8 +188,10 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     }
   })
 
-  if (patch.formatter !== undefined) {
-    const nextFormatter = parseInt(String(patch.formatter ?? obj.get('formatter')))
+  if (patch.formatter !== undefined || patch.dateProperty !== undefined) {
+    const resolved = resolveDatePropertyConfig(obj, propertiesStore.allProperties)
+    obj.set({ formatter: resolved.formatter, formatterOptions: [...resolved.formatterOptions] })
+    const nextFormatter = resolved.formatter
     const option = DateFormatOptions.find((o) => o.value === nextFormatter)
     if (option) {
       const textCase = (propertiesStore as any).textCase as number | undefined
@@ -217,6 +221,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       fill: savedTextStyle(obj).fill,
       fontSize: obj.fontSize,
       fontFamily: obj.fontFamily,
+      dateProperty: obj.dateProperty,
       formatter: obj.formatter,
       formatterOptions: Array.isArray(obj.formatterOptions) ? [...obj.formatterOptions] : undefined,
       topBase: encodeTopBaseForElement(obj as any),

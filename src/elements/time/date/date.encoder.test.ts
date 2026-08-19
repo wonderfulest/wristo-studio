@@ -23,4 +23,15 @@ describe('date formatter options persistence', () => {
 
     expect((decoded as any).formatterOptions).toEqual([38, 20])
   })
+
+  it('preserves the shared date property binding through encode and decode', () => {
+    const encoded = encodeDate({
+      id: 'date-shared', eleType: 'date', left: 10, top: 20,
+      originX: 'center', originY: 'center', fontFamily: 'roboto', fontSize: 18,
+      fill: '#ffffff', formatter: 31, formatterOptions: [31, 32], dateProperty: 'date_1',
+    } as any)
+
+    expect(encoded.dateProperty).toBe('date_1')
+    expect((decodeDate(encoded) as any).dateProperty).toBe('date_1')
+  })
 })

@@ -42,7 +42,7 @@ import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
-import { createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
+import { createQuickDateProperty, createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
@@ -230,7 +230,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
         normalizedConfig.fontFamily,
       )
     }
-    const normalizedRecord = normalizedConfig as AnyElementConfig & { formatter?: number; formatterOptions?: number[] }
+    const normalizedRecord = normalizedConfig as AnyElementConfig & { dateProperty?: string; formatter?: number; formatterOptions?: number[] }
     if (elementType === 'date' && typeof normalizedRecord.formatter === 'number') {
       normalizedRecord.formatter = getDefaultDateFormatterForAppLanguage(
         designStore.appLanguage,
@@ -240,6 +240,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
       if (!normalizedRecord.formatterOptions.includes(normalizedRecord.formatter)) {
         normalizedRecord.formatter = normalizedRecord.formatterOptions[0]
       }
+      normalizedRecord.dateProperty = createQuickDateProperty()
     }
     await loadElementFont(normalizedConfig)
 

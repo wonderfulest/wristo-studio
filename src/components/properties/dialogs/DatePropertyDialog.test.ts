@@ -4,6 +4,14 @@ import { describe, expect, it } from 'vitest'
 describe('DatePropertyDialog contract', () => {
   const source = readFileSync(new URL('./DatePropertyDialog.vue', import.meta.url), 'utf8')
 
+  it('edits a stable reusable date property', () => {
+    expect(source).toContain('PropertyKeyField')
+    expect(source).toContain('LocalizedPropertyTitleField')
+    expect(source).toContain("type: 'date'")
+    expect(source).toContain('propertyKey')
+    expect(source).toContain('defaultValue')
+  })
+
   it('uses three direct short, medium, and long filter tags', () => {
     expect(source).toContain('filterDateFormatOptions')
     expect(source).toContain('<el-check-tag')

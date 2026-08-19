@@ -71,27 +71,39 @@ export function classifyConnectIqSettingsUsage(usedBytes: number): ConnectIqSett
 export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetInput): ConnectIqSettingsBudgetReport {
   const fixedEntries = fixedSettings(input)
   const appLanguage = input.appLanguage === 'zhs' ? 'zhs' : 'eng'
-  const customEntries = Object.entries(input.properties || {}).map(([key, property]) => ({
+  const customEntries = Object.entries(input.properties || {}).filter(([, property]) => property.type !== 'date').map(([key, property]) => ({
     key,
     type: property.type,
     title: appLanguage === 'zhs' ? (property.titleCn || property.title) : property.title,
     value: property.value,
     options: propertyOptions(property, input.dataOptions || {}),
   }))
-  const dateIds = new Map<string, { formatter: unknown; formatterOptions?: unknown[] }>()
+  const dateIds = new Map<string, { formatter: unknown; formatterOptions?: unknown[]; title?: string }>()
+  Object.entries(input.properties || {}).forEach(([key, property]) => {
+    if (property.type !== 'date') return
+    dateIds.set(key, {
+      formatter: property.value,
+      formatterOptions: propertyOptions(property, input.dataOptions || {}).map(option => (option as any)?.value),
+      title: appLanguage === 'zhs' ? (property.titleCn || property.title) : property.title,
+    })
+  })
   for (const element of input.elements || []) {
     if (String(element.type || element.eleType || '') !== 'date') continue
+    const propertyKey = String(element.dateProperty ?? '')
+    if (propertyKey && dateIds.has(propertyKey)) continue
     const id = String(element.dateId ?? '')
-    if (!id) continue
-    dateIds.set(id, {
+    const legacyKey = id ? `DateFormatter${id}` : ''
+    if (!legacyKey) continue
+    dateIds.set(legacyKey, {
       formatter: element.formatter ?? 0,
       formatterOptions: Array.isArray(element.formatterOptions) ? element.formatterOptions : undefined,
     })
   }
   const allowedDateFormatters = [...getAllowedDateFormatters(appLanguage)]
-  const dateEntries = [...dateIds.entries()].map(([id, date]) => ({
-    key: `DateFormatter${id}`,
+  const dateEntries = [...dateIds.entries()].map(([key, date]) => ({
+    key,
     type: 'list',
+    title: date.title,
     value: date.formatter,
     options: date.formatterOptions?.filter(value => allowedDateFormatters.includes(Number(value)))
       ?? allowedDateFormatters,

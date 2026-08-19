@@ -16,7 +16,7 @@ export type DesignVerificationReport = {
   summary: { errors: number; warnings: number; infos: number }
 }
 
-const BINDING_FIELDS = ['dataProperty', 'goalProperty', 'chartProperty', 'textProperty'] as const
+const BINDING_FIELDS = ['dataProperty', 'goalProperty', 'chartProperty', 'textProperty', 'dateProperty'] as const
 
 /**
  * Performs Studio-only checks against the generated runtime configuration.

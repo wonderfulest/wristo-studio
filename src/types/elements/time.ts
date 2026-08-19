@@ -15,6 +15,7 @@ export interface TimeElementConfig extends TextElementConfig {
 
 export interface DateElementConfig extends TextElementConfig {
   eleType: 'date'
+  dateProperty?: string
   formatter: number
   formatterOptions?: number[]
   // 仅用于导出：文字 baseline 的纵坐标

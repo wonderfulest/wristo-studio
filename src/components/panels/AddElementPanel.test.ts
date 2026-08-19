@@ -21,6 +21,11 @@ describe('AddElementPanel metric property assignment', () => {
     expect(appMenuSource).toContain('getOrCreateAvailableDialProperty(mode)')
     expect(appMenuSource).toContain('dialProperty: binding.key')
   })
+
+  it('creates and binds a shared Date Property for each new date element', () => {
+    expect(source).toContain('createQuickDateProperty')
+    expect(source).toContain('normalizedRecord.dateProperty')
+  })
 })
 
 describe('AddElementPanel localization', () => {

@@ -10,6 +10,7 @@ export type DateElementSchema = {
     fontSize: number
     fontFamily: string
     fill: string
+    dateProperty: string
     formatter: number
     formatterOptions: number[]
   }
@@ -25,6 +26,7 @@ export const dateSchema: DateElementSchema = {
     fontSize: 24,
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',
+    dateProperty: '',
     formatter: DateFormatConstants.MMM_D_DDD,
     formatterOptions: [],
   },

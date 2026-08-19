@@ -17,6 +17,7 @@ export type FabricElement = (FabricObject & Partial<TextProps>) & {
   metricValue?: string
   dataProperty?: string
   goalProperty?: string
+  dateProperty?: string
   displayStates?: ElementDisplayStates
   visibility?: DynamicValue<boolean>
   [key: string]: any

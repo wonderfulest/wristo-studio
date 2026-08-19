@@ -11,6 +11,8 @@ import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import { useDesignStore } from '@/stores/designStore'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
+import { DateFormatOptions } from '@/config/elements/options/dateFormats'
+import { getCommonDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
 
 type BindableMetricPropertyType = Extract<PropertyType, 'data' | 'goal'>
 
@@ -148,6 +150,28 @@ export const getOrCreateAvailableDialProperty = (mode: DialProgressMode): { key:
   return existing ? { key: existing, created: false } : { key: createQuickDialProperty(mode), created: true }
 }
 
+export const createQuickDateProperty = (): string => {
+  const propertiesStore = usePropertiesStore()
+  let index = 1
+  while (propertiesStore.allProperties[`date_${index}`]) index += 1
+  const key = `date_${index}`
+  const appLanguage = useDesignStore().appLanguage
+  const values = getCommonDateFormatterValues(appLanguage)
+  propertiesStore.addProperty({
+    key,
+    type: 'date',
+    title: `Date ${index}`,
+    titleCn: `日期 ${index}`,
+    options: values.map(value => {
+      const option = DateFormatOptions.find(candidate => candidate.value === value)
+      return { label: option?.label || String(value), labelCn: option?.zhsLabel, value }
+    }),
+    defaultValue: values[0],
+  })
+  useHistoryStore().saveState('properties:quick-add-date')
+  return key
+}
+
 const getActiveElements = (): any[] => {
   const canvasStore = useCanvasStore()
   const canvasObjects = canvasStore.canvas?.getObjects?.() ?? []
@@ -219,6 +243,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
 }
 
 export const canBindMetricPropertyToSelection = (type: PropertyType): boolean => {
+  if (type === 'date') return getActiveElements().some((element) => String(element?.eleType ?? '') === 'date')
   if (type !== 'data' && type !== 'goal') return false
   return getActiveElements().some((element) => isMetricBindableElement(type, String(element?.eleType ?? '')))
 }
@@ -227,6 +252,19 @@ export const bindMetricPropertyToSelection = async (
   propertyKey: string,
   type: PropertyType,
 ): Promise<number> => {
+  if (type === 'date') {
+    let boundCount = 0
+    for (const element of getActiveElements()) {
+      if (String(element?.eleType ?? '') !== 'date' || element?.id == null) continue
+      await elementManager.updateElementById(String(element.id), { dateProperty: propertyKey })
+      boundCount += 1
+    }
+    if (boundCount > 0) {
+      useCanvasStore().canvas?.requestRenderAll?.()
+      useHistoryStore().saveState('settings:bind-date-property')
+    }
+    return boundCount
+  }
   if (type !== 'data' && type !== 'goal') return 0
 
   const historyStore = useHistoryStore()

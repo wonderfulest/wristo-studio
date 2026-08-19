@@ -36,4 +36,18 @@ describe('verifyDesignConfig', () => {
 
     expect(report.summary).toEqual({ errors: 0, warnings: 0, infos: 0 })
   })
+
+  it('treats dateProperty as a first-class binding', () => {
+    const valid = verifyDesignConfig({
+      properties: { date_1: { type: 'date', title: 'Date 1', value: 31 } },
+      elements: [{ id: 'date', eleType: 'date', dateProperty: 'date_1', displayStates: { active: true, ambient: true } }],
+    } as any)
+    const missing = verifyDesignConfig({
+      properties: {},
+      elements: [{ id: 'date', eleType: 'date', dateProperty: 'date_missing', displayStates: { active: true, ambient: true } }],
+    } as any)
+
+    expect(valid.summary).toEqual({ errors: 0, warnings: 0, infos: 0 })
+    expect(missing.issues).toContainEqual(expect.objectContaining({ code: 'missing-property', propertyKey: 'date_missing' }))
+  })
 })

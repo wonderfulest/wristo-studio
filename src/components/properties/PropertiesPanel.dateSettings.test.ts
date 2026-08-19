@@ -1,26 +1,24 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-describe('PropertiesPanel date settings contract', () => {
+describe('PropertiesPanel shared date settings contract', () => {
   const source = readFileSync(new URL('./PropertiesPanel.vue', import.meta.url), 'utf8')
 
-  it('includes canvas date elements as derived property entries', () => {
+  it('lists date properties from the shared property store', () => {
     expect(source).toContain("const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial', 'date']")
-    expect(source).toContain("snapshot.eleType === 'date'")
-    expect(source).toContain('DateFormatter${index}')
-    expect(source).toContain('const canvasDateIds = (canvasStore.canvas?.getObjects?.() || [])')
+    expect(source).toContain('Object.entries(propertiesStore.allProperties)')
+    expect(source).not.toContain('DateFormatter${index}')
   })
 
-  it('offers only date format options for derived date entries', () => {
-    expect(source).toContain('DateFormatOptions.filter')
-    expect(source).toContain('getAllowedDateFormatters(designStore.appLanguage)')
-    expect(source).toContain('v-for="option in item.prop.options"')
-    expect(source).toContain('resolveDateFormatterValues')
+  it('allows creating, editing, and binding a date property', () => {
+    expect(source).toContain("type === 'date'")
+    expect(source).toContain('datePropertyDialog.value?.show()')
+    expect(source).toContain("type !== 'data' && type !== 'goal' && type !== 'date'")
   })
 
-  it('updates the matching date element when its format changes', () => {
-    expect(source).toContain('updateDateFormatter(item.elementId, $event)')
-    expect(source).toContain('elementManager.updateElementById(elementId, { formatter: Number(formatter) })')
-    expect(source).toContain('elementManager.updateElementById(elementId, { formatter, formatterOptions })')
+  it('updates the shared property value instead of one element', () => {
+    expect(source).toContain('updateDatePropertyValue(item.key, $event)')
+    expect(source).toContain('propertiesStore.setPropertyValue(key, Number(formatter))')
+    expect(source).not.toContain('updateDateFormatter(item.elementId, $event)')
   })
 })

@@ -66,6 +66,26 @@ describe('Connect IQ settings budget', () => {
     expect(report.listOptions).toBe(3 + 4 + 2)
   })
 
+  it('counts one shared date property for multiple bound date elements', () => {
+    const report = calculateConnectIqSettingsBudget({
+      appLanguage: 'eng',
+      properties: {
+        date_1: {
+          type: 'date', title: 'Date 1', value: 31,
+          options: [{ label: 'MM-DD', value: 31 }, { label: 'MM/DD', value: 32 }],
+        },
+      },
+      elements: [
+        { type: 'date', dateProperty: 'date_1' },
+        { type: 'date', dateProperty: 'date_1' },
+      ],
+    })
+
+    expect(report.customSettings).toBe(0)
+    expect(report.dateSettings).toBe(1)
+    expect(report.listOptions).toBe(3 + 4 + 2)
+  })
+
   it('recalculates usage from the current app settings', () => {
     const defaults = calculateConnectIqSettingsBudget({
       properties: {},

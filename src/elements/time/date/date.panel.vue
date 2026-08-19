@@ -36,22 +36,10 @@
         />
       </el-form-item>
 
-      <el-form-item :label="t('elementSettings.dateFormat')">
-        <el-select
-          v-model.number="currentModel.formatter"
-          @change="handleFormatterChange"
-        >
-          <el-option
-            v-for="option in availableDateFormatOptions"
-            :key="option.value"
-            :label="getDateFormatOptionLabel(option)"
-            :value="option.value"
-            :title="'e.g.: ' + option.example"
-          >
-            {{ getDateFormatOptionLabel(option) }} - e.g.: {{ option.example }}
-          </el-option>
-        </el-select>
-      </el-form-item>
+      <DatePropertyField
+        v-model="currentModel.dateProperty"
+        @change="handleDatePropertyChange"
+      />
     </el-form>
   </div>
 </template>
@@ -61,11 +49,13 @@ import { onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useFontStore } from '@/stores/fontStore'
 import { useDesignStore } from '@/stores/designStore'
-import { originXOptions, DateFormatOptions } from '@/config/settings'
+import { usePropertiesStore } from '@/stores/properties'
+import { originXOptions } from '@/config/settings'
 import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
+import DatePropertyField from '@/elements/common/settings/DatePropertyField.vue'
 import { useI18n } from '@/i18n'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
@@ -73,11 +63,10 @@ import {
   getDateFontRequirementLabel,
   isFontCompatibleWithDateLanguage,
 } from '@/utils/dateFontCompatibility'
-import type { OptionFormat } from '@/types/settings'
 import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
-import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
+import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
 
 const props = defineProps<{
   config?: Record<string, any> | null
@@ -86,6 +75,7 @@ const props = defineProps<{
 
 const fontStore = useFontStore()
 const designStore = useDesignStore()
+const propertiesStore = usePropertiesStore()
 const { t } = useI18n()
 
 const currentModel = computed<any>(() => {
@@ -101,15 +91,6 @@ const originXProxy = computed<string>({
     applyUpdate({ originX: v })
   },
 })
-
-const availableDateFormatOptions = computed(() => {
-  const allowed = new Set(getAllowedDateFormatters(designStore.appLanguage))
-  return DateFormatOptions.filter((option) => allowed.has(option.value))
-})
-
-const getDateFormatOptionLabel = (option: OptionFormat<number>) => {
-  return designStore.appLanguage === 'zhs' ? option.zhsLabel : option.label
-}
 
 const currentDateLanguage = computed(() => resolveDesignContentLanguage(designStore))
 const getFontCompatibilityNotice = (fontFamily: string, language = currentDateLanguage.value) => {
@@ -170,8 +151,12 @@ const warnIfFontIncompatible = async (
   ElMessage.warning(`This date format requires a ${getDateFontRequirementLabel(language)}. Please choose a compatible font.`)
 }
 
-const handleFormatterChange = async (formatter: number) => {
-  applyUpdate({ formatter })
+const handleDatePropertyChange = async (dateProperty: string) => {
+  const resolved = resolveDatePropertyConfig(
+    { ...currentModel.value, dateProperty },
+    propertiesStore.allProperties,
+  )
+  applyUpdate(resolved)
   await warnIfFontIncompatible(String(currentModel.value.fontFamily || ''))
 }
 

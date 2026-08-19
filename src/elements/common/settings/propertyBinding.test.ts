@@ -93,5 +93,16 @@ describe('metric property binding support', () => {
 
     expect(unit.text).toBe('公里')
   })
+
+  it('binds a shared date property only to selected date elements', async () => {
+    const date: any = { id: 'date-1', eleType: 'date' }
+    const label = { id: 'label-1', eleType: 'label' }
+    activeObjects.splice(0, activeObjects.length, date, label)
+
+    expect(canBindMetricPropertyToSelection('date')).toBe(true)
+    expect(await bindMetricPropertyToSelection('date_1', 'date')).toBe(1)
+    expect(date.dateProperty).toBe('date_1')
+    expect(label).not.toHaveProperty('dateProperty')
+  })
 })
 // @vitest-environment jsdom

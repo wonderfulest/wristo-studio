@@ -154,7 +154,7 @@
                               :model-value="item.prop.value"
                               class="date-format-select"
                               @click.stop
-                              @change="updateDateFormatter(item.elementId, $event)"
+                              @change="updateDatePropertyValue(item.key, $event)"
                             >
                               <el-option
                                 v-for="option in item.prop.options"
@@ -194,7 +194,6 @@
                             <el-icon><Edit /></el-icon>
                           </el-button>
                         </el-tooltip>
-                        <template v-if="item.prop.type !== 'date'">
                         <el-tooltip :content="getBindTooltip(item.prop.type)" placement="top">
                           <el-button
                             :aria-label="t('property.bindToSelection')"
@@ -218,7 +217,6 @@
                             <el-icon><Delete /></el-icon>
                           </el-button>
                         </el-tooltip>
-                        </template>
                       </div>
                     </article>
                   </div>
@@ -260,7 +258,7 @@
     <ChartPropertyDialog ref="chartPropertyDialog" @confirm="handlePropertyConfirm" />
     <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
     <DialPropertyDialog ref="dialPropertyDialog" @confirm="handlePropertyConfirm" />
-    <DatePropertyDialog ref="datePropertyDialog" @confirm="handleDatePropertyConfirm" />
+    <DatePropertyDialog ref="datePropertyDialog" @confirm="handlePropertyConfirm" />
   </el-drawer>
 </template>
 
@@ -305,9 +303,6 @@ import {
   setColorPropertyValue,
 } from '@/engine/services/colorPropertyValueService'
 import { calculateConnectIqSettingsBudget } from '@/engine/services/connectIqSettingsBudget'
-import { DateFormatOptions } from '@/config/elements/options/dateFormats'
-import { getAllowedDateFormatters } from '@/domain/designLanguageCapabilities'
-import { resolveDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -330,7 +325,7 @@ const designStore = useDesignStore()
 const { t } = useI18n()
 
 const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial', 'date']
-const addablePropertyTypes = typeOrder.filter((type) => type !== 'date')
+const addablePropertyTypes = typeOrder
 
 const getPropertyDisplayValue = (key, prop) =>
   prop.type === 'color' ? getColorPropertyValue(key) : prop.value
@@ -349,7 +344,7 @@ const typeMeta = computed(() => ({
   chart: { label: t('property.chartSelect'), icon: TrendCharts },
   text: { label: t('property.textString'), icon: Document },
   dial: { label: 'Dial', icon: Histogram },
-  date: { label: t('editor.date'), icon: Calendar },
+  date: { label: t('property.dateSelect'), icon: Calendar },
 }))
 
 const addPropertyTypes = computed(() => addablePropertyTypes.map((type) => ({
@@ -395,43 +390,11 @@ const startPropertiesDrawerResize = (event) => {
   window.addEventListener('mouseup', stopPropertiesDrawerResize)
 }
 
-const availableDateFormatOptions = computed(() => {
-  const allowed = new Set(getAllowedDateFormatters(designStore.appLanguage))
-  return DateFormatOptions.filter((option) => allowed.has(option.value))
-})
-
 const getDateFormatOptionLabel = (option) =>
-  designStore.appLanguage === 'zhs' ? (option.zhsLabel || option.label) : option.label
+  designStore.appLanguage === 'zhs' ? (option.labelCn || option.zhsLabel || option.label) : option.label
 
-const derivedDateEntries = computed(() => {
-  const dateSnapshots = elementDataStore.elements.filter((snapshot) => snapshot.eleType === 'date')
-  const snapshotsById = new Map(dateSnapshots.map((snapshot) => [String(snapshot.id), snapshot]))
-  const canvasDateIds = (canvasStore.canvas?.getObjects?.() || [])
-    .filter((element) => element?.eleType === 'date' && element?.id != null)
-    .map((element) => String(element.id))
-  const orderedSnapshots = canvasDateIds.length > 0
-    ? canvasDateIds.map((id) => snapshotsById.get(id)).filter(Boolean)
-    : dateSnapshots
-
-  return orderedSnapshots.map((snapshot, index) => ({
-    key: `DateFormatter${index}`,
-    elementId: snapshot.id,
-    prop: {
-      type: 'date',
-      title: `${t('editor.date')} ${index + 1}`,
-      value: Number(snapshot.config.formatter ?? 0),
-      options: resolveDateFormatterValues(
-        snapshot.config.formatterOptions,
-        designStore.appLanguage,
-      ).map(value => availableDateFormatOptions.value.find(option => option.value === value)).filter(Boolean),
-    },
-  }))
-})
-
-const propertyEntries = computed(() => [
-  ...Object.entries(propertiesStore.allProperties).map(([key, prop]) => ({ key, prop })),
-  ...derivedDateEntries.value,
-])
+const propertyEntries = computed(() => Object.entries(propertiesStore.allProperties)
+  .map(([key, prop]) => ({ key, prop })))
 
 const propertyCount = computed(() => propertyEntries.value.length)
 
@@ -475,16 +438,10 @@ const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
 }
 
-const updateDateFormatter = async (elementId, formatter) => {
-  await elementManager.updateElementById(elementId, { formatter: Number(formatter) })
+const updateDatePropertyValue = async (key, formatter) => {
+  propertiesStore.setPropertyValue(key, Number(formatter))
   getDataSimulatorEngine().updateCanvas()
   commitHistory('date-formatter')
-}
-
-const handleDatePropertyConfirm = async ({ elementId, formatter, formatterOptions }) => {
-  await elementManager.updateElementById(elementId, { formatter, formatterOptions })
-  getDataSimulatorEngine().updateCanvas()
-  commitHistory('date-options')
 }
 
 const textCase = computed({
@@ -532,6 +489,8 @@ onMounted(() => {
     visible.value = true
     if (request?.type === 'dial') {
       dialPropertyDialog.value?.show({ dialMode: request.dialMode })
+    } else if (request?.type === 'date') {
+      datePropertyDialog.value?.show()
     }
   })
 })
@@ -555,6 +514,8 @@ const addProperty = (type) => {
     textPropertyDialog.value?.show()
   } else if (type === 'dial') {
     dialPropertyDialog.value?.show()
+  } else if (type === 'date') {
+    datePropertyDialog.value?.show()
   }
 }
 // 编辑属性
@@ -592,10 +553,8 @@ const editProperty = (key, prop, elementId = null) => {
     })
   } else if (prop.type === 'date') {
     datePropertyDialog.value?.show({
-      elementId,
-      title: prop.title,
-      formatter: prop.value,
-      formatterOptions: prop.options?.map(option => option.value),
+      ...prop,
+      propertyKey: key,
     })
   }
 }
@@ -605,7 +564,7 @@ const canBindProperty = (type) => {
 }
 
 const getBindTooltip = (type) => {
-  if (type !== 'data' && type !== 'goal') return t('property.bindUnsupported')
+  if (type !== 'data' && type !== 'goal' && type !== 'date') return t('property.bindUnsupported')
   if (!canBindProperty(type)) return t('property.bindRequiresSelection')
   return t('property.bindToSelection')
 }
@@ -622,6 +581,14 @@ const bindProperty = async (key, type) => {
 
 // 删除属性
 const deleteProperty = async (key) => {
+  if (propertiesStore.allProperties[key]?.type === 'date') {
+    const isBound = elementDataStore.elements.some((snapshot) => snapshot.config?.dateProperty === key)
+      || (canvasStore.canvas?.getObjects?.() || []).some((element) => element?.dateProperty === key)
+    if (isBound) {
+      ElMessage.warning(t('property.dateDeleteBound'))
+      return
+    }
+  }
   try {
     await ElMessageBox.confirm(
       t('property.deleteConfirm'),
