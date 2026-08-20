@@ -9,7 +9,9 @@ export type RectangleElementSchema = {
     height: number
     borderRadius: number
     fill: string
+    fillProperty: string | null
     stroke: string
+    strokeProperty: string | null
     strokeWidth: number
     opacity: number
     gradientEnabled: boolean
@@ -30,7 +32,9 @@ export const rectangleSchema: RectangleElementSchema = {
     height: 50,
     borderRadius: 5,
     fill: 'transparent',
+    fillProperty: null,
     stroke: '#FFFFFF',
+    strokeProperty: null,
     strokeWidth: 2,
     opacity: 1,
     gradientEnabled: false,

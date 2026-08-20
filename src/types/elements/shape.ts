@@ -33,6 +33,8 @@ export interface RectangleElementConfig extends ShapeElementConfig, ShapeGradien
   width: number
   height: number
   borderRadius: number
+  fillProperty?: string | null
+  strokeProperty?: string | null
 }
 
 export interface PolygonElementConfig extends ShapeElementConfig, ShapeGradientConfig {

@@ -31,11 +31,13 @@
       <el-form-item :label="t('elementSettings.fillColor')">
         <color-picker
           v-model="currentModel.fill"
+          :property-key="currentModel.fillProperty"
           enable-gradient
           :gradient-enabled="Boolean(currentModel.gradientEnabled)"
           :gradient-start-color="currentModel.gradientStartColor ?? currentModel.fill"
           :gradient-end-color="currentModel.gradientEndColor ?? currentModel.fill"
           @change="(v: string) => applyUpdate({ fill: v })"
+          @property-change="applyUpdate({ fill: $event.color, fillProperty: $event.propertyKey })"
           @gradient-change="handleGradientChange"
         />
       </el-form-item>
@@ -55,7 +57,9 @@
       <el-form-item :label="t('elementSettings.borderColor')">
         <color-picker
           v-model="currentModel.stroke"
+          :property-key="currentModel.strokeProperty"
           @change="(v: string) => applyUpdate({ stroke: v })"
+          @property-change="applyUpdate({ stroke: $event.color, strokeProperty: $event.propertyKey })"
         />
       </el-form-item>
 

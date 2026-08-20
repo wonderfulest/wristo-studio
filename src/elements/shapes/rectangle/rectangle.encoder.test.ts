@@ -41,4 +41,20 @@ describe('rectangle encoder gradient fields', () => {
       gradientDirection: 'leftToRight',
     })
   })
+
+  it('round-trips solid fill and stroke color-variable bindings', () => {
+    const encoded = encodeRectangle(rectangle({
+      fillProperty: 'surfaceColor',
+      strokeProperty: 'outlineColor',
+    }))
+
+    expect(encoded).toMatchObject({
+      fillProperty: 'surfaceColor',
+      strokeProperty: 'outlineColor',
+    })
+    expect(decodeRectangle(encoded)).toMatchObject({
+      fillProperty: 'surfaceColor',
+      strokeProperty: 'outlineColor',
+    })
+  })
 })
