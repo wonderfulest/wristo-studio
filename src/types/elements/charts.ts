@@ -15,8 +15,10 @@ export interface BarChartElementConfig extends BaseChartConfig {
 export interface LineChartElementConfig extends BaseChartConfig {
   chartProperty?: string
   color?: string
+  colorProperty?: string | null
   lineWidth?: number
   showPoints?: boolean
   pointColor?: string
+  pointColorProperty?: string | null
   pointRadius?: number
 }

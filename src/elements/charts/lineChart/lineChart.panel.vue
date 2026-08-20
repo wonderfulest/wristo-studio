@@ -44,8 +44,10 @@
 
       <el-form-item :label="t('elementSettings.pointColor')" v-if="formModel.showPoints">
         <color-picker 
-          v-model="formModel.pointColor" 
-          @change="(v: string) => applyUpdate({ pointColor: v })" 
+          v-model="formModel.pointColor"
+          :property-key="formModel.pointColorProperty"
+          @change="(v: string) => applyUpdate({ pointColor: v })"
+          @property-change="applyUpdate({ pointColor: $event.color, pointColorProperty: $event.propertyKey })"
         />
       </el-form-item>
 
@@ -60,8 +62,10 @@
 
       <el-form-item :label="t('elementSettings.lineColor')">
         <color-picker 
-          v-model="formModel.color" 
-          @change="(v: string) => applyUpdate({ color: v })" 
+          v-model="formModel.color"
+          :property-key="formModel.colorProperty"
+          @change="(v: string) => applyUpdate({ color: v })"
+          @property-change="applyUpdate({ color: $event.color, colorProperty: $event.propertyKey })"
         />
       </el-form-item>
     </el-form>

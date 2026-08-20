@@ -11,9 +11,11 @@ export type LineChartElementSchema = {
     originY: 'center'
     chartProperty: string
     color: string
+    colorProperty: string | null
     lineWidth: number
     showPoints: boolean
     pointColor: string
+    pointColorProperty: string | null
     pointRadius: number
   }
   resizable: boolean
@@ -32,9 +34,11 @@ export const lineChartSchema: LineChartElementSchema = {
     originY: 'center',
     chartProperty: 'steps',
     color: '#FFFFFF',
+    colorProperty: null,
     lineWidth: 2,
     showPoints: true,
     pointColor: '#FFFFFF',
+    pointColorProperty: null,
     pointRadius: 6,
   },
   resizable: true,

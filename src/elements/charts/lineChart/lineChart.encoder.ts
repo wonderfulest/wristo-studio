@@ -25,9 +25,11 @@ export function encodeLineChart(element: FabricElement): LineChartElementConfig 
     height: size.height,
     chartProperty: anyEl.chartProperty,
     color: anyEl.color,
+    colorProperty: anyEl.colorProperty,
     lineWidth: anyEl.lineWidth,
     showPoints: anyEl.showPoints,
     pointColor: anyEl.pointColor,
+    pointColorProperty: anyEl.pointColorProperty,
     pointRadius: anyEl.pointRadius,
   }
 }
@@ -44,9 +46,11 @@ export function decodeLineChart(config: LineChartElementConfig): Partial<FabricE
     height: config.height,
     chartProperty: config.chartProperty,
     color: config.color,
+    colorProperty: config.colorProperty,
     lineWidth: config.lineWidth,
     showPoints: config.showPoints,
     pointColor: config.pointColor,
+    pointColorProperty: config.pointColorProperty,
     pointRadius: config.pointRadius,
   } as Partial<FabricElement>
 }
