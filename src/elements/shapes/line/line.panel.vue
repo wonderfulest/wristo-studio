@@ -4,7 +4,9 @@
       <el-form-item :label="t('elementSettings.lineColor')">
         <color-picker 
           v-model="strokeProxy"
+          :property-key="currentModel.strokeProperty"
           show-alpha
+          @property-change="applyUpdate({ stroke: $event.color, strokeProperty: $event.propertyKey })"
         />
       </el-form-item>
       <el-form-item :label="t('elementSettings.lineWidth')">
