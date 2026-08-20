@@ -2,7 +2,7 @@ import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
-import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
+import { formatChineseDatePreview } from '@/utils/chineseDatePreview'
 import { applyMetricTextCase, requireCanonicalMetric, resolveMetricLabel } from '@/utils/metricLabel'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { isChineseDateFormatter, normalizeDateFormatterForRuntimeLocale } from '@/utils/dateFontCompatibility'
@@ -16,6 +16,7 @@ import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/ut
 import { resolveMetricDisplayResult } from '@/engine/simulator/metricDisplayResult'
 import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
+import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -39,14 +40,14 @@ function formatTimeValue(date: Date, formatter: number): string {
 function formatDateValue(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
   if (isChineseDateFormatter(normalizedFormatter)) {
-    return formatChineseCulturalDate(date, normalizedFormatter, runtimeLocale)
+    return formatChineseDatePreview(date, normalizedFormatter, runtimeLocale)
   }
   const normalizedLocale = String(runtimeLocale || '')
     .trim()
     .toLowerCase()
   const isChineseLocale = normalizedLocale === 'zh' || normalizedLocale === 'zh-cn' || normalizedLocale === 'zh-tw'
   if (isChineseLocale && normalizedFormatter === DateFormatConstants.WEEKDAY_LONG) {
-    return formatChineseCulturalDate(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
+    return formatChineseDatePreview(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
   }
   if (isChineseLocale && normalizedFormatter === DateFormatConstants.MONTH_LONG) {
     return `${date.getMonth() + 1}月`
@@ -285,6 +286,11 @@ export class DataSimulatorEngine {
         const nextText = formatDateValue(now, formatter, (propertiesStore as any).textCase, getDatePreviewLocale(designStore))
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
+          applyCurrentElementPreviewFont(obj, {
+            fontFamily: obj.fontFamily,
+            fontSize: obj.fontSize,
+            fill: obj.fill,
+          }, nextText)
           changed = true
         }
         return

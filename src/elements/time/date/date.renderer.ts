@@ -5,7 +5,7 @@ import { DateFormatConstants, DateFormatOptions } from '@/config/settings'
 import type { FabricElement } from '@/types/element'
 import type { DateElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
-import { formatChineseCulturalDate } from '@/utils/chineseCalendar'
+import { formatChineseDatePreview } from '@/utils/chineseDatePreview'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useLayerStore } from '@/stores/layerStore'
@@ -24,12 +24,12 @@ import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
   if (isChineseDateFormatter(normalizedFormatter)) {
-    return formatChineseCulturalDate(date, normalizedFormatter, runtimeLocale)
+    return formatChineseDatePreview(date, normalizedFormatter, runtimeLocale)
   }
   const normalizedLocale = String(runtimeLocale || '').trim().toLowerCase()
   const isChineseLocale = normalizedLocale === 'zh' || normalizedLocale === 'zh-cn' || normalizedLocale === 'zh-tw'
   if (isChineseLocale && normalizedFormatter === DateFormatConstants.WEEKDAY_LONG) {
-    return formatChineseCulturalDate(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
+    return formatChineseDatePreview(date, DateFormatConstants.CHINESE_WEEKDAY_LONG, runtimeLocale)
   }
   if (isChineseLocale && normalizedFormatter === DateFormatConstants.MONTH_LONG) {
     return `${date.getMonth() + 1}月`
@@ -113,6 +113,11 @@ export function createDate(config: DateElementConfig): FabricElement {
         getDatePreviewLocale(designStore),
       )
       element.set('text', nextText)
+      applyCurrentElementPreviewFont(element, {
+        fontFamily: element.fontFamily,
+        fontSize: element.fontSize,
+        fill: element.fill,
+      }, nextText)
       canvas.requestRenderAll?.()
     } catch (e) {
       console.warn('[date/updateTextCase] failed', e)

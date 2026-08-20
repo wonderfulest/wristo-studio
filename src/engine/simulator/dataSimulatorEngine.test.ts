@@ -62,6 +62,10 @@ vi.mock('@/stores/designStore', () => ({
   useDesignStore: () => ({ appLanguage: 'zhs' }),
 }))
 
+vi.mock('@/stores/fontStore', () => ({
+  useFontStore: () => ({ serverFonts: new Map() }),
+}))
+
 vi.mock('@/stores/previewDeviceContextStore', () => ({
   usePreviewDeviceContextStore: () => ({
     toContext: (language: 'eng' | 'zhs') => ({
@@ -84,7 +88,7 @@ vi.mock('@/utils/dataSimulator', () => ({
 }))
 
 import { DataSimulatorEngine } from './dataSimulatorEngine'
-import { TimeFormatConstants } from '@/config/settings'
+import { DateFormatConstants, TimeFormatConstants } from '@/config/settings'
 
 describe('DataSimulatorEngine bitmap time refresh', () => {
   beforeEach(() => {
@@ -126,6 +130,53 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(set).toHaveBeenCalledWith('text', '24H')
     expect(canvas.requestRenderAll).toHaveBeenCalled()
+  })
+
+  it('switches a refreshed Chinese date preview to the packaged Chinese font', () => {
+    const chineseDate: any = {
+      id: 'next-solar-term',
+      eleType: 'date',
+      type: 'text',
+      fontRenderType: 'truetype',
+      formatter: DateFormatConstants.NEXT_SOLAR_TERM,
+      text: '',
+      fontFamily: 'roboto-condensed-regular',
+      fontSize: 20,
+      fill: '#ffffff',
+      set(key: string | Record<string, unknown>, value?: unknown) {
+        if (typeof key === 'string') this[key] = value
+        else Object.assign(this, key)
+      },
+    }
+    canvas.getObjects.mockReturnValue([chineseDate])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(chineseDate.text).toMatch(/[\u3400-\u9fff]/u)
+    expect(chineseDate.fontFamily).toBe('noto-sans-sc-regular')
+  })
+
+  it('shows the design sample when festival or solar term today is empty', () => {
+    const festivalDate: any = {
+      id: 'festival-or-solar-term',
+      eleType: 'date',
+      type: 'text',
+      fontRenderType: 'truetype',
+      formatter: DateFormatConstants.FESTIVAL_OR_SOLAR_TERM,
+      text: '',
+      fontFamily: 'roboto-condensed-regular',
+      fontSize: 20,
+      fill: '#ffffff',
+      set(key: string | Record<string, unknown>, value?: unknown) {
+        if (typeof key === 'string') this[key] = value
+        else Object.assign(this, key)
+      },
+    }
+    canvas.getObjects.mockReturnValue([festivalDate])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(festivalDate.text).toBe('国庆+10')
   })
 
   it('maps the sleep score symbol to the distinct sleep score simulation', () => {
