@@ -118,17 +118,21 @@ export const getOrCreateAvailableMetricProperty = (
   return { key: createQuickMetricProperty(type), created: true }
 }
 
+// Dial properties are shared by standalone rotating hands and any future dial-bound elements.
 export const createQuickDialProperty = (mode: DialProgressMode): string => {
   const propertiesStore = usePropertiesStore()
   let index = 1
   while (propertiesStore.allProperties[`dial_${mode}_${index}`]) index += 1
   const key = `dial_${mode}_${index}`
-  const options = getDataTypePropertyOptions().filter(option => option.dialMode === mode)
+  const options = getDataTypePropertyOptions().filter((option) => option.dialMode === mode)
   propertiesStore.addProperty({
     key,
     type: 'dial',
     dialMode: mode,
-    title: mode === 'goal' ? `Goal Dial ${index}` : `Range Dial ${index}`,
+    title: mode === 'goal'
+      ? `Goal Dial ${index}`
+      : mode === 'range' ? `Range Dial ${index}` : `Direction Dial ${index}`,
+    metricSymbols: options.map((option) => option.metricSymbol),
     options: clone(options),
     defaultValue: options[0]?.value ?? '',
   })
@@ -136,10 +140,12 @@ export const createQuickDialProperty = (mode: DialProgressMode): string => {
   return key
 }
 
-export const getOrCreateAvailableDialProperty = (mode: DialProgressMode): { key: string; created: boolean } => {
+export const getOrCreateAvailableDialProperty = (
+  mode: DialProgressMode,
+): { key: string; created: boolean } => {
   const propertiesStore = usePropertiesStore()
   const used = new Set<string>()
-  useElementDataStore().elements.forEach(snapshot => {
+  useElementDataStore().elements.forEach((snapshot) => {
     const key = (snapshot.config as any)?.dialProperty
     if (key) used.add(String(key))
   })
@@ -147,7 +153,9 @@ export const getOrCreateAvailableDialProperty = (mode: DialProgressMode): { key:
     if (element?.dialProperty) used.add(String(element.dialProperty))
   })
   const existing = propertiesStore.getDialProperties(mode).find(([key]) => !used.has(key))?.[0]
-  return existing ? { key: existing, created: false } : { key: createQuickDialProperty(mode), created: true }
+  return existing
+    ? { key: existing, created: false }
+    : { key: createQuickDialProperty(mode), created: true }
 }
 
 export const createQuickDateProperty = (): string => {

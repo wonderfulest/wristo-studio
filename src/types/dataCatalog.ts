@@ -18,10 +18,11 @@ export interface DataTypeOption {
   readonly isActive: 1
   readonly systemDefault?: 0 | 1
   readonly sortOrder: number
-  readonly dialMode: 'goal' | 'range' | null
+  readonly dialMode: 'goal' | 'range' | 'direction' | null
   readonly dialMin: number | null
   readonly dialMax: number | null
   readonly dialGoalSource: 'garmin' | null
+  readonly dialDirectionUnit?: 'degree' | null
   readonly appLanguage?: import('@/types/localization').AppLanguage | null
 }
 

@@ -41,6 +41,26 @@ describe('design font-size round trip', () => {
 })
 
 describe('analog hand design-size scaling', () => {
+  it('scales rotating hand center and pivot offsets like time hands', () => {
+    const scaled = scaleElementConfig({
+      id: 'rotating-hand',
+      eleType: 'rotatingHand',
+      centerX: 100,
+      centerY: 120,
+      pivotOffsetX: 5,
+      pivotOffsetY: 10,
+      scalePercent: 60,
+    } as any, { width: 390, height: 390 }, { width: 454, height: 454 }) as any
+
+    expect(scaled).toMatchObject({
+      centerX: 116,
+      centerY: 140,
+      pivotOffsetX: 6,
+      pivotOffsetY: 12,
+      scalePercent: 60,
+    })
+  })
+
   it('keeps the hand pivot and relative length stable when reopening a smaller design at 454', () => {
     const scaled = scaleElementConfig({
       id: 'minute-hand',

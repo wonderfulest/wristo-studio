@@ -70,10 +70,12 @@ import { useI18n } from '@/i18n'
 import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
 import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
+import { isFontTypeVisible, normalizeAllowedFontTypes } from './fontTypeVisibility'
 
 const props = defineProps<{
   modelValue: string
   type?: string
+  types?: string[]
   canUsePremiumAssets?: boolean
   includeAllUsers?: boolean
   dateContentLanguage?: DateContentLanguage
@@ -94,8 +96,13 @@ const filteredFonts = ref<FontItem[]>([])
 const remoteSearchResults = ref<FontItem[]>([])
 const isSearching = ref<boolean>(false)
 const languageFilter = () => getFontLanguagesForDateContent(props.dateContentLanguage)
+const allowedTypes = () => normalizeAllowedFontTypes(props.types, props.type)
 
 const isVisibleFont = (font: FontItem | DesignFontVO) => {
+  const types = allowedTypes()
+  if (!isFontTypeVisible((font as any).type, types)) {
+    return false
+  }
   if (props.dateContentLanguage) {
     return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
   }
@@ -110,6 +117,7 @@ console.log('[FontSearch] setup init', {
   type: props.type
 })
 let searchTimer: number | undefined
+let searchGeneration = 0
 
 const onInput = () => {
   console.log('[FontSearch] onInput', {
@@ -128,7 +136,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
+  () => [props.type, ...(props.types || []), props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
   () => {
     if (searchTimer) window.clearTimeout(searchTimer)
     filterFonts()
@@ -136,12 +144,20 @@ watch(
 )
 
 const filterFonts = async () => {
+  const generation = ++searchGeneration
+  const query = searchQuery.value.trim()
   console.log('[FontSearch] filterFonts start', {
-    query: searchQuery.value,
+    query,
     type: props.type || undefined
   })
+  if (!query) {
+    filteredFonts.value = []
+    remoteSearchResults.value = []
+    isSearching.value = false
+    return
+  }
   // local filter
-  const local = filterAssetsByStudioAccess(fontStore.searchFonts(searchQuery.value), props.canUsePremiumAssets === true).filter(isVisibleFont)
+  const local = filterAssetsByStudioAccess(fontStore.searchFonts(query), props.canUsePremiumAssets === true).filter(isVisibleFont)
   filteredFonts.value = sortByFavorite(local)
   console.log('[FontSearch] local search done', {
     rawLocalCount: local.length,
@@ -153,18 +169,20 @@ const filterFonts = async () => {
   try {
     isSearching.value = true
     console.log('[FontSearch] remote search request', {
-      query: searchQuery.value,
+      query,
       type: props.type || undefined
     })
     const response = await searchFonts({
       pageNum: 1,
       pageSize: 20,
-      name: searchQuery.value,
-      type: props.type,
+      name: query,
+      type: props.types?.length ? undefined : props.type,
+      types: props.types?.length ? props.types : undefined,
       isSystem: props.canUsePremiumAssets === true ? undefined : 1,
       includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
       languages: languageFilter()
     })
+    if (generation !== searchGeneration) return
     const list = (response.data?.list ?? []) as DesignFontVO[]
     console.log('[FontSearch] remote search response', {
       listLength: list.length,
@@ -172,7 +190,9 @@ const filterFonts = async () => {
     })
 
     const localValues = new Set(fontStore.allFonts.map((f: FontOption) => f.value))
-    const serverList = filterAssetsByStudioAccess(list, props.canUsePremiumAssets === true).filter((font: DesignFontVO) => {
+    const serverList = filterAssetsByStudioAccess(list, props.canUsePremiumAssets === true)
+      .map((font: DesignFontVO) => fontStore.registerServerFont(font))
+      .filter((font: DesignFontVO) => {
       const val = font.slug
       return !!val && !localValues.has(val) && isVisibleFont(font)
     })
@@ -183,6 +203,7 @@ const filterFonts = async () => {
     try {
       await Promise.all(
         serverList.map((font: DesignFontVO) => {
+          if (font.bitmapPreviewDescriptorUrl && font.bitmapPreviewAtlasUrl) return Promise.resolve(true)
           return font?.slug ? fontStore.loadFont(font.slug, font?.ttfFile?.url) : Promise.resolve(true)
         })
       )
@@ -190,6 +211,7 @@ const filterFonts = async () => {
       // ignore individual font load failures
       console.warn('Some remote fonts failed to load for preview', e)
     }
+    if (generation !== searchGeneration) return
     const remoteFonts = serverList.map((font: DesignFontVO) => {
       const label = font.fullName || font.family
       const family = font.family || font.fullName
@@ -200,6 +222,7 @@ const filterFonts = async () => {
       const styleTags = font?.styleTags
       return {
         id: font.id,
+        userId: font.userId,
         label,
         value,
         family,
@@ -212,7 +235,11 @@ const filterFonts = async () => {
         widthClass: font.widthClass,
         favoriteWeight: font.favoriteWeight,
         language: font.language,
-        type: font.type
+        type: font.type,
+        bitmapRecipe: font.bitmapRecipe,
+        bitmapPreviewSize: font.bitmapPreviewSize,
+        bitmapPreviewAtlasUrl: font.bitmapPreviewAtlasUrl,
+        bitmapPreviewDescriptorUrl: font.bitmapPreviewDescriptorUrl
       } as FontItem
     })
     console.log('[FontSearch] remoteFonts mapped', {
@@ -223,9 +250,11 @@ const filterFonts = async () => {
       remoteSearchResultsCount: remoteSearchResults.value.length
     })
   } catch (error) {
+    if (generation !== searchGeneration) return
     console.error('[FontSearch] Remote font search error:', error)
     messageStore.error(t('font.remoteSearchFailed'))
   } finally {
+    if (generation !== searchGeneration) return
     console.log('[FontSearch] filterFonts finally', {
       isSearching: isSearching.value,
       filteredFontsCount: filteredFonts.value.length,

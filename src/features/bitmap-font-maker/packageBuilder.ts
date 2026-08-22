@@ -16,6 +16,9 @@ import {
   type RenderedGlyph,
   type RenderedGlyphSet,
 } from './glyphRenderer'
+import { canonicalJson, sha256Hex } from './deterministicEncoding'
+
+export { canonicalJson, sha256Hex } from './deterministicEncoding'
 
 export interface BitmapFontBuildRequest {
   source: ArrayBuffer
@@ -64,38 +67,6 @@ export class PackageBuildError extends Error {
     super(message)
     this.name = 'PackageBuildError'
   }
-}
-
-function stable(value: unknown, ancestors: Set<object>): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new PackageBuildError('PACKAGE_INVALID_JSON')
-    return value
-  }
-  if (typeof value !== 'object') throw new PackageBuildError('PACKAGE_INVALID_JSON')
-  if (ancestors.has(value)) throw new PackageBuildError('PACKAGE_INVALID_JSON')
-  ancestors.add(value)
-  try {
-    if (Array.isArray(value)) return value.map((child) => stable(child, ancestors))
-    if (Object.getPrototypeOf(value) !== Object.prototype) throw new PackageBuildError('PACKAGE_INVALID_JSON')
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
-        .map(([key, child]) => [key, stable(child, ancestors)]),
-    )
-  } finally {
-    ancestors.delete(value)
-  }
-}
-
-export function canonicalJson(value: unknown): string {
-  return JSON.stringify(stable(value, new Set()))
-}
-
-export async function sha256Hex(value: ArrayBuffer | Uint8Array<ArrayBufferLike>): Promise<string> {
-  const owned = value instanceof ArrayBuffer ? value : Uint8Array.from(value).buffer
-  const digest = await crypto.subtle.digest('SHA-256', owned)
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 function sourceExtension(fileName: string): 'ttf' | 'otf' {

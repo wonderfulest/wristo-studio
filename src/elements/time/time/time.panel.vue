@@ -13,7 +13,8 @@
         <template v-if="fontRenderType === 'truetype'">
           <FontPicker 
             v-model="safeFontFamily" 
-            :type="FontTypes.TEXT_FONT"
+            :type="timeFontType"
+            :types="timeFontTypes"
             :allow-any-language="true"
             @change="applyUpdate({ fontFamily: $event })" 
           />
@@ -83,7 +84,7 @@ import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
-import { FontTypes } from '@/config/fonts'
+import { resolvePrimaryTimeFontType, resolveTimeFontTypes } from './timeFontTypes'
 import { useI18n } from '@/i18n'
 
 const props = defineProps<{
@@ -103,6 +104,8 @@ const currentModel = computed<any>(() => {
 const isHourFormat = computed(
   () => Number(currentModel.value.formatter) === TimeFormatConstants.HOUR_FORMAT,
 )
+const timeFontTypes = computed(() => resolveTimeFontTypes([currentModel.value.formatter]))
+const timeFontType = computed(() => resolvePrimaryTimeFontType([currentModel.value.formatter]))
 
 // 字体渲染类型：truetype / bitmap，默认 truetype
 const fontRenderType = computed({

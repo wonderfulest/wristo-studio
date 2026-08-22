@@ -278,7 +278,8 @@ export function rasterizeFallbackContours(
   contours: ReadonlyArray<ReadonlyArray<RasterPoint>>,
   bounds: { left: number; top: number; width: number; height: number },
   fill: boolean,
-  strokeRadius: number
+  strokeRadius: number,
+  insetRadius = 0
 ): Uint8Array {
   if (!Number.isSafeInteger(bounds.left) || !Number.isSafeInteger(bounds.top)) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
   validateGlyphAllocation(bounds.width, bounds.height, 0)
@@ -286,6 +287,7 @@ export function rasterizeFallbackContours(
   const segments = buildSegments(contours)
   const fillRows = fill ? rowBuckets(segments, bounds, 0) : []
   const strokeRows = strokeRadius > 0 ? rowBuckets(segments, bounds, strokeRadius) : []
+  const insetRows = insetRadius > 0 ? rowBuckets(segments, bounds, insetRadius) : []
   for (let y = 0; y < bounds.height; y += 1) {
     for (let x = 0; x < bounds.width; x += 1) {
       let covered = 0
@@ -294,7 +296,8 @@ export function rasterizeFallbackContours(
         const sampleY = bounds.top + y + (sample < 2 ? 0.25 : 0.75)
         const isInside = fill && nonZeroInside(fillRows[y], sampleX, sampleY)
         const onStroke = strokeRadius > 0 && nearPath(strokeRows[y], sampleX, sampleY, strokeRadius)
-        if ((fill && isInside) || onStroke) covered += 1
+        const removedByInset = insetRadius > 0 && nearPath(insetRows[y], sampleX, sampleY, insetRadius)
+        if ((fill && isInside && !removedByInset) || onStroke) covered += 1
       }
       alpha[y * bounds.width + x] = Math.round((covered / 4) * 255)
     }
@@ -420,7 +423,10 @@ export async function createGlyphRendererSession(source: ParsedFontSource, envir
     rendererPath: registration ? 'font-face-canvas' : 'opentype-path',
     render: (size, recipe, codepoints) => {
       if (disposed) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
-      return registration ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration) : renderGlyphs(source, codepoints, size, recipe)
+      const needsDeterministicTransform = recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0
+      return registration && !needsDeterministicTransform
+        ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration)
+        : renderGlyphs(source, codepoints, size, recipe)
     },
     dispose: () => {
       if (disposed) return
@@ -451,10 +457,13 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
   const scale = size / source.unitsPerEm
   const baseline = Math.ceil(source.ascender * scale)
   const lineHeight = Math.ceil((source.ascender - source.descender) * scale)
-  const shear = Math.tan((recipe.italicAngle * Math.PI) / 180)
+  // Font outlines use a y-up coordinate system while CSS skewX is evaluated in
+  // the screen's y-down coordinate system, so negate the angle to keep both previews aligned.
+  const shear = Math.tan((-recipe.italicAngle * Math.PI) / 180)
   const outlineRadius = recipe.outlineMode === 'fill' ? 0 : recipe.outlineWidthEm * size
-  const weightRadius = recipe.fontWeight > source.sourceWeight ? ((recipe.fontWeight - source.sourceWeight) / 500) * size * 0.04 : 0
-  const strokeRadius = outlineRadius + weightRadius
+  const weightRadius = ((recipe.fontWeight - source.sourceWeight) / 500) * size * 0.04
+  const strokeRadius = Math.max(0, outlineRadius + Math.max(0, weightRadius))
+  const insetRadius = recipe.outlineMode === 'fill' ? Math.max(0, -weightRadius) : 0
 
   const glyphs = codepoints.map((codepoint): RenderedGlyph => {
     if (!source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
@@ -488,7 +497,7 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
     const bounds = { left, top, width: right - left, height: bottom - top }
     validateGlyphAllocation(bounds.width, bounds.height, codepoint)
     const fill = recipe.outlineMode !== 'outline-only'
-    const cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius), bounds)
+    const cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius, insetRadius), bounds)
     if (!cropped) throw new GlyphRenderError('GLYPH_RENDER_FAILED', codepoint)
     return {
       codepoint,

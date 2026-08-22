@@ -24,6 +24,7 @@ import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
 import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
+import { isFontTypeVisible, normalizeAllowedFontTypes } from './fontTypeVisibility'
 
 const { t } = useI18n()
 
@@ -31,6 +32,7 @@ const props = defineProps<{
   fonts: FontItem[]
   modelValue: string
   type?: string
+  types?: string[]
   canUsePremiumAssets?: boolean
   dateContentLanguage?: DateContentLanguage
   excludeIconFonts?: boolean
@@ -42,9 +44,13 @@ const emit = defineEmits<{
 }>()
 
 const fontStore = useFontStore()
+const allowedTypes = computed(() => normalizeAllowedFontTypes(props.types, props.type))
 const visibleFonts = computed(() =>
   sortSystemFontsFirst(
     filterAssetsByStudioAccess(props.fonts, props.canUsePremiumAssets === true).filter((font) => {
+      if (!isFontTypeVisible(font.type, allowedTypes.value)) {
+        return false
+      }
       if (props.dateContentLanguage) {
         return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
       }

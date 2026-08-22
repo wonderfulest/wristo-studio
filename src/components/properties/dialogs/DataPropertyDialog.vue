@@ -230,6 +230,12 @@ import {
   resolveDataOptionsBySymbols,
   restoreSystemDataOptions
 } from './dataPropertyOptions'
+import {
+  appendOrderedOptionIds,
+  moveOrderedOptionId,
+  removeOrderedOptionId,
+  resolveOrderedDefaultValue,
+} from './orderedPropertyOptions'
 
 const { locale, t } = useI18n()
 const dialogVisible = ref(false)
@@ -376,30 +382,21 @@ const openAddOptions = () => {
 
 const confirmAddOptions = () => {
   const selectedValues = new Set(pendingOptionValues.value.map(String))
-  formData.metricSymbols.push(...addableOptions.value
+  const selectedSymbols = addableOptions.value
     .filter((option) => selectedValues.has(option.metricSymbol))
-    .map((option) => option.metricSymbol))
+    .map((option) => option.metricSymbol)
+  formData.metricSymbols = appendOrderedOptionIds(formData.metricSymbols, selectedSymbols)
   pendingOptionValues.value = []
   addOptionsVisible.value = false
 }
 
 const deleteOption = (index) => {
-  const [removed] = formData.metricSymbols.splice(index, 1)
-  if (removed === formData.value) {
-    formData.value = createDefaultDataOptions(resolvedOptions.value)[0]?.metricSymbol
-  }
+  formData.metricSymbols = removeOrderedOptionId(formData.metricSymbols, index)
+  formData.value = resolveOrderedDefaultValue(createDefaultDataOptions(resolvedOptions.value), formData.value)
 }
 
 const moveOption = (index, direction) => {
-  if (direction === 'up' && index > 0) {
-    const temp = formData.metricSymbols[index]
-    formData.metricSymbols[index] = formData.metricSymbols[index - 1]
-    formData.metricSymbols[index - 1] = temp
-  } else if (direction === 'down' && index < formData.metricSymbols.length - 1) {
-    const temp = formData.metricSymbols[index]
-    formData.metricSymbols[index] = formData.metricSymbols[index + 1]
-    formData.metricSymbols[index + 1] = temp
-  }
+  formData.metricSymbols = moveOrderedOptionId(formData.metricSymbols, index, direction)
 }
 
 defineExpose({

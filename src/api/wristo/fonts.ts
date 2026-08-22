@@ -71,7 +71,8 @@ export const getDesignerUsageFontsPage = (
   params: {
     pageNum: number
     pageSize: number
-    type: string
+    type?: string
+    types?: string[]
     isSystem?: number
     includeAllUsers?: boolean
     languages?: string[]
@@ -88,6 +89,10 @@ export const getFontByName = (name: string): Promise<ApiResponse<DesignFontVO>> 
 // 根据 slug 获取字体详情
 export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> => {
   return instance.get(`/dsn/fonts/get-by-slug/${slug}?populate=ttf`)
+}
+
+export const getFontById = (id: number): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.get(`/dsn/fonts/get-by-id/${id}?populate=ttf`)
 }
 
 export const updateMyFontSearchIndex = (
@@ -135,11 +140,14 @@ export const increaseFontUsage = (slug: string, userId?: number): Promise<ApiRes
 }
 
 // recent fonts for current designer
-export const getRecentFonts = (limit?: number, type?: string, userId?: number): Promise<ApiResponse<DesignFontVO[]>> => {
+export const getRecentFonts = (limit?: number, type?: string, userId?: number, types?: string[]): Promise<ApiResponse<DesignFontVO[]>> => {
   const params = new URLSearchParams()
   if (typeof limit === 'number') params.set('limit', String(limit))
   if (type) params.set('type', type)
   if (typeof userId === 'number') params.set('user_id', String(userId))
+  for (const fontType of types || []) {
+    if (fontType) params.append('types', fontType)
+  }
   params.set('populate', 'ttf,user')
   const q = params.toString()
   return instance.get(`/dsn/fonts/recent${q ? `?${q}` : ''}`)

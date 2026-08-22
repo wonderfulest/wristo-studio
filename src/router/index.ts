@@ -140,6 +140,14 @@ const routes: RouteRecordRaw[] = [
         path: 'icon-library',
         name: 'IconLibrary',
         component: () => import('@/views/fonts/icons/IconLibrary.vue'),
+        props: { fontType: 'icon_font' },
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'weather-font-library',
+        name: 'WeatherFontLibrary',
+        component: () => import('@/views/fonts/icons/IconLibrary.vue'),
+        props: { fontType: 'weather_font' },
         meta: { requiresAuth: true },
       },
       {

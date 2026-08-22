@@ -27,7 +27,7 @@ export interface PropertyItem {
   value: unknown
   prompt?: string
   errorMessage?: string
-  dialMode?: 'goal' | 'range'
+  dialMode?: 'goal' | 'range' | 'direction'
   themeMode?: ThemeMode
   metricSymbols?: string[]
 }

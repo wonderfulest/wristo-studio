@@ -30,6 +30,7 @@ const SCALAR_FIELDS = new Set([
   'gap',
   'separator',
   'lineWidth',
+  'spacing',
   'pointRadius',
   'bodyStrokeWidth',
   'bodyRx',
@@ -39,7 +40,7 @@ const SCALAR_FIELDS = new Set([
   'headGap',
 ])
 const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image'])
-const HAND_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
+const HAND_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'rotatingHand'])
 
 function safeRatio(next: number, prev: number): number {
   if (!Number.isFinite(next) || !Number.isFinite(prev) || prev === 0) return 1
@@ -275,6 +276,13 @@ export function scaleFabricCanvasForDesignSize(
 
     if (HAND_ELEMENT_TYPES.has(String(obj.eleType ?? ''))) {
       scaleHandObject(obj, from, to)
+      obj.setCoords?.()
+      continue
+    }
+
+    if (obj.eleType === 'gridLines') {
+      scaleKnownObjectFields(obj, from, to)
+      obj.fire?.('modified')
       obj.setCoords?.()
       continue
     }

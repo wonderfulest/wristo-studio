@@ -8,6 +8,12 @@ import { translate } from '@/i18n'
 import { cancelPendingSsoRedirect, clearLocalAuthState, redirectToSsoLogin } from '@/utils/ssoRedirect'
 import { forbiddenRedirectPath } from './authFailureRedirect'
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    suppressBusinessErrorCodes?: Array<number | string>
+  }
+}
+
 type FallbackMessageKey = 'auth.sessionExpired' | 'auth.forbidden' | 'auth.requestFailed' | 'auth.networkError'
 
 const getFallbackMessage = (key: FallbackMessageKey) => {
@@ -68,7 +74,9 @@ instance.interceptors.response.use(
       exitOnForbidden(getResponseMessage(response.data, 'auth.forbidden'))
       return Promise.reject(response.data)
     } else {
-      ElMessage.error(getResponseMessage(response.data, 'auth.requestFailed'))
+      if (!response.config.suppressBusinessErrorCodes?.includes(res.code)) {
+        ElMessage.error(getResponseMessage(response.data, 'auth.requestFailed'))
+      }
       return Promise.reject(response.data)
     }
   },

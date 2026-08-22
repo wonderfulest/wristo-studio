@@ -3,6 +3,30 @@ import type { PropertiesMap } from '@/types/properties'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
+const validDialOptions = (property: any, mode: unknown): boolean => {
+  const options = property.options
+  if (!Array.isArray(options) || options.length === 0) return false
+  const values = new Set<unknown>()
+  const symbols = new Set<string>()
+  let selected = false
+  for (const option of options) {
+    const symbol = String(option?.metricSymbol ?? '').trim()
+    if (!option || option.dialMode !== mode || !symbol.startsWith(':')) return false
+    if (values.has(option.value) || symbols.has(symbol)) return false
+    values.add(option.value)
+    symbols.add(symbol)
+    if (option.value === property.value) selected = true
+    if (mode === 'goal' && option.dialGoalSource !== 'garmin') return false
+    if (mode === 'range') {
+      const min = Number(option.dialMin)
+      const max = Number(option.dialMax)
+      if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return false
+    }
+    if (mode === 'direction' && option.dialDirectionUnit !== 'degree') return false
+  }
+  return selected
+}
+
 /**
  * 校验数据、目标、图表和文本属性绑定，并拒绝元素引用不存在的数据属性。
  */
@@ -31,6 +55,27 @@ export function validateDataGoalBindings(
     if (!key || properties[key]?.type === 'date' || missingDateProperties.has(key)) continue
     missingDateProperties.add(key)
     errors.push(t('export.validation.missingDateProperty', { key }))
+  }
+
+  for (const element of elements) {
+    if ((element as any).eleType !== 'rotatingHand') continue
+    const id = String((element as any).id ?? 'rotatingHand')
+    const key = String((element as any).dialProperty ?? '').trim()
+    const property = key ? properties[key] : undefined
+    if (!key || property?.type !== 'dial') {
+      errors.push(t('export.validation.missingDialProperty', { id, key }))
+      continue
+    }
+
+    const mode = (element as any).progressMode
+    if (property.dialMode !== mode) {
+      errors.push(t('export.validation.dialModeMismatch', { id, key }))
+      continue
+    }
+
+    if (!validDialOptions(property, mode)) {
+      errors.push(t('export.validation.invalidDialMetric', { id, key }))
+    }
   }
 
   for (const [key, prop] of Object.entries(properties)) {

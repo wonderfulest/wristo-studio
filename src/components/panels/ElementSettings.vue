@@ -141,7 +141,7 @@ watch(activeElement, (element) => {
   if (!handCalibrationState.active) return
   const id = (element as any)?.id
   const type = String((element as any)?.eleType ?? '')
-  if (id != null && ['hourHand', 'minuteHand', 'secondHand'].includes(type)) {
+  if (id != null && ['hourHand', 'minuteHand', 'secondHand', 'rotatingHand'].includes(type)) {
     startHandCalibration(String(id))
     return
   }

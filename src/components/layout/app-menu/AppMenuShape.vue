@@ -78,16 +78,12 @@
         <el-icon><CaretTop /></el-icon>
         <span>{{ t('editor.triangle') }}</span>
       </el-menu-item>
-      <el-menu-item index="basic/image" @click="onAddElement('image')">
-        <el-icon><Picture /></el-icon>
-        <span>{{ t('editor.image') }}</span>
-      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>
 
 <script setup>
-import { Stamp, Minus, CircleCheck, Crop, Picture, CaretTop } from '@element-plus/icons-vue'
+import { Stamp, Minus, CircleCheck, Crop, CaretTop } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

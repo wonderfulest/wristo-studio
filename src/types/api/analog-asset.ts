@@ -3,7 +3,7 @@ import type { PageQueryDTO } from './api'
 /**
  * 指针表盘素材类型枚举
  */
-export type AnalogAssetType = 'hour' | 'minute' | 'second' | 'center_cap' | 'tick12' | 'tick60' | 'romans' | 'windDirection' | 'image'
+export type AnalogAssetType = 'hour' | 'minute' | 'second' | 'center_cap' | 'tick12' | 'tick60' | 'romans' | 'windDirection' | 'image' | 'mask'
 
 /**
  * 文件VO
@@ -25,6 +25,7 @@ export interface AnalogAssetVO {
   fileId: number
   userId?: number
   isSystem: boolean
+  isShared: boolean
   isDeleted: boolean
   version?: number
   isActive: boolean
@@ -45,6 +46,4 @@ export interface AnalogAssetPageQueryDTO extends PageQueryDTO {
   isActive?: boolean
   /** 用户ID */
   userId?: number
-  /** 查询范围：mine 当前用户素材 + 系统素材；all 全部素材 */
-  scope?: 'mine' | 'all'
 }

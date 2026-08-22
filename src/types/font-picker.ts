@@ -1,5 +1,6 @@
 export type FontItem = {
   id?: number
+  userId?: number
   label: string
   value: string
   family: string
@@ -16,7 +17,13 @@ export type FontItem = {
   favoriteWeight?: number | null
   language?: string
   type?: string
-  bitmapRecipe?: import('@/features/bitmap-font-maker/contracts').BitmapFontRecipe | string | null
+  bitmapRecipe?: import('@/features/bitmap-font-maker/contracts').BitmapFontRecipe
+    | import('@/features/bitmap-font-maker/svgIconPackageBuilder').SvgIconBitmapFontRecipe
+    | string
+    | null
+  bitmapPreviewSize?: number | null
+  bitmapPreviewAtlasUrl?: string | null
+  bitmapPreviewDescriptorUrl?: string | null
 }
 
 export type Section = {

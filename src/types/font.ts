@@ -1,4 +1,5 @@
 import type { BitmapFontRecipe } from '@/features/bitmap-font-maker/contracts'
+import type { SvgIconBitmapFontRecipe } from '@/features/bitmap-font-maker/svgIconPackageBuilder'
 
 // 提交表单字段（后端 @ModelAttribute DTO）
 export interface UploadFontMeta {
@@ -40,7 +41,11 @@ export interface DesignFontVO {
   ttf: number
   ttfFile: FileVO
   favoriteWeight?: number | null
-  bitmapRecipe?: BitmapFontRecipe | string | null
+  bitmapRecipe?: BitmapFontRecipe | SvgIconBitmapFontRecipe | string | null
+  version?: number | null
+  bitmapPreviewSize?: number | null
+  bitmapPreviewAtlasUrl?: string | null
+  bitmapPreviewDescriptorUrl?: string | null
 }
 
 export interface IconFontBuildStatusVO {
@@ -68,6 +73,7 @@ export interface DesignFontSearchDTO {
   orderBy?: string
   name?: string
   type?: string
+  types?: string[]
   isSystem?: number // 0/1
   isMonospace?: number // 0/1
   italic?: number // 0/1

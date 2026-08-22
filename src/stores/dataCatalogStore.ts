@@ -236,12 +236,18 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
   const defaultValue = typeof value.defaultValue === 'string' ? value.defaultValue.trim() : value.defaultValue
   if (typeof defaultValue !== 'string') throw new Error(`${prefix}: defaultValue is required`)
   const dialMode = typeof value.dialMode === 'string' ? value.dialMode.trim() : value.dialMode
-  if (dialMode !== null && dialMode !== 'goal' && dialMode !== 'range') {
-    throw new Error(`${prefix}: dialMode must be goal, range, or null`)
+  if (dialMode !== null && dialMode !== 'goal' && dialMode !== 'range' && dialMode !== 'direction') {
+    throw new Error(`${prefix}: dialMode must be goal, range, direction, or null`)
   }
   const dialGoalSource = typeof value.dialGoalSource === 'string' ? value.dialGoalSource.trim() : value.dialGoalSource
   if (dialGoalSource !== null && dialGoalSource !== 'garmin') {
     throw new Error(`${prefix}: dialGoalSource must be garmin or null`)
+  }
+  const dialDirectionUnit = typeof value.dialDirectionUnit === 'string'
+    ? value.dialDirectionUnit.trim()
+    : value.dialDirectionUnit ?? null
+  if (dialDirectionUnit !== null && dialDirectionUnit !== 'degree') {
+    throw new Error(`${prefix}: dialDirectionUnit must be degree or null`)
   }
   const rawAppLanguage = value.appLanguage == null ? null : String(value.appLanguage).trim()
   if (rawAppLanguage !== null && !['eng', 'zhs', 'en', 'zh'].includes(rawAppLanguage)) {
@@ -267,6 +273,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     dialMin: nullableNumber(value.dialMin, `${prefix}: dialMin`),
     dialMax: nullableNumber(value.dialMax, `${prefix}: dialMax`),
     dialGoalSource,
+    dialDirectionUnit,
     appLanguage
   })
 }

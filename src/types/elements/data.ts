@@ -77,21 +77,12 @@ export interface MoonElementConfig extends BaseElementConfig {
 
 export interface WeatherElementConfig extends BaseElementConfig {
   eleType: 'weather'
-  weatherDisplayType?: 'mip' | 'amoled'
-  // AMOLED image-based rendering
-  amoledImageUrl?: string
-  amoledIconUnicode?: string
-  width?: number
-  height?: number
-
-  // MIP font-based rendering
-  mipUnicode?: string
+  iconUnicode?: string
   fontFamily?: string
   fill?: string
   fontSize?: number
-
-  // legacy
-  imageUrl?: string
+  /** Studio-only SVG preview source; runtime export continues to use the bitmap font. */
+  previewSource?: string
 }
 
 export interface WindDirectionElementConfig extends BaseElementConfig {

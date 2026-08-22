@@ -45,6 +45,7 @@
         <font-picker
           v-model="fontFamily"
           :type="fontType"
+          :types="fontTypes"
           :date-content-language="metricTextFontLanguage"
           @change="updateFontFamily"
         />
@@ -69,6 +70,7 @@ import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import type { FabricElement } from '@/types/element'
 import { FontTypes } from '@/config/fonts'
+import { resolvePrimaryTimeFontType, resolveTimeFontTypes } from '@/elements/time/time/timeFontTypes'
 import { alignSelection, type AlignType } from '@/engine/managers/alignManager'
 import { applyGroupAlignment } from './groupAlignment'
 import * as elementManager from '@/engine/managers/elementManager'
@@ -326,6 +328,7 @@ const fontType = computed(() => {
     case 'icon':
       return FontTypes.ICON_FONT
     case 'time':
+      return resolvePrimaryTimeFontType(props.elements.map(element => Number((element as any).formatter)))
     case 'data':
     case 'unit':
     case 'label':
@@ -334,6 +337,11 @@ const fontType = computed(() => {
     default:
       return FontTypes.TEXT_FONT
   }
+})
+
+const fontTypes = computed(() => {
+  if (props.elements[0]?.eleType !== 'time') return undefined
+  return resolveTimeFontTypes(props.elements.map(element => Number((element as any).formatter)))
 })
 
 const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {

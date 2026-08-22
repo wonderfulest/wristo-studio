@@ -35,13 +35,24 @@ export interface CanvasManagerDeps {
 
 let fabricCanvas: FabricCanvas | null = null
 
-function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | null) {
-  if (!canvas) return
-  const activeObjects = canvas.getActiveObjects() as Array<{ id?: string | number; type?: string; eleType?: string }>
-  const ids = activeObjects
-    .map((o) => o.id)
+export function resolveCanvasSelectionIds(
+  activeObjects: Array<{ id?: string | number; eleType?: string; handId?: string | number }>,
+): string[] {
+  return activeObjects
+    .map((object) => object.eleType === 'handCalibrationPivot' ? object.handId : object.id)
     .filter((id): id is string | number => id !== undefined && id !== null && id !== '')
     .map(String)
+}
+
+function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | null) {
+  if (!canvas) return
+  const activeObjects = canvas.getActiveObjects() as Array<{
+    id?: string | number
+    type?: string
+    eleType?: string
+    handId?: string | number
+  }>
+  const ids = resolveCanvasSelectionIds(activeObjects)
   canvasStore.setActiveIds(ids)
   console.log('[canvas-selection] sync active ids', {
     ids,

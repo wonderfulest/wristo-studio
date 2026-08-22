@@ -2,11 +2,29 @@
   <div class="icon-library">
     <div class="header">
       <div class="header-copy">
-        <h2>{{ t('icon.libraryTitle') }}</h2>
-        <p>{{ t('icon.librarySubtitle') }}</p>
+        <h2>{{ t(isWeatherFontLibrary ? 'icon.weatherLibraryTitle' : 'icon.libraryTitle') }}</h2>
+        <p>{{ t(isWeatherFontLibrary ? 'icon.weatherLibrarySubtitle' : 'icon.librarySubtitle') }}</p>
       </div>
       <div class="header-actions">
+        <el-button @click="goToSiblingLibrary">
+          {{ t(isWeatherFontLibrary ? 'icon.goToOrdinaryLibrary' : 'icon.goToWeatherLibrary') }}
+        </el-button>
         <el-button @click="goToIconAssets">{{ t('icon.goToAssets') }}</el-button>
+      </div>
+    </div>
+
+    <div class="weather-journey" aria-label="SVG icon font creation progress">
+      <div class="journey-step" :class="{ done: !!activeGlyph }">
+        <span>01</span><div><strong>{{ t('weatherBitmap.nameStage') }}</strong><small>{{ activeGlyph?.glyphCode || t('weatherBitmap.namePending') }}</small></div>
+      </div>
+      <div class="journey-step" :class="{ done: sourceComplete, active: !!activeGlyph && !sourceComplete }">
+        <span>02</span><div><strong>{{ t(isWeatherFontLibrary ? 'weatherBitmap.sourcesStage' : 'iconBitmap.sourcesStage') }}</strong><small>{{ mappedRequiredAssetCount }} / {{ requiredSlots.length }}</small></div>
+      </div>
+      <div class="journey-step" :class="{ active: sourceComplete }">
+        <span>03</span><div><strong>{{ t('weatherBitmap.buildStage') }}</strong><small>{{ t('weatherBitmap.outputSizes') }}</small></div>
+      </div>
+      <div class="journey-step">
+        <span>04</span><div><strong>{{ t('weatherBitmap.publishStage') }}</strong><small>{{ t(isWeatherFontLibrary ? 'weatherBitmap.downloadAndPublish' : 'iconBitmap.downloadAndPublish') }}</small></div>
       </div>
     </div>
 
@@ -16,6 +34,7 @@
       class="hidden-upload"
       :show-button="false"
       :show-hint="false"
+      :library-scope="isWeatherFontLibrary ? 'weather' : 'ordinary'"
       :upload-context="{ glyphId: activeGlyphId }"
       @uploaded="onIconUploaded"
     />
@@ -57,7 +76,7 @@
               <span>{{ t('font.version') }} {{ glyph.version ?? '-' }}</span>
             </span>
             <el-tooltip
-              v-if="glyph.isDefault === 0 && canUsePremiumAssets && !isGlyphRenameLocked(glyph)"
+              v-if="glyph.isDefault === 0 && canUsePremiumAssets"
               :content="t('icon.renameIconFont')"
               placement="top"
             >
@@ -145,37 +164,6 @@
             <span class="summary-label">{{ t('icon.missingOnPage') }}</span>
             <strong>{{ missingAssetCount }}</strong>
           </div>
-          <div v-if="activeGlyph" class="summary-item build-status-compact" :class="`build-status-compact--${buildStatusTone}`">
-            <div class="build-status-head">
-              <span class="summary-label">{{ t('icon.buildTaskStatus') }}</span>
-              <el-tag size="small" effect="light" :type="buildStatusTagType">
-                {{ buildStatusShortLabel }}
-              </el-tag>
-            </div>
-            <div class="build-status-meta-row">
-              <span v-if="iconFontBuildStatus?.taskId" class="build-status-meta">
-                {{ t('icon.buildTaskId') }} {{ iconFontBuildStatus.taskId }}
-              </span>
-              <span v-if="buildStatusTime" class="build-status-meta">
-                {{ buildStatusTime }}
-              </span>
-              <span v-if="iconFontBuildStatus?.error" class="build-error">{{ iconFontBuildStatus.error }}</span>
-            </div>
-            <div class="build-status-actions">
-              <el-button size="small" text :loading="buildStatusLoading" @click="refreshBuildStatus">
-                {{ t('common.refresh') }}
-              </el-button>
-              <el-button
-                v-if="canDownloadBuildFont"
-                size="small"
-                text
-                type="primary"
-                @click="openBuildFontUrl"
-              >
-                {{ t('common.download') }}
-              </el-button>
-            </div>
-          </div>
         </div>
 
         <div class="assets-grid">
@@ -186,7 +174,7 @@
           <template v-else>
             <div v-if="assets.length === 0" class="empty-state">
               <div class="empty-title">{{ t('icon.noIcons') }}</div>
-              <div class="empty-desc">{{ t('icon.noIconsHint') }}</div>
+              <div class="empty-desc">{{ t(isWeatherFontLibrary ? 'icon.weatherNoIconsHint' : 'icon.noIconsHint') }}</div>
             </div>
             <div v-else class="grid">
               <div
@@ -259,11 +247,10 @@
             <div v-if="activeGlyph && canManageActiveGlyph" class="board-footer-actions">
               <el-button
                 type="primary"
-                :loading="buildSubmitting"
-                :disabled="isBuildRunning"
-                @click="handleSubmitGlyph"
+                :disabled="!activeGlyph"
+                @click="openSvgBitmapBuilder"
               >
-                {{ t('icon.submitFont') }}
+                {{ t(isWeatherFontLibrary ? 'weatherBitmap.openBuilder' : 'iconBitmap.openBuilder') }}
               </el-button>
             </div>
           </template>
@@ -297,13 +284,26 @@
       :asset-id="editAssetId"
       @saved="onEditSaved"
     />
+
+    <WeatherBitmapBuildDialog
+      v-if="activeGlyph"
+      v-model="weatherBitmapVisible"
+      :glyph-id="activeGlyph.id"
+      :glyph-code="activeGlyph.glyphCode"
+      :font-type="props.fontType"
+      :slots="requiredSlots"
+      :relations="buildRelations"
+      :initial-recipe="editingBitmapRecipe"
+      :overwrite="editingBitmapOverwrite"
+      @published="onWeatherBitmapPublished"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, ref, onMounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { Download, Edit, Loading, Plus, Upload } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import { useUserStore } from '@/stores/user'
@@ -311,6 +311,7 @@ import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import EditSvgDialog from './components/EditSvgDialog.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
+import WeatherBitmapBuildDialog from '../bitmap-maker/SvgBitmapFontBuildDialog.vue'
 import FontNamingBar from '@/components/fonts/FontNamingBar.vue'
 import { useI18n } from '@/i18n'
 import {
@@ -318,8 +319,9 @@ import {
   pageIconGlyphAssets,
   createIconGlyph,
   editIconGlyph,
-  submitIconGlyph,
   bindAssetsToGlyph,
+  getIconGlyphByCode,
+  listIconLibrary,
   type IconGlyphVO,
   type IconGlyphAssetVO,
   type IconAssetVO,
@@ -327,12 +329,25 @@ import {
   type DisplayType,
   type IconGlyphUpdateDTO,
 } from '@/api/wristo/iconGlyph'
-import { autoIconFontBuild, getIconFontBuildStatus } from '@/api/wristo/fonts'
-import type { IconFontBuildStatusVO } from '@/types/font'
 import { hasIconFontSlugConflict } from './iconFontSlugAvailability'
+import { deriveOrdinaryIconSlots } from './ordinaryIconSlots'
+import { WEATHER_FONT_SLOTS } from '@/features/bitmap-font-maker/weatherSourceSet'
+import type { SvgIconFontSlot } from '@/features/bitmap-font-maker/svgIconPackageBuilder'
+import type { WeatherBitmapFontRecipe } from '@/features/bitmap-font-maker/weatherPackageBuilder'
+import { getFontById } from '@/api/wristo/fonts'
+import { loadIconBitmapQuickEditTarget } from './iconBitmapQuickEdit'
 
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
+const props = withDefaults(defineProps<{
+  fontType?: 'icon_font' | 'weather_font'
+  embedded?: boolean
+}>(), {
+  fontType: 'icon_font',
+  embedded: false,
+})
+const isWeatherFontLibrary = computed(() => props.fontType === 'weather_font')
 const userStore = useUserStore()
 const membershipGate = useStudioMembershipGate()
 const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
@@ -363,6 +378,20 @@ const goToIconAssets = () => {
   window.open('/icon-assets', '_blank')
 }
 
+const goToSiblingLibrary = () => {
+  if (props.embedded) {
+    router.replace({
+      name: 'BitmapFontMaker',
+      query: {
+        source: 'svg',
+        fontType: isWeatherFontLibrary.value ? 'icon_font' : 'weather_font',
+      },
+    })
+    return
+  }
+  window.open(isWeatherFontLibrary.value ? '/icon-library' : '/weather-font-library', '_blank')
+}
+
 // glyph list (tabs)
 const glyphs = ref<IconGlyphVO[]>([])
 const glyphTotal = ref(0)
@@ -382,37 +411,24 @@ const displayType = ref<DisplayType>('mip')
 const headerUploadRef = ref<InstanceType<typeof HeaderUploadSvg> | null>(null)
 const selectedAssetId = ref<number | null>(null)
 const activeGlyph = computed(() => glyphs.value.find(x => x.glyphCode === activeTab.value) ?? null)
+const ordinarySlots = ref<SvgIconFontSlot[]>([])
+const requiredSlots = computed<readonly SvgIconFontSlot[]>(() => isWeatherFontLibrary.value ? WEATHER_FONT_SLOTS : ordinarySlots.value)
+const buildRelations = ref<IconGlyphAssetVO[]>([])
+const requiredCodes = computed(() => new Set(requiredSlots.value.map((slot) => slot.iconUnicode)))
 const mappedAssetCount = computed(() => assets.value.filter(item => !!getAssetImage(item)).length)
-const missingAssetCount = computed(() => Math.max(0, assets.value.length - mappedAssetCount.value))
-const iconFontBuildStatus = ref<IconFontBuildStatusVO | null>(null)
-const buildStatusLoading = ref(false)
-const buildSubmitting = ref(false)
+const mappedRequiredAssetCount = computed(() => new Set(buildRelations.value
+  .filter(item => requiredCodes.value.has(String(item.icon?.iconUnicode || '').toLowerCase()) && !!getAssetImage(item))
+  .map(item => String(item.icon?.iconUnicode || '').toLowerCase())).size)
+const missingAssetCount = computed(() => Math.max(0, requiredSlots.value.length - mappedRequiredAssetCount.value))
+const sourceComplete = computed(() => requiredSlots.value.length > 0 && mappedRequiredAssetCount.value === requiredSlots.value.length)
+const weatherBitmapVisible = ref(false)
+const editingBitmapRecipe = ref<WeatherBitmapFontRecipe | undefined>(undefined)
+const editingBitmapOverwrite = ref(false)
 const downloadingSvgSources = ref(false)
 const downloadSvgProgress = ref(0)
 const downloadSvgProcessed = ref(0)
 const downloadSvgTotal = ref(0)
 const downloadSvgProgressStage = ref<'preparing' | 'downloading' | 'packaging'>('preparing')
-let buildStatusTimer: number | null = null
-
-const buildFontUrl = computed(() => iconFontBuildStatus.value?.font?.ttfFile?.url || '')
-const normalizedBuildStatus = computed(() => String(iconFontBuildStatus.value?.status || 'idle').toLowerCase())
-const canDownloadBuildFont = computed(() => normalizedBuildStatus.value === 'success' && !!buildFontUrl.value)
-const buildStatusShortLabel = computed(() => t(`icon.buildStatus.${normalizedBuildStatus.value}`))
-const buildStatusTime = computed(() => iconFontBuildStatus.value?.updatedAt || iconFontBuildStatus.value?.startedAt || iconFontBuildStatus.value?.createdAt || '')
-const buildStatusTone = computed(() => {
-  if (normalizedBuildStatus.value === 'failed') return 'failed'
-  if (normalizedBuildStatus.value === 'success') return 'success'
-  if (normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running') return 'running'
-  return 'idle'
-})
-const buildStatusTagType = computed(() => {
-  if (normalizedBuildStatus.value === 'failed') return 'danger'
-  if (normalizedBuildStatus.value === 'success') return 'success'
-  if (normalizedBuildStatus.value === 'pending' || normalizedBuildStatus.value === 'running') return 'warning'
-  return 'info'
-})
-const isBuildRunning = computed(() => normalizedBuildStatus.value === 'running')
-const glyphBuildStatuses = ref<Record<string, IconFontBuildStatusVO | null>>({})
 const downloadSvgProgressLabel = computed(() => {
   if (downloadSvgProgressStage.value === 'packaging') return t('icon.downloadSvgPackaging')
   if (downloadSvgProgressStage.value === 'downloading') {
@@ -431,21 +447,55 @@ const renameGlyphId = ref<number | null>(null)
 const renameOriginalGlyphCode = ref('')
 const renameNamingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 
+const loadRequiredOrdinarySlots = async () => {
+  if (isWeatherFontLibrary.value || ordinarySlots.value.length > 0) return
+  const { data } = await listIconLibrary()
+  ordinarySlots.value = deriveOrdinaryIconSlots(data || [])
+}
+
 const fetchGlyphs = async () => {
   try {
     loadingGlyphs.value = true
+    await loadRequiredOrdinarySlots()
     const { data } = await pageIconGlyphs({
       pageNum: glyphPage.value,
       pageSize: glyphPageSize.value,
       // active: 1,
       isDefault: canUsePremiumAssets.value ? undefined : 1,
+      fontType: props.fontType,
       orderBy: 'id:asc',
     })
     const rawList = (data?.list ?? []) as IconGlyphVO[]
-    const list = canUsePremiumAssets.value ? rawList : rawList.filter(g => g.isDefault === 1)
+    let list = canUsePremiumAssets.value ? rawList : rawList.filter(g => g.isDefault === 1)
+    let quickEditTarget = null
+    try {
+      quickEditTarget = await loadIconBitmapQuickEditTarget({
+        query: route.query,
+        fontType: props.fontType,
+        currentUserId: userStore.userInfo?.id,
+        currentUserIsAdmin: userStore.isAdminUser,
+        pageGlyphs: list,
+        getGlyphByCode: getIconGlyphByCode,
+        getFontById,
+      })
+      if (quickEditTarget && !list.some(glyph => glyph.id === quickEditTarget!.glyph.id)) {
+        list = [quickEditTarget.glyph, ...list]
+      }
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : t('bitmapMaker.invalidFont'))
+    }
     console.log('glyphs list', list)
     glyphs.value = list
     glyphTotal.value = data?.total ?? list.length
+    if (quickEditTarget) {
+      activeTab.value = quickEditTarget.glyph.glyphCode
+      displayType.value = 'mip'
+      await fetchAssets(quickEditTarget.glyph.id)
+      editingBitmapRecipe.value = quickEditTarget.recipe
+      editingBitmapOverwrite.value = true
+      weatherBitmapVisible.value = true
+      return
+    }
     // set active tab
     const qGlyphCode = route.query.glyphCode as string | undefined
     const qGlyphId = route.query.glyphId as string | undefined
@@ -464,7 +514,6 @@ const fetchGlyphs = async () => {
       if (g) {
         displayType.value = 'mip'
         await fetchAssets(g.id)
-        await loadBuildStatus(g.glyphCode, true)
       }
     }
   } finally {
@@ -486,6 +535,7 @@ const fetchAssets = async (glyphId: number) => {
     } as any)
     assets.value = data?.list ?? []
     assetTotal.value = data?.total ?? 0
+    buildRelations.value = assetTotal.value <= assets.value.length ? [...assets.value] : await fetchAllGlyphAssets(glyphId)
     selectedAssetId.value = null
   } finally {
     loadingAssets.value = false
@@ -533,7 +583,6 @@ const onTabChange = async (name: string) => {
   if (!g) return
   displayType.value = 'mip'
   await fetchAssets(g.id)
-  await loadBuildStatus(g.glyphCode, true)
 }
 
 const onGlyphPageChange = async (page: number) => {
@@ -545,69 +594,7 @@ const onAssetPageChange = async (page: number) => {
   assetPage.value = page
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
-  await fetchGlyphs()
-}
-
-const clearBuildStatusPolling = () => {
-  if (buildStatusTimer) {
-    window.clearInterval(buildStatusTimer)
-    buildStatusTimer = null
-  }
-}
-
-const scheduleBuildStatusPolling = () => {
-  clearBuildStatusPolling()
-  if (normalizedBuildStatus.value !== 'pending' && normalizedBuildStatus.value !== 'running') return
-  if (!activeTab.value) return
-  buildStatusTimer = window.setInterval(() => {
-    void loadBuildStatus(activeTab.value, true)
-  }, 5000)
-}
-
-const loadBuildStatus = async (glyphCode: string, silent = false) => {
-  if (!glyphCode) return
-  try {
-    if (!silent) buildStatusLoading.value = true
-    const { data } = await getIconFontBuildStatus(glyphCode)
-    iconFontBuildStatus.value = data ?? { glyphCode, status: 'idle' }
-    scheduleBuildStatusPolling()
-  } catch (e) {
-    if (!silent) throw e
-  } finally {
-    if (!silent) buildStatusLoading.value = false
-  }
-}
-
-const refreshBuildStatus = async () => {
-  if (!activeTab.value) return
-  await loadBuildStatus(activeTab.value)
-}
-
-const hasGeneratedTtf = (status?: IconFontBuildStatusVO | null) => {
-  return !!status?.font?.ttfFile?.url || !!status?.font?.ttf
-}
-
-const isGlyphRenameLocked = (glyph?: IconGlyphVO | null) => {
-  if (!glyph?.glyphCode) return false
-  if (glyph.glyphCode === activeTab.value && hasGeneratedTtf(iconFontBuildStatus.value)) {
-    return true
-  }
-  return hasGeneratedTtf(glyphBuildStatuses.value[glyph.glyphCode])
-}
-
-const loadGlyphBuildStatusForRename = async (glyphCode: string) => {
-  const { data } = await getIconFontBuildStatus(glyphCode)
-  glyphBuildStatuses.value[glyphCode] = data ?? null
-  if (glyphCode === activeTab.value) {
-    iconFontBuildStatus.value = data ?? { glyphCode, status: 'idle' }
-    scheduleBuildStatusPolling()
-  }
-  return data ?? null
-}
-
-const openBuildFontUrl = () => {
-  if (!canDownloadBuildFont.value) return
-  window.open(buildFontUrl.value, '_blank')
+  await fetchAssets(g.id)
 }
 
 const tabLabel = (g: IconGlyphVO) => {
@@ -621,11 +608,6 @@ const openRenameDialog = async (glyph: IconGlyphVO) => {
     return
   }
   if (!glyph || glyph.isDefault === 1) return
-  const status = await loadGlyphBuildStatusForRename(glyph.glyphCode)
-  if (hasGeneratedTtf(status)) {
-    ElMessage.warning(t('icon.renameLockedAfterTtf'))
-    return
-  }
   renameGlyphId.value = glyph.id
   renameOriginalGlyphCode.value = glyph.glyphCode || ''
   renameVisible.value = true
@@ -656,15 +638,6 @@ const handleRenameConfirm = async () => {
     ElMessage.error(t('font.iconSlugExists'))
     return
   }
-  if (renameOriginalGlyphCode.value && code !== renameOriginalGlyphCode.value) {
-    const status = await loadGlyphBuildStatusForRename(renameOriginalGlyphCode.value)
-    if (hasGeneratedTtf(status)) {
-      ElMessage.warning(t('icon.renameLockedAfterTtf'))
-      renameVisible.value = false
-      return
-    }
-  }
-
   const dto: IconGlyphUpdateDTO = {
     id: renameGlyphId.value,
     glyphCode: code,
@@ -681,52 +654,22 @@ const handleRenameConfirm = async () => {
   }
 }
 
-const handleSubmitGlyph = async () => {
-  const glyph = glyphs.value.find(g => g.glyphCode === activeTab.value)
+const openSvgBitmapBuilder = async () => {
   if (!requireManageActiveGlyph()) return
-  if (!glyph || !glyph.glyphCode) {
-    ElMessage.error(t('icon.missingGlyphCode'))
-    return
-  }
-  try {
-    await ElMessageBox.confirm(
-      t('icon.buildFontBody'),
-      t('icon.buildFontTitle'),
-      {
-        type: 'info',
-        confirmButtonText: t('icon.build'),
-        cancelButtonText: t('common.cancel'),
-      }
-    )
+  const glyph = activeGlyph.value
+  if (!glyph) return
+  editingBitmapRecipe.value = undefined
+  editingBitmapOverwrite.value = false
+  weatherBitmapVisible.value = true
+}
 
-    buildSubmitting.value = true
-    await submitIconGlyph(glyph.id)
-    const { data } = await autoIconFontBuild(glyph.glyphCode)
-    iconFontBuildStatus.value = data ?? { glyphCode: glyph.glyphCode, status: 'pending' }
-    scheduleBuildStatusPolling()
-    await ElMessageBox.alert(
-      t('icon.buildSubmittedBody'),
-      t('icon.buildSubmittedTitle'),
-      {
-        type: 'success',
-        confirmButtonText: t('common.ok'),
-      }
-    )
-  } catch (e) {
-    if (e !== 'cancel' && e !== 'close') {
-      ElMessage.error(t('icon.buildSubmitFailed'))
-    }
-  } finally {
-    buildSubmitting.value = false
-  }
+const onWeatherBitmapPublished = async () => {
+  weatherBitmapVisible.value = false
+  ElMessage.success(t(isWeatherFontLibrary.value ? 'weatherBitmap.availableInPicker' : 'iconBitmap.availableInPicker'))
 }
 
 onMounted(async () => {
   await fetchGlyphs()
-})
-
-onUnmounted(() => {
-  clearBuildStatusPolling()
 })
 
 // 
@@ -767,9 +710,6 @@ const onIconUploaded = async (payload?: { asset?: IconAssetVO; assets?: IconAsse
     }
   }
   await fetchAssets(g.id)
-  if (g.glyphCode) {
-    await loadBuildStatus(g.glyphCode, true)
-  }
 }
 
 const handleUploadForIcon = (iconUnicode?: string) => {
@@ -903,7 +843,13 @@ const handleDownloadSvgSources = async () => {
 // ---------------- Create glyph ----------------
 const createVisible = ref(false)
 const creating = ref(false)
-const createForm = ref<IconGlyphCreateDTO>({ glyphCode: '', style: '', isDefault: 0, isActive: 1 })
+const createForm = ref<IconGlyphCreateDTO>({
+  glyphCode: '',
+  style: '',
+  fontType: props.fontType,
+  isDefault: 0,
+  isActive: 1,
+})
 const onAddGlyph = () => {
   if (!canUsePremiumAssets.value) {
     requireIconPremium()
@@ -919,7 +865,7 @@ const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
   if (!payload.glyphCode) return
   try {
     creating.value = true
-    const { data } = await createIconGlyph(payload)
+    const { data } = await createIconGlyph({ ...payload, fontType: props.fontType })
     createVisible.value = false
     // refresh list and switch to new glyph
     await fetchGlyphs()
@@ -929,7 +875,13 @@ const onCreateConfirm = async (payload: IconGlyphCreateDTO) => {
       await fetchAssets(data.id)
     }
     // reset form
-    createForm.value = { glyphCode: '', style: '', isDefault: 0, isActive: 1 }
+    createForm.value = {
+      glyphCode: '',
+      style: '',
+      fontType: props.fontType,
+      isDefault: 0,
+      isActive: 1,
+    }
   } finally {
     creating.value = false
   }
@@ -941,6 +893,8 @@ const toAbsUrl = (url: string) => {
 }
 
 const getAssetImage = (item: IconGlyphAssetVO): string => {
+  const svgContent = item?.asset?.svgContent
+  if (svgContent) return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`
   const raw = item?.asset?.svgFile || item?.asset?.previewUrl || item?.asset?.imageUrl || ''
   return raw ? toAbsUrl(raw) : ''
 }
@@ -958,6 +912,16 @@ const canUploadForIconAsset = (item: IconGlyphAssetVO) => {
 .header h2 { margin: 0; font-size: 21px; line-height: 1.18; color: var(--studio-text); }
 .header p { margin: 3px 0 0; max-width: 760px; color: var(--studio-text-muted); font-size: 13px; line-height: 1.35; }
 .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.weather-journey { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 0 14px; overflow: hidden; border: 1px solid var(--studio-border); border-radius: 10px; background: var(--studio-surface); box-shadow: var(--studio-shadow-sm); }
+.journey-step { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 13px; border-right: 1px solid var(--studio-border); color: var(--studio-text-muted); }
+.journey-step:last-child { border-right: 0; }
+.journey-step > span { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 auto; border: 1px solid var(--studio-border); border-radius: 50%; font: 700 9px ui-monospace, monospace; }
+.journey-step strong, .journey-step small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journey-step strong { color: var(--studio-text); font-size: 11px; }
+.journey-step small { margin-top: 2px; font-size: 10px; }
+.journey-step.done { background: color-mix(in srgb, var(--studio-primary) 7%, transparent); color: var(--studio-primary); }
+.journey-step.done > span { border-color: color-mix(in srgb, var(--studio-primary) 42%, var(--studio-border)); }
+.journey-step.active { box-shadow: inset 0 -2px var(--studio-primary); }
 .hidden-upload {
   position: absolute;
   width: 0;
@@ -1373,6 +1337,9 @@ const canUploadForIconAsset = (item: IconGlyphAssetVO) => {
 }
 
 @media (max-width: 820px) {
+  .weather-journey { grid-template-columns: 1fr 1fr; }
+  .journey-step:nth-child(2) { border-right: 0; }
+  .journey-step:nth-child(-n+2) { border-bottom: 1px solid var(--studio-border); }
   .icon-library { padding: 14px; }
   .header { flex-direction: column; align-items: stretch; }
   .header-actions { justify-content: flex-start; }

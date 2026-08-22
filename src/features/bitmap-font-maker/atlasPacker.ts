@@ -33,6 +33,7 @@ export interface PackedGlyphAtlas {
 export interface AtlasPackingOptions {
   padding: number
   powerOfTwo?: boolean
+  preferSquare?: boolean
   maxDimension?: number
 }
 
@@ -62,6 +63,7 @@ function packAtWidth(glyphs: AtlasGlyphRect[], width: number, padding: number, g
 export function packGlyphAtlas(input: AtlasGlyphRect[], options: AtlasPackingOptions): PackedGlyphAtlas {
   const maxDimension = options.maxDimension ?? MAX_ATLAS_DIMENSION
   if (!Number.isSafeInteger(options.padding) || options.padding < 0) throw new AtlasInputError('padding')
+  if (options.preferSquare !== undefined && typeof options.preferSquare !== 'boolean') throw new AtlasInputError('preferSquare')
   if (!Number.isSafeInteger(maxDimension) || maxDimension < 1 || maxDimension > MAX_ATLAS_DIMENSION) throw new AtlasInputError('maxDimension')
   const codepoints = new Set<number>()
   for (const glyph of input) {
@@ -79,11 +81,37 @@ export function packGlyphAtlas(input: AtlasGlyphRect[], options: AtlasPackingOpt
   const maximumWidth = Math.min(maxDimension, glyphs.reduce((sum, glyph) => sum + glyph.width + padding * 2, 0) + gap * (glyphs.length - 1))
   const widths = new Set<number>([minimumWidth, maximumWidth, Math.ceil(Math.sqrt(glyphs.reduce((sum, glyph) => sum + (glyph.width + padding * 2) * (glyph.height + padding * 2), 0)))])
   for (let width = nextPowerOfTwo(minimumWidth); width <= maximumWidth; width *= 2) widths.add(width)
+  if (options.preferSquare) {
+    let rowWidth = 0
+    for (let index = 0; index < glyphs.length; index += 1) {
+      rowWidth += glyphs[index].width + padding * 2 + (index > 0 ? gap : 0)
+      widths.add(rowWidth)
+    }
+  }
   let best: PackedGlyphAtlas | undefined
   for (const width of [...widths].filter((value) => value >= minimumWidth && value <= maximumWidth).sort((a, b) => a - b)) {
     const packed = packAtWidth(glyphs, width, padding, gap)
     if (!packed || packed.height > maxDimension) continue
-    if (!best || packed.width * packed.height < best.width * best.height || (packed.width * packed.height === best.width * best.height && packed.width < best.width)) best = packed
+    if (!best) {
+      best = packed
+      continue
+    }
+    if (options.preferSquare) {
+      const aspectPenalty = Math.abs(Math.log(packed.width / packed.height))
+      const bestAspectPenalty = Math.abs(Math.log(best.width / best.height))
+      const aspectDifference = aspectPenalty - bestAspectPenalty
+      const landscapePenalty = packed.width < packed.height ? 1 : 0
+      const bestLandscapePenalty = best.width < best.height ? 1 : 0
+      if (
+        aspectDifference < -Number.EPSILON ||
+        (Math.abs(aspectDifference) <= Number.EPSILON && landscapePenalty < bestLandscapePenalty) ||
+        (Math.abs(aspectDifference) <= Number.EPSILON && landscapePenalty === bestLandscapePenalty && packed.width * packed.height < best.width * best.height)
+      ) {
+        best = packed
+      }
+    } else if (packed.width * packed.height < best.width * best.height || (packed.width * packed.height === best.width * best.height && packed.width < best.width)) {
+      best = packed
+    }
   }
   if (!best) throw new AtlasPackingError()
   if (options.powerOfTwo) {

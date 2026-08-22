@@ -43,14 +43,14 @@
 
       <AppMenuWeatherGroup @add-element="handleAddElement" />
 
-      <el-menu-item index="add/dynamic-image" @click="handleAddElement('decoration', 'dynamicImage')">
-        <Icon icon="mdi:image-sync" />
-        <span>{{ t('dynamicImage.title') }}</span>
-      </el-menu-item>
-
       <el-menu-item index="navigation/tokens" @click="handleOpenTokens">
         <Icon icon="material-symbols:data-object" />
         <span>{{ t('tokens.nav') }}</span>
+      </el-menu-item>
+
+      <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
+        <Icon icon="material-symbols:font-download-outline" />
+        <span>Bitmap Fonts</span>
       </el-menu-item>
 
       <AppMenuHelp
@@ -188,7 +188,6 @@ import {
 } from '@/engine/managers/compoundShortcutOrchestrator'
 import { buildDataFieldDrafts, buildGoalArcDrafts, buildGoalBarDrafts } from '@/engine/managers/shortcutCompoundDrafts'
 import { elementConfigs } from '@/elements/schemaMap'
-import { getOrCreateAvailableDialProperty } from '@/elements/common/settings/propertyBinding'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
@@ -213,6 +212,7 @@ import VisualThemeQuickSelect from '@/components/layout/app-menu/VisualThemeQuic
 import VisualThemeSettings from '@/components/panels/settings/VisualThemeSettings.vue'
 import { useVisualThemePreview } from '@/composables/useVisualThemePreview'
 import { useI18n } from '@/i18n'
+import { getOrCreateAvailableDialProperty } from '@/elements/common/settings/propertyBinding'
 
 const route = useRoute()
 const router = useRouter()
@@ -840,8 +840,10 @@ const handleAddElement = async (category: string, elementType: string, overrides
         }
       }
 
-      if (resolvedElementType === 'subDial' && !String(config.dialProperty ?? '').trim()) {
-        const mode = config.progressMode === 'range' ? 'range' : 'goal'
+      if (resolvedElementType === 'rotatingHand' && !String(config.dialProperty ?? '').trim()) {
+        const mode = config.progressMode === 'goal'
+          ? 'goal'
+          : config.progressMode === 'direction' ? 'direction' : 'range'
         const binding = getOrCreateAvailableDialProperty(mode)
         if (binding.created) trackCreatedProperty(binding.key)
         config = { ...config, progressMode: mode, dialProperty: binding.key }
@@ -1176,6 +1178,7 @@ const handleOpenCreatorAcademy = () => {
   window.open('/academy', '_blank', 'noopener')
 }
 const handleOpenTokens = () => openRouteInNewTab(router, { name: 'Tokens' })
+const handleOpenBitmapFonts = () => openRouteInNewTab(router, { name: 'BitmapFontMaker' })
 
 </script>
 

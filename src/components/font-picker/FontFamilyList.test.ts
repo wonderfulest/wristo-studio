@@ -7,8 +7,8 @@ import type { FontItem } from '@/types/font-picker'
 
 vi.mock('@/components/fonts/FontListItem.vue', () => ({
   default: {
-    props: ['label', 'previewTextStyle'],
-    template: '<div class="font-main"><span class="preview-text" :style="previewTextStyle">Aa</span><span class="font-label">{{ label }}</span><button class="manage-font">Manage</button></div>'
+    props: ['label', 'previewTextStyle', 'fontId', 'fontSlug', 'ownerUserId', 'type', 'bitmapPreviewDescriptorUrl', 'bitmapPreviewAtlasUrl'],
+    template: '<div class="font-main" :data-font-id="fontId" :data-font-slug-prop="fontSlug" :data-owner-user-id="ownerUserId" :data-type="type" :data-preview-fnt="bitmapPreviewDescriptorUrl" :data-preview-atlas="bitmapPreviewAtlasUrl"><span class="preview-text" :style="previewTextStyle">Aa</span><span class="font-label">{{ label }}</span><button class="manage-font">Manage</button></div>'
   }
 }))
 
@@ -48,6 +48,27 @@ describe('FontFamilyList', () => {
     expect(wrapper.findAll('.font-item').filter((item) => item.isVisible())).toHaveLength(1)
   })
 
+  it('uses one collapsed family entry for matching number and text font variants', async () => {
+    const wrapper = mount(FontFamilyList, {
+      props: {
+        fonts: [
+          { value: 'clock-number', family: 'Clock Sans', label: 'Clock Sans Digits', type: 'number_font' },
+          { value: 'clock-text', family: 'Clock Sans', label: 'Clock Sans Regular', type: 'text_font' },
+        ],
+        modelValue: '',
+      },
+    })
+
+    expect(wrapper.findAll('.font-family-group')).toHaveLength(1)
+    expect(wrapper.findAll('.font-family-summary')).toHaveLength(1)
+    expect(wrapper.find('.font-family-summary').attributes('aria-expanded')).toBe('false')
+    expect(wrapper.findAll('.font-item').filter((item) => item.isVisible())).toHaveLength(0)
+
+    await wrapper.find('.font-family-summary').trigger('click')
+
+    expect(wrapper.findAll('.font-item').filter((item) => item.isVisible())).toHaveLength(2)
+  })
+
   it('automatically expands the selected font family', () => {
     const wrapper = mountList('kode-bold')
 
@@ -71,6 +92,21 @@ describe('FontFamilyList', () => {
     await wrapper.findAll('.font-item')[1].trigger('click')
 
     expect(wrapper.emitted('select')?.[0]).toEqual([fonts[1]])
+  })
+
+  it('forwards the original font identity needed by the quick edit button', () => {
+    const wrapper = mount(FontFamilyList, {
+      props: {
+        fonts: [{ id: 42, userId: 7, value: 'my-clock', family: 'My Clock', label: 'My Clock', type: 'number_font' } as FontItem],
+        modelValue: '',
+      },
+    })
+    const item = wrapper.get('.font-main')
+
+    expect(item.attributes('data-font-id')).toBe('42')
+    expect(item.attributes('data-font-slug-prop')).toBe('my-clock')
+    expect(item.attributes('data-owner-user-id')).toBe('7')
+    expect(item.attributes('data-type')).toBe('number_font')
   })
 
   it('marks and styles recipe cards as a non-destructive preview', () => {
@@ -105,5 +141,34 @@ describe('FontFamilyList', () => {
     expect(preview.style.transform).toBe(`skewX(${angle}deg)`)
     expect(preview.style.getPropertyValue('--bitmap-preview-fill')).toBe(fill)
     expect(preview.style.getPropertyValue('--bitmap-preview-stroke')).toBe(stroke)
+  })
+
+  it('forwards published BMFont assets without applying the recipe scale a second time', () => {
+    const wrapper = mount(FontFamilyList, {
+      props: {
+        fonts: [{
+          value: 'icons-compact',
+          family: 'Icons Compact',
+          label: 'Icons Compact',
+          type: 'icon_font',
+          bitmapRecipe: {
+            schemaVersion: 1,
+            rendererVersion: '1',
+            contentScale: 0.72,
+            antialias: true,
+          },
+          bitmapPreviewDescriptorUrl: '/preview/icons.fnt',
+          bitmapPreviewAtlasUrl: '/preview/icons.png',
+        } as FontItem],
+        modelValue: '',
+      },
+    })
+
+    const card = wrapper.get('[data-font-slug="icons-compact"]')
+    expect(card.attributes('data-bitmap-recipe-preview')).toBeUndefined()
+    expect(card.find('.bitmap-recipe-preview-badge').exists()).toBe(false)
+    expect((card.get('.preview-text').element as HTMLElement).style.transform).toBe('')
+    expect(card.get('.font-main').attributes('data-preview-fnt')).toBe('/preview/icons.fnt')
+    expect(card.get('.font-main').attributes('data-preview-atlas')).toBe('/preview/icons.png')
   })
 })

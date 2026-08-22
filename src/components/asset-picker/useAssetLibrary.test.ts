@@ -22,11 +22,12 @@ describe('useAssetLibrary', () => {
       .fn()
       .mockResolvedValueOnce({ data: { list: [asset(1)], total: 2 } })
       .mockResolvedValueOnce({ data: { list: [asset(2)], total: 2 } })
-    const library = useAssetLibrary({ assetType: () => 'image', canViewAll: () => true, api: { page, setFavorite: vi.fn() } })
+    const library = useAssetLibrary({ assetType: () => 'image', api: { page, setFavorite: vi.fn() } })
 
     await library.loadAssets(true)
     expect(library.assets.value.map((item) => item.id)).toEqual([1])
-    expect(page).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 1, pageSize: 48, scope: 'mine' }))
+    expect(page).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 1, pageSize: 48 }))
+    expect(page.mock.calls[0][0]).not.toHaveProperty('scope')
 
     await library.loadMore()
     expect(library.assets.value.map((item) => item.id)).toEqual([1, 2])
@@ -34,14 +35,14 @@ describe('useAssetLibrary', () => {
   })
 
   it('uses original URLs for hand-like assets and previews for images', () => {
-    const handLibrary = useAssetLibrary({ assetType: () => 'hour', canViewAll: () => false })
-    const imageLibrary = useAssetLibrary({ assetType: () => 'image', canViewAll: () => false })
+    const handLibrary = useAssetLibrary({ assetType: () => 'hour' })
+    const imageLibrary = useAssetLibrary({ assetType: () => 'image' })
     expect(handLibrary.getAssetUrl(asset(1, 'hour'))).toBe('https://cdn/1.svg')
     expect(imageLibrary.getAssetUrl(asset(1))).toBe('https://cdn/1.png')
   })
 
   it('sorts favorites first without mutating the source order', () => {
-    const library = useAssetLibrary({ assetType: () => 'image', canViewAll: () => false })
+    const library = useAssetLibrary({ assetType: () => 'image' })
     library.assets.value = [asset(1), asset(2, 'image', 20), asset(3, 'image', 10)]
     expect(library.sortedAssets.value.map((item) => item.id)).toEqual([2, 3, 1])
     expect(library.assets.value.map((item) => item.id)).toEqual([1, 2, 3])
@@ -52,7 +53,6 @@ describe('useAssetLibrary', () => {
     const onError = vi.fn()
     const library = useAssetLibrary({
       assetType: () => 'image',
-      canViewAll: () => false,
       api: { page: vi.fn(), setFavorite: vi.fn().mockRejectedValue(new Error('failed')) },
       onError
     })

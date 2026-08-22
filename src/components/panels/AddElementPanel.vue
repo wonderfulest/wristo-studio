@@ -1,7 +1,7 @@
 <template>
   <div class="add-element-panel">
     <div class="panel-content" :class="{ collapsed: isCollapsed }">
-      <div v-for="(category, categoryKey) in elementConfigs" :key="categoryKey" class="element-section">
+      <div v-for="(category, categoryKey) in panelElementConfigs" :key="categoryKey" class="element-section">
         <div class="section-header">
           <h2>{{ t(`addElement.category.${categoryKey}`) }}</h2>
           <div class="header-line"></div>
@@ -27,11 +27,16 @@
         </div>
       </div>
     </div>
+    <TimeHandsDialog
+      v-model="timeHandsDialogVisible"
+      @confirm="handleTimeHandsConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { nanoid } from 'nanoid'
 import { elementConfigs } from '@/elements/schemaMap'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -42,7 +47,12 @@ import emitter from '@/utils/eventBus'
 import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
-import { createQuickDateProperty, createQuickDialProperty, createQuickMetricProperty, getUnusedMetricPropertyKey } from '@/elements/common/settings/propertyBinding'
+import {
+  createQuickDateProperty,
+  createQuickDialProperty,
+  createQuickMetricProperty,
+  getUnusedMetricPropertyKey,
+} from '@/elements/common/settings/propertyBinding'
 import type { PropertyItem } from '@/types/properties'
 import { DEFAULT_DISPLAY_STATES } from '@/utils/displayStates'
 import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
@@ -52,10 +62,38 @@ import {
   getDefaultFontFamilyForAppLanguage,
 } from '@/domain/designLanguageCapabilities'
 import { getCommonDateFormatterValues } from '@/components/properties/dialogs/datePropertyOptions'
+import TimeHandsDialog, {
+  type TimeHandsDialogSelection,
+} from '@/elements/hands/timeHands/TimeHandsDialog.vue'
+import { addTimeHandsGroup } from '@/elements/hands/timeHands/timeHands.add'
+import { prepareCopiedTimeHandsConfigs } from '@/elements/hands/timeHands/timeHands.copyModel'
+import type { EDITOR_ELEMENT } from '@/types/editorElement'
 
 const fontStore = useFontStore()
+const panelElementConfigs = {
+  ...elementConfigs,
+  hands: {
+    timeHands: {
+      ...elementConfigs.hands.hourHand,
+      label: 'Time Hands',
+      eleType: 'timeHands',
+      icon: 'mdi:clock-time-four-outline',
+    } as AnyElementConfig & EDITOR_ELEMENT,
+    ...elementConfigs.hands,
+  },
+  decoration: {
+    ...elementConfigs.decoration,
+    mask: {
+      ...elementConfigs.decoration.image,
+      name: 'Mask',
+      icon: 'mdi:gradient-horizontal',
+      assetType: 'mask',
+    },
+  },
+}
 const messageStore = useMessageStore()
 const isCollapsed = ref(false)
+const timeHandsDialogVisible = ref(false)
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
 const dataCatalogStore = useDataCatalogStore()
@@ -167,8 +205,10 @@ const applyDefaultColorVariable = (normalizedConfig: AnyElementConfig) => {
 }
 
 const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: AnyElementConfig) => {
-  if (elementType === 'subDial') {
-    const mode = (normalizedConfig as any).progressMode === 'range' ? 'range' : 'goal'
+  if (elementType === 'rotatingHand') {
+    const mode = (normalizedConfig as any).progressMode === 'goal'
+      ? 'goal'
+      : (normalizedConfig as any).progressMode === 'direction' ? 'direction' : 'range'
     const current = String((normalizedConfig as any).dialProperty ?? '').trim()
     const property = current ? propertiesStore.allProperties[current] : null
     if (!property || property.type !== 'dial' || property.dialMode !== mode) {
@@ -206,10 +246,50 @@ const ensureMetricPropertyForElement = (elementType: string, normalizedConfig: A
   }
 }
 
+const createBlankTimeHandsConfigs = (includeCenterCap: boolean): AnyElementConfig[] => {
+  const types = includeCenterCap
+    ? ['hourHand', 'minuteHand', 'secondHand', 'centerCap']
+    : ['hourHand', 'minuteHand', 'secondHand']
+
+  return types.map(type => ({
+    ...elementConfigs.hands[type],
+    displayStates: DEFAULT_DISPLAY_STATES,
+  } as AnyElementConfig))
+}
+
+const handleTimeHandsConfirm = async (selection: TimeHandsDialogSelection) => {
+  try {
+    const configs = selection.mode === 'blank'
+      ? createBlankTimeHandsConfigs(selection.includeCenterCap)
+      : prepareCopiedTimeHandsConfigs(selection.elements, nanoid)
+
+    await addTimeHandsGroup(configs, {
+      runAtomic: task => historyStore.runAtomicMutation('time-hands:add', task),
+      addElement: async (config) => {
+        const handler = getElementHandler(String(config.eleType))
+        if (!handler?.add) return undefined
+        return historyStore.runWithoutRecording(() => handler.add(config))
+      },
+      saveHistory: () => historyStore.saveState('add:timeHands', { coalesceIfSameFabric: true }),
+    })
+
+    messageStore.success(t('timeHands.added', { count: configs.length }))
+    emit('switch-to-layer')
+    isCollapsed.value = true
+  } catch (error) {
+    console.error('[AddElementPanel] Failed to add Time Hands group', error)
+    messageStore.error(t('timeHands.addFailed'))
+  }
+}
+
 const addElementByType = async (_category: string, elementType: string, config: AnyElementConfig) => {
   try {
     if ((config as any)?.disabled) {
       messageStore.warning('This element is temporarily disabled')
+      return
+    }
+    if (elementType === 'timeHands') {
+      timeHandsDialogVisible.value = true
       return
     }
 
@@ -252,7 +332,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
       ensureChartPropertyForChartElement(normalizedConfig, metricSymbol)
     }
 
-    const resolvedElementType = elementType
+    const resolvedElementType = elementType === 'mask' ? 'image' : elementType
     ensureMetricPropertyForElement(resolvedElementType, normalizedConfig)
 
     // 使用注册器添加元素（新 Registry：通过 ElementHandler.add(config)）

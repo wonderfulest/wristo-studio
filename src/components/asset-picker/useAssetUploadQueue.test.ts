@@ -6,9 +6,10 @@ import { useAssetUploadQueue } from './useAssetUploadQueue'
 const file = (name: string) => new File(['<svg/>'], name, { type: 'image/svg+xml' })
 
 describe('useAssetUploadQueue', () => {
-  it('uploads files serially and continues after an individual failure', async () => {
+  it('waits for confirmation then uploads files serially with one shared choice', async () => {
     const order: string[] = []
-    const upload = vi.fn(async (item: File) => {
+    const upload = vi.fn(async (item: File, _type: string, isShared: boolean) => {
+      expect(isShared).toBe(true)
       order.push(item.name)
       if (item.name === 'b.svg') throw new Error('failed')
       return { data: { id: order.length, file: { url: `/${item.name}` } } as AnalogAssetVO }
@@ -26,6 +27,11 @@ describe('useAssetUploadQueue', () => {
 
     await queue.processFiles([file('a.svg'), file('b.svg'), file('c.svg')])
 
+    expect(upload).not.toHaveBeenCalled()
+    expect(queue.uploadQueue.value.map((item) => item.status)).toEqual(['pending', 'pending', 'pending'])
+    queue.shareUploads.value = true
+    await queue.startUpload()
+
     expect(order).toEqual(['a.svg', 'b.svg', 'c.svg'])
     expect(onAssetUploaded).toHaveBeenCalledTimes(2)
     expect(queue.uploadSummaryTone.value).toBe('warning')
@@ -35,6 +41,7 @@ describe('useAssetUploadQueue', () => {
 
   it('reports accept patterns by asset type', () => {
     expect(useAssetUploadQueue({ assetType: () => 'image' }).uploadAccept.value).toBe('.svg,.png,.jpg,.jpeg,.webp')
+    expect(useAssetUploadQueue({ assetType: () => 'mask' }).uploadAccept.value).toBe('.svg,.png,.jpg,.jpeg,.webp')
     expect(useAssetUploadQueue({ assetType: () => 'hour' }).uploadAccept.value).toBe('.svg,.png')
     expect(useAssetUploadQueue({ assetType: () => 'tick12' }).uploadAccept.value).toBe('.svg')
   })

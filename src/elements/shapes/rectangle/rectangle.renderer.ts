@@ -188,13 +188,13 @@ export function updateRectangle(
     rect.set({ displayStates, visible: getDisplayState(displayStates, useLayerStore().previewMode) })
   }
 
-  // 保护：若当前元素不是矩形，或 patch 看起来是天气的 AMOLED 配置，则忽略本次更新
+  // 保护：若当前元素不是矩形，且 patch 是图片图标配置，则忽略本次更新
   const eleType = (rect as any)?.eleType
   if (
     eleType &&
     eleType !== 'rectangle' &&
     (patch as any) &&
-    ('weatherDisplayType' in (patch as any) || 'amoledImageUrl' in (patch as any))
+    'amoledImageUrl' in (patch as any)
   ) {
     console.warn('[RectangleRenderer] ignore non-rectangle patch', {
       id: (rect as any)?.id,

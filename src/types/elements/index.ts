@@ -6,7 +6,14 @@
 export type { BaseElementConfig } from './base'
 export type { TextElementConfig } from './text'
 export type { ShapeElementConfig, CircleElementConfig, RectangleElementConfig, PolygonElementConfig, TriangleElementConfig, LineElementConfig } from './shape'
+export type { GridLinesElementConfig } from './gridLines'
 export type { RotationCenter, HandElementConfig } from './hand'
+export type {
+  RotatingHandElementConfig,
+  RotatingHandOutOfRangeBehavior,
+  RotatingHandProgressMode,
+  RotatingHandDialMode,
+} from './rotatingHand'
 
 // time & date
 export type { TimeElementConfig, DateElementConfig } from './time'
@@ -35,12 +42,6 @@ export type { BarChartElementConfig, LineChartElementConfig } from './charts'
 
 // tick/dials
 export type { TickElementConfig } from './tick'
-export type {
-  SubDialElementConfig,
-  SubDialOutOfRangeBehavior,
-  SubDialPointerConfig,
-  SubDialPointerStyle,
-} from './subDial'
 export type { ArcSunEventsElementConfig, LineSunEventsElementConfig } from './sunEvents'
 
 // 联合类型 - 所有可能的元素配置
@@ -50,16 +51,17 @@ import type { TimeElementConfig as _Time, DateElementConfig as _Date } from './t
 import type { IconElementConfig as _Icon, LabelElementConfig as _Label, DataElementConfig as _DataText, UnitElementConfig as _Unit, ZoneMetricElementConfig as _ZoneMetric, MoonElementConfig as _Moon, WeatherElementConfig as _Weather, WindDirectionElementConfig as _WindDirection } from './data'
 import type { IndicatorElementConfig as _Indicator } from './indicator'
 import type { ShapeElementConfig as _Shape, CircleElementConfig as _Circle, RectangleElementConfig as _Rectangle, PolygonElementConfig as _Polygon, TriangleElementConfig as _Triangle, LineElementConfig as _Line } from './shape'
+import type { GridLinesElementConfig as _GridLines } from './gridLines'
 import type { GoalElementConfig as _Goal, GoalBarElementConfig as _GoalBar, GoalArcElementConfig as _GoalArc } from './goal'
 import type { BarChartElementConfig as _BarChart, LineChartElementConfig as _LineChart } from './charts'
 import type { MoveBarElementConfig as _MoveBar } from './status'
 import type { BatteryElementConfig as _Battery } from './battery'
 import type { HandElementConfig as _Hand } from './hand'
+import type { RotatingHandElementConfig as _RotatingHand } from './rotatingHand'
 import type { TickElementConfig as _Tick } from './tick'
 import type { ImageElementConfig as _Image } from './image'
 import type { DynamicImageElementConfig as _DynamicImage } from './dynamicImage'
 import type { BackgroundElementConfig as _Background } from './background'
-import type { SubDialElementConfig as _SubDial } from './subDial'
 import type { ArcSunEventsElementConfig as _ArcSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
 
 export type AnyElementConfig =
@@ -78,6 +80,7 @@ export type AnyElementConfig =
   | _DynamicImage
   | _Indicator
   | _Hand
+  | _RotatingHand
   | _Shape
   | _Goal
   | _Base
@@ -89,9 +92,9 @@ export type AnyElementConfig =
   | _GoalArc
   | _BarChart
   | _LineChart
-  | _SubDial
   | _Polygon
   | _Triangle
+  | _GridLines
   | _ArcSunEvents
   | _LineSunEvents
 
@@ -125,9 +128,11 @@ export interface ElementConfigMap {
   'polygon': _Polygon
   'triangle': _Triangle
   'line': _Line
+  'gridLines': _GridLines
   'hourHand': _Hand
   'minuteHand': _Hand
   'secondHand': _Hand
+  'rotatingHand': _RotatingHand
   'romans': _Tick
   'tick12': _Tick
   'tick60': _Tick
@@ -139,7 +144,6 @@ export interface ElementConfigMap {
   'lineChart': _LineChart
   'battery': _Battery
   'moveBar': _MoveBar
-  'subDial': _SubDial
   'arcSunEvents': _ArcSunEvents
   'lineSunEvents': _LineSunEvents
   [key: string]: _Base

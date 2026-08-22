@@ -15,7 +15,7 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 
 export interface UseAssetUploadQueueOptions {
   assetType: () => AnalogAssetType
-  upload?: (file: File, type: AnalogAssetType) => Promise<{ data?: AnalogAssetVO | null }>
+  upload?: (file: File, type: AnalogAssetType, isShared: boolean) => Promise<{ data?: AnalogAssetVO | null }>
   acceptFile?: (file: File) => Promise<boolean>
   prepareFile?: (file: File) => Promise<File>
   getAssetUrl?: (asset: AnalogAssetVO) => string | undefined
@@ -32,9 +32,10 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   const uploadSummaryMessage = ref('')
   const uploadSummaryTone = ref<'success' | 'warning' | 'danger'>('success')
   const dragOver = ref(false)
+  const shareUploads = ref(false)
 
   const uploadAccept = computed(() => {
-    if (options.assetType() === 'image') return '.svg,.png,.jpg,.jpeg,.webp'
+    if (options.assetType() === 'image' || options.assetType() === 'mask') return '.svg,.png,.jpg,.jpeg,.webp'
     if (isHandAssetType(options.assetType())) return '.svg,.png'
     return '.svg'
   })
@@ -46,7 +47,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     return t('asset.uploadFailed')
   }
   const fileTypeMessage = (): string => {
-    if (options.assetType() === 'image') return t('asset.imageOnly')
+    if (options.assetType() === 'image' || options.assetType() === 'mask') return t('asset.imageOnly')
     if (isHandAssetType(options.assetType())) return t('asset.handSvgPngOnly')
     return t('asset.svgOnly')
   }
@@ -59,7 +60,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   const showRejectionMessage = (reason: UploadRejectionReason): void => {
     ElMessage.warning(reason === 'raster-svg' ? t('asset.svgVectorOnly') : fileTypeMessage())
   }
-  const uploadFile = async (file: File | undefined, showMessage = false): Promise<boolean> => {
+  const uploadFile = async (file: File | undefined, showMessage = false, isShared = false): Promise<boolean> => {
     if (!file) return false
     const rejectionReason = await validateFile(file)
     if (rejectionReason) {
@@ -68,7 +69,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     }
     try {
       const prepared = await (options.prepareFile ?? ensureSvgFileHasIntrinsicSize)(file)
-      const res = await (options.upload ?? analogAssetApi.upload)(prepared, options.assetType())
+      const res = await (options.upload ?? analogAssetApi.upload)(prepared, options.assetType(), isShared)
       if (!res.data) return false
       const url = options.getAssetUrl?.(res.data) ?? res.data.file?.url ?? res.data.file?.previewUrl
       if (url) options.onAssetUploaded?.(res.data, url)
@@ -102,26 +103,31 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
       file,
       status: 'pending'
     }))
+  }
+  const startUpload = async (): Promise<void> => {
+    if (uploading.value || !uploadQueue.value.length) return
     uploading.value = true
+    const totalCount = uploadQueue.value.length
     let successCount = 0
     for (const item of uploadQueue.value) {
       item.status = 'uploading'
-      const ok = await uploadFile(item.file)
+      const ok = await uploadFile(item.file, false, shareUploads.value)
       item.status = ok ? 'success' : 'failed'
       if (ok) successCount += 1
     }
     uploading.value = false
-    if (successCount === validFiles.length) {
+    if (successCount === totalCount) {
       uploadSummaryTone.value = 'success'
       uploadSummaryMessage.value = t('asset.uploadSuccessCount', { count: successCount })
     } else if (successCount > 0) {
       uploadSummaryTone.value = 'warning'
-      uploadSummaryMessage.value = t('asset.uploadPartialCount', { success: successCount, failed: validFiles.length - successCount })
+      uploadSummaryMessage.value = t('asset.uploadPartialCount', { success: successCount, failed: totalCount - successCount })
     } else {
       uploadSummaryTone.value = 'danger'
-      uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: validFiles.length })
+      uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: totalCount })
     }
     uploadQueue.value = []
+    shareUploads.value = false
   }
   const triggerUpload = (): void => uploadInput.value?.click()
   const setUploadInput = (element: unknown): void => {
@@ -153,11 +159,13 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     uploadSummaryMessage,
     uploadSummaryTone,
     dragOver,
+    shareUploads,
     uploadAccept,
     completedUploadCount,
     uploadStatusLabel,
     uploadFile,
     processFiles,
+    startUpload,
     triggerUpload,
     setUploadInput,
     handleUpload,

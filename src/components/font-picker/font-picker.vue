@@ -7,7 +7,13 @@
     </div>
     <div v-else class="font-preview" @click="togglePanel">
       <span class="font-name">{{ selectedFontLabel }}</span>
-      <FontPreviewText :font-family="selectedFontFamily" :type="selectedFontType" :language="selectedFontLanguage" />
+      <FontPreviewText
+        :font-family="selectedFontFamily"
+        :type="selectedFontType"
+        :language="selectedFontLanguage"
+        :bitmap-preview-descriptor-url="selectedFontOption?.bitmapPreviewDescriptorUrl"
+        :bitmap-preview-atlas-url="selectedFontOption?.bitmapPreviewAtlasUrl"
+      />
     </div>
 
     <!-- Font selection panel -->
@@ -23,15 +29,15 @@
           >
             <el-icon><Aim /></el-icon>
           </button>
-          <button v-if="canUsePremiumAssets && type !== FontTypes.ICON_FONT" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
+          <button v-if="canUsePremiumAssets && !isManagedIconFontType" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
           <RouterLink
-            v-if="type === FontTypes.ICON_FONT"
+            v-if="isManagedIconFontType"
             class="open-library-anchor"
-            to="/icon-library"
+            :to="type === FontTypes.WEATHER_FONT ? '/weather-font-library' : '/icon-library'"
             target="_blank"
             rel="noopener"
           >
-            {{ t('font.manageIconFonts') }}
+            {{ t(type === FontTypes.WEATHER_FONT ? 'font.manageWeatherFonts' : 'font.manageIconFonts') }}
           </RouterLink>
           <RouterLink
             v-else
@@ -60,6 +66,7 @@
         <FontSearch
           :model-value="modelValue"
           :type="type"
+          :types="types"
           :can-use-premium-assets="canUsePremiumAssets"
           :include-all-users="includeAllUsers"
           :date-content-language="effectiveContentLanguage"
@@ -72,6 +79,7 @@
             :fonts="recentFonts"
             :model-value="modelValue"
             :type="type"
+            :types="types"
             :can-use-premium-assets="canUsePremiumAssets"
             :date-content-language="effectiveContentLanguage"
             :exclude-icon-fonts="excludeIconFonts"
@@ -83,6 +91,7 @@
             ref="designerFontListRef"
             :model-value="modelValue"
             :type="type"
+            :types="types"
             :can-use-premium-assets="canUsePremiumAssets"
             :include-all-users="includeAllUsers"
             :excluded-font-values="recentFontValues"
@@ -94,7 +103,7 @@
       </div>
     </Teleport>
     <!-- Add font dialog -->
-    <FontImportDialog v-if="!usesBuiltInChineseFont && canUsePremiumAssets && type !== FontTypes.ICON_FONT" v-model:visible="dialogVisible" @selected="onFontUploaded" />
+    <FontImportDialog v-if="!usesBuiltInChineseFont && canUsePremiumAssets && !isManagedIconFontType" v-model:visible="dialogVisible" @selected="onFontUploaded" />
     <!-- Number glyph editor dialog (for number fonts) -->
     <NumberGlyphEditorDialog ref="numberGlyphDialogRef" />
 
@@ -189,6 +198,7 @@ import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import emitter from '@/utils/eventBus'
 import { GARMIN_SYSTEM_PREVIEW_FONT } from '@/utils/contentFontFallback'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 
 const props = defineProps({
   modelValue: {
@@ -200,6 +210,11 @@ const props = defineProps({
     type: String,
     required: false,
     default: FontTypes.TEXT_FONT
+  },
+  types: {
+    type: Array as () => string[],
+    required: false,
+    default: undefined
   },
   dateContentLanguage: {
     type: String as () => DateContentLanguage | undefined,
@@ -239,6 +254,8 @@ const dialogVisible = ref<boolean>(false)
 const pickerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
+const locatingFont = ref(false)
+let lastPanelScrollTop = 0
 const settingsPopupId = `font-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
 const designerFontListRef = ref<InstanceType<typeof DesignerFontList> | null>(null)
 const fontScope = ref<'mine' | 'all'>('mine')
@@ -292,12 +309,15 @@ const selectedFontOption = computed(() => {
     const match = sec.fonts?.find(f => f.value === slug)
     if (match) return match
   }
-  return null
+  return fontStore.serverFonts.get(canonicalFontSlug(slug)) || null
 })
 const selectedFontLanguage = computed(() => selectedFontOption.value?.language)
 const selectedFontType = computed(() => selectedFontOption.value?.type || props.type)
+const isManagedIconFontType = computed(() => (
+  props.type === FontTypes.ICON_FONT || props.type === FontTypes.WEATHER_FONT
+))
 const effectiveContentLanguage = computed<DateContentLanguage | undefined>(() => {
-  if (props.allowAnyLanguage || props.type === FontTypes.ICON_FONT) return undefined
+  if (props.allowAnyLanguage || isManagedIconFontType.value) return undefined
   return props.dateContentLanguage || resolveDesignContentLanguage(designStore)
 })
 const usesBuiltInChineseFont = computed(() => false)
@@ -307,8 +327,10 @@ const fontScopeOptions = computed(() => [
   { label: t('font.scopeMine'), value: 'mine' },
   { label: t('font.scopeAll'), value: 'all' },
 ])
-const initializedRecentFontTypes = new Set<string>()
-const recentFontTypeKey = computed(() => props.type || FontTypes.TEXT_FONT)
+const queryFontTypes = computed(() => {
+  const types = (props.types || []).map(type => String(type || '').trim()).filter(Boolean)
+  return types.length ? [...new Set(types)] : [props.type || FontTypes.TEXT_FONT]
+})
 
 // 切换面板显示
 const updatePanelPosition = () => {
@@ -349,21 +371,26 @@ const togglePanel = async () => {
   if (isOpen.value) {
     emitter.emit('settings-popup-open', settingsPopupId)
     fontStore.expandedSections.recent = true
-    if (!initializedRecentFontTypes.has(recentFontTypeKey.value)) {
-      initializedRecentFontTypes.add(recentFontTypeKey.value)
-      await fontStore.initRecentFonts(props.type)
-    }
+    await fontStore.initRecentFonts(
+      props.types?.length ? undefined : props.type,
+      props.types?.length ? queryFontTypes.value : undefined,
+    )
     await nextTick()
     updatePanelPosition()
-    await locateCurrentFont()
+    lastPanelScrollTop = panelRef.value?.scrollTop || 0
   }
 }
 
 const onPanelScroll = () => {
   const panel = panelRef.value
   if (!panel) return
+  const currentScrollTop = panel.scrollTop
+  const isScrollingDown = currentScrollTop > lastPanelScrollTop
+  lastPanelScrollTop = currentScrollTop
+  if (!isScrollingDown) return
+
   const threshold = 120
-  if (panel.scrollTop + panel.clientHeight + threshold >= panel.scrollHeight) {
+  if (currentScrollTop + panel.clientHeight + threshold >= panel.scrollHeight) {
     designerFontListRef.value?.loadNextPage?.()
   }
 }
@@ -380,23 +407,25 @@ const scrollActiveFontIntoView = () => {
 }
 
 const locateCurrentFont = async () => {
-  if (!isOpen.value) return
+  if (!isOpen.value || locatingFont.value || !props.modelValue) return
 
   await nextTick()
   if (scrollActiveFontIntoView()) return
 
-  const loaded = await designerFontListRef.value?.loadUntilFont?.(props.modelValue)
-  if (!loaded && canUsePremiumAssets.value && fontScope.value === 'mine') {
-    fontScope.value = 'all'
-    await nextTick()
-    const loadedInAll = await designerFontListRef.value?.loadUntilFont?.(props.modelValue)
-    if (!loadedInAll) return
-  } else if (!loaded) {
-    return
-  }
+  locatingFont.value = true
+  try {
+    const response = await getFontBySlug(props.modelValue)
+    const font = response?.data as DesignFontVO | undefined
+    if (!font?.slug) return
 
-  await nextTick()
-  scrollActiveFontIntoView()
+    designerFontListRef.value?.showLocatedFont?.(font)
+    await nextTick()
+    scrollActiveFontIntoView()
+  } catch {
+    // Keep the loaded page unchanged when the exact lookup is unavailable.
+  } finally {
+    locatingFont.value = false
+  }
 }
 
 const parseTokenList = (value?: string | string[]) => {

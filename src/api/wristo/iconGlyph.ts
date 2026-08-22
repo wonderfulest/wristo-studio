@@ -8,6 +8,7 @@ export interface IconGlyphPageQueryDTO {
   iconId?: number
   active?: number
   isDefault?: number
+  fontType?: IconGlyphFontType
   keyword?: string
   orderBy?: string
 }
@@ -16,6 +17,7 @@ export interface IconGlyphVO {
   id: number
   glyphCode: string
   style: string
+  fontType: IconGlyphFontType
   isDefault: number
   version: number
   isActive: number
@@ -27,9 +29,12 @@ export interface IconGlyphUpdateDTO {
   style?: string
 }
 
+export type IconGlyphFontType = 'icon_font' | 'weather_font'
+
 export interface IconGlyphCreateDTO {
   glyphCode: string
   style?: string
+  fontType?: IconGlyphFontType
   isDefault?: number
   isActive?: number
 }

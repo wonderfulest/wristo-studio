@@ -50,14 +50,34 @@ describe('renderGlyphs', () => {
     expect([italic.width, italic.xoffset]).not.toEqual([uprightStem.width, uprightStem.xoffset])
   })
 
+  it('uses the same italic direction as CSS skewX', async () => {
+    const glyph = renderGlyphs(await source(), [73], 120, recipe({ italicAngle: -20 })).glyphs[0]
+    const centroid = (startRow: number, endRow: number) => {
+      let weightedX = 0
+      let coverage = 0
+      for (let y = startRow; y < endRow; y += 1) {
+        for (let x = 0; x < glyph.width; x += 1) {
+          const alpha = glyph.alpha[y * glyph.width + x]
+          weightedX += (glyph.xoffset + x) * alpha
+          coverage += alpha
+        }
+      }
+      return weightedX / coverage
+    }
+    const quarter = Math.floor(glyph.height / 4)
+    expect(centroid(0, quarter)).toBeGreaterThan(centroid(glyph.height - quarter, glyph.height))
+  })
+
   it('applies synthetic weight and supports outline-only alpha', async () => {
     const parsed = await source()
     const regular = renderGlyphs(parsed, [79], 60, recipe()).glyphs[0]
     const bold = renderGlyphs(parsed, [79], 60, recipe({ fontWeight: 700 })).glyphs[0]
+    const light = renderGlyphs(parsed, [79], 60, recipe({ fontWeight: 100 })).glyphs[0]
     const outlineOnly = renderGlyphs(parsed, [79], 60, recipe({ outlineWidthEm: 0.06, outlineMode: 'outline-only' })).glyphs[0]
 
     const coverage = (alpha: Uint8Array) => alpha.filter((value) => value > 0).length
     expect(coverage(bold.alpha)).toBeGreaterThan(coverage(regular.alpha))
+    expect(coverage(light.alpha)).toBeLessThan(coverage(regular.alpha))
     expect(coverage(outlineOnly.alpha)).toBeGreaterThan(0)
     expect(coverage(outlineOnly.alpha)).toBeLessThan(outlineOnly.width * outlineOnly.height)
   })
@@ -219,7 +239,7 @@ describe('renderGlyphs', () => {
       }
     }
     const faces = new Set<object>()
-    const result = await renderGlyphsPreferWorkerCanvas(await source(), [65], 48, recipe({ fontWeight: 700 }), {
+    const result = await renderGlyphsPreferWorkerCanvas(await source(), [65], 48, recipe(), {
       FontFace: TestFontFace,
       OffscreenCanvas: TestCanvas,
       fonts: { add: (face: object) => faces.add(face), delete: (face: object) => faces.delete(face) }
@@ -278,6 +298,36 @@ describe('renderGlyphs', () => {
     session.dispose()
     session.dispose()
     expect({ loads, adds, deletes, rendererPath: session.rendererPath }).toEqual({ loads: 1, adds: 1, deletes: 1, rendererPath: 'font-face-canvas' })
+  })
+
+  it('uses deterministic path transforms when synthetic weight or italic is requested', async () => {
+    class TestFontFace {
+      async load() { return this }
+    }
+    class TestCanvas {
+      getContext() {
+        return {
+          font: '', textBaseline: 'alphabetic', lineJoin: 'round', lineWidth: 0,
+          measureText: () => ({ width: 20, actualBoundingBoxLeft: 0, actualBoundingBoxRight: 20, actualBoundingBoxAscent: 20, actualBoundingBoxDescent: 4 }),
+          fillText: () => undefined, strokeText: () => undefined,
+          getImageData: () => ({ data: new Uint8ClampedArray(24 * 24 * 4) }),
+        }
+      }
+    }
+    const parsed = await source()
+    const session = await createGlyphRendererSession(parsed, {
+      FontFace: TestFontFace,
+      OffscreenCanvas: TestCanvas,
+      fonts: { add: () => undefined, delete: () => true },
+    })
+    try {
+      const regular = session.render(60, recipe(), [73]).glyphs[0]
+      const styled = session.render(60, recipe({ fontWeight: 700, italicAngle: 14 }), [73])
+      expect(styled.diagnostics.rendererPath).toBe('opentype-path')
+      expect([styled.glyphs[0].width, styled.glyphs[0].xoffset, styled.glyphs[0].alpha]).not.toEqual([regular.width, regular.xoffset, regular.alpha])
+    } finally {
+      session.dispose()
+    }
   })
 
   it('falls back after FontFace load failure and supports finally cleanup after render errors', async () => {

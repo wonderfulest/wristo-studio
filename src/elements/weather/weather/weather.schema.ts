@@ -19,9 +19,9 @@ export const weatherSchema: WeatherElementSchema = {
   icon: 'mdi:weather-partly-cloudy',
   defaultConfig: {
     fontSize: 36,
-    fontFamily: 'wristo-icon',
+    fontFamily: '',
     fill: '#FFFFFF',
   },
-  resizable: true,
+  resizable: false,
   rotatable: false,
 }

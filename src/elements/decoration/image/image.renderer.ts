@@ -114,6 +114,7 @@ export async function createImage(
   const image = new FabricImage(imgEl, {
     id,
     eleType: 'image',
+    assetType: config.assetType === 'mask' ? 'mask' : 'image',
     designerControlMode: 'resize8',
     left: Number(config.left ?? 0),
     top: Number(config.top ?? 0),
@@ -136,6 +137,7 @@ export async function createImage(
 
   ;(image as any).imageUrl = businessImageUrl
   ;(image as any).assetId = config.assetId
+  ;(image as any).assetType = config.assetType === 'mask' ? 'mask' : 'image'
 
   attachImageScaleSync(image)
   applyControlsToObject(image as unknown as FabricObject)
@@ -242,6 +244,7 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
   }
 
   if (patch.assetId !== undefined) (obj as any).assetId = patch.assetId
+  if (patch.assetType !== undefined) (obj as any).assetType = patch.assetType === 'mask' ? 'mask' : 'image'
   if (typeof nextAssetId === 'number') (obj as any).assetId = nextAssetId
 
   obj.setCoords?.()

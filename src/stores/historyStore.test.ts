@@ -16,6 +16,8 @@ const createCanvas = () => {
     }),
     getObjects: () => [],
     getActiveObjects: () => [],
+    set: () => undefined,
+    requestRenderAll: () => undefined,
     on: () => undefined,
     off: () => undefined,
   }
@@ -129,5 +131,25 @@ describe('history saveState result', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+
+  it('restores the pre-mutation snapshot when an atomic mutation fails', async () => {
+    const canvas = createCanvas()
+    const loadFromJSON = vi.fn(async (json: string) => {
+      const parsed = JSON.parse(json)
+      const id = String(parsed.objects?.[0]?.id ?? '')
+      canvas.setVersion(Number(id.replace('element-', '')) || 0)
+    })
+    const historyStore = useHistoryStore()
+    historyStore.attachCanvas({ ...canvas, loadFromJSON } as any, baseStore as any)
+    historyStore.saveInitial()
+
+    await expect(historyStore.runAtomicMutation('time-hands:add', async () => {
+      canvas.setVersion(1)
+      throw new Error('minute hand failed')
+    })).rejects.toThrow('minute hand failed')
+
+    expect(loadFromJSON).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(loadFromJSON.mock.calls[0][0]).objects[0].id).toBe('element-0')
   })
 })

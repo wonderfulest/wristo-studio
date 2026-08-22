@@ -279,16 +279,20 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const projectedConfig = projectDefaultVisualThemeForLoad(config)
-    const migratedDates = migrateLegacyDateProperties(
-      { properties: projectedConfig.properties, elements: projectedConfig.elements as any[] },
-      (projectedConfig.localization as any)?.appLanguage || 'eng',
-      dataCatalogStore.options,
-    )
-    const loadConfig = {
-      ...projectedConfig,
-      properties: migratedDates.properties,
-      elements: migratedDates.elements,
-    } as RuntimeDesignConfig
+    const migratedDates = Array.isArray(projectedConfig.elements)
+      ? migrateLegacyDateProperties(
+          { properties: projectedConfig.properties, elements: projectedConfig.elements as any[] },
+          (projectedConfig.localization as any)?.appLanguage || 'eng',
+          dataCatalogStore.options
+        )
+      : null
+    const loadConfig = migratedDates
+      ? ({
+          ...projectedConfig,
+          properties: migratedDates.properties,
+          elements: migratedDates.elements
+        } as RuntimeDesignConfig)
+      : projectedConfig
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     if (Array.isArray(loadConfig.elements)) {
       visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)

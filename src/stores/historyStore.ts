@@ -662,6 +662,27 @@ export const useHistoryStore = defineStore('history', () => {
 
   const canUndo = () => !isRestoring.value && undoStack.value.length > 1
   const canRedo = () => !isRestoring.value && redoStack.value.length > 0
+  const runAtomicMutation = async <T>(label: string, task: () => T | Promise<T>): Promise<T> => {
+    const before = takeSnapshot()
+    if (!before) {
+      throw new Error(`Cannot start atomic mutation without a canvas snapshot: ${label}`)
+    }
+
+    recordingDepth += 1
+    try {
+      return await task()
+    } catch (error) {
+      const restored = await restoreSnapshot(before, `${label}:rollback`)
+      if (!restored) {
+        const rollbackError = new Error(`Atomic mutation rollback failed: ${label}`)
+        ;(rollbackError as Error & { cause?: unknown }).cause = error
+        throw rollbackError
+      }
+      throw error
+    } finally {
+      recordingDepth = Math.max(0, recordingDepth - 1)
+    }
+  }
   const runWithoutRecording = async <T>(task: () => T | Promise<T>): Promise<T> => {
     recordingDepth += 1
     try {
@@ -702,6 +723,7 @@ export const useHistoryStore = defineStore('history', () => {
     canUndo,
     canRedo,
     isRestoring,
+    runAtomicMutation,
     runWithoutRecording,
     hasUnsavedChanges,
     clear,

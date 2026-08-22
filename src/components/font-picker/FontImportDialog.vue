@@ -330,6 +330,8 @@ const confirmUpload = async () => {
     }
     const ttfUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`) : ''
     fontStore.addCustomFont({
+      id: created.id,
+      userId: created.userId,
       label: created.fullName || familyName,
       value: created.slug,
       family: familyName,

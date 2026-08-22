@@ -35,6 +35,17 @@ describe('packGlyphAtlas', () => {
     expect(powerOfTwo).toMatchObject({ width: 32, height: 32 })
   })
 
+  it('prefers a horizontal wrapped layout close to square when requested', () => {
+    const packed = packGlyphAtlas(
+      Array.from({ length: 12 }, (_, index) => ({ codepoint: 0x101d + index, width: 40, height: 40 })),
+      { padding: 0, preferSquare: true }
+    )
+
+    expect(new Set(packed.placements.map((placement) => placement.y)).size).toBeGreaterThan(1)
+    expect(packed.width).toBeGreaterThanOrEqual(packed.height)
+    expect(packed.width / packed.height).toBeLessThan(1.5)
+  })
+
   it('fails with ATLAS_TOO_LARGE instead of creating another page', () => {
     expect(() => packGlyphAtlas([{ codepoint: 65, width: 8193, height: 1 }], { padding: 0 })).toThrowError(expect.objectContaining<Partial<AtlasPackingError>>({ code: 'ATLAS_TOO_LARGE' }))
   })
@@ -62,6 +73,7 @@ describe('packGlyphAtlas', () => {
     for (const options of [{ padding: -1 }, { padding: 0.5 }, { padding: 0, maxDimension: 0 }, { padding: 0, maxDimension: 8193 }]) {
       expect(() => packGlyphAtlas([{ codepoint: 65, width: 1, height: 1 }], options)).toThrowError('ATLAS_INVALID_INPUT')
     }
+    expect(() => packGlyphAtlas([{ codepoint: 65, width: 1, height: 1 }], { padding: 0, preferSquare: 'yes' } as any)).toThrowError('ATLAS_INVALID_INPUT')
   })
 
   it('retains a zero-sized space placement and separates expanded rectangles', () => {

@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 
+const { getWeatherConditions } = vi.hoisted(() => ({
+  getWeatherConditions: vi.fn(),
+}))
+
 vi.hoisted(() => {
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
@@ -11,6 +15,8 @@ vi.hoisted(() => {
 })
 
 vi.mock('@/api/image', () => ({ findImageByUrl: vi.fn(async () => ({ data: null })) }))
+vi.mock('@/api/wristo/weather', () => ({ getWeatherConditions }))
+vi.mock('@/api/wristo/fonts', () => ({ getFontBySlug: vi.fn(async () => ({ data: null })) }))
 
 describe('design asset bundle MIME types', () => {
   it('restores SVG assets with an SVG image MIME type', () => {
@@ -33,52 +39,6 @@ describe('font asset collection', () => {
         { fontSource: 'asset', fontFamily: 'packaged-font' },
       ],
     } as any)).toEqual(['fallback-font', 'packaged-font'])
-  })
-})
-
-describe('sub-dial pointer assets', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('deduplicates identical pointer content and records pivot metadata', async () => {
-    setActivePinia(createPinia())
-    vi.stubGlobal('localStorage', { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() })
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="80"><path d="M10 0V80"/></svg>'
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(svg, {
-      status: 200,
-      headers: { 'content-type': 'image/svg+xml' },
-    })))
-    const pointer = {
-      style: 'image', color: '#fff', width: 2, lengthRatio: 0.8, assetId: null,
-      pivotX: 0.5, pivotY: 0.85, scale: 1, rotationOffset: 0, tintColor: null,
-    }
-    const config = {
-      version: '1', properties: {}, designId: 'design-1', name: 'Sub dial', textCase: 0,
-      bitmapMode: false, orderIds: ['one', 'two'],
-      elements: [
-        { id: 'one', eleType: 'subDial', pointer: { ...pointer, imageUrl: 'https://one/pointer.svg' } },
-        { id: 'two', eleType: 'subDial', pointer: { ...pointer, imageUrl: 'https://two/pointer.svg' } },
-      ],
-    }
-
-    const { buildWrtDesignPackage } = await import('@/engine/services/designAssetBundleService')
-    const file = await buildWrtDesignPackage(config as any)
-    const zip = await JSZip.loadAsync(await file.arrayBuffer())
-    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
-    const refs = manifest.studio.assetRefs.filter((asset: any) => asset.role === 'subDialPointer')
-
-    expect(refs).toHaveLength(2)
-    expect(new Set(refs.map((asset: any) => asset.path)).size).toBe(1)
-    expect(refs[0]).toMatchObject({
-      sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
-      width: 20,
-      height: 80,
-      pivotX: 0.5,
-      pivotY: 0.85,
-      mimeType: 'image/svg+xml',
-    })
-    expect(refs[0].path).toMatch(/^assets\/sub-dial-pointers\/[a-f0-9]{64}\.svg$/)
   })
 })
 
@@ -127,7 +87,6 @@ describe('formal asset package layout', () => {
       '163910-tiger/marketing/social/101-poster/thumbnail.png',
     ]))
     expect(zip.files['163910-tiger/assets/background/']).toBeUndefined()
-    expect(zip.files['163910-tiger/assets/weather/amoled/']).toBeUndefined()
     expect(zip.files['163910-tiger/marketing/hero/']).toBeUndefined()
     expect(zip.files['163910-tiger/marketing/raw/']).toBeUndefined()
     expect(zip.files['163910-tiger/marketing/banner/']).toBeUndefined()
@@ -135,6 +94,28 @@ describe('formal asset package layout', () => {
     const manifest = JSON.parse(await zip.file('163910-tiger/manifest.json')!.async('string'))
     expect(manifest.appId).toBe(163910)
     expect(manifest.productImages[0]).toMatchObject({ imageId: 101, relationId: 700, type: 'social' })
+  })
+
+  it('packages weather fonts without a weather image mode or weather asset manifest', async () => {
+    setActivePinia(createPinia())
+    getWeatherConditions.mockClear()
+    const config = {
+      version: '1', properties: {}, designId: 'design-1', name: 'Weather Font', textCase: 0,
+      bitmapMode: false, orderIds: ['weather-1'],
+      elements: [{
+        id: 'weather-1', eleType: 'weather', iconUnicode: '101d',
+        fontFamily: 'weather-font', fontSize: 36, fill: '#FFFFFF',
+      }],
+    }
+
+    const { buildWrtDesignPackage } = await import('@/engine/services/designAssetBundleService')
+    const file = await buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+
+    expect(getWeatherConditions).not.toHaveBeenCalled()
+    expect(manifest.assets).not.toHaveProperty('weather')
+    expect(Object.keys(zip.files).some(path => path.includes('/weather/'))).toBe(false)
   })
 })
 

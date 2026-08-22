@@ -19,7 +19,7 @@ export const isHandAssetType = (assetType: AnalogAssetType): boolean => {
 export const isAllowedAnalogAssetFile = (file: File, assetType: AnalogAssetType): boolean => {
   const name = String(file.name || '').toLowerCase()
   const type = String(file.type || '').toLowerCase()
-  if (assetType === 'image') {
+  if (assetType === 'image' || assetType === 'mask') {
     return /^(image\/svg\+xml|image\/png|image\/jpe?g|image\/webp)$/.test(type) || /\.(svg|png|jpe?g|webp)$/i.test(name)
   }
   if (isHandAssetType(assetType)) {

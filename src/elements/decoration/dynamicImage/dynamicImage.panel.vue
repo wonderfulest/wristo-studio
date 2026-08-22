@@ -14,6 +14,9 @@
     <el-dialog v-model="dialogVisible" :title="editingIndex === null ? t('dynamicImage.addItem') : t('dynamicImage.editItem')"
       width="min(560px, 92vw)" append-to-body destroy-on-close>
       <div class="edit-form">
+        <el-button v-if="editingIndex === null" class="copy-group-button" plain @click="copyDialogVisible = true">
+          {{ t('dynamicImage.copyExistingGroup') }}
+        </el-button>
         <AssetPicker :selected-url="draftImageUrl" :selected-asset-id="draftAssetId" asset-type="image"
           :on-select="selectDraftAsset" :on-upload="selectDraftAsset" />
         <ExpressionEditor v-model="draftExpression" :error="expressionError" />
@@ -25,6 +28,7 @@
         <el-button type="primary" @click="saveDraft">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
+    <DynamicImageGroupCopyDialog v-model="copyDialogVisible" @copy="handleCopyGroup" />
   </div>
 </template>
 
@@ -38,17 +42,22 @@ import { getReferencedTokenDefinitions } from '@/components/expression/tokenPick
 import { parseExpression } from '@/engine/expression/parser'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 import { useExpressionPreviewStore } from '@/stores/expressionPreviewStore'
+import { useMessageStore } from '@/stores/message'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
 import { useI18n } from '@/i18n'
+import DynamicImageGroupCopyDialog from './DynamicImageGroupCopyDialog.vue'
+import { appendCopiedDynamicImageItems } from './dynamicImage.copyModel'
 import { calculateDynamicImageThumbnailSize, resolveDynamicImagePreviewSource, resolvePreviewAwareNewExpression } from './dynamicImage.panelModel'
 
 const props = defineProps<{ config?: any; element?: any; applyPatch?: (patch: Record<string, any>) => void }>()
 const { t } = useI18n()
 const expressionPreviewStore = useExpressionPreviewStore()
+const messageStore = useMessageStore()
 const model = computed(() => props.config ?? props.element ?? {})
 const items = computed<DynamicImageItem[]>(() => model.value.items ?? [])
 const dialogVisible = ref(false)
+const copyDialogVisible = ref(false)
 const editingIndex = ref<number | null>(null)
 const draftImageUrl = ref('')
 const draftAssetId = ref<number | undefined>()
@@ -94,6 +103,11 @@ const removeEditingItem = () => {
   if (editingIndex.value === null) return
   commitItems(items.value.filter((_, index) => index !== editingIndex.value)); dialogVisible.value = false
 }
+const handleCopyGroup = (sourceItems: DynamicImageItem[]) => {
+  commitItems(appendCopiedDynamicImageItems(items.value, sourceItems, nanoid))
+  dialogVisible.value = false
+  messageStore.success(t('dynamicImage.rulesAppended', { count: sourceItems.length }))
+}
 const dropAt = (targetIndex: number) => {
   const sourceIndex = draggedIndex.value; draggedIndex.value = null
   if (sourceIndex === null || sourceIndex === targetIndex) return
@@ -111,6 +125,7 @@ const dropAt = (targetIndex: number) => {
 .expression-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--el-text-color-primary); }
 .add-button { width: 100%; }
 .edit-form { display: grid; gap: 18px; }
+.copy-group-button { width: 100%; margin: 0; }
 :deep(.el-dialog__footer) { display: flex; align-items: center; }
 .footer-spacer { flex: 1; }
 </style>

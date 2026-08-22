@@ -3,10 +3,77 @@ import { describe, expect, it } from 'vitest'
 import {
   BITMAP_FONT_SIZES,
   charsetForType,
+  deriveBitmapFontSlug,
+  mergeBitmapFontSearchKeywords,
+  mergeBitmapFontStyleTags,
   normalizeBitmapFontRecipe,
 } from './contracts'
 
+const styledRecipe = {
+  schemaVersion: 1 as const,
+  rendererVersion: '1' as const,
+  fontWeight: 900,
+  italicAngle: -3,
+  outlineWidthEm: 0.07,
+  outlineMode: 'fill' as const,
+  lineJoin: 'round' as const,
+  antialias: true as const,
+}
+
 describe('bitmap font contracts', () => {
+  it('derives a stable source-and-recipe slug and changes it when the rendered style changes', async () => {
+    const sourceSha256 = 'a'.repeat(64)
+
+    await expect(deriveBitmapFontSlug({
+      baseName: 'Quantico',
+      sourceSha256,
+      fontType: 'number_font',
+      recipe: styledRecipe,
+    })).resolves.toBe('quantico-5eb4ae6da498')
+
+    await expect(deriveBitmapFontSlug({
+      baseName: 'Quantico',
+      sourceSha256,
+      fontType: 'number_font',
+      recipe: { ...styledRecipe, fontWeight: 800 },
+    })).resolves.toBe('quantico-04eded8664f8')
+  })
+
+  it('merges recipe-derived tags with normalized manual tags without treating an unused outline width as outline', () => {
+    expect(mergeBitmapFontStyleTags(styledRecipe, ' sport, Editorial, sport ')).toEqual([
+      'bold',
+      'italic',
+      'fill',
+      'sport',
+      'editorial',
+    ])
+    expect(mergeBitmapFontStyleTags({ ...styledRecipe, outlineMode: 'fill-outline' }, ['sport'])).toEqual([
+      'bold',
+      'italic',
+      'fill',
+      'outline',
+      'sport',
+    ])
+    expect(mergeBitmapFontStyleTags({ ...styledRecipe, fontWeight: 300, italicAngle: 0 }, [])).toEqual(['thin', 'fill'])
+    expect(mergeBitmapFontStyleTags({ ...styledRecipe, fontWeight: 400, italicAngle: 0 }, [])).toEqual(['regular', 'fill'])
+    expect(mergeBitmapFontStyleTags({ ...styledRecipe, fontWeight: 600, italicAngle: 0 }, [])).toEqual(['medium', 'fill'])
+  })
+
+  it('derives searchable comma-separated keywords from the font identity and style while preserving phrases', () => {
+    const regularRecipe = { ...styledRecipe, fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill' as const }
+
+    expect(mergeBitmapFontSearchKeywords('Quantico', 'number_font', regularRecipe, ' sport editorial, Retro，retro ')).toEqual([
+      'quantico',
+      'number',
+      'time',
+      'bitmap',
+      'regular',
+      'fill',
+      'sport editorial',
+      'retro',
+    ])
+  })
+
   it('keeps the exact 38-size Wristo contract', () => {
     expect(BITMAP_FONT_SIZES).toHaveLength(38)
     expect(BITMAP_FONT_SIZES).toEqual([
@@ -33,6 +100,11 @@ describe('bitmap font contracts', () => {
         176, 8208, 8211, 8217, 8230,
       ],
     })
+    const chinese = charsetForType('text_font_zh')
+    expect(chinese.profile).toBe('wristo-text-zh-v1')
+    expect(chinese.codepoints).toContain('中'.codePointAt(0))
+    expect(chinese.codepoints).toContain('℃'.codePointAt(0))
+    expect(new Set(chinese.codepoints).size).toBe(chinese.codepoints.length)
     expect(() => charsetForType('icon_font')).toThrow('Unsupported bitmap font type')
   })
 

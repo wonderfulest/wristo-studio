@@ -1,11 +1,16 @@
-import { Group, Line } from 'fabric'
+import { Circle, Group, Line } from 'fabric'
 import { reactive } from 'vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { getHandPivot, getRotatedHandCenter, moveHandCenterKeepingPivot } from './hand.geometry'
+import {
+  getHandPivot,
+  getRotatedHandCenter,
+  moveHandCenterKeepingPivot,
+  moveHandPivotKeepingCenter,
+} from './hand.geometry'
 
-const HAND_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand'])
+const HAND_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'rotatingHand'])
 const PIVOT_MARKER_TYPE = 'handCalibrationPivot'
 
 type HandInteractionState = {
@@ -18,6 +23,12 @@ type HandInteractionState = {
   borderColor: string
   hoverCursor: string
   angle: number
+  geometry: {
+    centerX: number
+    centerY: number
+    pivotOffsetX: number
+    pivotOffsetY: number
+  }
 }
 
 export const handCalibrationState = reactive({
@@ -29,6 +40,7 @@ const priorInteraction = new Map<any, HandInteractionState>()
 let pivotMarker: any = null
 let attachedCanvas: any = null
 let priorPreserveObjectStacking: boolean | undefined
+let keyboardSequenceChanged = false
 
 function isHand(target: any): boolean {
   return HAND_TYPES.has(String(target?.eleType ?? ''))
@@ -48,6 +60,7 @@ function findSelectedHand(canvas: any): any | null {
 function markerFor(hand: any): any {
   const pivot = getHandPivot(hand)
   const marker = new Group([
+    new Circle({ radius: 18, fill: 'rgba(0,0,0,0)', originX: 'center', originY: 'center' }),
     new Line([-12, 0, 12, 0], { stroke: '#ef4444', strokeWidth: 2 }),
     new Line([0, -12, 0, 12], { stroke: '#ef4444', strokeWidth: 2 }),
   ], {
@@ -55,18 +68,19 @@ function markerFor(hand: any): any {
     top: pivot.y,
     originX: 'center',
     originY: 'center',
-    selectable: false,
-    evented: false,
+    selectable: true,
+    evented: true,
     hasControls: false,
     hasBorders: false,
     objectCaching: false,
     excludeFromExport: true,
   } as any)
-  marker.set({ eleType: PIVOT_MARKER_TYPE, handId: String(hand.id), hoverCursor: 'default' })
+  marker.set({ eleType: PIVOT_MARKER_TYPE, handId: String(hand.id), hoverCursor: 'crosshair' })
   return marker
 }
 
 function patchHand(hand: any, geometry: ReturnType<typeof moveHandCenterKeepingPivot>): void {
+  const calibrationAngle = getCalibrationAngle()
   hand.set({
     centerX: geometry.centerX,
     centerY: geometry.centerY,
@@ -75,7 +89,7 @@ function patchHand(hand: any, geometry: ReturnType<typeof moveHandCenterKeepingP
     pivotOffsetX: geometry.pivotOffsetX,
     pivotOffsetY: geometry.pivotOffsetY,
     rotationCenter: { x: geometry.pivotX, y: geometry.pivotY },
-    angle: 0,
+    angle: calibrationAngle,
   })
   hand.setCoords?.()
   if (hand.id != null) {
@@ -87,7 +101,24 @@ function patchHand(hand: any, geometry: ReturnType<typeof moveHandCenterKeepingP
       pivotOffsetX: geometry.pivotOffsetX,
       pivotOffsetY: geometry.pivotOffsetY,
       rotationCenter: { x: geometry.pivotX, y: geometry.pivotY },
-      angle: 0,
+    } as any)
+  }
+}
+
+function restoreHandGeometry(hand: any, state: HandInteractionState): void {
+  const geometry = state.geometry
+  const pivot = getHandPivot(geometry)
+  hand.set?.({
+    ...geometry,
+    rotationCenter: pivot,
+  })
+  hand.setCoords?.()
+  if (hand.id != null) {
+    useElementDataStore().patchElement(String(hand.id), {
+      ...geometry,
+      left: geometry.centerX,
+      top: geometry.centerY,
+      rotationCenter: pivot,
     } as any)
   }
 }
@@ -110,11 +141,16 @@ function restoreHandAngle(hand: any): void {
   hand.setCoords?.()
 }
 
-function pointHandAtNoon(hand: any): void {
+function getCalibrationAngle(): number {
+  return 0
+}
+
+function pointHandAtCalibrationAngle(hand: any): void {
+  const angle = getCalibrationAngle()
+  const position = getRotatedHandCenter(hand, angle)
   hand.set?.({
-    angle: 0,
-    left: Number(hand.centerX ?? hand.left ?? 0),
-    top: Number(hand.centerY ?? hand.top ?? 0),
+    angle,
+    ...position,
   })
   hand.setCoords?.()
 }
@@ -136,14 +172,24 @@ function applyCalibrationInteraction(): void {
     })
     hand.setCoords?.()
   }
-  pivotMarker?.set?.({ evented: false, hoverCursor: 'default' })
+  pivotMarker?.set?.({ selectable: true, evented: true, hoverCursor: 'crosshair' })
   if (selected) attachedCanvas.setActiveObject?.(selected)
   if (pivotMarker) attachedCanvas.bringObjectToFront?.(pivotMarker)
   attachedCanvas.requestRenderAll?.()
 }
 
 function handleObjectMoving(event: any): void {
-  const hand = event?.target
+  const target = event?.target
+  if (target?.eleType === PIVOT_MARKER_TYPE) {
+    const hand = findSelectedHand(attachedCanvas)
+    if (!hand || String(target.handId) !== String(hand.id)) return
+    patchHand(hand, moveHandPivotKeepingCenter(hand, {
+      x: Number(target.left ?? 0),
+      y: Number(target.top ?? 0),
+    }))
+    return
+  }
+  const hand = target
   if (!isHand(hand) || String(hand.id) !== handCalibrationState.selectedHandId) return
   const geometry = moveHandCenterKeepingPivot(hand, {
     x: Number(hand.left ?? hand.centerX ?? 0),
@@ -153,8 +199,66 @@ function handleObjectMoving(event: any): void {
 }
 
 function handleObjectModified(event: any): void {
-  if (!isHand(event?.target)) return
+  const target = event?.target
+  if (!isHand(target) && target?.eleType !== PIVOT_MARKER_TYPE) return
   useHistoryStore().saveState('hand:calibration-drag', { captureConfig: true })
+}
+
+function keyboardDelta(event: KeyboardEvent): { x: number; y: number } | null {
+  const step = event.shiftKey ? 10 : 1
+  if (event.key === 'ArrowLeft') return { x: -step, y: 0 }
+  if (event.key === 'ArrowRight') return { x: step, y: 0 }
+  if (event.key === 'ArrowUp') return { x: 0, y: -step }
+  if (event.key === 'ArrowDown') return { x: 0, y: step }
+  return null
+}
+
+function handleCalibrationKeyDown(event: KeyboardEvent): void {
+  if (!handCalibrationState.active || !attachedCanvas) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    cancelHandCalibration()
+    return
+  }
+
+  const delta = keyboardDelta(event)
+  if (!delta) return
+  const target = attachedCanvas.getActiveObject?.()
+  const isSelectedHand = isHand(target)
+    && String(target.id) === handCalibrationState.selectedHandId
+  const isSelectedPivot = target?.eleType === PIVOT_MARKER_TYPE
+    && String(target.handId) === handCalibrationState.selectedHandId
+  if (!isSelectedHand && !isSelectedPivot) return
+
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  target.set?.({
+    left: Number(target.left ?? 0) + delta.x,
+    top: Number(target.top ?? 0) + delta.y,
+  })
+  target.setCoords?.()
+  handleObjectMoving({ target })
+  keyboardSequenceChanged = true
+  attachedCanvas.requestRenderAll?.()
+}
+
+function handleCalibrationKeyUp(event: KeyboardEvent): void {
+  if (!keyboardDelta(event) || !keyboardSequenceChanged) return
+  keyboardSequenceChanged = false
+  useHistoryStore().saveState('hand:calibration-keyboard', { captureConfig: true })
+}
+
+function attachKeyboardCalibration(): void {
+  if (typeof document === 'undefined') return
+  document.addEventListener('keydown', handleCalibrationKeyDown, { capture: true })
+  document.addEventListener('keyup', handleCalibrationKeyUp, { capture: true })
+}
+
+function detachKeyboardCalibration(): void {
+  if (typeof document === 'undefined') return
+  document.removeEventListener('keydown', handleCalibrationKeyDown, { capture: true })
+  document.removeEventListener('keyup', handleCalibrationKeyUp, { capture: true })
 }
 
 export function syncHandCalibrationMarker(handId: string, pivot: { x: number; y: number }): void {
@@ -182,7 +286,7 @@ export function startHandCalibration(handId?: string): boolean {
     const previous = findSelectedHand(canvas)
     if (previous && previous !== selected) restoreHandAngle(previous)
     showMarkerFor(selected)
-    pointHandAtNoon(selected)
+    pointHandAtCalibrationAngle(selected)
     applyCalibrationInteraction()
     return true
   }
@@ -201,6 +305,12 @@ export function startHandCalibration(handId?: string): boolean {
       borderColor: String(hand.borderColor ?? ''),
       hoverCursor: String(hand.hoverCursor ?? ''),
       angle: Number(hand.angle ?? 0),
+      geometry: {
+        centerX: Number(hand.centerX ?? hand.left ?? 0),
+        centerY: Number(hand.centerY ?? hand.top ?? 0),
+        pivotOffsetX: Number(hand.pivotOffsetX ?? 0),
+        pivotOffsetY: Number(hand.pivotOffsetY ?? 0),
+      },
     })
     hand.set({
       selectable: false,
@@ -218,17 +328,29 @@ export function startHandCalibration(handId?: string): boolean {
   handCalibrationState.active = true
   if (selected) {
     showMarkerFor(selected)
-    pointHandAtNoon(selected)
+    pointHandAtCalibrationAngle(selected)
   }
   applyCalibrationInteraction()
   canvas.on?.('object:moving', handleObjectMoving)
   canvas.on?.('object:modified', handleObjectModified)
+  attachKeyboardCalibration()
   canvas.requestRenderAll?.()
   return true
 }
 
+export function cancelHandCalibration(): void {
+  priorInteraction.forEach((state, hand) => restoreHandGeometry(hand, state))
+  keyboardSequenceChanged = false
+  stopHandCalibration()
+}
+
 export function stopHandCalibration(): void {
   const canvas = attachedCanvas
+  detachKeyboardCalibration()
+  if (keyboardSequenceChanged) {
+    keyboardSequenceChanged = false
+    useHistoryStore().saveState('hand:calibration-keyboard', { captureConfig: true })
+  }
   if (canvas) {
     canvas.off?.('object:moving', handleObjectMoving)
     canvas.off?.('object:modified', handleObjectModified)

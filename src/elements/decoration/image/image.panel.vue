@@ -5,7 +5,7 @@
         <AssetPicker
           :selected-url="imageUrl"
           :selected-asset-id="assetId"
-          asset-type="image"
+          :asset-type="assetType"
           :on-select="handleAssetSelect"
           :on-upload="handleAssetUpload"
         />
@@ -19,7 +19,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement } from '@/types/element'
 import AssetPicker from '@/components/asset-picker/index.vue'
-import type { AnalogAssetVO } from '@/types/api/analog-asset'
+import type { AnalogAssetType, AnalogAssetVO } from '@/types/api/analog-asset'
 import { useI18n } from '@/i18n'
 
 const props = defineProps<{
@@ -36,6 +36,7 @@ const currentModel = computed<any>(() => {
 
 const imageUrl = ref<string>('')
 const assetId = ref<number | undefined>(undefined)
+const assetType = computed<AnalogAssetType>(() => currentModel.value.assetType === 'mask' ? 'mask' : 'image')
 
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {

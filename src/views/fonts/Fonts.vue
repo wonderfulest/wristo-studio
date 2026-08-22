@@ -35,6 +35,7 @@
             :key="font.id"
             :label="font.fullName || font.family"
             :font-family="font.previewFamily || font.family"
+            :font-slug="font.slug"
             :type="font.type"
             :language="font.language"
             :is-system="!!font.isSystem"

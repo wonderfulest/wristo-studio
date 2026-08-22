@@ -7,6 +7,10 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import {
+  LINE_AXIS_SNAP_THRESHOLD_DEGREES,
+  snapLineEndpointToAxis,
+} from './line.geometry'
 
 // ─── 辅助：x1/y1/x2/y2 <-> Rect left/top/width/angle 互转 ───────────────────
 
@@ -53,13 +57,16 @@ function createEndpointControl(side: 'left' | 'right'): Control {
       // 固定端坐标
       const fixedX = side === 'left' ? rect.left + cos * halfW : rect.left - cos * halfW
       const fixedY = side === 'left' ? rect.top + sin * halfW : rect.top - sin * halfW
+      const snappedEndpoint = snapLineEndpointToAxis(fixedX, fixedY, x, y)
 
       // 新长度 = 鼠标位置到固定端的距离
-      const newLength = Math.max(1, Math.sqrt((x - fixedX) ** 2 + (y - fixedY) ** 2))
+      const newLength = Math.max(1, Math.sqrt(
+        (snappedEndpoint.x - fixedX) ** 2 + (snappedEndpoint.y - fixedY) ** 2,
+      ))
       // 新角度
       const newAngle = side === 'left'
-        ? (Math.atan2(fixedY - y, fixedX - x) * 180) / Math.PI
-        : (Math.atan2(y - fixedY, x - fixedX) * 180) / Math.PI
+        ? (Math.atan2(fixedY - snappedEndpoint.y, fixedX - snappedEndpoint.x) * 180) / Math.PI
+        : (Math.atan2(snappedEndpoint.y - fixedY, snappedEndpoint.x - fixedX) * 180) / Math.PI
 
       // 新中心 = 固定端 + 半长沿新方向
       const newRad = (newAngle * Math.PI) / 180
@@ -149,6 +156,8 @@ export async function createLine(config: LineElementConfig): Promise<FabricEleme
     lockScalingY: true,
     strokeUniform: true,
     strokeDashArray: (config as any).strokeDashArray ?? null,
+    snapAngle: 90,
+    snapThreshold: LINE_AXIS_SNAP_THRESHOLD_DEGREES,
   } as any)
 
   applyLineControls(rect)
@@ -213,6 +222,8 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
       hasControls: false,
       hasBorders: false,
       evented: false,
+      snapAngle: 90,
+      snapThreshold: LINE_AXIS_SNAP_THRESHOLD_DEGREES,
     } as any)
 
     canvas.add(currentRect)
@@ -222,24 +233,16 @@ export function startDrawingLine(canvas: any, initialConfig: Partial<LineElement
     if (!isDrawing || !currentRect) return
 
     const pointer = canvas.getPointer(o.e)
-    let endX = pointer.x
-    let endY = pointer.y
-
-    // 水平/垂直吸附（Shift 感觉）
-    const dx = Math.abs(endX - startX)
-    const dy = Math.abs(endY - startY)
-    const SNAP_THRESHOLD = 10
-
-    if (Math.abs(dx - dy) >= SNAP_THRESHOLD) {
-      if (dx > dy) {
-        endY = startY
-      } else {
-        endX = startX
-      }
-    }
+    const endpoint = snapLineEndpointToAxis(startX, startY, pointer.x, pointer.y)
 
     const strokeWidth = currentRect.height
-    const { left, top, width, angle } = pointsToRect(startX, startY, endX, endY, strokeWidth)
+    const { left, top, width, angle } = pointsToRect(
+      startX,
+      startY,
+      endpoint.x,
+      endpoint.y,
+      strokeWidth,
+    )
     currentRect.set({ left, top, width, angle })
     canvas.renderAll()
   }
@@ -340,8 +343,9 @@ export function updateLine(element: FabricElement, patch: Partial<LineElementCon
     const y1 = patch.y1 !== undefined ? Math.round(Number(patch.y1)) : pts.y1
     const x2 = patch.x2 !== undefined ? Math.round(Number(patch.x2)) : pts.x2
     const y2 = patch.y2 !== undefined ? Math.round(Number(patch.y2)) : pts.y2
+    const endpoint = snapLineEndpointToAxis(x1, y1, x2, y2)
     const sw = patch.strokeWidth !== undefined ? Math.max(1, Number(patch.strokeWidth)) : rect.height
-    const { left, top, width, angle } = pointsToRect(x1, y1, x2, y2, sw)
+    const { left, top, width, angle } = pointsToRect(x1, y1, endpoint.x, endpoint.y, sw)
     rect.set({ left, top, width, angle, scaleX: 1 })
   }
 

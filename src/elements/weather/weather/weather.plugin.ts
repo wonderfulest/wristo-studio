@@ -12,7 +12,7 @@ export default function registerWeatherPlugin() {
       return createWeather(config as WeatherElementConfig, renderContext)
     },
     update: (element, patch) => {
-      updateWeather(element as any, patch as Partial<WeatherElementConfig>)
+      return updateWeather(element as any, patch as Partial<WeatherElementConfig>)
     },
     encode: (element) => {
       return encodeWeather(element as any) as any

@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { decodeWeather } from './weather.encoder'
 import { weatherSchema } from './weather.schema'
 
-describe('weather decoder compatibility', () => {
-  it('restores the schema font for legacy weather elements without fontFamily', () => {
+describe('weather font encoding', () => {
+  it('restores the schema font when a new weather element has no fontFamily', () => {
     const decoded = decodeWeather({
       eleType: 'weather',
-      id: 'legacy-weather',
+      id: 'weather',
       left: 120,
       top: 160,
       fill: '#FFFFAA',
@@ -16,13 +16,13 @@ describe('weather decoder compatibility', () => {
     expect(decoded.fontFamily).toBe(weatherSchema.defaultConfig.fontFamily)
   })
 
-  it('replaces a non-weather MIP code with the default weather icon', () => {
+  it('replaces a non-weather icon code with the default weather icon', () => {
     const decoded = decodeWeather({
       eleType: 'weather',
       id: 'invalid-weather-icon',
-      mipUnicode: '0030',
+      iconUnicode: '0030',
     } as any)
 
-    expect(decoded.mipUnicode).toBe('101d')
+    expect((decoded as any).iconUnicode).toBe('101d')
   })
 })

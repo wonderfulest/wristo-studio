@@ -44,8 +44,6 @@ import type { ImageElementConfig } from '@/types/elements/image'
 import { imageSchema } from '@/elements/decoration/image/image.schema'
 import { useI18n } from '@/i18n'
 import { isPngFile, isSvgFile, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
-import { installSubDialLayoutEditor } from '@/elements/dials/subDial/subDial.plugin'
-import { updateSubDial } from '@/elements/dials/subDial/subDial.renderer'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const baseStore = useBaseStore()
@@ -65,7 +63,6 @@ const isFileDragOver = ref(false)
 const isUploadingDroppedImage = ref(false)
 let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
-let disposeSubDialLayoutEditor: (() => void) | null = null
 
 const watchSize = computed(() => designStore.designSpec.width)
 const watchWidth = computed(() => designStore.designSpec.width)
@@ -97,19 +94,6 @@ onMounted(() => {
     zoomManager: null,
   })
 
-  const canvas = baseStore.canvas
-  if (canvas) {
-    const editor = installSubDialLayoutEditor({
-      canvas: canvas as any,
-      updateElement: (element, patch) => updateSubDial(element, patch),
-      saveHistory: () => {
-        historyStore.saveState('sub-dial:content-drag')
-      },
-      runWithoutRecording: (task) => historyStore.runWithoutRecording(task),
-    })
-    disposeSubDialLayoutEditor = () => editor.dispose()
-  }
-
   // 绑定缩放管理器
   zoomManager = attachZoomManager({
     baseStore,
@@ -137,8 +121,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  disposeSubDialLayoutEditor?.()
-  disposeSubDialLayoutEditor = null
   getDataSimulatorEngine().stop()
   historyManager.dispose()
   disposeCanvasManager()

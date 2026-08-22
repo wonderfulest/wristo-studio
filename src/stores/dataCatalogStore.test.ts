@@ -62,6 +62,29 @@ describe('data catalog store', () => {
     expect(() => validateDataCatalog(catalog)).toThrow('dialGoalSource must be garmin or null')
   })
 
+  it('accepts degree-based direction dial metadata', () => {
+    const catalog = clone(validCatalog()) as any
+    catalog.dataTypeOptions[0].metricSymbol = ':FIELD_TYPE_WEATHER_WIND_DIRECTION'
+    catalog.dataTypeOptions[0].dialMode = 'direction'
+    catalog.dataTypeOptions[0].dialDirectionUnit = 'degree'
+
+    const snapshot = validateDataCatalog(catalog)
+
+    expect(snapshot.optionsByMetricSymbol.get(':FIELD_TYPE_WEATHER_WIND_DIRECTION')).toMatchObject({
+      dialMode: 'direction',
+      dialDirectionUnit: 'degree',
+    })
+  })
+
+  it('rejects unsupported direction units', () => {
+    const catalog = clone(validCatalog()) as any
+    catalog.dataTypeOptions[0].metricSymbol = ':FIELD_TYPE_WEATHER_WIND_DIRECTION'
+    catalog.dataTypeOptions[0].dialMode = 'direction'
+    catalog.dataTypeOptions[0].dialDirectionUnit = 'radian'
+
+    expect(() => validateDataCatalog(catalog)).toThrow('dialDirectionUnit must be degree or null')
+  })
+
   it('replaces items and indexes atomically after strict validation', async () => {
     mockedGetDataCatalog.mockResolvedValue({ code: 0, msg: 'ok', data: validCatalog() })
 

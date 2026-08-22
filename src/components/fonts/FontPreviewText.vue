@@ -1,5 +1,13 @@
 <template>
+  <BitmapFontPreview
+    v-if="hasBitmapPreview"
+    class="preview-text preview-text-icon"
+    :descriptor-url="bitmapPreviewDescriptorUrl!"
+    :atlas-url="bitmapPreviewAtlasUrl!"
+    :codepoints="previewCodepoints"
+  />
   <span
+    v-else
     class="preview-text"
     :class="{ 'preview-text-icon': isIcon }"
     :style="[{ fontFamily: effectiveFontFamily }, previewTextStyle]"
@@ -11,15 +19,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { FontTypes } from '@/config/fonts'
+import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 
 const ICON_FONT_UNICODES = [
   '0030','0031','0032','0033','0034','0035','0036','0037',
-  '0040','0041','0042','0043',
-  '101d','102d','110d','150d'
+  '0040','0041','0042','0043'
+]
+
+const WEATHER_FONT_UNICODES = [
+  '101d','101e','102d','102e','103d','104d',
+  '109d','110d','110e','111d','113d','150d'
 ]
 
 const iconPreviewText = String.fromCodePoint(
   ...ICON_FONT_UNICODES.map(code => parseInt(code, 16))
+)
+const weatherPreviewText = String.fromCodePoint(
+  ...WEATHER_FONT_UNICODES.map(code => parseInt(code, 16))
 )
 
 const props = defineProps<{
@@ -30,9 +46,24 @@ const props = defineProps<{
   fontUrl?: string
   previewText?: string
   previewTextStyle?: CSSProperties
+  bitmapPreviewDescriptorUrl?: string | null
+  bitmapPreviewAtlasUrl?: string | null
 }>()
 
-const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
+const isWeatherIcon = computed(() => props.type === FontTypes.WEATHER_FONT)
+const isIcon = computed(() => (
+  props.type === FontTypes.ICON_FONT
+  || isWeatherIcon.value
+  || props.sectionName === 'icon'
+))
+const hasBitmapPreview = computed(() => (
+  isIcon.value
+  && !!props.bitmapPreviewDescriptorUrl
+  && !!props.bitmapPreviewAtlasUrl
+))
+const previewCodepoints = computed(() => (
+  isWeatherIcon.value ? WEATHER_FONT_UNICODES : ICON_FONT_UNICODES
+).map(code => parseInt(code, 16)))
 
 const loadedFontFamily = ref<string | null>(null)
 
@@ -46,7 +77,7 @@ const isChineseTextFont = computed(() => (
 
 const sampleText = computed(() => {
   if (isIcon.value) {
-    return iconPreviewText
+    return isWeatherIcon.value ? weatherPreviewText : iconPreviewText
   }
   const customText = props.previewText?.trim()
   if (customText) {
@@ -62,6 +93,10 @@ const sampleText = computed(() => {
 })
 
 const loadFontFromUrl = async (url?: string) => {
+  if (hasBitmapPreview.value) {
+    loadedFontFamily.value = null
+    return
+  }
   if (!url) {
     loadedFontFamily.value = null
     return
@@ -88,9 +123,9 @@ onMounted(() => {
 })
 
 watch(
-  () => props.fontUrl,
-  (newUrl) => {
-    loadFontFromUrl(newUrl)
+  () => [props.fontUrl, props.bitmapPreviewDescriptorUrl, props.bitmapPreviewAtlasUrl],
+  ([newUrl]) => {
+    loadFontFromUrl(newUrl || undefined)
   }
 )
 </script>

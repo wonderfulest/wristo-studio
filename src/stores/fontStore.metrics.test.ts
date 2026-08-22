@@ -122,6 +122,20 @@ describe('font metrics refresh', () => {
     expect(requestRenderAll).toHaveBeenCalledOnce()
   })
 
+  it('applies registered recipe metadata when the font is loaded with a direct URL', async () => {
+    const matchingText: any = {
+      fontFamily: 'direct-styled', fontSize: 50, fill: '#fff', fontWeight: 400, skewX: 0,
+      initDimensions: vi.fn(), setCoords: vi.fn(), set(props: any) { Object.assign(this, props) },
+    }
+    ;(useCanvasStore() as any).canvas = { getObjects: () => [matchingText], requestRenderAll: vi.fn() }
+    const store = useFontStore()
+
+    store.registerServerFont({ slug: 'direct-styled', bitmapRecipe: JSON.stringify(bitmapRecipe) } as any)
+    await expect(store.loadFont('direct-styled', 'data:font/ttf;base64,AA==')).resolves.toBe(true)
+
+    expect(matchingText).toMatchObject({ fontWeight: 700, skewX: -12, strokeWidth: 2 })
+  })
+
   it('removes stale recipe display props when refreshed metadata has no recipe', async () => {
     const matchingText: any = {
       fontFamily: 'plain-time',

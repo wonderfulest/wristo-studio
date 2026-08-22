@@ -137,6 +137,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     return
   }
   const handler = getElementHandler(type)
+  const handlerOwnsRuntimePosition = type === 'rotatingHand'
   applySharedElementPatch(resolved, patch)
   if (!handler || !handler.update) {
     console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
@@ -178,7 +179,9 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     const current = ((canvas?.getObjects?.() || []).find(
       (o: any) => o?.id != null && String(o.id) === String(id),
     ) as FabricElement | undefined) ?? resolved
-    const positionRestored = restoreUnpatchedRuntimePosition(current, runtimePositionBefore, positionPatch)
+    const positionRestored = handlerOwnsRuntimePosition
+      ? false
+      : restoreUnpatchedRuntimePosition(current, runtimePositionBefore, positionPatch)
 
     let stableBusinessPosition = applyStableBusinessPosition({}, businessPositionBefore, positionPatch)
     try {

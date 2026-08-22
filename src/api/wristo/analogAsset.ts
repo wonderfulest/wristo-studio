@@ -12,10 +12,11 @@ export const analogAssetApi = {
    * @param type 素材类型
    * @returns 上传结果
    */
-  upload(file: File, type: AnalogAssetType): Promise<ApiResponse<AnalogAssetVO>> {
+  upload(file: File, type: AnalogAssetType, isShared = false): Promise<ApiResponse<AnalogAssetVO>> {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', type)
+    formData.append('isShared', String(isShared))
     return instance.post('/dsn/analog-asset/upload?populate=asset', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'

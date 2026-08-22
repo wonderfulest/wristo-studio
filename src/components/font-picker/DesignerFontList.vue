@@ -27,12 +27,16 @@ import { useI18n } from '@/i18n'
 import { isFontCompatibleWithDateLanguage, type DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { getFontLanguagesForDateContent } from '@/utils/fontLanguageFilter'
 import { sortSystemFontsFirst } from '@/components/font-picker/fontSort'
+import { isFontTypeVisible, normalizeAllowedFontTypes } from './fontTypeVisibility'
+import { useFontStore } from '@/stores/fontStore'
 
 const { t } = useI18n()
+const fontStore = useFontStore()
 
 const props = defineProps<{
   modelValue: string
   type: string
+  types?: string[]
   canUsePremiumAssets?: boolean
   includeAllUsers?: boolean
   excludedFontValues?: Set<string>
@@ -46,15 +50,19 @@ const emit = defineEmits<{
 }>()
 
 const fonts = ref<DesignFontVO[]>([])
+const locatedFonts = ref<DesignFontVO[]>([])
 const loading = ref(false)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+let requestGeneration = 0
 
 const hasMore = computed(() => fonts.value.length < total.value)
 const languageFilter = computed(() => getFontLanguagesForDateContent(props.dateContentLanguage))
+const allowedTypes = computed(() => normalizeAllowedFontTypes(props.types, props.type))
 const isVisibleFont = (font: DesignFontVO) => {
   if (props.excludedFontValues?.has(font.slug)) return false
+  if (!isFontTypeVisible(font.type, allowedTypes.value)) return false
   if (props.dateContentLanguage) {
     return isFontCompatibleWithDateLanguage(font, props.dateContentLanguage)
   }
@@ -64,10 +72,19 @@ const isVisibleFont = (font: DesignFontVO) => {
   return true
 }
 
-const visibleFonts = computed(() => sortSystemFontsFirst(fonts.value.filter(isVisibleFont)))
+const visibleFonts = computed(() => {
+  const seen = new Set<string>()
+  const combined = [...locatedFonts.value, ...fonts.value].filter((font) => {
+    if (!font.slug || seen.has(font.slug)) return false
+    seen.add(font.slug)
+    return isVisibleFont(font)
+  })
+  return sortSystemFontsFirst(combined)
+})
 const visibleFontItems = computed<FontItem[]>(() =>
   visibleFonts.value.map((font) => ({
     id: font.id,
+    userId: font.userId,
     label: font.fullName || font.family || font.slug,
     value: font.slug,
     family: font.family || font.fullName || font.slug,
@@ -81,40 +98,49 @@ const visibleFontItems = computed<FontItem[]>(() =>
     widthClass: font.widthClass,
     favoriteWeight: font.favoriteWeight,
     language: font.language,
-    type: font.type
+    type: font.type,
+    bitmapRecipe: font.bitmapRecipe,
+    bitmapPreviewSize: font.bitmapPreviewSize,
+    bitmapPreviewAtlasUrl: font.bitmapPreviewAtlasUrl,
+    bitmapPreviewDescriptorUrl: font.bitmapPreviewDescriptorUrl
   }))
 )
 
 defineExpose({
   loadNextPage,
-  loadUntilFont
+  showLocatedFont
 })
 
-const loadPage = async () => {
+const loadPage = async (generation = requestGeneration) => {
+  if (generation !== requestGeneration) return
   if (loading.value || (!hasMore.value && pageNum.value !== 1)) return
   loading.value = true
   try {
     const resp: ApiResponse<PageResponse<DesignFontVO>> =
-      props.canUsePremiumAssets === true && props.type
+      props.canUsePremiumAssets === true && (props.type || props.types?.length)
         ? await getDesignerUsageFontsPage({
             pageNum: pageNum.value,
             pageSize: pageSize.value,
-            type: props.type,
+            type: props.types?.length ? undefined : props.type,
+            types: props.types?.length ? props.types : undefined,
             includeAllUsers: props.includeAllUsers === true,
             languages: languageFilter.value
           })
         : await searchFonts({
             pageNum: pageNum.value,
             pageSize: pageSize.value,
-            type: props.type || undefined,
+            type: props.types?.length ? undefined : props.type || undefined,
+            types: props.types?.length ? props.types : undefined,
             isSystem: props.canUsePremiumAssets === true ? undefined : 1,
             includeAllUsers: props.canUsePremiumAssets === true && props.includeAllUsers === true,
             languages: languageFilter.value
           })
+    if (generation !== requestGeneration) return
     if (resp.code === 0 && resp.data) {
       const { list, total: t } = resp.data
       total.value = t
       const visibleList = filterAssetsByStudioAccess(list || [], props.canUsePremiumAssets === true)
+        .map((font) => fontStore.registerServerFont(font))
       if (pageNum.value === 1) {
         fonts.value = visibleList
       } else {
@@ -122,7 +148,7 @@ const loadPage = async () => {
       }
     }
   } finally {
-    loading.value = false
+    if (generation === requestGeneration) loading.value = false
   }
 }
 
@@ -132,58 +158,51 @@ async function loadNextPage() {
   await loadPage()
 }
 
-const waitForIdle = () =>
-  new Promise<void>((resolve) => {
-    if (!loading.value) {
-      resolve()
-      return
-    }
-
-    const timer = window.setInterval(() => {
-      if (!loading.value) {
-        window.clearInterval(timer)
-        resolve()
-      }
-    }, 50)
-  })
-
-async function loadUntilFont(slug: string) {
-  if (!slug) return false
-  await waitForIdle()
-
-  while (!fonts.value.some((font) => font.slug === slug) && hasMore.value) {
-    const previousLength = fonts.value.length
-    await loadNextPage()
-    await waitForIdle()
-
-    if (fonts.value.length === previousLength && !hasMore.value) break
+async function loadInitialVisiblePage(generation = requestGeneration) {
+  await loadPage(generation)
+  while (
+    generation === requestGeneration
+    && hasMore.value
+    && visibleFonts.value.length < pageSize.value
+  ) {
+    pageNum.value += 1
+    await loadPage(generation)
   }
+}
 
-  return fonts.value.some((font) => font.slug === slug)
+function showLocatedFont(font: DesignFontVO) {
+  if (!font?.slug) return
+  locatedFonts.value = filterAssetsByStudioAccess([font], props.canUsePremiumAssets === true)
+    .map((item) => fontStore.registerServerFont(item))
 }
 
 const handleSelect = (font: FontItem) => emit('select', font)
 
 const onFontRemoved = (id: number) => {
   fonts.value = fonts.value.filter((f) => f.id !== id)
+  locatedFonts.value = locatedFonts.value.filter((f) => f.id !== id)
 }
 
 const handleFavoriteChanged = (id: number, favoriteWeight: number | null | undefined) => {
   fonts.value = fonts.value.map((font) => (font.id === id ? { ...font, favoriteWeight } : font)).sort((a, b) => Number(b.favoriteWeight || 0) - Number(a.favoriteWeight || 0))
+  locatedFonts.value = locatedFonts.value.map((font) => (font.id === id ? { ...font, favoriteWeight } : font))
 }
 
 onMounted(() => {
-  void loadPage()
+  void loadInitialVisiblePage()
 })
 
 watch(
-  () => [props.type, props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
+  () => [props.type, ...(props.types || []), props.canUsePremiumAssets, props.includeAllUsers, props.dateContentLanguage, props.excludeIconFonts],
   () => {
     // reset when type changes
+    requestGeneration += 1
+    loading.value = false
     pageNum.value = 1
     total.value = 0
     fonts.value = []
-    void loadPage()
+    locatedFonts.value = []
+    void loadInitialVisiblePage(requestGeneration)
   }
 )
 </script>

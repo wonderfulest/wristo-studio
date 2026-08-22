@@ -115,10 +115,12 @@ const props = withDefaults(defineProps<{
   iconUnicode?: string
   showButton?: boolean
   showHint?: boolean
+  libraryScope?: 'all' | 'ordinary' | 'weather'
   uploadContext?: UploadContext
 }>(), {
   showButton: true,
   showHint: true,
+  libraryScope: 'all',
 })
 const emit = defineEmits<{
   (e: 'uploaded', payload?: { asset?: IconAssetVO; assets?: IconAssetVO[]; context?: UploadContext }): void
@@ -127,7 +129,7 @@ const emit = defineEmits<{
 
 const uploading = ref(false)
 const dialogVisible = ref(false)
-const iconList = ref<Pick<IconLibraryVO, 'symbolCode' | 'label' | 'iconUnicode'>[]>([])
+const iconList = ref<Pick<IconLibraryVO, 'symbolCode' | 'label' | 'iconUnicode' | 'category'>[]>([])
 const selectedSymbolCode = ref<string | undefined>(undefined)
 const pendingIconUnicode = ref<string | undefined>(undefined)
 const activeUploadContext = ref<UploadContext | undefined>(undefined)
@@ -147,6 +149,10 @@ type UploadQueueItem = {
 
 const uploadQueue = ref<UploadQueueItem[]>([])
 let queueSeq = 0
+const standardWeatherIconCodes = new Set([
+  '101d', '101e', '102d', '102e', '103d', '104d',
+  '109d', '110d', '110e', '111d', '113d', '150d',
+])
 
 const normalizeSymbolCode = (value?: string) => (value || '').trim().toLowerCase().replace(/[-\s]+/g, '_')
 
@@ -156,9 +162,15 @@ const findIconBySymbolCode = (symbolCode?: string) => {
   return iconList.value.find(it => normalizeSymbolCode(it.symbolCode) === normalized)
 }
 
+const findIconByUnicode = (iconUnicode?: string) => {
+  const normalized = String(iconUnicode || '').trim().toLowerCase()
+  if (!normalized) return undefined
+  return iconList.value.find(it => String(it.iconUnicode || '').trim().toLowerCase() === normalized)
+}
+
 const readFileNameIconMetadata = (fileName: string) => {
   const baseName = fileName.replace(/\.svg$/i, '').trim()
-  const hexNameMatch = baseName.match(/^([0-9a-fA-F]{2,6})-(.+)$/)
+  const hexNameMatch = baseName.match(/^([0-9a-fA-F]{2,6})(?:-(.+))?$/)
   if (!hexNameMatch) {
     return {
       baseName,
@@ -168,7 +180,7 @@ const readFileNameIconMetadata = (fileName: string) => {
   }
   return {
     baseName,
-    symbolCode: hexNameMatch[2].replace(/-/g, '_'),
+    symbolCode: (hexNameMatch[2] || baseName).replace(/-/g, '_'),
     iconUnicode: hexNameMatch[1].toLowerCase(),
   }
 }
@@ -177,7 +189,20 @@ const loadIconLibrary = async () => {
   if (iconList.value.length > 0) return
   const resp = await listIconLibrary()
   const arr = (resp?.data || [])
-    .map((it: any) => ({ symbolCode: it?.symbolCode, label: it?.label, iconUnicode: it?.iconUnicode }))
+    .filter((it: IconLibraryVO) => {
+      const isWeather = String(it?.category || '').trim().toLowerCase() === 'weather'
+      if (props.libraryScope === 'weather') {
+        return isWeather && standardWeatherIconCodes.has(String(it?.iconUnicode || '').trim().toLowerCase())
+      }
+      if (props.libraryScope === 'ordinary') return !isWeather
+      return true
+    })
+    .map((it: IconLibraryVO) => ({
+      symbolCode: it?.symbolCode,
+      label: it?.label,
+      iconUnicode: it?.iconUnicode,
+      category: it?.category,
+    }))
     .filter((it: any) => !!it.symbolCode)
   iconList.value = arr
   console.log('[icon-asset-upload] loaded icon library', { count: arr.length })
@@ -212,12 +237,13 @@ const resolveUploadUnicode = async (file: File, selectedSymbol?: string) => {
 
   const fileNameMetadata = readFileNameIconMetadata(file.name)
   if (fileNameMetadata.iconUnicode) {
+    const allowedIcon = findIconByUnicode(fileNameMetadata.iconUnicode)
     console.log('[icon-asset-upload] resolve unicode by filename hex prefix', {
       fileName: file.name,
-      iconUnicode: fileNameMetadata.iconUnicode,
+      iconUnicode: allowedIcon?.iconUnicode || '',
       symbolCode: fileNameMetadata.symbolCode,
     })
-    return fileNameMetadata.iconUnicode
+    return allowedIcon?.iconUnicode || ''
   }
 
   const foundByName = findIconBySymbolCode(fileNameMetadata.symbolCode || fileNameMetadata.baseName)
@@ -238,7 +264,7 @@ const resolveUploadUnicode = async (file: File, selectedSymbol?: string) => {
     iconUnicode: foundByMetadata?.iconUnicode || metadata.iconUnicode || '',
   })
   if (foundByMetadata?.iconUnicode) return foundByMetadata.iconUnicode
-  return metadata.iconUnicode || ''
+  return findIconByUnicode(metadata.iconUnicode)?.iconUnicode || ''
 }
 
 const completedQueueCount = computed(() => uploadQueue.value.filter(item => item.status === 'done' || item.status === 'failed').length)

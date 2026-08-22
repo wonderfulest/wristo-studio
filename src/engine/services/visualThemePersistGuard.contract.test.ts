@@ -12,7 +12,6 @@ const contracts: PersistingRendererContract[] = [
   { renderer: 'data/label/label', plugins: ['data/label/label'] },
   { renderer: 'data/unit/unit', plugins: ['data/unit/unit'] },
   { renderer: 'decoration/image/image', plugins: ['decoration/image/image'] },
-  { renderer: 'dials/subDial/subDial', plugins: ['dials/subDial/subDial'] },
   { renderer: 'goal/goalArc/goalArc', plugins: ['goal/goalArc/goalArc'] },
   { renderer: 'goal/goalBar/goalBar', plugins: ['goal/goalBar/goalBar'] },
   {

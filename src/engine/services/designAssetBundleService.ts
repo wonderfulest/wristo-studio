@@ -2,9 +2,6 @@ import JSZip from 'jszip'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
-import { getWeatherConditions } from '@/api/wristo/weather'
-import type { WeatherConditionAssetsVO } from '@/types/api/weather'
-import { useWeatherAmoledIconStore, type PendingWeatherAmoledIcon } from '@/stores/weatherAmoledIconStore'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
@@ -22,14 +19,6 @@ import {
   type ImageVariantManifest,
 } from '@/engine/services/imageVariantBundle'
 import type { VisualThemesConfig } from '@/types/visualTheme'
-
-type ManifestWeatherAsset = {
-  condition: string
-  iconUnicode: string
-  path: string
-  format: string
-  sourceUrl?: string
-}
 
 type ManifestIconAsset = {
   iconUnicode: string
@@ -62,7 +51,6 @@ type WatchfaceAssetGroups = {
   badges: string[]
   overlays: string[]
   fonts: string[]
-  weather: string[]
 }
 
 type ManifestAsset = {
@@ -76,12 +64,9 @@ type ManifestAsset = {
   elementId?: string
   elementType?: string
   field?: string
-  role?: 'subDialPointer'
   sha256?: string
   width?: number
   height?: number
-  pivotX?: number
-  pivotY?: number
   variants?: Record<string, ImageVariantManifest>
 }
 
@@ -132,9 +117,6 @@ type DesignAssetManifest = {
   elements?: ManifestElement[]
   fonts?: ManifestFontAsset[]
   failures?: ManifestFailure[]
-  weather: {
-    amoled: ManifestWeatherAsset[]
-  }
   icons?: {
     amoled: ManifestIconAsset[]
   }
@@ -205,7 +187,6 @@ const ASSET_URL_FIELDS = new Set([
   'imageUrl',
   'imageSvg',
   'amoledImageUrl',
-  'weatherImageUrl',
   'moonImageUrl',
   'wristoImageUrl',
   'previewUrl',
@@ -227,12 +208,6 @@ const toAbsoluteUrl = (url: string): string => {
 const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
   const response = await fetch(dataUrl)
   return response.blob()
-}
-
-const getAmoledWeatherElements = (config: RuntimeDesignConfig): AnyElementConfig[] => {
-  return (config.elements || []).filter((element: any) => {
-    return element?.eleType === 'weather' && (element.weatherDisplayType || 'amoled') === 'amoled'
-  })
 }
 
 const getAmoledIconElements = (config: RuntimeDesignConfig): AnyElementConfig[] => {
@@ -330,7 +305,6 @@ const createAssetGroups = (): WatchfaceAssetGroups => ({
   badges: [],
   overlays: [],
   fonts: [],
-  weather: [],
 })
 
 const pushAssetGroupPath = (assets: WatchfaceAssetGroups, group: keyof WatchfaceAssetGroups, path: string) => {
@@ -455,9 +429,6 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
     elementType: string
     field: string
     source: string
-    role?: 'subDialPointer'
-    pivotX?: number
-    pivotY?: number
   }> = []
   const elementId = getElementId(element, index)
   const elementType = getElementType(element)
@@ -466,18 +437,11 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
     if (typeof value === 'string') {
       const source = value.trim()
       if (source && ASSET_URL_FIELDS.has(key)) {
-        const pointer = (element as any).pointer
-        const isSubDialPointer = elementType === 'subDial'
-          && key === 'imageUrl'
-          && pointer?.imageUrl === source
         refs.push({
           elementId,
           elementType,
           field: key,
           source,
-          role: isSubDialPointer ? 'subDialPointer' : undefined,
-          pivotX: isSubDialPointer ? Number(pointer?.pivotX) : undefined,
-          pivotY: isSubDialPointer ? Number(pointer?.pivotY) : undefined,
         })
       }
       return
@@ -537,26 +501,6 @@ export const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
   return Array.from(slugs)
 }
 
-const getBundleAssetEntries = (zip: JSZip, manifest: DesignAssetManifest | null): ManifestWeatherAsset[] => {
-  if (manifest?.weather?.amoled?.length) {
-    return manifest.weather.amoled.filter((item) => item?.path && item?.iconUnicode)
-  }
-
-  return Object.keys(zip.files)
-    .filter((path) => /^(?:assets\/)?weather\/amoled\/[^/]+\.(svg|png)$/i.test(path) && !zip.files[path].dir)
-    .map((path) => {
-      const iconUnicode = getIconUnicodeFromPath(path)
-      const format = /\.png$/i.test(path) ? 'png' : 'svg'
-      return {
-        condition: iconUnicode,
-        iconUnicode,
-        path,
-        format,
-      }
-    })
-    .filter((item) => item.iconUnicode)
-}
-
 const getBundleIconAssetEntries = (zip: JSZip, manifest: DesignAssetManifest | null): ManifestIconAsset[] => {
   if (manifest?.icons?.amoled?.length) {
     return manifest.icons.amoled.filter((item) => item?.iconUnicode)
@@ -577,29 +521,11 @@ const getBundleIconAssetEntries = (zip: JSZip, manifest: DesignAssetManifest | n
     .filter((item) => item.iconUnicode)
 }
 
-const pickWeatherAssetSource = (item: WeatherConditionAssetsVO): string => {
-  const asset = item.asset
-  if (!asset) return ''
-  if (asset.svgContent?.trim()) {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.svgContent.trim())}`
-  }
-  return asset.svgFile || asset.imageUrl || asset.previewUrl || ''
-}
-
 const getFileFormat = (file?: File): 'svg' | 'png' => {
   if (!file) return 'svg'
   const type = String(file.type || '').toLowerCase()
   const name = String(file.name || '').toLowerCase()
   return type === 'image/png' || name.endsWith('.png') ? 'png' : 'svg'
-}
-
-const getWeatherAssetFormat = (item: WeatherConditionAssetsVO): 'svg' | 'png' => {
-  const asset = item.asset
-  if (!asset) return 'svg'
-  if (asset.svgContent?.trim()) return 'svg'
-  const format = String(asset.format || '').toLowerCase()
-  const source = String(asset.imageUrl || asset.previewUrl || asset.svgFile || '').toLowerCase()
-  return format === 'png' || /\.png(?:$|\?)/i.test(source) ? 'png' : 'svg'
 }
 
 const fetchBlob = async (source: string): Promise<Blob> => {
@@ -647,9 +573,6 @@ const addReferencedAssetToBundle = async (
     elementId?: string
     elementType?: string
     field?: string
-    role?: 'subDialPointer'
-    pivotX?: number
-    pivotY?: number
   },
 ) => {
   const source = String(input.source || '').trim()
@@ -667,9 +590,6 @@ const addReferencedAssetToBundle = async (
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
-      role: input.role,
-      pivotX: input.pivotX,
-      pivotY: input.pivotY,
     })
     return
   }
@@ -697,12 +617,9 @@ const addReferencedAssetToBundle = async (
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
-      role: input.role,
       sha256: original.sha256,
       width: original.width,
       height: original.height,
-      pivotX: input.pivotX,
-      pivotY: input.pivotY,
       variants: Object.fromEntries(variants.map((variant) => [variant.name, variant])),
     }
     sourcePathByUrl.set(source, asset)
@@ -727,9 +644,6 @@ const addReferencedAssetToBundle = async (
         elementId: input.elementId,
         elementType: input.elementType,
         field: input.field,
-        role: input.role,
-        pivotX: input.pivotX,
-        pivotY: input.pivotY,
       }
       sourcePathByUrl.set(source, duplicateRef)
       pushAssetGroupPath(manifest.assets, getAssetGroupForElementRef(input), duplicateRef.path)
@@ -738,9 +652,7 @@ const addReferencedAssetToBundle = async (
     }
     const elementPart = sanitizePathSegment(input.elementId || input.category, input.category)
     const fieldPart = sanitizePathSegment(input.field || 'asset', 'asset')
-    let path = input.role === 'subDialPointer'
-      ? `assets/sub-dial-pointers/${sha256}.${format}`
-      : `assets/${sanitizePathSegment(input.category, 'asset')}/${elementPart}-${fieldPart}.${format}`
+    let path = `assets/${sanitizePathSegment(input.category, 'asset')}/${elementPart}-${fieldPart}.${format}`
     let suffix = 1
     while (usedPaths.has(path)) {
       suffix += 1
@@ -760,11 +672,8 @@ const addReferencedAssetToBundle = async (
       elementId: input.elementId,
       elementType: input.elementType,
       field: input.field,
-      role: input.role,
       sha256,
       ...dimensions,
-      pivotX: input.pivotX,
-      pivotY: input.pivotY,
     }
     sourcePathByUrl.set(source, asset)
     contentAssetByHash.set(sha256, asset)
@@ -837,45 +746,6 @@ const addFontAssetToBundle = async (
   }
 }
 
-const addWeatherAssetToBundle = async (
-  zip: JSZip,
-  manifest: DesignAssetManifest,
-  usedPaths: Set<string>,
-  input: {
-    condition: string
-    iconUnicode: string
-    source?: string
-    file?: File
-    format?: 'svg' | 'png'
-  },
-) => {
-  const iconUnicode = String(input.iconUnicode || '').trim()
-  if (!iconUnicode) return
-
-  const format = input.format || getFileFormat(input.file)
-  const path = `assets/weather/amoled/${iconUnicode}.${format}`
-  if (usedPaths.has(path)) return
-  usedPaths.add(path)
-
-  if (input.file) {
-    zip.file(path, input.file)
-  } else if (input.source) {
-    zip.file(path, await fetchBlob(input.source))
-  } else {
-    return
-  }
-
-  manifest.weather.amoled.push({
-    condition: String(input.condition || iconUnicode),
-    iconUnicode,
-    path,
-    format,
-    sourceUrl: input.source && !isDataUrl(input.source) ? input.source : undefined,
-  })
-  pushAssetGroupPath(manifest.assets, 'weather', path)
-  pushAssetGroupPath(manifest.assets, 'icons', path)
-}
-
 const addAmoledIconAssetToBundle = async (
   zip: JSZip,
   manifest: DesignAssetManifest,
@@ -932,9 +802,7 @@ const buildDesignAssetArchive = async (
   options: BuildDesignAssetBundleOptions = {},
   packageOptions: { format?: string; version?: 1; fileNameSuffix: string; mimeType: string; rooted?: boolean },
 ): Promise<File> => {
-  const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
-  const pendingStore = useWeatherAmoledIconStore()
   const iconPendingStore = useAmoledIconAssetStore()
 
   const zip = new JSZip()
@@ -961,9 +829,6 @@ const buildDesignAssetArchive = async (
     elements: [],
     fonts: [],
     failures: [],
-    weather: {
-      amoled: [],
-    },
     icons: {
       amoled: [],
     },
@@ -976,12 +841,6 @@ const buildDesignAssetArchive = async (
   }
   zip.file('design.json', JSON.stringify(config, null, 2))
   zip.file('config/config.json', JSON.stringify(config, null, 2))
-
-  const weatherFontSlugs = Array.from(new Set(
-    weatherElements
-      .map((element: any) => String(element.fontFamily || '').trim())
-      .filter(Boolean),
-  ))
 
   const usedPaths = new Set<string>()
   for (const [index, element] of (config.elements || []).entries()) {
@@ -1002,9 +861,6 @@ const buildDesignAssetArchive = async (
         elementType: ref.elementType,
         field: ref.field,
         source: ref.source,
-        role: ref.role,
-        pivotX: ref.pivotX,
-        pivotY: ref.pivotY,
       })
     }
   }
@@ -1039,79 +895,6 @@ const buildDesignAssetArchive = async (
 
   for (const slug of collectFontSlugs(config)) {
     await addFontAssetToBundle(zip, manifest, usedPaths, slug)
-  }
-
-  const pendingByFontAndUnicode = new Map<string, PendingWeatherAmoledIcon>()
-  pendingStore.listByFontSlugs(weatherFontSlugs).forEach((item) => {
-    pendingByFontAndUnicode.set(`${item.fontSlug}::${item.iconUnicode}`, item)
-  })
-
-  for (const fontSlug of weatherFontSlugs) {
-    let response
-    try {
-      response = await getWeatherConditions(fontSlug, 'amoled')
-    } catch (error: any) {
-      manifest.failures?.push({
-        category: 'weather',
-        sourceUrl: fontSlug,
-        message: error?.message || String(error),
-      })
-      continue
-    }
-    for (const item of response.data || []) {
-      const iconUnicode = String(item.iconUnicode || item.condition || '').trim()
-      if (!iconUnicode) continue
-      const pending = pendingByFontAndUnicode.get(`${fontSlug}::${iconUnicode}`)
-      if (pending) {
-        try {
-          await addWeatherAssetToBundle(zip, manifest, usedPaths, {
-            condition: pending.condition || String(item.condition || iconUnicode),
-            iconUnicode,
-            file: pending.file,
-          })
-        } catch (error: any) {
-          manifest.failures?.push({
-            category: 'weather',
-            sourceUrl: iconUnicode,
-            message: error?.message || String(error),
-          })
-        }
-        continue
-      }
-
-      const source = pickWeatherAssetSource(item)
-      if (!source) continue
-      try {
-        await addWeatherAssetToBundle(zip, manifest, usedPaths, {
-          condition: String(item.condition || iconUnicode),
-          iconUnicode,
-          source,
-          format: getWeatherAssetFormat(item),
-        })
-      } catch (error: any) {
-        manifest.failures?.push({
-          category: 'weather',
-          sourceUrl: isDataUrl(source) || isBlobUrl(source) ? undefined : source,
-          message: error?.message || String(error),
-        })
-      }
-    }
-  }
-
-  for (const pending of pendingByFontAndUnicode.values()) {
-    try {
-      await addWeatherAssetToBundle(zip, manifest, usedPaths, {
-        condition: pending.condition,
-        iconUnicode: pending.iconUnicode,
-        file: pending.file,
-      })
-    } catch (error: any) {
-      manifest.failures?.push({
-        category: 'weather',
-        sourceUrl: pending.iconUnicode,
-        message: error?.message || String(error),
-      })
-    }
   }
 
   for (const element of iconElements) {
@@ -1201,21 +984,17 @@ export async function restoreDesignAssetBundleFromZip(
   zip: JSZip,
   manifest: DesignAssetManifest | null,
 ): Promise<RuntimeDesignConfig> {
-  const pendingStore = useWeatherAmoledIconStore()
   const iconPendingStore = useAmoledIconAssetStore()
-  pendingStore.clearAll()
   iconPendingStore.clearAll()
 
   if (!config) return config
 
-  const weatherElements = getAmoledWeatherElements(config)
   const iconElements = getAmoledIconElements(config)
 
   try {
-    const assets = getBundleAssetEntries(zip, manifest)
     const iconAssets = getBundleIconAssetEntries(zip, manifest)
     const assetRefs = manifest?.studio?.assetRefs || []
-    if (!assets.length && !iconAssets.length && !assetRefs.length) return config
+    if (!iconAssets.length && !assetRefs.length) return config
 
     const restoredAssetUrls = new Map<string, string>()
     for (const asset of assetRefs) {
@@ -1251,41 +1030,6 @@ export async function restoreDesignAssetBundleFromZip(
     restoreElementAssetUrls(config.elements)
     restoreElementAssetUrls(config.visualThemes)
 
-    const weatherFontSlugs = Array.from(new Set(
-      weatherElements
-        .map((element: any) => String(element.fontFamily || '').trim())
-        .filter(Boolean),
-    ))
-    const restoredUrlByFontAndUnicode = new Map<string, string>()
-
-    for (const asset of assets) {
-      const iconUnicode = String(asset.iconUnicode || '').trim()
-      if (!iconUnicode) continue
-
-      const fileEntry = zip.file(asset.path)
-      if (!fileEntry) continue
-
-      const blob = await fileEntry.async('blob')
-      const fileName = `${iconUnicode}.${asset.format || (getMimeTypeForBundlePath(asset.path) === 'image/png' ? 'png' : 'svg')}`
-      const file = new File([blob], fileName, { type: getMimeTypeForBundlePath(asset.path) })
-
-      for (const fontSlug of weatherFontSlugs) {
-        if (!fontSlug) continue
-
-        pendingStore.upsertPending({
-          fontSlug,
-          iconUnicode,
-          condition: asset.condition || iconUnicode,
-          file,
-        })
-
-        const pending = pendingStore.getPending(fontSlug, iconUnicode)
-        if (pending?.objectUrl) {
-          restoredUrlByFontAndUnicode.set(`${fontSlug}::${iconUnicode}`, pending.objectUrl)
-        }
-      }
-    }
-
     const iconFontSlugs = Array.from(new Set([
       ...iconElements
         .map((element: any) => String(element.fontFamily || element.iconFont || '').trim())
@@ -1311,22 +1055,6 @@ export async function restoreDesignAssetBundleFromZip(
             restoredIconUrlByFontAndUnicode.set(`${fontSlug}::${iconUnicode}`, pending.objectUrl)
           }
         }
-      }
-    }
-
-    for (const element of weatherElements) {
-      const fontSlug = String((element as any).fontFamily || '').trim()
-      const iconUnicode = String((element as any).amoledIconUnicode || '').trim()
-      if (!fontSlug || !iconUnicode) continue
-
-      const objectUrl = restoredUrlByFontAndUnicode.get(`${fontSlug}::${iconUnicode}`)
-      if (objectUrl) {
-        const mutableElement = element as AnyElementConfig & {
-          amoledImageUrl?: string
-          imageUrl?: string
-        }
-        mutableElement.amoledImageUrl = objectUrl
-        mutableElement.imageUrl = objectUrl
       }
     }
 

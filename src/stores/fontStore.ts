@@ -15,6 +15,7 @@ import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 // Types
 export interface FontOption {
   id?: number
+  userId?: number
   label: string
   value: string
   family: string
@@ -34,6 +35,9 @@ export interface FontOption {
   language?: string
   type?: string
   bitmapRecipe?: DesignFontVO['bitmapRecipe']
+  bitmapPreviewSize?: number | null
+  bitmapPreviewAtlasUrl?: string | null
+  bitmapPreviewDescriptorUrl?: string | null
 }
 
 interface FontSectionsState {
@@ -120,7 +124,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
   // actions
   initBuiltinFontsFromSystem(type?: string): Promise<void>
   fetchFonts(): Promise<void>
-  initRecentFonts(type?: string): Promise<void>
+  initRecentFonts(type?: string, types?: string[]): Promise<void>
+  registerServerFont(font: DesignFontVO): DesignFontVO
   loadFont(slug: string, url?: string): Promise<boolean>
   refreshFontPreview(slug: string): Promise<void>
   loadFonts(fontNames: string[]): Promise<boolean>
@@ -189,6 +194,16 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
     },
 
     actions: {
+      registerServerFont(font: DesignFontVO): DesignFontVO {
+        const normalized = normalizeServerFont(font)
+        if (!normalized.slug) return normalized
+        const slug = canonicalFontSlug(normalized.slug)
+        this.serverFonts.set(slug, normalized)
+        if (this.loadedFonts.has(normalized.slug) || this.loadedFonts.has(slug)) {
+          refreshLoadedFontMetrics(normalized.slug, normalized.bitmapRecipe)
+        }
+        return normalized
+      },
       /**
        * 加载字体
        * @param slug 字体名称
@@ -360,6 +375,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             const value = f.slug || family
 	            const option: FontOption = {
 	              id: f.id,
+	              userId: f.userId,
 	              label,
 	              value,
 	              family,
@@ -370,11 +386,14 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
               language: f.language,
               type: f.type,
 	              bitmapRecipe: f.bitmapRecipe,
+	              bitmapPreviewSize: f.bitmapPreviewSize,
+	              bitmapPreviewAtlasUrl: f.bitmapPreviewAtlasUrl,
+	              bitmapPreviewDescriptorUrl: f.bitmapPreviewDescriptorUrl,
 	            }
             if (!groups[subfamily]) groups[subfamily] = []
             groups[subfamily].push(option)
             // 将内置字体的实际加载加入等待队列，避免竞态
-            pendingLoads.push(this.loadFont(value, f.ttfFile?.url))
+	            if (!f.bitmapPreviewDescriptorUrl || !f.bitmapPreviewAtlasUrl) pendingLoads.push(this.loadFont(value, f.ttfFile?.url))
           }
           // 自定义字体分组保留
           const custom = this.builtinFonts.custom || []
@@ -389,15 +408,16 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
       /**
        * 初始化最近使用字体，默认拉取 5 个
        */
-      async initRecentFonts(type?: string): Promise<void> {
+      async initRecentFonts(type?: string, types?: string[]): Promise<void> {
         try {
           const userStore = useUserStore()
-          const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id)
+          const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id, types)
           const list: DesignFontVO[] = (recentFonts?.data ?? []).map(normalizeServerFont)
           list.forEach((font) => { if (font.slug) this.serverFonts.set(canonicalFontSlug(font.slug), font) })
           const mapped: FontOption[] = list.map((f) => ({
 	            label: f.fullName,
 	            id: f.id,
+	            userId: f.userId,
 	            value: f.slug,
             family: f.family,
             src: f.ttfFile?.url,
@@ -408,6 +428,9 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             language: f.language,
             type: f.type,
 	            bitmapRecipe: f.bitmapRecipe,
+	            bitmapPreviewSize: f.bitmapPreviewSize,
+	            bitmapPreviewAtlasUrl: f.bitmapPreviewAtlasUrl,
+	            bitmapPreviewDescriptorUrl: f.bitmapPreviewDescriptorUrl,
 	          }))
           // 去重并只保留 5 个
           const seen = new Set<string>()
@@ -418,10 +441,9 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
             return true
           }).slice(0, 5)
           // 并行加载最近字体并等待，避免后续使用时未就绪
-          const tasks = this.recentFonts.map((f) => {
-            
-            return this.loadFont(f.value, f.src)
-          })
+          const tasks = this.recentFonts
+            .filter(f => !f.bitmapPreviewDescriptorUrl || !f.bitmapPreviewAtlasUrl)
+            .map(f => this.loadFont(f.value, f.src))
           try { await Promise.allSettled(tasks) } catch {}
         } catch (e) {
           console.warn('Failed to init recent fonts:', e)

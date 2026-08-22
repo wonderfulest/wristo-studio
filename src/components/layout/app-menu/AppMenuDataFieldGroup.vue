@@ -4,6 +4,24 @@
       <el-icon><DataLine /></el-icon>
       <span>{{ t('editor.dataField') }}</span>
     </template>
+    <div class="menu-group menu-group--image">
+      <div class="menu-group-title">
+        <el-icon><Picture /></el-icon>
+        <span>{{ t('editor.image') }}</span>
+      </div>
+      <el-menu-item index="image/image" @click="onAddElement('image', 'image')">
+        <el-icon><Picture /></el-icon>
+        <span>{{ t('editor.image') }}</span>
+      </el-menu-item>
+      <el-menu-item index="image/mask" @click="onAddElement('image', 'image', { assetType: 'mask' })">
+        <Icon icon="mdi:gradient-horizontal" />
+        <span>{{ t('editor.mask') }}</span>
+      </el-menu-item>
+      <el-menu-item index="image/dynamic-image" @click="onAddElement('decoration', 'dynamicImage')">
+        <Icon icon="mdi:image-sync" />
+        <span>{{ t('dynamicImage.title') }}</span>
+      </el-menu-item>
+    </div>
     <div class="menu-group menu-group--data-field">
       <div class="menu-group-title">
         <el-icon><DataLine /></el-icon>
@@ -35,20 +53,6 @@
       </el-menu-item>
     </div>
     <AppMenuGoalGroup :on-add-progress-bar="onAddGoalProgressBar" :on-add-progress-arc="onAddGoalArc" />
-    <div class="menu-group menu-group--dial">
-      <div class="menu-group-title">
-        <el-icon><Odometer /></el-icon>
-        <span>{{ t('editor.subDial') }}</span>
-      </div>
-      <el-menu-item index="dial/sub-dial-goal" @click="onAddElement('dials', 'subDial', { progressMode: 'goal' })">
-        <el-icon><Odometer /></el-icon>
-        <span>Goal Sub-dial</span>
-      </el-menu-item>
-      <el-menu-item index="dial/sub-dial-range" @click="onAddElement('dials', 'subDial', { progressMode: 'range' })">
-        <el-icon><Odometer /></el-icon>
-        <span>Range Sub-dial</span>
-      </el-menu-item>
-    </div>
     <div class="menu-group menu-group--chart">
       <div class="menu-group-title">
         <el-icon><TrendCharts /></el-icon>
@@ -67,7 +71,8 @@
 </template>
 
 <script setup>
-import { DataLine, TrendCharts, Aim, Monitor, Odometer } from '@element-plus/icons-vue'
+import { DataLine, TrendCharts, Aim, Monitor, Picture } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
 import { useI18n } from '@/i18n'
 

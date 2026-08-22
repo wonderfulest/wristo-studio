@@ -7,12 +7,18 @@
           {{ t('font.nameLabel') }}
         </div>
         <div class="naming-subtitle">
-          {{ t(isSimpleIconName ? 'font.iconNameHelper' : 'font.nameHelper', { use: type }) }}
+          {{ t(automatic ? 'font.automaticNameHelper' : isSimpleIconName ? 'font.iconNameHelper' : 'font.nameHelper', { use: type }) }}
         </div>
       </div>
-      <el-button v-if="!isSimpleIconName" size="small" text class="naming-random" @click="randomizeName">
+      <el-button
+        v-if="automatic || !isSimpleIconName"
+        size="small"
+        text
+        class="naming-random"
+        @click="automatic ? emit('regenerate') : randomizeName()"
+      >
         <el-icon><Refresh /></el-icon>
-        {{ t('font.randomName') }}
+        {{ t(automatic ? 'font.regenerateName' : 'font.randomName') }}
       </el-button>
     </div>
 
@@ -20,7 +26,7 @@
       <span class="naming-preview-value">{{ namingPreview || t('font.namePlaceholder') }}</span>
     </div>
 
-    <label v-if="isSimpleIconName" class="naming-field naming-field--simple">
+    <label v-if="isSimpleIconName && !automatic" class="naming-field naming-field--simple">
       <span>{{ t('font.iconSlugLabel') }}</span>
       <el-input
         v-model="fontName"
@@ -32,7 +38,7 @@
       />
     </label>
 
-    <div v-else class="naming-bar">
+    <div v-else-if="!isSimpleIconName" class="naming-bar">
       <label class="naming-field">
         <span>{{ t('font.seriesLabel') }}</span>
         <el-input
@@ -87,7 +93,7 @@
       </label>
     </div>
 
-    <div class="naming-tip">
+    <div v-if="!automatic" class="naming-tip">
       <div class="naming-tip-line">
         {{ t(isSimpleIconName ? 'font.iconNamingAutoSlug' : 'font.namingAutoSlug') }}
       </div>
@@ -117,8 +123,15 @@ import { MAX_ICON_FONT_SLUG_LENGTH, normalizeIconFontSlug } from '@/utils/iconFo
 
 const { t } = useI18n()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   type: 'number' | 'text' | 'icon'
+  automatic?: boolean
+}>(), {
+  automatic: false,
+})
+
+const emit = defineEmits<{
+  (event: 'regenerate'): void
 }>()
 
 const isSimpleIconName = computed(() => props.type === 'icon')

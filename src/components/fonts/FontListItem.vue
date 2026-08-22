@@ -10,17 +10,19 @@
         <el-icon><Clock /></el-icon>
       </div>
     </el-tooltip>
-    <div class="font-header" v-if="label || hasTags || fontId != null" :style="headerStyle">
+    <div class="font-header" v-if="label || fontSlug || hasTags || fontId != null" :style="headerStyle">
       <div class="font-title-group">
-        <div class="font-name" v-if="label">{{ label }}</div>
+        <div class="font-identity">
+          <div class="font-name" v-if="label" :title="fontSlug || undefined">{{ label }}</div>
+        </div>
         <div class="font-name-actions" :style="actionsStyle" v-if="fontId != null">
           <button
-            v-if="!isSystem && canManageFont && isIcon"
+            v-if="canQuickEdit"
             type="button"
             class="font-icon-btn font-icon-btn-edit"
-            title="Edit icon font"
-            aria-label="Edit icon font"
-            @click.stop="onEditIcon"
+            :title="t('common.edit')"
+            :aria-label="t('common.edit')"
+            @click.stop="onQuickEdit"
           >
             <el-icon><Edit /></el-icon>
           </button>
@@ -87,6 +89,8 @@
       :font-url="fontUrl"
       :preview-text="previewText"
       :preview-text-style="previewTextStyle"
+      :bitmap-preview-descriptor-url="bitmapPreviewDescriptorUrl"
+      :bitmap-preview-atlas-url="bitmapPreviewAtlasUrl"
     />
   </div>
   <div v-else class="font-main" :class="{ 'font-main-compact': compact }">
@@ -105,15 +109,16 @@ import FontPreviewText from '@/components/fonts/FontPreviewText.vue'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { favoriteFont, removeAdminFont, removeMyFont, unfavoriteFont } from '@/api/wristo/fonts'
-import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
+import { canQuickEditFont, resolveFontQuickEditLocation } from './fontQuickEdit'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   label?: string
   fontFamily: string
+  fontSlug?: string
   type?: string
   language?: string
   sectionName?: string
@@ -130,6 +135,8 @@ const props = defineProps<{
   compact?: boolean
   favoriteWeight?: number | null
   ownerUserId?: number
+  bitmapPreviewDescriptorUrl?: string | null
+  bitmapPreviewAtlasUrl?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -147,8 +154,6 @@ const fontStore = useFontStore()
 const userStore = useUserStore()
 const membershipGate = useStudioMembershipGate()
 
-const isIcon = computed(() => props.type === FontTypes.ICON_FONT || props.sectionName === 'icon')
-
 const parsedStyleTags = computed(() => {
   const raw = props.styleTags
   const list = Array.isArray(raw) ? raw : String(raw || '').split(/[,，\s]+/)
@@ -156,7 +161,13 @@ const parsedStyleTags = computed(() => {
 })
 const visibleStyleTags = computed(() => parsedStyleTags.value.slice(0, 3))
 const hasTags = computed(() => props.isMonospace || !!props.subfamily || visibleStyleTags.value.length > 0)
-const canManageFont = computed(() => userStore.canUsePremiumStudioAssets)
+const canQuickEdit = computed(() => canQuickEditFont({
+  ownerUserId: props.ownerUserId,
+  currentUserId: userStore.userInfo?.id,
+  currentUserIsAdmin: userStore.isAdminUser,
+  isSystem: !!props.isSystem,
+  type: props.type || '',
+}))
 const canDeleteFont = computed(() => {
   if (userStore.isAdminUser) return true
   const currentUserId = userStore.userInfo?.id
@@ -167,7 +178,7 @@ const cornerBadgeWidth = computed(() => cornerBadgeCount.value * 28)
 const actionButtonCount = computed(() => {
   if (props.fontId == null) return 0
   return [
-    !props.isSystem && canManageFont.value && isIcon.value,
+    canQuickEdit.value,
     true,
     props.canEditSearchIndex,
     !props.isSystem && canDeleteFont.value,
@@ -202,6 +213,10 @@ const formatTag = (tag: string) => tag
   .join(' ')
 
 const loadFont = async (slug: string | undefined, url?: string) => {
+  if (props.bitmapPreviewDescriptorUrl && props.bitmapPreviewAtlasUrl) {
+    isReady.value = true
+    return
+  }
   if (!slug) {
     isReady.value = true
     return
@@ -222,9 +237,9 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.fontFamily, props.fontUrl],
+  () => [props.fontFamily, props.fontUrl, props.bitmapPreviewDescriptorUrl, props.bitmapPreviewAtlasUrl],
   ([newSlug, newUrl]) => {
-    loadFont(newSlug, newUrl)
+    loadFont(newSlug || undefined, newUrl || undefined)
   }
 )
 
@@ -252,6 +267,8 @@ const onDelete = async () => {
           language: props.language,
           sectionName: props.sectionName,
           previewText: props.previewText,
+          bitmapPreviewDescriptorUrl: props.bitmapPreviewDescriptorUrl,
+          bitmapPreviewAtlasUrl: props.bitmapPreviewAtlasUrl,
         }),
       ]),
       type: 'warning',
@@ -280,19 +297,14 @@ const onDelete = async () => {
   }
 }
 
-const onEditIcon = () => {
-  if (!canManageFont.value) {
-    membershipGate.requirePremium('font.premiumAssetRequired')
-    return
-  }
-  // Use glyphCode to open the corresponding tab in IconLibrary.
-  // For icon fonts, the glyphCode is encoded in the font family name.
-  router.push({
-    path: '/icon-library',
-    query: {
-      glyphCode: props.fontFamily,
-    },
+const onQuickEdit = () => {
+  if (!canQuickEdit.value || props.fontId == null) return
+  const location = resolveFontQuickEditLocation({
+    id: props.fontId,
+    type: props.type || '',
+    slug: props.fontSlug || props.fontFamily,
   })
+  if (location) void router.push(location)
 }
 
 const onEditSearchIndex = () => {
@@ -387,10 +399,18 @@ const onToggleFavorite = async () => {
 
 .font-title-group {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
   gap: 8px;
   flex: 1 1 auto;
+}
+
+.font-identity {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .font-name {

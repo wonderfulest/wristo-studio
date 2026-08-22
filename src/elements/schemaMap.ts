@@ -29,6 +29,7 @@ import { moveBarSchema } from '@/elements/status/movebar/movebar.schema'
 import { rectangleSchema } from '@/elements/shapes/rectangle/rectangle.schema'
 import { circleSchema } from '@/elements/shapes/circle/circle.schema'
 import { lineSchema } from '@/elements/shapes/line/line.schema'
+import { gridLinesSchema } from '@/elements/shapes/gridLines/gridLines.schema'
 import { polygonSchema } from '@/elements/shapes/polygon/polygon.schema'
 import { triangleSchema } from '@/elements/shapes/triangle/triangle.schema'
 
@@ -47,13 +48,13 @@ import { radialTextSchema } from '@/elements/texts/radialText/radialText.schema'
 
 // hands
 import { hourHandSchema, minuteHandSchema, secondHandSchema } from '@/elements/hands/common/hand.schema'
+import { rotatingHandSchema } from '@/elements/hands/rotatingHand/rotatingHand.schema'
 
 // dials
 import { tick12Schema } from '@/elements/dials/tick12/tick12.schema'
 import { tick60Schema } from '@/elements/dials/tick60/tick60.schema'
 import { romansSchema } from '@/elements/dials/romans/romans.schema'
 import { centerCapSchema } from '@/elements/dials/centerCap/centerCap.schema'
-import { subDialSchema } from '@/elements/dials/subDial/subDial.schema'
 
 // goal
 import { goalBarSchema } from '@/elements/goal/goalBar/goalBar.schema'
@@ -131,18 +132,19 @@ export const elementConfigs: ElementConfigs = {
     tick12: buildConfigFromSchema(tick12Schema as AnySchema),
     tick60: buildConfigFromSchema(tick60Schema as AnySchema),
     romans: buildConfigFromSchema(romansSchema as AnySchema),
-    subDial: buildConfigFromSchema(subDialSchema as AnySchema),
   },
   hands: {
     hourHand: buildConfigFromSchema(hourHandSchema as AnySchema),
     minuteHand: buildConfigFromSchema(minuteHandSchema as AnySchema),
     secondHand: buildConfigFromSchema(secondHandSchema as AnySchema),
+    rotatingHand: buildConfigFromSchema(rotatingHandSchema as AnySchema),
     centerCap: buildConfigFromSchema(centerCapSchema as AnySchema),
   },
   shape: {
     rectangle: buildConfigFromSchema(rectangleSchema as AnySchema),
     circle: buildConfigFromSchema(circleSchema as AnySchema),
     line: buildConfigFromSchema(lineSchema as AnySchema),
+    gridLines: buildConfigFromSchema(gridLinesSchema as AnySchema),
     polygon: buildConfigFromSchema(polygonSchema as AnySchema),
     triangle: buildConfigFromSchema(triangleSchema as AnySchema),
   },

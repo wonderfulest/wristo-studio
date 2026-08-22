@@ -85,10 +85,10 @@ const toggle = (key: string) => {
   else expandedFamilies.add(key)
 }
 
-const recipeFor = (font: FontItem) => parseBitmapFontRecipe(font.bitmapRecipe)
-const hasRecipe = (font: FontItem) => recipeFor(font) !== null
+const textRecipeFor = (font: FontItem) => parseBitmapFontRecipe(font.bitmapRecipe)
+const hasRecipe = (font: FontItem) => textRecipeFor(font) !== null
 const recipeCardStyle = (font: FontItem) => {
-  const recipe = recipeFor(font)
+  const recipe = textRecipeFor(font)
   if (!recipe) return undefined
   const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
   return {
@@ -102,16 +102,20 @@ const recipeCardStyle = (font: FontItem) => {
 
 const commonProps = (font: FontItem) => ({
   fontFamily: font.value,
+  ownerUserId: font.userId,
   type: font.type || props.type,
   language: font.language,
   isSystem: font.isSystem === true,
   isMonospace: font.isMonospace === true,
   fontUrl: font.src,
+  bitmapPreviewDescriptorUrl: font.bitmapPreviewDescriptorUrl,
+  bitmapPreviewAtlasUrl: font.bitmapPreviewAtlasUrl,
   compact: true
 })
 
 const itemProps = (font: FontItem) => ({
   ...commonProps(font),
+  fontSlug: font.value,
   label: font.label,
   fontId: font.id,
   styleTags: font.styleTags,

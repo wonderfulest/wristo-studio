@@ -18,7 +18,7 @@ The first version deliberately excludes icons, weather fonts, radial text, angle
 ## Non-goals
 
 - Supporting radial, angled, or scrollable text.
-- Supporting icons, weather fonts, or text nested inside sub-dials and other complex elements.
+- Supporting icons, weather fonts, or text nested inside other complex elements.
 - Extracting or redistributing proprietary Garmin font files.
 - Adding a backend font database or querying a local SDK at Studio runtime.
 - Manually calibrating every supported device.

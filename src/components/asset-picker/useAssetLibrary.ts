@@ -10,7 +10,6 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 
 export interface UseAssetLibraryOptions {
   assetType: () => AnalogAssetType
-  canViewAll: () => boolean
   api?: AssetLibraryApi
   translate?: Translate
   onError?: (error: unknown) => void
@@ -24,7 +23,6 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
   const loading = ref(false)
   const hasMore = ref(true)
   const pageNum = ref(1)
-  const assetScope = ref<'mine' | 'all'>('mine')
   const favoritingAssetIds = ref<Set<number>>(new Set())
   const pageSize = 48
 
@@ -74,8 +72,7 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
         pageSize,
         analogAssetType: options.assetType(),
         isActive: true,
-        orderBy: 'createdAt:desc',
-        scope: options.canViewAll() ? assetScope.value : 'mine'
+        orderBy: 'createdAt:desc'
       })
       if (res.data) {
         const next = res.data.list || []
@@ -103,7 +100,6 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
   }
 
   const refresh = (): Promise<void> => loadAssets(true)
-  const handleScopeChange = (): Promise<void> => loadAssets(true)
   const isFavoriteAsset = (asset: AnalogAssetVO): boolean => Number(asset.favoriteWeight || 0) > 0
   const isFavoritingAsset = (id: number): boolean => favoritingAssetIds.value.has(id)
 
@@ -159,7 +155,6 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
     assets,
     loading,
     hasMore,
-    assetScope,
     sortedAssets,
     favoritingAssetIds,
     getAssetUrl,
@@ -171,7 +166,6 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
     loadMore,
     handleGridScroll,
     refresh,
-    handleScopeChange,
     isFavoriteAsset,
     isFavoritingAsset,
     toggleFavoriteAsset,

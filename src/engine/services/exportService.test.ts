@@ -42,6 +42,40 @@ describe('validateDataGoalBindings', () => {
       'Data element references missing data property (data_6)',
     ])
   })
+
+  it('rejects rotating hands with missing, mismatched, or non-canonical Dial Properties', () => {
+    const objects = [
+      { id: 'missing', eleType: 'rotatingHand', dialProperty: '', progressMode: 'range' },
+      { id: 'mismatch', eleType: 'rotatingHand', dialProperty: 'dial_goal_1', progressMode: 'range' },
+      { id: 'invalid', eleType: 'rotatingHand', dialProperty: 'dial_range_1', progressMode: 'range' },
+      { id: 'invalid-options', eleType: 'rotatingHand', dialProperty: 'dial_range_2', progressMode: 'range' },
+    ] as unknown as FabricElement[]
+    const properties = {
+      dial_goal_1: {
+        type: 'dial', title: 'Goal', dialMode: 'goal', value: 1,
+        options: [{ value: 1, metricSymbol: ':GOAL_TYPE_STEPS', dialMode: 'goal' }],
+      },
+      dial_range_1: {
+        type: 'dial', title: 'Range', dialMode: 'range', value: 2,
+        options: [{ value: 2, dialMode: 'range' }],
+      },
+      dial_range_2: {
+        type: 'dial', title: 'Range Options', dialMode: 'range', value: 3,
+        options: [
+          { value: 3, metricSymbol: ':FIELD_TYPE_BATTERY', dialMode: 'range', dialMin: 0, dialMax: 100 },
+          { value: 4, metricSymbol: ':FIELD_TYPE_STRESS', dialMode: 'goal', dialMin: 0, dialMax: 100 },
+        ],
+      },
+    } as unknown as PropertiesMap
+    const translate = (key: string, params?: Record<string, string | number>) => `${key}:${params?.id}`
+
+    expect(validateDataGoalBindings(objects, properties, translate)).toEqual([
+      'export.validation.missingDialProperty:missing',
+      'export.validation.dialModeMismatch:mismatch',
+      'export.validation.invalidDialMetric:invalid',
+      'export.validation.invalidDialMetric:invalid-options',
+    ])
+  })
 })
 
 describe('visual theme export persistence', () => {
@@ -518,5 +552,23 @@ describe('visual theme export persistence', () => {
     expect(resolved?.elements).toEqual([])
     expect(resolved?.visualThemes?.themes[0].assets.hourHand?.imageUrl)
       .toBe('https://cdn.example/original-21.svg')
+  })
+
+  it('resolves rotating hand assets through the analog asset API', async () => {
+    const { resolvePackageAssetUrls } = await import('./exportService')
+    getAnalogAsset.mockResolvedValue({
+      data: { file: { url: 'https://cdn.example/rotating-hand.svg' } },
+    })
+
+    const resolved = await resolvePackageAssetUrls({
+      elements: [{ id: 'rh-1', eleType: 'rotatingHand', assetId: 31, imageUrl: 'blob:pointer' }],
+    } as any)
+
+    expect(resolved?.elements[0]).toMatchObject({
+      id: 'rh-1',
+      eleType: 'rotatingHand',
+      assetId: 31,
+      imageUrl: 'https://cdn.example/rotating-hand.svg',
+    })
   })
 })

@@ -196,6 +196,71 @@ describe('ElementManager position stability', () => {
     expect(runtime.upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({ left: 137, top: 219 }))
   })
 
+  it('keeps the runtime position derived by a rotating hand preview update', async () => {
+    const element = makeElement({
+      id: 'rotating-hand',
+      eleType: 'rotatingHand',
+      left: 200,
+      top: 100,
+      angle: 0,
+    }) as FakeElement & {
+      centerX: number
+      centerY: number
+      pivotOffsetX: number
+      pivotOffsetY: number
+      previewProgress: number
+    }
+    Object.assign(element, {
+      centerX: 200,
+      centerY: 100,
+      pivotOffsetX: 20,
+      pivotOffsetY: 0,
+      previewProgress: 0,
+    })
+    installCanvas(element)
+    runtime.storedConfig = {
+      id: element.id,
+      eleType: element.eleType,
+      left: 200,
+      top: 100,
+      centerX: 200,
+      centerY: 100,
+      pivotOffsetX: 20,
+      pivotOffsetY: 0,
+      previewProgress: 0,
+    }
+    registerElement(element.eleType, {
+      add: vi.fn() as any,
+      update: (target) => {
+        target.set({ angle: 90, left: 220, top: 80, previewProgress: 50 })
+      },
+      encode: (target) => ({
+        id: target.id,
+        eleType: target.eleType,
+        left: target.centerX,
+        top: target.centerY,
+        centerX: target.centerX,
+        centerY: target.centerY,
+        pivotOffsetX: target.pivotOffsetX,
+        pivotOffsetY: target.pivotOffsetY,
+        previewProgress: target.previewProgress,
+      }) as any,
+    })
+
+    await updateElement(element as any, { previewProgress: 50 })
+
+    expect(element).toMatchObject({ angle: 90, left: 220, top: 80 })
+    expect(runtime.upsertElement).toHaveBeenLastCalledWith(expect.objectContaining({
+      left: 200,
+      top: 100,
+      centerX: 200,
+      centerY: 100,
+      pivotOffsetX: 20,
+      pivotOffsetY: 0,
+      previewProgress: 50,
+    }))
+  })
+
   it('restores live position when an update fails without persisting partial state', async () => {
     const element = makeElement({ id: 'failed-position', eleType: 'position-stability-failure' })
     installCanvas(element)

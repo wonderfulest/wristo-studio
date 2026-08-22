@@ -12,4 +12,13 @@ describe('bitmap font maker route', () => {
     expect(route).toContain("import('@/views/fonts/bitmap-maker/BitmapFontMaker.vue')")
     expect(route).toContain('requiresAuth: true')
   })
+
+  it('keeps the TTF generator and SVG library editor behind the shared route', () => {
+    const source = readFileSync(new URL('./BitmapFontMaker.vue', import.meta.url), 'utf8')
+    expect(source).toContain("value: 'ttf'")
+    expect(source).toContain("value: 'svg'")
+    expect(source).toContain("import TtfBitmapFontMaker from './TtfBitmapFontMaker.vue'")
+    expect(source).toContain("import IconLibrary from '../icons/IconLibrary.vue'")
+    expect(source).toContain(':font-type="svgFontType"')
+  })
 })

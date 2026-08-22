@@ -16,7 +16,7 @@ const membershipGate = useStudioMembershipGate()
 
 function open() {
   if (!membershipGate.requirePremium('font.uploadRequiresPremium')) return
-  router.push({ name: 'BitmapFontMaker' })
+  router.push({ name: 'BitmapFontMaker', query: { source: 'ttf' } })
 }
 </script>
 

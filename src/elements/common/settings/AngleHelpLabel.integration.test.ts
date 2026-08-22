@@ -5,7 +5,6 @@ const root = process.cwd()
 
 const angleFields = [
   ['src/elements/goal/goalArc/goalArc.panel.vue', 2],
-  ['src/elements/dials/subDial/subDial.panel.vue', 2],
   ['src/elements/sunEvents/arcSunEvents/arcSunEvents.panel.vue', 1],
   ['src/elements/sunEvents/lineSunEvents/lineSunEvents.panel.vue', 1],
   ['src/elements/texts/radialText/radialText.panel.vue', 1],
@@ -21,11 +20,9 @@ describe('absolute angle field help', () => {
     expect(source).toContain("import AngleHelpLabel from '@/elements/common/settings/AngleHelpLabel.vue'")
   })
 
-  it('does not attach clock-position help to angle ranges or offsets', () => {
+  it('does not attach clock-position help to angle ranges', () => {
     const arcSource = readFileSync(`${root}/src/elements/sunEvents/arcSunEvents/arcSunEvents.panel.vue`, 'utf8')
-    const subDialSource = readFileSync(`${root}/src/elements/dials/subDial/subDial.panel.vue`, 'utf8')
 
     expect(arcSource).not.toMatch(/AngleHelpLabel[^>]+angleRange/)
-    expect(subDialSource).not.toMatch(/AngleHelpLabel[^>]+rotationOffset/)
   })
 })

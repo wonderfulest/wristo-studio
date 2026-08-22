@@ -552,7 +552,7 @@ const getElementIcon = (eleType: string): string => {
 }
 
 const getLayerTypeLabel = (eleType: string): string => {
-  if (eleType === 'goal') return t('subDial.goal')
+  if (eleType === 'goal') return t('editor.goal')
   const key = `addElement.type.${eleType}`
   const label = t(key)
   return label === key ? eleType : label

@@ -22,6 +22,6 @@ describe('BitmapFontMakerEntry', () => {
     mocks.requirePremium.mockReturnValue(true)
     const wrapper = mount(BitmapFontMakerEntry)
     await wrapper.get('button').trigger('click')
-    expect(mocks.push).toHaveBeenCalledWith({ name: 'BitmapFontMaker' })
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'BitmapFontMaker', query: { source: 'ttf' } })
   })
 })

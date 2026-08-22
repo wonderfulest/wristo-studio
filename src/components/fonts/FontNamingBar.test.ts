@@ -47,4 +47,21 @@ describe('FontNamingBar', () => {
     expect(wrapper.find('.naming-field--simple').exists()).toBe(false)
     expect(wrapper.find('.naming-bar').exists()).toBe(true)
   })
+
+  it('shows an automatically generated icon name without a manual field', async () => {
+    const wrapper = mount(FontNamingBar, {
+      props: { type: 'icon', automatic: true },
+      global: { stubs },
+    })
+
+    ;(wrapper.vm as any).setName('weather-font-20260822-a3f2')
+    await nextTick()
+
+    expect(wrapper.find('.naming-preview-value').text()).toBe('weather-font-20260822-a3f2')
+    expect(wrapper.find('.naming-field--simple').exists()).toBe(false)
+    expect(wrapper.find('.naming-examples').exists()).toBe(false)
+
+    await wrapper.find('.naming-random').trigger('click')
+    expect(wrapper.emitted('regenerate')).toEqual([[]])
+  })
 })

@@ -184,7 +184,7 @@ Expected: FAIL because the capability and context modules do not exist.
 
 - [ ] **Step 3: Implement a first-version capability catalog with exact presets**
 
-Define `DESIGN_AGENT_CAPABILITIES` with `time/digital`, `date/default`, `text/plain`, `data/value`, `battery/default`, `circle/default`, and `rectangle/default`. Each entry must include `elementType`, `presets`, `editableFields`, and a `createConfig(id)` factory that imports defaults from the corresponding element schema where one exists. Do not advertise weather, images, hands, charts, goals, or sub-dials until a deterministic factory and focused compiler test exists for that type.
+Define `DESIGN_AGENT_CAPABILITIES` with `time/digital`, `date/default`, `text/plain`, `data/value`, `battery/default`, `circle/default`, and `rectangle/default`. Each entry must include `elementType`, `presets`, `editableFields`, and a `createConfig(id)` factory that imports defaults from the corresponding element schema where one exists. Do not advertise weather, images, hands, charts, or goals until a deterministic factory and focused compiler test exists for that type.
 
 ```ts
 export interface AgentCapability {

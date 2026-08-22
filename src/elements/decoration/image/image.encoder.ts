@@ -16,6 +16,7 @@ export function encodeImage(element: FabricElement): ImageElementConfig {
 
   return {
     eleType: 'image',
+    assetType: (element as any).assetType === 'mask' ? 'mask' : 'image',
     id: String((element as any).id ?? ''),
     left: Number((element as any).left ?? 0),
     top: Number((element as any).top ?? 0),
@@ -31,6 +32,7 @@ export function encodeImage(element: FabricElement): ImageElementConfig {
 export function decodeImage(config: ImageElementConfig): Partial<FabricElement> {
   return {
     eleType: 'image',
+    assetType: config.assetType === 'mask' ? 'mask' : 'image',
     id: config.id ?? nanoid(),
     left: config.left,
     top: config.top,

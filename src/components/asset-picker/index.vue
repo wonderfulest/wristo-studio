@@ -103,6 +103,18 @@
       </div>
 
       <div v-if="uploadQueue.length" class="upload-queue">
+        <div class="upload-confirmation">
+          <div class="upload-sharing-option">
+            <el-switch v-model="shareUploads" :disabled="uploading" />
+            <span>
+              <strong>{{ t('asset.shareUpload') }}</strong>
+              <small>{{ t('asset.shareUploadHint') }}</small>
+            </span>
+          </div>
+          <el-button type="primary" size="small" :loading="uploading" @click="startUpload">
+            {{ t('asset.startUpload') }}
+          </el-button>
+        </div>
         <div class="upload-queue-header">
           <strong>{{ t('asset.uploadQueue') }}</strong>
           <span>{{ t('asset.uploadQueueSummary', { done: completedUploadCount, total: uploadQueue.length }) }}</span>
@@ -127,14 +139,6 @@
         {{ uploadSummaryMessage }}
       </div>
 
-      <div v-if="canViewAllAssets" class="asset-scope-tabs">
-        <el-segmented
-          v-model="assetScope"
-          :options="assetScopeOptions"
-          size="small"
-          @change="handleScopeChange"
-        />
-      </div>
       <el-progress
         v-if="batchDeleting"
         class="asset-delete-progress"
@@ -154,7 +158,8 @@
             deleting: isDeletingAsset(asset.id),
             'batch-selected': isBatchSelected(asset.id),
             'not-removable': batchManageMode && !canRemoveAsset(asset),
-            'system-asset': asset.isSystem
+            'system-asset': asset.isSystem,
+            'shared-asset': asset.isShared && !asset.isSystem
           }"
           @click="handleSelect(asset, $event)"
           @mouseenter="handleMouseEnter(asset, $event)"
@@ -168,6 +173,11 @@
             @click.stop.prevent="handleBatchSelectionClick(asset, $event)"
           />
           <img v-if="getAssetUrl(asset)" :src="getAssetUrl(asset)" :alt="asset.file?.name" />
+          <span
+            v-if="asset.isShared && !asset.isSystem"
+            class="shared-badge"
+            :title="t('asset.sharedAsset')"
+          >{{ t('asset.sharedBadge') }}</span>
           <button
             v-if="!batchManageMode"
             type="button"
@@ -312,16 +322,10 @@ const svgSaving = ref(false)
 const editingSvgAsset = ref<AnalogAssetVO | null>(null)
 const editingSvgText = ref('')
 
-const canViewAllAssets = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
-const assetScopeOptions = computed(() => [
-  { label: t('asset.scopeMine'), value: 'mine' },
-  { label: t('asset.scopeAll'), value: 'all' },
-])
 const {
   assets,
   loading,
   hasMore,
-  assetScope,
   sortedAssets,
   getAssetUrl,
   getOriginalAssetUrl,
@@ -337,7 +341,6 @@ const {
   downloadAsset: handleDownloadAsset,
 } = useAssetLibrary({
   assetType: () => props.assetType,
-  canViewAll: () => canViewAllAssets.value,
   translate: t,
 })
 const {
@@ -372,10 +375,12 @@ const {
   uploadSummaryMessage,
   uploadSummaryTone,
   dragOver,
+  shareUploads,
   uploadAccept,
   completedUploadCount,
   uploadStatusLabel,
   uploadFile,
+  startUpload,
   triggerUpload,
   setUploadInput,
   handleUpload,
@@ -435,11 +440,6 @@ const toggleUploadPanel = () => {
 const isAssetSelected = (asset: AnalogAssetVO): boolean => {
   const url = getAssetUrl(asset)
   return props.selectedAssetId != null ? asset.id === props.selectedAssetId : props.selectedUrl === url
-}
-
-const handleScopeChange = () => {
-  clearBatchSelection()
-  void loadAssets(true)
 }
 
 /**
@@ -783,6 +783,40 @@ defineExpose({
   overflow: hidden;
 }
 
+.upload-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--studio-border);
+  background: var(--studio-surface-muted, #f3f4f6);
+}
+
+.upload-sharing-option {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-sharing-option span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upload-sharing-option strong {
+  color: var(--studio-text);
+  font-size: 12px;
+}
+
+.upload-sharing-option small {
+  color: var(--studio-text-muted);
+  font-size: 11px;
+}
+
 .upload-queue-header,
 .upload-queue-item {
   display: flex;
@@ -855,17 +889,6 @@ defineExpose({
 
 .upload-complete-message.tone-danger {
   color: #f56c6c;
-}
-
-.asset-scope-tabs {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 12px;
-}
-
-.asset-scope-tabs :deep(.el-segmented) {
-  --el-segmented-item-selected-bg-color: var(--studio-primary-soft);
-  --el-segmented-item-selected-color: var(--studio-primary);
 }
 
 .asset-delete-progress {
@@ -1087,6 +1110,27 @@ defineExpose({
 
 .asset-item.system-asset {
   border-style: dashed;
+}
+
+.asset-item.shared-asset {
+  border-color: rgba(15, 107, 104, 0.5);
+}
+
+.shared-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  border-radius: 999px;
+  padding: 1px 5px;
+  background: rgba(15, 107, 104, 0.9);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.asset-item.shared-asset .edit-icon {
+  left: 38px;
 }
 
 .edit-icon {

@@ -15,7 +15,7 @@ export interface LayoutOption {
   icon: string
 }
 
-export type DialProgressMode = 'goal' | 'range'
+export type DialProgressMode = 'goal' | 'range' | 'direction'
 
 export interface HandOption {
   name: string

@@ -4,19 +4,7 @@ import { weatherSchema } from './weather.schema'
 import { normalizeWeatherIconCode } from './weatherCodes'
 
 export function encodeWeather(element: FabricElement): WeatherElementConfig {
-  const anyEl = element as any
-  const weatherDisplayType = anyEl.weatherDisplayType as WeatherElementConfig['weatherDisplayType'] | undefined
-  const amoledImageUrl = anyEl.amoledImageUrl ?? anyEl.weatherImageUrl ?? anyEl.imageUrl
-  const amoledIconUnicode = anyEl.amoledIconUnicode
-  const mipUnicode = normalizeWeatherIconCode(anyEl.mipUnicode)
-  const fontFamily = anyEl.fontFamily
-  const fill = anyEl.fill || '#ffffff'
-  const fontSize = anyEl.fontSize != null ? Number(anyEl.fontSize) : undefined
-  const widthSource = anyEl.amoledWidth != null ? anyEl.amoledWidth : anyEl.width
-  const heightSource = anyEl.amoledHeight != null ? anyEl.amoledHeight : anyEl.height
-  const width = widthSource != null ? parseInt(String(widthSource)) : undefined
-  const height = heightSource != null ? parseInt(String(heightSource)) : undefined
-
+  const weather = element as FabricElement & Partial<WeatherElementConfig>
   return {
     eleType: 'weather',
     id: String(element.id ?? ''),
@@ -24,17 +12,10 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
     top: parseInt(String(element.top)),
     originX: 'center',
     originY: 'center',
-    weatherDisplayType,// 表盘不用 
-    amoledImageUrl, // 表盘不用 
-    amoledIconUnicode,
-    mipUnicode, // 表盘不用 
-    width,
-    height,
-    fontFamily,
-    fontSize,
-    fill,
-    // legacy field for backward compatibility
-    imageUrl: amoledImageUrl, // 表盘不用 
+    iconUnicode: normalizeWeatherIconCode(weather.iconUnicode),
+    fontFamily: weather.fontFamily || weatherSchema.defaultConfig.fontFamily,
+    fontSize: weather.fontSize != null ? Number(weather.fontSize) : weatherSchema.defaultConfig.fontSize,
+    fill: weather.fill || weatherSchema.defaultConfig.fill,
   }
 }
 
@@ -46,15 +27,9 @@ export function decodeWeather(config: WeatherElementConfig): Partial<FabricEleme
     top: config.top,
     originX: config.originX,
     originY: config.originY,
-    weatherDisplayType: config.weatherDisplayType,
-    amoledImageUrl: config.amoledImageUrl,
-    amoledIconUnicode: config.amoledIconUnicode,
-    mipUnicode: normalizeWeatherIconCode(config.mipUnicode),
-    fontSize: config.fontSize,
-    imageUrl: config.amoledImageUrl ?? config.imageUrl,
-    width: config.width,
-    height: config.height,
+    iconUnicode: normalizeWeatherIconCode(config.iconUnicode),
     fontFamily: config.fontFamily || weatherSchema.defaultConfig.fontFamily,
-    fill: config.fill,
+    fontSize: config.fontSize ?? weatherSchema.defaultConfig.fontSize,
+    fill: config.fill || weatherSchema.defaultConfig.fill,
   } as Partial<FabricElement>
 }
