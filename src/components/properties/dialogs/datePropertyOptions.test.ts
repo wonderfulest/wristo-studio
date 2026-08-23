@@ -8,23 +8,28 @@ import {
   resolveDateFormatterValues,
 } from './datePropertyOptions'
 
-const catalogOption = (formatterCode: number, category: 'date' | 'date_cn', systemDefault = 0): DataTypeOption => ({
+const catalogOption = (
+  formatterCode: number,
+  category: 'date' | 'date_cn',
+  systemDefault = 0,
+  defaultValue = String(formatterCode),
+): DataTypeOption => ({
   valueCode: 2000 + formatterCode,
   formatterCode,
   category,
   metricSymbol: `:DATE_FORMAT_${formatterCode}`,
   settingsLabel: { eng: `Format ${formatterCode}`, zhs: `格式 ${formatterCode}` },
   label: { eng: { short: 'Date', medium: 'Date Fmt', long: 'Date Format' }, zhs: `格式 ${formatterCode}` },
-  unitKey: 'none', iconUnicode: '', defaultValue: String(formatterCode), isActive: 1,
+  unitKey: 'none', iconUnicode: '', defaultValue, isActive: 1,
   systemDefault: systemDefault as 0 | 1, sortOrder: formatterCode,
   dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null,
 })
 
 const catalog = [
-  catalogOption(DateFormatConstants.DD, 'date', 1),
-  catalogOption(DateFormatConstants.DDD, 'date', 1),
+  catalogOption(DateFormatConstants.DD, 'date', 1, 'Sep'),
+  catalogOption(DateFormatConstants.DDD, 'date', 1, 'Sep 2023'),
   catalogOption(DateFormatConstants.YYYY_MM_DD, 'date'),
-  catalogOption(DateFormatConstants.LUNAR_DATE, 'date_cn', 1),
+  catalogOption(DateFormatConstants.LUNAR_DATE, 'date_cn', 1, '五月十五'),
   catalogOption(DateFormatConstants.NEXT_SOLAR_TERM, 'date_cn'),
 ]
 
@@ -37,6 +42,17 @@ describe('date property options', () => {
     expect(getCommonDateFormatterValues('zhs', catalog)).toEqual([
       DateFormatConstants.LUNAR_DATE,
     ])
+  })
+
+  it('keeps only 3-to-8-character formats in the default date options', () => {
+    const options = [
+      catalogOption(100, 'date', 1, '05'),
+      catalogOption(101, 'date', 1, 'Mon'),
+      catalogOption(102, 'date', 1, 'Sep 2023'),
+      catalogOption(103, 'date', 1, 'September'),
+    ]
+
+    expect(getCommonDateFormatterValues('eng', options)).toEqual([101, 102])
   })
 
   it('exposes exactly three festival and solar-term options', () => {

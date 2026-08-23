@@ -31,6 +31,10 @@ export function getCatalogDateFormatterDefaults(
   appLanguage: AppLanguage,
 ): number[] {
   const dateOptions = getCatalogDateFormatOptions(options, appLanguage)
+    .filter(option => {
+      const length = [...String(option.example || '')].length
+      return length >= 3 && length <= 8
+    })
   const defaults = dateOptions.filter(option => option.systemDefault).map(option => option.value)
   return defaults.length > 0 ? defaults : dateOptions.slice(0, 1).map(option => option.value)
 }
