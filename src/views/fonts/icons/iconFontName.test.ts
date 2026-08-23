@@ -9,6 +9,6 @@ describe('SVG icon font automatic naming', () => {
 
   it('keeps the weather prefix for weather fonts', () => {
     const date = new Date(2026, 7, 22, 9, 30)
-    expect(generateSvgIconFontSlug('weather_font', date, () => '09bf')).toBe('weather-font-20260822-09bf')
+    expect(generateSvgIconFontSlug('weather_font', date, () => '09bf12')).toBe('weather-font-09bf12')
   })
 })

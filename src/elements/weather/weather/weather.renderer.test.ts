@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 
-const { canvas } = vi.hoisted(() => ({
+const { canvas, applyCurrentElementPreviewFont } = vi.hoisted(() => ({
   canvas: { getObjects: vi.fn(), requestRenderAll: vi.fn(), renderAll: vi.fn() },
+  applyCurrentElementPreviewFont: vi.fn((): { bitmapPreviewAssets?: {
+    descriptorUrl: string
+    atlasUrl: string
+    sourceSize: number
+  } } => ({ bitmapPreviewAssets: undefined })),
 }))
 
 vi.mock('fabric', () => {
@@ -46,12 +51,44 @@ vi.mock('fabric', () => {
 vi.mock('@/stores/canvasStore', () => ({ useCanvasStore: () => ({ canvas }) }))
 vi.mock('@/stores/layerStore', () => ({ useLayerStore: () => ({ addLayer: vi.fn() }) }))
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))
+vi.mock('@/composables/useGarminSystemFont', () => ({ applyCurrentElementPreviewFont }))
 
 import { Group, Image, Rect, Text } from 'fabric'
 import { updateWeather } from './weather.renderer'
 
 describe('weather font canvas layout', () => {
+  it('uses the published BMFont glyph instead of an SVG source preview', async () => {
+    applyCurrentElementPreviewFont.mockReturnValueOnce({
+      bitmapPreviewAssets: {
+        descriptorUrl: '/weather/demo.fnt',
+        atlasUrl: '/weather/demo.png',
+        sourceSize: 30,
+      },
+    })
+    const glyph = new Text(String.fromCodePoint(0x101d), { role: 'glyph' }) as any
+    const group = new Group([glyph], {
+      id: 'weather-1', left: 180, top: 120, iconUnicode: '101d',
+      fontFamily: 'weather-font', fontSize: 36, fill: '#FFFFFF',
+    } as any) as any
+    canvas.getObjects.mockReturnValue([group])
+
+    await updateWeather(group, {
+      iconUnicode: '101d',
+      previewSource: '/weather/101d.svg',
+      fill: '#FFFFFF',
+    } as any)
+
+    expect(group.getObjects().find((item: any) => item.role === 'glyph')).toBeInstanceOf(Text)
+    expect(Image.fromURL).not.toHaveBeenCalled()
+    expect(applyCurrentElementPreviewFont).toHaveBeenCalledWith(
+      expect.any(Text),
+      { fontFamily: 'weather-font', fontSize: 36, fill: '#FFFFFF' },
+      String.fromCodePoint(0x101d),
+    )
+  })
+
   it('uses the selected weather SVG instead of a system-font fallback glyph', async () => {
+    applyCurrentElementPreviewFont.mockReturnValueOnce({ bitmapPreviewAssets: undefined })
     const glyph = new Text(String.fromCodePoint(0x101d), { role: 'glyph' }) as any
     const group = new Group([glyph], {
       id: 'weather-1', left: 180, top: 120, iconUnicode: '101d',

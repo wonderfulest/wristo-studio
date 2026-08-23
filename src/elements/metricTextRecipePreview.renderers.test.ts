@@ -112,4 +112,33 @@ describe('metric renderer bitmap recipe preview', () => {
     expect(element).toMatchObject({ fill: 'rgba(0,0,0,0)', stroke: '#1f9cff', strokeWidth: 2 })
     expect(runtime.upsertElement).toHaveBeenCalledWith(expect.objectContaining({ fill: '#1f9cff' }))
   })
+
+  it.each([
+    ['data', (el: any, patch: any) => updateData(el, patch)],
+    ['label', (el: any, patch: any) => updateLabel(el, patch)],
+    ['date', (el: any, patch: any) => updateDate(el, patch)],
+  ] as const)('%s update persists a newly selected slug instead of the Chinese preview fallback', async (kind, update) => {
+    const element = fakeText(kind)
+    Object.assign(element, {
+      text: '七月十一',
+      fontFamily: 'noto-sans-sc-regular',
+      assetFontFamily: 'old-chinese-font',
+    })
+    runtime.object = element
+
+    await update(element, { fontFamily: 'new-chinese-bitmap-font' })
+
+    expect(element.fontFamily).toBe('noto-sans-sc-regular')
+    expect(runtime.patchElement).toHaveBeenCalledWith(
+      String(element.id),
+      expect.objectContaining({ fontFamily: 'new-chinese-bitmap-font' }),
+    )
+
+    runtime.patchElement.mockReset()
+    await update(element, { fill: '#abcdef' })
+    expect(runtime.patchElement).toHaveBeenCalledWith(
+      String(element.id),
+      expect.objectContaining({ fontFamily: 'new-chinese-bitmap-font' }),
+    )
+  })
 })

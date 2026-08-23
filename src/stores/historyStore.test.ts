@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useHistoryStore } from './historyStore'
 import { usePropertiesStore } from './properties'
+import { useElementDataStore } from './elementDataStore'
 
 const createCanvas = () => {
   let version = 0
@@ -100,6 +101,33 @@ describe('history saveState result', () => {
     }
 
     expect(historyStore.saveState('data-options', { coalesceIfSameFabric: true })).toBe(true)
+  })
+
+  it('keeps the selected font slug when a modified object renders the Chinese preview fallback', () => {
+    const handlers = new Map<string, (event?: any) => void>()
+    const canvas = {
+      ...createCanvas(),
+      on: (name: string, handler: (event?: any) => void) => handlers.set(name, handler),
+      off: (name: string) => handlers.delete(name),
+    }
+    const elementDataStore = useElementDataStore()
+    elementDataStore.upsertElement({
+      id: 'date-1', eleType: 'date', left: 10, top: 20,
+      fontFamily: 'old-font', fontSize: 24,
+    } as any)
+    const historyStore = useHistoryStore()
+    historyStore.attachCanvas(canvas as any, baseStore as any)
+    historyStore.registerCanvasEvents()
+
+    handlers.get('object:modified')?.({
+      target: {
+        id: 'date-1', eleType: 'date', left: 10, top: 20,
+        fontFamily: 'noto-sans-sc-regular', assetFontFamily: 'new-chinese-bitmap-font', fontSize: 24,
+      },
+    })
+
+    expect(elementDataStore.getElementConfig('date-1')?.fontFamily).toBe('new-chinese-bitmap-font')
+    historyStore.dispose()
   })
 
   it('exposes restore activity and rejects saves while a restore overlaps', async () => {

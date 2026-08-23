@@ -72,21 +72,21 @@ describe('CreateGlyphDialog weather font automatic naming', () => {
 
   it('retries automatically when the generated slug already exists', async () => {
     mocks.generateSvgIconFontSlug
-      .mockReturnValueOnce('weather-font-20260822-0001')
-      .mockReturnValueOnce('weather-font-20260822-0002')
+      .mockReturnValueOnce('weather-font-000001')
+      .mockReturnValueOnce('weather-font-000002')
     mocks.hasSlugConflict.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
 
     const wrapper = await mountWeatherDialog()
 
-    expect(mocks.hasSlugConflict).toHaveBeenNthCalledWith(1, 'weather-font-20260822-0001')
-    expect(mocks.hasSlugConflict).toHaveBeenNthCalledWith(2, 'weather-font-20260822-0002')
-    expect(wrapper.get('.naming-preview-value').text()).toBe('weather-font-20260822-0002')
+    expect(mocks.hasSlugConflict).toHaveBeenNthCalledWith(1, 'weather-font-000001')
+    expect(mocks.hasSlugConflict).toHaveBeenNthCalledWith(2, 'weather-font-000002')
+    expect(wrapper.get('.naming-preview-value').text()).toBe('weather-font-000002')
   })
 
   it('regenerates a conflicted slug at confirmation and creates without manual input', async () => {
     mocks.generateSvgIconFontSlug
-      .mockReturnValueOnce('weather-font-20260822-0001')
-      .mockReturnValueOnce('weather-font-20260822-0002')
+      .mockReturnValueOnce('weather-font-000001')
+      .mockReturnValueOnce('weather-font-000002')
     mocks.hasSlugConflict
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true)
@@ -98,7 +98,7 @@ describe('CreateGlyphDialog weather font automatic naming', () => {
 
     expect(wrapper.emitted('confirm')).toEqual([[
       expect.objectContaining({
-        glyphCode: 'weather-font-20260822-0002',
+        glyphCode: 'weather-font-000002',
         fontType: 'weather_font',
       }),
     ]])

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { shallowMount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import WeatherPanel from './weather.panel.vue'
+import { useFontStore } from '@/stores/fontStore'
 
 vi.mock('opentype.js', () => ({
   default: {},
@@ -86,6 +87,7 @@ describe('weather settings panel', () => {
     expect(wrapper.findComponent({ name: 'FontPicker' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'ElTabs' }).exists()).toBe(false)
     expect(wrapper.text()).not.toContain('AMOLED')
+    await vi.waitFor(() => expect(useFontStore().serverFonts.has('weather-font')).toBe(true))
   })
 
   it('loads the selected weather font conditions without a display type', async () => {
@@ -169,7 +171,7 @@ describe('weather settings panel', () => {
         stubs: {
           'el-form': { template: '<form><slot /></form>' },
           'el-form-item': { template: '<div><slot /></div>' },
-          'el-select': { template: '<div><slot /><slot name="empty" /></div>' },
+          'el-select': { template: '<div><slot name="header" /><slot /><slot name="empty" /></div>' },
           'el-option': true,
           'el-icon': { template: '<span><slot /></span>' },
           EditPen: true,
@@ -200,7 +202,7 @@ describe('weather settings panel', () => {
         stubs: {
           'el-form': { template: '<form><slot /></form>' },
           'el-form-item': { template: '<div><slot /></div>' },
-          'el-select': { template: '<div><slot /><slot name="empty" /></div>' },
+          'el-select': { template: '<div><slot name="header" /><slot /><slot name="empty" /></div>' },
           'el-option': true,
           'el-icon': { template: '<span><slot /></span>' },
           EditPen: true,
@@ -211,6 +213,8 @@ describe('weather settings panel', () => {
     })
 
     await vi.waitFor(() => expect(getDesignerUsageFontsPage).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(applyPatch).toHaveBeenCalledTimes(1))
+    applyPatch.mockClear()
     await wrapper.get('[data-test="weather-font-editor-entry"]').trigger('click')
     window.dispatchEvent(new Event('focus'))
     expect(getDesignerUsageFontsPage).toHaveBeenCalledTimes(1)
@@ -237,7 +241,7 @@ describe('weather settings panel', () => {
         stubs: {
           'el-form': { template: '<form><slot /></form>' },
           'el-form-item': { template: '<div><slot /></div>' },
-          'el-select': { template: '<div><slot /><slot name="empty" /></div>' },
+          'el-select': { template: '<div><slot name="header" /><slot /><slot name="empty" /></div>' },
           'el-option': true,
           'el-icon': { template: '<span><slot /></span>' },
           EditPen: true,
@@ -248,6 +252,8 @@ describe('weather settings panel', () => {
     })
 
     await vi.waitFor(() => expect(getDesignerUsageFontsPage).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(applyPatch).toHaveBeenCalledTimes(1))
+    applyPatch.mockClear()
     await wrapper.get('[data-test="weather-font-editor-entry"]').trigger('click')
     window.dispatchEvent(new Event('blur'))
     window.dispatchEvent(new Event('focus'))

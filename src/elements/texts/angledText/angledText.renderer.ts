@@ -7,6 +7,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 export function createAngledText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
@@ -71,7 +72,7 @@ export function updateAngledText(element: FabricElement, patch: Partial<TextElem
   applyCurrentElementPreviewFont(
     anyEl,
     {
-      fontFamily: anyEl.fontFamily,
+      fontFamily: patch.fontFamily ?? getSavedFontFamily(anyEl),
       fontSize: anyEl.fontSize,
       fill: patch.fill
     },

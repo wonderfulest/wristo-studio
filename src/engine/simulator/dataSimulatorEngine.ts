@@ -17,6 +17,7 @@ import { resolveMetricDisplayResult } from '@/engine/simulator/metricDisplayResu
 import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -287,7 +288,7 @@ export class DataSimulatorEngine {
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           applyCurrentElementPreviewFont(obj, {
-            fontFamily: obj.fontFamily,
+            fontFamily: getSavedFontFamily(obj),
             fontSize: obj.fontSize,
             fill: obj.fill,
           }, nextText)

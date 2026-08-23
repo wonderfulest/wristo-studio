@@ -11,7 +11,7 @@ import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
-import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
 
@@ -122,7 +122,7 @@ export function updateData(
   if (patch.top === undefined) obj.set('top', currentTop)
 
   applyCurrentElementPreviewFont(obj, {
-    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+    fontFamily: patch.fontFamily ?? getSavedFontFamily(obj), fontSize: obj.fontSize, fill: patch.fill,
   }, obj.text)
 
   obj.setCoords()
@@ -140,9 +140,7 @@ export function updateData(
       fill: (savedTextStyle(obj).fill as string) ?? '#ffffff',
       fillProperty: (obj as any).fillProperty ?? undefined,
       fontSize: Number((obj.fontSize as any) ?? 14),
-      fontFamily: String(
-        (obj.fontFamily as any) ?? 'roboto-condensed-regular',
-      ),
+      fontFamily: getSavedFontFamily(obj, 'roboto-condensed-regular'),
       dataProperty: (obj as any).dataProperty ?? undefined,
       goalProperty: (obj as any).goalProperty ?? undefined,
       metricSymbol: String((obj as any).metricSymbol ?? ''),

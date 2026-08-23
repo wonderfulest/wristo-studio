@@ -14,6 +14,7 @@ import {
   normalizeMaxFieldLength,
 } from '@/utils/dataNumberFormat'
 import type { FabricElement } from '@/types/element'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 export type Snapshot = {
   fabricJSON: string
@@ -356,7 +357,7 @@ export const useHistoryStore = defineStore('history', () => {
       fill: obj.fill,
       stroke: obj.stroke,
       fontSize: obj.fontSize,
-      fontFamily: obj.fontFamily,
+      fontFamily: getSavedFontFamily(obj),
     }
     if (elementDataStore.getElementConfig(String(obj.id))) {
       elementDataStore.patchElement(String(obj.id), patch as any)

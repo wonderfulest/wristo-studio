@@ -1,6 +1,7 @@
 import type { FabricElement } from '@/types/element'
 import type { TextElementConfig } from '@/types/elements'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 export function encodeAngledText(element: FabricElement): TextElementConfig {
   if (!element) {
@@ -18,7 +19,7 @@ export function encodeAngledText(element: FabricElement): TextElementConfig {
     originX: anyEl.originX ?? 'center',
     originY: anyEl.originY ?? 'center',
     fill: (savedTextStyle(anyEl).fill as string) || '#FFFFFF',
-    fontFamily: anyEl.fontFamily || '',
+    fontFamily: getSavedFontFamily(anyEl),
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 36,
     textTemplate,
     localizedText: anyEl.localizedText,

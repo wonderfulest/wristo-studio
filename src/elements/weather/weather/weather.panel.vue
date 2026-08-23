@@ -3,9 +3,11 @@
     <el-form label-position="left" label-width="120px">
       <el-form-item :label="t('elementSettings.weatherFont')">
         <el-select
+          ref="weatherFontSelectRef"
           v-model="fontFamily"
           class="weather-font-select"
           filterable
+          popper-class="weather-font-select-popper"
           :loading="loadingFonts"
           @change="onFontChange"
         >
@@ -14,20 +16,58 @@
             :key="font.slug"
             :label="font.fullName || font.family || font.slug"
             :value="font.slug"
-          />
+          >
+            <FontListItem
+              compact
+              :label="font.fullName || font.family || font.slug"
+              :font-family="font.slug"
+              :font-slug="font.slug"
+              :type="FontTypes.WEATHER_FONT"
+              :language="font.language"
+              :is-system="font.isSystem === 1"
+              :is-monospace="font.isMonospace === 1"
+              :font-id="font.id"
+              :font-url="font.ttfFile?.url"
+              :style-tags="font.styleTags"
+              :favorite-weight="font.favoriteWeight"
+              :owner-user-id="font.userId"
+              :bitmap-preview-descriptor-url="font.bitmapPreviewDescriptorUrl"
+              :bitmap-preview-atlas-url="font.bitmapPreviewAtlasUrl"
+              @favorite-changed="onWeatherFontFavoriteChanged"
+              @removed="onWeatherFontRemoved"
+            />
+          </el-option>
           <template #empty>
             <div class="weather-font-empty">{{ t('elementSettings.noWeatherFonts') }}</div>
           </template>
-          <template #footer>
-            <button
-              type="button"
-              data-test="weather-font-editor-entry"
-              class="weather-font-editor-entry"
-              @click.stop="openWeatherFontEditor"
-            >
-              <el-icon><EditPen /></el-icon>
-              <span>{{ t('elementSettings.manageWeatherFonts') }}</span>
-            </button>
+          <template #header>
+            <div class="weather-font-toolbar" @click.stop>
+              <button
+                type="button"
+                class="weather-font-locate-button"
+                title="Locate current font"
+                aria-label="Locate current font"
+                @click.stop.prevent="locateCurrentWeatherFont"
+              >
+                <el-icon><Aim /></el-icon>
+              </button>
+              <button
+                type="button"
+                data-test="weather-font-editor-entry"
+                class="weather-font-editor-entry"
+                @click.stop="openWeatherFontEditor"
+              >
+                <span>{{ t('elementSettings.manageWeatherFonts') }}</span>
+              </button>
+              <el-segmented
+                v-if="canUsePremiumAssets"
+                v-model="fontScope"
+                class="weather-font-scope-toggle"
+                :options="fontScopeOptions"
+                size="small"
+                @change="onFontScopeChange"
+              />
+            </div>
           </template>
         </el-select>
       </el-form-item>
@@ -79,8 +119,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Aim } from '@element-plus/icons-vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement } from '@/types/element'
 import type { DesignFontVO } from '@/types/font'
@@ -90,7 +131,9 @@ import { getWeatherConditions } from '@/api/wristo/weather'
 import { FontTypes } from '@/config/fonts'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useFontStore } from '@/stores/fontStore'
+import { useUserStore } from '@/stores/user'
 import ColorPicker from '@/components/color-picker/index.vue'
+import FontListItem from '@/components/fonts/FontListItem.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import { useI18n } from '@/i18n'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
@@ -106,6 +149,8 @@ const props = defineProps<{
 const { t } = useI18n()
 const canvasStore = useCanvasStore()
 const fontStore = useFontStore()
+const userStore = useUserStore()
+const weatherFontSelectRef = ref()
 const fontFamily = ref(weatherSchema.defaultConfig.fontFamily)
 const fill = ref(weatherSchema.defaultConfig.fill)
 const fontSize = ref(weatherSchema.defaultConfig.fontSize)
@@ -114,11 +159,17 @@ const conditions = ref<WeatherConditionAssetsVO[]>([])
 const selectedCondition = ref<string | null>(null)
 const loadingFonts = ref(false)
 const loadingConditions = ref(false)
+const fontScope = ref<'mine' | 'all'>('mine')
 let awaitingFontEditorReturn = false
 let fontEditorWasAway = false
 let refreshingAfterFontEditor = false
 let fontEditorSnapshot = new Set<string>()
 const fillProperty = computed<string | null>(() => props.config?.fillProperty ?? (props.element as any)?.fillProperty ?? null)
+const canUsePremiumAssets = computed(() => userStore.canUsePremiumStudioAssets)
+const fontScopeOptions = computed(() => [
+  { label: t('font.scopeMine'), value: 'mine' },
+  { label: t('font.scopeAll'), value: 'all' },
+])
 
 const applyUpdate = (patch: Record<string, any>): void => {
   if (props.applyPatch) props.applyPatch(patch)
@@ -147,16 +198,19 @@ const loadWeatherFonts = async (previousSlugs?: ReadonlySet<string>): Promise<De
       pageNum: 1,
       pageSize: 100,
       type: FontTypes.WEATHER_FONT,
+      ...(canUsePremiumAssets.value && fontScope.value === 'all' ? { includeAllUsers: true } : {}),
     })
-    weatherFonts.value = response.data?.list || []
+    weatherFonts.value = (response.data?.list || []).map(font => fontStore.registerServerFont(font))
     const newlyCreated = previousSlugs
       ? weatherFonts.value.find(font => Boolean(font.slug) && !previousSlugs.has(font.slug))
       : undefined
     const selected = newlyCreated
       || weatherFonts.value.find(font => font.slug === fontFamily.value)
       || weatherFonts.value[0]
-    if (selected?.slug && selected.slug !== fontFamily.value) {
-      fontFamily.value = selected.slug
+    if (selected?.slug) {
+      if (selected.slug !== fontFamily.value) fontFamily.value = selected.slug
+      // The canvas element can be created before its published BMFont metadata is registered.
+      // Reapply the selected font so grouped weather glyphs switch off the browser fallback.
       applyUpdate({ fontFamily: selected.slug })
     }
     return newlyCreated
@@ -193,6 +247,52 @@ const onFontChange = async (): Promise<void> => {
   ensureSelectedFontLoaded()
   applyUpdate({ fontFamily: fontFamily.value })
   selectedCondition.value = null
+  await fetchConditions()
+}
+
+const locateCurrentWeatherFont = async (): Promise<void> => {
+  await nextTick()
+  const selectedOption = document.querySelector<HTMLElement>(
+    '.weather-font-select-popper .el-select-dropdown__item.is-selected',
+  )
+  selectedOption?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
+const onFontScopeChange = async (): Promise<void> => {
+  const previousFont = fontFamily.value
+  await loadWeatherFonts()
+  ensureSelectedFontLoaded()
+  if (fontFamily.value !== previousFont) {
+    selectedCondition.value = null
+    await fetchConditions()
+  }
+  await nextTick()
+  weatherFontSelectRef.value?.focus?.()
+}
+
+const onWeatherFontFavoriteChanged = (
+  id: number,
+  favoriteWeight: number | null | undefined,
+): void => {
+  weatherFonts.value = weatherFonts.value.map(font => (
+    font.id === id ? { ...font, favoriteWeight } : font
+  ))
+}
+
+const onWeatherFontRemoved = async (id: number): Promise<void> => {
+  const removedSelectedFont = weatherFonts.value.some(font => (
+    font.id === id && font.slug === fontFamily.value
+  ))
+  weatherFonts.value = weatherFonts.value.filter(font => font.id !== id)
+  if (!removedSelectedFont) return
+
+  const fallbackFont = weatherFonts.value[0]
+  fontFamily.value = fallbackFont?.slug || ''
+  selectedCondition.value = null
+  if (fontFamily.value) {
+    ensureSelectedFontLoaded()
+    applyUpdate({ fontFamily: fontFamily.value })
+  }
   await fetchConditions()
 }
 
@@ -286,8 +386,17 @@ onBeforeUnmount(() => {
 <style scoped>
 .weather-properties { padding: 12px 0; }
 .weather-font-select { width: 100%; }
-.weather-font-editor-entry { display: flex; width: 100%; align-items: center; gap: 7px; padding: 9px 12px; border: 0; background: transparent; color: #0f6b68; font: inherit; text-align: left; cursor: pointer; }
-.weather-font-editor-entry:hover { background: color-mix(in srgb, #0f766e 8%, transparent); }
+.weather-font-toolbar { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--studio-border); background: var(--studio-surface-raised); }
+.weather-font-locate-button { display: inline-flex; width: 32px; height: 28px; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--studio-border); border-radius: 4px; background: var(--studio-surface); color: var(--studio-text-muted); cursor: pointer; }
+.weather-font-locate-button:hover { background: var(--studio-surface-soft); color: var(--studio-primary); }
+.weather-font-locate-button :deep(.el-icon) { font-size: 15px; }
+.weather-font-editor-entry { display: inline-flex; width: 100%; min-height: 28px; align-items: center; justify-content: center; gap: 7px; padding: 5px 8px; overflow: hidden; border: 1px solid var(--studio-border); border-radius: 4px; background: var(--studio-surface); color: var(--studio-primary); font: inherit; font-size: 12px; line-height: 16px; text-align: center; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.weather-font-editor-entry:hover { background: var(--studio-surface-soft); }
+.weather-font-scope-toggle { flex-shrink: 0; }
+:global(.weather-font-select-popper .el-select-dropdown__item) { height: auto; min-height: 70px; padding: 4px 8px; line-height: normal; }
+:global(.weather-font-select-popper .el-select-dropdown__item.is-hovering) { background: transparent; }
+:global(.weather-font-select-popper .el-select-dropdown__item.is-selected) { background: transparent; }
+:global(.weather-font-select-popper .el-select-dropdown__item.is-selected .font-main) { border: 2px solid var(--studio-primary); box-shadow: 0 0 0 2px var(--studio-primary-soft), var(--studio-shadow-md); }
 .weather-font-empty { padding: 12px; color: #8b949e; font-size: 12px; text-align: center; }
 .weather-actions { display: flex; justify-content: flex-end; margin: 4px 0 14px; }
 .refresh-button { background-color: #0f6b68; color: #fff; }

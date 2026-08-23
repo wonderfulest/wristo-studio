@@ -18,7 +18,7 @@ import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
-import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
@@ -114,7 +114,7 @@ export function createDate(config: DateElementConfig): FabricElement {
       )
       element.set('text', nextText)
       applyCurrentElementPreviewFont(element, {
-        fontFamily: element.fontFamily,
+        fontFamily: getSavedFontFamily(element),
         fontSize: element.fontSize,
         fill: element.fill,
       }, nextText)
@@ -212,7 +212,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
   }
 
   applyCurrentElementPreviewFont(obj, {
-    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+    fontFamily: patch.fontFamily ?? getSavedFontFamily(obj), fontSize: obj.fontSize, fill: patch.fill,
   }, obj.text)
 
   obj.setCoords?.()
@@ -225,7 +225,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       originY: obj.originY,
       fill: savedTextStyle(obj).fill,
       fontSize: obj.fontSize,
-      fontFamily: obj.fontFamily,
+      fontFamily: getSavedFontFamily(obj),
       dateProperty: obj.dateProperty,
       formatter: obj.formatter,
       formatterOptions: Array.isArray(obj.formatterOptions) ? [...obj.formatterOptions] : undefined,

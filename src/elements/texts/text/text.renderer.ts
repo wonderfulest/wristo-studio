@@ -8,6 +8,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { usePropertiesStore } from '@/stores/properties'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 export function createText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
@@ -75,7 +76,7 @@ export function updateText(element: FabricElement, patch: Partial<TextElementCon
   applyCurrentElementPreviewFont(
     anyEl,
     {
-      fontFamily: anyEl.fontFamily,
+      fontFamily: patch.fontFamily ?? getSavedFontFamily(anyEl),
       fontSize: anyEl.fontSize,
       fill: patch.fill
     },

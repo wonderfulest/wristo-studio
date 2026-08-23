@@ -227,4 +227,28 @@ describe('font metrics refresh', () => {
     expect(outer.updateRadialLayout).toHaveBeenCalledOnce()
     expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
   })
+
+  it('refreshes an object by its selected slug when Fabric is rendering the Chinese fallback', async () => {
+    const matching: any = {
+      assetFontFamily: 'new-chinese-bitmap-font',
+      fontFamily: 'noto-sans-sc-regular',
+      fontSize: 50,
+      fill: '#fff',
+      initDimensions: vi.fn(),
+      setCoords: vi.fn(),
+      set(props: any) { Object.assign(this, props) },
+    }
+    const canvas = { getObjects: () => [matching], requestRenderAll: vi.fn() }
+    ;(useCanvasStore() as any).canvas = canvas
+    useFontStore().serverFonts.set('new-chinese-bitmap-font', {
+      slug: 'new-chinese-bitmap-font',
+      bitmapRecipe,
+    } as any)
+
+    await useFontStore().refreshFontPreview('new-chinese-bitmap-font')
+
+    expect(matching.strokeWidth).toBe(2)
+    expect(matching.initDimensions).toHaveBeenCalledOnce()
+    expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
+  })
 })

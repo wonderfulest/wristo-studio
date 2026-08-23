@@ -71,20 +71,27 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
   const scale = Math.max(1, Number(object.fontSize) || sourceSize) / sourceSize
   const lineHeight = descriptor.lineHeight * scale
   const totalHeight = Math.max(lineHeight, lines.length * lineHeight)
+  const maxWidth = Math.max(1, ...widths) * scale
+  const renderWidth = Math.max(1, Math.ceil(maxWidth))
+  const renderHeight = Math.max(1, Math.ceil(totalHeight))
+  const renderCanvas = document.createElement('canvas')
+  renderCanvas.width = renderWidth
+  renderCanvas.height = renderHeight
+  const renderContext = renderCanvas.getContext('2d')
+  if (!renderContext) return false
 
-  context.save()
   lines.forEach((line, lineIndex) => {
-    let cursor = -(widths[lineIndex] * scale) / 2
+    let cursor = (renderWidth - widths[lineIndex] * scale) / 2
     let previous: number | null = null
     for (const character of line) {
       const codepoint = character.codePointAt(0)!
       const glyph = descriptor.glyphs.get(codepoint)!
       if (previous != null) cursor += (descriptor.kernings.get(kerningKey(previous, codepoint)) || 0) * scale
-      context.drawImage(
+      renderContext.drawImage(
         atlas,
         glyph.x, glyph.y, glyph.width, glyph.height,
         cursor + glyph.xoffset * scale,
-        -totalHeight / 2 + lineIndex * lineHeight + glyph.yoffset * scale,
+        (renderHeight - totalHeight) / 2 + lineIndex * lineHeight + glyph.yoffset * scale,
         glyph.width * scale,
         glyph.height * scale,
       )
@@ -92,11 +99,10 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
       previous = codepoint
     }
   })
-  context.globalCompositeOperation = 'source-in'
-  context.fillStyle = state.color || (typeof object.fill === 'string' ? object.fill : '#FFFFFF')
-  const maxWidth = Math.max(1, ...widths) * scale
-  context.fillRect(-maxWidth / 2, -totalHeight / 2, maxWidth, totalHeight)
-  context.restore()
+  renderContext.globalCompositeOperation = 'source-in'
+  renderContext.fillStyle = state.color || (typeof object.fill === 'string' ? object.fill : '#FFFFFF')
+  renderContext.fillRect(0, 0, renderWidth, renderHeight)
+  context.drawImage(renderCanvas, -renderWidth / 2, -renderHeight / 2)
   return true
 }
 
@@ -123,6 +129,7 @@ export async function applyFabricBitmapFontPreview(
     return
   }
   const assetsKey = `${assets.descriptorUrl}\0${assets.atlasUrl}\0${assets.sourceSize}`
+  state.color = assets.color
   if (state.assetsKey === assetsKey && state.descriptor && state.atlas) return
   state.assetsKey = assetsKey
   const generation = ++state.generation
@@ -134,7 +141,6 @@ export async function applyFabricBitmapFontPreview(
   state.descriptor = descriptor
   state.atlas = atlas
   state.sourceSize = assets.sourceSize
-  state.color = assets.color
   object.dirty = true
   object.canvas?.requestRenderAll?.()
 }

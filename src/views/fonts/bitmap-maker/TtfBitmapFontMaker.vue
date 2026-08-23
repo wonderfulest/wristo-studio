@@ -88,8 +88,13 @@
           <div v-else class="atlas-empty"><span>012345</span><p>{{ t('bitmapMaker.buildToPreview') }}</p></div>
         </div>
         <div class="device-preview" aria-label="Recipe visual preview" :style="watchPreviewVariables">
-          <div class="watch-ring"><span data-test="source-font-live-preview" :style="previewTextStyle">{{ previewSample }}</span></div>
-          <div><strong>{{ t('bitmapMaker.recipeVisual') }}</strong><p>{{ recipeSummary }}</p></div>
+          <div ref="watchRingRef" class="watch-ring"><span ref="watchPreviewTextRef" data-test="source-font-live-preview" :style="previewTextStyle">{{ previewText }}</span></div>
+          <div class="preview-controls">
+            <strong>{{ t('bitmapMaker.recipeVisual') }}</strong>
+            <label>{{ t('bitmapMaker.previewContent') }}<span class="preview-content-input"><input v-model="previewText" type="text" maxlength="32" @input="previewTextCustomized = true" /><button type="button" @click="randomizePreviewText">{{ t('bitmapMaker.randomize') }}</button></span></label>
+            <label class="preview-size-control"><span>{{ t('bitmapMaker.previewFontSize') }} <output>{{ previewFontSize }} px</output></span><input v-model.number="previewFontSize" type="range" min="12" max="160" step="1" /></label>
+            <p>{{ recipeSummary }}</p>
+          </div>
         </div>
         <div v-if="buildRunning" class="progress-block" aria-live="polite">
           <div><span>{{ t('bitmapMaker.building') }} {{ buildProgress.completed }}/{{ buildProgress.total }}</span><span>{{ buildProgress.size }} px</span></div>
@@ -118,7 +123,7 @@
 <script setup lang="ts">
 import JSZip from 'jszip'
 import { ElMessageBox } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '@/i18n'
 import { BITMAP_FONT_SIZES, charsetForType, deriveBitmapFontSlug, mergeBitmapFontSearchKeywords, mergeBitmapFontStyleTags, normalizeBitmapFontRecipe, type BitmapFontManifest, type BitmapFontRecipe, type BitmapFontType } from '@/features/bitmap-font-maker/contracts'
@@ -170,6 +175,12 @@ const atlasWidth = ref(0)
 const atlasHeight = ref(0)
 const atlasGlyphs = ref<Array<{ id: number; x: number; y: number; width: number; height: number }>>([])
 const sourcePreviewFontFamily = ref('')
+const watchRingRef = ref<HTMLElement | null>(null)
+const watchPreviewTextRef = ref<HTMLElement | null>(null)
+const watchPreviewScale = ref(1)
+const previewText = ref('10:09')
+const previewTextCustomized = ref(false)
+const previewFontSize = ref(88)
 let workerClient: BitmapFontWorkerClient | null = null
 let sourcePreviewRegistration: RegisteredUploadedFontFace | undefined
 let activeBuild: BitmapFontBuildHandle | null = null
@@ -178,6 +189,7 @@ let buildToken = 0
 let previewToken = 0
 let operationToken = 0
 let slugToken = 0
+let watchPreviewResizeObserver: ResizeObserver | null = null
 
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const sourceValid = computed(() => !!sourceFile.value && !!sourceParsed.value && !sourceError.value && missingGlyphs.value.length === 0)
@@ -227,30 +239,62 @@ const supportedCharacters = computed(() => String.fromCodePoint(...supportedChar
 const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(code => code === 32 ? t('bitmapMaker.space') : String.fromCodePoint(code)).join(', '))
 const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewSample = computed(() => fontType.value === 'time_font' ? '10:09' : fontType.value === 'text_font_zh' ? '周三 24' : 'WED 24')
-const WATCH_PREVIEW_FONT_SIZE = 88
-const watchPreviewVariables = {
+const randomItem = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)]
+const randomTwoDigits = (maximum: number): string => String(Math.floor(Math.random() * maximum) + 1).padStart(2, '0')
+
+function randomizePreviewText() {
+  previewTextCustomized.value = true
+  if (fontType.value === 'time_font') {
+    previewText.value = `${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`
+    return
+  }
+  const weekday = fontType.value === 'text_font_zh'
+    ? randomItem(['周一', '周二', '周三', '周四', '周五', '周六', '周日'] as const)
+    : randomItem(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const)
+  previewText.value = `${weekday} ${randomTwoDigits(31)}`
+}
+const watchPreviewVariables = computed(() => ({
   '--watch-preview-size': '400px',
   '--watch-preview-border': '24px',
-  '--watch-preview-font-size': `${WATCH_PREVIEW_FONT_SIZE}px`,
-}
+  '--watch-preview-font-size': `${previewFontSize.value}px`,
+}))
 const previewTextStyle = computed(() => {
   const hasOutline = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
   const sourceWeight = sourceParsed.value?.sourceWeight ?? 400
   const syntheticWeightStroke = recipe.outlineMode === 'fill' && recipe.fontWeight > sourceWeight
-    ? 2 * ((recipe.fontWeight - sourceWeight) / 500) * WATCH_PREVIEW_FONT_SIZE * 0.04
+    ? 2 * ((recipe.fontWeight - sourceWeight) / 500) * previewFontSize.value * 0.04
     : 0
   // CSS text stroke is the full line width, while the bitmap renderer's
   // outlineWidthEm is a radius applied on both sides of the glyph path.
-  const strokeWidth = hasOutline ? 2 * recipe.outlineWidthEm * WATCH_PREVIEW_FONT_SIZE : syntheticWeightStroke
+  const strokeWidth = hasOutline ? 2 * recipe.outlineWidthEm * previewFontSize.value : syntheticWeightStroke
   return {
     fontFamily: sourcePreviewFontFamily.value ? `"${sourcePreviewFontFamily.value}"` : undefined,
     fontWeight: recipe.fontWeight,
-    transform: `skewX(${recipe.italicAngle}deg)`,
+    transform: `scale(${watchPreviewScale.value}) skewX(${recipe.italicAngle}deg)`,
     transformOrigin: 'center',
     webkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px #fff` : undefined,
     color: recipe.outlineMode === 'outline-only' ? 'transparent' : '#fff',
   }
 })
+
+async function fitWatchPreview() {
+  watchPreviewScale.value = 1
+  await nextTick()
+  const ring = watchRingRef.value
+  const text = watchPreviewTextRef.value
+  if (!ring || !text) return
+  await document.fonts?.ready
+  const textRect = text.getBoundingClientRect()
+  const safeSize = Math.min(ring.clientWidth, ring.clientHeight) / Math.SQRT2
+  if (!textRect.width || !textRect.height) return
+  const sourceWeight = sourceParsed.value?.sourceWeight ?? 400
+  const strokeWidth = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
+    ? 2 * recipe.outlineWidthEm * previewFontSize.value
+    : recipe.fontWeight > sourceWeight
+      ? 2 * ((recipe.fontWeight - sourceWeight) / 500) * previewFontSize.value * 0.04
+      : 0
+  watchPreviewScale.value = Math.min(1, safeSize / (textRect.width + strokeWidth), safeSize / (textRect.height + strokeWidth))
+}
 const buildActionDescription = computed(() => actionsLocked.value ? t('common.processing') : !sourceValid.value ? t('bitmapMaker.sourceRequired') : !recipeValid.value ? t('bitmapMaker.recipeInvalid') : buildFresh.value ? t('bitmapMaker.buildCurrent') : t('bitmapMaker.buildReady'))
 const downloadActionDescription = computed(() => downloading.value ? t('bitmapMaker.preparingCurrentSlug') : actionsLocked.value ? t('common.processing') : !buildFresh.value ? t('bitmapMaker.downloadBuildRequired') : !slugValid.value ? t('bitmapMaker.downloadSlugRequired') : t('bitmapMaker.downloadReady'))
 const publishActionDescription = computed(() => actionsLocked.value ? t('common.processing') : packageValidationError.value ? t('bitmapMaker.packageValidationRequired') : !buildFresh.value ? t('bitmapMaker.freshBuildRequired') : !metadataValid.value ? t('bitmapMaker.metadataRequired') : !metadata.redistributionRightsAttested ? t('bitmapMaker.rightsRequired') : t('bitmapMaker.publishReady'))
@@ -649,10 +693,16 @@ async function publishPackage() {
   } finally { if (mounted && token === operationToken) publishing.value = false }
 }
 
-watch(fontType, () => { metadata.type = fontType.value; metadata.language = fontType.value === 'text_font_zh' ? 'zh' : 'en'; validateGlyphs(); invalidateBuild(); void refreshGeneratedSlug() })
+watch(fontType, () => { metadata.type = fontType.value; metadata.language = fontType.value === 'text_font_zh' ? 'zh' : 'en'; if (!previewTextCustomized.value) previewText.value = previewSample.value; validateGlyphs(); invalidateBuild(); void refreshGeneratedSlug() })
 watch(recipe, () => { invalidateBuild(); void refreshGeneratedSlug() }, { deep: true })
+watch([previewText, previewFontSize, sourcePreviewFontFamily, () => recipe.fontWeight, () => recipe.italicAngle, () => recipe.outlineWidthEm, () => recipe.outlineMode], () => { void fitWatchPreview() }, { flush: 'post' })
 watch(currentSize, loadAtlasPreview)
-onMounted(loadEditingFont)
+onMounted(() => {
+  void loadEditingFont()
+  watchPreviewResizeObserver = new ResizeObserver(() => { void fitWatchPreview() })
+  if (watchRingRef.value) watchPreviewResizeObserver.observe(watchRingRef.value)
+  void fitWatchPreview()
+})
 onBeforeUnmount(() => {
   mounted = false
   buildToken += 1
@@ -660,6 +710,7 @@ onBeforeUnmount(() => {
   operationToken += 1
   if (activeBuild) activeBuild.cancel()
   workerClient?.dispose()
+  watchPreviewResizeObserver?.disconnect()
   disposeSourcePreviewFont()
   revokeAtlasUrl()
 })
@@ -672,12 +723,12 @@ defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeVali
 .section-index{margin:0 0 8px;color:var(--studio-primary);font-size:11px;font-weight:750;letter-spacing:.16em;text-transform:uppercase}
 .stage-rail{display:grid;grid-template-columns:repeat(4,1fr);max-width:1500px;margin:0 auto 14px;border:1px solid var(--studio-border);background:var(--studio-surface);border-radius:var(--studio-radius-md);overflow:hidden}.stage-rail span{display:flex;gap:10px;padding:12px 16px;color:var(--studio-text-muted);border-right:1px solid var(--studio-border);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.stage-rail span:last-child{border:0}.stage-rail b{color:var(--studio-text-subtle)}.stage-rail .active{color:var(--studio-text);background:rgba(15,107,104,.055)}.stage-rail .active b{color:var(--studio-primary)}
 .workbench-grid{display:grid;grid-template-columns:minmax(340px,430px) minmax(520px,1fr);gap:14px;max-width:1500px;margin:auto}.control-stack{display:grid;gap:14px}.panel{border:1px solid var(--studio-border);border-radius:var(--studio-radius-md);background:color-mix(in srgb,var(--studio-surface) 96%,transparent);box-shadow:var(--studio-shadow-sm)}.control-stack .panel{padding:18px}.panel-heading{display:flex;gap:12px;margin-bottom:16px}.panel-heading>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--studio-border);border-radius:50%;color:var(--studio-primary);font:700 10px ui-monospace,monospace}.panel-heading h2,.preview-toolbar h2{margin:0;font-size:15px}.panel-heading p{margin:4px 0 0;color:var(--studio-text-muted);font-size:12px}
-.file-drop{position:relative;display:flex;align-items:center;gap:13px;padding:14px;border:1px dashed var(--studio-border-strong);border-radius:var(--studio-radius-sm);cursor:pointer;background:var(--studio-surface-subtle);transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}.file-drop:focus-within{outline:2px solid var(--studio-primary);outline-offset:2px}.file-drop.dragging{border-color:var(--studio-primary);background:color-mix(in srgb,var(--studio-primary) 10%,var(--studio-surface));box-shadow:inset 0 0 0 1px var(--studio-primary)}.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}.file-mark{display:grid;place-items:center;width:42px;height:42px;background:#111820;color:#f4f7f8;border-radius:7px;font-family:Georgia,serif;font-size:18px}.file-drop strong,.file-drop small{display:block;overflow:hidden;text-overflow:ellipsis}.file-drop small{margin-top:3px;color:var(--studio-text-muted);font-size:11px}.segmented{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:14px;padding:3px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.segmented input{position:absolute;opacity:0}.segmented span{display:block;padding:8px;text-align:center;border-radius:5px;color:var(--studio-text-muted);font-size:12px;cursor:pointer}.segmented input:checked+span{background:var(--studio-surface);color:var(--studio-text);box-shadow:var(--studio-shadow-sm)}.charset-preview{margin-top:12px;padding:11px 12px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.charset-preview>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.charset-preview strong{font-size:12px}.charset-preview div span{color:var(--studio-text-muted);font:11px ui-monospace,monospace}.charset-preview p{max-height:120px;margin:9px 0 0;overflow:auto;color:var(--studio-text);font-size:15px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}
+.file-drop{position:relative;display:flex;align-items:center;gap:13px;padding:14px;border:1px dashed var(--studio-border-strong);border-radius:var(--studio-radius-sm);cursor:pointer;background:var(--studio-surface-subtle);transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}.file-drop:focus-within{outline:2px solid var(--studio-primary);outline-offset:2px}.file-drop.dragging{border-color:var(--studio-primary);background:color-mix(in srgb,var(--studio-primary) 10%,var(--studio-surface));box-shadow:inset 0 0 0 1px var(--studio-primary)}.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}.file-mark{display:grid;place-items:center;width:42px;height:42px;background:#111820;color:#f4f7f8;border-radius:7px;font-family:Georgia,serif;font-size:18px}.file-drop strong,.file-drop small{display:block;overflow:hidden;text-overflow:ellipsis}.file-drop small{margin-top:3px;color:var(--studio-text-muted);font-size:11px}.segmented{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px;padding:3px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.segmented input{position:absolute;opacity:0}.segmented span{display:block;padding:8px;text-align:center;border-radius:5px;color:var(--studio-text-muted);font-size:12px;cursor:pointer}.segmented input:checked+span{background:var(--studio-surface);color:var(--studio-text);box-shadow:var(--studio-shadow-sm)}.charset-preview{margin-top:12px;padding:11px 12px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.charset-preview>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.charset-preview strong{font-size:12px}.charset-preview div span{color:var(--studio-text-muted);font:11px ui-monospace,monospace}.charset-preview p{max-height:120px;margin:9px 0 0;overflow:auto;color:var(--studio-text);font-size:15px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}
 .source-required{margin:10px 0 0;color:var(--studio-danger,#d75b5b);font-size:12px;font-weight:650;line-height:1.5}
 .range-row,.field-label{display:grid;gap:7px;margin-top:13px;color:var(--studio-text-muted);font-size:12px}.range-row span{display:flex;justify-content:space-between}.range-row output{font:600 11px ui-monospace,monospace;color:var(--studio-text)}input[type=range]{accent-color:var(--studio-primary)}input[type=text],select{width:100%;box-sizing:border-box;border:1px solid var(--studio-border);border-radius:7px;padding:9px 10px;background:var(--studio-input-bg,var(--studio-surface));color:var(--studio-text)}input.invalid{border-color:var(--studio-danger,#d75b5b)}.validation-error{margin:9px 0 0;color:var(--studio-danger,#d75b5b);font-size:11px;line-height:1.45}
 .rights-attestation{display:flex;align-items:flex-start;gap:9px;margin-top:16px;color:var(--studio-text);font-size:12px;line-height:1.45}.rights-attestation input{margin-top:2px;accent-color:var(--studio-primary)}.field-help{margin:5px 0 0 25px;color:var(--studio-text-muted);font-size:11px;line-height:1.45}
 .preview-stage{display:flex;flex-direction:column;min-height:720px;padding:18px}.preview-toolbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px}.preview-toolbar label{display:flex;align-items:center;gap:8px;color:var(--studio-text-muted);font-size:12px}.preview-toolbar select{width:105px}.atlas-frame{display:grid;place-items:center;min-height:390px;overflow:auto;border:1px solid #303943;border-radius:10px;background-color:#0c1015;background-image:linear-gradient(45deg,#111820 25%,transparent 25%),linear-gradient(-45deg,#111820 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#111820 75%),linear-gradient(-45deg,transparent 75%,#111820 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}.atlas-image-wrap{position:relative;line-height:0}.atlas-image-wrap img{max-width:100%;image-rendering:pixelated}.glyph-overlay{position:absolute;inset:0;width:100%;height:100%}.glyph-overlay rect{fill:none;stroke:rgba(44,217,207,.75);stroke-width:.5}.atlas-empty{text-align:center;color:#44505d}.atlas-empty span{font:56px Georgia,serif;letter-spacing:-.08em}.atlas-empty p{font:12px var(--studio-font-ui);letter-spacing:.04em}
-.device-preview{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:14px;padding:22px;border:1px solid var(--studio-border);border-radius:9px;background:var(--studio-surface-subtle)}.watch-ring{display:grid;place-items:center;width:var(--watch-preview-size);height:var(--watch-preview-size);flex:0 0 auto;overflow:hidden;border:var(--watch-preview-border) solid #1a2129;border-radius:50%;background:#070a0d;color:white;box-shadow:inset 0 0 0 1px #46505a}.watch-ring span{display:inline-block;max-width:86%;font-size:var(--watch-preview-font-size);line-height:1;white-space:nowrap}.device-preview strong{font-size:12px}.device-preview p{margin:5px 0 0;color:var(--studio-text-muted);font:11px ui-monospace,monospace}.progress-block{margin-top:14px;font-size:11px}.progress-block div{display:flex;justify-content:space-between}.progress-block progress{width:100%;height:5px;accent-color:var(--studio-primary)}.action-bar{display:flex;justify-content:flex-end;gap:8px;margin-top:auto;padding-top:18px}.button{border:1px solid var(--studio-border);border-radius:7px;padding:10px 14px;background:var(--studio-surface);color:var(--studio-text);font-weight:650;cursor:pointer}.button.primary,.button.publish{border-color:var(--studio-primary);background:var(--studio-primary);color:white}.button.publish{background:#111820;border-color:#111820}.button:disabled{opacity:.42;cursor:not-allowed}
+.device-preview{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:14px;padding:22px;border:1px solid var(--studio-border);border-radius:9px;background:var(--studio-surface-subtle)}.watch-ring{display:grid;place-items:center;width:var(--watch-preview-size);height:var(--watch-preview-size);flex:0 0 auto;overflow:hidden;border:var(--watch-preview-border) solid #1a2129;border-radius:50%;background:#070a0d;color:white;box-shadow:inset 0 0 0 1px #46505a}.watch-ring span{display:inline-block;max-width:86%;font-size:var(--watch-preview-font-size);line-height:1;white-space:nowrap}.preview-controls{display:grid;gap:10px;width:min(240px,100%)}.preview-controls strong{font-size:12px}.preview-controls label{display:grid;gap:6px;color:var(--studio-text-muted);font-size:11px}.preview-content-input{display:grid;grid-template-columns:minmax(0,1fr) auto}.preview-content-input input{border-radius:7px 0 0 7px}.preview-content-input button{border:1px solid var(--studio-border);border-left:0;border-radius:0 7px 7px 0;padding:0 11px;background:var(--studio-surface);color:var(--studio-primary);font-size:11px;font-weight:650;cursor:pointer}.preview-content-input button:hover{background:var(--studio-surface-subtle)}.preview-size-control span{display:flex;justify-content:space-between;gap:12px}.preview-size-control output{color:var(--studio-text);font:600 11px ui-monospace,monospace}.preview-controls p{margin:0;color:var(--studio-text-muted);font:11px ui-monospace,monospace}.progress-block{margin-top:14px;font-size:11px}.progress-block div{display:flex;justify-content:space-between}.progress-block progress{width:100%;height:5px;accent-color:var(--studio-primary)}.action-bar{display:flex;justify-content:flex-end;gap:8px;margin-top:auto;padding-top:18px}.button{border:1px solid var(--studio-border);border-radius:7px;padding:10px 14px;background:var(--studio-surface);color:var(--studio-text);font-weight:650;cursor:pointer}.button.primary,.button.publish{border-color:var(--studio-primary);background:var(--studio-primary);color:white}.button.publish{background:#111820;border-color:#111820}.button:disabled{opacity:.42;cursor:not-allowed}
 .action-help{margin-top:8px;text-align:right;color:var(--studio-text-muted);font-size:11px;line-height:1.4}.action-help p{margin:2px 0}
 @media(max-width:900px){.bitmap-workbench{padding:0 16px 16px}.workbench-grid{grid-template-columns:1fr}.preview-stage{min-height:600px}.stage-rail span{padding:10px;font-size:10px}.stage-rail span b{display:none}}@media(max-width:560px){.stage-rail{grid-template-columns:1fr 1fr}.stage-rail span:nth-child(2){border-right:0}.stage-rail span:nth-child(-n+2){border-bottom:1px solid var(--studio-border)}.workbench-grid{display:block}.control-stack{margin-bottom:14px}.preview-stage{min-height:540px}.atlas-frame{min-height:280px}.device-preview{flex-direction:column;gap:14px}.watch-ring{--watch-preview-size:160px;--watch-preview-border:10px;--watch-preview-font-size:34px}.action-bar{display:grid;grid-template-columns:1fr 1fr}.button.publish{grid-column:1/-1}}
 </style>

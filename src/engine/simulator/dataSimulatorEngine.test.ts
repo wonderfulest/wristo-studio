@@ -141,6 +141,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
       formatter: DateFormatConstants.NEXT_SOLAR_TERM,
       text: '',
       fontFamily: 'roboto-condensed-regular',
+      assetFontFamily: 'new-chinese-bitmap-font',
       fontSize: 20,
       fill: '#ffffff',
       set(key: string | Record<string, unknown>, value?: unknown) {
@@ -154,6 +155,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(chineseDate.text).toMatch(/[\u3400-\u9fff]/u)
     expect(chineseDate.fontFamily).toBe('noto-sans-sc-regular')
+    expect(chineseDate.assetFontFamily).toBe('new-chinese-bitmap-font')
   })
 
   it('shows the design sample when festival or solar term today is empty', () => {

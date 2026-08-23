@@ -9,6 +9,7 @@ import type { MinimalFabricLike } from '@/types/layer'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { getWeatherGlyphHorizontalOffset, normalizeWeatherIconCode } from './weatherCodes'
 import { weatherSchema } from './weather.schema'
 
@@ -34,13 +35,16 @@ const createGlyphBounds = (fontSize: number): FabricRect => {
 }
 
 const createGlyph = (iconUnicode: string, fontFamily: string, fontSize: number, fill: string): FabricText => {
-  const glyph = new FabricText(resolveIconGlyphText(iconUnicode), {
+  const text = resolveIconGlyphText(iconUnicode)
+  const glyph = new FabricText(text, {
     originX: 'center', originY: 'center',
     left: fontSize * getWeatherGlyphHorizontalOffset(iconUnicode), top: 0,
     fill, fontFamily, fontSize, objectCaching: false,
     selectable: false, hasControls: false, hasBorders: false,
   } as TextProps)
-  ;(glyph as FabricText & { role?: string }).role = 'glyph'
+  const resolved = applyCurrentElementPreviewFont(glyph, { fontFamily, fontSize, fill }, text)
+  ;(glyph as FabricText & { role?: string; usesBitmapPreview?: boolean }).role = 'glyph'
+  ;(glyph as FabricText & { usesBitmapPreview?: boolean }).usesBitmapPreview = Boolean(resolved.bitmapPreviewAssets)
   return glyph
 }
 
@@ -51,7 +55,8 @@ const createGlyphPreview = async (
   fill: string,
   previewSource?: string,
 ): Promise<FabricObject> => {
-  if (!previewSource) return createGlyph(iconUnicode, fontFamily, fontSize, fill) as unknown as FabricObject
+  const glyph = createGlyph(iconUnicode, fontFamily, fontSize, fill) as FabricText & { usesBitmapPreview?: boolean }
+  if (glyph.usesBitmapPreview || !previewSource) return glyph as unknown as FabricObject
   try {
     const image = await FabricImage.fromURL(previewSource, { crossOrigin: 'anonymous' })
     const width = Math.max(1, Number(image.width || 1))
@@ -68,7 +73,7 @@ const createGlyphPreview = async (
     ;(image as FabricImage & { weatherPreviewSource?: string }).weatherPreviewSource = previewSource
     return image as unknown as FabricObject
   } catch {
-    return createGlyph(iconUnicode, fontFamily, fontSize, fill) as unknown as FabricObject
+    return glyph as unknown as FabricObject
   }
 }
 
@@ -151,6 +156,7 @@ export async function updateWeather(element: FabricElement, config: Partial<Weat
       text: resolveIconGlyphText(iconUnicode), fontFamily, fontSize, fill,
       left: fontSize * getWeatherGlyphHorizontalOffset(iconUnicode), top: 0,
     } as unknown as TextProps)
+    applyCurrentElementPreviewFont(glyph, { fontFamily, fontSize, fill }, resolveIconGlyphText(iconUnicode))
     glyph.initDimensions?.()
   } else {
     const nextGlyph = await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, previewSource)

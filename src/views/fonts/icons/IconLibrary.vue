@@ -185,6 +185,7 @@
                 class="grid-item"
                 :class="{ selected: selectedAssetId === item.id, missing: !getAssetImage(item) }"
                 @click="selectAsset(item)"
+                @dblclick.prevent="handleAssetDoubleClick(item)"
                 @keydown.enter.prevent="selectAsset(item)"
                 @keydown.space.prevent="selectAsset(item)"
               >
@@ -218,10 +219,10 @@
                 <div v-if="canManageActiveGlyph" class="quick-actions" @click.stop>
                   <el-tooltip
                     v-if="activeGlyph?.isDefault === 0 && item.asset?.id"
-                    :content="t('common.edit')"
+                    :content="t(isWeatherFontLibrary ? 'icon.uploadAsset' : 'common.edit')"
                     placement="top"
                   >
-                    <button type="button" class="icon-action" @click="handleEdit(item)">
+                    <button type="button" class="icon-action" @click="handleGlyphAction(item)">
                       <el-icon><Edit /></el-icon>
                     </button>
                   </el-tooltip>
@@ -681,6 +682,13 @@ const handleEdit = (item: IconGlyphAssetVO) => {
   editAssetId.value = item.asset?.id ?? null
   editVisible.value = true
 }
+const handleGlyphAction = (item: IconGlyphAssetVO) => {
+  if (isWeatherFontLibrary.value) {
+    handleUploadForIcon(item.icon?.iconUnicode)
+    return
+  }
+  handleEdit(item)
+}
 const onEditSaved = async () => {
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   if (!g) return
@@ -716,6 +724,11 @@ const handleUploadForIcon = (iconUnicode?: string) => {
   if (!requireManageActiveGlyph()) return
   const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
   headerUploadRef.value?.openUpload(iconUnicode, 'mip', { glyphId: g?.id })
+}
+
+const handleAssetDoubleClick = (item: IconGlyphAssetVO) => {
+  if (!isWeatherFontLibrary.value || !item.icon?.iconUnicode) return
+  handleUploadForIcon(item.icon.iconUnicode)
 }
 
 const handleUploadToActiveGlyph = () => {

@@ -115,6 +115,7 @@ import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { favoriteFont, removeAdminFont, removeMyFont, unfavoriteFont } from '@/api/wristo/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useI18n } from '@/i18n'
+import { openRouteInNewTab } from '@/utils/openRouteInNewTab'
 import { canQuickEditFont, resolveFontQuickEditLocation } from './fontQuickEdit'
 
 const { t } = useI18n()
@@ -318,7 +319,7 @@ const onQuickEdit = () => {
     type: props.type || '',
     slug: props.fontSlug || props.fontFamily,
   })
-  if (location) void router.push(location)
+  if (location) openRouteInNewTab(router, location)
 }
 
 const onEditSearchIndex = () => {

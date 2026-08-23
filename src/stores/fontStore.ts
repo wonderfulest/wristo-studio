@@ -12,6 +12,7 @@ import {
   savedTextStyle,
 } from '@/features/bitmap-font-maker/recipePreview'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 // Types
 export interface FontOption {
   id?: number
@@ -92,7 +93,7 @@ const refreshLoadedFontMetrics = (fontFamily: string, recipe: unknown): void => 
         if (refreshNode(child)) childChanged = true
       }
     }
-    const matches = canonicalFontSlug(object.fontFamily) === normalizedFontFamily
+    const matches = canonicalFontSlug(getSavedFontFamily(object)) === normalizedFontFamily
     if (matches) {
       applyRecipePreviewToFabricObject(object, recipe, object.fontSize, savedTextStyle(object).fill)
       object.initDimensions?.()

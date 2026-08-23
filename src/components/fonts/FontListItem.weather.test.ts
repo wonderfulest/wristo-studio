@@ -19,6 +19,7 @@ vi.mock('@/api/wristo/fonts', () => ({
 
 describe('weather font list item', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     setActivePinia(createPinia())
     useUserStore().setUserInfo({ id: 7, roles: [{ roleCode: 'ROLE_MERCHANT' }] } as any)
     useFontStore().loadFont = vi.fn().mockResolvedValue(true)
@@ -58,6 +59,7 @@ describe('weather font list item', () => {
   })
 
   it('opens the dedicated weather font library editor', async () => {
+    const openWindow = vi.spyOn(window, 'open').mockReturnValue(null)
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -92,11 +94,12 @@ describe('weather font list item', () => {
 
     await vi.waitFor(() => expect(wrapper.find('.font-icon-btn-edit').exists()).toBe(true))
     await wrapper.get('.font-icon-btn-edit').trigger('click')
-    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/weather-font-library'))
-    expect(router.currentRoute.value.query).toEqual({ fontId: '88', glyphCode: 'weather-custom', editBitmap: '1' })
+    expect(openWindow).toHaveBeenCalledWith('/weather-font-library?fontId=88&glyphCode=weather-custom&editBitmap=1', '_blank', 'noopener')
+    expect(router.currentRoute.value.path).toBe('/')
   })
 
   it('opens the bitmap maker in the current text type and hides editing for another owner', async () => {
+    const openWindow = vi.spyOn(window, 'open').mockReturnValue(null)
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -119,14 +122,15 @@ describe('weather font list item', () => {
     })
     await vi.waitFor(() => expect(wrapper.find('.font-icon-btn-edit').exists()).toBe(true))
     await wrapper.get('.font-icon-btn-edit').trigger('click')
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('BitmapFontMaker'))
-    expect(router.currentRoute.value.query).toEqual({ fontId: '91', fontType: 'text_font_zh' })
+    expect(openWindow).toHaveBeenCalledWith('/fonts/bitmap-maker?fontId=91&fontType=text_font_zh', '_blank', 'noopener')
+    expect(router.currentRoute.value.path).toBe('/')
 
     await wrapper.setProps({ ownerUserId: 8 })
     expect(wrapper.find('.font-icon-btn-edit').exists()).toBe(false)
   })
 
   it('shows quick edit on an owned single-font card in the picker', async () => {
+    const openWindow = vi.spyOn(window, 'open').mockReturnValue(null)
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -155,7 +159,7 @@ describe('weather font list item', () => {
 
     await vi.waitFor(() => expect(wrapper.find('.font-icon-btn-edit').exists()).toBe(true))
     await wrapper.get('.font-icon-btn-edit').trigger('click')
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('BitmapFontMaker'))
-    expect(router.currentRoute.value.query).toEqual({ fontId: '42', fontType: 'time_font' })
+    expect(openWindow).toHaveBeenCalledWith('/fonts/bitmap-maker?fontId=42&fontType=time_font', '_blank', 'noopener')
+    expect(router.currentRoute.value.path).toBe('/')
   })
 })

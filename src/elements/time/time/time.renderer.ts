@@ -13,7 +13,7 @@ import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContex
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
-import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
@@ -275,7 +275,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
       originY: target.originY,
       fill: savedTextStyle(target).fill,
       fontSize: target.fontSize,
-      fontFamily: target.fontFamily,
+      fontFamily: getSavedFontFamily(target),
       formatter: target.formatter,
       fontRenderType: target.fontRenderType,
       bitmapFontId: target.bitmapFontId,
@@ -299,7 +299,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
         originY: (config.originY ?? obj.originY) as any,
         fill: config.fill ?? (obj as any).fill ?? '#ffffff',
         fontSize: Number(config.fontSize ?? (obj as any).fontSize ?? 14),
-        fontFamily: config.fontFamily ?? (obj as any).fontFamily ?? 'roboto-condensed-regular',
+        fontFamily: config.fontFamily ?? getSavedFontFamily(obj, 'roboto-condensed-regular'),
         formatter,
         fontRenderType: 'truetype',
         bitmapFontId: preservedBitmapFontId,
@@ -525,7 +525,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
     }
     if (!isGroup) {
       applyCurrentElementPreviewFont(obj, {
-        fontFamily: (obj as any).fontFamily,
+        fontFamily: config.fontFamily ?? getSavedFontFamily(obj),
         fontSize: (obj as any).fontSize,
         fill: config.fill,
       }, (obj as any).text)

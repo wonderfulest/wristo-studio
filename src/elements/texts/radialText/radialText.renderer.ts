@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 export function createRadialText(config: TextElementConfig): FabricElement {
   const canvasStore = useCanvasStore()
@@ -109,7 +110,7 @@ export function updateRadialText(
   applyCurrentElementPreviewFont(
     anyEl,
     {
-      fontFamily: anyEl.fontFamily,
+      fontFamily: patch.fontFamily ?? getSavedFontFamily(anyEl),
       fontSize: anyEl.fontSize,
       fill: patch.fill
     },

@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useFontStore } from '@/stores/fontStore'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from './useGarminSystemFont'
 
 describe('resolveCurrentElementPreviewFont', () => {
@@ -103,7 +104,28 @@ describe('resolveCurrentElementPreviewFont', () => {
     expect(requestRenderAll).toHaveBeenCalledOnce()
   })
 
-  it('keeps the smooth Fabric renderer when the font also has published BMFont preview assets', () => {
+  it('preserves the selected font slug when Chinese content uses the preview fallback', () => {
+    const object: any = {
+      fill: '#fff',
+      fontFamily: 'old-font',
+      fontSize: 24,
+      initDimensions: vi.fn(),
+      setCoords: vi.fn(),
+      set(v: any) { Object.assign(this, v) },
+    }
+
+    applyCurrentElementPreviewFont(object, {
+      fontFamily: 'noto-sans-sc-text-font-zh-new-recipe',
+      fontSize: 24,
+      fill: '#fff',
+    }, '七月十一')
+
+    expect(object.fontFamily).toBe('noto-sans-sc-regular')
+    expect(getSavedFontFamily(object)).toBe('noto-sans-sc-text-font-zh-new-recipe')
+  })
+
+  it('uses the published BMFont renderer on canvas when preview assets are available', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     useFontStore().serverFonts.set('published-chinese', {
       slug: 'published-chinese',
       bitmapRecipe: {
@@ -143,7 +165,7 @@ describe('resolveCurrentElementPreviewFont', () => {
       fill: '#fff',
     }, object.text)
 
-    expect(object._renderText).toBe(originalRender)
-    expect(object).toMatchObject({ fontWeight: 900, skewX: -1 })
+    expect(object._renderText).not.toBe(originalRender)
+    vi.unstubAllGlobals()
   })
 })

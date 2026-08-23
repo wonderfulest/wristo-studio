@@ -15,7 +15,7 @@ import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
-import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
@@ -133,7 +133,7 @@ export function updateUnit(
   obj.metricValue = nextText
 
   applyCurrentElementPreviewFont(obj, {
-    fontFamily: obj.fontFamily, fontSize: obj.fontSize, fill: patch.fill,
+    fontFamily: patch.fontFamily ?? getSavedFontFamily(obj), fontSize: obj.fontSize, fill: patch.fill,
   }, nextText)
 
   obj.setCoords()
@@ -149,9 +149,7 @@ export function updateUnit(
       originY: (obj.originY as any) ?? 'center',
       fill: (savedTextStyle(obj).fill as string) ?? '#ffffff',
       fontSize: Number((obj.fontSize as any) ?? 16),
-      fontFamily: String(
-        (obj.fontFamily as any) ?? 'roboto-condensed-regular',
-      ),
+      fontFamily: getSavedFontFamily(obj, 'roboto-condensed-regular'),
       dataProperty: (obj as any).dataProperty ?? undefined,
       goalProperty: (obj as any).goalProperty ?? undefined,
       metricSymbol: String((obj as any).metricSymbol ?? ''),

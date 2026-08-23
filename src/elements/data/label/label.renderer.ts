@@ -15,7 +15,7 @@ import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
-import { getPersistedTextFont } from '@/utils/systemFontElement'
+import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 
 export async function createLabel(config: LabelElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -135,7 +135,7 @@ export function updateLabel(
   if (patch.top === undefined) (text as any).set('top', currentTop)
 
   applyCurrentElementPreviewFont(text, {
-    fontFamily: (text as any).fontFamily, fontSize: (text as any).fontSize, fill: patch.fill,
+    fontFamily: patch.fontFamily ?? getSavedFontFamily(text), fontSize: (text as any).fontSize, fill: patch.fill,
   }, (text as any).text)
 
   ;(text as any).setCoords()
@@ -154,7 +154,7 @@ export function updateLabel(
       fill: (savedTextStyle(text).fill as string) ?? '#ffffff',
       fillProperty: (text as any).fillProperty ?? undefined,
       fontSize: Number((text as any).fontSize ?? 14),
-      fontFamily: ((text as any).fontFamily as string) ?? '',
+      fontFamily: getSavedFontFamily(text),
       dataProperty: (text as any).dataProperty ?? undefined,
       goalProperty: (text as any).goalProperty ?? undefined,
       metricSymbol: (text as any).metricSymbol ?? undefined,

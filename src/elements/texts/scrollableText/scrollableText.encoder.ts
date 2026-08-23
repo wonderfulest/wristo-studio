@@ -3,6 +3,7 @@ import type { TextElementConfig } from '@/types/elements'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 
 export function encodeScrollableText(element: FabricElement): TextElementConfig {
   const anyEl = element as any
@@ -15,7 +16,7 @@ export function encodeScrollableText(element: FabricElement): TextElementConfig 
     originX: anyEl.originX ?? 'center',
     originY: anyEl.originY ?? 'center',
     fill: (savedTextStyle(anyEl).fill as string) ?? '#FFFFFF',
-    fontFamily: anyEl.fontFamily ?? '',
+    fontFamily: getSavedFontFamily(anyEl),
     fontSize: typeof anyEl.fontSize === 'number' ? anyEl.fontSize : 18,
     scrollAreaWidth: typeof anyEl.scrollAreaWidth === 'number' ? anyEl.scrollAreaWidth : 454,
     scrollAreaLeft: typeof anyEl.scrollAreaLeft === 'number' ? anyEl.scrollAreaLeft : typeof element.left === 'number' ? element.left : 227,
