@@ -24,4 +24,8 @@ describe('Tick asset color integration', () => {
     expect(rendererSource).not.toContain('supportsDialDynamicColor')
     expect(rendererSource).not.toContain('fillProperty')
   })
+
+  it('does not expose a tick color setting in translations', () => {
+    expect(readSource('../../../i18n.ts')).not.toContain('elementSettings.tickColor')
+  })
 })
