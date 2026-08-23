@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { decodeDial, encodeDial } from './dial.encoder'
 
-describe('Dial color binding persistence', () => {
-  it('encodes fill and fillProperty', () => {
+describe('Dial asset color persistence', () => {
+  it('does not encode legacy fill and fillProperty', () => {
     const encoded = encodeDial(
       {
         id: 'tick-12',
@@ -19,24 +19,20 @@ describe('Dial color binding persistence', () => {
       'tick12',
     )
 
-    expect(encoded).toMatchObject({
-      fill: '#9eea20',
-      fillProperty: 'accentColor',
-    })
+    expect(encoded).not.toHaveProperty('fill')
+    expect(encoded).not.toHaveProperty('fillProperty')
   })
 
-  it('decodes fill and fillProperty', () => {
+  it('drops legacy fill and fillProperty while decoding', () => {
     const decoded = decodeDial({
       eleType: 'tick60',
       imageUrl: '/tick60.svg',
       assetId: 60,
       fill: '#777777',
       fillProperty: 'minorColor',
-    }) as any
+    } as any) as any
 
-    expect(decoded).toMatchObject({
-      fill: '#777777',
-      fillProperty: 'minorColor',
-    })
+    expect(decoded).not.toHaveProperty('fill')
+    expect(decoded).not.toHaveProperty('fillProperty')
   })
 })

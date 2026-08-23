@@ -4,13 +4,13 @@ import { describe, expect, it } from 'vitest'
 const readSource = (relativePath: string) =>
   readFileSync(new URL(relativePath, import.meta.url), 'utf8')
 
-describe('Tick color settings integration', () => {
+describe('Tick asset color integration', () => {
   it.each(['../tick12/tick12.panel.vue', '../tick60/tick60.panel.vue'])(
-    'renders shared settings in %s',
+    'does not render color settings in %s',
     (path) => {
       const source = readSource(path)
-      expect(source).toContain("import TickColorSettings from '@/elements/dials/common/TickColorSettings.vue'")
-      expect(source).toContain('<TickColorSettings')
+      expect(source).not.toContain('TickColorSettings')
+      expect(source).not.toContain('ColorPicker')
     },
   )
 
@@ -18,19 +18,10 @@ describe('Tick color settings integration', () => {
     expect(readSource('../romans/romans.panel.vue')).not.toContain('TickColorSettings')
   })
 
-  it('uses one ColorPicker for both static colors and variable bindings', () => {
-    const source = readSource('./TickColorSettings.vue')
-    expect(source).not.toContain('ColorPropertyField')
-    expect(source.match(/<ColorPicker/g)).toHaveLength(1)
-    expect(source).toContain('@property-change="handleColorSelection"')
-    expect(source).toContain('fill: payload.color')
-    expect(source).toContain('fillProperty: payload.propertyKey')
-  })
-
-  it('refreshes the tick tint when a theme color variable changes', () => {
-    const themeSettingsSource = readSource('../../../components/panels/settings/ThemeConfigSettings.vue')
+  it('keeps uploaded asset colors in the shared renderer', () => {
     const rendererSource = readSource('./dial.renderer.ts')
-    expect(themeSettingsSource).toContain('setColorPropertyValue')
-    expect(rendererSource).toContain('applyDialColorPreview(group')
+    expect(rendererSource).not.toContain('applyDialColorPreview')
+    expect(rendererSource).not.toContain('supportsDialDynamicColor')
+    expect(rendererSource).not.toContain('fillProperty')
   })
 })

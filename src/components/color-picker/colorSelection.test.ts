@@ -190,7 +190,6 @@ describe('ColorPicker bound property display', () => {
 describe('ColorPicker explicit binding callers', () => {
   it.each([
     'src/elements/decoration/background/background.panel.vue',
-    'src/elements/dials/common/TickColorSettings.vue',
     'src/elements/goal/goalArc/goalArc.panel.vue',
     'src/elements/indicators/alarms/alarms.panel.vue',
     'src/elements/indicators/bluetooth/bluetooth.panel.vue',
