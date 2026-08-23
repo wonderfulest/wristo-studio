@@ -60,6 +60,22 @@ export function createSystemDataOptions(catalogOptions: readonly DataTypePropert
     .map(cloneOption)
 }
 
+export function resolveQuickAddDataFieldOptions(
+  catalogOptions: readonly DataTypePropertyOption[],
+  metricSymbol?: string,
+): { options: DataPropertyOption[]; defaultOption: DataPropertyOption } {
+  const options = createSystemDataOptions(catalogOptions)
+  const defaultOption = metricSymbol
+    ? options.find((option) => option.metricSymbol === metricSymbol)
+    : options[0]
+  if (!defaultOption) {
+    throw new Error(metricSymbol
+      ? `data type option ${metricSymbol}: enabled system definition is missing`
+      : 'field data type options: enabled system definitions are missing')
+  }
+  return { options, defaultOption }
+}
+
 export function createAddableDataOptions(
   catalogOptions: readonly DataTypePropertyOption[],
   currentOptions: readonly Record<string, any>[],

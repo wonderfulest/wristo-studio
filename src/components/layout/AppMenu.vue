@@ -27,8 +27,6 @@
       </div>
       <!-- Time group and items -->
       <AppMenuTimeGroup @add-element="handleAddElement" />
-      <!-- Image group -->
-      <AppMenuImageGroup @add-element="handleAddElement" />
       <!-- Health data group -->
       <AppMenuDataFieldGroup
         @add-data-field="handleAddDataField"
@@ -44,6 +42,11 @@
       <AppMenuIndicator @add-element="handleAddElement" />
 
       <AppMenuWeatherGroup @add-element="handleAddElement" />
+      <!-- Image group -->
+      <AppMenuImageGroup @add-element="handleAddElement" />
+
+      <!-- Auxiliary menu divider -->
+      <el-divider direction="vertical" class="menu-divider" />
 
       <el-menu-item index="navigation/tokens" @click="handleOpenTokens">
         <Icon icon="material-symbols:data-object" />
@@ -156,6 +159,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { hasIconFont } from '@/utils/elementUtils'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
+import { resolveQuickAddDataFieldOptions } from '@/components/properties/dialogs/dataPropertyOptions'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
 import { CircleCheck } from '@element-plus/icons-vue'
 
@@ -897,14 +901,10 @@ const handleAddDataField = async (metricSymbol?: string) => {
       const nextIndex = maxIndex + 1
       const propertyKey = `data_${nextIndex}`
       const title = `Data ${nextIndex}`
-      const fieldOptions = getDataTypePropertyOptions().filter((option) => option.category === 'field')
-      let defaultOption = fieldOptions[0]
-      if (!defaultOption) throw new Error('field data type options: canonical definitions are missing')
-      if (metricSymbol) {
-        const requested = fieldOptions.find((option) => option.metricSymbol === metricSymbol)
-        if (!requested) throw new Error(`data type option ${metricSymbol}: canonical definition is missing`)
-        defaultOption = requested
-      }
+      const { options: fieldOptions, defaultOption } = resolveQuickAddDataFieldOptions(
+        getDataTypePropertyOptions(designStore.appLanguage),
+        metricSymbol,
+      )
       if (!allProps[propertyKey]) {
         propertiesStore.addProperty({
           key: propertyKey,
