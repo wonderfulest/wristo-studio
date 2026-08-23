@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getDataCatalog } from '@/api/data-catalog'
-import type { DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitSelectionPolicy, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
+import type { DataLabel, DataTypeCategory, DataTypeOption, DataUnitDefinition, DataUnitSelectionPolicy, DataUnitVariant, LocalizedText, ReadonlyLookup, UnitVariantOwner, ValidatedDataCatalog } from '@/types/dataCatalog'
 import type { AppLanguage } from '@/types/localization'
 import { filterDataOptionsForAppLanguage } from '@/domain/designLanguageCapabilities'
 
@@ -37,6 +37,25 @@ const localizedText = (value: unknown, path: string): LocalizedText => {
   })
 }
 
+const dataLabel = (value: unknown, path: string): DataLabel => {
+  if (!isRecord(value) || !isRecord(value.eng)) throw new Error(`${path}.eng.short is required`)
+  const english = value.eng
+  const band = (key: 'short' | 'medium' | 'long', min: number, max: number) => {
+    const text = requiredString(english[key], `${path}.eng.${key}`)
+    const length = Array.from(text).length
+    if (length < min || length > max) throw new Error(`${path}.eng.${key} must contain ${min}-${max} characters`)
+    return text
+  }
+  return Object.freeze({
+    eng: Object.freeze({
+      short: band('short', 1, 4),
+      medium: band('medium', 5, 8),
+      long: band('long', 9, 12),
+    }),
+    zhs: requiredString(value.zhs, `${path}.zhs`),
+  })
+}
+
 const readonlyLookup = <K, V>(source: Map<K, V>): ReadonlyLookup<K, V> => Object.freeze({
   get: (key: K) => source.get(key),
   has: (key: K) => source.has(key),
@@ -56,7 +75,7 @@ const EMPTY_OPTIONS = Object.freeze([]) as readonly DataTypeOption[]
 export type DataTypePropertyOption = Omit<DataTypeOption, 'label'> & {
   readonly value: number
   readonly label: string
-  readonly dataLabel: LocalizedText
+  readonly dataLabel: DataLabel
   readonly icon: string
 }
 
@@ -67,7 +86,7 @@ export function getDataTypePropertyOptions(appLanguage?: AppLanguage): DataTypeP
   return options.map((option) => ({
     ...option,
     value: option.valueCode,
-    label: option.label.eng,
+    label: option.label.eng.short,
     dataLabel: option.label,
     icon: option.iconUnicode,
   }))
@@ -262,7 +281,7 @@ const validateOption = (value: unknown, index: number): DataTypeOption => {
     metricSymbol,
     category: category as DataTypeCategory,
     settingsLabel: localizedText(value.settingsLabel, `${prefix}: settingsLabel`),
-    label: localizedText(value.label, `${prefix}: label`),
+    label: dataLabel(value.label, `${prefix}: label`),
     unitKey: exactKey(value.unitKey, `${prefix}: unitKey`),
     iconUnicode: stringValue(value.iconUnicode, `${prefix}: iconUnicode`),
     defaultValue,

@@ -13,7 +13,7 @@ const option = (value: number, category: DataPropertyOption['category']): DataPr
   category,
   settingsLabel: { eng: String(value), zhs: String(value) },
   label: String(value),
-  dataLabel: { eng: String(value), zhs: String(value) },
+  dataLabel: { eng: { short: 'Data', medium: 'Metric', long: 'Data Label' }, zhs: String(value) },
   unitKey: 'none',
   iconUnicode: '0061',
   icon: '0061',

@@ -14,7 +14,7 @@ const catalogOption = (formatterCode: number, category: 'date' | 'date_cn', syst
   category,
   metricSymbol: `:DATE_FORMAT_${formatterCode}`,
   settingsLabel: { eng: `Format ${formatterCode}`, zhs: `格式 ${formatterCode}` },
-  label: { eng: `Format ${formatterCode}`, zhs: `格式 ${formatterCode}` },
+  label: { eng: { short: 'Date', medium: 'Date Fmt', long: 'Date Format' }, zhs: `格式 ${formatterCode}` },
   unitKey: 'none', iconUnicode: '', defaultValue: String(formatterCode), isActive: 1,
   systemDefault: systemDefault as 0 | 1, sortOrder: formatterCode,
   dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null,

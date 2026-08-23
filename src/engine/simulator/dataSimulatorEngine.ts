@@ -249,7 +249,7 @@ export class DataSimulatorEngine {
         ? String(formatSimulatedDisplay(simulated, propertiesStore))
         : canonicalMetric.defaultValue
       const result = resolveMetricDisplayResult(canonicalMetric, {
-        rawValue: simulated?.numeric ?? displayValue,
+        rawValue: simulated?.numericValues ?? simulated?.numeric ?? displayValue,
         displayValue,
         providerUnit: simulated?.unit || undefined,
       }, previewDevice.toContext(designStore.appLanguage), catalogSnapshot)

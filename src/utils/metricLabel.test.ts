@@ -11,7 +11,7 @@ const catalog = {
     metricSymbol: ':FIELD_TYPE_DISTANCE',
     category: 'field',
     settingsLabel: { eng: 'Distance', zhs: '距离' },
-    label: { eng: 'DIST', zhs: '距离' },
+    label: { eng: { short: 'Dist', medium: 'Distance', long: 'Total Dist' }, zhs: '距离' },
     unitKey: 'distance',
     iconUnicode: 'f001',
     defaultValue: '5.0',
@@ -63,7 +63,9 @@ const option = catalog.dataTypeOptions[0]
 describe('canonical metric label and unit resolvers', () => {
   it('reads watchface labels only from canonical label', () => {
     expect(resolveMetricLabel(option, 'zh')).toBe('距离')
-    expect(resolveMetricLabel(option, 'en')).toBe('DIST')
+    expect(resolveMetricLabel(option, 'en', 'short')).toBe('Dist')
+    expect(resolveMetricLabel(option, 'en', 'medium')).toBe('Distance')
+    expect(resolveMetricLabel(option, 'en', 'long')).toBe('Total Dist')
   })
 
   it('resolves normalized runtime aliases through the catalog owner', () => {

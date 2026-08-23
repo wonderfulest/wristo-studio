@@ -12,15 +12,18 @@ describe('single application language persistence', () => {
     store.setAppLanguage('zhs')
     expect(store.getLocalizationConfig()).toEqual({
       appLanguage: 'zhs',
+      dataLabelLength: 'short',
     })
 
     store.setAppLanguage('zh' as any)
-    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'zhs' })
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'zhs', dataLabelLength: 'short' })
 
     store.setAppLanguage('en' as any)
-    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng' })
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng', dataLabelLength: 'short' })
 
     store.setAppLanguage('invalid' as any)
-    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng' })
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng', dataLabelLength: 'short' })
+    store.setDataLabelLength('long')
+    expect(store.getLocalizationConfig()).toEqual({ appLanguage: 'eng', dataLabelLength: 'long' })
   })
 })

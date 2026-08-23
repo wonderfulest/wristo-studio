@@ -57,7 +57,7 @@ describe('Dial Properties', () => {
   it('returns undefined for an unknown metric instead of the catalog first item', () => {
     const catalog = validateDataCatalog({
       catalogVersion: 1,
-      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: { short: 'HR', medium: 'Heart', long: 'Heart Rate' }, zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
       unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
@@ -68,7 +68,7 @@ describe('Dial Properties', () => {
   it('resolves a data property through its metricSymbols and top-level snapshot', () => {
     const catalog = validateDataCatalog({
       catalogVersion: 1,
-      dataTypeOptions: [{ valueCode: 1, metricSymbol: ':FIELD_TYPE_STEPS', category: 'field', settingsLabel: { eng: 'Catalog Steps', zhs: '步数' }, label: { eng: 'STEPS', zhs: '步数' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      dataTypeOptions: [{ valueCode: 1, metricSymbol: ':FIELD_TYPE_STEPS', category: 'field', settingsLabel: { eng: 'Catalog Steps', zhs: '步数' }, label: { eng: { short: 'Stp', medium: 'Steps', long: 'Daily Steps' }, zhs: '步数' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
       unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog
@@ -89,7 +89,7 @@ describe('Dial Properties', () => {
   it('resolves a newly-created data property selected by its numeric option value', () => {
     const catalog = validateDataCatalog({
       catalogVersion: 1,
-      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: 'HR', zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
+      dataTypeOptions: [{ valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', category: 'field', settingsLabel: { eng: 'Heart Rate', zhs: '心率' }, label: { eng: { short: 'HR', medium: 'Heart', long: 'Heart Rate' }, zhs: '心率' }, unitKey: 'none', iconUnicode: '0061', defaultValue: '0', isActive: 1, sortOrder: 1, dialMode: null, dialMin: null, dialMax: null, dialGoalSource: null }],
       unitDefinitions: [{ unitKey: 'none', name: 'None', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {}, isActive: 1, sortOrder: 1, description: null }],
     })
     useDataCatalogStore().snapshot = catalog

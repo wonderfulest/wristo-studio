@@ -102,19 +102,19 @@
         </div>
       </div>
 
+      <div
+        v-if="uploadPanelVisible && rememberedShareUploads !== null"
+        class="upload-preference"
+      >
+        <span>
+          {{ rememberedShareUploads ? t('asset.sharingPreferenceShared') : t('asset.sharingPreferencePrivate') }}
+        </span>
+        <el-button link type="primary" size="small" @click="handleResetSharingPreference">
+          {{ t('asset.resetSharingPreference') }}
+        </el-button>
+      </div>
+
       <div v-if="uploadQueue.length" class="upload-queue">
-        <div class="upload-confirmation">
-          <div class="upload-sharing-option">
-            <el-switch v-model="shareUploads" :disabled="uploading" />
-            <span>
-              <strong>{{ t('asset.shareUpload') }}</strong>
-              <small>{{ t('asset.shareUploadHint') }}</small>
-            </span>
-          </div>
-          <el-button type="primary" size="small" :loading="uploading" @click="startUpload">
-            {{ t('asset.startUpload') }}
-          </el-button>
-        </div>
         <div class="upload-queue-header">
           <strong>{{ t('asset.uploadQueue') }}</strong>
           <span>{{ t('asset.uploadQueueSummary', { done: completedUploadCount, total: uploadQueue.length }) }}</span>
@@ -260,6 +260,14 @@
       @save="saveEditedSvgAsset"
       @closed="closeSvgEditor"
     />
+
+    <UploadSharingDecisionDialog
+      :visible="sharingDecisionVisible"
+      v-model:remember="rememberSharingChoice"
+      :saving="sharingChoiceSaving"
+      :translate="t"
+      @choose="chooseSharing"
+    />
   </div>
 </template>
 
@@ -273,6 +281,7 @@ import { useAnalogAssetStore } from '@/stores/analogAssetStore'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
+import UploadSharingDecisionDialog from './UploadSharingDecisionDialog.vue'
 import emitter from '@/utils/eventBus'
 import { isEditableSvgAssetSource } from './assetEditability'
 import { useAssetDrawerResize } from './useAssetDrawerResize'
@@ -375,12 +384,16 @@ const {
   uploadSummaryMessage,
   uploadSummaryTone,
   dragOver,
-  shareUploads,
+  rememberedShareUploads,
+  rememberSharingChoice,
+  sharingChoiceSaving,
+  sharingDecisionVisible,
   uploadAccept,
   completedUploadCount,
   uploadStatusLabel,
   uploadFile,
-  startUpload,
+  chooseSharing,
+  resetSharingPreference,
   triggerUpload,
   setUploadInput,
   handleUpload,
@@ -395,11 +408,6 @@ const {
     prependAsset(asset)
     analogAssetStore.prependAsset(asset)
     props.onUpload(url, asset)
-  },
-  onOpenQueue: () => {
-    emitter.emit('settings-popup-open', settingsPopupId)
-    assetDialogVisible.value = true
-    uploadPanelVisible.value = true
   },
   translate: t,
 })
@@ -435,6 +443,11 @@ const openAssetDialog = () => {
 
 const toggleUploadPanel = () => {
   uploadPanelVisible.value = !uploadPanelVisible.value
+}
+
+const handleResetSharingPreference = () => {
+  resetSharingPreference()
+  ElMessage.success(t('asset.sharingPreferenceReset'))
 }
 
 const isAssetSelected = (asset: AnalogAssetVO): boolean => {
@@ -783,38 +796,22 @@ defineExpose({
   overflow: hidden;
 }
 
-.upload-confirmation {
+.upload-preference {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--studio-border);
-  background: var(--studio-surface-muted, #f3f4f6);
-}
-
-.upload-sharing-option {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.upload-sharing-option span {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.upload-sharing-option strong {
+  gap: 12px;
+  margin: -4px 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-soft);
   color: var(--studio-text);
   font-size: 12px;
 }
 
-.upload-sharing-option small {
-  color: var(--studio-text-muted);
-  font-size: 11px;
+.upload-preference :deep(.el-button) {
+  flex: 0 0 auto;
 }
 
 .upload-queue-header,

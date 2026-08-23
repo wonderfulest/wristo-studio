@@ -14,6 +14,7 @@ import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
+import { formatInlineMetricUnit } from '@/utils/inlineMetricUnit'
 
 export async function createData(config: DataElementConfig): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
@@ -25,9 +26,10 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const canonicalMetric = requireCanonicalMetric(metric ?? config, catalog)
+  const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config, canonicalMetric.defaultValue)
-  const element = new FabricText(canonicalMetric.defaultValue, {
+  const previewFont = resolveCurrentElementPreviewFont(config, displayValue)
+  const element = new FabricText(displayValue, {
     id,
     eleType: 'data',
     left: config.left,
@@ -47,7 +49,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     hasControls: false,
     hasBorders: true,
   } as any)
-  applyCurrentElementPreviewFont(element, config, canonicalMetric.defaultValue)
+  applyCurrentElementPreviewFont(element, config, displayValue)
 
   const canvas = canvasStore.canvas
   canvas?.add(element as any)

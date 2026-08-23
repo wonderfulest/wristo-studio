@@ -10,7 +10,7 @@ const option = (valueCode: number, metricSymbol: string, category: DataTypeOptio
   metricSymbol,
   category,
   settingsLabel: { eng: metricSymbol, zhs: metricSymbol },
-  label: { eng: metricSymbol, zhs: metricSymbol },
+  label: { eng: { short: 'Data', medium: 'Metric', long: 'Data Label' }, zhs: metricSymbol },
   unitKey: 'none',
   iconUnicode: '0061',
   defaultValue: '0',

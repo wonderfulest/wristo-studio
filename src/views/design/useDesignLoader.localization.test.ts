@@ -48,6 +48,6 @@ describe('useDesignLoader localization', () => {
       localization: { appLanguage: 'zhs' },
     } as RuntimeDesignConfig, 0)
 
-    expect(designStore.getLocalizationConfig()).toEqual({ appLanguage: 'zhs' })
+    expect(designStore.getLocalizationConfig()).toEqual({ appLanguage: 'zhs', dataLabelLength: 'short' })
   })
 })

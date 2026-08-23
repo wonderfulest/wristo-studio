@@ -222,6 +222,7 @@ import VisualThemeSettings from '@/components/panels/settings/VisualThemeSetting
 import { useVisualThemePreview } from '@/composables/useVisualThemePreview'
 import { useI18n } from '@/i18n'
 import { getOrCreateAvailableDialProperty } from '@/elements/common/settings/propertyBinding'
+import { applyLastEditedElementStyle } from '@/engine/services/elementStyleMemory'
 
 const route = useRoute()
 const router = useRouter()
@@ -426,10 +427,16 @@ const shortcutDraft = (
   if (!schema || schema.disabled) {
     throw new Error(`Unsupported shortcut element: ${category}/${elementType}`)
   }
+  let defaultConfig = { ...schema }
+  if (hasIconFont({ eleType: elementType } as any)) {
+    const iconFontSlug = iconFontStrategyStore.currentIconFontSlug
+      || String(defaultConfig.iconFont || defaultConfig.fontFamily || '')
+    defaultConfig = { ...defaultConfig, fontFamily: iconFontSlug, iconFont: iconFontSlug }
+  }
   return {
     key,
     elementType,
-    config: scaleShortcutDraftConfig({ ...schema, ...overrides }),
+    config: scaleShortcutDraftConfig(applyLastEditedElementStyle(defaultConfig, overrides)),
   }
 }
 
@@ -807,6 +814,7 @@ const addShortcutBlock = (
 const handleAddElement = async (category: string, elementType: string, overrides: Record<string, any> = {}) => {
   try {
     const resolvedElementType = elementType || (category === 'image' ? 'image' : '')
+    const resolvedOverrides = { ...overrides }
     let baseConfig: Record<string, any>
     if (category === 'image') {
       baseConfig = {
@@ -816,24 +824,28 @@ const handleAddElement = async (category: string, elementType: string, overrides
           eleType: 'image',
           label: 'Image',
         }),
-        ...overrides,
       }
     } else if (category === 'decoration' && elementType === 'dynamicImage') {
-      baseConfig = { ...elementConfigs.decoration.dynamicImage, ...overrides }
+      baseConfig = { ...elementConfigs.decoration.dynamicImage }
     } else if (elementConfigs[category] && elementConfigs[category][elementType]) {
-      baseConfig = { ...elementConfigs[category][elementType], ...overrides }
+      baseConfig = { ...elementConfigs[category][elementType] }
     } else {
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
-    if ((baseConfig as any)?.disabled) {
+    if (({ ...baseConfig, ...resolvedOverrides } as any)?.disabled) {
       messageStore.warning(t('editor.elementTypeUnsupported'))
       return
     }
 
-    const resolvedOverrides = { ...overrides }
     return await addShortcutBlock(({ trackCreatedProperty }) => {
-      let config = { ...baseConfig }
+      let defaultConfig = { ...baseConfig }
+      if (hasIconFont({ eleType: resolvedElementType } as any)) {
+        const iconFontSlug = iconFontStrategyStore.currentIconFontSlug
+          || String(defaultConfig.iconFont || defaultConfig.fontFamily || '')
+        defaultConfig = { ...defaultConfig, fontFamily: iconFontSlug, iconFont: iconFontSlug }
+      }
+      let config = applyLastEditedElementStyle(defaultConfig, resolvedOverrides)
       if (category === 'chart' && (resolvedElementType === 'barChart' || resolvedElementType === 'lineChart')) {
         const requested = String(resolvedOverrides.chartProperty ?? '').trim()
         const requestedMetricSymbol = requested.startsWith(':CHART_TYPE_') ? requested : ''
@@ -857,12 +869,6 @@ const handleAddElement = async (category: string, elementType: string, overrides
         const binding = getOrCreateAvailableDialProperty(mode)
         if (binding.created) trackCreatedProperty(binding.key)
         config = { ...config, progressMode: mode, dialProperty: binding.key }
-      }
-
-      if (hasIconFont({ eleType: resolvedElementType } as any)) {
-        const iconFontSlug = iconFontStrategyStore.currentIconFontSlug
-          || String(config.iconFont || config.fontFamily || '')
-        config = { ...config, fontFamily: iconFontSlug, iconFont: iconFontSlug }
       }
 
       config = scaleShortcutDraftConfig(config)

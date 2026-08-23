@@ -491,9 +491,15 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         if (!elements || elements.length === 0) return true
 
         const fontNames = new Set<string>()
+        const bitmapIconFontNames = new Set<string>()
         
         const collectFontNames = (element: any): void => {
-          if (!element || hasIconFont(element)) return
+          if (!element) return
+          if (hasIconFont(element)) {
+            const slug = String(element.iconFont || element.fontFamily || '').trim()
+            if (slug) bitmapIconFontNames.add(slug)
+            return
+          }
           // 处理组元素
           if (element._objects) {
             element._objects.forEach(collectFontNames)
@@ -508,6 +514,17 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           }
         }
         elements.forEach(collectFontNames)
+
+        await Promise.all(Array.from(bitmapIconFontNames).map(async (slug) => {
+          const canonicalSlug = canonicalFontSlug(slug)
+          if (this.serverFonts.has(canonicalSlug)) return
+          try {
+            const response = await getFontBySlug(slug)
+            if (response?.data) this.registerServerFont(response.data)
+          } catch (error) {
+            console.warn(`Failed to load bitmap icon font metadata ${slug}:`, error)
+          }
+        }))
 
         return this.loadFonts(Array.from(fontNames))
       },

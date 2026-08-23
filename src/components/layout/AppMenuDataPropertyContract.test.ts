@@ -13,7 +13,7 @@ const option = (
   category,
   settingsLabel: { eng: metricSymbol, zhs: metricSymbol },
   label: metricSymbol,
-  dataLabel: { eng: metricSymbol, zhs: metricSymbol },
+  dataLabel: { eng: { short: 'Data', medium: 'Metric', long: 'Data Label' }, zhs: metricSymbol },
   unitKey: 'none',
   iconUnicode: '0061',
   icon: '0061',

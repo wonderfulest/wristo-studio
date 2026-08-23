@@ -6,6 +6,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import type { PropertyType } from '@/types/properties'
 import type { DialProgressMode } from '@/types/settings'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { formatInlineMetricUnit } from '@/utils/inlineMetricUnit'
 import { getDataTypePropertyOptions, useDataCatalogStore, type DataTypePropertyOption } from '@/stores/dataCatalogStore'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
@@ -225,7 +226,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
       const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
-    return { dataProperty: propertyKey, goalProperty: null, text: canonicalMetric.defaultValue }
+    return { dataProperty: propertyKey, goalProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue) }
   }
 
   if (['goalBar', 'goalArc'].includes(eleType)) {
@@ -244,7 +245,7 @@ const getPatchForElement = (element: any, propertyKey: string, type: BindableMet
     }
   }
   if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, contentLanguage) }
-  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: canonicalMetric.defaultValue }
+  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue) }
   if (eleType === 'unit') {
     const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }

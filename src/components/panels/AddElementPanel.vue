@@ -70,6 +70,7 @@ import { prepareCopiedTimeHandsConfigs } from '@/elements/hands/timeHands/timeHa
 import type { EDITOR_ELEMENT } from '@/types/editorElement'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { hasIconFont } from '@/utils/elementUtils'
+import { applyLastEditedElementStyle } from '@/engine/services/elementStyleMemory'
 
 const fontStore = useFontStore()
 const panelElementConfigs = {
@@ -317,6 +318,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
         normalizedConfig.fontFamily,
       )
     }
+    Object.assign(normalizedConfig, applyLastEditedElementStyle(normalizedConfig as any))
     const normalizedRecord = normalizedConfig as AnyElementConfig & { dateProperty?: string; formatter?: number; formatterOptions?: number[] }
     if (elementType === 'date' && typeof normalizedRecord.formatter === 'number') {
       normalizedRecord.formatter = getDefaultDateFormatterForAppLanguage(
@@ -331,7 +333,14 @@ const addElementByType = async (_category: string, elementType: string, config: 
     }
     await loadElementFont(normalizedConfig)
 
-    const colorBindings = applyDefaultColorVariable(normalizedConfig)
+    applyDefaultColorVariable(normalizedConfig)
+    Object.assign(normalizedConfig, applyLastEditedElementStyle(normalizedConfig as any))
+    const colorBindings = Object.fromEntries(
+      colorVariableBindings.flatMap(({ propField }) => {
+        const value = (normalizedConfig as unknown as Record<string, unknown>)[propField]
+        return value == null || String(value).trim() === '' ? [] : [[propField, String(value)]]
+      }),
+    )
 
     if (elementType === 'barChart' || elementType === 'lineChart') {
       const metricSymbol = ':CHART_TYPE_7DAYS_STEPS'

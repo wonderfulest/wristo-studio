@@ -24,6 +24,7 @@ import {
   syncWidgetBusinessPosition,
 } from '@/engine/geometry/elementPositionStability'
 import { collectExplicitColorBindings } from '@/engine/services/explicitColorBindingService'
+import { rememberLastEditedElementStyle } from '@/engine/services/elementStyleMemory'
 import { parseExpression } from '@/engine/expression/parser'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 
@@ -144,6 +145,13 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     if (id != null) {
       useElementDataStore().patchElement(String(id), patch as Partial<AnyElementConfig>)
       useLayerStore().applyPreviewVisibility()
+      const persisted = useElementDataStore().getElementConfig(String(id)) as unknown as Record<string, unknown> | null
+      rememberLastEditedElementStyle(
+        { ...(resolved as any), ...(persisted || {}) },
+        patch as Record<string, unknown>,
+      )
+    } else {
+      rememberLastEditedElementStyle(resolved as any, patch as Record<string, unknown>)
     }
     return
   }
@@ -205,6 +213,13 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     if (positionRestored) canvas?.requestRenderAll?.()
     registerElementInstance(current)
     useLayerStore().applyPreviewVisibility?.()
+    const persisted = elementDataStore.getElementConfig(String(id)) as unknown as Record<string, unknown> | null
+    rememberLastEditedElementStyle(
+      { ...(current as any), ...(persisted || {}) },
+      patch as Record<string, unknown>,
+    )
+  } else {
+    rememberLastEditedElementStyle(resolved as any, patch as Record<string, unknown>)
   }
 
 }

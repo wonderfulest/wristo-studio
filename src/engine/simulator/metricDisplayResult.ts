@@ -1,5 +1,6 @@
 import type { DataTypeOption, ValidatedDataCatalog } from '@/types/dataCatalog'
 import { resolveUnitLabel, resolveUnitVariant, type PreviewDeviceContext } from '@/utils/unitResolver'
+import { formatInlineMetricUnit } from '@/utils/inlineMetricUnit'
 
 export interface MetricSourceValue {
   readonly rawValue: unknown
@@ -24,7 +25,10 @@ export function resolveMetricDisplayResult(
   const unit = catalog.unitsByKey.get(metric.unitKey)
   if (!unit) throw new Error(`unitKey ${metric.unitKey}: definition is missing`)
   const variantKey = resolveUnitVariant(unit, context, source.providerUnit)
-  const displayValue = formatForVariant(metric, unit.unitKey, variantKey, source)
+  const displayValue = formatInlineMetricUnit(
+    metric.unitKey,
+    formatForVariant(metric, unit.unitKey, variantKey, source),
+  )
   return {
     rawValue: source.rawValue,
     displayValue,
@@ -40,6 +44,20 @@ function formatForVariant(
   variantKey: string | null,
   source: MetricSourceValue,
 ): string {
+  if (
+    unitKey === 'temperature'
+    && Array.isArray(source.rawValue)
+    && source.rawValue.length > 0
+    && source.rawValue.every((value) => typeof value === 'number' && Number.isFinite(value))
+  ) {
+    const displayParts = source.displayValue.split('/')
+    return source.rawValue
+      .map((rawValue, index) => {
+        const value = isVariant(variantKey, 'fahrenheit') ? rawValue * 9 / 5 + 32 : rawValue
+        return value.toFixed(decimalDigits(displayParts[index] ?? String(rawValue)))
+      })
+      .join('/')
+  }
   if (typeof source.rawValue !== 'number' || !Number.isFinite(source.rawValue)) return source.displayValue
   let value = source.rawValue
   if (unitKey === 'distance' && isVariant(variantKey, 'mi', 'imperial')) value *= 0.621371
@@ -49,9 +67,12 @@ function formatForVariant(
   else if (unitKey === 'speed' && isVariant(variantKey, 'miles_per_hour', 'mph')) value *= 2.23694
 
   if (value === source.rawValue && metric.unitKey !== 'temperature') return source.displayValue
-  const decimalIndex = source.displayValue.indexOf('.')
-  const digits = decimalIndex < 0 ? 0 : source.displayValue.length - decimalIndex - 1
-  return value.toFixed(digits)
+  return value.toFixed(decimalDigits(source.displayValue))
+}
+
+function decimalDigits(value: string): number {
+  const decimalIndex = value.indexOf('.')
+  return decimalIndex < 0 ? 0 : value.length - decimalIndex - 1
 }
 
 const isVariant = (variantKey: string | null, ...keys: string[]): boolean =>

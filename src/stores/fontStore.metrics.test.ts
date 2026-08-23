@@ -265,4 +265,33 @@ describe('font metrics refresh', () => {
     expect(loadFont).toHaveBeenCalledTimes(1)
     expect(loadFont).toHaveBeenCalledWith('roboto-condensed-regular')
   })
+
+  it('registers bitmap preview metadata for icon elements without loading their TTF', async () => {
+    const store = useFontStore()
+    const loadFont = vi.spyOn(store, 'loadFont').mockResolvedValue(true)
+    vi.mocked(getFontBySlug).mockResolvedValue({
+      code: 0,
+      msg: 'ok',
+      data: {
+        slug: 'qiwei-two',
+        type: 'icon_font',
+        bitmapCanvasPreviewSize: 48,
+        bitmapCanvasPreviewDescriptorUrl: '/fonts/qiwei-two/48/qiwei-two.fnt',
+        bitmapCanvasPreviewAtlasUrl: '/fonts/qiwei-two/48/qiwei-two.png',
+      },
+    } as any)
+
+    await store.loadFontsForElements([
+      { eleType: 'icon', fontFamily: 'qiwei-two', iconFont: 'qiwei-two' },
+      { eleType: 'bluetooth', fontFamily: 'qiwei-two' },
+    ] as any)
+
+    expect(store.serverFonts.get('qiwei-two')).toMatchObject({
+      slug: 'qiwei-two',
+      type: 'icon_font',
+      bitmapCanvasPreviewDescriptorUrl: '/fonts/qiwei-two/48/qiwei-two.fnt',
+      bitmapCanvasPreviewAtlasUrl: '/fonts/qiwei-two/48/qiwei-two.png',
+    })
+    expect(loadFont).not.toHaveBeenCalled()
+  })
 })

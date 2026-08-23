@@ -8,6 +8,8 @@ export interface SimulatedData {
   display: string
   /** 可选的数值逻辑值 */
   numeric?: number | null
+  /** 可选的多个数值逻辑值，例如温度范围的两个端点 */
+  numericValues?: readonly number[]
   /** 单位，例如 bpm、%、km 等 */
   unit?: string
   /** 简短标签，方便调试 */
@@ -256,7 +258,8 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'temperatureRange':
     case 'tempRange':
       return {
-        display: `${simState.temperatureLowC}-${simState.temperatureHighC}`,
+        display: `${simState.temperatureLowC}/${simState.temperatureHighC}`,
+        numericValues: [simState.temperatureLowC, simState.temperatureHighC],
         unit: '°C',
         label: 'RANGE'
       }

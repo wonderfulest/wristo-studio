@@ -16,13 +16,16 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 export interface UseAssetUploadQueueOptions {
   assetType: () => AnalogAssetType
   upload?: (file: File, type: AnalogAssetType, isShared: boolean) => Promise<{ data?: AnalogAssetVO | null }>
+  updateSharing?: (ids: number[], isShared: boolean) => Promise<unknown>
   acceptFile?: (file: File) => Promise<boolean>
   prepareFile?: (file: File) => Promise<File>
   getAssetUrl?: (asset: AnalogAssetVO) => string | undefined
   onAssetUploaded?: (asset: AnalogAssetVO, url: string) => void
-  onOpenQueue?: () => void
+  storage?: Storage
   translate?: Translate
 }
+
+const SHARING_PREFERENCE_STORAGE_KEY = 'wristo:asset-upload-sharing-preference'
 
 export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   const t: Translate = options.translate ?? ((key) => key)
@@ -32,7 +35,14 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   const uploadSummaryMessage = ref('')
   const uploadSummaryTone = ref<'success' | 'warning' | 'danger'>('success')
   const dragOver = ref(false)
-  const shareUploads = ref(false)
+  const storage = options.storage ?? (typeof window !== 'undefined' ? window.localStorage : undefined)
+  const storedSharingPreference = storage?.getItem(SHARING_PREFERENCE_STORAGE_KEY)
+  const rememberedShareUploads = ref<boolean | null>(
+    storedSharingPreference === 'true' ? true : storedSharingPreference === 'false' ? false : null
+  )
+  const pendingSharingAssets = ref<AnalogAssetVO[]>([])
+  const rememberSharingChoice = ref(false)
+  const sharingChoiceSaving = ref(false)
 
   const uploadAccept = computed(() => {
     if (options.assetType() === 'image' || options.assetType() === 'mask') return '.svg,.png,.jpg,.jpeg,.webp'
@@ -60,24 +70,24 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   const showRejectionMessage = (reason: UploadRejectionReason): void => {
     ElMessage.warning(reason === 'raster-svg' ? t('asset.svgVectorOnly') : fileTypeMessage())
   }
-  const uploadFile = async (file: File | undefined, showMessage = false, isShared = false): Promise<boolean> => {
-    if (!file) return false
+  const uploadFile = async (file: File | undefined, showMessage = false, isShared = false): Promise<AnalogAssetVO | null> => {
+    if (!file) return null
     const rejectionReason = await validateFile(file)
     if (rejectionReason) {
       if (showMessage) showRejectionMessage(rejectionReason)
-      return false
+      return null
     }
     try {
       const prepared = await (options.prepareFile ?? ensureSvgFileHasIntrinsicSize)(file)
       const res = await (options.upload ?? analogAssetApi.upload)(prepared, options.assetType(), isShared)
-      if (!res.data) return false
+      if (!res.data) return null
       const url = options.getAssetUrl?.(res.data) ?? res.data.file?.url ?? res.data.file?.previewUrl
       if (url) options.onAssetUploaded?.(res.data, url)
       if (showMessage) ElMessage.success(t('asset.uploadSuccess'))
-      return true
+      return res.data
     } catch {
       if (showMessage) ElMessage.error(t('asset.uploadFailed'))
-      return false
+      return null
     }
   }
   const processFiles = async (fileList: FileList | File[] | undefined | null): Promise<void> => {
@@ -96,24 +106,29 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     if (invalidCount) ElMessage.warning(fileTypeMessage())
     if (rasterSvgCount) ElMessage.warning(t('asset.svgVectorOnly'))
     if (!validFiles.length) return
-    options.onOpenQueue?.()
     uploadSummaryMessage.value = ''
     uploadQueue.value = validFiles.map((file, index) => ({
       id: `${Date.now()}-${index}-${file.name}`,
       file,
       status: 'pending'
     }))
+    await startUpload()
   }
   const startUpload = async (): Promise<void> => {
     if (uploading.value || !uploadQueue.value.length) return
     uploading.value = true
     const totalCount = uploadQueue.value.length
     let successCount = 0
+    const uploadedAssets: AnalogAssetVO[] = []
+    const isShared = rememberedShareUploads.value ?? false
     for (const item of uploadQueue.value) {
       item.status = 'uploading'
-      const ok = await uploadFile(item.file, false, shareUploads.value)
-      item.status = ok ? 'success' : 'failed'
-      if (ok) successCount += 1
+      const asset = await uploadFile(item.file, false, isShared)
+      item.status = asset ? 'success' : 'failed'
+      if (asset) {
+        uploadedAssets.push(asset)
+        successCount += 1
+      }
     }
     uploading.value = false
     if (successCount === totalCount) {
@@ -127,7 +142,38 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
       uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: totalCount })
     }
     uploadQueue.value = []
-    shareUploads.value = false
+    if (rememberedShareUploads.value == null && uploadedAssets.length) {
+      pendingSharingAssets.value = uploadedAssets
+      rememberSharingChoice.value = false
+    }
+  }
+  const sharingDecisionVisible = computed(() => pendingSharingAssets.value.length > 0)
+  const chooseSharing = async (isShared: boolean): Promise<boolean> => {
+    if (!pendingSharingAssets.value.length || sharingChoiceSaving.value) return false
+    sharingChoiceSaving.value = true
+    try {
+      if (isShared) {
+        const ids = pendingSharingAssets.value.map((asset) => asset.id)
+        await (options.updateSharing ?? analogAssetApi.updateSharing)(ids, true)
+      }
+      for (const asset of pendingSharingAssets.value) asset.isShared = isShared
+      if (rememberSharingChoice.value) {
+        rememberedShareUploads.value = isShared
+        storage?.setItem(SHARING_PREFERENCE_STORAGE_KEY, String(isShared))
+      }
+      pendingSharingAssets.value = []
+      rememberSharingChoice.value = false
+      return true
+    } catch {
+      ElMessage.error(t('asset.sharingUpdateFailed'))
+      return false
+    } finally {
+      sharingChoiceSaving.value = false
+    }
+  }
+  const resetSharingPreference = (): void => {
+    rememberedShareUploads.value = null
+    storage?.removeItem(SHARING_PREFERENCE_STORAGE_KEY)
   }
   const triggerUpload = (): void => uploadInput.value?.click()
   const setUploadInput = (element: unknown): void => {
@@ -159,13 +205,19 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     uploadSummaryMessage,
     uploadSummaryTone,
     dragOver,
-    shareUploads,
+    rememberedShareUploads,
+    pendingSharingAssets,
+    rememberSharingChoice,
+    sharingChoiceSaving,
+    sharingDecisionVisible,
     uploadAccept,
     completedUploadCount,
     uploadStatusLabel,
     uploadFile,
     processFiles,
     startUpload,
+    chooseSharing,
+    resetSharingPreference,
     triggerUpload,
     setUploadInput,
     handleUpload,

@@ -13,7 +13,7 @@ const option = (valueCode: number, category: DataTypeOption['category']): DataTy
   category,
   metricSymbol: `:FIELD_TYPE_${valueCode}:`,
   settingsLabel: { eng: `English ${valueCode}`, zhs: `Chinese ${valueCode}` },
-  label: { eng: `Label ${valueCode}`, zhs: `标签 ${valueCode}` },
+  label: { eng: { short: 'Data', medium: 'Metric', long: 'Data Label' }, zhs: `标签 ${valueCode}` },
   unitKey: 'none',
   iconUnicode: '',
   defaultValue: '',

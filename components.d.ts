@@ -148,6 +148,7 @@ declare module 'vue' {
     TimeSimulatorPanel: typeof import('./src/components/canvas/TimeSimulatorPanel.vue')['default']
     TokenPicker: typeof import('./src/components/expression/TokenPicker.vue')['default']
     TokenPreviewControls: typeof import('./src/components/expression/TokenPreviewControls.vue')['default']
+    UploadSharingDecisionDialog: typeof import('./src/components/asset-picker/UploadSharingDecisionDialog.vue')['default']
     UserMenu: typeof import('./src/components/layout/UserMenu.vue')['default']
     VisibilityExpressionField: typeof import('./src/components/panels/settings/VisibilityExpressionField.vue')['default']
     VisualThemeAssetFields: typeof import('./src/components/panels/settings/VisualThemeAssetFields.vue')['default']

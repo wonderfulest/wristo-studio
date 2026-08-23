@@ -34,6 +34,7 @@ import type { Design, DesignConfig } from '@/types/api/design'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig, BaseElementConfig } from '@/types/elements'
 import { hasIconFont } from '@/utils/elementUtils'
+import { clearLastEditedElementStyle } from '@/engine/services/elementStyleMemory'
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
 
@@ -302,6 +303,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         } as RuntimeDesignConfig)
       : projectedConfig
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
+    designStore.setDataLabelLength((loadConfig.localization as any)?.dataLabelLength)
     if (Array.isArray(loadConfig.elements)) {
       const loadedIconFontSlug = String((loadConfig as any).currentIconFontSlug || resolveLoadedIconFontSlug(loadConfig.elements)).trim()
       if (loadedIconFontSlug) iconFontStrategyStore.setIconFontSlug(loadedIconFontSlug)
@@ -435,6 +437,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         const currentDesignName = designStore.watchFaceName || baseStore.watchFaceName
         const imported = await readWrtDesignPackage(file)
         packageRead = true
+        clearLastEditedElementStyle()
         const clearImportedUrlsIfStale = (): boolean => {
           if (isCurrentDesignLoad(generation)) return false
           clearRestoredDesignAssetUrls()
@@ -483,6 +486,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   // 加载设计配置
   const loadDesign = async (designUid: string) => {
     const generation = ++designLoadGeneration
+    clearLastEditedElementStyle()
     baseStore.setDesignLoading(true)
     try {
       await enqueueDesignLoad(async () => {
@@ -570,6 +574,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   }
   const dispose = (): void => {
     designLoadGeneration += 1
+    clearLastEditedElementStyle()
     clearRestoredDesignAssetUrls()
   }
 

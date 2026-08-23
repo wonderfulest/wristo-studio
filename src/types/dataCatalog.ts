@@ -3,6 +3,11 @@ export interface LocalizedText {
   readonly zhs: string
 }
 
+export interface DataLabel {
+  readonly eng: { readonly short: string; readonly medium: string; readonly long: string }
+  readonly zhs: string
+}
+
 export type DataTypeCategory = 'field' | 'goal' | 'chart' | 'indicator' | 'date' | 'date_cn' | 'weather'
 
 export interface DataTypeOption {
@@ -11,7 +16,7 @@ export interface DataTypeOption {
   readonly metricSymbol: string
   readonly category: DataTypeCategory
   readonly settingsLabel: LocalizedText
-  readonly label: LocalizedText
+  readonly label: DataLabel
   readonly unitKey: string
   readonly iconUnicode: string
   readonly defaultValue: string

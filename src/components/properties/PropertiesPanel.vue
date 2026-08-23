@@ -63,6 +63,13 @@
               </div>
 
               <el-form label-position="top" class="app-settings-form">
+                <el-form-item v-if="designStore.appLanguage === 'eng'" label="Data Label Length">
+                  <el-select v-model="dataLabelLength" style="width: 100%">
+                    <el-option label="Short (1–4 characters)" value="short" />
+                    <el-option label="Medium (5–8 characters)" value="medium" />
+                    <el-option label="Long (9–12 characters)" value="long" />
+                  </el-select>
+                </el-form-item>
                 <el-form-item :label="t('property.textCase')">
                   <el-select v-model="textCase" style="width: 100%">
                     <el-option :label="t('property.capitalize')" :value="0" />
@@ -450,6 +457,15 @@ const textCase = computed({
     propertiesStore.textCase = Number(value)
     getDataSimulatorEngine().updateCanvas()
     commitHistory('text-case')
+  },
+})
+
+const dataLabelLength = computed({
+  get: () => designStore.dataLabelLength,
+  set: (value) => {
+    designStore.setDataLabelLength(value)
+    getDataSimulatorEngine().updateCanvas()
+    commitHistory('data-label-length')
   },
 })
 

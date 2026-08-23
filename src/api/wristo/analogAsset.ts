@@ -53,6 +53,11 @@ export const analogAssetApi = {
   },
   batchRemove(ids: number[]): Promise<ApiResponse<boolean>> {
     return instance.post('/dsn/analog-asset/batch-remove', ids)
+  },
+  updateSharing(ids: number[], isShared: boolean): Promise<ApiResponse<boolean>> {
+    return instance.post('/dsn/analog-asset/sharing', ids, {
+      params: { isShared }
+    })
   }
 }
 

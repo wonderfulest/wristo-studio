@@ -76,6 +76,7 @@ import { applyGroupAlignment } from './groupAlignment'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useI18n } from '@/i18n'
 import { requireCanonicalMetric, resolveMetricLabel, resolveMetricUnit } from '@/utils/metricLabel'
+import { formatInlineMetricUnit } from '@/utils/inlineMetricUnit'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useDesignStore } from '@/stores/designStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
@@ -190,11 +191,12 @@ const updateDataProperty = () => {
   if (dataProperty.value) {
     nextTick(async () => {
       if (dataElement.value) {
+        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
         dataElement.value.set('dataProperty', dataProperty.value)
         dataElement.value.set('goalProperty', null)
-        dataElement.value.set('text', canonicalMetric.defaultValue)
+        dataElement.value.set('text', displayValue)
         const dataId = String((dataElement.value as any).id)
-        if (dataId) elementDataStore.patchElement(dataId, { dataProperty: dataProperty.value, goalProperty: null, text: canonicalMetric.defaultValue } as any)
+        if (dataId) elementDataStore.patchElement(dataId, { dataProperty: dataProperty.value, goalProperty: null, text: displayValue } as any)
       }
       if (iconElement.value) {
         const iconId = String((iconElement.value as any).id)
@@ -243,11 +245,12 @@ const updateGoalProperty = () => {
   if (goalProperty.value) {
     nextTick(async () => {
       if (dataElement.value) {
+        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
         dataElement.value.set('goalProperty', goalProperty.value)
         dataElement.value.set('dataProperty', null)
-        dataElement.value.set('text', canonicalMetric.defaultValue)
+        dataElement.value.set('text', displayValue)
         const dataId = String((dataElement.value as any).id)
-        if (dataId) elementDataStore.patchElement(dataId, { goalProperty: goalProperty.value, dataProperty: null, text: canonicalMetric.defaultValue } as any)
+        if (dataId) elementDataStore.patchElement(dataId, { goalProperty: goalProperty.value, dataProperty: null, text: displayValue } as any)
       }
       if (iconElement.value) {
         const iconId = String((iconElement.value as any).id)

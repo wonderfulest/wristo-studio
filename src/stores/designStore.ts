@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { normalizeAppLanguage, type AppLanguage, type WatchfaceLocalizationConfig } from '@/types/localization'
+import { normalizeAppLanguage, normalizeDataLabelLength, type AppLanguage, type DataLabelLength, type WatchfaceLocalizationConfig } from '@/types/localization'
 
 export type WatchShape = 'circle' | 'rectangle'
 
@@ -46,6 +46,7 @@ export const useDesignStore = defineStore('design', {
       shape: 'circle' as WatchShape,
     } as DesignSpec & { centerX: number; centerY: number },
     appLanguage: 'eng' as AppLanguage,
+    dataLabelLength: 'short' as DataLabelLength,
     connectIqSettingsExcludedDataTypeValues: [] as number[],
   }),
 
@@ -67,6 +68,10 @@ export const useDesignStore = defineStore('design', {
 
     setAppLanguage(value: unknown): void {
       this.appLanguage = normalizeAppLanguage(value)
+    },
+
+    setDataLabelLength(value: unknown): void {
+      this.dataLabelLength = normalizeDataLabelLength(value)
     },
 
     setConnectIqSettingsExcludedDataTypeValues(value: unknown): boolean {
@@ -95,6 +100,7 @@ export const useDesignStore = defineStore('design', {
     getLocalizationConfig(): WatchfaceLocalizationConfig | undefined {
       return {
         appLanguage: this.appLanguage,
+        dataLabelLength: this.dataLabelLength,
       }
     },
 

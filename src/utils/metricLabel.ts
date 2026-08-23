@@ -1,4 +1,6 @@
 import type { DataTypeOption, ValidatedDataCatalog } from '@/types/dataCatalog'
+import type { DataLabelLength } from '@/types/localization'
+import { useDesignStore } from '@/stores/designStore'
 import { resolveUnitLabel, resolveUnitVariant, type PreviewDeviceContext } from '@/utils/unitResolver'
 
 export type MetricLabelLanguage = 'en' | 'zh'
@@ -30,8 +32,9 @@ export function requireCanonicalMetric(
   throw new Error(`data type option ${identityText}: canonical definition is missing`)
 }
 
-export function resolveMetricLabel(metric: DataTypeOption, language: MetricLabelLanguage): string {
-  return language === 'zh' ? metric.label.zhs : metric.label.eng
+export function resolveMetricLabel(metric: DataTypeOption, language: MetricLabelLanguage, length?: DataLabelLength): string {
+  if (language === 'zh') return metric.label.zhs
+  return metric.label.eng[length ?? useDesignStore().dataLabelLength]
 }
 
 export function resolveMetricUnit(

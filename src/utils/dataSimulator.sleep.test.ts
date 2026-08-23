@@ -31,4 +31,12 @@ describe('verification data scenarios', () => {
     expect(getSimulatedDataByName('hr')).toMatchObject({ display: '--', numeric: null })
     setDataSimulatorScenario('default')
   })
+
+  it('keeps both numeric temperature range endpoints for unit conversion', () => {
+    expect(getSimulatedDataByName('temperatureRange')).toMatchObject({
+      display: '18/29',
+      numericValues: [18, 29],
+      unit: '°C',
+    })
+  })
 })

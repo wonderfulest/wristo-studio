@@ -18,7 +18,7 @@ const validCatalog = (catalogVersion = 12): DataCatalogSnapshot => ({
       metricSymbol: ':FIELD_TYPE_HEART_RATE',
       category: 'field',
       settingsLabel: { eng: 'Heart Rate', zhs: '心率' },
-      label: { eng: 'HR', zhs: '心率' },
+      label: { eng: { short: 'HR', medium: 'Heart', long: 'Heart Rate' }, zhs: '心率' },
       unitKey: 'heart_rate',
       iconUnicode: '0061',
       defaultValue: '0',
@@ -49,6 +49,11 @@ const validCatalog = (catalogVersion = 12): DataCatalogSnapshot => ({
 const clone = <T>(value: T): T => structuredClone(value)
 
 describe('data catalog store', () => {
+  it('rejects English watchface labels outside their exact bands', () => {
+    const source = validCatalog() as any
+    source.dataTypeOptions[0].label.eng.medium = 'Rate'
+    expect(() => validateDataCatalog(source)).toThrow('label.eng.medium must contain 5-8 characters')
+  })
   beforeEach(() => {
     setActivePinia(createPinia())
     mockedGetDataCatalog.mockReset()
@@ -463,7 +468,7 @@ describe('data catalog store', () => {
 
     expect(() => ((store.options[0].label as any).eng = 'mutated')).toThrow()
     expect(() => (unit.variants.bpm.aliases as any).push('mutated')).toThrow()
-    expect(store.options[0].label.eng).toBe('HR')
+    expect(store.options[0].label.eng.short).toBe('HR')
     expect(store.unitsByKey.get('heart_rate')?.variants.bpm.aliases).toEqual(['bpm'])
   })
 
@@ -472,7 +477,7 @@ describe('data catalog store', () => {
     response.dataTypeOptions[0].metricSymbol = '  :FIELD_TYPE_HEART_RATE  '
     response.dataTypeOptions[0].category = '  field  '
     response.dataTypeOptions[0].settingsLabel = { eng: ' Heart Rate ', zhs: ' 心率 ' }
-    response.dataTypeOptions[0].label = { eng: ' HR ', zhs: ' 心率 ' }
+    response.dataTypeOptions[0].label = { eng: { short: ' HR ', medium: ' Heart ', long: ' Heart Rate ' }, zhs: ' 心率 ' }
     response.dataTypeOptions[0].unitKey = ' heart_rate '
     response.dataTypeOptions[0].iconUnicode = ' 0061 '
     response.dataTypeOptions[0].defaultValue = ' 0 '
@@ -494,7 +499,7 @@ describe('data catalog store', () => {
       iconUnicode: '0061',
       defaultValue: '0',
       settingsLabel: { eng: 'Heart Rate', zhs: '心率' },
-      label: { eng: 'HR', zhs: '心率' },
+      label: { eng: { short: 'HR', medium: 'Heart', long: 'Heart Rate' }, zhs: '心率' },
     }))
     expect(store.unitsByKey.get('heart_rate')?.defaultVariant).toBe('bpm')
     expect(store.unitsByKey.get('heart_rate')?.variants.bpm.aliases).toEqual(['bpm', 'beats/min'])
