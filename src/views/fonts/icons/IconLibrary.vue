@@ -219,11 +219,11 @@
                 <div v-if="canManageActiveGlyph" class="quick-actions" @click.stop>
                   <el-tooltip
                     v-if="activeGlyph?.isDefault === 0 && item.asset?.id"
-                    :content="t(isWeatherFontLibrary ? 'icon.uploadAsset' : 'common.edit')"
+                    :content="t('icon.uploadAsset')"
                     placement="top"
                   >
                     <button type="button" class="icon-action" @click="handleGlyphAction(item)">
-                      <el-icon><Edit /></el-icon>
+                      <el-icon><Upload /></el-icon>
                     </button>
                   </el-tooltip>
                 </div>
@@ -280,12 +280,6 @@
       </template>
     </el-dialog>
 
-    <EditSvgDialog
-      v-model="editVisible"
-      :asset-id="editAssetId"
-      @saved="onEditSaved"
-    />
-
     <WeatherBitmapBuildDialog
       v-if="activeGlyph"
       v-model="weatherBitmapVisible"
@@ -309,7 +303,6 @@ import { Download, Edit, Loading, Plus, Upload } from '@element-plus/icons-vue'
 import JSZip from 'jszip'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import EditSvgDialog from './components/EditSvgDialog.vue'
 import CreateGlyphDialog from './components/CreateGlyphDialog.vue'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
 import WeatherBitmapBuildDialog from '../bitmap-maker/SvgBitmapFontBuildDialog.vue'
@@ -675,24 +668,8 @@ onMounted(async () => {
 
 // 
 
-const editVisible = ref(false)
-const editAssetId = ref<number | null>(null)
-const handleEdit = (item: IconGlyphAssetVO) => {
-  if (!requireManageActiveGlyph()) return
-  editAssetId.value = item.asset?.id ?? null
-  editVisible.value = true
-}
 const handleGlyphAction = (item: IconGlyphAssetVO) => {
-  if (isWeatherFontLibrary.value) {
-    handleUploadForIcon(item.icon?.iconUnicode)
-    return
-  }
-  handleEdit(item)
-}
-const onEditSaved = async () => {
-  const g = glyphs.value.find(x => x.glyphCode === activeTab.value)
-  if (!g) return
-  await fetchAssets(g.id)
+  handleUploadForIcon(item.icon?.iconUnicode)
 }
 
 const getRequestErrorMessage = (error: unknown): string => {
@@ -727,7 +704,7 @@ const handleUploadForIcon = (iconUnicode?: string) => {
 }
 
 const handleAssetDoubleClick = (item: IconGlyphAssetVO) => {
-  if (!isWeatherFontLibrary.value || !item.icon?.iconUnicode) return
+  if (!item.icon?.iconUnicode) return
   handleUploadForIcon(item.icon.iconUnicode)
 }
 
