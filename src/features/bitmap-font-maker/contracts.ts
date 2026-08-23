@@ -6,7 +6,7 @@ export const BITMAP_FONT_SIZES = Object.freeze([
   216, 228, 240, 264, 288, 312,
 ] as const)
 
-export type BitmapFontType = 'number_font' | 'text_font' | 'text_font_zh'
+export type BitmapFontType = 'time_font' | 'text_font' | 'text_font_zh'
 export type OutlineMode = 'fill' | 'fill-outline' | 'outline-only'
 
 export interface BitmapFontRecipe {
@@ -54,10 +54,10 @@ const finiteOrDefault = (value: number, fallback: number): number =>
   Number.isFinite(value) ? value : fallback
 
 export function charsetForType(type: BitmapFontType | string): BitmapFontCharset {
-  if (type === 'number_font') {
+  if (type === 'time_font') {
     return {
-      profile: 'wristo-number-v1',
-      codepoints: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 176],
+      profile: 'wristo-time-v1',
+      codepoints: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
     }
   }
 
@@ -66,7 +66,7 @@ export function charsetForType(type: BitmapFontType | string): BitmapFontCharset
       profile: 'wristo-text-en-v1',
       codepoints: [
         ...Array.from({ length: 95 }, (_, index) => 32 + index),
-        176, 8208, 8211, 8217, 8230,
+        176, 8217, 8230,
       ],
     }
   }
@@ -120,11 +120,12 @@ export async function deriveBitmapFontSlug(identity: BitmapFontSlugIdentity): Pr
     recipe: normalizeBitmapFontRecipe(identity.recipe),
   })
   const fingerprint = (await sha256Hex(new TextEncoder().encode(identityJson))).slice(0, 12)
-  const maximumBaseLength = 191 - fingerprint.length - 1
+  const typeSegment = slugifyBitmapFontBase(identity.fontType)
+  const maximumBaseLength = 191 - typeSegment.length - fingerprint.length - 2
   const base = (slugifyBitmapFontBase(identity.baseName) || 'bitmap-font')
     .slice(0, maximumBaseLength)
     .replace(/-+$/g, '')
-  return `${base}-${fingerprint}`
+  return `${base}-${typeSegment}-${fingerprint}`
 }
 
 const normalizeStyleTags = (value: string | string[]): string[] => {
@@ -161,7 +162,7 @@ export function mergeBitmapFontSearchKeywords(
 ): string[] {
   const generated = [
     fullName.trim().toLowerCase(),
-    ...(fontType === 'number_font' ? ['number', 'time'] : fontType === 'text_font_zh' ? ['text', 'chinese', '中文'] : ['text']),
+    ...(fontType === 'time_font' ? ['number', 'time'] : fontType === 'text_font_zh' ? ['text', 'chinese', '中文'] : ['text']),
     'bitmap',
     ...mergeBitmapFontStyleTags(recipe, []),
   ].filter(Boolean)

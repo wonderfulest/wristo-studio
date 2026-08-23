@@ -265,7 +265,7 @@ export async function buildBitmapFontPackage(
     schemaVersion: 1,
     slug: request.slug,
     type: request.fontType,
-    language: 'en',
+    language: request.fontType === 'text_font_zh' ? 'zh' : 'en',
     source: { fileName: sourceName, sha256: sourceSha256 },
     sizes: [...BITMAP_FONT_SIZES],
     charset,

@@ -52,7 +52,7 @@ describe('FontFamilyList', () => {
     const wrapper = mount(FontFamilyList, {
       props: {
         fonts: [
-          { value: 'clock-number', family: 'Clock Sans', label: 'Clock Sans Digits', type: 'number_font' },
+          { value: 'clock-number', family: 'Clock Sans', label: 'Clock Sans Digits', type: 'time_font' },
           { value: 'clock-text', family: 'Clock Sans', label: 'Clock Sans Regular', type: 'text_font' },
         ],
         modelValue: '',
@@ -97,7 +97,7 @@ describe('FontFamilyList', () => {
   it('forwards the original font identity needed by the quick edit button', () => {
     const wrapper = mount(FontFamilyList, {
       props: {
-        fonts: [{ id: 42, userId: 7, value: 'my-clock', family: 'My Clock', label: 'My Clock', type: 'number_font' } as FontItem],
+        fonts: [{ id: 42, userId: 7, value: 'my-clock', family: 'My Clock', label: 'My Clock', type: 'time_font' } as FontItem],
         modelValue: '',
       },
     })
@@ -106,7 +106,7 @@ describe('FontFamilyList', () => {
     expect(item.attributes('data-font-id')).toBe('42')
     expect(item.attributes('data-font-slug-prop')).toBe('my-clock')
     expect(item.attributes('data-owner-user-id')).toBe('7')
-    expect(item.attributes('data-type')).toBe('number_font')
+    expect(item.attributes('data-type')).toBe('time_font')
   })
 
   it('marks and styles recipe cards as a non-destructive preview', () => {

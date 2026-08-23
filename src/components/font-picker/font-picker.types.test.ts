@@ -47,8 +47,8 @@ describe('font picker multi-type queries', () => {
     const wrapper = mount(FontPicker, {
       props: {
         modelValue: 'clock-font',
-        type: FontTypes.NUMBER_FONT,
-        types: [FontTypes.NUMBER_FONT, FontTypes.TEXT_FONT],
+        type: FontTypes.TIME_FONT,
+        types: [FontTypes.TIME_FONT, FontTypes.TEXT_FONT],
       },
       global: {
         plugins: [router],
@@ -76,20 +76,20 @@ describe('font picker multi-type queries', () => {
 
     await wrapper.get('.font-preview').trigger('click')
     expect(wrapper.getComponent(FontSearchStub).props('types')).toEqual([
-      FontTypes.NUMBER_FONT,
+      FontTypes.TIME_FONT,
       FontTypes.TEXT_FONT,
     ])
     expect(wrapper.getComponent(RecentFontListStub).props('types')).toEqual([
-      FontTypes.NUMBER_FONT,
+      FontTypes.TIME_FONT,
       FontTypes.TEXT_FONT,
     ])
     expect(wrapper.getComponent(DesignerFontListStub).props('types')).toEqual([
-      FontTypes.NUMBER_FONT,
+      FontTypes.TIME_FONT,
       FontTypes.TEXT_FONT,
     ])
     expect(initRecentFonts).toHaveBeenLastCalledWith(
       undefined,
-      [FontTypes.NUMBER_FONT, FontTypes.TEXT_FONT],
+      [FontTypes.TIME_FONT, FontTypes.TEXT_FONT],
     )
 
     await wrapper.get('.font-preview').trigger('click')
@@ -97,8 +97,8 @@ describe('font picker multi-type queries', () => {
     await wrapper.get('.font-preview').trigger('click')
     await wrapper.get('.font-preview').trigger('click')
     await wrapper.setProps({
-      type: FontTypes.NUMBER_FONT,
-      types: [FontTypes.NUMBER_FONT, FontTypes.TEXT_FONT],
+      type: FontTypes.TIME_FONT,
+      types: [FontTypes.TIME_FONT, FontTypes.TEXT_FONT],
     })
     await wrapper.get('.font-preview').trigger('click')
 

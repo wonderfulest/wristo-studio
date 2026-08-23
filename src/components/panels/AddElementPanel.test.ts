@@ -5,7 +5,7 @@ import { translate } from '@/i18n'
 
 const source = readFileSync(`${process.cwd()}/src/components/panels/AddElementPanel.vue`, 'utf8')
 const appMenuSource = readFileSync(`${process.cwd()}/src/components/layout/AppMenu.vue`, 'utf8')
-const dataFieldMenuSource = readFileSync(`${process.cwd()}/src/components/layout/app-menu/AppMenuDataFieldGroup.vue`, 'utf8')
+const imageMenuSource = readFileSync(`${process.cwd()}/src/components/layout/app-menu/AppMenuImageGroup.vue`, 'utf8')
 const imagePanelSource = readFileSync(`${process.cwd()}/src/elements/decoration/image/image.panel.vue`, 'utf8')
 describe('AddElementPanel metric property assignment', () => {
   it('binds standalone unit elements to a canonical metric property', () => {
@@ -56,7 +56,7 @@ describe('AddElementPanel localization', () => {
 
 describe('Mask image shortcut', () => {
   it('reuses the image element while routing its picker to mask assets', () => {
-    expect(dataFieldMenuSource).toContain("onAddElement('image', 'image', { assetType: 'mask' })")
+    expect(imageMenuSource).toContain("onAddElement('image', 'image', { assetType: 'mask' })")
     expect(appMenuSource).toContain("category === 'image'")
     expect(imagePanelSource).toContain(':asset-type="assetType"')
     expect(imagePanelSource).toContain("currentModel.value.assetType === 'mask' ? 'mask' : 'image'")

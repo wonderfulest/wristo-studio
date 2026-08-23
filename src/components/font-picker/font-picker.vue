@@ -29,7 +29,7 @@
           >
             <el-icon><Aim /></el-icon>
           </button>
-          <button v-if="canUsePremiumAssets && !isManagedIconFontType" class="add-font-btn" type="button" @click.stop.prevent="addCustomFont">{{ t('font.addCustomFont') }}</button>
+          <button v-if="!isManagedIconFontType" class="add-font-btn" type="button" @click.stop.prevent="makeFont">{{ t('font.makeFont') }}</button>
           <RouterLink
             v-if="isManagedIconFontType"
             class="open-library-anchor"
@@ -57,7 +57,7 @@
           />
         </div>
         <!-- Number font library guidance (only for number fonts) -->
-        <!-- <div v-if="type === FontTypes.NUMBER_FONT && isMerchantUser" class="icon-lib-tip">
+        <!-- <div v-if="type === FontTypes.TIME_FONT && isMerchantUser" class="icon-lib-tip">
           <button type="button" class="open-library-anchor" @click.stop="openNumberGlyphEditor">
             Custom your number fonts
           </button>
@@ -175,6 +175,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Aim } from '@element-plus/icons-vue'
 import { useFontStore } from '@/stores/fontStore'
@@ -244,6 +245,7 @@ const userStore = useUserStore()
 const designStore = useDesignStore()
 const iconFontStrategyStore = useIconFontStrategyStore()
 const membershipGate = useStudioMembershipGate()
+const router = useRouter()
 const { t } = useI18n()
 const numberGlyphDialogRef = ref<InstanceType<typeof NumberGlyphEditorDialog> | null>(null)
 
@@ -583,12 +585,9 @@ const onFontUploaded = async (slug: string) => {
   emit('change', slug)
 }
 
-const addCustomFont = () => {
-  if (!canUsePremiumAssets.value) {
-    membershipGate.requirePremium('font.uploadRequiresPremium')
-    return
-  }
-  dialogVisible.value = true
+const makeFont = () => {
+  const target = router.resolve({ name: 'BitmapFontMaker', query: { source: 'ttf' } })
+  window.open(target.href, '_blank', 'noopener,noreferrer')
 }
 
 const handleSettingsPopupOpen = (id: unknown) => {

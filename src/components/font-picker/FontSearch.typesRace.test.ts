@@ -40,8 +40,8 @@ describe('FontSearch type request ordering', () => {
     const wrapper = mount(FontSearch, {
       props: {
         modelValue: '',
-        type: 'number_font',
-        types: ['number_font', 'text_font'],
+        type: 'time_font',
+        types: ['time_font', 'text_font'],
       },
       global: {
         stubs: {
@@ -68,8 +68,8 @@ describe('FontSearch type request ordering', () => {
     const wrapper = mount(FontSearch, {
       props: {
         modelValue: '',
-        type: 'number_font',
-        types: ['number_font'],
+        type: 'time_font',
+        types: ['time_font'],
       },
       global: {
         stubs: {
@@ -87,7 +87,7 @@ describe('FontSearch type request ordering', () => {
     await vi.waitFor(() => expect(searchFonts).toHaveBeenCalledTimes(2))
     textSearch.resolve({ code: 0, data: { list: [{ id: 2, slug: 'text-new', type: 'text_font', isSystem: 1 }], total: 1 } })
     await vi.waitFor(() => expect(wrapper.text()).toContain('text-new'))
-    numberSearch.resolve({ code: 0, data: { list: [{ id: 1, slug: 'number-old', type: 'number_font', isSystem: 1 }], total: 1 } })
+    numberSearch.resolve({ code: 0, data: { list: [{ id: 1, slug: 'number-old', type: 'time_font', isSystem: 1 }], total: 1 } })
     await Promise.resolve()
     await Promise.resolve()
 
@@ -97,11 +97,11 @@ describe('FontSearch type request ordering', () => {
 
   it('preserves and registers bitmap recipes returned by search', async () => {
     const recipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 800, italicAngle: -13, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true }
-    vi.mocked(searchFonts).mockResolvedValue({ code: 0, data: { list: [{ id: 1, slug: 'quantico-search', family: 'Quantico', type: 'number_font', isSystem: 1, bitmapRecipe: JSON.stringify(recipe), ttfFile: { url: 'data:font/ttf;base64,AA==' } }], total: 1 } } as any)
+    vi.mocked(searchFonts).mockResolvedValue({ code: 0, data: { list: [{ id: 1, slug: 'quantico-search', family: 'Quantico', type: 'time_font', isSystem: 1, bitmapRecipe: JSON.stringify(recipe), ttfFile: { url: 'data:font/ttf;base64,AA==' } }], total: 1 } } as any)
     const store = useFontStore()
     store.loadFont = vi.fn().mockResolvedValue(true)
     const wrapper = mount(FontSearch, {
-      props: { modelValue: '', type: 'number_font' },
+      props: { modelValue: '', type: 'time_font' },
       global: { stubs: { FontFamilyList: FontFamilyListStub, 'el-icon': true } },
     })
 

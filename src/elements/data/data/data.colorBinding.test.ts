@@ -28,5 +28,7 @@ describe('data color property binding', () => {
     expect(source).toContain(':property-key="currentModel.fillProperty"')
     expect(source).toContain('@property-change="handleColorSelection"')
     expect(source).toContain('fillProperty: selection.propertyKey')
+    expect(source).toContain(':type="FontTypes.TEXT_FONT"')
+    expect(source).not.toContain('FontTypes.DATA_FONT')
   })
 })

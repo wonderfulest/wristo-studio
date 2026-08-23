@@ -6,10 +6,10 @@ import { resolvePrimaryTimeFontType, resolveTimeFontTypes } from './timeFontType
 describe('time font type queries', () => {
   it('lets numeric time formats query number and ordinary text fonts', () => {
     expect(resolveTimeFontTypes([TimeFormatConstants.HH_MM])).toEqual([
-      FontTypes.NUMBER_FONT,
+      FontTypes.TIME_FONT,
       FontTypes.TEXT_FONT,
     ])
-    expect(resolvePrimaryTimeFontType([TimeFormatConstants.HH_MM])).toBe(FontTypes.NUMBER_FONT)
+    expect(resolvePrimaryTimeFontType([TimeFormatConstants.HH_MM])).toBe(FontTypes.TIME_FONT)
   })
 
   it.each([TimeFormatConstants.A, TimeFormatConstants.a])(

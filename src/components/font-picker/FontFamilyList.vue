@@ -53,7 +53,7 @@ import { computed, reactive, watch } from 'vue'
 import FontListItem from '@/components/fonts/FontListItem.vue'
 import type { FontItem } from '@/types/font-picker'
 import { groupFontsByFamily } from './fontFamilyGroups'
-import { parseBitmapFontRecipe } from '@/features/bitmap-font-maker/recipePreview'
+import { parseBitmapFontRecipe, recipeToCssPreviewStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 const props = defineProps<{
   fonts: FontItem[]
@@ -87,18 +87,7 @@ const toggle = (key: string) => {
 
 const textRecipeFor = (font: FontItem) => parseBitmapFontRecipe(font.bitmapRecipe)
 const hasRecipe = (font: FontItem) => textRecipeFor(font) !== null
-const recipeCardStyle = (font: FontItem) => {
-  const recipe = textRecipeFor(font)
-  if (!recipe) return undefined
-  const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
-  return {
-    fontWeight: recipe.fontWeight,
-    transform: `skewX(${recipe.italicAngle}deg)`,
-    transformOrigin: 'center',
-    '--bitmap-preview-stroke': outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * 24))}px currentColor` : '0',
-    '--bitmap-preview-fill': recipe.outlineMode === 'outline-only' ? 'transparent' : 'currentColor'
-  }
-}
+const recipeCardStyle = (font: FontItem) => recipeToCssPreviewStyle(font.bitmapRecipe)
 
 const commonProps = (font: FontItem) => ({
   fontFamily: font.value,

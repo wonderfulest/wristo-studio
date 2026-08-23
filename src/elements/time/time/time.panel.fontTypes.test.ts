@@ -7,6 +7,7 @@ import TimePanel from './time.panel.vue'
 import { FontTypes } from '@/config/fonts'
 import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
 import { useFontStore } from '@/stores/fontStore'
+import { useCanvasStore } from '@/stores/canvasStore'
 
 vi.mock('opentype.js', () => ({ default: {}, parse: vi.fn() }))
 
@@ -17,6 +18,12 @@ const FontPickerStub = {
 }
 
 const SlotStub = { template: '<div><slot /></div>' }
+
+const BitmapFontPickerStub = {
+  name: 'BitmapFontPicker',
+  emits: ['change'],
+  template: '<button class="bitmap-font-picker-stub" @click="$emit(\'change\', 22)" />',
+}
 
 const mountPanel = (formatter: TimeFormatConstants) => {
   const fontStore = useFontStore()
@@ -57,8 +64,8 @@ describe('time panel font picker types', () => {
   it('passes number and text types for a numeric time element', () => {
     const picker = mountPanel(TimeFormatConstants.HH_MM).getComponent(FontPickerStub)
 
-    expect(picker.props('type')).toBe(FontTypes.NUMBER_FONT)
-    expect(picker.props('types')).toEqual([FontTypes.NUMBER_FONT, FontTypes.TEXT_FONT])
+    expect(picker.props('type')).toBe(FontTypes.TIME_FONT)
+    expect(picker.props('types')).toEqual([FontTypes.TIME_FONT, FontTypes.TEXT_FONT])
   })
 
   it('passes only text type for an AM/PM element', () => {
@@ -66,5 +73,50 @@ describe('time panel font picker types', () => {
 
     expect(picker.props('type')).toBe(FontTypes.TEXT_FONT)
     expect(picker.props('types')).toEqual([FontTypes.TEXT_FONT])
+  })
+
+  it('allows each bitmap time element to select a different font', async () => {
+    const fontStore = useFontStore()
+    fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
+    fontStore.loadFont = vi.fn().mockResolvedValue(true)
+    const canvasStore = useCanvasStore()
+    ;(canvasStore as any).canvas = {
+      getObjects: () => [
+        { id: 'other-time', eleType: 'time', fontRenderType: 'bitmap', bitmapFontId: 11 },
+      ],
+    }
+    const applyPatch = vi.fn()
+    const wrapper = mount(TimePanel, {
+      props: {
+        config: {
+          id: 'current-time',
+          formatter: TimeFormatConstants.HH_MM,
+          fontRenderType: 'bitmap',
+          bitmapFontId: 11,
+        },
+        applyPatch,
+      },
+      global: {
+        stubs: {
+          FontPicker: FontPickerStub,
+          BitmapFontPicker: BitmapFontPickerStub,
+          ColorPicker: true,
+          AlignXButtons: true,
+          FontSizeSelect: true,
+          'el-form': SlotStub,
+          'el-form-item': SlotStub,
+          'el-radio-group': SlotStub,
+          'el-radio': true,
+          'el-input-number': true,
+          'el-select': true,
+          'el-option': true,
+        },
+      },
+    })
+
+    await wrapper.get('.bitmap-font-picker-stub').trigger('click')
+    await vi.waitFor(() => {
+      expect(applyPatch).toHaveBeenCalledWith({ fontRenderType: 'bitmap', bitmapFontId: 22 })
+    })
   })
 })

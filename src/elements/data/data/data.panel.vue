@@ -32,6 +32,7 @@
       <el-form-item :label="t('elementSettings.font')">
         <font-picker
           v-model="currentModel.fontFamily"
+          :type="FontTypes.TEXT_FONT"
           :date-content-language="metricTextFontLanguage"
           :allow-any-language="true"
           @change="updateElement"
@@ -54,6 +55,7 @@ import DataPropertyField from '@/elements/common/settings/DataPropertyField.vue'
 import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
 import { useI18n } from '@/i18n'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
+import { FontTypes } from '@/config/fonts'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()

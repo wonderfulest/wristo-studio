@@ -26,6 +26,26 @@ describe('font preview icon type separation', () => {
     expect(wrapper.find('span.preview-text').exists()).toBe(false)
   })
 
+  it('uses the published BMFont assets and Chinese sample for Chinese text fonts', () => {
+    const wrapper = shallowMount(FontPreviewText, {
+      props: {
+        fontFamily: 'noto-chinese-outline',
+        type: 'text_font_zh',
+        language: 'zh',
+        fontUrl: '/source.ttf',
+        bitmapPreviewDescriptorUrl: '/preview.fnt',
+        bitmapPreviewAtlasUrl: '/preview.png',
+      },
+      global: { stubs: { BitmapFontPreview: true } },
+    })
+
+    const preview = wrapper.getComponent({ name: 'BitmapFontPreview' })
+    expect(preview.props('descriptorUrl')).toBe('/preview.fnt')
+    expect(preview.props('atlasUrl')).toBe('/preview.png')
+    expect(preview.props('codepoints')).toEqual(Array.from('12:34 晴 25°C 周二 六月 农历五月十六', character => character.codePointAt(0)))
+    expect(wrapper.find('span.preview-text').exists()).toBe(false)
+  })
+
   it('does not preview weather glyphs in an ordinary icon font', () => {
     const wrapper = shallowMount(FontPreviewText, {
       props: { fontFamily: 'ordinary-icons', type: 'icon_font' },

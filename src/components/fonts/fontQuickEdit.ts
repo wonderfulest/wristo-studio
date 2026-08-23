@@ -1,5 +1,5 @@
 export const QUICK_EDIT_FONT_TYPES = [
-  'number_font',
+  'time_font',
   'text_font',
   'text_font_zh',
   'icon_font',

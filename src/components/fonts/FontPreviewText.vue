@@ -57,13 +57,14 @@ const isIcon = computed(() => (
   || props.sectionName === 'icon'
 ))
 const hasBitmapPreview = computed(() => (
-  isIcon.value
-  && !!props.bitmapPreviewDescriptorUrl
+  !!props.bitmapPreviewDescriptorUrl
   && !!props.bitmapPreviewAtlasUrl
 ))
 const previewCodepoints = computed(() => (
-  isWeatherIcon.value ? WEATHER_FONT_UNICODES : ICON_FONT_UNICODES
-).map(code => parseInt(code, 16)))
+  isIcon.value
+    ? (isWeatherIcon.value ? WEATHER_FONT_UNICODES : ICON_FONT_UNICODES).map(code => parseInt(code, 16))
+    : Array.from(sampleText.value, character => character.codePointAt(0)!)
+))
 
 const loadedFontFamily = ref<string | null>(null)
 
@@ -83,7 +84,7 @@ const sampleText = computed(() => {
   if (customText) {
     return customText
   }
-  if (props.type === FontTypes.NUMBER_FONT) {
+  if (props.type === FontTypes.TIME_FONT) {
     return '0123456789:'
   }
   if (isChineseTextFont.value) {

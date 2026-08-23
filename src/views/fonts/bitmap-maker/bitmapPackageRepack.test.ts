@@ -26,7 +26,7 @@ async function packageFixture(pageFile = 'old-g_0.png') {
   }
   const material = [...hashes].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([path, hash]) => `${path}\0${hash}\n`).join('')
   const manifest: BitmapFontManifest = {
-    schemaVersion: 1, slug: 'old', type: 'number_font', language: 'en',
+    schemaVersion: 1, slug: 'old', type: 'time_font', language: 'en',
     source: { fileName: 'old.ttf', sha256: await sha256Hex(source) }, sizes: [...BITMAP_FONT_SIZES],
     charset: { profile: 'test', codepoints: [48] }, recipeSha256: await sha256Hex(new TextEncoder().encode(recipeText)),
     packageContentSha256: await sha256Hex(new TextEncoder().encode(material)),
@@ -52,7 +52,7 @@ describe('repackageBitmapFontSlug', () => {
     expect(await result.file('new-outline.ttf')!.async('uint8array')).toEqual(fixture.source)
     expect(await result.file('recipe.json')!.async('string')).toBe(fixture.recipeText)
     await expect(validateLocalBitmapPackage(repacked, {
-      slug: 'new-outline', fontType: 'number_font', sourceFileName: 'Original.ttf', recipe,
+      slug: 'new-outline', fontType: 'time_font', sourceFileName: 'Original.ttf', recipe,
       charset: { profile: 'test', codepoints: [48] },
     })).resolves.toBeUndefined()
   })

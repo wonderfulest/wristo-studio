@@ -3,7 +3,7 @@ import { canQuickEditFont, resolveFontQuickEditLocation } from './fontQuickEdit'
 
 describe('font quick edit routing', () => {
   it.each([
-    ['number_font', 'BitmapFontMaker', { fontId: '41', fontType: 'number_font' }],
+    ['time_font', 'BitmapFontMaker', { fontId: '41', fontType: 'time_font' }],
     ['text_font', 'BitmapFontMaker', { fontId: '41', fontType: 'text_font' }],
     ['text_font_zh', 'BitmapFontMaker', { fontId: '41', fontType: 'text_font_zh' }],
     ['icon_font', 'IconLibrary', { fontId: '41', glyphCode: 'my-icons', editBitmap: '1' }],

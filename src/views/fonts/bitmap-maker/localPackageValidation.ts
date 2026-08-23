@@ -114,7 +114,8 @@ export async function validateLocalBitmapPackage(
   const manifest = parseManifest(new TextDecoder().decode(await manifestEntry.async('uint8array')))
   if (canonicalJson(manifest) !== canonicalJson(artifact.manifest)) fail('MANIFEST_ARTIFACT_MISMATCH')
   if (manifest.schemaVersion !== 1) fail('MANIFEST_SCHEMA_INVALID')
-  if (manifest.slug !== expected.slug || manifest.type !== expected.fontType || manifest.language !== 'en') fail('MANIFEST_METADATA_MISMATCH')
+  const expectedLanguage = expected.fontType === 'text_font_zh' ? 'zh' : 'en'
+  if (manifest.slug !== expected.slug || manifest.type !== expected.fontType || manifest.language !== expectedLanguage) fail('MANIFEST_METADATA_MISMATCH')
   if (manifest.source.fileName !== sourcePath) fail('MANIFEST_SOURCE_MISMATCH')
   if (canonicalJson(manifest.sizes) !== canonicalJson([...BITMAP_FONT_SIZES])) fail('MANIFEST_SIZES_MISMATCH')
   if (canonicalJson(manifest.charset) !== canonicalJson(expected.charset)) fail('MANIFEST_CHARSET_MISMATCH')

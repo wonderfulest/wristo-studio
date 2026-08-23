@@ -5,7 +5,7 @@ import type { BitmapFontWorkerResponse } from './workerProtocol'
 import type { BitmapFontRecipe } from './contracts'
 
 const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true }
-const buildRequest = { type: 'build' as const, requestId: 'request-1', source: new Uint8Array([1, 2, 3]).buffer, fileName: 'fixture.ttf', slug: 'fixture', fontType: 'number_font' as const, recipe }
+const buildRequest = { type: 'build' as const, requestId: 'request-1', source: new Uint8Array([1, 2, 3]).buffer, fileName: 'fixture.ttf', slug: 'fixture', fontType: 'time_font' as const, recipe }
 
 describe('createBitmapFontWorkerHandler', () => {
   it('passes source into the builder and transfers the completed ZIP', async () => {

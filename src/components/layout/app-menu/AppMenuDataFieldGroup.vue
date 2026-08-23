@@ -4,24 +4,6 @@
       <el-icon><DataLine /></el-icon>
       <span>{{ t('editor.dataField') }}</span>
     </template>
-    <div class="menu-group menu-group--image">
-      <div class="menu-group-title">
-        <el-icon><Picture /></el-icon>
-        <span>{{ t('editor.image') }}</span>
-      </div>
-      <el-menu-item index="image/image" @click="onAddElement('image', 'image')">
-        <el-icon><Picture /></el-icon>
-        <span>{{ t('editor.image') }}</span>
-      </el-menu-item>
-      <el-menu-item index="image/mask" @click="onAddElement('image', 'image', { assetType: 'mask' })">
-        <Icon icon="mdi:gradient-horizontal" />
-        <span>{{ t('editor.mask') }}</span>
-      </el-menu-item>
-      <el-menu-item index="image/dynamic-image" @click="onAddElement('decoration', 'dynamicImage')">
-        <Icon icon="mdi:image-sync" />
-        <span>{{ t('dynamicImage.title') }}</span>
-      </el-menu-item>
-    </div>
     <div class="menu-group menu-group--data-field">
       <div class="menu-group-title">
         <el-icon><DataLine /></el-icon>
@@ -71,8 +53,7 @@
 </template>
 
 <script setup>
-import { DataLine, TrendCharts, Aim, Monitor, Picture } from '@element-plus/icons-vue'
-import { Icon } from '@iconify/vue'
+import { DataLine, TrendCharts, Aim, Monitor } from '@element-plus/icons-vue'
 import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
 import { useI18n } from '@/i18n'
 

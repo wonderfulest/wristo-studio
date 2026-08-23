@@ -46,7 +46,7 @@ const mountPicker = async () => {
   })
 
   const wrapper = mount(FontPicker, {
-    props: { modelValue: 'clock-bold', type: 'number_font', types: ['number_font', 'text_font'] },
+    props: { modelValue: 'clock-bold', type: 'time_font', types: ['time_font', 'text_font'] },
     global: {
       plugins: [router],
       stubs: {
@@ -97,7 +97,7 @@ describe('font picker pagination requests', () => {
         slug: 'clock-bold',
         family: 'Clock Sans',
         fullName: 'Clock Sans Bold',
-        type: 'number_font',
+        type: 'time_font',
         ttfFile: { url: '/fonts/clock-bold.ttf' },
       },
     } as any)

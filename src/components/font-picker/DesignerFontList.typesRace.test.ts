@@ -47,8 +47,8 @@ describe('DesignerFontList type request ordering', () => {
     const wrapper = mount(DesignerFontList, {
       props: {
         modelValue: '',
-        type: 'number_font',
-        types: ['number_font'],
+        type: 'time_font',
+        types: ['time_font'],
         canUsePremiumAssets: true,
       },
       global: {
@@ -62,7 +62,7 @@ describe('DesignerFontList type request ordering', () => {
     await vi.waitFor(() => expect(getDesignerUsageFontsPage).toHaveBeenCalledTimes(2))
     textPage.resolve({ code: 0, data: { list: [{ id: 2, slug: 'text-new', type: 'text_font' }], total: 1 } })
     await vi.waitFor(() => expect(wrapper.get('.font-values').text()).toBe('text-new'))
-    numberPage.resolve({ code: 0, data: { list: [{ id: 1, slug: 'number-old', type: 'number_font' }], total: 1 } })
+    numberPage.resolve({ code: 0, data: { list: [{ id: 1, slug: 'number-old', type: 'time_font' }], total: 1 } })
     await Promise.resolve()
     await Promise.resolve()
 
@@ -74,7 +74,7 @@ describe('DesignerFontList type request ordering', () => {
       code: 0,
       data: {
         list: [
-          { id: 1, slug: 'clock-number', family: 'Clock Sans', fullName: 'Clock Sans Digits', type: 'number_font' },
+          { id: 1, slug: 'clock-number', family: 'Clock Sans', fullName: 'Clock Sans Digits', type: 'time_font' },
           { id: 2, slug: 'clock-text', family: 'Clock Sans', fullName: 'Clock Sans Regular' },
         ],
         total: 2,
@@ -84,8 +84,8 @@ describe('DesignerFontList type request ordering', () => {
     const wrapper = mount(DesignerFontList, {
       props: {
         modelValue: '',
-        type: 'number_font',
-        types: ['number_font', 'text_font'],
+        type: 'time_font',
+        types: ['time_font', 'text_font'],
         canUsePremiumAssets: true,
       },
       global: {
@@ -104,7 +104,7 @@ describe('DesignerFontList type request ordering', () => {
     vi.mocked(getDesignerUsageFontsPage).mockResolvedValue({
       code: 0,
       data: {
-        list: [{ id: 42, userId: 7, slug: 'my-clock', family: 'My Clock', type: 'number_font' }],
+        list: [{ id: 42, userId: 7, slug: 'my-clock', family: 'My Clock', type: 'time_font' }],
         total: 1,
       },
     } as any)
@@ -112,7 +112,7 @@ describe('DesignerFontList type request ordering', () => {
     const wrapper = mount(DesignerFontList, {
       props: {
         modelValue: '',
-        type: 'number_font',
+        type: 'time_font',
         canUsePremiumAssets: true,
       },
       global: { stubs: { FontFamilyList: FontFamilyListStub } },
@@ -125,11 +125,11 @@ describe('DesignerFontList type request ordering', () => {
     const recipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 800, italicAngle: -13, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true }
     vi.mocked(getDesignerUsageFontsPage).mockResolvedValue({
       code: 0,
-      data: { list: [{ id: 42, slug: 'quantico-styled', family: 'Quantico', type: 'number_font', bitmapRecipe: JSON.stringify(recipe) }], total: 1 },
+      data: { list: [{ id: 42, slug: 'quantico-styled', family: 'Quantico', type: 'time_font', bitmapRecipe: JSON.stringify(recipe) }], total: 1 },
     } as any)
 
     const wrapper = mount(DesignerFontList, {
-      props: { modelValue: '', type: 'number_font', canUsePremiumAssets: true },
+      props: { modelValue: '', type: 'time_font', canUsePremiumAssets: true },
       global: { stubs: { FontFamilyList: FontFamilyListStub } },
     })
 
@@ -146,7 +146,7 @@ describe('DesignerFontList type request ordering', () => {
             id: index + 1,
             slug: `clock-${index + 1}`,
             family: `Clock ${index + 1}`,
-            type: 'number_font',
+            type: 'time_font',
           })),
           total: 20,
         },
@@ -154,7 +154,7 @@ describe('DesignerFontList type request ordering', () => {
       .mockResolvedValueOnce({
         code: 0,
         data: {
-          list: [{ id: 11, slug: 'clock-11', family: 'Clock 11', type: 'number_font' }],
+          list: [{ id: 11, slug: 'clock-11', family: 'Clock 11', type: 'time_font' }],
           total: 20,
         },
       } as any)
@@ -162,8 +162,8 @@ describe('DesignerFontList type request ordering', () => {
     const wrapper = mount(DesignerFontList, {
       props: {
         modelValue: '',
-        type: 'number_font',
-        types: ['number_font', 'text_font'],
+        type: 'time_font',
+        types: ['time_font', 'text_font'],
         canUsePremiumAssets: true,
       },
       global: {
@@ -194,7 +194,7 @@ describe('DesignerFontList type request ordering', () => {
             id: index + 1,
             slug: `clock-${index + 1}`,
             family: `Clock ${index + 1}`,
-            type: 'number_font',
+            type: 'time_font',
           })),
           total: 20,
         },
@@ -206,7 +206,7 @@ describe('DesignerFontList type request ordering', () => {
             id: index + 11,
             slug: `clock-${index + 11}`,
             family: `Clock ${index + 11}`,
-            type: 'number_font',
+            type: 'time_font',
           })),
           total: 20,
         },
@@ -215,7 +215,7 @@ describe('DesignerFontList type request ordering', () => {
     const wrapper = mount(DesignerFontList, {
       props: {
         modelValue: '',
-        type: 'number_font',
+        type: 'time_font',
         canUsePremiumAssets: true,
         excludedFontValues: new Set(Array.from({ length: 8 }, (_, index) => `clock-${index + 1}`)),
       },

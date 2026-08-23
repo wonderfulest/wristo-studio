@@ -12,7 +12,7 @@ describe('multi-type font query client', () => {
   })
 
   it('posts both allowed types to search and usage pagination', async () => {
-    const types = ['number_font', 'text_font']
+    const types = ['time_font', 'text_font']
 
     await searchFonts({ pageNum: 1, pageSize: 20, types })
     await getDesignerUsageFontsPage({ pageNum: 1, pageSize: 10, types })
@@ -30,10 +30,10 @@ describe('multi-type font query client', () => {
   })
 
   it('serializes repeated type parameters for recent fonts', async () => {
-    await getRecentFonts(5, undefined, 42, ['number_font', 'text_font'])
+    await getRecentFonts(5, undefined, 42, ['time_font', 'text_font'])
 
     expect(get).toHaveBeenCalledWith(
-      '/dsn/fonts/recent?limit=5&user_id=42&types=number_font&types=text_font&populate=ttf%2Cuser',
+      '/dsn/fonts/recent?limit=5&user_id=42&types=time_font&types=text_font&populate=ttf%2Cuser',
     )
   })
 })

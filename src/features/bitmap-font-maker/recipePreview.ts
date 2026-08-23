@@ -1,4 +1,5 @@
 import type { BitmapFontRecipe } from './contracts'
+import type { CSSProperties } from 'vue'
 
 export interface FabricRecipePreviewProps {
   fontWeight: number
@@ -116,6 +117,19 @@ export function recipeToFabricProps(value: unknown, fontSize: unknown, elementCo
     strokeWidth: hasOutline ? recipe.outlineWidthEm * safeFontSize(fontSize) : 0,
     strokeLineJoin: 'round',
     fill: recipe.outlineMode === 'outline-only' ? 'rgba(0,0,0,0)' : color
+  }
+}
+
+export function recipeToCssPreviewStyle(value: unknown, fontSize = 24): CSSProperties | undefined {
+  const recipe = parseBitmapFontRecipe(value)
+  if (!recipe) return undefined
+  const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
+  return {
+    fontWeight: recipe.fontWeight,
+    transform: `skewX(${recipe.italicAngle}deg)`,
+    transformOrigin: 'center',
+    WebkitTextStroke: outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * fontSize))}px currentColor` : '0',
+    WebkitTextFillColor: recipe.outlineMode === 'outline-only' ? 'transparent' : 'currentColor'
   }
 }
 

@@ -101,7 +101,7 @@ describe('font metrics refresh', () => {
     vi.mocked(getFontBySlug).mockResolvedValue({
       data: {
         slug: 'outlined-time',
-        type: 'number_font',
+        type: 'time_font',
         ttfFile: { url: 'data:font/ttf;base64,AA==' },
         bitmapRecipe: JSON.stringify(bitmapRecipe)
       }

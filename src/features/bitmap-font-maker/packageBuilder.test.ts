@@ -78,7 +78,7 @@ describe('buildBitmapFontPackage', () => {
       source: Uint8Array.from(parsedSource.bytes).buffer,
       fileName: 'Fixture.TTF',
       slug: 'fixture-outline',
-      fontType: 'number_font',
+      fontType: 'time_font',
       recipe,
     }, fixture.value, (event) => progress.push(event))
 
@@ -105,14 +105,14 @@ describe('buildBitmapFontPackage', () => {
   it('writes stable hashes and a complete manifest while excluding manifest.json from content hash', async () => {
     const fixture = adapters()
     const result = await buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.otf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.otf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value)
     const archive = await JSZip.loadAsync(result.zip)
     const manifest = JSON.parse(await archive.file('manifest.json')!.async('string'))
     const recipeBytes = new TextEncoder().encode(await archive.file('recipe.json')!.async('string'))
     expect(manifest).toEqual(result.manifest)
     expect(manifest.sizes).toEqual([...BITMAP_FONT_SIZES])
-    expect(manifest.charset.profile).toBe('wristo-number-v1')
+    expect(manifest.charset.profile).toBe('wristo-time-v1')
     expect(manifest.source).toEqual({ fileName: 'fixture.otf', sha256: await sha256Hex(parsedSource.bytes) })
     expect(manifest.recipeSha256).toBe(await sha256Hex(recipeBytes))
 
@@ -124,19 +124,31 @@ describe('buildBitmapFontPackage', () => {
     expect(await archive.file('manifest.json')!.async('string')).toBe(canonicalJson(manifest))
   })
 
+  it('marks Chinese text font packages as Chinese', async () => {
+    const result = await buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer,
+      fileName: 'Fixture.ttf',
+      slug: 'fixture-chinese',
+      fontType: 'text_font_zh',
+      recipe,
+    }, adapters().value)
+
+    expect(result.manifest.language).toBe('zh')
+  })
+
   it('rejects unsafe names and always disposes the renderer on cancellation', async () => {
     let cancelled = false
     const fixture = adapters({ onRender: () => { cancelled = true } })
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: '../Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: '../Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value)).rejects.toMatchObject({ code: 'UNSAFE_SOURCE_FILENAME' })
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: '../fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: '../fixture', fontType: 'time_font', recipe,
     }, fixture.value)).rejects.toThrow('Bitmap font slug')
 
     const progress = vi.fn()
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value, progress, () => cancelled)).rejects.toBeInstanceOf(BuildCancelledError)
     expect(progress).not.toHaveBeenCalled()
     expect(fixture.dispose).toHaveBeenCalledOnce()
@@ -150,7 +162,7 @@ describe('buildBitmapFontPackage', () => {
       onRelease: () => { retained -= 1 },
     })
     await buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value)
     expect(peak).toBe(1)
     expect(retained).toBe(0)
@@ -158,7 +170,7 @@ describe('buildBitmapFontPackage', () => {
   })
 
   it('produces byte-identical ZIPs for identical inputs', async () => {
-    const request = { source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font' as const, recipe }
+    const request = { source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font' as const, recipe }
     const first = await buildBitmapFontPackage(request, adapters().value)
     const second = await buildBitmapFontPackage({ ...request, source: request.source.slice(0) }, adapters().value)
     expect(new Uint8Array(first.zip)).toEqual(new Uint8Array(second.zip))
@@ -174,7 +186,7 @@ describe('buildBitmapFontPackage', () => {
     const fixture = adapters({ encodePng: () => new Promise((resolve) => { release = () => resolve(png.slice()) }) })
     const progress = vi.fn()
     const build = buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value, progress, () => cancelled)
     await vi.waitFor(() => expect(release).toBeTypeOf('function'))
     cancelled = true
@@ -197,7 +209,7 @@ describe('buildBitmapFontPackage', () => {
     })
     const progress = vi.fn()
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value, progress, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
     expect(hashes).toBe(3)
     expect(progress).not.toHaveBeenCalled()
@@ -209,7 +221,7 @@ describe('buildBitmapFontPackage', () => {
     const fixture = adapters()
     const progress = vi.fn((event: { completed: number }) => { if (event.completed === 38) cancelled = true })
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value, progress, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
     expect(progress).toHaveBeenCalledTimes(38)
     expect(fixture.dispose).toHaveBeenCalledOnce()
@@ -219,7 +231,7 @@ describe('buildBitmapFontPackage', () => {
     let cancelled = false
     const fixture = adapters({ generateZip: async () => { cancelled = true; return new ArrayBuffer(4) } })
     await expect(buildBitmapFontPackage({
-      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe,
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe,
     }, fixture.value, undefined, () => cancelled)).rejects.toMatchObject({ code: 'BUILD_CANCELLED' })
     expect(fixture.dispose).toHaveBeenCalledOnce()
   })
@@ -274,7 +286,7 @@ describe('builder validation', () => {
   it('normalizes the runtime recipe before hashing and rendering', async () => {
     const fixture = adapters()
     const dirtyRecipe = { ...recipe, fontWeight: 2000, italicAngle: 99, lineJoin: undefined } as unknown as BitmapFontRecipe
-    const result = await buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe: dirtyRecipe }, fixture.value)
+    const result = await buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe: dirtyRecipe }, fixture.value)
     expect(fixture.value.createRendererSession).toHaveBeenCalledOnce()
     const archive = await JSZip.loadAsync(result.zip)
     expect(JSON.parse(await archive.file('recipe.json')!.async('string'))).toMatchObject({ fontWeight: 900, italicAngle: 20, lineJoin: 'round' })
@@ -282,7 +294,7 @@ describe('builder validation', () => {
 
   it('rejects PNG encoder output without a valid PNG signature', async () => {
     const fixture = adapters({ encodePng: async () => new Uint8Array([1, 2, 3]) })
-    await expect(buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'number_font', recipe }, fixture.value)).rejects.toMatchObject({ code: 'PNG_INVALID' })
+    await expect(buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe }, fixture.value)).rejects.toMatchObject({ code: 'PNG_INVALID' })
     expect(fixture.dispose).toHaveBeenCalledOnce()
   })
 })

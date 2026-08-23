@@ -27,16 +27,16 @@ describe('bitmap font contracts', () => {
     await expect(deriveBitmapFontSlug({
       baseName: 'Quantico',
       sourceSha256,
-      fontType: 'number_font',
+      fontType: 'time_font',
       recipe: styledRecipe,
-    })).resolves.toBe('quantico-5eb4ae6da498')
+    })).resolves.toBe('quantico-time-font-ec6c546f216e')
 
     await expect(deriveBitmapFontSlug({
       baseName: 'Quantico',
       sourceSha256,
-      fontType: 'number_font',
+      fontType: 'time_font',
       recipe: { ...styledRecipe, fontWeight: 800 },
-    })).resolves.toBe('quantico-04eded8664f8')
+    })).resolves.toBe('quantico-time-font-a6223da65e75')
   })
 
   it('merges recipe-derived tags with normalized manual tags without treating an unused outline width as outline', () => {
@@ -62,7 +62,7 @@ describe('bitmap font contracts', () => {
   it('derives searchable comma-separated keywords from the font identity and style while preserving phrases', () => {
     const regularRecipe = { ...styledRecipe, fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill' as const }
 
-    expect(mergeBitmapFontSearchKeywords('Quantico', 'number_font', regularRecipe, ' sport editorial, Retro，retro ')).toEqual([
+    expect(mergeBitmapFontSearchKeywords('Quantico', 'time_font', regularRecipe, ' sport editorial, Retro，retro ')).toEqual([
       'quantico',
       'number',
       'time',
@@ -84,8 +84,8 @@ describe('bitmap font contracts', () => {
   })
 
   it('maps only supported v1 font types', () => {
-    expect(charsetForType('number_font').codepoints).toEqual([
-      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 176,
+    expect(charsetForType('time_font').codepoints).toEqual([
+      48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
     ])
     expect(charsetForType('text_font')).toEqual({
       profile: 'wristo-text-en-v1',
@@ -97,14 +97,19 @@ describe('bitmap font contracts', () => {
         96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
         110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
         123, 124, 125, 126,
-        176, 8208, 8211, 8217, 8230,
+        176, 8217, 8230,
       ],
     })
+    expect(charsetForType('text_font').codepoints.filter(codepoint => codepoint === 45)).toHaveLength(1)
+    expect(charsetForType('text_font').codepoints).not.toContain(8208)
+    expect(charsetForType('text_font').codepoints).not.toContain(8211)
     const chinese = charsetForType('text_font_zh')
     expect(chinese.profile).toBe('wristo-text-zh-v1')
     expect(chinese.codepoints).toContain('中'.codePointAt(0))
     expect(chinese.codepoints).toContain('℃'.codePointAt(0))
     expect(new Set(chinese.codepoints).size).toBe(chinese.codepoints.length)
+    expect(() => charsetForType('number_font')).toThrow('Unsupported bitmap font type')
+    expect(() => charsetForType('data_font')).toThrow('Unsupported bitmap font type')
     expect(() => charsetForType('icon_font')).toThrow('Unsupported bitmap font type')
   })
 

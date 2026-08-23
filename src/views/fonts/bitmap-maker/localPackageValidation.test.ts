@@ -8,7 +8,10 @@ const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontW
 const source = new Uint8Array([1, 2, 3])
 const png = new Uint8Array([137,80,78,71,13,10,26,10, 0,0,0,13,73,72,68,82, 0,0,0,16,0,0,0,16,8,6,0,0,0, 0,0,0,0, 0,0,0,0,73,69,78,68,174,66,96,130])
 
-async function packageFixture(mutate?: (zip: JSZip) => void) {
+async function packageFixture(
+  mutate?: (zip: JSZip) => void,
+  identity: { fontType: 'time_font' | 'text_font_zh'; language: 'en' | 'zh' } = { fontType: 'time_font', language: 'en' },
+) {
   const zip = new JSZip()
   const hashes = new Map<string, string>()
   const add = async (path: string, value: Uint8Array | string) => {
@@ -24,7 +27,7 @@ async function packageFixture(mutate?: (zip: JSZip) => void) {
   }
   const material = [...hashes].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([path, hash]) => `${path}\0${hash}\n`).join('')
   const manifest: BitmapFontManifest = {
-    schemaVersion: 1, slug: 'precision', type: 'number_font', language: 'en',
+    schemaVersion: 1, slug: 'precision', type: identity.fontType, language: identity.language,
     source: { fileName: 'precision.ttf', sha256: await sha256Hex(source) },
     sizes: [...BITMAP_FONT_SIZES], charset: { profile: 'test-numbers', codepoints: [48] },
     recipeSha256: await sha256Hex(new TextEncoder().encode(canonicalJson(recipe))),
@@ -32,12 +35,17 @@ async function packageFixture(mutate?: (zip: JSZip) => void) {
   }
   zip.file('manifest.json', canonicalJson(manifest), { createFolders: false })
   mutate?.(zip)
-  return { artifact: { zip: await zip.generateAsync({ type: 'arraybuffer' }), manifest }, expected: { slug: 'precision', fontType: 'number_font' as const, sourceFileName: 'Precision.ttf', recipe, charset: { profile: 'test-numbers', codepoints: [48] } } }
+  return { artifact: { zip: await zip.generateAsync({ type: 'arraybuffer' }), manifest }, expected: { slug: 'precision', fontType: identity.fontType, sourceFileName: 'Precision.ttf', recipe, charset: { profile: 'test-numbers', codepoints: [48] } } }
 }
 
 describe('validateLocalBitmapPackage', () => {
   it('accepts an exact 79-file package and verifies every hash and descriptor', async () => {
     const fixture = await packageFixture()
+    await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).resolves.toBeUndefined()
+  })
+
+  it('accepts Chinese metadata only when the manifest language is Chinese', async () => {
+    const fixture = await packageFixture(undefined, { fontType: 'text_font_zh', language: 'zh' })
     await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).resolves.toBeUndefined()
   })
 

@@ -1,0 +1,140 @@
+import { loadBmFontDescriptor } from './bmFontDescriptorLoader'
+import { kerningKey, type BmFontDescriptor } from './bmFontTextParser'
+
+export interface FabricBitmapFontPreviewAssets {
+  descriptorUrl: string
+  atlasUrl: string
+  sourceSize: number
+  color?: string
+}
+
+export interface FabricBitmapFontPreviewDependencies {
+  loadDescriptor?: (url: string) => Promise<BmFontDescriptor>
+  loadAtlas?: (url: string) => Promise<CanvasImageSource>
+}
+
+interface PreviewState {
+  originalRender: (context: CanvasRenderingContext2D) => void
+  generation: number
+  assetsKey?: string
+  descriptor?: BmFontDescriptor
+  atlas?: CanvasImageSource
+  sourceSize?: number
+  color?: string
+}
+
+const previewState = Symbol('fabricBitmapFontPreview')
+const atlasCache = new Map<string, Promise<CanvasImageSource>>()
+
+const loadAtlasImage = (url: string): Promise<CanvasImageSource> => {
+  const cached = atlasCache.get(url)
+  if (cached) return cached
+  const pending = fetch(url, { credentials: 'omit' }).then(async response => {
+    if (!response.ok) throw new Error(`BMFont atlas request failed: ${response.status}`)
+    const objectUrl = URL.createObjectURL(await response.blob())
+    try {
+      const image = new Image()
+      image.src = objectUrl
+      await image.decode()
+      return image
+    } finally {
+      URL.revokeObjectURL(objectUrl)
+    }
+  })
+  atlasCache.set(url, pending)
+  pending.catch(() => atlasCache.delete(url))
+  return pending
+}
+
+const lineWidth = (descriptor: BmFontDescriptor, text: string): number => {
+  let cursor = 0
+  let previous: number | null = null
+  for (const character of text) {
+    const codepoint = character.codePointAt(0)!
+    const glyph = descriptor.glyphs.get(codepoint)
+    if (!glyph) return -1
+    if (previous != null) cursor += descriptor.kernings.get(kerningKey(previous, codepoint)) || 0
+    cursor += glyph.xadvance
+    previous = codepoint
+  }
+  return cursor
+}
+
+const renderBitmapText = (object: any, state: PreviewState, context: CanvasRenderingContext2D): boolean => {
+  const descriptor = state.descriptor
+  const atlas = state.atlas
+  const sourceSize = state.sourceSize
+  if (!descriptor || !atlas || !sourceSize) return false
+  const lines = String(object.text ?? '').split('\n')
+  const widths = lines.map(line => lineWidth(descriptor, line))
+  if (widths.some(width => width < 0)) return false
+  const scale = Math.max(1, Number(object.fontSize) || sourceSize) / sourceSize
+  const lineHeight = descriptor.lineHeight * scale
+  const totalHeight = Math.max(lineHeight, lines.length * lineHeight)
+
+  context.save()
+  lines.forEach((line, lineIndex) => {
+    let cursor = -(widths[lineIndex] * scale) / 2
+    let previous: number | null = null
+    for (const character of line) {
+      const codepoint = character.codePointAt(0)!
+      const glyph = descriptor.glyphs.get(codepoint)!
+      if (previous != null) cursor += (descriptor.kernings.get(kerningKey(previous, codepoint)) || 0) * scale
+      context.drawImage(
+        atlas,
+        glyph.x, glyph.y, glyph.width, glyph.height,
+        cursor + glyph.xoffset * scale,
+        -totalHeight / 2 + lineIndex * lineHeight + glyph.yoffset * scale,
+        glyph.width * scale,
+        glyph.height * scale,
+      )
+      cursor += glyph.xadvance * scale
+      previous = codepoint
+    }
+  })
+  context.globalCompositeOperation = 'source-in'
+  context.fillStyle = state.color || (typeof object.fill === 'string' ? object.fill : '#FFFFFF')
+  const maxWidth = Math.max(1, ...widths) * scale
+  context.fillRect(-maxWidth / 2, -totalHeight / 2, maxWidth, totalHeight)
+  context.restore()
+  return true
+}
+
+export async function applyFabricBitmapFontPreview(
+  object: any,
+  assets?: FabricBitmapFontPreviewAssets,
+  dependencies: FabricBitmapFontPreviewDependencies = {},
+): Promise<void> {
+  if (!object || typeof object._renderText !== 'function') return
+  let state = object[previewState] as PreviewState | undefined
+  if (!state) {
+    state = { originalRender: object._renderText.bind(object), generation: 0 }
+    Object.defineProperty(object, previewState, { configurable: true, value: state })
+    object._renderText = (context: CanvasRenderingContext2D) => {
+      if (!renderBitmapText(object, state!, context)) state!.originalRender(context)
+    }
+  }
+  if (!assets) {
+    state.generation += 1
+    object._renderText = state.originalRender
+    delete object[previewState]
+    object.dirty = true
+    object.canvas?.requestRenderAll?.()
+    return
+  }
+  const assetsKey = `${assets.descriptorUrl}\0${assets.atlasUrl}\0${assets.sourceSize}`
+  if (state.assetsKey === assetsKey && state.descriptor && state.atlas) return
+  state.assetsKey = assetsKey
+  const generation = ++state.generation
+  const [descriptor, atlas] = await Promise.all([
+    (dependencies.loadDescriptor ?? loadBmFontDescriptor)(assets.descriptorUrl),
+    (dependencies.loadAtlas ?? loadAtlasImage)(assets.atlasUrl),
+  ])
+  if (generation !== state.generation) return
+  state.descriptor = descriptor
+  state.atlas = atlas
+  state.sourceSize = assets.sourceSize
+  state.color = assets.color
+  object.dirty = true
+  object.canvas?.requestRenderAll?.()
+}

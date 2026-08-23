@@ -10,7 +10,7 @@ export const resolveTimeFontTypes = (formatters: Array<number | null | undefined
   const containsAmPm = formatters.some((formatter) => AM_PM_FORMATTERS.has(Number(formatter)))
   return containsAmPm
     ? [FontTypes.TEXT_FONT]
-    : [FontTypes.NUMBER_FONT, FontTypes.TEXT_FONT]
+    : [FontTypes.TIME_FONT, FontTypes.TEXT_FONT]
 }
 
 export const resolvePrimaryTimeFontType = (formatters: Array<number | null | undefined>): string =>

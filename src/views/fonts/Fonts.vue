@@ -1,8 +1,5 @@
 <template>
   <div class="fonts-preview">
-    <div class="font-library-actions">
-      <BitmapFontMakerEntry />
-    </div>
     <!-- 搜索栏 -->
     <FontsSearchPanel
       v-model:search-query="searchQuery"
@@ -19,7 +16,11 @@
       @openUploadDialog="openUploadDialog"
       @previewTextChange="handlePreviewTextChange"
       @removeInterpretedFilter="handleRemoveInterpretedFilter"
-    />
+    >
+      <template #header-actions>
+        <BitmapFontMakerEntry />
+      </template>
+    </FontsSearchPanel>
 
     <!-- 字体列表（按类型分 Tab 展示） -->
     <el-tabs v-model="activeFontType" type="card" class="font-type-tabs">
@@ -47,6 +48,9 @@
             :owner-user-id="font.userId"
             :font-url="(font as any)?.ttfFile?.url"
             :preview-text="previewText"
+            :preview-text-style="recipeToCssPreviewStyle(font.bitmapRecipe)"
+            :bitmap-preview-descriptor-url="font.bitmapPreviewDescriptorUrl"
+            :bitmap-preview-atlas-url="font.bitmapPreviewAtlasUrl"
             :can-edit-search-index="canEditFontSearchIndex(font)"
 	            @edit-search-index="openSearchIndexDialog"
 	            @favorite-changed="handleFontFavoriteChanged"
@@ -161,6 +165,7 @@ import FontListItem from '@/components/fonts/FontListItem.vue'
 import { filterAssetsByStudioAccess } from '@/utils/studioAssetAccess'
 import { useI18n } from '@/i18n'
 import BitmapFontMakerEntry from './bitmap-maker/BitmapFontMakerEntry.vue'
+import { recipeToCssPreviewStyle } from '@/features/bitmap-font-maker/recipePreview'
 
 const { t } = useI18n()
 
@@ -227,7 +232,9 @@ const loadFonts = async () => {
     // 预注册本页字体，使用 slug 作为 font-family
     await Promise.all(
       list.map((f: DesignFontVO) =>
-        f?.slug ? fontStore.loadFont(f.slug, (f as any)?.ttfFile?.url) : Promise.resolve(true)
+        f?.slug && (!f.bitmapPreviewDescriptorUrl || !f.bitmapPreviewAtlasUrl)
+          ? fontStore.loadFont(f.slug, (f as any)?.ttfFile?.url)
+          : Promise.resolve(true)
       )
     )
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
@@ -467,12 +474,6 @@ onMounted(() => {
   background:
     linear-gradient(180deg, rgba(15, 107, 104, 0.04), transparent 280px),
     var(--studio-bg);
-}
-
-.font-library-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
 }
 
 .search-panel {

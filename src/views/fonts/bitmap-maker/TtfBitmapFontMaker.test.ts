@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia } from 'pinia'
+import { charsetForType } from '@/features/bitmap-font-maker/contracts'
 
 const mocks = vi.hoisted(() => ({
   parse: vi.fn(),
@@ -19,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   construct: vi.fn(),
   loadZip: vi.fn(),
   getFont: vi.fn(),
+  getFontBySlug: vi.fn(),
+  confirmOverwrite: vi.fn(),
   fontFaceConstruct: vi.fn(),
   fontFaceAdd: vi.fn(),
   fontFaceDelete: vi.fn(),
@@ -41,7 +44,8 @@ vi.mock('@/api/wristo/bitmapFontBuild', () => ({
   publishBitmapFontBuild: mocks.publish,
   isBitmapFontSlugConflict: (error: any) => error?.response?.status === 409 || error?.code === 411 || error?.data?.code === 411 || error?.response?.data?.code === 411,
 }))
-vi.mock('@/api/wristo/fonts', () => ({ getFontById: mocks.getFont }))
+vi.mock('@/api/wristo/fonts', () => ({ getFontById: mocks.getFont, getFontBySlug: mocks.getFontBySlug }))
+vi.mock('element-plus', () => ({ ElMessageBox: { confirm: mocks.confirmOverwrite } }))
 vi.mock('./bitmapPackageRepack', () => ({
   repackageBitmapFontSlug: mocks.repack,
 }))
@@ -59,7 +63,7 @@ const parsed = {
   unitsPerEm: 1000, ascender: 800, descender: -200, supportedCodepoints: new Set([48]),
   names: {}, font: {}, bytes: new Uint8Array([1, 2, 3]),
 }
-const manifest = { schemaVersion: 1, slug: 'precision-sans', type: 'number_font', language: 'en', sizes: Array.from({ length: 38 }, (_, index) => index + 1), charset: { profile: 'wristo-number-v1', codepoints: [48] }, source: { fileName: 'precision-sans.ttf', sha256: 'a' }, recipeSha256: 'b', packageContentSha256: 'c' }
+const manifest = { schemaVersion: 1, slug: 'precision-sans', type: 'time_font', language: 'en', sizes: Array.from({ length: 38 }, (_, index) => index + 1), charset: { profile: 'wristo-time-v1', codepoints: [48] }, source: { fileName: 'precision-sans.ttf', sha256: 'a' }, recipeSha256: 'b', packageContentSha256: 'c' }
 
 function mountMaker() {
   return mount(BitmapFontMaker, {
@@ -87,9 +91,10 @@ describe('BitmapFontMaker', () => {
     vi.stubGlobal('crypto', webcrypto)
     vi.stubGlobal('TextEncoder', TextEncoder)
     vi.clearAllMocks()
+    mocks.getFontBySlug.mockResolvedValue({ data: { id: 77, slug: 'precision-sans' } })
     mocks.route.query = {}
     mocks.parse.mockResolvedValue(parsed)
-    mocks.check.mockReturnValue({ profile: 'wristo-number-v1', missing: [] })
+    mocks.check.mockReturnValue({ profile: 'wristo-time-v1', missing: [] })
     mocks.build.mockReturnValue({
       requestId: 'build-1', cancel: mocks.cancel,
       result: Promise.resolve({ zip: new Uint8Array([80, 75]).buffer, manifest }),
@@ -128,17 +133,69 @@ describe('BitmapFontMaker', () => {
   })
 
   it('keeps the local font in memory and reports required glyph failures for the selected type', async () => {
-    mocks.check.mockReturnValue({ profile: 'wristo-number-v1', missing: [58, 176] })
+    mocks.check.mockReturnValue({ profile: 'wristo-time-v1', missing: [0x2010, 32] })
     const wrapper = mountMaker()
     await upload(wrapper)
     expect(mocks.parse).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('Missing required glyphs')
-    expect(wrapper.text()).toContain('U+003A')
+    expect(wrapper.text()).toContain('‐, Space')
+    expect(wrapper.text()).not.toContain('U+2010')
     expect(wrapper.get('[data-test="build-button"]').attributes('disabled')).toBeDefined()
     const download = wrapper.get('[data-test="download-button"]')
     expect(download.attributes('disabled')).toBeDefined()
     expect(download.attributes('aria-describedby')).toBe('bitmap-download-help')
     expect(wrapper.get('#bitmap-download-help').text()).toContain('Build and locally validate')
+  })
+
+  it('renders the desktop recipe watch at twice its original linear size', () => {
+    const wrapper = mountMaker()
+    const preview = wrapper.get('.device-preview')
+
+    expect(preview.attributes('style')).toContain('--watch-preview-size: 400px')
+    expect(preview.attributes('style')).toContain('--watch-preview-border: 24px')
+    expect(preview.attributes('style')).toContain('--watch-preview-font-size: 88px')
+  })
+
+  it('shows the exact read-only charset for the selected font type', async () => {
+    const wrapper = mountMaker()
+    const charset = wrapper.get('[data-test="supported-charset"]')
+
+    expect(charset.text()).toContain('0123456789:')
+    expect(charset.text()).toContain(`${charsetForType('time_font').codepoints.length}`)
+    expect(charset.find('input').exists()).toBe(false)
+    expect(charset.find('textarea').exists()).toBe(false)
+
+    await wrapper.get('.segmented input[value="text_font"]').setValue(true)
+    expect(charset.text()).toContain('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    expect(charset.text()).toContain(`${charsetForType('text_font').codepoints.length}`)
+
+    await wrapper.get('.segmented input[value="text_font_zh"]').setValue(true)
+    expect(charset.text()).toContain('星期周礼拜')
+    expect(charset.text()).toContain(`${charsetForType('text_font_zh').codepoints.length}`)
+  })
+
+  it('offers only time, English text, and Chinese text font types', () => {
+    const wrapper = mountMaker()
+    expect(wrapper.findAll('.segmented input').map(input => input.attributes('value'))).toEqual([
+      'time_font',
+      'text_font',
+      'text_font_zh',
+    ])
+  })
+
+  it('accepts a dropped font and replaces the current source with a later drop', async () => {
+    const wrapper = mountMaker()
+    const dropZone = wrapper.get('[data-test="source-drop-zone"]')
+    const first = new File([new Uint8Array([1])], 'First.ttf', { type: 'font/ttf' })
+    const second = new File([new Uint8Array([2])], 'Second.otf', { type: 'font/otf' })
+
+    await dropZone.trigger('drop', { dataTransfer: { files: [first] } })
+    await vi.waitFor(() => expect((wrapper.vm as any).sourceFile?.name).toBe('First.ttf'))
+    await dropZone.trigger('dragenter')
+    expect(dropZone.classes()).toContain('dragging')
+    await dropZone.trigger('drop', { dataTransfer: { files: [second] } })
+    await vi.waitFor(() => expect((wrapper.vm as any).sourceFile?.name).toBe('Second.otf'))
+    expect(dropZone.classes()).not.toContain('dragging')
   })
 
   it('validates outline-only recipes and makes raster changes stale but metadata changes do not', async () => {
@@ -184,11 +241,27 @@ describe('BitmapFontMaker', () => {
     const style = (preview.element as HTMLElement).style
     expect(style.fontWeight).toBe('900')
     expect(style.transform).toBe('skewX(20deg)')
-    expect(style.webkitTextStroke).toContain('4.4px')
+    expect(style.webkitTextStroke).toContain('17.6px')
     expect(style.color).toBe('transparent')
 
     wrapper.unmount()
     expect(mocks.fontFaceDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes a built atlas preview as soon as raster settings become stale', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+
+    await vm.buildPackage()
+    vm.atlasUrl = 'blob:built-atlas'
+    vm.recipe.outlineMode = 'outline-only'
+    vm.recipe.outlineWidthEm = 0.04
+    await nextTick()
+
+    expect(vm.buildFresh).toBe(false)
+    expect(vm.atlasUrl).toBe('')
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:built-atlas')
   })
 
   it('keeps slug, style tags, and search keywords in sync with the recipe while preserving comma-separated manual values', async () => {
@@ -196,8 +269,9 @@ describe('BitmapFontMaker', () => {
     await upload(wrapper)
     const vm = wrapper.vm as any
 
-    expect(vm.metadata.slug).toBe('precision-sans-a43b3b726b14')
-    expect(wrapper.find('.metadata-panel input[readonly]').exists()).toBe(true)
+    expect(vm.metadata.slug).toBe('precision-sans-time-font-eb965909698d')
+    expect(vm.metadata.fullName).toBe('Precision Sans')
+    expect(wrapper.findAll('.metadata-panel input[readonly]')).toHaveLength(2)
     expect(vm.normalizedStyleTags).toEqual(['regular', 'fill'])
     expect(vm.styleTagsInput).toBe('regular, fill')
     expect(vm.normalizedSearchKeywords).toEqual(['precision sans', 'number', 'time', 'bitmap', 'regular', 'fill'])
@@ -209,14 +283,14 @@ describe('BitmapFontMaker', () => {
     vm.searchKeywordsInput = 'sport editorial, Retro，retro'
     vm.recipe.fontWeight = 900
     vm.recipe.italicAngle = -3
-    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-7e980e8c9139'))
+    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-b5d29c9740bd'))
     expect(vm.normalizedStyleTags).toEqual(['bold', 'italic', 'fill', 'sport'])
     expect(vm.styleTagsInput).toBe('bold, italic, fill, sport')
     expect(vm.normalizedSearchKeywords).toEqual(['precision sans', 'number', 'time', 'bitmap', 'bold', 'italic', 'fill', 'sport editorial', 'retro'])
 
     vm.recipe.fontWeight = 400
     vm.recipe.italicAngle = 0
-    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-a43b3b726b14'))
+    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-eb965909698d'))
     expect(vm.normalizedStyleTags).toEqual(['regular', 'fill', 'sport'])
     expect(vm.styleTagsInput).toBe('regular, fill, sport')
     expect(vm.normalizedSearchKeywords).toEqual(['precision sans', 'number', 'time', 'bitmap', 'regular', 'fill', 'sport editorial', 'retro'])
@@ -278,7 +352,7 @@ describe('BitmapFontMaker', () => {
     expect(wrapper.get('#bitmap-download-help').text()).toContain('current slug')
   })
 
-  it('publishes exact fresh artifacts, preserves freshness on slug conflict, and retries without rasterizing', async () => {
+  it('confirms and overwrites the existing font without rebuilding', async () => {
     const wrapper = mountMaker()
     const source = await upload(wrapper)
     const vm = wrapper.vm as any
@@ -286,16 +360,34 @@ describe('BitmapFontMaker', () => {
     vm.metadata.redistributionRightsAttested = true
     vm.styleTagsInput = ' outline, sport, outline,  '
     mocks.publish.mockRejectedValueOnce({ response: { status: 200, data: { code: 411 } } })
+    mocks.confirmOverwrite.mockResolvedValue('confirm')
     await vm.publishPackage()
     expect(vm.buildFresh).toBe(true)
-    expect(vm.slugConflict).toBe(true)
-    vm.metadata.slug = 'precision-sans-outline'
-    await nextTick()
-    await vm.publishPackage()
+    expect(mocks.confirmOverwrite).toHaveBeenCalledTimes(1)
+    expect(mocks.getFontBySlug).toHaveBeenCalledWith(vm.metadata.slug)
     expect(mocks.build).toHaveBeenCalledTimes(1)
-    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ sourceFont: source }))
+    expect(mocks.publish).toHaveBeenCalledTimes(2)
+    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ sourceFont: source, fontId: 77, overwrite: true }))
     expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ metadata: expect.objectContaining({ styleTags: ['regular', 'fill', 'outline', 'sport'], searchKeywords: 'precision sans,number,time,bitmap,regular,fill', redistributionRightsAttested: true, rightsAttestationVersion: 'v1' }) }))
     expect(mocks.push).toHaveBeenCalledWith({ name: 'Fonts' })
+  })
+
+  it('does not replace or navigate when overwrite is declined', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    vm.metadata.redistributionRightsAttested = true
+    mocks.publish.mockRejectedValueOnce({ response: { status: 200, data: { code: 411 } } })
+    mocks.confirmOverwrite.mockRejectedValue('cancel')
+
+    await vm.publishPackage()
+
+    expect(mocks.publish).toHaveBeenCalledTimes(1)
+    expect(mocks.getFontBySlug).not.toHaveBeenCalled()
+    expect(mocks.push).not.toHaveBeenCalled()
+    expect(vm.publishError).toBe('')
+    expect(vm.buildFresh).toBe(true)
   })
 
   it('publishes changed edit recipes as new fonts and restores overwrite mode when reverted', async () => {
@@ -331,7 +423,11 @@ describe('BitmapFontMaker', () => {
     expect(mocks.getFont).toHaveBeenCalledWith(42)
     expect(vm.metadata).toMatchObject({ fullName: '我的中文字体', slug: 'my-chinese-font', type: 'text_font_zh' })
     expect(vm.recipe).toMatchObject({ fontWeight: 600, italicAngle: -4, outlineWidthEm: 0.08, outlineMode: 'fill-outline' })
-    expect(wrapper.findAll('.segmented input').every(input => input.attributes('disabled') !== undefined)).toBe(true)
+    expect(wrapper.findAll('.segmented input').every(input => input.attributes('disabled') === undefined)).toBe(true)
+
+    await wrapper.get('.segmented input[value="time_font"]').setValue(true)
+    expect(vm.metadata).toMatchObject({ type: 'time_font', language: 'en' })
+    expect(wrapper.get('[data-test="supported-charset"]').text()).toContain('0123456789:')
 
     vm.metadata.redistributionRightsAttested = true
     await vm.buildPackage()

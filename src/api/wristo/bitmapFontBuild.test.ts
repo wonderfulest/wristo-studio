@@ -26,7 +26,7 @@ describe('bitmap font publish client', () => {
     const metadata = {
       fullName: 'Precision Numerals',
       slug: 'precision-numerals',
-      type: 'number_font',
+      type: 'time_font',
       language: 'en',
       styleTags: ['outline', 'sport'],
       searchKeywords: '',
@@ -55,7 +55,7 @@ describe('bitmap font publish client', () => {
       packageFile: new File([new Uint8Array([2])], 'precision-numerals.zip', { type: 'application/zip' }),
       manifest: { schemaVersion: 1, slug: 'precision-numerals' } as any,
       recipe: { schemaVersion: 1, rendererVersion: '1' } as any,
-      metadata: { fullName: 'Precision Numerals', slug: 'precision-numerals', type: 'number_font', language: 'en' } as any,
+      metadata: { fullName: 'Precision Numerals', slug: 'precision-numerals', type: 'time_font', language: 'en' } as any,
       fontId: 42,
       overwrite: true,
     }

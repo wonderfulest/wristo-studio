@@ -15,6 +15,7 @@ declare module 'vue' {
     AppMenuDataFieldGroup: typeof import('./src/components/layout/app-menu/AppMenuDataFieldGroup.vue')['default']
     AppMenuGoalGroup: typeof import('./src/components/layout/app-menu/AppMenuGoalGroup.vue')['default']
     AppMenuHelp: typeof import('./src/components/layout/app-menu/AppMenuHelp.vue')['default']
+    AppMenuImageGroup: typeof import('./src/components/layout/app-menu/AppMenuImageGroup.vue')['default']
     AppMenuIndicator: typeof import('./src/components/layout/app-menu/AppMenuIndicator.vue')['default']
     AppMenuShape: typeof import('./src/components/layout/app-menu/AppMenuShape.vue')['default']
     AppMenuTimeGroup: typeof import('./src/components/layout/app-menu/AppMenuTimeGroup.vue')['default']

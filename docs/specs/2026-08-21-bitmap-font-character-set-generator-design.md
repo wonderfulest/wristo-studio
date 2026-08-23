@@ -25,7 +25,7 @@ Changing the input source, character set, Unicode assignment, SVG content, or re
 
 ### Character-set presets
 
-- `number_font`: starts with `0123456789:°`.
+- `time_font`: starts with `0123456789:°`.
 - `text_font`: starts with printable ASCII plus the existing supported punctuation characters.
 - `text_font_zh`: starts with an editable, compact Chinese sample and common Chinese punctuation. It does not preload thousands of CJK characters.
 - `icon_font`: starts empty and is populated from Studio's icon library or local SVG imports.
@@ -88,7 +88,7 @@ The `.fnt` descriptor remains standard BMFont text and uses the assigned Unicode
 
 The manifest supports:
 
-- `number_font`
+- `time_font`
 - `text_font`
 - `text_font_zh`
 - `icon_font`

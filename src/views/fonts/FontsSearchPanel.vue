@@ -5,9 +5,12 @@
         <p class="eyebrow">{{ t('font.searchFonts') }}</p>
         <h1>{{ t('font.libraryTitle') }}</h1>
       </div>
-      <p class="panel-description">
-        {{ t('font.librarySubtitle') }}
-      </p>
+      <div class="panel-heading-end">
+        <p class="panel-description">
+          {{ t('font.librarySubtitle') }}
+        </p>
+        <slot name="header-actions" />
+      </div>
     </div>
     <div class="search-inputs">
       <el-input
@@ -37,77 +40,75 @@
         </template>
       </el-input>
     </div>
-    <div v-if="interpretedFilters?.length" class="intent-chips">
-      <el-tag
-        v-for="filter in interpretedFilters"
-        :key="filter"
-        size="small"
-        closable
-        effect="plain"
-        @close="emit('removeInterpretedFilter', filter)"
-      >
-        {{ filter }}
-      </el-tag>
-    </div>
-    <el-divider />
-    <!-- Filters -->
-    <el-form :inline="true" class="filters-form" label-position="left" size="small">
-      <el-form-item>
-        <template #label>
-          {{ t('font.monospace') }}: {{ isMonospace ? t('common.on') : t('common.off') }}
-        </template>
-        <el-switch
-          :model-value="isMonospace"
-          :active-text="t('common.on')"
-          :inactive-text="t('common.off')"
-          inline-prompt
-          @change="onIsMonospaceChange"
-        />
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          {{ t('font.italic') }}: {{ italic ? t('common.on') : t('common.off') }}
-        </template>
-        <el-switch
-          :model-value="italic"
-          :active-text="t('common.on')"
-          :inactive-text="t('common.off')"
-          inline-prompt
-          @change="onItalicChange"
-        />
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          {{ t('font.weight') }}: {{ weightClass ?? t('common.any') }}
-        </template>
-        <el-select
-          :model-value="weightClass"
-          :placeholder="t('common.any')"
-          class="w-40"
-          clearable
-          @change="onWeightClassChange"
+    <div class="controls-row">
+      <!-- Filters -->
+      <el-form :inline="true" class="filters-form" label-position="left" size="small">
+        <el-form-item>
+          <template #label>
+            {{ t('font.monospace') }}: {{ isMonospace ? t('common.on') : t('common.off') }}
+          </template>
+          <el-switch
+            :model-value="isMonospace"
+            :active-text="t('common.on')"
+            :inactive-text="t('common.off')"
+            inline-prompt
+            @change="onIsMonospaceChange"
+          />
+        </el-form-item>
+        <el-form-item>
+          <template #label>
+            {{ t('font.italic') }}: {{ italic ? t('common.on') : t('common.off') }}
+          </template>
+          <el-switch
+            :model-value="italic"
+            :active-text="t('common.on')"
+            :inactive-text="t('common.off')"
+            inline-prompt
+            @change="onItalicChange"
+          />
+        </el-form-item>
+        <el-form-item>
+          <template #label>
+            {{ t('font.weight') }}: {{ weightClass ?? t('common.any') }}
+          </template>
+          <el-select
+            :model-value="weightClass"
+            :placeholder="t('common.any')"
+            class="w-40"
+            clearable
+            @change="onWeightClassChange"
+          >
+            <el-option v-for="w in [100,200,300,400,500,600,700,800,900]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <template #label>
+            {{ t('font.width') }}: {{ widthClass ?? t('common.any') }}
+          </template>
+          <el-select
+            :model-value="widthClass"
+            :placeholder="t('common.any')"
+            class="w-40"
+            clearable
+            @change="onWidthClassChange"
+          >
+            <el-option v-for="w in [1,2,3,4,5,6,7,8,9]" :key="w" :label="String(w)" :value="w" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div v-if="interpretedFilters?.length" class="intent-chips">
+        <el-tag
+          v-for="filter in interpretedFilters"
+          :key="filter"
+          size="small"
+          closable
+          effect="plain"
+          @close="emit('removeInterpretedFilter', filter)"
         >
-          <el-option v-for="w in [100,200,300,400,500,600,700,800,900]" :key="w" :label="String(w)" :value="w" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          {{ t('font.width') }}: {{ widthClass ?? t('common.any') }}
-        </template>
-        <el-select
-          :model-value="widthClass"
-          :placeholder="t('common.any')"
-          class="w-40"
-          clearable
-          @change="onWidthClassChange"
-        >
-          <el-option v-for="w in [1,2,3,4,5,6,7,8,9]" :key="w" :label="String(w)" :value="w" />
-        </el-select>
-      </el-form-item>
-    </el-form>
-
-    <!-- Toolbar: total + reset -->
-    <div class="search-toolbar flex items-center justify-between">
+          {{ filter }}
+        </el-tag>
+      </div>
+      <!-- Toolbar: upload + reset -->
       <div class="toolbar-actions">
         <el-button v-if="canUploadFonts" size="small" @click="emit('openUploadDialog')">
           <el-icon><Upload /></el-icon>
@@ -189,21 +190,29 @@ const onWidthClassChange = (val?: number) => {
     linear-gradient(135deg, var(--studio-surface), var(--studio-surface-soft));
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-md);
-  padding: 22px;
-  margin-bottom: 18px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   box-shadow: var(--studio-shadow-sm);
 }
 
 .panel-copy {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+}
+
+.panel-heading-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  min-width: 0;
 }
 
 .eyebrow {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--studio-primary);
   font-size: 12px;
   font-weight: 800;
@@ -213,8 +222,8 @@ const onWidthClassChange = (val?: number) => {
 h1 {
   margin: 0;
   color: var(--studio-text);
-  font-size: 28px;
-  line-height: 1.15;
+  font-size: 24px;
+  line-height: 1.1;
 }
 
 .panel-description {
@@ -222,13 +231,13 @@ h1 {
   margin: 0;
   color: var(--studio-text-muted);
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.35;
 }
 
 .search-inputs {
   display: grid;
   grid-template-columns: minmax(260px, 1.35fr) minmax(220px, 0.8fr);
-  gap: 16px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -250,11 +259,10 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
 }
 
 .search-panel :deep(.el-input__wrapper) {
-  min-height: 44px;
+  min-height: 36px;
   border-radius: var(--studio-radius-md);
   box-shadow: 0 0 0 1px var(--studio-border) inset;
 }
@@ -266,15 +274,15 @@ h1 {
 .filters-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 12px;
+  gap: 8px;
+  margin: 0;
 }
 
 .filters-form :deep(.el-form-item) {
-  min-height: 44px;
+  min-height: 34px;
   margin-right: 0;
   margin-bottom: 0;
-  padding: 8px 10px;
+  padding: 4px 8px;
   background: var(--studio-surface);
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-md);
@@ -285,15 +293,22 @@ h1 {
   font-weight: 650;
 }
 
-.filters-form :deep(.el-select) { min-width: 132px; }
+.filters-form :deep(.el-select) { min-width: 112px; }
 
-.search-toolbar { margin-top: 12px; }
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
 
 .toolbar-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .toolbar-actions :deep(.el-button) {
@@ -316,6 +331,16 @@ h1 {
 
   .panel-description {
     margin-top: 8px;
+  }
+
+  .panel-heading-end {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-top: 8px;
+  }
+
+  .toolbar-actions {
+    margin-left: 0;
   }
 }
 

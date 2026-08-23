@@ -65,14 +65,18 @@
       </div>
       <div class="font-tags" v-if="hasTags" :style="tagsStyle">
         <el-tag v-if="isMonospace" size="small" effect="plain">Mono</el-tag>
-        <el-tag
-          v-for="tag in visibleStyleTags"
-          :key="tag"
-          size="small"
-          effect="plain"
-        >
-          {{ formatTag(tag) }}
-        </el-tag>
+        <template v-for="tag in visibleStyleTags" :key="tag">
+          <el-tooltip v-if="effectIconFor(tag)" :content="formatTag(tag)" placement="top">
+            <span
+              class="font-effect-icon"
+              :class="`font-effect-icon-${normalizeTag(tag)}`"
+              :aria-label="formatTag(tag)"
+            >{{ effectIconFor(tag) }}</span>
+          </el-tooltip>
+          <el-tag v-else size="small" effect="plain">
+            {{ formatTag(tag) }}
+          </el-tag>
+        </template>
         <!-- <el-tag v-if="isMonospace" size="small">
           <el-icon><Rank /></el-icon>
         </el-tag>
@@ -157,7 +161,9 @@ const membershipGate = useStudioMembershipGate()
 const parsedStyleTags = computed(() => {
   const raw = props.styleTags
   const list = Array.isArray(raw) ? raw : String(raw || '').split(/[,，\s]+/)
-  return list.map(tag => tag.trim()).filter(Boolean)
+  return list
+    .map(tag => tag.trim())
+    .filter(tag => tag && tag.toLowerCase() !== 'regular')
 })
 const visibleStyleTags = computed(() => parsedStyleTags.value.slice(0, 3))
 const hasTags = computed(() => props.isMonospace || !!props.subfamily || visibleStyleTags.value.length > 0)
@@ -211,6 +217,14 @@ const formatTag = (tag: string) => tag
   .filter(Boolean)
   .map(part => part.charAt(0).toUpperCase() + part.slice(1))
   .join(' ')
+
+const normalizeTag = (tag: string) => tag.trim().toLowerCase()
+const effectIcons: Record<string, string> = {
+  bold: 'B',
+  italic: 'I',
+  outline: 'O',
+}
+const effectIconFor = (tag: string) => effectIcons[normalizeTag(tag)] || ''
 
 const loadFont = async (slug: string | undefined, url?: string) => {
   if (props.bitmapPreviewDescriptorUrl && props.bitmapPreviewAtlasUrl) {
@@ -453,6 +467,37 @@ const onToggleFavorite = async () => {
   border-radius: 999px;
   font-weight: 650;
   background: var(--studio-surface-soft);
+}
+
+.font-effect-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 18px;
+  border: 0;
+  color: var(--studio-primary);
+  background: transparent;
+  font-family: var(--studio-font-ui);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: default;
+}
+
+.font-effect-icon-bold {
+  font-weight: 800;
+}
+
+.font-effect-icon-italic {
+  font-family: serif;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.font-effect-icon-outline {
+  color: transparent;
+  font-weight: 800;
+  -webkit-text-stroke: 1px var(--studio-primary);
 }
 
 .font-icon-btn {

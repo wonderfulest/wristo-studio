@@ -102,4 +102,48 @@ describe('resolveCurrentElementPreviewFont', () => {
     expect(object.dirty).toBe(true)
     expect(requestRenderAll).toHaveBeenCalledOnce()
   })
+
+  it('keeps the smooth Fabric renderer when the font also has published BMFont preview assets', () => {
+    useFontStore().serverFonts.set('published-chinese', {
+      slug: 'published-chinese',
+      bitmapRecipe: {
+        schemaVersion: 1,
+        rendererVersion: '1',
+        fontWeight: 900,
+        italicAngle: -1,
+        outlineWidthEm: 0,
+        outlineMode: 'fill',
+        lineJoin: 'round',
+        antialias: true,
+      },
+      bitmapPreviewSize: 30,
+      bitmapPreviewDescriptorUrl: 'https://cdn.example.com/published-chinese.fnt',
+      bitmapPreviewAtlasUrl: 'https://cdn.example.com/published-chinese.png',
+    } as any)
+    const originalRender = vi.fn()
+    const object: any = {
+      text: '七月十',
+      fill: '#fff',
+      fontFamily: 'published-chinese',
+      fontSize: 24,
+      fontWeight: 400,
+      skewX: 0,
+      strokeWidth: 0,
+      _renderText: originalRender,
+      initDimensions: vi.fn(),
+      setCoords: vi.fn(),
+      set(props: Record<string, unknown>) {
+        Object.assign(this, props)
+      },
+    }
+
+    applyCurrentElementPreviewFont(object, {
+      fontFamily: 'published-chinese',
+      fontSize: 24,
+      fill: '#fff',
+    }, object.text)
+
+    expect(object._renderText).toBe(originalRender)
+    expect(object).toMatchObject({ fontWeight: 900, skewX: -1 })
+  })
 })

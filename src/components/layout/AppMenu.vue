@@ -27,6 +27,8 @@
       </div>
       <!-- Time group and items -->
       <AppMenuTimeGroup @add-element="handleAddElement" />
+      <!-- Image group -->
+      <AppMenuImageGroup @add-element="handleAddElement" />
       <!-- Health data group -->
       <AppMenuDataFieldGroup
         @add-data-field="handleAddDataField"
@@ -202,6 +204,7 @@ import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import DesignVerificationDrawer from '@/components/dialogs/DesignVerificationDrawer.vue'
 import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
+import AppMenuImageGroup from '@/components/layout/app-menu/AppMenuImageGroup.vue'
 import AppMenuDataFieldGroup from '@/components/layout/app-menu/AppMenuDataFieldGroup.vue'
 import AppMenuActions from '@/components/layout/app-menu/AppMenuActions.vue'
 import AppMenuShape from '@/components/layout/app-menu/AppMenuShape.vue'

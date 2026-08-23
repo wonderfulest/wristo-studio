@@ -139,7 +139,7 @@ describe('weather font list item', () => {
 
     const wrapper = mount(FontFamilyList, {
       props: {
-        fonts: [{ id: 42, userId: 7, value: 'quantico', family: 'Quantico', label: 'Quantico', type: 'number_font' }],
+        fonts: [{ id: 42, userId: 7, value: 'quantico', family: 'Quantico', label: 'Quantico', type: 'time_font' }],
         modelValue: 'quantico',
       },
       global: {
@@ -156,6 +156,6 @@ describe('weather font list item', () => {
     await vi.waitFor(() => expect(wrapper.find('.font-icon-btn-edit').exists()).toBe(true))
     await wrapper.get('.font-icon-btn-edit').trigger('click')
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('BitmapFontMaker'))
-    expect(router.currentRoute.value.query).toEqual({ fontId: '42', fontType: 'number_font' })
+    expect(router.currentRoute.value.query).toEqual({ fontId: '42', fontType: 'time_font' })
   })
 })
