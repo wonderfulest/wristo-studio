@@ -68,6 +68,8 @@ import TimeHandsDialog, {
 import { addTimeHandsGroup } from '@/elements/hands/timeHands/timeHands.add'
 import { prepareCopiedTimeHandsConfigs } from '@/elements/hands/timeHands/timeHands.copyModel'
 import type { EDITOR_ELEMENT } from '@/types/editorElement'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { hasIconFont } from '@/utils/elementUtils'
 
 const fontStore = useFontStore()
 const panelElementConfigs = {
@@ -98,17 +100,15 @@ const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
 const dataCatalogStore = useDataCatalogStore()
 const historyStore = useHistoryStore()
+const iconFontStrategyStore = useIconFontStrategyStore()
 const { t } = useI18n()
 const emit = defineEmits<{
   (e: 'switch-to-layer'): void
 }>()
 
 const loadElementFont = async (config: AnyElementConfig) => {
-  if (config.fontFamily) {
+  if (!hasIconFont(config as any) && config.fontFamily) {
     await fontStore.loadFont(config.fontFamily)
-  }
-  if (config && (config as IconElementConfig).iconFont) {
-    await fontStore.loadFont((config as IconElementConfig).iconFont)
   }
 }
 
@@ -304,6 +304,12 @@ const addElementByType = async (_category: string, elementType: string, config: 
       originX: (config as any).originX ?? 'center',
       originY: (config as any).originY ?? 'center',
       displayStates: DEFAULT_DISPLAY_STATES,
+    }
+    if (hasIconFont({ eleType: elementType } as any)) {
+      const iconFontSlug = iconFontStrategyStore.currentIconFontSlug
+        || String((config as IconElementConfig).iconFont || config.fontFamily || '')
+      normalizedConfig.fontFamily = iconFontSlug
+      ;(normalizedConfig as IconElementConfig).iconFont = iconFontSlug
     }
     if (typeof normalizedConfig.fontFamily === 'string') {
       normalizedConfig.fontFamily = getDefaultFontFamilyForAppLanguage(

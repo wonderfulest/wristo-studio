@@ -558,15 +558,11 @@ const selectFont = async (font: FontItem) => {
       } catch {
         return
       }
-      await ensureFontBySlug(font.value)
       iconFontStrategyStore.updateAllIconFont(font.value)
     } else if (!current) {
       iconFontStrategyStore.setIconFontSlug(font.value)
-      await ensureFontBySlug(font.value)
-    } else {
-      await ensureFontBySlug(font.value)
     }
-  } else {
+  } else if (props.type !== FontTypes.ICON_FONT) {
     await ensureFontBySlug(font.value)
   }
 

@@ -92,6 +92,7 @@ function applyResolvedFontRenderer(
   object: any,
   resolved: ResolvedTextPreviewFont,
   baselineFill?: unknown,
+  fallbackToText = true,
 ): void {
   if (!object) return
   const fill = baselineFill ?? savedTextStyle(object).fill ?? object.fill
@@ -105,14 +106,14 @@ function applyResolvedFontRenderer(
   applyBitmapRecipePreview(object, resolved, fill)
   const assets = resolved.bitmapPreviewAssets
   if (!assets) {
-    void applyFabricBitmapFontPreview(object)
+    void applyFabricBitmapFontPreview(object, undefined, {}, { fallbackToText })
     return
   }
 
   void applyFabricBitmapFontPreview(object, {
     ...assets,
     color: typeof fill === 'string' ? fill : assets.color,
-  }).then(() => {
+  }, {}, { fallbackToText }).then(() => {
     if (object[previewGeneration] !== generation) return
     applyFabricRecipePreviewPropsToObject(object, undefined, fill)
     object.initDimensions?.()
@@ -125,19 +126,24 @@ function applyResolvedFontRenderer(
   })
 }
 
-export function applyCurrentElementPreviewFont(object: any, config: TextFontPreviewConfig, content: unknown = ''): ResolvedTextPreviewFont {
+function applyCurrentElementPreviewFontMode(
+  object: any,
+  config: TextFontPreviewConfig,
+  content: unknown,
+  fallbackToText: boolean,
+): ResolvedTextPreviewFont {
   const resolved = resolveCurrentElementPreviewFont(config, content)
   const selectedFontFamily = String(config.fontFamily || object?.assetFontFamily || object?.fontFamily || 'sans-serif')
   const fontSize = config.fontSize ?? object?.fontSize
   const fill = config.fill ?? savedTextStyle(object).fill ?? object?.fill
   if (object) object.assetFontFamily = selectedFontFamily
   object?.set?.({ fontFamily: resolved.fontFamily, fontSize })
-  applyResolvedFontRenderer(object, resolved, fill)
+  applyResolvedFontRenderer(object, resolved, fill, fallbackToText)
   if (Array.isArray(object?._objects)) {
     object._objects.forEach((child: any) => {
       child.assetFontFamily = selectedFontFamily
       child?.set?.({ fontFamily: resolved.fontFamily, fontSize })
-      applyResolvedFontRenderer(child, resolved, fill)
+      applyResolvedFontRenderer(child, resolved, fill, fallbackToText)
       child?.initDimensions?.()
       child?.setCoords?.()
       child.dirty = true
@@ -148,4 +154,12 @@ export function applyCurrentElementPreviewFont(object: any, config: TextFontPrev
   if (object) object.dirty = true
   object?.canvas?.requestRenderAll?.()
   return resolved
+}
+
+export function applyCurrentElementPreviewFont(object: any, config: TextFontPreviewConfig, content: unknown = ''): ResolvedTextPreviewFont {
+  return applyCurrentElementPreviewFontMode(object, config, content, true)
+}
+
+export function applyCurrentElementBitmapFontPreview(object: any, config: TextFontPreviewConfig, content: unknown = ''): ResolvedTextPreviewFont {
+  return applyCurrentElementPreviewFontMode(object, config, content, false)
 }

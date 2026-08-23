@@ -8,6 +8,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import { applyCurrentElementBitmapFontPreview } from '@/composables/useGarminSystemFont'
 
 // 目前 indicators 仅支持这四种文本类指示器
 export type IndicatorTextType = 'bluetooth' | 'alarms' | 'disturb' | 'notification'
@@ -48,6 +49,11 @@ export async function createIndicatorText(
   }
 
   const element = new FabricText(glyph, textOptions as TextProps & IndicatorElementConfig)
+  applyCurrentElementBitmapFontPreview(element, {
+    fontFamily: config.fontFamily,
+    fontSize: config.fontSize,
+    fill: config.fill,
+  }, glyph)
 
   canvas.add(element as FabricText)
   layerStore.addLayer(element as unknown as MinimalFabricLike)
@@ -115,6 +121,12 @@ export async function updateIndicatorText(
 
   if (patch.left === undefined) obj.set('left', currentLeft)
   if (patch.top === undefined) obj.set('top', currentTop)
+
+  applyCurrentElementBitmapFontPreview(obj, {
+    fontFamily: patch.fontFamily ?? (obj as any).assetFontFamily ?? obj.fontFamily,
+    fontSize: patch.fontSize ?? obj.fontSize,
+    fill: patch.fill ?? obj.fill,
+  }, obj.text)
 
   obj.setCoords()
   canvas.renderAll()

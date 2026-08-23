@@ -48,6 +48,41 @@ describe('Fabric BMFont preview', () => {
     expect(object.canvas.requestRenderAll).toHaveBeenCalled()
   })
 
+  it('never falls back to the source TTF renderer in bitmap-only mode', async () => {
+    const descriptor: BmFontDescriptor = {
+      lineHeight: 32,
+      base: 25,
+      scaleW: 64,
+      scaleH: 64,
+      pageFile: 'icons.png',
+      glyphs: new Map(),
+      kernings: new Map(),
+    }
+    const originalRender = vi.fn()
+    const object: any = {
+      text: 'g', fontSize: 30, fill: '#fff',
+      _renderText: originalRender,
+    }
+    let releaseDescriptor!: (descriptor: BmFontDescriptor) => void
+    const descriptorPending = new Promise<BmFontDescriptor>((resolve) => {
+      releaseDescriptor = resolve
+    })
+    const pending = applyFabricBitmapFontPreview(object, {
+      descriptorUrl: '/icons.fnt', atlasUrl: '/icons.png', sourceSize: 30,
+    }, {
+      loadDescriptor: () => descriptorPending,
+      loadAtlas: async () => ({} as CanvasImageSource),
+    }, { fallbackToText: false })
+
+    object._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+    expect(originalRender).not.toHaveBeenCalled()
+
+    releaseDescriptor(descriptor)
+    await pending
+    object._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+    expect(originalRender).not.toHaveBeenCalled()
+  })
+
   it('updates the tint without reloading unchanged preview assets', async () => {
     const descriptor: BmFontDescriptor = {
       lineHeight: 30,

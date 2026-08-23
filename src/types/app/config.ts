@@ -18,4 +18,6 @@ export interface RuntimeDesignConfig {
   connectIqSettingsExcludedDataTypeValues?: number[]
   elements: AnyElementConfig[]
   orderIds: string[]
+  currentIconFontSlug?: string
+  currentIconFontSize?: number
 }

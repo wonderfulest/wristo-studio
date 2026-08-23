@@ -153,6 +153,8 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore, type ElementConfigSnapshot } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { hasIconFont } from '@/utils/elementUtils'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
 import { CircleCheck } from '@element-plus/icons-vue'
@@ -230,6 +232,7 @@ const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
+const iconFontStrategyStore = useIconFontStrategyStore()
 const { t } = useI18n()
 useVisualThemePreview()
 let shortcutDocumentGeneration = 0
@@ -852,6 +855,12 @@ const handleAddElement = async (category: string, elementType: string, overrides
         config = { ...config, progressMode: mode, dialProperty: binding.key }
       }
 
+      if (hasIconFont({ eleType: resolvedElementType } as any)) {
+        const iconFontSlug = iconFontStrategyStore.currentIconFontSlug
+          || String(config.iconFont || config.fontFamily || '')
+        config = { ...config, fontFamily: iconFontSlug, iconFont: iconFontSlug }
+      }
+
       config = scaleShortcutDraftConfig(config)
       const kind = resolvePlacementKind(category, resolvedElementType)
       return {
@@ -921,6 +930,7 @@ const handleAddDataField = async (metricSymbol?: string) => {
       const drafts = buildDataFieldDrafts(shortcutDraft, {
         propertyKey, metricSymbol: defaultOption.metricSymbol, hasUnit: canonicalMetric.unitKey !== 'none',
         left: baseLeft, top: baseTop, fontSize: dataFontSize,
+        iconFontSlug: iconFontStrategyStore.currentIconFontSlug || String(elementConfigs.metric?.icon?.fontFamily || ''),
       })
       return { kind: 'dataField', drafts, successName: title, errorMessageKey: 'editor.addDataFieldFailed' }
     }, 'editor.addDataFieldFailed')

@@ -8,6 +8,13 @@ const appMenuSource = readFileSync(`${process.cwd()}/src/components/layout/AppMe
 const imageMenuSource = readFileSync(`${process.cwd()}/src/components/layout/app-menu/AppMenuImageGroup.vue`, 'utf8')
 const imagePanelSource = readFileSync(`${process.cwd()}/src/elements/decoration/image/image.panel.vue`, 'utf8')
 describe('AddElementPanel metric property assignment', () => {
+  it('assigns the current bitmap icon font without loading a TTF for icon elements', () => {
+    expect(source).toContain('useIconFontStrategyStore')
+    expect(source).toContain("if (hasIconFont({ eleType: elementType } as any))")
+    expect(source).toContain('(normalizedConfig as IconElementConfig).iconFont = iconFontSlug')
+    expect(source).toContain("if (!hasIconFont(config as any) && config.fontFamily)")
+  })
+
   it('binds standalone unit elements to a canonical metric property', () => {
     expect(source).toContain("['data', 'icon', 'label', 'unit', 'zoneMetric'].includes(elementType)")
   })

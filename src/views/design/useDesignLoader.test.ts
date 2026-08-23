@@ -17,7 +17,7 @@ describe('useDesignLoader contract', () => {
     const applyStart = loaderSource.indexOf('const applyRuntimeDesignConfig = async')
     const fontFetch = loaderSource.indexOf('await fontStore.fetchFonts()', applyStart)
     const generationGuard = loaderSource.indexOf('if (!isCurrentDesignLoad(generation)) return false', fontFetch)
-    const projection = loaderSource.indexOf('const loadConfig = projectDefaultVisualThemeForLoad(config)', generationGuard)
+    const projection = loaderSource.indexOf('const projectedConfig = projectDefaultVisualThemeForLoad(config)', generationGuard)
     const hydrate = loaderSource.indexOf('visualThemeStore.hydrate(', projection)
     const normalization = loaderSource.indexOf('normalizeDataPropertyConfig(loadConfig, dataCatalogStore.options)', hydrate)
     const properties = loaderSource.indexOf('propertiesStore.loadDataPropertyConfig(', normalization)
@@ -67,5 +67,11 @@ describe('useDesignLoader contract', () => {
     expect(loaderSource).toContain("designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)")
     expect(loaderSource).not.toContain('supportedLocales')
     expect(loaderSource).not.toContain('supportsChineseContent')
+  })
+
+  it('restores the shared bitmap icon font strategy from the loaded design', () => {
+    expect(loaderSource).toContain('useIconFontStrategyStore')
+    expect(loaderSource).toContain('resolveLoadedIconFontSlug(loadConfig.elements)')
+    expect(loaderSource).toContain('iconFontStrategyStore.setIconFontSlug(loadedIconFontSlug)')
   })
 })

@@ -251,4 +251,18 @@ describe('font metrics refresh', () => {
     expect(matching.initDimensions).toHaveBeenCalledOnce()
     expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
   })
+
+  it('does not load TTF files for bitmap-only icon and indicator elements', async () => {
+    const store = useFontStore()
+    const loadFont = vi.spyOn(store, 'loadFont').mockResolvedValue(true)
+
+    await store.loadFontsForElements([
+      { eleType: 'icon', fontFamily: 'qiwei-two', iconFont: 'qiwei-two' },
+      { eleType: 'bluetooth', fontFamily: 'qiwei-two' },
+      { eleType: 'data', fontFamily: 'roboto-condensed-regular' },
+    ] as any)
+
+    expect(loadFont).toHaveBeenCalledTimes(1)
+    expect(loadFont).toHaveBeenCalledWith('roboto-condensed-regular')
+  })
 })

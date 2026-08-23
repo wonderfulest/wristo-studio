@@ -28,11 +28,12 @@ export function buildGoalArcDrafts(factory: ShortcutDraftFactory, input: {
 }
 
 export function buildDataFieldDrafts(factory: ShortcutDraftFactory, input: {
-  propertyKey: string; metricSymbol: string; hasUnit: boolean; left: number; top: number; fontSize: number
+  propertyKey: string; metricSymbol: string; hasUnit: boolean; left: number; top: number; fontSize: number; iconFontSlug?: string
 }): ShortcutDraft[] {
   const shared = { dataProperty: input.propertyKey, goalProperty: null, metricSymbol: input.metricSymbol, left: input.left, originX: 'center' }
+  const iconFont = input.iconFontSlug ? { fontFamily: input.iconFontSlug, iconFont: input.iconFontSlug } : {}
   const drafts = [
-    factory('metric', 'icon', { ...shared, top: input.top - input.fontSize }, 'data-icon'),
+    factory('metric', 'icon', { ...shared, ...iconFont, top: input.top - input.fontSize }, 'data-icon'),
     factory('metric', 'data', { ...shared, top: input.top }, 'data-value'),
   ]
   if (input.hasUnit) drafts.push(factory('metric', 'unit', { ...shared, top: input.top + input.fontSize * 0.8 }, 'data-unit'))

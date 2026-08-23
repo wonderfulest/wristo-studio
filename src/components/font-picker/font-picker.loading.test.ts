@@ -102,6 +102,51 @@ describe('font picker loading', () => {
     })
   })
 
+  it('selects managed icon fonts from published BMFont metadata without loading their TTF file', async () => {
+    const fontStore = useFontStore()
+    fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
+    const loadFont = vi.spyOn(fontStore, 'loadFont').mockResolvedValue(true)
+    fontStore.registerServerFont({
+      slug: 'qiwei-two', type: FontTypes.ICON_FONT,
+      bitmapCanvasPreviewSize: 312,
+      bitmapCanvasPreviewDescriptorUrl: '/fonts/qiwei-two/312/font.fnt',
+      bitmapCanvasPreviewAtlasUrl: '/fonts/qiwei-two/312/font.png',
+    } as any)
+    useUserStore().setUserInfo({ roles: [{ roleCode: 'ROLE_ADMIN' }] } as any)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: { template: '<div />' } }],
+    })
+    const wrapper = mount(FontPicker, {
+      props: {
+        modelValue: 'wristo-icon', type: FontTypes.ICON_FONT,
+        useGlobalIconFontStrategy: true,
+      },
+      global: {
+        plugins: [router],
+        stubs: {
+          Teleport: true, FontPreviewText: true, RecentFontList: true,
+          DesignerFontList: true, FontImportDialog: true, NumberGlyphEditorDialog: true,
+          'el-icon': true, 'el-segmented': true, 'el-form-item': true,
+          'el-option': true, 'el-select': true, 'el-input': true,
+          'el-switch': true, 'el-form': true, 'el-button': true, 'el-dialog': true,
+          FontSearch: {
+            template: '<button class="select-test-font" @click="$emit(\'select\', font)">select</button>',
+            data: () => ({ font: { value: 'qiwei-two', family: 'Qiwei Two', type: FontTypes.ICON_FONT } }),
+          },
+        },
+      },
+    })
+
+    await wrapper.get('.font-preview').trigger('click')
+    await wrapper.get('.select-test-font').trigger('click')
+
+    await vi.waitFor(() => expect(wrapper.emitted('update:modelValue')).toContainEqual(['qiwei-two']))
+    wrapper.unmount()
+    expect(loadFont).not.toHaveBeenCalled()
+    expect(useIconFontStrategyStore().currentIconFontSlug).toBe('qiwei-two')
+  })
+
   it('replaces Chinese font selection with the built-in Studio preview font', () => {
     const fontStore = useFontStore()
     fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)

@@ -3,6 +3,7 @@ import { hasIconFont } from '@/utils/elementUtils'
 import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { applyCurrentElementBitmapFontPreview } from '@/composables/useGarminSystemFont'
 
 // 专门负责“全局图标字体 slug/size 策略”的 store，和字体资源加载的 fontStore 区分开。
 export const useIconFontStrategyStore = defineStore('iconFontStrategy', {
@@ -23,11 +24,26 @@ export const useIconFontStrategyStore = defineStore('iconFontStrategy', {
     updateAllIconFont(slug: string): void {
       const canvas = useCanvasStore().canvas
       if (!canvas) return
+      const elementDataStore = useElementDataStore()
       const objects: FabricElement[] = canvas.getObjects() as FabricElement[]
       for (const obj of objects) {
         if (hasIconFont(obj)) {
           if ('fontFamily' in obj) {
             ;(obj as any).set('fontFamily', slug)
+          }
+          ;(obj as any).assetFontFamily = slug
+          if ((obj as any).eleType !== 'icon' || (obj as any).iconDisplayType !== 'amoled') {
+            applyCurrentElementBitmapFontPreview(obj, {
+              fontFamily: slug,
+              fontSize: (obj as any).fontSize,
+              fill: (obj as any).fill,
+            }, (obj as any).text)
+          }
+          if ((obj as any).id != null) {
+            elementDataStore.patchElement(String((obj as any).id), {
+              fontFamily: slug,
+              iconFont: slug,
+            } as any)
           }
         }
       }

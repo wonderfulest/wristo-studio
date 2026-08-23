@@ -180,6 +180,20 @@ describe('compound shortcut production orchestrator', () => {
     expect(buildDataFieldDrafts(factory, { ...base, hasUnit: false }).map((draft) => draft.key)).toEqual(['data-icon', 'data-value'])
   })
 
+  it('binds newly created data icons to the current bitmap icon font', () => {
+    const factory = (_category: string, elementType: string, overrides: Record<string, any>, key: string) => ({ key, elementType, config: overrides })
+    const drafts = buildDataFieldDrafts(factory, {
+      propertyKey: 'data_1', metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT',
+      hasUnit: true, left: 227, top: 227, fontSize: 36, iconFontSlug: 'qiwei-two',
+    })
+
+    expect(drafts[0]).toMatchObject({
+      key: 'data-icon',
+      config: { fontFamily: 'qiwei-two', iconFont: 'qiwei-two' },
+    })
+    expect(drafts[1].config).not.toHaveProperty('fontFamily')
+  })
+
   it('builds Goal Arc keys, types, and centered relative coordinates', () => {
     const factory = (_category: string, elementType: string, overrides: Record<string, any>, key: string) => ({ key, elementType, config: overrides })
     const drafts = buildGoalArcDrafts(factory, { propertyKey: 'goal_1', left: 227, top: 260 })

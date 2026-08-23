@@ -12,6 +12,7 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useUserStore } from '@/stores/user'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
 import { decodeElementConfig } from '@/engine/registry/elementRegistry'
 import { addElement, syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
@@ -32,8 +33,14 @@ import type { ApiResponse } from '@/types/api/api'
 import type { Design, DesignConfig } from '@/types/api/design'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig, BaseElementConfig } from '@/types/elements'
+import { hasIconFont } from '@/utils/elementUtils'
 
 const LAYER_ORDER_WAIT_TIMEOUT_MS = 800
+
+const resolveLoadedIconFontSlug = (elements: AnyElementConfig[]): string => {
+  const icon = elements.find((element) => hasIconFont(element as any)) as any
+  return String(icon?.iconFont || icon?.fontFamily || '').trim()
+}
 
 interface DesignCanvasAdapter {
   updateZoom?: () => void
@@ -60,6 +67,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const dataCatalogStore = useDataCatalogStore()
   const userStore = useUserStore()
   const visualThemeStore = useVisualThemeStore()
+  const iconFontStrategyStore = useIconFontStrategyStore()
   const canvasRef = options.canvasRef
   const waitCanvasReady = options.waitCanvasReady
   const t = options.translate
@@ -295,6 +303,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       : projectedConfig
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     if (Array.isArray(loadConfig.elements)) {
+      const loadedIconFontSlug = String((loadConfig as any).currentIconFontSlug || resolveLoadedIconFontSlug(loadConfig.elements)).trim()
+      if (loadedIconFontSlug) iconFontStrategyStore.setIconFontSlug(loadedIconFontSlug)
       visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)
       await fontStore.loadFontsForElements(loadConfig.elements as any)
       if (!isCurrentDesignLoad(generation)) return false

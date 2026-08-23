@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useFontStore } from '@/stores/fontStore'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
-import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from './useGarminSystemFont'
+import {
+  applyCurrentElementBitmapFontPreview,
+  applyCurrentElementPreviewFont,
+  resolveCurrentElementPreviewFont,
+} from './useGarminSystemFont'
 
 describe('resolveCurrentElementPreviewFont', () => {
   beforeEach(() => {
@@ -167,6 +171,24 @@ describe('resolveCurrentElementPreviewFont', () => {
 
     expect(object._renderText).not.toBe(originalRender)
     vi.unstubAllGlobals()
+  })
+
+  it('keeps icon glyphs bitmap-only when published preview assets are missing', () => {
+    const originalRender = vi.fn()
+    const object: any = {
+      text: 'g', fill: '#fff', fontFamily: 'qiwei-two', fontSize: 30,
+      _renderText: originalRender,
+      initDimensions: vi.fn(), setCoords: vi.fn(),
+      set(props: Record<string, unknown>) { Object.assign(this, props) },
+    }
+
+    applyCurrentElementBitmapFontPreview(object, {
+      fontFamily: 'qiwei-two', fontSize: 30, fill: '#fff',
+    }, object.text)
+    object._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+
+    expect(originalRender).not.toHaveBeenCalled()
+    expect(object.assetFontFamily).toBe('qiwei-two')
   })
 
   it('prefers the high-resolution canvas atlas and keeps the 30px preview as a legacy fallback', () => {

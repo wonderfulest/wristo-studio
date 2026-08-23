@@ -14,6 +14,10 @@ export interface FabricBitmapFontPreviewDependencies {
   loadAtlas?: (url: string) => Promise<CanvasImageSource>
 }
 
+export interface FabricBitmapFontPreviewOptions {
+  fallbackToText?: boolean
+}
+
 interface PreviewState {
   originalRender: (context: CanvasRenderingContext2D) => void
   generation: number
@@ -22,6 +26,7 @@ interface PreviewState {
   atlas?: CanvasImageSource
   sourceSize?: number
   color?: string
+  fallbackToText: boolean
 }
 
 const previewState = Symbol('fabricBitmapFontPreview')
@@ -125,20 +130,32 @@ export async function applyFabricBitmapFontPreview(
   object: any,
   assets?: FabricBitmapFontPreviewAssets,
   dependencies: FabricBitmapFontPreviewDependencies = {},
+  options: FabricBitmapFontPreviewOptions = {},
 ): Promise<void> {
   if (!object || typeof object._renderText !== 'function') return
   let state = object[previewState] as PreviewState | undefined
   if (!state) {
-    state = { originalRender: object._renderText.bind(object), generation: 0 }
+    state = {
+      originalRender: object._renderText.bind(object),
+      generation: 0,
+      fallbackToText: options.fallbackToText !== false,
+    }
     Object.defineProperty(object, previewState, { configurable: true, value: state })
     object._renderText = (context: CanvasRenderingContext2D) => {
-      if (!renderBitmapText(object, state!, context)) state!.originalRender(context)
+      if (!renderBitmapText(object, state!, context) && state!.fallbackToText) state!.originalRender(context)
     }
   }
+  state.fallbackToText = options.fallbackToText !== false
   if (!assets) {
     state.generation += 1
-    object._renderText = state.originalRender
-    delete object[previewState]
+    state.assetsKey = undefined
+    state.descriptor = undefined
+    state.atlas = undefined
+    state.sourceSize = undefined
+    if (state.fallbackToText) {
+      object._renderText = state.originalRender
+      delete object[previewState]
+    }
     object.dirty = true
     object.canvas?.requestRenderAll?.()
     return

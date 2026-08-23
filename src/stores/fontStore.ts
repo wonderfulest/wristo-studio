@@ -13,6 +13,7 @@ import {
 } from '@/features/bitmap-font-maker/recipePreview'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
+import { hasIconFont } from '@/utils/elementUtils'
 // Types
 export interface FontOption {
   id?: number
@@ -491,14 +492,11 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 
         const fontNames = new Set<string>()
         
-        elements.forEach((element: any) => {
+        const collectFontNames = (element: any): void => {
+          if (!element || hasIconFont(element)) return
           // 处理组元素
           if (element._objects) {
-            element._objects.forEach((obj: any) => {
-              if (obj.fontFamily) {
-                fontNames.add(obj.fontFamily as string)
-              }
-            })
+            element._objects.forEach(collectFontNames)
           }
           // 处理单个元素
           if (element.fontFamily) {
@@ -508,7 +506,8 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           if (element.font) {
             fontNames.add(element.font as string)
           }
-        })
+        }
+        elements.forEach(collectFontNames)
 
         return this.loadFonts(Array.from(fontNames))
       },
