@@ -20,9 +20,9 @@
         <div class="tips">
           <p>{{ t('elementSettings.svgTipTitle') }}</p>
           <ul>
-            <li>{{ t('elementSettings.svgOnlyTip') }}</li>
+            <li>{{ t('elementSettings.svgPngTip') }}</li>
             <li>{{ t('elementSettings.svgBlackTip') }}</li>
-            <li>{{ t('elementSettings.svgSquareTip') }}</li>
+            <li>{{ t('elementSettings.svgPngSquareTip') }}</li>
           </ul>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetType, AnalogAssetVO } from '@/types/api/analog-asset'
-import { ensureSvgFileHasIntrinsicSize, isAllowedAnalogAssetFile, isHandAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
+import { ensureSvgFileHasIntrinsicSize, isAllowedAnalogAssetFile, isSvgPngAssetType, svgFileContainsRasterImage } from '@/utils/assetUploadValidation'
 
 export type UploadQueueStatus = 'pending' | 'uploading' | 'success' | 'failed'
 export interface UploadQueueItem {
@@ -46,7 +46,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
 
   const uploadAccept = computed(() => {
     if (options.assetType() === 'image' || options.assetType() === 'mask') return '.svg,.png,.jpg,.jpeg,.webp'
-    if (isHandAssetType(options.assetType())) return '.svg,.png'
+    if (isSvgPngAssetType(options.assetType())) return '.svg,.png'
     return '.svg'
   })
   const completedUploadCount = computed(() => uploadQueue.value.filter((item) => item.status === 'success' || item.status === 'failed').length)
@@ -58,7 +58,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
   }
   const fileTypeMessage = (): string => {
     if (options.assetType() === 'image' || options.assetType() === 'mask') return t('asset.imageOnly')
-    if (isHandAssetType(options.assetType())) return t('asset.handSvgPngOnly')
+    if (isSvgPngAssetType(options.assetType())) return t('asset.svgPngOnly')
     return t('asset.svgOnly')
   }
   const validateFile = async (file: File): Promise<UploadRejectionReason | null> => {

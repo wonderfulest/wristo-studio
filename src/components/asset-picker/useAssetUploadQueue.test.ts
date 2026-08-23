@@ -126,7 +126,9 @@ describe('useAssetUploadQueue', () => {
     expect(useAssetUploadQueue({ assetType: () => 'image' }).uploadAccept.value).toBe('.svg,.png,.jpg,.jpeg,.webp')
     expect(useAssetUploadQueue({ assetType: () => 'mask' }).uploadAccept.value).toBe('.svg,.png,.jpg,.jpeg,.webp')
     expect(useAssetUploadQueue({ assetType: () => 'hour' }).uploadAccept.value).toBe('.svg,.png')
-    expect(useAssetUploadQueue({ assetType: () => 'tick12' }).uploadAccept.value).toBe('.svg')
+    expect(useAssetUploadQueue({ assetType: () => 'tick12' }).uploadAccept.value).toBe('.svg,.png')
+    expect(useAssetUploadQueue({ assetType: () => 'tick60' }).uploadAccept.value).toBe('.svg,.png')
+    expect(useAssetUploadQueue({ assetType: () => 'romans' }).uploadAccept.value).toBe('.svg,.png')
   })
 
   it('clears drag state after a drop', async () => {

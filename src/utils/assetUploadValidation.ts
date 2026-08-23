@@ -16,13 +16,17 @@ export const isHandAssetType = (assetType: AnalogAssetType): boolean => {
   return assetType === 'hour' || assetType === 'minute' || assetType === 'second' || assetType === 'center_cap'
 }
 
+export const isSvgPngAssetType = (assetType: AnalogAssetType): boolean => {
+  return isHandAssetType(assetType) || assetType === 'tick12' || assetType === 'tick60' || assetType === 'romans'
+}
+
 export const isAllowedAnalogAssetFile = (file: File, assetType: AnalogAssetType): boolean => {
   const name = String(file.name || '').toLowerCase()
   const type = String(file.type || '').toLowerCase()
   if (assetType === 'image' || assetType === 'mask') {
     return /^(image\/svg\+xml|image\/png|image\/jpe?g|image\/webp)$/.test(type) || /\.(svg|png|jpe?g|webp)$/i.test(name)
   }
-  if (isHandAssetType(assetType)) {
+  if (isSvgPngAssetType(assetType)) {
     return type === 'image/svg+xml' || type === 'image/png' || /\.(svg|png)$/i.test(name)
   }
   return name.endsWith('.svg') || type === 'image/svg+xml'

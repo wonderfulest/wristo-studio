@@ -83,6 +83,8 @@
           :show-package-download="true"
           :show-prg-preview="true"
           :store-weight-saving="storeWeightSavingAppIds.has(design.product?.appId ?? -1)"
+          :rename-saving="renameSavingDesignIds.has(design.id)"
+          :allow-rename="true"
           :now-ms="nowMs"
           @edit="editDesign"
           @delete="confirmDelete"
@@ -97,6 +99,7 @@
           @go-live="goLive"
           @copy="copyDesign"
           @update-store-weight="updateStoreWeight"
+          @rename="renameDesign"
           @transfer-owner="openTransferOwnerDialog"
         />
       </el-col>
@@ -278,6 +281,7 @@ const deleteDialogVisible = ref(false)
 const designToDelete = ref<Design | null>(null)
 const noDesignDialogVisible = ref(false)
 const storeWeightSavingAppIds = ref(new Set<number>())
+const renameSavingDesignIds = ref(new Set<number>())
 const transferDialogVisible = ref(false)
 const transferDesign = ref<Design | null>(null)
 const transferTargetUserId = ref<number | undefined>()
@@ -722,6 +726,26 @@ const updateStoreWeight = async (design: Design, storeWeight: number) => {
     messageStore.error(error?.response?.data?.msg || t('common.saveFailed'))
   } finally {
     storeWeightSavingAppIds.value.delete(appId)
+  }
+}
+
+const renameDesign = async (design: Design, name: string) => {
+  if (renameSavingDesignIds.value.has(design.id)) return
+
+  renameSavingDesignIds.value.add(design.id)
+  try {
+    const response = await designApi.updateDesign({ uid: design.designUid, name })
+    if (response.code === 0) {
+      design.name = response.data?.name || name
+      messageStore.success(t('common.savedSuccessfully'))
+    } else {
+      messageStore.error(response.msg || t('common.saveFailed'))
+    }
+  } catch (error: any) {
+    console.error('[MyDesigns] rename design failed:', error)
+    messageStore.error(error?.response?.data?.msg || t('common.saveFailed'))
+  } finally {
+    renameSavingDesignIds.value.delete(design.id)
   }
 }
 

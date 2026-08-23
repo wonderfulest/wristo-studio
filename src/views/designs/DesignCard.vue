@@ -4,7 +4,21 @@
     <template #header>
       <div class="card-header">
         <div class="title-row">
-          <span class="title">{{ design.name }}</span>
+          <input
+            v-if="renaming"
+            ref="renameInput"
+            v-model="renameDraft"
+            class="title-input"
+            type="text"
+            :disabled="renameSaving"
+            :aria-label="design.name"
+            @click.stop
+            @dblclick.stop
+            @keydown.enter.prevent="submitRename"
+            @keydown.esc.prevent="cancelRename"
+            @blur="submitRename"
+          />
+          <span v-else class="title" @dblclick.stop="startRename">{{ design.name }}</span>
           <el-tooltip
             v-if="isMerchantUser || isAdminUser"
             :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
@@ -246,7 +260,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
@@ -269,6 +283,7 @@ import {
   normalizeStoreWeight,
   shouldSubmitStoreWeight,
 } from './designCardStoreWeight'
+import { resolveDesignRename } from './designCardRename'
 
 interface LoadingStates {
   submit: Set<number>
@@ -297,6 +312,8 @@ const props = defineProps<{
   showPackageDownload?: boolean
   showPrgPreview?: boolean
   storeWeightSaving?: boolean
+  renameSaving?: boolean
+  allowRename?: boolean
   nowMs?: number
 }>()
 
@@ -315,6 +332,7 @@ const emit = defineEmits<{
   (e: 'go-live', design: Design): void
   (e: 'transfer-owner', design: Design): void
   (e: 'update-store-weight', design: Design, storeWeight: number): void
+  (e: 'rename', design: Design, name: string): void
 }>()
 
 const { t } = useI18n()
@@ -347,6 +365,11 @@ const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
 const showPackageDownload = computed(() => props.showPackageDownload !== false)
 const showPrgPreview = computed(() => props.showPrgPreview !== false)
 const storeWeightSaving = computed(() => props.storeWeightSaving === true)
+const renameSaving = computed(() => props.renameSaving === true)
+const allowRename = computed(() => props.allowRename === true)
+const renaming = ref(false)
+const renameDraft = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
 const persistedStoreWeight = computed(() => normalizeStoreWeight(design.value.product?.storeWeight))
 const storeWeightDraft = ref(persistedStoreWeight.value)
 const pendingStoreWeight = ref<number | null>(null)
@@ -375,6 +398,30 @@ const submitStoreWeight = () => {
 const canEditCurrentDesign = computed(() => {
   return isAdminUser.value || currentUserId.value === 1 || design.value.user?.id === currentUserId.value
 })
+
+const startRename = async () => {
+  if (!allowRename.value || !canEditCurrentDesign.value || renameSaving.value) return
+  renameDraft.value = design.value.name
+  renaming.value = true
+  await nextTick()
+  renameInput.value?.focus()
+  renameInput.value?.select()
+}
+
+const cancelRename = () => {
+  renameDraft.value = design.value.name
+  renaming.value = false
+}
+
+const submitRename = () => {
+  if (!renaming.value || renameSaving.value) return
+  const resolution = resolveDesignRename(renameDraft.value, design.value.name)
+  renaming.value = false
+  renameDraft.value = resolution.name
+  if (resolution.action === 'submit') {
+    emit('rename', design.value, resolution.name)
+  }
+}
 
 const appId = computed(() => {
   const id = (design.value.product as any)?.appId
@@ -647,6 +694,21 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.title-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--studio-primary);
+  border-radius: 6px;
+  padding: 3px 6px;
+  color: var(--studio-text);
+  background: var(--studio-surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  outline: none;
 }
 
 .app-ops-entry {
