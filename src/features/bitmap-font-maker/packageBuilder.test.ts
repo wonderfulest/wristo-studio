@@ -43,6 +43,7 @@ function rendered(size: number): RenderedGlyphSet {
 
 function adapters(options?: {
   onRender?: (size: number) => void
+  render?: (size: number) => RenderedGlyphSet
   onRelease?: () => void
   encodePng?: () => Promise<Uint8Array>
   hash?: typeof sha256Hex
@@ -53,7 +54,7 @@ function adapters(options?: {
     rendererPath: 'opentype-path',
     render(size) {
       options?.onRender?.(size)
-      return rendered(size)
+      return options?.render?.(size) ?? rendered(size)
     },
     dispose,
   }
@@ -71,7 +72,7 @@ function adapters(options?: {
 }
 
 describe('buildBitmapFontPackage', () => {
-  it('builds the canonical 38-size package with 79 root-relative entries and valid descriptors', async () => {
+  it('builds the canonical 38-size package with 80 root-relative entries and valid descriptors', async () => {
     const fixture = adapters()
     const progress: unknown[] = []
     const result = await buildBitmapFontPackage({
@@ -84,10 +85,11 @@ describe('buildBitmapFontPackage', () => {
 
     const archive = await JSZip.loadAsync(result.zip)
     const paths = Object.keys(archive.files).filter((path) => !archive.files[path].dir).sort()
-    expect(paths).toHaveLength(79)
+    expect(paths).toHaveLength(80)
     expect(paths).toContain('fixture-outline.ttf')
     expect(paths).toContain('recipe.json')
     expect(paths).toContain('manifest.json')
+    expect(paths).toContain('connectiq-layout.json')
     expect(paths).toContain('6/fixture-outline-g.fnt')
     expect(paths).toContain('312/fixture-outline-g_0.png')
     expect(paths.some((path) => path.startsWith('fixture-outline/'))).toBe(false)
@@ -100,6 +102,45 @@ describe('buildBitmapFontPackage', () => {
     expect(new TextDecoder().decode(archivedPng.slice(-8, -4))).toBe('IEND')
     expect(progress).toEqual(BITMAP_FONT_SIZES.map((size, index) => ({ completed: index + 1, size, total: 38 })))
     expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('writes Connect IQ-safe metrics for glyphs whose bitmap overhangs their advance', async () => {
+    const fixture = adapters({
+      render: (size) => ({
+        glyphs: [
+          { codepoint: 48, width: 45, height: 1, xoffset: 1, yoffset: 0, xadvance: 30, alpha: new Uint8Array(45).fill(255) },
+          { codepoint: 49, width: 39, height: 1, xoffset: -1, yoffset: 0, xadvance: 28, alpha: new Uint8Array(39).fill(255) },
+        ],
+        lineHeight: size,
+        baseline: Math.max(1, size - 1),
+        diagnostics: { rendererPath: 'opentype-path', rendererVersion: '1' },
+      }),
+    })
+    const result = await buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer,
+      fileName: 'Fixture.ttf',
+      slug: 'fixture-overhang',
+      fontType: 'time_font',
+      recipe,
+    }, fixture.value)
+
+    const archive = await JSZip.loadAsync(result.zip)
+    const fnt = await archive.file('144/fixture-overhang-g.fnt')!.async('string')
+    expect(fnt).toMatch(/char id=48 .* width=45 height=1 xoffset=1 yoffset=0 xadvance=46 /)
+    expect(fnt).toMatch(/char id=49 .* width=39 height=1 xoffset=0 yoffset=0 xadvance=39 /)
+    const layout = JSON.parse(await archive.file('connectiq-layout.json')!.async('string'))
+    expect(layout).toMatchObject({
+      schemaVersion: 1,
+      sizes: {
+        144: {
+          drawOffsetY: 26,
+          glyphs: {
+            48: { advance: 30, drawOffsetX: 0 },
+            49: { advance: 28, drawOffsetX: -1 },
+          },
+        },
+      },
+    })
   })
 
   it('writes stable hashes and a complete manifest while excluding manifest.json from content hash', async () => {

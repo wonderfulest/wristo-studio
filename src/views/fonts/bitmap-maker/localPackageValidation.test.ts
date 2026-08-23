@@ -21,6 +21,7 @@ async function packageFixture(
   }
   await add('precision.ttf', source)
   await add('recipe.json', canonicalJson(recipe))
+  await add('connectiq-layout.json', canonicalJson({ schemaVersion: 1, sizes: {} }))
   for (const size of BITMAP_FONT_SIZES) {
     await add(`${size}/precision-g_0.png`, png)
     await add(`${size}/precision-g.fnt`, `info face="Precision" size=${size}\ncommon lineHeight=${size} base=${size} scaleW=16 scaleH=16 pages=1 packed=0\npage id=0 file="precision-g_0.png"\nchars count=1\nchar id=48 x=0 y=0 width=1 height=1 xoffset=0 yoffset=0 xadvance=1 page=0 chnl=15\n`)
@@ -39,7 +40,7 @@ async function packageFixture(
 }
 
 describe('validateLocalBitmapPackage', () => {
-  it('accepts an exact 79-file package and verifies every hash and descriptor', async () => {
+  it('accepts an exact 80-file package with Connect IQ layout and verifies every hash and descriptor', async () => {
     const fixture = await packageFixture()
     await expect(validateLocalBitmapPackage(fixture.artifact, fixture.expected)).resolves.toBeUndefined()
   })

@@ -71,6 +71,11 @@ function mountMaker() {
       plugins: [createPinia()],
       stubs: {
         ElIcon: true, UploadFilled: true,
+        BitmapFontPreview: {
+          name: 'BitmapFontPreview',
+          props: ['descriptorUrl', 'atlasUrl', 'codepoints'],
+          template: '<span data-test="generated-bmfont-preview" />',
+        },
       },
     },
   })
@@ -90,6 +95,10 @@ describe('BitmapFontMaker', () => {
   beforeEach(() => {
     vi.stubGlobal('crypto', webcrypto)
     vi.stubGlobal('TextEncoder', TextEncoder)
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      disconnect() {}
+    })
     vi.clearAllMocks()
     mocks.getFontBySlug.mockResolvedValue({ data: { id: 77, slug: 'precision-sans' } })
     mocks.route.query = {}
@@ -240,12 +249,56 @@ describe('BitmapFontMaker', () => {
 
     const style = (preview.element as HTMLElement).style
     expect(style.fontWeight).toBe('900')
-    expect(style.transform).toBe('skewX(20deg)')
+    expect(style.transform).toBe('scale(1) skewX(20deg)')
     expect(style.webkitTextStroke).toContain('17.6px')
     expect(style.color).toBe('transparent')
 
     wrapper.unmount()
     expect(mocks.fontFaceDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('switches the watch preview to the generated BMFont atlas after a successful build', async () => {
+    const zip = {
+      file: (path: string) => path.endsWith('.png')
+        ? { async: () => Promise.resolve(new Blob(['atlas'])) }
+        : { async: () => Promise.resolve('common lineHeight=84 base=67 scaleW=128 scaleH=128 pages=1\npage id=0 file="precision-sans-g_0.png"\nchar id=48 x=0 y=0 width=40 height=70 xoffset=0 yoffset=0 xadvance=42 page=0 chnl=15') },
+    }
+    mocks.loadZip.mockResolvedValue(zip)
+    const wrapper = mountMaker()
+    await upload(wrapper)
+
+    await (wrapper.vm as any).buildPackage()
+    await vi.waitFor(() => expect(wrapper.find('[data-test="generated-bmfont-preview"]').exists()).toBe(true))
+
+    const preview = wrapper.getComponent({ name: 'BitmapFontPreview' })
+    expect(preview.props('descriptorUrl')).toBe('blob:preview')
+    expect(preview.props('atlasUrl')).toBe('blob:preview')
+    expect(preview.props('codepoints')).toEqual([49, 48, 58, 48, 57])
+    expect(wrapper.find('[data-test="source-font-live-preview"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="generated-bmfont-preview-wrap"]').attributes('style')).toContain(`scale(${88 / 84})`)
+  })
+
+  it('does not restore a generated preview that became stale while its ZIP entries were loading', async () => {
+    let resolvePreviewZip!: (value: any) => void
+    const atlasZip = {
+      file: (path: string) => path.endsWith('.png')
+        ? { async: () => Promise.resolve(new Blob(['atlas'])) }
+        : { async: () => Promise.resolve('common scaleW=16 scaleH=16') },
+    }
+    mocks.loadZip
+      .mockResolvedValueOnce(atlasZip)
+      .mockImplementationOnce(() => new Promise(resolve => { resolvePreviewZip = resolve }))
+    const wrapper = mountMaker()
+    await upload(wrapper)
+
+    const build = (wrapper.vm as any).buildPackage()
+    await vi.waitFor(() => expect(mocks.loadZip).toHaveBeenCalledTimes(2))
+    ;(wrapper.vm as any).recipe.italicAngle = 12
+    await nextTick()
+    resolvePreviewZip(atlasZip)
+    await build
+
+    expect(wrapper.find('[data-test="generated-bmfont-preview"]').exists()).toBe(false)
   })
 
   it('removes a built atlas preview as soon as raster settings become stale', async () => {

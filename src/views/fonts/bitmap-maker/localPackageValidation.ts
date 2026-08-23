@@ -97,11 +97,11 @@ export async function validateLocalBitmapPackage(
   try { archive = await JSZip.loadAsync(artifact.zip) } catch { fail('ZIP_INVALID') }
   const entries = Object.entries(archive!.files)
   if (entries.some(([, entry]) => entry.dir)) fail('PACKAGE_DIRECTORY_ENTRY')
-  if (entries.length !== 79) fail('PACKAGE_ENTRY_COUNT')
+  if (entries.length !== 80) fail('PACKAGE_ENTRY_COUNT')
 
   const extension = /\.otf$/i.test(expected.sourceFileName) ? 'otf' : /\.ttf$/i.test(expected.sourceFileName) ? 'ttf' : fail('SOURCE_EXTENSION_INVALID')
   const sourcePath = `${expected.slug}.${extension}`
-  const allowed = new Set(['manifest.json', 'recipe.json', sourcePath])
+  const allowed = new Set(['manifest.json', 'recipe.json', 'connectiq-layout.json', sourcePath])
   for (const size of BITMAP_FONT_SIZES) {
     allowed.add(`${size}/${expected.slug}-g.fnt`)
     allowed.add(`${size}/${expected.slug}-g_0.png`)
@@ -110,6 +110,7 @@ export async function validateLocalBitmapPackage(
 
   const manifestEntry = archive!.file('manifest.json') ?? fail('MANIFEST_MISSING')
   const recipeEntry = archive!.file('recipe.json') ?? fail('RECIPE_MISSING')
+  const connectIqLayoutEntry = archive!.file('connectiq-layout.json') ?? fail('PACKAGE_PATH_INVALID')
   const sourceEntry = archive!.file(sourcePath) ?? fail('SOURCE_MISSING')
   const manifest = parseManifest(new TextDecoder().decode(await manifestEntry.async('uint8array')))
   if (canonicalJson(manifest) !== canonicalJson(artifact.manifest)) fail('MANIFEST_ARTIFACT_MISMATCH')
@@ -127,6 +128,9 @@ export async function validateLocalBitmapPackage(
   if (recipeHash !== manifest.recipeSha256) fail('RECIPE_HASH_MISMATCH')
   hashes.push(['recipe.json', recipeHash])
   recipeBytes = undefined
+  let connectIqLayoutBytes: Uint8Array | undefined = await connectIqLayoutEntry.async('uint8array')
+  hashes.push(['connectiq-layout.json', await sha256Hex(connectIqLayoutBytes)])
+  connectIqLayoutBytes = undefined
   let sourceBytes: Uint8Array | undefined = await sourceEntry.async('uint8array')
   const sourceHash = await sha256Hex(sourceBytes)
   if (sourceHash !== manifest.source.sha256) fail('SOURCE_HASH_MISMATCH')

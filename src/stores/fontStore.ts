@@ -39,6 +39,9 @@ export interface FontOption {
   bitmapPreviewSize?: number | null
   bitmapPreviewAtlasUrl?: string | null
   bitmapPreviewDescriptorUrl?: string | null
+  bitmapCanvasPreviewSize?: number | null
+  bitmapCanvasPreviewAtlasUrl?: string | null
+  bitmapCanvasPreviewDescriptorUrl?: string | null
 }
 
 interface FontSectionsState {

@@ -168,4 +168,35 @@ describe('resolveCurrentElementPreviewFont', () => {
     expect(object._renderText).not.toBe(originalRender)
     vi.unstubAllGlobals()
   })
+
+  it('prefers the high-resolution canvas atlas and keeps the 30px preview as a legacy fallback', () => {
+    useFontStore().serverFonts.set('published-sharp', {
+      slug: 'published-sharp',
+      bitmapPreviewSize: 30,
+      bitmapPreviewDescriptorUrl: 'https://cdn.example.com/30/published-sharp.fnt',
+      bitmapPreviewAtlasUrl: 'https://cdn.example.com/30/published-sharp.png',
+      bitmapCanvasPreviewSize: 312,
+      bitmapCanvasPreviewDescriptorUrl: 'https://cdn.example.com/312/published-sharp.fnt',
+      bitmapCanvasPreviewAtlasUrl: 'https://cdn.example.com/312/published-sharp.png',
+    } as any)
+
+    const resolved = resolveCurrentElementPreviewFont({
+      fontFamily: 'published-sharp',
+      fontSize: 120,
+      fill: '#fff',
+    }, '12:48')
+
+    expect(resolved.bitmapPreviewAssets).toEqual({
+      descriptorUrl: 'https://cdn.example.com/312/published-sharp.fnt',
+      atlasUrl: 'https://cdn.example.com/312/published-sharp.png',
+      sourceSize: 312,
+      color: '#fff',
+      fallback: {
+        descriptorUrl: 'https://cdn.example.com/30/published-sharp.fnt',
+        atlasUrl: 'https://cdn.example.com/30/published-sharp.png',
+        sourceSize: 30,
+        color: '#fff',
+      },
+    })
+  })
 })

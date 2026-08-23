@@ -16,6 +16,7 @@ import {
   type RenderedGlyph,
   type RenderedGlyphSet,
 } from './glyphRenderer'
+import { connectIqDrawOffsetY } from '@/utils/fontVerticalMetrics'
 import { canonicalJson, sha256Hex } from './deterministicEncoding'
 
 export { canonicalJson, sha256Hex } from './deterministicEncoding'
@@ -99,6 +100,30 @@ function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas): Atl
   return { width: packed.width, height: packed.height, rgba }
 }
 
+function connectIqSafeHorizontalMetrics(glyph: RenderedGlyph): Pick<RenderedGlyph, 'xoffset' | 'xadvance'> {
+  // Connect IQ clips custom-font pixels outside the character advance box.
+  // Shift negative bearings into the box and widen the advance to retain the full bitmap.
+  const leftShift = Math.max(0, -glyph.xoffset)
+  const xoffset = glyph.xoffset + leftShift
+  return {
+    xoffset,
+    xadvance: Math.max(glyph.xadvance + leftShift, xoffset + glyph.width),
+  }
+}
+
+interface ConnectIqGlyphLayout {
+  advance: number
+  drawOffsetX: number
+}
+
+interface ConnectIqLayoutManifest {
+  schemaVersion: 1
+  sizes: Record<string, {
+    drawOffsetY: number
+    glyphs: Record<string, ConnectIqGlyphLayout>
+  }>
+}
+
 async function defaultParseSource(source: ArrayBuffer, fileName: string): Promise<ParsedFontSource> {
   return parseFontSource(new File([source], fileName))
 }
@@ -169,6 +194,7 @@ export async function buildBitmapFontPackage(
   const recipeBytes = new TextEncoder().encode(recipeText)
   const archive = new JSZip()
   const contentHashes = new Map<string, string>()
+  const connectIqLayout: ConnectIqLayoutManifest = { schemaVersion: 1, sizes: {} }
   const hash = adapters.hash ?? sha256Hex
   const generateZip = adapters.generateZip ?? ((zip: JSZip) => zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' }))
 
@@ -217,6 +243,18 @@ export async function buildBitmapFontPackage(
         await add(`${prefix}${request.slug}-g_0.png`, png)
         assertNotCancelled(isCancelled)
         const placements = new Map(packed.placements.map((placement) => [placement.codepoint, placement]))
+        connectIqLayout.sizes[size.toString()] = {
+          drawOffsetY: connectIqDrawOffsetY(size, rendered.lineHeight, rendered.baseline, rendered.glyphs),
+          glyphs: Object.fromEntries(
+            rendered.glyphs.map((glyph) => [
+              glyph.codepoint.toString(),
+              {
+                advance: glyph.xadvance,
+                drawOffsetX: Math.min(0, glyph.xoffset),
+              },
+            ]),
+          ),
+        }
         const descriptor = writeBmFontText({
           slug: request.slug,
           face: source.family,
@@ -228,7 +266,8 @@ export async function buildBitmapFontPackage(
           chars: rendered.glyphs.map((glyph) => {
             const placement = placements.get(glyph.codepoint)
             if (!placement) throw new Error(`Missing atlas placement for U+${glyph.codepoint.toString(16)}`)
-            return { id: glyph.codepoint, x: placement.x, y: placement.y, width: glyph.width, height: glyph.height, xoffset: glyph.xoffset, yoffset: glyph.yoffset, xadvance: glyph.xadvance }
+            const horizontalMetrics = connectIqSafeHorizontalMetrics(glyph)
+            return { id: glyph.codepoint, x: placement.x, y: placement.y, width: glyph.width, height: glyph.height, xoffset: horizontalMetrics.xoffset, yoffset: glyph.yoffset, xadvance: horizontalMetrics.xadvance }
           }),
         })
         assertNotCancelled(isCancelled)
@@ -249,6 +288,8 @@ export async function buildBitmapFontPackage(
     session.dispose()
   }
 
+  assertNotCancelled(isCancelled)
+  await add('connectiq-layout.json', canonicalJson(connectIqLayout))
   assertNotCancelled(isCancelled)
   const contentMaterial = [...contentHashes]
     .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)

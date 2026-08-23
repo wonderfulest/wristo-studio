@@ -42,7 +42,7 @@ export const resolveCurrentElementPreviewFont = (config: TextFontPreviewConfig, 
   const font = useFontStore().serverFonts.get(canonicalFontSlug(slug))
   const preview = recipeToFabricProps(font?.bitmapRecipe, config.fontSize, config.fill)
   const previewSize = Number(font?.bitmapPreviewSize)
-  const bitmapPreviewAssets = font?.bitmapPreviewDescriptorUrl
+  const legacyPreviewAssets = font?.bitmapPreviewDescriptorUrl
     && font.bitmapPreviewAtlasUrl
     && Number.isFinite(previewSize)
     && previewSize > 0
@@ -53,6 +53,19 @@ export const resolveCurrentElementPreviewFont = (config: TextFontPreviewConfig, 
         color: typeof config.fill === 'string' ? config.fill : undefined,
       }
     : undefined
+  const canvasPreviewSize = Number(font?.bitmapCanvasPreviewSize)
+  const bitmapPreviewAssets = font?.bitmapCanvasPreviewDescriptorUrl
+    && font.bitmapCanvasPreviewAtlasUrl
+    && Number.isFinite(canvasPreviewSize)
+    && canvasPreviewSize > 0
+    ? {
+        descriptorUrl: font.bitmapCanvasPreviewDescriptorUrl,
+        atlasUrl: font.bitmapCanvasPreviewAtlasUrl,
+        sourceSize: canvasPreviewSize,
+        color: typeof config.fill === 'string' ? config.fill : undefined,
+        fallback: legacyPreviewAssets,
+      }
+    : legacyPreviewAssets
   Object.defineProperty(base, 'bitmapRecipePreview', {
     configurable: false,
     enumerable: false,

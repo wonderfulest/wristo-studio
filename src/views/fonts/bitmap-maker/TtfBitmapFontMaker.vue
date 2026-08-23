@@ -88,7 +88,21 @@
           <div v-else class="atlas-empty"><span>012345</span><p>{{ t('bitmapMaker.buildToPreview') }}</p></div>
         </div>
         <div class="device-preview" aria-label="Recipe visual preview" :style="watchPreviewVariables">
-          <div ref="watchRingRef" class="watch-ring"><span ref="watchPreviewTextRef" data-test="source-font-live-preview" :style="previewTextStyle">{{ previewText }}</span></div>
+          <div ref="watchRingRef" class="watch-ring">
+            <span
+              v-if="generatedPreviewAssets"
+              data-test="generated-bmfont-preview-wrap"
+              class="generated-bmfont-preview-wrap"
+              :style="generatedPreviewStyle"
+            >
+              <BitmapFontPreview
+                :descriptor-url="generatedPreviewAssets.descriptorUrl"
+                :atlas-url="generatedPreviewAssets.atlasUrl"
+                :codepoints="previewCodepoints"
+              />
+            </span>
+            <span v-else ref="watchPreviewTextRef" data-test="source-font-live-preview" :style="previewTextStyle">{{ previewText }}</span>
+          </div>
           <div class="preview-controls">
             <strong>{{ t('bitmapMaker.recipeVisual') }}</strong>
             <label>{{ t('bitmapMaker.previewContent') }}<span class="preview-content-input"><input v-model="previewText" type="text" maxlength="32" @input="previewTextCustomized = true" /><button type="button" @click="randomizePreviewText">{{ t('bitmapMaker.randomize') }}</button></span></label>
@@ -135,6 +149,7 @@ import { isBitmapFontSlugConflict, publishBitmapFontBuild, type BitmapFontPublis
 import { getFontById, getFontBySlug } from '@/api/wristo/fonts'
 import { repackageBitmapFontSlug } from './bitmapPackageRepack'
 import { validateLocalBitmapPackage } from './localPackageValidation'
+import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -174,6 +189,7 @@ const atlasUrl = ref('')
 const atlasWidth = ref(0)
 const atlasHeight = ref(0)
 const atlasGlyphs = ref<Array<{ id: number; x: number; y: number; width: number; height: number }>>([])
+const generatedPreviewAssets = shallowRef<{ descriptorUrl: string; atlasUrl: string; sourceSize: number } | null>(null)
 const sourcePreviewFontFamily = ref('')
 const watchRingRef = ref<HTMLElement | null>(null)
 const watchPreviewTextRef = ref<HTMLElement | null>(null)
@@ -187,6 +203,7 @@ let activeBuild: BitmapFontBuildHandle | null = null
 let mounted = true
 let buildToken = 0
 let previewToken = 0
+let generatedPreviewToken = 0
 let operationToken = 0
 let slugToken = 0
 let watchPreviewResizeObserver: ResizeObserver | null = null
@@ -239,6 +256,14 @@ const supportedCharacters = computed(() => String.fromCodePoint(...supportedChar
 const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(code => code === 32 ? t('bitmapMaker.space') : String.fromCodePoint(code)).join(', '))
 const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewSample = computed(() => fontType.value === 'time_font' ? '10:09' : fontType.value === 'text_font_zh' ? '周三 24' : 'WED 24')
+const previewCodepoints = computed(() => Array.from(previewText.value, character => character.codePointAt(0)!))
+const generatedPreviewSize = computed(() => sizes.reduce((closest, size) =>
+  Math.abs(size - previewFontSize.value) < Math.abs(closest - previewFontSize.value) ? size : closest,
+))
+const generatedPreviewStyle = computed(() => ({
+  transform: `scale(${previewFontSize.value / (generatedPreviewAssets.value?.sourceSize ?? generatedPreviewSize.value)})`,
+  transformOrigin: 'center',
+}))
 const randomItem = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)]
 const randomTwoDigits = (maximum: number): string => String(Math.floor(Math.random() * maximum) + 1).padStart(2, '0')
 
@@ -302,10 +327,12 @@ const publishActionDescription = computed(() => actionsLocked.value ? t('common.
 function invalidateBuild() {
   localValidationPassed.value = false
   packageValidationError.value = ''
+  generatedPreviewToken += 1
   revokeAtlasUrl()
   atlasWidth.value = 0
   atlasHeight.value = 0
   atlasGlyphs.value = []
+  revokeGeneratedPreviewUrls()
 }
 
 async function validateGlyphs() {
@@ -495,6 +522,7 @@ async function buildPackage() {
       if (!mounted || token !== buildToken || key !== rasterKey.value) return
       localValidationPassed.value = true
       await loadAtlasPreview()
+      await loadGeneratedPreview()
     } catch (error) {
       if (!mounted || token !== buildToken || key !== rasterKey.value) return
       localValidationPassed.value = false
@@ -521,6 +549,41 @@ function cancelBuild() { activeBuild?.cancel() }
 function revokeAtlasUrl() {
   if (atlasUrl.value) URL.revokeObjectURL(atlasUrl.value)
   atlasUrl.value = ''
+}
+
+function revokeGeneratedPreviewUrls() {
+  const assets = generatedPreviewAssets.value
+  if (assets) {
+    URL.revokeObjectURL(assets.descriptorUrl)
+    URL.revokeObjectURL(assets.atlasUrl)
+  }
+  generatedPreviewAssets.value = null
+}
+
+async function loadGeneratedPreview() {
+  const token = ++generatedPreviewToken
+  revokeGeneratedPreviewUrls()
+  const artifact = buildArtifact.value
+  const size = generatedPreviewSize.value
+  if (!artifact || !buildFresh.value || !mounted) return
+  try {
+    const zip = await JSZip.loadAsync(artifact.zip)
+    if (!mounted || token !== generatedPreviewToken) return
+    const slug = artifact.manifest.slug
+    const png = zip.file(`${size}/${slug}-g_0.png`)
+    const fnt = zip.file(`${size}/${slug}-g.fnt`)
+    if (!png || !fnt) return
+    const [pngBlob, fntBlob] = await Promise.all([png.async('blob'), fnt.async('blob')])
+    if (!mounted || token !== generatedPreviewToken) return
+    const atlasUrl = URL.createObjectURL(pngBlob)
+    const descriptorUrl = URL.createObjectURL(fntBlob)
+    if (!mounted || token !== generatedPreviewToken) {
+      URL.revokeObjectURL(atlasUrl)
+      URL.revokeObjectURL(descriptorUrl)
+      return
+    }
+    generatedPreviewAssets.value = { descriptorUrl, atlasUrl, sourceSize: size }
+  } catch { /* Keep the source-font draft when generated preview assets cannot be decoded. */ }
 }
 
 async function loadAtlasPreview() {
@@ -697,6 +760,7 @@ watch(fontType, () => { metadata.type = fontType.value; metadata.language = font
 watch(recipe, () => { invalidateBuild(); void refreshGeneratedSlug() }, { deep: true })
 watch([previewText, previewFontSize, sourcePreviewFontFamily, () => recipe.fontWeight, () => recipe.italicAngle, () => recipe.outlineWidthEm, () => recipe.outlineMode], () => { void fitWatchPreview() }, { flush: 'post' })
 watch(currentSize, loadAtlasPreview)
+watch(generatedPreviewSize, loadGeneratedPreview)
 onMounted(() => {
   void loadEditingFont()
   watchPreviewResizeObserver = new ResizeObserver(() => { void fitWatchPreview() })
@@ -707,12 +771,14 @@ onBeforeUnmount(() => {
   mounted = false
   buildToken += 1
   previewToken += 1
+  generatedPreviewToken += 1
   operationToken += 1
   if (activeBuild) activeBuild.cancel()
   workerClient?.dispose()
   watchPreviewResizeObserver?.disconnect()
   disposeSourcePreviewFont()
   revokeAtlasUrl()
+  revokeGeneratedPreviewUrls()
 })
 
 defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeValid, buildFresh, buildRunning, localValidationPassed, publishing, downloading, editingFontId, recipe, metadata, styleTagsInput, normalizedStyleTags, searchKeywordsInput, normalizedSearchKeywords, currentSize, atlasUrl, buildProgress, slugConflict, buildError, publishError, downloadError, packageValidationError, loadAtlasPreview, buildPackage, cancelBuild, downloadPackage, publishPackage })
