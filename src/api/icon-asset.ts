@@ -22,7 +22,7 @@ export interface IconAssetCropSvgDTO {
 }
 
 export const getIconAssetDetail = (id: number, params?: { populate?: string }): Promise<ApiResponse<IconAssetVO>> => {
-  return instance.get(`/dsn/icon-asset/get/${id}`, { params })
+  return instance.get(`/dsn/icon-asset/get/${id}`, { params, suppressForbiddenRedirect: true })
 }
 
 export const cropIconSvg = (dto: IconAssetCropSvgDTO): Promise<ApiResponse<IconAssetVO>> => {

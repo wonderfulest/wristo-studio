@@ -153,5 +153,5 @@ export const listIconLibrary = (category?: string): Promise<ApiResponse<IconLibr
 }
 
 export const getIconAsset = (id: number): Promise<ApiResponse<IconAssetVO>> => {
-  return instance.get(`/dsn/icon-asset/get/${id}`)
+  return instance.get(`/dsn/icon-asset/get/${id}`, { suppressForbiddenRedirect: true })
 }

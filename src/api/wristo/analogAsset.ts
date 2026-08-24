@@ -38,7 +38,8 @@ export const analogAssetApi = {
    */
   get(id: number): Promise<ApiResponse<AnalogAssetVO>> {
     return instance.post('/dsn/analog-asset/get?populate=asset', null, {
-      params: { id }
+      params: { id },
+      suppressForbiddenRedirect: true,
     })
   },
   remove(id: number): Promise<ApiResponse<boolean>> {

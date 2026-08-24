@@ -11,6 +11,7 @@ import { forbiddenRedirectPath } from './authFailureRedirect'
 declare module 'axios' {
   interface AxiosRequestConfig {
     suppressBusinessErrorCodes?: Array<number | string>
+    suppressForbiddenRedirect?: boolean
   }
 }
 
@@ -32,14 +33,19 @@ const redirectToLogin = (message = getFallbackMessage('auth.sessionExpired')) =>
   redirectToSsoLogin('studio', 1000)
 }
 
-const exitOnForbidden = (message = getFallbackMessage('auth.forbidden')) => {
+const handleForbidden = (config?: { suppressForbiddenRedirect?: boolean }, message = getFallbackMessage('auth.forbidden')) => {
+  const redirectPath = forbiddenRedirectPath(config)
+  if (!redirectPath) {
+    ElMessage.error(message)
+    return
+  }
   const userStore = useUserStore()
   cancelPendingSsoRedirect()
   userStore.clearAuth()
   clearLocalAuthState()
   ElMessage.error(message)
 
-  window.location.replace(forbiddenRedirectPath())
+  window.location.replace(redirectPath)
 }
 
 const instance = axios.create({
@@ -71,7 +77,7 @@ instance.interceptors.response.use(
       redirectToLogin(getResponseMessage(response.data, 'auth.sessionExpired'))
       return Promise.reject(response.data)
     } else if (res.code === BizErrorCode.FORBIDDEN) {
-      exitOnForbidden(getResponseMessage(response.data, 'auth.forbidden'))
+      handleForbidden(response.config, getResponseMessage(response.data, 'auth.forbidden'))
       return Promise.reject(response.data)
     } else {
       if (!response.config.suppressBusinessErrorCodes?.includes(res.code)) {
@@ -85,7 +91,7 @@ instance.interceptors.response.use(
     if (status === 401) {
       redirectToLogin(getResponseMessage(error.response?.data, 'auth.sessionExpired'))
     } else if (status === 403) {
-      exitOnForbidden(getResponseMessage(error.response?.data, 'auth.forbidden'))
+      handleForbidden(error.config, getResponseMessage(error.response?.data, 'auth.forbidden'))
     } else {
       ElMessage.error(getResponseMessage(error.response?.data, 'auth.networkError'))
     }

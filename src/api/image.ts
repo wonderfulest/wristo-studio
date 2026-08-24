@@ -17,7 +17,7 @@ export const uploadImage = (file: File, aspectCode?: string): Promise<ApiRespons
 }
 
 export const getImageById = (id: number): Promise<ApiResponse<ImageVO>> => {
-  return instance.get(`/dsn/image/${id}`)
+  return instance.get(`/dsn/image/${id}`, { suppressForbiddenRedirect: true })
 }
 
 // 通过 URL 查询图片信息，后端会根据 url 返回 ImageVO
