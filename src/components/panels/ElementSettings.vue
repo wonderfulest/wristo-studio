@@ -50,6 +50,7 @@ const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
 let configPatchQueue: Promise<void> = Promise.resolve()
+let pendingConfigPatchCount = 0
 const committedConfigById = new Map<string, AnyElementConfig>()
 
 function cloneJsonData<T>(value: T): T {
@@ -184,7 +185,14 @@ const applyConfigPatch = computed(() => {
   const lockedId = String(el.id)
   return async (patch: Partial<AnyElementConfig>): Promise<void> => {
     const queuedPatch = cloneJsonData(patch)
-    const operation = configPatchQueue.then(async () => {
+    if (pendingConfigPatchCount === 0) {
+      const storedConfig = elementDataStore.getElementConfig(lockedId)
+      if (storedConfig) {
+        committedConfigById.set(lockedId, cloneElementConfig(storedConfig))
+      }
+    }
+    pendingConfigPatchCount += 1
+    const queuedOperation = configPatchQueue.then(async () => {
       if (String(el.eleType ?? '') === 'goalArc') {
         console.groupCollapsed('[goalArc.ElementSettings] applyConfigPatch')
         console.log('lockedId', lockedId)
@@ -243,6 +251,9 @@ const applyConfigPatch = computed(() => {
         }
         throw error
       }
+    })
+    const operation = queuedOperation.finally(() => {
+      pendingConfigPatchCount = Math.max(0, pendingConfigPatchCount - 1)
     })
 
     configPatchQueue = operation.catch(() => undefined)
