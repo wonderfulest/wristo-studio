@@ -42,7 +42,7 @@ export type { BarChartElementConfig, LineChartElementConfig } from './charts'
 
 // tick/dials
 export type { TickElementConfig } from './tick'
-export type { ArcSunEventsElementConfig, LineSunEventsElementConfig } from './sunEvents'
+export type { ArcSunEventsElementConfig, CurveSunEventsElementConfig, LineSunEventsElementConfig } from './sunEvents'
 
 // 联合类型 - 所有可能的元素配置
 import type { BaseElementConfig as _Base } from './base'
@@ -62,7 +62,7 @@ import type { TickElementConfig as _Tick } from './tick'
 import type { ImageElementConfig as _Image } from './image'
 import type { DynamicImageElementConfig as _DynamicImage } from './dynamicImage'
 import type { BackgroundElementConfig as _Background } from './background'
-import type { ArcSunEventsElementConfig as _ArcSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
+import type { ArcSunEventsElementConfig as _ArcSunEvents, CurveSunEventsElementConfig as _CurveSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
 
 export type AnyElementConfig =
   | _Time
@@ -96,6 +96,7 @@ export type AnyElementConfig =
   | _Triangle
   | _GridLines
   | _ArcSunEvents
+  | _CurveSunEvents
   | _LineSunEvents
 
 // 类型映射 - 根据元素类型获取对应的配置类型
@@ -145,6 +146,7 @@ export interface ElementConfigMap {
   'battery': _Battery
   'moveBar': _MoveBar
   'arcSunEvents': _ArcSunEvents
+  'curveSunEvents': _CurveSunEvents
   'lineSunEvents': _LineSunEvents
   [key: string]: _Base
 }

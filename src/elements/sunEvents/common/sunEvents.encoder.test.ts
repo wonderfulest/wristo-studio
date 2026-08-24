@@ -4,7 +4,14 @@ import { decodeArcSunEvents, encodeArcSunEvents } from '../arcSunEvents/arcSunEv
 import { arcSunEventsSchema } from '../arcSunEvents/arcSunEvents.schema'
 import { decodeLineSunEvents, encodeLineSunEvents } from '../lineSunEvents/lineSunEvents.encoder'
 import { lineSunEventsSchema } from '../lineSunEvents/lineSunEvents.schema'
-import { resolveSunEventIndicatorSource, scaleArcSunEventsConfig, scaleLineSunEventsConfig } from './sunEvents.geometry'
+import { decodeCurveSunEvents, encodeCurveSunEvents } from '../curveSunEvents/curveSunEvents.encoder'
+import { curveSunEventsSchema } from '../curveSunEvents/curveSunEvents.schema'
+import {
+  resolveSunEventIndicatorSource,
+  scaleArcSunEventsConfig,
+  scaleCurveSunEventsConfig,
+  scaleLineSunEventsConfig,
+} from './sunEvents.geometry'
 
 const indicator = {
   imageSvg: 'https://cdn.example.com/now.svg',
@@ -52,8 +59,31 @@ describe('Sun Events encoders', () => {
     }))
   })
 
+  it('bakes Curve scale into its bounds while keeping the indicator size fixed', () => {
+    const config = {
+      id: 'curve-scaled', eleType: 'curveSunEvents' as const,
+      left: 100, top: 110, originX: 'center' as const, originY: 'center' as const,
+      width: 180, height: 60, strokeWidth: 6, angle: 20,
+      phases: createDefaultSunEventStyles(),
+      indicator: {
+        ...indicator,
+        normalOffset: 4,
+        orientation: 'tangent' as const,
+      },
+    }
+
+    expect(scaleCurveSunEventsConfig(config, 1.5, 2, 130.4, 140.6)).toEqual(expect.objectContaining({
+      left: 130,
+      top: 141,
+      width: 270,
+      height: 120,
+      strokeWidth: 12,
+      indicator: expect.objectContaining({ width: 12, height: 18, normalOffset: 8 }),
+    }))
+  })
+
   it('shows the bundled sun SVG as the default current-time indicator', () => {
-    for (const schema of [arcSunEventsSchema, lineSunEventsSchema]) {
+    for (const schema of [arcSunEventsSchema, lineSunEventsSchema, curveSunEventsSchema]) {
       const source = schema.defaultConfig.indicator.imageSvg
       expect(source).toMatch(/^data:image\/svg\+xml/)
       expect(decodeURIComponent(source)).toContain('<path')
@@ -89,5 +119,30 @@ describe('Sun Events encoders', () => {
     const encoded = encodeLineSunEvents(decodeLineSunEvents(config) as any)
     expect(encoded).toEqual(config)
     expect(encoded).not.toHaveProperty('reverse')
+  })
+
+  it('round-trips Curve geometry and fixed mountain indicator options', () => {
+    const config = {
+      id: 'curve-1', eleType: 'curveSunEvents' as const, left: 80, top: 90,
+      originX: 'center' as const, originY: 'center' as const,
+      width: 180, height: 60, strokeWidth: 6, angle: 25,
+      phases: createDefaultSunEventStyles(),
+      indicator: { ...indicator, normalOffset: -4, orientation: 'tangent' as const },
+    }
+    const encoded = encodeCurveSunEvents(decodeCurveSunEvents(config) as any)
+    expect(encoded).toEqual(config)
+    expect(encoded).not.toHaveProperty('controlPoints')
+    expect(encoded).not.toHaveProperty('fill')
+    expect(encoded).not.toHaveProperty('reverse')
+  })
+
+  it('uses fixed symmetric Curve defaults', () => {
+    expect(curveSunEventsSchema.defaultConfig).toEqual(expect.objectContaining({
+      width: 180,
+      height: 60,
+      strokeWidth: 6,
+      angle: 0,
+      indicator: expect.objectContaining({ normalOffset: 0, orientation: 'fixed' }),
+    }))
   })
 })

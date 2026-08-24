@@ -25,4 +25,27 @@ describe('Sun Events export validation', () => {
     expect(validateSunEventsElement(base)).toBeNull()
     expect(validateSunEventsElement({ eleType: 'time' })).toBeNull()
   })
+
+  it('validates Curve dimensions and indicator orientation', () => {
+    const curve = {
+      ...base,
+      eleType: 'curveSunEvents',
+      width: 180,
+      height: 60,
+      strokeWidth: 6,
+      indicator: {
+        ...base.indicator,
+        normalOffset: 0,
+        orientation: 'fixed',
+      },
+    }
+    expect(validateSunEventsElement(curve)).toBeNull()
+    expect(validateSunEventsElement({ ...curve, width: 0 })).toBe('Curve Sun Events width must be positive.')
+    expect(validateSunEventsElement({ ...curve, height: 0 })).toBe('Curve Sun Events height must be positive.')
+    expect(validateSunEventsElement({ ...curve, strokeWidth: 0 })).toBe('Curve Sun Events stroke width must be positive.')
+    expect(validateSunEventsElement({
+      ...curve,
+      indicator: { ...curve.indicator, orientation: 'sideways' },
+    })).toBe('Curve Sun Events indicator orientation is invalid.')
+  })
 })

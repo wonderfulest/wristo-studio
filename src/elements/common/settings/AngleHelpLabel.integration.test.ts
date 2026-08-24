@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
@@ -24,5 +24,13 @@ describe('absolute angle field help', () => {
     const arcSource = readFileSync(`${root}/src/elements/sunEvents/arcSunEvents/arcSunEvents.panel.vue`, 'utf8')
 
     expect(arcSource).not.toMatch(/AngleHelpLabel[^>]+angleRange/)
+  })
+
+  it('uses the shared clock-position guide for Curve Sun Events', () => {
+    const relativePath = 'src/elements/sunEvents/curveSunEvents/curveSunEvents.panel.vue'
+    expect(existsSync(`${root}/${relativePath}`)).toBe(true)
+    const source = readFileSync(`${root}/${relativePath}`, 'utf8')
+    expect(source.match(/<AngleHelpLabel\b/g) ?? []).toHaveLength(1)
+    expect(source).toContain("import AngleHelpLabel from '@/elements/common/settings/AngleHelpLabel.vue'")
   })
 })
