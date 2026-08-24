@@ -58,12 +58,6 @@ function syncDialScaleFactor(element: any) {
   }
 }
 
-function lockDialToCanvasCenter(element: any) {
-  const center = getCanvasCenter()
-  element.set({ left: center.x, top: center.y })
-  element.setCoords?.()
-}
-
 function applyDialScale(element: any, type: DialType, scaleFactor: unknown) {
   const gw = Number(element.width || 0)
   const gh = Number(element.height || 0)
@@ -88,15 +82,14 @@ function configureDialControls(element: any) {
     hasControls: true,
     hasBorders: true,
     designerControlMode: 'corner4Inset',
-    lockMovementX: true,
-    lockMovementY: true,
+    lockMovementX: false,
+    lockMovementY: false,
     lockRotation: true,
     lockScalingFlip: true,
   })
   applyControlsToObject(element)
   if (!element.__dialControlHandlersBound) {
     const syncDialTransform = () => {
-      lockDialToCanvasCenter(element)
       syncDialScaleFactor(element)
     }
     element.on('scaling', syncDialTransform)
@@ -144,12 +137,14 @@ export async function createDial(
   const img: any = await FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' } as any)
   const element: any = img
   const center = getCanvasCenter()
+  const left = Number.isFinite(Number(config.left)) ? Number(config.left) : center.x
+  const top = Number.isFinite(Number(config.top)) ? Number(config.top) : center.y
 
   element.set({
     id,
     eleType: type,
-    left: center.x,
-    top: center.y,
+    left,
+    top,
     scaleX: 1,
     scaleY: 1,
     originX: 'center',
@@ -200,7 +195,8 @@ export async function updateDial(
     const prevAngle = group.angle
     syncDialScaleFactor(group)
     const prevScaleFactor = normalizeScaleFactor(group.scaleFactor)
-    const center = getCanvasCenter()
+    const left = Number.isFinite(Number(patch.left)) ? Number(patch.left) : Number(group.left)
+    const top = Number.isFinite(Number(patch.top)) ? Number(patch.top) : Number(group.top)
 
     canvas.remove(group)
 
@@ -213,8 +209,8 @@ export async function updateDial(
       eleType: type,
       originX: 'center',
       originY: 'center',
-      left: center.x,
-      top: center.y,
+      left,
+      top,
       angle: prevAngle,
       imageUrl: nextImageUrl,
       selectable: true,
@@ -239,11 +235,15 @@ export async function updateDial(
     applyDialScale(group, type, patch.scaleFactor)
   }
 
+  const positionPatch: Record<string, number> = {}
+  if (Number.isFinite(Number(patch.left))) positionPatch.left = Number(patch.left)
+  if (Number.isFinite(Number(patch.top))) positionPatch.top = Number(patch.top)
+  if (Object.keys(positionPatch).length > 0) group.set(positionPatch)
+
   configureDialControls(group)
   group.on('selected', () => {})
   group.on('deselected', () => {})
 
-  lockDialToCanvasCenter(group)
   syncDialScaleFactor(group)
   group.setCoords()
   canvas.requestRenderAll?.()
