@@ -18,6 +18,8 @@ export interface DateElementConfig extends TextElementConfig {
   dateProperty?: string
   formatter: number
   formatterOptions?: number[]
+  dateFormatMode?: 'preset' | 'custom'
+  dateTemplate?: string
   // 仅用于导出：文字 baseline 的纵坐标
   topBase?: number
 }

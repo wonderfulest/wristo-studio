@@ -18,6 +18,7 @@ import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
+import { DEFAULT_DATE_TEMPLATE, formatCustomDateTemplate } from '@/elements/time/date/dateTemplate'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -284,7 +285,11 @@ export class DataSimulatorEngine {
         const isBitmap = obj.fontRenderType === 'bitmap' || obj.type === 'group'
         if (isBitmap) return
         const formatter = Number(obj.formatter ?? 0)
-        const nextText = formatDateValue(now, formatter, (propertiesStore as any).textCase, getDatePreviewLocale(designStore))
+        const textCase = (propertiesStore as any).textCase
+        const runtimeLocale = getDatePreviewLocale(designStore)
+        const nextText = obj.dateFormatMode === 'custom'
+          ? applyTextCase(formatCustomDateTemplate(obj.dateTemplate || DEFAULT_DATE_TEMPLATE, now, runtimeLocale), textCase)
+          : formatDateValue(now, formatter, textCase, runtimeLocale)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           applyCurrentElementPreviewFont(obj, {

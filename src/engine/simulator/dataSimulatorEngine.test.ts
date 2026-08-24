@@ -181,6 +181,31 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(festivalDate.text).toBe('国庆+10')
   })
 
+  it('keeps a custom date token template when the simulator refreshes the canvas', () => {
+    const customDate: any = {
+      id: 'custom-date',
+      eleType: 'date',
+      type: 'text',
+      fontRenderType: 'truetype',
+      formatter: DateFormatConstants.DDD,
+      dateFormatMode: 'custom',
+      dateTemplate: '(dt3).format("%02d") + "." + (dt2).format("%02d")',
+      text: '13.07',
+      fontFamily: 'roboto-condensed-regular',
+      fontSize: 20,
+      fill: '#ffffff',
+      set(key: string | Record<string, unknown>, value?: unknown) {
+        if (typeof key === 'string') this[key] = value
+        else Object.assign(this, key)
+      },
+    }
+    canvas.getObjects.mockReturnValue([customDate])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(customDate.text).toBe('13.07')
+  })
+
   it('maps the sleep score symbol to the distinct sleep score simulation', () => {
     const set = vi.fn()
     getMetricByOptions.mockReturnValue({

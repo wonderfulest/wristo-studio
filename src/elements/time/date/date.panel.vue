@@ -36,10 +36,35 @@
         />
       </el-form-item>
 
+      <el-form-item :label="t('elementSettings.dateFormat')">
+        <el-select v-model="currentModel.dateFormatMode" @change="handleFormatModeChange">
+          <el-option :label="t('elementSettings.dateFormatPreset')" value="preset" />
+          <el-option :label="t('elementSettings.dateFormatCustomToken')" value="custom" />
+        </el-select>
+      </el-form-item>
+
       <DatePropertyField
+        v-if="currentModel.dateFormatMode !== 'custom'"
         v-model="currentModel.dateProperty"
         @change="handleDatePropertyChange"
       />
+      <el-form-item v-else :label="t('elementSettings.dateTokenTemplate')" class="token-template-field">
+        <TextTemplateEditor
+          :model-value="currentModel.dateTemplate || DEFAULT_DATE_TEMPLATE"
+          :allowed-variables="dateTemplateVariables"
+          :template-error="dateTemplateError"
+          :helper-text="t('elementSettings.dateTokenHelper')"
+          @update:model-value="handleDateTemplateChange"
+        />
+        <a
+          class="date-token-guide"
+          href="https://studio.wristo.io/tokens"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ t('elementSettings.dateTokenGuide') }} wristo.io/tokens
+        </a>
+      </el-form-item>
     </el-form>
   </div>
 </template>
@@ -56,6 +81,7 @@ import FontPicker from '@/components/font-picker/font-picker.vue'
 import AlignXButtons from '@/elements/common/settings/AlignXButtons.vue'
 import FontSizeSelect from '@/elements/common/settings/FontSizeSelect.vue'
 import DatePropertyField from '@/elements/common/settings/DatePropertyField.vue'
+import TextTemplateEditor from '@/components/properties/common/TextTemplateEditor.vue'
 import { useI18n } from '@/i18n'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
@@ -67,6 +93,8 @@ import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
+import { DEFAULT_DATE_TEMPLATE, validateCustomDateTemplate } from './dateTemplate'
+import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 
 const props = defineProps<{
   config?: Record<string, any> | null
@@ -102,6 +130,12 @@ const getFontCompatibilityNotice = (fontFamily: string, language = currentDateLa
 }
 
 const fontCompatibilityNotice = computed(() => getFontCompatibilityNotice(String(currentModel.value.fontFamily || '')))
+const dateTemplateVariables = computed(() => DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions
+  .filter((definition) => definition.code.startsWith('dt')
+    || definition.code.startsWith('cn')
+  )
+  .map((definition) => definition.code))
+const dateTemplateError = computed(() => validateCustomDateTemplate(currentModel.value.dateTemplate || DEFAULT_DATE_TEMPLATE)[0] || '')
 
 onMounted(async () => {
   if (fontStore.fonts.length === 0) {
@@ -160,6 +194,20 @@ const handleDatePropertyChange = async (dateProperty: string) => {
   await warnIfFontIncompatible(String(currentModel.value.fontFamily || ''))
 }
 
+const handleFormatModeChange = (dateFormatMode: 'preset' | 'custom') => {
+  applyUpdate({
+    dateFormatMode,
+    ...(dateFormatMode === 'custom' ? { dateProperty: '' } : {}),
+    ...(dateFormatMode === 'custom' && !currentModel.value.dateTemplate
+      ? { dateTemplate: DEFAULT_DATE_TEMPLATE }
+      : {}),
+  })
+}
+
+const handleDateTemplateChange = (dateTemplate: string) => {
+  applyUpdate({ dateFormatMode: 'custom', dateTemplate })
+}
+
 const handleFontChange = async (fontFamily: string) => {
   applyUpdate({ fontFamily })
   await warnIfFontIncompatible(fontFamily)
@@ -178,5 +226,22 @@ const handleFontChange = async (fontFamily: string) => {
   color: var(--el-color-warning);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.token-template-field :deep(.el-form-item__content) {
+  display: block;
+}
+
+.date-token-guide {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--el-color-primary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.date-token-guide:hover {
+  text-decoration: underline;
 }
 </style>

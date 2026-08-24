@@ -86,6 +86,16 @@ describe('Connect IQ settings budget', () => {
     expect(report.listOptions).toBe(3 + 4 + 2)
   })
 
+  it('does not count Studio-only custom date templates as Connect IQ settings', () => {
+    const report = calculateConnectIqSettingsBudget({
+      appLanguage: 'eng',
+      properties: {},
+      elements: [{ type: 'date', dateId: 0, formatter: 8, dateFormatMode: 'custom' }],
+    })
+
+    expect(report.dateSettings).toBe(0)
+  })
+
   it('recalculates usage from the current app settings', () => {
     const defaults = calculateConnectIqSettingsBudget({
       properties: {},

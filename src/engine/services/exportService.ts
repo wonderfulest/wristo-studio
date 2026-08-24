@@ -40,6 +40,7 @@ import { validateVisibilityExpression } from '@/engine/expression/validation'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import { calculateConnectIqSettingsBudget } from './connectIqSettingsBudget'
 import { resolveDatePropertyConfig } from './datePropertyConfig'
+import { validateCustomDateTemplate } from '@/elements/time/date/dateTemplate'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -181,7 +182,20 @@ async function validateDateContentAndFonts(
     if (eleType !== 'date') continue
 
     const formatter = Number((element as any).formatter ?? 0)
-    if (!isDateFormatAllowedByChineseSupport(formatter, supportsChineseContent)) {
+    const customTemplate = (element as any).dateFormatMode === 'custom'
+      ? String((element as any).dateTemplate ?? '')
+      : ''
+    if (customTemplate) {
+      const templateErrors = validateCustomDateTemplate(customTemplate)
+      if (templateErrors.length > 0) {
+        errors.push(...templateErrors)
+        continue
+      }
+      if (!supportsChineseContent && /\(cn[0-9.]+\)/.test(customTemplate)) {
+        errors.push('Chinese date tokens require Chinese content support to be enabled.')
+        continue
+      }
+    } else if (!isDateFormatAllowedByChineseSupport(formatter, supportsChineseContent)) {
       errors.push('Chinese date formats require Chinese content support to be enabled.')
       continue
     }
@@ -192,7 +206,9 @@ async function validateDateContentAndFonts(
       continue
     }
 
-    const language = getDateContentLanguage(formatter)
+    const language = customTemplate && /\(cn[0-9.]+\)/.test(customTemplate)
+      ? 'zh'
+      : getDateContentLanguage(formatter)
     const font = await resolveFontForValidation(fontFamily)
     if (!font) {
       errors.push(`Cannot verify the date font "${fontFamily}". Please choose a compatible font again.`)

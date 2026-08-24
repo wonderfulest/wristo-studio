@@ -34,9 +34,28 @@ const CHINESE_FORMATTERS: Record<string, number> = {
   'chinaCalendar.solar.weekLong': DateFormatConstants.CHINESE_WEEKDAY_LONG,
 }
 
+function dateIsoWeek(date: Date): number {
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const day = target.getUTCDay() || 7
+  target.setUTCDate(target.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1))
+  return Math.ceil((((target.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
 function tokenValue(definition: ExpressionTokenDefinition, date: Date): unknown {
   const lunar = getChineseLunarDate(date)
   switch (definition.id) {
+    case 'date.year': return date.getFullYear()
+    case 'date.shortYear': return date.getFullYear() % 100
+    case 'date.month': return date.getMonth() + 1
+    case 'date.monthShort': return new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date)
+    case 'date.monthLong': return new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)
+    case 'date.dayOfMonth': return date.getDate()
+    case 'date.isoWeek': return dateIsoWeek(date)
+    case 'date.dayOfWeek': return date.getDay() + 1
+    case 'date.weekdayShort': return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
+    case 'date.weekdayLong': return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date)
+    case 'date.dayOfYear': return Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 86400000)
     case 'time.year': return date.getFullYear()
     case 'time.shortYear': return date.getFullYear() % 100
     case 'time.month': return date.getMonth() + 1

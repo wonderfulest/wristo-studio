@@ -67,6 +67,19 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/tokens',
+    component: Layout,
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        name: 'Tokens',
+        component: () => import('@/views/Tokens.vue'),
+        meta: { requiresAuth: false },
+      },
+    ],
+  },
+  {
     path: '/',
     name: 'Home',
     component: Layout,
@@ -116,12 +129,6 @@ const routes: RouteRecordRaw[] = [
         path: 'fonts',
         name: 'Fonts',
         component: () => import('@/views/fonts/Fonts.vue'),
-        meta: { requiresAuth: true },
-      },
-      {
-        path: 'tokens',
-        name: 'Tokens',
-        component: () => import('@/views/Tokens.vue'),
         meta: { requiresAuth: true },
       },
       {

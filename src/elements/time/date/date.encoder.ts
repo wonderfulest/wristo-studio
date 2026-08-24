@@ -20,6 +20,8 @@ export function encodeDate(element: FabricElement): DateElementConfig {
     formatterOptions: Array.isArray((element as any).formatterOptions)
       ? [...(element as any).formatterOptions]
       : undefined,
+    dateFormatMode: (element as any).dateFormatMode === 'custom' ? 'custom' : 'preset',
+    dateTemplate: String((element as any).dateTemplate ?? ''),
     topBase: encodeTopBaseForElement(element),
   }
   return config
@@ -39,6 +41,8 @@ export function decodeDate(config: DateElementConfig): Partial<FabricElement> {
     dateProperty: config.dateProperty,
     formatter: config.formatter,
     formatterOptions: config.formatterOptions ? [...config.formatterOptions] : undefined,
+    dateFormatMode: config.dateFormatMode === 'custom' ? 'custom' : 'preset',
+    dateTemplate: config.dateTemplate,
   }
   return elementConfig
 }

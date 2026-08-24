@@ -20,6 +20,21 @@ import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
 import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
+import { DEFAULT_DATE_TEMPLATE, formatCustomDateTemplate } from './dateTemplate'
+
+function applyTextCase(text: string, textCase: number | undefined): string {
+  if (textCase === 1) return text.toUpperCase()
+  if (textCase === 2) return text.toLowerCase()
+  if (textCase === 0 || textCase === 3) return text.replace(/\b\w/g, (character) => character.toUpperCase())
+  return text
+}
+
+function renderDateText(config: Partial<DateElementConfig>, date: Date, textCase: number | undefined, runtimeLocale: string): string {
+  if (config.dateFormatMode === 'custom') {
+    return applyTextCase(formatCustomDateTemplate(config.dateTemplate || DEFAULT_DATE_TEMPLATE, date, runtimeLocale), textCase)
+  }
+  return formatDate(date, Number(config.formatter ?? 0), textCase, runtimeLocale)
+}
 
 function formatDate(date: Date, formatter: number, textCase: number | undefined, runtimeLocale: string): string {
   const normalizedFormatter = normalizeDateFormatterForRuntimeLocale(formatter, runtimeLocale)
@@ -75,7 +90,7 @@ export function createDate(config: DateElementConfig): FabricElement {
   }
 
   const textCase = (propertiesStore as any).textCase as number | undefined
-  const text = formatDate(getSimulatedNow(), formatterValue, textCase, getDatePreviewLocale(designStore))
+  const text = renderDateText({ ...config, formatter: formatterValue }, getSimulatedNow(), textCase, getDatePreviewLocale(designStore))
   const previewFont = resolveCurrentElementPreviewFont(config, text)
 
   const element: any = new FabricText(text, {
@@ -91,6 +106,8 @@ export function createDate(config: DateElementConfig): FabricElement {
     dateProperty: resolvedDate.dateProperty,
     formatter: resolvedDate.formatter,
     formatterOptions: [...resolvedDate.formatterOptions],
+    dateFormatMode: config.dateFormatMode === 'custom' ? 'custom' : 'preset',
+    dateTemplate: config.dateTemplate || DEFAULT_DATE_TEMPLATE,
     hasControls: false,
   } as any)
   applyCurrentElementPreviewFont(element, config, text)
@@ -106,12 +123,10 @@ export function createDate(config: DateElementConfig): FabricElement {
       })
       const option2 = DateFormatOptions.find((o) => o.value === currentFormatter)
       const now = getSimulatedNow()
-      const nextText = formatDate(
-        now,
-        option2 ? currentFormatter : (element as any).formatter,
-        (propertiesStore as any).textCase,
-        getDatePreviewLocale(designStore),
-      )
+      const nextText = renderDateText({
+        ...element,
+        formatter: option2 ? currentFormatter : (element as any).formatter,
+      }, now, (propertiesStore as any).textCase, getDatePreviewLocale(designStore))
       element.set('text', nextText)
       applyCurrentElementPreviewFont(element, {
         fontFamily: getSavedFontFamily(element),
@@ -154,6 +169,8 @@ export function createDate(config: DateElementConfig): FabricElement {
     formatterOptions: Array.isArray((element as any).formatterOptions)
       ? [...(element as any).formatterOptions]
       : undefined,
+    dateFormatMode: (element as any).dateFormatMode,
+    dateTemplate: (element as any).dateTemplate,
     topBase: encodeTopBaseForElement(element as any),
   } as any)
 
@@ -183,6 +200,8 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     formatter: patch.formatter,
     formatterOptions: patch.formatterOptions,
     dateProperty: patch.dateProperty,
+    dateFormatMode: patch.dateFormatMode,
+    dateTemplate: patch.dateTemplate,
     originX: patch.originX,
     originY: patch.originY,
   }
@@ -202,6 +221,10 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       const textCase = (propertiesStore as any).textCase as number | undefined
       obj.set('text', formatDate(getSimulatedNow(), nextFormatter, textCase, getDatePreviewLocale(designStore)))
     }
+  }
+
+  if (patch.dateFormatMode !== undefined || patch.dateTemplate !== undefined) {
+    obj.set('text', renderDateText(obj, getSimulatedNow(), (propertiesStore as any).textCase, getDatePreviewLocale(designStore)))
   }
 
   if (patch.left === undefined) {
@@ -229,6 +252,8 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       dateProperty: obj.dateProperty,
       formatter: obj.formatter,
       formatterOptions: Array.isArray(obj.formatterOptions) ? [...obj.formatterOptions] : undefined,
+      dateFormatMode: obj.dateFormatMode === 'custom' ? 'custom' : 'preset',
+      dateTemplate: String(obj.dateTemplate ?? ''),
       topBase: encodeTopBaseForElement(obj as any),
     } as any)
   }

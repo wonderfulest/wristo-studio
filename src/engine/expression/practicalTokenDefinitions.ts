@@ -109,6 +109,17 @@ const DAY_OF_WEEK_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> =
 ]
 
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
+  token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.month', code: 'dt2', label: 'Month', labelCn: '月份', category: 'date-time', exampleValue: 6, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.monthShort', code: 'dt2.1', label: 'Month Short', labelCn: '月份简称', category: 'date-time', valueType: 'string', exampleValue: 'Jun', source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.monthLong', code: 'dt2.2', label: 'Month Long', labelCn: '月份全称', category: 'date-time', valueType: 'string', exampleValue: 'June', source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.dayOfMonth', code: 'dt3', label: 'Day of Month', labelCn: '日期', category: 'date-time', exampleValue: 30, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.isoWeek', code: 'dt4', label: 'ISO Week', labelCn: 'ISO 周数', category: 'date-time', exampleValue: 27, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.dayOfWeek', code: 'dt5', label: 'Day of Week', labelCn: '星期序号', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.weekdayShort', code: 'dt5.1', label: 'Weekday Short', labelCn: '星期简称', category: 'date-time', valueType: 'string', exampleValue: 'Tue', source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.weekdayLong', code: 'dt5.2', label: 'Weekday Long', labelCn: '星期全称', category: 'date-time', valueType: 'string', exampleValue: 'Tuesday', source: 'time', providerKey: 'clock' }),
+  token({ id: 'date.dayOfYear', code: 'dt6', label: 'Day of Year', labelCn: '年内天数', category: 'date-time', exampleValue: 181, source: 'time', providerKey: 'clock' }),
   time('year', 'tm1', 'Year', '年份', 2026),
   time('shortYear', 'tm1.1', 'Short Year', '两位年份', 26),
   time('month', 'tm2', 'Month', '月份', 8),

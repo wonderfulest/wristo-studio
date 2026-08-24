@@ -13,6 +13,8 @@ export type DateElementSchema = {
     dateProperty: string
     formatter: number
     formatterOptions: number[]
+    dateFormatMode: 'preset' | 'custom'
+    dateTemplate: string
   }
   resizable: boolean
   rotatable: boolean
@@ -29,6 +31,8 @@ export const dateSchema: DateElementSchema = {
     dateProperty: '',
     formatter: DateFormatConstants.MMM_D_DDD,
     formatterOptions: [],
+    dateFormatMode: 'preset',
+    dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
   },
   resizable: false,
   rotatable: false,

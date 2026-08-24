@@ -10,7 +10,7 @@
       show-word-limit
       @input="onInput"
     />
-    <div v-if="templateError" class="template-error">{{ templateError }}</div>
+    <div v-if="resolvedTemplateError" class="template-error">{{ resolvedTemplateError }}</div>
     <div v-if="showVariableHelper" class="variable-helper">
       <span>{{ helperText || t('templateEditor.variableHelper') }}</span>
       <el-button size="small" text type="primary" @click="variablesOpen = !variablesOpen">
@@ -56,11 +56,15 @@ const props = withDefaults(defineProps<{
   showVariables?: boolean
   variablesInitiallyOpen?: boolean
   helperText?: string
+  templateError?: string
+  allowedVariables?: string[]
 }>(), {
   rows: 3,
   showVariables: true,
   variablesInitiallyOpen: true,
   helperText: '',
+  templateError: '',
+  allowedVariables: () => [],
 })
 
 const emit = defineEmits<{
@@ -75,6 +79,7 @@ const showVariableHelper = ref(props.showVariables)
 const templateError = computed(() => {
   return validateTokenTemplate(localValue.value)[0] || ''
 })
+const resolvedTemplateError = computed(() => props.templateError || templateError.value)
 
 const categoryTitles: Record<string, string> = {
   'date-time': 'Calendar', activity: 'Activity', sensor: 'Health', system: 'Device', weather: 'Environment', status: 'Status',
@@ -82,6 +87,7 @@ const categoryTitles: Record<string, string> = {
 const variableGroups = computed(() => {
   const groups = new Map<string, string[]>()
   for (const definition of DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions) {
+    if (props.allowedVariables.length > 0 && !props.allowedVariables.includes(definition.code)) continue
     if (definition.appLanguages && !definition.appLanguages.includes(designStore.appLanguage)) continue
     const items = groups.get(definition.category) || []
     items.push(definition.code)

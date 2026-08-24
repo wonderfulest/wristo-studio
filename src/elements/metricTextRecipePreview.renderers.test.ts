@@ -141,4 +141,24 @@ describe('metric renderer bitmap recipe preview', () => {
       expect.objectContaining({ fontFamily: 'new-chinese-bitmap-font' }),
     )
   })
+
+  it('date update renders and persists a custom token template', async () => {
+    const element = fakeText('date')
+    runtime.object = element
+
+    await updateDate(element, {
+      dateFormatMode: 'custom',
+      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
+    } as any)
+
+    expect(element.dateFormatMode).toBe('custom')
+    expect(element.text).toMatch(/^[A-Za-z]{3}\.\d{2}\.\d{2}$/)
+    expect(runtime.patchElement).toHaveBeenCalledWith(
+      String(element.id),
+      expect.objectContaining({
+        dateFormatMode: 'custom',
+        dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
+      }),
+    )
+  })
 })

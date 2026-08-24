@@ -88,6 +88,7 @@ export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetI
   })
   for (const element of input.elements || []) {
     if (String(element.type || element.eleType || '') !== 'date') continue
+    if (element.dateFormatMode === 'custom') continue
     const propertyKey = String(element.dateProperty ?? '')
     if (propertyKey && dateIds.has(propertyKey)) continue
     const id = String(element.dateId ?? '')

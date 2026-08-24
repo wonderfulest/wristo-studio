@@ -4,6 +4,24 @@ import { describe, expect, it } from 'vitest'
 import { encodeDate, decodeDate } from './date.encoder'
 
 describe('date formatter options persistence', () => {
+  it('preserves Studio-only custom date template settings', () => {
+    const encoded = encodeDate({
+      id: 'date-custom', eleType: 'date', left: 10, top: 20,
+      originX: 'center', originY: 'top', fontFamily: 'demo-font', fontSize: 24,
+      fill: '#ffffff', formatter: 8, dateFormatMode: 'custom',
+      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d")',
+    } as any)
+
+    expect(encoded).toMatchObject({
+      dateFormatMode: 'custom',
+      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d")',
+    })
+    expect(decodeDate(encoded)).toMatchObject({
+      dateFormatMode: 'custom',
+      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d")',
+    })
+  })
+
   it('encodes each date element formatter option order', () => {
     const encoded = encodeDate({
       id: 'date-1', eleType: 'date', left: 10, top: 20,
