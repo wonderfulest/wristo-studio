@@ -12,14 +12,18 @@
       <label>{{ t('sunEvents.width') }} <el-input-number :model-value="model.indicator?.width" :min="1" @change="(value: number | undefined) => patchIndicator({ width: value })" /></label>
       <label>{{ t('sunEvents.height') }} <el-input-number :model-value="model.indicator?.height" :min="1" @change="(value: number | undefined) => patchIndicator({ height: value })" /></label>
       <label v-if="mode === 'arc'">{{ t('sunEvents.radialOffset') }} <el-input-number :model-value="model.indicator?.radialOffset" @change="(value: number | undefined) => patchIndicator({ radialOffset: value })" /></label>
+      <label v-else-if="mode === 'curve'">{{ t('sunEvents.normalOffset') }} <el-input-number :model-value="model.indicator?.normalOffset" @change="(value: number | undefined) => patchIndicator({ normalOffset: value })" /></label>
       <label v-else>{{ t('sunEvents.verticalOffset') }} <el-input-number :model-value="model.indicator?.offset" @change="(value: number | undefined) => patchIndicator({ offset: value })" /></label>
     </div>
-    <label v-if="mode === 'arc'">
+    <label v-if="mode !== 'line'">
       {{ t('sunEvents.orientation') }}
       <el-select :model-value="model.indicator?.orientation" @change="(value: string) => patchIndicator({ orientation: value })">
         <el-option :label="t('sunEvents.orientation.fixed')" value="fixed" />
-        <el-option :label="t('sunEvents.orientation.inward')" value="inward" />
-        <el-option :label="t('sunEvents.orientation.outward')" value="outward" />
+        <template v-if="mode === 'arc'">
+          <el-option :label="t('sunEvents.orientation.inward')" value="inward" />
+          <el-option :label="t('sunEvents.orientation.outward')" value="outward" />
+        </template>
+        <el-option v-else :label="t('sunEvents.orientation.tangent')" value="tangent" />
       </el-select>
     </label>
 
@@ -42,7 +46,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import { SUN_EVENT_PHASES, createDefaultSunEventStyles, type SunEventPhaseKey, type SunEventPhaseStyle } from './sunEvents.model'
 
-const props = defineProps<{ model: any; mode: 'arc' | 'line' }>()
+const props = defineProps<{ model: any; mode: 'arc' | 'curve' | 'line' }>()
 const emit = defineEmits<{ patch: [patch: Record<string, unknown>] }>()
 const { t } = useI18n()
 

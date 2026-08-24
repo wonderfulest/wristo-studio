@@ -9,6 +9,8 @@ export type SunEventIndicatorBase = {
   height: number
 }
 
+export type CurveIndicatorOrientation = 'fixed' | 'tangent'
+
 export interface ArcSunEventsElementConfig extends BaseElementConfig {
   eleType: 'arcSunEvents'
   centerX?: number
@@ -33,5 +35,18 @@ export interface LineSunEventsElementConfig extends BaseElementConfig {
   phases: SunEventPhaseStyle[]
   indicator: SunEventIndicatorBase & {
     offset: number
+  }
+}
+
+export interface CurveSunEventsElementConfig extends BaseElementConfig {
+  eleType: 'curveSunEvents'
+  width: number
+  height: number
+  strokeWidth: number
+  angle: number
+  phases: SunEventPhaseStyle[]
+  indicator: SunEventIndicatorBase & {
+    normalOffset: number
+    orientation: CurveIndicatorOrientation
   }
 }

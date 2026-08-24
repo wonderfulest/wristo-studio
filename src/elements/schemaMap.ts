@@ -64,6 +64,7 @@ import { goalArcSchema } from '@/elements/goal/goalArc/goalArc.schema'
 import { barChartSchema } from '@/elements/charts/barChart/barChart.schema'
 import { lineChartSchema } from '@/elements/charts/lineChart/lineChart.schema'
 import { arcSunEventsSchema } from '@/elements/sunEvents/arcSunEvents/arcSunEvents.schema'
+import { curveSunEventsSchema } from '@/elements/sunEvents/curveSunEvents/curveSunEvents.schema'
 import { lineSunEventsSchema } from '@/elements/sunEvents/lineSunEvents/lineSunEvents.schema'
 
 export type ElementConfigs = Record<string, Record<string, AnyElementConfig & EDITOR_ELEMENT>>
@@ -126,6 +127,7 @@ export const elementConfigs: ElementConfigs = {
   },
   sun: {
     arcSunEvents: buildConfigFromSchema(arcSunEventsSchema as AnySchema),
+    curveSunEvents: buildConfigFromSchema(curveSunEventsSchema as AnySchema),
     lineSunEvents: buildConfigFromSchema(lineSunEventsSchema as AnySchema),
   },
   dials: {

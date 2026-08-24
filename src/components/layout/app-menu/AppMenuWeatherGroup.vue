@@ -33,12 +33,16 @@
         <el-icon><Minus /></el-icon>
         <span>{{ t('sunEvents.lineName') }}</span>
       </el-menu-item>
+      <el-menu-item index="sun/curveSunEvents" @click="onAddElement('sun', 'curveSunEvents')">
+        <el-icon><TrendCharts /></el-icon>
+        <span>{{ t('sunEvents.curveName') }}</span>
+      </el-menu-item>
     </div>
   </el-sub-menu>
 </template>
 
 <script setup>
-import { Cloudy, Compass, Minus, MoonNight, Sunny } from '@element-plus/icons-vue'
+import { Cloudy, Compass, Minus, MoonNight, Sunny, TrendCharts } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

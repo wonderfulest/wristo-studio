@@ -18,6 +18,8 @@ describe('Sun Events settings localization', () => {
     expect(translate('sunEvents.orientation.outward', 'zh')).toBe('远离中心')
     expect(translate('sunEvents.arcName', 'zh')).toBe('弧形太阳时间')
     expect(translate('sunEvents.lineName', 'zh')).toBe('直线太阳时间')
+    expect(translate('sunEvents.curveName', 'zh')).toBe('曲线太阳时间')
+    expect(translate('sunEvents.orientation.tangent', 'en')).toBe('Follow curve tangent')
   })
 
   it('uses translation keys instead of visible hard-coded settings copy', () => {
@@ -31,10 +33,12 @@ describe('Sun Events settings localization', () => {
     expect(arcSunEventsSchema.defaultConfig.indicator.orientation).toBe('outward')
   })
 
-  it('localizes both Sun Events creation entries', () => {
+  it('localizes all Sun Events creation entries', () => {
     expect(weatherMenuSource).toContain("t('sunEvents.arcName')")
     expect(weatherMenuSource).toContain("onAddElement('sun', 'arcSunEvents')")
     expect(weatherMenuSource).toContain("t('sunEvents.lineName')")
     expect(weatherMenuSource).toContain("onAddElement('sun', 'lineSunEvents')")
+    expect(weatherMenuSource).toContain("t('sunEvents.curveName')")
+    expect(weatherMenuSource).toContain("onAddElement('sun', 'curveSunEvents')")
   })
 })

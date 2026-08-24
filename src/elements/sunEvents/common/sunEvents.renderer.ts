@@ -1,7 +1,13 @@
 import { Circle, Group, Image as FabricImage, Line, Path, Rect, type FabricObject } from 'fabric'
-import type { ArcSunEventsElementConfig, LineSunEventsElementConfig } from '@/types/elements/sunEvents'
+import type { ArcSunEventsElementConfig, CurveSunEventsElementConfig, LineSunEventsElementConfig } from '@/types/elements/sunEvents'
 import { normalizeSunEventSegments, timeFractionToArcAngle } from './sunEvents.model'
-import { arcIndicatorTransform, lineIndicatorTransform, resolveSunEventIndicatorSource } from './sunEvents.geometry'
+import {
+  arcIndicatorTransform,
+  curveIndicatorTransform,
+  curveQuadraticPieces,
+  lineIndicatorTransform,
+  resolveSunEventIndicatorSource,
+} from './sunEvents.geometry'
 import { currentLocalDayFraction, SUN_EVENTS_PREVIEW_TIMES } from './sunEvents.preview'
 import { DEFAULT_SUN_EVENT_INDICATOR_SVG } from './sunEvents.defaults'
 
@@ -150,14 +156,47 @@ export async function buildLineSunEventObjects(config: LineSunEventsElementConfi
   return objects
 }
 
+export async function buildCurveSunEventObjects(config: CurveSunEventsElementConfig): Promise<FabricObject[]> {
+  const segments = normalizeSunEventSegments({ styles: config.phases, events: SUN_EVENTS_PREVIEW_TIMES })
+  const objects: FabricObject[] = []
+  for (const segment of segments) {
+    for (const piece of curveQuadraticPieces(segment.start, segment.end, config.width, config.height)) {
+      objects.push(new Path(
+        `M ${piece.start.x} ${piece.start.y} Q ${piece.control.x} ${piece.control.y} ${piece.end.x} ${piece.end.y}`,
+        {
+          fill: '', stroke: segment.color, strokeWidth: config.strokeWidth,
+          strokeLineCap: 'butt', selectable: false, evented: false,
+        },
+      ))
+    }
+  }
+  const indicator = await createIndicator(
+    resolveSunEventIndicatorSource(config.indicator),
+    config.indicator.width,
+    config.indicator.height,
+  )
+  if (indicator) {
+    const transform = curveIndicatorTransform({
+      fraction: currentLocalDayFraction(),
+      width: config.width,
+      height: config.height,
+      normalOffset: config.indicator.normalOffset,
+      orientation: config.indicator.orientation,
+    })
+    indicator.set({ left: transform.x, top: transform.y, angle: transform.angle })
+    objects.push(indicator)
+  }
+  return objects
+}
+
 export function createSunEventsGroup(
   objects: FabricObject[],
-  config: ArcSunEventsElementConfig | LineSunEventsElementConfig,
+  config: ArcSunEventsElementConfig | CurveSunEventsElementConfig | LineSunEventsElementConfig,
 ): Group {
   const centerOffset = config.eleType === 'arcSunEvents' ? circleCenterOffset(objects) : undefined
   const group = new Group(objects, {
     id: config.id, eleType: config.eleType, left: config.left, top: config.top,
-    angle: config.eleType === 'lineSunEvents' ? config.angle : 0,
+    angle: config.eleType === 'arcSunEvents' ? 0 : config.angle,
     originX: 'center', originY: 'center', objectCaching: false,
   } as any)
   if (centerOffset) (group as any).__sunEventsCenterOffset = centerOffset
