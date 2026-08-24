@@ -6,6 +6,13 @@ import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
 import type { DialProgressMode } from '@/types/settings'
 
+const withoutLegacyLocalizedTitles = (properties?: PropertiesMap): PropertiesMap => Object.fromEntries(
+  Object.entries(properties || {}).map(([key, value]) => {
+    const { titleCn: _legacyTitleCn, ...property } = value as PropertyItem & { titleCn?: string }
+    return [key, property]
+  })
+)
+
 export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
@@ -109,11 +116,11 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     },
 
     loadProperties(properties?: PropertiesMap) {
-      this.properties = properties || {}
+      this.properties = withoutLegacyLocalizedTitles(properties)
     },
 
     loadDataPropertyConfig(properties?: PropertiesMap, dataOptions?: DataOptionsMap) {
-      this.properties = properties || {}
+      this.properties = withoutLegacyLocalizedTitles(properties)
       this.dataOptions = dataOptions || {}
     },
 
@@ -182,7 +189,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       key: string
       type: PropertyType
       title: string
-      titleCn?: string
       options?: PropertyOption[]
       defaultValue?: unknown
       prompt?: string
@@ -196,7 +202,6 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       this.properties[propertyData.key] = {
         type: propertyData.type,
         title: propertyData.title,
-        titleCn: propertyData.titleCn,
         options: propertyData.options,
         value: defaultValue,
         prompt: propertyData.prompt,

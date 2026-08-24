@@ -5,6 +5,44 @@ import { applyFabricBitmapFontPreview } from './fabricBitmapFontPreview'
 import type { BmFontDescriptor } from './bmFontTextParser'
 
 describe('Fabric BMFont preview', () => {
+  it('keeps the Fabric selection width aligned with BMFont glyph advances', async () => {
+    const descriptor: BmFontDescriptor = {
+      lineHeight: 312,
+      base: 250,
+      scaleW: 512,
+      scaleH: 512,
+      pageFile: 'icons.png',
+      glyphs: new Map([
+        [0x30, { id: 0x30, x: 0, y: 0, width: 160, height: 240, xoffset: 4, yoffset: 30, xadvance: 168, page: 0 }],
+      ]),
+      kernings: new Map(),
+    }
+    const originalInitDimensions = vi.fn(function (this: any) {
+      this.width = 96
+    })
+    const object: any = {
+      text: '0', width: 96, fontSize: 30, fill: '#fff',
+      _renderText: vi.fn(),
+      initDimensions: originalInitDimensions,
+      setCoords: vi.fn(),
+    }
+
+    await applyFabricBitmapFontPreview(object, {
+      descriptorUrl: '/312/icons.fnt', atlasUrl: '/312/icons.png', sourceSize: 312,
+    }, {
+      loadDescriptor: async () => descriptor,
+      loadAtlas: async () => ({} as CanvasImageSource),
+    })
+
+    expect(object.width).toBeCloseTo(168 * 30 / 312)
+
+    object.initDimensions()
+
+    expect(originalInitDimensions).toHaveBeenCalledOnce()
+    expect(object.width).toBeCloseTo(168 * 30 / 312)
+    expect(object.setCoords).toHaveBeenCalled()
+  })
+
   it('draws published atlas glyphs instead of the source TTF renderer', async () => {
     const descriptor: BmFontDescriptor = {
       lineHeight: 32,

@@ -18,9 +18,29 @@ const indicator = {
   imageUrl: 'https://cdn.example.com/now.png',
   width: 12,
   height: 18,
+  nightDotColor: '#64748B',
 }
 
 describe('Sun Events encoders', () => {
+  it('defaults legacy elements to phase mode and preserves simple display settings', () => {
+    const legacy = encodeLineSunEvents({ id: 'legacy-line' })
+    expect(legacy).toEqual(expect.objectContaining({
+      displayMode: 'phases',
+      simpleColor: '#FFFFFF',
+      indicator: expect.objectContaining({ nightDotColor: '#64748B' }),
+    }))
+
+    const simple = {
+      ...lineSunEventsSchema.defaultConfig,
+      id: 'simple-line', eleType: 'lineSunEvents' as const,
+      originX: 'center' as const, originY: 'center' as const,
+      displayMode: 'simple' as const,
+      simpleColor: '#12AB34',
+      indicator: { ...lineSunEventsSchema.defaultConfig.indicator, nightDotColor: '#345678' },
+    }
+    expect(encodeLineSunEvents(decodeLineSunEvents(simple) as any)).toEqual(simple)
+  })
+
   it('prefers the original SVG over an image preview URL', () => {
     expect(resolveSunEventIndicatorSource(indicator)).toBe(indicator.imageSvg)
   })
@@ -84,6 +104,9 @@ describe('Sun Events encoders', () => {
 
   it('shows the bundled sun SVG as the default current-time indicator', () => {
     for (const schema of [arcSunEventsSchema, lineSunEventsSchema, curveSunEventsSchema]) {
+      expect(schema.defaultConfig.displayMode).toBe('phases')
+      expect(schema.defaultConfig.simpleColor).toBe('#FFFFFF')
+      expect(schema.defaultConfig.indicator.nightDotColor).toBe('#64748B')
       const source = schema.defaultConfig.indicator.imageSvg
       expect(source).toMatch(/^data:image\/svg\+xml/)
       expect(decodeURIComponent(source)).toContain('<path')
@@ -104,6 +127,7 @@ describe('Sun Events encoders', () => {
       originX: 'center' as const, originY: 'center' as const,
       radius: 70, strokeWidth: 8, startAngle: -90, angleRange: 300,
       counterClockwise: true, phases: createDefaultSunEventStyles(),
+      displayMode: 'phases' as const, simpleColor: '#FFFFFF',
       indicator: { ...indicator, radialOffset: 3, orientation: 'inward' as const },
     }
     expect(encodeArcSunEvents(decodeArcSunEvents(config) as any)).toEqual(config)
@@ -114,6 +138,7 @@ describe('Sun Events encoders', () => {
       id: 'line-1', eleType: 'lineSunEvents' as const, left: 80, top: 90,
       originX: 'center' as const, originY: 'center' as const,
       length: 120, strokeWidth: 6, angle: 25, phases: createDefaultSunEventStyles(),
+      displayMode: 'phases' as const, simpleColor: '#FFFFFF',
       indicator: { ...indicator, offset: -4 },
     }
     const encoded = encodeLineSunEvents(decodeLineSunEvents(config) as any)
@@ -127,6 +152,7 @@ describe('Sun Events encoders', () => {
       originX: 'center' as const, originY: 'center' as const,
       width: 180, height: 60, strokeWidth: 6, angle: 25,
       phases: createDefaultSunEventStyles(),
+      displayMode: 'phases' as const, simpleColor: '#FFFFFF',
       indicator: { ...indicator, normalOffset: -4, orientation: 'tangent' as const },
     }
     const encoded = encodeCurveSunEvents(decodeCurveSunEvents(config) as any)

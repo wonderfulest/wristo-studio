@@ -115,7 +115,7 @@ export async function createImage(
     id,
     eleType: 'image',
     assetType: config.assetType === 'mask' ? 'mask' : 'image',
-    designerControlMode: 'resize8',
+    designerControlMode: 'resize8CircleInset',
     left: Number(config.left ?? 0),
     top: Number(config.top ?? 0),
     originX: (config.originX as any) ?? 'center',

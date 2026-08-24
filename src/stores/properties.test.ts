@@ -28,19 +28,36 @@ describe('Dial Properties', () => {
     expect(store.allProperties.dial_goal_1.dialMode).toBe('goal')
   })
 
-  it('preserves Simplified Chinese property and option labels', () => {
+  it('uses one property title while preserving localized option labels', () => {
     const store = usePropertiesStore()
     store.addProperty({
       key: 'color_1',
       type: 'color',
       title: 'Accent Color',
-      titleCn: '强调色',
       defaultValue: '0xFF0000',
       options: [{ label: 'Red', labelCn: '红色', value: '0xFF0000' }],
     })
 
-    expect(store.allProperties.color_1.titleCn).toBe('强调色')
+    expect(store.allProperties.color_1.title).toBe('Accent Color')
     expect(store.allProperties.color_1.options?.[0].labelCn).toBe('红色')
+  })
+
+  it('drops legacy localized titles when loading properties', () => {
+    const store = usePropertiesStore()
+    store.loadProperties({
+      color_1: {
+        type: 'color',
+        title: 'Accent Color',
+        titleCn: '强调色',
+        value: '0xFF0000',
+      },
+    } as any)
+
+    expect(store.allProperties.color_1).toEqual({
+      type: 'color',
+      title: 'Accent Color',
+      value: '0xFF0000',
+    })
   })
 
   it('clears blank-design properties and defaults text case to uppercase', () => {

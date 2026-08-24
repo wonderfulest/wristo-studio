@@ -1,5 +1,15 @@
 <template>
   <section class="sun-events-settings">
+    <h4>{{ t('sunEvents.displayMode') }}</h4>
+    <el-radio-group :model-value="model.displayMode || 'phases'" @change="(displayMode: 'phases' | 'simple') => emit('patch', { displayMode })">
+      <el-radio label="phases">{{ t('sunEvents.displayMode.phases') }}</el-radio>
+      <el-radio label="simple">{{ t('sunEvents.displayMode.simple') }}</el-radio>
+    </el-radio-group>
+    <label v-if="model.displayMode === 'simple'" class="color-setting">
+      <span>{{ t('sunEvents.simpleColor') }}</span>
+      <ColorPicker :model-value="model.simpleColor || '#FFFFFF'" @update:model-value="(simpleColor: string) => emit('patch', { simpleColor })" />
+    </label>
+
     <h4>{{ t('sunEvents.currentTimeIndicator') }}</h4>
     <AssetPicker
       :selected-url="model.indicator?.imageUrl || model.indicator?.imageSvg"
@@ -15,6 +25,10 @@
       <label v-else-if="mode === 'curve'">{{ t('sunEvents.normalOffset') }} <el-input-number :model-value="model.indicator?.normalOffset" @change="(value: number | undefined) => patchIndicator({ normalOffset: value })" /></label>
       <label v-else>{{ t('sunEvents.verticalOffset') }} <el-input-number :model-value="model.indicator?.offset" @change="(value: number | undefined) => patchIndicator({ offset: value })" /></label>
     </div>
+    <label class="color-setting">
+      <span>{{ t('sunEvents.nightDotColor') }}</span>
+      <ColorPicker :model-value="model.indicator?.nightDotColor || '#64748B'" @update:model-value="(nightDotColor: string) => patchIndicator({ nightDotColor })" />
+    </label>
     <label v-if="mode !== 'line'">
       {{ t('sunEvents.orientation') }}
       <el-select :model-value="model.indicator?.orientation" @change="(value: string) => patchIndicator({ orientation: value })">
@@ -27,13 +41,15 @@
       </el-select>
     </label>
 
-    <h4>{{ t('sunEvents.phases') }}</h4>
-    <div v-for="phase in phaseRows" :key="phase.key" class="phase-row">
-      <el-checkbox :model-value="phase.enabled" @change="(enabled: boolean | string | number) => patchPhase(phase.key, { enabled: Boolean(enabled) })" />
-      <span>{{ t(`sunEvents.phase.${phase.key}`) }}</span>
-      <small v-if="phase.altitude !== null">({{ phase.altitude }}°) →</small>
-      <ColorPicker :model-value="phase.color" @update:model-value="(color: string) => patchPhase(phase.key, { color })" />
-    </div>
+    <template v-if="model.displayMode !== 'simple'">
+      <h4>{{ t('sunEvents.phases') }}</h4>
+      <div v-for="phase in phaseRows" :key="phase.key" class="phase-row">
+        <el-checkbox :model-value="phase.enabled" @change="(enabled: boolean | string | number) => patchPhase(phase.key, { enabled: Boolean(enabled) })" />
+        <span>{{ t(`sunEvents.phase.${phase.key}`) }}</span>
+        <small v-if="phase.altitude !== null">({{ phase.altitude }}°) →</small>
+        <ColorPicker :model-value="phase.color" @update:model-value="(color: string) => patchPhase(phase.key, { color })" />
+      </div>
+    </template>
   </section>
 </template>
 
@@ -90,6 +106,7 @@ function selectIndicator(url: string, asset: AnalogAssetVO) {
 .sun-events-settings { display: grid; gap: 14px; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .settings-grid label { display: grid; gap: 4px; font-size: 12px; }
+.color-setting { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(130px, 1fr); align-items: center; gap: 8px; font-size: 12px; }
 .phase-row { display: grid; grid-template-columns: 24px minmax(120px, 1fr) auto minmax(130px, 1fr); align-items: center; gap: 8px; }
 .phase-row small { color: var(--el-text-color-secondary); }
 h4 { margin: 6px 0 0; }

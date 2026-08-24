@@ -173,7 +173,6 @@ export const createQuickDateProperty = (): string => {
     key,
     type: 'date',
     title: `Date ${index}`,
-    titleCn: `日期 ${index}`,
     options: values.map(value => {
       const option = dateOptions.find(candidate => candidate.value === value)
       return { label: option?.label || String(value), labelCn: option?.zhsLabel, value }

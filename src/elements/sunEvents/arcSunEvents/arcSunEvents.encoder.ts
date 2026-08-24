@@ -1,5 +1,6 @@
 import type { ArcSunEventsElementConfig } from '@/types/elements/sunEvents'
 import { createDefaultSunEventStyles } from '../common/sunEvents.model'
+import { DEFAULT_SUN_EVENTS_SIMPLE_COLOR, normalizeSunEventIndicator } from '../common/sunEvents.defaults'
 
 export function decodeArcSunEvents(config: ArcSunEventsElementConfig): Record<string, unknown> {
   return {
@@ -7,8 +8,10 @@ export function decodeArcSunEvents(config: ArcSunEventsElementConfig): Record<st
     eleType: 'arcSunEvents',
     originX: config.originX ?? 'center',
     originY: config.originY ?? 'center',
+    displayMode: config.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(config.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (config.phases?.length ? config.phases : createDefaultSunEventStyles()).map((phase) => ({ ...phase })),
-    indicator: { ...config.indicator },
+    indicator: normalizeSunEventIndicator(config.indicator),
   }
 }
 
@@ -33,7 +36,9 @@ export function encodeArcSunEvents(element: Record<string, any>): ArcSunEventsEl
     radius: Number(source.radius ?? 50), strokeWidth: Number(source.strokeWidth ?? 6),
     startAngle: Number(source.startAngle ?? 90), angleRange: Number(source.angleRange ?? 360),
     counterClockwise: Boolean(source.counterClockwise),
+    displayMode: source.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(source.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (source.phases?.length ? source.phases : createDefaultSunEventStyles()).map((phase: any) => ({ ...phase })),
-    indicator: { ...source.indicator },
+    indicator: normalizeSunEventIndicator(source.indicator),
   }
 }

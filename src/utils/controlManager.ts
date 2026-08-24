@@ -114,7 +114,7 @@ function renderDefaultControl(ctx: CanvasRenderingContext2D, left: number, top: 
 }
 
 type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
-type ControlSetMode = 'default' | 'resize8' | 'resize8Rotate' | 'corner4' | 'corner4Inset'
+type ControlSetMode = 'default' | 'resize8' | 'resize8Rotate' | 'resize8CircleInset' | 'corner4' | 'corner4Inset'
 
 type ObjectActionDescriptor = {
   key: string
@@ -293,6 +293,89 @@ function getInsetActionAnchor(
   )
 }
 
+type CircularSafeArea = {
+  center: Point
+  radius: number
+}
+
+function getCircularSafeArea(fabricObject: FabricObject): CircularSafeArea | null {
+  const canvas = fabricObject.canvas
+  if (!canvas) return null
+  const clipPath = (canvas as Canvas & { clipPath?: FabricObject & { radius?: number } }).clipPath
+  const clipRadius = Number(clipPath?.radius)
+  const zoom = Number(canvas.getZoom?.() ?? 1)
+  const scaleX = Math.abs(Number(clipPath?.scaleX ?? 1))
+  const scaleY = Math.abs(Number(clipPath?.scaleY ?? 1))
+  const radius = Number.isFinite(clipRadius) && clipRadius > 0
+    ? clipRadius * Math.min(scaleX, scaleY) * (Number.isFinite(zoom) && zoom > 0 ? zoom : 1)
+    : Math.min(canvas.getWidth(), canvas.getHeight()) / 2
+  const sceneCenter = clipPath?.getCenterPoint?.()
+  const viewportTransform = canvas.viewportTransform
+  const center = sceneCenter
+    ? viewportTransform ? sceneCenter.transform(viewportTransform) : sceneCenter
+    : new Point(canvas.getWidth() / 2, canvas.getHeight() / 2)
+
+  return Number.isFinite(radius) && radius > 0 ? { center, radius } : null
+}
+
+function clampPointToCircle(position: Point, safeArea: CircularSafeArea, edgeInset: number): Point {
+  const dx = position.x - safeArea.center.x
+  const dy = position.y - safeArea.center.y
+  const distance = Math.hypot(dx, dy)
+  const allowedRadius = Math.max(0, safeArea.radius - edgeInset)
+  if (!Number.isFinite(distance) || distance <= allowedRadius || distance === 0) return position
+  const ratio = allowedRadius / distance
+  return new Point(
+    safeArea.center.x + dx * ratio,
+    safeArea.center.y + dy * ratio,
+  )
+}
+
+function getCircularInsetPosition(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+  control: Pick<Control, 'x' | 'y' | 'offsetX' | 'offsetY'>,
+  edgeInset = INSET_CORNER_CONTROL_OFFSET,
+): Point {
+  const position = getDefaultControlPosition(dim, finalMatrix, control)
+  const safeArea = getCircularSafeArea(fabricObject)
+  return safeArea ? clampPointToCircle(position, safeArea, edgeInset) : position
+}
+
+function circularInsetPositionHandler(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+  control: Control,
+): Point {
+  return getCircularInsetPosition(dim, finalMatrix, fabricObject, control)
+}
+
+function circularActionEntryPositionHandler(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+  control: Control,
+): Point {
+  return getCircularInsetPosition(dim, finalMatrix, fabricObject, control)
+}
+
+function circularActionItemPositionHandler(
+  dim: Point,
+  finalMatrix: TMat2D,
+  fabricObject: FabricObject,
+  control: Control,
+): Point {
+  return getCircularInsetPosition(
+    dim,
+    finalMatrix,
+    fabricObject,
+    control,
+    Math.hypot(OBJECT_ACTION_MENU_WIDTH / 2, OBJECT_ACTION_MENU_HEIGHT / 2),
+  )
+}
+
 function insetActionEntryPositionHandler(
   dim: Point,
   finalMatrix: TMat2D,
@@ -335,15 +418,16 @@ function createInsetActionItemPositionHandler(index: number) {
 
 function createLayerOrderControls(mode: ControlSetMode = 'default'): Record<string, Control> {
   const useInsetMenu = mode === 'corner4Inset'
+  const useCircularInsetMenu = mode === 'resize8CircleInset'
   const controls: Record<string, Control> = {
     layerOrderControl: new Control({
       x: 0.5,
       y: 0.5,
       offsetX: LAYER_ORDER_ENTRY_OFFSET,
       offsetY: LAYER_ORDER_ENTRY_OFFSET,
-      positionHandler: useInsetMenu
-        ? insetActionEntryPositionHandler
-        : Control.prototype.positionHandler,
+      positionHandler: useCircularInsetMenu
+        ? circularActionEntryPositionHandler
+        : useInsetMenu ? insetActionEntryPositionHandler : Control.prototype.positionHandler,
       cursorStyle: 'pointer',
       actionName: 'objectActions',
       getVisibility: isLayerEntryControlVisible,
@@ -364,9 +448,9 @@ function createLayerOrderControls(mode: ControlSetMode = 'default'): Record<stri
       y: 0.5,
       offsetX: OBJECT_ACTION_MENU_OFFSET_X,
       offsetY: getObjectActionOffsetY(index),
-      positionHandler: useInsetMenu
-        ? createInsetActionItemPositionHandler(index)
-        : Control.prototype.positionHandler,
+      positionHandler: useCircularInsetMenu
+        ? circularActionItemPositionHandler
+        : useInsetMenu ? createInsetActionItemPositionHandler(index) : Control.prototype.positionHandler,
       sizeX: OBJECT_ACTION_MENU_WIDTH,
       sizeY: OBJECT_ACTION_MENU_HEIGHT,
       touchSizeX: OBJECT_ACTION_MENU_WIDTH,
@@ -516,6 +600,10 @@ const CORNER_DIRECTIONS: Record<string, Point> = {
   tr: new Point(1, -1),
   bl: new Point(-1, 1),
   br: new Point(1, 1),
+  mt: new Point(0, -1),
+  mb: new Point(0, 1),
+  ml: new Point(-1, 0),
+  mr: new Point(1, 0),
 }
 
 const scaleInsetCorner = controlsUtils.wrapWithFireEvent(
@@ -554,11 +642,44 @@ const scaleInsetCorner = controlsUtils.wrapWithFireEvent(
   },
 )
 
+function createInsetSideScaleHandler(axis: 'x' | 'y') {
+  return controlsUtils.wrapWithFireEvent(
+    'scaling',
+    (_eventData, transform, x, y) => {
+      const target = transform.target
+      const direction = CORNER_DIRECTIONS[transform.corner]
+      if (!direction) return false
+      const originalScale = Number(axis === 'x' ? transform.original.scaleX : transform.original.scaleY)
+      const baseSize = Number(axis === 'x' ? transform.width : transform.height)
+      const halfSize = Math.abs(baseSize * originalScale) / 2
+      if (!Number.isFinite(halfSize) || halfSize <= 0) return false
+
+      const angle = Number(target.angle ?? 0) * Math.PI / 180
+      const dx = x - transform.ex
+      const dy = y - transform.ey
+      const localDelta = axis === 'x'
+        ? dx * Math.cos(angle) + dy * Math.sin(angle)
+        : -dx * Math.sin(angle) + dy * Math.cos(angle)
+      const sign = axis === 'x' ? direction.x : direction.y
+      const minScale = Number(target.minScaleLimit || 0.01)
+      const nextScale = Math.max(minScale, originalScale * (1 + localDelta * sign / halfSize))
+      const property = axis === 'x' ? 'scaleX' : 'scaleY'
+      if (target[property] === nextScale) return false
+      target.set({ [property]: nextScale })
+      return true
+    },
+  )
+}
+
 function createControls(mode: ControlSetMode = 'default'): Record<string, Control> {
   const positionHandler =
-    mode === 'corner4Inset' ? insetCornerPositionHandler : Control.prototype.positionHandler
+    mode === 'corner4Inset'
+      ? insetCornerPositionHandler
+      : mode === 'resize8CircleInset' ? circularInsetPositionHandler : Control.prototype.positionHandler
   const cornerScaleHandler =
-    mode === 'corner4Inset' ? scaleInsetCorner : controlsUtils.scalingEqually
+    mode === 'corner4Inset' || mode === 'resize8CircleInset'
+      ? scaleInsetCorner
+      : controlsUtils.scalingEqually
   const cornerControls: Record<string, Control> = {
     tl: new Control({
       x: -0.5,
@@ -609,39 +730,53 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     ...layerOrderControls,
   }
 
-  if (mode !== 'resize8' && mode !== 'resize8Rotate') return base
+  if (mode !== 'resize8' && mode !== 'resize8Rotate' && mode !== 'resize8CircleInset') return base
+
+  const sidePositionHandler = mode === 'resize8CircleInset'
+    ? circularInsetPositionHandler
+    : Control.prototype.positionHandler
+  const horizontalScaleHandler = mode === 'resize8CircleInset'
+    ? createInsetSideScaleHandler('x')
+    : controlsUtils.scalingX
+  const verticalScaleHandler = mode === 'resize8CircleInset'
+    ? createInsetSideScaleHandler('y')
+    : controlsUtils.scalingY
 
   const resizeControls = {
     ...base,
     mt: new Control({
       x: 0,
       y: -0.5,
+      positionHandler: sidePositionHandler,
       cursorStyle: 'ns-resize',
-      actionHandler: controlsUtils.scalingY,
+      actionHandler: verticalScaleHandler,
       actionName: 'scaleY',
       render: renderDefaultControl,
     }),
     mb: new Control({
       x: 0,
       y: 0.5,
+      positionHandler: sidePositionHandler,
       cursorStyle: 'ns-resize',
-      actionHandler: controlsUtils.scalingY,
+      actionHandler: verticalScaleHandler,
       actionName: 'scaleY',
       render: renderDefaultControl,
     }),
     ml: new Control({
       x: -0.5,
       y: 0,
+      positionHandler: sidePositionHandler,
       cursorStyle: 'ew-resize',
-      actionHandler: controlsUtils.scalingX,
+      actionHandler: horizontalScaleHandler,
       actionName: 'scaleX',
       render: renderDefaultControl,
     }),
     mr: new Control({
       x: 0.5,
       y: 0,
+      positionHandler: sidePositionHandler,
       cursorStyle: 'ew-resize',
-      actionHandler: controlsUtils.scalingX,
+      actionHandler: horizontalScaleHandler,
       actionName: 'scaleX',
       render: renderDefaultControl,
     }),
@@ -672,6 +807,8 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   const mode =
     (t as any).designerControlMode === 'resize8Rotate'
       ? 'resize8Rotate'
+      : (t as any).designerControlMode === 'resize8CircleInset'
+      ? 'resize8CircleInset'
       : (t as any).designerControlMode === 'resize8'
       ? 'resize8'
       : (t as any).designerControlMode === 'corner4Inset'
@@ -702,7 +839,9 @@ export function applyLayerOrderControlsToObject(target: FabricObject | null | un
   const mode: ControlSetMode =
     (target as unknown as FabricLikeObject).designerControlMode === 'corner4Inset'
       ? 'corner4Inset'
-      : 'default'
+      : (target as unknown as FabricLikeObject).designerControlMode === 'resize8CircleInset'
+        ? 'resize8CircleInset'
+        : 'default'
   ;(target as unknown as { controls: Record<string, Control> }).controls = {
     ...currentControls,
     ...createLayerOrderControls(mode),

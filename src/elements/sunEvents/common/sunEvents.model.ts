@@ -95,3 +95,17 @@ export function timeFractionToArcAngle(
 export function timeFractionToLinePoint(fraction: number, start: number, end: number): number {
   return start + Math.max(0, Math.min(1, fraction)) * (end - start)
 }
+
+export function isSunEventDaylight(
+  events: SunEventTimes,
+  fraction: number,
+  fallbackDaylight: boolean,
+): boolean {
+  const sunrise = events.sunrise
+  const sunset = events.sunset
+  if (!isDayFraction(sunrise) || !isDayFraction(sunset)) return fallbackDaylight
+  const current = Math.max(0, Math.min(1, fraction))
+  return sunrise <= sunset
+    ? current >= sunrise && current < sunset
+    : current >= sunrise || current < sunset
+}

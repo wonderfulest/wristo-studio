@@ -69,11 +69,10 @@ export function classifyConnectIqSettingsUsage(usedBytes: number): ConnectIqSett
 
 export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetInput): ConnectIqSettingsBudgetReport {
   const fixedEntries = fixedSettings(input)
-  const appLanguage = input.appLanguage === 'zhs' ? 'zhs' : 'eng'
   const customEntries = Object.entries(input.properties || {}).filter(([, property]) => property.type !== 'date').map(([key, property]) => ({
     key,
     type: property.type,
-    title: appLanguage === 'zhs' ? (property.titleCn || property.title) : property.title,
+    title: property.title,
     value: property.value,
     options: propertyOptions(property, input.dataOptions || {}),
   }))
@@ -83,7 +82,7 @@ export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetI
     dateIds.set(key, {
       formatter: property.value,
       formatterOptions: propertyOptions(property, input.dataOptions || {}).map(option => (option as any)?.value),
-      title: appLanguage === 'zhs' ? (property.titleCn || property.title) : property.title,
+      title: property.title,
     })
   })
   for (const element of input.elements || []) {

@@ -1,5 +1,6 @@
 import type { CurveSunEventsElementConfig } from '@/types/elements/sunEvents'
 import { createDefaultSunEventStyles } from '../common/sunEvents.model'
+import { DEFAULT_SUN_EVENTS_SIMPLE_COLOR, normalizeSunEventIndicator } from '../common/sunEvents.defaults'
 
 export function decodeCurveSunEvents(config: CurveSunEventsElementConfig): Record<string, unknown> {
   return {
@@ -7,8 +8,10 @@ export function decodeCurveSunEvents(config: CurveSunEventsElementConfig): Recor
     eleType: 'curveSunEvents',
     originX: config.originX ?? 'center',
     originY: config.originY ?? 'center',
+    displayMode: config.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(config.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (config.phases?.length ? config.phases : createDefaultSunEventStyles()).map((phase) => ({ ...phase })),
-    indicator: { ...config.indicator },
+    indicator: normalizeSunEventIndicator(config.indicator),
   }
 }
 
@@ -25,9 +28,11 @@ export function encodeCurveSunEvents(element: Record<string, any>): CurveSunEven
     height: Number(source.height ?? 60),
     strokeWidth: Number(source.strokeWidth ?? 6),
     angle: Number(element.angle ?? source.angle ?? 0),
+    displayMode: source.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(source.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (source.phases?.length ? source.phases : createDefaultSunEventStyles()).map((phase: any) => ({ ...phase })),
     indicator: {
-      ...source.indicator,
+      ...normalizeSunEventIndicator(source.indicator),
       normalOffset: Number(source.indicator?.normalOffset ?? 0),
       orientation: source.indicator?.orientation === 'tangent' ? 'tangent' : 'fixed',
     },

@@ -1,5 +1,6 @@
 import type { LineSunEventsElementConfig } from '@/types/elements/sunEvents'
 import { createDefaultSunEventStyles } from '../common/sunEvents.model'
+import { DEFAULT_SUN_EVENTS_SIMPLE_COLOR, normalizeSunEventIndicator } from '../common/sunEvents.defaults'
 
 export function decodeLineSunEvents(config: LineSunEventsElementConfig): Record<string, unknown> {
   return {
@@ -7,8 +8,10 @@ export function decodeLineSunEvents(config: LineSunEventsElementConfig): Record<
     eleType: 'lineSunEvents',
     originX: config.originX ?? 'center',
     originY: config.originY ?? 'center',
+    displayMode: config.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(config.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (config.phases?.length ? config.phases : createDefaultSunEventStyles()).map((phase) => ({ ...phase })),
-    indicator: { ...config.indicator },
+    indicator: normalizeSunEventIndicator(config.indicator),
   }
 }
 
@@ -20,7 +23,9 @@ export function encodeLineSunEvents(element: Record<string, any>): LineSunEvents
     originX: source.originX ?? element.originX ?? 'center', originY: source.originY ?? element.originY ?? 'center',
     length: Number(source.length ?? 120), strokeWidth: Number(source.strokeWidth ?? 8),
     angle: Number(source.angle ?? element.angle ?? 0),
+    displayMode: source.displayMode === 'simple' ? 'simple' : 'phases',
+    simpleColor: String(source.simpleColor || DEFAULT_SUN_EVENTS_SIMPLE_COLOR),
     phases: (source.phases?.length ? source.phases : createDefaultSunEventStyles()).map((phase: any) => ({ ...phase })),
-    indicator: { ...source.indicator },
+    indicator: normalizeSunEventIndicator(source.indicator),
   }
 }

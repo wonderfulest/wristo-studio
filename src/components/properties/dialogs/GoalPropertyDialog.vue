@@ -35,8 +35,6 @@
             <el-input v-model="formData.title" :placeholder="t('property.goalSelect')" />
           </el-form-item>
 
-          <LocalizedPropertyTitleField v-model="formData.titleCn" />
-
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -166,7 +164,6 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
-import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
@@ -183,7 +180,6 @@ const iconGlyph = (option) => resolveMetricIconGlyph(option)
 
 const formData = reactive({
   title: '',
-  titleCn: '',
   propertyKey: '',
   type: 'goal',
   options: cloneGoalOptions(),
@@ -199,7 +195,6 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
-      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: cloneGoalOptions(),
@@ -211,7 +206,6 @@ const initFormData = (data = null) => {
     const defaults = getNextMetricPropertyDefaults('goal')
     Object.assign(formData, {
       title: defaults.title,
-      titleCn: '',
       propertyKey: defaults.key,
       type: 'goal',
       options: cloneGoalOptions(),
@@ -233,7 +227,6 @@ const handleConfirm = async () => {
       type: 'goal',
       key: formData.propertyKey,
       title: formData.title,
-      titleCn: formData.titleCn.trim() || undefined,
       options: withSimplifiedChineseOptionLabels(formData.options),
       defaultValue: formData.value,
       prompt: formData.prompt,

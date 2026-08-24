@@ -3,6 +3,7 @@ import {
   SUN_EVENT_PHASES,
   createDefaultSunEventStyles,
   normalizeSunEventSegments,
+  isSunEventDaylight,
   timeFractionToArcAngle,
   timeFractionToLinePoint,
 } from './sunEvents.model'
@@ -66,5 +67,14 @@ describe('Sun Events shared model', () => {
     expect(timeFractionToArcAngle(0.25, 90, 180, false)).toBe(135)
     expect(timeFractionToArcAngle(0.25, 90, 180, true)).toBe(45)
     expect(timeFractionToLinePoint(0.25, 10, 110)).toBe(35)
+  })
+
+  it('classifies daylight from sunrise and sunset without treating midnight as daytime', () => {
+    const events = { sunrise: 0.25, sunset: 0.75 }
+    expect(isSunEventDaylight(events, 0.25, false)).toBe(true)
+    expect(isSunEventDaylight(events, 0.5, false)).toBe(true)
+    expect(isSunEventDaylight(events, 0.75, true)).toBe(false)
+    expect(isSunEventDaylight(events, 0, true)).toBe(false)
+    expect(isSunEventDaylight({ sunrise: null, sunset: null }, 0.5, true)).toBe(true)
   })
 })

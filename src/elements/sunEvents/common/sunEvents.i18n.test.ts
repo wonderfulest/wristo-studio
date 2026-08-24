@@ -12,14 +12,18 @@ const weatherMenuSource = readFileSync(`${process.cwd()}/src/components/layout/a
 
 describe('Sun Events settings localization', () => {
   it('provides English and Simplified Chinese settings copy', () => {
-    expect(translate('sunEvents.currentTimeIndicator', 'en')).toBe('Current time indicator (SVG)')
-    expect(translate('sunEvents.currentTimeIndicator', 'zh')).toBe('当前时间指示器（SVG）')
+    expect(translate('sunEvents.currentTimeIndicator', 'en')).toBe('Daytime sun indicator (SVG)')
+    expect(translate('sunEvents.currentTimeIndicator', 'zh')).toBe('白天太阳指示器（SVG）')
     expect(translate('sunEvents.phase.astronomicalDawn', 'zh')).toBe('天文曙光')
     expect(translate('sunEvents.orientation.outward', 'zh')).toBe('远离中心')
     expect(translate('sunEvents.arcName', 'zh')).toBe('弧形太阳时间')
     expect(translate('sunEvents.lineName', 'zh')).toBe('直线太阳时间')
     expect(translate('sunEvents.curveName', 'zh')).toBe('曲线太阳时间')
     expect(translate('sunEvents.orientation.tangent', 'en')).toBe('Follow curve tangent')
+    expect(translate('sunEvents.displayMode.simple', 'en')).toBe('Simple')
+    expect(translate('sunEvents.displayMode.simple', 'zh')).toBe('简洁')
+    expect(translate('sunEvents.simpleColor', 'zh')).toBe('轨迹颜色')
+    expect(translate('sunEvents.nightDotColor', 'zh')).toBe('夜间圆点颜色')
   })
 
   it('uses translation keys instead of visible hard-coded settings copy', () => {

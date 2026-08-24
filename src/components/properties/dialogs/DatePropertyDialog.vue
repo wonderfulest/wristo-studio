@@ -15,7 +15,6 @@
           <el-form-item :label="uiText.title" prop="title" :rules="[{ required: true, message: uiText.titleRequired, trigger: 'blur' }]">
             <el-input v-model="formData.title" :placeholder="uiText.editTitle" />
           </el-form-item>
-          <LocalizedPropertyTitleField v-model="formData.titleCn" />
           <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="date_1" placeholder="date_1" />
         </div>
       </div>
@@ -117,10 +116,9 @@ import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useI18n } from '@/i18n'
 import type { OptionFormat } from '@/types/settings'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
-import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { getCommonDateFormatterValues, resolveDateFormatterValues } from './datePropertyOptions'
 
-type DatePayload = { type: 'date'; key: string; title: string; titleCn?: string; defaultValue: number; options: Array<{ label: string; labelCn?: string; value: number }>; prompt: string; errorMessage: string; isEdit: boolean }
+type DatePayload = { type: 'date'; key: string; title: string; defaultValue: number; options: Array<{ label: string; labelCn?: string; value: number }>; prompt: string; errorMessage: string; isEdit: boolean }
 const emit = defineEmits<{ confirm: [payload: DatePayload] }>()
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
@@ -132,7 +130,7 @@ const formRef = ref<any>(null)
 const isEdit = ref(false)
 const activeOptions = ref<string[]>([])
 const pendingOptionValues = ref<number[]>([])
-const formData = reactive({ title: '', titleCn: '', propertyKey: '', type: 'date' as const, defaultValue: 0, prompt: '', errorMessage: '' })
+const formData = reactive({ title: '', propertyKey: '', type: 'date' as const, defaultValue: 0, prompt: '', errorMessage: '' })
 const selectedValues = ref<number[]>([])
 const selectedForDeletion = ref<number[]>([])
 const isChineseUi = computed(() => String(locale.value).startsWith('zh'))
@@ -168,9 +166,9 @@ const initFormData = (data: any = null) => {
   }
   const propertyKey = data?.propertyKey || nextKey()
   Object.assign(formData, data ? {
-    title: data.title, titleCn: data.titleCn || '', propertyKey, defaultValue: Number(data.value), prompt: data.prompt || '', errorMessage: data.errorMessage || '',
+    title: data.title, propertyKey, defaultValue: Number(data.value), prompt: data.prompt || '', errorMessage: data.errorMessage || '',
   } : {
-    title: `Date ${propertyKey.slice(5)}`, titleCn: '', propertyKey, defaultValue: defaults[0], prompt: '', errorMessage: '',
+    title: `Date ${propertyKey.slice(5)}`, propertyKey, defaultValue: defaults[0], prompt: '', errorMessage: '',
   })
   selectedValues.value = resolveDateFormatterValues(data?.options?.map((option: any) => option.value), designStore.appLanguage, dataCatalogStore.options)
   if (!selectedValues.value.includes(formData.defaultValue)) formData.defaultValue = selectedValues.value[0]
@@ -235,7 +233,7 @@ const handleConfirm = async () => {
   try {
     await formRef.value?.validate?.()
     emit('confirm', {
-      type: 'date', key: formData.propertyKey, title: formData.title, titleCn: formData.titleCn.trim() || undefined, defaultValue: formData.defaultValue,
+      type: 'date', key: formData.propertyKey, title: formData.title, defaultValue: formData.defaultValue,
       options: selectedOptions.value.map(option => ({ label: option.label, labelCn: option.zhsLabel, value: option.value })), prompt: formData.prompt, errorMessage: formData.errorMessage, isEdit: isEdit.value,
     })
     dialogVisible.value = false

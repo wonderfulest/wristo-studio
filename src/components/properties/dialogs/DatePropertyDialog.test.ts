@@ -6,7 +6,7 @@ describe('DatePropertyDialog contract', () => {
 
   it('edits a stable reusable date property', () => {
     expect(source).toContain('PropertyKeyField')
-    expect(source).toContain('LocalizedPropertyTitleField')
+    expect(source).not.toContain('LocalizedPropertyTitleField')
     expect(source).toContain("type: 'date'")
     expect(source).toContain('propertyKey')
     expect(source).toContain('defaultValue')

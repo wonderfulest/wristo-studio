@@ -4,7 +4,6 @@
       <el-form-item label="Title" prop="title" :rules="[{ required: true, message: 'Enter a title', trigger: 'blur' }]">
         <el-input v-model="formData.title" />
       </el-form-item>
-      <LocalizedPropertyTitleField v-model="formData.titleCn" />
       <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="dial_goal_1" placeholder="dial_goal_1" />
 
       <el-form-item label="Data Mode">
@@ -124,7 +123,6 @@ import { usePropertiesStore } from '@/stores/properties'
 import { useI18n } from '@/i18n'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
-import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { resolveDataOptionSettingsLabel } from './dataPropertyOptions'
 import {
@@ -158,7 +156,6 @@ const modeOptions = [
 ]
 const formData = reactive({
   title: '',
-  titleCn: '',
   propertyKey: '',
   dialMode: 'goal' as DialProgressMode,
   metricSymbols: [] as string[],
@@ -209,7 +206,6 @@ function show(data?: any): void {
   formData.title = data?.title || (formData.dialMode === 'goal'
     ? 'Goal Dial'
     : formData.dialMode === 'range' ? 'Range Dial' : 'Direction Dial')
-  formData.titleCn = data?.titleCn || ''
   storedOptions.value = Array.isArray(data?.options) ? data.options : []
   formData.metricSymbols = resolveDialOptionSymbols(data?.metricSymbols, storedOptions.value)
   if (formData.metricSymbols.length === 0) {
@@ -270,7 +266,6 @@ async function confirm(): Promise<void> {
     type: 'dial',
     key: formData.propertyKey,
     title: formData.title,
-    titleCn: formData.titleCn.trim() || undefined,
     dialMode: formData.dialMode,
     metricSymbols: [...formData.metricSymbols],
     options: withSimplifiedChineseOptionLabels(resolvedOptions.value),

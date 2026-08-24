@@ -35,8 +35,6 @@
             <el-input v-model="formData.title" :placeholder="t('property.dataSelect')" />
           </el-form-item>
 
-          <LocalizedPropertyTitleField v-model="formData.titleCn" />
-
           <PropertyKeyField
             v-model="formData.propertyKey"
             :is-edit="isEdit"
@@ -217,7 +215,6 @@ import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCa
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
-import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import {
@@ -254,7 +251,6 @@ const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, lo
 
 const formData = reactive({
   title: '',
-  titleCn: '',
   propertyKey: '',
   type: 'data',
   metricSymbols: cloneSystemDataOptions().map(option => option.metricSymbol),
@@ -282,7 +278,6 @@ const initFormData = (data = null) => {
     const options = resolveDataOptionsBySymbols(catalogOptions.value, propertiesStore.dataOptions, metricSymbols)
     Object.assign(formData, {
       title: data.title,
-      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       metricSymbols,
@@ -296,7 +291,6 @@ const initFormData = (data = null) => {
     const metricSymbols = options.map(option => option.metricSymbol)
     Object.assign(formData, {
       title: defaults.title,
-      titleCn: '',
       propertyKey: defaults.key,
       type: 'data',
       metricSymbols,
@@ -323,7 +317,6 @@ const handleConfirm = async () => {
       type: 'data',
       key: formData.propertyKey,
       title: formData.title,
-      titleCn: formData.titleCn.trim() || undefined,
       metricSymbols: [...formData.metricSymbols],
       dataOptions: formData.metricSymbols
         .map(symbol => propertiesStore.resolveDataOption(symbol)

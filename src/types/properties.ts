@@ -22,7 +22,6 @@ export interface PropertyOption {
 export interface PropertyItem {
   type: PropertyType
   title: string
-  titleCn?: string
   options?: PropertyOption[]
   value: unknown
   prompt?: string

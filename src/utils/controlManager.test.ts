@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { FabricObject, Point } from 'fabric'
 import dialRendererSource from '@/elements/dials/common/dial.renderer.ts?raw'
+import imageRendererSource from '@/elements/decoration/image/image.renderer.ts?raw'
 
 vi.mock('@/engine/managers/layerManager', () => ({
   bringToFront: vi.fn(),
@@ -33,6 +34,20 @@ describe('applyControlsToObject', () => {
   function getControlPosition(target: any, key: string, dim: Point) {
     const control = target.controls[key]
     return control.positionHandler(dim, [1, 0, 0, 1, 300, 300], target, control)
+  }
+
+  function attachCircularCanvas(target: any) {
+    target.canvas = {
+      clipPath: {
+        radius: 300,
+        scaleX: 1,
+        scaleY: 1,
+        getCenterPoint: () => new Point(300, 300),
+      },
+      getWidth: () => 600,
+      getHeight: () => 600,
+      getZoom: () => 1,
+    }
   }
 
   function createScaleTarget() {
@@ -106,6 +121,87 @@ describe('applyControlsToObject', () => {
 
     expect(getControlPosition(target, 'tl', new Point(800, 800))).toMatchObject({ x: -100, y: -100 })
     expect(getControlPosition(target, 'br', new Point(800, 800))).toMatchObject({ x: 700, y: 700 })
+  })
+
+  it('keeps all eight image controls inside the circular watch-face safe area', () => {
+    const target = createTarget('resize8CircleInset') as any
+    attachCircularCanvas(target)
+
+    applyControlsToObject(target)
+
+    for (const key of ['tl', 'tr', 'bl', 'br', 'mt', 'mb', 'ml', 'mr']) {
+      const position = getControlPosition(target, key, new Point(800, 800))
+      expect(Math.hypot(position.x - 300, position.y - 300)).toBeLessThanOrEqual(270.001)
+    }
+    expect(getControlPosition(target, 'mt', new Point(800, 800))).toMatchObject({ x: 300, y: 30 })
+    expect(getControlPosition(target, 'mr', new Point(800, 800))).toMatchObject({ x: 570, y: 300 })
+  })
+
+  it('keeps image controls at their real positions when already inside the circle', () => {
+    const target = createTarget('resize8CircleInset') as any
+    attachCircularCanvas(target)
+
+    applyControlsToObject(target)
+
+    expect(getControlPosition(target, 'tl', new Point(200, 200))).toMatchObject({ x: 200, y: 200 })
+    expect(getControlPosition(target, 'mr', new Point(200, 200))).toMatchObject({ x: 400, y: 300 })
+  })
+
+  it('keeps the full image action pills inside the circular watch face', () => {
+    const target = createTarget('resize8CircleInset') as any
+    attachCircularCanvas(target)
+
+    applyControlsToObject(target)
+
+    for (const key of ['cloneActionControl', 'deleteActionControl', 'bringToFrontControl', 'bringForwardControl', 'sendBackwardControl', 'sendToBackControl']) {
+      const position = getControlPosition(target, key, new Point(800, 800))
+      expect(Math.hypot(position.x - 300, position.y - 300) + Math.hypot(72, 14))
+        .toBeLessThanOrEqual(300.001)
+    }
+  })
+
+  it('starts a circularly inset image side drag without changing its scale', () => {
+    const target = createScaleTarget()
+    target.designerControlMode = 'resize8CircleInset'
+    attachCircularCanvas(target)
+    target.canvas.fire = vi.fn()
+    applyControlsToObject(target)
+    const transform = createScaleTransform(target, 'mr')
+    transform.ex = 570
+    transform.ey = 300
+
+    const changed = target.controls.mr.actionHandler(
+      { shiftKey: false } as PointerEvent,
+      transform,
+      570,
+      300,
+    )
+
+    expect(changed).toBe(false)
+    expect(target.scaleX).toBe(2)
+    expect(target.scaleY).toBe(2)
+  })
+
+  it('resizes only image width from a circularly inset side control', () => {
+    const target = createScaleTarget()
+    target.designerControlMode = 'resize8CircleInset'
+    attachCircularCanvas(target)
+    target.canvas.fire = vi.fn()
+    applyControlsToObject(target)
+    const transform = createScaleTransform(target, 'mr')
+    transform.ex = 570
+    transform.ey = 300
+
+    const changed = target.controls.mr.actionHandler(
+      { shiftKey: false } as PointerEvent,
+      transform,
+      580,
+      300,
+    )
+
+    expect(changed).toBe(true)
+    expect(target.scaleX).toBeCloseTo(2.033333, 5)
+    expect(target.scaleY).toBe(2)
   })
 
   it('adds a rotation handle to rotatable resize controls', () => {
@@ -206,6 +302,10 @@ describe('applyControlsToObject', () => {
   it('uses inset corner controls throughout the shared dial renderer', () => {
     expect(dialRendererSource).not.toContain("designerControlMode: 'corner4',")
     expect(dialRendererSource.match(/designerControlMode: 'corner4Inset'/g)).toHaveLength(3)
+  })
+
+  it('uses circular inset resize controls for ordinary images', () => {
+    expect(imageRendererSource).toContain("designerControlMode: 'resize8CircleInset'")
   })
 
   it('reapplies designer controls to moon images', () => {

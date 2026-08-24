@@ -102,7 +102,6 @@ export function migrateLegacyDateProperties(
     properties[key] = {
       type: 'date',
       title: `Date ${sequence}`,
-      titleCn: `日期 ${sequence}`,
       value: formatter,
       options: createDateOptions(values, appLanguage, catalog),
     }

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Group, Path } from 'fabric'
+import { Circle, Group, Path, Rect } from 'fabric'
+import { arcSunEventsSchema } from '../arcSunEvents/arcSunEvents.schema'
 import { curveSunEventsSchema } from '../curveSunEvents/curveSunEvents.schema'
 import { lineSunEventsSchema } from '../lineSunEvents/lineSunEvents.schema'
-import { buildCurveSunEventObjects, buildLineSunEventObjects } from './sunEvents.renderer'
+import { buildArcSunEventObjects, buildCurveSunEventObjects, buildLineSunEventObjects } from './sunEvents.renderer'
 import { curveIndicatorTransform } from './sunEvents.geometry'
 import * as preview from './sunEvents.preview'
 
@@ -11,6 +12,43 @@ afterEach(() => {
 })
 
 describe('sun events default indicator rendering', () => {
+  it('draws one pure-color track in simple mode for Arc, Line, and Curve', async () => {
+    vi.spyOn(preview, 'currentLocalDayFraction').mockReturnValue(0.5)
+    const simple = { displayMode: 'simple' as const, simpleColor: '#12AB34' }
+    const [arc, line, curve] = await Promise.all([
+      buildArcSunEventObjects({ ...arcSunEventsSchema.defaultConfig, ...simple, id: 'simple-arc', eleType: 'arcSunEvents', originX: 'center', originY: 'center' } as any),
+      buildLineSunEventObjects({ ...lineSunEventsSchema.defaultConfig, ...simple, id: 'simple-line', eleType: 'lineSunEvents', originX: 'center', originY: 'center' }),
+      buildCurveSunEventObjects({ ...curveSunEventsSchema.defaultConfig, ...simple, id: 'simple-curve', eleType: 'curveSunEvents', originX: 'center', originY: 'center' } as any),
+    ])
+
+    expect(arc.slice(0, -1)).toHaveLength(2)
+    expect(arc.slice(0, -1).every((object: any) => object.stroke === '#12AB34')).toBe(true)
+    expect(line.slice(0, -1)).toHaveLength(1)
+    expect(line[0]).toBeInstanceOf(Rect)
+    expect((line[0] as any).fill).toBe('#12AB34')
+    expect(curve.slice(0, -1)).toHaveLength(2)
+    expect(curve.slice(0, -1).every((object: any) => object.stroke === '#12AB34')).toBe(true)
+  })
+
+  it('uses the sun during daytime and a muted circle at night', async () => {
+    const fraction = vi.spyOn(preview, 'currentLocalDayFraction')
+    fraction.mockReturnValue(0.5)
+    const daytime = await buildLineSunEventObjects({
+      ...lineSunEventsSchema.defaultConfig,
+      id: 'day-line', eleType: 'lineSunEvents', originX: 'center', originY: 'center',
+    })
+    expect(daytime.at(-1)).toBeInstanceOf(Group)
+
+    fraction.mockReturnValue(0.9)
+    const nighttime = await buildLineSunEventObjects({
+      ...lineSunEventsSchema.defaultConfig,
+      id: 'night-line', eleType: 'lineSunEvents', originX: 'center', originY: 'center',
+      indicator: { ...lineSunEventsSchema.defaultConfig.indicator, width: 18, height: 12, nightDotColor: '#345678' },
+    })
+    expect(nighttime.at(-1)).toBeInstanceOf(Circle)
+    expect(nighttime.at(-1)).toEqual(expect.objectContaining({ radius: 6, fill: '#345678' }))
+  })
+
   it('draws the bundled sun without loading it through an HTML image', async () => {
     const objects = await buildLineSunEventObjects({
       ...lineSunEventsSchema.defaultConfig,

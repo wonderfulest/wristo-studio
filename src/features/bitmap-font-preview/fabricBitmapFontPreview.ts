@@ -20,6 +20,7 @@ export interface FabricBitmapFontPreviewOptions {
 
 interface PreviewState {
   originalRender: (context: CanvasRenderingContext2D) => void
+  originalInitDimensions?: () => void
   generation: number
   assetsKey?: string
   descriptor?: BmFontDescriptor
@@ -64,6 +65,17 @@ const lineWidth = (descriptor: BmFontDescriptor, text: string): number => {
     previous = codepoint
   }
   return cursor
+}
+
+const syncBitmapTextWidth = (object: any, state: PreviewState): void => {
+  const descriptor = state.descriptor
+  const sourceSize = state.sourceSize
+  if (!descriptor || !sourceSize) return
+  const widths = String(object.text ?? '').split('\n').map(line => lineWidth(descriptor, line))
+  if (widths.some(width => width < 0)) return
+  const scale = Math.max(1, Number(object.fontSize) || sourceSize) / sourceSize
+  object.width = Math.max(1, ...widths) * scale
+  object.setCoords?.()
 }
 
 const renderDensity = (object: any, sourceSize: number): number => {
@@ -137,12 +149,21 @@ export async function applyFabricBitmapFontPreview(
   if (!state) {
     state = {
       originalRender: object._renderText.bind(object),
+      originalInitDimensions: typeof object.initDimensions === 'function'
+        ? object.initDimensions.bind(object)
+        : undefined,
       generation: 0,
       fallbackToText: options.fallbackToText !== false,
     }
     Object.defineProperty(object, previewState, { configurable: true, value: state })
     object._renderText = (context: CanvasRenderingContext2D) => {
       if (!renderBitmapText(object, state!, context) && state!.fallbackToText) state!.originalRender(context)
+    }
+    if (state.originalInitDimensions) {
+      object.initDimensions = () => {
+        state!.originalInitDimensions!()
+        syncBitmapTextWidth(object, state!)
+      }
     }
   }
   state.fallbackToText = options.fallbackToText !== false
@@ -154,6 +175,10 @@ export async function applyFabricBitmapFontPreview(
     state.sourceSize = undefined
     if (state.fallbackToText) {
       object._renderText = state.originalRender
+      if (state.originalInitDimensions) {
+        object.initDimensions = state.originalInitDimensions
+        object.initDimensions()
+      }
       delete object[previewState]
     }
     object.dirty = true
@@ -198,6 +223,7 @@ export async function applyFabricBitmapFontPreview(
   state.descriptor = loaded.descriptor
   state.atlas = loaded.atlas
   state.sourceSize = loaded.sourceSize
+  syncBitmapTextWidth(object, state)
   object.dirty = true
   object.canvas?.requestRenderAll?.()
 }

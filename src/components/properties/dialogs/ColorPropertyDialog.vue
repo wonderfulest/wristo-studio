@@ -22,8 +22,6 @@
             <el-input v-model="formData.title" :placeholder="t('property.colorSelect')" />
           </el-form-item>
 
-          <LocalizedPropertyTitleField v-model="formData.titleCn" />
-
           <PropertyKeyField v-model="formData.propertyKey" :is-edit="isEdit" default-key="color_1" placeholder="color_1" />
         </div>
       </div>
@@ -140,7 +138,6 @@ import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
-import LocalizedPropertyTitleField from '@/components/properties/common/LocalizedPropertyTitleField.vue'
 import ColorPicker from '@/components/color-picker/index.vue'
 import {
   buildColorPropertyOptions,
@@ -167,7 +164,6 @@ const defaultColorHex = ref('#ffffff')
 
 const formData = reactive({
   title: '',
-  titleCn: '',
   propertyKey: '',
   type: 'color',
   options: [],
@@ -246,7 +242,6 @@ const initFormData = (data = null) => {
   if (data) {
     Object.assign(formData, {
       title: data.title,
-      titleCn: data.titleCn || '',
       propertyKey: data.propertyKey,
       type: data.type,
       options: JSON.parse(JSON.stringify(data.options)),
@@ -259,7 +254,6 @@ const initFormData = (data = null) => {
     const defaultValue = propertiesStore.lastSelectedColor || '0xffffff'
     Object.assign(formData, {
       title: defaults.title,
-      titleCn: '',
       propertyKey: defaults.key,
       type: 'color',
       options: [],
@@ -310,7 +304,6 @@ const handleConfirm = async () => {
       type: 'color',
       key: formData.propertyKey,
       title: formData.title,
-      titleCn: formData.titleCn.trim() || undefined,
       options: withSimplifiedChineseOptionLabels(formData.options),
       defaultValue: formData.value,
       prompt: formData.prompt,
