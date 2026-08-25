@@ -152,7 +152,24 @@
                       </div>
                       <div class="property-value">
                         <div class="property-title-line">
-                          <strong>{{ item.prop.title }}</strong>
+                          <el-input
+                            v-if="editingTitleKey === item.key"
+                            :ref="setTitleEditorRef"
+                            v-model="editingTitleValue"
+                            class="property-title-editor"
+                            maxlength="50"
+                            @click.stop
+                            @dblclick.stop
+                            @keyup.enter="saveTitleEditing(item.key)"
+                            @keyup.esc="cancelTitleEditing"
+                            @blur="saveTitleEditing(item.key)"
+                          />
+                          <strong
+                            v-else
+                            :title="item.prop.title"
+                            @click.stop
+                            @dblclick.stop="startTitleEditing(item.key, item.prop.title)"
+                          >{{ item.prop.title }}</strong>
                           <code>{{ item.key }}</code>
                         </div>
                         <div class="property-preview">
@@ -270,7 +287,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   Document,
   Histogram,
@@ -322,6 +339,9 @@ const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const dialPropertyDialog = ref(null)
 const datePropertyDialog = ref(null)
+const titleEditorRef = ref(null)
+const editingTitleKey = ref('')
+const editingTitleValue = ref('')
 const propertiesStore = usePropertiesStore()
 const historyStore = useHistoryStore()
 const editorLayoutStore = useEditorLayoutStore()
@@ -443,6 +463,40 @@ const formatBudgetBytes = (bytes) => bytes >= 1024
 
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
+}
+
+const setTitleEditorRef = (instance) => {
+  titleEditorRef.value = instance
+}
+
+const focusTitleEditor = () => {
+  nextTick(() => titleEditorRef.value?.select?.())
+}
+
+const startTitleEditing = (key, title) => {
+  editingTitleKey.value = key
+  editingTitleValue.value = title
+  focusTitleEditor()
+}
+
+const cancelTitleEditing = () => {
+  editingTitleKey.value = ''
+  editingTitleValue.value = ''
+}
+
+const saveTitleEditing = (key) => {
+  if (editingTitleKey.value !== key) return
+  const title = editingTitleValue.value.trim()
+  if (title.length < 2 || title.length > 50) {
+    ElMessage.warning(t('property.titleLength'))
+    focusTitleEditor()
+    return
+  }
+  if (propertiesStore.allProperties[key]?.title !== title) {
+    propertiesStore.editProperty(key, { title })
+    commitHistory('rename-property')
+  }
+  cancelTitleEditing()
 }
 
 const updateDatePropertyValue = async (key, formatter) => {
@@ -1158,6 +1212,21 @@ defineExpose({
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: text;
+}
+
+.property-title-editor {
+  width: min(220px, 100%);
+}
+
+.property-title-editor :deep(.el-input__wrapper) {
+  padding: 0 7px;
+}
+
+.property-title-editor :deep(.el-input__inner) {
+  height: 26px;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .property-title-line code {
