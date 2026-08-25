@@ -48,7 +48,21 @@
         v-model="currentModel.dateProperty"
         @change="handleDatePropertyChange"
       />
-      <el-form-item v-else :label="t('elementSettings.dateTokenTemplate')" class="token-template-field">
+      <el-form-item v-else class="token-template-field">
+        <template #label>
+          <div class="date-template-label">
+            <span>{{ t('elementSettings.dateTokenTemplate') }}</span>
+            <el-button
+              class="date-template-random"
+              size="small"
+              text
+              type="primary"
+              @click="handleRandomDateTemplate"
+            >
+              {{ t('elementSettings.dateTokenRandom') }}
+            </el-button>
+          </div>
+        </template>
         <TextTemplateEditor
           :model-value="currentModel.dateTemplate || DEFAULT_DATE_TEMPLATE"
           :allowed-variables="dateTemplateVariables"
@@ -93,7 +107,11 @@ import type { FontItem } from '@/types/font-picker'
 import type { DesignFontVO } from '@/types/font'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { resolveDatePropertyConfig } from '@/engine/services/datePropertyConfig'
-import { DEFAULT_DATE_TEMPLATE, validateCustomDateTemplate } from './dateTemplate'
+import {
+  createRandomDateTemplate,
+  DEFAULT_DATE_TEMPLATE,
+  validateCustomDateTemplate,
+} from './dateTemplate'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 
 const props = defineProps<{
@@ -208,6 +226,13 @@ const handleDateTemplateChange = (dateTemplate: string) => {
   applyUpdate({ dateFormatMode: 'custom', dateTemplate })
 }
 
+const handleRandomDateTemplate = () => {
+  applyUpdate({
+    dateFormatMode: 'custom',
+    dateTemplate: createRandomDateTemplate(currentModel.value.dateTemplate || DEFAULT_DATE_TEMPLATE),
+  })
+}
+
 const handleFontChange = async (fontFamily: string) => {
   applyUpdate({ fontFamily })
   await warnIfFontIncompatible(fontFamily)
@@ -230,6 +255,18 @@ const handleFontChange = async (fontFamily: string) => {
 
 .token-template-field :deep(.el-form-item__content) {
   display: block;
+}
+
+.date-template-label {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-template-random {
+  min-height: 24px;
+  padding: 2px 6px;
 }
 
 .date-token-guide {

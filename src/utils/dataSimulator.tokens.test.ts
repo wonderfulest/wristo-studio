@@ -7,4 +7,8 @@ describe('compact token simulation', () => {
 
     expect(heartRate).toMatchObject({ display: '78', numeric: 78, unit: 'bpm' })
   })
+
+  it('simulates ds15 as a numeric heart-rate zone', () => {
+    expect(getSimulatedDataByTokenCode('ds15')).toMatchObject({ display: '3', numeric: 3, unit: '' })
+  })
 })

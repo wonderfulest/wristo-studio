@@ -108,6 +108,24 @@ const DAY_OF_WEEK_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> =
   { value: 7, label: 'Saturday', labelCn: '周六' },
 ]
 
+const MOVE_BAR_LEVEL_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'No alert (under 60 min)', labelCn: '无久坐提醒（不足 60 分钟）' },
+  { value: 1, label: 'First bar (60–74 min)', labelCn: '一级久坐提醒（60–74 分钟）' },
+  { value: 2, label: 'Two bars (75–89 min)', labelCn: '二级久坐提醒（75–89 分钟）' },
+  { value: 3, label: 'Three bars (90–104 min)', labelCn: '三级久坐提醒（90–104 分钟）' },
+  { value: 4, label: 'Four bars (105–119 min)', labelCn: '四级久坐提醒（105–119 分钟）' },
+  { value: 5, label: 'Full move bar (120+ min)', labelCn: '完整久坐提醒（120 分钟及以上）' },
+]
+
+const HEART_RATE_ZONE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'No valid zone or below Zone 1', labelCn: '无有效区间或低于 Z1 下限' },
+  { value: 1, label: 'Zone 1: Z1 threshold to below Z2', labelCn: 'Z1：达到 Z1 下限且低于 Z2 下限' },
+  { value: 2, label: 'Zone 2: Z2 threshold to below Z3', labelCn: 'Z2：达到 Z2 下限且低于 Z3 下限' },
+  { value: 3, label: 'Zone 3: Z3 threshold to below Z4', labelCn: 'Z3：达到 Z3 下限且低于 Z4 下限' },
+  { value: 4, label: 'Zone 4: Z4 threshold to below Z5', labelCn: 'Z4：达到 Z4 下限且低于 Z5 下限' },
+  { value: 5, label: 'Zone 5: at or above the Z5 threshold', labelCn: 'Z5：达到或超过 Z5 下限' },
+]
+
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),
@@ -165,7 +183,13 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   activity('distanceToday', 'ai5', 'Distance Today', '今日距离', 645000, 'cm'),
   activity('floorsClimbedToday', 'ai6', 'Floors Climbed', '今日爬楼层数', 7),
   activity('floorsDescendedToday', 'ai8', 'Floors Descended', '今日下楼层数', 6),
-  activity('moveBarLevel', 'ai11', 'Move Bar', '久坐提醒等级', 2),
+  token({
+    id: 'activity.moveBarLevel', code: 'ai11', label: 'Move Bar', labelCn: '久坐提醒等级',
+    category: 'activity', exampleValue: 2, enumValues: MOVE_BAR_LEVEL_VALUES, source: 'activity',
+    providerKey: 'activityInfo', nullable: true, requirement: 'Activity Monitor support and available move-bar data',
+    description: 'Garmin move-bar alert level: 0 before 60 inactive minutes; level 1 at 60 minutes; then one additional level every 15 minutes until level 5 at 120 minutes.',
+    descriptionCn: 'Garmin 久坐提醒等级：静止不足 60 分钟返回 0；60 分钟进入 1 级；之后每 15 分钟增加一级，120 分钟及以上为 5 级。',
+  }),
   activity('stepsToday', 'ai12', 'Steps', '今日步数', 8240, 'steps'),
   activity('stepsGoal', 'ai13', 'Steps Goal', '步数目标', 10000, 'steps'),
   activity('respirationRate', 'ai14', 'Respiration Rate', '呼吸频率', 15, 'brpm'),
@@ -182,6 +206,14 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   sensor('pressure', 'ds11', 'Pressure', '气压', 101325, 'Pa'),
   sensor('temperature', 'ds12', 'Temperature', '温度', 24, '°C'),
   token({ id: 'user.restingHeartRate7DayAverage', code: 'ds14', label: '7-day Average Resting HR', labelCn: '七日平均静息心率', category: 'sensor', exampleValue: 58, unit: 'bpm', source: 'sensor', providerKey: 'userProfile', nullable: true, requirement: 'User profile resting heart-rate data' }),
+  token({
+    id: 'sensor.heartRateZone', code: 'ds15', label: 'Heart Rate Zone', labelCn: '心率区间',
+    category: 'sensor', exampleValue: 3, enumValues: HEART_RATE_ZONE_VALUES, source: 'sensor',
+    providerKey: 'userProfile.heartRateZones',
+    description: 'Current generic-sport heart-rate zone using the user’s Garmin thresholds: 0 when heart rate or zone data is unavailable, or below the Zone 1 threshold; 1–4 between adjacent zone thresholds; 5 at or above the Zone 5 threshold.',
+    descriptionCn: '使用 Garmin 用户“通用运动”心率区间阈值计算：无有效心率或区间数据、或心率低于 Z1 下限时返回 0；位于相邻区间阈值之间时返回 1–4；达到或超过 Z5 下限时返回 5。',
+    requirement: 'Current heart-rate data and UserProfile heart-rate-zone support',
+  }),
   sensor('bodyBattery', 'ds330', 'Body Battery', '身体电量', 68, '%'),
   sensor('stress', 'ds331', 'Stress', '压力', 31),
 

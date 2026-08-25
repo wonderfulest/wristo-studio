@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { formatCustomDateTemplate, validateCustomDateTemplate } from './dateTemplate'
+import {
+  createRandomDateTemplate,
+  formatCustomDateTemplate,
+  validateCustomDateTemplate,
+} from './dateTemplate'
 
 describe('custom date templates', () => {
   it('formats the requested short weekday and padded numeric date parts', () => {
@@ -24,5 +28,18 @@ describe('custom date templates', () => {
       date,
       'en-US',
     )).toBe('2026/26/6/Jun/June/30/27/3/Tue/Tuesday/181')
+  })
+
+  it('creates a valid template containing only month, day, and weekday tokens', () => {
+    const template = createRandomDateTemplate('', () => 0)
+
+    expect(template).toBe('(dt2) + "." + (dt3) + "." + (dt5.1)')
+    expect(validateCustomDateTemplate(template)).toEqual([])
+  })
+
+  it('does not return the current template when another candidate is available', () => {
+    const firstTemplate = createRandomDateTemplate('', () => 0)
+
+    expect(createRandomDateTemplate(firstTemplate, () => 0)).not.toBe(firstTemplate)
   })
 })

@@ -2,6 +2,48 @@ import { resolveTokenTemplate, validateTokenTemplate } from '@/engine/expression
 
 export const DEFAULT_DATE_TEMPLATE = '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")'
 
+const RANDOM_DATE_PARTS = {
+  month: ['(dt2)', '(dt2.1)', '(dt2.2)'],
+  day: ['(dt3)', '(dt3).format("%02d")'],
+  weekday: ['(dt5.1)', '(dt5.2)'],
+} as const
+const RANDOM_DATE_PART_ORDERS = [
+  ['month', 'day', 'weekday'],
+  ['month', 'weekday', 'day'],
+  ['day', 'month', 'weekday'],
+  ['day', 'weekday', 'month'],
+  ['weekday', 'month', 'day'],
+  ['weekday', 'day', 'month'],
+] as const
+const RANDOM_DATE_SEPARATORS = ['.', '/', '-', '·', ' '] as const
+
+export function createRandomDateTemplate(
+  currentTemplate = '',
+  random: () => number = Math.random,
+): string {
+  const candidates: string[] = []
+  for (const month of RANDOM_DATE_PARTS.month) {
+    for (const day of RANDOM_DATE_PARTS.day) {
+      for (const weekday of RANDOM_DATE_PARTS.weekday) {
+        const parts = { month, day, weekday }
+        for (const order of RANDOM_DATE_PART_ORDERS) {
+          for (const separator of RANDOM_DATE_SEPARATORS) {
+            candidates.push(order
+              .map((part) => parts[part])
+              .join(` + ${JSON.stringify(separator)} + `))
+          }
+        }
+      }
+    }
+  }
+  const available = candidates.filter((candidate) => candidate !== currentTemplate)
+  const index = Math.min(
+    available.length - 1,
+    Math.max(0, Math.floor(random() * available.length)),
+  )
+  return available[index]
+}
+
 const DATE_TOKEN_PATTERN = /\(([a-zA-Z][a-zA-Z0-9_.]*)\)/g
 const DATE_TOKENS = new Set(['dt1', 'dt1.1', 'dt2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6'])
 
