@@ -13,6 +13,7 @@ import {
   type DisplayStateMode,
   type ElementDisplayStates,
 } from '@/utils/displayStates'
+import { reflowAllLayoutGroups } from '@/engine/layout/studioLayoutController'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -70,6 +71,7 @@ export const useLayerStore = defineStore('layerStore', {
     setPreviewMode(mode: DisplayStateMode): void {
       this.previewMode = mode
       this.applyPreviewVisibility()
+      reflowAllLayoutGroups()
     },
     addLayer(element: MinimalFabricLike): void {
       if (!element || !element.id || !element.eleType) {

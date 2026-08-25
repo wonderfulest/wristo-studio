@@ -6,6 +6,12 @@ import { nanoid } from 'nanoid'
 import { addElement } from '@/engine/managers/elementManager'
 import { useHistoryStore } from '@/stores/historyStore'
 import { ActiveSelection } from 'fabric'
+import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
+import { remapLayoutGroupForPaste } from '@/engine/layout/layoutGroupClipboard'
+import { reflowLayoutGroup } from '@/engine/layout/studioLayoutController'
+import { selectLayoutGroupProxy } from '@/engine/layout/layoutGroupSelectionProxy'
+import { resolveLayoutGroupClipboardSelection } from '@/engine/layout/layoutGroupClipboardSelection'
 
 // Selection-level clipboard state
 
@@ -24,6 +30,7 @@ let selectionClipboard: ClipboardItem[] = []
 let clipboardSelectionCenter: { x: number; y: number } | null = null
 // 连续粘贴计数，用于实现 Figma 风格的递增偏移
 let pasteCount = 0
+let clipboardLayoutGroups: HorizontalLayoutGroupConfig[] = []
 
 export function hasClipboardSelection(): boolean {
   return selectionClipboard.length > 0 && clipboardSelectionCenter != null
@@ -117,11 +124,18 @@ export function copySelection(): void {
   const canvas = canvasStore.canvas
   if (!canvas) return
 
-  const actives = canvas.getActiveObjects() as FabricElement[]
+  const resolvedSelection = resolveLayoutGroupClipboardSelection(
+    canvas.getActiveObjects() as FabricElement[],
+    canvas.getObjects() as FabricElement[],
+    canvasStore.activeLayoutGroupIds,
+    useLayoutGroupStore().groups,
+  )
+  const actives = resolvedSelection.objects
   if (!actives || actives.length === 0) {
     selectionClipboard = []
     clipboardSelectionCenter = null
     pasteCount = 0
+    clipboardLayoutGroups = []
     return
   }
 
@@ -134,6 +148,7 @@ export function copySelection(): void {
     selectionClipboard = []
     clipboardSelectionCenter = null
     pasteCount = 0
+    clipboardLayoutGroups = []
     return
   }
 
@@ -144,6 +159,10 @@ export function copySelection(): void {
 
   clipboardSelectionCenter = selectionCenter
   pasteCount = 0
+  clipboardLayoutGroups = resolvedSelection.layoutGroups.map((group) => ({
+    ...group,
+    members: group.members.map((member) => ({ ...member })),
+  }))
 
   const encoded: ClipboardItem[] = []
 
@@ -210,6 +229,7 @@ export function pasteSelection(): void {
 
     const historyStore = useHistoryStore()
     const pastedObjects: FabricElement[] = []
+    const pastedIdBySourceId = new Map<string, string>()
     await historyStore.runWithoutRecording(async () => {
       for (const [index, item] of selectionClipboard.entries()) {
         try {
@@ -223,6 +243,7 @@ export function pasteSelection(): void {
           }
 
           const newId = nanoid()
+          pastedIdBySourceId.set(String((item.config as any).id), newId)
 
           const centerX = pasteCenter.x + item.offsetX
           const centerY = pasteCenter.y + item.offsetY
@@ -251,6 +272,27 @@ export function pasteSelection(): void {
       }
     })
     commitPastedSelection(canvas, pastedObjects)
-    historyStore.saveState('paste:selection')
+    if (clipboardLayoutGroups.length > 0) {
+      const pastedGroupIds = clipboardLayoutGroups.map((clipboardLayoutGroup) => {
+        const groupId = nanoid()
+        const pastedGroup = remapLayoutGroupForPaste(
+          clipboardLayoutGroup,
+          pastedIdBySourceId,
+          groupId,
+          baseOffset,
+          baseOffset,
+        )
+        useLayoutGroupStore().createGroup(pastedGroup)
+        reflowLayoutGroup(groupId)
+        return groupId
+      })
+      if (clipboardLayoutGroups.length === 1
+        && selectionClipboard.length === clipboardLayoutGroups[0].members.length) {
+        selectLayoutGroupProxy(pastedGroupIds[0])
+      }
+      historyStore.saveState('paste:layout-group')
+    } else {
+      historyStore.saveState('paste:selection')
+    }
   })()
 }

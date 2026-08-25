@@ -47,6 +47,18 @@
                 <el-icon v-if="isGroupVisibleInPreview(item)"><View /></el-icon>
                 <el-icon v-else><Hide /></el-icon>
               </button>
+              <button
+                class="layer-btn no-drag"
+                type="button"
+                :aria-pressed="areAllGroupMembersLocked(item)"
+                :title="areAllGroupMembersLocked(item) ? 'Unlock group' : 'Lock group'"
+                @click.stop="toggleGroupLock(item)">
+                <el-icon v-if="areAllGroupMembersLocked(item)"><Lock /></el-icon>
+                <el-icon v-else><Unlock /></el-icon>
+              </button>
+              <button class="layer-btn no-drag" type="button" title="Delete group" @click.stop="deleteGroup(item)">
+                <el-icon><Delete /></el-icon>
+              </button>
             </div>
             <div v-if="item.isExpanded" class="layer-group-members">
               <div
@@ -173,6 +185,8 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
+import { selectLayoutGroupProxy } from '@/engine/layout/layoutGroupSelectionProxy'
 import { elementConfigs } from '@/elements/schemaMap'
 import draggable from 'vuedraggable'
 import type { MinimalFabricLike } from '@/types/layer'
@@ -184,7 +198,7 @@ import type { LayerElement } from '@/types/layer'
 import { getDisplayState, setDisplayState, type DisplayStateMode } from '@/utils/displayStates'
 import { Delete, Hide, Lock, Unlock, View } from '@element-plus/icons-vue'
 import { toPanelLayers } from './layerPanelOrder'
-import { areAllGroupMembersVisible, buildLayerPanelItems, findCollapsedGroupsForLayerIds, getGroupVisibilityTarget, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
+import { areAllGroupMembersVisible, buildLayerPanelItems, findCollapsedGroupsForLayerIds, getGroupDeletionIds, getGroupLockTarget, getGroupVisibilityTarget, resolvePanelItemsToCanvasIds, retainExistingExpandedGroups, type LayerPanelGroupItem, type LayerPanelItem } from './layerPanelGrouping'
 import { normalizeLayerName } from './layerName'
 import { resolveLayerDisplayName, resolveLayerGroupDisplayName, type LayerBindingSummaryContext } from './layerBindingSummary'
 
@@ -194,6 +208,7 @@ const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
 const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
+const layoutGroupStore = useLayoutGroupStore()
 const { locale, t } = useI18n()
 
 const panelLayers = ref<LayerElement[]>([])
@@ -239,9 +254,9 @@ const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
 }
 
 const rebuildPanelItems = (): void => {
-  const nextItems = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value)
+  const nextItems = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value, layoutGroupStore.groups)
   expandedGroupKeys.value = retainExistingExpandedGroups(expandedGroupKeys.value, nextItems)
-  panelItems.value = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value)
+  panelItems.value = buildLayerPanelItems(panelLayers.value, expandedGroupKeys.value, layoutGroupStore.groups)
 }
 
 const resolveDragOrderIds = (): string[] => {
@@ -265,6 +280,8 @@ watch(
   },
   { deep: true, immediate: true }
 )
+
+watch(() => layoutGroupStore.groups, rebuildPanelItems, { deep: true })
 
 // kept for internal operations but selection highlight uses store
 const activeElements = ref<MinimalFabricLike[]>([])
@@ -373,6 +390,11 @@ const selectLayer = async (layer: any): Promise<void> => {
 }
 
 const selectLayerGroup = (item: LayerPanelGroupItem): void => {
+  if (item.source === 'layout' && item.layoutGroupId) {
+    selectLayoutGroupProxy(item.layoutGroupId)
+    selectedIds.value = []
+    return
+  }
   const canvas = baseStore.canvas
   if (!canvas) return
 
@@ -403,6 +425,9 @@ const isActived = (layerId: string | undefined): boolean => {
 }
 
 const isGroupActived = (item: LayerPanelGroupItem): boolean => {
+  if (item.source === 'layout' && item.layoutGroupId) {
+    return canvasStore.activeLayoutGroupIds.includes(item.layoutGroupId)
+  }
   return item.members.some((layer) => isActived(layer.id))
 }
 
@@ -446,6 +471,18 @@ const toggleLock = (layer: any): void => {
   debouncedUpdateElements()
 }
 
+const areAllGroupMembersLocked = (item: LayerPanelGroupItem): boolean => {
+  return item.members.length > 0 && item.members.every((member) => member.locked)
+}
+
+const toggleGroupLock = (item: LayerPanelGroupItem): void => {
+  const targetLocked = getGroupLockTarget(item.members.map((member) => member.locked))
+  item.members.forEach((member) => {
+    if (member.locked !== targetLocked) layerStore.toggleLayerLock(String(member.id))
+  })
+  debouncedUpdateElements()
+}
+
 // drag end reorders canvas stacking
 const handleDragStart = (): void => {
   isDraggingLayers.value = true
@@ -460,7 +497,7 @@ const handleDragEnd = (): void => {
 }
 
 // simple undo buffer for deletes
-type DeleteAction = { type: 'delete'; element: MinimalFabricLike }
+type DeleteAction = { type: 'delete'; elements: MinimalFabricLike[] }
 const history = ref<DeleteAction[]>([])
 const currentHistoryIndex = ref<number>(-1)
 
@@ -476,8 +513,10 @@ const undo = (): void => {
   if (currentHistoryIndex.value >= 0) {
     const action = history.value[currentHistoryIndex.value]
     if (action.type === 'delete') {
-      baseStore.canvas?.add?.(action.element as any)
-      layerStore.addLayer(action.element)
+      action.elements.forEach((element) => {
+        baseStore.canvas?.add?.(element as any)
+        layerStore.addLayer(element)
+      })
     }
     currentHistoryIndex.value--
     baseStore.canvas?.renderAll?.()
@@ -509,9 +548,28 @@ const deleteLayer = (layer: any): void => {
     })
   }
   const fabricElement = (fromRegistry ?? (layer.element as unknown) ?? (layer as unknown)) as FabricElement
-  addToHistory({ type: 'delete', element: (layer.element as any) ?? (layer as any) })
+  addToHistory({ type: 'delete', elements: [(layer.element as any) ?? (layer as any)] })
   removeElement(fabricElement)
   canvas.discardActiveObject?.()
+  canvas.renderAll?.()
+  debouncedUpdateElements()
+}
+
+const deleteGroup = (item: LayerPanelGroupItem): void => {
+  const canvas = baseStore.canvas
+  if (!canvas) return
+
+  const ids = getGroupDeletionIds(item.members)
+  const elements = ids
+    .map((id) => getElementById(id) ?? item.members.find((member) => String(member.id) === id)?.element)
+    .filter((element): element is MinimalFabricLike => Boolean(element))
+  if (!elements.length) return
+
+  addToHistory({ type: 'delete', elements })
+  elements.forEach((element) => removeElement(element as FabricElement))
+  canvas.discardActiveObject?.()
+  canvasStore.clearActiveIds()
+  layerStore.clearSelected()
   canvas.renderAll?.()
   debouncedUpdateElements()
 }
@@ -576,6 +634,7 @@ const getLayerDisplayName = (layer: LayerElement): string => {
 }
 
 const getGroupDisplayName = (item: LayerPanelGroupItem): string => {
+  if (item.source === 'layout') return item.label
   return resolveLayerGroupDisplayName(item.key, getBindingSummaryContext())
 }
 

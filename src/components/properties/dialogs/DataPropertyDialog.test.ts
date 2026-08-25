@@ -19,6 +19,15 @@ describe('DataPropertyDialog contract', () => {
     expect(defaultValueSelect).not.toContain('allow-create')
   })
 
+  it('uses pinyin-aware filtering for both data option selectors', () => {
+    const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
+
+    expect(source).toContain(':filter-method="filterDefaultOptions"')
+    expect(source).toContain(':filter-method="filterAddableOptions"')
+    expect(source).toContain('matchesDataOptionSearch(option, defaultOptionsQuery.value)')
+    expect(source).toContain('matchesDataOptionSearch(option, addableOptionsQuery.value)')
+  })
+
   it('emits symbol references instead of full options', () => {
     const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
 

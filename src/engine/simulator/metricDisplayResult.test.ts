@@ -44,45 +44,55 @@ describe('metric display result', () => {
     })
   })
 
-  it.each([
-    [
-      { valueCode: 57, metricSymbol: ':FIELD_TYPE_TEMPERATURE', unitKey: 'temperature' },
-      {
-        unitKey: 'temperature',
-        defaultVariant: 'celsius',
-        selectionPolicy: {
-          type: 'deviceSetting', setting: 'temperatureUnits',
-          mapping: { metric: 'celsius', statute: 'fahrenheit' },
-        },
-        variants: {
-          celsius: { aliases: ['c', '°c'], label: { eng: '°C', zhs: '摄氏度' } },
-          fahrenheit: { aliases: ['f', '°f'], label: { eng: '°F', zhs: '华氏度' } },
-        },
+  it('puts the fixed temperature degree sign in the data value and leaves the unit empty', () => {
+    const metricValue = { valueCode: 57, metricSymbol: ':FIELD_TYPE_TEMPERATURE', unitKey: 'temperature' }
+    const unitValue = {
+      unitKey: 'temperature',
+      defaultVariant: 'celsius',
+      selectionPolicy: {
+        type: 'deviceSetting', setting: 'temperatureUnits',
+        mapping: { metric: 'celsius', statute: 'fahrenheit' },
       },
-      { rawValue: 20, displayValue: '20', providerUnit: '°C' },
-      { language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute' },
-      '68°',
-    ],
-    [
-      { valueCode: 9, metricSymbol: ':FIELD_TYPE_BATTERY', unitKey: 'percentage' },
-      {
-        unitKey: 'percentage',
-        defaultVariant: 'percent',
-        selectionPolicy: { type: 'fixed', variant: 'percent' },
-        variants: { percent: { aliases: ['%'], label: { eng: '%', zhs: '百分比' } } },
+      variants: {
+        celsius: { aliases: ['c', '°c'], label: { eng: '°C', zhs: '摄氏度' } },
+        fahrenheit: { aliases: ['f', '°f'], label: { eng: '°F', zhs: '华氏度' } },
       },
-      { rawValue: 82, displayValue: '82', providerUnit: '%' },
-      { language: 'zhs', distanceUnits: 'metric', temperatureUnits: 'metric' },
-      '82%',
-    ],
-  ] as const)('puts fixed inline units in the data value and leaves the unit empty', (metricValue, unitValue, source, context, expectedDisplay) => {
+    }
     const inlineCatalog = {
       unitsByKey: new Map([[unitValue.unitKey, unitValue]]),
     } as unknown as ValidatedDataCatalog
 
-    expect(resolveMetricDisplayResult(metricValue as DataTypeOption, source, context, inlineCatalog)).toMatchObject({
-      displayValue: expectedDisplay,
+    expect(resolveMetricDisplayResult(metricValue as DataTypeOption, {
+      rawValue: 20, displayValue: '20', providerUnit: '°C',
+    }, {
+      language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute',
+    }, inlineCatalog)).toMatchObject({
+      displayValue: '68°',
       unitLabel: '',
+    })
+  })
+
+  it('keeps percentage separate from the numeric data value by default', () => {
+    const percentageMetric = {
+      valueCode: 9, metricSymbol: ':FIELD_TYPE_BATTERY', unitKey: 'percentage',
+    } as DataTypeOption
+    const percentageUnit = {
+      unitKey: 'percentage',
+      defaultVariant: 'percent',
+      selectionPolicy: { type: 'fixed', variant: 'percent' },
+      variants: { percent: { aliases: ['%'], label: { eng: '%', zhs: '%' } } },
+    }
+    const percentageCatalog = {
+      unitsByKey: new Map([['percentage', percentageUnit]]),
+    } as unknown as ValidatedDataCatalog
+
+    expect(resolveMetricDisplayResult(percentageMetric, {
+      rawValue: 82, displayValue: '82', providerUnit: '%',
+    }, {
+      language: 'eng', distanceUnits: 'metric', temperatureUnits: 'metric',
+    }, percentageCatalog)).toMatchObject({
+      displayValue: '82',
+      unitLabel: '%',
     })
   })
 

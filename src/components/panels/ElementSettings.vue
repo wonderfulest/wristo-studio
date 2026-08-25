@@ -1,6 +1,7 @@
 <template>
   <!-- 整组设置 -->
-  <GroupSettings v-if="activeElements.length > 1" :elements="activeElements"></GroupSettings>
+  <LayoutGroupSettings v-if="activeLayoutGroupId" />
+  <GroupSettings v-else-if="activeElements.length > 1" :elements="activeElements"></GroupSettings>
   <!-- 单个元素设置 -->
   <div class="settings-panel" v-if="activeElements.length == 1">
     <div class="settings-header">
@@ -34,6 +35,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
+import LayoutGroupSettings from '@/components/panels/settings/LayoutGroupSettings.vue'
 import VisibilityExpressionField from '@/components/panels/settings/VisibilityExpressionField.vue'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
@@ -49,6 +51,10 @@ const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
+const activeLayoutGroupId = computed(() => canvasStore.activeIds.length === 0
+  && canvasStore.activeLayoutGroupIds.length === 1
+  ? canvasStore.activeLayoutGroupIds[0]
+  : '')
 let configPatchQueue: Promise<void> = Promise.resolve()
 let pendingConfigPatchCount = 0
 const committedConfigById = new Map<string, AnyElementConfig>()

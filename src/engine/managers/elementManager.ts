@@ -27,6 +27,10 @@ import { collectExplicitColorBindings } from '@/engine/services/explicitColorBin
 import { rememberLastEditedElementStyle } from '@/engine/services/elementStyleMemory'
 import { parseExpression } from '@/engine/expression/parser'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import {
+  removeElementFromLayoutGroups,
+  scheduleReflowForElement,
+} from '@/engine/layout/studioLayoutController'
 
 // 运行时缓存：id -> FabricElement
 // 作为轻量级 Registry，供各元素 handler / 设置面板按 id O(1) 查找 Group
@@ -153,6 +157,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     } else {
       rememberLastEditedElementStyle(resolved as any, patch as Record<string, unknown>)
     }
+    if (id != null) scheduleReflowForElement(String(id))
     return
   }
   const positionPatch = (patch ?? {}) as Record<string, unknown>
@@ -222,6 +227,8 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     rememberLastEditedElementStyle(resolved as any, patch as Record<string, unknown>)
   }
 
+  if (id != null) scheduleReflowForElement(String(id))
+
 }
 
 export async function updateElementById(id: string | number | null | undefined, patch: any): Promise<void> {
@@ -246,6 +253,7 @@ export function removeElement(element: FabricElement) {
   if (!canvas || !element) return
 
   const id = (element as any).id
+  if (id != null) removeElementFromLayoutGroups(String(id))
 
   // 为了兼容从 LayerPanel 传入的 Vue Proxy（不是画布上的真实 FabricObject 引用），
   // 这里优先通过 canvas.getObjects() 按 id 找一次真正挂在画布上的对象。

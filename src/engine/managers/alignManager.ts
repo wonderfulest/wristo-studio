@@ -1,6 +1,8 @@
 import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useHistoryStore } from '@/stores/historyStore'
+import { isLayoutGroupProxy, syncLayoutGroupProxyBounds } from '@/engine/layout/layoutGroupSelectionProxy'
+import { moveLayoutGroup } from '@/engine/layout/studioLayoutController'
 
 /**
  * Align / Distribute Manager
@@ -34,6 +36,27 @@ function getRects(els: FabricElement[]) {
   return els.map((el) => ({ el, rect: el.getBoundingRect() }))
 }
 
+type LayoutRect = { left: number; top: number; width: number; height: number }
+
+export function calculateAlignedRectOffsets(rects: readonly LayoutRect[], align: AlignType) {
+  if (rects.length === 0) return []
+  const minLeft = Math.min(...rects.map((rect) => rect.left))
+  const maxRight = Math.max(...rects.map((rect) => rect.left + rect.width))
+  const minTop = Math.min(...rects.map((rect) => rect.top))
+  const maxBottom = Math.max(...rects.map((rect) => rect.top + rect.height))
+  return rects.map((rect) => {
+    let dx = 0
+    let dy = 0
+    if (align === 'left') dx = minLeft - rect.left
+    else if (align === 'right') dx = maxRight - (rect.left + rect.width)
+    else if (align === 'center') dx = (minLeft + maxRight) / 2 - (rect.left + rect.width / 2)
+    else if (align === 'top') dy = minTop - rect.top
+    else if (align === 'bottom') dy = maxBottom - (rect.top + rect.height)
+    else if (align === 'middle') dy = (minTop + maxBottom) / 2 - (rect.top + rect.height / 2)
+    return { dx, dy }
+  })
+}
+
 // ============ Align ============
 
 export type AlignType =
@@ -52,6 +75,24 @@ export function alignSelection(align: AlignType): void {
   if (actives.length <= 1) return
 
   const items = getRects(actives)
+  const layoutGroupOnly = actives.every((element) => isLayoutGroupProxy(element))
+  if (layoutGroupOnly) {
+    const offsets = calculateAlignedRectOffsets(items.map((item) => item.rect), align)
+    items.forEach(({ el }, index) => {
+      const proxy = el as any
+      const dx = offsets[index]?.dx ?? 0
+      const dy = offsets[index]?.dy ?? 0
+      moveLayoutGroup(
+        String(proxy.layoutGroupId),
+        Number(proxy.left ?? 0) + dx,
+        Number(proxy.top ?? 0) + dy,
+      )
+      syncLayoutGroupProxyBounds(String(proxy.layoutGroupId))
+    })
+    requestRender()
+    commitHistory(`align:layout-groups:${align}`)
+    return
+  }
   const minLeft = Math.min(...items.map((i) => i.rect.left))
   const maxRight = Math.max(...items.map((i) => i.rect.left + i.rect.width))
   const minTop = Math.min(...items.map((i) => i.rect.top))

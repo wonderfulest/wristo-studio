@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useHistoryStore } from './historyStore'
 import { usePropertiesStore } from './properties'
 import { useElementDataStore } from './elementDataStore'
+import { useLayoutGroupStore } from './layoutGroupStore'
 
 const createCanvas = () => {
   let version = 0
@@ -179,5 +180,34 @@ describe('history saveState result', () => {
 
     expect(loadFromJSON).toHaveBeenCalledTimes(1)
     expect(JSON.parse(loadFromJSON.mock.calls[0][0]).objects[0].id).toBe('element-0')
+  })
+
+  it('restores layout group relationships through undo and redo', async () => {
+    const canvas = createCanvas()
+    const historyStore = useHistoryStore()
+    historyStore.attachCanvas({
+      ...canvas,
+      loadFromJSON: async () => undefined,
+    } as any, baseStore as any)
+    const elementDataStore = useElementDataStore()
+    elementDataStore.upsertElement({ id: 'data-1', eleType: 'data', left: 10, top: 20 } as any)
+    elementDataStore.upsertElement({ id: 'unit-1', eleType: 'unit', left: 30, top: 20 } as any)
+    const layoutStore = useLayoutGroupStore()
+    layoutStore.createGroup({
+      id: 'row-1', name: 'Row', direction: 'horizontal', left: 20, top: 20, originX: 'left',
+      members: [
+        { elementId: 'data-1', gapBefore: 0, offsetY: 0 },
+        { elementId: 'unit-1', gapBefore: 1, offsetY: 0 },
+      ],
+    })
+    historyStore.saveInitial()
+
+    layoutStore.reorderMembers('row-1', ['unit-1', 'data-1'])
+    expect(historyStore.saveState('layout-group:reorder')).toBe(true)
+    await historyStore.undo()
+    expect(layoutStore.groups[0].members.map((member) => member.elementId)).toEqual(['data-1', 'unit-1'])
+
+    await historyStore.redo()
+    expect(layoutStore.groups[0].members.map((member) => member.elementId)).toEqual(['unit-1', 'data-1'])
   })
 })

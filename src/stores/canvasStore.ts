@@ -17,6 +17,7 @@ export const useCanvasStore = defineStore('canvas', {
 
     return {
       activeIds: [] as string[],
+      activeLayoutGroupIds: [] as string[],
       canvas: null as Canvas | null,
       designStore,
       watchFaceCircle: null as AnyObject | null,
@@ -26,10 +27,25 @@ export const useCanvasStore = defineStore('canvas', {
   actions: {
     setActiveIds(ids: string[]) {
       this.activeIds = ids
+      if (ids.length > 0) this.activeLayoutGroupIds = []
+    },
+
+    setActiveLayoutGroupIds(ids: string[]) {
+      this.activeLayoutGroupIds = ids
+      if (ids.length > 0) this.activeIds = []
+    },
+
+    setActiveSelection(ids: string[], layoutGroupIds: string[]) {
+      this.activeIds = ids
+      this.activeLayoutGroupIds = layoutGroupIds
     },
 
     clearActiveIds() {
       this.activeIds = []
+    },
+
+    clearActiveLayoutGroupIds() {
+      this.activeLayoutGroupIds = []
     },
 
     setCanvas(fabricCanvas: AnyObject): void {

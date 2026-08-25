@@ -19,6 +19,7 @@ import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
 import { DEFAULT_DATE_TEMPLATE, formatCustomDateTemplate } from '@/elements/time/date/dateTemplate'
+import { reflowAllLayoutGroups } from '@/engine/layout/studioLayoutController'
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -425,6 +426,7 @@ export class DataSimulatorEngine {
     })
 
     if (changed) {
+      reflowAllLayoutGroups()
       canvas.requestRenderAll?.()
     }
   }

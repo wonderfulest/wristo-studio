@@ -1,6 +1,7 @@
 import type { Canvas } from 'fabric'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
+import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
 import { normalizeFontSizeToOption } from '@/utils/fontSize'
 import { fontSizes } from '@/config/elements/options/typography'
 
@@ -170,6 +171,35 @@ export function normalizeConfigToStandardSize(
         height: STANDARD_DESIGN_SIZE,
       }),
     ),
+    ...(config.layoutGroups
+      ? {
+          layoutGroups: config.layoutGroups.map((group) =>
+            scaleLayoutGroupConfig(group, currentSize, {
+              width: STANDARD_DESIGN_SIZE,
+              height: STANDARD_DESIGN_SIZE,
+            }),
+          ),
+        }
+      : {}),
+  }
+}
+
+export function scaleLayoutGroupConfig(
+  group: HorizontalLayoutGroupConfig,
+  from: DesignSize,
+  to: DesignSize,
+): HorizontalLayoutGroupConfig {
+  const ratioX = safeRatio(to.width, from.width)
+  const ratioY = safeRatio(to.height, from.height)
+  return {
+    ...group,
+    left: Number((group.left * ratioX).toFixed(3)),
+    top: Number((group.top * ratioY).toFixed(3)),
+    members: group.members.map((member) => ({
+      ...member,
+      gapBefore: Number((member.gapBefore * ratioX).toFixed(3)),
+      offsetY: Number((member.offsetY * ratioY).toFixed(3)),
+    })),
   }
 }
 

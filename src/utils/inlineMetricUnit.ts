@@ -1,6 +1,5 @@
 const INLINE_UNIT_SUFFIXES: Readonly<Record<string, string>> = Object.freeze({
   temperature: '°',
-  percentage: '%',
 })
 
 export function resolveInlineMetricUnitSuffix(unitKey: string): string | null {

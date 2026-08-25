@@ -1,8 +1,8 @@
 <template>
   <div class="settings-group">
-    <h3>{{ t('elementSettings.dataGroupTitle') }}</h3>
+    <h3 v-if="!bindingOnly">{{ t('elementSettings.dataGroupTitle') }}</h3>
     <el-form ref="formRef" :model="formModel" label-position="left" label-width="120px">
-      <el-form-item class="group-alignment-item" :label="t('editor.align')">
+      <el-form-item v-if="!bindingOnly" class="group-alignment-item" :label="t('editor.align')">
         <div class="group-alignment-actions">
           <el-button
             v-for="option in groupAlignOptions"
@@ -17,6 +17,12 @@
         </div>
       </el-form-item>
 
+      <el-form-item v-if="!bindingOnly && canCreateLayoutGroup">
+        <el-button type="primary" plain @click="handleCreateLayoutGroup">
+          {{ t('layoutGroup.create') }}
+        </el-button>
+      </el-form-item>
+
       <DataPropertyField
         v-if="showDataProperty"
         v-model="dataProperty"
@@ -29,11 +35,11 @@
         @change="updateGoalProperty"
       />
 
-      <el-form-item v-if="showTypographyControls" :label="t('elementSettings.fontSize')" required>
+      <el-form-item v-if="!bindingOnly && showTypographyControls" :label="t('elementSettings.fontSize')" required>
         <FontSizeSelect v-model="fontSize" @change="updateFontSize" />
       </el-form-item>
 
-      <el-form-item v-if="isUpdateColor" :label="t('elementSettings.textColor')" required>
+      <el-form-item v-if="!bindingOnly && isUpdateColor" :label="t('elementSettings.textColor')" required>
         <color-picker
           v-model="textColor"
           :property-key="sharedFillProperty"
@@ -41,7 +47,7 @@
         />
       </el-form-item>
 
-      <el-form-item v-if="showTypographyControls" :label="t('elementSettings.font')" required>
+      <el-form-item v-if="!bindingOnly && showTypographyControls" :label="t('elementSettings.font')" required>
         <font-picker
           v-model="fontFamily"
           :type="fontType"
@@ -88,6 +94,11 @@ import {
   buildPrimaryColorBindingPatch,
   resolveSharedPrimaryColorBinding,
 } from './groupPrimaryColorBinding'
+import { isHorizontalLayoutElementType } from '@/types/layoutGroup'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
+import { createLayoutGroupFromSelection } from '@/engine/layout/studioLayoutController'
+import { selectLayoutGroupProxy } from '@/engine/layout/layoutGroupSelectionProxy'
+import type { LayoutGroupBinding } from '@/types/layoutGroup'
 
 const baseStore = useBaseStore()
 const { t } = useI18n()
@@ -97,10 +108,42 @@ const designStore = useDesignStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const amoledIconAssetStore = useAmoledIconAssetStore()
+const layoutGroupStore = useLayoutGroupStore()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   elements: FabricElement[]
+  bindingOnly?: boolean
+  showBothBindingTypes?: boolean
+  initialBinding?: LayoutGroupBinding | null
+  manageHistory?: boolean
+}>(), {
+  bindingOnly: false,
+  showBothBindingTypes: false,
+  initialBinding: null,
+  manageHistory: true,
+})
+
+const emit = defineEmits<{
+  (e: 'bindingChange', binding: LayoutGroupBinding): void
 }>()
+
+const canCreateLayoutGroup = computed(() => props.elements.length >= 2 && props.elements.every((element) => {
+  const id = String((element as any).id ?? '')
+  return id
+    && isHorizontalLayoutElementType((element as any).eleType)
+    && !layoutGroupStore.findGroupByElementId(id)
+}))
+
+const handleCreateLayoutGroup = async () => {
+  if (!canCreateLayoutGroup.value) return
+  let groupId = ''
+  await historyStore.runWithoutRecording(() => {
+    groupId = createLayoutGroupFromSelection(props.elements.map((element: any) => String(element.id)))
+  })
+  if (!groupId) return
+  selectLayoutGroupProxy(groupId)
+  historyStore.saveState('layout-group:create')
+}
 
 const groupAlignOptions: Array<{ type: AlignType; icon: string; labelKey: string }> = [
   { type: 'left', icon: 'mdi:align-horizontal-left', labelKey: 'editor.alignLeft' },
@@ -146,6 +189,7 @@ const formModel = reactive({
 })
 
 const commitHistory = (reason: string) => {
+  if (!props.manageHistory) return
   historyStore.saveState(`group:${reason}`)
 }
 
@@ -176,20 +220,23 @@ watch(goalProperty, (val) => {
   formModel.goalProperty = val
 })
 
-const updateDataProperty = () => {
+const updateDataProperty = async () => {
   const prop = dataProperty.value || goalProperty.value
   if (!prop) return
 
+  goalProperty.value = ''
+  formModel.goalProperty = ''
+
   const metric = propertiesStore.getMetricByOptions({
     dataProperty: dataProperty.value,
-    goalProperty: goalProperty.value,
+    goalProperty: '',
   })
   if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
   const catalog = dataCatalog.snapshot
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
   const contentLanguage = resolveDesignContentLanguage(designStore)
   if (dataProperty.value) {
-    nextTick(async () => {
+    await nextTick()
       if (dataElement.value) {
         const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
         dataElement.value.set('dataProperty', dataProperty.value)
@@ -227,23 +274,26 @@ const updateDataProperty = () => {
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('dataProperty')
       commitHistory('data-property')
-    })
+      emit('bindingChange', { kind: 'data', propertyKey: dataProperty.value })
   }
 }
 
-const updateGoalProperty = () => {
+const updateGoalProperty = async () => {
   if (!goalProperty.value) return
+
+  dataProperty.value = ''
+  formModel.dataProperty = ''
 
   const metric = propertiesStore.getMetricByOptions({
     goalProperty: goalProperty.value,
-    dataProperty: dataProperty.value,
+    dataProperty: '',
   })
   if (!dataCatalog.snapshot) throw new Error('data catalog: snapshot is missing')
   const catalog = dataCatalog.snapshot
   const canonicalMetric = requireCanonicalMetric(metric, catalog)
   const contentLanguage = resolveDesignContentLanguage(designStore)
   if (goalProperty.value) {
-    nextTick(async () => {
+    await nextTick()
       if (dataElement.value) {
         const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
         dataElement.value.set('goalProperty', goalProperty.value)
@@ -289,11 +339,32 @@ const updateGoalProperty = () => {
       baseStore.canvas?.renderAll()
       formRef.value?.clearValidate?.('goalProperty')
       commitHistory('goal-property')
-    })
+      emit('bindingChange', { kind: 'goal', propertyKey: goalProperty.value })
   }
 }
 
+const applyCurrentBinding = async () => {
+  if (goalProperty.value) await updateGoalProperty()
+  else if (dataProperty.value) await updateDataProperty()
+}
+
+defineExpose({ applyCurrentBinding })
+
 onMounted(() => {
+  if (props.initialBinding?.kind === 'data') {
+    dataProperty.value = props.initialBinding.propertyKey
+    goalProperty.value = ''
+    formModel.dataProperty = dataProperty.value
+    formModel.goalProperty = ''
+    return
+  }
+  if (props.initialBinding?.kind === 'goal') {
+    dataProperty.value = ''
+    goalProperty.value = props.initialBinding.propertyKey
+    formModel.dataProperty = ''
+    formModel.goalProperty = goalProperty.value
+    return
+  }
   const dataProperties = props.elements.map((el) => el.dataProperty)
   const allSame = dataProperties.every((prop) => prop === dataProperties[0])
   dataProperty.value = allSame ? dataProperties[0] || '' : ''
@@ -427,10 +498,16 @@ const showDataProperty = computed(() => {
   return show
 })
 
+const hasGoalProperties = computed(() =>
+  Object.values(propertiesStore.allProperties).some((property) => property.type === 'goal'),
+)
+
 const showGoalProperty = computed(() => {
   const hasGoalBar = goalBarElement.value !== undefined
   const hasGoalArc = goalArcElement.value !== undefined
-  return hasGoalBar || hasGoalArc
+  return hasGoalBar
+    || hasGoalArc
+    || (props.bindingOnly && props.showBothBindingTypes && showDataProperty.value && hasGoalProperties.value)
 })
 </script>
 

@@ -1,4 +1,4 @@
-import { Canvas, Point } from 'fabric'
+import { ActiveSelection, Canvas, Point } from 'fabric'
 import emitter from '@/utils/eventBus'
 import { initAligningGuidelines } from '@/lib/aligning_guidelines'
 import { initCenteringGuidelines } from '@/lib/centering_guidelines'
@@ -21,6 +21,16 @@ import {
   getExpandedLayerOrderControlId,
   getLayerOrderControlTitle,
 } from '@/utils/layerOrderControl'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
+import { moveLayoutGroupByProxyCenter } from '@/engine/layout/studioLayoutController'
+import {
+  disposeAllLayoutGroupProxies,
+  ensureLayoutGroupProxy,
+  isLayoutGroupProxy,
+  selectLayoutGroupProxy,
+  syncLayoutGroupProxyBounds,
+} from '@/engine/layout/layoutGroupSelectionProxy'
+import { resolveAtomicLayoutSelection } from '@/engine/layout/layoutGroupSelectionPolicy'
 
 export interface CanvasManagerDeps {
   baseStore: any
@@ -39,9 +49,52 @@ export function resolveCanvasSelectionIds(
   activeObjects: Array<{ id?: string | number; eleType?: string; handId?: string | number }>,
 ): string[] {
   return activeObjects
+    .filter((object) => object.eleType !== 'layoutGroupProxy')
     .map((object) => object.eleType === 'handCalibrationPivot' ? object.handId : object.id)
     .filter((id): id is string | number => id !== undefined && id !== null && id !== '')
     .map(String)
+}
+
+export function resolveLayoutGroupProxyCenters(target: any): Array<{
+  groupId: string
+  centerX: number
+  centerY: number
+}> {
+  const objects = isLayoutGroupProxy(target)
+    ? [target]
+    : String(target?.type ?? '').toLowerCase() === 'activeselection'
+      ? (target.getObjects?.() ?? [])
+      : []
+  const seen = new Set<string>()
+
+  return objects.flatMap((object: any) => {
+    if (!isLayoutGroupProxy(object)) return []
+    const groupId = String(object.layoutGroupId ?? '').trim()
+    if (!groupId || seen.has(groupId)) return []
+    seen.add(groupId)
+    const center = object.getCenterPoint?.() ?? { x: object.left, y: object.top }
+    const centerX = Number(center?.x)
+    const centerY = Number(center?.y)
+    return Number.isFinite(centerX) && Number.isFinite(centerY)
+      ? [{ groupId, centerX, centerY }]
+      : []
+  })
+}
+
+export function canSaveInitialHistorySnapshot(
+  canvasObjects: Array<{ id?: unknown }>,
+  layoutGroups: Array<{ members?: Array<{ elementId?: unknown }> }>,
+): boolean {
+  if (layoutGroups.length === 0) return true
+  const canvasElementIds = new Set(
+    canvasObjects
+      .map((object) => String(object.id ?? '').trim())
+      .filter(Boolean),
+  )
+  const memberIds = layoutGroups.flatMap((group) => group.members ?? [])
+    .map((member) => String(member.elementId ?? '').trim())
+    .filter(Boolean)
+  return memberIds.length > 0 && memberIds.every((elementId) => canvasElementIds.has(elementId))
 }
 
 function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | null) {
@@ -52,8 +105,11 @@ function syncSelectionIdsFromCanvas(canvasStore: any, canvas?: FabricCanvas | nu
     eleType?: string
     handId?: string | number
   }>
+  const groupIds = activeObjects
+    .filter((object) => isLayoutGroupProxy(object))
+    .map((object: any) => String(object.layoutGroupId))
   const ids = resolveCanvasSelectionIds(activeObjects)
-  canvasStore.setActiveIds(ids)
+  canvasStore.setActiveSelection(ids, [...new Set(groupIds)])
   console.log('[canvas-selection] sync active ids', {
     ids,
     activeObjectCount: activeObjects.length,
@@ -71,6 +127,7 @@ function clearCanvasSelection(layerStore: any, canvasStore: any, canvas: FabricC
   canvas.discardActiveObject?.()
   canvas.requestRenderAll?.()
   canvasStore.clearActiveIds()
+  canvasStore.clearActiveLayoutGroupIds()
   layerStore.clearSelected()
 }
 
@@ -167,6 +224,46 @@ export function initCanvasManager(
   initCenteringGuidelines(canvas)
   canvas.selection = true
 
+  let normalizingLayoutGroupSelection = false
+  const normalizeMarqueeLayoutGroupSelection = (): boolean => {
+    const active = canvas.getActiveObject() as any
+    if (!active || String(active.type).toLowerCase() !== 'activeselection') return false
+
+    const decision = resolveAtomicLayoutSelection(
+      canvas.getActiveObjects() as any[],
+      useLayoutGroupStore().groups,
+    )
+    if (decision.kind === 'unchanged') return false
+
+    normalizingLayoutGroupSelection = true
+    try {
+      canvas.discardActiveObject?.()
+
+      if (decision.kind === 'replace') {
+        const objects = decision.objects as any[]
+        const proxies = decision.groupIds
+          .map((groupId) => ensureLayoutGroupProxy(groupId))
+          .filter((proxy): proxy is NonNullable<typeof proxy> => proxy != null)
+        const atomicObjects = [...objects, ...proxies]
+        if (atomicObjects.length === 1) {
+          canvas.setActiveObject?.(atomicObjects[0])
+        } else if (atomicObjects.length > 1) {
+          const selection = new ActiveSelection(atomicObjects, { canvas: canvas as any })
+          selection.set({ hasControls: false })
+          selection.setCoords?.()
+          canvas.setActiveObject?.(selection as any)
+        }
+        const ids = resolveCanvasSelectionIds(objects)
+        canvasStore.setActiveSelection(ids, proxies.map((proxy) => proxy.layoutGroupId))
+        layerStore.setSelected(ids)
+      }
+    } finally {
+      normalizingLayoutGroupSelection = false
+    }
+    canvas.requestRenderAll?.()
+    return true
+  }
+
   // 选择事件同步到 canvasStore
   canvas.on({
     'mouse:move': (event) => {
@@ -177,12 +274,26 @@ export function initCanvasManager(
       canvas.upperCanvasEl.title = ''
     },
     'mouse:down': (event) => {
-      const target = (event as unknown as { target?: unknown }).target
+      const target = (event as unknown as { target?: any }).target
+      if (isLayoutGroupProxy(target)) return
+      const targetId = String(target?.id ?? '')
+      const layoutGroup = targetId ? useLayoutGroupStore().findGroupByElementId(targetId) : null
+      if (layoutGroup) {
+        const clickCount = Number((event as any)?.e?.detail ?? 1)
+        if (clickCount < 2) {
+          queueMicrotask(() => selectLayoutGroupProxy(layoutGroup.id))
+          return
+        }
+        canvasStore.setActiveIds([targetId])
+        return
+      }
       if (target && !isBackgroundElement(target) && !isDefaultBackgroundElement(target)) return
       clearCanvasSelection(layerStore, canvasStore, canvas)
     },
     'selection:created': () => {
+      if (normalizingLayoutGroupSelection) return
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
+      if (normalizeMarqueeLayoutGroupSelection()) return
       const active = canvas.getActiveObject() as any
       const activeId = active?.id == null ? null : String(active.id)
       if (getExpandedLayerOrderControlId() !== activeId) {
@@ -201,7 +312,9 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:updated': () => {
+      if (normalizingLayoutGroupSelection) return
       if (rejectBackgroundSelection(layerStore, canvasStore, canvas)) return
+      if (normalizeMarqueeLayoutGroupSelection()) return
       clearExpandedLayerOrderControl()
       const active = canvas.getActiveObject() as any
       console.log('[canvas-selection] updated', {
@@ -217,9 +330,11 @@ export function initCanvasManager(
       syncSelectionIdsFromCanvas(canvasStore, canvas)
     },
     'selection:cleared': () => {
+      if (normalizingLayoutGroupSelection) return
       clearExpandedLayerOrderControl()
       console.log('[canvas-selection] cleared')
       canvasStore.clearActiveIds()
+      canvasStore.clearActiveLayoutGroupIds()
       layerStore.clearSelected()
     },
   })
@@ -234,7 +349,9 @@ export function initCanvasManager(
 
   // 历史管理
   historyStore.attachCanvas(canvas as any, baseStore as any)
-  historyStore.saveInitial()
+  if (canSaveInitialHistorySnapshot(canvas.getObjects() as any[], useLayoutGroupStore().groups)) {
+    historyStore.saveInitial()
+  }
   historyStore.registerCanvasEvents()
 
   // 扫描并注册自定义属性
@@ -297,6 +414,26 @@ export function initCanvasManager(
     elementManager.unregisterElementInstance(target as any)
   })
 
+  canvas.on('object:moving', (e) => {
+    const target = (e as any)?.target
+    const proxyCenters = resolveLayoutGroupProxyCenters(target)
+    proxyCenters.forEach(({ groupId, centerX, centerY }) => {
+      moveLayoutGroupByProxyCenter(groupId, centerX, centerY)
+      if (isLayoutGroupProxy(target)) syncLayoutGroupProxyBounds(groupId)
+    })
+  })
+
+  canvas.on('object:modified', (e) => {
+    const target = (e as any)?.target
+    const proxyCenters = resolveLayoutGroupProxyCenters(target)
+    if (proxyCenters.length === 0) return
+    proxyCenters.forEach(({ groupId, centerX, centerY }) => {
+      moveLayoutGroupByProxyCenter(groupId, centerX, centerY)
+      if (isLayoutGroupProxy(target)) syncLayoutGroupProxyBounds(groupId)
+    })
+    historyStore.saveState('layout-group:move')
+  })
+
   // 监听撤销/重做事件
   emitter.on('canvas-undo', () => {
     void historyStore.undo()
@@ -316,6 +453,7 @@ export function disposeCanvasManager(): void {
   emitter.off('canvas-undo')
   emitter.off('canvas-redo')
   clearExpandedLayerOrderControl()
+  disposeAllLayoutGroupProxies()
   if (fabricCanvas?.upperCanvasEl) {
     fabricCanvas.upperCanvasEl.title = ''
   }

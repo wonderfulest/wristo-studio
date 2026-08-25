@@ -13,6 +13,7 @@ import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useUserStore } from '@/stores/user'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { useIconFontStrategyStore } from '@/stores/iconFontStrategyStore'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { decodeElementConfig } from '@/engine/registry/elementRegistry'
 import { addElement, syncElementInstancesFromCanvas } from '@/engine/managers/elementManager'
 import { applyOrder, syncLayersFromCanvas } from '@/engine/managers/layerManager'
@@ -26,7 +27,8 @@ import { normalizeDataPropertyConfig } from '@/engine/services/dataPropertyConfi
 import { migrateLegacyDateProperties } from '@/engine/services/datePropertyConfig'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH, normalizeDataNumberFormatMode, normalizeMaxFieldLength } from '@/utils/dataNumberFormat'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
-import { scaleElementConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
+import { scaleElementConfig, scaleLayoutGroupConfig, STANDARD_DESIGN_SIZE, type DesignSize } from '@/utils/designScale'
+import { clearLayoutGroupProjections, reflowAllLayoutGroups } from '@/engine/layout/studioLayoutController'
 import { DEFAULT_BACKGROUND_IMAGE_URL } from '@/elements/decoration/background/background.constants'
 import { normalizeLegacyTextFont } from '@/utils/contentFontFallback'
 import type { ApiResponse } from '@/types/api/api'
@@ -69,6 +71,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const userStore = useUserStore()
   const visualThemeStore = useVisualThemeStore()
   const iconFontStrategyStore = useIconFontStrategyStore()
+  const layoutGroupStore = useLayoutGroupStore()
   const canvasRef = options.canvasRef
   const waitCanvasReady = options.waitCanvasReady
   const t = options.translate
@@ -317,6 +320,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
       elementDataStore.clearAll()
+      layoutGroupStore.clear()
+      clearLayoutGroupProjections()
       baseStore.canvas?.requestRenderAll()
       historyStore.saveInitial()
       return true
@@ -380,11 +385,33 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       scaledElements,
       config.elements,
     ).forEach(element => elementDataStore.upsertElement(element))
+    layoutGroupStore.clear()
+    clearLayoutGroupProjections()
+    if (Array.isArray(loadConfig.layoutGroups) && loadConfig.layoutGroups.length > 0) {
+      const currentSize = getCurrentDesignSize()
+      const storedSize = { width: STANDARD_DESIGN_SIZE, height: STANDARD_DESIGN_SIZE }
+      const scaledGroups = currentSize.width === STANDARD_DESIGN_SIZE && currentSize.height === STANDARD_DESIGN_SIZE
+        ? loadConfig.layoutGroups
+        : loadConfig.layoutGroups.map((group) => scaleLayoutGroupConfig(group, storedSize, currentSize))
+      try {
+        layoutGroupStore.hydrate(scaledGroups, scaledElements)
+        reflowAllLayoutGroups()
+      } catch (error) {
+        layoutGroupStore.clear()
+        clearLayoutGroupProjections()
+        void ElMessageBox.alert(
+          error instanceof Error ? error.message : String(error),
+          'Invalid layout groups',
+          { type: 'error' },
+        )
+      }
+    }
     applyLoadedElementDisplayStates(scaledElements)
     canvasRef.value?.updateZoom?.()
 
     if (!(await restoreLayerOrder(loadConfig.orderIds, generation)) || !isCurrentDesignLoad(generation)) return false
     applyLoadedElementDisplayStates(scaledElements)
+    reflowAllLayoutGroups()
 
     await new Promise<void>((resolve, reject) =>
       window.setTimeout(() => {
@@ -395,6 +422,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
               return
             }
             getDataSimulatorEngine().updateCanvas()
+            reflowAllLayoutGroups()
             await restoreLayerOrder(loadConfig.orderIds, generation)
             resolve()
           } catch (error) {
@@ -411,6 +439,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const clearEditableDesignCanvas = async (generation: number): Promise<boolean> => {
     const canvas = baseStore.canvas
     if (!canvas || !isCurrentDesignLoad(generation)) return false
+
+    layoutGroupStore.clear()
+    clearLayoutGroupProjections()
 
     canvas.discardActiveObject?.()
     const objects = canvas.getObjects?.() || []

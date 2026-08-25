@@ -123,7 +123,7 @@ declare module 'vue' {
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']
     LayerPanel: typeof import('./src/components/panels/LayerPanel.vue')['default']
     Layout: typeof import('./src/components/layout/Layout.vue')['default']
-    LocalizedPropertyTitleField: typeof import('./src/components/properties/common/LocalizedPropertyTitleField.vue')['default']
+    LayoutGroupSettings: typeof import('./src/components/panels/settings/LayoutGroupSettings.vue')['default']
     Message: typeof import('./src/components/Message.vue')['default']
     ProductImagesEditor: typeof import('./src/components/common/ProductImagesEditor.vue')['default']
     ProductTagSelector: typeof import('./src/components/common/ProductTagSelector.vue')['default']

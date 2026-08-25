@@ -94,6 +94,98 @@ describe('visual theme export persistence', () => {
     })
   })
 
+  it('exports validated horizontal layout groups at the top level', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    for (const eleType of ['data', 'unit']) {
+      registerElement(eleType as any, {
+        add: vi.fn() as any,
+        encode: (element) => ({ ...(element as any) }),
+      })
+    }
+    const elements = [
+      { id: 'data-1', eleType: 'data', left: 10, top: 20 },
+      { id: 'unit-1', eleType: 'unit', left: 30, top: 20 },
+    ]
+    const layoutGroups = [{
+      id: 'row-1', name: 'Row', direction: 'horizontal' as const, left: 20, top: 20, originX: 'left' as const,
+      members: [
+        { elementId: 'data-1', gapBefore: 0, offsetY: 0 },
+        { elementId: 'unit-1', gapBefore: 1, offsetY: 2 },
+      ],
+    }]
+
+    const config = generateConfig({
+      canvas: { getObjects: () => elements } as any,
+      properties: {}, designId: 'design-1', watchFaceName: 'Layout', textCase: 0, bitmapMode: true,
+      layoutGroups,
+    })
+
+    expect(config?.layoutGroups).toEqual(layoutGroups)
+    expect(config?.layoutGroups).not.toBe(layoutGroups)
+  })
+
+  it('ignores the temporary layout group selection proxy when exporting', async () => {
+    const { generateConfig } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    for (const eleType of ['data', 'unit']) {
+      registerElement(eleType as any, {
+        add: vi.fn() as any,
+        encode: (element) => ({ ...(element as any) }),
+      })
+    }
+    const elements = [
+      { id: 'data-1', eleType: 'data', left: 10, top: 20 },
+      { id: 'unit-1', eleType: 'unit', left: 30, top: 20 },
+      {
+        id: 'layout-group:row-1',
+        eleType: 'layoutGroupProxy',
+        layoutGroupId: 'row-1',
+        excludeFromExport: true,
+        left: 20,
+        top: 20,
+      },
+    ]
+
+    const config = generateConfig({
+      canvas: { getObjects: () => elements } as any,
+      properties: {}, designId: 'design-1', watchFaceName: 'Layout', textCase: 0, bitmapMode: true,
+      layoutGroups: [{
+        id: 'row-1', name: 'Row', direction: 'horizontal', left: 20, top: 20, originX: 'left',
+        members: [
+          { elementId: 'data-1', gapBefore: 0, offsetY: 0 },
+          { elementId: 'unit-1', gapBefore: 1, offsetY: 0 },
+        ],
+      }],
+    })
+
+    expect(config).not.toBeNull()
+    expect(config?.elements.map((element) => element.id)).toEqual(['data-1', 'unit-1'])
+    expect(config?.orderIds).toEqual(['data-1', 'unit-1'])
+  })
+
+  it('rejects layout groups with damaged member references', async () => {
+    const { generateConfig } = await import('./exportService')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const config = generateConfig({
+        canvas: { getObjects: () => [{ id: 'data-1', eleType: 'data', left: 10, top: 20 }] } as any,
+        properties: {}, designId: 'design-1', watchFaceName: 'Layout', textCase: 0, bitmapMode: true,
+        layoutGroups: [{
+          id: 'row-1', name: 'Row', direction: 'horizontal', left: 20, top: 20, originX: 'left',
+          members: [
+            { elementId: 'data-1', gapBefore: 0, offsetY: 0 },
+            { elementId: 'missing', gapBefore: 1, offsetY: 0 },
+          ],
+        }],
+      } as any)
+
+      expect(config).toBeNull()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('rejects an invalid dynamic visibility expression before export', async () => {
     const { generateConfig } = await import('./exportService')
     const { registerElement } = await import('@/engine/registry/elementRegistry')

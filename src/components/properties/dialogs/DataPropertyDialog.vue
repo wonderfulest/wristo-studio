@@ -63,11 +63,12 @@
           <el-select 
             v-model="formData.value" 
             filterable
+            :filter-method="filterDefaultOptions"
             :placeholder="t('property.selectDataType')"
             style="width: 100%"
           >
             <el-option
-              v-for="option in defaultValueOptions"
+              v-for="option in filteredDefaultValueOptions"
               :key="option.value"
               :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
               :value="option.value"
@@ -179,11 +180,12 @@
       v-model="pendingOptionValues"
       multiple
       filterable
+      :filter-method="filterAddableOptions"
       :placeholder="t('property.selectDataTypesToAdd')"
       style="width: 100%"
     >
       <el-option
-        v-for="option in addableOptions"
+        v-for="option in filteredAddableOptions"
         :key="option.metricSymbol"
         :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
         :value="option.metricSymbol"
@@ -233,6 +235,7 @@ import {
   removeOrderedOptionId,
   resolveOrderedDefaultValue,
 } from './orderedPropertyOptions'
+import { matchesDataOptionSearch } from './dataOptionSearch'
 
 const { locale, t } = useI18n()
 const dialogVisible = ref(false)
@@ -241,6 +244,8 @@ const isEdit = ref(false)
 const activeOptions = ref([])
 const addOptionsVisible = ref(false)
 const pendingOptionValues = ref([])
+const defaultOptionsQuery = ref('')
+const addableOptionsQuery = ref('')
 const dataCatalogStore = useDataCatalogStore()
 const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
@@ -265,10 +270,18 @@ const resolvedOptions = computed(() => resolveDataOptionsBySymbols(
   formData.metricSymbols
 ))
 const defaultValueOptions = computed(() => createDefaultDataOptions(resolvedOptions.value))
+const filteredDefaultValueOptions = computed(() => defaultValueOptions.value
+  .filter(option => matchesDataOptionSearch(option, defaultOptionsQuery.value)))
 const selectedOption = computed(() => defaultValueOptions.value.find((option) => option.value === formData.value) || null)
 const addableOptions = computed(() => createAddableDataOptions(catalogOptions.value, resolvedOptions.value))
+const filteredAddableOptions = computed(() => addableOptions.value
+  .filter(option => matchesDataOptionSearch(option, addableOptionsQuery.value)))
+const filterDefaultOptions = (query) => { defaultOptionsQuery.value = query }
+const filterAddableOptions = (query) => { addableOptionsQuery.value = query }
 
 const initFormData = (data = null) => {
+  defaultOptionsQuery.value = ''
+  addableOptionsQuery.value = ''
   isEdit.value = !!data
   if (data) {
     const legacyOptions = createEditDataOptions(data.options, catalogOptions.value)
@@ -370,6 +383,7 @@ const restoreSystemDefaults = async () => {
 
 const openAddOptions = () => {
   pendingOptionValues.value = []
+  addableOptionsQuery.value = ''
   addOptionsVisible.value = true
 }
 

@@ -41,6 +41,8 @@ import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamic
 import { calculateConnectIqSettingsBudget } from './connectIqSettingsBudget'
 import { resolveDatePropertyConfig } from './datePropertyConfig'
 import { validateCustomDateTemplate } from '@/elements/time/date/dateTemplate'
+import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
+import { normalizeAndValidateLayoutGroups } from '@/engine/layout/layoutGroupValidation'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -235,6 +237,7 @@ export interface GenerateConfigOptions {
   maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
   visualThemes?: VisualThemesConfig
+  layoutGroups?: HorizontalLayoutGroupConfig[]
   validateBindings?: boolean
   baseElements?: Array<Record<string, any>>
   connectIqSettingsExcludedDataTypeValues?: unknown
@@ -309,6 +312,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     maxFieldLength,
     localization,
     visualThemes,
+    layoutGroups,
     connectIqSettingsExcludedDataTypeValues,
     validateBindings = false,
     baseElements = [],
@@ -400,6 +404,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
   try {
     for (const element of objects) {
+      if ((element as any).excludeFromExport) continue
       if (!(element as any).eleType) continue
 
       const eleType = String((element as any).eleType)
@@ -506,6 +511,10 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       }
     }
 
+    if (layoutGroups) {
+      config.layoutGroups = normalizeAndValidateLayoutGroups(layoutGroups, config.elements)
+    }
+
     const designStore = useDesignStore()
     const normalizedConfig = normalizeConfigToStandardSize(config, {
       width: Number(designStore.designSpec.width || 454),
@@ -520,7 +529,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   } catch (err) {
     console.error('Generate config failed:', err)
     const message = (err as Error)?.message || 'Failed to generate configuration'
-    ElMessage.error(message)
+    if (typeof document !== 'undefined') ElMessage.error(message)
     return null
   }
 }

@@ -8,6 +8,28 @@ import {
 } from './designScale'
 
 describe('design font-size round trip', () => {
+  it('scales horizontal layout group anchors, gaps, and vertical offsets', () => {
+    const config = {
+      elements: [],
+      layoutGroups: [{
+        id: 'row-1', name: 'Row', direction: 'horizontal', left: 195, top: 100, originX: 'left',
+        members: [
+          { elementId: 'data-1', gapBefore: 0, offsetY: 0 },
+          { elementId: 'unit-1', gapBefore: 10, offsetY: 5 },
+        ],
+      }],
+    } as unknown as RuntimeDesignConfig
+
+    const saved = normalizeConfigToStandardSize(config, { width: 390, height: 200 })
+
+    expect(saved.layoutGroups?.[0]).toMatchObject({ left: 227, top: 227 })
+    expect(saved.layoutGroups?.[0].members[1]).toEqual({
+      elementId: 'unit-1',
+      gapBefore: 11.641,
+      offsetY: 11.35,
+    })
+  })
+
   it('keeps a data font size of 30 after save normalization and reload scaling', () => {
     const deviceSize = { width: 506, height: 506 }
     const config = {

@@ -15,6 +15,7 @@ import {
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
 import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO } from '@/api/device'
@@ -324,6 +325,7 @@ export const useBaseStore = defineStore('baseStore', {
       const canvasStore = useCanvasStore()
       const visualThemeStore = useVisualThemeStore()
       const elementDataStore = useElementDataStore()
+      const layoutGroupStore = useLayoutGroupStore()
       const config = generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -339,6 +341,7 @@ export const useBaseStore = defineStore('baseStore', {
         connectIqSettingsExcludedDataTypeValues: designStore.connectIqSettingsExcludedDataTypeValues,
         visualThemes: visualThemeStore.config,
         baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
+        layoutGroups: layoutGroupStore.snapshot(),
         validateBindings: true,
       })
       if (!config) return false
@@ -424,6 +427,7 @@ export const useBaseStore = defineStore('baseStore', {
       const designStore = useDesignStore()
       const visualThemeStore = useVisualThemeStore()
       const elementDataStore = useElementDataStore()
+      const layoutGroupStore = useLayoutGroupStore()
       return generateRuntimeConfig({
         canvas: canvasStore.canvas as any,
         properties: propertiesStore.allProperties,
@@ -439,6 +443,7 @@ export const useBaseStore = defineStore('baseStore', {
         connectIqSettingsExcludedDataTypeValues: designStore.connectIqSettingsExcludedDataTypeValues,
         visualThemes: visualThemeStore.config,
         baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
+        layoutGroups: layoutGroupStore.snapshot(),
         validateBindings: options.validateBindings ?? false,
       })
     },

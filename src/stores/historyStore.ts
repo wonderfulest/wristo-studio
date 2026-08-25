@@ -7,6 +7,7 @@ import { syncElementInstancesFromCanvas, updateElementById } from '@/engine/mana
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import {
   DATA_NUMBER_FORMAT_AUTO,
   DEFAULT_MAX_FIELD_LENGTH,
@@ -59,6 +60,8 @@ const summarizeSnapshot = (snap: Snapshot | undefined | null) => {
     configLength: snap.configJSON?.length ?? 0,
     hasElementData: Boolean(snap.elementDataJSON),
     elementDataLength: snap.elementDataJSON?.length ?? 0,
+    hasDesign: Boolean(snap.designJSON),
+    designLength: snap.designJSON?.length ?? 0,
     objectCount,
     objectIds,
   }
@@ -256,7 +259,13 @@ export const useHistoryStore = defineStore('history', () => {
   }
 
   const takeDesignSnapshot = (): string | undefined => {
-    return undefined
+    try {
+      return JSON.stringify({
+        layoutGroups: useLayoutGroupStore().snapshot(),
+      })
+    } catch {
+      return undefined
+    }
   }
 
   const takeConfigSnapshot = (): string | undefined => {
@@ -337,8 +346,20 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
-  const restoreDesignSnapshot = (_snap: Snapshot) => {
-    return
+  const restoreDesignSnapshot = (snap: Snapshot) => {
+    const layoutGroupStore = useLayoutGroupStore()
+    if (!snap.designJSON) {
+      layoutGroupStore.clear()
+      return
+    }
+    try {
+      const parsed = JSON.parse(snap.designJSON)
+      const elements = useElementDataStore().elements.map((snapshot) => snapshot.config)
+      layoutGroupStore.hydrate(parsed?.layoutGroups ?? [], elements)
+    } catch (error) {
+      console.warn('[History] restore design snapshot failed', error)
+      throw error
+    }
   }
 
   const syncElementDataFromFabricObject = (obj: any) => {
@@ -429,6 +450,7 @@ export const useHistoryStore = defineStore('history', () => {
     if (last?.configJSON && !snap.configJSON) snap.configJSON = last.configJSON
     if (last?.elementDataJSON && !snap.elementDataJSON) snap.elementDataJSON = last.elementDataJSON
     if (last?.propertiesJSON && !snap.propertiesJSON) snap.propertiesJSON = last.propertiesJSON
+    if (last?.designJSON && !snap.designJSON) snap.designJSON = last.designJSON
     if (last && snapshotsEqual(last, snap)) {
       debug('saveState:skipped:duplicate', {
         reason: _reason,

@@ -2,6 +2,7 @@ import type { DataOptionsMap, PropertiesMap } from '@/types/properties'
 import type { AnyElementConfig } from '@/types/elements'
 import type { WatchfaceLocalizationConfig } from '@/types/localization'
 import type { VisualThemesConfig } from '@/types/visualTheme'
+import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
 
 export interface RuntimeDesignConfig {
   version: string
@@ -15,6 +16,7 @@ export interface RuntimeDesignConfig {
   maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
   visualThemes?: VisualThemesConfig
+  layoutGroups?: HorizontalLayoutGroupConfig[]
   connectIqSettingsExcludedDataTypeValues?: number[]
   elements: AnyElementConfig[]
   orderIds: string[]

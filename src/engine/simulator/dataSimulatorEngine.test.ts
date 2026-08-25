@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode } = vi.hoisted(() => ({
+const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode, reflowAllLayoutGroups } = vi.hoisted(() => ({
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
@@ -11,6 +11,7 @@ const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSi
   getMetricByOptions: vi.fn(),
   getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
   getSimulatedDataByTokenCode: vi.fn(() => ({ display: '80', numeric: 80, unit: 'bpm' })),
+  reflowAllLayoutGroups: vi.fn(),
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
@@ -75,6 +76,7 @@ vi.mock('@/stores/previewDeviceContextStore', () => ({
 }))
 
 vi.mock('@/engine/managers/elementManager', () => ({ updateElement }))
+vi.mock('@/engine/layout/studioLayoutController', () => ({ reflowAllLayoutGroups }))
 
 vi.mock('@/engine/simulator/simulatedClock', () => ({
   getSimulatedNow: () => new Date('2026-07-13T12:34:00.000Z'),
@@ -130,6 +132,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(set).toHaveBeenCalledWith('text', '24H')
     expect(canvas.requestRenderAll).toHaveBeenCalled()
+    expect(reflowAllLayoutGroups).toHaveBeenCalledOnce()
   })
 
   it('switches a refreshed Chinese date preview to the packaged Chinese font', () => {
