@@ -4,7 +4,7 @@ import { filterExpressionTokens } from '@/components/expression/tokenPickerModel
 export type TokenCategoryFilter = ExpressionTokenCategory | 'chinese-calendar' | 'all'
 
 const CATEGORY_ORDER: readonly Exclude<TokenCategoryFilter, 'all'>[] = [
-  'date-time', 'activity', 'sensor', 'system', 'status', 'weather', 'chinese-calendar',
+  'date-time', 'astronomy', 'activity', 'sensor', 'system', 'status', 'weather', 'chinese-calendar',
 ]
 
 export const createTokenCatalogPageModel = () => {

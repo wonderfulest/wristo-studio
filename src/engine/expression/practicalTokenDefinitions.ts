@@ -68,6 +68,13 @@ const weather = (id: string, code: string, label: string, labelCn: string, examp
   requirement: 'Toybox.Weather current conditions and synced weather data',
 })
 
+const astronomy = (input: Omit<TokenInput, 'category' | 'source' | 'providerKey'>): ExpressionTokenDefinition => token({
+  ...input,
+  category: 'astronomy',
+  source: 'time',
+  providerKey: 'clock',
+})
+
 const chineseCalendar = (
   id: string,
   code: string,
@@ -126,6 +133,125 @@ const HEART_RATE_ZONE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues'
   { value: 5, label: 'Zone 5: at or above the Z5 threshold', labelCn: 'Z5：达到或超过 Z5 下限' },
 ]
 
+const BATTERY_STAGE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Low (below 25%)', labelCn: '电量不足（原值 < 25%）' },
+  { value: 1, label: 'Fair (25% to below 50%)', labelCn: '电量一般（原值 >= 25% 且 < 50%）' },
+  { value: 2, label: 'Good (50% to below 75%)', labelCn: '电量良好（原值 >= 50% 且 < 75%）' },
+  { value: 3, label: 'Full (75% or above)', labelCn: '电量充足（原值 >= 75%）' },
+]
+
+const BODY_BATTERY_STAGE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Exhausted (below 25)', labelCn: '疲惫（原值 < 25）' },
+  { value: 1, label: 'Fair (25 to below 50)', labelCn: '一般（原值 >= 25 且 < 50）' },
+  { value: 2, label: 'Good (50 to below 75)', labelCn: '良好（原值 >= 50 且 < 75）' },
+  { value: 3, label: 'High (75 or above)', labelCn: '充沛（原值 >= 75）' },
+]
+
+const STRESS_STAGE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Relaxed (below 25)', labelCn: '放松（原值 < 25）' },
+  { value: 1, label: 'Normal (25 to below 50)', labelCn: '正常（原值 >= 25 且 < 50）' },
+  { value: 2, label: 'Tense (50 to below 75)', labelCn: '紧张（原值 >= 50 且 < 75）' },
+  { value: 3, label: 'High stress (75 or above)', labelCn: '高压（原值 >= 75）' },
+]
+
+const HUMIDITY_LEVEL_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Dry (below 40%)', labelCn: '干燥（原值 < 40%）' },
+  { value: 1, label: 'Comfortable (40% to 60%)', labelCn: '舒适（原值 40% 至 60%）' },
+  { value: 2, label: 'Humid (above 60%)', labelCn: '潮湿（原值 > 60%）' },
+]
+
+const PRECIPITATION_LEVEL_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'No rain (below 30%)', labelCn: '无雨（原值 < 30%）' },
+  { value: 1, label: 'Rain possible (30% to below 70%)', labelCn: '可能下雨（原值 >= 30% 且 < 70%）' },
+  { value: 2, label: 'Rain likely (70% or above)', labelCn: '大概率下雨（原值 >= 70%）' },
+]
+
+const SOLAR_TERM_INDEX_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Beginning of Spring', labelCn: '立春' },
+  { value: 1, label: 'Rain Water', labelCn: '雨水' },
+  { value: 2, label: 'Awakening of Insects', labelCn: '惊蛰' },
+  { value: 3, label: 'Spring Equinox', labelCn: '春分' },
+  { value: 4, label: 'Clear and Bright', labelCn: '清明' },
+  { value: 5, label: 'Grain Rain', labelCn: '谷雨' },
+  { value: 6, label: 'Beginning of Summer', labelCn: '立夏' },
+  { value: 7, label: 'Lesser Fullness of Grain', labelCn: '小满' },
+  { value: 8, label: 'Grain in Ear', labelCn: '芒种' },
+  { value: 9, label: 'Summer Solstice', labelCn: '夏至' },
+  { value: 10, label: 'Lesser Heat', labelCn: '小暑' },
+  { value: 11, label: 'Greater Heat', labelCn: '大暑' },
+  { value: 12, label: 'Beginning of Autumn', labelCn: '立秋' },
+  { value: 13, label: 'End of Heat', labelCn: '处暑' },
+  { value: 14, label: 'White Dew', labelCn: '白露' },
+  { value: 15, label: 'Autumn Equinox', labelCn: '秋分' },
+  { value: 16, label: 'Cold Dew', labelCn: '寒露' },
+  { value: 17, label: "Frost's Descent", labelCn: '霜降' },
+  { value: 18, label: 'Beginning of Winter', labelCn: '立冬' },
+  { value: 19, label: 'Lesser Snow', labelCn: '小雪' },
+  { value: 20, label: 'Greater Snow', labelCn: '大雪' },
+  { value: 21, label: 'Winter Solstice', labelCn: '冬至' },
+  { value: 22, label: 'Lesser Cold', labelCn: '小寒' },
+  { value: 23, label: 'Greater Cold', labelCn: '大寒' },
+]
+
+const ZODIAC_INDEX_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Rat', labelCn: '鼠' }, { value: 1, label: 'Ox', labelCn: '牛' },
+  { value: 2, label: 'Tiger', labelCn: '虎' }, { value: 3, label: 'Rabbit', labelCn: '兔' },
+  { value: 4, label: 'Dragon', labelCn: '龙' }, { value: 5, label: 'Snake', labelCn: '蛇' },
+  { value: 6, label: 'Horse', labelCn: '马' }, { value: 7, label: 'Goat', labelCn: '羊' },
+  { value: 8, label: 'Monkey', labelCn: '猴' }, { value: 9, label: 'Rooster', labelCn: '鸡' },
+  { value: 10, label: 'Dog', labelCn: '狗' }, { value: 11, label: 'Pig', labelCn: '猪' },
+]
+
+const TEMPERATURE_LEVEL_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Cold (below 10°C)', labelCn: '寒冷（原值 < 10°C）' },
+  { value: 1, label: 'Cool (10°C to below 18°C)', labelCn: '凉爽（原值 >= 10°C 且 < 18°C）' },
+  { value: 2, label: 'Comfortable (18°C to 25°C)', labelCn: '舒适（原值 18°C 至 25°C）' },
+  { value: 3, label: 'Hot (above 25°C)', labelCn: '炎热（原值 > 25°C）' },
+]
+
+const TRUE_SOLAR_PERIOD_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Late Night', labelCn: '深夜' },
+  { value: 1, label: 'Early Morning', labelCn: '清晨' },
+  { value: 2, label: 'Morning', labelCn: '上午' },
+  { value: 3, label: 'Afternoon', labelCn: '下午' },
+  { value: 4, label: 'Evening', labelCn: '傍晚' },
+  { value: 5, label: 'Night', labelCn: '夜晚' },
+]
+
+const ASTRONOMICAL_LIGHT_PERIOD_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'Astronomical Night', labelCn: '天文夜' },
+  { value: 1, label: 'Astronomical Dawn', labelCn: '天文晨光' },
+  { value: 2, label: 'Nautical Dawn', labelCn: '航海晨光' },
+  { value: 3, label: 'Civil Dawn', labelCn: '民用晨光' },
+  { value: 4, label: 'Daylight', labelCn: '白昼' },
+  { value: 5, label: 'Civil Dusk', labelCn: '民用暮光' },
+  { value: 6, label: 'Nautical Dusk', labelCn: '航海暮光' },
+  { value: 7, label: 'Astronomical Dusk', labelCn: '天文暮光' },
+]
+
+const MOON_AGE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  ...Array.from({ length: 6 }, (_, index) => ({ value: index + 1, label: `Waxing Crescent ${index + 1}`, labelCn: `渐盈月 ${index + 1}` })),
+  { value: 7, label: 'First Quarter', labelCn: '上弦月' },
+  ...Array.from({ length: 6 }, (_, index) => ({ value: index + 8, label: `Waxing Gibbous ${index + 1}`, labelCn: `盈凸月 ${index + 1}` })),
+  { value: 14, label: 'Full Moon', labelCn: '满月' },
+  ...Array.from({ length: 6 }, (_, index) => ({ value: index + 15, label: `Waning Gibbous ${index + 1}`, labelCn: `亏凸月 ${index + 1}` })),
+  { value: 21, label: 'Third Quarter', labelCn: '下弦月' },
+  ...Array.from({ length: 6 }, (_, index) => ({ value: index + 22, label: `Waning Crescent ${index + 1}`, labelCn: `残月 ${index + 1}` })),
+  { value: 28, label: 'New Moon', labelCn: '新月' },
+  { value: 29, label: 'New Moon', labelCn: '新月' },
+]
+
+const MOON_PHASE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = [
+  { value: 0, label: 'New Moon', labelCn: '新月' },
+  { value: 1, label: 'Waxing Crescent', labelCn: '渐盈月' },
+  { value: 2, label: 'First Quarter', labelCn: '上弦月' },
+  { value: 3, label: 'Waxing Gibbous', labelCn: '盈凸月' },
+  { value: 4, label: 'Full Moon', labelCn: '满月' },
+  { value: 5, label: 'Waning Gibbous', labelCn: '亏凸月' },
+  { value: 6, label: 'Third Quarter', labelCn: '下弦月' },
+  { value: 7, label: 'Waning Crescent', labelCn: '残月' },
+]
+
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),
@@ -167,7 +293,90 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   token({ id: 'time.secondFirstDigit', code: 'tm9.3', label: 'First Second Digit', labelCn: '秒钟十位', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', updateFrequency: 'second' }),
   token({ id: 'time.secondSecondDigit', code: 'tm9.4', label: 'Second Second Digit', labelCn: '秒钟个位', category: 'date-time', exampleValue: 5, source: 'time', providerKey: 'clock', updateFrequency: 'second' }),
   time('amPm', 'tm10', 'AM/PM', '上午/下午', 1),
+  token({
+    id: 'time.amPm24Hour', code: 'tm10.1', label: 'AM/PM/24H', labelCn: '上午/下午/24小时制',
+    category: 'date-time', exampleValue: 2, source: 'time', providerKey: 'clock',
+    enumValues: [
+      { value: 0, label: 'AM', labelCn: '上午' },
+      { value: 1, label: 'PM', labelCn: '下午' },
+      { value: 2, label: '24H', labelCn: '24小时制' },
+    ],
+    description: 'Device time state: AM or PM in 12-hour mode, otherwise 24H.',
+    descriptionCn: '设备时间制状态：12 小时制返回上午或下午，24 小时制返回 24H。',
+  }),
   time('dayOfYear', 'tm11', 'Day of Year', '年内天数', 227),
+  astronomy({
+    id: 'astronomy.trueSolarSeconds', code: 'as1', label: 'True Solar Time', labelCn: '真太阳时',
+    exampleValue: 52200, nullable: true,
+    requirement: 'A synced position with longitude',
+    description: 'True solar time as seconds since local solar midnight, from 0 through 86399.',
+    descriptionCn: '真太阳时距当地太阳午夜的秒数，范围为 0–86399。',
+  }),
+  astronomy({
+    id: 'astronomy.trueSolarPeriod', code: 'as1.1', label: 'True Solar Period', labelCn: '真太阳时段',
+    exampleValue: 3, enumValues: TRUE_SOLAR_PERIOD_VALUES,
+    nullable: true, requirement: 'A synced position with longitude',
+    description: 'Fixed six-period classification derived from true solar time.',
+    descriptionCn: '根据真太阳时划分的固定六时段。',
+  }),
+  astronomy({
+    id: 'astronomy.astronomicalLightPeriod', code: 'as1.2', label: 'Astronomical Light Period', labelCn: '天文光照阶段',
+    exampleValue: 4, enumValues: ASTRONOMICAL_LIGHT_PERIOD_VALUES,
+    nullable: true, requirement: 'A synced position with latitude and longitude',
+    description: 'Dynamic daylight and twilight stage derived from current solar altitude and the rising or setting half of the solar day.',
+    descriptionCn: '根据当前太阳高度以及太阳处于升起或落下半程动态划分的白昼与曙暮光阶段。',
+  }),
+  astronomy({
+    id: 'astronomy.sunriseSeconds', code: 'as2', label: 'Sunrise Time', labelCn: '日出时间',
+    exampleValue: 21600, unit: 's', nullable: true, requirement: 'A synced position',
+    description: 'Sunrise as seconds since local midnight, from 0 through 86399.',
+    descriptionCn: '日出时刻距当地午夜的秒数，范围为 0–86399。',
+  }),
+  astronomy({
+    id: 'astronomy.sunsetSeconds', code: 'as2.1', label: 'Sunset Time', labelCn: '日落时间',
+    exampleValue: 64800, unit: 's', nullable: true, requirement: 'A synced position',
+    description: 'Sunset as seconds since local midnight, from 0 through 86399.',
+    descriptionCn: '日落时刻距当地午夜的秒数，范围为 0–86399。',
+  }),
+  astronomy({
+    id: 'astronomy.nextSolarEvent', code: 'as2.2', label: 'Next Solar Event', labelCn: '下一太阳事件',
+    exampleValue: 1, nullable: true, enumValues: [
+      { value: 0, label: 'Sunrise', labelCn: '日出' },
+      { value: 1, label: 'Sunset', labelCn: '日落' },
+    ], requirement: 'A synced position',
+    description: 'Next solar event: 0 for sunrise or 1 for sunset.',
+    descriptionCn: '下一太阳事件：0 表示日出，1 表示日落。',
+  }),
+  astronomy({
+    id: 'astronomy.secondsUntilNextSolarEvent', code: 'as2.3', label: 'Seconds Until Next Solar Event', labelCn: '距下一太阳事件秒数',
+    exampleValue: 7200, unit: 's', nullable: true, requirement: 'A synced position',
+    description: 'Whole seconds remaining until the next sunrise or sunset.',
+    descriptionCn: '距离下一次日出或日落剩余的整数秒数。',
+  }),
+  astronomy({
+    id: 'astronomy.daylightDuration', code: 'as2.4', label: 'Daylight Duration', labelCn: '白昼长度',
+    exampleValue: 43200, unit: 's', nullable: true, requirement: 'A synced position',
+    description: 'Seconds from today’s sunrise through sunset.',
+    descriptionCn: '从当日日出到日落的秒数。',
+  }),
+  astronomy({
+    id: 'astronomy.daylightProgress', code: 'as2.5', label: 'Daylight Progress', labelCn: '白昼进度',
+    exampleValue: 50, unit: '%', nullable: true, requirement: 'A synced position',
+    description: 'Integer daylight progress from 0 through 100; returns 0 outside daylight.',
+    descriptionCn: '白昼进度整数百分比，范围为 0–100；非白昼时返回 0。',
+  }),
+  astronomy({
+    id: 'astronomy.solarAltitude', code: 'as2.6', label: 'Solar Altitude', labelCn: '太阳高度角',
+    exampleValue: 45, unit: '°', nullable: true, requirement: 'A synced position',
+    description: 'Current solar altitude in degrees, from -90 through 90.',
+    descriptionCn: '当前太阳高度角，范围为 -90°–90°。',
+  }),
+  astronomy({
+    id: 'astronomy.solarAzimuth', code: 'as2.7', label: 'Solar Azimuth', labelCn: '太阳方位角',
+    exampleValue: 180, unit: '°', nullable: true, requirement: 'A synced position',
+    description: 'Current solar azimuth clockwise from north, from 0 through 360 degrees.',
+    descriptionCn: '当前太阳方位角，以正北为 0° 顺时针计算，范围为 0°–360°。',
+  }),
 
   activity('activeMinutesToday', 'ai1', 'Active Minutes Today', '今日活跃分钟', 42, 'min'),
   activity('moderateMinutesToday', 'ai1.1', 'Moderate Minutes Today', '今日中等强度分钟', 24, 'min'),
@@ -197,6 +406,12 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   token({ id: 'system.alarm.count', code: 'ds1', label: 'Alarm Count', labelCn: '闹钟数量', category: 'system', exampleValue: 1, source: 'system', providerKey: 'deviceSettings', nullable: true, requirement: 'Alarm access support' }),
   token({ id: 'system.notification.count', code: 'ds2', label: 'Notification Count', labelCn: '通知数量', category: 'system', exampleValue: 3, source: 'system', providerKey: 'deviceSettings', nullable: true, requirement: 'Notification count support' }),
   token({ id: 'system.battery.level', code: 'ds3', label: 'Battery Level', labelCn: '电池电量', category: 'system', exampleValue: 76, unit: '%', source: 'system', providerKey: 'systemStats' }),
+  token({
+    id: 'system.battery.stage', code: 'ds3.1', label: 'Battery Stage', labelCn: '电池电量阶段',
+    category: 'system', exampleValue: 3, enumValues: BATTERY_STAGE_VALUES, source: 'system', providerKey: 'systemStats',
+    description: 'Battery stage: 0 below 25%; 1 from 25% to below 50%; 2 from 50% to below 75%; 3 at or above 75%.',
+    descriptionCn: '电池电量阶段：原值低于 25% 返回 0；25%（含）至 50%（不含）返回 1；50%（含）至 75%（不含）返回 2；75% 及以上返回 3。',
+  }),
   token({ id: 'system.memory.free', code: 'ds4', label: 'Free Memory', labelCn: '可用内存', category: 'system', exampleValue: 65536, unit: 'bytes', source: 'system', providerKey: 'systemStats' }),
   token({ id: 'system.memory.total', code: 'ds6', label: 'Total Memory', labelCn: '总内存', category: 'system', exampleValue: 262144, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total memory exposed by the device' }),
   token({ id: 'system.memory.used', code: 'ds7', label: 'Used Memory', labelCn: '已用内存', category: 'system', exampleValue: 196608, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total and free memory exposed by the device' }),
@@ -215,7 +430,23 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
     requirement: 'Current heart-rate data and UserProfile heart-rate-zone support',
   }),
   sensor('bodyBattery', 'ds330', 'Body Battery', '身体电量', 68, '%'),
+  token({
+    id: 'sensor.bodyBatteryStage', code: 'ds330.1', label: 'Body Battery Stage', labelCn: '身体电量阶段',
+    category: 'sensor', exampleValue: 2, enumValues: BODY_BATTERY_STAGE_VALUES, source: 'sensor',
+    providerKey: 'sensorHistory.bodyBattery', nullable: true,
+    requirement: 'Sensor history support for Body Battery',
+    description: 'Body Battery stage: 0 below 25; 1 from 25 to below 50; 2 from 50 to below 75; 3 at or above 75.',
+    descriptionCn: '身体电量阶段：原值低于 25 返回 0；25（含）至 50（不含）返回 1；50（含）至 75（不含）返回 2；75 及以上返回 3。',
+  }),
   sensor('stress', 'ds331', 'Stress', '压力', 31),
+  token({
+    id: 'sensor.stressStage', code: 'ds331.1', label: 'Stress Stage', labelCn: '压力阶段',
+    category: 'sensor', exampleValue: 1, enumValues: STRESS_STAGE_VALUES, source: 'sensor',
+    providerKey: 'sensorHistory.stress', nullable: true,
+    requirement: 'Sensor history support for Stress',
+    description: 'Stress stage: 0 below 25; 1 from 25 to below 50; 2 from 50 to below 75; 3 at or above 75.',
+    descriptionCn: '压力阶段：原值低于 25 返回 0；25（含）至 50（不含）返回 1；50（含）至 75（不含）返回 2；75 及以上返回 3。',
+  }),
 
   token({
     id: 'weather.current.conditionCode', code: 'w01', label: 'Weather Code', labelCn: '天气代码',
@@ -231,10 +462,58 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   weather('lowTemperature', 'w05', 'Low Temperature', '最低温度', 23, 'number', '°C'),
   weather('observationLocationName', 'w06', 'Observation Location', '观测地点', 'Shanghai', 'string'),
   weather('precipitationChance', 'w08', 'Precipitation', '降水概率', 35, 'number', '%'),
+  token({
+    id: 'weather.current.precipitationLevel', code: 'w08.1', label: 'Precipitation Level', labelCn: '降水概率阶段',
+    category: 'weather', exampleValue: 1, enumValues: PRECIPITATION_LEVEL_VALUES, source: 'weather',
+    updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
+    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    description: 'Precipitation stage: 0 below 30%; 1 from 30% to below 70%; 2 at or above 70%.',
+    descriptionCn: '降水概率阶段：原值低于 30% 返回 0；30%（含）至 70%（不含）返回 1；70% 及以上返回 2。',
+  }),
   weather('humidity', 'w09', 'Humidity', '湿度', 63, 'number', '%'),
+  token({
+    id: 'weather.current.humidityLevel', code: 'w09.1', label: 'Humidity Level', labelCn: '湿度阶段',
+    category: 'weather', exampleValue: 2, enumValues: HUMIDITY_LEVEL_VALUES, source: 'weather',
+    updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
+    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    description: 'Humidity stage: 0 below 40%; 1 from 40% through 60%; 2 above 60%.',
+    descriptionCn: '湿度阶段：原值低于 40% 返回 0；40% 至 60%（含边界）返回 1；高于 60% 返回 2。',
+  }),
   weather('temperature', 'w10', 'Temperature', '当前温度', 27, 'number', '°C'),
+  token({
+    id: 'weather.current.temperatureLevel', code: 'w10.1', label: 'Temperature Level', labelCn: '温度阶段',
+    category: 'weather', exampleValue: 2, enumValues: TEMPERATURE_LEVEL_VALUES, source: 'weather',
+    updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
+    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    description: 'Celsius temperature stage: 0 below 10°C; 1 from 10°C to below 18°C; 2 from 18°C through 25°C; 3 above 25°C.',
+    descriptionCn: '摄氏温度阶段：原值低于 10°C 返回 0；10°C（含）至 18°C（不含）返回 1；18°C（含）至 25°C（含）返回 2；高于 25°C 返回 3。',
+  }),
   weather('windBearing', 'w11', 'Wind Bearing', '风向角度', 135, 'number', '°'),
   weather('windSpeed', 'w12', 'Wind Speed', '风速', 4.2, 'number', 'm/s'),
+  astronomy({
+    id: 'astronomy.moonAge', code: 'as3', label: 'Moon Age', labelCn: '月龄',
+    exampleValue: 14, enumValues: MOON_AGE_VALUES,
+    description: 'Locally calculated moon age from 1 through 29.',
+    descriptionCn: '根据本地日期计算的月龄，范围为 1–29。',
+  }),
+  astronomy({
+    id: 'astronomy.moonPhase', code: 'as3.1', label: 'Moon Phase', labelCn: '月相阶段',
+    exampleValue: 4, enumValues: MOON_PHASE_VALUES,
+    description: 'Eight-stage moon phase derived from the locally calculated moon age.',
+    descriptionCn: '根据本地计算月龄归纳的八阶段月相。',
+  }),
+  astronomy({
+    id: 'astronomy.moonIllumination', code: 'as3.2', label: 'Moon Illumination', labelCn: '月面照明百分比',
+    exampleValue: 100, unit: '%',
+    description: 'Locally calculated illuminated fraction of the Moon as an integer percentage from 0 through 100.',
+    descriptionCn: '本地计算的月面受光比例，返回 0–100 的整数百分比。',
+  }),
+  astronomy({
+    id: 'astronomy.daysUntilFullMoon', code: 'as3.3', label: 'Days Until Full Moon', labelCn: '距下一次满月天数',
+    exampleValue: 0, unit: 'days',
+    description: 'Whole days until the next full moon, from 0 through 29.',
+    descriptionCn: '距离下一次满月的整数天数，范围为 0–29。',
+  }),
 
   chineseCalendar('lunar.date', 'cn1', 'Lunar Date', '农历月日', '七月初四'),
   chineseCalendar('lunar.year', 'cn1.1', 'Lunar Year', '农历年序号', 2026, 'number'),
@@ -248,6 +527,13 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   chineseCalendar('festival.gregorian.next', 'cn2.1', 'Next Gregorian Festival', '下一个公历节日', '国庆节'),
   chineseCalendar('festival.gregorian.suffix', 'cn2.2', 'Gregorian Festival Distance Suffix', '公历节日距离后缀', '+10', 'string', true),
   chineseCalendar('solarTerm.next', 'cn2.3', 'Next Solar Term', '下一个节气', '处暑'),
+  token({
+    id: 'chinaCalendar.solarTerm.nextIndex', code: 'cn2.3.1', label: 'Next Solar Term Index', labelCn: '下一个节气编号',
+    category: 'date-time', exampleValue: 13, enumValues: SOLAR_TERM_INDEX_VALUES, source: 'wristo', providerKey: 'chineseCalendar',
+    nullable: true, appLanguages: ['zhs'], wfbEquivalent: undefined,
+    description: 'Numeric index of the next solar term, from 0 for Beginning of Spring through 23 for Greater Cold.',
+    descriptionCn: '下一个节气的数字编号：立春为 0，依次排列，大寒为 23。',
+  }),
   chineseCalendar('solarTerm.suffix', 'cn2.4', 'Solar-Term Distance Suffix', '节气距离后缀', '+6', 'string', true),
   chineseCalendar('ganzhi.year', 'cn3', 'Traditional Ganzhi Year', '传统干支年', '丙午'),
   chineseCalendar('pillar.year', 'cn3.1', 'Year Pillar', '四柱年柱', '丙午'),
@@ -256,6 +542,13 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   chineseCalendar('pillar.hour', 'cn3.4', 'Hour Pillar', '四柱时柱', '戊申'),
   chineseCalendar('zodiac.name', 'cn4', 'Zodiac', '生肖', '马'),
   chineseCalendar('zodiac.year', 'cn4.1', 'Zodiac Year', '生肖年', '马年'),
+  token({
+    id: 'chinaCalendar.zodiac.yearIndex', code: 'cn4.1.1', label: 'Zodiac Year Index', labelCn: '生肖编号',
+    category: 'date-time', exampleValue: 6, enumValues: ZODIAC_INDEX_VALUES, source: 'wristo', providerKey: 'chineseCalendar',
+    nullable: true, appLanguages: ['zhs'], wfbEquivalent: undefined,
+    description: 'Numeric index of the zodiac year, from 0 for Rat through 11 for Pig.',
+    descriptionCn: '生肖年的数字编号：鼠为 0，依次排列，猪为 11。',
+  }),
   chineseCalendar('shichen.branch', 'cn4.2', 'Shichen Branch', '当前时支', '申'),
   chineseCalendar('shichen.name', 'cn4.3', 'Shichen', '当前时辰', '申时'),
   chineseCalendar('solar.yearText', 'cn5', 'Gregorian Year Text', '公历年文本', '2026年'),

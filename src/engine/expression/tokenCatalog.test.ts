@@ -8,14 +8,17 @@ const EXPECTED_CODES = [
   'tm7.3', 'tm7.4', 'tm7.0', 'tm7.1', 'tm7.2',
   'tm8', 'tm8.0', 'tm8.1', 'tm8.2',
   'tm9', 'tm9.0', 'tm9.3', 'tm9.4',
-  'tm10', 'tm11',
+  'tm10', 'tm10.1', 'tm11',
+  'as1', 'as1.1', 'as1.2',
+  'as2', 'as2.1', 'as2.2', 'as2.3', 'as2.4', 'as2.5', 'as2.6', 'as2.7',
   'ai1', 'ai1.1', 'ai1.2', 'ai4', 'ai4.1', 'ai5', 'ai6', 'ai8', 'ai11', 'ai12', 'ai13', 'ai14',
-  'ds1', 'ds2', 'ds3', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'ds14', 'ds15', 'ds330', 'ds331',
-  'w01', 'w02', 'w03', 'w04', 'w05', 'w06', 'w08', 'w09', 'w10', 'w11', 'w12',
+  'ds1', 'ds2', 'ds3', 'ds3.1', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'ds14', 'ds15', 'ds330', 'ds330.1', 'ds331', 'ds331.1',
+  'w01', 'w02', 'w03', 'w04', 'w05', 'w06', 'w08', 'w08.1', 'w09', 'w09.1', 'w10', 'w10.1', 'w11', 'w12',
+  'as3', 'as3.1', 'as3.2', 'as3.3',
   'cn1', 'cn1.1', 'cn1.2', 'cn1.3', 'cn1.4', 'cn1.5', 'cn1.6', 'cn1.7',
-  'cn2', 'cn2.1', 'cn2.2', 'cn2.3', 'cn2.4',
+  'cn2', 'cn2.1', 'cn2.2', 'cn2.3', 'cn2.3.1', 'cn2.4',
   'cn3', 'cn3.1', 'cn3.2', 'cn3.3', 'cn3.4',
-  'cn4', 'cn4.1', 'cn4.2', 'cn4.3',
+  'cn4', 'cn4.1', 'cn4.1.1', 'cn4.2', 'cn4.3',
   'cn5', 'cn5.1', 'cn5.2', 'cn5.3', 'cn5.4', 'cn5.5', 'cn5.6',
   'wr.charging', 'wr.phoneConnected', 'wr.bluetoothConnected', 'wr.dnd',
 ]
@@ -38,7 +41,7 @@ describe('default expression token catalog', () => {
       expect(definition.labelCn.trim()).not.toBe('')
       expect(definition.description.trim()).not.toBe('')
       expect(definition.descriptionCn.trim()).not.toBe('')
-      expect(definition.category).toMatch(/^(date-time|activity|sensor|system|weather|status)$/)
+      expect(definition.category).toMatch(/^(date-time|activity|sensor|system|weather|astronomy|status)$/)
       expect(['number', 'string', 'boolean']).toContain(definition.valueType)
       expect(definition.supportedTargets).toEqual(['visibility'])
       expect(definition.providerKey.trim()).not.toBe('')
@@ -63,7 +66,55 @@ describe('default expression token catalog', () => {
       valueType: 'string',
       exampleValue: '+6',
     })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.3.1')?.valueType).toBe('number')
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn4.1.1')?.valueType).toBe('number')
     expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.5')).toBeUndefined()
+  })
+
+  it('exposes all 24 next-solar-term numeric enum values', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn2.3.1')).toMatchObject({
+      id: 'chinaCalendar.solarTerm.nextIndex', labelCn: '下一个节气编号', exampleValue: 13,
+      enumValues: [
+        { value: 0, label: 'Beginning of Spring', labelCn: '立春' },
+        { value: 1, label: 'Rain Water', labelCn: '雨水' },
+        { value: 2, label: 'Awakening of Insects', labelCn: '惊蛰' },
+        { value: 3, label: 'Spring Equinox', labelCn: '春分' },
+        { value: 4, label: 'Clear and Bright', labelCn: '清明' },
+        { value: 5, label: 'Grain Rain', labelCn: '谷雨' },
+        { value: 6, label: 'Beginning of Summer', labelCn: '立夏' },
+        { value: 7, label: 'Lesser Fullness of Grain', labelCn: '小满' },
+        { value: 8, label: 'Grain in Ear', labelCn: '芒种' },
+        { value: 9, label: 'Summer Solstice', labelCn: '夏至' },
+        { value: 10, label: 'Lesser Heat', labelCn: '小暑' },
+        { value: 11, label: 'Greater Heat', labelCn: '大暑' },
+        { value: 12, label: 'Beginning of Autumn', labelCn: '立秋' },
+        { value: 13, label: 'End of Heat', labelCn: '处暑' },
+        { value: 14, label: 'White Dew', labelCn: '白露' },
+        { value: 15, label: 'Autumn Equinox', labelCn: '秋分' },
+        { value: 16, label: 'Cold Dew', labelCn: '寒露' },
+        { value: 17, label: "Frost's Descent", labelCn: '霜降' },
+        { value: 18, label: 'Beginning of Winter', labelCn: '立冬' },
+        { value: 19, label: 'Lesser Snow', labelCn: '小雪' },
+        { value: 20, label: 'Greater Snow', labelCn: '大雪' },
+        { value: 21, label: 'Winter Solstice', labelCn: '冬至' },
+        { value: 22, label: 'Lesser Cold', labelCn: '小寒' },
+        { value: 23, label: 'Greater Cold', labelCn: '大寒' },
+      ],
+    })
+  })
+
+  it('exposes all 12 zodiac-year numeric enum values', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn4.1.1')).toMatchObject({
+      id: 'chinaCalendar.zodiac.yearIndex', labelCn: '生肖编号', exampleValue: 6,
+      enumValues: [
+        { value: 0, label: 'Rat', labelCn: '鼠' }, { value: 1, label: 'Ox', labelCn: '牛' },
+        { value: 2, label: 'Tiger', labelCn: '虎' }, { value: 3, label: 'Rabbit', labelCn: '兔' },
+        { value: 4, label: 'Dragon', labelCn: '龙' }, { value: 5, label: 'Snake', labelCn: '蛇' },
+        { value: 6, label: 'Horse', labelCn: '马' }, { value: 7, label: 'Goat', labelCn: '羊' },
+        { value: 8, label: 'Monkey', labelCn: '猴' }, { value: 9, label: 'Rooster', labelCn: '鸡' },
+        { value: 10, label: 'Dog', labelCn: '狗' }, { value: 11, label: 'Pig', labelCn: '猪' },
+      ],
+    })
   })
 
   it('preserves the canonical battery identity', () => {
@@ -73,6 +124,23 @@ describe('default expression token catalog', () => {
       nullable: false,
       unit: '%',
       wfbEquivalent: 'ds3',
+    })
+  })
+
+  it('keeps ds3 raw and exposes ds3.1 as four documented battery stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds3')).toMatchObject({
+      id: 'system.battery.level', unit: '%', enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds3.1')).toMatchObject({
+      id: 'system.battery.stage', label: 'Battery Stage', labelCn: '电池电量阶段', exampleValue: 3,
+      description: 'Battery stage: 0 below 25%; 1 from 25% to below 50%; 2 from 50% to below 75%; 3 at or above 75%.',
+      descriptionCn: '电池电量阶段：原值低于 25% 返回 0；25%（含）至 50%（不含）返回 1；50%（含）至 75%（不含）返回 2；75% 及以上返回 3。',
+      enumValues: [
+        { value: 0, label: 'Low (below 25%)', labelCn: '电量不足（原值 < 25%）' },
+        { value: 1, label: 'Fair (25% to below 50%)', labelCn: '电量一般（原值 >= 25% 且 < 50%）' },
+        { value: 2, label: 'Good (50% to below 75%)', labelCn: '电量良好（原值 >= 50% 且 < 75%）' },
+        { value: 3, label: 'Full (75% or above)', labelCn: '电量充足（原值 >= 75%）' },
+      ],
     })
   })
 
@@ -107,6 +175,135 @@ describe('default expression token catalog', () => {
       { value: 7, label: 'Saturday', labelCn: '周六' },
     ])
   })
+
+  it('documents the three AM PM and 24-hour states for tm10.1', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('tm10.1')).toMatchObject({
+      id: 'time.amPm24Hour',
+      label: 'AM/PM/24H',
+      labelCn: '上午/下午/24小时制',
+      exampleValue: 2,
+      enumValues: [
+        { value: 0, label: 'AM', labelCn: '上午' },
+        { value: 1, label: 'PM', labelCn: '下午' },
+        { value: 2, label: '24H', labelCn: '24小时制' },
+      ],
+    })
+  })
+
+  it('exposes moon age as the numeric as3 token', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as3')).toMatchObject({
+      id: 'astronomy.moonAge',
+      label: 'Moon Age',
+      labelCn: '月龄',
+      valueType: 'number',
+      nullable: false,
+      exampleValue: 14,
+      updateFrequency: 'minute',
+      enumValues: [
+        ...Array.from({ length: 6 }, (_, index) => ({ value: index + 1, label: `Waxing Crescent ${index + 1}`, labelCn: `渐盈月 ${index + 1}` })),
+        { value: 7, label: 'First Quarter', labelCn: '上弦月' },
+        ...Array.from({ length: 6 }, (_, index) => ({ value: index + 8, label: `Waxing Gibbous ${index + 1}`, labelCn: `盈凸月 ${index + 1}` })),
+        { value: 14, label: 'Full Moon', labelCn: '满月' },
+        ...Array.from({ length: 6 }, (_, index) => ({ value: index + 15, label: `Waning Gibbous ${index + 1}`, labelCn: `亏凸月 ${index + 1}` })),
+        { value: 21, label: 'Third Quarter', labelCn: '下弦月' },
+        ...Array.from({ length: 6 }, (_, index) => ({ value: index + 22, label: `Waning Crescent ${index + 1}`, labelCn: `残月 ${index + 1}` })),
+        { value: 28, label: 'New Moon', labelCn: '新月' },
+        { value: 29, label: 'New Moon', labelCn: '新月' },
+      ],
+    })
+  })
+
+  it('exposes as3.1 as the confirmed eight-stage moon phase enum', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as3.1')).toMatchObject({
+      id: 'astronomy.moonPhase',
+      label: 'Moon Phase',
+      labelCn: '月相阶段',
+      valueType: 'number',
+      nullable: false,
+      exampleValue: 4,
+      enumValues: [
+        { value: 0, label: 'New Moon', labelCn: '新月' },
+        { value: 1, label: 'Waxing Crescent', labelCn: '渐盈月' },
+        { value: 2, label: 'First Quarter', labelCn: '上弦月' },
+        { value: 3, label: 'Waxing Gibbous', labelCn: '盈凸月' },
+        { value: 4, label: 'Full Moon', labelCn: '满月' },
+        { value: 5, label: 'Waning Gibbous', labelCn: '亏凸月' },
+        { value: 6, label: 'Third Quarter', labelCn: '下弦月' },
+        { value: 7, label: 'Waning Crescent', labelCn: '残月' },
+      ],
+    })
+  })
+
+  it('exposes true solar time and both confirmed solar period enums', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as1')).toMatchObject({
+      id: 'astronomy.trueSolarSeconds',
+      label: 'True Solar Time',
+      labelCn: '真太阳时',
+      valueType: 'number',
+      nullable: true,
+      exampleValue: 52200,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as1.1')).toMatchObject({
+      id: 'astronomy.trueSolarPeriod',
+      exampleValue: 3,
+      enumValues: [
+        { value: 0, label: 'Late Night', labelCn: '深夜' },
+        { value: 1, label: 'Early Morning', labelCn: '清晨' },
+        { value: 2, label: 'Morning', labelCn: '上午' },
+        { value: 3, label: 'Afternoon', labelCn: '下午' },
+        { value: 4, label: 'Evening', labelCn: '傍晚' },
+        { value: 5, label: 'Night', labelCn: '夜晚' },
+      ],
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as1.2')).toMatchObject({
+      id: 'astronomy.astronomicalLightPeriod',
+      exampleValue: 4,
+      enumValues: [
+        { value: 0, label: 'Astronomical Night', labelCn: '天文夜' },
+        { value: 1, label: 'Astronomical Dawn', labelCn: '天文晨光' },
+        { value: 2, label: 'Nautical Dawn', labelCn: '航海晨光' },
+        { value: 3, label: 'Civil Dawn', labelCn: '民用晨光' },
+        { value: 4, label: 'Daylight', labelCn: '白昼' },
+        { value: 5, label: 'Civil Dusk', labelCn: '民用暮光' },
+        { value: 6, label: 'Nautical Dusk', labelCn: '航海暮光' },
+        { value: 7, label: 'Astronomical Dusk', labelCn: '天文暮光' },
+      ],
+    })
+  })
+
+  it('exposes the eight solar-event tokens with expression-ready numeric contracts', () => {
+    expect([
+      ['as2', 'astronomy.sunriseSeconds'],
+      ['as2.1', 'astronomy.sunsetSeconds'],
+      ['as2.2', 'astronomy.nextSolarEvent'],
+      ['as2.3', 'astronomy.secondsUntilNextSolarEvent'],
+      ['as2.4', 'astronomy.daylightDuration'],
+      ['as2.5', 'astronomy.daylightProgress'],
+      ['as2.6', 'astronomy.solarAltitude'],
+      ['as2.7', 'astronomy.solarAzimuth'],
+    ].map(([code]) => DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)?.id)).toEqual([
+      'astronomy.sunriseSeconds', 'astronomy.sunsetSeconds', 'astronomy.nextSolarEvent',
+      'astronomy.secondsUntilNextSolarEvent', 'astronomy.daylightDuration',
+      'astronomy.daylightProgress', 'astronomy.solarAltitude', 'astronomy.solarAzimuth',
+    ])
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as2.2')?.enumValues).toEqual([
+      { value: 0, label: 'Sunrise', labelCn: '日出' },
+      { value: 1, label: 'Sunset', labelCn: '日落' },
+    ])
+    expect(['as2', 'as2.1', 'as2.2', 'as2.3', 'as2.4', 'as2.5', 'as2.6', 'as2.7']
+      .map((code) => DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)?.nullable))
+      .toEqual([true, true, true, true, true, true, true, true])
+  })
+
+  it('exposes moon illumination and days until the next full moon', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as3.2')).toMatchObject({
+      id: 'astronomy.moonIllumination', valueType: 'number', nullable: false, unit: '%',
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('as3.3')).toMatchObject({
+      id: 'astronomy.daysUntilFullMoon', valueType: 'number', nullable: false, unit: 'days',
+    })
+  })
+
 
   it('documents every move-bar level exposed by ai11', () => {
     expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ai11')).toMatchObject({
@@ -145,6 +342,49 @@ describe('default expression token catalog', () => {
     })
   })
 
+  it('keeps ds330 raw and exposes ds330.1 as four documented body-battery stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds330')).toMatchObject({
+      id: 'sensor.bodyBattery',
+      unit: '%',
+      enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds330.1')).toMatchObject({
+      id: 'sensor.bodyBatteryStage',
+      label: 'Body Battery Stage',
+      labelCn: '身体电量阶段',
+      exampleValue: 2,
+      description: 'Body Battery stage: 0 below 25; 1 from 25 to below 50; 2 from 50 to below 75; 3 at or above 75.',
+      descriptionCn: '身体电量阶段：原值低于 25 返回 0；25（含）至 50（不含）返回 1；50（含）至 75（不含）返回 2；75 及以上返回 3。',
+      enumValues: [
+        { value: 0, label: 'Exhausted (below 25)', labelCn: '疲惫（原值 < 25）' },
+        { value: 1, label: 'Fair (25 to below 50)', labelCn: '一般（原值 >= 25 且 < 50）' },
+        { value: 2, label: 'Good (50 to below 75)', labelCn: '良好（原值 >= 50 且 < 75）' },
+        { value: 3, label: 'High (75 or above)', labelCn: '充沛（原值 >= 75）' },
+      ],
+    })
+  })
+
+  it('keeps ds331 raw and exposes ds331.1 as four documented stress stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds331')).toMatchObject({
+      id: 'sensor.stress',
+      enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('ds331.1')).toMatchObject({
+      id: 'sensor.stressStage',
+      label: 'Stress Stage',
+      labelCn: '压力阶段',
+      exampleValue: 1,
+      description: 'Stress stage: 0 below 25; 1 from 25 to below 50; 2 from 50 to below 75; 3 at or above 75.',
+      descriptionCn: '压力阶段：原值低于 25 返回 0；25（含）至 50（不含）返回 1；50（含）至 75（不含）返回 2；75 及以上返回 3。',
+      enumValues: [
+        { value: 0, label: 'Relaxed (below 25)', labelCn: '放松（原值 < 25）' },
+        { value: 1, label: 'Normal (25 to below 50)', labelCn: '正常（原值 >= 25 且 < 50）' },
+        { value: 2, label: 'Tense (50 to below 75)', labelCn: '紧张（原值 >= 50 且 < 75）' },
+        { value: 3, label: 'High stress (75 or above)', labelCn: '高压（原值 >= 75）' },
+      ],
+    })
+  })
+
   it('exposes w01 as the normalized Wristo weather condition code', () => {
     const weatherCode = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w01')
     expect(weatherCode).toMatchObject({
@@ -157,6 +397,62 @@ describe('default expression token catalog', () => {
     expect(weatherCode?.enumValues).toHaveLength(14)
     expect(weatherCode?.enumValues?.[0]).toMatchObject({ value: 0, label: 'Clear' })
     expect(weatherCode?.enumValues?.[13]).toMatchObject({ value: 13, label: 'Broken Clouds' })
+  })
+
+  it('keeps w09 raw and exposes w09.1 as three documented humidity stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w09')).toMatchObject({
+      id: 'weather.current.humidity',
+      unit: '%',
+      enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w09.1')).toMatchObject({
+      id: 'weather.current.humidityLevel',
+      label: 'Humidity Level',
+      labelCn: '湿度阶段',
+      nullable: true,
+      enumValues: [
+        { value: 0, label: 'Dry (below 40%)', labelCn: '干燥（原值 < 40%）' },
+        { value: 1, label: 'Comfortable (40% to 60%)', labelCn: '舒适（原值 40% 至 60%）' },
+        { value: 2, label: 'Humid (above 60%)', labelCn: '潮湿（原值 > 60%）' },
+      ],
+    })
+  })
+
+  it('keeps w08 raw and exposes w08.1 as three documented precipitation stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w08')).toMatchObject({
+      id: 'weather.current.precipitationChance', unit: '%', enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w08.1')).toMatchObject({
+      id: 'weather.current.precipitationLevel', label: 'Precipitation Level', labelCn: '降水概率阶段',
+      exampleValue: 1,
+      description: 'Precipitation stage: 0 below 30%; 1 from 30% to below 70%; 2 at or above 70%.',
+      descriptionCn: '降水概率阶段：原值低于 30% 返回 0；30%（含）至 70%（不含）返回 1；70% 及以上返回 2。',
+      enumValues: [
+        { value: 0, label: 'No rain (below 30%)', labelCn: '无雨（原值 < 30%）' },
+        { value: 1, label: 'Rain possible (30% to below 70%)', labelCn: '可能下雨（原值 >= 30% 且 < 70%）' },
+        { value: 2, label: 'Rain likely (70% or above)', labelCn: '大概率下雨（原值 >= 70%）' },
+      ],
+    })
+  })
+
+  it('keeps w10 raw and exposes w10.1 as four documented Celsius temperature stages', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w10')).toMatchObject({
+      id: 'weather.current.temperature',
+      unit: '°C',
+      enumValues: undefined,
+    })
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('w10.1')).toMatchObject({
+      id: 'weather.current.temperatureLevel',
+      label: 'Temperature Level',
+      labelCn: '温度阶段',
+      nullable: true,
+      enumValues: [
+        { value: 0, label: 'Cold (below 10°C)', labelCn: '寒冷（原值 < 10°C）' },
+        { value: 1, label: 'Cool (10°C to below 18°C)', labelCn: '凉爽（原值 >= 10°C 且 < 18°C）' },
+        { value: 2, label: 'Comfortable (18°C to 25°C)', labelCn: '舒适（原值 18°C 至 25°C）' },
+        { value: 3, label: 'Hot (above 25°C)', labelCn: '炎热（原值 > 25°C）' },
+      ],
+    })
   })
 
   it('keeps w02 as the Garmin weather description', () => {

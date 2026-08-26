@@ -1,6 +1,6 @@
 export type ExpressionValueType = 'number' | 'string' | 'boolean' | 'color' | 'asset' | 'theme' | 'null'
 export type DynamicTarget = 'visibility' | 'color' | 'content' | 'image' | 'theme'
-export type ExpressionTokenCategory = 'date-time' | 'activity' | 'sensor' | 'system' | 'weather' | 'status'
+export type ExpressionTokenCategory = 'date-time' | 'astronomy' | 'activity' | 'sensor' | 'system' | 'weather' | 'status'
 
 import type { AppLanguage } from '@/types/localization'
 
