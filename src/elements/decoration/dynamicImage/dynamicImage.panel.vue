@@ -6,7 +6,10 @@
         <span class="drag-handle" aria-hidden="true">⋮⋮</span>
         <img :src="item.imageUrl" :alt="item.expression.source" class="asset-thumbnail" :style="thumbnailStyle" />
         <code class="expression-summary">{{ item.expression.source }}</code>
-        <el-button size="small" @click="openEdit(Number(index))">{{ t('common.edit') }}</el-button>
+        <div class="row-actions">
+          <el-button size="small" type="danger" plain @click.stop="removeItem(Number(index))">{{ t('common.delete') }}</el-button>
+          <el-button size="small" @click="openEdit(Number(index))">{{ t('common.edit') }}</el-button>
+        </div>
       </div>
     </div>
     <el-button class="add-button" type="primary" plain @click="openAdd">＋ {{ t('dynamicImage.addItem') }}</el-button>
@@ -101,8 +104,9 @@ const saveDraft = () => {
 }
 const removeEditingItem = () => {
   if (editingIndex.value === null) return
-  commitItems(items.value.filter((_, index) => index !== editingIndex.value)); dialogVisible.value = false
+  removeItem(editingIndex.value); dialogVisible.value = false
 }
+const removeItem = (itemIndex: number) => commitItems(items.value.filter((_, index) => index !== itemIndex))
 const handleCopyGroup = (sourceItems: DynamicImageItem[]) => {
   commitItems(appendCopiedDynamicImageItems(items.value, sourceItems, nanoid))
   dialogVisible.value = false
@@ -123,6 +127,8 @@ const dropAt = (targetIndex: number) => {
 .drag-handle { color: var(--el-text-color-placeholder); cursor: grab; user-select: none; }
 .asset-thumbnail { justify-self: center; object-fit: fill; border-radius: 6px; background: var(--el-fill-color-light); }
 .expression-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--el-text-color-primary); }
+.row-actions { display: flex; align-items: center; gap: 8px; }
+.row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .add-button { width: 100%; }
 .edit-form { display: grid; gap: 18px; }
 .copy-group-button { width: 100%; margin: 0; }

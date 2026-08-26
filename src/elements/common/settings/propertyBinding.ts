@@ -192,7 +192,7 @@ const getActiveElements = (): any[] => {
   return canvasStore.canvas?.getActiveObjects?.() ?? []
 }
 
-const getPatchForElement = (element: any, propertyKey: string, type: BindableMetricPropertyType) => {
+export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: string, type: BindableMetricPropertyType) => {
   const eleType = String(element?.eleType ?? '')
   if (!isMetricBindableElement(type, eleType)) return null
   const propertiesStore = usePropertiesStore()
@@ -283,7 +283,7 @@ export const bindMetricPropertyToSelection = async (
   for (const element of getActiveElements()) {
     const id = element?.id
     if (id == null) continue
-    const patch = getPatchForElement(element, propertyKey, type)
+    const patch = resolveMetricPropertyBindingPatch(element, propertyKey, type)
     if (!patch) continue
     await elementManager.updateElementById(String(id), patch)
     boundCount += 1

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 
 const source = readFileSync(new URL('./LayoutGroupSettings.vue', import.meta.url), 'utf8')
 const groupSettingsSource = readFileSync(new URL('./GroupSettings.vue', import.meta.url), 'utf8')
+const propertiesPanelSource = readFileSync(new URL('../../properties/PropertiesPanel.vue', import.meta.url), 'utf8')
 
 describe('LayoutGroupSettings binding UI contract', () => {
   it('renders reusable binding controls for the whole layout group', () => {
@@ -31,5 +32,9 @@ describe('LayoutGroupSettings binding UI contract', () => {
   it('does not render the goal selector when the design has no goal properties', () => {
     expect(groupSettingsSource).toContain('const hasGoalProperties = computed')
     expect(groupSettingsSource).toContain('&& hasGoalProperties.value')
+  })
+
+  it('refreshes bound layout-group metric content after a data or goal property is edited', () => {
+    expect(propertiesPanelSource).toContain('syncLayoutGroupsForMetricProperty(propertyPayload.key, propertyPayload.type)')
   })
 })
