@@ -329,7 +329,7 @@ const editorState = shallowRef<GoalBarPolygonMiniEditorState & { active: boolean
 
 const currentModel = computed<any>(() => {
   console.log('[GoalBarPanel] currentModel', props.config, props.element)
-  return props.config ?? props.element ?? {}
+  return props.element ?? props.config ?? {}
 })
 const currentProgressDirection = computed(() => normalizeGoalBarDirection(currentModel.value.progressDirection))
 const currentOrientation = computed<GoalBarOrientation>(() => resolveGoalBarOrientation(currentProgressDirection.value))
