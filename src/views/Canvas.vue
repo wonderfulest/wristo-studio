@@ -12,6 +12,14 @@
     <div class="watch-face-backdrop" :style="watchFaceBackdropStyle"></div>
     <canvas ref="canvasRef"></canvas>
     <DeviceFrameOverlay :canvas-offset="CANVAS_MARGIN" />
+    <CanvasEyedropperOverlay
+      v-if="isCanvasEyedropperActive && eyedropperSourceCanvas"
+      :source-canvas="eyedropperSourceCanvas"
+      :hint="t('colorPicker.eyedropperHint')"
+      :style="watchFaceBackdropStyle"
+      @pick="handleEyedropperPick"
+      @cancel="cancelCanvasEyedropper"
+    />
   </div>
   
 </template>
@@ -33,6 +41,8 @@ import { useDesignStore } from '@/stores/designStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import DeviceFrameOverlay from '@/components/canvas/DeviceFrameOverlay.vue'
+import CanvasEyedropperOverlay from '@/components/canvas/CanvasEyedropperOverlay.vue'
+import emitter from '@/utils/eventBus'
 import {
   scaleElementConfig,
   scaleFabricCanvasForDesignSize,
@@ -61,6 +71,8 @@ const editorStore = useEditorStore()
 const { t } = useI18n()
 const isFileDragOver = ref(false)
 const isUploadingDroppedImage = ref(false)
+const isCanvasEyedropperActive = ref(false)
+const eyedropperSourceCanvas = ref<HTMLCanvasElement | null>(null)
 let zoomManager: ZoomManagerHandle | null = null
 let guidelineManager: GuidelineManagerHandle | null = null
 
@@ -93,6 +105,7 @@ onMounted(() => {
     watchHeight: watchHeight.value,
     zoomManager: null,
   })
+  eyedropperSourceCanvas.value = (baseStore.canvas as any)?.lowerCanvasEl || canvasRef.value
 
   // 绑定缩放管理器
   zoomManager = attachZoomManager({
@@ -118,6 +131,7 @@ onMounted(() => {
   const engine = getDataSimulatorEngine()
   engine.start({ intervalMs: 1000 })
   ;(window as any).__dataSimulatorEngine = engine
+  emitter.on('canvas-eyedropper-start', startCanvasEyedropper)
 })
 
 onUnmounted(() => {
@@ -128,7 +142,25 @@ onUnmounted(() => {
   zoomManager = null
   guidelineManager?.dispose()
   guidelineManager = null
+  emitter.off('canvas-eyedropper-start', startCanvasEyedropper)
 })
+
+const startCanvasEyedropper = () => {
+  eyedropperSourceCanvas.value = (baseStore.canvas as any)?.lowerCanvasEl || canvasRef.value
+  isCanvasEyedropperActive.value = !!eyedropperSourceCanvas.value
+}
+
+const cancelCanvasEyedropper = () => {
+  if (!isCanvasEyedropperActive.value) return
+  isCanvasEyedropperActive.value = false
+  emitter.emit('canvas-eyedropper-cancelled')
+}
+
+const handleEyedropperPick = (color: string) => {
+  if (!isCanvasEyedropperActive.value) return
+  isCanvasEyedropperActive.value = false
+  emitter.emit('canvas-eyedropper-picked', color)
+}
 
 const updateFixedLayersForCanvasSize = () => {
   const width = watchWidth.value
@@ -164,6 +196,10 @@ const clearCanvasSelection = () => {
 }
 
 const handleWrapperPointerDown = (event: PointerEvent) => {
+  if (isCanvasEyedropperActive.value) {
+    cancelCanvasEyedropper()
+    return
+  }
   const target = event.target as HTMLElement | null
   if (!target) return
   if (target.closest('.canvas-container')) return

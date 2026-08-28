@@ -275,6 +275,7 @@ import {
   getPrgBuildDisabledReason,
   getPrgCardAction,
   shouldShowBuildIqButton,
+  shouldShowPublishButton,
   shouldShowPreviewPrgButton,
 } from './designCardActions'
 import {
@@ -525,8 +526,7 @@ const showPreviewPrgButton = computed(() => {
 })
 
 const showPublishButton = computed(() => {
-  const product = design.value.product
-  return !!product?.release
+  return shouldShowPublishButton(design.value.product, isAdminUser.value)
 })
 const hasPreviewActions = computed(() => showPreviewPrgButton.value)
 const hasReleaseActions = computed(() => showPublishButton.value)

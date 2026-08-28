@@ -52,6 +52,11 @@
           <div v-for="color in visibleColorMatrix" :key="color" class="color-cell" :style="{ backgroundColor: color }" @click="selectColor({ hex: color, value: color })"></div>
         </div>
 
+        <button type="button" class="canvas-eyedropper-button" @click="startCanvasEyedropper">
+          <Icon icon="material-symbols:colorize-outline-rounded" width="17" height="17" />
+          {{ t('colorPicker.pickFromCanvas') }}
+        </button>
+
         <button type="button" class="more-colors-button" @click="pickerView = 'rgb565'">
           {{ t('colorPicker.moreColors') }}
         </button>
@@ -107,6 +112,7 @@ import { toColorSelectionPayload } from './colorSelection'
 import { buildColorPropertyChoices } from './colorPropertyChoices'
 import { getColorPropertyValue } from '@/engine/services/colorPropertyValueService'
 import Rgb565ColorSpectrum from './Rgb565ColorSpectrum.vue'
+import { Icon } from '@iconify/vue'
 
 const { t } = useI18n()
 
@@ -225,6 +231,7 @@ const wrapperRef = ref(null)
 const pickerRef = ref(null)
 const pickerStyle = ref({})
 const pickerView = ref('quick')
+const isCanvasEyedropperActive = ref(false)
 // 为每个实例生成唯一标识，用于互斥控制
 const instanceId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
 const settingsPopupId = `color-picker_${instanceId}`
@@ -383,6 +390,22 @@ const handleRgb565Change = (color) => {
   }
 }
 
+const startCanvasEyedropper = () => {
+  isCanvasEyedropperActive.value = true
+  isOpen.value = false
+  emitter.emit('canvas-eyedropper-start')
+}
+
+const handleCanvasEyedropperPicked = (color) => {
+  if (!isCanvasEyedropperActive.value) return
+  isCanvasEyedropperActive.value = false
+  handleRgb565Change(color)
+}
+
+const handleCanvasEyedropperCancelled = () => {
+  isCanvasEyedropperActive.value = false
+}
+
 // 更新颜色
 const updateColor = () => {
   propertiesStore.setLastSelectedColor(hexColor.value)
@@ -463,6 +486,8 @@ onMounted(() => {
   window.addEventListener('resize', positionColorPicker)
   document.addEventListener('scroll', positionColorPicker, true)
   emitter.on('settings-popup-open', handleSettingsPopupOpen)
+  emitter.on('canvas-eyedropper-picked', handleCanvasEyedropperPicked)
+  emitter.on('canvas-eyedropper-cancelled', handleCanvasEyedropperCancelled)
 })
 
 onUnmounted(() => {
@@ -470,6 +495,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', positionColorPicker)
   document.removeEventListener('scroll', positionColorPicker, true)
   emitter.off('settings-popup-open', handleSettingsPopupOpen)
+  emitter.off('canvas-eyedropper-picked', handleCanvasEyedropperPicked)
+  emitter.off('canvas-eyedropper-cancelled', handleCanvasEyedropperCancelled)
 })
 
 // 监听 modelValue 变化
@@ -846,6 +873,7 @@ const togglePicker = () => {
   background-color: var(--studio-surface-soft);
 }
 
+.canvas-eyedropper-button,
 .more-colors-button,
 .rgb565-back-button {
   width: 100%;
@@ -858,6 +886,15 @@ const togglePicker = () => {
   font: inherit;
 }
 
+.canvas-eyedropper-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.canvas-eyedropper-button:hover,
 .more-colors-button:hover,
 .rgb565-back-button:hover {
   border-color: var(--studio-primary);

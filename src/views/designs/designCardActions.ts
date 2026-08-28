@@ -1,6 +1,7 @@
 type Timestamp = string | number | null | undefined
 
 type PackagingState = {
+  release?: { id?: number | null } | null
   packagingLog?: { rank?: number | null }
   prgPackagingLog?: {
     deviceId?: string | null
@@ -37,6 +38,11 @@ export const shouldShowBuildIqButton = (product?: PackagingState | null) => {
   const rank = product.packagingLog?.rank
   return rank === null || rank === undefined
 }
+
+export const shouldShowPublishButton = (
+  product: PackagingState | null | undefined,
+  isAdminUser: boolean,
+) => isAdminUser || !!product?.release
 
 export const getPrgCardAction = (
   product: PackagingState | null | undefined,

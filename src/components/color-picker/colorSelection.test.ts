@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { toColorSelectionPayload } from './colorSelection'
+import emitter from '@/utils/eventBus'
 
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 const propertiesState = vi.hoisted(() => ({
@@ -107,6 +108,34 @@ describe('ColorPicker canvas colors contract', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('change')).toEqual([['#ABCDEF']])
     expect(wrapper.emitted('property-change')).toEqual([[{ color: '#ABCDEF', propertyKey: null }]])
+    wrapper.unmount()
+  })
+})
+
+describe('ColorPicker canvas eyedropper contract', () => {
+  it('starts canvas sampling and applies the picked color through the solid color path', async () => {
+    const wrapper = mount(ColorPicker)
+    await wrapper.find('.color-input').trigger('click')
+
+    await wrapper.find('button.canvas-eyedropper-button').trigger('click')
+    emitter.emit('canvas-eyedropper-picked', '#123456')
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([['#123456']])
+    expect(wrapper.emitted('change')).toEqual([['#123456']])
+    expect(wrapper.emitted('property-change')).toEqual([[{ color: '#123456', propertyKey: null }]])
+    wrapper.unmount()
+  })
+
+  it('applies the picked color to the active gradient stop', async () => {
+    const wrapper = mount(ColorPicker, {
+      props: { enableGradient: true, gradientEnabled: true },
+    })
+    await wrapper.find('.color-input').trigger('click')
+
+    await wrapper.find('button.canvas-eyedropper-button').trigger('click')
+    emitter.emit('canvas-eyedropper-picked', '#ABCDEF')
+
+    expect(wrapper.emitted('update:gradientStartColor')).toEqual([['#ABCDEF']])
     wrapper.unmount()
   })
 })

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   getPrgCardAction,
+  shouldShowPublishButton,
   shouldShowBuildIqButton,
   shouldShowPreviewPrgButton,
 } from './designCardActions'
@@ -32,6 +33,17 @@ describe('DesignCard Build IQ action', () => {
   it('keeps package download visible in Workspace only', () => {
     expect(workspaceSource).toContain(':show-package-download="true"')
     expect(newProjectsSource).toContain(':show-package-download="false"')
+  })
+})
+
+describe('DesignCard Publish action', () => {
+  it('lets administrators publish without an IQ release', () => {
+    expect(shouldShowPublishButton({}, true)).toBe(true)
+  })
+
+  it('still requires an IQ release for non-administrators', () => {
+    expect(shouldShowPublishButton({}, false)).toBe(false)
+    expect(shouldShowPublishButton({ release: { id: 9 } }, false)).toBe(true)
   })
 })
 

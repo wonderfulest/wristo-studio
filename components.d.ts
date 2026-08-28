@@ -25,6 +25,7 @@ declare module 'vue' {
     BitmapFontList: typeof import('./src/components/font-picker/BitmapFontList.vue')['default']
     BitmapFontPicker: typeof import('./src/components/font-picker/BitmapFontPicker.vue')['default']
     BundleSelector: typeof import('./src/components/common/BundleSelector.vue')['default']
+    CanvasEyedropperOverlay: typeof import('./src/components/canvas/CanvasEyedropperOverlay.vue')['default']
     CanvasRulers: typeof import('./src/components/canvas/CanvasRulers.vue')['default']
     CategorySelector: typeof import('./src/components/common/CategorySelector.vue')['default']
     ChangelogDialog: typeof import('./src/components/dialogs/ChangelogDialog.vue')['default']
