@@ -21,16 +21,26 @@ import HandGeometrySettings from './HandGeometrySettings.vue'
 
 const ElInputNumber = {
   name: 'ElInputNumber',
-  props: ['field', 'modelValue'],
+  props: ['field', 'modelValue', 'disabled'],
   emits: ['change'],
-  template: '<input :data-field="field" :value="modelValue" @change="$emit(\'change\', Number($event.target.value))" />',
+  template: '<input :data-field="field" :value="modelValue" :disabled="disabled" @change="$emit(\'change\', Number($event.target.value))" />',
+}
+
+const ElSlider = {
+  name: 'ElSlider',
+  props: ['modelValue', 'disabled'],
+  emits: ['input'],
+  template: '<input data-field="scaleSlider" :disabled="disabled" @input="$emit(\'input\', Number($event.target.value))" />',
 }
 
 describe('HandGeometrySettings', () => {
   it('shows absolute pivot coordinates and converts edits back to persisted offsets', async () => {
+    calibration.state.active = true
+    calibration.state.selectedHandId = 'minute-1'
     const wrapper = mount(HandGeometrySettings, {
       props: {
         model: {
+          id: 'minute-1',
           centerX: 220,
           centerY: 200,
           pivotOffsetX: 7,
@@ -75,5 +85,38 @@ describe('HandGeometrySettings', () => {
     expect(calibration.start).toHaveBeenCalledWith('minute-1')
 
     expect(wrapper.find('.calibration-mode').exists()).toBe(false)
+  })
+
+  it('locks geometry values and ignores updates after calibration finishes', async () => {
+    calibration.state.active = false
+    calibration.state.selectedHandId = null
+    const wrapper = mount(HandGeometrySettings, {
+      props: {
+        model: {
+          id: 'minute-1',
+          centerX: 220,
+          centerY: 200,
+          pivotOffsetX: 7,
+          pivotOffsetY: 27,
+          scalePercent: 100,
+        },
+      },
+      global: {
+        stubs: {
+          'el-input-number': ElInputNumber,
+          'el-slider': ElSlider,
+          'el-button': true,
+        },
+      },
+    })
+
+    for (const field of ['centerX', 'centerY', 'pivotX', 'pivotY', 'scalePercent', 'scaleSlider']) {
+      expect(wrapper.get(`[data-field="${field}"]`).attributes('disabled')).toBeDefined()
+    }
+
+    wrapper.getComponent(ElInputNumber).vm.$emit('change', 230)
+    wrapper.getComponent(ElSlider).vm.$emit('input', 50)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.emitted('update')).toBeUndefined()
   })
 })

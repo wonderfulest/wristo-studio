@@ -1,7 +1,6 @@
 <template>
   <div class="text-template-editor">
     <el-input
-      ref="textareaRef"
       v-model="localValue"
       type="textarea"
       class="template-input"
@@ -13,30 +12,67 @@
     <div v-if="resolvedTemplateError" class="template-error">{{ resolvedTemplateError }}</div>
     <div v-if="showVariableHelper" class="variable-helper">
       <span>{{ helperText || t('templateEditor.variableHelper') }}</span>
-      <el-button size="small" text type="primary" @click="variablesOpen = !variablesOpen">
-        {{ variablesOpen ? t('templateEditor.hideVariables') : t('templateEditor.showVariables') }}
+      <el-button class="open-token-editor" size="small" text type="primary" @click="openTokenEditor">
+        {{ t('templateEditor.editTokens') }}
       </el-button>
     </div>
-    <div v-if="showVariables && variablesOpen" class="variables">
-      <div class="variables-head">
-        <span class="variables-label">{{ t('templateEditor.variables') }}</span>
-      </div>
-      <section v-for="group in variableGroups" :key="group.title" class="variable-group">
-        <div class="variable-group-title">{{ group.title }}</div>
-        <div class="variable-chips">
-          <button
-            v-for="name in group.items"
-            :key="name"
-            class="variable-chip"
-            type="button"
-            @click="insertVariable(name)"
-          >
-            <span>{{ variableLabel(name) }}</span>
-            <code>{{ formatToken(name) }}</code>
-          </button>
+
+    <el-dialog
+      v-model="tokenDialogOpen"
+      class="token-dialog"
+      :title="t('templateEditor.tokenDialogTitle')"
+      width="min(720px, calc(100vw - 32px))"
+      append-to-body
+      destroy-on-close
+      @closed="discardTokenDraft"
+    >
+      <div class="token-dialog-content">
+        <el-input
+          ref="tokenTextareaRef"
+          v-model="tokenDraft"
+          type="textarea"
+          class="token-dialog-input"
+          :rows="4"
+          :maxlength="128"
+          show-word-limit
+        />
+        <div v-if="tokenDraftError" class="template-error">{{ tokenDraftError }}</div>
+        <div class="variables">
+          <div class="variables-head">
+            <span class="variables-label">{{ t('templateEditor.variables') }}</span>
+            <span class="variables-hint">{{ t('templateEditor.tokenDialogHint') }}</span>
+          </div>
+          <section v-for="group in variableGroups" :key="group.title" class="variable-group">
+            <div class="variable-group-title">{{ group.title }}</div>
+            <div class="variable-chips">
+              <button
+                v-for="name in group.items"
+                :key="name"
+                class="variable-chip"
+                type="button"
+                @click="insertVariable(name)"
+              >
+                <span>{{ variableLabel(name) }}</span>
+                <code>{{ formatToken(name) }}</code>
+              </button>
+            </div>
+          </section>
         </div>
-      </section>
-    </div>
+      </div>
+      <template #footer>
+        <el-button class="cancel-token-edit" @click="closeTokenEditor">
+          {{ t('common.cancel') }}
+        </el-button>
+        <el-button
+          class="confirm-token-edit"
+          type="primary"
+          :disabled="Boolean(tokenDraftError)"
+          @click="confirmTokenEdit"
+        >
+          {{ t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -72,13 +108,15 @@ const emit = defineEmits<{
   (e: 'change', value: string): void
 }>()
 
-const textareaRef = ref<any>(null)
+const tokenTextareaRef = ref<any>(null)
 const localValue = ref(props.modelValue || '')
-const variablesOpen = ref(props.variablesInitiallyOpen)
+const tokenDialogOpen = ref(false)
+const tokenDraft = ref('')
 const showVariableHelper = ref(props.showVariables)
 const templateError = computed(() => {
   return validateTokenTemplate(localValue.value)[0] || ''
 })
+const tokenDraftError = computed(() => validateTokenTemplate(tokenDraft.value)[0] || '')
 const resolvedTemplateError = computed(() => props.templateError || templateError.value)
 
 const categoryTitles: Record<string, string> = {
@@ -117,28 +155,45 @@ const onInput = () => {
   emit('change', localValue.value)
 }
 
+const openTokenEditor = () => {
+  tokenDraft.value = localValue.value
+  tokenDialogOpen.value = true
+}
+
+const discardTokenDraft = () => {
+  tokenDraft.value = localValue.value
+}
+
+const closeTokenEditor = () => {
+  discardTokenDraft()
+  tokenDialogOpen.value = false
+}
+
+const confirmTokenEdit = () => {
+  if (tokenDraftError.value) return
+  localValue.value = tokenDraft.value
+  onInput()
+  tokenDialogOpen.value = false
+}
+
 const insertVariable = (name: string) => {
-  const root = textareaRef.value as any
+  const root = tokenTextareaRef.value as any
   // Element Plus 的 ElInput 组件实例上通常有 textarea 属性指向真实的 HTMLTextAreaElement
   const textarea: HTMLTextAreaElement | null = (root && root.textarea) || root || null
   const token = `(${name})`
 
   if (!textarea || typeof (textarea as any).setSelectionRange !== 'function') {
-    localValue.value += token
-    onInput()
+    tokenDraft.value += token
     return
   }
 
-  const start = textarea.selectionStart ?? localValue.value.length
+  const start = textarea.selectionStart ?? tokenDraft.value.length
   const end = textarea.selectionEnd ?? start
 
-  const before = localValue.value.slice(0, start)
-  const after = localValue.value.slice(end)
+  const before = tokenDraft.value.slice(0, start)
+  const after = tokenDraft.value.slice(end)
 
-  localValue.value = `${before}${token}${after}`
-
-  emit('update:modelValue', localValue.value)
-  emit('change', localValue.value)
+  tokenDraft.value = `${before}${token}${after}`
 
   requestAnimationFrame(() => {
     const pos = start + token.length
@@ -193,7 +248,7 @@ const insertVariable = (name: string) => {
   display: flex;
   flex-direction: column;
   gap: 9px;
-  max-height: 240px;
+  max-height: min(420px, 48vh);
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--el-border-color-lighter);
@@ -205,6 +260,24 @@ const insertVariable = (name: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.variables-hint {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.token-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.token-dialog-input :deep(.el-textarea__inner) {
+  min-height: 96px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .variables-label {

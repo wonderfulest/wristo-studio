@@ -19,6 +19,7 @@
           :min="control.min"
           :max="control.max"
           :step="control.step"
+          :disabled="!isCalibrating"
           controls-position="right"
           @change="update(control.field, $event)"
         />
@@ -32,6 +33,7 @@
           :min="0"
           :max="100"
           :step="0.25"
+          :disabled="!isCalibrating"
           :format-tooltip="formatScaleTooltip"
           @input="updateScaleFromSlider"
         />
@@ -41,6 +43,7 @@
           :min="10"
           :max="500"
           :step="1"
+          :disabled="!isCalibrating"
           controls-position="right"
           @change="update('scalePercent', $event)"
         />
@@ -123,6 +126,7 @@ function valueFor(field: HandGeometryField): number {
 }
 
 function update(field: HandGeometryField, value: number | undefined): void {
+  if (!isCalibrating.value) return
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return
   const normalized = field === 'scalePercent' ? Math.min(500, Math.max(10, numeric)) : numeric
@@ -146,6 +150,7 @@ function update(field: HandGeometryField, value: number | undefined): void {
 }
 
 function updateScaleFromSlider(value: number | number[]): void {
+  if (!isCalibrating.value) return
   if (Array.isArray(value)) return
   update('scalePercent', handScaleSliderToPercent(value))
 }

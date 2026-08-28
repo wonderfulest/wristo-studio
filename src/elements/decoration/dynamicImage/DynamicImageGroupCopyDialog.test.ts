@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 const source = readFileSync(new URL('./DynamicImageGroupCopyDialog.vue', import.meta.url), 'utf8')
 
 describe('DynamicImageGroupCopyDialog', () => {
-  it('loads only the current user projects with search and pagination', () => {
-    expect(source).toContain("scope: 'mine'")
+  it('loads all projects for administrators and only current user projects for other users', () => {
+    expect(source).toContain("scope: userStore.isAdminUser ? 'all' : 'mine'")
     expect(source).toContain('pageNum: projectPage.value')
     expect(source).toContain('name: projectSearch.value.trim() || undefined')
     expect(source).toContain('designApi.getDesignPage')

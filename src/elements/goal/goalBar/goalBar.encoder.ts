@@ -59,7 +59,7 @@ export function encodeGoalBar(element: Partial<FabricElement>): GoalBarElementCo
     width: config.width ?? background?.width,
     height: config.height ?? background?.height,
     color: config.color ?? anyElement.color,
-    bgColor: config.bgColor ?? anyElement.bgColor,
+    bgColor: config.bgColor ?? anyElement.bgColor ?? '#333333',
     colorProperty: anyElement.colorProperty !== undefined
       ? anyElement.colorProperty
       : config.colorProperty,

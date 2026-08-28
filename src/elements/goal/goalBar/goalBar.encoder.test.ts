@@ -40,6 +40,17 @@ afterEach(() => {
 })
 
 describe('goalBar encoder compatibility', () => {
+  it('exports the renderer default background color when legacy config omits it', () => {
+    const encoded = encodeGoalBar({
+      id: 'legacy-goal-bar',
+      __element: {
+        config: createConfig({ bgColor: undefined })
+      }
+    } as any)
+
+    expect(encoded.bgColor).toBe('#333333')
+  })
+
   it.each([
     ['leftToRight', 'horizontal'],
     ['rightToLeft', 'horizontal'],

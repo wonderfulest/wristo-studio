@@ -2,7 +2,8 @@
   <el-dialog
     :model-value="modelValue"
     :title="t('dynamicImage.copyGroupTitle')"
-    width="min(760px, 94vw)"
+    width="min(1080px, 96vw)"
+    top="5vh"
     append-to-body
     destroy-on-close
     @update:model-value="emit('update:modelValue', $event)"
@@ -120,7 +121,7 @@ const loadProjects = async () => {
       pageNum: projectPage.value,
       pageSize: projectPageSize,
       orderBy: 'updatedAt:desc',
-      scope: 'mine',
+      scope: userStore.isAdminUser ? 'all' : 'mine',
       name: projectSearch.value.trim() || undefined,
       populate: 'cover,image',
     }
@@ -194,29 +195,30 @@ watch(() => props.modelValue, (visible) => {
 </script>
 
 <style scoped>
-.copy-dialog-body { min-height: 360px; display: grid; align-content: start; gap: 16px; }
+.copy-dialog-body { min-height: 520px; max-height: 72vh; display: grid; align-content: start; gap: 18px; overflow-y: auto; }
 .search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-.project-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; min-height: 260px; }
+.project-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; min-height: 424px; }
 .project-card, .group-card, .back-button { border: 0; font: inherit; color: inherit; cursor: pointer; }
-.project-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 10px; padding: 9px; text-align: left; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; background: var(--el-bg-color); }
+.project-card { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 112px; padding: 10px 14px; text-align: left; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; background: var(--el-bg-color); }
 .project-card:hover, .group-card:hover { border-color: var(--el-color-primary-light-5); background: var(--el-color-primary-light-9); }
-.project-card img, .project-placeholder { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--el-fill-color-light); }
+.project-card img, .project-placeholder { width: 92px; height: 92px; border-radius: 8px; object-fit: contain; background: var(--el-fill-color-light); }
 .project-placeholder { display: grid; place-items: center; font-size: 26px; }
-.project-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.project-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; }
 .back-button { justify-self: start; padding: 0; background: transparent; color: var(--el-color-primary); }
 .source-heading { font-size: 16px; font-weight: 700; }
-.group-list { display: grid; gap: 10px; min-height: 260px; align-content: start; }
-.group-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 12px; text-align: left; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; background: var(--el-bg-color); }
+.group-list { display: grid; gap: 12px; min-height: 424px; align-content: start; }
+.group-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; min-height: 96px; padding: 14px 16px; text-align: left; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; background: var(--el-bg-color); }
 .group-card.selected { border-color: var(--el-color-primary); box-shadow: 0 0 0 1px var(--el-color-primary) inset; }
 .group-copy { display: grid; gap: 5px; min-width: 0; }
 .group-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-copy small { color: var(--el-text-color-secondary); }
 .group-thumbnails { display: flex; align-items: center; gap: 5px; }
-.group-thumbnails img, .more-count { width: 42px; height: 42px; border-radius: 6px; background: var(--el-fill-color-light); }
+.group-thumbnails img, .more-count { width: 68px; height: 68px; border-radius: 8px; background: var(--el-fill-color-light); }
 .group-thumbnails img { object-fit: contain; }
 .more-count { display: grid; place-items: center; font-size: 12px; color: var(--el-text-color-secondary); }
 :deep(.el-pagination) { justify-content: center; }
 @media (max-width: 680px) {
+  .copy-dialog-body { min-height: 420px; }
   .project-list { grid-template-columns: 1fr; }
   .group-thumbnails img:nth-child(n+3) { display: none; }
 }
