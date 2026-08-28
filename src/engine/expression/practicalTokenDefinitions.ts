@@ -292,7 +292,16 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   token({ id: 'time.secondFirstDigitNullable', code: 'tm9.0', label: 'Optional First Second Digit', labelCn: '可空秒钟十位', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', nullable: true, updateFrequency: 'second', description: 'First second digit; null before second 10.', descriptionCn: '秒钟十位；秒数小于 10 时返回空值。' }),
   token({ id: 'time.secondFirstDigit', code: 'tm9.3', label: 'First Second Digit', labelCn: '秒钟十位', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', updateFrequency: 'second' }),
   token({ id: 'time.secondSecondDigit', code: 'tm9.4', label: 'Second Second Digit', labelCn: '秒钟个位', category: 'date-time', exampleValue: 5, source: 'time', providerKey: 'clock', updateFrequency: 'second' }),
-  time('amPm', 'tm10', 'AM/PM', '上午/下午', 1),
+  token({
+    id: 'time.amPm', code: 'tm10', label: 'AM/PM', labelCn: '上午/下午',
+    category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock',
+    enumValues: [
+      { value: 0, label: 'AM', labelCn: '上午' },
+      { value: 1, label: 'PM', labelCn: '下午' },
+    ],
+    description: 'AM or PM based on the current hour: 0 before 12:00 and 1 from 12:00 onward.',
+    descriptionCn: '根据当前小时返回上午或下午：12:00 前为 0，12:00 起为 1。',
+  }),
   token({
     id: 'time.amPm24Hour', code: 'tm10.1', label: 'AM/PM/24H', labelCn: '上午/下午/24小时制',
     category: 'date-time', exampleValue: 2, source: 'time', providerKey: 'clock',

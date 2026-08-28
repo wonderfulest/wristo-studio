@@ -197,6 +197,7 @@ const enumGuideGroups = [
   { code: 'tm5', titleKey: 'tokens.guide.weekday.title', descriptionKey: 'tokens.guide.weekday.description' },
   { code: 'ai11', titleKey: 'tokens.guide.moveBar.title', descriptionKey: 'tokens.guide.moveBar.description' },
   { code: 'ds15', titleKey: 'tokens.guide.heartRateZone.title', descriptionKey: 'tokens.guide.heartRateZone.description' },
+  { code: 'tm10', titleKey: 'tokens.guide.amPm.title', descriptionKey: 'tokens.guide.amPm.description' },
   { code: 'tm10.1', titleKey: 'tokens.guide.timeFormat.title', descriptionKey: 'tokens.guide.timeFormat.description' },
 ].map((group) => ({
   ...group,

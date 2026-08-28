@@ -38,6 +38,8 @@ describe('Tokens usage guide', () => {
     expect(guide.find('.tokens-usage-guide__body').text()).toContain('(tm5) == 7')
     expect(guide.find('.tokens-usage-guide__body').text()).toContain('(ai11) == 5')
     expect(guide.find('.tokens-usage-guide__body').text()).toContain('(ds15) == 5')
+    expect(guide.find('.tokens-usage-guide__body').text()).toContain('(tm10) == 0')
+    expect(guide.find('.tokens-usage-guide__body').text()).toContain('(tm10) == 1')
     expect(guide.find('.tokens-usage-guide__body').text()).toContain('(tm10.1) == 2')
     const sections = guide.findAll('.guide-usage-section')
     expect(sections).toHaveLength(3)
