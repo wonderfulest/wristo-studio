@@ -1,5 +1,6 @@
 import { loadBmFontDescriptor } from './bmFontDescriptorLoader'
 import { kerningKey, type BmFontDescriptor } from './bmFontTextParser'
+import { traceStudioUnit } from '@/utils/studioUnitTrace'
 
 export interface FabricBitmapFontPreviewAssets {
   descriptorUrl: string
@@ -223,6 +224,20 @@ export async function applyFabricBitmapFontPreview(
   state.descriptor = loaded.descriptor
   state.atlas = loaded.atlas
   state.sourceSize = loaded.sourceSize
+  if (String(object.eleType ?? '') === 'unit') {
+    const codepoints = Array.from(String(object.text ?? ''), character => character.codePointAt(0)!)
+    traceStudioUnit(object.id, 'bitmap-glyph-check', {
+      text: String(object.text ?? ''),
+      descriptorUrl: assets.descriptorUrl,
+      sourceSize: loaded.sourceSize,
+      codepoints,
+      missingCodepoints: codepoints.filter(codepoint => !loaded.descriptor.glyphs.has(codepoint)),
+      emptyGlyphCodepoints: codepoints.filter((codepoint) => {
+        const glyph = loaded.descriptor.glyphs.get(codepoint)
+        return Boolean(glyph && (glyph.width <= 0 || glyph.height <= 0))
+      }),
+    })
+  }
   syncBitmapTextWidth(object, state)
   object.dirty = true
   object.canvas?.requestRenderAll?.()

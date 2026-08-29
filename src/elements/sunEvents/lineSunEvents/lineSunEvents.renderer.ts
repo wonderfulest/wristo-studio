@@ -64,13 +64,14 @@ export async function createLineSunEvents(input: LineSunEventsElementConfig): Pr
 export async function updateLineSunEvents(element: FabricElement, patch: Partial<LineSunEventsElementConfig>): Promise<void> {
   const group = element as any
   const current = encodeLineSunEvents(group)
+  const { simulatedTime, ...persistentPatch } = patch as Partial<LineSunEventsElementConfig> & { simulatedTime?: Date }
   const next: LineSunEventsElementConfig = {
-    ...current, ...patch,
+    ...current, ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
     indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
   }
   group.remove(...group.getObjects())
-  group.add(...await buildLineSunEventObjects(next))
+  group.add(...await buildLineSunEventObjects(next, simulatedTime))
   group.set({ left: next.left, top: next.top, angle: next.angle })
   group.__element = { config: structuredClone(next) }
   group.setCoords()

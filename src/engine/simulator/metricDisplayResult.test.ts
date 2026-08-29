@@ -44,7 +44,7 @@ describe('metric display result', () => {
     })
   })
 
-  it('puts the fixed temperature degree sign in the data value and leaves the unit empty', () => {
+  it('keeps the temperature value numeric and exposes the selected unit separately', () => {
     const metricValue = { valueCode: 57, metricSymbol: ':FIELD_TYPE_TEMPERATURE', unitKey: 'temperature' }
     const unitValue = {
       unitKey: 'temperature',
@@ -67,8 +67,8 @@ describe('metric display result', () => {
     }, {
       language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute',
     }, inlineCatalog)).toMatchObject({
-      displayValue: '68°',
-      unitLabel: '',
+      displayValue: '68',
+      unitLabel: '°F',
     })
   })
 
@@ -96,7 +96,7 @@ describe('metric display result', () => {
     })
   })
 
-  it('converts both temperature range endpoints before adding one degree suffix', () => {
+  it('converts both temperature range endpoints and exposes one separate unit', () => {
     const temperatureMetric = {
       valueCode: 61,
       metricSymbol: ':FIELD_TYPE_TEMPERATURE_RANGE',
@@ -125,8 +125,8 @@ describe('metric display result', () => {
     }, {
       language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute',
     }, temperatureCatalog)).toMatchObject({
-      displayValue: '68/86°',
-      unitLabel: '',
+      displayValue: '68/86',
+      unitLabel: '°F',
     })
   })
 })

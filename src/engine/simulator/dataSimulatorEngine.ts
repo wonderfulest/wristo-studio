@@ -11,15 +11,26 @@ import { formatDataNumberDisplay } from '@/utils/dataNumberFormat'
 import * as elementManager from '@/engine/managers/elementManager'
 import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { useDesignStore } from '@/stores/designStore'
+import { useEditorStore } from '@/stores/editorStore'
 import { formatTimePreview } from '@/elements/time/time/formatTimePreview'
 import { resolveDesignContentLanguage, resolveDesignEffectiveLocale } from '@/utils/effectiveDisplayLocale'
 import { resolveMetricDisplayResult } from '@/engine/simulator/metricDisplayResult'
+import { traceStudioUnit } from '@/utils/studioUnitTrace'
 import { usePreviewDeviceContextStore } from '@/stores/previewDeviceContextStore'
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
 import { DEFAULT_DATE_TEMPLATE, formatCustomDateTemplate } from '@/elements/time/date/dateTemplate'
 import { reflowAllLayoutGroups } from '@/engine/layout/studioLayoutController'
+import { createSunEventsPreviewRefreshQueue } from '@/elements/sunEvents/common/sunEvents.previewRefresh'
+
+const refreshSunEventsPreview = createSunEventsPreviewRefreshQueue(async (element, patch) => {
+  try {
+    await elementManager.updateElement(element as any, patch)
+  } catch (error) {
+    console.warn('[DataSimulatorEngine] Sun Events refresh failed', error)
+  }
+})
 
 function resolveChartMetricSymbol(propertiesStore: ReturnType<typeof usePropertiesStore>, chartProperty: string): string {
   const key = String(chartProperty ?? '').trim()
@@ -225,6 +236,7 @@ export class DataSimulatorEngine {
 
     const propertiesStore = usePropertiesStore()
     const designStore = useDesignStore()
+    const editorStore = useEditorStore()
     const previewDevice = usePreviewDeviceContextStore()
 
     const objects = (canvas.getObjects?.() || []) as any[]
@@ -303,6 +315,12 @@ export class DataSimulatorEngine {
         return
       }
 
+      if (eleType === 'arcSunEvents' || eleType === 'curveSunEvents' || eleType === 'lineSunEvents') {
+        const previewTime = editorStore.showTimeSimulator ? now : new Date()
+        refreshSunEventsPreview(obj, previewTime)
+        return
+      }
+
       if (eleType === 'data') {
         const textCase = (propertiesStore as any).textCase
         const display = applyTextCase(metricResultFor(obj).displayValue, textCase)
@@ -317,7 +335,20 @@ export class DataSimulatorEngine {
 
       if (eleType === 'unit') {
         const textCase = (propertiesStore as any).textCase
-        const display = applyTextCase(metricResultFor(obj).unitLabel, textCase)
+        const metricResult = metricResultFor(obj)
+        traceStudioUnit(obj.id, 'simulator-resolve', {
+          dataProperty: obj.dataProperty ?? null,
+          requestedMetricSymbol: obj.metricSymbol ?? '',
+          unitKey: metricResult.unitKey,
+          variantKey: metricResult.variantKey,
+          unitLabel: metricResult.unitLabel,
+        })
+        const display = applyTextCase(metricResult.unitLabel, textCase)
+        traceStudioUnit(obj.id, 'simulator-write', {
+          beforeText: String(obj.text ?? ''),
+          text: String(display),
+          textCase,
+        })
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))

@@ -63,12 +63,13 @@ export async function createArcSunEvents(input: ArcSunEventsElementConfig): Prom
 export async function updateArcSunEvents(element: FabricElement, patch: Partial<ArcSunEventsElementConfig>): Promise<void> {
   const group = element as any
   const current = encodeArcSunEvents(group)
+  const { simulatedTime, ...persistentPatch } = patch as Partial<ArcSunEventsElementConfig> & { simulatedTime?: Date }
   const next: ArcSunEventsElementConfig = {
-    ...current, ...patch,
+    ...current, ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
     indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
   }
-  const objects = await buildArcSunEventObjects(next)
+  const objects = await buildArcSunEventObjects(next, simulatedTime)
   setArcSunEventsCenterOffset(group, objects)
   group.remove(...group.getObjects())
   group.add(...objects)

@@ -149,10 +149,15 @@
       <el-form-item>
         <div class="progress-bar-segment-panel" :class="{ 'is-active': isSegmentMode }">
           <div class="progress-bar-segment-header">
-            <div class="progress-bar-segment-title">
-              <label>{{ t('elementSettings.segmentMode') }}</label>
+            <button
+              type="button"
+              class="progress-bar-segment-title segment-mode-toggle-target"
+              :aria-pressed="isSegmentMode"
+              @click="onSegmentModeChange(!isSegmentMode)"
+            >
+              <span class="progress-bar-segment-label">{{ t('elementSettings.segmentMode') }}</span>
               <span>{{ isSegmentMode ? t('common.on') : t('common.off') }}</span>
-            </div>
+            </button>
             <el-switch :model-value="isSegmentMode" @change="onSegmentModeChange" />
           </div>
 
@@ -329,7 +334,7 @@ const editorState = shallowRef<GoalBarPolygonMiniEditorState & { active: boolean
 
 const currentModel = computed<any>(() => {
   console.log('[GoalBarPanel] currentModel', props.config, props.element)
-  return props.element ?? props.config ?? {}
+  return props.config ?? props.element ?? {}
 })
 const currentProgressDirection = computed(() => normalizeGoalBarDirection(currentModel.value.progressDirection))
 const currentOrientation = computed<GoalBarOrientation>(() => resolveGoalBarOrientation(currentProgressDirection.value))
@@ -921,12 +926,29 @@ defineExpose({
 
 .progress-bar-segment-title {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   align-items: center;
   gap: 8px;
 }
 
-.progress-bar-segment-title label {
+.segment-mode-toggle-target {
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.segment-mode-toggle-target:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--studio-primary-border);
+  outline-offset: 3px;
+}
+
+.progress-bar-segment-label {
   margin: 0;
   color: var(--studio-text);
   font-size: 13px;

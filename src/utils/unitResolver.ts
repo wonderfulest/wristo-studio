@@ -1,5 +1,4 @@
 import type { DataUnitDefinition } from '@/types/dataCatalog'
-import { resolveInlineMetricUnitSuffix } from '@/utils/inlineMetricUnit'
 
 export interface PreviewDeviceContext {
   readonly language: 'eng' | 'zhs'
@@ -33,7 +32,6 @@ export function resolveUnitLabel(
   language: 'eng' | 'zhs',
 ): string {
   if (unit.selectionPolicy.type === 'none') return ''
-  if (resolveInlineMetricUnitSuffix(unit.unitKey)) return ''
   const variant = variantKey ? unit.variants[variantKey] : undefined
   if (!variant) throw new Error(`unitKey ${unit.unitKey}: variant ${String(variantKey)} is missing`)
   return variant.label[language]

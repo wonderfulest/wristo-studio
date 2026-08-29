@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Circle, Group, Path, Rect } from 'fabric'
+import { Group, Path, Rect } from 'fabric'
 import { arcSunEventsSchema } from '../arcSunEvents/arcSunEvents.schema'
 import { curveSunEventsSchema } from '../curveSunEvents/curveSunEvents.schema'
 import { lineSunEventsSchema } from '../lineSunEvents/lineSunEvents.schema'
@@ -30,7 +30,7 @@ describe('sun events default indicator rendering', () => {
     expect(curve.slice(0, -1).every((object: any) => object.stroke === '#12AB34')).toBe(true)
   })
 
-  it('uses the sun during daytime and a muted circle at night', async () => {
+  it('keeps the sun indicator during both daytime and nighttime', async () => {
     const fraction = vi.spyOn(preview, 'currentLocalDayFraction')
     fraction.mockReturnValue(0.5)
     const daytime = await buildLineSunEventObjects({
@@ -45,8 +45,18 @@ describe('sun events default indicator rendering', () => {
       id: 'night-line', eleType: 'lineSunEvents', originX: 'center', originY: 'center',
       indicator: { ...lineSunEventsSchema.defaultConfig.indicator, width: 18, height: 12, nightDotColor: '#345678' },
     })
-    expect(nighttime.at(-1)).toBeInstanceOf(Circle)
-    expect(nighttime.at(-1)).toEqual(expect.objectContaining({ radius: 6, fill: '#345678' }))
+    expect(nighttime.at(-1)).toBeInstanceOf(Group)
+  })
+
+  it('positions the indicator from an explicitly supplied preview time', async () => {
+    const objects = await buildLineSunEventObjects({
+      ...lineSunEventsSchema.defaultConfig,
+      id: 'simulated-line', eleType: 'lineSunEvents', originX: 'center', originY: 'center',
+    }, new Date(2026, 6, 13, 18, 0, 0))
+
+    expect(objects.at(-1)).toEqual(expect.objectContaining({
+      left: lineSunEventsSchema.defaultConfig.length / 4,
+    }))
   })
 
   it('draws the bundled sun without loading it through an HTML image', async () => {

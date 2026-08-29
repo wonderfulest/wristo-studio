@@ -78,14 +78,15 @@ export async function updateCurveSunEvents(
 ): Promise<void> {
   const group = element as any
   const current = encodeCurveSunEvents(group)
+  const { simulatedTime, ...persistentPatch } = patch as Partial<CurveSunEventsElementConfig> & { simulatedTime?: Date }
   const next: CurveSunEventsElementConfig = {
     ...current,
-    ...patch,
+    ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
     indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
   }
   group.remove(...group.getObjects())
-  group.add(...await buildCurveSunEventObjects(next))
+  group.add(...await buildCurveSunEventObjects(next, simulatedTime))
   group.set({ left: next.left, top: next.top, angle: next.angle })
   group.__element = { config: structuredClone(next) }
   group.setCoords()

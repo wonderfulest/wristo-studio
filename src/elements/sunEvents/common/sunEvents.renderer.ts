@@ -1,6 +1,6 @@
 import { Circle, Group, Image as FabricImage, Line, Path, Rect, type FabricObject } from 'fabric'
 import type { ArcSunEventsElementConfig, CurveSunEventsElementConfig, LineSunEventsElementConfig, SunEventIndicatorBase } from '@/types/elements/sunEvents'
-import { isSunEventDaylight, normalizeSunEventSegments, timeFractionToArcAngle, type SunEventSegment } from './sunEvents.model'
+import { normalizeSunEventSegments, timeFractionToArcAngle, type SunEventSegment } from './sunEvents.model'
 import {
   arcIndicatorTransform,
   curveIndicatorTransform,
@@ -9,7 +9,7 @@ import {
   resolveSunEventIndicatorSource,
 } from './sunEvents.geometry'
 import { currentLocalDayFraction, SUN_EVENTS_PREVIEW_TIMES } from './sunEvents.preview'
-import { DEFAULT_SUN_EVENT_INDICATOR_SVG, DEFAULT_SUN_EVENTS_NIGHT_DOT_COLOR, DEFAULT_SUN_EVENTS_SIMPLE_COLOR } from './sunEvents.defaults'
+import { DEFAULT_SUN_EVENT_INDICATOR_SVG, DEFAULT_SUN_EVENTS_SIMPLE_COLOR } from './sunEvents.defaults'
 
 type Point = { x: number; y: number }
 
@@ -103,23 +103,11 @@ function trackSegments(
   return normalizeSunEventSegments({ styles: config.phases, events: SUN_EVENTS_PREVIEW_TIMES })
 }
 
-async function createCurrentTimeIndicator(indicator: SunEventIndicatorBase, fraction: number): Promise<FabricObject | null> {
-  const daylight = isSunEventDaylight(
-    SUN_EVENTS_PREVIEW_TIMES,
-    fraction,
-    fraction >= 0.25 && fraction < 0.75,
-  )
-  if (daylight) {
-    return createIndicator(resolveSunEventIndicatorSource(indicator), indicator.width, indicator.height)
-  }
-  return new Circle({
-    radius: Math.max(1, Math.min(indicator.width, indicator.height)) / 2,
-    fill: indicator.nightDotColor || DEFAULT_SUN_EVENTS_NIGHT_DOT_COLOR,
-    originX: 'center', originY: 'center', selectable: false, evented: false,
-  })
+async function createCurrentTimeIndicator(indicator: SunEventIndicatorBase): Promise<FabricObject | null> {
+  return createIndicator(resolveSunEventIndicatorSource(indicator), indicator.width, indicator.height)
 }
 
-export async function buildArcSunEventObjects(config: ArcSunEventsElementConfig): Promise<FabricObject[]> {
+export async function buildArcSunEventObjects(config: ArcSunEventsElementConfig, previewTime?: Date): Promise<FabricObject[]> {
   const segments = trackSegments(config)
   const objects: FabricObject[] = []
   for (const segment of segments) {
@@ -138,8 +126,8 @@ export async function buildArcSunEventObjects(config: ArcSunEventsElementConfig)
       }))
     }
   }
-  const fraction = currentLocalDayFraction()
-  const indicator = await createCurrentTimeIndicator(config.indicator, fraction)
+  const fraction = currentLocalDayFraction(previewTime)
+  const indicator = await createCurrentTimeIndicator(config.indicator)
   if (indicator) {
     const transform = arcIndicatorTransform({
       fraction, centerX: 0, centerY: 0,
@@ -153,7 +141,7 @@ export async function buildArcSunEventObjects(config: ArcSunEventsElementConfig)
   return objects
 }
 
-export async function buildLineSunEventObjects(config: LineSunEventsElementConfig): Promise<FabricObject[]> {
+export async function buildLineSunEventObjects(config: LineSunEventsElementConfig, previewTime?: Date): Promise<FabricObject[]> {
   const segments = trackSegments(config)
   const objects: FabricObject[] = segments.map((segment) => {
     const width = Math.max(0.5, (segment.end - segment.start) * config.length)
@@ -163,8 +151,8 @@ export async function buildLineSunEventObjects(config: LineSunEventsElementConfi
       originX: 'center', originY: 'center', selectable: false, evented: false,
     })
   })
-  const fraction = currentLocalDayFraction()
-  const indicator = await createCurrentTimeIndicator(config.indicator, fraction)
+  const fraction = currentLocalDayFraction(previewTime)
+  const indicator = await createCurrentTimeIndicator(config.indicator)
   if (indicator) {
     const transform = lineIndicatorTransform({
       fraction, length: config.length, offset: config.indicator.offset,
@@ -175,7 +163,7 @@ export async function buildLineSunEventObjects(config: LineSunEventsElementConfi
   return objects
 }
 
-export async function buildCurveSunEventObjects(config: CurveSunEventsElementConfig): Promise<FabricObject[]> {
+export async function buildCurveSunEventObjects(config: CurveSunEventsElementConfig, previewTime?: Date): Promise<FabricObject[]> {
   const segments = trackSegments(config)
   const objects: FabricObject[] = []
   for (const segment of segments) {
@@ -189,8 +177,8 @@ export async function buildCurveSunEventObjects(config: CurveSunEventsElementCon
       ))
     }
   }
-  const fraction = currentLocalDayFraction()
-  const indicator = await createCurrentTimeIndicator(config.indicator, fraction)
+  const fraction = currentLocalDayFraction(previewTime)
+  const indicator = await createCurrentTimeIndicator(config.indicator)
   if (indicator) {
     const transform = curveIndicatorTransform({
       fraction,

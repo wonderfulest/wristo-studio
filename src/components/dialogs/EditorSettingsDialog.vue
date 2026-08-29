@@ -234,6 +234,7 @@ const handleDarkCanvasBackgroundColorChange = (color: string) => {
 const handleTimeSimulatorChange = (value: boolean) => {
   showTimeSimulator.value = Boolean(value)
   editorStore.updateSetting('showTimeSimulator', showTimeSimulator.value)
+  getDataSimulatorEngine().updateCanvas()
 }
 
 const handleDeviceFrameChange = (value: boolean) => {

@@ -20,6 +20,24 @@ const distanceUnit: DataUnitDefinition = {
   description: null,
 }
 
+const temperatureUnit: DataUnitDefinition = {
+  unitKey: 'temperature',
+  name: 'Temperature',
+  defaultVariant: 'celsius',
+  selectionPolicy: {
+    type: 'deviceSetting',
+    setting: 'temperatureUnits',
+    mapping: { metric: 'celsius', statute: 'fahrenheit' },
+  },
+  variants: {
+    celsius: { aliases: ['c', '°c'], label: { eng: '°C', zhs: '摄氏度' } },
+    fahrenheit: { aliases: ['f', '°f'], label: { eng: '°F', zhs: '华氏度' } },
+  },
+  isActive: 1,
+  sortOrder: 2,
+  description: null,
+}
+
 describe('unit resolver', () => {
   it('selects statute distance and localizes it in Chinese', () => {
     const variantKey = resolveUnitVariant(distanceUnit, {
@@ -27,6 +45,13 @@ describe('unit resolver', () => {
     })
     expect(variantKey).toBe('mi')
     expect(resolveUnitLabel(distanceUnit, variantKey, 'zhs')).toBe('英里')
+  })
+
+  it('returns the complete temperature unit for a standalone Unit element', () => {
+    const variantKey = resolveUnitVariant(temperatureUnit, {
+      language: 'eng', distanceUnits: 'metric', temperatureUnits: 'metric',
+    })
+    expect(resolveUnitLabel(temperatureUnit, variantKey, 'eng')).toBe('°C')
   })
 
   it('rejects an unknown provider alias without falling back', () => {

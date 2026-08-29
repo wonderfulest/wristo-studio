@@ -48,6 +48,8 @@ describe('AddElementPanel localization', () => {
     expect(translate('addElement.type.zoneMetric', 'zh')).toBe('区间指标')
     expect(translate('addElement.type.angledText', 'zh')).toBe('倾斜文本')
     expect(translate('addElement.type.arcSunEvents', 'zh')).toBe('弧形日出日落')
+    expect(translate('addElement.type.curveSunEvents', 'en')).toBe('Curved Sunrise & Sunset')
+    expect(translate('addElement.type.curveSunEvents', 'zh')).toBe('曲线日出日落')
     expect(translate('addElement.type.rotatingHand', 'zh')).toBe('旋转指针')
     expect(translate('addElement.type.timeHands', 'zh')).toBe('时间指针组')
   })

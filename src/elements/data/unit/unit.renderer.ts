@@ -16,13 +16,30 @@ import { applyCurrentElementPreviewFont, resolveCurrentElementPreviewFont } from
 import { savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
 import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElement'
+import { traceStudioUnit } from '@/utils/studioUnitTrace'
 
 const resolveUnitText = (config: Partial<UnitElementConfig>): string => {
   const metric = usePropertiesStore().getMetricByOptions(config)
   const designStore = useDesignStore()
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
-  return resolveMetricUnit(requireCanonicalMetric(metric ?? config, catalog), resolveDesignContentLanguage(designStore), catalog)
+  const canonicalMetric = requireCanonicalMetric(metric ?? config, catalog)
+  const text = resolveMetricUnit(canonicalMetric, resolveDesignContentLanguage(designStore), catalog)
+  const unitDefinition = catalog.unitsByKey?.get(canonicalMetric.unitKey)
+  traceStudioUnit(config.id, 'resolve-unit', {
+    dataProperty: config.dataProperty ?? null,
+    goalProperty: config.goalProperty ?? null,
+    requestedMetricSymbol: config.metricSymbol ?? '',
+    resolvedMetricSymbol: canonicalMetric.metricSymbol,
+    unitKey: canonicalMetric.unitKey,
+    unitDefinitionFound: Boolean(unitDefinition),
+    defaultVariant: unitDefinition?.defaultVariant ?? null,
+    selectionPolicy: unitDefinition?.selectionPolicy ?? null,
+    variantKeys: unitDefinition ? Object.keys(unitDefinition.variants) : [],
+    language: resolveDesignContentLanguage(designStore),
+    text,
+  })
+  return text
 }
 
 export async function createUnit(config: UnitElementConfig): Promise<FabricElement> {
@@ -54,6 +71,12 @@ export async function createUnit(config: UnitElementConfig): Promise<FabricEleme
     hasControls: false,
     hasBorders: true,
   } as any)
+  traceStudioUnit(id, 'fabric-create', {
+    text: String((element as any).text ?? ''),
+    requestedFontFamily: config.fontFamily ?? '',
+    resolvedFontFamily: previewFont.fontFamily,
+    hasBitmapPreviewAssets: Boolean(previewFont.bitmapPreviewAssets),
+  })
   applyCurrentElementPreviewFont(element, config, text)
 
   const canvas = canvasStore.canvas
@@ -131,6 +154,10 @@ export function updateUnit(
   })
   obj.set('text', nextText)
   obj.metricValue = nextText
+  traceStudioUnit(obj.id, 'fabric-update', {
+    text: String(obj.text ?? ''),
+    requestedFontFamily: patch.fontFamily ?? getSavedFontFamily(obj),
+  })
 
   applyCurrentElementPreviewFont(obj, {
     fontFamily: patch.fontFamily ?? getSavedFontFamily(obj), fontSize: obj.fontSize, fill: patch.fill,

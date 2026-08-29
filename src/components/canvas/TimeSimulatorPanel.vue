@@ -1,50 +1,68 @@
 <template>
   <section class="time-simulator-panel" :aria-label="t('timeSimulator.title')">
-    <div class="simulator-main">
-      <Icon icon="material-symbols:timer-outline-rounded" width="18" height="18" />
-      <div class="time-readout">
-        <span class="panel-title">{{ t('timeSimulator.title') }}</span>
-        <el-date-picker
-          v-model="currentTime"
-          class="date-time-picker"
-          type="datetime"
-          :clearable="false"
-          :editable="false"
-          :teleported="true"
-          format="MM/DD HH:mm:ss"
-          @change="handleDateTimeChange"
-        />
+    <div class="simulator-controls">
+      <div class="simulator-main">
+        <Icon icon="material-symbols:timer-outline-rounded" width="18" height="18" />
+        <div class="time-readout">
+          <span class="panel-title">{{ t('timeSimulator.title') }}</span>
+          <el-date-picker
+            v-model="currentTime"
+            class="date-time-picker"
+            type="datetime"
+            :clearable="false"
+            :editable="false"
+            :teleported="true"
+            format="MM/DD HH:mm:ss"
+            @change="handleDateTimeChange"
+            @visible-change="handleDateTimePickerVisibleChange"
+          />
+        </div>
       </div>
-    </div>
 
-    <el-segmented
-      v-model="clockMode"
-      class="mode-control"
-      :options="modeOptions"
-      size="small"
-      @change="handleModeChange"
-    />
-
-    <div class="speed-control">
-      <span>{{ t('timeSimulator.speed') }}</span>
-      <el-slider
-        v-model="speedSliderValue"
-        class="speed-slider"
-        :min="0"
-        :max="TIME_SIMULATOR_SPEEDS.length - 1"
-        :step="1"
-        :show-stops="true"
-        :show-tooltip="false"
-        @input="handleSpeedInput"
+      <el-segmented
+        v-model="clockMode"
+        class="mode-control"
+        :options="modeOptions"
+        size="small"
+        @change="handleModeChange"
       />
-      <strong class="speed-value">{{ speedMultiplier }}x</strong>
+
+      <div v-if="clockMode === 'running'" class="speed-control">
+        <span>{{ t('timeSimulator.speed') }}</span>
+        <el-slider
+          v-model="speedSliderValue"
+          class="speed-slider"
+          :min="0"
+          :max="TIME_SIMULATOR_SPEEDS.length - 1"
+          :step="1"
+          :show-stops="true"
+          :show-tooltip="false"
+          @input="handleSpeedInput"
+        />
+        <strong class="speed-value">{{ speedMultiplier }}x</strong>
+      </div>
+
+      <el-button size="small" class="reset-button" @click="resetClock">
+        <Icon icon="material-symbols:restart-alt-rounded" width="16" height="16" />
+        <span>{{ t('timeSimulator.reset') }}</span>
+      </el-button>
     </div>
 
-    <el-button size="small" class="reset-button" @click="resetClock">
-      <Icon icon="material-symbols:restart-alt-rounded" width="16" height="16" />
-      <span>{{ t('timeSimulator.reset') }}</span>
-    </el-button>
-
+    <div v-if="clockMode === 'fixed'" class="day-time-control">
+      <span class="day-time-boundary">00:00</span>
+      <el-slider
+        v-model="dayMinute"
+        class="day-time-slider"
+        :min="0"
+        :max="1439"
+        :step="1"
+        :show-tooltip="false"
+        :aria-label="t('timeSimulator.dayTimeline')"
+        @input="handleDayTimeInput"
+      />
+      <strong class="day-time-value">{{ dayTimeLabel }}</strong>
+      <span class="day-time-boundary">24:00</span>
+    </div>
   </section>
 </template>
 
@@ -73,6 +91,8 @@ const initialSpeed = initialSnapshot.isRunning ? initialSnapshot.speedMultiplier
 const speedMultiplier = ref<number>(getSpeedAtSliderIndex(getSliderIndexForSpeed(initialSpeed)))
 const speedSliderValue = ref<number>(getSliderIndexForSpeed(speedMultiplier.value))
 const clockMode = ref<ClockMode>(initialSnapshot.isRunning ? 'running' : 'fixed')
+const dayMinute = ref(initialSnapshot.currentTime.getHours() * 60 + initialSnapshot.currentTime.getMinutes())
+const isDateTimePickerVisible = ref(false)
 let timer: number | null = null
 
 const modeOptions = computed(() => [
@@ -80,14 +100,27 @@ const modeOptions = computed(() => [
   { label: t('timeSimulator.running'), value: 'running' },
 ])
 
+const dayTimeLabel = computed(() => {
+  const hours = Math.floor(dayMinute.value / 60)
+  const minutes = dayMinute.value % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+})
+
 const syncFromClock = () => {
   const snapshot = getSimulatedClockSnapshot()
-  currentTime.value = snapshot.currentTime
+  if (!isDateTimePickerVisible.value) {
+    currentTime.value = snapshot.currentTime
+  }
+  dayMinute.value = snapshot.currentTime.getHours() * 60 + snapshot.currentTime.getMinutes()
   clockMode.value = snapshot.isRunning ? 'running' : 'fixed'
   if (snapshot.isRunning) {
     speedMultiplier.value = getSpeedAtSliderIndex(getSliderIndexForSpeed(snapshot.speedMultiplier))
     speedSliderValue.value = getSliderIndexForSpeed(speedMultiplier.value)
   }
+}
+
+const handleDateTimePickerVisibleChange = (visible: boolean) => {
+  isDateTimePickerVisible.value = visible
 }
 
 const refreshCanvas = () => {
@@ -103,6 +136,19 @@ const handleSpeedInput = (value: number) => {
     setSimulatedSpeed(nextSpeedMultiplier)
     refreshCanvas()
   }
+}
+
+const handleDayTimeInput = (value: number) => {
+  const nextMinute = Math.min(1439, Math.max(0, Math.round(Number(value))))
+  const nextTime = new Date(getSimulatedClockSnapshot().currentTime)
+  nextTime.setHours(Math.floor(nextMinute / 60), nextMinute % 60, 0, 0)
+
+  pauseSimulatedClock()
+  setSimulatedTime(nextTime)
+  clockMode.value = 'fixed'
+  currentTime.value = nextTime
+  dayMinute.value = nextMinute
+  getDataSimulatorEngine().updateCanvas()
 }
 
 const handleDateTimeChange = (value: Date | string | number | null) => {
@@ -151,7 +197,7 @@ onBeforeUnmount(() => {
   bottom: 22px;
   z-index: var(--studio-z-workspace-control-active);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   max-width: min(840px, calc(100% - 32px));
   padding: 8px 10px;
@@ -162,6 +208,44 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
   transform: translateX(-50%);
   backdrop-filter: blur(10px);
+}
+
+.simulator-controls,
+.day-time-control {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.simulator-controls {
+  gap: 10px;
+}
+
+.day-time-control {
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.day-time-slider {
+  flex: 1;
+  min-width: 320px;
+}
+
+.day-time-boundary,
+.day-time-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.day-time-boundary {
+  color: var(--studio-text-muted);
+}
+
+.day-time-value {
+  width: 36px;
+  color: var(--studio-text);
+  text-align: center;
 }
 
 .simulator-main,
@@ -240,9 +324,17 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1180px) {
   .time-simulator-panel {
-    flex-wrap: wrap;
     justify-content: center;
     bottom: 14px;
+  }
+
+  .simulator-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .day-time-slider {
+    min-width: 220px;
   }
 }
 </style>

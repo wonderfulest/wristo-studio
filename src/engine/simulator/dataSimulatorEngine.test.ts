@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode, reflowAllLayoutGroups } = vi.hoisted(() => ({
+const { canvas, editor, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode, reflowAllLayoutGroups } = vi.hoisted(() => ({
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
@@ -12,10 +12,15 @@ const { canvas, updateElement, getMetricByOptions, getSimulatedDataByName, getSi
   getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
   getSimulatedDataByTokenCode: vi.fn(() => ({ display: '80', numeric: 80, unit: 'bpm' })),
   reflowAllLayoutGroups: vi.fn(),
+  editor: { showTimeSimulator: true },
 }))
 
 vi.mock('@/stores/canvasStore', () => ({
   useCanvasStore: () => ({ canvas }),
+}))
+
+vi.mock('@/stores/editorStore', () => ({
+  useEditorStore: () => editor,
 }))
 
 vi.mock('@/stores/properties', () => ({
@@ -95,6 +100,21 @@ import { DateFormatConstants, TimeFormatConstants } from '@/config/settings'
 describe('DataSimulatorEngine bitmap time refresh', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    editor.showTimeSimulator = true
+  })
+
+  it('dispatches the simulated time to Sun Events elements while the time simulator is open', () => {
+    const sunEvents = {
+      id: 'line-sun-events',
+      eleType: 'lineSunEvents',
+    }
+    canvas.getObjects.mockReturnValue([sunEvents])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(updateElement).toHaveBeenCalledWith(sunEvents, {
+      simulatedTime: new Date('2026-07-13T12:34:00.000Z'),
+    })
   })
 
   it('dispatches the simulated time to bitmap time elements', () => {
