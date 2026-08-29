@@ -43,7 +43,7 @@ export async function createDynamicImage(config: DynamicImageElementConfig, rend
     tokenValues: useExpressionPreviewStore().tokenValues,
   })
   const asset = selection.kind === 'none' ? {} : selection.asset
-  const element = await createImage({ ...config, eleType: 'image', ...asset }, renderContext)
+  const element = await createImage({ ...config, eleType: 'dynamicImage', ...asset }, renderContext)
   Object.assign(element as any, {
     eleType: 'dynamicImage', items: structuredClone(config.items ?? []),
     frameWidth: config.width, frameHeight: config.height, dynamicImageVisible: selection.kind !== 'none',

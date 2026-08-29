@@ -16,6 +16,10 @@ import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 const EMPTY_IMAGE_PLACEHOLDER =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 
+type ImageRenderConfig = Omit<ImageElementConfig, 'eleType'> & {
+  eleType: 'image' | 'dynamicImage'
+}
+
 function loadHtmlImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -83,7 +87,7 @@ function attachImageScaleSync(image: FabricImage): void {
 }
 
 export async function createImage(
-  config: ImageElementConfig,
+  config: ImageRenderConfig,
   renderContext?: ElementRenderContext,
 ): Promise<FabricElement> {
   assertElementRenderCurrent(renderContext)
@@ -113,7 +117,7 @@ export async function createImage(
 
   const image = new FabricImage(imgEl, {
     id,
-    eleType: 'image',
+    eleType: config.eleType,
     assetType: config.assetType === 'mask' ? 'mask' : 'image',
     designerControlMode: 'resize8CircleInset',
     left: Number(config.left ?? 0),

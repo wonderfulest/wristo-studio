@@ -28,10 +28,24 @@ vi.mock('@/utils/controlManager', () => ({
 }))
 
 vi.mock('fabric', () => ({
-  Image: class FakeFabricImage {},
+  Image: class FakeFabricImage {
+    width = 1
+    height = 1
+    scaleX = 1
+    scaleY = 1
+
+    constructor(_element: unknown, options: Record<string, unknown>) {
+      Object.assign(this, options)
+    }
+
+    on() { return this }
+    set(values: Record<string, unknown>) { Object.assign(this, values); return this }
+    getScaledWidth() { return this.width * this.scaleX }
+    getScaledHeight() { return this.height * this.scaleY }
+  },
 }))
 
-import { updateImage } from './image.renderer'
+import { createImage, updateImage } from './image.renderer'
 
 class FakeHtmlImage {
   naturalWidth = 200
@@ -86,5 +100,30 @@ describe('updateImage', () => {
 
     expect(image.getScaledWidth()).toBeCloseTo(120)
     expect(image.getScaledHeight()).toBeCloseTo(80)
+  })
+})
+
+describe('createImage', () => {
+  beforeEach(() => {
+    vi.stubGlobal('Image', FakeHtmlImage)
+    runtime.elementDataStore = { upsertElement: vi.fn() }
+  })
+
+  it('exposes the requested runtime element type when the canvas first selects it', async () => {
+    const selectedTypes: string[] = []
+    runtime.canvas = {
+      add: vi.fn(),
+      setActiveObject: (element: { eleType: string }) => selectedTypes.push(element.eleType),
+      requestRenderAll: vi.fn(),
+    }
+
+    await (createImage as any)({
+      id: 'dynamic-image-1',
+      eleType: 'dynamicImage',
+      width: 100,
+      height: 100,
+    })
+
+    expect(selectedTypes).toEqual(['dynamicImage'])
   })
 })
