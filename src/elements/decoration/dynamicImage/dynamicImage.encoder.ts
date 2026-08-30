@@ -11,6 +11,7 @@ export function encodeDynamicImage(element: FabricElement): DynamicImageElementC
     left: Number(value.left ?? 0), top: Number(value.top ?? 0),
     originX: value.originX ?? 'center', originY: value.originY ?? 'center',
     width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)),
+    rotation: Number(value.angle ?? value.rotation ?? 0),
     items: structuredClone(value.items ?? []),
   }
 }
@@ -20,5 +21,7 @@ export function decodeDynamicImage(config: DynamicImageElementConfig): Partial<F
     ...structuredClone(config),
     id: config.id || nanoid(),
     items: config.items ?? [],
+    angle: Number(config.rotation ?? 0),
+    rotation: Number(config.rotation ?? 0),
   } as Partial<FabricElement>
 }

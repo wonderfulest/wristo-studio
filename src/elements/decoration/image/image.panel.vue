@@ -10,6 +10,14 @@
           :on-upload="handleAssetUpload"
         />
       </el-form-item>
+      <el-form-item :label="t('elementSettings.angle')">
+        <el-input-number
+          :model-value="Number(currentModel.rotation ?? 0)"
+          :min="-360"
+          :max="360"
+          @change="(value: number) => applyUpdate({ rotation: Number(value) })"
+        />
+      </el-form-item>
     </el-form>
   </div>
 </template>

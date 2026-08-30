@@ -13,11 +13,11 @@
       <summary>
         <div>
           <p class="eyebrow">{{ t('tokens.guide.eyebrow') }}</p>
-          <h2>{{ t('tokens.guide.dynamicImages.title') }}</h2>
+          <h2>{{ t('tokens.guide.title') }}</h2>
         </div>
       </summary>
       <div class="tokens-usage-guide__body">
-        <p class="guide-description">{{ t('tokens.guide.dynamicImages.description') }}</p>
+        <p class="guide-description">{{ t('tokens.guide.description') }}</p>
         <section class="guide-usage-section">
           <header class="guide-section-heading">
             <span>1</span>
@@ -79,6 +79,41 @@
               <code>{{ example.expression }}</code>
             </div>
           </div>
+        </section>
+        <section class="guide-usage-section">
+          <header class="guide-section-heading">
+            <span>4</span>
+            <div><h3>{{ t('tokens.guide.category.format.title') }}</h3><p>{{ t('tokens.guide.category.format.description') }}</p></div>
+          </header>
+          <div class="guide-example-grid">
+            <article>
+              <h4>{{ t('tokens.guide.format.formatsTitle') }}</h4>
+              <div class="guide-format-table-wrap">
+                <table class="guide-format-table">
+                  <thead><tr><th>{{ t('tokens.guide.format.input') }}</th><th>{{ t('tokens.guide.format.expression') }}</th><th>{{ t('tokens.guide.format.output') }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="item in formatExamples" :key="item.expression">
+                      <td><code>{{ item.input }}</code></td><td><code>{{ item.expression }}</code></td><td><code>{{ item.output }}</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+            <article>
+              <h4>{{ t('tokens.guide.format.arithmeticTitle') }}</h4>
+              <div class="guide-format-table-wrap">
+                <table class="guide-format-table">
+                  <thead><tr><th>{{ t('tokens.guide.format.input') }}</th><th>{{ t('tokens.guide.format.expression') }}</th><th>{{ t('tokens.guide.format.output') }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="item in arithmeticExamples" :key="item.expression">
+                      <td><code>{{ item.input }}</code></td><td><code>{{ item.expression }}</code></td><td><code>{{ item.output }}</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+          <p class="guide-description">{{ t('tokens.guide.format.note') }}</p>
         </section>
         <p class="guide-note">{{ t('tokens.guide.dynamicImages.note') }}</p>
       </div>
@@ -192,6 +227,16 @@ const combinationExamples = [
     expression: '(ds331) >= 75 && (ds330) < 25',
   },
 ] as const
+const formatExamples = [
+  { input: '86400', expression: '(ds3.3).format("%06d")', output: '086400' },
+  { input: '7.25', expression: '(w03).format("%02.1f")', output: '7.3' },
+  { input: '12345', expression: '(ai12).format("%,d")', output: '12,345' },
+  { input: 'Cloudy', expression: '(w02).format("%s")', output: 'Cloudy' },
+] as const
+const arithmeticExamples = [
+  { input: '725760', expression: '((ds3.3) / 86400).format("%.1f") + " days"', output: '8.4 days' },
+  { input: '20', expression: '((w03) * 9 / 5 + 32).format("%.1f") + "°F"', output: '68.0°F' },
+] as const
 const enumGuideGroups = [
   { code: 'w01', titleKey: 'tokens.guide.weather.title', descriptionKey: 'tokens.guide.weather.description' },
   { code: 'tm5', titleKey: 'tokens.guide.weekday.title', descriptionKey: 'tokens.guide.weekday.description' },
@@ -256,6 +301,14 @@ const copyToken = async (code: string) => {
 .guide-example-grid li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: center; }
 .guide-example-grid li span { color: var(--studio-text-muted); font-size: 13px; }
 .guide-example-grid li code, .guide-combination > code { padding: 7px 9px; border: 1px solid var(--studio-border); border-radius: var(--studio-radius-sm); color: var(--studio-text); background: var(--studio-bg); font-family: var(--studio-font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.guide-format-table-wrap { margin-top: 14px; overflow-x: auto; }
+.guide-format-table { width: 100%; border-spacing: 0; border-collapse: separate; color: var(--studio-text); font-size: 12px; }
+.guide-format-table th { padding: 0 8px 8px; color: var(--studio-text-muted); font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; }
+.guide-format-table td { padding: 8px; border-top: 1px solid var(--studio-border); vertical-align: top; }
+.guide-format-table td:first-child { width: 72px; }
+.guide-format-table td:last-child { width: 88px; }
+.guide-format-table code { color: var(--studio-text); font-family: var(--studio-font-mono); overflow-wrap: anywhere; }
+.guide-format-table td:last-child code { color: var(--studio-primary); font-weight: 600; white-space: nowrap; }
 .guide-combination { display: grid; grid-template-columns: minmax(180px, .55fr) 1.45fr; gap: 16px; align-items: center; margin-top: 12px; padding: 14px 16px; border: 1px solid var(--studio-primary-border); border-radius: var(--studio-radius-md); background: var(--studio-primary-soft); }
 .guide-combination-list { display: grid; gap: 10px; margin-top: 12px; }
 .guide-combination-list .guide-combination { margin-top: 0; }

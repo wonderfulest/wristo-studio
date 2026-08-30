@@ -8,6 +8,7 @@ export type ImageElementSchema = {
     imageUrl: string
     width: number
     height: number
+    rotation: number
   }
   resizable: boolean
   rotatable: boolean
@@ -22,8 +23,9 @@ export const imageSchema: ImageElementSchema = {
     imageUrl: '',
     width: 60,
     height: 60,
+    rotation: 0,
   },
   resizable: true,
-  rotatable: false,
+  rotatable: true,
   disabled: false,
 }

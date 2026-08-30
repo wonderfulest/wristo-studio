@@ -101,6 +101,34 @@ describe('updateImage', () => {
     expect(image.getScaledWidth()).toBeCloseTo(120)
     expect(image.getScaledHeight()).toBeCloseTo(80)
   })
+
+  it('applies and persists rotation patches', async () => {
+    const image = {
+      id: 'image-rotated',
+      imageUrl: 'https://assets.example/image.png',
+      width: 100,
+      height: 80,
+      scaleX: 1,
+      scaleY: 1,
+      angle: 0,
+      getScaledWidth() { return this.width * this.scaleX },
+      getScaledHeight() { return this.height * this.scaleY },
+      set(values: Record<string, unknown>) { Object.assign(this, values) },
+      setCoords: vi.fn(),
+    }
+    runtime.canvas = {
+      getObjects: () => [image],
+      requestRenderAll: vi.fn(),
+    }
+
+    await updateImage(image as any, { rotation: 45 })
+
+    expect(image.angle).toBe(45)
+    expect(runtime.elementDataStore.patchElement).toHaveBeenCalledWith(
+      'image-rotated',
+      expect.objectContaining({ rotation: 45 }),
+    )
+  })
 })
 
 describe('createImage', () => {
@@ -125,5 +153,29 @@ describe('createImage', () => {
     })
 
     expect(selectedTypes).toEqual(['dynamicImage'])
+  })
+
+  it('creates centered images with the persisted angle and rotatable inset controls', async () => {
+    let created: any
+    runtime.canvas = {
+      add: (element: unknown) => { created = element },
+      setActiveObject: vi.fn(),
+      requestRenderAll: vi.fn(),
+    }
+
+    await (createImage as any)({
+      id: 'image-rotated',
+      eleType: 'image',
+      width: 100,
+      height: 80,
+      rotation: 32,
+    })
+
+    expect(created).toMatchObject({
+      angle: 32,
+      originX: 'center',
+      originY: 'center',
+      designerControlMode: 'resize8CircleInsetRotate',
+    })
   })
 })

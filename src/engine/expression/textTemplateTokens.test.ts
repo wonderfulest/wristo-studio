@@ -34,4 +34,27 @@ describe('token text templates', () => {
         .some((error) => error.includes('8 tokens')),
     ).toBe(true)
   })
+
+  it('formats numeric tokens with precision, width, and thousands separators', () => {
+    const resolve = (code: string) => code === 'ai12' ? 12345 : 7.25
+
+    expect(resolveTokenTemplate('(w03).format("%.1f")', undefined, resolve)).toBe('7.3')
+    expect(resolveTokenTemplate('(w03).format("%06.1f")', undefined, resolve)).toBe('0007.3')
+    expect(resolveTokenTemplate('(ai12).format("%,d")', undefined, resolve)).toBe('12,345')
+    expect(resolveTokenTemplate('(ai12).format("%,.1f")', undefined, resolve)).toBe('12,345.0')
+  })
+
+  it('evaluates grouped numeric arithmetic before formatting', () => {
+    const resolve = (code: string) => code === 'ds3.3' ? 725760 : undefined
+
+    expect(
+      resolveTokenTemplate('((ds3.3) / 86400).format("%.1f") + " days"', undefined, resolve),
+    ).toBe('8.4 days')
+    expect(validateTokenTemplate('((ds3.3) / 86400).format("%.1f") + " days"')).toEqual([])
+  })
+
+  it('returns an empty dynamic string for invalid numeric arithmetic', () => {
+    expect(resolveTokenTemplate('((ds3.3) / 0).format("%.1f")', undefined, () => 725760)).toBe('')
+    expect(resolveTokenTemplate('((ds3.3) / 86400).format("%.1f")', undefined, () => null)).toBe('')
+  })
 })

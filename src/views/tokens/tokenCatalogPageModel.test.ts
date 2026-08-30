@@ -4,7 +4,7 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(131)
+    expect(model.total).toBe(132)
     expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(31)
     expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(14)
     expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(15)
@@ -73,7 +73,7 @@ describe('token catalog page model', () => {
     const model = createTokenCatalogPageModel()
 
     expect(model.filter({ category: 'system', query: 'ds3' }).map(({ code }) => code))
-      .toEqual(['ds3', 'ds3.1'])
+      .toEqual(['ds3', 'ds3.1', 'ds3.3'])
     expect(model.filter({ category: 'system', query: 'ds3.1' })[0]?.enumValues).toEqual([
       { value: 0, label: 'Low (below 25%)', labelCn: '电量不足（原值 < 25%）' },
       { value: 1, label: 'Fair (25% to below 50%)', labelCn: '电量一般（原值 >= 25% 且 < 50%）' },

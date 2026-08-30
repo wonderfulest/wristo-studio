@@ -26,6 +26,7 @@ export function encodeImage(element: FabricElement): ImageElementConfig {
     assetId: (element as any).assetId,
     width: Math.max(1, Math.round(Number.isFinite(width) ? width : 1)),
     height: Math.max(1, Math.round(Number.isFinite(height) ? height : 1)),
+    rotation: Number((element as any).angle ?? (element as any).rotation ?? 0),
   }
 }
 
@@ -42,5 +43,7 @@ export function decodeImage(config: ImageElementConfig): Partial<FabricElement> 
     assetId: config.assetId,
     width: config.width,
     height: config.height,
+    angle: Number(config.rotation ?? 0),
+    rotation: Number(config.rotation ?? 0),
   } as Partial<FabricElement>
 }

@@ -114,7 +114,11 @@ function renderDefaultControl(ctx: CanvasRenderingContext2D, left: number, top: 
 }
 
 type LayerOrderAction = 'front' | 'forward' | 'backward' | 'back'
-type ControlSetMode = 'default' | 'resize8' | 'resize8Rotate' | 'resize8CircleInset' | 'corner4' | 'corner4Inset'
+type ControlSetMode = 'default' | 'resize8' | 'resize8Rotate' | 'resize8CircleInset' | 'resize8CircleInsetRotate' | 'corner4' | 'corner4Inset'
+
+function isCircularInsetMode(mode: ControlSetMode): boolean {
+  return mode === 'resize8CircleInset' || mode === 'resize8CircleInsetRotate'
+}
 
 type ObjectActionDescriptor = {
   key: string
@@ -418,7 +422,7 @@ function createInsetActionItemPositionHandler(index: number) {
 
 function createLayerOrderControls(mode: ControlSetMode = 'default'): Record<string, Control> {
   const useInsetMenu = mode === 'corner4Inset'
-  const useCircularInsetMenu = mode === 'resize8CircleInset'
+  const useCircularInsetMenu = isCircularInsetMode(mode)
   const controls: Record<string, Control> = {
     layerOrderControl: new Control({
       x: 0.5,
@@ -675,9 +679,9 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
   const positionHandler =
     mode === 'corner4Inset'
       ? insetCornerPositionHandler
-      : mode === 'resize8CircleInset' ? circularInsetPositionHandler : Control.prototype.positionHandler
+      : isCircularInsetMode(mode) ? circularInsetPositionHandler : Control.prototype.positionHandler
   const cornerScaleHandler =
-    mode === 'corner4Inset' || mode === 'resize8CircleInset'
+    mode === 'corner4Inset' || isCircularInsetMode(mode)
       ? scaleInsetCorner
       : controlsUtils.scalingEqually
   const cornerControls: Record<string, Control> = {
@@ -730,15 +734,15 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     ...layerOrderControls,
   }
 
-  if (mode !== 'resize8' && mode !== 'resize8Rotate' && mode !== 'resize8CircleInset') return base
+  if (mode !== 'resize8' && mode !== 'resize8Rotate' && !isCircularInsetMode(mode)) return base
 
-  const sidePositionHandler = mode === 'resize8CircleInset'
+  const sidePositionHandler = isCircularInsetMode(mode)
     ? circularInsetPositionHandler
     : Control.prototype.positionHandler
-  const horizontalScaleHandler = mode === 'resize8CircleInset'
+  const horizontalScaleHandler = isCircularInsetMode(mode)
     ? createInsetSideScaleHandler('x')
     : controlsUtils.scalingX
-  const verticalScaleHandler = mode === 'resize8CircleInset'
+  const verticalScaleHandler = isCircularInsetMode(mode)
     ? createInsetSideScaleHandler('y')
     : controlsUtils.scalingY
 
@@ -782,7 +786,7 @@ function createControls(mode: ControlSetMode = 'default'): Record<string, Contro
     }),
   }
 
-  if (mode !== 'resize8Rotate') return resizeControls
+  if (mode !== 'resize8Rotate' && mode !== 'resize8CircleInsetRotate') return resizeControls
 
   return {
     ...resizeControls,
@@ -807,6 +811,8 @@ export function applyControlsToObject(target: FabricObject | null | undefined): 
   const mode =
     (t as any).designerControlMode === 'resize8Rotate'
       ? 'resize8Rotate'
+      : (t as any).designerControlMode === 'resize8CircleInsetRotate'
+      ? 'resize8CircleInsetRotate'
       : (t as any).designerControlMode === 'resize8CircleInset'
       ? 'resize8CircleInset'
       : (t as any).designerControlMode === 'resize8'
@@ -839,6 +845,8 @@ export function applyLayerOrderControlsToObject(target: FabricObject | null | un
   const mode: ControlSetMode =
     (target as unknown as FabricLikeObject).designerControlMode === 'corner4Inset'
       ? 'corner4Inset'
+      : (target as unknown as FabricLikeObject).designerControlMode === 'resize8CircleInsetRotate'
+        ? 'resize8CircleInsetRotate'
       : (target as unknown as FabricLikeObject).designerControlMode === 'resize8CircleInset'
         ? 'resize8CircleInset'
         : 'default'

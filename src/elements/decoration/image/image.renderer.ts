@@ -119,9 +119,10 @@ export async function createImage(
     id,
     eleType: config.eleType,
     assetType: config.assetType === 'mask' ? 'mask' : 'image',
-    designerControlMode: 'resize8CircleInset',
+    designerControlMode: 'resize8CircleInsetRotate',
     left: Number(config.left ?? 0),
     top: Number(config.top ?? 0),
+    angle: Number(config.rotation ?? 0),
     originX: (config.originX as any) ?? 'center',
     originY: (config.originY as any) ?? 'center',
     selectable: true,
@@ -170,6 +171,7 @@ export async function updateImage(element: FabricElement, patch: Partial<ImageEl
 
   if (patch.left !== undefined) obj.set('left', Number(patch.left) as never)
   if (patch.top !== undefined) obj.set('top', Number(patch.top) as never)
+  if (patch.rotation !== undefined) obj.set({ angle: Number(patch.rotation) } as unknown as ImageProps)
 
   const currentW = Number((obj as any).width ?? 0)
   const currentH = Number((obj as any).height ?? 0)

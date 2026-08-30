@@ -1,5 +1,15 @@
 <template>
   <div class="dynamic-image-panel">
+    <el-form label-position="left" label-width="120px">
+      <el-form-item :label="t('elementSettings.angle')">
+        <el-input-number
+          :model-value="Number(model.rotation ?? 0)"
+          :min="-360"
+          :max="360"
+          @change="(value: number) => props.applyPatch?.({ rotation: Number(value) })"
+        />
+      </el-form-item>
+    </el-form>
     <div class="dynamic-image-list">
       <div v-for="(item, index) in items" :key="item.id" class="dynamic-image-row" draggable="true"
         @dragstart="draggedIndex = Number(index)" @dragover.prevent @drop="dropAt(Number(index))">

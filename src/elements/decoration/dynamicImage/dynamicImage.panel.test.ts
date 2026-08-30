@@ -30,6 +30,9 @@ describe('dynamic image panel', () => {
       props: { config: { width: 100, height: 50, items }, applyPatch },
       global: {
         stubs: {
+          'el-form': true,
+          'el-form-item': true,
+          'el-input-number': true,
           'el-button': { template: '<button><slot /></button>' },
           'el-dialog': true,
           AssetPicker: true,
@@ -46,5 +49,30 @@ describe('dynamic image panel', () => {
     expect(deleteButton).toBeDefined()
     await deleteButton!.trigger('click')
     expect(applyPatch).toHaveBeenCalledWith({ items: [items[1]] })
+  })
+
+  it('patches one shared rotation for the dynamic image frame', async () => {
+    const applyPatch = vi.fn()
+    const wrapper = shallowMount(DynamicImagePanel, {
+      props: { config: { width: 100, height: 50, rotation: 0, items: [] }, applyPatch },
+      global: {
+        stubs: {
+          'el-form': { template: '<form><slot /></form>' },
+          'el-form-item': { template: '<label><slot /></label>' },
+          'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], emits: ['change'], template: '<input />' },
+          'el-button': true,
+          'el-dialog': true,
+          AssetPicker: true,
+          ExpressionEditor: true,
+          TokenPreviewControls: true,
+          DynamicImageGroupCopyDialog: true,
+        },
+      },
+    })
+
+    wrapper.findComponent({ name: 'ElInputNumber' }).vm.$emit('change', 72)
+    await wrapper.vm.$nextTick()
+
+    expect(applyPatch).toHaveBeenCalledWith({ rotation: 72 })
   })
 })

@@ -7,4 +7,5 @@ export interface ImageElementConfig extends BaseElementConfig {
   assetId?: number
   width: number
   height: number
+  rotation?: number
 }

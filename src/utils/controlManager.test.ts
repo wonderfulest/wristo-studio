@@ -214,6 +214,19 @@ describe('applyControlsToObject', () => {
     expect(target.controls.mt).toBeDefined()
   })
 
+  it('combines circularly inset image resize controls with a rotation handle', () => {
+    const target = createTarget('resize8CircleInsetRotate') as any
+    attachCircularCanvas(target)
+
+    applyControlsToObject(target)
+
+    expect(target.controls.mtr?.actionName).toBe('rotate')
+    for (const key of ['tl', 'tr', 'bl', 'br', 'mt', 'mb', 'ml', 'mr']) {
+      const position = getControlPosition(target, key, new Point(800, 800))
+      expect(Math.hypot(position.x - 300, position.y - 300)).toBeLessThanOrEqual(270.001)
+    }
+  })
+
   it('keeps the oversized ticks action entry above the bottom-right resize control', () => {
     const target = createTarget('corner4Inset') as any
     target.canvas = { getWidth: () => 600, getHeight: () => 600 }
@@ -305,7 +318,7 @@ describe('applyControlsToObject', () => {
   })
 
   it('uses circular inset resize controls for ordinary images', () => {
-    expect(imageRendererSource).toContain("designerControlMode: 'resize8CircleInset'")
+    expect(imageRendererSource).toContain("designerControlMode: 'resize8CircleInsetRotate'")
   })
 
   it('reapplies designer controls to moon images', () => {

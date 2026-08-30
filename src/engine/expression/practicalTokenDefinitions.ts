@@ -421,6 +421,13 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
     description: 'Battery stage: 0 below 25%; 1 from 25% to below 50%; 2 from 50% to below 75%; 3 at or above 75%.',
     descriptionCn: '电池电量阶段：原值低于 25% 返回 0；25%（含）至 50%（不含）返回 1；50%（含）至 75%（不含）返回 2；75% 及以上返回 3。',
   }),
+  token({
+    id: 'system.battery.remainingSeconds', code: 'ds3.3', label: 'Remaining Battery Life', labelCn: '电池剩余时间',
+    category: 'system', exampleValue: 725760, unit: 's', source: 'system', providerKey: 'systemStats', nullable: true,
+    requirement: 'System.Stats.batteryInDays support (Connect IQ API level 3.3.0+ on supported devices)',
+    description: 'Garmin SDK remaining battery life converted from batteryInDays to rounded integer seconds.',
+    descriptionCn: '将 Garmin SDK 的 batteryInDays 转换为四舍五入后的整数秒数。',
+  }),
   token({ id: 'system.memory.free', code: 'ds4', label: 'Free Memory', labelCn: '可用内存', category: 'system', exampleValue: 65536, unit: 'bytes', source: 'system', providerKey: 'systemStats' }),
   token({ id: 'system.memory.total', code: 'ds6', label: 'Total Memory', labelCn: '总内存', category: 'system', exampleValue: 262144, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total memory exposed by the device' }),
   token({ id: 'system.memory.used', code: 'ds7', label: 'Used Memory', labelCn: '已用内存', category: 'system', exampleValue: 196608, unit: 'bytes', source: 'system', providerKey: 'systemStats', nullable: true, requirement: 'Total and free memory exposed by the device' }),

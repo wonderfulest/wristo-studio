@@ -15,5 +15,6 @@ export interface DynamicImageElementConfig extends BaseElementConfig {
   eleType: 'dynamicImage'
   width: number
   height: number
+  rotation?: number
   items: DynamicImageItem[]
 }

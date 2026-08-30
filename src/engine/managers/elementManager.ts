@@ -28,6 +28,7 @@ import { rememberLastEditedElementStyle } from '@/engine/services/elementStyleMe
 import { parseExpression } from '@/engine/expression/parser'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 import {
+  moveLayoutGroupByProxyCenter,
   removeElementFromLayoutGroups,
   scheduleReflowForElement,
 } from '@/engine/layout/studioLayoutController'
@@ -311,6 +312,13 @@ export function nudgeSelection(direction: 'left' | 'right' | 'up' | 'down', step
     const nextTop = top + dy
     obj.set({ left: nextLeft, top: nextTop })
     obj.setCoords?.()
+    if (String(obj.eleType ?? '') === 'layoutGroupProxy' && obj.layoutGroupId != null) {
+      const center = obj.getCenterPoint?.()
+      if (center && Number.isFinite(center.x) && Number.isFinite(center.y)) {
+        moveLayoutGroupByProxyCenter(String(obj.layoutGroupId), Number(center.x), Number(center.y))
+      }
+      return
+    }
     if (obj.id != null) {
       useElementDataStore().patchElement(String(obj.id), { left: nextLeft, top: nextTop } as any)
     }
