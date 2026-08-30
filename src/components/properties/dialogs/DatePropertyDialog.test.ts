@@ -34,4 +34,9 @@ describe('DatePropertyDialog contract', () => {
     expect(source).not.toContain('class="selected-option-card"')
     expect(source).not.toContain('const selectedOption = computed')
   })
+
+  it('places each date example in a dedicated middle column', () => {
+    expect(source).toMatch(/\.date-option-content\s*\{[^}]*grid-template-columns:\s*minmax\(0, 160px\) minmax\(88px, 1fr\)/s)
+    expect(source).toMatch(/\.option-example\s*\{[^}]*justify-self:\s*start/s)
+  })
 })

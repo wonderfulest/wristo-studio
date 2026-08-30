@@ -253,7 +253,7 @@ defineExpose({ show: (data: any = null) => { initFormData(data); dialogVisible.v
 .option-batch-actions { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
 .date-length-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .date-length-label { margin-right: auto; color: var(--el-text-color-secondary); font-size: 13px; }
-.date-option-content { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.date-option-content { display: grid; grid-template-columns: minmax(0, 160px) minmax(88px, 1fr); align-items: center; gap: 12px; }
 .option-label { overflow: hidden; color: var(--el-text-color-primary); text-overflow: ellipsis; white-space: nowrap; }
-.option-example { color: var(--el-text-color-secondary); font-size: 12px; white-space: nowrap; }
+.option-example { justify-self: start; color: var(--el-text-color-secondary); font-size: 12px; white-space: nowrap; }
 </style>

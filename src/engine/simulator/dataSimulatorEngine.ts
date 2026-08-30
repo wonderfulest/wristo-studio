@@ -165,6 +165,8 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'sunrise'
     case ':FIELD_TYPE_SUN_SET':
       return 'sunset'
+    case ':FIELD_TYPE_SUN_RISE_SET':
+      return 'sunriseSunset'
     default:
       return null
   }
@@ -259,7 +261,11 @@ export class DataSimulatorEngine {
       })
       const canonicalMetric = requireCanonicalMetric(metric ?? obj, catalogSnapshot)
       const simKey = metricSymbolToSimKey(canonicalMetric.metricSymbol)
-      const simulated = simKey ? getSimulatedDataByName(simKey) : null
+      const simulated = simKey === 'sunriseSunset'
+        ? getSimulatedDataByName(simKey, now)
+        : simKey
+          ? getSimulatedDataByName(simKey)
+          : null
       const displayValue = simulated
         ? String(formatSimulatedDisplay(simulated, propertiesStore))
         : canonicalMetric.defaultValue

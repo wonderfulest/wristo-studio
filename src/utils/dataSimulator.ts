@@ -164,7 +164,7 @@ export function tickSimulatedData(): void {
  *
  * 这里只做非常轻量的映射，用于设计器中的预览效果
  */
-export function getSimulatedDataByName(name: string): SimulatedData {
+export function getSimulatedDataByName(name: string, now: Date = new Date()): SimulatedData {
   const key = name.trim()
   const scenarioValue = scenarioData(key)
   if (scenarioValue) return scenarioValue
@@ -346,6 +346,14 @@ export function getSimulatedDataByName(name: string): SimulatedData {
     case 'sunset':
     case 'ss':
       return { display: '18:12', unit: '', label: 'sunset' }
+    case 'sunriseSunset': {
+      const seconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+      const sunriseSeconds = 6 * 3600 + 42 * 60
+      const sunsetSeconds = 18 * 3600 + 12 * 60
+      return seconds >= sunriseSeconds && seconds < sunsetSeconds
+        ? { display: '18:12', unit: '', label: 'sunset' }
+        : { display: '06:42', unit: '', label: 'sunrise' }
+    }
 
     // 名言 / 文本
     case 'quote':

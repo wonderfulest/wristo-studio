@@ -9,7 +9,9 @@ const { canvas, editor, updateElement, getMetricByOptions, getSimulatedDataByNam
   },
   updateElement: vi.fn(() => Promise.resolve()),
   getMetricByOptions: vi.fn(),
-  getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
+  getSimulatedDataByName: vi.fn((name: string) => name === 'sunriseSunset'
+    ? { display: '18:12', unit: '', label: 'sunset' }
+    : { display: '80', numeric: 80, unit: '' }),
   getSimulatedDataByTokenCode: vi.fn((code: string) => code === 'ds3.3'
     ? { display: '725760', numeric: 725760, unit: 's' }
     : { display: '80', numeric: 80, unit: 'bpm' }),
@@ -44,6 +46,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' },
         { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' },
         { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' },
+        { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' },
       ],
       optionsByValueCode: new Map([
         [0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
@@ -52,6 +55,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [1201, { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' }],
         [1202, { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' }],
         [1203, { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' }],
+        [48, { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       optionsByMetricSymbol: new Map([
         [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
@@ -60,6 +64,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', { valueCode: 1201, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', label: { eng: 'Current Precipitation', zhs: '当前降水概率' }, unitKey: 'percentage' }],
         [':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', { valueCode: 1202, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_NEXT_HOUR', label: { eng: 'Next Hour Precipitation', zhs: '未来一小时降水概率' }, unitKey: 'percentage' }],
         [':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', { valueCode: 1203, metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_TODAY', label: { eng: 'Today Precipitation', zhs: '今日降水概率' }, unitKey: 'percentage' }],
+        [':FIELD_TYPE_SUN_RISE_SET', { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       unitsByKey: new Map([
         ['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }],
@@ -251,6 +256,30 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     new DataSimulatorEngine().updateCanvas()
 
     expect(getSimulatedDataByName).toHaveBeenCalledWith('sleepScore')
+  })
+
+  it('renders a simulated value for the combined sunrise and sunset field', () => {
+    const element = {
+      id: 'sunrise-sunset',
+      eleType: 'data',
+      metricSymbol: ':FIELD_TYPE_SUN_RISE_SET',
+      text: '',
+      set(key: string, value: unknown) {
+        ;(this as Record<string, unknown>)[key] = value
+      },
+    }
+    getMetricByOptions.mockReturnValue({
+      valueCode: 48,
+      metricSymbol: ':FIELD_TYPE_SUN_RISE_SET',
+      label: { eng: 'Sunrise & Sunset', zhs: '日出日落' },
+      unitKey: 'none',
+      defaultValue: '',
+    })
+    canvas.getObjects.mockReturnValue([element])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(element.text).toBe('18:12')
   })
 
   it('renders the resolved compact token value for text templates', () => {

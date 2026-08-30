@@ -60,12 +60,12 @@
             <el-option
               v-for="option in formData.options"
               :key="option.value"
-              :label="option.name + ' (' + option.metricSymbol + ')'"
+              :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
               :value="option.value"
             >
               <div class="goal-option">
                 <span class="goal-icon">{{ iconGlyph(option) }}</span>
-                <span class="goal-label">{{ option.name }} ({{ option.metricSymbol }})</span>
+                <span class="goal-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
           </el-select>
@@ -74,7 +74,7 @@
         <div v-if="selectedOption" class="selected-option-card">
           <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
           <div class="selected-option-copy">
-            <div class="selected-option-title">{{ selectedOption.name }}</div>
+            <div class="selected-option-title">{{ optionDisplayLabel(selectedOption) }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
           </div>
         </div>
@@ -92,7 +92,7 @@
                   <div class="option-content">
                     <div class="option-info">
                       <span class="goal-icon">{{ iconGlyph(option) }}</span>
-                      <span class="goal-label">{{ option.name }}</span>
+                      <span class="goal-label">{{ optionDisplayLabel(option) }}</span>
                       <span class="goal-metric">({{ option.metricSymbol }})</span>
                     </div>
                   </div>
@@ -167,8 +167,9 @@ import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vu
 import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
+import { resolveDataOptionSettingsLabel } from './dataPropertyOptions'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
@@ -177,6 +178,7 @@ const activeOptions = ref([])
 const goalOptions = getDataTypePropertyOptions().filter(option => option.category === 'goal')
 const cloneGoalOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(goalOptions)))
 const iconGlyph = (option) => resolveMetricIconGlyph(option)
+const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
 const formData = reactive({
   title: '',
@@ -276,3 +278,13 @@ defineExpose({
   }
 })
 </script>
+
+<style scoped>
+.goal-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
+}
+
+.selected-option-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
+}
+</style>

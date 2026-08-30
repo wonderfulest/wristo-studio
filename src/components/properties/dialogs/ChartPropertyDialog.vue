@@ -60,21 +60,21 @@
             <el-option
               v-for="option in formData.options"
               :key="option.value"
-              :label="option.name + ' (' + option.metricSymbol + ')'"
+              :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
               :value="option.value"
             >
               <div class="metric-option">
-                <span class="metric-icon">{{ option.icon }}</span>
-                <span class="metric-label">{{ option.name }} ({{ option.metricSymbol }})</span>
+                <span class="metric-icon">{{ iconGlyph(option) }}</span>
+                <span class="metric-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
               </div>
             </el-option>
           </el-select>
         </el-form-item>
 
         <div v-if="selectedOption" class="selected-option-card">
-          <span class="selected-option-icon">{{ selectedOption.icon }}</span>
+          <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
           <div class="selected-option-copy">
-            <div class="selected-option-title">{{ selectedOption.name }}</div>
+            <div class="selected-option-title">{{ optionDisplayLabel(selectedOption) }}</div>
             <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
           </div>
         </div>
@@ -91,8 +91,8 @@
                 <div v-for="(option, index) in formData.options" :key="index" class="option-item">
                   <div class="option-content">
                     <div class="option-info">
-                      <span class="metric-icon">{{ option.icon }}</span>
-                      <span class="metric-label">{{ option.name }}</span>
+                      <span class="metric-icon">{{ iconGlyph(option) }}</span>
+                      <span class="metric-label">{{ optionDisplayLabel(option) }}</span>
                       <span class="metric-symbol">({{ option.metricSymbol }})</span>
                     </div>
                   </div>
@@ -165,14 +165,18 @@ import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
+import { resolveDataOptionSettingsLabel } from './dataPropertyOptions'
+import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
 const chartOptions = getDataTypePropertyOptions().filter(option => option.category === 'chart')
 const cloneChartOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(chartOptions)))
+const iconGlyph = (option) => resolveMetricIconGlyph(option)
+const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
 const formData = reactive({
   title: '',
@@ -289,9 +293,14 @@ defineExpose({
 }
 
 .metric-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
   font-size: 16px;
   width: 24px;
   text-align: center;
+}
+
+.selected-option-icon {
+  font-family: var(--studio-data-icon-font), sans-serif !important;
 }
 
 .metric-label {
