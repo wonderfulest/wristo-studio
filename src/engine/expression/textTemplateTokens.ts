@@ -213,7 +213,7 @@ function evaluateNumeric(node: ExpressionNode, resolve: (code: string) => unknow
 export function resolveTokenTemplate(
   template: string,
   date = new Date(),
-  resolver?: (code: string, format?: string) => unknown,
+  resolver?: (code: string, format?: string, usage?: 'display' | 'numeric') => unknown,
 ): string {
   const source = String(template ?? '')
   if (![...source.matchAll(TOKEN_PATTERN)].length) return source
@@ -223,7 +223,7 @@ export function resolveTokenTemplate(
       if (part.type === 'literal') return part.value
       if (part.type === 'numeric') {
         const value = evaluateNumeric(part.ast, (code) => {
-          const resolved = resolver?.(code)
+          const resolved = resolver?.(code, undefined, 'numeric')
           const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)
           return resolved === undefined && definition ? tokenValue(definition, date) : resolved
         })
@@ -232,7 +232,7 @@ export function resolveTokenTemplate(
       }
       const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(part.code)
       if (!definition) return ''
-      const resolved = resolver?.(part.code, part.format)
+      const resolved = resolver?.(part.code, part.format, 'display')
       return applyFormat(resolved === undefined ? tokenValue(definition, date) : resolved, part.format)
     }).join('')
     return invalidNumeric ? '' : result

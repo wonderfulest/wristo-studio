@@ -11,6 +11,14 @@ describe('expression token picker model', () => {
     expect(filterExpressionTokens('m/s').map(({ code }) => code)).toContain('w12')
   })
 
+  it.each(['xinlv', 'xl'])('searches Chinese token text by pinyin query %s', (query) => {
+    expect(filterExpressionTokens(query).map(({ code }) => code)).toContain('ds9')
+  })
+
+  it('does not treat pinyin separators as an empty query that matches every token', () => {
+    expect(filterExpressionTokens('___')).toEqual([])
+  })
+
   it('hides Chinese-only tokens from English designs', () => {
     expect(filterExpressionTokens('', 'zhs').map(({ code }) => code)).toContain('cn1')
     expect(filterExpressionTokens('', 'eng').map(({ code }) => code)).not.toContain('cn1')

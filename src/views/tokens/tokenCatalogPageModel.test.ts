@@ -4,7 +4,7 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(132)
+    expect(model.total).toBe(131)
     expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(31)
     expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(14)
     expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(15)

@@ -10,7 +10,9 @@ const { canvas, editor, updateElement, getMetricByOptions, getSimulatedDataByNam
   updateElement: vi.fn(() => Promise.resolve()),
   getMetricByOptions: vi.fn(),
   getSimulatedDataByName: vi.fn(() => ({ display: '80', numeric: 80, unit: '' })),
-  getSimulatedDataByTokenCode: vi.fn(() => ({ display: '80', numeric: 80, unit: 'bpm' })),
+  getSimulatedDataByTokenCode: vi.fn((code: string) => code === 'ds3.3'
+    ? { display: '725760', numeric: 725760, unit: 's' }
+    : { display: '80', numeric: 80, unit: 'bpm' }),
   reflowAllLayoutGroups: vi.fn(),
   editor: { showTimeSimulator: true },
 }))
@@ -24,7 +26,12 @@ vi.mock('@/stores/editorStore', () => ({
 }))
 
 vi.mock('@/stores/properties', () => ({
-  usePropertiesStore: () => ({ allProperties: {}, getMetricByOptions }),
+  usePropertiesStore: () => ({
+    allProperties: {},
+    dataNumberFormat: 3,
+    maxFieldLength: 4,
+    getMetricByOptions,
+  }),
 }))
 
 vi.mock('@/stores/dataCatalogStore', () => ({
@@ -212,7 +219,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
       fontRenderType: 'truetype',
       formatter: DateFormatConstants.DDD,
       dateFormatMode: 'custom',
-      dateTemplate: '(dt3).format("%02d") + "." + (dt2).format("%02d")',
+      dateTemplate: '(dt3).format("%02d") + "." + (tm2).format("%02d")',
       text: '13.07',
       fontFamily: 'roboto-condensed-regular',
       fontSize: 20,
@@ -256,6 +263,23 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     expect(getSimulatedDataByTokenCode).toHaveBeenCalledWith('ds9')
     expect(set).toHaveBeenCalledWith('text', '80')
+  })
+
+  it('uses raw numeric token values when evaluating formatted arithmetic text templates', () => {
+    const set = vi.fn()
+    canvas.getObjects.mockReturnValue([
+      {
+        id: 'battery-days-template',
+        eleType: 'text',
+        textTemplate: '((ds3.3) / 86400).format("%.1f") + "d"',
+        text: '',
+        set,
+      },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(set).toHaveBeenCalledWith('text', '8.4d')
   })
 
   it('keeps Chinese unit labels when the simulator refreshes a Chinese application', () => {

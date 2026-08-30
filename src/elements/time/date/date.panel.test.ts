@@ -55,7 +55,7 @@ describe('date settings panel', () => {
 
   it('replaces the custom template with a valid random date template', async () => {
     const applyPatch = vi.fn()
-    const currentTemplate = '(dt2) + "." + (dt3) + "." + (dt5.1)'
+    const currentTemplate = '(tm2) + "." + (dt3) + "." + (dt5.1)'
     const wrapper = mount(DatePanel, {
       props: {
         config: {

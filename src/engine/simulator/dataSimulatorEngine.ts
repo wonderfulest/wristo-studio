@@ -175,9 +175,10 @@ function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>,
 }
 
 function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
-  return resolveTokenTemplate(template, new Date(), (code, format) => {
+  return resolveTokenTemplate(template, new Date(), (code, format, usage) => {
     const data = getSimulatedDataByTokenCode(code)
     if (!data) return undefined
+    if (usage === 'numeric') return data.numeric
     return format ? (data.numeric ?? data.display) : formatSimulatedDisplay(data, propertiesStore)
   })
 }

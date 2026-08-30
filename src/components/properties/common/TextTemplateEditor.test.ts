@@ -1,72 +1,86 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/stores/designStore', () => ({
-  useDesignStore: () => ({ appLanguage: 'en' }),
+  useDesignStore: () => ({ appLanguage: 'eng' })
+}))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    resolve: (route: { query?: Record<string, string> }) => ({
+      href: `/tokens?${new URLSearchParams(route.query).toString()}`
+    })
+  })
 }))
 
 import TextTemplateEditor from './TextTemplateEditor.vue'
+import { applyTokenEditorSession, readTokenEditorSession, tokenEditorResultStorageKey } from '@/views/tokens/tokenEditorTransfer'
 
 const stubs = {
-  ElDialog: {
-    props: ['modelValue'],
-    emits: ['update:modelValue'],
-    template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>',
-  },
   ElInput: {
     props: ['modelValue'],
     emits: ['update:modelValue', 'input'],
-    template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value); $emit(\'input\')" />',
+    template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value); $emit(\'input\')" />'
   },
   ElButton: {
     emits: ['click'],
-    template: '<button @click="$emit(\'click\')"><slot/></button>',
-  },
+    template: '<button @click="$emit(\'click\')"><slot/></button>'
+  }
 }
 
-const mountEditor = () => mount(TextTemplateEditor, {
-  props: { modelValue: 'New Text', variablesInitiallyOpen: false },
-  global: { stubs },
-})
-
-describe('TextTemplateEditor token dialog', () => {
-  it('keeps dialog edits as a draft until confirmation', async () => {
-    const wrapper = mountEditor()
-
-    await wrapper.get('.open-token-editor').trigger('click')
-    const dialogInput = wrapper.get('.token-dialog textarea')
-    await dialogInput.setValue('"Year: " + (dt1)')
-
-    expect(wrapper.emitted('change')).toBeUndefined()
-
-    await wrapper.get('.confirm-token-edit').trigger('click')
-
-    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['"Year: " + (dt1)'])
-    expect(wrapper.emitted('change')?.at(-1)).toEqual(['"Year: " + (dt1)'])
+const mountEditor = () =>
+  mount(TextTemplateEditor, {
+    props: { modelValue: 'New Text', variablesInitiallyOpen: false },
+    global: { stubs }
   })
 
-  it('discards the draft when the dialog is cancelled', async () => {
+describe('TextTemplateEditor token page handoff', () => {
+  const openedWindow = { opener: window } as unknown as Window
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.spyOn(window, 'open').mockReturnValue(openedWindow)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('opens the Tokens editor tab with the current field value', async () => {
     const wrapper = mountEditor()
 
     await wrapper.get('.open-token-editor').trigger('click')
-    await wrapper.get('.token-dialog textarea').setValue('Discard me')
-    await wrapper.get('.cancel-token-edit').trigger('click')
-    await wrapper.get('.open-token-editor').trigger('click')
 
-    expect((wrapper.get('.token-dialog textarea').element as HTMLTextAreaElement).value).toBe('New Text')
+    expect(wrapper.find('.token-dialog').exists()).toBe(false)
+    expect(window.open).toHaveBeenCalledOnce()
+    const [url, target, features] = vi.mocked(window.open).mock.calls[0]
+    const sessionId = new URL(String(url), 'https://studio.wristo.io').searchParams.get('session')
+    expect(target).toBe('_blank')
+    expect(features).toBe('noopener')
+    expect(new URL(String(url), 'https://studio.wristo.io').searchParams.get('tab')).toBe('editor')
+    expect(readTokenEditorSession(sessionId || '')).toEqual({ value: 'New Text', appLanguage: 'eng', allowedVariables: [] })
     expect(wrapper.emitted('change')).toBeUndefined()
   })
 
-  it('inserts a token into the dialog draft without changing the outer value', async () => {
+  it('applies the edited value back to the original field', async () => {
     const wrapper = mountEditor()
-
     await wrapper.get('.open-token-editor').trigger('click')
-    await wrapper.get('.token-dialog .variable-chip').trigger('click')
+    const [url] = vi.mocked(window.open).mock.calls[0]
+    const sessionId = new URL(String(url), 'https://studio.wristo.io').searchParams.get('session') || ''
 
-    expect((wrapper.get('.token-dialog textarea').element as HTMLTextAreaElement).value).not.toBe('New Text')
-    expect(wrapper.emitted('change')).toBeUndefined()
+    applyTokenEditorSession(sessionId, '(tm1).format("%04d")')
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: tokenEditorResultStorageKey(sessionId),
+        newValue: '(tm1).format("%04d")',
+        storageArea: localStorage
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['(tm1).format("%04d")'])
+    expect(wrapper.emitted('change')?.at(-1)).toEqual(['(tm1).format("%04d")'])
   })
 })

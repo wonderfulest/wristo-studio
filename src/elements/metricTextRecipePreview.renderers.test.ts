@@ -148,7 +148,7 @@ describe('metric renderer bitmap recipe preview', () => {
 
     await updateDate(element, {
       dateFormatMode: 'custom',
-      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
+      dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (tm2).format("%02d")',
     } as any)
 
     expect(element.dateFormatMode).toBe('custom')
@@ -157,7 +157,7 @@ describe('metric renderer bitmap recipe preview', () => {
       String(element.id),
       expect.objectContaining({
         dateFormatMode: 'custom',
-        dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
+        dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (tm2).format("%02d")',
       }),
     )
   })

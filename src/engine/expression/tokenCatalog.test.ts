@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from './tokenCatalog'
 
 const EXPECTED_CODES = [
-  'dt1', 'dt1.1', 'dt2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6',
+  'dt1', 'dt1.1', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6',
   'tm1', 'tm1.1', 'tm2', 'tm3', 'tm4', 'tm5',
   'tm6', 'tm6.1', 'tm6.0', 'tm6.2',
   'tm7.3', 'tm7.4', 'tm7.0', 'tm7.1', 'tm7.2',
@@ -24,6 +24,23 @@ const EXPECTED_CODES = [
 ]
 
 describe('default expression token catalog', () => {
+  it('uses tm2 as the only numeric Gregorian month token', () => {
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('dt2')).toBeUndefined()
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('tm2')).toMatchObject({
+      id: 'time.month',
+      valueType: 'number',
+      description: 'Current Gregorian month as an integer from 1 to 12.',
+      descriptionCn: '当前公历月份整数，取值范围 1–12。',
+      exampleExpression: '(tm2) == 8',
+      exampleExpressions: [
+        { expression: '(tm2)', description: '1–12', descriptionCn: '1–12' },
+        { expression: '(tm2).format("%02d")', description: '01–12', descriptionCn: '01–12' },
+        { expression: '(tm2) == 8', description: 'Whether the current month is August', descriptionCn: '当前是否为八月' },
+        { expression: '(tm2) >= 6 && (tm2) <= 8', description: 'Whether the current month is June through August', descriptionCn: '当前是否为六月到八月' },
+      ],
+    })
+  })
+
   it('does not expose the redundant complete four-pillars token', () => {
     expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode('cn3.5')).toBeUndefined()
   })
@@ -171,6 +188,32 @@ describe('default expression token catalog', () => {
       updateFrequency: 'second',
       exampleValue: 5,
     })
+  })
+
+  it('documents integer ranges and equality examples for hour and minute tokens', () => {
+    const expected = {
+      tm6: ['Integer hour in 24-hour format, from 0 to 23.', '24 小时制小时整数，取值范围 0–23。', '(tm6) == 14'],
+      'tm6.0': ['Integer first digit of the 24-hour value, from 1 to 2; null before 10:00.', '24 小时制小时十位整数，取值范围 1–2；小于 10 点时返回空值。', '(tm6.0) == 1'],
+      'tm6.1': ['Integer first digit of the zero-padded 24-hour value, from 0 to 2.', '补零后的 24 小时制小时十位整数，取值范围 0–2。', '(tm6.1) == 1'],
+      'tm6.2': ['Integer second digit of the 24-hour value, from 0 to 9.', '24 小时制小时个位整数，取值范围 0–9。', '(tm6.2) == 4'],
+      'tm7.3': ['Integer hour in 12-hour format, from 1 to 12.', '12 小时制小时整数，取值范围 1–12。', '(tm7.3) == 2'],
+      'tm7.4': ['Integer hour in the device format: 0 to 23 in 24-hour mode, or 1 to 12 in 12-hour mode.', '设备时间格式的小时整数：24 小时制取值范围 0–23，12 小时制取值范围 1–12。', '(tm7.4) == 14'],
+      'tm7.0': ['Integer first digit of the 12-hour value, always 1 when present; null for single-digit hours.', '12 小时制小时十位整数；有值时固定为 1，个位数小时返回空值。', 'isnull((tm7.0))'],
+      'tm7.1': ['Integer first digit of the zero-padded 12-hour value, from 0 to 1.', '补零后的 12 小时制小时十位整数，取值范围 0–1。', '(tm7.1) == 0'],
+      'tm7.2': ['Integer second digit of the 12-hour value, from 0 to 9.', '12 小时制小时个位整数，取值范围 0–9。', '(tm7.2) == 2'],
+      tm8: ['Integer minute, from 0 to 59.', '分钟整数，取值范围 0–59。', '(tm8) == 30'],
+      'tm8.0': ['Integer first minute digit, from 1 to 5; null before minute 10.', '分钟十位整数，取值范围 1–5；分钟数小于 10 时返回空值。', '(tm8.0) == 3'],
+      'tm8.1': ['Integer first digit of the zero-padded minute, from 0 to 5.', '补零后的分钟十位整数，取值范围 0–5。', '(tm8.1) == 3'],
+      'tm8.2': ['Integer second minute digit, from 0 to 9.', '分钟个位整数，取值范围 0–9。', '(tm8.2) == 0'],
+    } as const
+
+    for (const [code, [description, descriptionCn, exampleExpression]] of Object.entries(expected)) {
+      expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)).toMatchObject({
+        description,
+        descriptionCn,
+        exampleExpression,
+      })
+    }
   })
 
   it('documents the Connect IQ day-of-week values for tm5', () => {

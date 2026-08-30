@@ -4,6 +4,12 @@ export type ExpressionTokenCategory = 'date-time' | 'astronomy' | 'activity' | '
 
 import type { AppLanguage } from '@/types/localization'
 
+export interface ExpressionTokenExample {
+  expression: string
+  description: string
+  descriptionCn: string
+}
+
 export interface ExpressionTokenDefinition {
   id: string
   code: string
@@ -23,6 +29,7 @@ export interface ExpressionTokenDefinition {
   providerKey: string
   deviceRequirements: string[]
   exampleExpression: string
+  exampleExpressions?: ExpressionTokenExample[]
   wfbEquivalent?: string
   appLanguages?: AppLanguage[]
 }

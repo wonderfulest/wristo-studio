@@ -1,9 +1,9 @@
 import { resolveTokenTemplate, validateTokenTemplate } from '@/engine/expression/textTemplateTokens'
 
-export const DEFAULT_DATE_TEMPLATE = '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")'
+export const DEFAULT_DATE_TEMPLATE = '(dt5.1) + "." + (dt3).format("%02d") + "." + (tm2).format("%02d")'
 
 const RANDOM_DATE_PARTS = {
-  month: ['(dt2)', '(dt2.1)', '(dt2.2)'],
+  month: ['(tm2)', '(dt2.1)', '(dt2.2)'],
   day: ['(dt3)', '(dt3).format("%02d")'],
   weekday: ['(dt5.1)', '(dt5.2)'],
 } as const
@@ -45,7 +45,7 @@ export function createRandomDateTemplate(
 }
 
 const DATE_TOKEN_PATTERN = /\(([a-zA-Z][a-zA-Z0-9_.]*)\)/g
-const DATE_TOKENS = new Set(['dt1', 'dt1.1', 'dt2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6'])
+const DATE_TOKENS = new Set(['dt1', 'dt1.1', 'tm2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6'])
 
 function isoWeek(date: Date): number {
   const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -71,7 +71,7 @@ export function formatCustomDateTemplate(template: string, date: Date, locale: s
     switch (code) {
       case 'dt1': return date.getFullYear()
       case 'dt1.1': return date.getFullYear() % 100
-      case 'dt2': return date.getMonth() + 1
+      case 'tm2': return date.getMonth() + 1
       case 'dt2.1': return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date)
       case 'dt2.2': return new Intl.DateTimeFormat(locale, { month: 'long' }).format(date)
       case 'dt3': return date.getDate()

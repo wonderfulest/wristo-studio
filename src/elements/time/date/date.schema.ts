@@ -32,7 +32,7 @@ export const dateSchema: DateElementSchema = {
     formatter: DateFormatConstants.MMM_D_DDD,
     formatterOptions: [],
     dateFormatMode: 'preset',
-    dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (dt2).format("%02d")',
+    dateTemplate: '(dt5.1) + "." + (dt3).format("%02d") + "." + (tm2).format("%02d")',
   },
   resizable: false,
   rotatable: false,

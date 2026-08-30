@@ -18,6 +18,8 @@ type TokenInput = {
   requirement?: string
   description?: string
   descriptionCn?: string
+  exampleExpression?: string
+  exampleExpressions?: ExpressionTokenDefinition['exampleExpressions']
   wfbEquivalent?: string
   appLanguages?: ExpressionTokenDefinition['appLanguages']
 }
@@ -40,7 +42,8 @@ const token = (input: TokenInput): ExpressionTokenDefinition => ({
   updateFrequency: input.updateFrequency || 'minute',
   providerKey: input.providerKey,
   deviceRequirements: [input.requirement || 'All supported Connect IQ devices'],
-  exampleExpression: `(${input.code})`,
+  exampleExpression: input.exampleExpression || `(${input.code})`,
+  exampleExpressions: input.exampleExpressions,
   wfbEquivalent: input.wfbEquivalent === undefined && !input.code.startsWith('wr.') ? input.code : input.wfbEquivalent,
   appLanguages: input.appLanguages,
 })
@@ -255,7 +258,6 @@ const MOON_PHASE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = 
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),
-  token({ id: 'date.month', code: 'dt2', label: 'Month', labelCn: '月份', category: 'date-time', exampleValue: 6, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.monthShort', code: 'dt2.1', label: 'Month Short', labelCn: '月份简称', category: 'date-time', valueType: 'string', exampleValue: 'Jun', source: 'time', providerKey: 'clock' }),
   token({ id: 'date.monthLong', code: 'dt2.2', label: 'Month Long', labelCn: '月份全称', category: 'date-time', valueType: 'string', exampleValue: 'June', source: 'time', providerKey: 'clock' }),
   token({ id: 'date.dayOfMonth', code: 'dt3', label: 'Day of Month', labelCn: '日期', category: 'date-time', exampleValue: 30, source: 'time', providerKey: 'clock' }),
@@ -266,7 +268,16 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   token({ id: 'date.dayOfYear', code: 'dt6', label: 'Day of Year', labelCn: '年内天数', category: 'date-time', exampleValue: 181, source: 'time', providerKey: 'clock' }),
   time('year', 'tm1', 'Year', '年份', 2026),
   time('shortYear', 'tm1.1', 'Short Year', '两位年份', 26),
-  time('month', 'tm2', 'Month', '月份', 8),
+  token({
+    id: 'time.month', code: 'tm2', label: 'Month', labelCn: '月份', category: 'date-time', exampleValue: 8, source: 'time', providerKey: 'clock',
+    description: 'Current Gregorian month as an integer from 1 to 12.', descriptionCn: '当前公历月份整数，取值范围 1–12。', exampleExpression: '(tm2) == 8',
+    exampleExpressions: [
+      { expression: '(tm2)', description: '1–12', descriptionCn: '1–12' },
+      { expression: '(tm2).format("%02d")', description: '01–12', descriptionCn: '01–12' },
+      { expression: '(tm2) == 8', description: 'Whether the current month is August', descriptionCn: '当前是否为八月' },
+      { expression: '(tm2) >= 6 && (tm2) <= 8', description: 'Whether the current month is June through August', descriptionCn: '当前是否为六月到八月' },
+    ],
+  }),
   time('dayOfMonth', 'tm3', 'Day of Month', '日期', 15),
   time('isoWeek', 'tm4', 'ISO Week', 'ISO 周数', 33),
   token({
@@ -275,19 +286,19 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
     description: 'Day of week using Connect IQ values: Sunday is 1 through Saturday is 7.',
     descriptionCn: 'Connect IQ 星期枚举值：周日为 1，周一为 2，依次至周六为 7。',
   }),
-  time('hour24', 'tm6', 'Hour (24-hour)', '小时（24 小时制）', 14),
-  token({ id: 'time.hour24FirstDigit', code: 'tm6.1', label: 'First Hour Digit (24-hour)', labelCn: '小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock' }),
-  token({ id: 'time.hour24FirstDigitNullable', code: 'tm6.0', label: 'Optional First Hour Digit (24-hour)', labelCn: '可空小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock', nullable: true, description: 'First digit of the 24-hour value; null before 10:00.', descriptionCn: '24 小时制小时十位；小于 10 点时返回空值。' }),
-  token({ id: 'time.hour24SecondDigit', code: 'tm6.2', label: 'Second Hour Digit (24-hour)', labelCn: '小时个位（24 小时制）', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock' }),
-  time('hour12', 'tm7.3', 'Hour (12-hour)', '小时（12 小时制）', 2),
-  time('deviceHour', 'tm7.4', 'Hour (Device Format)', '小时（设备格式）', 14),
-  token({ id: 'time.hour12FirstDigitNullable', code: 'tm7.0', label: 'Optional First Hour Digit (12-hour)', labelCn: '可空小时十位（12 小时制）', category: 'date-time', exampleValue: null, source: 'time', providerKey: 'clock', nullable: true, description: 'First digit of the 12-hour value; null for single-digit hours.', descriptionCn: '12 小时制小时十位；个位数小时返回空值。' }),
-  token({ id: 'time.hour12FirstDigit', code: 'tm7.1', label: 'First Hour Digit (12-hour)', labelCn: '小时十位（12 小时制）', category: 'date-time', exampleValue: 0, source: 'time', providerKey: 'clock' }),
-  token({ id: 'time.hour12SecondDigit', code: 'tm7.2', label: 'Second Hour Digit (12-hour)', labelCn: '小时个位（12 小时制）', category: 'date-time', exampleValue: 2, source: 'time', providerKey: 'clock' }),
-  time('minute', 'tm8', 'Minute', '分钟', 30),
-  token({ id: 'time.minuteFirstDigitNullable', code: 'tm8.0', label: 'Optional First Minute Digit', labelCn: '可空分钟十位', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock', nullable: true, description: 'First minute digit; null before minute 10.', descriptionCn: '分钟十位；分钟数小于 10 时返回空值。' }),
-  token({ id: 'time.minuteFirstDigit', code: 'tm8.1', label: 'First Minute Digit', labelCn: '分钟十位', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock' }),
-  token({ id: 'time.minuteSecondDigit', code: 'tm8.2', label: 'Second Minute Digit', labelCn: '分钟个位', category: 'date-time', exampleValue: 0, source: 'time', providerKey: 'clock' }),
+  token({ id: 'time.hour24', code: 'tm6', label: 'Hour (24-hour)', labelCn: '小时（24 小时制）', category: 'date-time', exampleValue: 14, source: 'time', providerKey: 'clock', description: 'Integer hour in 24-hour format, from 0 to 23.', descriptionCn: '24 小时制小时整数，取值范围 0–23。', exampleExpression: '(tm6) == 14' }),
+  token({ id: 'time.hour24FirstDigit', code: 'tm6.1', label: 'First Hour Digit (24-hour)', labelCn: '小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock', description: 'Integer first digit of the zero-padded 24-hour value, from 0 to 2.', descriptionCn: '补零后的 24 小时制小时十位整数，取值范围 0–2。', exampleExpression: '(tm6.1) == 1' }),
+  token({ id: 'time.hour24FirstDigitNullable', code: 'tm6.0', label: 'Optional First Hour Digit (24-hour)', labelCn: '可空小时十位（24 小时制）', category: 'date-time', exampleValue: 1, source: 'time', providerKey: 'clock', nullable: true, description: 'Integer first digit of the 24-hour value, from 1 to 2; null before 10:00.', descriptionCn: '24 小时制小时十位整数，取值范围 1–2；小于 10 点时返回空值。', exampleExpression: '(tm6.0) == 1' }),
+  token({ id: 'time.hour24SecondDigit', code: 'tm6.2', label: 'Second Hour Digit (24-hour)', labelCn: '小时个位（24 小时制）', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', description: 'Integer second digit of the 24-hour value, from 0 to 9.', descriptionCn: '24 小时制小时个位整数，取值范围 0–9。', exampleExpression: '(tm6.2) == 4' }),
+  token({ id: 'time.hour12', code: 'tm7.3', label: 'Hour (12-hour)', labelCn: '小时（12 小时制）', category: 'date-time', exampleValue: 2, source: 'time', providerKey: 'clock', description: 'Integer hour in 12-hour format, from 1 to 12.', descriptionCn: '12 小时制小时整数，取值范围 1–12。', exampleExpression: '(tm7.3) == 2' }),
+  token({ id: 'time.deviceHour', code: 'tm7.4', label: 'Hour (Device Format)', labelCn: '小时（设备格式）', category: 'date-time', exampleValue: 14, source: 'time', providerKey: 'clock', description: 'Integer hour in the device format: 0 to 23 in 24-hour mode, or 1 to 12 in 12-hour mode.', descriptionCn: '设备时间格式的小时整数：24 小时制取值范围 0–23，12 小时制取值范围 1–12。', exampleExpression: '(tm7.4) == 14' }),
+  token({ id: 'time.hour12FirstDigitNullable', code: 'tm7.0', label: 'Optional First Hour Digit (12-hour)', labelCn: '可空小时十位（12 小时制）', category: 'date-time', exampleValue: null, source: 'time', providerKey: 'clock', nullable: true, description: 'Integer first digit of the 12-hour value, always 1 when present; null for single-digit hours.', descriptionCn: '12 小时制小时十位整数；有值时固定为 1，个位数小时返回空值。', exampleExpression: 'isnull((tm7.0))' }),
+  token({ id: 'time.hour12FirstDigit', code: 'tm7.1', label: 'First Hour Digit (12-hour)', labelCn: '小时十位（12 小时制）', category: 'date-time', exampleValue: 0, source: 'time', providerKey: 'clock', description: 'Integer first digit of the zero-padded 12-hour value, from 0 to 1.', descriptionCn: '补零后的 12 小时制小时十位整数，取值范围 0–1。', exampleExpression: '(tm7.1) == 0' }),
+  token({ id: 'time.hour12SecondDigit', code: 'tm7.2', label: 'Second Hour Digit (12-hour)', labelCn: '小时个位（12 小时制）', category: 'date-time', exampleValue: 2, source: 'time', providerKey: 'clock', description: 'Integer second digit of the 12-hour value, from 0 to 9.', descriptionCn: '12 小时制小时个位整数，取值范围 0–9。', exampleExpression: '(tm7.2) == 2' }),
+  token({ id: 'time.minute', code: 'tm8', label: 'Minute', labelCn: '分钟', category: 'date-time', exampleValue: 30, source: 'time', providerKey: 'clock', description: 'Integer minute, from 0 to 59.', descriptionCn: '分钟整数，取值范围 0–59。', exampleExpression: '(tm8) == 30' }),
+  token({ id: 'time.minuteFirstDigitNullable', code: 'tm8.0', label: 'Optional First Minute Digit', labelCn: '可空分钟十位', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock', nullable: true, description: 'Integer first minute digit, from 1 to 5; null before minute 10.', descriptionCn: '分钟十位整数，取值范围 1–5；分钟数小于 10 时返回空值。', exampleExpression: '(tm8.0) == 3' }),
+  token({ id: 'time.minuteFirstDigit', code: 'tm8.1', label: 'First Minute Digit', labelCn: '分钟十位', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock', description: 'Integer first digit of the zero-padded minute, from 0 to 5.', descriptionCn: '补零后的分钟十位整数，取值范围 0–5。', exampleExpression: '(tm8.1) == 3' }),
+  token({ id: 'time.minuteSecondDigit', code: 'tm8.2', label: 'Second Minute Digit', labelCn: '分钟个位', category: 'date-time', exampleValue: 0, source: 'time', providerKey: 'clock', description: 'Integer second minute digit, from 0 to 9.', descriptionCn: '分钟个位整数，取值范围 0–9。', exampleExpression: '(tm8.2) == 0' }),
   time('second', 'tm9', 'Second', '秒', 45),
   token({ id: 'time.secondFirstDigitNullable', code: 'tm9.0', label: 'Optional First Second Digit', labelCn: '可空秒钟十位', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', nullable: true, updateFrequency: 'second', description: 'First second digit; null before second 10.', descriptionCn: '秒钟十位；秒数小于 10 时返回空值。' }),
   token({ id: 'time.secondFirstDigit', code: 'tm9.3', label: 'First Second Digit', labelCn: '秒钟十位', category: 'date-time', exampleValue: 4, source: 'time', providerKey: 'clock', updateFrequency: 'second' }),
