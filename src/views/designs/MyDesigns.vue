@@ -37,8 +37,9 @@
       <el-select v-model="sortField" :placeholder="t('project.sortField')" @change="handleSortChange" class="sort-field-filter">
         <el-option :label="t('project.createdTime')" value="created_at" />
         <el-option :label="t('project.updatedTime')" value="updated_at" />
+        <el-option v-if="isAdminUser" :label="t('card.storeWeight')" value="store_weight" />
       </el-select>
-      <el-select v-model="sortOrder" :placeholder="t('project.sortOrder')" @change="handleSortChange" class="sort-order-filter">
+      <el-select v-model="sortOrder" :disabled="sortField === 'store_weight'" :placeholder="t('project.sortOrder')" @change="handleSortChange" class="sort-order-filter">
         <el-option :label="t('project.ascending')" value="asc" />
         <el-option :label="t('project.descending')" value="desc" />
       </el-select>
@@ -233,6 +234,7 @@ import {
 } from '@/api/wristo/prg-installer'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
+import { normalizeDesignSort, toDesignOrderBy, type DesignSortField, type DesignSortOrder } from '@/views/designs/designSort'
 import {
   canChooseDuplicateLanguage,
   getDuplicateSourceLanguage,
@@ -304,9 +306,6 @@ const loadingStates = ref<LoadingStates>({
 const loadingStatesPlain = computed(() => loadingStates.value)
 
 // 搜索相关状态
-type DesignSortField = 'created_at' | 'updated_at'
-type DesignSortOrder = 'asc' | 'desc'
-
 interface DesignSearchPreference {
   searchName: string
   searchAppId: string
@@ -328,7 +327,7 @@ const isLaunchStatusValue = (value: unknown): value is LaunchStatus | '' => {
 }
 
 const isDesignSortField = (value: unknown): value is DesignSortField => {
-  return value === 'created_at' || value === 'updated_at'
+  return value === 'created_at' || value === 'updated_at' || value === 'store_weight'
 }
 
 const isDesignSortOrder = (value: unknown): value is DesignSortOrder => {
@@ -384,7 +383,9 @@ const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
   }
 }
 
-const initialDesignSearch = readDesignSearchPreference()
+const savedDesignSearch = readDesignSearchPreference()
+const initialSort = normalizeDesignSort(savedDesignSearch.sortField, savedDesignSearch.sortOrder, userStore.isAdminUser)
+const initialDesignSearch = { ...savedDesignSearch, sortField: initialSort.field, sortOrder: initialSort.order }
 const searchName = ref(initialDesignSearch.searchName)
 const searchAppId = ref(initialDesignSearch.searchAppId)
 const selectedCreatorUserId = ref<number | undefined>(initialDesignSearch.selectedCreatorUserId)
@@ -460,6 +461,9 @@ const handleSearch = () => {
 
 // 处理排序变化
 const handleSortChange = () => {
+  const normalized = normalizeDesignSort(sortField.value, sortOrder.value, isAdminUser.value)
+  sortField.value = normalized.field
+  sortOrder.value = normalized.order
   currentPage.value = 1
   fetchDesigns()
 }
@@ -487,6 +491,9 @@ const handleDesignScopeChange = () => {
 watch(isAdminUser, (isAdmin) => {
   if (!isAdmin) {
     selectedCreatorUserId.value = undefined
+    const normalized = normalizeDesignSort(sortField.value, sortOrder.value, false)
+    sortField.value = normalized.field
+    sortOrder.value = normalized.order
   }
   const nextScope = getPreferredDesignScope(isAdmin)
   if (designScope.value === nextScope) return
@@ -568,7 +575,7 @@ const fetchDesigns = async () => {
       name: searchName.value,
       appId: normalizePositiveAppId(searchAppId.value),
       creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
-      orderBy: `${sortField.value}:${sortOrder.value}`,
+      orderBy: toDesignOrderBy(sortField.value, sortOrder.value, isAdminUser.value),
       scope: isAdminUser.value ? designScope.value : 'mine',
       populate: 'user,product,release,cover,package_log'
     }

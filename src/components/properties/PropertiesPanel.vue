@@ -327,7 +327,7 @@ import {
   setColorPropertyValue,
 } from '@/engine/services/colorPropertyValueService'
 import { calculateConnectIqSettingsBudget } from '@/engine/services/connectIqSettingsBudget'
-import { syncLayoutGroupsForMetricProperty } from '@/engine/layout/layoutGroupPropertySync'
+import { syncMetricPropertyBindings } from '@/engine/layout/layoutGroupPropertySync'
 
 const visible = ref(false)
 const propertiesDrawerResizeStartX = ref(0)
@@ -728,7 +728,7 @@ const handlePropertyConfirm = async (propertyData) => {
     propertiesStore.registerDataOptions(dataOptions)
   }
   if (isEdit && (propertyPayload.type === 'data' || propertyPayload.type === 'goal')) {
-    await syncLayoutGroupsForMetricProperty(propertyPayload.key, propertyPayload.type)
+    await syncMetricPropertyBindings(propertyPayload.key, propertyPayload.type)
   }
   if (propertyPayload.type === 'color') {
     if (!isEdit) {

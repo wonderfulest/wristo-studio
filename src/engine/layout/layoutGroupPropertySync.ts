@@ -7,7 +7,7 @@ import { resolveMetricPropertyBindingPatch } from '@/elements/common/settings/pr
 import { reflowLayoutGroup } from './studioLayoutController'
 import { syncLayoutGroupProxyBounds } from './layoutGroupSelectionProxy'
 
-export async function syncLayoutGroupsForMetricProperty(
+export async function syncMetricPropertyBindings(
   propertyKey: string,
   propertyType: PropertyType,
 ): Promise<number> {
@@ -18,15 +18,17 @@ export async function syncLayoutGroupsForMetricProperty(
   const affectedGroupIds = new Set<string>()
   const patches = new Map<string, Record<string, unknown>>()
 
+  for (const snapshot of elementDataStore.elements) {
+    const config = snapshot.config as any
+    const actualProperty = propertyType === 'goal' ? config.goalProperty : config.dataProperty
+    if (String(actualProperty ?? '').trim() !== propertyKey) continue
+    const patch = resolveMetricPropertyBindingPatch(config, propertyKey, propertyType)
+    if (!patch) continue
+    patches.set(snapshot.id, patch)
+  }
+
   for (const group of layoutGroupStore.groups) {
-    for (const member of group.members) {
-      const config = elementDataStore.getElementConfig(member.elementId) as any
-      if (!config) continue
-      const actualProperty = propertyType === 'goal' ? config.goalProperty : config.dataProperty
-      if (String(actualProperty ?? '').trim() !== propertyKey) continue
-      const patch = resolveMetricPropertyBindingPatch(config, propertyKey, propertyType)
-      if (!patch) continue
-      patches.set(member.elementId, patch)
+    if (group.members.some((member) => patches.has(member.elementId))) {
       affectedGroupIds.add(group.id)
     }
   }

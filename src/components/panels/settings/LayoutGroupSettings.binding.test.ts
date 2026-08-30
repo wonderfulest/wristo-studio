@@ -35,6 +35,6 @@ describe('LayoutGroupSettings binding UI contract', () => {
   })
 
   it('refreshes bound layout-group metric content after a data or goal property is edited', () => {
-    expect(propertiesPanelSource).toContain('syncLayoutGroupsForMetricProperty(propertyPayload.key, propertyPayload.type)')
+    expect(propertiesPanelSource).toContain('syncMetricPropertyBindings(propertyPayload.key, propertyPayload.type)')
   })
 })
