@@ -655,7 +655,7 @@ watch(currentMetricSignature, async () => {
     originX: 'center',
     originY: 'center'
   })
-}, { immediate: true })
+})
 
 const handleClose = async () => {
   try {
