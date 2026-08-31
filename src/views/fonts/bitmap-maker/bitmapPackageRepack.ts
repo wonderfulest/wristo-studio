@@ -41,7 +41,7 @@ export async function repackageBitmapFontSlug(
     if (entry.dir || path === 'manifest.json') continue
     let nextPath = path
     if (path === manifest.source.fileName) nextPath = `${nextSlug}.${extension}`
-    else if (path !== 'recipe.json') {
+    else if (path !== 'recipe.json' && path !== 'connectiq-layout.json' && !/^\d+\/glyphs\/(?:[0-9]|colon)\.png$/.test(path)) {
       const escaped = oldSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const match = new RegExp(`^(\\d+)/${escaped}(-g_0\\.png|-g\\.fnt)$`).exec(path)
       if (!match) throw new Error('PACKAGE_PATH_INVALID')

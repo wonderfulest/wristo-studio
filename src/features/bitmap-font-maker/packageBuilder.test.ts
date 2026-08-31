@@ -20,6 +20,9 @@ const recipe: BitmapFontRecipe = {
   outlineMode: 'fill',
   lineJoin: 'round',
   antialias: true,
+  gradientStartColor: '#ffffff',
+  gradientEndColor: '#ffffff',
+  gradientAngle: 90,
 }
 
 const parsedSource = {
@@ -34,7 +37,7 @@ const png = Uint8Array.from(
 
 function rendered(size: number): RenderedGlyphSet {
   return {
-    glyphs: [{ codepoint: 48, width: 1, height: 1, xoffset: 0, yoffset: 0, xadvance: size, alpha: new Uint8Array([255]) }],
+    glyphs: Array.from({ length: 11 }, (_, index) => ({ codepoint: 48 + index, width: 1, height: 1, xoffset: 0, yoffset: 0, xadvance: size, alpha: new Uint8Array([255]) })),
     lineHeight: size,
     baseline: Math.max(1, size - 1),
     diagnostics: { rendererPath: 'opentype-path', rendererVersion: '1' },
@@ -45,7 +48,7 @@ function adapters(options?: {
   onRender?: (size: number) => void
   render?: (size: number) => RenderedGlyphSet
   onRelease?: () => void
-  encodePng?: () => Promise<Uint8Array>
+  encodePng?: (pixels: { width: number; height: number; rgba: Uint8ClampedArray }) => Promise<Uint8Array>
   hash?: typeof sha256Hex
   generateZip?: () => Promise<ArrayBuffer>
 }) {
@@ -72,7 +75,7 @@ function adapters(options?: {
 }
 
 describe('buildBitmapFontPackage', () => {
-  it('builds the canonical 38-size package with 80 root-relative entries and valid descriptors', async () => {
+  it('builds the canonical 38-size time package with BMFont files and 11 standalone glyph PNGs per size', async () => {
     const fixture = adapters()
     const progress: unknown[] = []
     const result = await buildBitmapFontPackage({
@@ -85,13 +88,16 @@ describe('buildBitmapFontPackage', () => {
 
     const archive = await JSZip.loadAsync(result.zip)
     const paths = Object.keys(archive.files).filter((path) => !archive.files[path].dir).sort()
-    expect(paths).toHaveLength(80)
+    expect(paths).toHaveLength(498)
     expect(paths).toContain('fixture-outline.ttf')
     expect(paths).toContain('recipe.json')
     expect(paths).toContain('manifest.json')
     expect(paths).toContain('connectiq-layout.json')
     expect(paths).toContain('6/fixture-outline-g.fnt')
     expect(paths).toContain('312/fixture-outline-g_0.png')
+    expect(paths).toContain('6/glyphs/0.png')
+    expect(paths).toContain('6/glyphs/9.png')
+    expect(paths).toContain('6/glyphs/colon.png')
     expect(paths.some((path) => path.startsWith('fixture-outline/'))).toBe(false)
 
     const fnt = await archive.file('6/fixture-outline-g.fnt')!.async('string')
@@ -102,6 +108,34 @@ describe('buildBitmapFontPackage', () => {
     expect(new TextDecoder().decode(archivedPng.slice(-8, -4))).toBe('IEND')
     expect(progress).toEqual(BITMAP_FONT_SIZES.map((size, index) => ({ completed: index + 1, size, total: 38 })))
     expect(fixture.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('colors each glyph from its own gradient bounds before atlas and standalone PNG encoding', async () => {
+    const encoded: Array<{ width: number; height: number; rgba: Uint8ClampedArray }> = []
+    const fixture = adapters({
+      render: (size) => ({
+        glyphs: [{ codepoint: 48, width: 1, height: 2, xoffset: 0, yoffset: 0, xadvance: 1, alpha: new Uint8Array([255, 255]) }],
+        lineHeight: size,
+        baseline: size,
+        diagnostics: { rendererPath: 'opentype-path', rendererVersion: '1' },
+      }),
+      encodePng: async (pixels) => {
+        encoded.push({ ...pixels, rgba: pixels.rgba.slice() })
+        return png.slice()
+      },
+    })
+    await buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer,
+      fileName: 'Fixture.ttf',
+      slug: 'fixture-gradient',
+      fontType: 'time_font',
+      recipe: { ...recipe, gradientStartColor: '#ff0000', gradientEndColor: '#0000ff', gradientAngle: 90 },
+    }, fixture.value)
+
+    const standalone = encoded.find(item => item.width === 3 && item.height === 4)
+    expect(standalone).toBeDefined()
+    expect(Array.from(standalone!.rgba.slice(16, 19))).toEqual([255, 0, 0])
+    expect(Array.from(standalone!.rgba.slice(28, 31))).toEqual([0, 0, 255])
   })
 
   it('writes Connect IQ-safe metrics for glyphs whose bitmap overhangs their advance', async () => {

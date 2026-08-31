@@ -322,7 +322,7 @@ describe('BitmapFontMaker', () => {
     await upload(wrapper)
     const vm = wrapper.vm as any
 
-    expect(vm.metadata.slug).toBe('precision-sans-time-font-eb965909698d')
+    expect(vm.metadata.slug).toBe('precision-sans-time-font-e54d70f50812')
     expect(vm.metadata.fullName).toBe('Precision Sans')
     expect(wrapper.findAll('.metadata-panel input[readonly]')).toHaveLength(2)
     expect(vm.normalizedStyleTags).toEqual(['regular', 'fill'])
@@ -336,14 +336,14 @@ describe('BitmapFontMaker', () => {
     vm.searchKeywordsInput = 'sport editorial, Retro，retro'
     vm.recipe.fontWeight = 900
     vm.recipe.italicAngle = -3
-    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-b5d29c9740bd'))
+    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-a42ba3388b12'))
     expect(vm.normalizedStyleTags).toEqual(['bold', 'italic', 'fill', 'sport'])
     expect(vm.styleTagsInput).toBe('bold, italic, fill, sport')
     expect(vm.normalizedSearchKeywords).toEqual(['precision sans', 'number', 'time', 'bitmap', 'bold', 'italic', 'fill', 'sport editorial', 'retro'])
 
     vm.recipe.fontWeight = 400
     vm.recipe.italicAngle = 0
-    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-eb965909698d'))
+    await vi.waitFor(() => expect(vm.metadata.slug).toBe('precision-sans-time-font-e54d70f50812'))
     expect(vm.normalizedStyleTags).toEqual(['regular', 'fill', 'sport'])
     expect(vm.styleTagsInput).toBe('regular, fill, sport')
     expect(vm.normalizedSearchKeywords).toEqual(['precision sans', 'number', 'time', 'bitmap', 'regular', 'fill', 'sport editorial', 'retro'])
@@ -515,6 +515,18 @@ describe('BitmapFontMaker', () => {
     expect(publish.attributes('disabled')).toBeDefined()
     expect(publish.attributes('aria-describedby')).toBe('bitmap-publish-help')
     expect(wrapper.get('#bitmap-publish-help').text()).toContain('local validation')
+  })
+
+  it('shows gradient controls only for time fonts and binds both colors plus angle to the recipe', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    expect(wrapper.get('[data-test="gradient-controls"]').isVisible()).toBe(true)
+    await wrapper.get('[data-test="gradient-start-color"]').setValue('#f6e7c7')
+    await wrapper.get('[data-test="gradient-end-color"]').setValue('#9ccbee')
+    await wrapper.get('[data-test="gradient-angle"]').setValue('135')
+    expect((wrapper.vm as any).recipe).toMatchObject({ gradientStartColor: '#f6e7c7', gradientEndColor: '#9ccbee', gradientAngle: 135 })
+    await wrapper.get('.segmented input[value="text_font"]').setValue(true)
+    expect(wrapper.find('[data-test="gradient-controls"]').exists()).toBe(false)
   })
 
   it('keeps source validity separate from retryable build and publish failures', async () => {

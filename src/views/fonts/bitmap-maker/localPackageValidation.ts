@@ -97,7 +97,9 @@ export async function validateLocalBitmapPackage(
   try { archive = await JSZip.loadAsync(artifact.zip) } catch { fail('ZIP_INVALID') }
   const entries = Object.entries(archive!.files)
   if (entries.some(([, entry]) => entry.dir)) fail('PACKAGE_DIRECTORY_ENTRY')
-  if (entries.length !== 80) fail('PACKAGE_ENTRY_COUNT')
+  const standaloneGlyphNames = ['0','1','2','3','4','5','6','7','8','9','colon']
+  const expectedEntryCount = expected.fontType === 'time_font' ? 498 : 80
+  if (entries.length !== expectedEntryCount) fail('PACKAGE_ENTRY_COUNT')
 
   const extension = /\.otf$/i.test(expected.sourceFileName) ? 'otf' : /\.ttf$/i.test(expected.sourceFileName) ? 'ttf' : fail('SOURCE_EXTENSION_INVALID')
   const sourcePath = `${expected.slug}.${extension}`
@@ -105,6 +107,7 @@ export async function validateLocalBitmapPackage(
   for (const size of BITMAP_FONT_SIZES) {
     allowed.add(`${size}/${expected.slug}-g.fnt`)
     allowed.add(`${size}/${expected.slug}-g_0.png`)
+    if (expected.fontType === 'time_font') for (const name of standaloneGlyphNames) allowed.add(`${size}/glyphs/${name}.png`)
   }
   if (entries.some(([path]) => !allowed.has(path)) || allowed.size !== entries.length) fail('PACKAGE_PATH_INVALID')
 
@@ -150,6 +153,15 @@ export async function validateLocalBitmapPackage(
     parseDescriptor(new TextDecoder().decode(descriptorBytes), `${expected.slug}-g_0.png`, expected.charset.codepoints, dimensions.width, dimensions.height)
     hashes.push([descriptorPath, await sha256Hex(descriptorBytes)])
     descriptorBytes = undefined
+    if (expected.fontType === 'time_font') {
+      for (const name of standaloneGlyphNames) {
+        const glyphPath = `${size}/glyphs/${name}.png`
+        let glyphBytes: Uint8Array | undefined = await (archive!.file(glyphPath) ?? fail('PNG_MISSING')).async('uint8array')
+        parsePng(glyphBytes)
+        hashes.push([glyphPath, await sha256Hex(glyphBytes)])
+        glyphBytes = undefined
+      }
+    }
   }
 
   const material = hashes.sort(([a], [b]) => utf8Compare(a, b)).map(([path, hash]) => `${path}\0${hash.toLowerCase()}\n`).join('')

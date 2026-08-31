@@ -5,7 +5,7 @@ import { canonicalJson, sha256Hex } from '@/features/bitmap-font-maker/packageBu
 import { repackageBitmapFontSlug } from './bitmapPackageRepack'
 import { validateLocalBitmapPackage } from './localPackageValidation'
 
-const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true }
+const recipe: BitmapFontRecipe = { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 }
 
 async function packageFixture(pageFile = 'old-g_0.png') {
   const archive = new JSZip()
@@ -20,9 +20,11 @@ async function packageFixture(pageFile = 'old-g_0.png') {
   const png = new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,16,0,0,0,16,8,6,0,0,0,0,0,0,0,0,0,0,0,73,69,78,68,174,66,96,130])
   await add('old.ttf', source)
   await add('recipe.json', recipeText)
+  await add('connectiq-layout.json', canonicalJson({ schemaVersion: 1, sizes: {} }))
   for (const size of BITMAP_FONT_SIZES) {
     await add(`${size}/old-g_0.png`, png)
     await add(`${size}/old-g.fnt`, `info face="Gold old Engraved" size=${size}\ncommon lineHeight=${size} base=${size} scaleW=16 scaleH=16 pages=1 packed=0\npage id=0 file="${pageFile}"\nchars count=1\nchar id=48 x=0 y=0 width=1 height=1 xoffset=0 yoffset=0 xadvance=1 page=0 chnl=15\n`)
+    for (const name of ['0','1','2','3','4','5','6','7','8','9','colon']) await add(`${size}/glyphs/${name}.png`, png)
   }
   const material = [...hashes].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([path, hash]) => `${path}\0${hash}\n`).join('')
   const manifest: BitmapFontManifest = {
@@ -42,7 +44,7 @@ describe('repackageBitmapFontSlug', () => {
     const result = await JSZip.loadAsync(repacked.zip)
     const paths = Object.keys(result.files)
 
-    expect(paths).toHaveLength(79)
+    expect(paths).toHaveLength(498)
     expect(paths).not.toContain('old.ttf')
     expect(paths).toContain('new-outline.ttf')
     expect(paths).toContain('6/new-outline-g_0.png')
@@ -60,5 +62,15 @@ describe('repackageBitmapFontSlug', () => {
   it('rejects a descriptor whose unique page field does not match the old atlas', async () => {
     const fixture = await packageFixture('not-old.png')
     await expect(repackageBitmapFontSlug(fixture.zip, fixture.manifest, 'new-outline')).rejects.toThrow('FNT_PAGE_INVALID')
+  })
+
+  it('preserves standalone time glyph PNG paths while changing the font slug', async () => {
+    const fixture = await packageFixture()
+    const input = await JSZip.loadAsync(fixture.zip)
+    input.file('6/glyphs/colon.png', Uint8Array.from([137, 80, 78, 71]))
+    const bytes = await input.generateAsync({ type: 'arraybuffer' })
+    const repacked = await repackageBitmapFontSlug(bytes, fixture.manifest, 'new-outline')
+    const result = await JSZip.loadAsync(repacked.zip)
+    expect(result.file('6/glyphs/colon.png')).not.toBeNull()
   })
 })

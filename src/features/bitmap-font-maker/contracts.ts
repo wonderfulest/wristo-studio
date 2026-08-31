@@ -18,6 +18,9 @@ export interface BitmapFontRecipe {
   outlineMode: OutlineMode
   lineJoin: 'round'
   antialias: true
+  gradientStartColor?: string
+  gradientEndColor?: string
+  gradientAngle?: number
 }
 
 export interface BitmapFontManifest {
@@ -44,14 +47,22 @@ export interface BitmapFontSlugIdentity {
   recipe: BitmapFontRecipe
 }
 
-type BitmapFontRecipeInput = Omit<BitmapFontRecipe, 'lineJoin' | 'antialias'> &
-  Partial<Pick<BitmapFontRecipe, 'lineJoin' | 'antialias'>>
+type BitmapFontRecipeInput = Omit<BitmapFontRecipe, 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'> &
+  Partial<Pick<BitmapFontRecipe, 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'>>
 
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value))
 
 const finiteOrDefault = (value: number, fallback: number): number =>
   Number.isFinite(value) ? value : fallback
+
+const normalizeHexColor = (value: string | undefined): string =>
+  typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '#ffffff'
+
+const normalizeAngle = (value: number | undefined): number => {
+  const finite = finiteOrDefault(value ?? 90, 90)
+  return ((finite % 360) + 360) % 360
+}
 
 export function charsetForType(type: BitmapFontType | string): BitmapFontCharset {
   if (type === 'time_font') {
@@ -102,6 +113,9 @@ export function normalizeBitmapFontRecipe(input: BitmapFontRecipeInput): BitmapF
     outlineMode: input.outlineMode,
     lineJoin: 'round',
     antialias: true,
+    gradientStartColor: normalizeHexColor(input.gradientStartColor),
+    gradientEndColor: normalizeHexColor(input.gradientEndColor),
+    gradientAngle: normalizeAngle(input.gradientAngle),
   }
 }
 

@@ -53,6 +53,31 @@ export function removeLocalDesignDraft(storage: Storage, designId: string, devic
   storage.removeItem(buildLocalDesignDraftKey(designId, deviceKey))
 }
 
+function rehydrateDraftAmoledAssetUrls(
+  draftConfig: RuntimeDesignConfig,
+  serverConfig: RuntimeDesignConfig,
+): RuntimeDesignConfig {
+  const restoredUrlByElementId = new Map<string, string>()
+  for (const element of serverConfig.elements || []) {
+    const record = element as unknown as Record<string, unknown>
+    const id = String(record.id || '')
+    const imageUrl = String(record.amoledImageUrl || '')
+    if (id && imageUrl) restoredUrlByElementId.set(id, imageUrl)
+  }
+
+  if (!restoredUrlByElementId.size) return draftConfig
+
+  return {
+    ...draftConfig,
+    elements: (draftConfig.elements || []).map((element) => {
+      const record = element as unknown as Record<string, unknown>
+      if (record.eleType !== 'icon' || record.iconDisplayType !== 'amoled') return element
+      const restoredUrl = restoredUrlByElementId.get(String(record.id || ''))
+      return restoredUrl ? { ...element, amoledImageUrl: restoredUrl } : element
+    }),
+  } as RuntimeDesignConfig
+}
+
 export async function resolveLocalDesignDraft(options: {
   storage: Storage
   designId: string
@@ -62,7 +87,9 @@ export async function resolveLocalDesignDraft(options: {
 }): Promise<RuntimeDesignConfig> {
   const draft = readLocalDesignDraft(options.storage, options.designId, options.deviceKey)
   if (!draft) return options.serverConfig
-  if (await options.confirmRestore(draft)) return draft.config
+  if (await options.confirmRestore(draft)) {
+    return rehydrateDraftAmoledAssetUrls(draft.config, options.serverConfig)
+  }
   removeLocalDesignDraft(options.storage, options.designId, options.deviceKey)
   return options.serverConfig
 }

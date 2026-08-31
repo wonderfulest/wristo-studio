@@ -51,6 +51,13 @@
               <option value="outline-only">{{ t('bitmapMaker.outlineOnly') }}</option>
             </select>
           </label>
+          <div v-if="fontType === 'time_font'" data-test="gradient-controls" class="gradient-controls">
+            <div class="gradient-colors">
+              <label>{{ t('bitmapMaker.gradientStart') }}<input v-model="recipe.gradientStartColor" data-test="gradient-start-color" type="color" :disabled="!sourceParsed || actionsLocked" /></label>
+              <label>{{ t('bitmapMaker.gradientEnd') }}<input v-model="recipe.gradientEndColor" data-test="gradient-end-color" type="color" :disabled="!sourceParsed || actionsLocked" /></label>
+            </div>
+            <label class="range-row"><span>{{ t('bitmapMaker.gradientAngle') }} <output>{{ recipe.gradientAngle }}°</output></span><input v-model.number="recipe.gradientAngle" data-test="gradient-angle" type="range" min="0" max="359" step="1" :disabled="!sourceParsed || actionsLocked" /></label>
+          </div>
           <p v-if="!recipeValid" class="validation-error">{{ t('bitmapMaker.outlineRequired') }}</p>
         </article>
 
@@ -101,7 +108,10 @@
                 :codepoints="previewCodepoints"
               />
             </span>
-            <span v-else ref="watchPreviewTextRef" data-test="source-font-live-preview" :style="previewTextStyle">{{ previewText }}</span>
+            <span v-else ref="watchPreviewTextRef" data-test="source-font-live-preview" :style="previewTextStyle">
+              <template v-if="fontType === 'time_font'"><span v-for="(character, index) in previewText" :key="`${index}-${character}`" :style="previewGlyphStyle">{{ character }}</span></template>
+              <template v-else>{{ previewText }}</template>
+            </span>
           </div>
           <div class="preview-controls">
             <strong>{{ t('bitmapMaker.recipeVisual') }}</strong>
@@ -172,7 +182,7 @@ const editingOriginalRecipe = shallowRef<BitmapFontRecipe | null>(null)
 const sourceRevision = ref(0)
 const sourceSha256 = ref('')
 const sourceSlugBase = ref('')
-const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true })
+const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 })
 const metadata = reactive<BitmapFontPublishMetadata>({ fullName: '', slug: '', type: 'time_font', language: 'en', styleTags: [], searchKeywords: '', redistributionRightsAttested: false, rightsAttestationVersion: 'v1' })
 const manualStyleTags = ref<string[]>([])
 const manualSearchKeywords = ref<string[]>([])
@@ -298,9 +308,16 @@ const previewTextStyle = computed(() => {
     transform: `scale(${watchPreviewScale.value}) skewX(${recipe.italicAngle}deg)`,
     transformOrigin: 'center',
     webkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px #fff` : undefined,
-    color: recipe.outlineMode === 'outline-only' ? 'transparent' : '#fff',
+    color: fontType.value === 'time_font' || recipe.outlineMode === 'outline-only' ? 'transparent' : '#fff',
   }
 })
+const previewGlyphStyle = computed(() => ({
+  display: 'inline-block',
+  backgroundImage: `linear-gradient(${((recipe.gradientAngle ?? 90) + 90) % 360}deg, ${recipe.gradientStartColor ?? '#ffffff'}, ${recipe.gradientEndColor ?? '#ffffff'})`,
+  backgroundClip: 'text',
+  webkitBackgroundClip: 'text',
+  color: 'transparent',
+}))
 
 async function fitWatchPreview() {
   watchPreviewScale.value = 1
@@ -756,7 +773,7 @@ async function publishPackage() {
   } finally { if (mounted && token === operationToken) publishing.value = false }
 }
 
-watch(fontType, () => { metadata.type = fontType.value; metadata.language = fontType.value === 'text_font_zh' ? 'zh' : 'en'; if (!previewTextCustomized.value) previewText.value = previewSample.value; validateGlyphs(); invalidateBuild(); void refreshGeneratedSlug() })
+watch(fontType, () => { metadata.type = fontType.value; metadata.language = fontType.value === 'text_font_zh' ? 'zh' : 'en'; if (fontType.value !== 'time_font') { recipe.gradientStartColor = '#ffffff'; recipe.gradientEndColor = '#ffffff'; recipe.gradientAngle = 90 }; if (!previewTextCustomized.value) previewText.value = previewSample.value; validateGlyphs(); invalidateBuild(); void refreshGeneratedSlug() })
 watch(recipe, () => { invalidateBuild(); void refreshGeneratedSlug() }, { deep: true })
 watch([previewText, previewFontSize, sourcePreviewFontFamily, () => recipe.fontWeight, () => recipe.italicAngle, () => recipe.outlineWidthEm, () => recipe.outlineMode], () => { void fitWatchPreview() }, { flush: 'post' })
 watch(currentSize, loadAtlasPreview)
@@ -790,6 +807,7 @@ defineExpose({ sourceFile, sourceParsed, sourceRevision, sourceValid, recipeVali
 .stage-rail{display:grid;grid-template-columns:repeat(4,1fr);max-width:1500px;margin:0 auto 14px;border:1px solid var(--studio-border);background:var(--studio-surface);border-radius:var(--studio-radius-md);overflow:hidden}.stage-rail span{display:flex;gap:10px;padding:12px 16px;color:var(--studio-text-muted);border-right:1px solid var(--studio-border);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.stage-rail span:last-child{border:0}.stage-rail b{color:var(--studio-text-subtle)}.stage-rail .active{color:var(--studio-text);background:rgba(15,107,104,.055)}.stage-rail .active b{color:var(--studio-primary)}
 .workbench-grid{display:grid;grid-template-columns:minmax(340px,430px) minmax(520px,1fr);gap:14px;max-width:1500px;margin:auto}.control-stack{display:grid;gap:14px}.panel{border:1px solid var(--studio-border);border-radius:var(--studio-radius-md);background:color-mix(in srgb,var(--studio-surface) 96%,transparent);box-shadow:var(--studio-shadow-sm)}.control-stack .panel{padding:18px}.panel-heading{display:flex;gap:12px;margin-bottom:16px}.panel-heading>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--studio-border);border-radius:50%;color:var(--studio-primary);font:700 10px ui-monospace,monospace}.panel-heading h2,.preview-toolbar h2{margin:0;font-size:15px}.panel-heading p{margin:4px 0 0;color:var(--studio-text-muted);font-size:12px}
 .file-drop{position:relative;display:flex;align-items:center;gap:13px;padding:14px;border:1px dashed var(--studio-border-strong);border-radius:var(--studio-radius-sm);cursor:pointer;background:var(--studio-surface-subtle);transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}.file-drop:focus-within{outline:2px solid var(--studio-primary);outline-offset:2px}.file-drop.dragging{border-color:var(--studio-primary);background:color-mix(in srgb,var(--studio-primary) 10%,var(--studio-surface));box-shadow:inset 0 0 0 1px var(--studio-primary)}.file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}.file-mark{display:grid;place-items:center;width:42px;height:42px;background:#111820;color:#f4f7f8;border-radius:7px;font-family:Georgia,serif;font-size:18px}.file-drop strong,.file-drop small{display:block;overflow:hidden;text-overflow:ellipsis}.file-drop small{margin-top:3px;color:var(--studio-text-muted);font-size:11px}.segmented{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:14px;padding:3px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.segmented input{position:absolute;opacity:0}.segmented span{display:block;padding:8px;text-align:center;border-radius:5px;color:var(--studio-text-muted);font-size:12px;cursor:pointer}.segmented input:checked+span{background:var(--studio-surface);color:var(--studio-text);box-shadow:var(--studio-shadow-sm)}.charset-preview{margin-top:12px;padding:11px 12px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.charset-preview>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.charset-preview strong{font-size:12px}.charset-preview div span{color:var(--studio-text-muted);font:11px ui-monospace,monospace}.charset-preview p{max-height:120px;margin:9px 0 0;overflow:auto;color:var(--studio-text);font-size:15px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}
+.gradient-controls{display:grid;gap:12px;margin-top:14px;padding:12px;border:1px solid var(--studio-border);border-radius:8px;background:var(--studio-surface-subtle)}.gradient-colors{display:grid;grid-template-columns:1fr 1fr;gap:12px}.gradient-colors label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--studio-text-muted);font-size:12px}.gradient-colors input{width:48px;height:30px;padding:2px;border:1px solid var(--studio-border);border-radius:6px;background:var(--studio-surface)}
 .source-required{margin:10px 0 0;color:var(--studio-danger,#d75b5b);font-size:12px;font-weight:650;line-height:1.5}
 .range-row,.field-label{display:grid;gap:7px;margin-top:13px;color:var(--studio-text-muted);font-size:12px}.range-row span{display:flex;justify-content:space-between}.range-row output{font:600 11px ui-monospace,monospace;color:var(--studio-text)}input[type=range]{accent-color:var(--studio-primary)}input[type=text],select{width:100%;box-sizing:border-box;border:1px solid var(--studio-border);border-radius:7px;padding:9px 10px;background:var(--studio-input-bg,var(--studio-surface));color:var(--studio-text)}input.invalid{border-color:var(--studio-danger,#d75b5b)}.validation-error{margin:9px 0 0;color:var(--studio-danger,#d75b5b);font-size:11px;line-height:1.45}
 .rights-attestation{display:flex;align-items:flex-start;gap:9px;margin-top:16px;color:var(--studio-text);font-size:12px;line-height:1.45}.rights-attestation input{margin-top:2px;accent-color:var(--studio-primary)}.field-help{margin:5px 0 0 25px;color:var(--studio-text-muted);font-size:11px;line-height:1.45}

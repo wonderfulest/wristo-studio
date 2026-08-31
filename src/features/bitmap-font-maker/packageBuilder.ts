@@ -80,20 +80,55 @@ function sourceExtension(fileName: string): 'ttf' | 'otf' {
   return extension
 }
 
-function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas): AtlasPixels {
+interface Rgb { red: number; green: number; blue: number }
+
+function parseRgb(color: string | undefined): Rgb {
+  color ??= '#ffffff'
+  return { red: parseInt(color.slice(1, 3), 16), green: parseInt(color.slice(3, 5), 16), blue: parseInt(color.slice(5, 7), 16) }
+}
+
+function gradientColor(recipe: BitmapFontRecipe, x: number, y: number, width: number, height: number): Rgb {
+  const start = parseRgb(recipe.gradientStartColor)
+  const end = parseRgb(recipe.gradientEndColor)
+  const radians = (recipe.gradientAngle ?? 90) * Math.PI / 180
+  const dx = Math.cos(radians)
+  const dy = Math.sin(radians)
+  const span = Math.max(Math.abs(dx) * Math.max(0, width - 1) + Math.abs(dy) * Math.max(0, height - 1), 1)
+  const origin = (dx < 0 ? dx * Math.max(0, width - 1) : 0) + (dy < 0 ? dy * Math.max(0, height - 1) : 0)
+  const position = ((dx * x + dy * y) - origin) / span
+  const mix = (left: number, right: number) => Math.round(left + (right - left) * position)
+  return { red: mix(start.red, end.red), green: mix(start.green, end.green), blue: mix(start.blue, end.blue) }
+}
+
+function composeGlyph(glyph: RenderedGlyph, recipe: BitmapFontRecipe, padding = 0): AtlasPixels {
+  const width = glyph.width + padding * 2
+  const height = glyph.height + padding * 2
+  const rgba = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < glyph.height; y += 1) {
+    for (let x = 0; x < glyph.width; x += 1) {
+      const color = gradientColor(recipe, x, y, glyph.width, glyph.height)
+      const target = ((y + padding) * width + x + padding) * 4
+      rgba[target] = color.red
+      rgba[target + 1] = color.green
+      rgba[target + 2] = color.blue
+      rgba[target + 3] = glyph.alpha[y * glyph.width + x]
+    }
+  }
+  return { width, height, rgba }
+}
+
+function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas, recipe: BitmapFontRecipe): AtlasPixels {
   const rgba = new Uint8ClampedArray(packed.width * packed.height * 4)
   const glyphs = new Map<number, RenderedGlyph>(rendered.glyphs.map((glyph) => [glyph.codepoint, glyph]))
   for (const placement of packed.placements) {
     const glyph = glyphs.get(placement.codepoint)
     if (!glyph) continue
+    const colored = composeGlyph(glyph, recipe)
     for (let y = 0; y < glyph.height; y += 1) {
       for (let x = 0; x < glyph.width; x += 1) {
-        const alpha = glyph.alpha[y * glyph.width + x]
+        const source = (y * glyph.width + x) * 4
         const offset = ((placement.y + y) * packed.width + placement.x + x) * 4
-        rgba[offset] = 255
-        rgba[offset + 1] = 255
-        rgba[offset + 2] = 255
-        rgba[offset + 3] = alpha
+        rgba.set(colored.rgba.subarray(source, source + 4), offset)
       }
     }
   }
@@ -234,13 +269,21 @@ export async function buildBitmapFontPackage(
         assertNotCancelled(isCancelled)
         packed = packGlyphAtlas(rendered.glyphs, { padding: 0 })
         assertNotCancelled(isCancelled)
-        atlas = composeAtlas(rendered, packed)
+        atlas = composeAtlas(rendered, packed, normalizedRecipe)
         assertNotCancelled(isCancelled)
         png = await adapters.encodePng(atlas)
         assertNotCancelled(isCancelled)
         assertPng(png)
         const prefix = `${size}/`
         await add(`${prefix}${request.slug}-g_0.png`, png)
+        if (request.fontType === 'time_font') {
+          for (const glyph of rendered.glyphs) {
+            const glyphPng = await adapters.encodePng(composeGlyph(glyph, normalizedRecipe, 1))
+            assertPng(glyphPng)
+            const name = glyph.codepoint === 58 ? 'colon' : String.fromCodePoint(glyph.codepoint)
+            await add(`${prefix}glyphs/${name}.png`, glyphPng)
+          }
+        }
         assertNotCancelled(isCancelled)
         const placements = new Map(packed.placements.map((placement) => [placement.codepoint, placement]))
         connectIqLayout.sizes[size.toString()] = {

@@ -29,14 +29,14 @@ describe('bitmap font contracts', () => {
       sourceSha256,
       fontType: 'time_font',
       recipe: styledRecipe,
-    })).resolves.toBe('quantico-time-font-ec6c546f216e')
+    })).resolves.toBe('quantico-time-font-2e8533340d11')
 
     await expect(deriveBitmapFontSlug({
       baseName: 'Quantico',
       sourceSha256,
       fontType: 'time_font',
       recipe: { ...styledRecipe, fontWeight: 800 },
-    })).resolves.toBe('quantico-time-font-a6223da65e75')
+    })).resolves.toBe('quantico-time-font-8708dbafbba9')
   })
 
   it('merges recipe-derived tags with normalized manual tags without treating an unused outline width as outline', () => {
@@ -130,6 +130,22 @@ describe('bitmap font contracts', () => {
       outlineMode: 'fill',
       lineJoin: 'round',
       antialias: true,
+      gradientStartColor: '#ffffff',
+      gradientEndColor: '#ffffff',
+      gradientAngle: 90,
+    })
+  })
+
+  it('normalizes gradient colors and wraps the direction angle', () => {
+    expect(normalizeBitmapFontRecipe({
+      ...styledRecipe,
+      gradientStartColor: '#F6E7C7',
+      gradientEndColor: '#9CCBEE',
+      gradientAngle: 450,
+    })).toMatchObject({
+      gradientStartColor: '#f6e7c7',
+      gradientEndColor: '#9ccbee',
+      gradientAngle: 90,
     })
   })
 
@@ -150,6 +166,9 @@ describe('bitmap font contracts', () => {
       outlineMode: 'fill-outline',
       lineJoin: 'round',
       antialias: true,
+      gradientStartColor: '#ffffff',
+      gradientEndColor: '#ffffff',
+      gradientAngle: 90,
     })
   })
 
@@ -200,6 +219,9 @@ describe('bitmap font contracts', () => {
       outlineMode: 'outline-only',
       lineJoin: 'round',
       antialias: true,
+      gradientStartColor: '#ffffff',
+      gradientEndColor: '#ffffff',
+      gradientAngle: 90,
     })
   })
 })

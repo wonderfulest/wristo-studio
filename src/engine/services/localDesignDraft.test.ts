@@ -116,6 +116,53 @@ describe('localDesignDraft', () => {
     expect(readLocalDesignDraft(storage, 'design-a', 'fr965')).not.toBeNull()
   })
 
+  it('rehydrates AMOLED image URLs from the restored server config when recovering a local draft', async () => {
+    const storage = new MemoryStorage()
+    writeLocalDesignDraft(storage, {
+      designId: 'design-a',
+      deviceKey: 'fr965',
+      savedAt: 123,
+      config: {
+        designId: 'design-a',
+        elements: [{
+          id: 'battery-icon',
+          eleType: 'icon',
+          iconDisplayType: 'amoled',
+          fontFamily: 'pulse-solid',
+          amoledIconUnicode: '0062',
+          amoledImageUrl: 'blob:https://studio.wristo.io/stale-draft-url',
+          left: 120,
+        }],
+      } as any,
+    })
+
+    const resolved = await resolveLocalDesignDraft({
+      storage,
+      designId: 'design-a',
+      deviceKey: 'fr965',
+      serverConfig: {
+        designId: 'design-a',
+        elements: [{
+          id: 'battery-icon',
+          eleType: 'icon',
+          iconDisplayType: 'amoled',
+          fontFamily: 'pulse-solid',
+          amoledIconUnicode: '0062',
+          amoledImageUrl: 'blob:https://studio.wristo.io/restored-bundle-url',
+          left: 100,
+        }],
+      } as any,
+      confirmRestore: vi.fn().mockResolvedValue(true),
+    })
+
+    expect(resolved.elements).toEqual([expect.objectContaining({
+      id: 'battery-icon',
+      iconDisplayType: 'amoled',
+      amoledImageUrl: 'blob:https://studio.wristo.io/restored-bundle-url',
+      left: 120,
+    })])
+  })
+
   it('uses the server config and clears the draft when recovery is declined', async () => {
     const storage = new MemoryStorage()
     const serverConfig = { designId: 'design-a', elements: [{ id: 'server' }] } as any
