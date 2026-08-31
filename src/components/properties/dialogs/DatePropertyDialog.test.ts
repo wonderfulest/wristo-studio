@@ -39,4 +39,16 @@ describe('DatePropertyDialog contract', () => {
     expect(source).toMatch(/\.date-option-content\s*\{[^}]*grid-template-columns:\s*minmax\(0, 160px\) minmax\(88px, 1fr\)/s)
     expect(source).toMatch(/\.option-example\s*\{[^}]*justify-self:\s*start/s)
   })
+
+  it('shows the date example in each default-value dropdown option', () => {
+    expect(source).toContain('class="default-option-content"')
+    expect(source).toContain('{{ option.example }}')
+  })
+
+  it('lets an option become the default directly from its row', () => {
+    expect(source).toContain('@click="setDefaultValue(option.value)"')
+    expect(source).toContain('formData.defaultValue === option.value')
+    expect(source).toContain('setAsDefault:')
+    expect(source).toContain('currentDefault:')
+  })
 })

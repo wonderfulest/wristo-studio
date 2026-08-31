@@ -29,7 +29,12 @@
         </div>
         <el-form-item :label="uiText.defaultValue" prop="defaultValue">
           <el-select v-model.number="formData.defaultValue" style="width: 100%">
-            <el-option v-for="option in selectedOptions" :key="option.value" :label="optionLabel(option)" :value="option.value" />
+            <el-option v-for="option in selectedOptions" :key="option.value" :label="`${optionLabel(option)} · ${option.example}`" :value="option.value">
+              <div class="default-option-content">
+                <span>{{ optionLabel(option) }}</span>
+                <span class="default-option-example">{{ option.example }}</span>
+              </div>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-collapse v-model="activeOptions" class="options-collapse">
@@ -50,6 +55,15 @@
                     <span class="option-example">{{ option.example }}</span>
                   </div>
                   <div class="option-actions">
+                    <el-button
+                      type="primary"
+                      link
+                      size="small"
+                      :disabled="formData.defaultValue === option.value"
+                      @click="setDefaultValue(option.value)"
+                    >
+                      {{ formData.defaultValue === option.value ? uiText.currentDefault : uiText.setAsDefault }}
+                    </el-button>
                     <el-tooltip :content="uiText.moveUp" placement="top" :disabled="index === 0">
                       <el-button type="primary" link :disabled="index === 0" @click="moveOption(index, 'up')"><el-icon><ArrowUp /></el-icon></el-button>
                     </el-tooltip>
@@ -135,9 +149,9 @@ const selectedValues = ref<number[]>([])
 const selectedForDeletion = ref<number[]>([])
 const isChineseUi = computed(() => String(locale.value).startsWith('zh'))
 const uiText = computed(() => isChineseUi.value ? {
-  editTitle: '日期选择', basicInformation: '基础信息', title: '标题', titleRequired: '请输入标题', defaultValue: '默认值', dateOptions: '日期选项', addOption: '添加选项', restoreDefaults: '恢复系统默认', addDateOptions: '添加日期选项', selectDateOptions: '请选择要添加的日期格式', selectByLength: '按字符长度全选', lengthOneTwo: '1–2 字', lengthThreeFour: '3–4 字', lengthFiveSix: '5–6 字', lengthSevenPlus: '≥7 字', selectAll: '全选', deleteSelected: '删除所选', keepOne: '至少保留一个日期选项', messages: '消息', promptOptional: '提示（可选）', promptPlaceholder: '请输入属性提示', errorMessageOptional: '错误消息（可选）', errorPlaceholder: '请输入错误消息', moveUp: '上移', moveDown: '下移', delete: '删除', cancel: '取消', confirm: '确认', closeConfirm: '确定关闭吗？未保存的修改将丢失。', warning: '警告', yes: '是', no: '否', restoreConfirm: '确定恢复系统默认日期选项吗？', formError: '请检查表单内容',
+  editTitle: '日期选择', basicInformation: '基础信息', title: '标题', titleRequired: '请输入标题', defaultValue: '默认值', dateOptions: '日期选项', addOption: '添加选项', restoreDefaults: '恢复系统默认', addDateOptions: '添加日期选项', selectDateOptions: '请选择要添加的日期格式', selectByLength: '按字符长度全选', lengthOneTwo: '1–2 字', lengthThreeFour: '3–4 字', lengthFiveSix: '5–6 字', lengthSevenPlus: '≥7 字', selectAll: '全选', deleteSelected: '删除所选', keepOne: '至少保留一个日期选项', setAsDefault: '设为默认', currentDefault: '当前默认', messages: '消息', promptOptional: '提示（可选）', promptPlaceholder: '请输入属性提示', errorMessageOptional: '错误消息（可选）', errorPlaceholder: '请输入错误消息', moveUp: '上移', moveDown: '下移', delete: '删除', cancel: '取消', confirm: '确认', closeConfirm: '确定关闭吗？未保存的修改将丢失。', warning: '警告', yes: '是', no: '否', restoreConfirm: '确定恢复系统默认日期选项吗？', formError: '请检查表单内容',
 } : {
-  editTitle: 'Date selection', basicInformation: 'Basic information', title: 'Title', titleRequired: 'Enter a title', defaultValue: 'Default value', dateOptions: 'Date options', addOption: 'Add option', restoreDefaults: 'Restore system defaults', addDateOptions: 'Add date options', selectDateOptions: 'Select date formats to add', selectByLength: 'Select all by length', lengthOneTwo: '1–2 chars', lengthThreeFour: '3–4 chars', lengthFiveSix: '5–6 chars', lengthSevenPlus: '≥7 chars', selectAll: 'Select all', deleteSelected: 'Delete selected', keepOne: 'Keep at least one date option', messages: 'Messages', promptOptional: 'Prompt (optional)', promptPlaceholder: 'Enter a property prompt', errorMessageOptional: 'Error message (optional)', errorPlaceholder: 'Enter an error message', moveUp: 'Move up', moveDown: 'Move down', delete: 'Delete', cancel: 'Cancel', confirm: 'Confirm', closeConfirm: 'Close without saving your changes?', warning: 'Warning', yes: 'Yes', no: 'No', restoreConfirm: 'Restore the system date options?', formError: 'Please check the form',
+  editTitle: 'Date selection', basicInformation: 'Basic information', title: 'Title', titleRequired: 'Enter a title', defaultValue: 'Default value', dateOptions: 'Date options', addOption: 'Add option', restoreDefaults: 'Restore system defaults', addDateOptions: 'Add date options', selectDateOptions: 'Select date formats to add', selectByLength: 'Select all by length', lengthOneTwo: '1–2 chars', lengthThreeFour: '3–4 chars', lengthFiveSix: '5–6 chars', lengthSevenPlus: '≥7 chars', selectAll: 'Select all', deleteSelected: 'Delete selected', keepOne: 'Keep at least one date option', setAsDefault: 'Set as default', currentDefault: 'Current default', messages: 'Messages', promptOptional: 'Prompt (optional)', promptPlaceholder: 'Enter a property prompt', errorMessageOptional: 'Error message (optional)', errorPlaceholder: 'Enter an error message', moveUp: 'Move up', moveDown: 'Move down', delete: 'Delete', cancel: 'Cancel', confirm: 'Confirm', closeConfirm: 'Close without saving your changes?', warning: 'Warning', yes: 'Yes', no: 'No', restoreConfirm: 'Restore the system date options?', formError: 'Please check the form',
 })
 
 const catalogDateOptions = computed(() => getCatalogDateFormatOptions(dataCatalogStore.options, designStore.appLanguage))
@@ -155,6 +169,7 @@ const lengthGroups = computed(() => [
   { value: 'sevenPlus' as const, label: uiText.value.lengthSevenPlus },
 ])
 const optionLabel = (option: OptionFormat<number>) => designStore.appLanguage === 'zhs' ? (option.zhsLabel || option.label) : option.label
+const setDefaultValue = (value: number) => { formData.defaultValue = value }
 const nextKey = () => { let index = 1; while (propertiesStore.allProperties[`date_${index}`]) index += 1; return `date_${index}` }
 
 const initFormData = (data: any = null) => {
@@ -254,6 +269,8 @@ defineExpose({ show: (data: any = null) => { initFormData(data); dialogVisible.v
 .date-length-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .date-length-label { margin-right: auto; color: var(--el-text-color-secondary); font-size: 13px; }
 .date-option-content { display: grid; grid-template-columns: minmax(0, 160px) minmax(88px, 1fr); align-items: center; gap: 12px; }
+.default-option-content { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.default-option-example { color: var(--el-text-color-secondary); font-size: 12px; }
 .option-label { overflow: hidden; color: var(--el-text-color-primary); text-overflow: ellipsis; white-space: nowrap; }
 .option-example { justify-self: start; color: var(--el-text-color-secondary); font-size: 12px; white-space: nowrap; }
 </style>
