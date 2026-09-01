@@ -241,6 +241,29 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(customDate.text).toBe('13.07')
   })
 
+  it('previews the numeric year without a suffix', () => {
+    const numericYear: any = {
+      id: 'numeric-year',
+      eleType: 'date',
+      type: 'text',
+      fontRenderType: 'truetype',
+      formatter: DateFormatConstants.YEAR,
+      text: '',
+      fontFamily: 'roboto-condensed-regular',
+      fontSize: 20,
+      fill: '#ffffff',
+      set(key: string | Record<string, unknown>, value?: unknown) {
+        if (typeof key === 'string') this[key] = value
+        else Object.assign(this, key)
+      },
+    }
+    canvas.getObjects.mockReturnValue([numericYear])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(numericYear.text).toBe('2026')
+  })
+
   it('maps the sleep score symbol to the distinct sleep score simulation', () => {
     const set = vi.fn()
     getMetricByOptions.mockReturnValue({

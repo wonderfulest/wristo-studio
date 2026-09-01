@@ -22,7 +22,10 @@
         </div>
       </div>
     </div>
-    <el-button class="add-button" type="primary" plain @click="openAdd">＋ {{ t('dynamicImage.addItem') }}</el-button>
+    <div class="panel-actions">
+      <el-button class="add-button" type="primary" plain @click="openAdd">＋ {{ t('dynamicImage.addItem') }}</el-button>
+      <el-button class="quick-import-button" plain @click="quickImportVisible = true">{{ t('dynamicImage.quickImport') }}</el-button>
+    </div>
     <TokenPreviewControls :tokens="referencedTokens" />
     <el-dialog v-model="dialogVisible" :title="editingIndex === null ? t('dynamicImage.addItem') : t('dynamicImage.editItem')"
       width="min(560px, 92vw)" append-to-body destroy-on-close>
@@ -42,11 +45,12 @@
       </template>
     </el-dialog>
     <DynamicImageGroupCopyDialog v-model="copyDialogVisible" @copy="handleCopyGroup" />
+    <DynamicImageQuickImportDialog v-model="quickImportVisible" :apply-groups="handleQuickImported" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import { nanoid } from 'nanoid'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import ExpressionEditor from '@/components/expression/ExpressionEditor.vue'
@@ -60,17 +64,23 @@ import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
 import { useI18n } from '@/i18n'
 import DynamicImageGroupCopyDialog from './DynamicImageGroupCopyDialog.vue'
+import DynamicImageQuickImportDialog from './DynamicImageQuickImportDialog.vue'
 import { appendCopiedDynamicImageItems } from './dynamicImage.copyModel'
 import { calculateDynamicImageThumbnailSize, resolveDynamicImagePreviewSource, resolvePreviewAwareNewExpression } from './dynamicImage.panelModel'
+import { addElement, removeElement } from '@/engine/managers/elementManager'
+import type { MaterializedDynamicImageGroup } from './dynamicImage.quickImport'
+import { useHistoryStore } from '@/stores/historyStore'
 
-const props = defineProps<{ config?: any; element?: any; applyPatch?: (patch: Record<string, any>) => void }>()
+const props = defineProps<{ config?: any; element?: any; applyPatch?: (patch: Record<string, any>) => Promise<void> | void }>()
 const { t } = useI18n()
 const expressionPreviewStore = useExpressionPreviewStore()
 const messageStore = useMessageStore()
+const historyStore = useHistoryStore()
 const model = computed(() => props.config ?? props.element ?? {})
 const items = computed<DynamicImageItem[]>(() => model.value.items ?? [])
 const dialogVisible = ref(false)
 const copyDialogVisible = ref(false)
+const quickImportVisible = ref(false)
 const editingIndex = ref<number | null>(null)
 const draftImageUrl = ref('')
 const draftAssetId = ref<number | undefined>()
@@ -122,6 +132,42 @@ const handleCopyGroup = (sourceItems: DynamicImageItem[]) => {
   dialogVisible.value = false
   messageStore.success(t('dynamicImage.rulesAppended', { count: sourceItems.length }))
 }
+const handleQuickImported = async (groups: MaterializedDynamicImageGroup[]) => {
+  const [first, ...additional] = groups
+  if (!first) return
+  const original = {
+    width: Number(model.value.width ?? 1),
+    height: Number(model.value.height ?? 1),
+    items: structuredClone(toRaw(items.value)),
+  }
+  const created: any[] = []
+  try {
+    await historyStore.runWithoutRecording(async () => {
+      await props.applyPatch?.({ width: first.width, height: first.height, items: first.items })
+      for (const [index, group] of additional.entries()) {
+        const offset = (index + 1) * 12
+        const element = await addElement('dynamicImage', {
+          id: '', eleType: 'dynamicImage',
+          left: Number(model.value.left ?? 0) + offset,
+          top: Number(model.value.top ?? 0) + offset,
+          originX: model.value.originX ?? 'center', originY: model.value.originY ?? 'center',
+          width: group.width, height: group.height, rotation: Number(model.value.rotation ?? 0),
+          displayStates: structuredClone(toRaw(model.value.displayStates ?? { active: true, ambient: true })),
+          items: group.items,
+        } as any)
+        if (element) created.push(element)
+      }
+    })
+  } catch (error) {
+    await historyStore.runWithoutRecording(async () => {
+      created.reverse().forEach((element) => removeElement(element))
+      await props.applyPatch?.(original)
+    })
+    throw error
+  }
+  historyStore.saveState('dynamic-image:quick-import', { captureConfig: true })
+  messageStore.success(t('dynamicImage.quickImportSuccess', { count: groups.length }))
+}
 const dropAt = (targetIndex: number) => {
   const sourceIndex = draggedIndex.value; draggedIndex.value = null
   if (sourceIndex === null || sourceIndex === targetIndex) return
@@ -140,6 +186,8 @@ const dropAt = (targetIndex: number) => {
 .row-actions { display: flex; align-items: center; gap: 8px; }
 .row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .add-button { width: 100%; }
+.panel-actions { display: grid; gap: 10px; }
+.quick-import-button { width: 100%; margin: 0; }
 .edit-form { display: grid; gap: 18px; }
 .copy-group-button { width: 100%; margin: 0; }
 :deep(.el-dialog__footer) { display: flex; align-items: center; }

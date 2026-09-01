@@ -29,6 +29,7 @@ const catalog = [
   catalogOption(DateFormatConstants.DD, 'date', 1, 'Sep'),
   catalogOption(DateFormatConstants.DDD, 'date', 1, 'Sep 2023'),
   catalogOption(DateFormatConstants.YYYY_MM_DD, 'date'),
+  catalogOption(DateFormatConstants.YEAR, 'date', 0, '2026'),
   catalogOption(DateFormatConstants.LUNAR_DATE, 'date_cn', 1, '五月十五'),
   catalogOption(DateFormatConstants.NEXT_SOLAR_TERM, 'date_cn'),
 ]
@@ -80,6 +81,27 @@ describe('date property options', () => {
       DateFormatConstants.DD,
       DateFormatConstants.DD,
     ], 'eng', catalog)).toEqual([DateFormatConstants.DD])
+  })
+
+  it('upgrades a complete legacy English option set with the numeric year', () => {
+    expect(resolveDateFormatterValues([
+      DateFormatConstants.DD,
+      DateFormatConstants.DDD,
+      DateFormatConstants.YYYY_MM_DD,
+    ], 'eng', catalog)).toEqual([
+      DateFormatConstants.DD,
+      DateFormatConstants.DDD,
+      DateFormatConstants.YYYY_MM_DD,
+      DateFormatConstants.YEAR,
+    ])
+
+    expect(resolveDateFormatterValues([
+      DateFormatConstants.DD,
+      DateFormatConstants.DDD,
+    ], 'eng', catalog)).toEqual([
+      DateFormatConstants.DD,
+      DateFormatConstants.DDD,
+    ])
   })
 
   it('classifies and filters options by example character length', () => {

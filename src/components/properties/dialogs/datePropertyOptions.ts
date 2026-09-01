@@ -1,5 +1,6 @@
 import type { DataTypeOption } from '@/types/dataCatalog'
-import { getCatalogDateFormatterDefaults, resolveCatalogDateFormatterValues } from '@/domain/dateFormatCatalog'
+import { getCatalogDateFormatOptions, getCatalogDateFormatterDefaults, resolveCatalogDateFormatterValues } from '@/domain/dateFormatCatalog'
+import { DateFormatConstants } from '@/config/elements/options/dateFormats'
 import type { AppLanguage } from '@/types/localization'
 import type { OptionFormat } from '@/types/settings'
 
@@ -14,7 +15,19 @@ export const resolveDateFormatterValues = (
   appLanguage: AppLanguage,
   options: readonly DataTypeOption[] = [],
 ): number[] => {
-  return resolveCatalogDateFormatterValues(values, options, appLanguage)
+  const resolved = resolveCatalogDateFormatterValues(values, options, appLanguage)
+  if (appLanguage !== 'eng' || !Array.isArray(values) || resolved.includes(DateFormatConstants.YEAR)) {
+    return resolved
+  }
+
+  const available = getCatalogDateFormatOptions(options, appLanguage).map(option => option.value)
+  const legacyOptions = available.filter(value => value !== DateFormatConstants.YEAR)
+  if (available.includes(DateFormatConstants.YEAR)
+    && legacyOptions.length > 0
+    && legacyOptions.every(value => resolved.includes(value))) {
+    return [...resolved, DateFormatConstants.YEAR]
+  }
+  return resolved
 }
 
 export const getDateOptionLengthBand = (

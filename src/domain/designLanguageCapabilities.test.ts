@@ -77,6 +77,17 @@ describe('design language capabilities', () => {
     expect(getAllowedDateFormatters('eng')).not.toContain(DateFormatConstants.LUNAR_DATE)
   })
 
+  it('offers the numeric year only to English designs', () => {
+    expect(DateFormatConstants.YEAR).toBe(57)
+    expect(DateFormatOptions).toContainEqual(expect.objectContaining({
+      value: DateFormatConstants.YEAR,
+      label: 'YYYY',
+      example: '2026',
+    }))
+    expect(getAllowedDateFormatters('eng')).toContain(DateFormatConstants.YEAR)
+    expect(getAllowedDateFormatters('zhs')).not.toContain(DateFormatConstants.YEAR)
+  })
+
   it('recognizes the seven Chinese-only data items', () => {
     expect(isChineseOnlyDataSymbol(':FIELD_TYPE_LUNAR_DATE')).toBe(true)
     expect(isChineseOnlyDataSymbol(':FIELD_TYPE_HUANGLI_JI')).toBe(true)

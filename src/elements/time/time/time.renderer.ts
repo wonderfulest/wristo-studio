@@ -468,6 +468,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
           })
 
           const index = canvas.getObjects().indexOf(obj)
+          const wasActiveObject = canvas.getActiveObject?.() === obj
           canvas.remove(obj)
           removeBitmapTimeGroupsById(canvas, String(obj.id || element.id || ''))
           canvas.add(group as any)
@@ -475,7 +476,9 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
             canvas.moveObjectTo(group as any, index)
           }
           syncLayerElementRef(String((group as any).id), group)
-          canvas.setActiveObject(group as any)
+          if (wasActiveObject) {
+            canvas.setActiveObject(group as any)
+          }
           canvas.renderAll()
           console.debug('[time/updateElement] bitmap group rebuilt', { id: (group as any).id, fontId })
           patchConfigFromObject(group)

@@ -62,6 +62,7 @@ const ENGLISH_DATE_FORMATTERS = [
   DateFormatConstants.MONTH_LONG,
   DateFormatConstants.MM_DD,
   DateFormatConstants.MM_DD_SLASH,
+  DateFormatConstants.YEAR,
 ] as const
 
 export const CHINESE_ONLY_DATA_SYMBOLS = new Set([

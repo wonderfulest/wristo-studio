@@ -53,6 +53,7 @@ export enum DateFormatConstants {
   FOUR_PILLAR_MONTH = 54,
   FOUR_PILLAR_DAY = 55,
   FOUR_PILLAR_HOUR = 56,
+  YEAR = 57,
 }
 
 export const DateFormatOptions: OptionFormat<number>[] = [
@@ -108,4 +109,5 @@ export const DateFormatOptions: OptionFormat<number>[] = [
   { value: DateFormatConstants.FOUR_PILLAR_MONTH, label: 'Month pillar', zhsLabel: '月柱', example: '丙申' },
   { value: DateFormatConstants.FOUR_PILLAR_DAY, label: 'Day pillar', zhsLabel: '日柱', example: '壬戌' },
   { value: DateFormatConstants.FOUR_PILLAR_HOUR, label: 'Hour pillar', zhsLabel: '时柱', example: '戊申' },
+  { value: DateFormatConstants.YEAR, label: 'YYYY', example: '2026' },
 ]
