@@ -76,13 +76,21 @@ export const DYNAMIC_IMAGE_IMPORT_KINDS: Readonly<Record<DynamicImageImportKind,
   weather: { tokenCode: 'w01', minimum: 0, maximum: 13, requiresDefault: true },
 }
 
-const FILE_NAME_PATTERN = /^(minute|hour24|hour12|weekday|weather)-(default|\d{2})(?:-([a-z0-9]+(?:-[a-z0-9]+)*))?\.(png|svg)$/
+const TOKEN_KIND_MAP: Readonly<Record<string, DynamicImageImportKind>> = {
+  tm8: 'minute',
+  tm6: 'hour24',
+  'tm7.3': 'hour12',
+  tm5: 'weekday',
+  w01: 'weather',
+}
+
+const FILE_NAME_PATTERN = /^(tm8|tm6|tm7\.3|tm5|w01)-(default|\d{2})(?:-([a-z0-9]+(?:-[a-z0-9]+)*))?\.(png|svg)$/
 
 export function parseDynamicAssetFilename(fileName: string): ParsedDynamicAssetFilename | null {
   const baseName = fileName.split('/').at(-1) || fileName
   const match = FILE_NAME_PATTERN.exec(baseName)
   if (!match) return null
-  const kind = match[1] as DynamicImageImportKind
+  const kind = TOKEN_KIND_MAP[match[1]]
   const isDefault = match[2] === 'default'
   return {
     kind,
@@ -137,7 +145,7 @@ export function buildDynamicImageImportPlan(files: readonly DynamicImageImportFi
       }
     }
     const missing = expectedValues(definition).filter((value) => !seen.has(String(value)))
-    if (missing.length) errors.push({ code: 'missing-values', kind, values: missing })
+    if (missing.length) warnings.push({ code: 'missing-values', kind, values: missing })
     if (definition.requiresDefault && !seen.has('default')) warnings.push({ code: 'missing-default', kind })
     entries.sort((left, right) => {
       if (left.isDefault) return 1

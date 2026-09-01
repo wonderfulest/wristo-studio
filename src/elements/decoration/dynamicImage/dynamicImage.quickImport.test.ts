@@ -15,22 +15,49 @@ const image = (name: string, width = 120, height = 80): DynamicImageImportFile =
 })
 
 describe('dynamic image quick import naming contract', () => {
-  it('maps canonical resource names to the runtime token values', () => {
-    expect(parseDynamicAssetFilename('minute-09.png')).toMatchObject({ kind: 'minute', value: 9 })
-    expect(parseDynamicAssetFilename('hour24-23.png')).toMatchObject({ kind: 'hour24', value: 23 })
-    expect(parseDynamicAssetFilename('hour12-12.png')).toMatchObject({ kind: 'hour12', value: 12 })
-    expect(parseDynamicAssetFilename('weekday-01-sun.png')).toMatchObject({ kind: 'weekday', value: 1, label: 'sun' })
-    expect(parseDynamicAssetFilename('weather-13-broken-clouds.png')).toMatchObject({ kind: 'weather', value: 13, label: 'broken-clouds' })
-    expect(parseDynamicAssetFilename('weather-default.png')).toMatchObject({ kind: 'weather', isDefault: true })
-    expect(parseDynamicAssetFilename('Minute_09.png')).toBeNull()
+  it('maps token-value resource names to their import groups', () => {
+    expect(parseDynamicAssetFilename('tm8-09.png')).toMatchObject({ kind: 'minute', value: 9 })
+    expect(parseDynamicAssetFilename('tm6-23.png')).toMatchObject({ kind: 'hour24', value: 23 })
+    expect(parseDynamicAssetFilename('tm7.3-12.png')).toMatchObject({ kind: 'hour12', value: 12 })
+    expect(parseDynamicAssetFilename('tm5-01-sun.png')).toMatchObject({ kind: 'weekday', value: 1, label: 'sun' })
+    expect(parseDynamicAssetFilename('w01-13-broken-clouds.png')).toMatchObject({ kind: 'weather', value: 13, label: 'broken-clouds' })
+    expect(parseDynamicAssetFilename('w01-default.png')).toMatchObject({ kind: 'weather', isDefault: true })
+  })
+
+  it('rejects every legacy semantic prefix', () => {
+    for (const fileName of [
+      'minute-09.png',
+      'hour-09.png',
+      'hour24-09.png',
+      'hour12-09.png',
+      'weekday-01.png',
+      'weather-01.png',
+    ]) expect(parseDynamicAssetFilename(fileName)).toBeNull()
+  })
+
+  it('keeps an incomplete token range importable', () => {
+    const files = Array.from({ length: 13 }, (_, value) => image(`tm6-${String(value).padStart(2, '0')}.png`))
+
+    const plan = buildDynamicImageImportPlan(files)
+
+    expect(plan.errors).toEqual([])
+    expect(plan.groups).toHaveLength(1)
+    expect(plan.groups[0]).toMatchObject({ kind: 'hour24', tokenCode: 'tm6' })
+    expect(plan.groups[0].entries[0].expression).toBe('(tm6) == 0')
+    expect(plan.groups[0].entries.at(-1)?.expression).toBe('(tm6) == 12')
+    expect(plan.warnings).toContainEqual({
+      code: 'missing-values',
+      kind: 'hour24',
+      values: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    })
   })
 
   it('builds sorted mutually exclusive expressions for complete resource groups', () => {
     const files = [
-      ...Array.from({ length: 60 }, (_, value) => image(`minute-${String(value).padStart(2, '0')}.png`)),
-      ...Array.from({ length: 7 }, (_, index) => image(`weekday-${String(index + 1).padStart(2, '0')}.png`)),
-      ...Array.from({ length: 14 }, (_, value) => image(`weather-${String(value).padStart(2, '0')}.png`)),
-      image('weather-default.png'),
+      ...Array.from({ length: 60 }, (_, value) => image(`tm8-${String(value).padStart(2, '0')}.png`)),
+      ...Array.from({ length: 7 }, (_, index) => image(`tm5-${String(index + 1).padStart(2, '0')}.png`)),
+      ...Array.from({ length: 14 }, (_, value) => image(`w01-${String(value).padStart(2, '0')}.png`)),
+      image('w01-default.png'),
     ].reverse()
 
     const plan = buildDynamicImageImportPlan(files)
@@ -48,10 +75,10 @@ describe('dynamic image quick import naming contract', () => {
 
   it('reports unrecognized names, duplicates, missing values, out-of-range values, and size mismatches', () => {
     const plan = buildDynamicImageImportPlan([
-      image('minute-00.png'),
-      image('minute-00-copy.png'),
-      image('minute-60.png'),
-      image('minute-01.png', 121, 80),
+      image('tm8-00.png'),
+      image('tm8-00-copy.png'),
+      image('tm8-60.png'),
+      image('tm8-01.png', 121, 80),
       image('notes.png'),
     ])
 
@@ -59,13 +86,13 @@ describe('dynamic image quick import naming contract', () => {
       expect.objectContaining({ code: 'unrecognized-name', fileName: 'notes.png' }),
       expect.objectContaining({ code: 'duplicate-value', kind: 'minute', value: 0 }),
       expect.objectContaining({ code: 'out-of-range', kind: 'minute', value: 60 }),
-      expect.objectContaining({ code: 'dimension-mismatch', kind: 'minute', fileName: 'minute-01.png' }),
-      expect.objectContaining({ code: 'missing-values', kind: 'minute' }),
+      expect.objectContaining({ code: 'dimension-mismatch', kind: 'minute', fileName: 'tm8-01.png' }),
     ]))
+    expect(plan.warnings).toContainEqual(expect.objectContaining({ code: 'missing-values', kind: 'minute' }))
   })
 
   it('warns when a weather group has no fallback image', () => {
-    const files = Array.from({ length: 14 }, (_, value) => image(`weather-${String(value).padStart(2, '0')}.png`))
+    const files = Array.from({ length: 14 }, (_, value) => image(`w01-${String(value).padStart(2, '0')}.png`))
     expect(buildDynamicImageImportPlan(files).warnings).toContainEqual(
       expect.objectContaining({ code: 'missing-default', kind: 'weather' }),
     )
@@ -83,7 +110,7 @@ describe('dynamic image quick import naming contract', () => {
   })
 
   it('uploads every file before materializing complete dynamic image groups', async () => {
-    const files = Array.from({ length: 12 }, (_, index) => image(`hour12-${String(index + 1).padStart(2, '0')}.png`))
+    const files = Array.from({ length: 12 }, (_, index) => image(`tm7.3-${String(index + 1).padStart(2, '0')}.png`))
     const plan = buildDynamicImageImportPlan(files)
     const uploaded: string[] = []
 
@@ -98,12 +125,12 @@ describe('dynamic image quick import naming contract', () => {
     expect(uploaded).toHaveLength(12)
     expect(groups).toHaveLength(1)
     expect(groups[0]).toMatchObject({ kind: 'hour12', width: 120, height: 80 })
-    expect(groups[0].items[0]).toMatchObject({ id: 'hour12-0', assetId: 1, imageUrl: 'https://cdn.example/hour12-01.png' })
+    expect(groups[0].items[0]).toMatchObject({ id: 'hour12-0', assetId: 1, imageUrl: 'https://cdn.example/tm7.3-01.png' })
     expect(groups[0].items[0].expression.source).toBe('(tm7.3) == 1')
   })
 
   it('does not return partially materialized groups when an upload fails', async () => {
-    const files = Array.from({ length: 7 }, (_, index) => image(`weekday-${String(index + 1).padStart(2, '0')}.png`))
+    const files = Array.from({ length: 7 }, (_, index) => image(`tm5-${String(index + 1).padStart(2, '0')}.png`))
     const plan = buildDynamicImageImportPlan(files)
     let attempts = 0
 
@@ -114,6 +141,6 @@ describe('dynamic image quick import naming contract', () => {
         return { assetId: attempts, imageUrl: `https://cdn.example/${file.name}` }
       },
       createId: (kind, index) => `${kind}-${index}`,
-    })).rejects.toThrow('upload failed: weekday-03.png')
+    })).rejects.toThrow('upload failed: tm5-03.png')
   })
 })
