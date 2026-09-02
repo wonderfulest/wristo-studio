@@ -40,6 +40,14 @@ export interface BitmapFontBuildResult {
   manifest: BitmapFontManifest
 }
 
+export interface CurrentSizeGlyphExportRequest {
+  source: ArrayBuffer
+  fileName: string
+  size: number
+  recipe: BitmapFontRecipe
+  gradientEnabled: boolean
+}
+
 export interface AtlasPixels {
   width: number
   height: number
@@ -100,7 +108,7 @@ function gradientColor(recipe: BitmapFontRecipe, x: number, y: number, width: nu
   return { red: mix(start.red, end.red), green: mix(start.green, end.green), blue: mix(start.blue, end.blue) }
 }
 
-function composeGlyph(glyph: RenderedGlyph, recipe: BitmapFontRecipe, padding = 0): AtlasPixels {
+export function composeGlyphPixels(glyph: RenderedGlyph, recipe: BitmapFontRecipe, padding = 0): AtlasPixels {
   const width = glyph.width + padding * 2
   const height = glyph.height + padding * 2
   const rgba = new Uint8ClampedArray(width * height * 4)
@@ -123,7 +131,7 @@ function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas, reci
   for (const placement of packed.placements) {
     const glyph = glyphs.get(placement.codepoint)
     if (!glyph) continue
-    const colored = composeGlyph(glyph, recipe)
+    const colored = composeGlyphPixels(glyph, recipe)
     for (let y = 0; y < glyph.height; y += 1) {
       for (let x = 0; x < glyph.width; x += 1) {
         const source = (y * glyph.width + x) * 4
@@ -135,7 +143,14 @@ function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas, reci
   return { width: packed.width, height: packed.height, rgba }
 }
 
-function connectIqSafeHorizontalMetrics(glyph: RenderedGlyph): Pick<RenderedGlyph, 'xoffset' | 'xadvance'> {
+const solidWhiteRecipe = (recipe: BitmapFontRecipe): BitmapFontRecipe => ({
+  ...recipe,
+  gradientStartColor: '#ffffff',
+  gradientEndColor: '#ffffff',
+  gradientAngle: 90,
+})
+
+export function connectIqSafeHorizontalMetrics(glyph: RenderedGlyph): Pick<RenderedGlyph, 'xoffset' | 'xadvance'> {
   // Connect IQ clips custom-font pixels outside the character advance box.
   // Shift negative bearings into the box and widen the advance to retain the full bitmap.
   const leftShift = Math.max(0, -glyph.xoffset)
@@ -223,7 +238,7 @@ export async function buildBitmapFontPackage(
   assertNotCancelled(isCancelled)
   const charset = charsetForType(request.fontType)
   assertNotCancelled(isCancelled)
-  const normalizedRecipe = normalizeBitmapFontRecipe(request.recipe)
+  const normalizedRecipe = solidWhiteRecipe(normalizeBitmapFontRecipe(request.recipe))
   const recipeText = canonicalJson(normalizedRecipe)
   assertNotCancelled(isCancelled)
   const recipeBytes = new TextEncoder().encode(recipeText)
@@ -278,7 +293,7 @@ export async function buildBitmapFontPackage(
         await add(`${prefix}${request.slug}-g_0.png`, png)
         if (request.fontType === 'time_font') {
           for (const glyph of rendered.glyphs) {
-            const glyphPng = await adapters.encodePng(composeGlyph(glyph, normalizedRecipe, 1))
+            const glyphPng = await adapters.encodePng(composeGlyphPixels(glyph, normalizedRecipe, 1))
             assertPng(glyphPng)
             const name = glyph.codepoint === 58 ? 'colon' : String.fromCodePoint(glyph.codepoint)
             await add(`${prefix}glyphs/${name}.png`, glyphPng)
@@ -365,4 +380,28 @@ export async function buildBitmapFontPackage(
   assertNotCancelled(isCancelled)
   assertNotCancelled(isCancelled)
   return { zip, manifest }
+}
+
+export async function buildCurrentSizeGlyphZip(
+  request: CurrentSizeGlyphExportRequest,
+  adapters: PackageBuilderAdapters = defaultAdapters,
+): Promise<ArrayBuffer> {
+  sourceExtension(request.fileName)
+  const source = await adapters.parseSource(request.source.slice(0), request.fileName)
+  const recipe = normalizeBitmapFontRecipe(request.recipe)
+  const colorRecipe = request.gradientEnabled ? recipe : solidWhiteRecipe(recipe)
+  const archive = new JSZip()
+  const session = await adapters.createRendererSession(source)
+  try {
+    const rendered = session.render(request.size, recipe, charsetForType('time_font').codepoints)
+    for (const glyph of rendered.glyphs) {
+      const bytes = await adapters.encodePng(composeGlyphPixels(glyph, colorRecipe, 1))
+      assertPng(bytes)
+      const name = glyph.codepoint === 58 ? 'colon' : String.fromCodePoint(glyph.codepoint)
+      archive.file(`${name}.png`, bytes, { date: ZIP_ENTRY_DATE, createFolders: false, compression: 'STORE' })
+    }
+  } finally {
+    session.dispose()
+  }
+  return (adapters.generateZip ?? ((zip: JSZip) => zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' })))(archive)
 }

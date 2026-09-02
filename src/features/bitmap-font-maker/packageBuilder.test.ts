@@ -6,6 +6,7 @@ import type { GlyphRendererSession, RenderedGlyphSet } from './glyphRenderer'
 import {
   BuildCancelledError,
   buildBitmapFontPackage,
+  buildCurrentSizeGlyphZip,
   canonicalJson,
   encodePngWithOffscreenCanvas,
   sha256Hex,
@@ -110,7 +111,7 @@ describe('buildBitmapFontPackage', () => {
     expect(fixture.dispose).toHaveBeenCalledOnce()
   })
 
-  it('colors each glyph from its own gradient bounds before atlas and standalone PNG encoding', async () => {
+  it('keeps BMFont atlas and bundled glyph PNG pixels pure white even when recipe contains gradient colors', async () => {
     const encoded: Array<{ width: number; height: number; rgba: Uint8ClampedArray }> = []
     const fixture = adapters({
       render: (size) => ({
@@ -132,10 +133,38 @@ describe('buildBitmapFontPackage', () => {
       recipe: { ...recipe, gradientStartColor: '#ff0000', gradientEndColor: '#0000ff', gradientAngle: 90 },
     }, fixture.value)
 
+    const atlas = encoded.find(item => item.width === 1 && item.height === 2)
     const standalone = encoded.find(item => item.width === 3 && item.height === 4)
+    expect(Array.from(atlas!.rgba.slice(0, 3))).toEqual([255, 255, 255])
+    expect(Array.from(atlas!.rgba.slice(4, 7))).toEqual([255, 255, 255])
     expect(standalone).toBeDefined()
-    expect(Array.from(standalone!.rgba.slice(16, 19))).toEqual([255, 0, 0])
-    expect(Array.from(standalone!.rgba.slice(28, 31))).toEqual([0, 0, 255])
+    expect(Array.from(standalone!.rgba.slice(16, 19))).toEqual([255, 255, 255])
+    expect(Array.from(standalone!.rgba.slice(28, 31))).toEqual([255, 255, 255])
+  })
+
+  it('exports only the 11 time glyphs at the requested size with per-glyph gradients', async () => {
+    const encoded: Array<{ width: number; height: number; rgba: Uint8ClampedArray }> = []
+    const fixture = adapters({
+      render: (size) => ({
+        ...rendered(size),
+        glyphs: rendered(size).glyphs.map(glyph => ({ ...glyph, width: 1, height: 2, alpha: new Uint8Array([255, 255]) })),
+      }),
+      encodePng: async pixels => { encoded.push({ ...pixels, rgba: pixels.rgba.slice() }); return png.slice() },
+    })
+    const zip = await buildCurrentSizeGlyphZip({
+      source: Uint8Array.from(parsedSource.bytes).buffer,
+      fileName: 'Fixture.ttf',
+      size: 240,
+      recipe: { ...recipe, gradientStartColor: '#ff0000', gradientEndColor: '#0000ff', gradientAngle: 90 },
+      gradientEnabled: true,
+    }, fixture.value)
+
+    const archive = await JSZip.loadAsync(zip)
+    expect(Object.keys(archive.files).sort()).toEqual(['0.png', '1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png', '9.png', 'colon.png'])
+    expect(fixture.value.createRendererSession).toHaveBeenCalledOnce()
+    expect(encoded).toHaveLength(11)
+    expect(Array.from(encoded[0].rgba.slice(16, 19))).toEqual([255, 0, 0])
+    expect(Array.from(encoded[0].rgba.slice(28, 31))).toEqual([0, 0, 255])
   })
 
   it('writes Connect IQ-safe metrics for glyphs whose bitmap overhangs their advance', async () => {

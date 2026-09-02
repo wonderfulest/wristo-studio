@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   repack: vi.fn(),
   construct: vi.fn(),
   loadZip: vi.fn(),
+  buildGlyphZip: vi.fn(),
+  buildLivePreview: vi.fn(),
   getFont: vi.fn(),
   getFontBySlug: vi.fn(),
   confirmOverwrite: vi.fn(),
@@ -50,6 +52,8 @@ vi.mock('./bitmapPackageRepack', () => ({
   repackageBitmapFontSlug: mocks.repack,
 }))
 vi.mock('./localPackageValidation', () => ({ validateLocalBitmapPackage: mocks.validate }))
+vi.mock('@/features/bitmap-font-maker/packageBuilder', () => ({ buildCurrentSizeGlyphZip: mocks.buildGlyphZip }))
+vi.mock('@/features/bitmap-font-maker/liveGlyphPreview', () => ({ buildLiveGlyphPreview: mocks.buildLivePreview }))
 vi.mock('jszip', () => ({ default: { loadAsync: mocks.loadZip } }))
 vi.mock('vue-router', () => ({
   useRoute: () => mocks.route,
@@ -75,6 +79,11 @@ function mountMaker() {
           name: 'BitmapFontPreview',
           props: ['descriptorUrl', 'atlasUrl', 'codepoints'],
           template: '<span data-test="generated-bmfont-preview" />',
+        },
+        LiveGlyphRasterPreview: {
+          name: 'LiveGlyphRasterPreview',
+          props: ['preview'],
+          template: '<span data-test="live-glyph-raster-preview" />',
         },
       },
     },
@@ -112,6 +121,8 @@ describe('BitmapFontMaker', () => {
     mocks.validate.mockResolvedValue(undefined)
     mocks.repack.mockImplementation((zip: ArrayBuffer, current: any, slug: string) => Promise.resolve({ zip, manifest: { ...current, slug } }))
     mocks.loadZip.mockRejectedValue(new Error('preview unavailable'))
+    mocks.buildGlyphZip.mockResolvedValue(new Uint8Array([80, 75]).buffer)
+    mocks.buildLivePreview.mockReturnValue({ width: 90, lineHeight: 84, glyphs: [] })
     class TestFontFace {
       constructor(public family: string, public source: ArrayBuffer) {
         mocks.fontFaceConstruct(family, source)
@@ -156,13 +167,14 @@ describe('BitmapFontMaker', () => {
     expect(wrapper.get('#bitmap-download-help').text()).toContain('Build and locally validate')
   })
 
-  it('renders the desktop recipe watch at twice its original linear size', () => {
+  it('starts with a fixed 454px watch and exposes only Studio bitmap font sizes', () => {
     const wrapper = mountMaker()
     const preview = wrapper.get('.device-preview')
 
-    expect(preview.attributes('style')).toContain('--watch-preview-size: 400px')
-    expect(preview.attributes('style')).toContain('--watch-preview-border: 24px')
-    expect(preview.attributes('style')).toContain('--watch-preview-font-size: 88px')
+    expect(preview.attributes('style')).toContain('--watch-preview-size: 454px')
+    const size = wrapper.get('[data-test="preview-font-size"]')
+    expect(size.element.tagName).toBe('SELECT')
+    expect(size.findAll('option').map(option => Number(option.attributes('value')))).toEqual([...charsetForType('time_font').codepoints].length ? [6,7,8,9,10,11,12,14,16,18,21,24,30,36,42,48,54,60,66,72,78,84,96,108,120,132,144,156,168,180,192,204,216,228,240,264,288,312] : [])
   })
 
   it('shows the exact read-only charset for the selected font type', async () => {
@@ -227,34 +239,23 @@ describe('BitmapFontMaker', () => {
     expect(vm.buildFresh).toBe(false)
   })
 
-  it('uses the uploaded source font for the enlarged live recipe preview', async () => {
+  it('uses the bottom raster result for live mode, gradient, and spacing preview', async () => {
     const wrapper = mountMaker()
     await upload(wrapper)
     const vm = wrapper.vm as any
-    const preview = wrapper.get('[data-test="source-font-live-preview"]')
+    vm.recipe.outlineMode = 'fill-outline'
+    vm.recipe.outlineWidthEm = 0.1
+    vm.gradientEnabled = true
+    await nextTick()
 
-    await vi.waitFor(() => expect(preview.attributes('style')).toContain('WristoUploaded-'))
-    expect(mocks.fontFaceConstruct).toHaveBeenCalledTimes(1)
-    expect(mocks.fontFaceAdd).toHaveBeenCalledTimes(1)
-
-    vm.recipe.fontWeight = 900
+    const preview = wrapper.getComponent({ name: 'LiveGlyphRasterPreview' })
+    expect(preview.props('preview')).toEqual({ width: 90, lineHeight: 84, glyphs: [] })
+    expect(preview.element.parentElement?.classList.contains('watch-preview-content')).toBe(true)
+    expect(mocks.buildLivePreview.mock.calls.at(-1)?.slice(1)).toEqual([[49, 48, 58, 48, 57], 84, expect.objectContaining({ outlineMode: 'fill-outline', outlineWidthEm: 0.1 }), true])
+    expect(wrapper.find('[data-test="source-font-live-preview"]').exists()).toBe(false)
     vm.recipe.outlineMode = 'fill'
     await nextTick()
-    expect((preview.element as HTMLElement).style.webkitTextStroke).not.toBe('')
-
-    vm.recipe.italicAngle = 20
-    vm.recipe.outlineWidthEm = 0.1
-    vm.recipe.outlineMode = 'outline-only'
-    await nextTick()
-
-    const style = (preview.element as HTMLElement).style
-    expect(style.fontWeight).toBe('900')
-    expect(style.transform).toBe('scale(1) skewX(20deg)')
-    expect(style.webkitTextStroke).toContain('17.6px')
-    expect(style.color).toBe('transparent')
-
-    wrapper.unmount()
-    expect(mocks.fontFaceDelete).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[data-test="outline-width"]').attributes('disabled')).toBeDefined()
   })
 
   it('switches the watch preview to the generated BMFont atlas after a successful build', async () => {
@@ -275,7 +276,7 @@ describe('BitmapFontMaker', () => {
     expect(preview.props('atlasUrl')).toBe('blob:preview')
     expect(preview.props('codepoints')).toEqual([49, 48, 58, 48, 57])
     expect(wrapper.find('[data-test="source-font-live-preview"]').exists()).toBe(false)
-    expect(wrapper.get('[data-test="generated-bmfont-preview-wrap"]').attributes('style')).toContain(`scale(${88 / 84})`)
+    expect(wrapper.get('[data-test="generated-bmfont-preview-wrap"]').attributes('style')).toContain('scale(1)')
   })
 
   it('does not restore a generated preview that became stale while its ZIP entries were loading', async () => {
@@ -521,12 +522,38 @@ describe('BitmapFontMaker', () => {
     const wrapper = mountMaker()
     await upload(wrapper)
     expect(wrapper.get('[data-test="gradient-controls"]').isVisible()).toBe(true)
+    await wrapper.get('[data-test="gradient-enabled"]').setValue(true)
     await wrapper.get('[data-test="gradient-start-color"]').setValue('#f6e7c7')
     await wrapper.get('[data-test="gradient-end-color"]').setValue('#9ccbee')
     await wrapper.get('[data-test="gradient-angle"]').setValue('135')
     expect((wrapper.vm as any).recipe).toMatchObject({ gradientStartColor: '#f6e7c7', gradientEndColor: '#9ccbee', gradientAngle: 135 })
     await wrapper.get('.segmented input[value="text_font"]').setValue(true)
     expect(wrapper.find('[data-test="gradient-controls"]').exists()).toBe(false)
+  })
+
+  it('disables bitmap font generation and publishing while gradient mode is enabled', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    await wrapper.get('[data-test="gradient-enabled"]').setValue(true)
+    expect(wrapper.get('[data-test="build-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="publish-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="glyph-download-button"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('exports 11 glyph PNGs using the preview font size and current gradient setting', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    await wrapper.get('[data-test="gradient-enabled"]').setValue(true)
+    await wrapper.get('[data-test="preview-font-size"]').setValue('240')
+    await wrapper.get('[data-test="glyph-download-button"]').trigger('click')
+    await vi.waitFor(() => expect(mocks.buildGlyphZip).toHaveBeenCalled())
+    expect(mocks.buildGlyphZip.mock.calls.at(-1)?.[0]).toMatchObject({ size: 240, gradientEnabled: true })
+  })
+
+  it('keeps the watch preview fixed at 454 by 454 pixels without a diameter control', () => {
+    const wrapper = mountMaker()
+    expect(wrapper.find('[data-test="watch-preview-diameter"]').exists()).toBe(false)
+    expect(String(wrapper.get('.device-preview').attributes('style') ?? '')).toContain('--watch-preview-size: 454px')
   })
 
   it('keeps source validity separate from retryable build and publish failures', async () => {
