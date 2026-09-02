@@ -93,6 +93,25 @@ describe('renderGlyphs', () => {
     expect(coverage(outlineOnly.alpha)).toBeLessThan(outlineOnly.width * outlineOnly.height)
   })
 
+  it('keeps a subpixel-thin underscore renderable at the smallest generated size', async () => {
+    const parsed = await source()
+    const underscore = parsed.font.charToGlyph('_')
+    underscore.getPath = () => ({
+      commands: [
+        { type: 'M', x: 0, y: 6.01 },
+        { type: 'L', x: 4, y: 6.01 },
+        { type: 'L', x: 4, y: 6.1 },
+        { type: 'L', x: 0, y: 6.1 },
+        { type: 'Z' },
+      ],
+    }) as ReturnType<typeof underscore.getPath>
+    parsed.font.charToGlyph = character => character === '_' ? underscore : parsed.font.glyphs.get(0)
+
+    const glyph = renderGlyphs(parsed, [0x5f], 6, recipe({ fontWeight: 300 })).glyphs[0]
+
+    expect(glyph.alpha.some(alpha => alpha > 0)).toBe(true)
+  })
+
   it('keeps fill, fill-outline, and outline-only rendering semantics distinct', async () => {
     const parsed = await source()
     const plain = renderGlyphs(parsed, [79], 120, recipe()).glyphs[0]

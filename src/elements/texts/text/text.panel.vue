@@ -66,7 +66,11 @@
         </div>
         <div class="text-setting-field full">
           <label>{{ t('elementSettings.font') }}</label>
-          <font-picker v-model="fontFamily" @change="updateFontFamily" />
+          <font-picker
+            v-model="fontFamily"
+            :type="FontTypes.TEXT_FONT"
+            @change="updateFontFamily"
+          />
         </div>
       </div>
     </section>
@@ -84,6 +88,7 @@ import ColorPicker from '@/components/color-picker/index.vue'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import TextVariableEditor from '@/elements/common/settings/TextVariableEditor.vue'
 import { useI18n } from '@/i18n'
+import { FontTypes } from '@/config/fonts'
 
 const { t } = useI18n()
 

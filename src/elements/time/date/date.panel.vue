@@ -19,7 +19,7 @@
       <el-form-item :label="t('elementSettings.font')">
         <FontPicker
           v-model="currentModel.fontFamily"
-          type=""
+          :type="FontTypes.TEXT_FONT"
           :exclude-icon-fonts="true"
           :date-content-language="currentDateLanguage"
           @change="handleFontChange"
@@ -113,6 +113,7 @@ import {
   validateCustomDateTemplate,
 } from './dateTemplate'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import { FontTypes } from '@/config/fonts'
 
 const props = defineProps<{
   config?: Record<string, any> | null

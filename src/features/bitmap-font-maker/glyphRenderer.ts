@@ -498,7 +498,13 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
     const bounds = { left, top, width: right - left, height: bottom - top }
     validateGlyphAllocation(bounds.width, bounds.height, codepoint)
     const fill = recipe.outlineMode !== 'outline-only'
-    const cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius, insetRadius), bounds)
+    let cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, fill, strokeRadius, insetRadius), bounds)
+    // Point-sampled fills can miss a valid contour that is thinner than one
+    // pixel (notably `_` at the smallest generated sizes). Preserve a faint
+    // one-pixel trace instead of rejecting the entire font build.
+    if (!cropped && fill) {
+      cropped = cropAlpha(rasterizeFallbackContours(contours, bounds, false, 0.5), bounds)
+    }
     if (!cropped) throw new GlyphRenderError('GLYPH_RENDER_FAILED', codepoint)
     return {
       codepoint,

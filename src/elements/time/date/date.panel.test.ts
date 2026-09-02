@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import DatePanel from './date.panel.vue'
 import { useFontStore } from '@/stores/fontStore'
 import { validateCustomDateTemplate } from './dateTemplate'
+import { FontTypes } from '@/config/fonts'
 
 vi.mock('opentype.js', () => ({ default: {}, parse: vi.fn() }))
 
@@ -17,6 +18,34 @@ describe('date settings panel', () => {
     const fontStore = useFontStore()
     fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
     fontStore.loadFont = vi.fn().mockResolvedValue(true)
+  })
+
+  it('limits the font picker to text fonts', () => {
+    const wrapper = mount(DatePanel, {
+      props: {
+        config: {
+          dateFormatMode: 'preset',
+          fontFamily: '',
+        },
+        applyPatch: vi.fn(),
+      },
+      global: {
+        stubs: {
+          FontPicker: { name: 'FontPicker', props: ['type'], template: '<div />' },
+          ColorPicker: true,
+          AlignXButtons: true,
+          FontSizeSelect: true,
+          DatePropertyField: true,
+          TextTemplateEditor: true,
+          'el-form': SlotStub,
+          'el-form-item': SlotStub,
+          'el-select': SlotStub,
+          'el-option': true,
+        },
+      },
+    })
+
+    expect(wrapper.getComponent({ name: 'FontPicker' }).props('type')).toBe(FontTypes.TEXT_FONT)
   })
 
   it('links custom token users to the Studio token guide', () => {
