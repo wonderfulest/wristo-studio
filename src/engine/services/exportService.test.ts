@@ -663,4 +663,33 @@ describe('visual theme export persistence', () => {
       imageUrl: 'https://cdn.example/rotating-hand.svg',
     })
   })
+
+  it('replaces a stale AMOLED blob URL with the current pending asset before persistence', async () => {
+    const { resolvePackageAssetUrls } = await import('./exportService')
+    const { useAmoledIconAssetStore } = await import('@/stores/amoledIconAssetStore')
+    const assetStore = useAmoledIconAssetStore()
+    assetStore.upsertPending({
+      fontSlug: 'wristo-icon',
+      iconUnicode: '0063',
+      file: new File(['battery'], '0063.png', { type: 'image/png' }),
+    })
+    const currentUrl = assetStore.getPending('wristo-icon', '0063')!.objectUrl
+
+    const resolved = await resolvePackageAssetUrls({
+      elements: [{
+        id: 'battery-icon',
+        eleType: 'icon',
+        fontFamily: 'wristo-icon',
+        iconDisplayType: 'amoled',
+        amoledIconUnicode: '0063',
+        amoledImageUrl: 'blob:https://studio.wristo.io/revoked-battery',
+        imageUrl: 'blob:https://studio.wristo.io/revoked-battery',
+      }],
+    } as any)
+
+    expect(resolved?.elements[0]).toMatchObject({
+      amoledImageUrl: currentUrl,
+      imageUrl: currentUrl,
+    })
+  })
 })

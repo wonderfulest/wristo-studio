@@ -43,7 +43,7 @@ vi.mock('@/stores/elementDataStore', () => ({ useElementDataStore: () => ({ upse
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))
 vi.mock('@/utils/baselineUtil', () => ({ encodeTopBaseForElement: () => 0 }))
 
-import { createIcon } from './icon.renderer'
+import { createIcon, updateIcon } from './icon.renderer'
 
 describe('icon bitmap font rendering', () => {
   beforeEach(() => {
@@ -66,5 +66,39 @@ describe('icon bitmap font rendering', () => {
     expect(icon.text).toBe('g')
     expect(originalTextRender).not.toHaveBeenCalled()
     expect(icon.assetFontFamily).toBe('qiwei-two')
+  })
+
+  it('keeps the current AMOLED image when the panel reapplies the same asset config', async () => {
+    const icon: any = {
+      id: 'battery-icon',
+      eleType: 'icon',
+      type: 'image',
+      left: 80,
+      top: 120,
+      fontSize: 36,
+      iconSize: 36,
+      iconDisplayType: 'amoled',
+      amoledImageUrl: 'blob:https://studio.wristo.io/battery',
+      amoledIconUnicode: '0063',
+      set(key: string | Record<string, any>, value?: any) {
+        if (typeof key === 'string') this[key] = value
+        else Object.assign(this, key)
+        return this
+      },
+      setCoords: vi.fn(),
+    }
+    canvas.objects = [icon]
+
+    await updateIcon(icon, {
+      left: 96,
+      iconDisplayType: 'amoled',
+      amoledImageUrl: 'blob:https://studio.wristo.io/battery',
+      amoledIconUnicode: '0063',
+      width: 36,
+      height: 36,
+    })
+
+    expect(canvas.objects).toEqual([icon])
+    expect(icon.left).toBe(96)
   })
 })

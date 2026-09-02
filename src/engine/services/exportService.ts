@@ -43,6 +43,8 @@ import { resolveDatePropertyConfig } from './datePropertyConfig'
 import { validateCustomDateTemplate } from '@/elements/time/date/dateTemplate'
 import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
 import { normalizeAndValidateLayoutGroups } from '@/engine/layout/layoutGroupValidation'
+import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
+import { normalizeIconUnicode } from '@/types/amoledIcons'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   const localeStore = useLocaleStore()
@@ -72,6 +74,7 @@ function readNumericAssetId(element: AnyElementConfig): number | null {
 export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null): Promise<RuntimeDesignConfig | null> {
   if (!config) return config
 
+  const amoledIconAssetStore = useAmoledIconAssetStore()
   const assetUrlById = new Map<number, Promise<string>>()
   const resolveAnalogAssetUrl = (assetId: number): Promise<string> => {
     let pending = assetUrlById.get(assetId)
@@ -86,15 +89,32 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
     return pending
   }
   const elements = await Promise.all((config.elements || []).map(async (element) => {
-    if (!isPackageAssetElement(element)) return element
+    let resolvedElement = element
+    if (String((element as any)?.eleType ?? '') === 'icon' && (element as any)?.iconDisplayType === 'amoled') {
+      const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
+      const iconUnicode = normalizeIconUnicode((element as any).amoledIconUnicode)
+      const pending = fontSlug && iconUnicode
+        ? amoledIconAssetStore.getPending(fontSlug, iconUnicode)
+        : null
+      const pendingUrl = String(pending?.objectUrl || pending?.sourceUrl || '').trim()
+      if (pendingUrl) {
+        resolvedElement = {
+          ...(element as any),
+          amoledImageUrl: pendingUrl,
+          imageUrl: pendingUrl,
+        } as AnyElementConfig
+      }
+    }
 
-    const assetId = readNumericAssetId(element)
-    if (!assetId) return element
+    if (!isPackageAssetElement(resolvedElement)) return resolvedElement
+
+    const assetId = readNumericAssetId(resolvedElement)
+    if (!assetId) return resolvedElement
 
     const fileUrl = await resolveAnalogAssetUrl(assetId)
 
     return {
-      ...(element as any),
+      ...(resolvedElement as any),
       imageUrl: fileUrl,
     } as AnyElementConfig
   }))

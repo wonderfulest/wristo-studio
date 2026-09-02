@@ -129,7 +129,7 @@ const emit = defineEmits(['close'])
 const props = defineProps<{
   element?: any
   config?: Record<string, any> | null
-  applyPatch?: (patch: Record<string, any>) => void
+  applyPatch?: (patch: Record<string, any>) => Promise<void> | void
 }>()
 
 const formRef = ref<any>(null)
@@ -227,7 +227,7 @@ const applyUpdate = async (patch: Record<string, any>) => {
   }
 
   if (props.applyPatch && props.config) {
-    props.applyPatch(patch)
+    await props.applyPatch(patch)
     return
   }
 

@@ -358,7 +358,16 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
 
   if (nextDisplayType === 'amoled') {
     const imageUrl = String(config.amoledImageUrl || (obj as any).amoledImageUrl || '')
-    if (imageUrl) {
+    const currentImageUrl = String((obj as any).amoledImageUrl || (obj as any).imageUrl || '')
+    const currentIconPixelSize = resolveIconPixelSize(obj as any)
+    const nextIconPixelSize = resolveIconPixelSize(config as any, obj as any, baseProps)
+    const hasExplicitSizeChange = (config.iconSize !== undefined || config.fontSize !== undefined)
+      && nextIconPixelSize !== currentIconPixelSize
+    const shouldReplaceWithAmoledImage = (obj as any).type !== 'image'
+      || (obj as any).iconDisplayType !== 'amoled'
+      || imageUrl !== currentImageUrl
+      || hasExplicitSizeChange
+    if (imageUrl && shouldReplaceWithAmoledImage) {
       try {
         const imageObj = await createAmoledImage(
           {
@@ -410,7 +419,7 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
           error
         })
       }
-    } else {
+    } else if (!imageUrl) {
       console.warn('[amoled-icon-renderer] updateIcon AMOLED requested without imageUrl', {
         config,
         objectAmoledImageUrl: (obj as any).amoledImageUrl
