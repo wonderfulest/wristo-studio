@@ -19,7 +19,13 @@ describe('font quick edit routing', () => {
     expect(canQuickEditFont({ ownerUserId: 7, currentUserId: 7, isSystem: false, type: 'unknown' })).toBe(false)
   })
 
-  it.each(['icon_font', 'weather_font'])('allows an admin to edit a system %s', (type) => {
+  it.each([
+    'time_font',
+    'text_font',
+    'text_font_zh',
+    'icon_font',
+    'weather_font',
+  ])('allows an admin to edit any supported %s regardless of owner or system status', (type) => {
     expect(canQuickEditFont({
       ownerUserId: 99,
       currentUserId: 7,

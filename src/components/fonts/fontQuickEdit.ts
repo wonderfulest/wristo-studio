@@ -28,7 +28,7 @@ export function isQuickEditFontType(type: string): type is QuickEditFontType {
 
 export function canQuickEditFont(input: QuickEditVisibilityInput): boolean {
   if (!isQuickEditFontType(input.type)) return false
-  if (input.currentUserIsAdmin && (input.type === 'icon_font' || input.type === 'weather_font')) return true
+  if (input.currentUserIsAdmin) return true
   return !input.isSystem && input.currentUserId != null && input.ownerUserId === input.currentUserId
 }
 
