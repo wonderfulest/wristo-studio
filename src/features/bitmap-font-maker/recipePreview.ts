@@ -19,9 +19,11 @@ export interface SavedTextStyle {
   strokeLineJoin: unknown
 }
 
-const recipeKeys = ['schemaVersion', 'rendererVersion', 'fontWeight', 'italicAngle', 'outlineWidthEm', 'outlineMode', 'lineJoin', 'antialias'] as const
+const legacyRecipeKeys = ['schemaVersion', 'rendererVersion', 'fontWeight', 'italicAngle', 'outlineWidthEm', 'outlineMode', 'lineJoin', 'antialias'] as const
+const recipeKeys = [...legacyRecipeKeys, 'horizontalScale'] as const
 
 const recipeKeySet = new Set<string>(recipeKeys)
+const legacyRecipeKeySet = new Set<string>(legacyRecipeKeys)
 const previewBaseline = Symbol('bitmapRecipePreviewBaseline')
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -80,7 +82,9 @@ export function parseBitmapFontRecipe(value: unknown): BitmapFontRecipe | null {
   }
   if (!isPlainRecord(candidate)) return null
   const keys = Object.keys(candidate)
-  if (keys.length !== recipeKeys.length || keys.some((key) => !recipeKeySet.has(key))) return null
+  const hasHorizontalScale = Object.prototype.hasOwnProperty.call(candidate, 'horizontalScale')
+  const expectedKeys = hasHorizontalScale ? recipeKeySet : legacyRecipeKeySet
+  if (keys.length !== expectedKeys.size || keys.some((key) => !expectedKeys.has(key))) return null
   if (
     candidate.schemaVersion !== 1 ||
     candidate.rendererVersion !== '1' ||
@@ -88,6 +92,7 @@ export function parseBitmapFontRecipe(value: unknown): BitmapFontRecipe | null {
     !Number.isFinite(candidate.fontWeight) ||
     typeof candidate.italicAngle !== 'number' ||
     !Number.isFinite(candidate.italicAngle) ||
+    (hasHorizontalScale && (typeof candidate.horizontalScale !== 'number' || !Number.isFinite(candidate.horizontalScale))) ||
     typeof candidate.outlineWidthEm !== 'number' ||
     !Number.isFinite(candidate.outlineWidthEm) ||
     !['fill', 'fill-outline', 'outline-only'].includes(String(candidate.outlineMode)) ||
@@ -95,7 +100,7 @@ export function parseBitmapFontRecipe(value: unknown): BitmapFontRecipe | null {
     candidate.antialias !== true
   )
     return null
-  if (candidate.fontWeight < 100 || candidate.fontWeight > 900 || candidate.italicAngle < -20 || candidate.italicAngle > 20 || candidate.outlineWidthEm < 0 || candidate.outlineWidthEm > 0.5)
+  if (candidate.fontWeight < 100 || candidate.fontWeight > 900 || candidate.italicAngle < -20 || candidate.italicAngle > 20 || (hasHorizontalScale && (candidate.horizontalScale as number) < 0.5) || (hasHorizontalScale && (candidate.horizontalScale as number) > 1.5) || candidate.outlineWidthEm < 0 || candidate.outlineWidthEm > 0.5)
     return null
   return candidate as unknown as BitmapFontRecipe
 }
@@ -126,7 +131,7 @@ export function recipeToCssPreviewStyle(value: unknown, fontSize = 24): CSSPrope
   const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
   return {
     fontWeight: recipe.fontWeight,
-    transform: `skewX(${recipe.italicAngle}deg)`,
+    transform: `skewX(${recipe.italicAngle}deg) scaleX(${recipe.horizontalScale ?? 1})`,
     transformOrigin: 'center',
     WebkitTextStroke: outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * fontSize))}px currentColor` : '0',
     WebkitTextFillColor: recipe.outlineMode === 'outline-only' ? 'transparent' : 'currentColor'

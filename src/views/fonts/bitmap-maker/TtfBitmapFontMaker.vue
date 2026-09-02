@@ -43,6 +43,7 @@
           <div class="panel-heading"><span>02</span><div><h2>{{ t('bitmapMaker.style') }}</h2><p>{{ t('bitmapMaker.styleHint') }}</p></div></div>
           <label class="range-row"><span>{{ t('bitmapMaker.weight') }} <output>{{ recipe.fontWeight }}</output></span><input v-model.number="recipe.fontWeight" type="range" min="100" max="900" step="100" :disabled="!sourceParsed || actionsLocked" /></label>
           <label class="range-row"><span>{{ t('bitmapMaker.italic') }} <output>{{ recipe.italicAngle }}°</output></span><input v-model.number="recipe.italicAngle" type="range" min="-20" max="20" step="1" :disabled="!sourceParsed || actionsLocked" /></label>
+          <label class="range-row"><span>{{ t('bitmapMaker.horizontalScale') }} <output>{{ Math.round((recipe.horizontalScale ?? 1) * 100) }}%</output></span><input v-model.number="recipe.horizontalScale" data-test="horizontal-scale" type="range" min="0.5" max="1.5" step="0.01" :disabled="!sourceParsed || actionsLocked" /></label>
           <label class="range-row"><span>{{ t('bitmapMaker.outline') }} <output>{{ recipe.outlineWidthEm.toFixed(2) }} em</output></span><input v-model.number="recipe.outlineWidthEm" data-test="outline-width" type="range" min="0" max="0.5" step="0.01" :disabled="!sourceParsed || actionsLocked || recipe.outlineMode === 'fill'" /></label>
           <label class="field-label">{{ t('bitmapMaker.renderMode') }}
             <select v-model="recipe.outlineMode" :disabled="!sourceParsed || actionsLocked">
@@ -186,7 +187,7 @@ const editingOriginalRecipe = shallowRef<BitmapFontRecipe | null>(null)
 const sourceRevision = ref(0)
 const sourceSha256 = ref('')
 const sourceSlugBase = ref('')
-const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 })
+const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, horizontalScale: 1, outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 })
 const gradientEnabled = ref(false)
 const metadata = reactive<BitmapFontPublishMetadata>({ fullName: '', slug: '', type: 'time_font', language: 'en', styleTags: [], searchKeywords: '', redistributionRightsAttested: false, rightsAttestationVersion: 'v1' })
 const manualStyleTags = ref<string[]>([])
@@ -275,7 +276,7 @@ const sourceSummary = computed(() => sourceParsed.value ? `${sourceParsed.value.
 const supportedCharset = computed(() => charsetForType(fontType.value))
 const supportedCharacters = computed(() => String.fromCodePoint(...supportedCharset.value.codepoints))
 const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(code => code === 32 ? t('bitmapMaker.space') : String.fromCodePoint(code)).join(', '))
-const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
+const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${Math.round((recipe.horizontalScale ?? 1) * 100)}% · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewSample = computed(() => fontType.value === 'time_font' ? '10:09' : fontType.value === 'text_font_zh' ? '周三 24' : 'WED 24')
 const previewCodepoints = computed(() => Array.from(previewText.value, character => character.codePointAt(0)!))
 const livePreview = computed(() => {

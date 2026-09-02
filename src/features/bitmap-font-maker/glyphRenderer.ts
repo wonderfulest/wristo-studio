@@ -167,12 +167,12 @@ function interpolateCurve(command: CurveCommand, start: Point): Point[] {
   return points
 }
 
-function flatten(commands: PathCommand[], shear: number, baseline: number): Contour[] {
+function flatten(commands: PathCommand[], shear: number, horizontalScale: number, baseline: number): Contour[] {
   const contours: Contour[] = []
   let contour: Contour = []
   let current: Point = { x: 0, y: 0 }
   const transform = (point: Point): Point => ({
-    x: point.x + shear * (baseline - point.y),
+    x: (point.x + shear * (baseline - point.y)) * horizontalScale,
     y: point.y
   })
   const finish = () => {
@@ -423,7 +423,7 @@ export async function createGlyphRendererSession(source: ParsedFontSource, envir
     rendererPath: registration ? 'font-face-canvas' : 'opentype-path',
     render: (size, recipe, codepoints) => {
       if (disposed) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
-      const needsDeterministicTransform = recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0
+      const needsDeterministicTransform = recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0 || (recipe.horizontalScale ?? 1) !== 1
       return registration && !needsDeterministicTransform
         ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration)
         : renderGlyphs(source, codepoints, size, recipe)
@@ -460,6 +460,7 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
   // Font outlines use a y-up coordinate system while CSS skewX is evaluated in
   // the screen's y-down coordinate system, so negate the angle to keep both previews aligned.
   const shear = Math.tan((-recipe.italicAngle * Math.PI) / 180)
+  const horizontalScale = recipe.horizontalScale ?? 1
   const outlineRadius = recipe.outlineMode === 'fill' ? 0 : recipe.outlineWidthEm * size
   const weightRadius = ((recipe.fontWeight - source.sourceWeight) / 500) * size * 0.04
   const strokeRadius = Math.max(0, outlineRadius + Math.max(0, weightRadius))
@@ -469,8 +470,8 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
     if (!source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
     const glyph = source.font.charToGlyph(String.fromCodePoint(codepoint))
     if (glyph.index === 0 && codepoint !== 0) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
-    const xadvance = Math.max(1, Math.round((glyph.advanceWidth ?? source.unitsPerEm) * scale + weightRadius))
-    const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, baseline)
+    const xadvance = Math.max(1, Math.round(((glyph.advanceWidth ?? source.unitsPerEm) * scale + weightRadius) * horizontalScale))
+    const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, horizontalScale, baseline)
     if (contours.length === 0) {
       if (codepoint !== 0x20) throw new GlyphRenderError('GLYPH_RENDER_EMPTY', codepoint)
       return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }

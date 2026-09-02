@@ -37,6 +37,13 @@ describe('bitmap font contracts', () => {
       fontType: 'time_font',
       recipe: { ...styledRecipe, fontWeight: 800 },
     })).resolves.toBe('quantico-time-font-8708dbafbba9')
+
+    await expect(deriveBitmapFontSlug({
+      baseName: 'Quantico',
+      sourceSha256,
+      fontType: 'time_font',
+      recipe: { ...styledRecipe, horizontalScale: 0.7 },
+    })).resolves.not.toBe('quantico-time-font-2e8533340d11')
   })
 
   it('merges recipe-derived tags with normalized manual tags without treating an unused outline width as outline', () => {
@@ -126,6 +133,7 @@ describe('bitmap font contracts', () => {
       rendererVersion: '1',
       fontWeight: 900,
       italicAngle: -20,
+      horizontalScale: 1,
       outlineWidthEm: 0,
       outlineMode: 'fill',
       lineJoin: 'round',
@@ -134,6 +142,22 @@ describe('bitmap font contracts', () => {
       gradientEndColor: '#ffffff',
       gradientAngle: 90,
     })
+  })
+
+  it('defaults legacy recipes to their original width and bounds horizontal scaling', () => {
+    const base = {
+      schemaVersion: 1 as const,
+      rendererVersion: '1' as const,
+      fontWeight: 400,
+      italicAngle: 0,
+      horizontalScale: 1,
+      outlineWidthEm: 0,
+      outlineMode: 'fill' as const,
+    }
+
+    expect(normalizeBitmapFontRecipe(base).horizontalScale).toBe(1)
+    expect(normalizeBitmapFontRecipe({ ...base, horizontalScale: 0.1 }).horizontalScale).toBe(0.5)
+    expect(normalizeBitmapFontRecipe({ ...base, horizontalScale: 2 }).horizontalScale).toBe(1.5)
   })
 
   it('normalizes gradient colors and wraps the direction angle', () => {
@@ -162,6 +186,7 @@ describe('bitmap font contracts', () => {
       rendererVersion: '1',
       fontWeight: 400,
       italicAngle: 0,
+      horizontalScale: 1,
       outlineWidthEm: 0,
       outlineMode: 'fill-outline',
       lineJoin: 'round',
@@ -178,6 +203,7 @@ describe('bitmap font contracts', () => {
       rendererVersion: '1',
       fontWeight: 400,
       italicAngle: 0,
+      horizontalScale: 1,
       outlineWidthEm: 0,
       outlineMode: 'fill',
     }
@@ -205,6 +231,7 @@ describe('bitmap font contracts', () => {
       rendererVersion: '1',
       fontWeight: 400,
       italicAngle: 0,
+      horizontalScale: 1,
       outlineWidthEm: 0,
       outlineMode: 'outline-only',
       injected: 'not-canonical',
@@ -215,6 +242,7 @@ describe('bitmap font contracts', () => {
       rendererVersion: '1',
       fontWeight: 400,
       italicAngle: 0,
+      horizontalScale: 1,
       outlineWidthEm: 0,
       outlineMode: 'outline-only',
       lineJoin: 'round',

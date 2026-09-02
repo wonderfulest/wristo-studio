@@ -50,6 +50,17 @@ describe('renderGlyphs', () => {
     expect([italic.width, italic.xoffset]).not.toEqual([uprightStem.width, uprightStem.xoffset])
   })
 
+  it('compresses glyph pixels and advance horizontally without changing line height', async () => {
+    const parsed = await source()
+    const regular = renderGlyphs(parsed, [65], 120, recipe()).glyphs[0]
+    const narrowResult = renderGlyphs(parsed, [65], 120, recipe({ horizontalScale: 0.5 }))
+    const narrow = narrowResult.glyphs[0]
+
+    expect(narrow.width).toBeLessThan(regular.width)
+    expect(narrow.xadvance).toBeLessThan(regular.xadvance)
+    expect(narrowResult.lineHeight).toBe(renderGlyphs(parsed, [65], 120, recipe()).lineHeight)
+  })
+
   it('uses the same italic direction as CSS skewX', async () => {
     const glyph = renderGlyphs(await source(), [73], 120, recipe({ italicAngle: -20 })).glyphs[0]
     const centroid = (startRow: number, endRow: number) => {

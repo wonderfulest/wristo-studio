@@ -51,6 +51,11 @@ describe('bitmap recipe preview', () => {
     expect(parseBitmapFontRecipe({ ...recipe, fontWeight: '700' })).toBeNull()
   })
 
+  it('accepts a bounded horizontal scale while retaining legacy recipes', () => {
+    expect(parseBitmapFontRecipe({ ...recipe, horizontalScale: 0.7 })).toMatchObject({ horizontalScale: 0.7 })
+    expect(parseBitmapFontRecipe({ ...recipe, horizontalScale: 0.49 })).toBeNull()
+  })
+
   it('restores explicit user display styles when the recipe is removed', () => {
     const object: any = {
       fill: '#2468ac',

@@ -14,6 +14,8 @@ export interface BitmapFontRecipe {
   rendererVersion: '1'
   fontWeight: number
   italicAngle: number
+  /** Horizontal glyph scale. 1 keeps the uploaded font's original width. */
+  horizontalScale?: number
   outlineWidthEm: number
   outlineMode: OutlineMode
   lineJoin: 'round'
@@ -47,8 +49,8 @@ export interface BitmapFontSlugIdentity {
   recipe: BitmapFontRecipe
 }
 
-type BitmapFontRecipeInput = Omit<BitmapFontRecipe, 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'> &
-  Partial<Pick<BitmapFontRecipe, 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'>>
+type BitmapFontRecipeInput = Omit<BitmapFontRecipe, 'horizontalScale' | 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'> &
+  Partial<Pick<BitmapFontRecipe, 'horizontalScale' | 'lineJoin' | 'antialias' | 'gradientStartColor' | 'gradientEndColor' | 'gradientAngle'>>
 
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value))
@@ -109,6 +111,7 @@ export function normalizeBitmapFontRecipe(input: BitmapFontRecipeInput): BitmapF
     rendererVersion: '1',
     fontWeight: clamp(finiteOrDefault(input.fontWeight, 400), 100, 900),
     italicAngle: clamp(finiteOrDefault(input.italicAngle, 0), -20, 20),
+    horizontalScale: clamp(finiteOrDefault(input.horizontalScale ?? 1, 1), 0.5, 1.5),
     outlineWidthEm: clamp(finiteOrDefault(input.outlineWidthEm, 0), 0, 0.5),
     outlineMode: input.outlineMode,
     lineJoin: 'round',
@@ -128,10 +131,16 @@ const slugifyBitmapFontBase = (value: string): string =>
     .replace(/-{2,}/g, '-')
 
 export async function deriveBitmapFontSlug(identity: BitmapFontSlugIdentity): Promise<string> {
+  const normalizedRecipe = normalizeBitmapFontRecipe(identity.recipe)
+  // Preserve the established identity for every legacy/full-width font. A
+  // non-default scale changes raster output, so it remains part of the hash.
+  const recipeIdentity = (normalizedRecipe.horizontalScale ?? 1) === 1
+    ? (({ horizontalScale: _horizontalScale, ...legacyCompatibleRecipe }) => legacyCompatibleRecipe)(normalizedRecipe)
+    : normalizedRecipe
   const identityJson = canonicalJson({
     sourceSha256: identity.sourceSha256.toLowerCase(),
     fontType: identity.fontType,
-    recipe: normalizeBitmapFontRecipe(identity.recipe),
+    recipe: recipeIdentity,
   })
   const fingerprint = (await sha256Hex(new TextEncoder().encode(identityJson))).slice(0, 12)
   const typeSegment = slugifyBitmapFontBase(identity.fontType)
