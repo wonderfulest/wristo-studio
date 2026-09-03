@@ -157,6 +157,7 @@ const fontSize = ref(weatherSchema.defaultConfig.fontSize)
 const weatherFonts = ref<DesignFontVO[]>([])
 const conditions = ref<WeatherConditionAssetsVO[]>([])
 const selectedCondition = ref<string | null>(null)
+const selectedIconUnicode = ref<string | null>(null)
 const loadingFonts = ref(false)
 const loadingConditions = ref(false)
 const fontScope = ref<'mine' | 'all'>('mine')
@@ -182,6 +183,9 @@ const initElementProperties = (): void => {
   fill.value = initial.fill || weatherSchema.defaultConfig.fill
   fontSize.value = Number(initial.fontSize ?? weatherSchema.defaultConfig.fontSize)
   selectedCondition.value = initial.condition || null
+  selectedIconUnicode.value = isWeatherIconCode(initial.iconUnicode)
+    ? normalizeWeatherIconCode(initial.iconUnicode)
+    : null
 
   const canvasElement = canvasStore.canvas?.getObjects?.()
     .find((object: any) => object.id === props.element?.id) as any
@@ -235,7 +239,10 @@ const fetchConditions = async (): Promise<void> => {
   try {
     const response = await getWeatherConditions(fontFamily.value)
     conditions.value = (response.data || []).filter(item => isWeatherIconCode(item.iconUnicode))
-    const selected = conditions.value.find(item => item.condition === selectedCondition.value)
+    const selected = conditions.value.find(item => (
+      item.condition === selectedCondition.value
+      || normalizeWeatherIconCode(item.iconUnicode) === selectedIconUnicode.value
+    ))
       || conditions.value[0]
     if (selected) selectCondition(selected)
   } finally {
@@ -247,6 +254,7 @@ const onFontChange = async (): Promise<void> => {
   ensureSelectedFontLoaded()
   applyUpdate({ fontFamily: fontFamily.value })
   selectedCondition.value = null
+  selectedIconUnicode.value = null
   await fetchConditions()
 }
 
@@ -264,6 +272,7 @@ const onFontScopeChange = async (): Promise<void> => {
   ensureSelectedFontLoaded()
   if (fontFamily.value !== previousFont) {
     selectedCondition.value = null
+    selectedIconUnicode.value = null
     await fetchConditions()
   }
   await nextTick()
@@ -289,6 +298,7 @@ const onWeatherFontRemoved = async (id: number): Promise<void> => {
   const fallbackFont = weatherFonts.value[0]
   fontFamily.value = fallbackFont?.slug || ''
   selectedCondition.value = null
+  selectedIconUnicode.value = null
   if (fontFamily.value) {
     ensureSelectedFontLoaded()
     applyUpdate({ fontFamily: fontFamily.value })
@@ -333,6 +343,7 @@ const onWindowBlur = (): void => {
 const selectCondition = (condition: WeatherConditionAssetsVO): void => {
   if (!condition.iconUnicode) return
   selectedCondition.value = condition.condition
+  selectedIconUnicode.value = normalizeWeatherIconCode(condition.iconUnicode)
   applyUpdate({
     iconUnicode: normalizeWeatherIconCode(condition.iconUnicode),
     fontFamily: fontFamily.value,

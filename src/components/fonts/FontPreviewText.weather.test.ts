@@ -22,8 +22,20 @@ describe('font preview icon type separation', () => {
     const preview = wrapper.getComponent({ name: 'BitmapFontPreview' })
     expect(preview.props('descriptorUrl')).toBe('/preview.fnt')
     expect(preview.props('atlasUrl')).toBe('/preview.png')
-    expect(preview.props('codepoints')).toEqual([48, 49, 50, 51, 52, 53, 54, 55, 64, 65, 66, 67])
+    expect(preview.props('codepoints')).toEqual([34, 42, 48, 49, 50, 51, 52, 53, 54, 55, 64, 65, 66, 67])
     expect(wrapper.find('span.preview-text').exists()).toBe(false)
+  })
+
+  it('shows one Bluetooth state and one battery level in the ordinary icon fallback preview', () => {
+    const wrapper = shallowMount(FontPreviewText, {
+      props: { fontFamily: 'ordinary-icons', type: 'icon_font' },
+    })
+
+    expect(Array.from(wrapper.text(), character => character.codePointAt(0))).toEqual([
+      0x22, 0x2a,
+      0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+      0x40, 0x41, 0x42, 0x43,
+    ])
   })
 
   it('uses the published BMFont assets and Chinese sample for Chinese text fonts', () => {

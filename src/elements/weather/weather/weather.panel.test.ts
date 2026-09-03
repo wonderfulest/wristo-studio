@@ -131,6 +131,36 @@ describe('weather settings panel', () => {
     }))
   })
 
+  it('keeps the saved weather icon selected when the settings panel reopens', async () => {
+    const applyPatch = vi.fn()
+    getWeatherConditions.mockResolvedValue({
+      data: [
+        { condition: 'clear_sky', iconUnicode: '101d' },
+        { condition: 'rain', iconUnicode: '110d' },
+      ],
+    })
+
+    const wrapper = shallowMount(WeatherPanel, {
+      props: { config: { fontFamily: 'weather-font', iconUnicode: '110d' }, applyPatch },
+      global: {
+        stubs: {
+          'el-form': { template: '<form><slot /></form>' },
+          'el-form-item': { template: '<div><slot /></div>' },
+          'el-select': { template: '<select><slot /></select>' },
+          'el-option': true,
+          'el-icon': true,
+          'el-button': true,
+        },
+        directives: { loading: {} },
+      },
+    })
+
+    await vi.waitFor(() => expect(applyPatch).toHaveBeenLastCalledWith(expect.objectContaining({
+      iconUnicode: '110d',
+    })))
+    expect(wrapper.findAll('.condition-item').at(1)?.classes()).toContain('selected')
+  })
+
   it('optically centers cloud glyph fallbacks with known asymmetric ink bounds', async () => {
     getWeatherConditions.mockResolvedValue({ data: [{ condition: 'few_clouds', iconUnicode: '102d' }] })
 

@@ -22,6 +22,7 @@ import { FontTypes } from '@/config/fonts'
 import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 
 const ICON_FONT_UNICODES = [
+  '0022','002a',
   '0030','0031','0032','0033','0034','0035','0036','0037',
   '0040','0041','0042','0043'
 ]
