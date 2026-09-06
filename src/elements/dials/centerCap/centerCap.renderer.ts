@@ -49,6 +49,8 @@ function configureCenterCapControls(element: any) {
     lockMovementX: true,
     lockMovementY: true,
     lockRotation: true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockScalingFlip: true,
   })
   applyControlsToObject(element)

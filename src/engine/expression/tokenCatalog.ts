@@ -1,5 +1,5 @@
 import type { ExpressionTokenDefinition } from './types'
-import { PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS } from './practicalTokenDefinitions'
+import { LEGACY_EXPRESSION_TOKEN_DEFINITIONS, PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS } from './practicalTokenDefinitions'
 
 export interface ExpressionTokenCatalog {
   readonly definitions: readonly ExpressionTokenDefinition[]
@@ -9,9 +9,11 @@ export interface ExpressionTokenCatalog {
 
 export function createExpressionTokenCatalog(
   definitions: readonly ExpressionTokenDefinition[],
+  legacyDefinitions: readonly ExpressionTokenDefinition[] = [],
 ): ExpressionTokenCatalog {
-  const byCode = new Map(definitions.map((definition) => [definition.code, definition]))
-  const byId = new Map(definitions.map((definition) => [definition.id, definition]))
+  const supportedDefinitions = [...legacyDefinitions, ...definitions]
+  const byCode = new Map(supportedDefinitions.map((definition) => [definition.code, definition]))
+  const byId = new Map(supportedDefinitions.map((definition) => [definition.id, definition]))
   return {
     definitions: Object.freeze([...definitions]),
     getByCode: (code) => byCode.get(code),
@@ -21,4 +23,5 @@ export function createExpressionTokenCatalog(
 
 export const DEFAULT_EXPRESSION_TOKEN_CATALOG = createExpressionTokenCatalog(
   PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS,
+  LEGACY_EXPRESSION_TOKEN_DEFINITIONS,
 )

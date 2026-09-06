@@ -22,6 +22,14 @@
         </div>
       </div>
     </div>
+    <div class="quick-import-type">
+      <span class="quick-import-type-label">{{ t('dynamicImage.quickImportType') }}</span>
+      <el-radio-group :model-value="quickImportKind" size="small" @change="selectQuickImportKind">
+        <el-radio-button label="all">{{ t('dynamicImage.quickImportType.general') }}</el-radio-button>
+        <el-radio-button label="weekday">{{ t('dynamicImage.quickImportType.weekday') }}</el-radio-button>
+        <el-radio-button label="weather">{{ t('dynamicImage.quickImportType.weather') }}</el-radio-button>
+      </el-radio-group>
+    </div>
     <div class="panel-actions">
       <el-button class="add-button" type="primary" plain @click="openAdd">＋ {{ t('dynamicImage.addItem') }}</el-button>
       <el-button class="quick-import-button" plain @click="quickImportVisible = true">{{ t('dynamicImage.quickImport') }}</el-button>
@@ -45,7 +53,11 @@
       </template>
     </el-dialog>
     <DynamicImageGroupCopyDialog v-model="copyDialogVisible" @copy="handleCopyGroup" />
-    <DynamicImageQuickImportDialog v-model="quickImportVisible" :apply-groups="handleQuickImported" />
+    <DynamicImageQuickImportDialog
+      v-model="quickImportVisible"
+      :allowed-kinds="allowedQuickImportKinds"
+      :apply-groups="handleQuickImported"
+    />
   </div>
 </template>
 
@@ -68,7 +80,7 @@ import DynamicImageQuickImportDialog from './DynamicImageQuickImportDialog.vue'
 import { appendCopiedDynamicImageItems } from './dynamicImage.copyModel'
 import { calculateDynamicImageThumbnailSize, resolveDynamicImagePreviewSource, resolvePreviewAwareNewExpression } from './dynamicImage.panelModel'
 import { addElement, removeElement } from '@/engine/managers/elementManager'
-import type { MaterializedDynamicImageGroup } from './dynamicImage.quickImport'
+import type { DynamicImageImportKind, MaterializedDynamicImageGroup } from './dynamicImage.quickImport'
 import { useHistoryStore } from '@/stores/historyStore'
 
 const props = defineProps<{ config?: any; element?: any; applyPatch?: (patch: Record<string, any>) => Promise<void> | void }>()
@@ -81,6 +93,7 @@ const items = computed<DynamicImageItem[]>(() => model.value.items ?? [])
 const dialogVisible = ref(false)
 const copyDialogVisible = ref(false)
 const quickImportVisible = ref(false)
+const quickImportKind = ref<'all' | 'weekday' | 'weather'>('all')
 const editingIndex = ref<number | null>(null)
 const draftImageUrl = ref('')
 const draftAssetId = ref<number | undefined>()
@@ -92,6 +105,14 @@ const thumbnailStyle = computed(() => {
   const size = calculateDynamicImageThumbnailSize(Number(model.value.width), Number(model.value.height))
   return { width: `${size.width}px`, height: `${size.height}px` }
 })
+const allowedQuickImportKinds = computed<readonly DynamicImageImportKind[] | undefined>(() => {
+  if (quickImportKind.value === 'all') return undefined
+  return [quickImportKind.value]
+})
+
+const selectQuickImportKind = (value: 'all' | 'weekday' | 'weather') => {
+  quickImportKind.value = value
+}
 
 const commitItems = (next: DynamicImageItem[]) => props.applyPatch?.({ items: next })
 const resetDraft = () => { draftImageUrl.value = ''; draftAssetId.value = undefined; draftExpression.value = 'false'; expressionError.value = '' }
@@ -187,6 +208,8 @@ const dropAt = (targetIndex: number) => {
 .row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .add-button { width: 100%; }
 .panel-actions { display: grid; gap: 10px; }
+.quick-import-type { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.quick-import-type-label { color: var(--el-text-color-secondary); font-size: 13px; }
 .quick-import-button { width: 100%; margin: 0; }
 .edit-form { display: grid; gap: 18px; }
 .copy-group-button { width: 100%; margin: 0; }

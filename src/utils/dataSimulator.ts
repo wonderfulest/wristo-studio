@@ -392,7 +392,7 @@ export function getSimulatedDataByName(name: string, now: Date = new Date()): Si
 
     default:
       // 未知字段：返回占位符，方便在画布上察觉问题
-      return { display: `{{${key}}}`, unit: '', label: 'UNKNOWN' }
+      return { display: `(${key})`, unit: '', label: 'UNKNOWN' }
   }
 }
 

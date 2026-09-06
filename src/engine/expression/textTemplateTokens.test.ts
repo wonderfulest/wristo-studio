@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { resolveTokenTemplate, validateTokenTemplate } from './textTemplateTokens'
 
 describe('token text templates', () => {
+  it('validates unfinished expression syntax even without a complete token', () => {
+    for (const source of ['(ai12', '"Steps', '“Steps” + (ai12)', '"Steps" +']) {
+      expect(validateTokenTemplate(source).length).toBeGreaterThan(0)
+    }
+    expect(validateTokenTemplate('Activity')).toEqual([])
+  })
+
+  it('evaluates quoted text without tokens and keeps plain labels unchanged', () => {
+    expect(resolveTokenTemplate('"Activity " + "steps"')).toBe('Activity steps')
+    expect(resolveTokenTemplate('Activity steps')).toBe('Activity steps')
+    expect(validateTokenTemplate('"(unknown) {{text}}"')).toEqual([])
+    expect(resolveTokenTemplate('"(unknown) {{text}}"')).toBe('(unknown) {{text}}')
+  })
+
   it('evaluates WFB-style string expressions with compact tokens', () => {
     const now = new Date(2025, 0, 29, 12)
     expect(resolveTokenTemplate('(cn1.4) + (cn1.6) + " " + (cn4.1)', now)).toBe('正月初一 蛇年')

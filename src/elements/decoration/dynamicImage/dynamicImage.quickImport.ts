@@ -33,7 +33,7 @@ export interface DynamicImageImportGroup {
 }
 
 export interface DynamicImageImportIssue {
-  code: 'unrecognized-name' | 'duplicate-value' | 'out-of-range' | 'dimension-mismatch' | 'missing-values' | 'missing-default'
+  code: 'unrecognized-name' | 'unexpected-kind' | 'duplicate-value' | 'out-of-range' | 'dimension-mismatch' | 'missing-values' | 'missing-default'
     | 'unsupported-file' | 'image-read-failed'
   kind?: DynamicImageImportKind
   fileName?: string
@@ -107,7 +107,10 @@ function expectedValues(definition: KindDefinition): number[] {
   )
 }
 
-export function buildDynamicImageImportPlan(files: readonly DynamicImageImportFile[]): DynamicImageImportPlan {
+export function buildDynamicImageImportPlan(
+  files: readonly DynamicImageImportFile[],
+  options: { allowedKinds?: readonly DynamicImageImportKind[] } = {},
+): DynamicImageImportPlan {
   const errors: DynamicImageImportIssue[] = []
   const warnings: DynamicImageImportIssue[] = []
   const grouped = new Map<DynamicImageImportKind, DynamicImageImportEntry[]>()
@@ -116,6 +119,10 @@ export function buildDynamicImageImportPlan(files: readonly DynamicImageImportFi
     const parsed = parseDynamicAssetFilename(source.name)
     if (!parsed) {
       errors.push({ code: 'unrecognized-name', fileName: source.name })
+      continue
+    }
+    if (options.allowedKinds && !options.allowedKinds.includes(parsed.kind)) {
+      errors.push({ code: 'unexpected-kind', kind: parsed.kind, fileName: source.name })
       continue
     }
     const definition = DYNAMIC_IMAGE_IMPORT_KINDS[parsed.kind]

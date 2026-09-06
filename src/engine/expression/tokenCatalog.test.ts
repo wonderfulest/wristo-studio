@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from './tokenCatalog'
 
 const EXPECTED_CODES = [
-  'dt1', 'dt1.1', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6',
+  'dt1', 'dt1.1', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5.1', 'dt5.2', 'dt6',
   'tm1', 'tm1.1', 'tm2', 'tm3', 'tm4', 'tm5',
   'tm6', 'tm6.1', 'tm6.0', 'tm6.2',
   'tm7.3', 'tm7.4', 'tm7.0', 'tm7.1', 'tm7.2',

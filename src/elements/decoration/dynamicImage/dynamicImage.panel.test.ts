@@ -43,6 +43,8 @@ describe('dynamic image panel', () => {
           'el-form': true,
           'el-form-item': true,
           'el-input-number': true,
+          'el-radio-group': true,
+          'el-radio-button': true,
           'el-button': { template: '<button><slot /></button>' },
           'el-dialog': true,
           AssetPicker: true,
@@ -70,6 +72,8 @@ describe('dynamic image panel', () => {
           'el-form': { template: '<form><slot /></form>' },
           'el-form-item': { template: '<label><slot /></label>' },
           'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], emits: ['change'], template: '<input />' },
+          'el-radio-group': true,
+          'el-radio-button': true,
           'el-button': true,
           'el-dialog': true,
           AssetPicker: true,
@@ -86,6 +90,31 @@ describe('dynamic image panel', () => {
     expect(applyPatch).toHaveBeenCalledWith({ rotation: 72 })
   })
 
+  it('opens weekday quick import with weekday-only resources enabled', async () => {
+    const wrapper = shallowMount(DynamicImagePanel, {
+      props: { config: { width: 100, height: 50, items: [] }, applyPatch: vi.fn() },
+      global: { stubs: {
+          'el-form': true,
+          'el-form-item': true,
+          'el-input-number': true,
+          'el-radio-group': { name: 'ElRadioGroup', emits: ['change'], template: '<div><slot /></div>' },
+          'el-radio-button': true,
+        'el-button': true,
+        'el-dialog': true,
+        AssetPicker: true,
+        ExpressionEditor: true,
+        TokenPreviewControls: true,
+        DynamicImageGroupCopyDialog: true,
+        DynamicImageQuickImportDialog: { name: 'DynamicImageQuickImportDialog', props: ['allowedKinds'], template: '<div />' },
+      } },
+    })
+
+    wrapper.findComponent({ name: 'ElRadioGroup' }).vm.$emit('change', 'weekday')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent({ name: 'DynamicImageQuickImportDialog' }).props('allowedKinds')).toEqual(['weekday'])
+  })
+
   it('applies the first quick-import group and creates additional groups as sibling elements', async () => {
     const applyPatch = vi.fn()
     const wrapper = shallowMount(DynamicImagePanel, {
@@ -98,6 +127,8 @@ describe('dynamic image panel', () => {
           'el-form': true,
           'el-form-item': true,
           'el-input-number': true,
+          'el-radio-group': true,
+          'el-radio-button': true,
           'el-button': { template: '<button @click="$emit(\'click\')"><slot /></button>' },
           'el-dialog': true,
           AssetPicker: true,
@@ -134,6 +165,7 @@ describe('dynamic image panel', () => {
       props: { config: { id: 'current', left: 80, top: 90, width: 100, height: 50, rotation: 0, items: originalItems }, applyPatch },
       global: { stubs: {
         'el-form': true, 'el-form-item': true, 'el-input-number': true,
+        'el-radio-group': true, 'el-radio-button': true,
         'el-button': true, 'el-dialog': true, AssetPicker: true, ExpressionEditor: true,
         TokenPreviewControls: true, DynamicImageGroupCopyDialog: true,
         DynamicImageQuickImportDialog: { name: 'DynamicImageQuickImportDialog', template: '<div />' },

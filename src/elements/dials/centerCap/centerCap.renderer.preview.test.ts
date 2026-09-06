@@ -94,6 +94,18 @@ describe('center cap preview updates', () => {
     expect(cap.setCoords).toHaveBeenCalledTimes(1)
   })
 
+  it('unlocks resizing when a preview update reuses a previously locked center cap', async () => {
+    const cap = createCap()
+    cap.lockScalingX = true
+    cap.lockScalingY = true
+    canvasObjects = [cap]
+
+    await updateCenterCap(cap as any, { targetSize: 44 }, { persist: false })
+
+    expect(cap.lockScalingX).toBe(false)
+    expect(cap.lockScalingY).toBe(false)
+  })
+
   it('keeps the old cap on canvas when replacement image loading rejects', async () => {
     const cap = createCap()
     canvasObjects = [cap]

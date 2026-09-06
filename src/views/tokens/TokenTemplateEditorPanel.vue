@@ -8,15 +8,33 @@
       </div>
     </header>
 
+    <section class="token-text-help" :aria-label="t('tokens.editor.textHelpTitle')">
+      <strong>{{ t('tokens.editor.textHelpTitle') }}</strong>
+      <p>{{ t('tokens.editor.textHelp') }}</p>
+      <code>"Activity " + (ai12) + " steps"</code>
+      <p>{{ t('tokens.editor.textSpaceHint') }}</p>
+      <label for="token-plain-text">{{ t('tokens.editor.plainTextLabel') }}</label>
+      <div class="token-text-entry">
+        <input id="token-plain-text" v-model="plainText" maxlength="128" :placeholder="t('tokens.editor.plainTextPlaceholder')" @keydown.enter.prevent="appendText" />
+        <button type="button" :disabled="!plainText.length" @click="appendText">{{ t('tokens.editor.appendText') }}</button>
+      </div>
+      <p>{{ t('tokens.editor.plainTextHint') }}</p>
+      <p v-if="insertionError" class="token-editor-error" role="alert">{{ insertionError }}</p>
+    </section>
+
     <label class="token-editor-input-label" for="token-template-source">{{ t('tokens.editor.inputLabel') }}</label>
     <div class="token-editor-input-wrap">
       <textarea id="token-template-source" ref="textareaRef" :value="localValue" maxlength="128" rows="5" spellcheck="false" @input="handleInput" @click="syncFormatTarget" @keyup="syncFormatTarget" @select="syncFormatTarget" />
       <span>{{ localValue.length }} / 128</span>
     </div>
-    <p v-if="validationError" class="token-editor-error">{{ validationError }}</p>
+    <div class="token-validation-actions">
+      <button type="button" class="token-validate-button" @click="validationChecked = true">{{ t('tokens.editor.validate') }}</button>
+      <span v-if="validationChecked && !validationError" class="token-validation-success" role="status">{{ t('tokens.editor.validationSuccess') }}</span>
+    </div>
+    <p v-if="validationError" class="token-editor-error" role="alert">{{ validationError }}</p>
     <div class="token-editor-result">
       <span>{{ t('tokens.editor.result') }}</span>
-      <code class="token-editor-result-value">{{ resultValue }}</code>
+      <code class="token-editor-result-value">{{ validationError ? '—' : resultValue }}</code>
     </div>
 
     <section ref="formatHelpRef" class="token-format-help">
@@ -125,7 +143,8 @@ import type { AppLanguage } from '@/types/localization'
 import type { ExpressionTokenDefinition } from '@/engine/expression/types'
 import { filterExpressionTokens } from '@/components/expression/tokenPickerModel'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
-import { resolveTokenTemplate, validateTokenTemplate } from '@/engine/expression/textTemplateTokens'
+import { resolveTokenTemplate, TOKEN_TEMPLATE_MAX_LENGTH } from '@/engine/expression/textTemplateTokens'
+import { appendTemplateText, appendTemplateToken, templateValidationMessage } from './tokenTextEditor'
 import { useI18n } from '@/i18n'
 import { TOKEN_FORMATTING_GUIDE } from './tokenFormattingGuide'
 import {
@@ -160,11 +179,17 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const formatHelpRef = ref<HTMLElement | null>(null)
 const localValue = ref(props.modelValue)
 const searchQuery = ref('')
+const plainText = ref('')
+const insertionError = ref('')
+const validationChecked = ref(false)
 const editorOpen = ref(false)
 const selectedPreset = ref('')
 const currentTarget = ref<TokenFormatTarget | null>(null)
 const formatDraft = ref<TokenFormatDraft>(parseTokenFormat('%d'))
-const validationError = computed(() => validateTokenTemplate(localValue.value)[0] || '')
+const validationError = computed(() => {
+  const message = templateValidationMessage(localValue.value)
+  return message ? t(message.key, { token: message.detail || '' }) : ''
+})
 const resultValue = computed(() => resolveTokenTemplate(
   localValue.value,
   undefined,
@@ -195,9 +220,33 @@ watch(
   }
 )
 
+watch(localValue, () => {
+  validationChecked.value = false
+  insertionError.value = ''
+})
+
 const updateValue = (value: string) => {
   localValue.value = value
   emit('update:modelValue', value)
+}
+
+const appendText = () => {
+  if (!plainText.value.length) return
+  if (localValue.value.trim() && validationError.value) {
+    insertionError.value = validationError.value
+    return
+  }
+  const value = appendTemplateText(localValue.value, plainText.value)
+  if (value.length > TOKEN_TEMPLATE_MAX_LENGTH) {
+    insertionError.value = t('tokens.editor.validationLength')
+    return
+  }
+  updateValue(value)
+  plainText.value = ''
+  requestAnimationFrame(() => {
+    textareaRef.value?.focus()
+    textareaRef.value?.setSelectionRange(value.length, value.length)
+  })
 }
 
 const handleInput = (event: Event) => {
@@ -254,11 +303,16 @@ const insertToken = (code: string) => {
   const token = `(${code})`
   const start = textarea?.selectionStart ?? localValue.value.length
   const end = textarea?.selectionEnd ?? start
-  const insertion = start === end && start === localValue.value.length && localValue.value.trim()
-    ? ` + " " + ${token}`
-    : token
-  updateValue(`${localValue.value.slice(0, start)}${insertion}${localValue.value.slice(end)}`)
-  const position = start + insertion.length
+  const atEnd = start === end && start === localValue.value.length
+  const value = atEnd
+    ? appendTemplateToken(localValue.value, code)
+    : `${localValue.value.slice(0, start)}${token}${localValue.value.slice(end)}`
+  if (value.length > TOKEN_TEMPLATE_MAX_LENGTH) {
+    insertionError.value = t('tokens.editor.validationLength')
+    return
+  }
+  updateValue(value)
+  const position = atEnd ? value.length : start + token.length
   currentTarget.value = findTokenFormatTarget(localValue.value, position)
   requestAnimationFrame(() => {
     textarea?.setSelectionRange(position, position)
@@ -268,6 +322,73 @@ const insertToken = (code: string) => {
 </script>
 
 <style scoped>
+.token-text-help {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+  color: var(--studio-text);
+  font-size: 13px;
+}
+.token-text-help p {
+  margin: 0;
+  color: var(--studio-text-muted);
+  line-height: 1.6;
+}
+.token-text-help code {
+  color: var(--studio-primary);
+  overflow-wrap: anywhere;
+}
+.token-text-help label {
+  margin-top: 4px;
+  font-weight: 600;
+}
+.token-text-entry,
+.token-validation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.token-text-entry input {
+  flex: 1;
+  min-width: 150px;
+  padding: 9px 12px;
+  border: 1px solid var(--studio-border-strong);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  font: inherit;
+}
+.token-text-entry button,
+.token-validate-button {
+  padding: 9px 14px;
+  border: 1px solid var(--studio-primary-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface);
+  color: var(--studio-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.token-text-entry button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.token-validation-actions {
+  margin-top: 10px;
+}
+.token-validation-success {
+  color: var(--studio-primary);
+  font-size: 13px;
+}
+.token-text-help .token-editor-error {
+  color: var(--el-color-danger);
+}
 .token-editor-card {
   padding: 24px;
   border: 1px solid var(--studio-border);

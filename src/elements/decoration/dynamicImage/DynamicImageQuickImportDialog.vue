@@ -64,6 +64,7 @@ import { buildDynamicImageImportPlan, collectDynamicImageImportFiles, materializ
 
 const props = defineProps<{
   modelValue: boolean
+  allowedKinds?: readonly DynamicImageImportKind[]
   applyGroups: (groups: MaterializedDynamicImageGroup[]) => Promise<void>
 }>()
 const emit = defineEmits<{
@@ -97,7 +98,7 @@ const handleInput = async (event: Event) => {
   try {
     const collected = await collectDynamicImageImportFiles(files)
     collectionErrors.value = collected.errors
-    plan.value = buildDynamicImageImportPlan(collected.files)
+    plan.value = buildDynamicImageImportPlan(collected.files, { allowedKinds: props.allowedKinds })
     progress.value = 100
   } finally {
     busy.value = false

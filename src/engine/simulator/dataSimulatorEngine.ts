@@ -403,7 +403,7 @@ export class DataSimulatorEngine {
           if (typeof obj.updateRadialText === 'function') {
             const previousLeft = obj.left
             const previousTop = obj.top
-            obj.updateRadialText(template)
+            obj.updateRadialText(template, nextText)
             if (typeof previousLeft === 'number') obj.set?.('left', previousLeft)
             if (typeof previousTop === 'number') obj.set?.('top', previousTop)
           } else {

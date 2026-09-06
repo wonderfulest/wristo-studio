@@ -308,13 +308,24 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
   it('renders the resolved compact token value for text templates', () => {
     const set = vi.fn()
     canvas.getObjects.mockReturnValue([
-      { id: 'heart-rate-template', eleType: 'angledText', textTemplate: '(ds9)', text: '{{ds9}}', set },
+      { id: 'heart-rate-template', eleType: 'angledText', textTemplate: '(ds9)', text: '72', set },
     ])
 
     new DataSimulatorEngine().updateCanvas()
 
     expect(getSimulatedDataByTokenCode).toHaveBeenCalledWith('ds9')
     expect(set).toHaveBeenCalledWith('text', '80')
+  })
+
+  it('passes the resolved token text to radial-text updates', () => {
+    const updateRadialText = vi.fn()
+    canvas.getObjects.mockReturnValue([
+      { id: 'radial-heart-rate-template', eleType: 'radialText', textTemplate: '"HR " + (ds9)', text: 'HR 72', updateRadialText },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(updateRadialText).toHaveBeenCalledWith('"HR " + (ds9)', 'HR 80')
   })
 
   it('uses raw numeric token values when evaluating formatted arithmetic text templates', () => {

@@ -8,6 +8,68 @@ vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 import TokenTemplateEditorPanel from './TokenTemplateEditorPanel.vue'
 
 describe('TokenTemplateEditorPanel', () => {
+  it('adds ordinary text, converts it when adding a token, and escapes the suffix', async () => {
+    const wrapper = mount(TokenTemplateEditorPanel, {
+      props: { modelValue: '', actionLabel: 'Apply' }
+    })
+    await wrapper.get('#token-plain-text').setValue('Activity')
+    await wrapper.get('.token-text-entry button').trigger('click')
+    expect(wrapper.get('.token-editor-result-value').text()).toBe('Activity')
+    const textarea = wrapper.get('textarea').element as HTMLTextAreaElement
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    await wrapper.get('[data-token-code="ai12"]').trigger('click')
+    expect(textarea.value).toBe('"Activity" + " " + (ai12)')
+
+    await wrapper.get('#token-plain-text').setValue(' "steps" \\ done')
+    await wrapper.get('.token-text-entry button').trigger('click')
+    expect(wrapper.get('.token-editor-result-value').text()).toBe('Activity 8240 "steps" \\ done')
+    expect(wrapper.find('.token-editor-error').exists()).toBe(false)
+  })
+
+  it('reports explicit validation success and clears it on user and external edits', async () => {
+    const wrapper = mount(TokenTemplateEditorPanel, {
+      props: { modelValue: '(ai12)', actionLabel: 'Apply' }
+    })
+    await wrapper.get('.token-validate-button').trigger('click')
+    expect(wrapper.get('[role="status"]').text()).toBe('tokens.editor.validationSuccess')
+    await wrapper.get('textarea').setValue('(ai12')
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    await wrapper.get('.token-validate-button').trigger('click')
+    expect(wrapper.get('.token-editor-error').text()).toBe('tokens.editor.validationSyntax')
+    expect(wrapper.get('.token-editor-action').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.token-editor-result-value').text()).toBe('—')
+    await wrapper.setProps({ modelValue: '(tm1)' })
+    await wrapper.get('.token-validate-button').trigger('click')
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
+    await wrapper.setProps({ modelValue: '(tm2)' })
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+  })
+
+  it('rejects empty content and explains a missing operand', async () => {
+    const wrapper = mount(TokenTemplateEditorPanel, {
+      props: { modelValue: '', actionLabel: 'Apply' }
+    })
+    await wrapper.get('.token-validate-button').trigger('click')
+    expect(wrapper.get('.token-editor-error').text()).toBe('tokens.editor.validationEmpty')
+    await wrapper.get('textarea').setValue('(ai12) +')
+    expect(wrapper.get('.token-editor-error').text()).toBe('tokens.editor.validationOperand')
+  })
+
+  it('does not truncate text or insert a token when the generated expression exceeds the limit', async () => {
+    const original = 'a'.repeat(125)
+    const wrapper = mount(TokenTemplateEditorPanel, {
+      props: { modelValue: original, actionLabel: 'Apply' }
+    })
+    await wrapper.get('#token-plain-text').setValue('long suffix')
+    await wrapper.get('.token-text-entry button').trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(wrapper.get('.token-text-help [role="alert"]').text()).toBe('tokens.editor.validationLength')
+    const textarea = wrapper.get('textarea').element as HTMLTextAreaElement
+    textarea.setSelectionRange(original.length, original.length)
+    await wrapper.get('[data-token-code="ai12"]').trigger('click')
+    expect(textarea.value).toBe(original)
+  })
+
   it('uses the same search prompt as token lookup', () => {
     const wrapper = mount(TokenTemplateEditorPanel, {
       props: { modelValue: '', appLanguage: 'eng', actionLabel: 'Apply' }

@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { getSimulatedDataByName, setDataSimulatorScenario } from './dataSimulator'
 
 describe('sleep data simulation', () => {
+  it('uses token syntax for unknown-field placeholders', () => {
+    expect(getSimulatedDataByName('missingField')).toMatchObject({ display: '(missingField)' })
+  })
+
   it('keeps configured bedtime distinct from sleep score', () => {
     expect(getSimulatedDataByName('sleep')).toEqual({
       display: '22:30',

@@ -98,6 +98,20 @@ describe('dynamic image quick import naming contract', () => {
     )
   })
 
+  it('rejects files outside the selected quick-import type', () => {
+    const plan = buildDynamicImageImportPlan([
+      image('tm5-01.png'),
+      image('w01-00.png'),
+    ], { allowedKinds: ['weekday'] })
+
+    expect(plan.groups.map((group) => group.kind)).toEqual(['weekday'])
+    expect(plan.errors).toContainEqual({
+      code: 'unexpected-kind',
+      kind: 'weather',
+      fileName: 'w01-00.png',
+    })
+  })
+
   it('rejects ZIP archives instead of treating them as quick-import sources', async () => {
     const archive = new File(['zip'], 'minutes.zip', { type: 'application/zip' })
 

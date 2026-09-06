@@ -1,5 +1,5 @@
 import { FabricText, Group as FabricGroup } from 'fabric'
-import { getDataValueByName } from '@/utils/dataSimulator'
+import { resolveDataTextTemplate } from '@/utils/dataSimulator'
 
 interface FabricRadialTextOptions {
   text?: string
@@ -50,10 +50,7 @@ export class FabricRadialText {
   // 生成环形文字，返回 fabric.Group
   render() {
     const templateText = this.text || ''
-    const baseResolvedText = templateText.replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
-      const key = String(p1 || '').trim()
-      return key ? getDataValueByName(key) : ''
-    })
+    const baseResolvedText = resolveDataTextTemplate(templateText)
 
     const chars = baseResolvedText.split('')
     const items: FabricText[] = []
@@ -212,18 +209,12 @@ export class FabricRadialText {
     }
 
     // 统一文本更新：根据新文本增删子对象并重排
-    ;(group as any).updateRadialText = function updateRadialText(newText: string) {
+    ;(group as any).updateRadialText = function updateRadialText(newText: string, resolvedText = resolveDataTextTemplate(newText)) {
       console.log('[111 updateRadialText] newText (template)', newText)
       const g: any = this
       const m = g.radialMeta || meta
-      // 1) 先把模板字符串解析为真实展示文本
-      // 支持简单形式："hr" 或 "{{hr}}"，以及混合文本例如 "HR {{hr}} bpm"
-      const resolvedText = (newText || '').replace(/\{\{([^}]+)\}\}/g, (_match, p1) => {
-        const key = String(p1 || '').trim()
-        return key ? getDataValueByName(key) : ''
-      })
 
-      // 2) 更新模板与解析后的文本
+      // 更新模板与解析后的文本
       g.textTemplate = newText
       g.text = resolvedText
       if (m) m.text = resolvedText

@@ -7,6 +7,12 @@ import type { ExpressionNode, ExpressionTokenDefinition } from './types'
 export const TOKEN_TEMPLATE_MAX_LENGTH = 128
 export const TOKEN_TEMPLATE_MAX_TOKENS = 8
 
+// Plain labels remain valid; expression-looking input must also be parsed when
+// a user has not finished typing a Token yet.
+export function isTokenTemplateExpression(source: string): boolean {
+  return /\([a-zA-Z][a-zA-Z0-9_.]*\)|^\s*["'“”‘’(]|\.format\(|\{\{|\}\}/.test(source)
+}
+
 const TOKEN_PATTERN = /\(([a-zA-Z][a-zA-Z0-9_.]*)\)/g
 const NUMBER_FORMAT_SOURCE = '%(?:,)?(?:0)?(?:\\d+)?(?:\\.\\d+)?[dfs]'
 const TOKEN_OPERAND_PATTERN = new RegExp(`^\\(([a-zA-Z][a-zA-Z0-9_.]*)\\)(?:\\.format\\("(${NUMBER_FORMAT_SOURCE})"\\))?$`)
@@ -92,7 +98,7 @@ export function validateTokenTemplate(template: string): string[] {
   if (source.length > TOKEN_TEMPLATE_MAX_LENGTH) {
     errors.push(`Token template must not exceed ${TOKEN_TEMPLATE_MAX_LENGTH} characters.`)
   }
-  const matches = [...source.matchAll(TOKEN_PATTERN)]
+  const matches = [...source.replace(/"(?:\\.|[^"\\])*"/g, '""').matchAll(TOKEN_PATTERN)]
   if (matches.length > TOKEN_TEMPLATE_MAX_TOKENS) {
     errors.push(`Token template must not contain more than ${TOKEN_TEMPLATE_MAX_TOKENS} tokens.`)
   }
@@ -100,7 +106,7 @@ export function validateTokenTemplate(template: string): string[] {
     const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(match[1])
     if (!definition) errors.push(`Unknown token: ${match[1]}`)
   }
-  if (matches.length > 0 || source.includes('{{') || source.includes('}}')) {
+  if (isTokenTemplateExpression(source)) {
     try {
       parseDynamicString(source)
     } catch (error) {
@@ -118,7 +124,8 @@ type DynamicStringPart =
   | { type: 'numeric'; ast: ExpressionNode; format: string }
 
 function parseDynamicString(source: string): DynamicStringPart[] {
-  if (source.includes('{{') || source.includes('}}')) throw new Error('Legacy token syntax is not supported')
+  const unquotedSource = source.replace(/"(?:\\.|[^"\\])*"/g, '""')
+  if (unquotedSource.includes('{{') || unquotedSource.includes('}}')) throw new Error('Legacy token syntax is not supported')
   const parts: string[] = []
   let start = 0
   let quoted = false
@@ -216,7 +223,7 @@ export function resolveTokenTemplate(
   resolver?: (code: string, format?: string, usage?: 'display' | 'numeric') => unknown,
 ): string {
   const source = String(template ?? '')
-  if (![...source.matchAll(TOKEN_PATTERN)].length) return source
+  if (!isTokenTemplateExpression(source)) return source
   try {
     let invalidNumeric = false
     const result = parseDynamicString(source).map((part) => {
