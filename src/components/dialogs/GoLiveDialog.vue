@@ -21,6 +21,17 @@
           </template>
         </el-input>
       </el-form-item>
+      <ProductTagSelector
+        :tag-ids="form.tagIds"
+        :suggestion-text="tagSuggestionText"
+        :suggestion-config="currentDesign?.configJson"
+        :supported-device-ids="currentDesign?.product?.release?.deviceIds"
+        :limit="MAX_PRODUCT_TAGS"
+        @update:tag-ids="updateProductTags"
+        :tags="productTags"
+        :loading="loadingProductTags"
+        :disabled="productTagsLoadFailed"
+      />
       <el-form-item :label="t('submitDesign.description')">
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
@@ -172,12 +183,6 @@
         </div>
       </el-form-item>
 
-      <ProductTagSelector
-        v-model:tagIds="form.tagIds"
-        :tags="productTags"
-        :loading="loadingProductTags"
-        :disabled="productTagsLoadFailed"
-      />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
         :bundles="bundles"
@@ -272,7 +277,7 @@ import {
   saveProductImageArchive,
   type ProductImageDownloadMode,
 } from '@/components/common/productImageDownload'
-import { filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
+import { MAX_PRODUCT_TAGS, suggestProductTags, tagDescriptionSuffix, syncTagDescription, filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
 import {
   PRODUCT_IMAGE_LIMIT,
   groupProductImages,
@@ -303,7 +308,7 @@ const rules: FormRules = {
           return
         }
         if (result === 'invalid') {
-          callback(new Error(t('productTags.limit', { limit: 5 })))
+          callback(new Error(t('productTags.limit', { limit: MAX_PRODUCT_TAGS })))
           return
         }
         callback()
@@ -392,9 +397,20 @@ const emit = defineEmits(['success', 'cancel'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 
+let descriptionTagSuffix = ''
+const tagSuggestionText = computed(() => `${form.name} ${syncTagDescription(form.description, descriptionTagSuffix, '')}`)
+const updateProductTags = (ids: number[]) => {
+  const next = tagDescriptionSuffix(ids, productTags.value)
+  form.description = syncTagDescription(form.description, descriptionTagSuffix, next)
+  descriptionTagSuffix = next
+  form.tagIds = ids
+}
+
 const restoreCurrentProductTags = () => {
   const selectedIds = currentDesign.value?.product?.tags?.map((tag) => tag.id) ?? []
-  form.tagIds = restorePublishedTagIds(productTags.value, selectedIds)
+  descriptionTagSuffix = tagDescriptionSuffix(selectedIds, productTags.value)
+  const restored = restorePublishedTagIds(productTags.value, selectedIds)
+  updateProductTags(restored.length ? restored : suggestProductTags(tagSuggestionText.value, productTags.value, currentDesign.value?.configJson))
 }
 
 const handlePaymentMethodChange = (value: string) => {
@@ -475,6 +491,7 @@ const handleConfirm = async () => {
 
   const valid = await formRef.value?.validate?.().catch(() => false)
   if (valid === false) return
+  updateProductTags(form.tagIds)
   
   // 验证必填字段
   if (!form.garminImageUrl.trim()) {
@@ -701,6 +718,7 @@ const refreshDescription = async () => {
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
+      updateProductTags(form.tagIds)
       ElMessage.success(t('goLive.descriptionUpdated'))
     }
   } catch (e) {

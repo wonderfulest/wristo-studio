@@ -9,9 +9,10 @@ const mocks = vi.hoisted(() => ({
   getProductTagsPage: vi.fn(),
   getBundles: vi.fn(),
   publish: vi.fn(),
+  generateDescription: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
-  messageWarning: vi.fn(),
+  messageWarning: vi.fn()
 }))
 
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage }))
@@ -19,27 +20,27 @@ vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
     publish: mocks.publish,
-    generateDescription: vi.fn(),
-  },
+    generateDescription: mocks.generateDescription
+  }
 }))
 vi.mock('@/stores/message', () => ({
   useMessageStore: () => ({
     error: mocks.messageError,
     success: mocks.messageSuccess,
-    warning: mocks.messageWarning,
-  }),
+    warning: mocks.messageWarning
+  })
 }))
 vi.mock('@/stores/user', () => ({
   useUserStore: () => ({
     isMerchantUser: true,
     isAdminUser: false,
-    userInfo: { id: 10 },
-  }),
+    userInfo: { id: 10 }
+  })
 }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('element-plus', () => ({
   ElMessage: { error: vi.fn(), success: vi.fn() },
-  ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) },
+  ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) }
 }))
 
 import GoLiveDialog from './GoLiveDialog.vue'
@@ -50,16 +51,10 @@ const tag = (id: number, tagGroup: string, status = 1): ProductTag => ({
   slug: `tag-${id}`,
   tagGroup,
   sort: id,
-  status,
+  status
 })
 
-const apiTags = [
-  tag(1, 'style'),
-  tag(28, 'function'),
-  tag(38, 'scene'),
-  tag(49, 'seasonal'),
-  tag(99, 'style', 0),
-]
+const apiTags = [tag(1, 'style'), tag(28, 'function'), tag(38, 'scene'), tag(49, 'seasonal'), tag(99, 'style', 0)]
 
 const design = {
   product: {
@@ -78,15 +73,15 @@ const design = {
     garminStoreUrl: 'https://apps.garmin.com/app',
     youtubeUrl: '',
     productImages: [],
-    lastGoLive: null,
-  },
+    lastGoLive: null
+  }
 } as unknown as Design
 
 const ElFormStub = defineComponent({
   setup(_, { slots, expose }) {
     expose({ validate: vi.fn().mockResolvedValue(true) })
     return () => h('form', slots.default?.())
-  },
+  }
 })
 
 const ProductTagSelectorStub = defineComponent({
@@ -95,16 +90,16 @@ const ProductTagSelectorStub = defineComponent({
     tagIds: { type: Array, required: true },
     tags: { type: Array, required: true },
     loading: Boolean,
-    disabled: Boolean,
+    disabled: Boolean
   },
   emits: ['update:tagIds'],
-  template: '<div class="product-tag-selector" />',
+  template: '<div class="product-tag-selector" />'
 })
 
 const stubs = {
   ElDialog: {
     props: ['modelValue'],
-    template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>',
+    template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>'
   },
   ElForm: ElFormStub,
   ElFormItem: { template: '<div><slot/></div>' },
@@ -125,7 +120,7 @@ const stubs = {
   ProductImagesEditor: true,
   ProductTagSelector: ProductTagSelectorStub,
   BundleSelector: true,
-  DesignerDefaultConfigDialog: true,
+  DesignerDefaultConfigDialog: true
 }
 
 const mountDialog = () => mount(GoLiveDialog, { global: { stubs } })
@@ -149,7 +144,7 @@ describe('GoLiveDialog product tag behavior', () => {
     mocks.publish.mockResolvedValue({ code: 0, data: true })
   })
 
-  it('shows all enabled groups, restores product tags, and publishes tagIds only', async () => {
+  it('shows all enabled groups, restores product tags, and publishes tags in the description', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
@@ -160,14 +155,36 @@ describe('GoLiveDialog product tag behavior', () => {
 
     await confirm(wrapper)
 
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [28, 49] }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [28, 49], description: expect.stringContaining('#tag-28 #tag-49') }))
     expect(mocks.publish.mock.calls[0][0]).not.toHaveProperty('categoryIds')
+  })
+
+  it('synchronizes changed tags without duplicating the description suffix', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    wrapper.getComponent(ProductTagSelectorStub).vm.$emit('update:tagIds', [1, 38])
+    await flushPromises()
+    await confirm(wrapper)
+    const description = mocks.publish.mock.calls[0][0].description
+    expect(description).toContain('#tag-1 #tag-38')
+    expect(description).not.toContain('#tag-28')
+    expect(description.split('#tag-1')).toHaveLength(2)
+  })
+
+  it('rebuilds refreshed server tags from the current selection without duplicates', async () => {
+    mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Refreshed body\n\n\\#tag-49 #tag-28\n\n#tag-28 #tag-49' })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.findAll('button').find((button) => button.text() === 'common.refresh')!.trigger('click')
+    await flushPromises()
+    await confirm(wrapper)
+    expect(mocks.publish.mock.calls[0][0].description).toBe('Refreshed body\n\n#tag-28 #tag-49')
   })
 
   it.each([
     ['rejected', () => Promise.reject(new Error('network'))],
     ['nonzero', () => Promise.resolve({ code: 9, data: null })],
-    ['invalid', () => Promise.resolve({ code: 0, data: { list: null } })],
+    ['invalid', () => Promise.resolve({ code: 0, data: { list: null } })]
   ])('keeps the dialog open and blocks publishing when tag loading is %s', async (_name, response) => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.getProductTagsPage.mockImplementationOnce(response)
