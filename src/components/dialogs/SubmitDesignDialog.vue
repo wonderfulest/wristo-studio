@@ -82,25 +82,6 @@
         <div class="form-tip">{{ t('submitDesign.trialTip') }}</div>
       </el-form-item>
       
-      <el-form-item :label="t('submitDesign.description')">
-        <el-input 
-          v-model="form.description" 
-          type="textarea" 
-          :rows="3" 
-          :placeholder="t('submitDesign.enterDescription')"
-        />
-        <div class="description-actions">
-          <el-button size="small" type="primary" :loading="refreshingDescription" @click="refreshDescription">
-            {{ t('common.refresh') }}
-          </el-button>
-        </div>
-      </el-form-item>
-      <StyleTagSelector
-        v-model:tagIds="form.tagIds"
-        :tags="styleTags"
-        :loading="loadingStyleTags"
-        :disabled="styleTagsLoadFailed"
-      />
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
         :bundles="bundles"
@@ -129,27 +110,16 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
-import { getProductTagsPage } from '@/api/wristo/productTags'
-import type { ProductTag } from '@/types/api/productTag'
 import { productsApi } from '@/api/wristo/products'
 import type { Bundle } from '@/types/api/bundle'
-import StyleTagSelector from '@/components/common/StyleTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
-import { filterEnabledStyleTags } from '@/components/common/styleTagSelection'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
-import {
-  buildGenerateDescriptionPayload,
-  resolveDescriptionTemplateLanguage,
-} from '@/utils/descriptionTemplateLanguage'
-import { ElMessage } from 'element-plus'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
-import { restoreEnabledStyleTagIds, STYLE_TAG_LIMIT, validateStyleTagIds } from './submitDesignStyleTags'
 import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 
 const dialogVisible = ref(false)
 const loading = ref(false)
-const refreshingDescription = ref(false)
 const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 const dialogMode = ref<'submit' | 'prg-build'>('submit')
@@ -172,7 +142,6 @@ const getCurrentDeviceParams = () => {
 const form = reactive({
   designUid: '',
   name: '',
-  description: '',
   originalType: 'original' as DesignOriginalType,
   sourcePlatform: '' as DesignSourcePlatform | '',
   sourceId: '',
@@ -180,7 +149,6 @@ const form = reactive({
   kpayId: '',
   price: 1.99,
   trialLasts: 0.25, // default 0.25 hours
-  tagIds: [] as number[],
   bundleIds: [] as number[]
 })
 
@@ -239,18 +207,6 @@ const rules = computed(() => ({
       message: t('submitDesign.trialRange'), 
       trigger: 'blur' 
     }
-  ],
-  tagIds: [
-    { required: true, type: 'array', message: t('styleTags.required'), trigger: 'change' },
-    { 
-      validator: (_rule: any, value: unknown, callback: (err?: Error) => void) => {
-        const result = validateStyleTagIds(value)
-        if (result === 'required' || result === 'invalid') return callback(new Error(t('styleTags.required')))
-        if (result === 'limit') return callback(new Error(t('styleTags.limit', { limit: STYLE_TAG_LIMIT })))
-        callback()
-      },
-      trigger: 'change'
-    }
   ]
 }))
 
@@ -260,33 +216,8 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-// Style tag / bundle options
-const styleTags = ref<ProductTag[]>([])
-const loadingStyleTags = ref(false)
-const styleTagsLoadFailed = ref(false)
 const bundles = ref<Bundle[]>([])
 const loadingBundles = ref(false)
-
-const loadStyleTags = async () => {
-  loadingStyleTags.value = true
-  styleTagsLoadFailed.value = false
-  try {
-    const response = await getProductTagsPage()
-    if (response.code === 0 && Array.isArray(response.data?.list)) {
-      styleTags.value = filterEnabledStyleTags(response.data.list)
-      return
-    }
-    throw new Error(response.msg || 'Invalid style tag response')
-  } catch (error) {
-    console.error('Failed to load style tags:', error)
-    styleTags.value = []
-    form.tagIds = []
-    styleTagsLoadFailed.value = true
-    messageStore.error(t('styleTags.loadFailed'))
-  } finally {
-    loadingStyleTags.value = false
-  }
-}
 
 const loadBundles = async () => {
   try {
@@ -329,10 +260,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
     currentDesign.value = null
     dialogMode.value = options?.mode || 'submit'
     prgDeviceId.value = options?.deviceId || ''
-    styleTags.value = []
-    styleTagsLoadFailed.value = false
-    form.tagIds = []
-    
+
     // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
     
@@ -345,7 +273,6 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
       Object.assign(form, {
         designUid: designDetail.designUid,
         name: designDetail.name,
-        description: designDetail.description || '',
         originalType: designDetail.originalType || 'original',
         sourcePlatform: designDetail.sourcePlatform || '',
         sourceId: designDetail.sourceId || '',
@@ -353,13 +280,12 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         kpayId: '',
         price: 1.99,
         trialLasts: 0.25,
-        tagIds: [],
         bundleIds: []
       })
       
       if (product) {
         form.trialLasts = product.trialLasts
-        // Initialize bundles; style tags are restored after enabled options load.
+        // Initialize bundles.
         if (Array.isArray(product.bundles)) {
           form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)
         }
@@ -378,11 +304,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
           form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
-      // Load style tag and bundle options
-      await Promise.all([loadStyleTags(), loadBundles()])
-      if (!styleTagsLoadFailed.value) {
-        form.tagIds = restoreEnabledStyleTagIds(product?.tags?.map((tag) => tag.id), styleTags.value)
-      }
+      await loadBundles()
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || t('submitDesign.loadDetailsFailed'))
@@ -395,43 +317,9 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
   }
 }
 
-const refreshDescription = async () => {
-  const uid = userStore.userInfo?.id
-  if (!uid) {
-    ElMessage.error(t('auth.userNotLoggedIn'))
-    return
-  }
-
-  const productId = currentDesign.value?.product?.id
-  if (!productId) {
-    ElMessage.error(t('submitDesign.loadDetailsFailed'))
-    return
-  }
-
-  try {
-    refreshingDescription.value = true
-    const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
-    const payload = buildGenerateDescriptionPayload(uid, productId, language)
-    const res = await productsApi.generateDescription(payload) as ApiResponse<string>
-    if (typeof res.data === 'string') {
-      form.description = res.data
-      ElMessage.success(t('goLive.descriptionUpdated'))
-    }
-  } catch (e) {
-    ElMessage.error(t('goLive.generateDescriptionFailed'))
-  } finally {
-    refreshingDescription.value = false
-  }
-}
-
 // Confirm submit
 const handleConfirm = async () => {
   if (!formRef.value) return
-  if (styleTagsLoadFailed.value) {
-    messageStore.error(t('styleTags.loadFailed'))
-    return
-  }
-  
   try {
     await formRef.value.validate()
     if (form.paymentMethod !== 'free' && !canPublishPaid.value) {
@@ -449,8 +337,6 @@ const handleConfirm = async () => {
       sourcePlatform: resolvedOriginalType === 'non_original' ? form.sourcePlatform || undefined : undefined,
       sourceId: resolvedOriginalType === 'non_original' ? form.sourceId.trim() || undefined : undefined,
       name: form.name,
-      description: form.description,
-      tagIds: form.tagIds,
       bundleIds: form.bundleIds
     }
 
@@ -508,8 +394,6 @@ const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiRe
   const updateData: UpdateDesignParamsV2 = {
     uid: submitData.designUid,
     name: submitData.name,
-    description: submitData.description,
-    tagIds: submitData.tagIds,
     bundleIds: submitData.bundleIds,
   }
   if (canPublishPaid.value) {
@@ -559,15 +443,6 @@ defineExpose({
   color: var(--el-text-color-secondary);
   vertical-align: middle;
 }
-
-.description-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
 
 .dialog-footer {
   display: flex;

@@ -145,29 +145,17 @@ describe('SubmitDesignDialog style tag behavior', () => {
     mocks.submitPrgPackageTask.mockResolvedValue({ code: 0, data: true })
   })
 
-  it('loads Dsn style tags for a non-admin Studio user, restores IDs, and submits tagIds', async () => {
+  it.each([undefined, { mode: 'prg-build' as const, deviceId: 'fenix8' }])('submits without editing publishing metadata (%s)', async (options) => {
     const wrapper = mountDialog()
-    await showDialog(wrapper)
-
-    expect(wrapper.find('.dialog').exists()).toBe(true)
-    expect(mocks.getDsnProductTagsPage).toHaveBeenCalledOnce()
-    const selector = wrapper.getComponent(StyleTagSelectorStub)
-    expect((selector.props('tags') as ProductTag[]).map((item) => item.id)).toEqual([7, 2, 100, 9, 4, 6, 8])
-    expect(selector.props('tagIds')).toEqual([7, 2, 9, 4, 6])
-    expect(selector.props('disabled')).toBe(false)
-
+    await showDialog(wrapper, options)
+    expect(wrapper.findComponent(StyleTagSelectorStub).exists()).toBe(false)
+    expect(mocks.getDsnProductTagsPage).not.toHaveBeenCalled()
     await confirm(wrapper)
-    expect(mocks.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [7, 2, 9, 4, 6] }))
-  })
-
-  it('passes tagIds through updateDesign before submitting a PRG task', async () => {
-    const wrapper = mountDialog()
-    await showDialog(wrapper, { mode: 'prg-build', deviceId: 'fenix8' })
-    await confirm(wrapper)
-
-    expect(mocks.updateDesign).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [7, 2, 9, 4, 6] }))
-    expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
-    expect(wrapper.emitted('success')).toEqual([[{ mode: 'prg-build' }]])
+    const request = options ? mocks.updateDesign : mocks.submitDesign
+    expect(request).toHaveBeenCalledOnce()
+    expect(request.mock.calls[0][0]).not.toHaveProperty('tagIds')
+    expect(request.mock.calls[0][0]).not.toHaveProperty('description')
+    if (options) expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
   })
 
   it('identifies ordinary submissions separately from PRG builds', async () => {
@@ -203,24 +191,4 @@ describe('SubmitDesignDialog style tag behavior', () => {
     expect(mocks.submitDesign).not.toHaveBeenCalled()
   })
 
-  it.each([
-    ['rejected', () => Promise.reject(new Error('network'))],
-    ['nonzero', () => Promise.resolve({ code: 9, data: null })],
-    ['invalid', () => Promise.resolve({ code: 0, data: { list: null } })],
-  ])('keeps the dialog open and blocks requests when tag loading is %s', async (_name, response) => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    mocks.getDsnProductTagsPage.mockImplementationOnce(response)
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-
-    expect(wrapper.find('.dialog').exists()).toBe(true)
-    expect(wrapper.getComponent(StyleTagSelectorStub).props('disabled')).toBe(true)
-    expect(mocks.messageError).toHaveBeenCalledWith('styleTags.loadFailed')
-
-    await confirm(wrapper)
-    expect(mocks.submitDesign).not.toHaveBeenCalled()
-    expect(mocks.updateDesign).not.toHaveBeenCalled()
-    expect(mocks.submitPrgPackageTask).not.toHaveBeenCalled()
-    consoleError.mockRestore()
-  })
 })

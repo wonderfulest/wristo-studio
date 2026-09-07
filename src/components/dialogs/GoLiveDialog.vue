@@ -32,7 +32,7 @@
         :loading="loadingProductTags"
         :disabled="productTagsLoadFailed"
       />
-      <el-form-item :label="t('submitDesign.description')">
+      <el-form-item :label="t('submitDesign.description')" prop="description" required>
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
           <el-button size="small" type="primary" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
@@ -296,6 +296,9 @@ const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 const { t } = useI18n()
 
 const rules: FormRules = {
+  description: [
+    { required: true, whitespace: true, message: t('submitDesign.enterDescription'), trigger: ['blur', 'change'] },
+  ],
   garminStoreUrl: [
     { required: true, message: t('goLive.garminStoreUrlRequired'), trigger: ['blur', 'change'] },
   ],

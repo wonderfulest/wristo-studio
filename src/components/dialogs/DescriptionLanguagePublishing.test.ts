@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 const readDialog = (name: string) =>
   readFileSync(new URL(`./${name}.vue`, import.meta.url), 'utf8')
 
-describe.each(['GoLiveDialog', 'SubmitDesignDialog'])('%s description language', (name) => {
+describe.each(['GoLiveDialog'])('%s description language', (name) => {
   it('does not offer a manual template language selector', () => {
     const source = readDialog(name)
 

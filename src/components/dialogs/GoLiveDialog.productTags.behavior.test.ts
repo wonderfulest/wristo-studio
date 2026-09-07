@@ -1,3 +1,4 @@
+import Schema from 'async-validator'
 // @vitest-environment jsdom
 import { defineComponent, h, nextTick } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -78,8 +79,9 @@ const design = {
 } as unknown as Design
 
 const ElFormStub = defineComponent({
-  setup(_, { slots, expose }) {
-    expose({ validate: vi.fn().mockResolvedValue(true) })
+  props: ['model', 'rules'],
+  setup(props, { slots, expose }) {
+    expose({ validate: () => new Schema(props.rules).validate(props.model).then(() => true) })
     return () => h('form', slots.default?.())
   }
 })
@@ -157,6 +159,23 @@ describe('GoLiveDialog product tag behavior', () => {
 
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [28, 49], description: expect.stringContaining('#tag-28 #tag-49') }))
     expect(mocks.publish.mock.calls[0][0]).not.toHaveProperty('categoryIds')
+  })
+
+  it.each(['', '   '])('blocks publishing with an empty description (%s)', async (description) => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    wrapper.getComponent(ElFormStub).props('model').description = description
+    await confirm(wrapper)
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('blocks publishing without tags', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    wrapper.getComponent(ProductTagSelectorStub).vm.$emit('update:tagIds', [])
+    await flushPromises()
+    await confirm(wrapper)
+    expect(mocks.publish).not.toHaveBeenCalled()
   })
 
   it('synchronizes changed tags without duplicating the description suffix', async () => {
