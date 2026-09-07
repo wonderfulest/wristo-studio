@@ -7,6 +7,7 @@ export type DateElementSchema = {
   name: string
   icon: string
   defaultConfig: {
+    letterSpacing: number
     fontSize: number
     fontFamily: string
     fill: string
@@ -25,6 +26,7 @@ export const dateSchema: DateElementSchema = {
   name: 'Date',
   icon: 'mdi:calendar-outline',
   defaultConfig: {
+    letterSpacing: 0,
     fontSize: 24,
     fontFamily: 'roboto-condensed-regular',
     fill: '#ffffff',

@@ -23,6 +23,7 @@ const DEFAULT_FABRIC_PROPS = [
   'fontRenderType',
   'bitmapFontId',
   'fontGap',
+  'letterSpacing',
   'assetFontFamily',
   // 背景/图片运行时元数据
   'wristoImageUrl',

@@ -62,6 +62,7 @@ export const publishBitmapFontBuild = ({ sourceFont, packageFile, manifest, reci
   return instance.post(`/dsn/fonts/bitmap-build/publish${query}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
+    suppressForbiddenRedirect: true,
     suppressBusinessErrorCodes: overwrite ? [] : [411]
   })
 }

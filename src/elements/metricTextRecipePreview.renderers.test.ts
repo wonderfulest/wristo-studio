@@ -142,6 +142,29 @@ describe('metric renderer bitmap recipe preview', () => {
     )
   })
 
+  it('keeps date spacing in pixels across font changes without moving the anchor', () => {
+    const element = fakeText('date')
+    runtime.object = element
+    updateDate(element, { letterSpacing: 3 })
+    expect(element).toMatchObject({ letterSpacing: 3, charSpacing: 60, left: 10, top: 20 })
+    updateDate(element, { fontSize: 75 })
+    expect(element).toMatchObject({ letterSpacing: 3, charSpacing: 40, left: 10, top: 20 })
+    expect(runtime.patchElement).toHaveBeenLastCalledWith(element.id, expect.objectContaining({ letterSpacing: 3 }))
+    updateDate(element, { letterSpacing: 0 })
+    expect(element.charSpacing).toBe(0)
+  })
+
+  it('creates and persists spaced custom dates', () => {
+    runtime.object = null
+    const element: any = createDate({
+      id: 'spaced-date', eleType: 'date', left: 10, top: 20, fontSize: 50, originX: 'center', originY: 'top',
+      fontFamily: 'plain-metric', fill: '#fff', formatter: 8,
+      dateFormatMode: 'custom', dateTemplate: '(dt3)', letterSpacing: 4,
+    })
+    expect(element).toMatchObject({ letterSpacing: 4, charSpacing: 80 })
+    expect(runtime.upsertElement).toHaveBeenCalledWith(expect.objectContaining({ letterSpacing: 4 }))
+  })
+
   it('date update renders and persists a custom token template', async () => {
     const element = fakeText('date')
     runtime.object = element

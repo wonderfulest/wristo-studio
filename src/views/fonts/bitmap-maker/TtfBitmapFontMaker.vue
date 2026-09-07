@@ -695,6 +695,14 @@ async function downloadGlyphs() {
   }
 }
 
+function publishErrorMessage(error: unknown): string {
+  const candidate = error as { msg?: unknown; message?: unknown; response?: { data?: { msg?: unknown; message?: unknown } } } | null
+  for (const message of [candidate?.response?.data?.msg, candidate?.response?.data?.message, candidate?.msg, candidate?.message]) {
+    if (typeof message === 'string' && message.trim()) return message
+  }
+  return t('bitmapMaker.publishFailed')
+}
+
 async function publishPackage() {
   if (!canPublish.value || !sourceFile.value || !buildArtifact.value) return
   const token = ++operationToken
@@ -758,12 +766,12 @@ async function publishPackage() {
         await router.push({ name: 'Fonts' })
       } catch (retryError) {
         if (!operationIsCurrent(snapshot)) publishError.value = t('bitmapMaker.slugChangedPublishRetry')
-        else publishError.value = retryError instanceof Error ? retryError.message : t('bitmapMaker.publishFailed')
+        else publishError.value = publishErrorMessage(retryError)
       }
     } else if (!packagePrepared) {
       localValidationPassed.value = false
       packageValidationError.value = error instanceof Error ? error.message : t('bitmapMaker.packageInvalid')
-    } else publishError.value = error instanceof Error ? error.message : t('bitmapMaker.publishFailed')
+    } else publishError.value = publishErrorMessage(error)
   } finally { if (mounted && token === operationToken) publishing.value = false }
 }
 

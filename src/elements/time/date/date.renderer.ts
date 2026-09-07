@@ -108,6 +108,8 @@ export function createDate(config: DateElementConfig): FabricElement {
     formatterOptions: [...resolvedDate.formatterOptions],
     dateFormatMode: config.dateFormatMode === 'custom' ? 'custom' : 'preset',
     dateTemplate: config.dateTemplate || DEFAULT_DATE_TEMPLATE,
+    letterSpacing: config.letterSpacing ?? 0,
+    charSpacing: (config.letterSpacing ?? 0) * 1000 / Number(previewFont.fontSize),
     hasControls: false,
   } as any)
   applyCurrentElementPreviewFont(element, config, text)
@@ -164,6 +166,7 @@ export function createDate(config: DateElementConfig): FabricElement {
     originY: element.originY as any,
     fill: savedTextStyle(element).fill as any,
     ...getPersistedTextFont(config, element),
+    letterSpacing: (element as any).letterSpacing ?? 0,
     dateProperty: (element as any).dateProperty,
     formatter: (element as any).formatter,
     formatterOptions: Array.isArray((element as any).formatterOptions)
@@ -195,6 +198,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     left: patch.left,
     top: patch.top,
     fontSize: patch.fontSize,
+    letterSpacing: patch.letterSpacing,
     fill: patch.fill,
     fontFamily: patch.fontFamily,
     formatter: patch.formatter,
@@ -234,6 +238,8 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
     obj.set('top', currentTop)
   }
 
+  obj.set('charSpacing', Number(obj.letterSpacing ?? 0) * 1000 / Number(obj.fontSize))
+
   applyCurrentElementPreviewFont(obj, {
     fontFamily: patch.fontFamily ?? getSavedFontFamily(obj), fontSize: obj.fontSize, fill: patch.fill,
   }, obj.text)
@@ -249,6 +255,7 @@ export function updateDate(element: FabricElement, patch: Partial<DateElementCon
       fill: savedTextStyle(obj).fill,
       fontSize: obj.fontSize,
       fontFamily: getSavedFontFamily(obj),
+      letterSpacing: obj.letterSpacing ?? 0,
       dateProperty: obj.dateProperty,
       formatter: obj.formatter,
       formatterOptions: Array.isArray(obj.formatterOptions) ? [...obj.formatterOptions] : undefined,

@@ -54,14 +54,14 @@ const loadAtlasImage = (url: string): Promise<CanvasImageSource> => {
   return pending
 }
 
-const lineWidth = (descriptor: BmFontDescriptor, text: string): number => {
+const lineWidth = (descriptor: BmFontDescriptor, text: string, spacing = 0): number => {
   let cursor = 0
   let previous: number | null = null
   for (const character of text) {
     const codepoint = character.codePointAt(0)!
     const glyph = descriptor.glyphs.get(codepoint)
     if (!glyph) return -1
-    if (previous != null) cursor += descriptor.kernings.get(kerningKey(previous, codepoint)) || 0
+    if (previous != null) cursor += (descriptor.kernings.get(kerningKey(previous, codepoint)) || 0) + spacing
     cursor += glyph.xadvance
     previous = codepoint
   }
@@ -72,9 +72,10 @@ const syncBitmapTextWidth = (object: any, state: PreviewState): void => {
   const descriptor = state.descriptor
   const sourceSize = state.sourceSize
   if (!descriptor || !sourceSize) return
-  const widths = String(object.text ?? '').split('\n').map(line => lineWidth(descriptor, line))
-  if (widths.some(width => width < 0)) return
   const scale = Math.max(1, Number(object.fontSize) || sourceSize) / sourceSize
+  const spacing = Number(object.letterSpacing ?? 0) / scale
+  const widths = String(object.text ?? '').split('\n').map(line => lineWidth(descriptor, line, spacing))
+  if (widths.some(width => width < 0)) return
   object.width = Math.max(1, ...widths) * scale
   object.setCoords?.()
 }
@@ -96,9 +97,10 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
   const sourceSize = state.sourceSize
   if (!descriptor || !atlas || !sourceSize) return false
   const lines = String(object.text ?? '').split('\n')
-  const widths = lines.map(line => lineWidth(descriptor, line))
-  if (widths.some(width => width < 0)) return false
   const scale = Math.max(1, Number(object.fontSize) || sourceSize) / sourceSize
+  const spacing = Number(object.letterSpacing ?? 0)
+  const widths = lines.map(line => lineWidth(descriptor, line, spacing / scale))
+  if (widths.some(width => width < 0)) return false
   const lineHeight = descriptor.lineHeight * scale
   const totalHeight = Math.max(lineHeight, lines.length * lineHeight)
   const maxWidth = Math.max(1, ...widths) * scale
@@ -119,7 +121,7 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
     for (const character of line) {
       const codepoint = character.codePointAt(0)!
       const glyph = descriptor.glyphs.get(codepoint)!
-      if (previous != null) cursor += (descriptor.kernings.get(kerningKey(previous, codepoint)) || 0) * scale
+      if (previous != null) cursor += (descriptor.kernings.get(kerningKey(previous, codepoint)) || 0) * scale + spacing
       renderContext.drawImage(
         atlas,
         glyph.x, glyph.y, glyph.width, glyph.height,

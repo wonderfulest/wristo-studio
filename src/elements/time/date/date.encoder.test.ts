@@ -53,3 +53,16 @@ describe('date formatter options persistence', () => {
     expect((decodeDate(encoded) as any).dateProperty).toBe('date_1')
   })
 })
+
+it.each([0, 3, 2.5])('round-trips date letter spacing %s in pixels', (letterSpacing) => {
+  const encoded = encodeDate({
+    id: 'spaced-date', left: 10, top: 20, fontSize: 24, letterSpacing,
+  } as any)
+  expect(encoded.letterSpacing).toBe(letterSpacing)
+  expect((decodeDate(encoded) as any).letterSpacing).toBe(letterSpacing)
+})
+
+it('defaults legacy dates to zero spacing', () => {
+  expect((decodeDate({} as any) as any).letterSpacing).toBe(0)
+  expect(encodeDate({ left: 0, top: 0 } as any).letterSpacing).toBe(0)
+})

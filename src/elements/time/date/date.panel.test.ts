@@ -41,11 +41,32 @@ describe('date settings panel', () => {
           'el-form-item': SlotStub,
           'el-select': SlotStub,
           'el-option': true,
+          'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], template: '<input />' },
         },
       },
     })
 
     expect(wrapper.getComponent({ name: 'FontPicker' }).props('type')).toBe(FontTypes.TEXT_FONT)
+  })
+
+  it('updates spacing and restores zero when the input is cleared', () => {
+    const applyPatch = vi.fn()
+    const wrapper = mount(DatePanel, {
+      props: { config: { fontFamily: '' }, applyPatch },
+      global: { stubs: {
+        FontPicker: true, ColorPicker: true, AlignXButtons: true, FontSizeSelect: true,
+        DatePropertyField: true, TextTemplateEditor: true,
+        'el-form': SlotStub, 'el-form-item': SlotStub, 'el-select': SlotStub,
+        'el-option': true, 'el-button': true,
+        'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], template: '<input />' },
+      } },
+    })
+    const input = wrapper.getComponent({ name: 'ElInputNumber' })
+    expect(input.props('modelValue')).toBe(0)
+    input.vm.$emit('change', 4)
+    expect(applyPatch).toHaveBeenLastCalledWith({ letterSpacing: 4 })
+    input.vm.$emit('change', undefined)
+    expect(applyPatch).toHaveBeenLastCalledWith({ letterSpacing: 0 })
   })
 
   it('links custom token users to the Studio token guide', () => {
@@ -70,6 +91,7 @@ describe('date settings panel', () => {
           'el-form-item': SlotStub,
           'el-select': SlotStub,
           'el-option': true,
+          'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], template: '<input />' },
           'el-button': { template: '<button><slot /></button>' },
         },
       },
@@ -106,6 +128,7 @@ describe('date settings panel', () => {
           'el-form-item': SlotStub,
           'el-select': SlotStub,
           'el-option': true,
+          'el-input-number': { name: 'ElInputNumber', props: ['modelValue'], template: '<input />' },
           'el-button': { template: '<button><slot /></button>' },
         },
       },

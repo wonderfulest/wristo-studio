@@ -8,6 +8,15 @@
         />
       </el-form-item>
 
+      <el-form-item :label="t('elementSettings.letterSpacing')">
+        <el-input-number
+          :model-value="currentModel.letterSpacing ?? 0"
+          :min="0"
+          :step="1"
+          @change="(v: number | undefined) => applyUpdate({ letterSpacing: v ?? 0 })"
+        />
+      </el-form-item>
+
       <el-form-item :label="t('elementSettings.fontColor')">
         <ColorPicker
           v-model="currentModel.fill"

@@ -39,7 +39,7 @@ describe('bitmap font publish client', () => {
     expect(post).toHaveBeenCalledTimes(1)
     const [url, form, config] = post.mock.calls[0]
     expect(url).toBe('/dsn/fonts/bitmap-build/publish')
-    expect(config).toMatchObject({ headers: { 'Content-Type': 'multipart/form-data' } })
+    expect(config).toMatchObject({ suppressForbiddenRedirect: true, headers: { 'Content-Type': 'multipart/form-data' } })
     expect([...form.keys()]).toEqual(['sourceFont', 'package', 'manifest', 'recipe', 'metadata'])
     expect(form.get('sourceFont')).toBe(sourceFont)
     expect(form.get('package')).toBe(packageFile)

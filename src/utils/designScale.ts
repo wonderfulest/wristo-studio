@@ -21,6 +21,7 @@ const SCALAR_FIELDS = new Set([
   'iconSize',
   'fontSize',
   'fontGap',
+  'letterSpacing',
   'radius',
   'bgRadius',
   'strokeWidth',

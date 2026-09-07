@@ -15,6 +15,8 @@ export interface TimeElementConfig extends TextElementConfig {
 
 export interface DateElementConfig extends TextElementConfig {
   eleType: 'date'
+  /** Extra space between date characters, in design pixels. */
+  letterSpacing?: number
   dateProperty?: string
   formatter: number
   formatterOptions?: number[]

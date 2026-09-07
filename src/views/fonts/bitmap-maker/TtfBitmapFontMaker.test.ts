@@ -574,6 +574,21 @@ describe('BitmapFontMaker', () => {
     expect(vm.publishError).toContain('network retry')
   })
 
+  it.each([
+    { code: 403, msg: 'BITMAP_FONT_OVERWRITE_FORBIDDEN' },
+    { response: { data: { msg: 'BITMAP_FONT_OVERWRITE_FORBIDDEN' } }, message: 'Request failed with status code 403' },
+  ])('shows the server publish error instead of a generic failure', async (error) => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    const vm = wrapper.vm as any
+    await vm.buildPackage()
+    vm.metadata.redistributionRightsAttested = true
+    mocks.publish.mockRejectedValueOnce(error)
+    await vm.publishPackage()
+    expect(wrapper.text()).toContain('BITMAP_FONT_OVERWRITE_FORBIDDEN')
+    expect(vm.canPublish).toBe(true)
+  })
+
   it('requires redistribution attestation only for publish and enforces tag contract bounds', async () => {
     const wrapper = mountMaker()
     await upload(wrapper)

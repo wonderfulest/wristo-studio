@@ -43,6 +43,26 @@ describe('Fabric BMFont preview', () => {
     expect(object.setCoords).toHaveBeenCalled()
   })
 
+  it('adds design-pixel spacing only between glyphs, including Chinese characters', async () => {
+    const descriptor: BmFontDescriptor = {
+      lineHeight: 32, base: 25, scaleW: 64, scaleH: 64, pageFile: 'date.png',
+      glyphs: new Map([[20013, { id: 20013, x: 0, y: 0, width: 10, height: 14, xoffset: 0, yoffset: 0, xadvance: 12, page: 0 }]]),
+      kernings: new Map(),
+    }
+    const object: any = { text: '中中中', fontSize: 64, letterSpacing: 3, _renderText: vi.fn(), initDimensions: vi.fn() }
+    await applyFabricBitmapFontPreview(object, {
+      descriptorUrl: '/date.fnt', atlasUrl: '/date.png', sourceSize: 32,
+    }, { loadDescriptor: async () => descriptor, loadAtlas: async () => ({} as CanvasImageSource) })
+    expect(object.width).toBe(78) // 3 * 24 + 2 * 3, no trailing gap
+    object.text = '中'
+    object.initDimensions()
+    expect(object.width).toBe(24)
+    object.text = '中中'
+    object.letterSpacing = 0
+    object.initDimensions()
+    expect(object.width).toBe(48)
+  })
+
   it('draws published atlas glyphs instead of the source TTF renderer', async () => {
     const descriptor: BmFontDescriptor = {
       lineHeight: 32,
