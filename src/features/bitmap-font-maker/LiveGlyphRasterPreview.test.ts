@@ -13,6 +13,21 @@ describe('LiveGlyphRasterPreview', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData, putImageData } as unknown as CanvasRenderingContext2D)
   })
 
+  it.each([[0, 0], [0, 12], [12, 0]])('skips empty glyph pixels (%i x %i) while preserving layout', (width, height) => {
+    const wrapper = mount(LiveGlyphRasterPreview, {
+      props: {
+        preview: {
+          width: 17,
+          lineHeight: 12,
+          glyphs: [{ key: '32-0', codepoint: 32, left: 3, top: 2, width, height, rgba: new Uint8ClampedArray() }],
+        },
+      },
+    })
+    expect(wrapper.get('[data-test="live-raster-preview"]').attributes('style')).toContain('width: 17px')
+    expect(createImageData).not.toHaveBeenCalled()
+    expect(putImageData).not.toHaveBeenCalled()
+  })
+
   it('draws bottom-rendered RGBA pixels at their safe metric positions', () => {
     const rgba = new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 128])
     const wrapper = mount(LiveGlyphRasterPreview, {

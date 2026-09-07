@@ -19,7 +19,7 @@
       </el-form-item>
       <el-form-item :label="t('designerSettings.defaultPrice')">
         <div class="price-row">
-          <el-input-number v-model="form.defaultPrice" :min="0" :precision="2" :step="1" />
+          <el-input-number v-model="form.defaultPrice" :min="0" :precision="3" :step="1" />
           <span class="currency-label">{{ form.defaultCurrency || 'USD' }}</span>
         </div>
       </el-form-item>

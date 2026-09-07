@@ -24,6 +24,8 @@ defineProps<{ preview: LiveGlyphPreview }>()
 
 function drawGlyph(element: unknown, glyph: LiveGlyphPreviewGlyph): void {
   if (!(element instanceof HTMLCanvasElement)) return
+  // Spaces retain their advance in the layout but have no pixels to draw.
+  if (glyph.width <= 0 || glyph.height <= 0) return
   const context = element.getContext('2d')
   if (!context) return
   const image = context.createImageData(glyph.width, glyph.height)
