@@ -4,6 +4,7 @@ import { parseExpression } from '@/engine/expression/parser'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
 import { useExpressionPreviewStore } from './expressionPreviewStore'
 import { useLayerStore } from './layerStore'
+import { resolveDynamicImageSelection } from '@/elements/decoration/dynamicImage/dynamicImage.selection'
 
 vi.hoisted(() => {
   Object.defineProperty(globalThis, 'localStorage', {
@@ -23,6 +24,28 @@ describe('expression preview visibility', () => {
 
   it('starts with catalog example values', () => {
     expect(useExpressionPreviewStore().tokenValues['system.battery.level']).toBe(76)
+  })
+
+  it.each([
+    ['tm5', 7],
+    ['w01', 2],
+  ])('shows a dynamic resource using the default %s preview value', (code, value) => {
+    const previewStore = useExpressionPreviewStore()
+    const token = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(String(code))!
+    const items = [{
+      id: 'default-resource',
+      imageUrl: '/preview.png',
+      expression: parseExpression(`(${code}) == ${value}`, DEFAULT_EXPRESSION_TOKEN_CATALOG),
+    }]
+
+    expect(previewStore.tokenValues[token.id]).toBe(value)
+    expect(resolveDynamicImageSelection({ items, tokenValues: previewStore.tokenValues }))
+      .toMatchObject({ kind: 'item', index: 0 })
+
+    previewStore.setTokenValue(token.id, 99)
+    previewStore.resetExamples()
+    expect(resolveDynamicImageSelection({ items, tokenValues: previewStore.tokenValues }))
+      .toMatchObject({ kind: 'item', index: 0 })
   })
 
   it('recomputes layer visibility when a preview token changes', () => {

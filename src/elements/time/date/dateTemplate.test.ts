@@ -6,6 +6,11 @@ import {
 } from './dateTemplate'
 
 describe('custom date templates', () => {
+  it('rejects the removed numeric weekday token and accepts tm5', () => {
+    expect(validateCustomDateTemplate('(dt5)').length).toBeGreaterThan(0)
+    expect(validateCustomDateTemplate('(tm5)')).toEqual([])
+  })
+
   it('formats the requested short weekday and padded numeric date parts', () => {
     const date = new Date(2026, 5, 30, 12, 0, 0)
 
@@ -28,7 +33,7 @@ describe('custom date templates', () => {
     const date = new Date(2026, 5, 30, 12, 0, 0)
 
     expect(formatCustomDateTemplate(
-      '(dt1) + "/" + (dt1.1) + "/" + (tm2) + "/" + (dt2.1) + "/" + (dt2.2) + "/" + (dt3) + "/" + (dt4) + "/" + (dt5) + "/" + (dt5.1) + "/" + (dt5.2) + "/" + (dt6)',
+      '(dt1) + "/" + (dt1.1) + "/" + (tm2) + "/" + (dt2.1) + "/" + (dt2.2) + "/" + (dt3) + "/" + (dt4) + "/" + (tm5) + "/" + (dt5.1) + "/" + (dt5.2) + "/" + (dt6)',
       date,
       'en-US',
     )).toBe('2026/26/6/Jun/June/30/27/3/Tue/Tuesday/181')

@@ -1,3 +1,4 @@
+import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { nextTick, type Ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { designApi } from '@/api/wristo/design'
@@ -287,6 +288,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   }
 
   const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
+    config = migrateWeekdayTokens(config)
     await fontStore.fetchFonts()
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)

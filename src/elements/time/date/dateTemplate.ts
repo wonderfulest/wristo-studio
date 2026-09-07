@@ -45,7 +45,7 @@ export function createRandomDateTemplate(
 }
 
 const DATE_TOKEN_PATTERN = /\(([a-zA-Z][a-zA-Z0-9_.]*)\)/g
-const DATE_TOKENS = new Set(['dt1', 'dt1.1', 'tm2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5', 'dt5.1', 'dt5.2', 'dt6'])
+const DATE_TOKENS = new Set(['dt1', 'dt1.1', 'tm2', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'tm5', 'dt5.1', 'dt5.2', 'dt6'])
 
 function isoWeek(date: Date): number {
   const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -76,7 +76,7 @@ export function formatCustomDateTemplate(template: string, date: Date, locale: s
       case 'dt2.2': return new Intl.DateTimeFormat(locale, { month: 'long' }).format(date)
       case 'dt3': return date.getDate()
       case 'dt4': return isoWeek(date)
-      case 'dt5': return date.getDay() + 1
+      case 'tm5': return date.getDay() + 1
       case 'dt5.1': return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)
       case 'dt5.2': return new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date)
       case 'dt6': return Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 86400000)

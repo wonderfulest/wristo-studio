@@ -255,11 +255,6 @@ const MOON_PHASE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = 
   { value: 7, label: 'Waning Crescent', labelCn: '残月' },
 ]
 
-// Keep saved expressions readable without offering duplicate tokens for new designs.
-export const LEGACY_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
-  token({ id: 'date.dayOfWeek', code: 'dt5', label: 'Day of Week', labelCn: '星期序号', category: 'date-time', exampleValue: 3, source: 'time', providerKey: 'clock' }),
-]
-
 export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),

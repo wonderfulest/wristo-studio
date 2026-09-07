@@ -300,6 +300,7 @@
 </template>
 
 <script setup lang="ts">
+import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { ApiResponse } from '@/types/api/api'
@@ -725,7 +726,7 @@ const handleSave = async () => {
     saving.value = true
     const resolvedConfigJson = await resolvePackageAssetUrls(parsedConfigJson as any)
     if (!resolvedConfigJson) return
-    const nextConfigJson = await persistBlobAssetUrls(resolvedConfigJson)
+    const nextConfigJson = await persistBlobAssetUrls(migrateWeekdayTokens(resolvedConfigJson))
     form.configJson = nextConfigJson
     const payload = {
       uid: currentDesign.value.designUid,

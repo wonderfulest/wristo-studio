@@ -10,17 +10,15 @@ describe('weekday token compatibility', () => {
       .toEqual(['dt5.1', 'dt5.2', 'tm5'])
   })
 
-  it('still resolves the legacy code and identity in saved expressions', () => {
-    const legacy = catalog.getByCode('dt5')
-    expect(legacy).toMatchObject({ id: 'date.dayOfWeek', code: 'dt5' })
-    expect(catalog.getById('date.dayOfWeek')).toBe(legacy)
-    expect(() => parseExpression('(dt5) == (tm5)', catalog)).not.toThrow()
-    expect(validateTokenTemplate('(dt5)')).toEqual([])
+  it('rejects the legacy code and identity', () => {
+    expect(catalog.getByCode('dt5')).toBeUndefined()
+    expect(catalog.getById('date.dayOfWeek')).toBeUndefined()
+    expect(() => parseExpression('(dt5) == (tm5)', catalog)).toThrow()
+    expect(validateTokenTemplate('(dt5)').length).toBeGreaterThan(0)
   })
 
-  it.each([1, 2, 3, 4, 5, 6, 7])('preserves weekday value %i in old and new templates', (day) => {
+  it.each([1, 2, 3, 4, 5, 6, 7])('preserves weekday value %i in canonical templates', (day) => {
     const date = new Date(2026, 8, 5 + day, 12)
-    expect(resolveTokenTemplate('(dt5)', date)).toBe(String(day))
     expect(resolveTokenTemplate('(tm5)', date)).toBe(String(day))
   })
 })

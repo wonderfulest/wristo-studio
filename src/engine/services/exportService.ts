@@ -1,3 +1,4 @@
+import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ElMessage } from 'element-plus'
 import type { Canvas } from 'fabric'
 import type { DataOptionsMap, PropertiesMap } from '@/types/properties'
@@ -454,6 +455,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         console.error('Failed to encode element:', element)
         return null
       }
+      encodeConfig = migrateWeekdayTokens(encodeConfig)
       if (eleType === 'date') {
         Object.assign(encodeConfig, resolveDatePropertyConfig(encodeConfig as any, properties))
       }

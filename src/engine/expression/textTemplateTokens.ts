@@ -61,7 +61,6 @@ function tokenValue(definition: ExpressionTokenDefinition, date: Date): unknown 
     case 'date.monthLong': return new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)
     case 'date.dayOfMonth': return date.getDate()
     case 'date.isoWeek': return dateIsoWeek(date)
-    case 'date.dayOfWeek': return date.getDay() + 1
     case 'date.weekdayShort': return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
     case 'date.weekdayLong': return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date)
     case 'date.dayOfYear': return Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 86400000)

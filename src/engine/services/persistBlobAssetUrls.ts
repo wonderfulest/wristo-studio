@@ -1,3 +1,4 @@
+import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 type PersistBlobAssetDependencies = {
   fetchBlob?: (url: string) => Promise<Blob>
   uploadFile?: (file: File) => Promise<string>
@@ -136,7 +137,7 @@ export async function persistAndSaveDesignConfig<T>(
   save: (persistedConfig: T) => Promise<void>,
   persist: (input: T) => Promise<T> = persistBlobAssetUrls,
 ): Promise<T> {
-  const persistedConfig = await persist(input)
+  const persistedConfig = await persist(migrateWeekdayTokens(input))
   await save(persistedConfig)
   return persistedConfig
 }

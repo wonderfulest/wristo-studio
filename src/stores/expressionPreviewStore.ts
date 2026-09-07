@@ -4,7 +4,8 @@ import type { ExpressionTokenValues } from '@/engine/expression/types'
 import { useLayerStore } from '@/stores/layerStore'
 
 const createExampleValues = (): Record<string, unknown> => Object.fromEntries(
-  DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.map((definition) => [definition.id, definition.exampleValue]),
+  DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions
+    .map((definition) => [definition.id, definition.exampleValue]),
 )
 
 export const useExpressionPreviewStore = defineStore('expressionPreviewStore', {
