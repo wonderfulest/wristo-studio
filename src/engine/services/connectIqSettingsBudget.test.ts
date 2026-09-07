@@ -117,3 +117,10 @@ describe('Connect IQ settings budget', () => {
     expect(changed.usedBytes).not.toBe(defaults.usedBytes)
   })
 })
+
+it('adds four settings when second timezone is available but not selected', () => {
+  const base = calculateConnectIqSettingsBudget({ properties: {}, elements: [] })
+  const report = calculateConnectIqSettingsBudget({ properties: { data_1: { type: 'data', title: 'Data', value: ':FIELD_TYPE_STEPS', metricSymbols: [':FIELD_TYPE_STEPS', ':FIELD_TYPE_SECOND_TIME_ZONE'] } }, elements: [] })
+  expect(report.fixedSettings).toBe(base.fixedSettings + 4)
+  expect(report.listOptions).toBe(base.listOptions + 21 + 2)
+})

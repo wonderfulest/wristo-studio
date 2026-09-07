@@ -118,8 +118,10 @@ describe('visual theme export persistence', () => {
     const config = generateConfig({
       canvas: { getObjects: () => elements } as any,
       properties: {}, designId: 'design-1', watchFaceName: 'Layout', textCase: 0, bitmapMode: true,
+      secondTimeZone: { city: 10, offsetMinutes: 0, label: 'NYC', format: 2 },
       layoutGroups,
     })
+    expect(config?.secondTimeZone).toEqual({ city: 10, offsetMinutes: 0, label: 'NYC', format: 2 })
 
     expect(config?.layoutGroups).toEqual(layoutGroups)
     expect(config?.layoutGroups).not.toBe(layoutGroups)

@@ -2,7 +2,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { canvas, editor, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode, reflowAllLayoutGroups } = vi.hoisted(() => ({
+const { secondZone, canvas, editor, updateElement, getMetricByOptions, getSimulatedDataByName, getSimulatedDataByTokenCode, reflowAllLayoutGroups } = vi.hoisted(() => ({
+  secondZone: { city: 10, offsetMinutes: 0, label: '', format: 2 },
   canvas: {
     getObjects: vi.fn(),
     requestRenderAll: vi.fn(),
@@ -29,6 +30,8 @@ vi.mock('@/stores/editorStore', () => ({
 
 vi.mock('@/stores/properties', () => ({
   usePropertiesStore: () => ({
+    secondTimeZone: secondZone,
+    textCase: 2,
     allProperties: {},
     dataNumberFormat: 3,
     maxFieldLength: 4,
@@ -58,6 +61,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [48, { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       optionsByMetricSymbol: new Map([
+        [':FIELD_TYPE_SECOND_TIME_ZONE', { valueCode: 1215, metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE', label: { eng: 'TZ', zhs: '时区' }, unitKey: 'none', defaultValue: '00:00' }],
         [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
         [':FIELD_TYPE_DISTANCE', { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
         [':FIELD_TYPE_SLEEP_SCORE', { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
@@ -422,4 +426,19 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(errorSpy).toHaveBeenCalledTimes(2)
     errorSpy.mockRestore()
   })
+})
+
+it('updates paired timezone data and uppercase dynamic labels from shared settings', () => {
+  const data: any = { eleType: 'data', metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE', text: '', set(key: string, value: string) { this[key] = value } }
+  const label: any = { eleType: 'label', metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE', text: '', set(key: string, value: string) { this[key] = value } }
+  getMetricByOptions.mockReturnValue({ metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE' })
+  canvas.getObjects.mockReturnValue([data, label])
+  const simulator = new DataSimulatorEngine()
+  simulator.updateCanvas()
+  expect(data.text).toBe('08:34 AM')
+  expect(label.text).toBe('NYC')
+  Object.assign(secondZone, { city: 17, offsetMinutes: 345, label: 'HOME', format: 1 })
+  simulator.updateCanvas()
+  expect(data.text).toBe('18:19')
+  expect(label.text).toBe('HOME')
 })

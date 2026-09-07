@@ -1,3 +1,4 @@
+import type { SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import type { UserBase } from './user'
 import type { Image, ImageBase } from './image'
 import type { Product } from './product'
@@ -131,6 +132,7 @@ export interface DesignConfig {
   designId: string
   elements: DesignElement[]
   orderIds: string[]
+  secondTimeZone?: SecondTimeZoneConfig
   textCase: number
   bitmapMode?: boolean
   dataNumberFormat?: number

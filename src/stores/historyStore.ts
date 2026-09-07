@@ -1,3 +1,4 @@
+import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { defineStore } from 'pinia'
 import { ref, type Ref } from 'vue'
 import type { Canvas } from 'fabric'
@@ -248,6 +249,7 @@ export const useHistoryStore = defineStore('history', () => {
       return JSON.stringify({
         properties: propertiesStore.allProperties,
         dataOptions: propertiesStore.dataOptions,
+        secondTimeZone: { ...propertiesStore.secondTimeZone },
         textCase: propertiesStore.textCase,
         bitmapMode: propertiesStore.bitmapMode,
         dataNumberFormat: propertiesStore.dataNumberFormat,
@@ -335,6 +337,7 @@ export const useHistoryStore = defineStore('history', () => {
       const parsed = JSON.parse(snap.propertiesJSON)
       const propertiesStore = usePropertiesStore()
       propertiesStore.loadDataPropertyConfig(parsed?.properties || {}, parsed?.dataOptions || {})
+      propertiesStore.secondTimeZone = normalizeSecondTimeZone(parsed?.secondTimeZone)
       const textCase = Number(parsed?.textCase ?? 0)
       propertiesStore.textCase = [0, 1, 2, 3].includes(textCase) ? (textCase === 3 ? 0 : textCase) : 0
       propertiesStore.bitmapMode = typeof parsed?.bitmapMode === 'boolean' ? parsed.bitmapMode : true

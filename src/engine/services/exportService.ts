@@ -1,3 +1,4 @@
+import { normalizeSecondTimeZone, type SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ElMessage } from 'element-plus'
 import type { Canvas } from 'fabric'
@@ -252,6 +253,7 @@ export interface GenerateConfigOptions {
   catalogOptions?: readonly DataTypeOption[]
   designId: string
   watchFaceName: string
+  secondTimeZone?: SecondTimeZoneConfig
   textCase: number
   bitmapMode: boolean
   dataNumberFormat?: number
@@ -327,6 +329,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     catalogOptions = [],
     designId,
     watchFaceName,
+    secondTimeZone,
     textCase,
     bitmapMode,
     dataNumberFormat,
@@ -368,6 +371,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     dataOptions: normalizedDataProperties.dataOptions,
     designId: designId || '',
     name: watchFaceName,
+    secondTimeZone: normalizeSecondTimeZone(secondTimeZone),
     textCase,
     bitmapMode,
     dataNumberFormat: normalizeDataNumberFormatMode(dataNumberFormat),

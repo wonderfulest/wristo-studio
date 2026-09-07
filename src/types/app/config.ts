@@ -1,3 +1,4 @@
+import type { SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import type { DataOptionsMap, PropertiesMap } from '@/types/properties'
 import type { AnyElementConfig } from '@/types/elements'
 import type { WatchfaceLocalizationConfig } from '@/types/localization'
@@ -10,6 +11,7 @@ export interface RuntimeDesignConfig {
   dataOptions?: DataOptionsMap
   designId: string
   name: string
+  secondTimeZone?: SecondTimeZoneConfig
   textCase: number
   bitmapMode: boolean
   dataNumberFormat?: number

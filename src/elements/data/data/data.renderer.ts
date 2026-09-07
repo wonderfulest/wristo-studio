@@ -1,3 +1,4 @@
+import { SECOND_TIME_ZONE_SYMBOL, secondTimeZoneTime } from '@/utils/secondTimeZone'
 import type { FabricElement } from '@/types/element'
 import type { DataElementConfig } from '@/types/elements/data'
 import { FabricText } from 'fabric'
@@ -26,7 +27,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
   const canonicalMetric = requireCanonicalMetric(metric ?? config, catalog)
-  const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
+  const displayValue = canonicalMetric.metricSymbol === SECOND_TIME_ZONE_SYMBOL ? secondTimeZoneTime(usePropertiesStore().secondTimeZone) : formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
   const displayStates = normalizeDisplayStates(config.displayStates)
   const previewFont = resolveCurrentElementPreviewFont(config, displayValue)
   const element = new FabricText(displayValue, {

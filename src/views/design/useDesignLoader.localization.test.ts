@@ -1,3 +1,4 @@
+import { usePropertiesStore } from '@/stores/properties'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
@@ -50,4 +51,13 @@ describe('useDesignLoader localization', () => {
 
     expect(designStore.getLocalizationConfig()).toEqual({ appLanguage: 'zhs', dataLabelLength: 'short' })
   })
+  it('resets a previous second timezone when loading a legacy design without config', async () => {
+    const properties = usePropertiesStore()
+    properties.secondTimeZone = { city: 17, offsetMinutes: 345, label: 'HOME', format: 2 }
+    vi.spyOn(useFontStore(), 'fetchFonts').mockResolvedValue(undefined)
+    const loader = useDesignLoader({ canvasRef: ref(null), waitCanvasReady: async () => undefined, translate: key => key, redirectToDesigns: () => undefined })
+    await loader.applyRuntimeDesignConfig({ version: '1.0', properties: {}, designId: 'legacy', name: 'Legacy' } as RuntimeDesignConfig, 0)
+    expect(properties.secondTimeZone).toEqual({ city: 0, offsetMinutes: 0, label: '', format: 1 })
+  })
+
 })

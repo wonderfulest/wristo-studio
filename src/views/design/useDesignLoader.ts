@@ -1,3 +1,4 @@
+import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { nextTick, type Ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
@@ -307,6 +308,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           elements: migratedDates.elements
         } as RuntimeDesignConfig)
       : projectedConfig
+    propertiesStore.secondTimeZone = normalizeSecondTimeZone(loadConfig.secondTimeZone)
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     designStore.setDataLabelLength((loadConfig.localization as any)?.dataLabelLength)
     if (Array.isArray(loadConfig.elements)) {

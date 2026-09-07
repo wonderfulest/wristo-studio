@@ -1,3 +1,4 @@
+import { SECOND_TIME_ZONE_SYMBOL, secondTimeZoneLabel } from '@/utils/secondTimeZone'
 import type { FabricElement } from '@/types/element'
 import type { LabelElementConfig } from '@/types/elements/data'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
@@ -57,7 +58,7 @@ export function decodeLabel(config: LabelElementConfig): Partial<FabricElement> 
   const designStore = useDesignStore()
   const catalog = useDataCatalogStore().snapshot
   if (!catalog) throw new Error('data catalog: snapshot is missing')
-  const text = applyMetricTextCase(
+  const text = requireCanonicalMetric(metric ?? config, catalog).metricSymbol === SECOND_TIME_ZONE_SYMBOL ? secondTimeZoneLabel(propertiesStore.secondTimeZone) : applyMetricTextCase(
     resolveMetricLabel(requireCanonicalMetric(metric ?? config, catalog), resolveDesignContentLanguage(designStore)),
     (propertiesStore as any).textCase,
   )

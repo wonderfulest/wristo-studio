@@ -1,3 +1,4 @@
+import { normalizeSecondTimeZone, SECOND_TIME_ZONE_SYMBOL, type SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import type { AppLanguage } from '@/types/localization'
 import type { DataOptionsMap, PropertiesMap, PropertyItem } from '@/types/properties'
 
@@ -12,6 +13,7 @@ export type ConnectIqSettingsBudgetInput = {
   elements: Array<Record<string, unknown>>
   appLanguage?: AppLanguage
   visualThemes?: { enabled?: boolean; themes?: unknown[] } | null
+  secondTimeZone?: SecondTimeZoneConfig
   textCase?: number
   dataNumberFormat?: number
   maxFieldLength?: number
@@ -69,6 +71,18 @@ export function classifyConnectIqSettingsUsage(usedBytes: number): ConnectIqSett
 
 export function calculateConnectIqSettingsBudget(input: ConnectIqSettingsBudgetInput): ConnectIqSettingsBudgetReport {
   const fixedEntries = fixedSettings(input)
+  const hasSecondTimeZone = Object.values(input.dataOptions || {}).some(option => option.metricSymbol === SECOND_TIME_ZONE_SYMBOL)
+    || Object.values(input.properties || {}).some(property => property.value === SECOND_TIME_ZONE_SYMBOL || property.metricSymbols?.includes(SECOND_TIME_ZONE_SYMBOL))
+    || input.elements.some(element => element.metricSymbol === SECOND_TIME_ZONE_SYMBOL)
+  if (hasSecondTimeZone) {
+    const config = normalizeSecondTimeZone(input.secondTimeZone)
+    fixedEntries.push(
+      { key: 'SecondTimeZoneCity', type: 'list', value: config.city, options: Array.from({ length: 18 }, (_, index) => index) },
+      { key: 'SecondTimeZoneOffset', type: 'number', value: config.offsetMinutes },
+      { key: 'SecondTimeZoneLabel', type: 'text', value: config.label },
+      { key: 'SecondTimeZoneFormat', type: 'list', value: config.format, options: [0, 1, 2] },
+    )
+  }
   const customEntries = Object.entries(input.properties || {}).filter(([, property]) => property.type !== 'date').map(([key, property]) => ({
     key,
     type: property.type,

@@ -1,3 +1,4 @@
+import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { defineStore } from 'pinia'
 import type { DataOptionsMap, PropertiesMap, PropertyItem, PropertyOption, PropertyType } from '@/types/properties'
 import type { ThemeMode } from '@/types/visualTheme'
@@ -17,6 +18,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
   state: () => ({
     properties: {} as PropertiesMap,
     dataOptions: {} as DataOptionsMap,
+    secondTimeZone: normalizeSecondTimeZone(),
     textCase: 0 as number,
     bitmapMode: true as boolean,
     dataNumberFormat: DATA_NUMBER_FORMAT_AUTO as number,
@@ -154,6 +156,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     clearProperties() {
       this.properties = {}
       this.dataOptions = {}
+      this.secondTimeZone = normalizeSecondTimeZone()
       this.textCase = 1
       this.bitmapMode = true
       this.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO

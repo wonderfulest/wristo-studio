@@ -70,6 +70,24 @@
                     <el-option label="Long (9–12 characters)" value="long" />
                   </el-select>
                 </el-form-item>
+                <el-form-item :label="t('property.secondTimeZone')">
+                  <el-select v-model="propertiesStore.secondTimeZone.city" @change="updateSecondTimeZone">
+                    <el-option v-for="(city, index) in SECOND_TIME_ZONE_CITIES" :key="index" :label="index === 17 ? t('property.secondTimeZoneCustom') : city[0] + ' · ' + t('property.secondTimeZoneCity' + index)" :value="index" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item v-if="propertiesStore.secondTimeZone.city === 17" :label="t('property.secondTimeZoneOffset')">
+                  <el-input-number v-model="propertiesStore.secondTimeZone.offsetMinutes" :min="-720" :max="840" :step="15" step-strictly @change="updateSecondTimeZone" />
+                </el-form-item>
+                <el-form-item :label="t('property.secondTimeZoneLabel')">
+                  <el-input v-model="propertiesStore.secondTimeZone.label" maxlength="5" :placeholder="t('property.secondTimeZoneAuto')" @change="updateSecondTimeZone" />
+                </el-form-item>
+                <el-form-item :label="t('property.secondTimeZoneFormat')">
+                  <el-select v-model="propertiesStore.secondTimeZone.format" @change="updateSecondTimeZone">
+                    <el-option :label="t('property.secondTimeZoneSystem')" :value="0" />
+                    <el-option label="24h" :value="1" />
+                    <el-option label="12h AM/PM" :value="2" />
+                  </el-select>
+                </el-form-item>
                 <el-form-item :label="t('property.textCase')">
                   <el-select v-model="textCase" style="width: 100%">
                     <el-option :label="t('property.capitalize')" :value="0" />
@@ -287,6 +305,7 @@
 </template>
 
 <script setup>
+import { SECOND_TIME_ZONE_CITIES, normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   Document,
@@ -453,7 +472,8 @@ const settingsBudget = computed(() => calculateConnectIqSettingsBudget({
   elements: budgetElements.value,
   appLanguage: designStore.appLanguage,
   visualThemes: visualThemeStore.config,
-  textCase: propertiesStore.textCase,
+  secondTimeZone: { ...propertiesStore.secondTimeZone },
+        textCase: propertiesStore.textCase,
   dataNumberFormat: propertiesStore.dataNumberFormat,
   maxFieldLength: propertiesStore.maxFieldLength,
   bitmapMode: propertiesStore.bitmapMode,
@@ -504,6 +524,12 @@ const updateDatePropertyValue = async (key, formatter) => {
   propertiesStore.setPropertyValue(key, Number(formatter))
   getDataSimulatorEngine().updateCanvas()
   commitHistory('date-formatter')
+}
+
+const updateSecondTimeZone = () => {
+  propertiesStore.secondTimeZone = normalizeSecondTimeZone(propertiesStore.secondTimeZone)
+  getDataSimulatorEngine().updateCanvas()
+  commitHistory('second-time-zone')
 }
 
 const textCase = computed({

@@ -1,3 +1,4 @@
+import { SECOND_TIME_ZONE_SYMBOL, secondTimeZoneLabel, secondTimeZoneTime } from '@/utils/secondTimeZone'
 import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -266,7 +267,9 @@ export class DataSimulatorEngine {
         : simKey
           ? getSimulatedDataByName(simKey)
           : null
-      const displayValue = simulated
+      const displayValue = canonicalMetric.metricSymbol === SECOND_TIME_ZONE_SYMBOL
+        ? secondTimeZoneTime(propertiesStore.secondTimeZone, now)
+        : simulated
         ? String(formatSimulatedDisplay(simulated, propertiesStore))
         : canonicalMetric.defaultValue
       const result = resolveMetricDisplayResult(canonicalMetric, {
@@ -330,7 +333,7 @@ export class DataSimulatorEngine {
 
       if (eleType === 'data') {
         const textCase = (propertiesStore as any).textCase
-        const display = applyTextCase(metricResultFor(obj).displayValue, textCase)
+        const display = propertiesStore.getMetricByOptions(obj)?.metricSymbol === SECOND_TIME_ZONE_SYMBOL ? metricResultFor(obj).displayValue : applyTextCase(metricResultFor(obj).displayValue, textCase)
 
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
@@ -376,7 +379,7 @@ export class DataSimulatorEngine {
 
         let nextText = resolveMetricLabel(requireCanonicalMetric(metric ?? obj, catalogSnapshot), resolveDesignContentLanguage(designStore))
 
-        nextText = applyTextCase(nextText, (propertiesStore as any).textCase)
+        nextText = requireCanonicalMetric(metric ?? obj, catalogSnapshot).metricSymbol === SECOND_TIME_ZONE_SYMBOL ? secondTimeZoneLabel(propertiesStore.secondTimeZone) : applyTextCase(nextText, (propertiesStore as any).textCase)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           changed = true

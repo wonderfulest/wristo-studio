@@ -210,4 +210,17 @@ describe('history saveState result', () => {
     await historyStore.redo()
     expect(layoutStore.groups[0].members.map((member) => member.elementId)).toEqual(['unit-1', 'data-1'])
   })
+  it('restores second timezone settings through undo and redo', async () => {
+    const history = useHistoryStore()
+    history.attachCanvas({ ...createCanvas(), loadFromJSON: async () => undefined } as any, baseStore as any)
+    const properties = usePropertiesStore()
+    history.saveInitial()
+    properties.secondTimeZone = { city: 17, offsetMinutes: 345, label: 'HOME', format: 2 }
+    history.saveState('second-time-zone')
+    await history.undo()
+    expect(properties.secondTimeZone).toEqual({ city: 0, offsetMinutes: 0, label: '', format: 1 })
+    await history.redo()
+    expect(properties.secondTimeZone).toEqual({ city: 17, offsetMinutes: 345, label: 'HOME', format: 2 })
+  })
+
 })
