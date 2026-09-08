@@ -630,7 +630,7 @@ const handlePaymentMethodChange = (value: string | number | boolean | undefined)
     form.payment.trialLasts = 0
     return
   }
-  form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 2.239
+  form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 2.59
   if (isGarminPayment(typeof value === 'string' ? value : null)) {
     form.payment.trialLasts = 0
     return
