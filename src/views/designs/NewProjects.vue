@@ -16,6 +16,7 @@
     <NewProjectDialog
       v-model="dialogVisible"
       :initial-name="projectName"
+      :busy="creating"
       :inherit-source="Boolean(currentTemplate)"
       @confirm="handleConfirmDialog"
     />
@@ -57,6 +58,10 @@ import { useI18n } from '@/i18n'
 import type { AppLanguage } from '@/types/localization'
 import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
 
+import { readWrtDesignPackage, WrtDesignPackageError, clearRestoredDesignAssetUrls } from '@/engine/services/designAssetBundleService'
+import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
+
+const creating = ref(false)
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 const router = useRouter()
@@ -128,21 +133,25 @@ const handleOpenFromTemplate = (design: Design) => {
 // 确认创建：
 // - 如果选择了 sample（currentTemplate 有值），复制模板并打开画布
 // - 如果没有选择 sample，创建一个全新的应用并打开画布
-const withAppLanguage = (config: unknown, appLanguage: AppLanguage) => {
+const withAppLanguage = (config: unknown, appLanguage: AppLanguage): Record<string, any> => {
   let base: Record<string, any> = {}
   if (config && typeof config === 'object') base = structuredClone(config as Record<string, any>)
   if (typeof config === 'string') {
     try { base = JSON.parse(config) } catch { base = {} }
   }
-  return { ...base, localization: { appLanguage } }
+  return { ...base, localization: { ...base.localization, appLanguage } }
 }
 
-const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string }) => {
-  if (!canCreateProject()) return
+const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string; wrtFile?: File }) => {
+  if (creating.value || !canCreateProject()) return
   const name = (input.name || projectName.value).trim() || generateRandomProjectName()
   const appLanguage = input.appLanguage
 
+  creating.value = true
+  let packageRead = false
   try {
+    const imported = input.wrtFile ? await readWrtDesignPackage(input.wrtFile) : undefined
+    packageRead = Boolean(imported)
     // 情况一：从 Sample 复制
     if (currentTemplate.value) {
       const copyRes = await designApi.createDesignByCopy({ uid: currentTemplate.value.designUid }) as ApiResponse<Design>
@@ -199,14 +208,20 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     }
 
     const newDesign = createRes.data
-    const initializeRes = await designApi.updateDesign({
-      uid: newDesign.designUid,
-      configJson: withAppLanguage(newDesign.configJson, appLanguage),
-    } as any) as ApiResponse<Design>
-    if (!initializeRes || initializeRes.code !== 0) {
-      messageStore.error(initializeRes?.msg || t('project.createProjectFailed'))
-      return
+    const config = withAppLanguage(imported?.config ?? newDesign.configJson, appLanguage)
+    if (imported) {
+      config.designId = newDesign.designUid
+      config.name = name
     }
+    await persistAndSaveDesignConfig(config, async (saveConfig) => {
+      const initializeRes = await designApi.updateDesign({
+        uid: newDesign.designUid,
+        configJson: saveConfig,
+      } as any) as ApiResponse<Design>
+      if (!initializeRes || initializeRes.code !== 0) {
+        throw new Error(initializeRes?.msg || t('project.createProjectFailed'))
+      }
+    })
     baseStore.watchFaceName = newDesign.name
     baseStore.appId = newDesign.product?.appId || -1
 
@@ -217,7 +232,12 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     await userStore.refreshUserInfo()
   } catch (error: any) {
     console.error('[NewProjects] handleConfirmDialog error:', error)
-    messageStore.error(error?.response?.data?.msg || t('project.openDesignFailed'))
+    messageStore.error(error instanceof WrtDesignPackageError
+      ? t(`editor.wrtImport.${error.code}`)
+      : error?.response?.data?.msg || error?.message || t('project.openDesignFailed'))
+  } finally {
+    if (packageRead) clearRestoredDesignAssetUrls()
+    creating.value = false
   }
 }
 

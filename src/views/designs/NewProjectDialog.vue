@@ -4,10 +4,21 @@
     :title="t('project.newProject')"
     width="400px"
     :close-on-click-modal="false"
+    :close-on-press-escape="!busy"
+    :show-close="!busy"
     append-to-body
     :z-index="4000"
   >
     <div class="dialog-body">
+      <template v-if="!inheritSource">
+        <div class="field-label">{{ t('editor.importWrt') }}</div>
+        <input ref="wrtInput" type="file" accept=".wrt" hidden @change="handleWrtSelected" />
+        <div class="wrt-selection">
+          <el-button :disabled="busy" @click="wrtInput?.click()">{{ t('editor.importWrt') }}</el-button>
+          <el-button v-if="wrtFile" text :disabled="busy" @click="wrtFile = undefined">{{ t('common.cancel') }}</el-button>
+        </div>
+        <span v-if="wrtFile" class="wrt-file-name">{{ wrtFile.name }}</span>
+      </template>
       <div class="field-label">{{ t('project.projectName') }}</div>
       <el-input
         v-model="localName"
@@ -73,8 +84,8 @@
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleOk">{{ t('common.ok') }}</el-button>
+        <el-button :disabled="busy" @click="handleCancel">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="busy" @click="handleOk">{{ t('common.ok') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -100,13 +111,34 @@ const props = defineProps<{
   modelValue: boolean
   initialName: string
   inheritSource?: boolean
+  busy?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirm', value: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string }): void
+  (e: 'confirm', value: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string; wrtFile?: File }): void
   (e: 'cancel'): void
 }>()
+
+const wrtInput = ref<HTMLInputElement>()
+const wrtFile = ref<File>()
+const handleWrtSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!/\.wrt$/i.test(file.name)) {
+    ElMessage.error(t('editor.wrtImport.invalid-file'))
+    return
+  }
+  wrtFile.value = file
+  const fileName = file.name
+    .replace(/\.wrt$/i, '')
+    .replace(/[^\p{L}\p{N} ]/gu, '')
+    .replace(/ +/g, ' ')
+    .trim()
+  localName.value = Array.from(fileName).slice(0, 50).join('') || props.initialName
+}
 
 const internalVisible = ref(props.modelValue)
 const localName = ref(props.initialName)
@@ -140,6 +172,7 @@ watch(
     if (val) {
       // 每次打开时重置为传入的初始名称
       localName.value = props.initialName
+      wrtFile.value = undefined
       appLanguage.value = 'eng'
       originalType.value = 'original'
       sourcePlatform.value = ''
@@ -175,6 +208,7 @@ const handleDeviceSelected = (device: GarminDeviceVO) => {
 }
 
 const handleOk = () => {
+  if (props.busy) return
   if (!currentDevice.value?.deviceId) {
     openDeviceSelector()
     return
@@ -189,17 +223,25 @@ const handleOk = () => {
     return
   }
   emit('confirm', {
+    wrtFile: props.inheritSource ? undefined : wrtFile.value,
     name: localName.value,
     appLanguage: appLanguage.value,
     originalType: resolvedOriginalType,
     sourcePlatform: resolvedOriginalType === 'non_original' ? sourcePlatform.value || undefined : undefined,
     sourceId: resolvedOriginalType === 'non_original' ? sourceId.value.trim() || undefined : undefined,
   })
-  emit('update:modelValue', false)
 }
+
+watch(internalVisible, (value) => emit('update:modelValue', value))
 </script>
 
 <style scoped>
+.wrt-file-name {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--studio-text-muted);
+}
+
 .dialog-body {
   display: flex;
   flex-direction: column;
