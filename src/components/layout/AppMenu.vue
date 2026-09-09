@@ -13,6 +13,7 @@
           :on-record-gif="handleRecordGif"
           :on-verify="() => verificationDrawerVisible = true"
           :on-export-wrt="handleExportWrt"
+          :exporting-wrt="exportingWrt"
           :on-import-wrt="handleImportWrt"
           :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
         />
@@ -138,6 +139,21 @@
         {{ recordingGif ? t('editor.recordGifRecording') : t('editor.recordGif') }}
       </el-button>
     </template>
+  </el-dialog>
+  <el-dialog
+    :model-value="exportingWrt"
+    :title="t('editor.wrtExporting')"
+    width="420px"
+    append-to-body
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :show-close="false"
+  >
+    <div role="status" aria-live="polite" aria-busy="true">
+      <p>{{ t(wrtExportStage) }}</p>
+      <el-progress :percentage="100" :indeterminate="true" :show-text="false" />
+      <p>{{ t('editor.wrtExportWait') }}</p>
+    </div>
   </el-dialog>
 </template>
 
@@ -1085,21 +1101,33 @@ const handleRecordGif = () => {
   gifDialogVisible.value = true
 }
 
+const exportingWrt = ref(false)
+const wrtExportStage = ref('editor.wrtExportPreparing')
+
 const handleExportWrt = async () => {
-  baseStore.deactivateObject()
+  if (exportingWrt.value) return
+  exportingWrt.value = true
+  wrtExportStage.value = 'editor.wrtExportPreparing'
   try {
+    // Yield so the dialog can render before synchronous config generation.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    baseStore.deactivateObject()
     const config = baseStore.generateConfig({ validateBindings: false })
     if (!config) {
       messageStore.error(t('editor.wrtExportFailed'))
       return
     }
+    wrtExportStage.value = 'editor.wrtExportPreview'
     const previewDataUrl = await baseStore.captureScreenshot().catch(() => null)
+    wrtExportStage.value = 'editor.wrtExportPackaging'
     const file = await buildWrtDesignPackage(config, { previewDataUrl })
     downloadBlob(file, file.name)
     messageStore.success(t('editor.wrtExported'))
   } catch (error) {
     console.error('Failed to export WRT design package:', error)
     messageStore.error(t('editor.wrtExportFailed'))
+  } finally {
+    exportingWrt.value = false
   }
 }
 

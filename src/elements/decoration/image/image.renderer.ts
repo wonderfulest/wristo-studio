@@ -14,7 +14,8 @@ import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContex
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
 
 const EMPTY_IMAGE_PLACEHOLDER =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+  // The transparent pixel stays invisible when an unmatched dynamic image stretches it to its frame.
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 type ImageRenderConfig = Omit<ImageElementConfig, 'eleType'> & {
   eleType: 'image' | 'dynamicImage'

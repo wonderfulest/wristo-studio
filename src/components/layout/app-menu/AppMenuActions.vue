@@ -22,7 +22,7 @@
       <el-icon><CircleCheck /></el-icon>
       <span>Verify design</span>
     </el-menu-item>
-    <el-menu-item index="actions/exportWrt" @click="onExportWrt">
+    <el-menu-item index="actions/exportWrt" :disabled="exportingWrt" @click="onExportWrt">
       <el-icon><Download /></el-icon>
       <span>{{ t('editor.exportWrt') }}</span>
     </el-menu-item>
@@ -60,6 +60,7 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  exportingWrt: Boolean,
   onExportWrt: {
     type: Function,
     required: true,

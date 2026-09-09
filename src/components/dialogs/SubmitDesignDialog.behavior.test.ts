@@ -158,6 +158,33 @@ describe('SubmitDesignDialog style tag behavior', () => {
     if (options) expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
   })
 
+  it.each([
+    [undefined, 2.99],
+    [2.39, 2.39],
+    [2.38, null],
+  ])('enforces paid pricing for input %s', async (price, expectedPrice) => {
+    mocks.getDesignByUid.mockResolvedValueOnce({
+      code: 0,
+      data: {
+        ...designDetail,
+        product: {
+          ...designDetail.product,
+          payment: { paymentMethod: 'wpay', price, trialLasts: 0.25 },
+        },
+      },
+    })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+
+    if (expectedPrice === null) {
+      expect(mocks.submitDesign).not.toHaveBeenCalled()
+      expect(mocks.messageError).toHaveBeenCalledWith('submitDesign.priceRange')
+    } else {
+      expect(mocks.submitDesign.mock.calls[0][0].price).toBe(expectedPrice)
+    }
+  })
+
   it('identifies ordinary submissions separately from PRG builds', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)

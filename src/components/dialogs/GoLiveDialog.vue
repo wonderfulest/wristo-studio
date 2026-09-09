@@ -349,7 +349,7 @@ const form = reactive({
   bundleIds: [] as number[],
   paymentMethod: 'free',
   trialLasts: 0.25,
-  price: 2.59,
+  price: 2.99,
   // Hero / raw image ids from ImageUpload (for future use if needed)
   heroImageId: undefined as number | undefined,
   rawImageId: undefined as number | undefined,
@@ -429,11 +429,11 @@ const handlePaymentMethodChange = (value: string) => {
     return
   }
   if (isGarminPayment(value)) {
-    form.price = form.price || 2.59
+    form.price = form.price || 2.99
     form.trialLasts = 0
     return
   }
-  form.price = form.price || 2.59
+  form.price = form.price || 2.99
   form.trialLasts = form.trialLasts || 0.25
 }
 
@@ -460,7 +460,7 @@ const loadDesign = (design: Design) => {
       ? (design.product.payment?.paymentMethod || 'wpay')
       : 'free'
     form.trialLasts = normalizeTrialLasts(form.paymentMethod, design.product.trialLasts ?? 0.25)
-    form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.59)
+    form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.99)
     // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
     const backendProductImages = (design.product as any).productImages as unknown[] | undefined
 
@@ -494,6 +494,10 @@ const handleConfirm = async () => {
 
   const valid = await formRef.value?.validate?.().catch(() => false)
   if (valid === false) return
+  if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 2.39 || form.price > 99.99)) {
+    messageStore.error(t('submitDesign.priceRange'))
+    return
+  }
   updateProductTags(form.tagIds)
   
   // 验证必填字段
