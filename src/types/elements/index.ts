@@ -15,6 +15,9 @@ export type {
   RotatingHandDialMode,
 } from './rotatingHand'
 
+export type { WorldMapElementConfig } from './worldMap'
+import type { WorldMapElementConfig as _WorldMap } from './worldMap'
+
 // time & date
 export type { TimeElementConfig, DateElementConfig } from './time'
 
@@ -65,6 +68,7 @@ import type { BackgroundElementConfig as _Background } from './background'
 import type { ArcSunEventsElementConfig as _ArcSunEvents, CurveSunEventsElementConfig as _CurveSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
 
 export type AnyElementConfig =
+  | _WorldMap
   | _Time
   | _Date
   | _Icon
@@ -101,6 +105,7 @@ export type AnyElementConfig =
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {
+  'worldMap': _WorldMap
   'time': _Time
   'date': _Date
   'text': _Text

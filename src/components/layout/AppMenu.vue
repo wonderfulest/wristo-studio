@@ -151,7 +151,7 @@
   >
     <div role="status" aria-live="polite" aria-busy="true">
       <p>{{ t(wrtExportStage) }}</p>
-      <el-progress :percentage="100" :indeterminate="true" :show-text="false" />
+      <el-progress :percentage="wrtExportProgress" />
       <p>{{ t('editor.wrtExportWait') }}</p>
     </div>
   </el-dialog>
@@ -1103,10 +1103,12 @@ const handleRecordGif = () => {
 
 const exportingWrt = ref(false)
 const wrtExportStage = ref('editor.wrtExportPreparing')
+const wrtExportProgress = ref(0)
 
 const handleExportWrt = async () => {
   if (exportingWrt.value) return
   exportingWrt.value = true
+  wrtExportProgress.value = 0
   wrtExportStage.value = 'editor.wrtExportPreparing'
   try {
     // Yield so the dialog can render before synchronous config generation.
@@ -1117,10 +1119,19 @@ const handleExportWrt = async () => {
       messageStore.error(t('editor.wrtExportFailed'))
       return
     }
+    wrtExportProgress.value = 5
     wrtExportStage.value = 'editor.wrtExportPreview'
     const previewDataUrl = await baseStore.captureScreenshot().catch(() => null)
     wrtExportStage.value = 'editor.wrtExportPackaging'
-    const file = await buildWrtDesignPackage(config, { previewDataUrl })
+    wrtExportProgress.value = 10
+    const file = await buildWrtDesignPackage(config, {
+      previewDataUrl,
+      onProgress: (percent: number) => {
+        wrtExportProgress.value = Math.max(wrtExportProgress.value, Math.min(99, Math.floor(10 + percent * 0.9)))
+      },
+    })
+    wrtExportProgress.value = 100
+    await new Promise((resolve) => setTimeout(resolve, 0))
     downloadBlob(file, file.name)
     messageStore.success(t('editor.wrtExported'))
   } catch (error) {

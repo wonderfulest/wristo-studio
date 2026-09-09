@@ -4,10 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Exercise the actual handler without mounting the editor and its canvas dependencies.
 const source = readFileSync(new URL('./AppMenu.vue', import.meta.url), 'utf8')
-const body = source.match(/const handleExportWrt = async \(\) => \{([\s\S]*?)\n\}\n\nconst handleImportWrt/)![1]
+const body = source.match(/const handleExportWrt = async \(\) => \{([\s\S]*?)\n\}\n\nconst handleImportWrt/)![1].replace('(percent: number)', '(percent)')
 function setup() {
   const exportingWrt = ref(false)
   const wrtExportStage = ref('')
+  const wrtExportProgress = ref(0)
   const baseStore = {
     deactivateObject: vi.fn(),
     generateConfig: vi.fn(() => ({ elements: [] })),
@@ -16,8 +17,8 @@ function setup() {
   const build = vi.fn().mockResolvedValue({ name: 'design.wrt' })
   const download = vi.fn()
   const messages = { error: vi.fn(), success: vi.fn() }
-  const run = new Function('exportingWrt', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'downloadBlob', 'messageStore', 't', `return async () => {${body}}`)(exportingWrt, wrtExportStage, baseStore, build, download, messages, (key: string) => key)
-  return { exportingWrt, wrtExportStage, baseStore, build, download, messages, run }
+  const run = new Function('exportingWrt', 'wrtExportProgress', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'downloadBlob', 'messageStore', 't', `return async () => {${body}}`)(exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, download, messages, (key: string) => key)
+  return { exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, download, messages, run }
 }
 afterEach(() => { vi.restoreAllMocks() })
 describe('WRT export', () => {
@@ -30,10 +31,16 @@ describe('WRT export', () => {
     await s.run()
     await vi.waitFor(() => expect(s.build).toHaveBeenCalledTimes(1))
     expect(s.wrtExportStage.value).toBe('editor.wrtExportPackaging')
+    const onProgress = s.build.mock.calls[0][1].onProgress
+    onProgress(50)
+    expect(s.wrtExportProgress.value).toBe(55)
+    onProgress(100)
+    expect(s.wrtExportProgress.value).toBe(99)
     await s.run()
     expect(s.baseStore.generateConfig).toHaveBeenCalledTimes(1)
     finish({ name: 'design.wrt' })
     await pending
+    expect(s.wrtExportProgress.value).toBe(100)
     expect(s.download).toHaveBeenCalledTimes(1)
     expect(s.exportingWrt.value).toBe(false)
     s.build.mockResolvedValue({ name: 'design.wrt' })

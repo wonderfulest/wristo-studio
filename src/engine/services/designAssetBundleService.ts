@@ -129,6 +129,8 @@ type DesignAssetManifest = {
 }
 
 type BuildDesignAssetBundleOptions = {
+  /** Weighted work progress, not elapsed time. 100 means the file is ready. */
+  onProgress?: (percent: number) => void
   previewDataUrl?: string | null
   appId?: number | null
   product?: {
@@ -852,26 +854,30 @@ const buildDesignAssetArchive = async (
   }
   const sourcePathByUrl = new Map<string, ManifestAsset>()
   const contentAssetByHash = new Map<string, ManifestAsset>()
-  for (const [index, element] of (config.elements || []).entries()) {
-    const refs = collectElementAssetRefs(element, index)
-    for (const ref of refs) {
-      await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, {
-        category: ref.elementType || 'element',
-        elementId: ref.elementId,
-        elementType: ref.elementType,
-        field: ref.field,
-        source: ref.source,
-      })
-    }
+  const elementRefs = (config.elements || []).flatMap((element, index) =>
+    collectElementAssetRefs(element, index).map(ref => ({ ...ref, category: ref.elementType || 'element' })),
+  )
+  const themeRefs = collectVisualThemeAssetRefs(config.visualThemes)
+  const marketingInputs = createMarketingAssetInputs(options.product || options.productImages)
+  const fontSlugs = collectFontSlugs(config)
+  const totalAssets = elementRefs.length + themeRefs.length + marketingInputs.scalars.length
+    + marketingInputs.gallery.length + fontSlugs.length + iconElements.length
+    + (options.previewDataUrl ? 1 : 0)
+  let completedAssets = 0
+  const assetCompleted = () => {
+    completedAssets += 1
+    options.onProgress?.(totalAssets ? 80 * completedAssets / totalAssets : 80)
   }
-  for (const ref of collectVisualThemeAssetRefs(config.visualThemes)) {
+  options.onProgress?.(0)
+  for (const ref of [...elementRefs, ...themeRefs]) {
     await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, ref)
+    assetCompleted()
   }
 
-  const marketingInputs = createMarketingAssetInputs(options.product || options.productImages)
   for (const scalar of marketingInputs.scalars) {
     const record = await addScalarMarketingImage(zip, scalar)
     if (record) manifest.productImages?.push(record)
+    assetCompleted()
   }
   for (const item of marketingInputs.gallery) {
     const imageId = Number(item.imageId ?? item.image?.id ?? item.id)
@@ -891,19 +897,27 @@ const buildDesignAssetArchive = async (
       name: image.name,
       image,
     }))
+    assetCompleted()
   }
 
-  for (const slug of collectFontSlugs(config)) {
+  for (const slug of fontSlugs) {
     await addFontAssetToBundle(zip, manifest, usedPaths, slug)
+    assetCompleted()
   }
 
   for (const element of iconElements) {
     const iconUnicode = normalizeIconUnicode((element as any).amoledIconUnicode)
-    if (!iconUnicode) continue
+    if (!iconUnicode) {
+      assetCompleted()
+      continue
+    }
     const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
     const pending = fontSlug ? iconPendingStore.getPending(fontSlug, iconUnicode) : null
     const source = pending ? undefined : String((element as any).amoledImageUrl || (element as any).imageUrl || '').trim()
-    if (!pending && !source) continue
+    if (!pending && !source) {
+      assetCompleted()
+      continue
+    }
     try {
       await addAmoledIconAssetToBundle(zip, manifest, usedPaths, {
         iconUnicode,
@@ -918,6 +932,7 @@ const buildDesignAssetArchive = async (
         message: error?.message || String(error),
       })
     }
+    assetCompleted()
   }
 
   if (options.previewDataUrl) {
@@ -929,6 +944,7 @@ const buildDesignAssetArchive = async (
         message: error?.message || String(error),
       })
     }
+    assetCompleted()
   }
   if (!zip.file('preview.png')) {
     const width = manifest.canvas?.width || 454
@@ -952,8 +968,14 @@ const buildDesignAssetArchive = async (
     outputZip = wrapped
     fileBaseName = root
   }
-  const blob = await outputZip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
-  return new File([blob], `${fileBaseName}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
+  options.onProgress?.(80)
+  const blob = await outputZip.generateAsync(
+    { type: 'blob', compression: 'DEFLATE' },
+    ({ percent }) => options.onProgress?.(Math.min(99, 80 + percent * 0.19)),
+  )
+  const file = new File([blob], `${fileBaseName}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
+  options.onProgress?.(100)
+  return file
 }
 
 export async function buildDesignAssetBundle(

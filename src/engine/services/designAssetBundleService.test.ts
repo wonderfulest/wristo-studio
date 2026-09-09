@@ -42,6 +42,24 @@ describe('font asset collection', () => {
   })
 })
 
+describe('archive progress', () => {
+  it('reports monotonic progress and only completes once the file is ready', async () => {
+    setActivePinia(createPinia())
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    const progress: number[] = []
+    const file = await buildWrtDesignPackage({
+      version: '1', properties: {}, designId: 'progress', name: 'Progress',
+      textCase: 0, bitmapMode: false, orderIds: [], elements: [],
+    } as any, { onProgress: percent => progress.push(percent) })
+    expect(file.name).toMatch(/\.wrt$/)
+    expect(progress[0]).toBe(0)
+    expect(progress[progress.length - 1]).toBe(100)
+    expect(progress.slice(0, -1).every(value => value < 100)).toBe(true)
+    expect(progress.some(value => value > 80 && value < 100)).toBe(true)
+    expect(progress.every((value, index) => index === 0 || value >= progress[index - 1])).toBe(true)
+  })
+})
+
 describe('formal asset package layout', () => {
   afterEach(() => {
     vi.unstubAllGlobals()

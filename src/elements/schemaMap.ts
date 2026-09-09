@@ -15,6 +15,8 @@ import { moonSchema } from '@/elements/weather/moon/moon.schema'
 import { weatherSchema } from '@/elements/weather/weather/weather.schema'
 import { windDirectionSchema } from '@/elements/weather/windDirection/windDirection.schema'
 
+import { worldMapSchema } from '@/elements/weather/worldMap/worldMap.schema'
+
 // indicator
 import { bluetoothSchema } from '@/elements/indicators/bluetooth/bluetooth.schema'
 import { disturbSchema } from '@/elements/indicators/disturb/disturb.schema'
@@ -121,6 +123,7 @@ export const elementConfigs: ElementConfigs = {
     radialText: buildConfigFromSchema(radialTextSchema as AnySchema),
   },
   weather: {
+    worldMap: buildConfigFromSchema(worldMapSchema as AnySchema),
     weather: buildConfigFromSchema(weatherSchema as AnySchema),
     moon: buildConfigFromSchema(moonSchema as AnySchema),
     windDirection: buildConfigFromSchema(windDirectionSchema as AnySchema),

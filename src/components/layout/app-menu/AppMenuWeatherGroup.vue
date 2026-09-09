@@ -13,6 +13,10 @@
         <el-icon><Cloudy /></el-icon>
         <span>{{ t('editor.weather') }}</span>
       </div>
+      <el-menu-item index="weather/worldMap" @click="onAddElement('weather', 'worldMap')">
+        <el-icon><Location /></el-icon>
+        <span>{{ t('worldMap.name') }}</span>
+      </el-menu-item>
       <el-menu-item index="weather/weather" @click="onAddElement('weather', 'weather')">
         <el-icon><Sunny /></el-icon>
         <span>{{ t('editor.weather') }}</span>
@@ -42,7 +46,7 @@
 </template>
 
 <script setup>
-import { Cloudy, Compass, Minus, MoonNight, Sunny, TrendCharts } from '@element-plus/icons-vue'
+import { Cloudy, Compass, Location, Minus, MoonNight, Sunny, TrendCharts } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
