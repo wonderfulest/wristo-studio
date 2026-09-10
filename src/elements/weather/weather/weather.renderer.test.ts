@@ -87,6 +87,24 @@ describe('weather font canvas layout', () => {
     )
   })
 
+  it.each([false, true])('centers bitmap cloudy glyphs with preview source %s', async (withSource) => {
+    applyCurrentElementPreviewFont.mockReturnValueOnce({
+      bitmapPreviewAssets: { descriptorUrl: '/weather.fnt', atlasUrl: '/weather.png', sourceSize: 36 },
+    })
+    const glyph = new Text(String.fromCodePoint(0x101d), { role: 'glyph' }) as any
+    const group = new Group([glyph], {
+      id: 'weather-bitmap', left: 343, top: 48, iconUnicode: '101d',
+      fontFamily: 'weather-font', fontSize: 36,
+    } as any) as any
+    canvas.getObjects.mockReturnValue([group])
+    await updateWeather(group, {
+      iconUnicode: '102d', ...(withSource ? { previewSource: '/weather/102d.svg' } : {}),
+    })
+    expect(group.getObjects().find((item: any) => item.role === 'glyph').left).toBe(0)
+    expect(group.left).toBe(343)
+    expect(group.top).toBe(48)
+  })
+
   it('uses the selected weather SVG instead of a system-font fallback glyph', async () => {
     applyCurrentElementPreviewFont.mockReturnValueOnce({ bitmapPreviewAssets: undefined })
     const glyph = new Text(String.fromCodePoint(0x101d), { role: 'glyph' }) as any

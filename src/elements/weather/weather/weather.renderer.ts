@@ -43,6 +43,8 @@ const createGlyph = (iconUnicode: string, fontFamily: string, fontSize: number, 
     selectable: false, hasControls: false, hasBorders: false,
   } as TextProps)
   const resolved = applyCurrentElementPreviewFont(glyph, { fontFamily, fontSize, fill }, text)
+  // Published bitmap glyphs already carry their layout metrics.
+  if (resolved.bitmapPreviewAssets) glyph.set({ left: 0 } as TextProps)
   ;(glyph as FabricText & { role?: string; usesBitmapPreview?: boolean }).role = 'glyph'
   ;(glyph as FabricText & { usesBitmapPreview?: boolean }).usesBitmapPreview = Boolean(resolved.bitmapPreviewAssets)
   return glyph
@@ -156,7 +158,8 @@ export async function updateWeather(element: FabricElement, config: Partial<Weat
       text: resolveIconGlyphText(iconUnicode), fontFamily, fontSize, fill,
       left: fontSize * getWeatherGlyphHorizontalOffset(iconUnicode), top: 0,
     } as unknown as TextProps)
-    applyCurrentElementPreviewFont(glyph, { fontFamily, fontSize, fill }, resolveIconGlyphText(iconUnicode))
+    const resolved = applyCurrentElementPreviewFont(glyph, { fontFamily, fontSize, fill }, resolveIconGlyphText(iconUnicode))
+    if (resolved.bitmapPreviewAssets) glyph.set({ left: 0 } as TextProps)
     glyph.initDimensions?.()
   } else {
     const nextGlyph = await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, previewSource)
