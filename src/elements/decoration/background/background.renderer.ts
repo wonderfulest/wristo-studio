@@ -56,29 +56,10 @@ async function setFabricImageSource(
     return
   }
 
-  // Fabric 6: setSrc may return Promise; Fabric 5: callback signature.
-  try {
-    const ret = fn.call(anyImg, src, opts)
-    if (ret && typeof ret.then === 'function') {
-      await ret
-      return
-    }
-  } catch {
-    // ignore and fallback to callback style
-  }
+  // Fabric 6.7 uses a Promise. Propagate rejection to updateBackground;
+  // retrying with a Fabric 5 callback leaves the design load queue pending.
+  await fn.call(anyImg, src, opts)
 
-  await new Promise<void>((resolve, reject) => {
-    try {
-      fn.call(
-        anyImg,
-        src,
-        () => resolve(),
-        opts,
-      )
-    } catch (e) {
-      reject(e)
-    }
-  })
 }
 
 function applyBackgroundLayout(imgObj: FabricImage, config: Partial<BackgroundElementConfig>): void {
