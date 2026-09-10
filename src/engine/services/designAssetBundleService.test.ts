@@ -1,4 +1,6 @@
 import JSZip from 'jszip'
+import { packageArchiveExtras } from './packageAssetRegistry'
+afterEach(() => { packageArchiveExtras.productImages = []; packageArchiveExtras.files.clear(); packageArchiveExtras.preview = undefined })
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
@@ -43,6 +45,17 @@ describe('font asset collection', () => {
 })
 
 describe('archive progress', () => {
+  it('round-trips a newly created empty API project', async () => {
+    setActivePinia(createPinia())
+    const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const config = newProjectConfig('{}', 'blank', 'Blank', 'zhs')
+    const loaded = await readWrtDesignPackage(await buildWrtDesignPackage(config))
+    expect(loaded.config.elements).toEqual([])
+    expect(loaded.config.name).toBe('Blank')
+    expect(loaded.config.localization?.appLanguage).toBe('zhs')
+  })
+
   it('reports monotonic progress and only completes once the file is ready', async () => {
     setActivePinia(createPinia())
     const { buildWrtDesignPackage } = await import('./designAssetBundleService')
@@ -114,7 +127,7 @@ describe('formal asset package layout', () => {
     expect(manifest.productImages[0]).toMatchObject({ imageId: 101, relationId: 700, type: 'social' })
   })
 
-  it('packages weather fonts without a weather image mode or weather asset manifest', async () => {
+  it('rejects weather designs when the required font is missing', async () => {
     setActivePinia(createPinia())
     getWeatherConditions.mockClear()
     const config = {
@@ -127,13 +140,8 @@ describe('formal asset package layout', () => {
     }
 
     const { buildWrtDesignPackage } = await import('@/engine/services/designAssetBundleService')
-    const file = await buildWrtDesignPackage(config as any)
-    const zip = await JSZip.loadAsync(await file.arrayBuffer())
-    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
-
+    await expect(buildWrtDesignPackage(config as any)).rejects.toThrow('Missing font file: weather-font')
     expect(getWeatherConditions).not.toHaveBeenCalled()
-    expect(manifest.assets).not.toHaveProperty('weather')
-    expect(Object.keys(zip.files).some(path => path.includes('/weather/'))).toBe(false)
   })
 })
 
@@ -182,7 +190,8 @@ describe('visual theme assets', () => {
       expect.objectContaining({ elementId: 'theme-classic-centerCap', field: 'centerCap' }),
     ]))
     expect(fetch).toHaveBeenCalledTimes(3)
-    expect(savedConfig.visualThemes).toEqual(config.visualThemes)
+    expect(savedConfig.visualThemes.themes[0].assets.background.imageUrl.startsWith('bundle://')).toBe(true)
+    expect(config.visualThemes.themes[0].assets.background.imageUrl).toBe('https://cdn/theme-background.svg')
   })
 
   it('restores themed asset URLs from the archive for designs without base elements', async () => {
@@ -272,5 +281,138 @@ describe('visual theme assets', () => {
     const restored = await restoreDesignAssetBundleFromZip(structuredClone(config) as any, zip, manifest)
     expect(restored.visualThemes!.themes[0].assets.background?.imageUrl).toBe('blob:shared-restored')
     expect(restored.visualThemes!.themes[0].assets.hourHand?.imageUrl).toBe('blob:shared-restored')
+  })
+})
+
+describe('self-contained WRT v2', () => {
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    const registry = await import('./packageAssetRegistry')
+    registry.packageFonts.clear()
+    registry.packageFontBuildFiles.clear()
+    registry.packageBitmapChars.clear()
+  })
+
+  it('imports and reexports images and font build bytes with HTTP unavailable', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const registry = await import('./packageAssetRegistry')
+    const nativeFetch = globalThis.fetch
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"/>'
+    registry.packageFonts.set('offline-font', { slug: 'offline-font', ttfFile: { url: 'data:font/ttf;base64,AAEAAA==' } } as any)
+    registry.packageFontBuildFiles.set('offline-font', new Map([
+      ['36/offline-font-g.fnt', new Blob(['page id=0 file="offline-font-g_0.png"'])],
+      ['36/offline-font-g_0.png', new Blob(['PNG'])],
+    ]))
+    const config = { designId: 'offline', name: 'Offline', elements: [{ id: 'image', eleType: 'image', imageUrl: `data:image/svg+xml,${encodeURIComponent(svg)}`, fontFamily: 'offline-font', fontSize: 36 }], properties: { nested: { imageUrl: `data:image/svg+xml,${encodeURIComponent(svg)}` } } }
+    const original = await service.buildWrtDesignPackage(config as any)
+    registry.packageFonts.clear()
+    registry.packageFontBuildFiles.clear()
+    vi.stubGlobal('fetch', vi.fn((input: any, init?: any) => {
+      if (/^https?:/.test(String(input))) throw new Error('Network disabled')
+      return nativeFetch(input, init)
+    }))
+    const imported = await service.readWrtDesignPackage(original)
+    expect((imported.config.elements[0] as any).imageUrl).toMatch(/^blob:/)
+    expect((imported.config.properties as any).nested.imageUrl).toMatch(/^blob:/)
+    expect(registry.packageFonts.get('offline-font')?.ttfFile.url).toMatch(/^blob:/)
+    const exported = await service.buildWrtDesignPackage(imported.config)
+    const zip = await JSZip.loadAsync(await exported.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+    expect(manifest).toMatchObject({ version: 2, selfContained: true, failures: [] })
+    expect(await zip.file('fonts/bitmaps/offline-font/36/offline-font-g.fnt')!.async('string')).toContain('page id=0')
+    expect(await zip.file('design.json')!.async('string')).not.toContain('blob:')
+    expect(manifest.fonts[0].sha256).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('preserves bitmap-only weather font previews without a TTF', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const registry = await import('./packageAssetRegistry')
+    registry.packageFonts.set('bitmap-weather', {
+      slug: 'bitmap-weather', type: 'weather_font',
+      bitmapPreviewDescriptorUrl: 'data:text/plain,page%20id=0',
+      bitmapPreviewAtlasUrl: 'data:image/png;base64,iVBORw0KGgo=',
+    } as any)
+    registry.packageFontBuildFiles.set('bitmap-weather', new Map([
+      ['36/bitmap-weather-g.fnt', new Blob(['page id=0 file="bitmap-weather-g_0.png"'])],
+      ['36/bitmap-weather-g_0.png', new Blob(['PNG'])],
+    ]))
+    const file = await service.buildWrtDesignPackage({ elements: [{ eleType: 'weather', fontFamily: 'bitmap-weather', fontSize: 36 }] } as any)
+    await service.readWrtDesignPackage(file)
+    expect(registry.packageFonts.get('bitmap-weather')?.ttfFile).toBeUndefined()
+    expect(registry.packageFonts.get('bitmap-weather')?.bitmapPreviewAtlasUrl).toMatch(/^blob:/)
+    expect(registry.packageFontBuildFiles.get('bitmap-weather')?.size).toBe(2)
+    await expect(service.buildWrtDesignPackage({ elements: [{ eleType: 'weather', fontFamily: 'bitmap-weather', fontSize: 36 }] } as any)).resolves.toBeInstanceOf(File)
+  })
+
+  it('cloud restoration uses the verified embedded design and rejects tampering', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const file = await service.buildWrtDesignPackage({ name: 'Embedded', elements: [] } as any)
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(await file.arrayBuffer())))
+    expect((await service.restoreDesignAssetBundle({ name: 'Stale', elements: [] } as any, { assetBundleUrl: 'https://cdn/project.wrt' })).name).toBe('Embedded')
+    expect((await service.restoreDesignAssetBundle({ name: 'Edited', elements: [] } as any, { assetBundleUrl: 'https://cdn/project.wrt', preserveConfig: true })).name).toBe('Edited')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('invalid zip')))
+    await expect(service.restoreDesignAssetBundle({ elements: [] } as any, { assetBundleUrl: 'https://cdn/project.wrt' })).rejects.toThrow()
+  })
+
+  it('rejects image files that hide external dependencies in SVG content', async () => {
+    setActivePinia(createPinia())
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    const svg = '<svg><image href="https://cdn.example.com/image.png"/></svg>'
+    await expect(buildWrtDesignPackage({ elements: [{ imageUrl: `data:image/svg+xml,${encodeURIComponent(svg)}` }] } as any)).rejects.toThrow('external dependency')
+  })
+
+  it('retains marketing images and preview when reexporting offline without options', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const nativeFetch = globalThis.fetch
+    const pixel = 'data:image/png;base64,iVBORw0KGgo='
+    const original = await service.buildWrtDesignPackage({ name: 'Extras', elements: [] } as any, {
+      previewDataUrl: pixel,
+      product: { productImages: [{ id: 7, imageId: 7, type: 'social', image: { id: 7, name: 'Poster', url: pixel } }] } as any,
+    })
+    await service.readWrtDesignPackage(original)
+    vi.stubGlobal('fetch', vi.fn((input: any, init?: any) => {
+      if (/^https?:/.test(String(input))) throw new Error('Network disabled')
+      return nativeFetch(input, init)
+    }))
+    const reexported = await service.buildWrtDesignPackage({ name: 'Extras', elements: [] } as any)
+    const source = await JSZip.loadAsync(await original.arrayBuffer())
+    const output = await JSZip.loadAsync(await reexported.arrayBuffer())
+    const before = JSON.parse(await source.file('manifest.json')!.async('string'))
+    const after = JSON.parse(await output.file('manifest.json')!.async('string'))
+    expect(after.productImages).toEqual(before.productImages)
+    expect(after.preview).toEqual(before.preview)
+    for (const path of [after.preview.path, after.productImages[0].variants.original.path]) {
+      expect(await output.file(path)!.async('base64')).toBe(await source.file(path)!.async('base64'))
+    }
+    expect(fetch).not.toHaveBeenCalled()
+    const removed = await service.buildWrtDesignPackage({ name: 'Extras', elements: [] } as any, { product: {}, previewDataUrl: null })
+    const removedZip = await JSZip.loadAsync(await removed.arrayBuffer())
+    const removedManifest = JSON.parse(await removedZip.file('manifest.json')!.async('string'))
+    expect(removedManifest.productImages).toEqual([])
+    expect(removedManifest.preview.path).toBe('preview.svg')
+  })
+
+  it('rejects corrupt package bytes', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const file = await service.buildWrtDesignPackage({ name: 'Hash', elements: [{ imageUrl: 'data:image/svg+xml,%3Csvg/%3E' }] } as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+    zip.file(manifest.studio.assetRefs[0].path, 'tampered')
+    const corrupt = new File([await zip.generateAsync({ type: 'arraybuffer' })], 'corrupt.wrt')
+    await expect(service.readWrtDesignPackage(corrupt)).rejects.toThrow('Missing or corrupt package asset')
+  })
+
+  it('still reads legacy v1 packages', async () => {
+    setActivePinia(createPinia())
+    const zip = new JSZip()
+    zip.file('manifest.json', JSON.stringify({ version: 1, format: 'wristo-design-package', design: { path: 'design.json' } }))
+    zip.file('design.json', JSON.stringify({ name: 'Legacy', elements: [] }))
+    const { readWrtDesignPackage } = await import('./designAssetBundleService')
+    expect((await readWrtDesignPackage(new File([await zip.generateAsync({ type: 'arraybuffer' })], 'legacy.wrt'))).sourceName).toBe('Legacy')
   })
 })

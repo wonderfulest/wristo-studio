@@ -1,3 +1,4 @@
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone, type SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ElMessage } from 'element-plus'
@@ -111,7 +112,7 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
     if (!isPackageAssetElement(resolvedElement)) return resolvedElement
 
     const assetId = readNumericAssetId(resolvedElement)
-    if (!assetId) return resolvedElement
+    if (!assetId || String((resolvedElement as any).imageUrl || '').trim()) return resolvedElement
 
     const fileUrl = await resolveAnalogAssetUrl(assetId)
 
@@ -130,7 +131,7 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
           await Promise.all(analogSlots.map(async (slot) => {
             const asset = assets[slot]
             const assetId = readNumericAssetId(asset as AnyElementConfig)
-            if (!asset || !assetId) return
+            if (!asset || !assetId || String(asset.imageUrl || '').trim()) return
             assets[slot] = { ...asset, imageUrl: await resolveAnalogAssetUrl(assetId) }
           }))
           return { ...theme, assets }
@@ -174,6 +175,8 @@ function validateColorBindings(
 }
 
 async function resolveFontForValidation(slug: string) {
+  const packaged = packageFonts.get(canonicalFontSlug(slug))
+  if (packaged) return packaged
   const fontStore = useFontStore()
   const local = [
     ...(fontStore.allFonts as any[]),

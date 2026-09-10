@@ -13,6 +13,7 @@ vi.mock('@/api/wristo/analogAsset', () => ({ analogAssetApi: { upload } }))
 describe('dynamic image quick import dialog', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => 'blob:local-image' })
     upload.mockReset().mockResolvedValue({ data: { id: 9, file: { url: 'https://cdn.example/minute-00.png' } } })
   })
 
@@ -61,11 +62,12 @@ describe('dynamic image quick import dialog', () => {
     } satisfies DynamicImageImportPlan
     await wrapper.vm.$nextTick()
 
-    const confirm = wrapper.findAll('button').find((button) => button.text() === 'Upload and create groups')
+    const confirm = wrapper.findAll('button').find((button) => button.text() === 'Import and create groups')
     await confirm!.trigger('click')
     await flushPromises()
 
     expect(applyGroups).toHaveBeenCalledTimes(1)
+    expect(upload).not.toHaveBeenCalled()
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
 
     finishApply?.()

@@ -1,3 +1,4 @@
+import { packageBitmapChars } from '@/engine/services/packageAssetRegistry'
 import { nanoid } from 'nanoid'
 import { FabricText, TextProps, Group, FabricImage } from 'fabric'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -44,6 +45,7 @@ function removeBitmapTimeGroupsById(canvas: any, id: string) {
 }
 
 async function getBitmapChars(fontId: number): Promise<BitmapFontAssetRelationVO[]> {
+  if (packageBitmapChars.has(fontId)) return packageBitmapChars.get(fontId)!
   if (bitmapCharCache.has(fontId)) return bitmapCharCache.get(fontId) as BitmapFontAssetRelationVO[]
   const res = await listBitmapFontChars(fontId)
   const list = (res.data || []) as BitmapFontAssetRelationVO[]

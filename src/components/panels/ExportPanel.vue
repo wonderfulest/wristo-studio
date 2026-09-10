@@ -87,7 +87,7 @@ import { isDefaultBackgroundUrl } from '@/elements/decoration/background/backgro
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
-import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
+import { saveWrtProject } from '@/engine/services/saveWrtProject'
 import { getProduct } from '@/api/products'
 import { resolveCoverImageSaveChoice } from './coverImageSaveChoice'
 import emitter from '@/utils/eventBus'
@@ -183,17 +183,11 @@ const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
   if (!designUid || !config) return null
   try {
     const product = await loadAssetBundleProduct()
-    const bundleFile = await buildDesignAssetBundle({
-      ...config,
-      designId: designUid,
-    }, {
+    return await saveWrtProject(designUid, config, {
       previewDataUrl: options.previewDataUrl || null,
       appId: baseStore.appId > 0 ? baseStore.appId : undefined,
       product,
     })
-    if (!bundleFile) return null
-    const res = await designApi.uploadAssetBundle(designUid, bundleFile)
-    return res.data || null
   } catch (error) {
     console.error('Failed to upload design asset bundle:', error)
     messageStore.error(error?.message || t('common.saveFailed'))
@@ -309,6 +303,8 @@ const isOperationLocked = ref(false)
 
 // 定时轮训保存配置，只需要保存 name, kpayId, configJson 即可
 const saveConfig = async (options = {}) => {
+  const saveToken = crypto.randomUUID()
+  emitter.emit('design-save-started', { designId: baseStore.id, saveToken })
   if (router.currentRoute.value.path !== '/design') {
     messageStore.error(t('export.notDesignPage'))
     return
@@ -329,15 +325,11 @@ const saveConfig = async (options = {}) => {
     if (!baseStore.id) {
       return ''
     }
-    await persistAndSaveDesignConfig(exportConfig, async (saveConfig) => {
-      await designApi.updateDesign({
-        uid: baseStore.id,
-        name: baseStore.watchFaceName,
-        configJson: JSON.stringify(saveConfig),
-      })
+    await uploadDesignAssetBundle(baseStore.id, exportConfig, {
+      previewDataUrl: await baseStore.captureScreenshot(),
     })
     historyStore.saveInitial()
-    emitter.emit('design-saved', baseStore.id)
+    emitter.emit('design-saved', { designId: baseStore.id, saveToken })
     return baseStore.id
   } catch (error) {
     console.error('Auto save failed', error)
@@ -347,6 +339,8 @@ const saveConfig = async (options = {}) => {
 
 // 上传配置到服务器
 const uploadApp = async () => {
+  const saveToken = crypto.randomUUID()
+  emitter.emit('design-save-started', { designId: baseStore.id, saveToken })
   // 检查应用名称
   if (!baseStore.watchFaceName) {
     messageStore.error(t('export.setAppName'))
@@ -425,41 +419,21 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
-    let res
-    const configJson = await persistAndSaveDesignConfig(resolvedConfig, async (saveConfig) => {
-      const data = {
-        uid: baseStore.id,
-        name: baseStore.watchFaceName,
-        description: baseStore.watchFaceName,
-        designStatus: 'draft',
-        configJson: saveConfig,
-        // 直接使用配置中的 backgroundImage 元信息
-        backgroundImage: getBackgroundImagePayload(saveConfig),
-      }
-      if (screenshotUrl) { // 屏幕截图成功时，上传
-        data.coverImage = {
-          url: screenshotUrl,
-          type: 'screenshot',
-          usageType: 'screenshot'
-        }
-      }
-
-      // 创建或更新表盘设计
-      res = await designApi.updateDesign(data)
+    // Publish the complete project before updating optional app metadata.
+    await uploadDesignAssetBundle(baseStore.id, resolvedConfig, {
+      previewDataUrl: screenshotResult.dataUrl,
     })
-    
-    // 更新 baseStore.id
-    baseStore.id = res.data.documentId
-    if (res.data?.designUid || baseStore.id) {
-      currentStatus = t('export.updatingConfig')
-      currentProgress = 70
-      if (loadingInstance) {
-        loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
-      }
-      await uploadDesignAssetBundle(res.data?.designUid || baseStore.id, configJson, {
-        previewDataUrl: screenshotResult.dataUrl,
-      })
+    const data = {
+      uid: baseStore.id,
+      name: baseStore.watchFaceName,
+      description: baseStore.watchFaceName,
+      designStatus: 'draft',
+      ...(screenshotUrl ? { coverImage: { url: screenshotUrl, type: 'screenshot', usageType: 'screenshot' } } : {}),
     }
+    const res = await designApi.updateDesign(data)
+    if (res.code !== 0) throw new Error(res.msg || 'Failed to update design')
+    baseStore.id = res.data?.designUid || baseStore.id
+    emitter.emit('design-saved', { designId: baseStore.id, saveToken })
     historyStore.saveInitial()
 
     // 更新WPay产品信息(必须在设计创建或更新之后)

@@ -1,3 +1,4 @@
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -38,6 +39,7 @@ class TestFontFace {
 describe('font metrics refresh', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    packageFonts.clear()
     vi.restoreAllMocks()
     ;(globalThis as any).FontFace = TestFontFace
     Object.defineProperty(document, 'fonts', {
@@ -49,6 +51,15 @@ describe('font metrics refresh', () => {
         check: vi.fn().mockReturnValue(true)
       }
     })
+  })
+
+  it('invalidates a loaded font when a package supplies a different font source', () => {
+    const store = useFontStore()
+    store.registerServerFont({ slug: 'shared', ttfFile: { url: 'https://library/old.ttf' } } as any)
+    store.loadedFonts.add('shared')
+    store.registerServerFont({ slug: 'shared', ttfFile: { url: 'blob:packaged-font' } } as any)
+    expect(store.loadedFonts.has('shared')).toBe(false)
+    expect(store.serverFonts.get('shared')?.ttfFile.url).toBe('blob:packaged-font')
   })
 
   it('clears cached widths and recalculates matching Fabric text after a font loads', async () => {

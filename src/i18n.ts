@@ -699,7 +699,7 @@ const en = {
   'dynamicImage.quickImportDescription': 'Select multiple images or a folder. Files are grouped by name, validated, uploaded, and bound to Token expressions automatically.',
   'dynamicImage.quickImportChooseImages': 'Select images',
   'dynamicImage.quickImportChooseFolder': 'Choose folder',
-  'dynamicImage.quickImportConfirm': 'Upload and create groups',
+  'dynamicImage.quickImportConfirm': 'Import and create groups',
   'dynamicImage.quickImportReadErrors': '{count} files could not be read',
   'dynamicImage.quickImportValidationErrors': '{count} naming or validation errors',
   'dynamicImage.quickImportWarnings': '{count} warnings',

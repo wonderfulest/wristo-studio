@@ -1,4 +1,8 @@
 import JSZip from 'jszip'
+import { assertSelfContainedSvg } from './selfContainedSvg'
+import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
+import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { AnyElementConfig } from '@/types/elements'
@@ -21,6 +25,7 @@ import {
 import type { VisualThemesConfig } from '@/types/visualTheme'
 
 type ManifestIconAsset = {
+  sha256?: string
   iconUnicode: string
   path?: string
   format?: string
@@ -71,6 +76,9 @@ type ManifestAsset = {
 }
 
 type ManifestFontAsset = {
+  sha256?: string
+  buildPath?: string
+  buildFiles?: Array<{ path: string; sha256: string }>
   slug: string
   path?: string
   format?: string
@@ -88,6 +96,7 @@ export type ManifestFailure = {
 }
 
 type DesignAssetManifest = {
+  selfContained?: boolean
   version: 1 | 2
   format?: string
   generatedAt: string
@@ -116,10 +125,12 @@ type DesignAssetManifest = {
   }
   elements?: ManifestElement[]
   fonts?: ManifestFontAsset[]
+  bitmapFonts?: Array<{ id: number; chars: Array<{ charValue: string; path: string; sha256: string }> }>
   failures?: ManifestFailure[]
   icons?: {
     amoled: ManifestIconAsset[]
   }
+  preview?: { path: string; sha256: string }
   productImages?: MarketingImageManifest[]
   studio?: {
     configPath: string
@@ -148,11 +159,12 @@ type BuildDesignAssetBundleOptions = {
 }
 
 type RestoreBundleOptions = {
+  preserveConfig?: boolean
   assetBundleUrl?: string | null
 }
 
 export const WRT_FORMAT = 'wristo-design-package'
-export const WRT_VERSION = 1
+export const WRT_VERSION = 2
 
 export class WrtDesignPackageError extends Error {
   readonly code: 'invalid-file' | 'invalid-archive' | 'invalid-manifest' | 'unsupported-version' | 'invalid-design'
@@ -195,9 +207,14 @@ const ASSET_URL_FIELDS = new Set([
   'svgFile',
   'fileUrl',
   'src',
+  'url',
+  'bitmapPreviewAtlasUrl',
+  'bitmapPreviewDescriptorUrl',
+  'bitmapCanvasPreviewAtlasUrl',
+  'bitmapCanvasPreviewDescriptorUrl',
 ])
 
-const FONT_FIELDS = new Set(['fontFamily'])
+const FONT_FIELDS = new Set(['fontFamily', 'iconFont', 'assetFontFamily'])
 
 const toAbsoluteUrl = (url: string): string => {
   if (!url) return ''
@@ -596,7 +613,7 @@ const addReferencedAssetToBundle = async (
     return
   }
 
-  const backendImage = await resolveBackendImageRecord(source)
+  const backendImage = manifest.selfContained ? null : await resolveBackendImageRecord(source)
   if (backendImage) {
     const group = getAssetGroupForElementRef(input)
     const safeName = sanitizePathSegment(backendImage.name || input.field || 'image', 'image')
@@ -633,6 +650,7 @@ const addReferencedAssetToBundle = async (
   try {
     const blob = await fetchBlob(source)
     const format = getFormatFromBlob(blob, source)
+    if (manifest.selfContained && format === 'svg') assertSelfContainedSvg(await blob.text())
     const sha256 = await sha256Hex(blob)
     const dimensions = await readImageDimensions(blob, format)
     const duplicateContent = contentAssetByHash.get(sha256)
@@ -699,16 +717,15 @@ const addFontAssetToBundle = async (
   slug: string,
 ) => {
   try {
-    const response = await getFontBySlug(slug)
-    const font = response.data
+    const cached = packageFonts.get(canonicalFontSlug(slug))
+    const font = cached || (await getFontBySlug(slug)).data
     const source = font?.ttfFile?.url
-    if (!font || !source) {
-      manifest.fonts?.push({ slug, metadata: font ? { ...font, ttfFile: undefined } as any : undefined })
-      return
+    if (!font || (!source && !font.bitmapPreviewDescriptorUrl)) {
+      throw new Error(`Missing font file: ${slug}`)
     }
 
-    const blob = await fetchBlob(source)
-    const format = getFormatFromBlob(blob, source, 'ttf')
+    const blob = source ? await fetchBlob(source) : null
+    const format = blob ? getFormatFromBlob(blob, source!, 'ttf') : undefined
     const safeSlug = sanitizePathSegment(slug, 'font')
     let path = `fonts/${safeSlug}.${format}`
     let suffix = 1
@@ -717,27 +734,40 @@ const addFontAssetToBundle = async (
       path = `fonts/${safeSlug}-${suffix}.${format}`
     }
     usedPaths.add(path)
-    zip.file(path, blob)
-    pushAssetGroupPath(manifest.assets, 'fonts', path)
+    if (blob) {
+      zip.file(path, await blob.arrayBuffer())
+      pushAssetGroupPath(manifest.assets, 'fonts', path)
+    }
+    const buildPath = `fonts/bitmaps/${safeSlug}`
+    const buildFiles: Array<{ path: string; sha256: string }> = []
+    if (manifest.selfContained && !slug.startsWith('local-')) {
+      let files = packageFontBuildFiles.get(slug)
+      if (!files) {
+        const fontZip = await JSZip.loadAsync(await (await fetchBlob(`https://cdn.wristo.io/font-bitmaps/${encodeURIComponent(slug)}/${encodeURIComponent(slug)}.zip`)).arrayBuffer())
+        files = new Map()
+        for (const [name, entry] of Object.entries(fontZip.files)) {
+          if (!entry.dir && !name.split('/').includes('..') && /\.(fnt|png)$/i.test(name)) files.set(name, new Blob([await entry.async('arraybuffer')]))
+        }
+        if (![...files.keys()].some(name => name.endsWith('.fnt'))) throw new Error(`Missing bitmap build files: ${slug}`)
+        packageFontBuildFiles.set(slug, files)
+      }
+      for (const [name, content] of files) {
+        const filePath = `${buildPath}/${name}`
+        zip.file(filePath, await content.arrayBuffer())
+        buildFiles.push({ path: filePath, sha256: await sha256Hex(content) })
+      }
+    }
+
     manifest.fonts?.push({
       slug,
-      path,
+      path: blob ? path : undefined,
+      buildPath: manifest.selfContained && buildFiles.length ? buildPath : undefined,
+      buildFiles: manifest.selfContained && buildFiles.length ? buildFiles : undefined,
       format,
-      mimeType: blob.type || getMimeTypeForFormat(format),
+      mimeType: blob ? blob.type || getMimeTypeForFormat(format!) : undefined,
       sourceUrl: source,
-      metadata: {
-        id: font.id,
-        fullName: font.fullName,
-        postscriptName: font.postscriptName,
-        family: font.family,
-        subfamily: font.subfamily,
-        language: font.language,
-        type: font.type,
-        weight: font.weight,
-        glyphCount: font.glyphCount,
-        isSystem: font.isSystem,
-        status: font.status,
-      },
+      sha256: blob ? await sha256Hex(blob) : undefined,
+      metadata: { ...font, ttfFile: undefined },
     })
   } catch (error: any) {
     manifest.failures?.push({
@@ -785,10 +815,12 @@ const addAmoledIconAssetToBundle = async (
     if (!usedPaths.has(path)) {
       usedPaths.add(path)
       if (input.file) {
-        zip.file(path, input.file)
+        zip.file(path, await input.file.arrayBuffer())
       } else if (input.source) {
-        zip.file(path, await fetchBlob(input.source))
+        zip.file(path, await (await fetchBlob(input.source)).arrayBuffer())
       }
+      if (manifest.selfContained && format === 'svg') assertSelfContainedSvg(await zip.file(path)!.async('string'))
+      entry.sha256 = await sha256Hex(new Blob([await zip.file(path)!.async('arraybuffer')]))
       entry.path = path
       entry.format = format
       entry.sourceUrl = input.source && !isDataUrl(input.source) ? input.source : undefined
@@ -802,16 +834,28 @@ const addAmoledIconAssetToBundle = async (
 const buildDesignAssetArchive = async (
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
-  packageOptions: { format?: string; version?: 1; fileNameSuffix: string; mimeType: string; rooted?: boolean },
+  packageOptions: { format?: string; version?: 1 | 2; fileNameSuffix: string; mimeType: string; rooted?: boolean },
 ): Promise<File> => {
+  config = JSON.parse(JSON.stringify(config))
+  if (packageOptions.format === WRT_FORMAT) {
+    for (const element of config.elements || []) {
+      if (element.eleType === 'weather' && (element as any).fontFamily === 'wristo-icon') (element as any).fontFamily = 'weather-font-0fe87f'
+    }
+  }
   const iconElements = getAmoledIconElements(config)
   const iconPendingStore = useAmoledIconAssetStore()
+  for (const element of iconElements) {
+    const item = element as any
+    const pending = iconPendingStore.getPending(String(item.fontFamily || item.iconFont || ''), normalizeIconUnicode(item.amoledIconUnicode))
+    if (pending) { item.amoledImageUrl = pending.objectUrl; item.imageUrl = pending.objectUrl }
+  }
 
   const zip = new JSZip()
   const designUid = String((config as any).designId || 'design')
   const slug = slugifyDesignName(config.name, designUid || 'watchface')
   const manifest: DesignAssetManifest = {
     version: packageOptions.version || 2,
+    selfContained: packageOptions.format === WRT_FORMAT ? true : undefined,
     format: packageOptions.format,
     generatedAt: new Date().toISOString(),
     designUid,
@@ -845,6 +889,25 @@ const buildDesignAssetArchive = async (
   zip.file('config/config.json', JSON.stringify(config, null, 2))
 
   const usedPaths = new Set<string>()
+  if (options.product === undefined && options.productImages === undefined) {
+    manifest.productImages = JSON.parse(JSON.stringify(packageArchiveExtras.productImages))
+    for (const product of manifest.productImages || []) {
+      for (const variant of Object.values(product.variants)) {
+        const blob = packageArchiveExtras.files.get(variant.path)
+        if (!blob) throw new Error(`Missing preserved marketing image: ${variant.path}`)
+        zip.file(variant.path, await blob.arrayBuffer())
+        usedPaths.add(variant.path)
+      }
+    }
+  }
+  if (options.previewDataUrl === undefined && packageArchiveExtras.preview) {
+    const preview = packageArchiveExtras.preview
+    const blob = packageArchiveExtras.files.get(preview.path)
+    if (!blob) throw new Error(`Missing preserved preview: ${preview.path}`)
+    zip.file(preview.path, await blob.arrayBuffer())
+    manifest.assets.preview = preview.path
+    usedPaths.add(preview.path)
+  }
   for (const [index, element] of (config.elements || []).entries()) {
     const id = getElementId(element, index)
     const type = getElementType(element)
@@ -858,9 +921,12 @@ const buildDesignAssetArchive = async (
     collectElementAssetRefs(element, index).map(ref => ({ ...ref, category: ref.elementType || 'element' })),
   )
   const themeRefs = collectVisualThemeAssetRefs(config.visualThemes)
+  const configRefs = manifest.selfContained
+    ? collectElementAssetRefs({ ...config, elements: undefined, visualThemes: undefined } as any, 0).map(ref => ({ ...ref, category: 'config' }))
+    : []
   const marketingInputs = createMarketingAssetInputs(options.product || options.productImages)
   const fontSlugs = collectFontSlugs(config)
-  const totalAssets = elementRefs.length + themeRefs.length + marketingInputs.scalars.length
+  const totalAssets = elementRefs.length + themeRefs.length + configRefs.length + marketingInputs.scalars.length
     + marketingInputs.gallery.length + fontSlugs.length + iconElements.length
     + (options.previewDataUrl ? 1 : 0)
   let completedAssets = 0
@@ -869,7 +935,7 @@ const buildDesignAssetArchive = async (
     options.onProgress?.(totalAssets ? 80 * completedAssets / totalAssets : 80)
   }
   options.onProgress?.(0)
-  for (const ref of [...elementRefs, ...themeRefs]) {
+  for (const ref of [...elementRefs, ...themeRefs, ...configRefs]) {
     await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, ref)
     assetCompleted()
   }
@@ -915,6 +981,7 @@ const buildDesignAssetArchive = async (
     const pending = fontSlug ? iconPendingStore.getPending(fontSlug, iconUnicode) : null
     const source = pending ? undefined : String((element as any).amoledImageUrl || (element as any).imageUrl || '').trim()
     if (!pending && !source) {
+      if (manifest.selfContained) manifest.failures?.push({ category: 'icon', sourceUrl: iconUnicode, message: `Missing AMOLED icon asset: ${iconUnicode}` })
       assetCompleted()
       continue
     }
@@ -937,7 +1004,8 @@ const buildDesignAssetArchive = async (
 
   if (options.previewDataUrl) {
     try {
-      zip.file('preview.png', await fetchBlob(options.previewDataUrl))
+      zip.file('preview.png', await (await fetchBlob(options.previewDataUrl)).arrayBuffer())
+      manifest.assets.preview = 'preview.png'
     } catch (error: any) {
       manifest.failures?.push({
         category: 'preview',
@@ -946,12 +1014,60 @@ const buildDesignAssetArchive = async (
     }
     assetCompleted()
   }
-  if (!zip.file('preview.png')) {
+  if (!zip.file(manifest.assets.preview)) {
     const width = manifest.canvas?.width || 454
     const height = manifest.canvas?.height || 454
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${manifest.palette?.background || '#000000'}"/></svg>`
     zip.file('preview.svg', svg)
     manifest.assets.preview = 'preview.svg'
+  }
+  const previewEntry = zip.file(manifest.assets.preview)
+  if (previewEntry) manifest.preview = { path: manifest.assets.preview, sha256: await sha256Hex(new Blob([await previewEntry.async('arraybuffer')])) }
+  if (manifest.selfContained) {
+    const bitmapIds = new Set<number>()
+    const collectBitmapIds = (value: any): void => {
+      if (!value || typeof value !== 'object') return
+      if (Number(value.bitmapFontId) > 0) bitmapIds.add(Number(value.bitmapFontId))
+      Object.values(value).forEach(collectBitmapIds)
+    }
+    collectBitmapIds(config)
+    manifest.bitmapFonts = []
+    for (const id of bitmapIds) {
+      const chars = packageBitmapChars.get(id) || (await listBitmapFontChars(id)).data
+      if (!chars?.length) throw new Error(`Missing bitmap characters: ${id}`)
+      const entries = []
+      for (const char of chars) {
+        if (!char.image?.url) throw new Error(`Missing bitmap character image: ${id}/${char.charValue}`)
+        const blob = await fetchBlob(char.image.url)
+        const path = `fonts/bitmap-chars/${id}/${Array.from(char.charValue).map(c => c.codePointAt(0)!.toString(16)).join('-')}.${getFormatFromBlob(blob, char.image.url)}`
+        zip.file(path, await blob.arrayBuffer())
+        entries.push({ charValue: char.charValue, path, sha256: await sha256Hex(blob) })
+      }
+      manifest.bitmapFonts.push({ id, chars: entries })
+    }
+    for (const font of manifest.fonts || []) {
+      for (const ref of collectElementAssetRefs(font.metadata as any, 0)) {
+        await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, { ...ref, category: 'font' })
+      }
+    }
+    for (const entry of Object.values(zip.files)) {
+      if (!entry.dir && entry.name.endsWith('.svg')) assertSelfContainedSvg(await entry.async('string'))
+    }
+    if (manifest.failures?.length) throw new Error(`Incomplete WRT: ${manifest.failures.map(f => f.message).join('; ')}`)
+    const portable = JSON.parse(JSON.stringify(config))
+    const rewrite = (value: any): void => {
+      if (!value || typeof value !== 'object') return
+      if (Object.values(value).some(child => typeof child === 'string' && sourcePathByUrl.has(child))) { delete value.assetId; delete value.imageId }
+      for (const [key, child] of Object.entries(value)) {
+        if (typeof child === 'string' && sourcePathByUrl.has(child)) value[key] = `bundle://${sourcePathByUrl.get(child)!.path}`
+        else rewrite(child)
+      }
+    }
+    rewrite(portable)
+    for (const font of manifest.fonts || []) rewrite(font.metadata)
+    zip.file('design.json', JSON.stringify(portable, null, 2))
+    zip.file('config/config.json', JSON.stringify(portable, null, 2))
+    for (const [index, element] of portable.elements.entries()) zip.file(manifest.elements![index].path, JSON.stringify(element, null, 2))
   }
   zip.file('README.md', createReadme(config, manifest))
   zip.file('manifest.json', JSON.stringify(manifest, null, 2))
@@ -963,7 +1079,7 @@ const buildDesignAssetArchive = async (
     wrapped.folder(root)
     for (const [path, entry] of Object.entries(zip.files)) {
       if (entry.dir) wrapped.folder(`${root}/${path}`)
-      else wrapped.file(`${root}/${path}`, await entry.async('uint8array'))
+      else wrapped.file(`${root}/${path}`, await entry.async('arraybuffer'))
     }
     outputZip = wrapped
     fileBaseName = root
@@ -1016,7 +1132,7 @@ export async function restoreDesignAssetBundleFromZip(
   try {
     const iconAssets = getBundleIconAssetEntries(zip, manifest)
     const assetRefs = manifest?.studio?.assetRefs || []
-    if (!iconAssets.length && !assetRefs.length) return config
+
 
     const restoredAssetUrls = new Map<string, string>()
     for (const asset of assetRefs) {
@@ -1026,11 +1142,13 @@ export async function restoreDesignAssetBundleFromZip(
         const fileEntry = zip.file(asset.path)
         if (!fileEntry) continue
         const archiveBlob = await fileEntry.async('blob')
-        const blob = new Blob([archiveBlob], { type: getBundleAssetMimeType(asset.path) })
+        const blob = new Blob([archiveBlob], { type: asset.mimeType || getBundleAssetMimeType(asset.path) })
         const objectUrl = URL.createObjectURL(blob)
         restoredDesignAssetUrls.add(objectUrl)
         restoredAssetUrls.set(sourceRef, objectUrl)
+        restoredAssetUrls.set(`bundle://${asset.path}`, objectUrl)
       } catch (error) {
+        if (manifest?.version === 2 && manifest.format === WRT_FORMAT) throw error
         console.warn('[designAssetBundle] Failed to restore referenced asset', error)
       }
     }
@@ -1041,7 +1159,7 @@ export async function restoreDesignAssetBundleFromZip(
         return
       }
       Object.entries(value as Record<string, unknown>).forEach(([key, childValue]) => {
-        if (typeof childValue === 'string' && ASSET_URL_FIELDS.has(key)) {
+        if (typeof childValue === 'string') {
           const restoredUrl = restoredAssetUrls.get(childValue)
           if (restoredUrl) (value as Record<string, unknown>)[key] = restoredUrl
           return
@@ -1049,16 +1167,58 @@ export async function restoreDesignAssetBundleFromZip(
         restoreElementAssetUrls(childValue)
       })
     }
-    restoreElementAssetUrls(config.elements)
-    restoreElementAssetUrls(config.visualThemes)
+    restoreElementAssetUrls(config)
+    for (const font of manifest?.fonts || []) {
+      let ttfFile
+      if (font.path && zip.file(font.path)) {
+        const blob = new Blob([await zip.file(font.path)!.async('arraybuffer')], { type: font.mimeType || 'font/ttf' })
+        const url = URL.createObjectURL(blob)
+        restoredDesignAssetUrls.add(url)
+        ttfFile = { url }
+      }
+      const metadata = { ...font.metadata, slug: font.slug, ttfFile }
+      restoreElementAssetUrls(metadata)
+      packageFonts.set(canonicalFontSlug(font.slug), metadata as any)
+      if (font.buildPath) {
+        const files = new Map<string, Blob>()
+        for (const entry of font.buildFiles || []) files.set(entry.path.slice(font.buildPath.length + 1), new Blob([await zip.file(entry.path)!.async('arraybuffer')]))
+        packageFontBuildFiles.set(font.slug, files)
+      }
+    }
 
+    for (const font of manifest?.bitmapFonts || []) {
+      const chars = []
+      for (const char of font.chars) {
+        const blob = new Blob([await zip.file(char.path)!.async('arraybuffer')], { type: getBundleAssetMimeType(char.path) })
+        const url = URL.createObjectURL(blob)
+        restoredDesignAssetUrls.add(url)
+        chars.push({ fontId: font.id, charValue: char.charValue, image: { url } } as any)
+      }
+      packageBitmapChars.set(font.id, chars)
+    }
+    packageArchiveExtras.productImages = JSON.parse(JSON.stringify(manifest?.productImages || []))
+    packageArchiveExtras.files.clear()
+    packageArchiveExtras.preview = undefined
+    for (const product of packageArchiveExtras.productImages) {
+      for (const variant of Object.values(product.variants)) {
+        const entry = zip.file(variant.path)
+        if (entry) packageArchiveExtras.files.set(variant.path, new Blob([await entry.async('arraybuffer')], { type: variant.mimeType }))
+      }
+    }
+    const previewPath = manifest?.preview?.path || manifest?.assets?.preview
+    const previewEntry = previewPath && zip.file(previewPath)
+    if (previewEntry) {
+      const blob = new Blob([await previewEntry.async('arraybuffer')], { type: getBundleAssetMimeType(previewPath) })
+      packageArchiveExtras.files.set(previewPath, blob)
+      packageArchiveExtras.preview = { path: previewPath, sha256: await sha256Hex(blob) }
+    }
     const iconFontSlugs = Array.from(new Set([
       ...iconElements
         .map((element: any) => String(element.fontFamily || element.iconFont || '').trim())
         .filter(Boolean),
     ].filter(Boolean)))
     const restoredIconUrlByFontAndUnicode = new Map<string, string>()
-    if (iconFontSlugs.length) {
+    if (iconFontSlugs.length && !(manifest?.format === WRT_FORMAT && manifest.version === 2)) {
       for (const asset of iconAssets) {
         const iconUnicode = normalizeIconUnicode(asset.iconUnicode)
         if (!iconUnicode || !asset.path) continue
@@ -1096,6 +1256,7 @@ export async function restoreDesignAssetBundleFromZip(
       }
     }
   } catch (error) {
+    if (manifest?.version === 2 && manifest.format === WRT_FORMAT) throw error
     console.warn('[designAssetBundle] Failed to restore design asset bundle', error)
   }
 
@@ -1109,19 +1270,17 @@ export async function restoreDesignAssetBundle(
   const assetBundleUrl = String(options.assetBundleUrl || '').trim()
   if (!assetBundleUrl) return config
 
-  try {
-    const response = await fetch(toAbsoluteUrl(assetBundleUrl))
-    if (!response.ok) {
-      throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
-    }
-    const zip = await JSZip.loadAsync(await response.blob())
-    const manifest = await parseManifest(zip)
-    clearRestoredDesignAssetUrls()
-    return restoreDesignAssetBundleFromZip(config, zip, manifest)
-  } catch (error) {
-    console.warn('[designAssetBundle] Failed to restore design asset bundle', error)
-    return config
+  const response = await fetch(toAbsoluteUrl(assetBundleUrl))
+  if (!response.ok) throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
+  const bytes = await response.arrayBuffer()
+  const zip = await JSZip.loadAsync(bytes)
+  const manifest = await parseManifest(zip)
+  if (manifest?.format === WRT_FORMAT && manifest.version === 2) {
+    const imported = await readWrtDesignPackage(new File([bytes], 'project.wrt'))
+    return options.preserveConfig ? restoreDesignAssetBundleFromZip(config, zip, manifest) : imported.config
   }
+  clearRestoredDesignAssetUrls()
+  return restoreDesignAssetBundleFromZip(config, zip, manifest)
 }
 
 export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesignPackage> {
@@ -1131,7 +1290,7 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
 
   let zip: JSZip
   try {
-    zip = await JSZip.loadAsync(file)
+    zip = await JSZip.loadAsync(await file.arrayBuffer())
   } catch (error) {
     throw new WrtDesignPackageError('invalid-archive', 'Unable to read .wrt archive')
   }
@@ -1149,7 +1308,7 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
   if (manifest.format !== WRT_FORMAT) {
     throw new WrtDesignPackageError('invalid-manifest', 'Unsupported .wrt package format')
   }
-  if (manifest.version !== WRT_VERSION) {
+  if (manifest.version !== 1 && manifest.version !== WRT_VERSION) {
     throw new WrtDesignPackageError('unsupported-version', 'Unsupported .wrt package version')
   }
 
@@ -1168,7 +1327,35 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
     throw new WrtDesignPackageError('invalid-design', 'Design configuration must contain an elements array')
   }
 
+  if (manifest.version === 2) {
+    if (!manifest.selfContained || manifest.failures?.length) throw new WrtDesignPackageError('invalid-manifest', 'WRT v2 must be complete and self-contained')
+    for (const asset of [...(manifest.studio?.assetRefs || []), ...(manifest.fonts || []).filter(font => font.path), ...(manifest.fonts || []).flatMap(font => font.buildFiles || []), ...(manifest.bitmapFonts || []).flatMap(font => font.chars), ...(manifest.icons?.amoled || []), ...(manifest.preview ? [manifest.preview] : []), ...(manifest.productImages || []).flatMap(image => Object.values(image.variants || {}))]) {
+      const entry = asset.path && zip.file(asset.path)
+      if (entry && asset.path?.endsWith('.svg')) assertSelfContainedSvg(await entry.async('string'))
+      if (!entry || !asset.sha256 || asset.sha256 !== await sha256Hex(new Blob([await entry.async('arraybuffer')]))) {
+        throw new WrtDesignPackageError('invalid-manifest', `Missing or corrupt package asset: ${asset.path}`)
+      }
+    }
+    const verifiedRefs = new Set((manifest.studio?.assetRefs || []).map(asset => `bundle://${asset.path}`))
+    const check = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return
+      for (const [key, child] of Object.entries(value)) {
+        if (typeof child === 'string' && ASSET_URL_FIELDS.has(key) && child && (!child.startsWith('bundle://') || !verifiedRefs.has(child))) throw new WrtDesignPackageError('invalid-design', `Unresolved package asset: ${key}`)
+        else check(child)
+      }
+    }
+    check(config)
+    for (const font of manifest.fonts || []) {
+      check(font.metadata)
+      if (!font.path && (!font.metadata?.bitmapPreviewAtlasUrl || !font.metadata?.bitmapPreviewDescriptorUrl)) throw new WrtDesignPackageError('invalid-manifest', `Missing font preview assets: ${font.slug}`)
+      if (!font.slug.startsWith('local-') && !font.buildFiles?.some(file => file.path.endsWith('.fnt'))) throw new WrtDesignPackageError('invalid-manifest', `Missing font build assets: ${font.slug}`)
+    }
+    for (const slug of collectFontSlugs(config)) if (!manifest.fonts?.some(font => font.slug === slug && (font.path || font.buildFiles?.length))) throw new WrtDesignPackageError('invalid-manifest', `Missing packaged font: ${slug}`)
+  }
   clearRestoredDesignAssetUrls()
+  packageFonts.clear()
+  packageFontBuildFiles.clear()
+  packageBitmapChars.clear()
   const restoredConfig = await restoreDesignAssetBundleFromZip(config, zip, manifest)
   return {
     config: restoredConfig,

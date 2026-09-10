@@ -1,3 +1,4 @@
+import { createLocalProjectAsset } from '@/engine/services/localProjectAsset'
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
@@ -14,6 +15,7 @@ type UploadRejectionReason = 'file-type' | 'raster-svg'
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
 export interface UseAssetUploadQueueOptions {
+  localOnly?: boolean
   assetType: () => AnalogAssetType
   upload?: (file: File, type: AnalogAssetType, isShared: boolean) => Promise<{ data?: AnalogAssetVO | null }>
   updateSharing?: (ids: number[], isShared: boolean) => Promise<unknown>
@@ -79,7 +81,9 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
     }
     try {
       const prepared = await (options.prepareFile ?? ensureSvgFileHasIntrinsicSize)(file)
-      const res = await (options.upload ?? analogAssetApi.upload)(prepared, options.assetType(), isShared)
+      const res = options.localOnly
+        ? { data: createLocalProjectAsset(prepared, options.assetType()) }
+        : await (options.upload ?? analogAssetApi.upload)(prepared, options.assetType(), isShared)
       if (!res.data) return null
       const url = options.getAssetUrl?.(res.data) ?? res.data.file?.url ?? res.data.file?.previewUrl
       if (url) options.onAssetUploaded?.(res.data, url)
@@ -142,7 +146,7 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
       uploadSummaryMessage.value = t('asset.uploadFailedCount', { count: totalCount })
     }
     uploadQueue.value = []
-    if (rememberedShareUploads.value == null && uploadedAssets.length) {
+    if (!options.localOnly && rememberedShareUploads.value == null && uploadedAssets.length) {
       pendingSharingAssets.value = uploadedAssets
       rememberSharingChoice.value = false
     }

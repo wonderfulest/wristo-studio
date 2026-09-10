@@ -95,7 +95,7 @@
       <span class="dialog-footer">
         <el-button @click="cancelUpload">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="confirmUpload" :loading="uploading" :disabled="!selectedFile">
-          {{ t('font.confirmUpload') }}
+          {{ t('common.confirm') }}
         </el-button>
       </span>
     </template>
@@ -112,8 +112,8 @@ import type { ParsedFontInfo } from '@/types/font-parse'
 import { useFontStore } from '@/stores/fontStore'
 import { useMessageStore } from '@/stores/message'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { uploadFontFile, getFontByName, getSystemFonts, increaseFontUsage } from '@/api/wristo/fonts'
-import type { DesignFontVO } from '@/types/font'
+import { createLocalProjectFont } from './localProjectFont'
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { getEnumOptions, type EnumOption } from '@/api/common'
 import { useI18n } from '@/i18n'
 import { filterUploadFontTypes, getUploadFontLanguageOptions } from './fontUploadPolicy'
@@ -304,45 +304,23 @@ const confirmUpload = async () => {
   }
   uploading.value = true
   try {
-    const fontName = fontForm.value.name
-    const byName = await getFontByName(fontName)
-    const usedExisting = Boolean(byName.data)
-
-    let created: DesignFontVO
-    if (usedExisting) {
-      created = byName.data as DesignFontVO
-    } else {
-      console.log('uploading font type', selectedFontType.value)
-      const uploadRes = await uploadFontFile(selectedFile.value.raw as File, selectedFontType.value, selectedFontLanguage.value)
-      created = uploadRes.data as DesignFontVO
-    }
-
-    // register locally and record usage
-    const familyName = created.family || created.fullName || created.postscriptName || fontName
-    let rawUrl = created.ttfFile?.url
-    if (!rawUrl) {
-      try {
-        const sys = await getSystemFonts(undefined, userStore.userInfo?.id)
-        
-        const hit = (sys.data || []).find((f: any) => f.slug === created.slug)
-        rawUrl = hit?.ttfFile?.url || ''
-      } catch {}
-    }
-    const ttfUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${location.origin}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`) : ''
+    const created = await createLocalProjectFont(
+      selectedFile.value.raw as File,
+      parsedInfo.value || { glyphCount: 0, fullName: fontForm.value.name, family: fontForm.value.family },
+      selectedFontType.value,
+      selectedFontLanguage.value,
+    )
+    packageFonts.set(created.slug, created)
+    fontStore.registerServerFont(created)
     fontStore.addCustomFont({
-      id: created.id,
-      userId: created.userId,
-      label: created.fullName || familyName,
+      label: created.fullName,
       value: created.slug,
-      family: familyName,
-      src: ttfUrl,
-      language: created.language || selectedFontLanguage.value,
-      type: created.type || selectedFontType.value,
+      family: created.family,
+      src: created.ttfFile.url,
+      language: created.language,
+      type: created.type,
     })
 
-    try { await increaseFontUsage(created.slug, userStore.userInfo?.id) } catch {}
-
-    messageStore.success(usedExisting ? t('font.existsLoaded') : t('font.uploadedPendingReview'))
     emit('selected', created.slug)
     visibleRef.value = false
   } catch (error: any) {

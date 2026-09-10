@@ -319,8 +319,8 @@ import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
-import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
-import { persistBlobAssetUrls } from '@/engine/services/persistBlobAssetUrls'
+import { buildWrtDesignPackage, restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
+import { saveWrtProject } from '@/engine/services/saveWrtProject'
 import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
@@ -563,9 +563,10 @@ const downloadDesignAssets = async () => {
 
   try {
     downloadingAssets.value = true
-    const config = await resolvePackageAssetUrls(form.configJson as any)
+    const restored = await restoreDesignAssetBundle(form.configJson as any, { assetBundleUrl: currentDesign.value.assetBundleUrl, preserveConfig: true })
+    const config = await resolvePackageAssetUrls(restored)
     if (!config) return
-    const bundleFile = await buildDesignAssetBundle({
+    const bundleFile = await buildWrtDesignPackage({
       ...config,
       designId: currentDesign.value.designUid || (config as any).designId || 'design',
       name: (config as any).name || form.name,
@@ -724,9 +725,11 @@ const handleSave = async () => {
 
   try {
     saving.value = true
-    const resolvedConfigJson = await resolvePackageAssetUrls(parsedConfigJson as any)
+    const restoredConfig = await restoreDesignAssetBundle(parsedConfigJson as any, { assetBundleUrl: currentDesign.value.assetBundleUrl, preserveConfig: true })
+    const resolvedConfigJson = await resolvePackageAssetUrls(restoredConfig)
     if (!resolvedConfigJson) return
-    const nextConfigJson = await persistBlobAssetUrls(migrateWeekdayTokens(resolvedConfigJson))
+    const nextConfigJson = migrateWeekdayTokens({ ...resolvedConfigJson, name: form.name })
+    await saveWrtProject(currentDesign.value.designUid, nextConfigJson)
     form.configJson = nextConfigJson
     const payload = {
       uid: currentDesign.value.designUid,
@@ -735,7 +738,6 @@ const handleSave = async () => {
       originalType: form.originalType,
       sourcePlatform: form.sourcePlatform || undefined,
       sourceId: form.sourceId.trim() || undefined,
-      configJson: nextConfigJson,
       payment: {
         paymentMethod: form.payment.paymentMethod,
         price: form.payment.paymentMethod === 'free' ? 0 : Number(form.payment.price || 0),

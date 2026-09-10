@@ -48,7 +48,7 @@ import {
   scaleFabricCanvasForDesignSize,
   type DesignSize,
 } from '@/utils/designScale'
-import { analogAssetApi } from '@/api/wristo/analogAsset'
+import { createLocalProjectAsset } from '@/engine/services/localProjectAsset'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
 import type { ImageElementConfig } from '@/types/elements/image'
 import { imageSchema } from '@/elements/decoration/image/image.schema'
@@ -300,8 +300,7 @@ const handleDrop = async (event: DragEvent) => {
 
   isUploadingDroppedImage.value = true
   try {
-    const res = await analogAssetApi.upload(file, 'image')
-    const asset = res.data
+    const asset = createLocalProjectAsset(file, 'image')
     const imageUrl = asset ? getAssetImageUrl(asset) : ''
     if (!asset || !imageUrl) {
       ElMessage.error(t('asset.uploadFailed'))

@@ -1,3 +1,4 @@
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { nextTick, type Ref } from 'vue'
@@ -57,6 +58,7 @@ export interface UseDesignLoaderOptions {
   translate: (key: string) => string
   redirectToDesigns: () => void
   resolveLoadedConfig?: (designId: string, config: RuntimeDesignConfig) => Promise<RuntimeDesignConfig>
+  onDesignImported?: (designId: string) => void
   onDesignLoaded?: (designId: string) => void
 }
 
@@ -290,7 +292,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
 
   const applyRuntimeDesignConfig = async (config: RuntimeDesignConfig, generation: number): Promise<boolean> => {
     config = migrateWeekdayTokens(config)
-    await fontStore.fetchFonts()
+    // Load only fonts referenced by this project; the picker loads the library on demand.
     if (!isCurrentDesignLoad(generation)) return false
     if (Array.isArray(config.elements)) ensureBackgroundElement(config as any)
     const projectedConfig = projectDefaultVisualThemeForLoad(config)
@@ -461,6 +463,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   const importWrtDesign = async (file: File): Promise<void> => {
     const generation = ++designLoadGeneration
     let packageRead = false
+    let applied = false
     try {
       await enqueueDesignLoad(async () => {
         if (!isCurrentDesignLoad(generation)) return
@@ -472,6 +475,11 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         const currentDesignName = designStore.watchFaceName || baseStore.watchFaceName
         const imported = await readWrtDesignPackage(file)
         packageRead = true
+        const fontStore = useFontStore()
+        for (const [slug, font] of packageFonts) {
+          fontStore.loadedFonts.delete(slug)
+          fontStore.registerServerFont(font)
+        }
         clearLastEditedElementStyle()
         const clearImportedUrlsIfStale = (): boolean => {
           if (isCurrentDesignLoad(generation)) return false
@@ -498,6 +506,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           return
         }
         if (clearImportedUrlsIfStale()) return
+        applied = true
         messageStore.success(t('editor.wrtImported'))
       })
     } catch (error) {
@@ -514,6 +523,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     } finally {
       if (isCurrentDesignLoad(generation)) {
         baseStore.setDesignLoading(false)
+        if (applied) options.onDesignImported?.(baseStore.id)
       }
     }
   }
@@ -539,15 +549,21 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           assetBundleUrl: designData.assetBundleUrl
         })
         if (!isCurrentDesignLoad(generation)) return
+        const fontStore = useFontStore()
+        for (const [slug, font] of packageFonts) {
+          fontStore.loadedFonts.delete(slug)
+          fontStore.registerServerFont(font)
+        }
 
         baseStore.id = designUid
         designStore.id = designUid
         baseStore.setWatchFaceName(designData.name)
         designStore.setWatchFaceName(designData.name)
         baseStore.appId = designData.product?.appId || -1
+        const projectConfig = { ...restoredConfig, designId: designUid, name: designData.name }
         const selectedConfig = options.resolveLoadedConfig
-          ? await options.resolveLoadedConfig(designUid, restoredConfig)
-          : restoredConfig
+          ? await options.resolveLoadedConfig(designUid, projectConfig)
+          : projectConfig
         if (!isCurrentDesignLoad(generation)) return
         if (await applyRuntimeDesignConfig(selectedConfig, generation)) {
           options.onDesignLoaded?.(designUid)

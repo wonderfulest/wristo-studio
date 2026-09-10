@@ -14,6 +14,10 @@ describe('Sun Events export validation', () => {
     expect(validateSunEventsElement({ ...base, indicator: { ...base.indicator, imageSvg: 'now.png' } })).toContain('SVG')
   })
 
+  it('accepts local SVG object URLs restored from WRT', () => {
+    expect(validateSunEventsElement({ ...base, indicator: { ...base.indicator, imageSvg: 'blob:http://localhost/restored-svg' } })).toBeNull()
+  })
+
   it('requires at least one enabled phase', () => {
     expect(validateSunEventsElement({
       ...base,

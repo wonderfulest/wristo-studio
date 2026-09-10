@@ -97,7 +97,7 @@
       >
         <el-icon class="upload-icon"><Plus /></el-icon>
         <div class="asset-drop-copy">
-          <strong>{{ uploading ? t('common.uploading') : t('asset.upload') }}</strong>
+          <strong>{{ uploading ? 'Importing…' : 'Import images' }}</strong>
           <span>{{ t('asset.dropMultiHint') }}</span>
         </div>
       </div>
@@ -179,7 +179,7 @@
             :title="t('asset.sharedAsset')"
           >{{ t('asset.sharedBadge') }}</span>
           <button
-            v-if="!batchManageMode"
+            v-if="!batchManageMode && asset.id > 0"
             type="button"
             class="favorite-button"
             :class="{ favorited: isFavoriteAsset(asset) }"
@@ -402,11 +402,12 @@ const {
   handleDragLeave,
   handleDrop,
 } = useAssetUploadQueue({
+  localOnly: true,
   assetType: () => props.assetType,
   getAssetUrl,
   onAssetUploaded: (asset, url) => {
     prependAsset(asset)
-    analogAssetStore.prependAsset(asset)
+    if (asset.id > 0) analogAssetStore.prependAsset(asset)
     props.onUpload(url, asset)
   },
   translate: t,

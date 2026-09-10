@@ -117,8 +117,14 @@ import {
   createLocalDesignDraftAutosave,
   removeLocalDesignDraft,
   resolveLocalDesignDraft,
-  writeLocalDesignDraft,
+  buildLocalDesignDraftKey,
 } from '@/engine/services/localDesignDraft'
+import { accessProjectDraft, captureProjectSnapshot, restoreProjectSnapshot } from '@/engine/services/localProjectSnapshot'
+import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
+import { useFontStore } from '@/stores/fontStore'
+import { usePropertiesStore } from '@/stores/properties'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -140,21 +146,38 @@ const themeStore = useThemeStore()
 let saveTimer: number | null = null
 let stopElementDataSubscription: (() => void) | null = null
 let loadedDesignId = ''
+let draftRevision = 0
+const saveRevisions = new Map<string, number>()
 const getDraftDeviceKey = (): string => String(
   userStore.userInfo?.device?.deviceId
   || userStore.userInfo?.device?.hardwarePartNumber
   || userStore.userInfo?.device?.partNumber
   || `${designStore.designSpec.width}x${designStore.designSpec.height}`,
 )
+let draftWriteQueue: Promise<unknown> = Promise.resolve()
+let draftChangeTimer: ReturnType<typeof setTimeout> | undefined
 const persistLocalDraft = (): void => {
-  if (!loadedDesignId) return
+  if (!loadedDesignId || baseStore.designLoading) return
   const config = baseStore.generateConfig({ validateBindings: false })
   if (!config) return
-  writeLocalDesignDraft(window.localStorage, {
-    designId: loadedDesignId,
-    deviceKey: getDraftDeviceKey(),
-    savedAt: Date.now(),
-    config,
+  const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
+  const savedAt = Date.now()
+  // Capture while object URLs are still valid; serialize writes to prevent stale completion.
+  const serializedConfig = JSON.stringify(config)
+  const fonts = Array.from(new Map([...useFontStore().serverFonts, ...packageFonts]).values())
+    .filter((font) => serializedConfig.includes(JSON.stringify(font.slug)))
+  const snapshot = captureProjectSnapshot({ config, bitmapChars: Array.from(packageBitmapChars) }, fonts)
+  // Attach rejection immediately even if an earlier IndexedDB write is still pending.
+  const captured = snapshot.then((value) => ({ value }), (error) => ({ error }))
+  const fontBuildFiles = new Map(packageFontBuildFiles)
+  const archiveExtras = structuredClone(packageArchiveExtras)
+  draftWriteQueue = draftWriteQueue.catch(() => undefined).then(async () => {
+    const result = await captured
+    if ('error' in result) throw result.error
+    await accessProjectDraft(key, 'write', { ...result.value, savedAt, fontBuildFiles, archiveExtras })
+  }).catch((error) => {
+    draftAutosave.markDirty()
+    console.error('Failed to save local project assets:', error)
   })
 }
 const draftAutosave = createLocalDesignDraftAutosave(persistLocalDraft)
@@ -168,36 +191,52 @@ const saveDirtyDraft = (): void => {
 const startDraftTracking = (designId: string): void => {
   loadedDesignId = designId
   stopElementDataSubscription?.()
-  stopElementDataSubscription = elementDataStore.$subscribe(
-    () => draftAutosave.markDirty(),
-    { detached: true, flush: 'sync' },
-  )
+  const markChanged = () => {
+    if (baseStore.designLoading) return
+    draftRevision += 1
+    draftAutosave.markDirty()
+    clearTimeout(draftChangeTimer)
+    draftChangeTimer = setTimeout(saveDirtyDraft, 500)
+  }
+  const stops = [elementDataStore, designStore, usePropertiesStore(), useVisualThemeStore(), useLayoutGroupStore()]
+    .map((store) => store.$subscribe(markChanged, { detached: true, flush: 'sync' }))
+  stopElementDataSubscription = () => stops.forEach((stop) => stop())
 }
-const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<any> => resolveLocalDesignDraft({
-  storage: window.localStorage,
-  designId,
-  deviceKey: getDraftDeviceKey(),
-  serverConfig,
-  confirmRestore: async () => {
-    try {
-      await ElMessageBox.confirm(
-        t('editor.localDraft.message'),
-        t('editor.localDraft.title'),
-        {
-          confirmButtonText: t('editor.localDraft.restore'),
-          cancelButtonText: t('editor.localDraft.useServer'),
-          distinguishCancelAndClose: true,
-          closeOnClickModal: false,
-          closeOnPressEscape: false,
-          type: 'warning',
-        },
-      )
-      return true
-    } catch {
-      return false
+const confirmDraftRestore = async (): Promise<boolean> => {
+  try {
+    await ElMessageBox.confirm(t('editor.localDraft.message'), t('editor.localDraft.title'), {
+      confirmButtonText: t('editor.localDraft.restore'), cancelButtonText: t('editor.localDraft.useServer'),
+      distinguishCancelAndClose: true, closeOnClickModal: false, closeOnPressEscape: false, type: 'warning',
+    })
+    return true
+  } catch { return false }
+}
+const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<any> => {
+  const key = buildLocalDesignDraftKey(designId, getDraftDeviceKey())
+  await draftWriteQueue
+  const draft = await accessProjectDraft(key, 'read')
+  if (draft) {
+    if (await confirmDraftRestore()) {
+      const restored = restoreProjectSnapshot(draft)
+      packageFonts.clear()
+      restored.fonts.forEach((font) => useFontStore().registerServerFont(font))
+      packageFontBuildFiles.clear()
+      draft.fontBuildFiles?.forEach((files, slug) => packageFontBuildFiles.set(slug, files))
+      packageArchiveExtras.productImages = draft.archiveExtras?.productImages || []
+      packageArchiveExtras.files = draft.archiveExtras?.files || new Map()
+      packageArchiveExtras.preview = draft.archiveExtras?.preview
+      packageBitmapChars.clear()
+      restored.config.bitmapChars.forEach(([id, chars]: any) => packageBitmapChars.set(id, chars))
+      return restored.config.config
     }
-  },
-})
+    await accessProjectDraft(key, 'delete')
+    removeLocalDesignDraft(window.localStorage, designId, getDraftDeviceKey())
+    return serverConfig
+  }
+  return resolveLocalDesignDraft({ storage: window.localStorage, designId,
+    deviceKey: getDraftDeviceKey(), serverConfig, confirmRestore: confirmDraftRestore })
+}
+
 const emptyAvailability: ElementActionAvailability = { canCopy: false, canPaste: false, canDelete: false, canBringForward: false, canSendBackward: false, canBringToFront: false, canSendToBack: false, canFlip: false, canRound: false }
 const contextMenu = ref({ visible: false, x: 0, y: 0, availability: emptyAvailability })
 
@@ -315,6 +354,11 @@ const {
   },
   resolveLoadedConfig: resolveLoadedDraft,
   onDesignLoaded: startDraftTracking,
+  onDesignImported: () => {
+    draftRevision += 1
+    draftAutosave.markDirty()
+    saveDirtyDraft()
+  },
 })
 
 // 设置自动保存
@@ -323,9 +367,23 @@ const setupAutoSave = () => {
 }
 
 const handleBeforeUnload = (): void => saveDirtyDraft()
-const handleDesignSaved = (designId: unknown): void => {
+const handleDesignSaveStarted = (input: any): void => {
+  if (input?.designId !== loadedDesignId) return
+  saveRevisions.set(input.saveToken, draftRevision)
+}
+const handleDesignSaved = (input: any): void => {
+  const designId = typeof input === 'string' ? input : input?.designId
   if (!loadedDesignId || String(designId) !== loadedDesignId) return
+  const savedRevision = saveRevisions.get(input?.saveToken)
+  saveRevisions.delete(input?.saveToken)
+  if (savedRevision === undefined || savedRevision !== draftRevision) {
+    saveDirtyDraft()
+    return
+  }
   draftAutosave.markClean()
+  clearTimeout(draftChangeTimer)
+  const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
+  draftWriteQueue = draftWriteQueue.then(() => accessProjectDraft(key, 'delete')).catch(console.error)
   removeLocalDesignDraft(window.localStorage, loadedDesignId, getDraftDeviceKey())
 }
 
@@ -359,6 +417,7 @@ onMounted(() => {
   // 设置自动保存
   setupAutoSave()
   window.addEventListener('beforeunload', handleBeforeUnload)
+  emitter.on('design-save-started', handleDesignSaveStarted as any)
   emitter.on('design-saved', handleDesignSaved as any)
 
   window.addEventListener('resize', handleWorkspaceResize)
@@ -376,6 +435,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  saveDirtyDraft()
+  clearTimeout(draftChangeTimer)
   disposeCanvasPan()
   disposeDesignLoader()
   disposeResizablePanels()
@@ -383,6 +444,7 @@ onBeforeUnmount(() => {
   stopElementDataSubscription?.()
   stopElementDataSubscription = null
   emitter.off('import-wrt-design', importWrtDesign as any)
+  emitter.off('design-save-started', handleDesignSaveStarted as any)
   emitter.off('design-saved', handleDesignSaved as any)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 

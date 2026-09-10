@@ -27,7 +27,7 @@ export function useAssetBatchManagement(options: UseAssetBatchManagementOptions)
   const deleteProgressPercent = computed(() => (deleteProgressTotal.value ? Math.round((deleteProgressDone.value / deleteProgressTotal.value) * 100) : 0))
 
   const canRemoveAsset = (asset: AnalogAssetVO): boolean => {
-    if (asset.isSystem) return false
+    if (asset.id < 0 || asset.isSystem) return false
     if (options.isAdmin()) return true
     const currentUserId = options.currentUserId()
     return currentUserId != null && Number(asset.userId) === Number(currentUserId)

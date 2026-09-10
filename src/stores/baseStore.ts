@@ -12,8 +12,7 @@ import {
   resolvePackageAssetUrls,
   validateRuntimeConfigForExport,
 } from '@/engine/services/exportService'
-import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
-import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
+import { saveWrtProject } from '@/engine/services/saveWrtProject'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { useEditorStore } from '@/stores/editorStore'
@@ -349,36 +348,15 @@ export const useBaseStore = defineStore('baseStore', {
       if (!(await validateRuntimeConfigForExport(config))) return false
       const exportConfig = await resolvePackageAssetUrls(config)
       if (!exportConfig) return false
-      let designUid = this.id
-      let res: any
-      const persistedConfig = await persistAndSaveDesignConfig(exportConfig, async (saveConfig) => {
-        if (!designUid) {
-          const created = await designApi.createDesign({
-            name: designStore.watchFaceName,
-            description: designStore.watchFaceName,
-            originalType: 'original',
-          })
-          if (created.code !== 0 || !created.data?.designUid) {
-            ElMessage.error('创建设计失败！')
-            throw new Error('创建设计失败！')
-          }
-          designUid = created.data.designUid
-          this.id = designUid
-          designStore.id = designUid
-        }
-
-        res = await designApi.updateDesign({
-          uid: designUid,
-          name: designStore.watchFaceName,
-          configJson: JSON.stringify(saveConfig),
-        })
-        if (res.code !== 0) {
-          throw new Error(res.msg || '保存设计失败！')
-        }
+      const created = await designApi.createDesign({
+        name: designStore.watchFaceName,
+        description: designStore.watchFaceName,
+        originalType: 'original',
       })
-      this.id = res.data?.designUid || designUid
-      designStore.id = this.id
-      designUid = res.data?.designUid || designUid
+      if (created.code !== 0 || !created.data?.designUid) throw new Error(created.msg || 'Failed to create design')
+      const designUid = created.data.designUid
+      this.id = designUid
+      designStore.id = designUid
       let previewDataUrl = ''
       try {
         previewDataUrl = await this.captureScreenshot() || ''
@@ -396,14 +374,10 @@ export const useBaseStore = defineStore('baseStore', {
           console.warn('Failed to load product images for asset bundle:', error)
         }
       }
-      const bundleFile = await buildDesignAssetBundle(
-        { ...persistedConfig, designId: designUid },
-        { previewDataUrl, appId: this.appId > 0 ? this.appId : undefined, product: bundleProduct },
-      )
-      if (bundleFile) {
-        await designApi.uploadAssetBundle(designUid, bundleFile)
-      }
-      return res.code === 0
+      await saveWrtProject(designUid, exportConfig, {
+        previewDataUrl, appId: this.appId > 0 ? this.appId : undefined, product: bundleProduct,
+      })
+      return true
     },
     // 获取所有对象
     getObjects(): FabricElement[] {

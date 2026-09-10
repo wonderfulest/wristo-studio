@@ -1,3 +1,4 @@
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { defineStore } from 'pinia'
 import { cache } from 'fabric'
 import { getFontBySlug, getSystemFonts, getRecentFonts } from '@/api/wristo/fonts'
@@ -203,6 +204,18 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         const normalized = normalizeServerFont(font)
         if (!normalized.slug) return normalized
         const slug = canonicalFontSlug(normalized.slug)
+        const previous = this.serverFonts.get(slug)
+        if (previous?.ttfFile?.url !== normalized.ttfFile?.url) {
+          this.loadedFonts.delete(slug)
+          this.loadedFonts.delete(normalized.slug)
+          if (typeof document !== 'undefined' && document.fonts?.forEach) {
+            document.fonts.forEach((face) => {
+              if (face.family.replace(/["']/g, '') === normalized.slug) document.fonts.delete(face)
+            })
+          }
+          cache.clearFontCache(normalized.slug)
+        }
+        if (!packageFonts.has(slug)) packageFonts.set(slug, normalized)
         this.serverFonts.set(slug, normalized)
         if (this.loadedFonts.has(normalized.slug) || this.loadedFonts.has(slug)) {
           refreshLoadedFontMetrics(normalized.slug, normalized.bitmapRecipe)
@@ -254,7 +267,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           let ttfUrl = url
           if (!ttfUrl) {
             // 如果已经获取过字体信息，直接使用
-            let fontInfo = this.serverFonts.get(canonicalFontSlug(slug))
+            let fontInfo = packageFonts.get(canonicalFontSlug(slug)) || this.serverFonts.get(canonicalFontSlug(slug))
             if (!fontInfo) {
               const response: ApiResponse<DesignFontVO> = await getFontBySlug(slug)
               
@@ -296,7 +309,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           
           if (isAvailable) {
             this.loadedFonts.add(slug)
-            refreshLoadedFontMetrics(slug, this.serverFonts.get(canonicalFontSlug(slug))?.bitmapRecipe)
+            refreshLoadedFontMetrics(slug, (packageFonts.get(canonicalFontSlug(slug)) || this.serverFonts.get(canonicalFontSlug(slug)))?.bitmapRecipe)
             return true
           }
           return false
@@ -309,7 +322,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
       },
 
       async refreshFontPreview(slug: string): Promise<void> {
-        refreshLoadedFontMetrics(slug, this.serverFonts.get(canonicalFontSlug(slug))?.bitmapRecipe)
+        refreshLoadedFontMetrics(slug, (packageFonts.get(canonicalFontSlug(slug)) || this.serverFonts.get(canonicalFontSlug(slug)))?.bitmapRecipe)
       },
 
       /**
@@ -517,6 +530,10 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
 
         await Promise.all(Array.from(bitmapIconFontNames).map(async (slug) => {
           const canonicalSlug = canonicalFontSlug(slug)
+          if (packageFonts.has(canonicalSlug)) {
+            this.serverFonts.set(canonicalSlug, packageFonts.get(canonicalSlug)!)
+            return
+          }
           if (this.serverFonts.has(canonicalSlug)) return
           try {
             const response = await getFontBySlug(slug)

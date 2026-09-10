@@ -562,7 +562,17 @@ describe('visual theme export persistence', () => {
     expect(config?.visualThemes).toEqual(visualThemes)
   })
 
-  it('resolves every themed analog asset once while preserving background URL', async () => {
+  it('keeps embedded local assets without querying the asset library', async () => {
+    const { resolvePackageAssetUrls } = await import('./exportService')
+    getAnalogAsset.mockRejectedValue(new Error('asset library unavailable'))
+    const config = { elements: [{ id: 'h', eleType: 'hourHand', assetId: 12, imageUrl: 'blob:local' }],
+      visualThemes: { themes: [{ assets: { minuteHand: { assetId: 13, imageUrl: 'bundle://assets/minute.svg' } } }] } }
+    const result = await resolvePackageAssetUrls(config as any)
+    expect(result?.elements[0]).toEqual(config.elements[0])
+    expect(result?.visualThemes).toEqual(config.visualThemes)
+  })
+
+  it('preserves existing themed assets without library resolution', async () => {
     const { resolvePackageAssetUrls } = await import('./exportService')
     getAnalogAsset.mockImplementation(async (id: number) => ({
       data: { file: { url: `https://cdn.example/original-${id}.svg` } },
@@ -602,15 +612,15 @@ describe('visual theme export persistence', () => {
       assetId: 99,
       imageUrl: 'https://cdn.example/background.png',
     })
-    expect(assets.hourHand?.imageUrl).toBe('https://cdn.example/original-11.svg')
-    expect(assets.minuteHand?.imageUrl).toBe('https://cdn.example/original-11.svg')
-    expect(assets.secondHand?.imageUrl).toBe('https://cdn.example/original-12.svg')
+    expect(assets.hourHand?.imageUrl).toBe('blob:hour')
+    expect(assets.minuteHand?.imageUrl).toBe('blob:hour-again')
+    expect(assets.secondHand?.imageUrl).toBe('blob:second')
     expect(assets.centerCap).toEqual({
       assetId: 13,
-      imageUrl: 'https://cdn.example/original-13.svg',
+      imageUrl: 'blob:cap',
       targetSize: 32,
     })
-    expect(getAnalogAsset).toHaveBeenCalledTimes(3)
+    expect(getAnalogAsset).not.toHaveBeenCalled()
   })
 
   it('resolves visual themes when a legacy config omits elements', async () => {
@@ -635,7 +645,7 @@ describe('visual theme export persistence', () => {
           id: 'classic',
           name: 'Classic',
           assets: {
-            hourHand: { assetId: 21, imageUrl: 'blob:hour' },
+            hourHand: { assetId: 21 },
           },
         }],
       },
@@ -655,7 +665,7 @@ describe('visual theme export persistence', () => {
     })
 
     const resolved = await resolvePackageAssetUrls({
-      elements: [{ id: 'rh-1', eleType: 'rotatingHand', assetId: 31, imageUrl: 'blob:pointer' }],
+      elements: [{ id: 'rh-1', eleType: 'rotatingHand', assetId: 31 }],
     } as any)
 
     expect(resolved?.elements[0]).toMatchObject({

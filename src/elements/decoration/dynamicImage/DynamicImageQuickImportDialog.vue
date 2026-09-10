@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { analogAssetApi } from '@/api/wristo/analogAsset'
+import { createLocalProjectAsset } from '@/engine/services/localProjectAsset'
 import { useI18n } from '@/i18n'
 import { useMessageStore } from '@/stores/message'
 import type { DynamicImageImportIssue, DynamicImageImportKind, DynamicImageImportPlan, MaterializedDynamicImageGroup } from './dynamicImage.quickImport'
@@ -114,8 +114,7 @@ const confirmImport = async () => {
   try {
     const groups = await materializeDynamicImageImportGroups(plan.value.groups, {
       upload: async (file) => {
-        const response = await analogAssetApi.upload(file, 'image', false)
-        const asset = response.data
+        const asset = createLocalProjectAsset(file, 'image')
         const imageUrl = asset?.file?.previewUrl || asset?.file?.url || ''
         if (!asset || !imageUrl) throw new Error(`Upload failed: ${file.name}`)
         uploaded += 1

@@ -18,6 +18,21 @@ const createStorage = (): Storage => {
 }
 
 describe('useAssetUploadQueue', () => {
+  it('imports project assets locally without a library upload or sharing prompt', async () => {
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:project-image' })
+    const queue = useAssetUploadQueue({
+      assetType: () => 'image', localOnly: true,
+      acceptFile: async () => true, prepareFile: async (file) => file,
+      storage: createStorage(),
+    })
+    const asset = await queue.uploadFile(file('local.svg'))
+    expect(asset?.file?.url).toBe('blob:project-image')
+    expect(asset?.id).toBeLessThan(0)
+    await queue.processFiles([file('second.svg')])
+    expect(queue.sharingDecisionVisible.value).toBe(false)
+    vi.unstubAllGlobals()
+  })
+
   it('uploads files immediately as private and asks about sharing after success', async () => {
     const order: string[] = []
     const onOpenQueue = vi.fn()

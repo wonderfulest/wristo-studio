@@ -58,8 +58,10 @@ import { useI18n } from '@/i18n'
 import type { AppLanguage } from '@/types/localization'
 import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
 
-import { readWrtDesignPackage, WrtDesignPackageError, clearRestoredDesignAssetUrls } from '@/engine/services/designAssetBundleService'
-import { persistAndSaveDesignConfig } from '@/engine/services/persistBlobAssetUrls'
+import { readWrtDesignPackage, restoreDesignAssetBundle, WrtDesignPackageError, clearRestoredDesignAssetUrls } from '@/engine/services/designAssetBundleService'
+import { newProjectConfig } from './newProjectConfig'
+import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
+import { saveWrtProject } from '@/engine/services/saveWrtProject'
 
 const creating = ref(false)
 const messageStore = useMessageStore()
@@ -133,14 +135,6 @@ const handleOpenFromTemplate = (design: Design) => {
 // 确认创建：
 // - 如果选择了 sample（currentTemplate 有值），复制模板并打开画布
 // - 如果没有选择 sample，创建一个全新的应用并打开画布
-const withAppLanguage = (config: unknown, appLanguage: AppLanguage): Record<string, any> => {
-  let base: Record<string, any> = {}
-  if (config && typeof config === 'object') base = structuredClone(config as Record<string, any>)
-  if (typeof config === 'string') {
-    try { base = JSON.parse(config) } catch { base = {} }
-  }
-  return { ...base, localization: { ...base.localization, appLanguage } }
-}
 
 const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string; wrtFile?: File }) => {
   if (creating.value || !canCreateProject()) return
@@ -162,18 +156,11 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
 
       const newDesignUid = copyRes.data.designUid
 
-      // 更新新设计名称
-      if (name) {
-        const copyUpdateRes = await designApi.updateDesign({
-          uid: newDesignUid,
-          name,
-          configJson: withAppLanguage(copyRes.data.configJson, appLanguage),
-        } as any)
-        if (!copyUpdateRes || copyUpdateRes.code !== 0) {
-          messageStore.error(copyUpdateRes?.msg || t('project.createProjectFailed'))
-          return
-        }
-      }
+      const sourceConfig = await restoreDesignAssetBundle(copyRes.data.configJson as any, {
+        assetBundleUrl: copyRes.data.assetBundleUrl,
+      })
+      const copiedConfig = newProjectConfig(sourceConfig, newDesignUid, name, appLanguage)
+      await saveWrtProject(newDesignUid, copiedConfig as any)
 
       const detailRes = await designApi.getDesignByUid(newDesignUid, getCurrentDeviceParams()) as ApiResponse<Design>
       if (!detailRes || detailRes.code !== 0 || !detailRes.data) {
@@ -193,6 +180,14 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
       return
     }
 
+    if (!imported) {
+      packageFonts.clear()
+      packageFontBuildFiles.clear()
+      packageBitmapChars.clear()
+      packageArchiveExtras.files.clear()
+      packageArchiveExtras.productImages = []
+      packageArchiveExtras.preview = undefined
+    }
     // 情况二：未选择 Sample，创建全新空白应用
     const createRes = await designApi.createDesign({
       name,
@@ -208,20 +203,8 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     }
 
     const newDesign = createRes.data
-    const config = withAppLanguage(imported?.config ?? newDesign.configJson, appLanguage)
-    if (imported) {
-      config.designId = newDesign.designUid
-      config.name = name
-    }
-    await persistAndSaveDesignConfig(config, async (saveConfig) => {
-      const initializeRes = await designApi.updateDesign({
-        uid: newDesign.designUid,
-        configJson: saveConfig,
-      } as any) as ApiResponse<Design>
-      if (!initializeRes || initializeRes.code !== 0) {
-        throw new Error(initializeRes?.msg || t('project.createProjectFailed'))
-      }
-    })
+    const config = newProjectConfig(imported?.config ?? newDesign.configJson, newDesign.designUid, name, appLanguage)
+    await saveWrtProject(newDesign.designUid, config as any)
     baseStore.watchFaceName = newDesign.name
     baseStore.appId = newDesign.product?.appId || -1
 
