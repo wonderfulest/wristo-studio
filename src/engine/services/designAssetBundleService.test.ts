@@ -346,6 +346,62 @@ describe('self-contained WRT v2', () => {
     await expect(service.buildWrtDesignPackage({ elements: [{ eleType: 'weather', fontFamily: 'bitmap-weather', fontSize: 36 }] } as any)).resolves.toBeInstanceOf(File)
   })
 
+  it('saves and reopens weather previews from the font ZIP when preview CDN objects are denied', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const registry = await import('./packageAssetRegistry')
+    const slug = 'weather-preview-denied'
+    const base = `https://cdn.wristo.io/font-bitmaps/${slug}/preview/v1-revision`
+    const metadata = {
+      slug, type: 'weather_font', bitmapPreviewSize: 30, bitmapCanvasPreviewSize: 312,
+      bitmapPreviewDescriptorUrl: `${base}/30/${slug}-g.fnt`,
+      bitmapPreviewAtlasUrl: `${base}/30/${slug}-g_0.png`,
+      bitmapCanvasPreviewDescriptorUrl: `${base}/312/${slug}-g.fnt`,
+      bitmapCanvasPreviewAtlasUrl: `${base}/312/${slug}-g_0.png`,
+    }
+    registry.packageFonts.set(slug, metadata as any)
+    const fontZip = new JSZip()
+    for (const size of [30, 312]) {
+      fontZip.file(`${size}/${slug}-g.fnt`, `info size=${size}\npage id=0 file="${slug}-g_0.png"`)
+      fontZip.file(`${size}/${slug}-g_0.png`, `PNG-${size}`)
+    }
+    const bytes = await fontZip.generateAsync({ type: 'arraybuffer' })
+    const nativeFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn(async (input: any) => {
+      const url = String(input)
+      if (!/^https?:/.test(url)) return nativeFetch(input)
+      return url.endsWith(`${slug}.zip`) ? new Response(bytes) : new Response('AccessDenied', { status: 403 })
+    }))
+    const file = await service.buildWrtDesignPackage({ elements: [{ eleType: 'weather', fontFamily: slug }] } as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+    expect(manifest.failures).toEqual([])
+    const atlasPath = manifest.fonts[0].metadata.bitmapCanvasPreviewAtlasUrl.replace('bundle://', '')
+    expect(await zip.file(atlasPath)!.async('string')).toBe('PNG-312')
+    expect(metadata.bitmapCanvasPreviewAtlasUrl).toBe(`${base}/312/${slug}-g_0.png`)
+    const imported = await service.readWrtDesignPackage(file)
+    expect(registry.packageFonts.get(slug)?.bitmapCanvasPreviewAtlasUrl).toMatch(/^blob:/)
+    await expect(service.buildWrtDesignPackage(imported.config)).resolves.toBeInstanceOf(File)
+  })
+
+  it.each(['fnt', 'png'])('rejects inaccessible previews when the font ZIP is missing the %s half of the pair', async (missing) => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const registry = await import('./packageAssetRegistry')
+    const slug = 'incomplete-weather-preview'
+    const base = `https://cdn.wristo.io/font-bitmaps/${slug}/preview/v1-revision/312`
+    registry.packageFonts.set(slug, {
+      slug, bitmapPreviewDescriptorUrl: `${base}/${slug}-g.fnt`,
+      bitmapPreviewAtlasUrl: `${base}/${slug}-g_0.png`,
+    } as any)
+    registry.packageFontBuildFiles.set(slug, new Map([
+      [missing === 'fnt' ? `312/${slug}-g_0.png` : `312/${slug}-g.fnt`, new Blob(['incomplete'])],
+    ]))
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('AccessDenied', { status: 403 })))
+    await expect(service.buildWrtDesignPackage({ elements: [{ eleType: 'weather', fontFamily: slug }] } as any))
+      .rejects.toThrow('Incomplete WRT')
+  })
+
   it('cloud restoration uses the verified embedded design and rejects tampering', async () => {
     setActivePinia(createPinia())
     const service = await import('./designAssetBundleService')

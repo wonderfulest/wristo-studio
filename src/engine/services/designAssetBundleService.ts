@@ -1047,6 +1047,34 @@ const buildDesignAssetArchive = async (
     }
     for (const font of manifest.fonts || []) {
       for (const ref of collectElementAssetRefs(font.metadata as any, 0)) {
+        // Published preview objects may be absent for older fonts. The full font
+        // ZIP already contains the same-size descriptor and atlas needed here.
+        const previewFields = ['bitmapPreviewAtlasUrl', 'bitmapPreviewDescriptorUrl',
+          'bitmapCanvasPreviewAtlasUrl', 'bitmapCanvasPreviewDescriptorUrl']
+        const prefix = `https://cdn.wristo.io/font-bitmaps/${encodeURIComponent(font.slug)}/preview/`
+        if (previewFields.includes(ref.field) && ref.source.startsWith(prefix) && font.buildPath) {
+          const match = ref.source.slice(prefix.length).match(/^v[^/]+\/(\d+)\/([^/?#]+)$/)
+          const size = match?.[1]
+          const name = match?.[2]
+          const descriptorPath = `${font.buildPath}/${size}/${font.slug}-g.fnt`
+          const atlasPath = `${font.buildPath}/${size}/${font.slug}-g_0.png`
+          const path = name === `${font.slug}-g.fnt` ? descriptorPath
+            : name === `${font.slug}-g_0.png` ? atlasPath : undefined
+          const buildFile = font.buildFiles?.find(file => file.path === path)
+          if (buildFile && zip.file(descriptorPath) && zip.file(atlasPath)) {
+            const asset: ManifestAsset = {
+              id: `asset-${sourcePathByUrl.size + 1}`, category: 'font',
+              path: buildFile.path, sha256: buildFile.sha256,
+              format: buildFile.path.endsWith('.png') ? 'png' : 'fnt',
+              mimeType: buildFile.path.endsWith('.png') ? 'image/png' : 'text/plain',
+              sourceRef: ref.source, sourceUrl: ref.source, field: ref.field,
+            }
+            sourcePathByUrl.set(ref.source, asset)
+            manifest.studio?.assetRefs.push(asset)
+            pushAssetGroupPath(manifest.assets, 'fonts', asset.path)
+            continue
+          }
+        }
         await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, { ...ref, category: 'font' })
       }
     }
