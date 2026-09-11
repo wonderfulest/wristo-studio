@@ -577,7 +577,7 @@ const fetchDesigns = async () => {
       creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
       orderBy: toDesignOrderBy(sortField.value, sortOrder.value, isAdminUser.value),
       scope: isAdminUser.value ? designScope.value : 'mine',
-      populate: 'user,product,release,cover,package_log'
+      populate: 'user,product,payment,release,cover,package_log'
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId

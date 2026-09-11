@@ -41,8 +41,9 @@
           class="background-image"
         />
         <div v-else class="placeholder-circle"></div>
-        <div class="creator-badge" v-if="showCreator">
-          <span>{{ creatorName }}</span>
+        <div v-if="showCreator || paymentMethodLabel" class="card-badges">
+          <span v-if="showCreator" class="creator-badge">{{ creatorName }}</span>
+          <span v-if="paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
       </div>
       <div class="meta">
@@ -360,6 +361,15 @@ const statusText = computed(() => props.statusText)
 const statusColor = computed(() => props.statusColor)
 const lastGoLiveText = computed(() => props.lastGoLiveText)
 const creatorName = computed(() => props.creatorName)
+const paymentMethodLabel = computed(() => {
+  const payment = props.design.product?.payment
+  switch (payment?.paymentMethod) {
+    case 'free': return t('payment.free')
+    case 'wpay': return 'WPay'
+    case 'garmin': return t('payment.garminOfficial')
+    default: return payment?.paymentMethodDesc || payment?.paymentMethod || ''
+  }
+})
 const designImageUrl = computed(() => props.designImageUrl)
 const hasNewRelease = computed(() => props.hasNewRelease)
 const hasDownloadablePackage = computed(() => props.hasDownloadablePackage)
@@ -896,10 +906,20 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   background: var(--studio-surface-soft);
 }
 
-.creator-badge {
+.card-badges {
   position: absolute;
-  top: 0px;
+  top: 0;
   right: 4px;
+  left: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.creator-badge {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background-color: rgba(0, 0, 0, 0.6);
   color: var(--color-white);
   padding: 4px 8px;

@@ -15,7 +15,7 @@ import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { applyControlsToObject } from '@/utils/controlManager'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
-import { applyCurrentElementBitmapFontPreview } from '@/composables/useGarminSystemFont'
+import { applyCurrentElementPreviewFont } from '@/composables/useGarminSystemFont'
 
 const iconUpdateVersionById = new Map<string, number>()
 
@@ -218,7 +218,7 @@ export async function createIcon(
   assertElementRenderCurrent(renderContext)
   if (!element) {
     element = createMipText(resolveMetricIconGlyph(metric), iconOptions as any) as unknown as FabricElement
-    applyCurrentElementBitmapFontPreview(element, {
+    applyCurrentElementPreviewFont(element, {
       fontFamily: resolvedFontFamily,
       fontSize: resolvedFontSize,
       fill: config.fill,
@@ -468,7 +468,7 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
   })
 
   if (nextDisplayType === 'mip') {
-    applyCurrentElementBitmapFontPreview(target, {
+    applyCurrentElementPreviewFont(target, {
       fontFamily: resolveIconFontFamily(config as any, target as any, baseProps),
       fontSize: Number((target as any).fontSize ?? nextIconPixelSize),
       fill: (target as any).fill,

@@ -190,7 +190,7 @@
               class="payment-input"
             />
           </div>
-          <div class="form-field" v-if="form.payment.paymentMethod !== 'free'">
+          <div class="form-field" v-if="form.payment.paymentMethod === 'wpay'">
             <label class="field-label">{{ t('editDesign.trialHours') }}</label>
             <el-input-number
               v-model="form.payment.trialLasts"

@@ -68,7 +68,7 @@
       <el-form-item 
         :label="t('submitDesign.trialDuration')" 
         prop="trialLasts"
-        v-if="form.paymentMethod !== 'free'"
+        v-if="form.paymentMethod === 'wpay'"
       >
         <el-input-number 
           v-model="form.trialLasts" 
@@ -194,9 +194,9 @@ const rules = computed(() => ({
       trigger: 'blur' 
     }
   ],
-  trialLasts: [
+  trialLasts: form.paymentMethod === 'wpay' ? [
     { 
-      required: form.paymentMethod !== 'free', 
+      required: true,
       message: t('submitDesign.enterTrialRequired'), 
       trigger: 'blur' 
     },
@@ -207,7 +207,7 @@ const rules = computed(() => ({
       message: t('submitDesign.trialRange'), 
       trigger: 'blur' 
     }
-  ]
+  ] : []
 }))
 
 type SubmitSuccessPayload = { mode: 'submit' | 'prg-build' }

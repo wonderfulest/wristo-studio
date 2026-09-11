@@ -284,7 +284,7 @@ const deleteRecentDesign = async () => {
 const fetchDesigns = async () => {
   try {
     const params: { device?: string; populate?: string } = {
-      populate: 'user,product,cover',
+      populate: 'user,product,payment,cover',
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId
@@ -313,7 +313,7 @@ const fetchRecentDesigns = async () => {
       pageNum: 1,
       pageSize: 5,
       orderBy: 'updated_at:desc',
-      populate: 'user,product,release,cover,package_log',
+      populate: 'user,product,payment,release,cover,package_log',
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId

@@ -27,6 +27,7 @@ vi.mock('fabric', () => {
     setCoords() {}
   }
   class FabricText extends FabricObject {
+    type = 'text'
     _renderText = originalTextRender
     text: string
     constructor(text: string, options: Record<string, any> = {}) { super(options); this.text = text }
@@ -53,7 +54,7 @@ describe('icon bitmap font rendering', () => {
     upsertElement.mockClear()
   })
 
-  it('renders precipitation icons in bitmap-only mode instead of falling back to TTF text', async () => {
+  it('renders imported icon glyphs with the selected TTF when bitmap assets are missing', async () => {
     const icon: any = await createIcon({
       id: 'precipitation-icon', eleType: 'icon', left: 10, top: 20,
       fontFamily: 'qiwei-two', fontSize: 30, fill: '#fff',
@@ -64,8 +65,24 @@ describe('icon bitmap font rendering', () => {
     icon._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
 
     expect(icon.text).toBe('g')
-    expect(originalTextRender).not.toHaveBeenCalled()
+    expect(originalTextRender).toHaveBeenCalledOnce()
     expect(icon.assetFontFamily).toBe('qiwei-two')
+  })
+
+  it('keeps TTF glyph rendering after changing the icon font', async () => {
+    const icon: any = await createIcon({
+      id: 'imported-icon', eleType: 'icon', left: 10, top: 20,
+      fontFamily: 'qiwei-two', fontSize: 30, fill: '#fff',
+      dataProperty: 'data_1', iconDisplayType: 'mip',
+    } as any)
+
+    await updateIcon(icon, { fontFamily: 'mars-geology-expedition', fontSize: 30 })
+    icon._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+
+    expect(originalTextRender).toHaveBeenCalledOnce()
+    expect(icon.fontFamily).toBe('mars-geology-expedition')
+    expect(icon.assetFontFamily).toBe('mars-geology-expedition')
+    expect(icon.text).toBe('g')
   })
 
   it('keeps the current AMOLED image when the panel reapplies the same asset config', async () => {
