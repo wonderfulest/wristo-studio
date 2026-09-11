@@ -1,3 +1,4 @@
+import { decryptWrtFileIfNeeded } from './wrtCryptoService'
 import JSZip from 'jszip'
 import { assertSelfContainedSvg } from './selfContainedSvg'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
@@ -1322,9 +1323,10 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
     throw new WrtDesignPackageError('invalid-file', 'Expected a .wrt design package file')
   }
 
+  const readableFile = await decryptWrtFileIfNeeded(file)
   let zip: JSZip
   try {
-    zip = await JSZip.loadAsync(await file.arrayBuffer())
+    zip = await JSZip.loadAsync(await readableFile.arrayBuffer())
   } catch (error) {
     throw new WrtDesignPackageError('invalid-archive', 'Unable to read .wrt archive')
   }

@@ -321,6 +321,7 @@ import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownlo
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 import { buildWrtDesignPackage, restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
 import { saveWrtProject } from '@/engine/services/saveWrtProject'
+import { encryptWrtFile } from '@/engine/services/wrtCryptoService'
 import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 const designId = ref<string | null>(null)
 const dialogVisible = ref(false)
@@ -575,7 +576,8 @@ const downloadDesignAssets = async () => {
       product: currentDesign.value.product,
     })
     if (!bundleFile) return
-    downloadBlob(bundleFile, bundleFile.name || `${currentDesign.value.designUid || 'design'}-assets.zip`)
+    const encryptedFile = await encryptWrtFile(bundleFile)
+    downloadBlob(encryptedFile, encryptedFile.name)
   } catch (error: any) {
     console.error('Failed to download design assets:', error)
     ElMessage.error(error?.message || t('editDesign.downloadDesignAssetsFailed'))

@@ -216,6 +216,7 @@ import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
 import { buildWrtDesignPackage } from '@/engine/services/designAssetBundleService'
+import { encryptWrtFile } from '@/engine/services/wrtCryptoService'
 import type { FabricElement } from '@/types/element'
 import type { LayerElement } from '@/types/layer'
 import emitter from '@/utils/eventBus'
@@ -1130,9 +1131,11 @@ const handleExportWrt = async () => {
         wrtExportProgress.value = Math.max(wrtExportProgress.value, Math.min(99, Math.floor(10 + percent * 0.9)))
       },
     })
+    wrtExportStage.value = 'editor.wrtExportEncrypting'
+    const encryptedFile = await encryptWrtFile(file)
     wrtExportProgress.value = 100
     await new Promise((resolve) => setTimeout(resolve, 0))
-    downloadBlob(file, file.name)
+    downloadBlob(encryptedFile, encryptedFile.name)
     messageStore.success(t('editor.wrtExported'))
   } catch (error) {
     console.error('Failed to export WRT design package:', error)
