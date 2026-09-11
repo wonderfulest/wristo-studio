@@ -81,12 +81,6 @@
         />
         <div class="form-tip">{{ t('submitDesign.trialTip') }}</div>
       </el-form-item>
-      
-      <BundleSelector
-        v-model:bundleIds="form.bundleIds"
-        :bundles="bundles"
-        :loadingBundles="loadingBundles"
-      />
     </el-form>
     
     <template #footer>
@@ -110,9 +104,6 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
-import { productsApi } from '@/api/wristo/products'
-import type { Bundle } from '@/types/api/bundle'
-import BundleSelector from '@/components/common/BundleSelector.vue'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
@@ -148,8 +139,7 @@ const form = reactive({
   paymentMethod: 'free',
   kpayId: '',
   price: 2.39,
-  trialLasts: 0.25, // default 0.25 hours
-  bundleIds: [] as number[]
+  trialLasts: 0.25 // default 0.25 hours
 })
 
 const rules = computed(() => ({
@@ -216,23 +206,6 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const bundles = ref<Bundle[]>([])
-const loadingBundles = ref(false)
-
-const loadBundles = async () => {
-  try {
-    loadingBundles.value = true
-    const res = await productsApi.getBundles()
-    if (res.code === 0 && res.data) {
-      bundles.value = res.data
-    }
-  } catch (e) {
-    console.error('Failed to load bundles:', e)
-  } finally {
-    loadingBundles.value = false
-  }
-}
-
 // Handle payment method change
 const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
@@ -279,16 +252,11 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         paymentMethod: 'free',
         kpayId: '',
         price: 2.39,
-        trialLasts: 0.25,
-        bundleIds: []
+        trialLasts: 0.25
       })
       
       if (product) {
         form.trialLasts = product.trialLasts
-        // Initialize bundles.
-        if (Array.isArray(product.bundles)) {
-          form.bundleIds = product.bundles.map((b: Bundle) => b.bundleId)
-        }
       }
       // If product contains payment info, prefill
       if (product?.payment) {
@@ -304,7 +272,6 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
           form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
-      await loadBundles()
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || t('submitDesign.loadDetailsFailed'))
@@ -340,8 +307,7 @@ const handleConfirm = async () => {
       originalType: resolvedOriginalType,
       sourcePlatform: resolvedOriginalType === 'non_original' ? form.sourcePlatform || undefined : undefined,
       sourceId: resolvedOriginalType === 'non_original' ? form.sourceId.trim() || undefined : undefined,
-      name: form.name,
-      bundleIds: form.bundleIds
+      name: form.name
     }
 
     if (submitData.sourcePlatform && submitData.sourceId) {
@@ -398,7 +364,6 @@ const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiRe
   const updateData: UpdateDesignParamsV2 = {
     uid: submitData.designUid,
     name: submitData.name,
-    bundleIds: submitData.bundleIds,
   }
   if (canPublishPaid.value) {
     updateData.payment = {
