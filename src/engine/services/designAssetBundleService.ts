@@ -1,3 +1,6 @@
+import { translate } from '@/i18n'
+import { useLocaleStore } from '@/stores/locale'
+import { findInvalidUnicodePaths } from './unicodeValidation'
 import { decryptWrtFileIfNeeded } from './wrtCryptoService'
 import JSZip from 'jszip'
 import { assertSelfContainedSvg } from './selfContainedSvg'
@@ -837,6 +840,10 @@ const buildDesignAssetArchive = async (
   options: BuildDesignAssetBundleOptions = {},
   packageOptions: { format?: string; version?: 1 | 2; fileNameSuffix: string; mimeType: string; rooted?: boolean },
 ): Promise<File> => {
+  const unicodePaths = findInvalidUnicodePaths(config)
+  if (unicodePaths.length > 0) {
+    throw new Error(translate('export.validation.invalidUnicode', useLocaleStore().currentLocale, { paths: unicodePaths.join(', ') }))
+  }
   config = JSON.parse(JSON.stringify(config))
   if (packageOptions.format === WRT_FORMAT) {
     for (const element of config.elements || []) {

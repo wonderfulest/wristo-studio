@@ -56,7 +56,7 @@
         <el-input-number 
           v-model="form.price" 
           :min="1.99"
-          :max="99.99"
+          :max="5.99"
           :precision="3"
           :step="0.2"
           :placeholder="t('submitDesign.enterPrice')"
@@ -147,7 +147,7 @@ const form = reactive({
   sourceId: '',
   paymentMethod: 'free',
   kpayId: '',
-  price: 1.99,
+  price: 2.39,
   trialLasts: 0.25, // default 0.25 hours
   bundleIds: [] as number[]
 })
@@ -189,7 +189,7 @@ const rules = computed(() => ({
     { 
       type: 'number', 
       min: 1.99,
-      max: 99.99, 
+      max: 5.99,
       message: t('submitDesign.priceRange'), 
       trigger: 'blur' 
     }
@@ -245,10 +245,10 @@ const handlePaymentMethodChange = (value: string) => {
     form.price = 0
     form.trialLasts = 0
   } else if (isGarminPayment(value)) {
-    form.price = form.price || 1.99
+    form.price = form.price || 2.39
     form.trialLasts = 0
   } else if (value === 'kpay' || value === 'wpay') {
-    form.price = form.price || 1.99
+    form.price = form.price || 2.39
     form.trialLasts = form.trialLasts || 0.25
   }
 }
@@ -278,7 +278,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
         sourceId: designDetail.sourceId || '',
         paymentMethod: 'free',
         kpayId: '',
-        price: 1.99,
+        price: 2.39,
         trialLasts: 0.25,
         bundleIds: []
       })
@@ -300,7 +300,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
           form.trialLasts = 0
         } else {
           // Paid modes: use provided price / trialLasts with sensible defaults
-          form.price = payment.price ?? 1.99
+          form.price = payment.price ?? 2.39
           form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
@@ -322,7 +322,7 @@ const handleConfirm = async () => {
   if (!formRef.value) return
   try {
     await formRef.value.validate()
-    if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 99.99)) {
+    if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 5.99)) {
       messageStore.error(t('submitDesign.priceRange'))
       return
     }

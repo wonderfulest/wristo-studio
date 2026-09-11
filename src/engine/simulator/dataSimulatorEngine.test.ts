@@ -43,6 +43,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
   useDataCatalogStore: () => ({
     snapshot: {
       dataTypeOptions: [
+        { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' },
         { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' },
         { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' },
         { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' },
@@ -52,6 +53,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' },
       ],
       optionsByValueCode: new Map([
+        [1007, { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' }],
         [0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
         [20, { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
         [1004, { valueCode: 1004, metricSymbol: ':FIELD_TYPE_SLEEP_SCORE', label: { eng: 'SLPS', zhs: '睡眠' }, unitKey: 'none' }],
@@ -61,6 +63,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [48, { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       optionsByMetricSymbol: new Map([
+        [':FIELD_TYPE_TRUE_SOLAR_TIME', { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' }],
         [':FIELD_TYPE_SECOND_TIME_ZONE', { valueCode: 1215, metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE', label: { eng: 'TZ', zhs: '时区' }, unitKey: 'none', defaultValue: '00:00' }],
         [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
         [':FIELD_TYPE_DISTANCE', { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
@@ -386,6 +389,23 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     new DataSimulatorEngine().updateCanvas()
 
     expect(getSimulatedDataByName).toHaveBeenCalledWith(simulationKey)
+  })
+
+  it('maps the true solar time symbol to its simulation', () => {
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue({
+      valueCode: 1007,
+      metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME',
+      label: { eng: 'SOLAR', zhs: '太阳时' },
+      unitKey: 'none',
+    })
+    canvas.getObjects.mockReturnValue([
+      { id: 'true-solar-time', eleType: 'data', metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', text: '', set },
+    ])
+
+    new DataSimulatorEngine().updateCanvas()
+
+    expect(getSimulatedDataByName).toHaveBeenCalledWith('trueSolarTime')
   })
 
   it('rejects an unknown label symbol instead of rendering the catalog first item', () => {

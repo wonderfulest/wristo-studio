@@ -346,6 +346,9 @@ export function getSimulatedDataByName(name: string, now: Date = new Date()): Si
     case 'sunset':
     case 'ss':
       return { display: '18:12', unit: '', label: 'sunset' }
+    case 'trueSolarTime':
+    case 'solarTime':
+      return { display: '12:07', unit: '', label: 'SOLAR' }
     case 'sunriseSunset': {
       const seconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
       const sunriseSeconds = 6 * 3600 + 42 * 60

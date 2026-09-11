@@ -1,3 +1,4 @@
+import { findInvalidUnicodePaths } from './unicodeValidation'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone, type SecondTimeZoneConfig } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
@@ -292,6 +293,13 @@ function restoreVisualThemeBaseFields(
 }
 
 export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig): Promise<boolean> {
+  const unicodePaths = findInvalidUnicodePaths(config)
+  if (unicodePaths.length > 0) {
+    if (typeof document !== 'undefined') {
+      ElMessage.error(t('export.validation.invalidUnicode', { paths: unicodePaths.join(', ') }))
+    }
+    return false
+  }
   const dateErrors = await validateDateContentAndFonts(
     config.elements,
     config.localization?.appLanguage === 'zhs',

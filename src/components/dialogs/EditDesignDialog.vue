@@ -184,7 +184,7 @@
             <el-input-number
               v-model="form.payment.price"
               :min="1.99"
-              :max="99.99"
+              :max="5.99"
               :precision="3"
               :step="0.2"
               class="payment-input"
@@ -633,7 +633,7 @@ const handlePaymentMethodChange = (value: string | number | boolean | undefined)
     form.payment.trialLasts = 0
     return
   }
-  form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 1.99
+  form.payment.price = Number(form.payment.price || 0) > 0 ? form.payment.price : 2.39
   if (isGarminPayment(typeof value === 'string' ? value : null)) {
     form.payment.trialLasts = 0
     return
@@ -710,7 +710,7 @@ const handleCancel = () => {
 
 const handleSave = async () => {
   if (!currentDesign.value || !canManageAppDetails.value || saving.value) return
-  if (form.payment.paymentMethod !== 'free' && (!Number.isFinite(form.payment.price) || form.payment.price < 1.99 || form.payment.price > 99.99)) {
+  if (form.payment.paymentMethod !== 'free' && (!Number.isFinite(form.payment.price) || form.payment.price < 1.99 || form.payment.price > 5.99)) {
     messageStore.error(t('submitDesign.priceRange'))
     return
   }

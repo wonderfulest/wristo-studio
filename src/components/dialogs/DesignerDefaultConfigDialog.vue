@@ -19,7 +19,7 @@
       </el-form-item>
       <el-form-item :label="t('designerSettings.defaultPrice')">
         <div class="price-row">
-          <el-input-number v-model="form.defaultPrice" :min="0" :precision="3" :step="1" />
+          <el-input-number v-model="form.defaultPrice" :min="1.99" :max="5.99" :precision="3" :step="0.01" />
           <span class="currency-label">{{ form.defaultCurrency || 'USD' }}</span>
         </div>
       </el-form-item>
@@ -74,7 +74,7 @@ const form = reactive<DesignerDefaultConfigVO>({
   id: 0,
   userId: 0,
   defaultPaymentMethod: null,
-  defaultPrice: 1.99,
+  defaultPrice: 2.39,
   defaultCurrency: 'USD',
   descriptionTemplate: null,
   descriptionTemplateZh: null,
@@ -100,7 +100,7 @@ const load = async () => {
       form.id = data.id
       form.userId = data.userId
       form.defaultPaymentMethod = data.defaultPaymentMethod
-      form.defaultPrice = data.defaultPrice ?? 1.99
+      form.defaultPrice = data.defaultPrice ?? 2.39
       form.defaultCurrency = data.defaultCurrency
       form.descriptionTemplate = data.descriptionTemplate
       form.descriptionTemplateZh = data.descriptionTemplateZh

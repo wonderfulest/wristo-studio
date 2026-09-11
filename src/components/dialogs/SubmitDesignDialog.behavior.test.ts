@@ -159,9 +159,11 @@ describe('SubmitDesignDialog style tag behavior', () => {
   })
 
   it.each([
-    [undefined, 1.99],
+    [undefined, 2.39],
     [1.99, 1.99],
     [1.98, null],
+    [5.99, 5.99],
+    [6, null],
   ])('enforces paid pricing for input %s', async (price, expectedPrice) => {
     mocks.getDesignByUid.mockResolvedValueOnce({
       code: 0,

@@ -490,3 +490,12 @@ describe('self-contained WRT v2', () => {
     expect((await readWrtDesignPackage(new File([await zip.generateAsync({ type: 'arraybuffer' })], 'legacy.wrt'))).sourceName).toBe('Legacy')
   })
 })
+
+describe('invalid Unicode save guard', () => {
+  it('rejects incomplete text before creating a WRT', async () => {
+    setActivePinia(createPinia())
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    await expect(buildWrtDesignPackage({ elements: [], properties: { label: '\ud83d' } } as any))
+      .rejects.toThrow('$.properties.label')
+  })
+})

@@ -166,6 +166,8 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'sunrise'
     case ':FIELD_TYPE_SUN_SET':
       return 'sunset'
+    case ':FIELD_TYPE_TRUE_SOLAR_TIME':
+      return 'trueSolarTime'
     case ':FIELD_TYPE_SUN_RISE_SET':
       return 'sunriseSunset'
     default:
