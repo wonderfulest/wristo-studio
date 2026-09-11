@@ -1085,6 +1085,12 @@ const buildDesignAssetArchive = async (
     const portable = JSON.parse(JSON.stringify(config))
     const rewrite = (value: any): void => {
       if (!value || typeof value !== 'object') return
+      // Dynamic images resolve their runtime assets from items. The renderer can
+      // leave the selected preview's IDs on the parent after its URL is omitted.
+      if (value.eleType === 'dynamicImage') {
+        delete value.assetId
+        delete value.imageId
+      }
       if (Object.values(value).some(child => typeof child === 'string' && sourcePathByUrl.has(child))) { delete value.assetId; delete value.imageId }
       for (const [key, child] of Object.entries(value)) {
         if (typeof child === 'string' && sourcePathByUrl.has(child)) value[key] = `bundle://${sourcePathByUrl.get(child)!.path}`

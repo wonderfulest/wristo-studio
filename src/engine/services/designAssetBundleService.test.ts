@@ -285,6 +285,24 @@ describe('visual theme assets', () => {
 })
 
 describe('self-contained WRT v2', () => {
+  it('removes dynamic image preview IDs while embedding every item', async () => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const config = { elements: [{ id: 'weather', eleType: 'dynamicImage', assetId: 123, imageId: 456,
+      items: [{ id: 'sun', assetId: 123, imageUrl: 'data:image/svg+xml,%3Csvg%20xmlns="http://www.w3.org/2000/svg"/%3E' }],
+    }] }
+    const file = await service.buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const portable = JSON.parse(await zip.file('design.json')!.async('string'))
+    expect(portable.elements[0].assetId).toBeUndefined()
+    expect(portable.elements[0].imageId).toBeUndefined()
+    const url = portable.elements[0].items[0].imageUrl
+    expect(url).toMatch(/^bundle:\/\//)
+    expect(zip.file(url.slice(9))).not.toBeNull()
+    expect(config.elements[0].assetId).toBe(123)
+    expect(JSON.parse(await zip.file('config/config.json')!.async('string'))).toEqual(portable)
+  })
+
   afterEach(async () => {
     vi.unstubAllGlobals()
     const registry = await import('./packageAssetRegistry')

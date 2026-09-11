@@ -74,7 +74,7 @@ const form = reactive<DesignerDefaultConfigVO>({
   id: 0,
   userId: 0,
   defaultPaymentMethod: null,
-  defaultPrice: null,
+  defaultPrice: 1.99,
   defaultCurrency: 'USD',
   descriptionTemplate: null,
   descriptionTemplateZh: null,
@@ -100,7 +100,7 @@ const load = async () => {
       form.id = data.id
       form.userId = data.userId
       form.defaultPaymentMethod = data.defaultPaymentMethod
-      form.defaultPrice = data.defaultPrice
+      form.defaultPrice = data.defaultPrice ?? 1.99
       form.defaultCurrency = data.defaultCurrency
       form.descriptionTemplate = data.descriptionTemplate
       form.descriptionTemplateZh = data.descriptionTemplateZh
