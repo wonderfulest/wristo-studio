@@ -263,7 +263,7 @@ describe('font metrics refresh', () => {
     expect(canvas.requestRenderAll).toHaveBeenCalledOnce()
   })
 
-  it('does not load TTF files for bitmap-only icon and indicator elements', async () => {
+  it('loads TTF files for imported icon and indicator fonts without bitmap assets', async () => {
     const store = useFontStore()
     const loadFont = vi.spyOn(store, 'loadFont').mockResolvedValue(true)
 
@@ -273,7 +273,8 @@ describe('font metrics refresh', () => {
       { eleType: 'data', fontFamily: 'roboto-condensed-regular' },
     ] as any)
 
-    expect(loadFont).toHaveBeenCalledTimes(1)
+    expect(loadFont).toHaveBeenCalledTimes(2)
+    expect(loadFont).toHaveBeenCalledWith('qiwei-two')
     expect(loadFont).toHaveBeenCalledWith('roboto-condensed-regular')
   })
 

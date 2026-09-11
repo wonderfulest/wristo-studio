@@ -532,15 +532,20 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
           const canonicalSlug = canonicalFontSlug(slug)
           if (packageFonts.has(canonicalSlug)) {
             this.serverFonts.set(canonicalSlug, packageFonts.get(canonicalSlug)!)
-            return
+          } else if (!this.serverFonts.has(canonicalSlug)) {
+            try {
+              const response = await getFontBySlug(slug)
+              if (response?.data) this.registerServerFont(response.data)
+            } catch (error) {
+              console.warn(`Failed to load icon font metadata ${slug}:`, error)
+            }
           }
-          if (this.serverFonts.has(canonicalSlug)) return
-          try {
-            const response = await getFontBySlug(slug)
-            if (response?.data) this.registerServerFont(response.data)
-          } catch (error) {
-            console.warn(`Failed to load bitmap icon font metadata ${slug}:`, error)
-          }
+          const font = this.serverFonts.get(canonicalSlug)
+          const hasCanvasPreview = font?.bitmapCanvasPreviewDescriptorUrl
+            && font.bitmapCanvasPreviewAtlasUrl && Number(font.bitmapCanvasPreviewSize) > 0
+          const hasLegacyPreview = font?.bitmapPreviewDescriptorUrl
+            && font.bitmapPreviewAtlasUrl && Number(font.bitmapPreviewSize) > 0
+          if (!hasCanvasPreview && !hasLegacyPreview) fontNames.add(slug)
         }))
 
         return this.loadFonts(Array.from(fontNames))

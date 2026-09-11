@@ -43,7 +43,7 @@ describe('indicator bitmap font rendering', () => {
     originalTextRender.mockClear()
   })
 
-  it('keeps status indicator glyphs on the bitmap-only renderer', async () => {
+  it('renders status indicator glyphs with TTF when bitmap assets are missing', async () => {
     const indicator: any = await createIndicatorText('bluetooth', '"', {
       id: 'bluetooth-1', eleType: 'bluetooth', left: 20, top: 30,
       originX: 'center', originY: 'center', fontFamily: 'qiwei-two',
@@ -52,7 +52,7 @@ describe('indicator bitmap font rendering', () => {
 
     indicator._renderText({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
 
-    expect(originalTextRender).not.toHaveBeenCalled()
+    expect(originalTextRender).toHaveBeenCalledOnce()
     expect(indicator.assetFontFamily).toBe('qiwei-two')
   })
 })
