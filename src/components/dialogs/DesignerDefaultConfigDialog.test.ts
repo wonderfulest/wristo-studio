@@ -24,7 +24,7 @@ const stubs = {
   ElDialog: { template: '<section><slot /><slot name="footer" /></section>' },
   ElForm: { template: '<form><slot /></form>' },
   ElFormItem: { template: '<div><slot /></div>' },
-  ElSelect: { template: '<div><slot /></div>' },
+  ElSelect: { name: 'ElSelect', props: ['modelValue'], emits: ['update:modelValue'], template: '<div><slot /></div>' },
   ElOption: true,
   ElInputNumber: true,
   ElSwitch: true,
@@ -54,6 +54,10 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
         defaultCurrency: 'USD',
         descriptionTemplate: 'English template',
         descriptionTemplateZh: '中文模板',
+        descriptionTemplateGarmin: 'Garmin template',
+        descriptionTemplateGarminZh: '佳明模板',
+        descriptionTemplateFree: 'Free template',
+        descriptionTemplateFreeZh: '免费模板',
         enableAutoPublish: 1,
         isActive: 1,
       },
@@ -71,12 +75,36 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
       '中文模板',
     ])
 
+    const paymentSelector = wrapper.findAllComponents({ name: 'ElSelect' })[1]
+    paymentSelector.vm.$emit('update:modelValue', 'garmin')
+    await flushPromises()
+    expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
+      'Garmin template', '佳明模板',
+    ])
+    const editors = wrapper.findAllComponents(stubs.TemplateTextEditor)
+    editors[0].vm.$emit('update:modelValue', 'Edited Garmin')
+    await flushPromises()
+    paymentSelector.vm.$emit('update:modelValue', 'free')
+    await flushPromises()
+    expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
+      'Free template', '免费模板',
+    ])
+    paymentSelector.vm.$emit('update:modelValue', 'wpay')
+    await flushPromises()
+    expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
+      'English template', '中文模板',
+    ])
+
     await wrapper.findAll('button.el-button').at(-1)!.trigger('click')
     await flushPromises()
 
     expect(apiMocks.update).toHaveBeenCalledWith(expect.objectContaining({
       descriptionTemplate: 'English template',
       descriptionTemplateZh: '中文模板',
+      descriptionTemplateGarmin: 'Edited Garmin',
+      descriptionTemplateGarminZh: '佳明模板',
+      descriptionTemplateFree: 'Free template',
+      descriptionTemplateFreeZh: '免费模板',
     }))
   })
 })

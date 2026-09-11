@@ -21,6 +21,31 @@
           </template>
         </el-input>
       </el-form-item>
+      <el-form-item v-if="currentDesign?.copiedFromDesignUid" :label="t('goLive.sourceDesign')">
+        <div class="source-design-links">
+          <span v-if="sourceAppId">{{ t('card.appId') }}: {{ sourceAppId }}</span>
+          <el-link
+            :href="`https://studio.wristo.io/design?id=${encodeURIComponent(currentDesign.copiedFromDesignUid)}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            type="primary"
+          >{{ t('goLive.openSourceDesign') }}</el-link>
+          <el-link
+            :disabled="loadingSourceLink"
+            @click="openSourceStore('wristo')"
+            target="_blank"
+            rel="noopener noreferrer"
+            type="primary"
+          >Wristo Store</el-link>
+          <el-link
+            :disabled="loadingSourceLink"
+            @click="openSourceStore('garmin')"
+            target="_blank"
+            rel="noopener noreferrer"
+            type="primary"
+          >{{ t('goLive.openSourceGarminStore') }}</el-link>
+        </div>
+      </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
         :suggestion-text="tagSuggestionText"
@@ -35,6 +60,7 @@
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
+          <CopyGarminDescriptionButton :text="form.description || ''" />
           <el-button size="small" type="primary" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
         </div>
         <div class="form-tip">
@@ -245,11 +271,13 @@
 </template>
 
 <script setup lang="ts">
+import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
 import type { ProductTag } from '@/types/api/productTag'
 import { getProductTagsPage } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
+import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
 import { Plus, CopyDocument, Download, QuestionFilled } from '@element-plus/icons-vue'
@@ -290,8 +318,46 @@ const dialogVisible = ref(false)
 const loading = ref(false)
 const downloadingImages = ref(false)
 const currentDesign = ref<Design | null>(null)
+const sourceAppId = ref<number | null>(null)
+const loadingSourceLink = ref(false)
+
+const openSourceStore = async (store: 'wristo' | 'garmin') => {
+  const sourceUid = currentDesign.value?.copiedFromDesignUid
+  if (!sourceUid || loadingSourceLink.value) return
+  // Open during the click event so the browser does not block the async navigation.
+  const target = window.open('about:blank', '_blank')
+  if (!target) {
+    messageStore.warning(t('goLive.sourcePopupBlocked'))
+    return
+  }
+  target.opener = null
+  loadingSourceLink.value = true
+  try {
+    const response = await designApi.getDesignByUid(sourceUid, { populate: 'product' })
+    if (response.code !== 0 || !response.data) throw new Error('Source design unavailable')
+    const product = response.data.product
+    if (currentDesign.value?.copiedFromDesignUid === sourceUid) {
+      sourceAppId.value = product?.appId ?? null
+    }
+    const url = store === 'wristo'
+      ? (product?.appId ? `https://wristo.io/app/${product.appId}` : '')
+      : product?.garminStoreUrl?.trim()
+    if (!url || !/^https?:\/\//i.test(url)) {
+      target.close()
+      messageStore.warning(t('goLive.sourceLinkUnavailable'))
+      return
+    }
+    target.location.href = url
+  } catch {
+    target.close()
+    messageStore.error(t('goLive.sourceLoadFailed'))
+  } finally {
+    loadingSourceLink.value = false
+  }
+}
+
 const formRef = ref<FormInstance | null>(null)
-type DesignerConfigDialogRef = { show: () => void | Promise<void> }
+type DesignerConfigDialogRef = { show: (productId?: number, paymentMethod?: string) => void | Promise<void> }
 const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 const { t } = useI18n()
 
@@ -323,7 +389,7 @@ const rules: FormRules = {
 
 const openSettings = (): void => {
   if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
-    designerConfigDialog.value.show()
+    designerConfigDialog.value.show(currentDesign.value?.product?.id, form.paymentMethod)
   }
 }
 
@@ -439,6 +505,7 @@ const handlePaymentMethodChange = (value: string) => {
 
 // 加载设计数据
 const loadDesign = (design: Design) => {
+  sourceAppId.value = null
   currentDesign.value = design
   
   // 设置表单数据
@@ -721,7 +788,7 @@ const refreshDescription = async () => {
   const pid = currentDesign.value.product.id
   try {
     const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
-    const payload = buildGenerateDescriptionPayload(uid, pid, language)
+    const payload = { ...buildGenerateDescriptionPayload(uid, pid, language), paymentMethod: form.paymentMethod }
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
     if (typeof res.data === 'string') {
       form.description = res.data
@@ -746,6 +813,13 @@ defineExpose({
 </script>
 
 <style scoped>
+.source-design-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 /* 对话框样式 */
 :deep(.go-live-dialog .el-dialog) {
   margin-top: 5vh !important;

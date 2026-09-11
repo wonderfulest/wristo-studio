@@ -137,4 +137,5 @@ export interface GenerateDescriptionDto {
   userId: number
   productId: number
   language: DescriptionTemplateLanguage
+  paymentMethod?: string
 }

@@ -77,6 +77,7 @@ export interface FetchDesignReviewPageParams {
 export interface Design {
   id: number
   designUid: string
+  copiedFromDesignUid?: string | null
   name: string
   description: string
   originalType: DesignOriginalType

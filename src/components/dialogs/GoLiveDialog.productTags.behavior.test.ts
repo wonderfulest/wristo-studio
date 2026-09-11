@@ -8,6 +8,7 @@ import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
   getProductTagsPage: vi.fn(),
+  getDesignByUid: vi.fn(),
   getBundles: vi.fn(),
   publish: vi.fn(),
   generateDescription: vi.fn(),
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   messageWarning: vi.fn()
 }))
 
+vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
@@ -144,6 +146,48 @@ describe('GoLiveDialog product tag behavior', () => {
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })
+  })
+
+  it.each(['wristo', 'garmin'])('loads source details only when the %s link is clicked', async (store) => {
+    const target = { opener: {}, location: { href: '' }, close: vi.fn() }
+    const open = vi.spyOn(window, 'open').mockReturnValue(target as unknown as Window)
+    mocks.getDesignByUid.mockResolvedValue({ code: 0, data: {
+      product: { appId: 123456, garminStoreUrl: 'https://apps.garmin.com/apps/source-app' }
+    } })
+    const wrapper = mountDialog()
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show({
+      ...design, copiedFromDesignUid: 'source-design'
+    })
+    await flushPromises()
+    expect(mocks.getDesignByUid).not.toHaveBeenCalled()
+    const links = wrapper.get('.source-design-links').findAll('el-link-stub')
+    expect(links[0].attributes('href')).toBe('https://studio.wristo.io/design?id=source-design')
+    await links[store === 'wristo' ? 1 : 2].trigger('click')
+    await flushPromises()
+    expect(mocks.getDesignByUid).toHaveBeenCalledWith('source-design', { populate: 'product' })
+    expect(target.location.href).toBe(store === 'wristo'
+      ? 'https://wristo.io/app/123456' : 'https://apps.garmin.com/apps/source-app')
+    expect(target.opener).toBeNull()
+    expect(wrapper.get('.source-design-links').text()).toContain('123456')
+    await showDialog(wrapper)
+    expect(wrapper.find('.source-design-links').exists()).toBe(false)
+    open.mockRestore()
+  })
+
+  it('closes the blank tab and reports a missing source store URL', async () => {
+    const target = { opener: null, location: { href: '' }, close: vi.fn() }
+    const open = vi.spyOn(window, 'open').mockReturnValue(target as unknown as Window)
+    mocks.getDesignByUid.mockResolvedValue({ code: 0, data: {} })
+    const wrapper = mountDialog()
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show({
+      ...design, copiedFromDesignUid: 'source-design'
+    })
+    await flushPromises()
+    await wrapper.get('.source-design-links').findAll('el-link-stub')[2].trigger('click')
+    await flushPromises()
+    expect(target.close).toHaveBeenCalled()
+    expect(mocks.messageWarning).toHaveBeenCalledWith('goLive.sourceLinkUnavailable')
+    open.mockRestore()
   })
 
   it('shows all enabled groups, restores product tags, and publishes tags in the description', async () => {

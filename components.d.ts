@@ -35,6 +35,7 @@ declare module 'vue' {
     ColorPropertyDialog: typeof import('./src/components/properties/dialogs/ColorPropertyDialog.vue')['default']
     ConnectIqDataTypeSelector: typeof import('./src/components/dialogs/ConnectIqDataTypeSelector.vue')['default']
     CookieConsent: typeof import('./src/components/CookieConsent.vue')['default']
+    CopyGarminDescriptionButton: typeof import('./src/components/common/CopyGarminDescriptionButton.vue')['default']
     CreateDesignDialog: typeof import('./src/components/dialogs/CreateDesignDialog.vue')['default']
     DataPropertyDialog: typeof import('./src/components/properties/dialogs/DataPropertyDialog.vue')['default']
     DatePropertyDialog: typeof import('./src/components/properties/dialogs/DatePropertyDialog.vue')['default']

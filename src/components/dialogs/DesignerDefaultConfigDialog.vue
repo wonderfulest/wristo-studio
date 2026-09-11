@@ -24,18 +24,26 @@
         </div>
       </el-form-item>
       <el-form-item :label="t('designerSettings.descriptionTemplate')">
+        <el-select v-model="templatePaymentMethod" class="template-payment-select">
+          <el-option label="WPay" value="wpay" />
+          <el-option :label="t('payment.garminOfficial')" value="garmin" />
+          <el-option :label="t('designerSettings.none')" value="free" />
+        </el-select>
+        <div class="template-payment-tip">{{ t('designerSettings.templatePaymentTip') }}</div>
         <el-tabs v-model="descriptionLanguage" class="description-template-tabs">
           <el-tab-pane :label="t('designerSettings.languageEnglish')" name="en">
             <TemplateTextEditor
-              v-model="form.descriptionTemplate"
+              v-model="englishTemplate"
               :user-id="userStore.userInfo?.id || 0"
+              :product-id="previewProductId"
               :placeholder="t('designerSettings.descriptionPlaceholder')"
             />
           </el-tab-pane>
           <el-tab-pane :label="t('designerSettings.languageChinese')" name="zh">
             <TemplateTextEditor
-              v-model="form.descriptionTemplateZh"
+              v-model="chineseTemplate"
               :user-id="userStore.userInfo?.id || 0"
+              :product-id="previewProductId"
               :placeholder="t('designerSettings.descriptionPlaceholder')"
             />
           </el-tab-pane>
@@ -58,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, ref, reactive } from 'vue'
+import { computed, defineAsyncComponent, ref, reactive } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO, DesignerDefaultConfigUpdateDTO, DesignerDefaultConfigCreateDTO } from '@/types/api/designer-default-config'
@@ -78,6 +86,10 @@ const form = reactive<DesignerDefaultConfigVO>({
   defaultCurrency: 'USD',
   descriptionTemplate: null,
   descriptionTemplateZh: null,
+  descriptionTemplateFreeZh: null,
+  descriptionTemplateFree: null,
+  descriptionTemplateGarminZh: null,
+  descriptionTemplateGarmin: null,
   enableAutoPublish: 0,
   isActive: 1
 })
@@ -85,6 +97,20 @@ const form = reactive<DesignerDefaultConfigVO>({
 const autoPublish = ref(true)
 const active = ref(true)
 const descriptionLanguage = ref<'en' | 'zh'>('en')
+const templatePaymentMethod = ref<'wpay' | 'garmin' | 'free'>('wpay')
+const templateFields = {
+  wpay: ['descriptionTemplate', 'descriptionTemplateZh'],
+  garmin: ['descriptionTemplateGarmin', 'descriptionTemplateGarminZh'],
+  free: ['descriptionTemplateFree', 'descriptionTemplateFreeZh'],
+} as const
+const englishTemplate = computed({
+  get: () => form[templateFields[templatePaymentMethod.value][0]] ?? null,
+  set: (value: string | null) => { form[templateFields[templatePaymentMethod.value][0]] = value },
+})
+const chineseTemplate = computed({
+  get: () => form[templateFields[templatePaymentMethod.value][1]] ?? null,
+  set: (value: string | null) => { form[templateFields[templatePaymentMethod.value][1]] = value },
+})
 
 const userStore = useUserStore()
 const { t } = useI18n()
@@ -97,13 +123,17 @@ const load = async () => {
     const res = await designerDefaultConfigApi.getByUserId(uid)
     const data = res.data
     if (data) {
-      form.id = data.id
+      form.id = data.id || 0
       form.userId = data.userId
       form.defaultPaymentMethod = data.defaultPaymentMethod
       form.defaultPrice = data.defaultPrice ?? 2.39
       form.defaultCurrency = data.defaultCurrency
       form.descriptionTemplate = data.descriptionTemplate
       form.descriptionTemplateZh = data.descriptionTemplateZh
+      form.descriptionTemplateFreeZh = data.descriptionTemplateFreeZh ?? null
+      form.descriptionTemplateFree = data.descriptionTemplateFree ?? null
+      form.descriptionTemplateGarminZh = data.descriptionTemplateGarminZh ?? null
+      form.descriptionTemplateGarmin = data.descriptionTemplateGarmin ?? null
       form.enableAutoPublish = data.enableAutoPublish
       form.isActive = data.isActive
       autoPublish.value = (data.enableAutoPublish ?? 0) === 1
@@ -132,6 +162,10 @@ const handleSave = async () => {
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
         descriptionTemplateZh: form.descriptionTemplateZh,
+        descriptionTemplateFreeZh: form.descriptionTemplateFreeZh,
+        descriptionTemplateFree: form.descriptionTemplateFree,
+        descriptionTemplateGarminZh: form.descriptionTemplateGarminZh,
+        descriptionTemplateGarmin: form.descriptionTemplateGarmin,
         enableAutoPublish: autoPublish.value ? 1 : 0,
         isActive: active.value ? 1 : 0
       }
@@ -149,6 +183,10 @@ const handleSave = async () => {
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
         descriptionTemplateZh: form.descriptionTemplateZh,
+        descriptionTemplateFreeZh: form.descriptionTemplateFreeZh,
+        descriptionTemplateFree: form.descriptionTemplateFree,
+        descriptionTemplateGarminZh: form.descriptionTemplateGarminZh,
+        descriptionTemplateGarmin: form.descriptionTemplateGarmin,
         enableAutoPublish: autoPublish.value ? 1 : 0,
         isActive: active.value ? 1 : 0
       }
@@ -162,9 +200,13 @@ const handleSave = async () => {
   }
 }
 
-const show = async () => {
+const previewProductId = ref<number>()
+const show = async (productId?: number, paymentMethod?: string) => {
+  previewProductId.value = productId
   descriptionLanguage.value = 'en'
   await load()
+  const method = paymentMethod ?? form.defaultPaymentMethod
+  templatePaymentMethod.value = method === 'garmin' ? 'garmin' : (method === 'none' || method === 'free') ? 'free' : 'wpay'
   visible.value = true
 }
 
@@ -172,6 +214,8 @@ defineExpose({ show })
 </script>
 
 <style scoped>
+.template-payment-select { width: 240px; }
+.template-payment-tip { width: 100%; color: var(--studio-text-muted); font-size: 12px; margin: 8px 0; }
 .price-row {
   display: flex;
   align-items: center;

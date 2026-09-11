@@ -6,6 +6,10 @@ export interface DesignerDefaultConfigVO {
   defaultCurrency: string | null
   descriptionTemplate: string | null
   descriptionTemplateZh: string | null
+  descriptionTemplateGarmin?: string | null
+  descriptionTemplateGarminZh?: string | null
+  descriptionTemplateFree?: string | null
+  descriptionTemplateFreeZh?: string | null
   enableAutoPublish: number | null
   isActive: number | null
 }
@@ -17,6 +21,10 @@ export interface DesignerDefaultConfigCreateDTO {
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
   descriptionTemplateZh?: string | null
+  descriptionTemplateGarmin?: string | null
+  descriptionTemplateGarminZh?: string | null
+  descriptionTemplateFree?: string | null
+  descriptionTemplateFreeZh?: string | null
   enableAutoPublish?: number | null
   isActive?: number | null
 }
@@ -29,6 +37,10 @@ export interface DesignerDefaultConfigUpdateDTO {
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
   descriptionTemplateZh?: string | null
+  descriptionTemplateGarmin?: string | null
+  descriptionTemplateGarminZh?: string | null
+  descriptionTemplateFree?: string | null
+  descriptionTemplateFreeZh?: string | null
   enableAutoPublish?: number | null
   isActive?: number | null
 }

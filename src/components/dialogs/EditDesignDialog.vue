@@ -135,6 +135,7 @@
       <div v-if="form.description" class="form-section">
         <div class="form-field full-width">
           <label class="field-label">{{ t('submitDesign.description') }}</label>
+          <CopyGarminDescriptionButton :text="form.description || ''" />
           <div class="readonly-field readonly-description">
             {{ form.description || '-' }}
           </div>
@@ -300,6 +301,7 @@
 </template>
 
 <script setup lang="ts">
+import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import dayjs from 'dayjs'
