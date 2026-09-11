@@ -68,6 +68,7 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
     await (wrapper.vm as unknown as { show: () => Promise<void> }).show()
     await flushPromises()
 
+    expect(wrapper.find('.price-row').exists()).toBe(true)
     const panes = wrapper.findAll('.tab-pane')
     expect(panes.map((pane) => pane.attributes('data-name'))).toEqual(['en', 'zh'])
     expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
@@ -75,7 +76,8 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
       '中文模板',
     ])
 
-    const paymentSelector = wrapper.findAllComponents({ name: 'ElSelect' })[1]
+    expect(wrapper.findAllComponents({ name: 'ElSelect' })).toHaveLength(1)
+    const paymentSelector = wrapper.findComponent({ name: 'ElSelect' })
     paymentSelector.vm.$emit('update:modelValue', 'garmin')
     await flushPromises()
     expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
@@ -84,21 +86,27 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
     const editors = wrapper.findAllComponents(stubs.TemplateTextEditor)
     editors[0].vm.$emit('update:modelValue', 'Edited Garmin')
     await flushPromises()
-    paymentSelector.vm.$emit('update:modelValue', 'free')
+    paymentSelector.vm.$emit('update:modelValue', 'none')
     await flushPromises()
     expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
       'Free template', '免费模板',
     ])
+    expect(wrapper.find('.price-row').exists()).toBe(false)
+    expect(wrapper.find('.currency-label').exists()).toBe(false)
     paymentSelector.vm.$emit('update:modelValue', 'wpay')
     await flushPromises()
     expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
       'English template', '中文模板',
     ])
 
+    expect(wrapper.find('.price-row').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'ElInputNumber' }).attributes('modelvalue')).toBe('2.39')
+
     await wrapper.findAll('button.el-button').at(-1)!.trigger('click')
     await flushPromises()
 
     expect(apiMocks.update).toHaveBeenCalledWith(expect.objectContaining({
+      defaultPaymentMethod: 'wpay',
       descriptionTemplate: 'English template',
       descriptionTemplateZh: '中文模板',
       descriptionTemplateGarmin: 'Edited Garmin',
@@ -106,5 +114,12 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
       descriptionTemplateFree: 'Free template',
       descriptionTemplateFreeZh: '免费模板',
     }))
+
+    await (wrapper.vm as unknown as { show: (id?: number, method?: string) => Promise<void> }).show(42, 'garmin')
+    await flushPromises()
+    expect(paymentSelector.props('modelValue')).toBe('garmin')
+    expect(wrapper.findAll('.template-editor-stub').map((editor) => editor.text())).toEqual([
+      'Garmin template', '佳明模板',
+    ])
   })
 })

@@ -17,18 +17,13 @@
           <el-option v-if="userStore.isAdminUser" :label="t('payment.garminOfficial')" value="garmin" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="t('designerSettings.defaultPrice')">
+      <el-form-item v-if="templatePaymentMethod !== 'free'" :label="t('designerSettings.defaultPrice')">
         <div class="price-row">
           <el-input-number v-model="form.defaultPrice" :min="1.99" :max="5.99" :precision="3" :step="0.01" />
           <span class="currency-label">{{ form.defaultCurrency || 'USD' }}</span>
         </div>
       </el-form-item>
       <el-form-item :label="t('designerSettings.descriptionTemplate')">
-        <el-select v-model="templatePaymentMethod" class="template-payment-select">
-          <el-option label="WPay" value="wpay" />
-          <el-option :label="t('payment.garminOfficial')" value="garmin" />
-          <el-option :label="t('designerSettings.none')" value="free" />
-        </el-select>
         <div class="template-payment-tip">{{ t('designerSettings.templatePaymentTip') }}</div>
         <el-tabs v-model="descriptionLanguage" class="description-template-tabs">
           <el-tab-pane :label="t('designerSettings.languageEnglish')" name="en">
@@ -97,7 +92,10 @@ const form = reactive<DesignerDefaultConfigVO>({
 const autoPublish = ref(true)
 const active = ref(true)
 const descriptionLanguage = ref<'en' | 'zh'>('en')
-const templatePaymentMethod = ref<'wpay' | 'garmin' | 'free'>('wpay')
+const templatePaymentMethod = computed(() => {
+  const method = form.defaultPaymentMethod
+  return method === 'garmin' ? 'garmin' : (method === 'none' || method === 'free') ? 'free' : 'wpay'
+})
 const templateFields = {
   wpay: ['descriptionTemplate', 'descriptionTemplateZh'],
   garmin: ['descriptionTemplateGarmin', 'descriptionTemplateGarminZh'],
@@ -205,8 +203,9 @@ const show = async (productId?: number, paymentMethod?: string) => {
   previewProductId.value = productId
   descriptionLanguage.value = 'en'
   await load()
-  const method = paymentMethod ?? form.defaultPaymentMethod
-  templatePaymentMethod.value = method === 'garmin' ? 'garmin' : (method === 'none' || method === 'free') ? 'free' : 'wpay'
+  if (paymentMethod != null) {
+    form.defaultPaymentMethod = paymentMethod === 'free' ? 'none' : paymentMethod
+  }
   visible.value = true
 }
 
@@ -214,7 +213,6 @@ defineExpose({ show })
 </script>
 
 <style scoped>
-.template-payment-select { width: 240px; }
 .template-payment-tip { width: 100%; color: var(--studio-text-muted); font-size: 12px; margin: 8px 0; }
 .price-row {
   display: flex;
