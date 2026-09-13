@@ -9,7 +9,7 @@ async function transform(file: File, operation: 'encrypt' | 'decrypt'): Promise<
   const { default: instance } = await import('@/config/axios')
   const body = new FormData()
   body.append('file', file)
-  const result = await instance.post<unknown, ApiResponse<string>>(`/api/dsn/wrt/${operation}`, body, {
+  const result = await instance.post<unknown, ApiResponse<string>>(`/dsn/wrt/${operation}`, body, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
     suppressForbiddenRedirect: true,

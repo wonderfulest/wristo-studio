@@ -16,13 +16,13 @@ describe('encrypted WRT transport', () => {
     const file = await encryptWrtFile(new File(['PK source'], 'design.wrt'))
     expect(file.name).toBe('design.wrt')
     expect(await file.text()).toBe('WRTENC01encrypted')
-    expect(post.mock.calls[0][0]).toBe('/api/dsn/wrt/encrypt')
+    expect(post.mock.calls[0][0]).toBe('/dsn/wrt/encrypt')
   })
   it('decrypts recognized files before parsing', async () => {
     post.mockResolvedValue({ code: 0, data: btoa('PK source') })
     const file = await decryptWrtFileIfNeeded(new File(['WRTENC01encrypted'], 'design.wrt'))
     expect(await file.text()).toBe('PK source')
-    expect(post.mock.calls[0][0]).toBe('/api/dsn/wrt/decrypt')
+    expect(post.mock.calls[0][0]).toBe('/dsn/wrt/decrypt')
   })
   it('never falls back to plaintext after encryption failure', async () => {
     post.mockRejectedValue(new Error('unavailable'))
