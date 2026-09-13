@@ -126,7 +126,6 @@ declare module 'vue' {
     LayerPanel: typeof import('./src/components/panels/LayerPanel.vue')['default']
     Layout: typeof import('./src/components/layout/Layout.vue')['default']
     LayoutGroupSettings: typeof import('./src/components/panels/settings/LayoutGroupSettings.vue')['default']
-    Message: typeof import('./src/components/Message.vue')['default']
     ProductImagesEditor: typeof import('./src/components/common/ProductImagesEditor.vue')['default']
     ProductTagSelector: typeof import('./src/components/common/ProductTagSelector.vue')['default']
     PropertiesPanel: typeof import('./src/components/properties/PropertiesPanel.vue')['default']

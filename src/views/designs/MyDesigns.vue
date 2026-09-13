@@ -207,6 +207,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, h, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 // 移除旧的API导入，使用新的designApi
@@ -607,7 +609,7 @@ const fetchDesigns = async () => {
   } catch (error: any) {
     console.error('[MyDesigns] fetchDesigns error:', error)
     console.error('错误详情:', error.response?.data)
-    messageStore.error(t('project.getListFailed'))
+    showErrorOnce(error, t('project.getListFailed'))
   }
 }
 
@@ -649,7 +651,7 @@ const openCanvas = async (design: Design) => {
   } catch (error) {
     if (isStaleDynamicImportError(error)) return
     console.error('加载设计失败:', error)
-    messageStore.error(t('project.loadDesignFailed'))
+    showErrorOnce(error, t('project.loadDesignFailed'))
   }
 }
 
@@ -709,7 +711,7 @@ const confirmTransferOwner = async () => {
     await fetchDesigns()
   } catch (error: any) {
     console.error('[MyDesigns] transfer product owner failed:', error)
-    messageStore.error(error?.msg || error?.response?.data?.msg || t('card.transferOwner.failed'))
+    showErrorOnce(error, error?.msg || error?.response?.data?.msg || t('card.transferOwner.failed'))
   } finally {
     transferLoading.value = false
   }
@@ -730,7 +732,7 @@ const updateStoreWeight = async (design: Design, storeWeight: number) => {
     }
   } catch (error: any) {
     console.error('[MyDesigns] update Store weight failed:', error)
-    messageStore.error(error?.response?.data?.msg || t('common.saveFailed'))
+    showErrorOnce(error, error?.response?.data?.msg || t('common.saveFailed'))
   } finally {
     storeWeightSavingAppIds.value.delete(appId)
   }
@@ -750,7 +752,7 @@ const renameDesign = async (design: Design, name: string) => {
     }
   } catch (error: any) {
     console.error('[MyDesigns] rename design failed:', error)
-    messageStore.error(error?.response?.data?.msg || t('common.saveFailed'))
+    showErrorOnce(error, error?.response?.data?.msg || t('common.saveFailed'))
   } finally {
     renameSavingDesignIds.value.delete(design.id)
   }
@@ -785,7 +787,7 @@ const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguag
     }
   } catch (error) {
     console.error('复制失败:', error)
-    messageStore.error((error as any)?.response?.data?.msg || t('project.copyFailed'))
+    showErrorOnce(error, (error as any)?.response?.data?.msg || t('project.copyFailed'))
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
@@ -820,7 +822,7 @@ const copyDesign = async (design: Design) => {
     await executeDuplicateDesign(detailResponse.data, getDuplicateSourceLanguage(detailResponse.data.configJson))
   } catch (error) {
     console.error('加载待复制应用失败:', error)
-    messageStore.error((error as any)?.response?.data?.msg || t('project.loadDesignFailed'))
+    showErrorOnce(error, (error as any)?.response?.data?.msg || t('project.loadDesignFailed'))
   } finally {
     loadingStates.value.copy.delete(design.id)
   }
@@ -867,7 +869,7 @@ const confirmDeleteDesign = async () => {
     }
   } catch (error) {
     console.error('删除失败:', error)
-    messageStore.error(t('project.deleteFailed'))
+    showErrorOnce(error, t('project.deleteFailed'))
   } finally {
     loadingStates.value.delete.delete(designToDelete.value.id)
   }
@@ -921,7 +923,7 @@ const cancelPrg = async (design: Design) => {
     }
   } catch (error: any) {
     if (error === 'cancel' || error === 'close') return
-    messageStore.error(error?.message || t('project.cancelPrgBuildFailed'))
+    showErrorOnce(error, error?.message || t('project.cancelPrgBuildFailed'))
   }
 }
 
@@ -973,7 +975,7 @@ const preparePreviewPrg = async (design: Design) => {
     await prgInstallerTicketCache.prepare(releaseId)
   } catch (error) {
     console.error('Failed to prepare simulator preview:', error)
-    messageStore.error(t('project.prgInstallerPreviewFailed'))
+    showErrorOnce(error, t('project.prgInstallerPreviewFailed'))
   } finally {
     loadingStates.value.previewPrg.delete(design.id)
   }
@@ -1064,7 +1066,7 @@ const goLive = async (design: Design) => {
       goLiveDialog.value.show(fullDesign)
     }
   } catch (e) {
-    messageStore.error(t('project.loadDesignFailed'))
+    showErrorOnce(e, t('project.loadDesignFailed'))
   }
 }
 

@@ -1,3 +1,4 @@
+import { showErrorOnce } from '@/utils/errorMessage'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
@@ -515,10 +516,10 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         return
       }
       if (error instanceof WrtDesignPackageError) {
-        messageStore.error(t(`editor.wrtImport.${error.code}`))
+        showErrorOnce(error, t(`editor.wrtImport.${error.code}`))
       } else {
         console.error('导入 .wrt 设计失败:', error)
-        messageStore.error(t('editor.wrtImport.failed'))
+        showErrorOnce(error, t('editor.wrtImport.failed'))
       }
     } finally {
       if (isCurrentDesignLoad(generation)) {
@@ -572,7 +573,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     } catch (error) {
       if (!isCurrentDesignLoad(generation)) return
       console.error('加载设计失败:', error)
-      messageStore.error('加载设计失败')
+      showErrorOnce(error, '加载设计失败')
     } finally {
       if (isCurrentDesignLoad(generation)) {
         baseStore.setDesignLoading(false)

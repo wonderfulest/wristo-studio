@@ -99,6 +99,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, reactive, computed } from 'vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -278,7 +280,7 @@ const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; d
     }
   } catch (error) {
     console.error('Failed to get design details:', error)
-    messageStore.error(t('submitDesign.loadDetailsFailed'))
+    showErrorOnce(error, t('submitDesign.loadDetailsFailed'))
   } finally {
     loading.value = false
   }
@@ -350,7 +352,7 @@ const handleConfirm = async () => {
     }
   } catch (error) {
     console.error('Submit failed:', error)
-    messageStore.error(dialogMode.value === 'prg-build' ? t('project.prgBuildFailed') : t('submitDesign.submitFailed'))
+    showErrorOnce(error, dialogMode.value === 'prg-build' ? t('project.prgBuildFailed') : t('submitDesign.submitFailed'))
   } finally {
     loading.value = false
   }

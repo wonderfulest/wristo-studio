@@ -1,3 +1,4 @@
+import { showErrorOnce } from '@/utils/errorMessage'
 import { createLocalProjectAsset } from '@/engine/services/localProjectAsset'
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -89,8 +90,8 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
       if (url) options.onAssetUploaded?.(res.data, url)
       if (showMessage) ElMessage.success(t('asset.uploadSuccess'))
       return res.data
-    } catch {
-      if (showMessage) ElMessage.error(t('asset.uploadFailed'))
+    } catch (caughtError) {
+      if (showMessage) showErrorOnce(caughtError, t('asset.uploadFailed'))
       return null
     }
   }
@@ -168,8 +169,8 @@ export function useAssetUploadQueue(options: UseAssetUploadQueueOptions) {
       pendingSharingAssets.value = []
       rememberSharingChoice.value = false
       return true
-    } catch {
-      ElMessage.error(t('asset.sharingUpdateFailed'))
+    } catch (caughtError) {
+      showErrorOnce(caughtError, t('asset.sharingUpdateFailed'))
       return false
     } finally {
       sharingChoiceSaving.value = false

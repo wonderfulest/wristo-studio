@@ -46,6 +46,7 @@ vi.mock('element-plus', () => ({
   ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) }
 }))
 
+import { ElMessage } from 'element-plus'
 import GoLiveDialog from './GoLiveDialog.vue'
 
 const tag = (id: number, tagGroup: string, status = 1): ProductTag => ({
@@ -256,7 +257,7 @@ describe('GoLiveDialog product tag behavior', () => {
 
     expect(wrapper.find('.dialog').exists()).toBe(true)
     expect(wrapper.getComponent(ProductTagSelectorStub).props('disabled')).toBe(true)
-    expect(mocks.messageError).toHaveBeenCalledWith('productTags.loadFailed')
+    expect(ElMessage.error).toHaveBeenCalledWith('productTags.loadFailed')
 
     await confirm(wrapper)
     expect(mocks.publish).not.toHaveBeenCalled()

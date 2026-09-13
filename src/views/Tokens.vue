@@ -408,6 +408,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref } from 'vue'
 import type { ExpressionTokenDefinition } from '@/engine/expression/types'
 import { useMessageStore } from '@/stores/message'
@@ -518,8 +520,8 @@ const copyGuideExpression = async (expression: string) => {
   try {
     await navigator.clipboard.writeText(expression)
     messageStore.success(t('common.copied'))
-  } catch {
-    messageStore.error(t('common.copyFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('common.copyFailed'))
   }
 }
 const copyToken = async (code: string) => {

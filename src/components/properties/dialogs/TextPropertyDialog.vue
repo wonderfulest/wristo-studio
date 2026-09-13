@@ -82,10 +82,12 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, reactive } from 'vue'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import DefaultTextField from '@/components/properties/common/DefaultTextField.vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 
@@ -153,7 +155,7 @@ const handleConfirm = async () => {
     })
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error(t('property.formError'))
+    showErrorOnce(error, t('property.formError'))
   }
 }
 

@@ -94,6 +94,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
@@ -502,7 +504,7 @@ const processUploadQueue = async () => {
           error: e,
           errorMessage,
         })
-        ElMessage.error(`${t('icon.uploadFailed', { name: item.file.name })}: ${errorMessage}`)
+        showErrorOnce(e, `${t('icon.uploadFailed', { name: item.file.name })}: ${errorMessage}`)
       }
     }
   } finally {

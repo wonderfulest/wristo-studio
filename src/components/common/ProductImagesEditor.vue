@@ -42,6 +42,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { h, ref } from 'vue'
 import { ElMessage, ElLoading, ElMessageBox } from 'element-plus'
 import type { UploadFile } from 'element-plus'
@@ -210,7 +212,7 @@ const handleChange = async (file: UploadFile) => {
     ElMessage.success(t('image.productUploaded'))
   } catch (error) {
     console.error('Failed to upload product image:', error)
-    ElMessage.error(t('image.productUploadFailed'))
+    showErrorOnce(error, t('image.productUploadFailed'))
   } finally {
     loadingInstance.close()
   }

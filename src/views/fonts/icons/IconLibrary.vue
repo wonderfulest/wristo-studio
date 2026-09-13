@@ -296,6 +296,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -476,7 +478,7 @@ const fetchGlyphs = async () => {
         list = [quickEditTarget.glyph, ...list]
       }
     } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : t('bitmapMaker.invalidFont'))
+      showErrorOnce(error, error instanceof Error ? error.message : t('bitmapMaker.invalidFont'))
     }
     console.log('glyphs list', list)
     glyphs.value = list
@@ -691,7 +693,7 @@ const onIconUploaded = async (payload?: { asset?: IconAssetVO; assets?: IconAsse
     try {
       await bindAssetsToGlyph(glyphId, asset.id)
     } catch (e) {
-      ElMessage.error(getRequestErrorMessage(e))
+      showErrorOnce(e, getRequestErrorMessage(e))
     }
   }
   await fetchAssets(g.id)
@@ -818,7 +820,7 @@ const handleDownloadSvgSources = async () => {
     downloadSvgProgress.value = 100
   } catch (e) {
     console.warn('download icon SVG sources failed', e)
-    ElMessage.error(t('icon.downloadSvgSourcesFailed'))
+    showErrorOnce(e, t('icon.downloadSvgSourcesFailed'))
   } finally {
     window.setTimeout(() => {
       downloadingSvgSources.value = false

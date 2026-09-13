@@ -35,6 +35,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref } from 'vue'
 import { nanoid } from 'nanoid'
 import { elementConfigs } from '@/elements/schemaMap'
@@ -279,7 +281,7 @@ const handleTimeHandsConfirm = async (selection: TimeHandsDialogSelection) => {
     isCollapsed.value = true
   } catch (error) {
     console.error('[AddElementPanel] Failed to add Time Hands group', error)
-    messageStore.error(t('timeHands.addFailed'))
+    showErrorOnce(error, t('timeHands.addFailed'))
   }
 }
 
@@ -383,7 +385,7 @@ const addElementByType = async (_category: string, elementType: string, config: 
       config,
       error,
     })
-    messageStore.error('添加元素失败')
+    showErrorOnce(error, '添加元素失败')
     // 自动打开 Properties and App Settings 面板，方便用户先配置数据属性
     emitter.emit('open-app-properties')
   }

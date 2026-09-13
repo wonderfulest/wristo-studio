@@ -273,6 +273,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch, watchEffect } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
@@ -596,7 +598,7 @@ const commitPolygonEditing = async (emittedValue?: unknown) => {
     session.saving = false
     session.error = t('elementSettings.polygonSaveFailed')
     editorState.value = { ...editorState.value, error: session.error }
-    ElMessage.error(session.error)
+    showErrorOnce(error, session.error)
   }
 }
 

@@ -24,6 +24,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, defineEmits, defineProps, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
@@ -114,7 +116,7 @@ const handleUpload = async (event) => {
     ElMessage.success(t('asset.dialUploadSuccess'))
   } catch (error) {
     console.error('上传刻度失败:', error)
-    ElMessage.error(t('asset.dialUploadFailed'))
+    showErrorOnce(error, t('asset.dialUploadFailed'))
   } finally {
     // 清空文件输入
     event.target.value = ''

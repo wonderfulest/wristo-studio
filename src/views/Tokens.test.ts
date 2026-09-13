@@ -12,6 +12,8 @@ const messageError = vi.fn()
 
 vi.mock('@/stores/message', () => ({ useMessageStore: () => ({ success: messageSuccess, error: messageError }) }))
 
+vi.mock('element-plus', () => ({ ElMessage: { error: vi.fn() } }))
+import { ElMessage } from 'element-plus'
 import Tokens from './Tokens.vue'
 import { createTokenEditorSession, tokenEditorResultStorageKey } from './tokens/tokenEditorTransfer'
 
@@ -165,7 +167,7 @@ describe('Tokens page tabs', () => {
     await expect(copyButton.trigger('click')).resolves.toBeUndefined()
 
     expect(messageSuccess).not.toHaveBeenCalled()
-    expect(messageError).toHaveBeenCalledWith('common.copyFailed')
+    expect(ElMessage.error).toHaveBeenCalledWith('common.copyFailed')
   })
 
   it('renders the catalog equality example for hour and minute cards', () => {

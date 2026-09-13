@@ -55,16 +55,16 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useMessageStore } from '@/stores/message'
 import { Promotion } from '@element-plus/icons-vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import { useI18n } from '@/i18n'
 
 const router = useRouter()
 const route = useRoute()
-const messageStore = useMessageStore()
 const { t } = useI18n()
 
 // 计算当前路由状态
@@ -84,7 +84,7 @@ const navigateTo = async (routeName: string) => {
     })
   } catch (error) {
     console.error('[DesignList] navigation error:', error)
-    messageStore.error(t('common.navigationFailed'))
+    showErrorOnce(error, t('common.navigationFailed'))
   }
 }
 

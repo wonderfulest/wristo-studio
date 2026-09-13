@@ -45,6 +45,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -159,7 +161,7 @@ const handleConfirm = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('Failed to create design:', error)
-    ElMessage.error(t('createDesign.createFailed'))
+    showErrorOnce(error, t('createDesign.createFailed'))
   } finally {
     loading.value = false
   }

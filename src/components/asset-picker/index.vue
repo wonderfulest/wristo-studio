@@ -272,6 +272,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, onBeforeUnmount, PropType, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Loading, Star, StarFilled, Delete, Edit, Download } from '@element-plus/icons-vue'
@@ -527,7 +529,7 @@ const openSvgEditor = async (asset: AnalogAssetVO) => {
     editingSvgText.value = svgText
   } catch (error) {
     console.error('加载 SVG 失败:', error)
-    ElMessage.error(t('asset.loadSvgFailed'))
+    showErrorOnce(error, t('asset.loadSvgFailed'))
     closeSvgEditor()
   }
 }
@@ -546,7 +548,7 @@ const saveEditedSvgAsset = async (svgText: string) => {
     }
   } catch (error) {
     console.error('保存 SVG 失败:', error)
-    ElMessage.error(t('asset.saveSvgFailed'))
+    showErrorOnce(error, t('asset.saveSvgFailed'))
   } finally {
     svgSaving.value = false
   }

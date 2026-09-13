@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { onMounted, ref, onUnmounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
@@ -328,7 +330,7 @@ const handleDrop = async (event: DragEvent) => {
     ElMessage.success(t('asset.uploadSuccess'))
   } catch (error) {
     console.error('[Canvas] drop image upload failed:', error)
-    ElMessage.error(t('asset.uploadFailed'))
+    showErrorOnce(error, t('asset.uploadFailed'))
   } finally {
     isUploadingDroppedImage.value = false
   }

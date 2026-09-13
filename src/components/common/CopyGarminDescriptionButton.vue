@@ -5,6 +5,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
 import { stripDescriptionEmoji } from '@/utils/garminDescription'
@@ -16,8 +18,8 @@ async function copyDescription() {
   try {
     await navigator.clipboard.writeText(stripDescriptionEmoji(props.text))
     ElMessage.success(t('common.copied'))
-  } catch {
-    ElMessage.error(t('common.copyFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('common.copyFailed'))
   }
 }
 </script>

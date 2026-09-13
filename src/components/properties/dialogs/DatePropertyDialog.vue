@@ -119,6 +119,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, reactive, ref } from 'vue'
 import { ArrowDown, ArrowUp, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -252,7 +254,7 @@ const handleConfirm = async () => {
       options: selectedOptions.value.map(option => ({ label: option.label, labelCn: option.zhsLabel, value: option.value })), prompt: formData.prompt, errorMessage: formData.errorMessage, isEdit: isEdit.value,
     })
     dialogVisible.value = false
-  } catch { ElMessage.error(uiText.value.formError) }
+  } catch (caughtError) { showErrorOnce(caughtError, uiText.value.formError) }
 }
 const handleClose = () => {
   ElMessageBox.confirm(uiText.value.closeConfirm, uiText.value.warning, { confirmButtonText: uiText.value.yes, cancelButtonText: uiText.value.no, type: 'warning' })

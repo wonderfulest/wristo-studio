@@ -125,6 +125,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, nextTick, reactive, ref } from 'vue'
 import { CopyDocument, InfoFilled, Message, Promotion } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -306,8 +308,8 @@ const copyMailTemplate = async (): Promise<void> => {
   try {
     await copyText(template)
     messageStore.success(t('feedback.templateCopied'))
-  } catch {
-    messageStore.error(t('feedback.copyFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('feedback.copyFailed'))
   }
 }
 

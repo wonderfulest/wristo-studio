@@ -129,12 +129,13 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useBaseStore } from '@/stores/baseStore'
 import { useExportStore } from '@/stores/exportStore'
 import { useHistoryStore } from '@/stores/historyStore'
-import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import CreateDesignDialog from '../dialogs/CreateDesignDialog.vue'
@@ -155,7 +156,6 @@ const route = useRoute()
 const baseStore = useBaseStore()
 const exportStore = useExportStore()
 const historyStore = useHistoryStore()
-const messageStore = useMessageStore()
 const userStore = useUserStore()
 const { t } = useI18n()
 
@@ -250,7 +250,7 @@ const confirmOpenDesignsList = async () => {
     router.push('/designs')
   } catch (error) {
     console.error('[AppHeader] confirmOpenDesignsList save failed:', error)
-    messageStore.error(t('project.failedToSave'))
+    showErrorOnce(error, t('project.failedToSave'))
   }
 }
 

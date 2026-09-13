@@ -90,6 +90,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { designApi } from '@/api/wristo/design'
@@ -145,7 +147,7 @@ const loadProjects = async () => {
   } catch (error) {
     projects.value = []
     projectTotal.value = 0
-    messageStore.error(error instanceof Error && error.message ? error.message : t('timeHands.loadProjectsFailed'))
+    showErrorOnce(error, error instanceof Error && error.message ? error.message : t('timeHands.loadProjectsFailed'))
   } finally {
     loadingProjects.value = false
   }
@@ -177,7 +179,7 @@ const selectProject = async (project: Design) => {
     selectedGroup.value = group
     step.value = 'preview'
   } catch (error) {
-    messageStore.error(error instanceof Error && error.message ? error.message : t('timeHands.loadGroupFailed'))
+    showErrorOnce(error, error instanceof Error && error.message ? error.message : t('timeHands.loadGroupFailed'))
   }
 }
 

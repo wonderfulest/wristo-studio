@@ -207,6 +207,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, reactive } from 'vue'
 import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -342,7 +344,7 @@ const handleConfirm = async () => {
     })
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error(t('property.formError'))
+    showErrorOnce(error, t('property.formError'))
   }
 }
 

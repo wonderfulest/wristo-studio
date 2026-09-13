@@ -158,6 +158,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { nanoid } from 'nanoid'
@@ -906,7 +908,7 @@ const handleAddElement = async (category: string, elementType: string, overrides
     }, 'editor.addElementFailed')
   } catch (error: any) {
     console.error('Failed to add element:', error)
-    messageStore.error(t('editor.addElementFailed'))
+    showErrorOnce(error, t('editor.addElementFailed'))
   }
 }
 
@@ -959,7 +961,7 @@ const handleAddDataField = async (metricSymbol?: string) => {
     }, 'editor.addDataFieldFailed')
   } catch (e) {
     console.error('Failed to add data field (icon + data + unit):', e)
-    messageStore.error(t('editor.addDataFieldFailed'))
+    showErrorOnce(e, t('editor.addDataFieldFailed'))
   }
 }
 
@@ -995,7 +997,7 @@ const handleAddGoalProgressBarField = async () => {
     }, 'editor.addGoalFieldFailed')
   } catch (e) {
     console.error('Failed to add goal progress bar (goal + icon + data):', e)
-    messageStore.error(t('editor.addGoalFieldFailed'))
+    showErrorOnce(e, t('editor.addGoalFieldFailed'))
   }
 }
 
@@ -1031,7 +1033,7 @@ const handleAddGoalArcField = async () => {
     }, 'editor.addGoalFieldFailed')
   } catch (e) {
     console.error('Failed to add goal arc (goal + icon + data):', e)
-    messageStore.error(t('editor.addGoalFieldFailed'))
+    showErrorOnce(e, t('editor.addGoalFieldFailed'))
   }
 }
 
@@ -1091,7 +1093,7 @@ const confirmScreenshot = async () => {
     messageStore.success(t('editor.screenshotSaved'))
   } catch (error) {
     console.error('Failed to save screenshot:', error)
-    messageStore.error(t('editor.screenshotFailed'))
+    showErrorOnce(error, t('editor.screenshotFailed'))
   }
 }
 
@@ -1139,7 +1141,7 @@ const handleExportWrt = async () => {
     messageStore.success(t('editor.wrtExported'))
   } catch (error) {
     console.error('Failed to export WRT design package:', error)
-    messageStore.error(t('editor.wrtExportFailed'))
+    showErrorOnce(error, t('editor.wrtExportFailed'))
   } finally {
     exportingWrt.value = false
   }
@@ -1208,7 +1210,7 @@ const confirmRecordGif = async () => {
     messageStore.success(t('editor.recordGifSaved'))
   } catch (error) {
     console.error('Failed to save GIF recording:', error)
-    messageStore.error(t('editor.recordGifFailed'))
+    showErrorOnce(error, t('editor.recordGifFailed'))
   } finally {
     recordingGif.value = false
   }
@@ -1227,7 +1229,7 @@ const handleSave =async () => {
     }
   } catch (error: any) {
     console.error('Upload failed:', error)
-    messageStore.error(t('editor.uploadFailedWithReason', { reason: error.message || t('common.unknown') }))
+    showErrorOnce(error, t('editor.uploadFailedWithReason', { reason: error.message || t('common.unknown') }))
   }
 }
 

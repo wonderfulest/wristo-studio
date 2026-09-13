@@ -105,6 +105,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, h, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElTag, ElMessageBox, ElMessage } from 'element-plus'
@@ -308,7 +310,7 @@ const onDelete = async () => {
   } catch (e) {
     // ignore errors here; parent can handle global errors if needed
     console.error('remove font failed', e)
-    ElMessage.error(t('common.deleteFailed'))
+    showErrorOnce(e, t('common.deleteFailed'))
   }
 }
 
@@ -339,7 +341,7 @@ const onToggleFavorite = async () => {
     emit('favoriteChanged', props.fontId, nextWeight)
   } catch (e) {
     console.warn('toggle font favorite failed', e)
-    ElMessage.error(t('font.favoriteFailed'))
+    showErrorOnce(e, t('font.favoriteFailed'))
   } finally {
     favoriteUpdating.value = false
   }

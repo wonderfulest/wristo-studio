@@ -1,12 +1,10 @@
 <!-- src/App.vue -->
 <template>
   <router-view></router-view>
-  <Message />
   <CookieConsent />
 </template>
 
 <script setup>
-import Message from '@/components/Message.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
 import { useLocaleStore } from '@/stores/locale'
 import { useThemeStore } from '@/stores/theme'

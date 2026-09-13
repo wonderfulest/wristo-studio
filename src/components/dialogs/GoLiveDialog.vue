@@ -271,6 +271,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
@@ -348,9 +350,9 @@ const openSourceStore = async (store: 'wristo' | 'garmin') => {
       return
     }
     target.location.href = url
-  } catch {
+  } catch (caughtError) {
     target.close()
-    messageStore.error(t('goLive.sourceLoadFailed'))
+    showErrorOnce(caughtError, t('goLive.sourceLoadFailed'))
   } finally {
     loadingSourceLink.value = false
   }
@@ -454,7 +456,7 @@ const downloadAllProductImages = async (mode: ProductImageDownloadMode) => {
     }
   } catch (error) {
     console.error('Failed to download product images:', error)
-    messageStore.error(t('goLive.imageDownloadFailed'))
+    showErrorOnce(error, t('goLive.imageDownloadFailed'))
   } finally {
     downloadingImages.value = false
   }
@@ -627,8 +629,8 @@ const copyAppId = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(String(form.appId))
     ElMessage.success(t('common.copied'))
-  } catch {
-    ElMessage.error(t('common.copyFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('common.copyFailed'))
   }
 }
 
@@ -636,8 +638,8 @@ const copyDesignName = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(String(form.name || ''))
     ElMessage.success(t('common.copied'))
-  } catch {
-    ElMessage.error(t('common.copyFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('common.copyFailed'))
   }
 }
 // Hero / Raw image uploaded handlers from ImageUpload
@@ -671,7 +673,7 @@ const loadProductTags = async () => {
     productTags.value = []
     form.tagIds = []
     productTagsLoadFailed.value = true
-    messageStore.error(t('productTags.loadFailed'))
+    showErrorOnce(error, t('productTags.loadFailed'))
   } finally {
     loadingProductTags.value = false
   }
@@ -762,7 +764,7 @@ const handleBannerChange = async (file: UploadFile) => {
       img.src = dataUrl
     } catch (err) {
       console.error('Failed to upload banner:', err)
-      ElMessage.error(t('goLive.uploadBannerFailed'))
+      showErrorOnce(err, t('goLive.uploadBannerFailed'))
       loadingInstance.close()
     }
   }
@@ -796,7 +798,7 @@ const refreshDescription = async () => {
       ElMessage.success(t('goLive.descriptionUpdated'))
     }
   } catch (e) {
-    ElMessage.error(t('goLive.generateDescriptionFailed'))
+    showErrorOnce(e, t('goLive.generateDescriptionFailed'))
   }
 }
 

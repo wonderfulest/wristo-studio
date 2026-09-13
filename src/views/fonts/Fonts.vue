@@ -151,6 +151,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, onMounted, watch } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
@@ -240,7 +242,7 @@ const loadFonts = async () => {
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
   } catch (error) {
     console.error('加载字体失败:', error)
-    ElMessage.error(t('font.loadListFailed'))
+    showErrorOnce(error, t('font.loadListFailed'))
   }
 }
 
@@ -435,7 +437,7 @@ const saveSearchIndex = async () => {
       ElMessage.error(resp.msg || t('common.saveFailed'))
     }
   } catch (e: any) {
-    ElMessage.error(e?.msg || e?.message || t('common.saveFailed'))
+    showErrorOnce(e, e?.msg || e?.message || t('common.saveFailed'))
   } finally {
     searchIndexSaving.value = false
   }

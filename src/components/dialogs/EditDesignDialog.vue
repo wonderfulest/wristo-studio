@@ -301,6 +301,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
@@ -582,7 +584,7 @@ const downloadDesignAssets = async () => {
     downloadBlob(encryptedFile, encryptedFile.name)
   } catch (error: any) {
     console.error('Failed to download design assets:', error)
-    ElMessage.error(error?.message || t('editDesign.downloadDesignAssetsFailed'))
+    showErrorOnce(error, error?.message || t('editDesign.downloadDesignAssetsFailed'))
   } finally {
     downloadingAssets.value = false
   }
@@ -699,7 +701,7 @@ const loadDesign = async (designUid: string) => {
     }
   } catch (error) {
     console.error('加载设计失败:', error)
-    ElMessage.error(t('editDesign.loadFailed'))
+    showErrorOnce(error, t('editDesign.loadFailed'))
     handleCancel()
   }
 }
@@ -758,7 +760,7 @@ const handleSave = async () => {
     }
   } catch (error) {
     console.error('保存设计详情失败:', error)
-    messageStore.error(t('common.saveFailed'))
+    showErrorOnce(error, t('common.saveFailed'))
   } finally {
     saving.value = false
   }

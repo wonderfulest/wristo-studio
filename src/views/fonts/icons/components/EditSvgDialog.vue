@@ -12,6 +12,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import SvgEditorDialog from '@/components/svg-editor/SvgEditorDialog.vue'
@@ -78,7 +80,7 @@ async function loadDetail(id: number) {
       editSvgContent.value = data.svgContent
     }
   } catch (e) {
-    ElMessage.error(t('icon.loadSvgFailed'))
+    showErrorOnce(e, t('icon.loadSvgFailed'))
   }
 }
 
@@ -99,7 +101,7 @@ async function save(svgContent: string) {
     visibleInner.value = false
     emit('saved')
   } catch (e) {
-    ElMessage.error(t('icon.saveFailed'))
+    showErrorOnce(e, t('icon.saveFailed'))
   } finally {
     saving.value = false
   }

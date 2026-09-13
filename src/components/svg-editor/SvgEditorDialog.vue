@@ -72,8 +72,9 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import ColorPicker from '@/components/color-picker/index.vue'
 import { useI18n } from '@/i18n'
 
@@ -183,8 +184,8 @@ const handleClosed = () => {
 const handleSave = () => {
   try {
     emit('save', buildEditedSvgText())
-  } catch {
-    ElMessage.error(t('icon.invalidSvg'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('icon.invalidSvg'))
   }
 }
 

@@ -19,7 +19,7 @@ function setup() {
   const encrypt = vi.fn().mockResolvedValue(encrypted)
   const download = vi.fn()
   const messages = { error: vi.fn(), success: vi.fn() }
-  const run = new Function('exportingWrt', 'wrtExportProgress', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'encryptWrtFile', 'downloadBlob', 'messageStore', 't', `return async () => {${body}}`)(exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, (key: string) => key)
+  const run = new Function('exportingWrt', 'wrtExportProgress', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'encryptWrtFile', 'downloadBlob', 'messageStore', 'showErrorOnce', 't', `return async () => {${body}}`)(exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, (_error: unknown, message: string) => messages.error(message), (key: string) => key)
   return { exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, run }
 }
 afterEach(() => { vi.restoreAllMocks() })

@@ -40,6 +40,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, onActivated, onBeforeUnmount, onDeactivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { designApi } from '@/api/wristo/design'
@@ -215,7 +217,7 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     await userStore.refreshUserInfo()
   } catch (error: any) {
     console.error('[NewProjects] handleConfirmDialog error:', error)
-    messageStore.error(error instanceof WrtDesignPackageError
+    showErrorOnce(error, error instanceof WrtDesignPackageError
       ? t(`editor.wrtImport.${error.code}`)
       : error?.response?.data?.msg || error?.message || t('project.openDesignFailed'))
   } finally {
@@ -238,7 +240,7 @@ const handleOpenRecentDesign = async (design: Design) => {
     router.push('/design?id=' + designData.designUid)
   } catch (error: any) {
     console.error('[NewProjects] handleOpenRecentDesign error:', error)
-    messageStore.error(t('project.openDesignFailed'))
+    showErrorOnce(error, t('project.openDesignFailed'))
   }
 }
 
@@ -275,7 +277,7 @@ const deleteRecentDesign = async () => {
     }
   } catch (error: any) {
     console.error('[NewProjects] deleteRecentDesign error:', error)
-    messageStore.error(t('project.deleteFailed'))
+    showErrorOnce(error, t('project.deleteFailed'))
   } finally {
     deletingDesignId.value = null
   }
@@ -302,7 +304,7 @@ const fetchDesigns = async () => {
     }
   } catch (error: any) {
     console.error('[NewProjects] fetchDesigns error:', error)
-    messageStore.error(t('project.getSamplesFailed'))
+    showErrorOnce(error, t('project.getSamplesFailed'))
   }
 }
 
@@ -329,7 +331,7 @@ const fetchRecentDesigns = async () => {
     }
   } catch (error: any) {
     console.error('[NewProjects] fetchRecentDesigns error:', error)
-    messageStore.error(t('project.getRecentFailed'))
+    showErrorOnce(error, t('project.getRecentFailed'))
   }
 }
 

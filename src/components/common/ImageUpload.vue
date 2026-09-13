@@ -41,6 +41,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { uploadImage } from '@/api/image'
@@ -268,7 +270,7 @@ const uploadRawFile = async (raw) => {
     emit('uploaded', img)
     ElMessage.success(t('image.uploadSuccess'))
   } catch (e) {
-    ElMessage.error(e && e.msg ? e.msg : t('image.uploadFailed'))
+    showErrorOnce(e, e && e.msg ? e.msg : t('image.uploadFailed'))
   } finally {
     uploading.value = false
   }

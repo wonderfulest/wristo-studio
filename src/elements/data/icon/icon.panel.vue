@@ -104,6 +104,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, nextTick, watch } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
@@ -411,8 +413,8 @@ const validateUploadFile = async (file: File): Promise<boolean> => {
         ElMessage.error(`${file.name} is ${width}x${height}. PNG icons must be at least 24x24.`)
         return false
       }
-    } catch {
-      ElMessage.error(`Cannot read PNG dimensions: ${file.name}`)
+    } catch (caughtError) {
+      showErrorOnce(caughtError, `Cannot read PNG dimensions: ${file.name}`)
       return false
     }
   }
@@ -426,7 +428,7 @@ const openSvgEditorForUpload = async (file: File) => {
     svgEditorVisible.value = true
   } catch (error) {
     console.error('[amoled-icon-panel] failed to read SVG for editing', error)
-    ElMessage.error(t('asset.loadSvgFailed'))
+    showErrorOnce(error, t('asset.loadSvgFailed'))
     closeSvgEditor()
   }
 }
@@ -459,7 +461,7 @@ const openCurrentAmoledSvgEditor = async () => {
     svgEditorVisible.value = true
   } catch (error) {
     console.error('[amoled-icon-panel] failed to load current SVG asset for editing', error)
-    ElMessage.error(t('asset.loadSvgFailed'))
+    showErrorOnce(error, t('asset.loadSvgFailed'))
     closeSvgEditor()
   }
 }
@@ -569,7 +571,7 @@ const saveEditedUploadSvg = async (svgText: string) => {
     closeSvgEditor()
   } catch (error) {
     console.error('[amoled-icon-panel] failed to save edited SVG upload', error)
-    ElMessage.error(t('asset.saveSvgFailed'))
+    showErrorOnce(error, t('asset.saveSvgFailed'))
   } finally {
     svgSaving.value = false
   }

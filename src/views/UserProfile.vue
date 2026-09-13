@@ -184,6 +184,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -292,7 +294,7 @@ const cancelMembership = async () => {
     ElMessage.success(t('membership.cancelSubmitted'))
   } catch (error) {
     console.error('cancel Studio membership failed', error)
-    ElMessage.error(t('membership.cancelFailed'))
+    showErrorOnce(error, t('membership.cancelFailed'))
   } finally {
     billingLoading.value = false
   }
@@ -317,7 +319,7 @@ const resumeMembership = async () => {
     ElMessage.success(t('membership.resumeSubmitted'))
   } catch (error) {
     console.error('resume Studio membership failed', error)
-    ElMessage.error(t('membership.resumeFailed'))
+    showErrorOnce(error, t('membership.resumeFailed'))
   } finally {
     billingLoading.value = false
   }
@@ -332,7 +334,7 @@ const refreshProfileOnOpen = async () => {
     }
   } catch (error) {
     console.error('Failed to refresh user profile on open', error)
-    ElMessage.error(t('common.loadFailed'))
+    showErrorOnce(error, t('common.loadFailed'))
   } finally {
     isRefreshingProfile.value = false
   }
@@ -450,7 +452,7 @@ const onAvatarFileChange = async (e: Event) => {
     form.value.avatar = avatarPreviewUrl.value
   } catch (error) {
     console.error('Failed to compress avatar image', error)
-    ElMessage.error(t('common.uploadFailed'))
+    showErrorOnce(error, t('common.uploadFailed'))
   }
 }
 
@@ -528,7 +530,7 @@ const handleSave = async () => {
     editMode.value = false
   } catch (error) {
     console.error('Failed to update user profile', error)
-    ElMessage.error(t('common.saveFailed'))
+    showErrorOnce(error, t('common.saveFailed'))
   } finally {
     isSaving.value = false
   }

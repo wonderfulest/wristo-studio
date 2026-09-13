@@ -51,6 +51,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import type { Product } from '@/types/api/product'
@@ -101,7 +103,7 @@ const goLive = async (row: Product): Promise<void> => {
       goLiveDialog.value.show(design)
     }
   } catch (e) {
-    messageStore.error(t('project.loadDesignFailed'))
+    showErrorOnce(e, t('project.loadDesignFailed'))
   }
 }
 

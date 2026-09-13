@@ -64,6 +64,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, Check, Warning, Search } from '@element-plus/icons-vue'
@@ -175,7 +177,7 @@ const loadDeviceList = async () => {
     deviceList.value = devices
   } catch (error) {
     console.error('Failed to load device list:', error)
-    ElMessage.error(t('device.loadFailed'))
+    showErrorOnce(error, t('device.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -235,7 +237,7 @@ const confirmSelection = async () => {
     ElMessage.success(t('device.selectedSuccessfully'))
   } catch (error) {
     console.error('Failed to get device details:', error)
-    ElMessage.error(t('device.getDetailsFailed'))
+    showErrorOnce(error, t('device.getDetailsFailed'))
   } finally {
     confirmLoading.value = false
   }

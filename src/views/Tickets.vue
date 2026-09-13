@@ -188,6 +188,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import ticketsApi from '@/api/wristo/tickets'
@@ -255,7 +257,7 @@ async function loadData(): Promise<void> {
     list.value = data?.list ?? []
     total.value = data?.total ?? 0
   } catch (e) {
-    ElMessage.error(t('ticket.loadFailed'))
+    showErrorOnce(e, t('ticket.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -330,7 +332,7 @@ async function loadComments(): Promise<void> {
     const resp = await ticketsApi.comments(id)
     comments.value = resp.data ?? []
   } catch (e) {
-    ElMessage.error(t('ticket.loadCommentsFailed'))
+    showErrorOnce(e, t('ticket.loadCommentsFailed'))
   } finally {
     commentsLoading.value = false
   }
@@ -353,7 +355,7 @@ async function submitComment(): Promise<void> {
     await loadComments()
     ElMessage.success(t('ticket.commentAdded'))
   } catch (e) {
-    ElMessage.error(t('ticket.addCommentFailed'))
+    showErrorOnce(e, t('ticket.addCommentFailed'))
   } finally {
     submittingComment.value = false
   }
@@ -382,7 +384,7 @@ async function submitProcess(): Promise<void> {
     // refresh list
     loadData()
   } catch (e) {
-    ElMessage.error(t('ticket.updateStatusFailed'))
+    showErrorOnce(e, t('ticket.updateStatusFailed'))
   } finally {
     processing.value = false
   }

@@ -52,6 +52,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import JSZip from 'jszip'
@@ -398,7 +400,7 @@ const handleDownloadBitmapFont = async (font: BitmapFontVO) => {
     downloadBlob(blob, `${sanitizeDownloadName(font.fontName)}.zip`)
   } catch (e) {
     console.warn('download bitmap font failed', e)
-    ElMessage.error(t('font.downloadBitmapFontFailed'))
+    showErrorOnce(e, t('font.downloadBitmapFontFailed'))
   } finally {
     downloadingFontId.value = null
   }
@@ -440,7 +442,7 @@ const handleDeleteBitmapFont = async (font: BitmapFontVO) => {
     }
   } catch (e) {
     console.warn('delete bitmap font failed', e)
-    ElMessage.error(t('common.deleteFailed'))
+    showErrorOnce(e, t('common.deleteFailed'))
   } finally {
     deletingFontId.value = null
   }
@@ -458,7 +460,7 @@ const handleToggleBitmapFontFavorite = async (font: BitmapFontVO) => {
     await bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
   } catch (e) {
     console.warn('toggle bitmap font favorite failed', e)
-    ElMessage.error(t('font.favoriteFailed'))
+    showErrorOnce(e, t('font.favoriteFailed'))
   }
 }
 

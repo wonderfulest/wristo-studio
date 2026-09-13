@@ -57,10 +57,11 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, watch } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { FontOption, useFontStore } from '@/stores/fontStore'
-import { useMessageStore } from '@/stores/message'
 import { searchFonts } from '@/api/wristo/fonts'
 import type { FontItem } from '@/types/font-picker'
 import { DesignFontVO } from '@/types/font'
@@ -88,7 +89,6 @@ const emit = defineEmits<{
 }>()
 
 const fontStore = useFontStore()
-const messageStore = useMessageStore()
 const { t } = useI18n()
 
 const searchQuery = ref<string>('')
@@ -252,7 +252,7 @@ const filterFonts = async () => {
   } catch (error) {
     if (generation !== searchGeneration) return
     console.error('[FontSearch] Remote font search error:', error)
-    messageStore.error(t('font.remoteSearchFailed'))
+    showErrorOnce(error, t('font.remoteSearchFailed'))
   } finally {
     if (generation !== searchGeneration) return
     console.log('[FontSearch] filterFonts finally', {

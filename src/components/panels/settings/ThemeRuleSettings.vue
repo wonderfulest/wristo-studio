@@ -65,6 +65,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useBaseStore } from '@/stores/baseStore'
@@ -105,7 +107,7 @@ const fetchRuleTypes = async () => {
     }))
   } catch (e) {
     console.error('Failed to fetch rule types', e)
-    ElMessage.error(t('elementSettings.loadThemeRuleTypesFailed'))
+    showErrorOnce(e, t('elementSettings.loadThemeRuleTypesFailed'))
   } finally {
     loadingTypes.value = false
   }
@@ -185,7 +187,7 @@ const handleActiveChange = async (value) => {
   } catch (e) {
     active.value = confirmedActive.value
     console.error('Failed to activate theme rule', e)
-    ElMessage.error(t('elementSettings.updateRuleActivationFailed'))
+    showErrorOnce(e, t('elementSettings.updateRuleActivationFailed'))
   } finally {
     activationSaving.value = false
   }
@@ -226,7 +228,7 @@ const saveRule = async () => {
     ElMessage.success(t('elementSettings.themeRuleSaved'))
   } catch (e) {
     console.error('Failed to save theme rule', e)
-    ElMessage.error(t('elementSettings.saveThemeRuleFailed'))
+    showErrorOnce(e, t('elementSettings.saveThemeRuleFailed'))
   } finally {
     saving.value = false
   }

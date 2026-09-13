@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { showErrorOnce } from '@/utils/errorMessage'
 import { BizErrorCode } from './errorCode'
 import type { ApiResponse } from '../types/api/api'
 import { useUserStore } from '../stores/user'
@@ -26,24 +26,24 @@ const getResponseMessage = (data: any, fallbackKey: FallbackMessageKey) => {
   return data?.msg || data?.message || getFallbackMessage(fallbackKey)
 }
 
-const redirectToLogin = (message = getFallbackMessage('auth.sessionExpired')) => {
+const redirectToLogin = (error: unknown, message = getFallbackMessage('auth.sessionExpired')) => {
   const userStore = useUserStore()
   userStore.clearAuth()
-  ElMessage.error(message)
+  showErrorOnce(error, message)
   redirectToSsoLogin('studio', 1000)
 }
 
-const handleForbidden = (config?: { suppressForbiddenRedirect?: boolean }, message = getFallbackMessage('auth.forbidden')) => {
+const handleForbidden = (error: unknown, config?: { suppressForbiddenRedirect?: boolean }, message = getFallbackMessage('auth.forbidden')) => {
   const redirectPath = forbiddenRedirectPath(config)
   if (!redirectPath) {
-    ElMessage.error(message)
+    showErrorOnce(error, message)
     return
   }
   const userStore = useUserStore()
   cancelPendingSsoRedirect()
   userStore.clearAuth()
   clearLocalAuthState()
-  ElMessage.error(message)
+  showErrorOnce(error, message)
 
   window.location.replace(redirectPath)
 }
@@ -74,14 +74,14 @@ instance.interceptors.response.use(
     if (res.code === BizErrorCode.SUCCESS) {
       return response.data // 返回原始 response
     } else if (res.code === 401) {
-      redirectToLogin(getResponseMessage(response.data, 'auth.sessionExpired'))
+      redirectToLogin(response.data, getResponseMessage(response.data, 'auth.sessionExpired'))
       return Promise.reject(response.data)
     } else if (res.code === BizErrorCode.FORBIDDEN) {
-      handleForbidden(response.config, getResponseMessage(response.data, 'auth.forbidden'))
+      handleForbidden(response.data, response.config, getResponseMessage(response.data, 'auth.forbidden'))
       return Promise.reject(response.data)
     } else {
       if (!response.config.suppressBusinessErrorCodes?.includes(res.code)) {
-        ElMessage.error(getResponseMessage(response.data, 'auth.requestFailed'))
+        showErrorOnce(response.data, getResponseMessage(response.data, 'auth.requestFailed'))
       }
       return Promise.reject(response.data)
     }
@@ -89,11 +89,11 @@ instance.interceptors.response.use(
   error => {
     const status = error.response?.status
     if (status === 401) {
-      redirectToLogin(getResponseMessage(error.response?.data, 'auth.sessionExpired'))
+      redirectToLogin(error, getResponseMessage(error.response?.data, 'auth.sessionExpired'))
     } else if (status === 403) {
-      handleForbidden(error.config, getResponseMessage(error.response?.data, 'auth.forbidden'))
+      handleForbidden(error, error.config, getResponseMessage(error.response?.data, 'auth.forbidden'))
     } else {
-      ElMessage.error(getResponseMessage(error.response?.data, 'auth.networkError'))
+      showErrorOnce(error, getResponseMessage(error.response?.data, 'auth.networkError'))
     }
     return Promise.reject(error)
   }

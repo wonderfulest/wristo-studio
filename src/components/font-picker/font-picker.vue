@@ -174,6 +174,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -506,7 +508,7 @@ const saveSearchIndex = async () => {
       ElMessage.error(resp.msg || t('common.saveFailed'))
     }
   } catch (e: any) {
-    ElMessage.error(e?.msg || e?.message || t('common.saveFailed'))
+    showErrorOnce(e, e?.msg || e?.message || t('common.saveFailed'))
   } finally {
     searchIndexSaving.value = false
   }

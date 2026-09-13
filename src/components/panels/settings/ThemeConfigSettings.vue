@@ -100,6 +100,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, watch, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -310,7 +312,7 @@ const handleDefaultToggle = async (val, value) => {
     ElMessage.success(t('elementSettings.defaultConfigSet'))
   } catch (e) {
     console.error('Failed to set default theme config', e)
-    ElMessage.error(t('elementSettings.defaultConfigFailed'))
+    showErrorOnce(e, t('elementSettings.defaultConfigFailed'))
     currentConfigMap.value[val].isDefault = 0
   }
 }
@@ -348,7 +350,7 @@ const saveConfig = async (val) => {
     }
   } catch (e) {
     console.error('Failed to save theme config', e)
-    ElMessage.error(t('elementSettings.saveThemeConfigFailed'))
+    showErrorOnce(e, t('elementSettings.saveThemeConfigFailed'))
   } finally {
     savingMap.value[val] = false
   }
@@ -370,7 +372,7 @@ const deleteConfig = async (val) => {
     ElMessage.success(t('elementSettings.configDeleted'))
   } catch (e) {
     console.error('Failed to delete theme config', e)
-    ElMessage.error(t('elementSettings.deleteThemeConfigFailed'))
+    showErrorOnce(e, t('elementSettings.deleteThemeConfigFailed'))
   } finally {
     deletingMap.value[val] = false
   }

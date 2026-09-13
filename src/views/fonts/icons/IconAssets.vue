@@ -64,8 +64,9 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import HeaderUploadSvg from './components/HeaderUploadSvg.vue'
@@ -135,7 +136,7 @@ const fetchPage = async () => {
     })
   } catch (e) {
     console.error('[icon-assets-page] fetch failed', { query, error: e })
-    ElMessage.error(t('icon.loadAssetsFailed'))
+    showErrorOnce(e, t('icon.loadAssetsFailed'))
   } finally {
     loading.value = false
   }

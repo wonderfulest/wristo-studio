@@ -82,10 +82,11 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, watch } from 'vue'
 import { designApi } from '@/api/wristo/design'
 import { useI18n } from '@/i18n'
-import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import type { Design, DesignPageParams } from '@/types/api/design'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
@@ -97,7 +98,6 @@ const emit = defineEmits<{
   copy: [items: DynamicImageItem[]]
 }>()
 const { t } = useI18n()
-const messageStore = useMessageStore()
 const userStore = useUserStore()
 const step = ref<'projects' | 'groups'>('projects')
 const projects = ref<Design[]>([])
@@ -134,7 +134,7 @@ const loadProjects = async () => {
   } catch (error) {
     projects.value = []
     projectTotal.value = 0
-    messageStore.error(error instanceof Error && error.message ? error.message : t('dynamicImage.loadProjectsFailed'))
+    showErrorOnce(error, error instanceof Error && error.message ? error.message : t('dynamicImage.loadProjectsFailed'))
   } finally {
     loadingProjects.value = false
   }
@@ -157,7 +157,7 @@ const selectProject = async (project: Design) => {
     if (response.code !== 0 || !response.data) throw new Error(response.msg)
     sourceGroups.value = extractDynamicImageGroups(response.data.configJson)
   } catch (error) {
-    messageStore.error(error instanceof Error && error.message ? error.message : t('dynamicImage.loadGroupsFailed'))
+    showErrorOnce(error, error instanceof Error && error.message ? error.message : t('dynamicImage.loadGroupsFailed'))
   } finally {
     loadingGroups.value = false
   }

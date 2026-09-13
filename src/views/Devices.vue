@@ -73,8 +73,9 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import type { GarminDeviceVO } from '@/types/api/garmin-device'
 import garminDevicesApi from '@/api/wristo/garminDevices'
 import { useI18n } from '@/i18n'
@@ -103,7 +104,7 @@ async function loadData(): Promise<void> {
     list.value = data?.list ?? []
     total.value = data?.total ?? 0
   } catch (e) {
-    ElMessage.error(t('device.loadFailed'))
+    showErrorOnce(e, t('device.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -133,7 +134,7 @@ async function downloadDevicePng(row: GarminDeviceVO): Promise<void> {
     a.rel = 'noopener noreferrer'
     a.click()
   } catch (e) {
-    ElMessage.error(t('device.openPngFailed'))
+    showErrorOnce(e, t('device.openPngFailed'))
   }
 }
 </script>

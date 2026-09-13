@@ -55,9 +55,10 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import AppBasicInfoCard from '@/views/meter/components/AppBasicInfoCard.vue'
 import AppMetricsCard from '@/views/meter/components/AppMetricsCard.vue'
 import AppScoreCard from '@/views/meter/components/AppScoreCard.vue'
@@ -200,8 +201,8 @@ const openDeviceDetail = async (token: string) => {
   try {
     const res = await getDeviceDetail(String(currentAppId.value), token)
     deviceDetail.value = res.data || null
-  } catch {
-    ElMessage.error(t('meter.loadDeviceDetailFailed'))
+  } catch (caughtError) {
+    showErrorOnce(caughtError, t('meter.loadDeviceDetailFailed'))
   } finally {
     deviceDetailLoading.value = false
   }
@@ -245,9 +246,9 @@ const fetchMeter = async () => {
   try {
     const res = await getAppMeter(currentAppId.value, date.value || undefined)
     meter.value = res.data || null
-  } catch {
+  } catch (caughtError) {
     meter.value = null
-    ElMessage.error(t('meter.loadMetricsFailed'))
+    showErrorOnce(caughtError, t('meter.loadMetricsFailed'))
   } finally {
     loading.value = false
   }

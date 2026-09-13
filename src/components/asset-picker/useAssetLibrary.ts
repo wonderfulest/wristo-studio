@@ -1,5 +1,5 @@
+import { showErrorOnce } from '@/utils/errorMessage'
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { analogAssetApi } from '@/api/wristo/analogAsset'
 import type { AnalogAssetType, AnalogAssetVO } from '@/types/api/analog-asset'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
@@ -81,7 +81,7 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
       }
     } catch (error) {
       options.onError?.(error)
-      if (!options.onError) ElMessage.error(t('asset.loadFailed'))
+      if (!options.onError) showErrorOnce(error, t('asset.loadFailed'))
     } finally {
       loading.value = false
     }
@@ -115,7 +115,7 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
     } catch (error) {
       asset.favoriteWeight = previousWeight
       options.onError?.(error)
-      if (!options.onError) ElMessage.error(t('asset.favoriteFailed'))
+      if (!options.onError) showErrorOnce(error, t('asset.favoriteFailed'))
     } finally {
       const next = new Set(favoritingAssetIds.value)
       next.delete(asset.id)

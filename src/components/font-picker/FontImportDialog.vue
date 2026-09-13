@@ -103,6 +103,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useDesignStore } from '@/stores/designStore'
@@ -273,7 +275,7 @@ const handleFontFileChange = async (file: any) => {
 
     selectedFile.value = file
   } catch (error) {
-    messageStore.error(t('font.loadFileFailed'))
+    showErrorOnce(error, t('font.loadFileFailed'))
     console.error('Font load error:', error)
   }
 }
@@ -324,7 +326,7 @@ const confirmUpload = async () => {
     emit('selected', created.slug)
     visibleRef.value = false
   } catch (error: any) {
-    messageStore.error(error?.response?.data?.message || t('font.uploadFailed'))
+    showErrorOnce(error, error?.response?.data?.message || t('font.uploadFailed'))
     console.error('Font upload error:', error)
   } finally {
     uploading.value = false

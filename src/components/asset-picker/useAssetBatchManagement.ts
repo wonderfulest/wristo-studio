@@ -1,3 +1,4 @@
+import { showErrorOnce } from '@/utils/errorMessage'
 import { computed, ref, type Ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { AnalogAssetVO } from '@/types/api/analog-asset'
@@ -97,8 +98,8 @@ export function useAssetBatchManagement(options: UseAssetBatchManagementOptions)
         pruneSelection([asset.id])
         ElMessage.success(t('common.deleteSuccess'))
       } else ElMessage.error(t('asset.deleteFailed'))
-    } catch {
-      ElMessage.error(t('asset.deleteFailed'))
+    } catch (caughtError) {
+      showErrorOnce(caughtError, t('asset.deleteFailed'))
     } finally {
       setDeletingIds([])
     }

@@ -102,6 +102,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import JSZip from 'jszip'
@@ -295,7 +297,7 @@ const handleSave = async () => {
     visible.value = false
   } catch (e) {
     console.error(e)
-    ElMessage.error(t('font.numberGlyphUploadFailed'))
+    showErrorOnce(e, t('font.numberGlyphUploadFailed'))
   } finally {
     saving.value = false
   }

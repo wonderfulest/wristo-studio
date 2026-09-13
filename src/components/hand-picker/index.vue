@@ -32,6 +32,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { ref, defineEmits, defineProps, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
@@ -122,7 +124,7 @@ const handleUpload = async (event) => {
     ElMessage.success(t('asset.handUploadSuccess'))
   } catch (error) {
     console.error('上传指针失败:', error)
-    ElMessage.error(t('asset.handUploadFailed'))
+    showErrorOnce(error, t('asset.handUploadFailed'))
   } finally {
     // 清空文件输入
     event.target.value = ''

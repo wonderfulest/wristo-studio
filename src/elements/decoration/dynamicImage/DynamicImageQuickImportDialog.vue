@@ -55,10 +55,11 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref } from 'vue'
 import { createLocalProjectAsset } from '@/engine/services/localProjectAsset'
 import { useI18n } from '@/i18n'
-import { useMessageStore } from '@/stores/message'
 import type { DynamicImageImportIssue, DynamicImageImportKind, DynamicImageImportPlan, MaterializedDynamicImageGroup } from './dynamicImage.quickImport'
 import { buildDynamicImageImportPlan, collectDynamicImageImportFiles, materializeDynamicImageImportGroups } from './dynamicImage.quickImport'
 
@@ -71,7 +72,6 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 const { t } = useI18n()
-const messageStore = useMessageStore()
 const imageInput = ref<HTMLInputElement | null>(null)
 const folderInput = ref<HTMLInputElement | null>(null)
 const plan = ref<DynamicImageImportPlan | null>(null)
@@ -125,7 +125,7 @@ const confirmImport = async () => {
     await props.applyGroups(groups)
     emit('update:modelValue', false)
   } catch (error) {
-    messageStore.error(error instanceof Error ? error.message : t('asset.uploadFailed'))
+    showErrorOnce(error, error instanceof Error ? error.message : t('asset.uploadFailed'))
   } finally {
     busy.value = false
   }

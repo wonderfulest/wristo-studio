@@ -207,6 +207,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, ref, onMounted } from 'vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
@@ -279,7 +281,7 @@ const loadFonts = async () => {
     fonts.value = list.map((f: any) => ({ ...f, previewFamily: f.slug || f.family }))
   } catch (error) {
     console.error('Failed to load number fonts:', error)
-    ElMessage.error(t('font.loadNumberListFailed'))
+    showErrorOnce(error, t('font.loadNumberListFailed'))
   }
 }
 

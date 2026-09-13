@@ -9,6 +9,8 @@
 </template>
 
 <script setup lang="ts">
+import { showErrorOnce } from '@/utils/errorMessage'
+
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { designApi } from '@/api/wristo/design'
@@ -55,7 +57,7 @@ onMounted(async () => {
     messageStore.error(response.msg || t('project.copyFailed'))
   } catch (error) {
     console.error('复制并打开设计失败:', error)
-    messageStore.error(getErrorMessage(error) || t('project.copyFailed'))
+    showErrorOnce(error, getErrorMessage(error) || t('project.copyFailed'))
   }
 })
 </script>

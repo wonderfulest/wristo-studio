@@ -61,6 +61,8 @@
 </template>
 
 <script setup>
+import { showErrorOnce } from '@/utils/errorMessage'
+
 /**
  * Export panel script setup
  *
@@ -75,7 +77,7 @@ import { designApi } from '@/api/wristo/design'
 import _ from 'lodash'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
-import { ElMessage, ElProgress, ElLoading, ElTag, ElMessageBox } from 'element-plus'
+import { ElProgress, ElLoading, ElTag, ElMessageBox } from 'element-plus'
 import { useMessageStore } from '@/stores/message'
 import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
@@ -165,7 +167,7 @@ const prepareExportConfig = async (config) => {
     return await resolvePackageAssetUrls(config)
   } catch (error) {
     console.error('Failed to resolve package asset URLs:', error)
-    messageStore.error(error?.message || t('common.saveFailed'))
+    showErrorOnce(error, error?.message || t('common.saveFailed'))
     return null
   }
 }
@@ -190,7 +192,7 @@ const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
     })
   } catch (error) {
     console.error('Failed to upload design asset bundle:', error)
-    messageStore.error(error?.message || t('common.saveFailed'))
+    showErrorOnce(error, error?.message || t('common.saveFailed'))
     throw error
   }
 }
@@ -360,7 +362,7 @@ const uploadApp = async () => {
     coverImageSaveChoice = await getCoverImageSaveChoice()
   } catch (error) {
     console.error('Failed to check the existing cover image:', error)
-    messageStore.error(error?.message || t('export.loadDesignFailed'))
+    showErrorOnce(error, error?.message || t('export.loadDesignFailed'))
     return -1
   }
   if (coverImageSaveChoice === 'abort') return -1

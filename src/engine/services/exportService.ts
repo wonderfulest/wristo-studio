@@ -1,3 +1,4 @@
+import { showErrorOnce } from '@/utils/errorMessage'
 import { findInvalidUnicodePaths } from './unicodeValidation'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone, type SecondTimeZoneConfig } from '@/utils/secondTimeZone'
@@ -433,7 +434,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
     } catch (err) {
       console.error('Failed to encode background element with exception:', bgObj, err)
       const message = (err as Error)?.message || 'Encode background element failed'
-      ElMessage.error(message)
+      showErrorOnce(err, message)
       return null
     }
   }
@@ -463,7 +464,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       } catch (err) {
         console.error('Failed to encode element with exception:', element, err)
         const message = (err as Error)?.message || 'Encode element failed'
-        ElMessage.error(message)
+        showErrorOnce(err, message)
         return null
       }
       if (!encodeConfig) {
@@ -566,7 +567,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   } catch (err) {
     console.error('Generate config failed:', err)
     const message = (err as Error)?.message || 'Failed to generate configuration'
-    if (typeof document !== 'undefined') ElMessage.error(message)
+    if (typeof document !== 'undefined') showErrorOnce(err, message)
     return null
   }
 }

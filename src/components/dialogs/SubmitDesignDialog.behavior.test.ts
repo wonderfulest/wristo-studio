@@ -48,6 +48,8 @@ vi.mock('@/stores/user', () => ({
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('element-plus', () => ({ ElMessage: { error: vi.fn(), success: vi.fn() } }))
 
+import { ElMessage } from 'element-plus'
+import { showErrorOnce } from '@/utils/errorMessage'
 import SubmitDesignDialog from './SubmitDesignDialog.vue'
 
 const tag = (id: number, tagGroup = 'style', status = 1): ProductTag => ({
@@ -218,6 +220,33 @@ describe('SubmitDesignDialog style tag behavior', () => {
     })
     expect(mocks.messageError).toHaveBeenCalledWith('designSource.duplicate')
     expect(mocks.submitDesign).not.toHaveBeenCalled()
+  })
+
+  it('keeps the server failure visible once and allows retry', async () => {
+    const error = { code: 500, msg: 'Contact the team' }
+    mocks.submitDesign.mockImplementationOnce(async () => {
+      showErrorOnce(error, error.msg)
+      throw error
+    })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(ElMessage.error).toHaveBeenCalledTimes(1)
+    expect(ElMessage.error).toHaveBeenCalledWith(error.msg)
+    expect(mocks.messageError).not.toHaveBeenCalled()
+    expect(wrapper.find('.dialog').exists()).toBe(true)
+    expect(wrapper.emitted('success')).toBeUndefined()
+    await confirm(wrapper)
+    expect(wrapper.emitted('success')).toEqual([[{ mode: 'submit' }]])
+  })
+
+  it('shows a fallback for a failure that has not been reported', async () => {
+    mocks.submitDesign.mockRejectedValueOnce(new Error('local failure'))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(ElMessage.error).toHaveBeenCalledOnce()
+    expect(ElMessage.error).toHaveBeenCalledWith('submitDesign.submitFailed')
   })
 
 })
