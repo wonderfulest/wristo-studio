@@ -27,6 +27,7 @@ import {
   type ImageVariantManifest,
 } from '@/engine/services/imageVariantBundle'
 import type { VisualThemesConfig } from '@/types/visualTheme'
+import { validateLayoutConfig } from './layoutConfig'
 
 type ManifestIconAsset = {
   sha256?: string
@@ -1151,6 +1152,8 @@ export async function buildWrtDesignPackage(
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
 ): Promise<File> {
+  const layoutErrors = validateLayoutConfig(config.properties || {}, config.elements || [])
+  if (layoutErrors.length) throw new Error(layoutErrors.join(' '))
   return buildDesignAssetArchive(config, options, {
     format: WRT_FORMAT,
     version: WRT_VERSION,

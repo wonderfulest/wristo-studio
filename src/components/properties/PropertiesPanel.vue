@@ -301,6 +301,7 @@
     <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
     <DialPropertyDialog ref="dialPropertyDialog" @confirm="handlePropertyConfirm" />
     <DatePropertyDialog ref="datePropertyDialog" @confirm="handlePropertyConfirm" />
+    <LayoutPropertyDialog ref="layoutPropertyDialog" @confirm="handlePropertyConfirm" />
   </el-drawer>
 </template>
 
@@ -326,6 +327,8 @@ import ChartPropertyDialog from '@/components/properties/dialogs/ChartPropertyDi
 import TextPropertyDialog from '@/components/properties/dialogs/TextPropertyDialog.vue'
 import DialPropertyDialog from '@/components/properties/dialogs/DialPropertyDialog.vue'
 import DatePropertyDialog from '@/components/properties/dialogs/DatePropertyDialog.vue'
+import LayoutPropertyDialog from '@/components/properties/dialogs/LayoutPropertyDialog.vue'
+import { validateLayoutConfig } from '@/engine/services/layoutConfig'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
@@ -359,6 +362,7 @@ const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const dialPropertyDialog = ref(null)
 const datePropertyDialog = ref(null)
+const layoutPropertyDialog = ref(null)
 const titleEditorRef = ref(null)
 const editingTitleKey = ref('')
 const editingTitleValue = ref('')
@@ -371,7 +375,7 @@ const visualThemeStore = useVisualThemeStore()
 const designStore = useDesignStore()
 const { t } = useI18n()
 
-const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial', 'date']
+const typeOrder = ['color', 'layout', 'data', 'goal', 'chart', 'text', 'dial', 'date']
 const addablePropertyTypes = typeOrder
 
 const getPropertyDisplayValue = (key, prop) =>
@@ -380,6 +384,7 @@ const getPropertyDisplayValue = (key, prop) =>
 const getPropertyOptionCount = (prop) => {
   if (prop.type === 'data') return prop.metricSymbols?.length || 0
   if (prop.type === 'date') return prop.options?.length || 0
+  if (prop.type === 'layout') return prop.options?.length || 0
   if (prop.type === 'color' || prop.type === 'goal') return prop.options?.length || 0
   return null
 }
@@ -392,6 +397,7 @@ const typeMeta = computed(() => ({
   text: { label: t('property.textString'), icon: Document },
   dial: { label: 'Dial', icon: Histogram },
   date: { label: t('property.dateSelect'), icon: Calendar },
+  layout: { label: 'Layout', icon: Document },
 }))
 
 const addPropertyTypes = computed(() => addablePropertyTypes.map((type) => ({
@@ -588,6 +594,8 @@ onMounted(() => {
       dialPropertyDialog.value?.show({ dialMode: request.dialMode })
     } else if (request?.type === 'date') {
       datePropertyDialog.value?.show()
+    } else if (request?.type === 'layout') {
+      nextTick(() => layoutPropertyDialog.value?.show())
     }
   })
 })
@@ -613,10 +621,16 @@ const addProperty = (type) => {
     dialPropertyDialog.value?.show()
   } else if (type === 'date') {
     datePropertyDialog.value?.show()
+  } else if (type === 'layout') {
+    layoutPropertyDialog.value?.show()
   }
 }
 // 编辑属性
 const editProperty = (key, prop, elementId = null) => {
+  if (prop.type === 'layout') {
+    layoutPropertyDialog.value?.show({ ...prop, propertyKey: key })
+    return
+  }
   if (prop.type === 'color') {
     colorPropertyDialog.value?.show({
       ...prop,
@@ -678,6 +692,11 @@ const bindProperty = async (key, type) => {
 
 // 删除属性
 const deleteProperty = async (key) => {
+  if (propertiesStore.allProperties[key]?.type === 'layout'
+    && elementDataStore.elements.some(snapshot => snapshot.config?.layoutVisibility?.propertyKey === key)) {
+    ElMessage.warning('Update element layout bindings before deleting this parameter.')
+    return
+  }
   if (propertiesStore.allProperties[key]?.type === 'date') {
     const isBound = elementDataStore.elements.some((snapshot) => snapshot.config?.dateProperty === key)
       || (canvasStore.canvas?.getObjects?.() || []).some((element) => element?.dateProperty === key)
@@ -735,6 +754,10 @@ const deleteProperty = async (key) => {
 // 处理属性确认
 const handlePropertyConfirm = async (propertyData) => {
   const { isEdit, dataOptions = [], ...propertyPayload } = propertyData
+  if (propertyPayload.type === 'layout') {
+    const errors = validateLayoutConfig({ ...propertiesStore.allProperties, [propertyPayload.key]: { ...propertyPayload, value: propertyPayload.defaultValue } }, elementDataStore.elements.map(snapshot => snapshot.config))
+    if (errors.length) { ElMessage.error(errors.join(' ')); return }
+  }
   if (!isEdit && propertiesStore.allProperties[propertyPayload.key]) {
     ElMessage.error(t('property.keyDuplicate'))
     return
@@ -784,6 +807,7 @@ const getChartOption = (prop) => {
 }
 
 const getPropertyPreview = (prop) => {
+  if (prop.type === 'layout') return `Default: ${prop.options?.find(option => option.value === prop.value)?.label || '-'}`
   if (prop.type === 'goal') return getGoalOption(prop)?.label || prop.value || '-'
   if (prop.type === 'chart') return getChartOption(prop)?.label || prop.value || '-'
   if (prop.type === 'data') return getDataOption(prop)?.label || prop.value || '-'

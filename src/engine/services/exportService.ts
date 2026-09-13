@@ -32,6 +32,7 @@ import {
 import { validateDataGoalBindings } from '@/engine/services/propertyBindingValidation'
 import { toPlainRuntimeConfig } from '@/engine/services/runtimeConfigSerialization'
 import { validateVisualThemes } from '@/engine/services/visualThemeService'
+import { validateLayoutConfig } from '@/engine/services/layoutConfig'
 import type { VisualThemesConfig, VisualThemeAssetSlot } from '@/types/visualTheme'
 import {
   VISUAL_THEME_ASSET_BASE_FIELDS,
@@ -309,6 +310,9 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.visualThemes,
     config.properties,
     config.elements as unknown as Array<Record<string, unknown>>,
+    // Save/export embeds asset bytes in WRT; the archive builder rejects unreadable
+    // blobs. Imported theme images do not need separate library database records.
+    { allowEmbeddedBlobAssets: true },
   )
   const settingsBudget = calculateConnectIqSettingsBudget({
     properties: config.properties,
@@ -323,6 +327,7 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     }
   }
   const errors = [...dateErrors, ...visualThemeErrors]
+  errors.push(...validateLayoutConfig(config.properties, config.elements))
   if (errors.length > 0) {
     if (typeof document !== 'undefined') {
       ElMessage.error(errors.join(t('common.listSeparator')))
@@ -356,6 +361,11 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
   const baseElementById = new Map((visualThemes?.enabled ? baseElements : [])
     .filter((element) => element?.id != null)
     .map((element) => [String(element.id), element]))
+  const layoutMemberIds = new Set(Object.values(properties).some(property => property.type === 'layout')
+    ? (layoutGroups ?? []).flatMap(group => group.members.map(member => member.elementId)) : [])
+  const layoutBaseById = new Map(baseElements
+    .filter(element => layoutMemberIds.has(String(element.id)))
+    .map(element => [String(element.id), element]))
 
   if (!canvas || !canvas.getObjects().length) {
     return null
@@ -472,6 +482,13 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         return null
       }
       encodeConfig = migrateWeekdayTokens(encodeConfig)
+      // Layout previews project group members on the canvas without changing authoring positions.
+      const layoutBase = layoutBaseById.get(String(encodeConfig.id))
+      if (layoutBase) {
+        for (const field of ['left', 'top', 'topBase'] as const) {
+          if (Object.prototype.hasOwnProperty.call(layoutBase, field)) encodeConfig[field] = layoutBase[field]
+        }
+      }
       if (eleType === 'date') {
         Object.assign(encodeConfig, resolveDatePropertyConfig(encodeConfig as any, properties))
       }
@@ -549,6 +566,8 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
       }
     }
 
+    const layoutErrors = validateLayoutConfig(config.properties, config.elements)
+    if (layoutErrors.length) throw new Error(layoutErrors.join(' '))
     if (layoutGroups) {
       config.layoutGroups = normalizeAndValidateLayoutGroups(layoutGroups, config.elements)
     }

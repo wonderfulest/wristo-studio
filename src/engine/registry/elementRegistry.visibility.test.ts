@@ -31,11 +31,14 @@ describe('element registry dynamic visibility', () => {
       top: 20,
       displayStates: { active: true, ambient: false },
       visibility,
+      layoutVisibility: { propertyKey: 'layout', values: [1, 2] },
     } as any)
     const decoded = decodeElementConfig(encoded!)
 
     expect((encoded as any).visibility).toEqual(visibility)
     expect((decoded as any).visibility).toEqual(visibility)
+    expect(encoded?.layoutVisibility).toEqual({ propertyKey: 'layout', values: [1, 2] })
+    expect(decoded?.layoutVisibility).toEqual(encoded?.layoutVisibility)
   })
 
   it('preserves a custom layer name through the shared encoder', () => {

@@ -70,6 +70,12 @@ export const encodeElementByRegistry = (
   if ((element as any).visibility !== undefined) {
     ;(normalized as any).visibility = (element as any).visibility
   }
+  if (element.layoutVisibility !== undefined) {
+    normalized.layoutVisibility = element.layoutVisibility == null ? null : {
+      propertyKey: element.layoutVisibility.propertyKey,
+      values: [...element.layoutVisibility.values],
+    }
+  }
   return normalized
 }
 

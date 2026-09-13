@@ -3,6 +3,7 @@ import { FabricObject, TextProps } from 'fabric'
 import type { AnyElementConfig } from './elements'
 import type { ElementDisplayStates } from '@/utils/displayStates'
 import type { DynamicValue } from '@/engine/expression/types'
+import type { LayoutVisibility } from '@/types/layout'
 
 export type ElementType = string
 export type ElementConfig = AnyElementConfig
@@ -20,5 +21,6 @@ export type FabricElement = (FabricObject & Partial<TextProps>) & {
   dateProperty?: string
   displayStates?: ElementDisplayStates
   visibility?: DynamicValue<boolean>
+  layoutVisibility?: LayoutVisibility | null
   [key: string]: any
 }

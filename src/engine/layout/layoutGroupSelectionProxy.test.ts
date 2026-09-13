@@ -19,6 +19,7 @@ import {
   disposeLayoutGroupProxy,
   selectLayoutGroupProxy,
   syncLayoutGroupProxyBounds,
+  refreshLayoutGroupProxies,
 } from './layoutGroupSelectionProxy'
 
 describe('layoutGroupSelectionProxy', () => {
@@ -68,6 +69,14 @@ describe('layoutGroupSelectionProxy', () => {
     useLayoutGroupStore().updateGroup('row-1', { left: 120 })
     syncLayoutGroupProxyBounds('row-1')
     expect(proxy.left).toBe(99)
+
+    data.visible = false
+    unit.visible = false
+    refreshLayoutGroupProxies()
+    expect(proxy).toMatchObject({ visible: false, evented: false, selectable: false })
+    data.visible = true
+    refreshLayoutGroupProxies()
+    expect(proxy).toMatchObject({ visible: true, evented: true, selectable: true, width: 30 })
 
     disposeLayoutGroupProxy('row-1')
     expect(useCanvasStore().activeLayoutGroupIds).toEqual([])

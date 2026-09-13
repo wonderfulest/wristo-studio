@@ -14,6 +14,9 @@ import {
   type ElementDisplayStates,
 } from '@/utils/displayStates'
 import { reflowAllLayoutGroups } from '@/engine/layout/studioLayoutController'
+import { usePropertiesStore } from './properties'
+import { useLayoutPreviewStore } from './layoutPreviewStore'
+import { refreshLayoutGroupProxies } from '@/engine/layout/layoutGroupSelectionProxy'
 
 export const useLayerStore = defineStore('layerStore', {
   // state
@@ -41,7 +44,9 @@ export const useLayerStore = defineStore('layerStore', {
 
   actions: {
     applyPreviewVisibility(): void {
+      let changed = false
       this.layers.forEach((layer) => {
+        const previousVisible = layer.visible
         const displayStates = normalizeDisplayStates(layer.displayStates)
         layer.displayStates = displayStates
         const tokenValues = useExpressionPreviewStore().tokenValues
@@ -52,7 +57,11 @@ export const useLayerStore = defineStore('layerStore', {
               previewMode: this.previewMode,
               visibility: (layer.element as any)?.visibility ?? layer.visibility,
               tokenValues,
+              layoutVisibility: layer.element?.layoutVisibility ?? useElementDataStore().getElementConfig(layer.id)?.layoutVisibility,
+              properties: usePropertiesStore().allProperties,
+              layoutValues: useLayoutPreviewStore().values,
             })
+        changed ||= layer.visible !== previousVisible
         if (layer.element) {
           ;(layer.element as any).displayStates = displayStates
           if (typeof layer.element.set === 'function') {
@@ -66,6 +75,12 @@ export const useLayerStore = defineStore('layerStore', {
           }
         }
       })
+      if (changed) {
+        reflowAllLayoutGroups({ persistPositions: false })
+        refreshLayoutGroupProxies()
+        const activeObjects = this.baseStore.canvas?.getActiveObjects?.() || []
+        if (activeObjects.some((element: any) => element.visible === false)) this.baseStore.canvas?.discardActiveObject?.()
+      }
       this.baseStore.canvas?.renderAll?.()
     },
     setPreviewMode(mode: DisplayStateMode): void {
@@ -74,6 +89,7 @@ export const useLayerStore = defineStore('layerStore', {
       reflowAllLayoutGroups()
     },
     addLayer(element: MinimalFabricLike): void {
+      if (element?.excludeFromExport) return
       if (!element || !element.id || !element.eleType) {
         console.error('[LayerStore:addLayer] 无效的元素', {
           hasElement: !!element,
@@ -86,6 +102,7 @@ export const useLayerStore = defineStore('layerStore', {
       const storedConfig = useElementDataStore().getElementConfig(id) as any
       const displayStates = normalizeDisplayStates((element as any).displayStates ?? storedConfig?.displayStates)
       const visibility = (element as any).visibility ?? storedConfig?.visibility
+      element.layoutVisibility = element.layoutVisibility ?? storedConfig?.layoutVisibility
       ;(element as any).displayStates = displayStates
       ;(element as any).visibility = visibility
       const existing = this.layers.find((l) => l.id === id)
@@ -115,7 +132,7 @@ export const useLayerStore = defineStore('layerStore', {
     },
 
     setLayers(nextLayers: LayerElement[]): void {
-      this.layers = nextLayers.map((l) => ({
+      this.layers = nextLayers.filter(l => !l.element?.excludeFromExport).map((l) => ({
         ...l,
         displayStates: normalizeDisplayStates(l.displayStates ?? (l.element as any)?.displayStates),
         visibility: l.visibility ?? (l.element as any)?.visibility,
@@ -149,7 +166,7 @@ export const useLayerStore = defineStore('layerStore', {
         }
       }
       useElementDataStore().patchElement(layerId, { displayStates: normalized } as any)
-      this.baseStore.canvas?.renderAll?.()
+      this.applyPreviewVisibility()
     },
     toggleLayerVisibility(layerId: string): void {
       const layer = this.layers.find((l) => l.id === layerId)

@@ -6,6 +6,7 @@ import type { DataTypeOption } from '@/types/dataCatalog'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataNumberFormat'
 import type { DialProgressMode } from '@/types/settings'
+import { useLayoutPreviewStore } from './layoutPreviewStore'
 
 const withoutLegacyLocalizedTitles = (properties?: PropertiesMap): PropertiesMap => Object.fromEntries(
   Object.entries(properties || {}).map(([key, value]) => {
@@ -118,10 +119,12 @@ export const usePropertiesStore = defineStore('propertiesStore', {
     },
 
     loadProperties(properties?: PropertiesMap) {
+      useLayoutPreviewStore().reset()
       this.properties = withoutLegacyLocalizedTitles(properties)
     },
 
     loadDataPropertyConfig(properties?: PropertiesMap, dataOptions?: DataOptionsMap) {
+      useLayoutPreviewStore().reset()
       this.properties = withoutLegacyLocalizedTitles(properties)
       this.dataOptions = dataOptions || {}
     },
@@ -154,6 +157,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
 
     // Clear all properties - call this when creating a new design
     clearProperties() {
+      useLayoutPreviewStore().reset()
       this.properties = {}
       this.dataOptions = {}
       this.secondTimeZone = normalizeSecondTimeZone()
@@ -198,6 +202,7 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       errorMessage?: string
       dialMode?: DialProgressMode
       metricSymbols?: string[]
+      nextLayoutValue?: number
     }) {
       const defaultValue =
         propertyData.defaultValue !== undefined ? propertyData.defaultValue : this.properties[propertyData.key]?.value || propertyData.options?.[0]?.value || this.getDefaultValue(propertyData.type)
@@ -210,7 +215,8 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         prompt: propertyData.prompt,
         errorMessage: propertyData.errorMessage,
         dialMode: propertyData.dialMode,
-        metricSymbols: propertyData.metricSymbols
+        metricSymbols: propertyData.metricSymbols,
+        ...(propertyData.type === 'layout' ? { nextLayoutValue: propertyData.nextLayoutValue } : {})
       } as PropertyItem
       if (propertyData.type === 'data') this.pruneDataOptions()
     },

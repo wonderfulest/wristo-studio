@@ -52,12 +52,13 @@ export function syncLayersFromCanvas(): void {
 
   const objects = (canvas.getObjects?.() || []) as any[]
   const backgroundObj = objects.find((o) => o?.eleType === 'background')
-  const userObjects = objects.filter((o) => o?.id != null && o?.eleType && !isFixedLayer(o))
+  const userObjects = objects.filter((o) => o?.id != null && o?.eleType && !isFixedLayer(o) && !o.excludeFromExport)
   const elementDataStore = useElementDataStore()
 
   const nextLayers: LayerElement[] = userObjects.map((obj) => {
     const id = String(obj.id)
     const storedConfig = elementDataStore.getElementConfig(id) as any
+    if (storedConfig && Object.prototype.hasOwnProperty.call(storedConfig, 'layoutVisibility')) obj.layoutVisibility = storedConfig.layoutVisibility
     const displayStates = normalizeDisplayStates(obj.displayStates ?? storedConfig?.displayStates)
     obj.displayStates = displayStates
     return {
@@ -75,6 +76,7 @@ export function syncLayersFromCanvas(): void {
   if (backgroundObj) {
     const bgId = String(backgroundObj.id ?? 'background')
     const storedConfig = elementDataStore.getElementConfig(bgId) as any
+    if (storedConfig && Object.prototype.hasOwnProperty.call(storedConfig, 'layoutVisibility')) backgroundObj.layoutVisibility = storedConfig.layoutVisibility
     const locked = Boolean(backgroundObj.locked ?? isDefaultBackgroundElement(backgroundObj))
     const selectable = Boolean(backgroundObj.selectable ?? !locked)
     const displayStates = normalizeDisplayStates(backgroundObj.displayStates ?? storedConfig?.displayStates)

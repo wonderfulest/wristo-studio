@@ -22,6 +22,7 @@
           <span>{{ t('common.save') }}</span>
         </el-menu-item>
         <VisualThemeQuickSelect @edit="openVisualThemeEditor" />
+        <LayoutQuickSelect />
 
         <!-- Main menu divider -->
         <el-divider direction="vertical" class="menu-divider" />
@@ -237,6 +238,7 @@ import AppMenuIndicator from '@/components/layout/app-menu/AppMenuIndicator.vue'
 import AppMenuHelp from '@/components/layout/app-menu/AppMenuHelp.vue'
 import AppMenuWeatherGroup from '@/components/layout/app-menu/AppMenuWeatherGroup.vue'
 import VisualThemeQuickSelect from '@/components/layout/app-menu/VisualThemeQuickSelect.vue'
+import LayoutQuickSelect from '@/components/layout/app-menu/LayoutQuickSelect.vue'
 import VisualThemeSettings from '@/components/panels/settings/VisualThemeSettings.vue'
 import { useVisualThemePreview } from '@/composables/useVisualThemePreview'
 import { useI18n } from '@/i18n'

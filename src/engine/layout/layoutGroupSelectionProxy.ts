@@ -12,13 +12,16 @@ export type LayoutGroupSelectionProxy = Rect & {
 const proxies = new Map<string, LayoutGroupSelectionProxy>()
 
 const proxyPatchForGroup = (groupId: string) => {
-  const projection = reflowLayoutGroup(groupId) ?? getLayoutGroupProjection(groupId)
+  const projection = reflowLayoutGroup(groupId, { persistPositions: false }) ?? getLayoutGroupProjection(groupId)
   if (!projection) return null
   return {
     left: projection.left + projection.width / 2,
     top: projection.top + projection.height / 2,
     width: Math.max(1, projection.width),
     height: Math.max(1, projection.height),
+    visible: projection.members.length > 0,
+    evented: projection.members.length > 0,
+    selectable: projection.members.length > 0,
   }
 }
 
@@ -78,7 +81,7 @@ export function selectLayoutGroupProxy(groupId: string): LayoutGroupSelectionPro
   canvas.discardActiveObject?.()
   const proxy = ensureLayoutGroupProxy(groupId)
   if (!proxy) return null
-  canvas.setActiveObject?.(proxy)
+  if (proxy.visible) canvas.setActiveObject?.(proxy)
   canvasStore.setActiveLayoutGroupIds([groupId])
   canvas.requestRenderAll?.()
   return proxy
@@ -86,6 +89,10 @@ export function selectLayoutGroupProxy(groupId: string): LayoutGroupSelectionPro
 
 export function getLayoutGroupProxy(groupId: string): LayoutGroupSelectionProxy | null {
   return proxies.get(groupId) ?? null
+}
+
+export function refreshLayoutGroupProxies(): void {
+  for (const groupId of proxies.keys()) syncLayoutGroupProxyBounds(groupId)
 }
 
 export function disposeLayoutGroupProxy(groupId: string): void {

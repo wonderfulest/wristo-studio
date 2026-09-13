@@ -158,6 +158,7 @@ export function validateVisualThemes(
   visualThemes: VisualThemesConfig | undefined,
   propertiesOrBaseElements: PropertiesMap | Array<Record<string, unknown>> = {},
   baseElements?: Array<Record<string, unknown>>,
+  options: { allowEmbeddedBlobAssets?: boolean } = {},
 ): string[] {
   if (!visualThemes) return []
 
@@ -228,6 +229,7 @@ export function validateVisualThemes(
       if (
         asset?.imageUrl?.trim().toLocaleLowerCase().startsWith('blob:')
         && !isPositiveInteger(asset.assetId)
+        && !options.allowEmbeddedBlobAssets
       ) {
         errors.push(`Theme "${themeName}" ${slot} requires a persistent assetId.`)
       }

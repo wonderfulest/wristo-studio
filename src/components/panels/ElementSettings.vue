@@ -2,6 +2,7 @@
   <!-- 整组设置 -->
   <LayoutGroupSettings v-if="activeLayoutGroupId" />
   <GroupSettings v-else-if="activeElements.length > 1" :elements="activeElements"></GroupSettings>
+  <LayoutVisibilityField :element-ids="layoutBindingElementIds" :apply-patch="layoutBindingElementIds.length === 1 ? applyConfigPatch : undefined" />
   <!-- 单个元素设置 -->
   <div class="settings-panel" v-if="activeElements.length == 1">
     <div class="settings-header">
@@ -37,6 +38,8 @@ import { useLayerStore } from '@/stores/layerStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import LayoutGroupSettings from '@/components/panels/settings/LayoutGroupSettings.vue'
 import VisibilityExpressionField from '@/components/panels/settings/VisibilityExpressionField.vue'
+import LayoutVisibilityField from '@/components/panels/settings/LayoutVisibilityField.vue'
+import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { getSettingsComponent as getRegistrySettingsComponent } from '@/engine/registry/settingsRegistry'
 import * as elementManager from '@/engine/managers/elementManager'
 import type { FabricElement, ElementType } from '@/types/element'
@@ -51,6 +54,11 @@ const canvasStore = useCanvasStore()
 const elementDataStore = useElementDataStore()
 const historyStore = useHistoryStore()
 const layerStore = useLayerStore()
+const layoutGroupStore = useLayoutGroupStore()
+const layoutBindingElementIds = computed(() => [...new Set([
+  ...canvasStore.activeIds,
+  ...canvasStore.activeLayoutGroupIds.flatMap(id => layoutGroupStore.groups.find(group => group.id === id)?.members.map(member => member.elementId) ?? []),
+])])
 const activeLayoutGroupId = computed(() => canvasStore.activeIds.length === 0
   && canvasStore.activeLayoutGroupIds.length === 1
   ? canvasStore.activeLayoutGroupIds[0]

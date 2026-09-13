@@ -75,6 +75,9 @@ export function applySharedElementPatch(
   element: FabricElement | Record<string, unknown>,
   patch: Partial<AnyElementConfig> | Record<string, unknown>,
 ): void {
+  if (Object.prototype.hasOwnProperty.call(patch, 'layoutVisibility')) {
+    element.layoutVisibility = patch.layoutVisibility
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'visibility')) {
     const visibility = (patch as any).visibility
     ;(element as any).visibility = visibility?.mode === 'expression' && typeof visibility.expression?.source === 'string'

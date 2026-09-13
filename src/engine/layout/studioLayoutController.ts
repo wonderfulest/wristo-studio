@@ -8,6 +8,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { useLayerStore } from '@/stores/layerStore'
+import { usePropertiesStore } from '@/stores/properties'
 
 const projections = new Map<string, HorizontalLayoutResult>()
 const pendingGroups = new Set<string>()
@@ -38,7 +39,7 @@ export function getLayoutGroupProjection(groupId: string): HorizontalLayoutResul
   return projections.get(groupId) ?? null
 }
 
-export function reflowLayoutGroup(groupId: string): HorizontalLayoutResult | null {
+export function reflowLayoutGroup(groupId: string, options: { persistPositions?: boolean } = {}): HorizontalLayoutResult | null {
   if (applyingProjection) return projections.get(groupId) ?? null
   const group = useLayoutGroupStore().groups.find((candidate) => candidate.id === groupId)
   if (!group) {
@@ -46,6 +47,9 @@ export function reflowLayoutGroup(groupId: string): HorizontalLayoutResult | nul
     return null
   }
   const mode = useLayerStore().previewMode
+  // With global variants, anchors and member offsets are canonical; reflowed coordinates
+  // are only a projection, including subsequent simulator and power-mode refreshes.
+  const persistPositions = options.persistPositions ?? !Object.values(usePropertiesStore().allProperties).some(property => property.type === 'layout')
   const measured = group.members.map((member) => {
     const element = getCanvasElementById(member.elementId)
     const measurement = element
@@ -76,7 +80,7 @@ export function reflowLayoutGroup(groupId: string): HorizontalLayoutResult | nul
       const positioned = positionedById.get(member.elementId)
       if (!positioned) return
       measurement.placeAtVisualCenter(positioned.centerX, positioned.centerY)
-      persistElementPosition(element)
+      if (persistPositions) persistElementPosition(element)
     })
   } finally {
     applyingProjection = false
@@ -86,8 +90,8 @@ export function reflowLayoutGroup(groupId: string): HorizontalLayoutResult | nul
   return result
 }
 
-export function reflowAllLayoutGroups(): void {
-  useLayoutGroupStore().groups.forEach((group) => reflowLayoutGroup(group.id))
+export function reflowAllLayoutGroups(options: { persistPositions?: boolean } = {}): void {
+  useLayoutGroupStore().groups.forEach((group) => reflowLayoutGroup(group.id, options))
 }
 
 export function scheduleReflowForElement(elementId: string): void {
@@ -100,7 +104,7 @@ export function scheduleReflowForElement(elementId: string): void {
     reflowScheduled = false
     const groupIds = [...pendingGroups]
     pendingGroups.clear()
-    groupIds.forEach(reflowLayoutGroup)
+    groupIds.forEach(groupId => reflowLayoutGroup(groupId))
   })
 }
 

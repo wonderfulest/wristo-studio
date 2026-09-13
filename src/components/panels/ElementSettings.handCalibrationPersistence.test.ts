@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@/stores/canvasStore', () => ({
   useCanvasStore: () => ({
     activeIds: ['minute-1'],
+    activeLayoutGroupIds: [],
     canvas: { getObjects: () => [mocks.hand] },
   }),
 }))
@@ -55,6 +56,7 @@ vi.mock('@/stores/historyStore', () => ({
 vi.mock('@/stores/layerStore', () => ({
   useLayerStore: () => ({ previewMode: 'active', layers: [] }),
 }))
+vi.mock('@/stores/layoutGroupStore', () => ({ useLayoutGroupStore: () => ({ groups: [] }) }))
 vi.mock('@/engine/managers/elementManager', () => ({
   updateElementById: mocks.updateElementById,
 }))
@@ -100,6 +102,7 @@ describe('ElementSettings hand calibration persistence', () => {
         stubs: {
           Icon: true,
           VisibilityExpressionField: true,
+          LayoutVisibilityField: true,
         },
       },
     })

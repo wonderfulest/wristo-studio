@@ -5,7 +5,7 @@ describe('PropertiesPanel shared date settings contract', () => {
   const source = readFileSync(new URL('./PropertiesPanel.vue', import.meta.url), 'utf8')
 
   it('lists date properties from the shared property store', () => {
-    expect(source).toContain("const typeOrder = ['color', 'data', 'goal', 'chart', 'text', 'dial', 'date']")
+    expect(source).toMatch(/const typeOrder = \[[^\]]*'date'/)
     expect(source).toContain('Object.entries(propertiesStore.allProperties)')
     expect(source).not.toContain('DateFormatter${index}')
   })

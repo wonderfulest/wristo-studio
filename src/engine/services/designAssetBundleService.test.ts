@@ -10,6 +10,7 @@ const { getWeatherConditions } = vi.hoisted(() => ({
 }))
 
 vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn() } })
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
     value: { getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 },
@@ -45,6 +46,23 @@ describe('font asset collection', () => {
 })
 
 describe('archive progress', () => {
+  it('round-trips layout defaults, element membership and independent dynamic conditions', async () => {
+    setActivePinia(createPinia())
+    const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const { usePropertiesStore } = await import('@/stores/properties')
+    const { useLayoutPreviewStore } = await import('@/stores/layoutPreviewStore')
+    const config = newProjectConfig('{}', 'layout-roundtrip', 'Layouts', 'eng')
+    config.properties = { layout: { type: 'layout', title: 'Layout', value: 1, options: [{ label: 'Heart rate', value: 1 }, { label: 'Time', value: 2 }] } }
+    config.elements = [{ id: 'shape', eleType: 'rectangle', left: 227, top: 350, width: 80, height: 20, originX: 'center', originY: 'center', fill: '#ffffff', layoutVisibility: { propertyKey: 'layout', values: [1] }, visibility: { mode: 'literal', value: false } } as any]
+    usePropertiesStore().loadProperties(config.properties)
+    useLayoutPreviewStore().select('layout', 2)
+    const loaded = await readWrtDesignPackage(await buildWrtDesignPackage(config))
+    expect(loaded.config.properties.layout).toEqual(config.properties.layout)
+    expect(loaded.config.elements[0].layoutVisibility).toEqual({ propertyKey: 'layout', values: [1] })
+    expect(loaded.config.elements[0].visibility).toEqual({ mode: 'literal', value: false })
+    expect(JSON.stringify(loaded.config)).not.toContain('layoutPreview')
+  })
   it('round-trips a newly created empty API project', async () => {
     setActivePinia(createPinia())
     const { newProjectConfig } = await import('@/views/designs/newProjectConfig')

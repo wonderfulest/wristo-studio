@@ -88,6 +88,7 @@
                         @keydown.enter.prevent="commitLayerName(layer)"
                         @keydown.esc.prevent="cancelRenaming" />
                       <span v-else class="layer-name">{{ getLayerDisplayName(layer) }}</span>
+                      <small v-if="layoutLabel(layer.id)" class="layout-badge" :title="layoutLabel(layer.id)">{{ layoutLabel(layer.id) }}</small>
                     </span>
                   </div>
                   <div class="layer-actions">
@@ -210,6 +211,13 @@ const elementDataStore = useElementDataStore()
 const propertiesStore = usePropertiesStore()
 const layoutGroupStore = useLayoutGroupStore()
 const { locale, t } = useI18n()
+
+const layoutLabel = (id: string): string => {
+  const binding = elementDataStore.getElementConfig(String(id))?.layoutVisibility
+  if (!binding) return ''
+  const property = propertiesStore.allProperties[binding.propertyKey]
+  return binding.values.map(value => property?.options?.find(option => option.value === value)?.label ?? String(value)).join(' / ')
+}
 
 const panelLayers = ref<LayerElement[]>([])
 const panelItems = ref<LayerPanelItem[]>([])
@@ -364,7 +372,7 @@ const selectLayer = async (layer: any): Promise<void> => {
   if (canvas && layer) {
     const obj = getElementById(layer.id) ?? layer.element
     if (obj) {
-      if (isBackgroundLayer) {
+      if (isBackgroundLayer || obj.visible === false) {
         canvas.discardActiveObject?.()
         canvasStore.setActiveIds([String(layer.id)])
         layerStore.selectOne(String(layer.id))
@@ -764,6 +772,8 @@ onUnmounted((): void => {
 </script>
 
 <style scoped>
+.layout-badge { display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--el-color-primary); }
+
 .layer-panel {
   height: 100%;
   overflow: auto;

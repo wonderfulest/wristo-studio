@@ -8,6 +8,7 @@ export type PropertyType =
   | 'boolean'
   | 'date'
   | 'select'
+  | 'layout'
   | 'goal'
   | 'data'
   | 'chart'
@@ -29,6 +30,8 @@ export interface PropertyItem {
   dialMode?: 'goal' | 'range' | 'direction'
   themeMode?: ThemeMode
   metricSymbols?: string[]
+  /** Monotonic ID allocation; removed layout values are never reused. */
+  nextLayoutValue?: number
 }
 
 export type PropertiesMap = Record<string, PropertyItem>

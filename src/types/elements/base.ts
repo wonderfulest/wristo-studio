@@ -4,6 +4,7 @@ import { TOriginX, TOriginY } from "fabric"
 import type { FabricFill } from "@/types/fabric"
 import type { ElementDisplayStates } from '@/utils/displayStates'
 import type { DynamicValue } from '@/engine/expression/types'
+import type { LayoutVisibility } from '@/types/layout'
 
 export interface BaseElementConfig {
   id: string
@@ -19,4 +20,5 @@ export interface BaseElementConfig {
   topBase?: number
   displayStates?: ElementDisplayStates
   visibility?: DynamicValue<boolean>
+  layoutVisibility?: LayoutVisibility | null
 }
