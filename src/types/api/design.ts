@@ -170,6 +170,7 @@ export interface DesignPageParams {
   userId?: number
   status?: string
   designStatus?: DesignStatus
+  paymentMethod?: 'free' | 'wpay' | 'garmin'
   launchStatus?: LaunchStatus
   name?: string
   appId?: number

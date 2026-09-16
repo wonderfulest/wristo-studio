@@ -34,6 +34,11 @@
         <el-option :label="t('project.updateAvailable')" value="update_available" />
       </el-select>
 
+      <el-select v-model="selectedPaymentMethod" :placeholder="t('submitDesign.paymentMethod')" clearable class="payment-filter" @change="handleStatusChange">
+        <el-option :label="t('payment.free')" value="free" />
+        <el-option label="WPay" value="wpay" />
+        <el-option :label="t('payment.garminOfficial')" value="garmin" />
+      </el-select>
       <el-select v-model="sortField" :placeholder="t('project.sortField')" @change="handleSortChange" class="sort-field-filter">
         <el-option :label="t('project.createdTime')" value="created_at" />
         <el-option :label="t('project.updatedTime')" value="updated_at" />
@@ -313,6 +318,7 @@ interface DesignSearchPreference {
   searchAppId: string
   selectedCreatorUserId?: number
   selectedStatus: DesignStatus | ''
+  selectedPaymentMethod: 'free' | 'wpay' | 'garmin' | ''
   selectedLaunchStatus: LaunchStatus | ''
   sortField: DesignSortField
   sortOrder: DesignSortOrder
@@ -347,6 +353,7 @@ const defaultDesignSearchPreference = (): DesignSearchPreference => ({
   selectedCreatorUserId: undefined,
   selectedStatus: '',
   selectedLaunchStatus: '',
+  selectedPaymentMethod: '',
   sortField: 'updated_at',
   sortOrder: 'desc'
 })
@@ -363,6 +370,7 @@ const readDesignSearchPreference = (): DesignSearchPreference => {
     return {
       searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
       searchAppId: typeof parsed.searchAppId === 'string' ? parsed.searchAppId : defaults.searchAppId,
+      selectedPaymentMethod: parsed.selectedPaymentMethod === 'free' || parsed.selectedPaymentMethod === 'wpay' || parsed.selectedPaymentMethod === 'garmin' ? parsed.selectedPaymentMethod : '',
       selectedCreatorUserId: normalizeCreatorUserId(parsed.selectedCreatorUserId),
       selectedStatus: isDesignStatusValue(parsed.selectedStatus) ? parsed.selectedStatus : defaults.selectedStatus,
       selectedLaunchStatus: isLaunchStatusValue(parsed.selectedLaunchStatus) ? parsed.selectedLaunchStatus : defaults.selectedLaunchStatus,
@@ -392,6 +400,7 @@ const searchName = ref(initialDesignSearch.searchName)
 const searchAppId = ref(initialDesignSearch.searchAppId)
 const selectedCreatorUserId = ref<number | undefined>(initialDesignSearch.selectedCreatorUserId)
 const selectedStatus = ref<DesignStatus | ''>(initialDesignSearch.selectedStatus)
+const selectedPaymentMethod = ref(initialDesignSearch.selectedPaymentMethod)
 const selectedLaunchStatus = ref<LaunchStatus | ''>(initialDesignSearch.selectedLaunchStatus)
 const sortField = ref<DesignSortField>(initialDesignSearch.sortField)
 const sortOrder = ref<DesignSortOrder>(initialDesignSearch.sortOrder)
@@ -509,7 +518,7 @@ watch(isAdminUser, (isAdmin) => {
 })
 
 watch(
-  [searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, sortField, sortOrder],
+  [searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, selectedPaymentMethod, sortField, sortOrder],
   () => {
     writeDesignSearchPreference({
       searchName: searchName.value,
@@ -517,6 +526,7 @@ watch(
       selectedCreatorUserId: selectedCreatorUserId.value,
       selectedStatus: selectedStatus.value,
       selectedLaunchStatus: selectedLaunchStatus.value,
+      selectedPaymentMethod: selectedPaymentMethod.value,
       sortField: sortField.value,
       sortOrder: sortOrder.value
     })
@@ -574,6 +584,7 @@ const fetchDesigns = async () => {
       pageSize: pageSize.value,
       designStatus: selectedStatus.value || undefined,
       launchStatus: selectedLaunchStatus.value || undefined,
+      paymentMethod: selectedPaymentMethod.value || undefined,
       name: searchName.value,
       appId: normalizePositiveAppId(searchAppId.value),
       creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
@@ -597,7 +608,7 @@ const fetchDesigns = async () => {
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
-      if (designScope.value === 'mine' && currentPage.value === 1 && response.data.list.length === 0) {
+      if (designScope.value === 'mine' && !selectedPaymentMethod.value && currentPage.value === 1 && response.data.list.length === 0) {
         noDesignDialogVisible.value = true
       }
       
@@ -1158,6 +1169,10 @@ const handleGoLiveSuccess = () => {
   width: 200px;
 }
 
+.payment-filter {
+  width: 220px;
+}
+
 .status-filter {
   width: 180px;
 }
@@ -1217,6 +1232,7 @@ const handleGoLiveSuccess = () => {
   .name-filter,
   .app-id-filter,
   .designer-filter,
+  .payment-filter,
   .sort-field-filter,
   .sort-order-filter,
   .scope-filter {
