@@ -145,6 +145,11 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
 
   creating.value = true
   let packageRead = false
+  const releaseImportedAssets = () => {
+    if (!packageRead) return
+    clearRestoredDesignAssetUrls()
+    packageRead = false
+  }
   try {
     const imported = input.wrtFile ? await readWrtDesignPackage(input.wrtFile) : undefined
     packageRead = Boolean(imported)
@@ -175,6 +180,7 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
       baseStore.appId = designData.product?.appId || -1
       designStore.setAppLanguage(appLanguage)
 
+      releaseImportedAssets()
       router.push('/design?id=' + designData.designUid)
       dialogVisible.value = false
       currentTemplate.value = null
@@ -212,6 +218,9 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
 
     propertiesStore.clearProperties()
     designStore.setAppLanguage(appLanguage)
+    // The destination editor owns the next restored URLs. Release ours before
+    // navigation, never after the asynchronous profile refresh in finally.
+    releaseImportedAssets()
     router.push('/design?id=' + newDesign.designUid)
     dialogVisible.value = false
     await userStore.refreshUserInfo()
@@ -221,7 +230,7 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
       ? t(`editor.wrtImport.${error.code}`)
       : error?.response?.data?.msg || error?.message || t('project.openDesignFailed'))
   } finally {
-    if (packageRead) clearRestoredDesignAssetUrls()
+    releaseImportedAssets()
     creating.value = false
   }
 }
