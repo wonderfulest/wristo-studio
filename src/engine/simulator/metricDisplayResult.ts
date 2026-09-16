@@ -67,6 +67,8 @@ function formatForVariant(
   else if (unitKey === 'speed' && isVariant(variantKey, 'miles_per_hour', 'mph')) value *= 2.23694
 
   if (value === source.rawValue && metric.unitKey !== 'temperature') return source.displayValue
+  // Compact formatting may remove .0; distance conversion still needs one decimal.
+  if (unitKey === 'distance') return value.toFixed(1)
   return value.toFixed(decimalDigits(source.displayValue))
 }
 

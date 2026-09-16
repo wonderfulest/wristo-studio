@@ -58,7 +58,8 @@ function formatCompact(value: number): string {
     { threshold: 1_000, suffix: 'k' },
   ]
   const unit = units.find((item) => abs >= item.threshold)
-  if (!unit) return Number.isInteger(value) ? String(value) : String(value)
+  // Match Connect IQ DataFetcher: compact values retain at most one decimal.
+  if (!unit) return value.toFixed(1).replace(/\.0$/, '')
   const scaled = abs / unit.threshold
   const text = scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1).replace(/\.0$/, '')
   return `${sign}${text}${unit.suffix}`

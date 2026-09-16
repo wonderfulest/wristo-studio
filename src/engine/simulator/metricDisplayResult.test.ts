@@ -28,6 +28,14 @@ const unit = {
 const catalog = { unitsByKey: new Map([['distance', unit]]) } as unknown as ValidatedDataCatalog
 
 describe('metric display result', () => {
+  it('keeps one distance decimal when converting compact whole values to miles', () => {
+    expect(resolveMetricDisplayResult(metric, {
+      rawValue: 5.04, displayValue: '5', providerUnit: 'km',
+    }, {
+      language: 'eng', distanceUnits: 'statute', temperatureUnits: 'metric',
+    }, catalog).displayValue).toBe('3.1')
+  })
+
   it('converts the value and unit variant from one preview context', () => {
     expect(resolveMetricDisplayResult(metric, {
       rawValue: 5,
