@@ -20,9 +20,10 @@ import { applyTokenEditorSession, readTokenEditorSession, tokenEditorResultStora
 
 const stubs = {
   ElInput: {
+    name: 'ElInput',
     props: ['modelValue'],
     emits: ['update:modelValue', 'input'],
-    template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value); $emit(\'input\')" />'
+    template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value); $emit(\'input\', $event.target.value)" />'
   },
   ElButton: {
     emits: ['click'],
@@ -82,5 +83,21 @@ describe('TextTemplateEditor token page handoff', () => {
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['(tm1).format("%04d")'])
     expect(wrapper.emitted('change')?.at(-1)).toEqual(['(tm1).format("%04d")'])
+  })
+})
+
+describe('text template string input', () => {
+  it('keeps legacy numeric zero when reading and replacing a value', async () => {
+    const wrapper = mount(TextTemplateEditor, { props: { modelValue: 0 }, global: { stubs } })
+    expect(wrapper.getComponent({ name: 'ElInput' }).props('modelValue')).toBe('0')
+    await wrapper.setProps({ modelValue: 9 as unknown as string })
+    expect(wrapper.getComponent({ name: 'ElInput' }).props('modelValue')).toBe('9')
+  })
+
+  it.each(['9', '009', '0', '(ds9)', '"HR " + (ds9)', ''])('emits %j as a string before parsing', (value) => {
+    const wrapper = mountEditor()
+    wrapper.getComponent({ name: 'ElInput' }).vm.$emit('input', value)
+    expect(wrapper.emitted('change')?.[0]).toEqual([value])
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([value])
   })
 })

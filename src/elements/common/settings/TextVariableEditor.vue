@@ -78,7 +78,7 @@ import { resolveTextVariablePreview, syncTextPropertyValue } from './textVariabl
 
 const props = withDefaults(defineProps<{
   modelValue?: string
-  fallbackText?: string
+  fallbackText?: string | number
   ownerElementId?: string
 }>(), {
   modelValue: '',
@@ -158,7 +158,7 @@ watch(
   () => props.fallbackText,
   (value) => {
     if (!selectedProperty.value && value !== editableValue.value) {
-      editableValue.value = value || ''
+      editableValue.value = String(value ?? '')
     }
   },
   { immediate: true },
@@ -166,7 +166,7 @@ watch(
 
 const handlePropertyChange = (value: string) => {
   if (!value) {
-    editableValue.value = props.fallbackText || ''
+    editableValue.value = String(props.fallbackText ?? '')
     emit('apply', { textProperty: '', textTemplate: editableValue.value })
     emit('update-template', editableValue.value)
     return
@@ -214,7 +214,8 @@ const handleSelectChange = async (value: string) => {
   cleanupUnusedTextProperty(previousKey, key)
 }
 
-const handleTextChange = async (value: string) => {
+const handleTextChange = async (input: string) => {
+  const value = String(input ?? '')
   const key = localProperty.value
   if (!key) {
     emit('apply', { textProperty: '', textTemplate: value })

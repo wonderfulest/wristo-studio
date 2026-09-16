@@ -1,6 +1,6 @@
 <template>
   <div class="text-template-editor">
-    <el-input v-model="localValue" type="textarea" class="template-input" :rows="rows" :maxlength="128" show-word-limit @input="onInput" />
+    <el-input :model-value="localValue" type="textarea" class="template-input" :rows="rows" :maxlength="128" show-word-limit @input="onInput" />
     <div v-if="resolvedTemplateError" class="template-error">{{ resolvedTemplateError }}</div>
     <div v-if="showVariableHelper" class="variable-helper">
       <span>{{ helperText || t('templateEditor.variableHelper') }}</span>
@@ -26,7 +26,7 @@ const router = useRouter()
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string
+    modelValue: string | number
     rows?: number
     showVariables?: boolean
     variablesInitiallyOpen?: boolean
@@ -49,7 +49,7 @@ const emit = defineEmits<{
   (e: 'change', value: string): void
 }>()
 
-const localValue = ref(props.modelValue || '')
+const localValue = ref(String(props.modelValue ?? ''))
 const activeTokenEditorSession = ref<TokenEditorSession | null>(null)
 const showVariableHelper = ref(props.showVariables)
 const validationError = computed(() => {
@@ -61,12 +61,13 @@ watch(
   () => props.modelValue,
   (val) => {
     if (val !== localValue.value) {
-      localValue.value = val || ''
+      localValue.value = String(val ?? '')
     }
   }
 )
 
-const onInput = () => {
+const onInput = (value: string | number) => {
+  localValue.value = String(value ?? '')
   emit('update:modelValue', localValue.value)
   emit('change', localValue.value)
 }
@@ -81,7 +82,7 @@ const openTokenEditor = () => {
     },
     (value) => {
       localValue.value = value
-      onInput()
+      onInput(value)
     }
   )
   openRouteInNewTab(router, {

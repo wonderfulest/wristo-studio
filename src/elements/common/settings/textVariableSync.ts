@@ -6,7 +6,8 @@ import type { FabricElement } from '@/types/element'
 
 const textElementTypes = new Set(['text', 'scrollableText', 'radialText', 'angledText'])
 
-export async function syncTextPropertyValue(propertyKey: string, value: string) {
+export async function syncTextPropertyValue(propertyKey: string, input: string) {
+  const value = String(input ?? '')
   const key = String(propertyKey || '').trim()
   if (!key) return
 
