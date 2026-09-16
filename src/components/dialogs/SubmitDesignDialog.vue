@@ -229,7 +229,7 @@ const handlePaymentMethodChange = (value: string) => {
 }
 
 // Show dialog
-const show = async (design: Design, options?: { mode?: 'submit' | 'prg-build'; deviceId?: string }) => {
+const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submit' | 'prg-build'; deviceId?: string }) => {
   try {
     loading.value = true
     currentDesign.value = null

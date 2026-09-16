@@ -104,3 +104,16 @@ export const shouldShowPreviewPrgButton = (
     && !!release?.id
     && !!release.prgUrl?.trim()
 }
+
+export const shouldShowBuildLog = (log?: {
+  id?: number
+  packagingStatus?: string
+  rank?: number | null
+  hasBuildLog?: boolean
+  lastBuildLogPath?: string | null
+}) => {
+  const status = String(log?.packagingStatus || '').toLowerCase()
+  const isFinished = ['complete', 'completed', 'failed'].includes(status)
+  const isQueued = log?.rank !== null && log?.rank !== undefined
+  return !!(log?.id && (log.hasBuildLog ?? !!log.lastBuildLogPath) && isFinished && !isQueued)
+}

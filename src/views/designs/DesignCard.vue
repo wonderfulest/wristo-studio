@@ -260,13 +260,12 @@
   </el-drawer>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends DesignListItem">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessageBox } from 'element-plus'
-import type { Design } from '@/types/api/design'
-import type { ProductPackagingLogVo } from '@/types/api/product'
+import type { DesignListItem, DesignListTask } from '@/types/api/design'
 import { ArrowDown, Box, Delete, DocumentCopy, Download, Edit, EditPen, Switch, Upload } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
@@ -276,6 +275,7 @@ import {
   getPrgBuildDisabledReason,
   getPrgCardAction,
   shouldShowBuildIqButton,
+  shouldShowBuildLog,
   shouldShowPublishButton,
   shouldShowPreviewPrgButton,
 } from './designCardActions'
@@ -297,7 +297,7 @@ interface LoadingStates {
 }
 
 const props = defineProps<{
-  design: Design
+  design: T
   isMerchantUser: boolean
   isAdminUser: boolean
   canDeleteDesign: boolean
@@ -320,21 +320,21 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', design: Design): void
-  (e: 'delete', design: Design): void
-  (e: 'open', design: Design): void
-  (e: 'copy', design: Design): void
-  (e: 'build-prg', design: Design): void
-  (e: 'cancel-prg', design: Design): void
-  (e: 'prepare-preview-prg', design: Design): void
-  (e: 'preview-prg', design: Design): void
-  (e: 'run-prg', design: Design): void
-  (e: 'submit', design: Design): void
-  (e: 'download-package', design: Design): void
-  (e: 'go-live', design: Design): void
-  (e: 'transfer-owner', design: Design): void
-  (e: 'update-store-weight', design: Design, storeWeight: number): void
-  (e: 'rename', design: Design, name: string): void
+  (e: 'edit', design: T): void
+  (e: 'delete', design: T): void
+  (e: 'open', design: T): void
+  (e: 'copy', design: T): void
+  (e: 'build-prg', design: T): void
+  (e: 'cancel-prg', design: T): void
+  (e: 'prepare-preview-prg', design: T): void
+  (e: 'preview-prg', design: T): void
+  (e: 'run-prg', design: T): void
+  (e: 'submit', design: T): void
+  (e: 'download-package', design: T): void
+  (e: 'go-live', design: T): void
+  (e: 'transfer-owner', design: T): void
+  (e: 'update-store-weight', design: T, storeWeight: number): void
+  (e: 'rename', design: T, name: string): void
 }>()
 
 const { t } = useI18n()
@@ -553,7 +553,7 @@ const lastUpdatedText = computed(() => {
   return dayjs(updatedAt).format('YYYY-MM-DD HH:mm')
 })
 
-const packageStatusText = (log?: ProductPackagingLogVo) => {
+const packageStatusText = (log?: DesignListTask) => {
   if (!log) return ''
   const rank = log.rank
   if (rank !== null && rank !== undefined) {
@@ -566,7 +566,7 @@ const packageStatusText = (log?: ProductPackagingLogVo) => {
   return log.packagingStatus || t('common.unknown')
 }
 
-const packageTone = (log?: ProductPackagingLogVo, hasRelease = false) => {
+const packageTone = (log?: DesignListTask, hasRelease = false) => {
   const status = String(log?.packagingStatus || '').toLowerCase()
   if (status === 'failed') return 'failed'
   if (log?.rank !== null && log?.rank !== undefined) return 'pending'
@@ -587,15 +587,7 @@ const packageRows = computed(() => {
     logId?: number
     canViewBuildLog: boolean
     canDownload: boolean
-    buildLogPath?: string | null
   }> = []
-
-  const canOpenLog = (log?: ProductPackagingLogVo) => {
-    const status = String(log?.packagingStatus || '').toLowerCase()
-    const isFinished = status === 'complete' || status === 'completed' || status === 'failed'
-    const isQueued = log?.rank !== null && log?.rank !== undefined
-    return !!(log?.id && log?.lastBuildLogPath && isFinished && !isQueued)
-  }
 
   const prgLog = product.prgPackagingLog
   const currentPrgLog = prgLog?.deviceId === currentDeviceId.value ? prgLog : undefined
@@ -611,9 +603,8 @@ const packageRows = computed(() => {
       tone: packageTone(currentPrgLog, !!currentPrgRelease?.prgUrl),
       isPackaging: currentPrgLog?.rank === 0,
       logId: currentPrgLog?.id,
-      canViewBuildLog: canOpenLog(currentPrgLog),
+      canViewBuildLog: shouldShowBuildLog(currentPrgLog),
       canDownload: !!currentPrgRelease?.prgUrl,
-      buildLogPath: currentPrgLog?.lastBuildLogPath,
     })
   }
 
@@ -628,9 +619,8 @@ const packageRows = computed(() => {
       tone: packageTone(iqLog, !!product.release?.packageUrl),
       isPackaging: iqLog?.rank === 0,
       logId: iqLog?.id,
-      canViewBuildLog: canOpenLog(iqLog),
+      canViewBuildLog: shouldShowBuildLog(iqLog),
       canDownload: !!product.release?.packageUrl,
-      buildLogPath: iqLog?.lastBuildLogPath,
     })
   }
 

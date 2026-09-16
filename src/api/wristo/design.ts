@@ -5,6 +5,7 @@ import type {
 } from '@/types/api/api'
 import type { 
   Design, 
+  DesignListItem,
   DesignPageParams,
   DesignDetailParams,
   CreateDesignParams,
@@ -52,6 +53,10 @@ export const designApi = {
    * @param params 查询参数
    * @returns 设计列表分页数据
    */
+  getDesignCards(params: Omit<DesignPageParams, 'populate'>): Promise<ApiResponse<PageResponse<DesignListItem>>> {
+    return instance.get('/dsn/design/cards', { params })
+  },
+
   getDesignPage(params: DesignPageParams): Promise<ApiResponse<PageResponse<Design>>> {
     return instance.get('/dsn/design/page', { params })
   },

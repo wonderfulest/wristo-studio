@@ -225,7 +225,7 @@ import DesignerSelect from '@/components/users/DesignerSelect.vue'
 import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
-import { Design, DesignStatus, LaunchStatus, type DesignPageParams } from '@/types/api/design'
+import { Design, type DesignListItem, DesignStatus, LaunchStatus, type DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -276,18 +276,18 @@ interface LoadingStates {
   previewPrg: Set<number>
 }
 
-const designs = ref<Design[]>([])
+const designs = ref<DesignListItem[]>([])
 const deviceDisplayRef = ref<InstanceType<typeof DeviceDisplay> | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 const deleteDialogVisible = ref(false)
-const designToDelete = ref<Design | null>(null)
+const designToDelete = ref<DesignListItem | null>(null)
 const noDesignDialogVisible = ref(false)
 const storeWeightSavingAppIds = ref(new Set<number>())
 const renameSavingDesignIds = ref(new Set<number>())
 const transferDialogVisible = ref(false)
-const transferDesign = ref<Design | null>(null)
+const transferDesign = ref<DesignListItem | null>(null)
 const transferTargetUserId = ref<number | undefined>()
 const transferLoading = ref(false)
 const duplicateLanguageDialogVisible = ref(false)
@@ -410,7 +410,7 @@ const canDeleteDesign = computed(() => {
   return level !== 'free'
 })
 
-const isLaunchedDesign = (design: Design | null | undefined) => !!design?.product?.lastGoLive
+const isLaunchedDesign = (design: DesignListItem | null | undefined) => !!design?.product?.lastGoLive
 
 type DesignScope = 'mine' | 'all'
 
@@ -552,13 +552,13 @@ const formatDateNullable = (date: string | number | null | undefined) => {
 }
 
 // 获取创作者名称
-const getCreatorName = (design: Design) => {
+const getCreatorName = (design: DesignListItem) => {
   return design.user?.username || t('common.unknownUser')
 }
 
 // 获取设计图片URL
-const getDesignImageUrl = (design: Design) => {
-  return designApi.getDesignImageUrl(design, true) || ''
+const getDesignImageUrl = (design: DesignListItem) => {
+  return design.cover?.url || ''
 }
 
 const getCurrentDeviceParams = () => {
@@ -578,8 +578,7 @@ const fetchDesigns = async () => {
       appId: normalizePositiveAppId(searchAppId.value),
       creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
       orderBy: toDesignOrderBy(sortField.value, sortOrder.value, isAdminUser.value),
-      scope: isAdminUser.value ? designScope.value : 'mine',
-      populate: 'user,product,payment,release,cover,package_log'
+      scope: isAdminUser.value ? designScope.value : 'mine'
     }
 
     const deviceId = (userStore.userInfo as any)?.device?.deviceId
@@ -587,7 +586,7 @@ const fetchDesigns = async () => {
       params.device = deviceId
     }
 
-    const response: ApiResponse<PageResponse<Design>> = await designApi.getDesignPage(params)
+    const response: ApiResponse<PageResponse<DesignListItem>> = await designApi.getDesignCards(params)
     
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
@@ -639,7 +638,7 @@ const handleSizeChange = (val: number) => {
 }
 
 // 打开画布编辑器
-const openCanvas = async (design: Design) => {
+const openCanvas = async (design: DesignListItem) => {
   try {
     const response = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
     const designData = response.data || {} as Design
@@ -656,7 +655,7 @@ const openCanvas = async (design: Design) => {
 }
 
 // 查看设计详情
-const editDesign = (design: Design) => {
+const editDesign = (design: DesignListItem) => {
   if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
     editDesignDialog.value.show(design.designUid)
   }
@@ -668,7 +667,7 @@ const resetTransferOwnerDialog = () => {
   transferTargetUserId.value = undefined
 }
 
-const openTransferOwnerDialog = (design: Design) => {
+const openTransferOwnerDialog = (design: DesignListItem) => {
   const appId = design.product?.appId
   if (!isAdminUser.value || !appId) {
     messageStore.error(t('card.transferOwner.unavailable'))
@@ -717,7 +716,7 @@ const confirmTransferOwner = async () => {
   }
 }
 
-const updateStoreWeight = async (design: Design, storeWeight: number) => {
+const updateStoreWeight = async (design: DesignListItem, storeWeight: number) => {
   const appId = design.product?.appId
   if (!isAdminUser.value || !appId || storeWeightSavingAppIds.value.has(appId)) return
 
@@ -725,7 +724,7 @@ const updateStoreWeight = async (design: Design, storeWeight: number) => {
   try {
     const response = await productsApi.updateStoreWeight(appId, storeWeight)
     if (response.code === 0 && response.data) {
-      design.product.storeWeight = response.data.storeWeight ?? storeWeight
+      if (design.product) design.product.storeWeight = response.data.storeWeight ?? storeWeight
       messageStore.success(t('common.savedSuccessfully'))
     } else {
       messageStore.error(response.msg || t('common.saveFailed'))
@@ -738,7 +737,7 @@ const updateStoreWeight = async (design: Design, storeWeight: number) => {
   }
 }
 
-const renameDesign = async (design: Design, name: string) => {
+const renameDesign = async (design: DesignListItem, name: string) => {
   if (renameSavingDesignIds.value.has(design.id)) return
 
   renameSavingDesignIds.value.add(design.id)
@@ -794,7 +793,7 @@ const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguag
 }
 
 // Studio 卡片的 Duplicate：英文应用可选择保留英文或创建中文版。
-const copyDesign = async (design: Design) => {
+const copyDesign = async (design: DesignListItem) => {
   if (loadingStates.value.copy.has(design.id)) return
   if (!userStore.canCreateDesign) {
     const max = userStore.studioMembership?.maxDesigns
@@ -837,7 +836,7 @@ const confirmDuplicateLanguage = async () => {
 }
 
 // 确认删除
-const confirmDelete = (design: Design) => {
+const confirmDelete = (design: DesignListItem) => {
   if (isLaunchedDesign(design)) {
     messageStore.warning(t('project.deletePublishedNotAllowed'))
     return
@@ -876,7 +875,7 @@ const confirmDeleteDesign = async () => {
 }
 
 // 提交设计
-const submitDesign = async (design: Design) => {
+const submitDesign = async (design: DesignListItem) => {
   if (!membershipGate.requirePublish()) return
   if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
     submitDesignDialog.value.show(design)
@@ -884,7 +883,7 @@ const submitDesign = async (design: Design) => {
 }
 
 // 提交 PRG 打包任务
-const buildPrg = async (design: Design) => {
+const buildPrg = async (design: DesignListItem) => {
   if (!membershipGate.requireExport()) return
   if (loadingStates.value.prgBuild.has(design.id)) return
 
@@ -904,7 +903,7 @@ const buildPrg = async (design: Design) => {
   }
 }
 
-const cancelPrg = async (design: Design) => {
+const cancelPrg = async (design: DesignListItem) => {
   const deviceId = userStore.userInfo?.device?.deviceId
   const task = design.product?.prgPackagingLog
   if (!deviceId || !task?.id) return
@@ -928,7 +927,7 @@ const cancelPrg = async (design: Design) => {
 }
 
 // 下载安装包
-const downloadPackage = async (design: Design) => {
+const downloadPackage = async (design: DesignListItem) => {
   if (!membershipGate.requireExport()) return
   const url = design.product?.release?.packageUrl
   if (url) {
@@ -939,7 +938,7 @@ const downloadPackage = async (design: Design) => {
 }
 
 // 运行 PRG：跳转下载 prgUrl
-const runPrg = async (design: Design) => {
+const runPrg = async (design: DesignListItem) => {
   if (!membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
@@ -966,7 +965,7 @@ const showPrgInstallerGuideNotification = (message: string) => {
   })
 }
 
-const preparePreviewPrg = async (design: Design) => {
+const preparePreviewPrg = async (design: DesignListItem) => {
   const releaseId = design.product?.prgRelease?.id
   if (!releaseId || loadingStates.value.previewPrg.has(design.id)) return
 
@@ -981,7 +980,7 @@ const preparePreviewPrg = async (design: Design) => {
   }
 }
 
-const previewPrg = (design: Design) => {
+const previewPrg = (design: DesignListItem) => {
   if (loadingStates.value.previewPrg.has(design.id)) return
 
   const releaseId = design.product?.prgRelease?.id
@@ -1005,12 +1004,12 @@ const previewPrg = (design: Design) => {
 }
 
 // 检查是否有可下载的安装包
-const hasDownloadablePackage = (design: Design): boolean => {
+const hasDownloadablePackage = (design: DesignListItem): boolean => {
   return !!(design.product?.release?.packageUrl)
 }
 
 // 检查是否有新版本需要上传
-const hasNewRelease = (design: Design): boolean => {
+const hasNewRelease = (design: DesignListItem): boolean => {
   const releaseExists = !!design.product?.release
   if (!releaseExists) return false
 
@@ -1052,7 +1051,7 @@ onUnmounted(() => {
 })
 
 // Publish 方法
-const goLive = async (design: Design) => {
+const goLive = async (design: DesignListItem) => {
   if (!membershipGate.requirePublish()) return
   try {
     const res = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>

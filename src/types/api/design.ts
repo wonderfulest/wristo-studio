@@ -182,3 +182,50 @@ export interface DesignDetailParams {
   populate?: string
   device?: string
 }
+
+/** The fixed /dsn/design/cards response; full editor fields are loaded by UID. */
+export interface DesignListItem {
+  id: number
+  designUid: string
+  name: string
+  designStatus: DesignStatus
+  reviewComment?: string | null
+  createdAt: number
+  updatedAt: number
+  user?: Pick<UserBase, 'id' | 'username'>
+  cover?: { url: string } | null
+  product?: {
+    id: number
+    appId: number
+    name: string
+    download?: number
+    purchase?: number
+    score?: number
+    storeWeight?: number | null
+    lastGoLive?: number | string | null
+    payment?: { paymentMethod: string; paymentMethodDesc?: string }
+    release?: { id: number; packageUrl: string; updatedAt: number }
+    prgRelease?: {
+      id: number
+      deviceId: string
+      prgUrl: string
+      updatedAt: number
+      completedAt?: string | number | null
+      canRebuild?: boolean
+      rebuildAvailableAt?: string | number | null
+    }
+    packagingLog?: DesignListTask
+    prgPackagingLog?: DesignListTask
+  }
+}
+
+export interface DesignListTask {
+  id: number
+  packagingStatus: string
+  deviceId?: string
+  createdAt: number
+  rank?: number | null
+  hasBuildLog?: boolean
+  /** Existing detail responses are also rendered by DesignCard. */
+  lastBuildLogPath?: string | null
+}

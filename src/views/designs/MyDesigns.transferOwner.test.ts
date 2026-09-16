@@ -10,7 +10,7 @@ const i18nSource = readFileSync(new URL('../../i18n.ts', import.meta.url), 'utf8
 describe('My Designs product owner transfer', () => {
   it('exposes the transfer action only to administrators for published applications', () => {
     expect(cardSource).toContain('v-if="isAdminUser && appId"')
-    expect(cardSource).toContain("(e: 'transfer-owner', design: Design): void")
+    expect(cardSource).toContain("(e: 'transfer-owner', design: T): void")
     expect(cardSource).toContain("emit('transfer-owner', design)")
   })
 
