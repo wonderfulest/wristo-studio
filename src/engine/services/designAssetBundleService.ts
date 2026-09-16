@@ -745,7 +745,8 @@ const addFontAssetToBundle = async (
     }
     const buildPath = `fonts/bitmaps/${safeSlug}`
     const buildFiles: Array<{ path: string; sha256: string }> = []
-    if (manifest.selfContained && !slug.startsWith('local-')) {
+    // Imported local bitmap fonts still need their build files when re-exported.
+    if (manifest.selfContained && (packageFontBuildFiles.has(slug) || !slug.startsWith('local-'))) {
       let files = packageFontBuildFiles.get(slug)
       if (!files) {
         const fontZip = await JSZip.loadAsync(await (await fetchBlob(`https://cdn.wristo.io/font-bitmaps/${encodeURIComponent(slug)}/${encodeURIComponent(slug)}.zip`)).arrayBuffer())
