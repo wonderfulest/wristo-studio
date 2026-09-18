@@ -2,9 +2,11 @@
 <template>
   <router-view></router-view>
   <CookieConsent />
+  <WrtImportProgressDialog />
 </template>
 
 <script setup>
+import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
 import { useLocaleStore } from '@/stores/locale'
 import { useThemeStore } from '@/stores/theme'

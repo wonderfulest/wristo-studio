@@ -158,6 +158,7 @@ declare module 'vue' {
     VisualThemeAssetFields: typeof import('./src/components/panels/settings/VisualThemeAssetFields.vue')['default']
     VisualThemeQuickSelect: typeof import('./src/components/layout/app-menu/VisualThemeQuickSelect.vue')['default']
     VisualThemeSettings: typeof import('./src/components/panels/settings/VisualThemeSettings.vue')['default']
+    WrtImportProgressDialog: typeof import('./src/components/WrtImportProgressDialog.vue')['default']
     ZoomControls: typeof import('./src/components/canvas/ZoomControls.vue')['default']
   }
   export interface ComponentCustomProperties {

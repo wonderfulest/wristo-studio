@@ -70,3 +70,21 @@ it('preserves current project fonts and disposes the worker on a build failure',
   expect(packageFonts.has('current')).toBe(true)
   expect(dispose).toHaveBeenCalledOnce()
 })
+
+it('reports verification, bitmap size progress and completion in order', async () => {
+  setActivePinia(createPinia())
+  build.mockImplementation((_request, onProgress) => {
+    onProgress?.({ completed: 19, total: 38, size: 66 })
+    return { result: workerResult() }
+  })
+  const events: any[] = []
+  const { readWrtDesignPackage } = await import('./designAssetBundleService')
+  await readWrtDesignPackage(await input(), event => events.push(event))
+  expect(events[0]).toMatchObject({ stage: 'reading', percentage: 0 })
+  expect(events.some(event => event.stage === 'verifying')).toBe(true)
+  expect(events.find(event => event.fontSize === 66)).toMatchObject({
+    stage: 'fonts', fontSlug: 'fixture', fontIndex: 1, fontTotal: 1,
+  })
+  expect(events.at(-1)).toMatchObject({ stage: 'complete', percentage: 100 })
+  expect(events.map(event => event.percentage)).toEqual(events.map(event => event.percentage).sort((a, b) => a - b))
+})

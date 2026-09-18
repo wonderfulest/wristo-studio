@@ -11,13 +11,26 @@ export interface WrtSourceFont {
 }
 
 /** Enrich the verified archive before touching the active project's font registry. */
-export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[]) {
+export interface WrtFontBuildProgress {
+  fraction: number
+  fontSlug: string
+  fontIndex: number
+  fontTotal: number
+  fontSize?: number
+}
+
+export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[], onProgress?: (progress: WrtFontBuildProgress) => void) {
   const missing = fonts.filter(font => !font.buildFiles?.some(file => file.path.endsWith('.fnt')) && font.path && /\.(ttf|otf)$/i.test(font.path))
   if (!missing.length) return []
   const worker = new BitmapFontWorkerClient()
   const refs: Array<{ id: string; category: string; path: string; format: string; mimeType: string; sourceRef: string; sha256: string }> = []
   try {
-    for (const font of missing) {
+    for (const [index, font] of missing.entries()) {
+      const report = (fraction: number, fontSize?: number) => onProgress?.({
+        fraction: (index + fraction) / missing.length, fontSlug: font.slug,
+        fontIndex: index + 1, fontTotal: missing.length, fontSize,
+      })
+      report(0)
       if (!/^[a-zA-Z0-9_-]+$/.test(font.slug)) throw new Error(`Invalid font slug: ${font.slug}`)
       const source = zip.file(font.path!)
       if (!source) throw new Error(`Missing font source: ${font.slug}`)
@@ -26,7 +39,7 @@ export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[]) {
         slug: font.slug, fontType: 'text_font', preserveSource: true,
         recipe: { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0,
           outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true },
-      }).result
+      }, progress => report(0.95 * progress.completed / progress.total, progress.size)).result
       const generated = await JSZip.loadAsync(artifact.zip)
       const buildPath = `fonts/bitmaps/${font.slug}`
       const buildFiles = []
@@ -51,6 +64,7 @@ export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[]) {
         }
       }
       Object.assign(font, { metadata, buildPath, buildFiles })
+      report(1)
     }
     return refs
   } finally {

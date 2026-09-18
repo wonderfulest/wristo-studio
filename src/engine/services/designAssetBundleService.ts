@@ -1,3 +1,4 @@
+import type { WrtImportProgress } from './wrtImportProgress'
 import { translate } from '@/i18n'
 import { useLocaleStore } from '@/stores/locale'
 import { findInvalidUnicodePaths } from './unicodeValidation'
@@ -1329,7 +1330,8 @@ export async function restoreDesignAssetBundle(
   return restoreDesignAssetBundleFromZip(config, zip, manifest)
 }
 
-export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesignPackage> {
+export async function readWrtDesignPackage(file: File, onProgress?: (progress: WrtImportProgress) => void): Promise<ImportedWrtDesignPackage> {
+  onProgress?.({ stage: 'reading', percentage: 0 })
   if (!file || !/\.wrt$/i.test(file.name || '')) {
     throw new WrtDesignPackageError('invalid-file', 'Expected a .wrt design package file')
   }
@@ -1374,14 +1376,18 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
     throw new WrtDesignPackageError('invalid-design', 'Design configuration must contain an elements array')
   }
 
+  onProgress?.({ stage: 'verifying', percentage: 10 })
   if (manifest.version === 2) {
     if (!manifest.selfContained || manifest.failures?.length) throw new WrtDesignPackageError('invalid-manifest', 'WRT v2 must be complete and self-contained')
-    for (const asset of [...(manifest.studio?.assetRefs || []), ...(manifest.fonts || []).filter(font => font.path), ...(manifest.fonts || []).flatMap(font => font.buildFiles || []), ...(manifest.bitmapFonts || []).flatMap(font => font.chars), ...(manifest.icons?.amoled || []), ...(manifest.preview ? [manifest.preview] : []), ...(manifest.productImages || []).flatMap(image => Object.values(image.variants || {}))]) {
+    const assets = [...(manifest.studio?.assetRefs || []), ...(manifest.fonts || []).filter(font => font.path), ...(manifest.fonts || []).flatMap(font => font.buildFiles || []), ...(manifest.bitmapFonts || []).flatMap(font => font.chars), ...(manifest.icons?.amoled || []), ...(manifest.preview ? [manifest.preview] : []), ...(manifest.productImages || []).flatMap(image => Object.values(image.variants || {}))]
+    let verified = 0
+    for (const asset of assets) {
       const entry = asset.path && zip.file(asset.path)
       if (entry && asset.path?.endsWith('.svg')) assertSelfContainedSvg(await entry.async('string'))
       if (!entry || !asset.sha256 || asset.sha256 !== await sha256Hex(new Blob([await entry.async('arraybuffer')]))) {
         throw new WrtDesignPackageError('invalid-manifest', `Missing or corrupt package asset: ${asset.path}`)
       }
+      onProgress?.({ stage: 'verifying', percentage: 10 + 15 * (++verified / assets.length) })
     }
     const verifiedRefs = new Set((manifest.studio?.assetRefs || []).map(asset => `bundle://${asset.path}`))
     const check = (value: unknown): void => {
@@ -1402,17 +1408,21 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
   // Only build after validating all supplied hashes and references. Keep active
   // project resources intact if parsing or rasterization fails.
   const { buildMissingWrtFonts } = await import('./wrtFontBuild')
-  const fontRefs = await buildMissingWrtFonts(zip, manifest.fonts || [])
+  const fontRefs = await buildMissingWrtFonts(zip, manifest.fonts || [], progress => {
+    onProgress?.({ ...progress, stage: 'fonts', percentage: 25 + 65 * progress.fraction })
+  })
   if (fontRefs.length) {
     manifest.studio ||= { configPath: 'config/config.json', elementsPath: 'elements/', assetRefs: [] }
     manifest.studio.assetRefs ||= []
     manifest.studio.assetRefs.push(...fontRefs)
   }
+  onProgress?.({ stage: 'restoring', percentage: 90 })
   clearRestoredDesignAssetUrls()
   packageFonts.clear()
   packageFontBuildFiles.clear()
   packageBitmapChars.clear()
   const restoredConfig = await restoreDesignAssetBundleFromZip(config, zip, manifest)
+  onProgress?.({ stage: 'complete', percentage: 100 })
   return {
     config: restoredConfig,
     sourceName: manifest.designName || config.name || 'Watch Face',

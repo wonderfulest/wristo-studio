@@ -1,3 +1,4 @@
+import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
@@ -462,6 +463,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   }
 
   const importWrtDesign = async (file: File): Promise<void> => {
+    const importProgress = useWrtImportProgressStore()
+    if (importProgress.active) return
+    importProgress.begin(file.name)
     const generation = ++designLoadGeneration
     let packageRead = false
     let applied = false
@@ -474,8 +478,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           return
         }
         const currentDesignName = designStore.watchFaceName || baseStore.watchFaceName
-        const imported = await readWrtDesignPackage(file)
+        const imported = await readWrtDesignPackage(file, importProgress.update)
         packageRead = true
+        importProgress.finalize('applying')
         const fontStore = useFontStore()
         for (const [slug, font] of packageFonts) {
           fontStore.loadedFonts.delete(slug)
@@ -522,6 +527,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         showErrorOnce(error, t('editor.wrtImport.failed'))
       }
     } finally {
+      importProgress.finish()
       if (isCurrentDesignLoad(generation)) {
         baseStore.setDesignLoading(false)
         if (applied) options.onDesignImported?.(baseStore.id)

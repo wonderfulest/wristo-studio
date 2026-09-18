@@ -56,6 +56,7 @@ import RecentProjectsSection from '@/views/designs/RecentProjectsSection.vue'
 import SampleProjectsSection from '@/views/designs/SampleProjectsSection.vue'
 import NewProjectDialog from '@/views/designs/NewProjectDialog.vue'
 import emitter from '@/utils/eventBus'
+import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
 import { useI18n } from '@/i18n'
 import type { AppLanguage } from '@/types/localization'
 import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
@@ -66,6 +67,7 @@ import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchive
 import { saveWrtProject } from '@/engine/services/saveWrtProject'
 
 const creating = ref(false)
+const importProgress = useWrtImportProgressStore()
 const messageStore = useMessageStore()
 const userStore = useUserStore()
 const router = useRouter()
@@ -139,11 +141,15 @@ const handleOpenFromTemplate = (design: Design) => {
 // - 如果没有选择 sample，创建一个全新的应用并打开画布
 
 const handleConfirmDialog = async (input: { name: string; appLanguage: AppLanguage; originalType: DesignOriginalType; sourcePlatform?: DesignSourcePlatform; sourceId?: string; wrtFile?: File }) => {
-  if (creating.value || !canCreateProject()) return
+  if (creating.value || importProgress.active || !canCreateProject()) return
   const name = (input.name || projectName.value).trim() || generateRandomProjectName()
   const appLanguage = input.appLanguage
 
   creating.value = true
+  if (input.wrtFile) {
+    dialogVisible.value = false
+    importProgress.begin(input.wrtFile.name)
+  }
   let packageRead = false
   const releaseImportedAssets = () => {
     if (!packageRead) return
@@ -151,8 +157,9 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     packageRead = false
   }
   try {
-    const imported = input.wrtFile ? await readWrtDesignPackage(input.wrtFile) : undefined
+    const imported = input.wrtFile ? await readWrtDesignPackage(input.wrtFile, importProgress.update) : undefined
     packageRead = Boolean(imported)
+    if (imported) importProgress.finalize('saving')
     // 情况一：从 Sample 复制
     if (currentTemplate.value) {
       const copyRes = await designApi.createDesignByCopy({ uid: currentTemplate.value.designUid }) as ApiResponse<Design>
@@ -232,6 +239,7 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
   } finally {
     releaseImportedAssets()
     creating.value = false
+    if (input.wrtFile) importProgress.finish()
   }
 }
 

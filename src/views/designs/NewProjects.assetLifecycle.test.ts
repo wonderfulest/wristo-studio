@@ -15,7 +15,9 @@ describe('new WRT project resource ownership', () => {
     const allocate = () => { const url = URL.createObjectURL(new Blob(['image'])); urls.add(url); return url }
     const clear = vi.fn(() => { urls.forEach(url => URL.revokeObjectURL(url)); urls.clear() })
     let editorUrl = ''
+    const dialogVisible = { value: true }
     const dependencies: Record<string, any> = {
+      importProgress: { active: false, begin: vi.fn(() => { expect(dialogVisible.value).toBe(false) }), update: vi.fn(), finalize: vi.fn(), finish: vi.fn() },
       creating: { value: false }, canCreateProject: () => true, projectName: { value: 'Panda' },
       generateRandomProjectName: () => 'Panda', currentTemplate: { value: null },
       readWrtDesignPackage: async () => ({ config: { imageUrl: allocate() } }),
@@ -25,7 +27,7 @@ describe('new WRT project resource ownership', () => {
       saveWrtProject: async (_id: string, config: any) => { expect((await fetch(config.imageUrl)).ok).toBe(true) },
       baseStore: {}, propertiesStore: { clearProperties: vi.fn() }, designStore: { setAppLanguage: vi.fn() },
       router: { push: () => { clear(); editorUrl = allocate() } },
-      dialogVisible: { value: true },
+      dialogVisible,
       userStore: { refreshUserInfo: async () => { await Promise.resolve(); if (rejectRefresh) throw new Error('Profile unavailable') } },
       messageStore: { error: vi.fn() }, showErrorOnce: vi.fn(), t: (key: string) => key,
       WrtDesignPackageError: class extends Error {}, console: { error: vi.fn() },
@@ -36,6 +38,29 @@ describe('new WRT project resource ownership', () => {
       const snapshot = await captureProjectSnapshot({ imageUrl: editorUrl }, [])
       expect(await snapshot.assets['local-asset://0'].text()).toBe('image')
       expect(dependencies.creating.value).toBe(false)
+      expect(dependencies.importProgress.finish).toHaveBeenCalledOnce()
     } finally { clear() }
   })
+})
+
+it('closes the import overlay and reports the error when package reading fails', async () => {
+  const error = new Error('Invalid font source')
+  const dependencies = {
+    creating: { value: false },
+    dialogVisible: { value: true },
+    importProgress: { active: false, begin: vi.fn(), update: vi.fn(), finish: vi.fn() },
+    canCreateProject: () => true,
+    projectName: { value: 'Volt' },
+    readWrtDesignPackage: async () => { throw error },
+    clearRestoredDesignAssetUrls: vi.fn(),
+    showErrorOnce: vi.fn(), WrtDesignPackageError: class extends Error {},
+    console: { error: vi.fn() }, t: (key: string) => key,
+  }
+  const run = new Function(...Object.keys(dependencies), `${code}; return handleConfirmDialog`)(...Object.values(dependencies))
+  await run({ name: 'Volt', appLanguage: 'eng', wrtFile: new File(['wrt'], 'volt.wrt') })
+  expect(dependencies.importProgress.begin).toHaveBeenCalledWith('volt.wrt')
+  expect(dependencies.importProgress.finish).toHaveBeenCalledOnce()
+  expect(dependencies.creating.value).toBe(false)
+  expect(dependencies.showErrorOnce).toHaveBeenCalledWith(error, 'Invalid font source')
+  expect(dependencies.clearRestoredDesignAssetUrls).not.toHaveBeenCalled()
 })
