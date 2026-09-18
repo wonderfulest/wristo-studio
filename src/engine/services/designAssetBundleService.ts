@@ -730,7 +730,19 @@ const addFontAssetToBundle = async (
       throw new Error(`Missing font file: ${slug}`)
     }
 
-    const blob = source ? await fetchBlob(source) : null
+    // A bitmap font package is self-contained through its build files. The
+    // optional TTF may be hosted on a CDN and can be temporarily unavailable;
+    // do not reject an otherwise complete WRT just because that optional copy
+    // cannot be fetched.
+    let blob: Blob | null = null
+    let sourceFetchError: unknown = null
+    if (source) {
+      try {
+        blob = await fetchBlob(source)
+      } catch (error) {
+        sourceFetchError = error
+      }
+    }
     const format = blob ? getFormatFromBlob(blob, source!, 'ttf') : undefined
     const safeSlug = sanitizePathSegment(slug, 'font')
     let path = `fonts/${safeSlug}.${format}`
@@ -763,6 +775,10 @@ const addFontAssetToBundle = async (
         zip.file(filePath, await content.arrayBuffer())
         buildFiles.push({ path: filePath, sha256: await sha256Hex(content) })
       }
+    }
+
+    if (!blob && !buildFiles.length) {
+      throw sourceFetchError || new Error(`Missing font file: ${slug}`)
     }
 
     manifest.fonts?.push({
