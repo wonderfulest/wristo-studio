@@ -1395,9 +1395,18 @@ export async function readWrtDesignPackage(file: File): Promise<ImportedWrtDesig
     for (const font of manifest.fonts || []) {
       check(font.metadata)
       if (!font.path && (!font.metadata?.bitmapPreviewAtlasUrl || !font.metadata?.bitmapPreviewDescriptorUrl)) throw new WrtDesignPackageError('invalid-manifest', `Missing font preview assets: ${font.slug}`)
-      if (!font.slug.startsWith('local-') && !font.buildFiles?.some(file => file.path.endsWith('.fnt'))) throw new WrtDesignPackageError('invalid-manifest', `Missing font build assets: ${font.slug}`)
+      if (!font.slug.startsWith('local-') && !font.buildFiles?.some(file => file.path.endsWith('.fnt')) && !(font.path && /\.(ttf|otf)$/i.test(font.path))) throw new WrtDesignPackageError('invalid-manifest', `Missing font build assets: ${font.slug}`)
     }
     for (const slug of collectFontSlugs(config)) if (!manifest.fonts?.some(font => font.slug === slug && (font.path || font.buildFiles?.length))) throw new WrtDesignPackageError('invalid-manifest', `Missing packaged font: ${slug}`)
+  }
+  // Only build after validating all supplied hashes and references. Keep active
+  // project resources intact if parsing or rasterization fails.
+  const { buildMissingWrtFonts } = await import('./wrtFontBuild')
+  const fontRefs = await buildMissingWrtFonts(zip, manifest.fonts || [])
+  if (fontRefs.length) {
+    manifest.studio ||= { configPath: 'config/config.json', elementsPath: 'elements/', assetRefs: [] }
+    manifest.studio.assetRefs ||= []
+    manifest.studio.assetRefs.push(...fontRefs)
   }
   clearRestoredDesignAssetUrls()
   packageFonts.clear()

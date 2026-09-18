@@ -1,0 +1,23 @@
+<!doctype html><meta charset="UTF-8"><title>WRT font import verification</title>
+<input type="file" multiple accept=".wrt"><pre id="result">Ready</pre>
+<script type="module">
+import {createPinia,setActivePinia} from 'pinia';
+import {readWrtDesignPackage,buildWrtDesignPackage} from '/src/engine/services/designAssetBundleService.ts';
+import {packageFonts,packageFontBuildFiles} from '/src/engine/services/packageAssetRegistry.ts';
+setActivePinia(createPinia());
+window.results=[];
+document.querySelector('input').onchange=async event=>{
+ try {
+  for(const file of event.target.files){
+   document.querySelector('#result').textContent='Building '+file.name;
+   const start=performance.now();
+   const imported=await readWrtDesignPackage(file);
+   const fonts=[...packageFonts.keys()].map(slug=>({slug,files:packageFontBuildFiles.get(slug)?.size,preview:packageFonts.get(slug)?.bitmapPreviewAtlasUrl?.startsWith('blob:')}));
+   const saved=await buildWrtDesignPackage(imported.config);
+   const reopened=await readWrtDesignPackage(saved);
+   window.results.push({file:file.name,fonts,failures:reopened.failures,elapsedMs:Math.round(performance.now()-start),bytes:saved.size});
+  }
+  document.querySelector('#result').textContent=JSON.stringify(window.results,null,2);
+ }catch(error){document.querySelector('#result').textContent=error.stack;window.checkError=error.stack;}
+};
+</script>

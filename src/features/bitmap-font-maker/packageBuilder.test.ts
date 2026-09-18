@@ -76,6 +76,29 @@ function adapters(options?: {
 }
 
 describe('buildBitmapFontPackage', () => {
+  it('preserves source styling and visible glyphs without rasterizing invisible control characters', async () => {
+    const fixture = adapters()
+    fixture.value.parseSource.mockResolvedValue({
+      ...parsedSource, sourceWeight: 300,
+      supportedCodepoints: new Set([32, 48, 65, 0xad, 0x200b, 0x85]),
+      font: { charToGlyph: () => ({ path: { commands: [{ type: 'M', x: 0, y: 0 }] } }) },
+    } as unknown as ParsedFontSource)
+    fixture.value.createRendererSession.mockResolvedValue({
+      rendererPath: 'opentype-path', dispose: fixture.dispose,
+      render(size, actualRecipe, codepoints) {
+        expect(actualRecipe.fontWeight).toBe(300)
+        expect(codepoints).toEqual([32, 48, 65])
+        return rendered(size)
+      },
+    })
+    const result = await buildBitmapFontPackage({
+      source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf',
+      slug: 'fixture', fontType: 'text_font', recipe, preserveSource: true,
+    }, fixture.value)
+    const archive = await JSZip.loadAsync(result.zip)
+    expect(archive.file('312/fixture-g.fnt')).not.toBeNull()
+  })
+
   it('builds the canonical 38-size time package with BMFont files and 11 standalone glyph PNGs per size', async () => {
     const fixture = adapters()
     const progress: unknown[] = []

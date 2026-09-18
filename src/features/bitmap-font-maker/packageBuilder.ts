@@ -27,6 +27,8 @@ export interface BitmapFontBuildRequest {
   slug: string
   fontType: BitmapFontType
   recipe: BitmapFontRecipe
+  /** WRT imports preserve the uploaded font's glyph coverage and native style. */
+  preserveSource?: boolean
 }
 
 export interface BitmapFontBuildProgress {
@@ -236,9 +238,22 @@ export async function buildBitmapFontPackage(
   assertNotCancelled(isCancelled)
   const source = await adapters.parseSource(request.source.slice(0), request.fileName)
   assertNotCancelled(isCancelled)
-  const charset = charsetForType(request.fontType)
+  const charset = request.preserveSource
+    ? { profile: 'wristo-source-v1', codepoints: [...source.supportedCodepoints]
+      .filter(code => {
+        if (code === 32) return true
+        const character = String.fromCodePoint(code)
+        // FontFace suppresses controls such as soft hyphen even when the font
+        // contains an outline. They cannot produce standalone bitmap glyphs.
+        return !/[\p{Cc}\p{Cf}]/u.test(character)
+          && source.font.charToGlyph(character).path.commands.length > 0
+      })
+      .sort((a, b) => a - b) }
+    : charsetForType(request.fontType)
   assertNotCancelled(isCancelled)
-  const normalizedRecipe = solidWhiteRecipe(normalizeBitmapFontRecipe(request.recipe))
+  const normalizedRecipe = solidWhiteRecipe(normalizeBitmapFontRecipe(request.preserveSource
+    ? { ...request.recipe, fontWeight: source.sourceWeight, italicAngle: 0 }
+    : request.recipe))
   const recipeText = canonicalJson(normalizedRecipe)
   assertNotCancelled(isCancelled)
   const recipeBytes = new TextEncoder().encode(recipeText)
