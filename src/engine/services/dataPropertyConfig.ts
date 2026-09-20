@@ -66,6 +66,43 @@ const legacySelectedSymbol = (
   return ''
 }
 
+// Goal settings are numeric Connect IQ properties, unlike symbolic data properties.
+function normalizeGoalProperties(
+  properties: PropertiesMap,
+  catalogOptions: readonly DataTypeOption[],
+  issues: DataPropertyIssue[],
+): void {
+  const { bySymbol, byValue } = catalogIndexes(catalogOptions)
+  const resolve = (value: unknown) => {
+    if (typeof value === 'string' && value.startsWith(':')) return bySymbol.get(value)
+    const number = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value
+    return typeof number === 'number' && Number.isSafeInteger(number) ? byValue.get(number) : undefined
+  }
+  for (const [propertyKey, property] of Object.entries(properties)) {
+    if (property.type !== 'goal') continue
+    const issue = (code: DataPropertyIssueCode, field: string) => issues.push({ code, propertyKey, path: `properties.${propertyKey}.${field}` })
+    const options = property.options
+    if (!Array.isArray(options) || options.length === 0) {
+      issue('empty_options', 'options')
+      continue
+    }
+    const seen = new Set<number>()
+    property.options = options.map((option, index) => {
+      const metric = resolve(option?.value)
+      if (!metric || !Number.isSafeInteger(metric.valueCode)) {
+        issue('unknown_symbol', `options[${index}].value`)
+        return option
+      }
+      if (seen.has(metric.valueCode)) issue('invalid_definition', `options[${index}].value`)
+      seen.add(metric.valueCode)
+      return { ...option, value: metric.valueCode, valueCode: metric.valueCode, metricSymbol: metric.metricSymbol, settingsLabel: metric.settingsLabel }
+    })
+    const selected = resolve(property.value)
+    if (!selected || !seen.has(selected.valueCode)) issue('invalid_value', 'value')
+    else property.value = selected.valueCode
+  }
+}
+
 export function normalizeDataPropertyConfig(
   config: unknown,
   catalogOptions: readonly DataTypeOption[],
@@ -127,6 +164,7 @@ export function normalizeDataPropertyConfig(
     properties[propertyKey] = property as PropertyItem
   }
 
+  normalizeGoalProperties(properties, catalogOptions, issues)
   return { properties, dataOptions, issues }
 }
 
@@ -173,5 +211,6 @@ export function serializeDataPropertyConfig(
     }
   }
 
+  normalizeGoalProperties(properties, catalogOptions, issues)
   return { properties, dataOptions, issues }
 }

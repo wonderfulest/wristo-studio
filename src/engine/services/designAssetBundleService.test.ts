@@ -517,3 +517,36 @@ describe('invalid Unicode save guard', () => {
       .rejects.toThrow('$.properties.label')
   })
 })
+
+describe('legacy cloud bundle restoration', () => {
+  afterEach(() => { vi.unstubAllGlobals() })
+  it.each(['', '180890-worldgriddigital/'])('replaces stale package fonts and restores assets under %s', async (root) => {
+    setActivePinia(createPinia())
+    const service = await import('./designAssetBundleService')
+    const registry = await import('./packageAssetRegistry')
+    const { captureProjectSnapshot } = await import('./localProjectSnapshot')
+    registry.packageFonts.set('old-font', { slug: 'old-font', bitmapPreviewAtlasUrl: 'blob:expired' } as any)
+    registry.packageFontBuildFiles.set('old-font', new Map())
+    registry.packageBitmapChars.set(99, [])
+    const zip = new JSZip()
+    zip.file(`${root}manifest.json`, JSON.stringify({ version: 2,
+      fonts: [{ slug: 'grid-font', path: 'fonts/grid.ttf', metadata: { fullName: 'Grid' } }],
+      studio: { assetRefs: [{ path: 'assets/grid.svg', sourceUrl: 'https://cdn/grid.svg' }] },
+    }))
+    zip.file(`${root}fonts/grid.ttf`, 'font bytes')
+    zip.file(`${root}assets/grid.svg`, '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    const bytes = await zip.generateAsync({ type: 'arraybuffer' })
+    const nativeFetch = globalThis.fetch
+    vi.stubGlobal('fetch', vi.fn((input: any) => String(input) === 'https://cdn/project.zip'
+      ? Promise.resolve(new Response(bytes)) : nativeFetch(input)))
+    const restored = await service.restoreDesignAssetBundle({ elements: [{ imageUrl: 'https://cdn/grid.svg' }] } as any,
+      { assetBundleUrl: 'https://cdn/project.zip' })
+    expect((restored.elements[0] as any).imageUrl).toMatch(/^blob:/)
+    expect([...registry.packageFonts.keys()]).toEqual(['grid-font'])
+    expect(registry.packageFontBuildFiles.size).toBe(0)
+    expect(registry.packageBitmapChars.size).toBe(0)
+    const snapshot = await captureProjectSnapshot(restored, [...registry.packageFonts.values()])
+    expect(Object.keys(snapshot.assets)).toHaveLength(2)
+    service.clearRestoredDesignAssetUrls()
+  })
+})

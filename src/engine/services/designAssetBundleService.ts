@@ -1336,13 +1336,21 @@ export async function restoreDesignAssetBundle(
   const response = await fetch(toAbsoluteUrl(assetBundleUrl))
   if (!response.ok) throw new Error(`Failed to fetch design asset bundle: ${assetBundleUrl}`)
   const bytes = await response.arrayBuffer()
-  const zip = await JSZip.loadAsync(bytes)
+  const archive = await JSZip.loadAsync(bytes)
+  // Older cloud bundles wrap all entries in an appId-name directory.
+  const nestedManifests = Object.keys(archive.files).filter(path => /^[^/]+\/manifest\.json$/.test(path))
+  const zip = !archive.file('manifest.json') && nestedManifests.length === 1
+    ? archive.folder(nestedManifests[0].slice(0, -'manifest.json'.length))!
+    : archive
   const manifest = await parseManifest(zip)
   if (manifest?.format === WRT_FORMAT && manifest.version === 2) {
     const imported = await readWrtDesignPackage(new File([bytes], 'project.wrt'))
     return options.preserveConfig ? restoreDesignAssetBundleFromZip(config, zip, manifest) : imported.config
   }
   clearRestoredDesignAssetUrls()
+  packageFonts.clear()
+  packageFontBuildFiles.clear()
+  packageBitmapChars.clear()
   return restoreDesignAssetBundleFromZip(config, zip, manifest)
 }
 

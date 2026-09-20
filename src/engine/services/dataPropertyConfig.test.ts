@@ -134,3 +134,28 @@ describe('serializeDataPropertyConfig', () => {
     expect(result.properties.data_1).not.toHaveProperty('options')
   })
 })
+
+describe('goal property numeric contract', () => {
+  const goal = { type: 'goal' as const, title: 'Battery', value: ':FIELD_TYPE_BATTERY', options: [{ label: 'Battery', value: ':FIELD_TYPE_BATTERY' }] }
+  it('normalizes legacy import and preserves numeric values after save and reload', () => {
+    const source = { properties: { goal_1: goal } }
+    const imported = normalizeDataPropertyConfig(source, catalog)
+    const saved = serializeDataPropertyConfig(imported.properties, imported.dataOptions, catalog)
+    const reloaded = normalizeDataPropertyConfig(saved, catalog)
+    for (const result of [imported, saved, reloaded]) {
+      expect(result.issues).toEqual([])
+      expect(result.properties.goal_1.value).toBe(2)
+      expect(result.properties.goal_1.options?.[0]).toMatchObject({ value: 2, valueCode: 2, metricSymbol: battery.metricSymbol })
+    }
+    expect(source.properties.goal_1.value).toBe(':FIELD_TYPE_BATTERY')
+  })
+  it('blocks unknown symbols, duplicate numeric options, and missing selected values', () => {
+    for (const property of [
+      { ...goal, value: ':UNKNOWN', options: [{ label: 'Unknown', value: ':UNKNOWN' }] },
+      { ...goal, options: [...goal.options, { label: 'Again', value: 2 }] },
+      { ...goal, value: 1 },
+    ]) {
+      expect(serializeDataPropertyConfig({ goal_1: property }, {}, catalog).issues.length).toBeGreaterThan(0)
+    }
+  })
+})
