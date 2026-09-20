@@ -423,7 +423,7 @@ export async function createGlyphRendererSession(source: ParsedFontSource, envir
     rendererPath: registration ? 'font-face-canvas' : 'opentype-path',
     render: (size, recipe, codepoints) => {
       if (disposed) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
-      const needsDeterministicTransform = recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0 || (recipe.horizontalScale ?? 1) !== 1
+      const needsDeterministicTransform = recipe.timeMonospace === true || recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0 || (recipe.horizontalScale ?? 1) !== 1
       return registration && !needsDeterministicTransform
         ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration)
         : renderGlyphs(source, codepoints, size, recipe)
@@ -452,7 +452,7 @@ export async function renderGlyphsPreferWorkerCanvas(
   }
 }
 
-export function renderGlyphs(source: ParsedFontSource, codepoints: number[], size: number, recipe: BitmapFontRecipe): RenderedGlyphSet {
+function renderProportionalGlyphs(source: ParsedFontSource, codepoints: number[], size: number, recipe: BitmapFontRecipe): RenderedGlyphSet {
   validateRasterRequest(source, size, recipe)
   const scale = size / source.unitsPerEm
   const baseline = Math.ceil(source.ascender * scale)
@@ -518,4 +518,24 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
   })
 
   return { glyphs, lineHeight, baseline, diagnostics: { rendererPath: 'opentype-path', rendererVersion: '1' } }
+}
+
+/** Measure the complete time charset so preview text cannot change the cell width. */
+export function renderGlyphs(source: ParsedFontSource, codepoints: number[], size: number, recipe: BitmapFontRecipe): RenderedGlyphSet {
+  if (!recipe.timeMonospace) return renderProportionalGlyphs(source, codepoints, size, recipe)
+  const timeCodepoints = Array.from({ length: 11 }, (_, index) => 48 + index)
+  const rendered = renderProportionalGlyphs(source, [...new Set([...timeCodepoints, ...codepoints])], size, recipe)
+  const digits = rendered.glyphs.filter(glyph => glyph.codepoint >= 48 && glyph.codepoint <= 57)
+  const colon = rendered.glyphs.find(glyph => glyph.codepoint === 58)!
+  const ratio = recipe.colonWidth === 'full' ? 1 : 2
+  // Even pixel cells give an exact half-width colon at every generated size.
+  const width = Math.ceil(Math.max(...digits.map(glyph => Math.max(glyph.width + 2, glyph.xadvance)), (colon.width + 2) * ratio) / ratio) * ratio
+  const byCodepoint = new Map(rendered.glyphs.map(glyph => {
+    if (glyph.codepoint >= 48 && glyph.codepoint <= 58) {
+      const xadvance = glyph.codepoint === 58 ? width / ratio : width
+      return [glyph.codepoint, { ...glyph, xadvance, xoffset: Math.floor((xadvance - glyph.width) / 2) }] as const
+    }
+    return [glyph.codepoint, glyph] as const
+  }))
+  return { ...rendered, glyphs: codepoints.map(codepoint => byCodepoint.get(codepoint)!) }
 }

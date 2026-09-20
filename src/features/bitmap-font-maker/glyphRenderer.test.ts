@@ -24,6 +24,31 @@ const recipe = (changes: Partial<Parameters<typeof normalizeBitmapFontRecipe>[0]
   })
 
 describe('renderGlyphs', () => {
+  it('uses fixed digit cells and half-width colon without changing pixels', async () => {
+    const parsed = await source()
+    const cps = charsetForType('time_font').codepoints
+    const plain = renderGlyphs(parsed, cps, 48, recipe())
+    const mono = renderGlyphs(parsed, cps, 48, recipe({ timeMonospace: true }))
+    const width = mono.glyphs[0].xadvance
+    for (const glyph of mono.glyphs) {
+      expect(glyph.xadvance).toBe(glyph.codepoint === 58 ? width / 2 : width)
+      expect(glyph.xoffset).toBe(Math.floor((glyph.xadvance - glyph.width) / 2))
+      expect(glyph.xoffset).toBeGreaterThanOrEqual(0)
+      expect(glyph.alpha).toEqual(plain.glyphs.find(g => g.codepoint === glyph.codepoint)!.alpha)
+    }
+    expect(renderGlyphs(parsed, [49], 48, recipe({ timeMonospace: true })).glyphs[0].xadvance).toBe(width)
+  })
+
+  it('supports full-width colon and fits outlined italic glyphs in their cells', async () => {
+    const result = renderGlyphs(await source(), charsetForType('time_font').codepoints, 48,
+      recipe({ timeMonospace: true, colonWidth: 'full', italicAngle: 20, outlineMode: 'fill-outline', outlineWidthEm: 0.2 }))
+    expect(new Set(result.glyphs.map(g => g.xadvance)).size).toBe(1)
+    for (const glyph of result.glyphs) {
+      expect(glyph.xoffset).toBeGreaterThanOrEqual(0)
+      expect(glyph.xoffset + glyph.width).toBeLessThanOrEqual(glyph.xadvance)
+    }
+  })
+
   it('renders uploaded glyph alpha and preserves space advance against one baseline', async () => {
     const result = renderGlyphs(await source(), [32, 65], 48, recipe())
     const letter = result.glyphs.find((glyph) => glyph.codepoint === 65)!

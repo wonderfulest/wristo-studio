@@ -4,6 +4,7 @@ import { BITMAP_FONT_SIZES, type BitmapFontRecipe } from './contracts'
 import type { ParsedFontSource } from './fontSource'
 import type { GlyphRendererSession, RenderedGlyphSet } from './glyphRenderer'
 import {
+  composeStandaloneGlyphPixels,
   BuildCancelledError,
   buildBitmapFontPackage,
   buildCurrentSizeGlyphZip,
@@ -424,4 +425,17 @@ describe('builder validation', () => {
     await expect(buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'time_font', recipe }, fixture.value)).rejects.toMatchObject({ code: 'PNG_INVALID' })
     expect(fixture.dispose).toHaveBeenCalledOnce()
   })
+})
+
+it('exports mono PNG cells with exact half-width colon and shared baseline', () => {
+  const digit = { codepoint: 48, width: 2, height: 2, xoffset: 3, yoffset: 1, xadvance: 8, alpha: new Uint8Array([255,255,255,255]) }
+  const colon = { ...digit, codepoint: 58, width: 1, height: 1, xoffset: 1, yoffset: 2, xadvance: 4, alpha: new Uint8Array([255]) }
+  const rendered = { glyphs: [digit, colon], lineHeight: 8, baseline: 6 } as RenderedGlyphSet
+  const monoRecipe = { ...recipe, timeMonospace: true, colonWidth: 'half' as const }
+  const digitPixels = composeStandaloneGlyphPixels(digit, rendered, monoRecipe)
+  const colonPixels = composeStandaloneGlyphPixels(colon, rendered, monoRecipe)
+  expect(digitPixels.width).toBe(colonPixels.width * 2)
+  expect(digitPixels.height).toBe(colonPixels.height)
+  expect(digitPixels.rgba[(2 * 8 + 3) * 4 + 3]).toBe(255)
+  expect(colonPixels.rgba[(3 * 4 + 1) * 4 + 3]).toBe(255)
 })

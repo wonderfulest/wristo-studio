@@ -16,6 +16,9 @@ export interface BitmapFontRecipe {
   italicAngle: number
   /** Horizontal glyph scale. 1 keeps the uploaded font's original width. */
   horizontalScale?: number
+  /** Fixed digit cells for time fonts only; colon defaults to half a cell. */
+  timeMonospace?: boolean
+  colonWidth?: 'half' | 'full'
   outlineWidthEm: number
   outlineMode: OutlineMode
   lineJoin: 'round'
@@ -107,6 +110,7 @@ export function normalizeBitmapFontRecipe(input: BitmapFontRecipeInput): BitmapF
   }
 
   return {
+    ...(input.timeMonospace === true ? { timeMonospace: true, colonWidth: input.colonWidth === 'full' ? 'full' as const : 'half' as const } : {}),
     schemaVersion: 1,
     rendererVersion: '1',
     fontWeight: clamp(finiteOrDefault(input.fontWeight, 400), 100, 900),

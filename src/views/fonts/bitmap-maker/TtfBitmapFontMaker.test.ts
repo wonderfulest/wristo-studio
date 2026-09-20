@@ -518,6 +518,21 @@ describe('BitmapFontMaker', () => {
     expect(wrapper.get('#bitmap-publish-help').text()).toContain('local validation')
   })
 
+  it('offers mono only for time fonts, defaults colon to half, and clears it for text', async () => {
+    const wrapper = mountMaker()
+    await upload(wrapper)
+    await wrapper.get('[data-test="time-monospace"]').setValue(true)
+    expect((wrapper.get('[data-test="colon-width"]').element as HTMLSelectElement).value).toBe('half')
+    expect((wrapper.vm as any).recipe.timeMonospace).toBe(true)
+    await wrapper.get('[data-test="colon-width"]').setValue('full')
+    expect((wrapper.vm as any).recipe.colonWidth).toBe('full')
+    await wrapper.get('.segmented input[value="text_font"]').setValue(true)
+    expect(wrapper.find('[data-test="time-monospace-controls"]').exists()).toBe(false)
+    expect((wrapper.vm as any).recipe.timeMonospace).toBe(false)
+    await wrapper.get('.segmented input[value="text_font_zh"]').setValue(true)
+    expect(wrapper.find('[data-test="time-monospace-controls"]').exists()).toBe(false)
+  })
+
   it('shows gradient controls only for time fonts and binds both colors plus angle to the recipe', async () => {
     const wrapper = mountMaker()
     await upload(wrapper)

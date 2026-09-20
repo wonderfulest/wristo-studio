@@ -47,6 +47,14 @@
       <div class="form-section">
         <div class="section-header">
           <h3 class="section-title">{{ t('property.goalOptions') }}</h3>
+          <div class="section-actions">
+            <el-button type="primary" link :disabled="addableOptions.length === 0" @click="openAddOptions">
+              {{ t('property.addOption') }}
+            </el-button>
+            <el-button type="primary" link @click="restoreSystemDefaults">
+              {{ t('property.restoreSystemDefaults') }}
+            </el-button>
+          </div>
         </div>
         <el-form-item 
           :label="t('property.defaultValue')"
@@ -153,6 +161,20 @@
       </div>
     </template>
   </el-dialog>
+  <el-dialog v-model="addOptionsVisible" :title="t('property.addGoalOptions')" width="560px" append-to-body destroy-on-close :close-on-click-modal="false">
+    <el-select v-model="pendingOptionValues" multiple filterable :placeholder="t('property.selectGoalTypesToAdd')" style="width: 100%">
+      <el-option
+        v-for="option in addableOptions"
+        :key="option.value"
+        :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
+        :value="option.value"
+      />
+    </el-select>
+    <template #footer>
+      <el-button @click="addOptionsVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :disabled="pendingOptionValues.length === 0" @click="confirmAddOptions">{{ t('common.confirm') }}</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -160,7 +182,7 @@ import { showErrorOnce } from '@/utils/errorMessage'
 
 import { computed, ref, reactive } from 'vue'
 import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions } from '@/stores/dataCatalogStore'
@@ -169,6 +191,7 @@ import { withSimplifiedChineseOptionLabels } from './propertyLocalization'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import { resolveDataOptionSettingsLabel } from './dataPropertyOptions'
+import { resolveOrderedDefaultValue } from './orderedPropertyOptions'
 
 const { locale, t } = useI18n()
 const dialogVisible = ref(false)
@@ -176,8 +199,10 @@ const formRef = ref(null)
 const isEdit = ref(false)
 const activeOptions = ref([])
 // 获取目标数据项作为选项
-const goalOptions = getDataTypePropertyOptions().filter(option => option.category === 'goal')
-const cloneGoalOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(goalOptions)))
+const goalOptions = computed(() => getDataTypePropertyOptions().filter(option => option.category === 'goal'))
+const addOptionsVisible = ref(false)
+const pendingOptionValues = ref([])
+const cloneGoalOptions = () => withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(goalOptions.value)))
 const iconGlyph = (option) => resolveMetricIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
@@ -186,22 +211,57 @@ const formData = reactive({
   propertyKey: '',
   type: 'goal',
   options: cloneGoalOptions(),
-  value: goalOptions[0]?.value,
+  value: goalOptions.value[0]?.value,
   prompt: '',
   errorMessage: ''
 })
 
 const selectedOption = computed(() => formData.options.find((option) => option.value === formData.value) || null)
 
+const addableOptions = computed(() => goalOptions.value.filter(option =>
+  !formData.options.some(current => String(current.value) === String(option.value))
+))
+
+const openAddOptions = () => {
+  pendingOptionValues.value = []
+  addOptionsVisible.value = true
+}
+
+const confirmAddOptions = () => {
+  const selected = addableOptions.value.filter(option => pendingOptionValues.value.includes(option.value))
+  formData.options.push(...withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(selected))))
+  formData.value = resolveOrderedDefaultValue(formData.options, formData.value)
+  pendingOptionValues.value = []
+  addOptionsVisible.value = false
+}
+
+const restoreSystemDefaults = async () => {
+  try {
+    await ElMessageBox.confirm(t('property.restoreGoalDefaultsConfirm'), t('property.restoreSystemDefaults'), {
+      confirmButtonText: t('common.yes'),
+      cancelButtonText: t('common.no'),
+      type: 'warning',
+    })
+    formData.options = cloneGoalOptions()
+    formData.value = resolveOrderedDefaultValue(formData.options, formData.value)
+  } catch {
+    // Canceling preserves the current options and default value.
+  }
+}
+
 const initFormData = (data = null) => {
+  addOptionsVisible.value = false
+  pendingOptionValues.value = []
   isEdit.value = !!data
   if (data) {
     Object.assign(formData, {
       title: data.title,
       propertyKey: data.propertyKey,
       type: data.type,
-      options: cloneGoalOptions(),
-      value: data.value || goalOptions[0]?.value || '',
+      options: Array.isArray(data.options)
+        ? withSimplifiedChineseOptionLabels(JSON.parse(JSON.stringify(data.options)))
+        : cloneGoalOptions(),
+      value: data.value ?? goalOptions.value[0]?.value,
       prompt: data.prompt,
       errorMessage: data.errorMessage
     })
@@ -212,11 +272,12 @@ const initFormData = (data = null) => {
       propertyKey: defaults.key,
       type: 'goal',
       options: cloneGoalOptions(),
-      value: goalOptions[0]?.value,
+      value: goalOptions.value[0]?.value,
       prompt: '',
       errorMessage: ''
     })
   }
+  formData.value = resolveOrderedDefaultValue(formData.options, formData.value)
 }
 
 const emit = defineEmits(['confirm'])
@@ -226,6 +287,10 @@ const handleConfirm = async () => {
   
   try {
     await formRef.value.validate()
+    if (!selectedOption.value) {
+      ElMessage.error(t('property.selectValidOption'))
+      return
+    }
     emit('confirm', {
       type: 'goal',
       key: formData.propertyKey,
@@ -258,6 +323,7 @@ const handleClose = () => {
 
 const deleteOption = (index) => {
   formData.options.splice(index, 1)
+  formData.value = resolveOrderedDefaultValue(formData.options, formData.value)
 }
 
 const moveOption = (index, direction) => {
@@ -281,6 +347,11 @@ defineExpose({
 </script>
 
 <style scoped>
+.section-actions {
+  display: flex;
+  align-items: center;
+}
+
 .goal-icon {
   font-family: var(--studio-data-icon-font), sans-serif !important;
 }

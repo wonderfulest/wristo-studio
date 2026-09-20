@@ -20,6 +20,14 @@ const recipe = (outlineMode: 'fill' | 'fill-outline' | 'outline-only') => normal
 })
 
 describe('buildLiveGlyphPreview', () => {
+  it('keeps time width stable when digits change', async () => {
+    const bytes = await readFile(fileURLToPath(fixtureUrl))
+    const source = await parseFontSource(new File([bytes], 'minimal-latin.ttf'))
+    const mono = { ...recipe('fill'), timeMonospace: true }
+    const preview = (text: string) => buildLiveGlyphPreview(source, Array.from(text, c => c.codePointAt(0)!), 48, mono, false)
+    expect(preview('11:11').width).toBe(preview('08:58').width)
+  })
+
   it('uses the bottom renderer modes, per-glyph gradient pixels, and safe advances', async () => {
     const bytes = await readFile(fileURLToPath(fixtureUrl))
     const source = await parseFontSource(new File([bytes], 'minimal-latin.ttf'))

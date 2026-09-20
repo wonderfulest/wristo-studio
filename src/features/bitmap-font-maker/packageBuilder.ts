@@ -127,6 +127,20 @@ export function composeGlyphPixels(glyph: RenderedGlyph, recipe: BitmapFontRecip
   return { width, height, rgba }
 }
 
+export function composeStandaloneGlyphPixels(glyph: RenderedGlyph, rendered: RenderedGlyphSet, recipe: BitmapFontRecipe): AtlasPixels {
+  if (!recipe.timeMonospace) return composeGlyphPixels(glyph, recipe, 1)
+  const top = Math.min(0, ...rendered.glyphs.map(item => item.yoffset)) - 1
+  const bottom = Math.max(rendered.lineHeight, ...rendered.glyphs.map(item => item.yoffset + item.height)) + 1
+  const width = glyph.xadvance
+  const height = bottom - top
+  const rgba = new Uint8ClampedArray(width * height * 4)
+  const pixels = composeGlyphPixels(glyph, recipe)
+  for (let y = 0; y < glyph.height; y += 1) {
+    rgba.set(pixels.rgba.subarray(y * glyph.width * 4, (y + 1) * glyph.width * 4), ((glyph.yoffset - top + y) * width + glyph.xoffset) * 4)
+  }
+  return { width, height, rgba }
+}
+
 function composeAtlas(rendered: RenderedGlyphSet, packed: PackedGlyphAtlas, recipe: BitmapFontRecipe): AtlasPixels {
   const rgba = new Uint8ClampedArray(packed.width * packed.height * 4)
   const glyphs = new Map<number, RenderedGlyph>(rendered.glyphs.map((glyph) => [glyph.codepoint, glyph]))
@@ -254,6 +268,10 @@ export async function buildBitmapFontPackage(
   const normalizedRecipe = solidWhiteRecipe(normalizeBitmapFontRecipe(request.preserveSource
     ? { ...request.recipe, fontWeight: source.sourceWeight, italicAngle: 0 }
     : request.recipe))
+  if (request.fontType !== 'time_font') {
+    delete normalizedRecipe.timeMonospace
+    delete normalizedRecipe.colonWidth
+  }
   const recipeText = canonicalJson(normalizedRecipe)
   assertNotCancelled(isCancelled)
   const recipeBytes = new TextEncoder().encode(recipeText)
@@ -308,7 +326,7 @@ export async function buildBitmapFontPackage(
         await add(`${prefix}${request.slug}-g_0.png`, png)
         if (request.fontType === 'time_font') {
           for (const glyph of rendered.glyphs) {
-            const glyphPng = await adapters.encodePng(composeGlyphPixels(glyph, normalizedRecipe, 1))
+            const glyphPng = await adapters.encodePng(composeStandaloneGlyphPixels(glyph, rendered, normalizedRecipe))
             assertPng(glyphPng)
             const name = glyph.codepoint === 58 ? 'colon' : String.fromCodePoint(glyph.codepoint)
             await add(`${prefix}glyphs/${name}.png`, glyphPng)
@@ -410,7 +428,7 @@ export async function buildCurrentSizeGlyphZip(
   try {
     const rendered = session.render(request.size, recipe, charsetForType('time_font').codepoints)
     for (const glyph of rendered.glyphs) {
-      const bytes = await adapters.encodePng(composeGlyphPixels(glyph, colorRecipe, 1))
+      const bytes = await adapters.encodePng(composeStandaloneGlyphPixels(glyph, rendered, colorRecipe))
       assertPng(bytes)
       const name = glyph.codepoint === 58 ? 'colon' : String.fromCodePoint(glyph.codepoint)
       archive.file(`${name}.png`, bytes, { date: ZIP_ENTRY_DATE, createFolders: false, compression: 'STORE' })
