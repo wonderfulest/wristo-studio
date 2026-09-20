@@ -18,6 +18,18 @@ vi.hoisted(() => {
 const config = { type: 'layout' as const, title: 'Layout', value: 1, options: [{ label: 'Heart rate', value: 1 }, { label: 'Time', value: 2 }] }
 describe('layout preview', () => {
   beforeEach(() => { setActivePinia(createPinia()) })
+  it.each(['background', 'image', 'dynamicImage'])('%s follows configured display states in both modes', (eleType) => {
+    const layers = useLayerStore()
+    layers.addLayer({ id: 'asset', eleType, displayStates: { active: false, ambient: true } } as any)
+    expect(layers.layers[0].visible).toBe(false)
+    layers.setPreviewMode('ambient')
+    expect(layers.layers[0].visible).toBe(true)
+    layers.setLayerDisplayStates('asset', { active: true, ambient: false })
+    expect(layers.layers[0].visible).toBe(false)
+    layers.setPreviewMode('active')
+    expect(layers.layers[0].visible).toBe(true)
+  })
+
   it('switches layers without changing the published default or dynamic expression', () => {
     const properties = usePropertiesStore()
     properties.loadProperties({ layout: config })

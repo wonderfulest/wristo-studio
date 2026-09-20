@@ -1,4 +1,5 @@
 import instance from '@/config/axios'
+import { uploadDesignAssetBundle } from './designAssetUpload'
 import type { 
   PageResponse,
   ApiResponse,
@@ -211,12 +212,7 @@ export const designApi = {
   },
 
   uploadAssetBundle(designUid: string, file: File): Promise<ApiResponse<DesignAssetBundleVO>> {
-    const form = new FormData()
-    form.append('file', file)
-    return instance.post(`/dsn/design/${encodeURIComponent(designUid)}/asset-bundle`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
-    })
+    return uploadDesignAssetBundle(designUid, file)
   },
 
   getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {

@@ -50,17 +50,15 @@ export const useLayerStore = defineStore('layerStore', {
         const displayStates = normalizeDisplayStates(layer.displayStates)
         layer.displayStates = displayStates
         const tokenValues = useExpressionPreviewStore().tokenValues
-        layer.visible = String(layer.eleType ?? '') === 'background' && this.previewMode === 'ambient'
-          ? false
-          : resolveElementVisibility({
-              displayStates,
-              previewMode: this.previewMode,
-              visibility: (layer.element as any)?.visibility ?? layer.visibility,
-              tokenValues,
-              layoutVisibility: layer.element?.layoutVisibility ?? useElementDataStore().getElementConfig(layer.id)?.layoutVisibility,
-              properties: usePropertiesStore().allProperties,
-              layoutValues: useLayoutPreviewStore().values,
-            })
+        layer.visible = resolveElementVisibility({
+          displayStates,
+          previewMode: this.previewMode,
+          visibility: (layer.element as any)?.visibility ?? layer.visibility,
+          tokenValues,
+          layoutVisibility: layer.element?.layoutVisibility ?? useElementDataStore().getElementConfig(layer.id)?.layoutVisibility,
+          properties: usePropertiesStore().allProperties,
+          layoutValues: useLayoutPreviewStore().values,
+        })
         changed ||= layer.visible !== previousVisible
         if (layer.element) {
           ;(layer.element as any).displayStates = displayStates

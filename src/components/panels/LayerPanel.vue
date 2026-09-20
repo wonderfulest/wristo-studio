@@ -230,9 +230,6 @@ const previewMode = computed<DisplayStateMode>({
   get: () => layerStore.previewMode,
   set: (mode) => {
     layerStore.setPreviewMode(mode)
-    if (mode === 'ambient') {
-      clearBackgroundSelection()
-    }
     debouncedUpdateElements()
   }
 })
@@ -240,21 +237,6 @@ const previewMode = computed<DisplayStateMode>({
 const isFixedLayer = (layer: any): boolean => {
   const t = String(layer?.eleType ?? '')
   return t === 'global' || t === 'background'
-}
-
-const isAmbientBackgroundLayer = (layer: any): boolean => {
-  return previewMode.value === 'ambient' && String(layer?.eleType ?? '') === 'background'
-}
-
-const clearBackgroundSelection = (): void => {
-  const backgroundIds = new Set(layerStore.layers.filter((layer) => String(layer?.eleType ?? '') === 'background').map((layer) => String(layer.id)))
-  if (!canvasStore.activeIds.some((id) => backgroundIds.has(String(id)))) return
-  baseStore.canvas?.discardActiveObject?.()
-  canvasStore.clearActiveIds()
-  layerStore.clearSelected()
-  activeElements.value = []
-  selectedIds.value = []
-  baseStore.canvas?.renderAll?.()
 }
 
 const sortLayersForPanel = (sourceLayers: LayerElement[]): LayerElement[] => {
@@ -357,10 +339,6 @@ const setupElementListeners = (): void => {
 // select a layer from side panel and sync to canvas + store
 const selectLayer = async (layer: any): Promise<void> => {
   const isBackgroundLayer = String(layer?.eleType ?? '') === 'background'
-  if (isAmbientBackgroundLayer(layer)) {
-    clearBackgroundSelection()
-    return
-  }
   // do not allow selecting locked layers from panel
   if ((layer as { locked?: boolean }).locked && !isBackgroundLayer) {
     return
@@ -426,7 +404,6 @@ const isActived = (layerId: string | undefined): boolean => {
   if (!layerId) return false
   const layer = layers.value.find((l) => l.id === layerId)
   if (!layer) return false
-  if (isAmbientBackgroundLayer(layer)) return false
   if ((layer as any).locked && String((layer as any).eleType ?? '') !== 'background') return false
   const result = selectedIds.value.includes(layerId) || canvasStore.activeIds.includes(layerId) || layerStore.isSelected(layerId)
   return result
