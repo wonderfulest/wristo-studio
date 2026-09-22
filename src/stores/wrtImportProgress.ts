@@ -4,13 +4,15 @@ import type { WrtImportProgress } from '@/engine/services/wrtImportProgress'
 export const useWrtImportProgressStore = defineStore('wrtImportProgress', {
   state: () => ({
     active: false,
+    mode: 'import' as 'import' | 'load',
     fileName: '',
     progress: { stage: 'reading', percentage: 0 } as Omit<WrtImportProgress, 'stage'> & {
       stage: WrtImportProgress['stage'] | 'saving' | 'applying'
     },
   }),
   actions: {
-    begin(fileName: string) {
+    begin(fileName: string, mode: 'import' | 'load' = 'import') {
+      this.mode = mode
       this.fileName = fileName
       this.progress = { stage: 'reading', percentage: 0 }
       this.active = true

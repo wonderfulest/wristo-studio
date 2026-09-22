@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="state.active"
-    :title="t('editor.wrtImportProgress.title')"
+    :title="t(state.mode === 'load' ? 'editor.wrtImportProgress.loadTitle' : 'editor.wrtImportProgress.title')"
     width="min(440px, calc(100vw - 32px))"
     append-to-body
     :close-on-click-modal="false"
@@ -22,11 +22,32 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from '@/i18n'
 import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
 
 const state = useWrtImportProgressStore()
 const { t } = useI18n()
+
+// Modal focus alone does not block document-level editor shortcuts.
+const blockEditorShortcuts = (event: KeyboardEvent) => {
+  if (!state.active || event.key === 'Tab') return
+  event.preventDefault()
+  event.stopImmediatePropagation()
+}
+const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+  if (!state.active) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+onMounted(() => {
+  window.addEventListener('keydown', blockEditorShortcuts, true)
+  window.addEventListener('beforeunload', warnBeforeLeaving)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', blockEditorShortcuts, true)
+  window.removeEventListener('beforeunload', warnBeforeLeaving)
+})
 </script>
 
 <style scoped>

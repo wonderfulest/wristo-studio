@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'editor.wrtImportProgress.loadTitle': 'Loading design',
   'editor.wrtImportProgress.title': 'Importing WRT',
   'editor.wrtImportProgress.reading': 'Reading package…',
   'editor.wrtImportProgress.verifying': 'Verifying assets…',
@@ -11,7 +12,7 @@ const en = {
   'editor.wrtImportProgress.saving': 'Saving project…',
   'editor.wrtImportProgress.applying': 'Applying design…',
   'editor.wrtImportProgress.font': 'Font {current}/{total}: {name}',
-  'editor.wrtImportProgress.wait': 'Please keep this page open until the import finishes.',
+  'editor.wrtImportProgress.wait': 'Please keep this page open. Editing is paused until loading finishes.',
 
   'language.selector': 'Language selector',
   'language.en': 'English',
@@ -2464,6 +2465,7 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'editor.wrtImportProgress.loadTitle': '正在加载设计',
   'editor.wrtImportProgress.title': '正在导入 WRT',
   'editor.wrtImportProgress.reading': '正在读取素材包…',
   'editor.wrtImportProgress.verifying': '正在校验素材…',
@@ -2473,7 +2475,7 @@ const zh: Messages = {
   'editor.wrtImportProgress.saving': '正在保存项目…',
   'editor.wrtImportProgress.applying': '正在应用设计…',
   'editor.wrtImportProgress.font': '字体 {current}/{total}：{name}',
-  'editor.wrtImportProgress.wait': '导入完成前请保持此页面打开。',
+  'editor.wrtImportProgress.wait': '加载期间已暂停编辑，请保持此页面打开。',
 
   'language.selector': '语言选择',
   'language.en': 'English',

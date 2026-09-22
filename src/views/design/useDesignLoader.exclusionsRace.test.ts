@@ -27,6 +27,8 @@ vi.mock('@/engine/services/designAssetBundleService', () => ({
   WrtDesignPackageError: class extends Error {},
 }))
 
+vi.mock('@/utils/errorMessage', () => ({ showErrorOnce: vi.fn() }))
+
 import { useBaseStore } from '@/stores/baseStore'
 import { useDesignStore } from '@/stores/designStore'
 import { useFontStore } from '@/stores/fontStore'
@@ -82,4 +84,33 @@ describe('useDesignLoader exclusion hydration races', () => {
 
     expect(designStore.connectIqSettingsExcludedDataTypeValues).toEqual([2, 31])
   })
+})
+
+it('blocks editor actions and reports cloud font progress until loading fails', async () => {
+  setActivePinia(createPinia())
+  const { useWrtImportProgressStore } = await import('@/stores/wrtImportProgress')
+  const { restoreDesignAssetBundle } = await import('@/engine/services/designAssetBundleService')
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  let started!: () => void
+  const reached = new Promise<void>(resolve => { started = resolve })
+  getDesignByUid.mockResolvedValue({ data: { name: 'Tactical Casio', configJson: {}, assetBundleUrl: 'https://cdn/project.wrt' } })
+  vi.mocked(restoreDesignAssetBundle).mockImplementationOnce(async (_config, options) => {
+    options.onProgress?.({ stage: 'fonts', percentage: 60, fontSlug: 'wristo-icon', fontSize: 72 })
+    started()
+    await pending
+    throw new Error('fixture load failure')
+  })
+  const loader = useDesignLoader({ canvasRef: { value: null } as any, waitCanvasReady: vi.fn(), translate: key => key, redirectToDesigns: vi.fn() })
+  const loading = loader.loadDesign('cloud')
+  await reached
+  const progress = useWrtImportProgressStore()
+  expect(progress.active).toBe(true)
+  expect(progress.fileName).toBe('Tactical Casio')
+  expect(progress.progress).toMatchObject({ stage: 'fonts', percentage: 54, fontSlug: 'wristo-icon' })
+  expect(useBaseStore().designLoading).toBe(true)
+  release()
+  await loading
+  expect(progress.active).toBe(false)
+  expect(useBaseStore().designLoading).toBe(false)
 })

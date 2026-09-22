@@ -466,6 +466,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     const importProgress = useWrtImportProgressStore()
     if (importProgress.active) return
     importProgress.begin(file.name)
+    baseStore.setDesignLoading(true)
     const generation = ++designLoadGeneration
     let packageRead = false
     let applied = false
@@ -478,7 +479,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           return
         }
         const currentDesignName = designStore.watchFaceName || baseStore.watchFaceName
-        const imported = await readWrtDesignPackage(file, importProgress.update)
+        const imported = await readWrtDesignPackage(file, progress => {
+          if (isCurrentDesignLoad(generation)) importProgress.update(progress)
+        })
         packageRead = true
         importProgress.finalize('applying')
         const fontStore = useFontStore()
@@ -527,8 +530,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         showErrorOnce(error, t('editor.wrtImport.failed'))
       }
     } finally {
-      importProgress.finish()
       if (isCurrentDesignLoad(generation)) {
+        importProgress.finish()
         baseStore.setDesignLoading(false)
         if (applied) options.onDesignImported?.(baseStore.id)
       }
@@ -538,6 +541,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   // 加载设计配置
   const loadDesign = async (designUid: string) => {
     const generation = ++designLoadGeneration
+    const importProgress = useWrtImportProgressStore()
+    importProgress.begin('', 'load')
     clearLastEditedElementStyle()
     baseStore.setDesignLoading(true)
     try {
@@ -551,9 +556,13 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           return
         }
         const designData = response.data
+        importProgress.fileName = designData.name
         const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
         const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
-          assetBundleUrl: designData.assetBundleUrl
+          assetBundleUrl: designData.assetBundleUrl,
+          onProgress: progress => {
+            if (isCurrentDesignLoad(generation)) importProgress.update(progress)
+          },
         })
         if (!isCurrentDesignLoad(generation)) return
         const fontStore = useFontStore()
@@ -567,6 +576,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         baseStore.setWatchFaceName(designData.name)
         designStore.setWatchFaceName(designData.name)
         baseStore.appId = designData.product?.appId || -1
+        importProgress.finalize('applying')
         const projectConfig = { ...restoredConfig, designId: designUid, name: designData.name }
         const selectedConfig = options.resolveLoadedConfig
           ? await options.resolveLoadedConfig(designUid, projectConfig)
@@ -582,6 +592,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       showErrorOnce(error, '加载设计失败')
     } finally {
       if (isCurrentDesignLoad(generation)) {
+        importProgress.finish()
         baseStore.setDesignLoading(false)
       }
     }
@@ -631,6 +642,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     return true
   }
   const dispose = (): void => {
+    useWrtImportProgressStore().finish()
+    baseStore.setDesignLoading(false)
     designLoadGeneration += 1
     clearLastEditedElementStyle()
     clearRestoredDesignAssetUrls()

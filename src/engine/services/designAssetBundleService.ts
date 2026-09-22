@@ -165,6 +165,7 @@ type BuildDesignAssetBundleOptions = {
 }
 
 type RestoreBundleOptions = {
+  onProgress?: (progress: WrtImportProgress) => void
   preserveConfig?: boolean
   assetBundleUrl?: string | null
 }
@@ -1364,7 +1365,7 @@ export async function restoreDesignAssetBundle(
     : archive
   const manifest = await parseManifest(zip)
   if (manifest?.format === WRT_FORMAT && manifest.version === 2) {
-    const imported = await readWrtDesignPackage(new File([bytes], 'project.wrt'))
+    const imported = await readWrtDesignPackage(new File([bytes], 'project.wrt'), options.onProgress)
     return options.preserveConfig ? restoreDesignAssetBundleFromZip(config, zip, manifest) : imported.config
   }
   clearRestoredDesignAssetUrls()
