@@ -56,30 +56,48 @@ export async function iconFontCoverage(zip: JSZip, font: WrtSourceFont, config?:
   return { required, incomplete }
 }
 
-/** Wonderful uses U+110D for rain probability; the runtime requests U+0067. */
-export function addIconGlyphAliases(descriptor: string): string {
-  if (/^char\s+id=103\b/m.test(descriptor)) return descriptor
-  const rain = descriptor.match(/^char\s+id=4365\b[^\r\n]*/m)?.[0]
-  if (!rain) return descriptor
-  const result = descriptor.trimEnd() + '\n' + rain.replace(/id=4365\b/, 'id=103') + '\n'
+// Wonderful uses U+110D for rain probability. Legacy Wristo packages use
+// U+0063 for pressure, while the sensor-pressure catalog requests U+0068.
+function iconGlyphAliases(legacyPressureAlias: boolean): Array<[number, number]> {
+  return legacyPressureAlias ? [[103, 4365], [104, 99]] : [[103, 4365]]
+}
+export function addIconGlyphAliases(descriptor: string, legacyPressureAlias = false): string {
+  let result = descriptor
+  for (const [target, source] of iconGlyphAliases(legacyPressureAlias)) {
+    if (new RegExp(`^char\\s+id=${target}\\b`, 'm').test(result)) continue
+    const original = result.match(new RegExp(`^char\\s+id=${source}\\b[^\\r\\n]*`, 'm'))?.[0]
+    if (!original) continue
+    result = result.trimEnd() + '\n' + original.replace(new RegExp(`id=${source}\\b`), `id=${target}`) + '\n'
+  }
+  if (result === descriptor) return descriptor
   return result.replace(/^chars count=\d+/m, `chars count=${[...result.matchAll(/^char\s+id=/gm)].length}`)
 }
 
 /** Keep the nested font package self-consistent after adding runtime aliases. */
-export async function completeIconBuild(zip: JSZip): Promise<void> {
+export async function completeIconBuild(zip: JSZip, legacyPressureAlias = false): Promise<void> {
   const { canonicalJson, sha256Hex } = await import('@/features/bitmap-font-maker/deterministicEncoding')
-  let addedRain = false
+  const addedAliases = new Set<number>()
   for (const entry of Object.values(zip.files)) {
     if (entry.dir || !entry.name.endsWith('.fnt')) continue
     const original = await entry.async('string')
-    const completed = addIconGlyphAliases(original)
-    if (completed !== original) { zip.file(entry.name, completed); addedRain = true }
+    const completed = addIconGlyphAliases(original, legacyPressureAlias)
+    if (completed !== original) {
+      zip.file(entry.name, completed)
+      for (const [target] of iconGlyphAliases(legacyPressureAlias)) {
+        if (!new RegExp(`^char\\s+id=${target}\\b`, 'm').test(original)
+          && new RegExp(`^char\\s+id=${target}\\b`, 'm').test(completed)) addedAliases.add(target)
+      }
+    }
   }
   const layoutFile = zip.file('connectiq-layout.json')
-  if (addedRain && layoutFile) {
+  if (addedAliases.size && layoutFile) {
     const layout = JSON.parse(await layoutFile.async('string'))
     for (const size of Object.values(layout.sizes || {}) as any[]) {
-      if (size.glyphs?.['4365'] && !size.glyphs['103']) size.glyphs['103'] = { ...size.glyphs['4365'] }
+      for (const [target, source] of iconGlyphAliases(legacyPressureAlias)) {
+        if (addedAliases.has(target) && size.glyphs?.[source] && !size.glyphs[target]) {
+          size.glyphs[target] = { ...size.glyphs[source] }
+        }
+      }
     }
     zip.file('connectiq-layout.json', canonicalJson(layout))
   }
@@ -87,8 +105,10 @@ export async function completeIconBuild(zip: JSZip): Promise<void> {
   if (manifestFile) {
     const manifest = JSON.parse(await manifestFile.async('string'))
     manifest.type = 'icon_font'
-    if (addedRain && manifest.charset?.codepoints && !manifest.charset.codepoints.includes(103)) {
-      manifest.charset.codepoints.push(103)
+    if (addedAliases.size && manifest.charset?.codepoints) {
+      for (const target of addedAliases) {
+        if (!manifest.charset.codepoints.includes(target)) manifest.charset.codepoints.push(target)
+      }
       manifest.charset.codepoints.sort((a: number, b: number) => a - b)
     }
     const hashes: string[] = []

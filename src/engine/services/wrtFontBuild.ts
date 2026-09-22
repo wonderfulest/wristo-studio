@@ -47,7 +47,9 @@ export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[], o
           outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true },
       }, progress => report(0.95 * progress.completed / progress.total, progress.size)).result
       const generated = await JSZip.loadAsync(artifact.zip)
-      if (iconCoverage) await completeIconBuild(generated)
+      if (iconCoverage) await completeIconBuild(generated,
+        font.slug === 'wristo-icon' && iconCoverage.required.has(104)
+        && (config as any)?.dataOptions?.[':FIELD_TYPE_SENSOR_PRESSURE']?.iconUnicode === '0068')
       const buildPath = `fonts/bitmaps/${font.slug}`
       const buildFiles = []
       for (const entry of Object.values(generated.files)) {

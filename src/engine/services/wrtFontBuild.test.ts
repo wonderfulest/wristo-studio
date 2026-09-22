@@ -154,3 +154,29 @@ it('refreshes nested font manifest hashes and layout when adding runtime aliases
   const material=(await Promise.all(Object.keys(zip.files).filter(p=>!zip.files[p].dir&&p!=='manifest.json').sort().map(async p=>`${p}\0${digest(await zip.files[p].async('uint8array'))}\n`))).join('')
   expect(manifest.packageContentSha256).toBe(createHash('sha256').update(material).digest('hex'))
 })
+
+it('repairs the legacy Wristo sensor-pressure slot and keeps layout and hashes consistent', async () => {
+  const { completeIconBuild, iconFontCoverage } = await import('./wrtIconCoverage')
+  const zip = new JSZip()
+  zip.file('30/wristo-icon-g.fnt', 'chars count=1\nchar id=99 x=4 y=8 width=30 height=30 page=0\n')
+  zip.file('connectiq-layout.json', JSON.stringify({ sizes: { 30: { glyphs: { 99: { advance: 30 } } } } }))
+  zip.file('manifest.json', JSON.stringify({ charset: { codepoints: [99] } }))
+  await completeIconBuild(zip, true)
+  const config = { elements: [{ eleType: 'icon', fontFamily: 'wristo-icon', metricSymbol: ':FIELD_TYPE_SENSOR_PRESSURE' }],
+    dataOptions: { ':FIELD_TYPE_SENSOR_PRESSURE': { iconUnicode: '0068' } } }
+  expect((await iconFontCoverage(zip, { slug: 'wristo-icon', buildFiles: [{ path: '30/wristo-icon-g.fnt', sha256: '' }] }, config))?.incomplete).toEqual([])
+  const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+  expect(manifest.charset.codepoints).toEqual([99, 104])
+  const layout = JSON.parse(await zip.file('connectiq-layout.json')!.async('string'))
+  expect(layout.sizes[30].glyphs[104]).toEqual(layout.sizes[30].glyphs[99])
+  const material = (await Promise.all(Object.keys(zip.files).filter(p => !zip.files[p].dir && p !== 'manifest.json').sort().map(async p => `${p}\0${digest(await zip.files[p].async('uint8array'))}\n`))).join('')
+  expect(manifest.packageContentSha256).toBe(createHash('sha256').update(material).digest('hex'))
+})
+
+it('never replaces an existing 0068 glyph or adds the legacy pressure alias by default', async () => {
+  const { addIconGlyphAliases } = await import('./wrtIconCoverage')
+  const source = 'chars count=1\nchar id=99 x=4 y=8 width=30 height=30 page=0\n'
+  expect(addIconGlyphAliases(source)).toBe(source)
+  const existing = source + 'char id=104 x=40 y=8 width=30 height=30 page=0\n'
+  expect(addIconGlyphAliases(existing, true)).toBe(existing)
+})
