@@ -89,7 +89,7 @@ it('reports verification, bitmap size progress and completion in order', async (
   expect(events.map(event => event.percentage)).toEqual(events.map(event => event.percentage).sort((a, b) => a - b))
 })
 
-it('repairs an existing icon subset before export and preserves it on reopen', async () => {
+it('preserves an existing icon subset on save and reopen without rebuilding', async () => {
   setActivePinia(createPinia())
   const ot = await import('opentype.js')
   const codes = [38,39,40,41,42,64,70]
@@ -104,29 +104,23 @@ it('repairs an existing icon subset before export and preserves it on reopen', a
     ['30/fixture-g.fnt',new Blob(['page id=0 file="fixture-g_0.png"\nchar id=40 x=0 y=0 width=1 height=1\n'])],
     ['30/fixture-g_0.png',new Blob([new Uint8Array([137,80,78,71])])],
   ]))
-  const generated = new JSZip()
-  for (const size of [30,312]) {
-    generated.file(`${size}/fixture-g.fnt`, 'page id=0 file="fixture-g_0.png"\n'+codes.map(id=>`char id=${id} x=0 y=0 width=1 height=1`).join('\n'))
-    generated.file(`${size}/fixture-g_0.png`,new Uint8Array([137,80,78,71]))
-  }
-  build.mockReturnValue({result:Promise.resolve({zip:await generated.generateAsync({type:'arraybuffer'})})})
   const {buildWrtDesignPackage,readWrtDesignPackage}=await import('./designAssetBundleService')
   const config:any={name:'Icons',version:'1',designId:'icons',bitmapMode:false,orderIds:['icon'],elements:[{id:'icon',eleType:'icon',fontFamily:'fixture',fontSize:30,metricSymbol:':FIELD_TYPE_BATTERY'}],properties:{},dataOptions:{}}
   const exported=await buildWrtDesignPackage(config)
-  expect(build).toHaveBeenCalledOnce()
+  expect(build).not.toHaveBeenCalled()
   expect((await readWrtDesignPackage(exported)).failures).toEqual([])
-  expect(build).toHaveBeenCalledOnce()
+  expect(build).not.toHaveBeenCalled()
   const descriptor=await(await fetch(packageFonts.get('fixture')!.bitmapPreviewDescriptorUrl!)).text()
-  for(const id of codes) expect(descriptor).toContain(`char id=${id} `)
+  expect(descriptor).toBe('page id=0 file="fixture-g_0.png"\nchar id=40 x=0 y=0 width=1 height=1\n')
 })
 
-it('rejects bitmap-only battery subsets rather than exporting a broken WRT', async () => {
+it('allows bitmap-only icon subsets even when required runtime glyphs are missing', async () => {
   const {buildMissingWrtFonts}=await import('./wrtFontBuild')
   const zip=new JSZip()
   zip.file('fonts/icons/30/icons-g.fnt','char id=40 x=0 y=0 width=1 height=1')
   const fonts=[{slug:'icons',metadata:{type:'icon_font'},buildFiles:[{path:'fonts/icons/30/icons-g.fnt',sha256:''}]}]
   await expect(buildMissingWrtFonts(zip,fonts,undefined,{elements:[{eleType:'icon',fontFamily:'icons',metricSymbol:':FIELD_TYPE_BATTERY'}]}))
-    .rejects.toThrow('Missing WRT icon glyphs: icons')
+    .resolves.toEqual([])
   expect(build).not.toHaveBeenCalled()
 })
 
@@ -179,4 +173,22 @@ it('never replaces an existing 0068 glyph or adds the legacy pressure alias by d
   expect(addIconGlyphAliases(source)).toBe(source)
   const existing = source + 'char id=104 x=40 y=8 width=30 height=30 page=0\n'
   expect(addIconGlyphAliases(existing, true)).toBe(existing)
+})
+
+
+it('allows source-only icon fonts to build even when required glyphs are absent', async () => {
+  const { buildMissingWrtFonts } = await import('./wrtFontBuild')
+  const zip = new JSZip()
+  const ot = await import('opentype.js')
+  const source = new ot.Font({ familyName: 'Icons', styleName: 'Regular', unitsPerEm: 1000,
+    ascender: 800, descender: -200,
+    glyphs: [new ot.Glyph({ name: '.notdef', advanceWidth: 120, path: new ot.Path() })],
+  }).toArrayBuffer()
+  zip.file('fonts/fixture.ttf', source)
+  const fonts = [{ slug: 'fixture', path: 'fonts/fixture.ttf', metadata: { type: 'icon_font' } }]
+  build.mockReturnValue({ result: workerResult() })
+  await expect(buildMissingWrtFonts(zip, fonts, undefined, {
+    elements: [{ eleType: 'icon', fontFamily: 'fixture', metricSymbol: ':FIELD_TYPE_BATTERY' }],
+  })).resolves.toHaveLength(4)
+  expect(build).toHaveBeenCalledOnce()
 })
