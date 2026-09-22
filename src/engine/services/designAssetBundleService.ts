@@ -716,6 +716,20 @@ const addReferencedAssetToBundle = async (
   }
 }
 
+// A preview reference can point directly into the rebuilt font directory.
+// Keep its checksum and dimensions in sync with the final build bytes.
+const refreshFontAssetRefs = async (zip: JSZip, manifest: DesignAssetManifest) => {
+  const files = new Map((manifest.fonts || []).flatMap(font => font.buildFiles || []).map(file => [file.path, file]))
+  for (const ref of manifest.studio?.assetRefs || []) {
+    const file = files.get(ref.path)
+    if (!file) continue
+    ref.sha256 = file.sha256
+    if (ref.path.endsWith('.png')) {
+      Object.assign(ref, await readImageDimensions(new Blob([await zip.file(ref.path)!.async('arraybuffer')]), 'png'))
+    }
+  }
+}
+
 const addFontAssetToBundle = async (
   zip: JSZip,
   manifest: DesignAssetManifest,
@@ -1130,6 +1144,12 @@ const buildDesignAssetArchive = async (
     zip.file('config/config.json', JSON.stringify(portable, null, 2))
     for (const [index, element] of portable.elements.entries()) zip.file(manifest.elements![index].path, JSON.stringify(element, null, 2))
   }
+  if (manifest.selfContained) {
+    const { buildMissingWrtFonts } = await import('./wrtFontBuild')
+    const refs = await buildMissingWrtFonts(zip, manifest.fonts || [], undefined, config)
+    manifest.studio!.assetRefs.push(...refs)
+    await refreshFontAssetRefs(zip, manifest)
+  }
   zip.file('README.md', createReadme(config, manifest))
   zip.file('manifest.json', JSON.stringify(manifest, null, 2))
   let outputZip = zip
@@ -1434,11 +1454,12 @@ export async function readWrtDesignPackage(file: File, onProgress?: (progress: W
   const { buildMissingWrtFonts } = await import('./wrtFontBuild')
   const fontRefs = await buildMissingWrtFonts(zip, manifest.fonts || [], progress => {
     onProgress?.({ ...progress, stage: 'fonts', percentage: 25 + 65 * progress.fraction })
-  })
+  }, config)
   if (fontRefs.length) {
     manifest.studio ||= { configPath: 'config/config.json', elementsPath: 'elements/', assetRefs: [] }
     manifest.studio.assetRefs ||= []
     manifest.studio.assetRefs.push(...fontRefs)
+    await refreshFontAssetRefs(zip, manifest)
   }
   onProgress?.({ stage: 'restoring', percentage: 90 })
   clearRestoredDesignAssetUrls()

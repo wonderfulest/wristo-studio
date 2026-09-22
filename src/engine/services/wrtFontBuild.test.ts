@@ -88,3 +88,69 @@ it('reports verification, bitmap size progress and completion in order', async (
   expect(events.at(-1)).toMatchObject({ stage: 'complete', percentage: 100 })
   expect(events.map(event => event.percentage)).toEqual(events.map(event => event.percentage).sort((a, b) => a - b))
 })
+
+it('repairs an existing icon subset before export and preserves it on reopen', async () => {
+  setActivePinia(createPinia())
+  const ot = await import('opentype.js')
+  const codes = [38,39,40,41,42,64,70]
+  const glyphs = codes.map(unicode => {
+    const path = new ot.Path(); path.moveTo(0,0); path.lineTo(100,0); path.lineTo(0,100); path.close()
+    return new ot.Glyph({ name:`g${unicode}`, unicode, advanceWidth:120, path })
+  })
+  const source = new ot.Font({ familyName:'Icons', styleName:'Regular', unitsPerEm:1000, ascender:800, descender:-200,
+    glyphs:[new ot.Glyph({name:'.notdef',advanceWidth:120,path:new ot.Path()}), ...glyphs] }).toArrayBuffer()
+  packageFonts.set('fixture', {slug:'fixture',type:'icon_font',bitmapPreviewSize:30,bitmapPreviewDescriptorUrl:'https://cdn.wristo.io/font-bitmaps/fixture/preview/v1/30/fixture-g.fnt',bitmapPreviewAtlasUrl:'https://cdn.wristo.io/font-bitmaps/fixture/preview/v1/30/fixture-g_0.png',ttfFile:{url:URL.createObjectURL(new Blob([source]))}} as any)
+  packageFontBuildFiles.set('fixture', new Map([
+    ['30/fixture-g.fnt',new Blob(['page id=0 file="fixture-g_0.png"\nchar id=40 x=0 y=0 width=1 height=1\n'])],
+    ['30/fixture-g_0.png',new Blob([new Uint8Array([137,80,78,71])])],
+  ]))
+  const generated = new JSZip()
+  for (const size of [30,312]) {
+    generated.file(`${size}/fixture-g.fnt`, 'page id=0 file="fixture-g_0.png"\n'+codes.map(id=>`char id=${id} x=0 y=0 width=1 height=1`).join('\n'))
+    generated.file(`${size}/fixture-g_0.png`,new Uint8Array([137,80,78,71]))
+  }
+  build.mockReturnValue({result:Promise.resolve({zip:await generated.generateAsync({type:'arraybuffer'})})})
+  const {buildWrtDesignPackage,readWrtDesignPackage}=await import('./designAssetBundleService')
+  const config:any={name:'Icons',version:'1',designId:'icons',bitmapMode:false,orderIds:['icon'],elements:[{id:'icon',eleType:'icon',fontFamily:'fixture',fontSize:30,metricSymbol:':FIELD_TYPE_BATTERY'}],properties:{},dataOptions:{}}
+  const exported=await buildWrtDesignPackage(config)
+  expect(build).toHaveBeenCalledOnce()
+  expect((await readWrtDesignPackage(exported)).failures).toEqual([])
+  expect(build).toHaveBeenCalledOnce()
+  const descriptor=await(await fetch(packageFonts.get('fixture')!.bitmapPreviewDescriptorUrl!)).text()
+  for(const id of codes) expect(descriptor).toContain(`char id=${id} `)
+})
+
+it('rejects bitmap-only battery subsets rather than exporting a broken WRT', async () => {
+  const {buildMissingWrtFonts}=await import('./wrtFontBuild')
+  const zip=new JSZip()
+  zip.file('fonts/icons/30/icons-g.fnt','char id=40 x=0 y=0 width=1 height=1')
+  const fonts=[{slug:'icons',metadata:{type:'icon_font'},buildFiles:[{path:'fonts/icons/30/icons-g.fnt',sha256:''}]}]
+  await expect(buildMissingWrtFonts(zip,fonts,undefined,{elements:[{eleType:'icon',fontFamily:'icons',metricSymbol:':FIELD_TYPE_BATTERY'}]}))
+    .rejects.toThrow('Missing WRT icon glyphs: icons')
+  expect(build).not.toHaveBeenCalled()
+})
+
+it('adds the runtime rain-probability alias without changing its bitmap or overwriting existing glyphs', async () => {
+  const {addIconGlyphAliases}=await import('./wrtIconCoverage')
+  const source='chars count=1\nchar id=4365 x=4 y=8 width=30 height=30 page=0\n'
+  const repaired=addIconGlyphAliases(source)
+  expect(repaired).toContain('chars count=2')
+  expect(repaired).toContain('char id=103 x=4 y=8 width=30 height=30 page=0')
+  expect(addIconGlyphAliases(repaired)).toBe(repaired)
+})
+
+it('refreshes nested font manifest hashes and layout when adding runtime aliases', async () => {
+  const {completeIconBuild}=await import('./wrtIconCoverage')
+  const zip=new JSZip()
+  zip.file('30/icons-g.fnt','chars count=1\nchar id=4365 x=4 y=8 width=30 height=30 page=0\n')
+  zip.file('connectiq-layout.json',JSON.stringify({sizes:{30:{glyphs:{4365:{advance:30,drawOffsetX:-1}}}}}))
+  zip.file('manifest.json',JSON.stringify({type:'text_font',charset:{codepoints:[4365]},packageContentSha256:'stale'}))
+  await completeIconBuild(zip)
+  const manifest=JSON.parse(await zip.file('manifest.json')!.async('string'))
+  expect(manifest.type).toBe('icon_font')
+  expect(manifest.charset.codepoints).toEqual([103,4365])
+  const layout=JSON.parse(await zip.file('connectiq-layout.json')!.async('string'))
+  expect(layout.sizes[30].glyphs[103]).toEqual(layout.sizes[30].glyphs[4365])
+  const material=(await Promise.all(Object.keys(zip.files).filter(p=>!zip.files[p].dir&&p!=='manifest.json').sort().map(async p=>`${p}\0${digest(await zip.files[p].async('uint8array'))}\n`))).join('')
+  expect(manifest.packageContentSha256).toBe(createHash('sha256').update(material).digest('hex'))
+})
