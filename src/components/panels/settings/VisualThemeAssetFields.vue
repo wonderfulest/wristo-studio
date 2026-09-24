@@ -26,6 +26,11 @@
           :on-select="(url, asset) => selectAsset(field.slot, url, asset)"
           :on-upload="(url, asset) => selectAsset(field.slot, url, asset)"
         />
+        <CenterCapGeometrySettings
+          v-if="field.slot === 'centerCap'"
+          :model="{ ...baseCenterCap, ...theme.assets.centerCap }"
+          @update="updateCapGeometry"
+        />
       </div>
     </div>
   </section>
@@ -33,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import CenterCapGeometrySettings from '@/elements/dials/centerCap/CenterCapGeometrySettings.vue'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import { useI18n } from '@/i18n'
 import type { AnalogAssetType, AnalogAssetVO } from '@/types/api/analog-asset'
@@ -41,6 +47,7 @@ import type { VisualTheme, VisualThemeAssetRef, VisualThemeAssetSlot } from '@/t
 const props = withDefaults(defineProps<{
   theme: VisualTheme
   availableSlots?: VisualThemeAssetSlot[]
+  baseCenterCap?: Record<string, any>
 }>(), {
   availableSlots: () => ['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'],
 })
@@ -64,10 +71,22 @@ const selectAsset = (slot: VisualThemeAssetSlot, url: string, asset: AnalogAsset
     assetId: Number.isInteger(asset?.id) ? asset.id : null,
     imageUrl: originalUrl || null,
   }
-  if (slot === 'centerCap' && props.theme.assets.centerCap?.targetSize) {
-    next.targetSize = props.theme.assets.centerCap.targetSize
+  if (slot === 'centerCap') {
+    for (const field of ['targetSize', 'left', 'top'] as const) {
+      const value = props.theme.assets.centerCap?.[field]
+      if (value !== undefined) next[field] = value
+    }
   }
   emit('updateAsset', slot, next)
+}
+function updateCapGeometry(patch: Record<string, number>): void {
+  const base = props.baseCenterCap
+  emit('updateAsset', 'centerCap', {
+    assetId: base?.assetId ?? null,
+    imageUrl: base?.imageUrl ?? null,
+    ...props.theme.assets.centerCap,
+    ...patch,
+  })
 }
 </script>
 

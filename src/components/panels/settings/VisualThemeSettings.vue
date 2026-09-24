@@ -88,6 +88,7 @@
           <VisualThemeAssetFields
             :theme="selectedTheme"
             :available-slots="availableAssetSlots"
+            :base-center-cap="baseCenterCap"
             @update-asset="(slot, asset) => store.updateAsset(selectedTheme!.id, slot, asset)"
           />
 
@@ -158,6 +159,7 @@ const isPreview = computed(() => selectedTheme.value?.id === store.previewThemeI
 const themeColorProperties = computed(() => Object.entries(propertiesStore.allProperties)
   .filter(([key, property]) => property.type === 'color'
     && selectedTheme.value?.colors?.[key] !== undefined))
+const baseCenterCap = computed(() => elementDataStore.elements.find(element => element.eleType === 'centerCap')?.config)
 const availableAssetSlots = computed<VisualThemeAssetSlot[]>(() => {
   const elementTypes = new Set(elementDataStore.elements.map((snapshot) => snapshot.eleType))
   return (['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as VisualThemeAssetSlot[])

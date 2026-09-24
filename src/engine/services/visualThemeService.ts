@@ -70,6 +70,13 @@ function readAssetRef(element: unknown, slot: VisualThemeAssetSlot): VisualTheme
   if (slot === 'centerCap' && isPositiveInteger(candidate.targetSize)) {
     ref.targetSize = candidate.targetSize
   }
+  if (slot === 'centerCap') {
+    for (const field of ['left', 'top'] as const) {
+      if (typeof candidate[field] === 'number' && Number.isFinite(candidate[field])) {
+        ref[field] = candidate[field] as number
+      }
+    }
+  }
   return ref
 }
 
@@ -98,6 +105,8 @@ export function backfillVisualThemeBackground(
 const cloneAssetRef = (asset: VisualThemeAssetRef): VisualThemeAssetRef => ({
   assetId: asset.assetId,
   imageUrl: asset.imageUrl,
+  ...(asset.left === undefined ? {} : { left: asset.left }),
+  ...(asset.top === undefined ? {} : { top: asset.top }),
   ...(asset.targetSize === undefined ? {} : { targetSize: asset.targetSize }),
 })
 

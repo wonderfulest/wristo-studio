@@ -2,6 +2,9 @@ import { Image as FabricImage } from 'fabric'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useElementDataStore } from '@/stores/elementDataStore'
+import type { AnyElementConfig } from '@/types/elements'
+import { encodeCenterCap } from './centerCap.encoder'
 import { useLayerStore } from '@/stores/layerStore'
 import { useDesignStore } from '@/stores/designStore'
 import { useAnalogAssetStore } from '@/stores/analogAssetStore'
@@ -33,12 +36,6 @@ function syncCenterCapSize(element: any) {
   }
 }
 
-function lockCenterCapToCanvasCenter(element: any) {
-  const center = getCanvasCenter()
-  element.set({ left: center.x, top: center.y })
-  element.setCoords?.()
-}
-
 function configureCenterCapControls(element: any) {
   element.set({
     selectable: true,
@@ -46,8 +43,8 @@ function configureCenterCapControls(element: any) {
     hasControls: true,
     hasBorders: true,
     designerControlMode: 'corner4',
-    lockMovementX: true,
-    lockMovementY: true,
+    lockMovementX: false,
+    lockMovementY: false,
     lockRotation: true,
     lockScalingX: false,
     lockScalingY: false,
@@ -57,15 +54,15 @@ function configureCenterCapControls(element: any) {
   if (element.__centerCapEventHandlers) return
   const handlers = {
     scaling: () => {
-      lockCenterCapToCanvasCenter(element)
+      element.setCoords?.()
       syncCenterCapSize(element)
     },
     modified: () => {
-      lockCenterCapToCanvasCenter(element)
+      element.setCoords?.()
       syncCenterCapSize(element)
     },
     moving: () => {
-      lockCenterCapToCanvasCenter(element)
+      element.setCoords?.()
     },
     selected: () => undefined,
     deselected: () => undefined,
@@ -130,8 +127,8 @@ export async function createCenterCap(
   element.set({
     id,
     eleType: 'centerCap',
-    left: center.x,
-    top: center.y,
+    left: config.left ?? center.x,
+    top: config.top ?? center.y,
     scaleX: 1,
     scaleY: 1,
     originX: 'center',
@@ -149,6 +146,10 @@ export async function createCenterCap(
   element.setCoords()
   assertElementRenderCurrent(renderContext)
   canvas.add(element)
+  useElementDataStore().upsertElement({
+    ...config,
+    ...encodeCenterCap(element),
+  } as AnyElementConfig)
   layerStore.addLayer(element)
   canvas.requestRenderAll?.()
   canvas.discardActiveObject?.()
@@ -172,6 +173,10 @@ export async function updateCenterCap(
 
   const center = getCanvasCenter()
 
+  const left = Object.prototype.hasOwnProperty.call(patch, 'left') ? patch.left ?? center.x : group.left ?? center.x
+  const top = Object.prototype.hasOwnProperty.call(patch, 'top') ? patch.top ?? center.y : group.top ?? center.y
+  const assetId = patch.assetId === undefined ? group.assetId : patch.assetId
+
   const nextImageUrl = patch.imageUrl
   const hasNewImage = typeof nextImageUrl === 'string' && nextImageUrl.length > 0
 
@@ -190,8 +195,9 @@ export async function updateCenterCap(
       eleType: 'centerCap',
       originX: 'center',
       originY: 'center',
-      left: center.x,
-      top: center.y,
+      left,
+      top,
+      assetId,
       angle: prevAngle,
       imageUrl: nextImageUrl,
     })
@@ -208,11 +214,11 @@ export async function updateCenterCap(
     canvas.add(group)
   }
 
-  if (typeof patch.assetId === 'number') {
+  if (patch.assetId !== undefined) {
     group.assetId = patch.assetId
   }
 
-  if (patch.targetSize && !hasNewImage) {
+  if (patch.targetSize) {
     const baseSize = Math.max(group.width || 1, group.height || 1)
     const scale = patch.targetSize / baseSize
     group.set({ scaleX: scale, scaleY: scale })
@@ -224,7 +230,7 @@ export async function updateCenterCap(
 
   configureCenterCapControls(group)
 
-  group.set({ left: center.x, top: center.y })
+  group.set({ left, top })
   group.setCoords()
   canvas.requestRenderAll?.()
   canvas.discardActiveObject?.()

@@ -22,12 +22,14 @@
         </div>
       </div>
 
+      <CenterCapGeometrySettings :model="config || element" @update="applyUpdate" />
     </el-form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import CenterCapGeometrySettings from './CenterCapGeometrySettings.vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { ElMessage } from 'element-plus'
 import AssetPicker from '@/components/asset-picker/index.vue'

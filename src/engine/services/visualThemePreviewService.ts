@@ -37,7 +37,9 @@ function resolveAssetPatch(
       assetId: base.assetId ?? null,
     }
     if (slot === 'background') patch.imageId = base.imageId ?? base.assetId ?? null
-    if (slot === 'centerCap' && base.targetSize !== undefined) patch.targetSize = base.targetSize
+    if (slot === 'centerCap') {
+      for (const field of ['targetSize', 'left', 'top'] as const) patch[field] = base[field]
+    }
     return patch
   }
   const patch: Record<string, unknown> = {
@@ -45,7 +47,11 @@ function resolveAssetPatch(
     assetId: asset.assetId,
   }
   if (slot === 'background') patch.imageId = null
-  if (slot === 'centerCap' && asset.targetSize !== undefined) patch.targetSize = asset.targetSize
+  if (slot === 'centerCap') {
+    for (const field of ['targetSize', 'left', 'top'] as const) {
+      patch[field] = asset[field] ?? base[field]
+    }
+  }
   return patch
 }
 
@@ -100,7 +106,7 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
             ...resolveAssetPatch(base, theme),
             ...resolveColorPatch(base, canvasElement, theme, properties),
           }
-        : clone(base)
+        : { ...clone(base), ...(base.eleType === 'centerCap' ? { left: base.left, top: base.top } : {}) }
       await dependencies.applyElement(canvasElement, patch, { persist: false })
       if (runGeneration !== generation) return
     }

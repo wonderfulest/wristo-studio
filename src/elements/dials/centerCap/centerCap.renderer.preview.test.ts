@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { createPinia, setActivePinia } from 'pinia'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { fromURL, requestRenderAll, remove, add } = vi.hoisted(() => ({
@@ -40,7 +43,7 @@ vi.mock('@/stores/analogAssetStore', () => ({ useAnalogAssetStore: vi.fn() }))
 vi.mock('@/api/wristo/analogAsset', () => ({ analogAssetApi: { get: vi.fn() } }))
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))
 
-import { updateCenterCap } from './centerCap.renderer'
+import { createCenterCap, updateCenterCap } from './centerCap.renderer'
 
 function createCap(imageUrl = 'base.svg') {
   const listeners = new Map<string, Array<() => void>>()
@@ -74,8 +77,22 @@ function createCap(imageUrl = 'base.svg') {
 
 describe('center cap preview updates', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     canvasObjects = []
+  })
+
+  it('registers a created cap so visual themes can discover its base asset and geometry', async () => {
+    fromURL.mockResolvedValueOnce(createCap())
+    const cap = await createCenterCap({
+      id: 'theme-cap', imageUrl: 'base.svg', assetId: 7, left: 0, top: 120, targetSize: 48,
+    })
+
+    expect(useElementDataStore().getElementConfig('theme-cap')).toMatchObject({
+      id: 'theme-cap', eleType: 'centerCap', imageUrl: 'base.svg', assetId: 7,
+      left: 0, top: 120, targetSize: 48,
+    })
+    expect(cap).toBeDefined()
   })
 
   it('binds stable event handlers only once across repeated preview and restore updates', async () => {
@@ -123,3 +140,28 @@ describe('center cap preview updates', () => {
     expect(cap).toMatchObject({ imageUrl: 'base.svg' })
   })
 })
+
+  it('creates caps at explicit coordinates including zero and keeps drag positions', async () => {
+    setActivePinia(createPinia())
+    fromURL.mockResolvedValueOnce(createCap())
+    const cap: any = await createCenterCap({ imageUrl: 'base.svg', assetId: 1, left: 0, top: 120 })
+    expect(cap).toMatchObject({ left: 0, top: 120, lockMovementX: false, lockMovementY: false })
+    cap.set({ left: 80, top: 90 })
+    cap.fire('moving')
+    cap.fire('modified')
+    expect(cap).toMatchObject({ left: 80, top: 90 })
+  })
+
+  it('preserves position and asset identity through image replacement and size updates', async () => {
+    const cap = createCap()
+    cap.set({ left: 10, top: 20, assetId: 7 })
+    canvasObjects = [cap]
+    fromURL.mockResolvedValueOnce(createCap('next.svg'))
+    await updateCenterCap(cap as any, { imageUrl: 'next.svg' })
+    const next = canvasObjects[0]
+    expect(next).toMatchObject({ left: 10, top: 20, assetId: 7 })
+    await updateCenterCap(next, { imageUrl: 'next.svg', targetSize: 60, left: 0 })
+    expect(next).toMatchObject({ left: 0, top: 20, scaleX: 3, scaleY: 3 })
+    await updateCenterCap(next, { left: undefined, top: undefined })
+    expect(next).toMatchObject({ left: 227, top: 227 })
+  })

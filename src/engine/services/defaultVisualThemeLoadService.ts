@@ -48,8 +48,10 @@ function applyAsset(
   element.imageUrl = asset.imageUrl
   element.assetId = asset.assetId
   if (slot === 'background') element.imageId = null
-  if (slot === 'centerCap' && asset.targetSize !== undefined) {
-    element.targetSize = asset.targetSize
+  if (slot === 'centerCap') {
+    for (const field of ['targetSize', 'left', 'top'] as const) {
+      if (asset[field] !== undefined) element[field] = asset[field]
+    }
   }
 }
 

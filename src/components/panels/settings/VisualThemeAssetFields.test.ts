@@ -2,6 +2,7 @@
 import { shallowMount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import type { VisualTheme } from '@/types/visualTheme'
+import CenterCapGeometrySettings from '@/elements/dials/centerCap/CenterCapGeometrySettings.vue'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
 
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
@@ -13,6 +14,17 @@ const theme: VisualTheme = {
 }
 
 describe('VisualThemeAssetFields', () => {
+  it('edits inherited cap geometry without losing the base asset', () => {
+    const wrapper = shallowMount(VisualThemeAssetFields, {
+      props: { theme: { ...theme, assets: {} }, baseCenterCap: { assetId: 7, imageUrl: 'base.svg', left: 227, top: 180, targetSize: 30 } },
+      global: { stubs: { ElButton: true } },
+    })
+    const geometry = wrapper.findComponent(CenterCapGeometrySettings)
+    expect(geometry.props('model')).toMatchObject({ left: 227, top: 180 })
+    geometry.vm.$emit('update', { left: 0 })
+    expect(wrapper.emitted('updateAsset')?.[0]).toEqual(['centerCap', { assetId: 7, imageUrl: 'base.svg', left: 0 }])
+  })
+
   it('maps picker selections to durable asset references at the component boundary', () => {
     const wrapper = shallowMount(VisualThemeAssetFields, {
       props: { theme },

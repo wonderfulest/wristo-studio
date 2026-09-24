@@ -35,5 +35,5 @@ export const VISUAL_THEME_ASSET_BASE_FIELDS: Partial<Record<VisualThemeAssetSlot
   hourHand: ['imageUrl', 'assetId'],
   minuteHand: ['imageUrl', 'assetId'],
   secondHand: ['imageUrl', 'assetId'],
-  centerCap: ['imageUrl', 'assetId', 'targetSize'],
+  centerCap: ['imageUrl', 'assetId', 'targetSize', 'left', 'top'],
 }

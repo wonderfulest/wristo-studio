@@ -15,6 +15,8 @@ export interface VisualThemeAssetRef {
   assetId: number | null
   imageUrl: string | null
   targetSize?: number
+  left?: number
+  top?: number
 }
 
 export interface VisualTheme {
