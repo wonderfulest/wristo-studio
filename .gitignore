@@ -35,3 +35,6 @@ playwright/.cache/
 
 # Local Superpowers artifacts
 docs/superpowers/
+
+# Local production environment values
+.env.prod

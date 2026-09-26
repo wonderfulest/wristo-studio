@@ -25,8 +25,9 @@ const removeConsolePlugin = {
 }
 
 export default defineConfig(({ mode }) => {
-  const envDir = path.resolve(__dirname, '..')
-  const rootEnv = loadEnv(mode, envDir, '')
+  const sharedEnvDir = path.resolve(__dirname, '..')
+  const envDir = mode === 'prod' || mode === 'production' ? __dirname : sharedEnvDir
+  const rootEnv = { ...loadEnv(mode, sharedEnvDir, ''), ...loadEnv(mode, envDir, '') }
 
   return {
     envDir,
