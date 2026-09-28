@@ -47,7 +47,7 @@
         <el-input-number 
           v-model.number="currentModel.strokeWidth" 
           :min="0" 
-          :max="20" 
+          :max="300"
           @change="(v: number) => applyUpdate({ strokeWidth: v })" 
         />
       </el-form-item>
