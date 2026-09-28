@@ -140,7 +140,7 @@ describe('dynamic image quick import naming contract', () => {
     expect(groups).toHaveLength(1)
     expect(groups[0]).toMatchObject({ kind: 'hour12', width: 120, height: 80 })
     expect(groups[0].items[0]).toMatchObject({ id: 'hour12-0', assetId: 1, imageUrl: 'https://cdn.example/tm7.3-01.png' })
-    expect(groups[0].items[0].expression.source).toBe('(tm7.3) == 1')
+    expect(groups[0].items[0].expression?.source).toBe('(tm7.3) == 1')
   })
 
   it('does not return partially materialized groups when an upload fails', async () => {

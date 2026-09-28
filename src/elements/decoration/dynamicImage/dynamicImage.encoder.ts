@@ -12,13 +12,15 @@ export function encodeDynamicImage(element: FabricElement): DynamicImageElementC
     originX: value.originX ?? 'center', originY: value.originY ?? 'center',
     width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)),
     rotation: Number(value.angle ?? value.rotation ?? 0),
-    items: structuredClone(value.items ?? []),
+    items: JSON.parse(JSON.stringify(value.items ?? [])),
+    ...(value.selectionMode ? { selectionMode: value.selectionMode } : {}),
+    ...(value.goalProperty || value.selectionMode === 'goalProgress' ? { goalProperty: value.goalProperty, progress: Number(value.progress ?? 0) } : {}),
   }
 }
 
 export function decodeDynamicImage(config: DynamicImageElementConfig): Partial<FabricElement> {
   return {
-    ...structuredClone(config),
+    ...JSON.parse(JSON.stringify(config)),
     id: config.id || nanoid(),
     items: config.items ?? [],
     angle: Number(config.rotation ?? 0),

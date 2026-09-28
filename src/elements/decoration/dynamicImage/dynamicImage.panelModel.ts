@@ -97,7 +97,8 @@ export function resolvePreviewAwareNewExpression(
   const copied = resolveNewDynamicImageExpression(items)
   if (!items.length) return copied
   if (resolveDynamicImageSelection({ items: [...items], tokenValues }).kind === 'item') return copied
-  return printExpressionNode(replaceDirectComparisonValues(items.at(-1)!.expression.ast, tokenValues))
+  const expression = items.at(-1)?.expression
+  return expression ? printExpressionNode(replaceDirectComparisonValues(expression.ast, tokenValues)) : 'false'
 }
 import type { ExpressionNode, ExpressionTokenValues, ExpressionValueType } from '@/engine/expression/types'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'

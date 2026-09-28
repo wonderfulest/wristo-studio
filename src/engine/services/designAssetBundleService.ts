@@ -1,3 +1,5 @@
+import { GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
+import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import type { WrtImportProgress } from './wrtImportProgress'
 import { translate } from '@/i18n'
 import { useLocaleStore } from '@/stores/locale'
@@ -102,8 +104,9 @@ export type ManifestFailure = {
 }
 
 type DesignAssetManifest = {
+  requiredFeatures?: string[]
   selfContained?: boolean
-  version: 1 | 2
+  version: 1 | 2 | 3
   format?: string
   generatedAt: string
   designUid: string
@@ -872,7 +875,7 @@ const addAmoledIconAssetToBundle = async (
 const buildDesignAssetArchive = async (
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
-  packageOptions: { format?: string; version?: 1 | 2; fileNameSuffix: string; mimeType: string; rooted?: boolean },
+  packageOptions: { format?: string; version?: 1 | 2 | 3; fileNameSuffix: string; mimeType: string; rooted?: boolean },
 ): Promise<File> => {
   const unicodePaths = findInvalidUnicodePaths(config)
   if (unicodePaths.length > 0) {
@@ -897,6 +900,7 @@ const buildDesignAssetArchive = async (
   const slug = slugifyDesignName(config.name, designUid || 'watchface')
   const manifest: DesignAssetManifest = {
     version: packageOptions.version || 2,
+    requiredFeatures: hasGoalProgressImages(config) ? [GOAL_PROGRESS_IMAGES_FEATURE] : undefined,
     selfContained: packageOptions.format === WRT_FORMAT ? true : undefined,
     format: packageOptions.format,
     generatedAt: new Date().toISOString(),
@@ -1193,9 +1197,13 @@ export async function buildWrtDesignPackage(
 ): Promise<File> {
   const layoutErrors = validateLayoutConfig(config.properties || {}, config.elements || [])
   if (layoutErrors.length) throw new Error(layoutErrors.join(' '))
+  for (const element of config.elements || []) if (element.eleType === 'dynamicImage') {
+    const errors = validateDynamicImage(element as any, config.properties)
+    if (errors.length) throw new Error(errors.join(' '))
+  }
   return buildDesignAssetArchive(config, options, {
     format: WRT_FORMAT,
-    version: WRT_VERSION,
+    version: hasGoalProgressImages(config) ? 3 : WRT_VERSION,
     fileNameSuffix: '.wrt',
     mimeType: 'application/vnd.wristo.design-package+zip',
   })
@@ -1232,7 +1240,7 @@ export async function restoreDesignAssetBundleFromZip(
         restoredAssetUrls.set(sourceRef, objectUrl)
         restoredAssetUrls.set(`bundle://${asset.path}`, objectUrl)
       } catch (error) {
-        if (manifest?.version === 2 && manifest.format === WRT_FORMAT) throw error
+        if ((manifest?.version ?? 0) >= 2 && manifest?.format === WRT_FORMAT) throw error
         console.warn('[designAssetBundle] Failed to restore referenced asset', error)
       }
     }
@@ -1302,7 +1310,7 @@ export async function restoreDesignAssetBundleFromZip(
         .filter(Boolean),
     ].filter(Boolean)))
     const restoredIconUrlByFontAndUnicode = new Map<string, string>()
-    if (iconFontSlugs.length && !(manifest?.format === WRT_FORMAT && manifest.version === 2)) {
+    if (iconFontSlugs.length && !(manifest?.format === WRT_FORMAT && manifest.version >= 2)) {
       for (const asset of iconAssets) {
         const iconUnicode = normalizeIconUnicode(asset.iconUnicode)
         if (!iconUnicode || !asset.path) continue
@@ -1340,7 +1348,7 @@ export async function restoreDesignAssetBundleFromZip(
       }
     }
   } catch (error) {
-    if (manifest?.version === 2 && manifest.format === WRT_FORMAT) throw error
+    if ((manifest?.version ?? 0) >= 2 && manifest?.format === WRT_FORMAT) throw error
     console.warn('[designAssetBundle] Failed to restore design asset bundle', error)
   }
 
@@ -1364,7 +1372,7 @@ export async function restoreDesignAssetBundle(
     ? archive.folder(nestedManifests[0].slice(0, -'manifest.json'.length))!
     : archive
   const manifest = await parseManifest(zip)
-  if (manifest?.format === WRT_FORMAT && manifest.version === 2) {
+  if (manifest?.format === WRT_FORMAT && manifest.version >= 2) {
     const imported = await readWrtDesignPackage(new File([bytes], 'project.wrt'), options.onProgress)
     return options.preserveConfig ? restoreDesignAssetBundleFromZip(config, zip, manifest) : imported.config
   }
@@ -1402,7 +1410,7 @@ export async function readWrtDesignPackage(file: File, onProgress?: (progress: W
   if (manifest.format !== WRT_FORMAT) {
     throw new WrtDesignPackageError('invalid-manifest', 'Unsupported .wrt package format')
   }
-  if (manifest.version !== 1 && manifest.version !== WRT_VERSION) {
+  if (![1, 2, 3].includes(manifest.version)) {
     throw new WrtDesignPackageError('unsupported-version', 'Unsupported .wrt package version')
   }
 
@@ -1421,8 +1429,14 @@ export async function readWrtDesignPackage(file: File, onProgress?: (progress: W
     throw new WrtDesignPackageError('invalid-design', 'Design configuration must contain an elements array')
   }
 
+  const capabilityErrors = validateWrtCapabilities(manifest, config)
+  if (capabilityErrors.length) throw new WrtDesignPackageError('unsupported-version', capabilityErrors.join(' '))
+  for (const element of config.elements) if (element.eleType === 'dynamicImage') {
+    const errors = validateDynamicImage(element as any, config.properties)
+    if (errors.length) throw new WrtDesignPackageError('invalid-design', errors.join(' '))
+  }
   onProgress?.({ stage: 'verifying', percentage: 10 })
-  if (manifest.version === 2) {
+  if (manifest.version >= 2) {
     if (!manifest.selfContained || manifest.failures?.length) throw new WrtDesignPackageError('invalid-manifest', 'WRT v2 must be complete and self-contained')
     const assets = [...(manifest.studio?.assetRefs || []), ...(manifest.fonts || []).filter(font => font.path), ...(manifest.fonts || []).flatMap(font => font.buildFiles || []), ...(manifest.bitmapFonts || []).flatMap(font => font.chars), ...(manifest.icons?.amoled || []), ...(manifest.preview ? [manifest.preview] : []), ...(manifest.productImages || []).flatMap(image => Object.values(image.variants || {}))]
     let verified = 0

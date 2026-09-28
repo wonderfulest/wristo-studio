@@ -327,6 +327,7 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     }
   }
   const errors = [...dateErrors, ...visualThemeErrors]
+  for (const element of config.elements) if (element.eleType === 'dynamicImage') errors.push(...validateDynamicImage(element as any, config.properties))
   errors.push(...validateLayoutConfig(config.properties, config.elements))
   if (errors.length > 0) {
     if (typeof document !== 'undefined') {
@@ -502,7 +503,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         return null
       }
       if (eleType === 'dynamicImage') {
-        const errors = validateDynamicImage(encodeConfig as any)
+        const errors = validateDynamicImage(encodeConfig as any, properties)
         if (errors.length) {
           if (typeof document !== 'undefined') ElMessage.error(errors.join(t('common.listSeparator')))
           console.error('Export validation failed:', errors)

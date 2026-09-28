@@ -10,19 +10,38 @@
         />
       </el-form-item>
     </el-form>
+    <el-form label-position="top">
+      <el-form-item :label="t('dynamicImage.driveMode')">
+        <el-radio-group class="drive-mode" :model-value="goalMode ? 'goalProgress' : 'expression'" @change="setDriveMode">
+          <el-radio-button label="expression">{{ t('dynamicImage.expressionMode') }}</el-radio-button>
+          <el-radio-button label="goalProgress">{{ t('dynamicImage.goalMode') }}</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <template v-if="goalMode">
+        <GoalPropertyField :model-value="model.goalProperty || ''" @update:model-value="bindGoal" />
+        <p class="goal-help">{{ t('dynamicImage.goalHelp') }}</p>
+        <el-form-item :label="t('dynamicImage.previewProgress')">
+          <el-slider :model-value="Math.round((model.progress || 0) * 100)" :min="0" :max="100" show-input
+            @input="(value: number) => props.applyPatch?.({ progress: value / 100 })" />
+        </el-form-item>
+        <el-alert v-for="error in goalErrors" :key="error" :title="error" type="error" :closable="false" />
+      </template>
+    </el-form>
     <div class="dynamic-image-list">
       <div v-for="(item, index) in items" :key="item.id" class="dynamic-image-row" draggable="true"
         @dragstart="draggedIndex = Number(index)" @dragover.prevent @drop="dropAt(Number(index))">
         <span class="drag-handle" aria-hidden="true">⋮⋮</span>
-        <img :src="item.imageUrl" :alt="item.expression.source" class="asset-thumbnail" :style="thumbnailStyle" />
-        <code class="expression-summary">{{ item.expression.source }}</code>
+        <img :src="item.imageUrl" :alt="goalMode ? `${Math.round((item.minProgress || 0) * 100)}%` : item.expression?.source || 'false'" class="asset-thumbnail" :style="thumbnailStyle" />
+        <el-input-number v-if="goalMode" :model-value="Math.round((item.minProgress || 0) * 100)"
+          :min="0" :max="100" :step="10" @change="(value: number) => setThreshold(Number(index), value)" />
+        <code v-else class="expression-summary">{{ item.expression?.source || 'false' }}</code>
         <div class="row-actions">
           <el-button size="small" type="danger" plain @click.stop="removeItem(Number(index))">{{ t('common.delete') }}</el-button>
           <el-button size="small" @click="openEdit(Number(index))">{{ t('common.edit') }}</el-button>
         </div>
       </div>
     </div>
-    <div class="quick-import-type">
+    <div v-if="!goalMode" class="quick-import-type">
       <span class="quick-import-type-label">{{ t('dynamicImage.quickImportType') }}</span>
       <el-radio-group :model-value="quickImportKind" size="small" @change="selectQuickImportKind">
         <el-radio-button label="all">{{ t('dynamicImage.quickImportType.general') }}</el-radio-button>
@@ -32,9 +51,9 @@
     </div>
     <div class="panel-actions">
       <el-button class="add-button" type="primary" plain @click="openAdd">＋ {{ t('dynamicImage.addItem') }}</el-button>
-      <el-button class="quick-import-button" plain @click="quickImportVisible = true">{{ t('dynamicImage.quickImport') }}</el-button>
+      <el-button v-if="!goalMode" class="quick-import-button" plain @click="quickImportVisible = true">{{ t('dynamicImage.quickImport') }}</el-button>
     </div>
-    <TokenPreviewControls :tokens="referencedTokens" />
+    <TokenPreviewControls v-if="!goalMode" :tokens="referencedTokens" />
     <el-dialog v-model="dialogVisible" :title="editingIndex === null ? t('dynamicImage.addItem') : t('dynamicImage.editItem')"
       width="min(560px, 92vw)" append-to-body destroy-on-close>
       <div class="edit-form">
@@ -43,7 +62,11 @@
         </el-button>
         <AssetPicker :selected-url="draftImageUrl" :selected-asset-id="draftAssetId" asset-type="image"
           :on-select="selectDraftAsset" :on-upload="selectDraftAsset" />
-        <ExpressionEditor v-model="draftExpression" :error="expressionError" />
+        <el-form-item v-if="goalMode" :label="t('dynamicImage.startPercent')">
+          <el-input-number v-model="draftPercent" :min="0" :max="100" :precision="0" />
+        </el-form-item>
+        <el-alert v-if="goalMode && expressionError" :title="expressionError" type="error" :closable="false" />
+        <ExpressionEditor v-if="!goalMode" v-model="draftExpression" :error="expressionError" />
       </div>
       <template #footer>
         <el-button v-if="editingIndex !== null" type="danger" plain @click="removeEditingItem">{{ t('common.delete') }}</el-button>
@@ -63,6 +86,10 @@
 
 <script setup lang="ts">
 import { computed, ref, toRaw } from 'vue'
+import GoalPropertyField from '@/elements/common/settings/GoalPropertyField.vue'
+import { usesGoalProgress, initializeGoalStages, nextGoalThreshold } from './dynamicImage.goal'
+import { validateDynamicImage } from './dynamicImage.validation'
+import { usePropertiesStore } from '@/stores/properties'
 import { nanoid } from 'nanoid'
 import AssetPicker from '@/components/asset-picker/index.vue'
 import ExpressionEditor from '@/components/expression/ExpressionEditor.vue'
@@ -90,6 +117,18 @@ const messageStore = useMessageStore()
 const historyStore = useHistoryStore()
 const model = computed(() => props.config ?? props.element ?? {})
 const items = computed<DynamicImageItem[]>(() => model.value.items ?? [])
+const goalMode = computed(() => usesGoalProgress(model.value))
+const propertiesStore = usePropertiesStore()
+const goalErrors = computed(() => goalMode.value ? validateDynamicImage(model.value, propertiesStore.properties) : [])
+const setDriveMode = (selectionMode: 'expression' | 'goalProgress') => props.applyPatch?.({
+  selectionMode, goalProperty: selectionMode === 'expression' ? '' : model.value.goalProperty || '',
+  progress: model.value.progress ?? 0,
+  items: selectionMode === 'goalProgress' ? initializeGoalStages(items.value) : items.value.map(item => ({ ...item, expression: item.expression ?? parseExpression('false', DEFAULT_EXPRESSION_TOKEN_CATALOG) })),
+})
+const bindGoal = (goalProperty: string) => props.applyPatch?.({ selectionMode: 'goalProgress', goalProperty })
+const setThreshold = (index: number, value: number) => props.applyPatch?.({
+  items: items.value.map((item, i) => i === index ? { ...item, minProgress: value / 100 } : item),
+})
 const dialogVisible = ref(false)
 const copyDialogVisible = ref(false)
 const quickImportVisible = ref(false)
@@ -98,6 +137,7 @@ const editingIndex = ref<number | null>(null)
 const draftImageUrl = ref('')
 const draftAssetId = ref<number | undefined>()
 const draftExpression = ref('false')
+const draftPercent = ref(0)
 const expressionError = ref('')
 const draggedIndex = ref<number | null>(null)
 const referencedTokens = computed(() => getReferencedTokenDefinitions(resolveDynamicImagePreviewSource(items.value)))
@@ -119,13 +159,15 @@ const resetDraft = () => { draftImageUrl.value = ''; draftAssetId.value = undefi
 const openAdd = () => {
   editingIndex.value = null
   resetDraft()
-  draftExpression.value = resolvePreviewAwareNewExpression(items.value, expressionPreviewStore.tokenValues)
+  draftExpression.value = goalMode.value ? 'false' : resolvePreviewAwareNewExpression(items.value, expressionPreviewStore.tokenValues)
+  draftPercent.value = Math.round((nextGoalThreshold(items.value) ?? 1) * 100)
   dialogVisible.value = true
 }
 const openEdit = (index: number) => {
   const item = items.value[index]
   editingIndex.value = index; draftImageUrl.value = item.imageUrl; draftAssetId.value = item.assetId
-  draftExpression.value = item.expression.source; expressionError.value = ''; dialogVisible.value = true
+  draftPercent.value = Math.round((item.minProgress ?? 0) * 100)
+  draftExpression.value = item.expression?.source || 'false'; expressionError.value = ''; dialogVisible.value = true
 }
 const selectDraftAsset = (url: string, asset: AnalogAssetVO) => {
   draftImageUrl.value = asset.file?.previewUrl || asset.file?.url || url; draftAssetId.value = asset.id
@@ -133,10 +175,14 @@ const selectDraftAsset = (url: string, asset: AnalogAssetVO) => {
 const saveDraft = () => {
   if (!draftImageUrl.value.trim()) { expressionError.value = t('dynamicImage.assetRequired'); return }
   try {
+    if (goalMode.value && items.value.some((item, index) => index !== editingIndex.value && item.minProgress === draftPercent.value / 100)) {
+      expressionError.value = t('dynamicImage.duplicateThreshold'); return
+    }
     const item: DynamicImageItem = {
       id: editingIndex.value === null ? nanoid() : items.value[editingIndex.value].id,
       imageUrl: draftImageUrl.value, assetId: draftAssetId.value,
       expression: parseExpression(draftExpression.value, DEFAULT_EXPRESSION_TOKEN_CATALOG),
+      ...(goalMode.value ? { minProgress: draftPercent.value / 100 } : {}),
     }
     const next = [...items.value]
     if (editingIndex.value === null) next.push(item); else next[editingIndex.value] = item
@@ -149,7 +195,8 @@ const removeEditingItem = () => {
 }
 const removeItem = (itemIndex: number) => commitItems(items.value.filter((_, index) => index !== itemIndex))
 const handleCopyGroup = (sourceItems: DynamicImageItem[]) => {
-  commitItems(appendCopiedDynamicImageItems(items.value, sourceItems, nanoid))
+  const copied = appendCopiedDynamicImageItems(items.value, sourceItems, nanoid)
+  commitItems(goalMode.value ? initializeGoalStages(copied) : copied)
   dialogVisible.value = false
   messageStore.success(t('dynamicImage.rulesAppended', { count: sourceItems.length }))
 }
@@ -197,6 +244,7 @@ const dropAt = (targetIndex: number) => {
 </script>
 
 <style scoped>
+.goal-help { margin: 0 0 16px; color: var(--el-text-color-secondary); font-size: 13px; line-height: 1.5; }
 .dynamic-image-panel { padding: 16px; display: grid; gap: 16px; }
 .dynamic-image-list { display: grid; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; overflow: hidden; }
 .dynamic-image-row { display: grid; grid-template-columns: 18px 92px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 68px; padding: 8px 12px; background: var(--el-bg-color); }
