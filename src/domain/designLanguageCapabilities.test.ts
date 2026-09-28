@@ -94,6 +94,16 @@ describe('design language capabilities', () => {
     expect(isChineseOnlyDataSymbol(':FIELD_TYPE_HEART_RATE')).toBe(false)
   })
 
+  it('keeps Chinese calendar fields without explicit language metadata in Chinese designs', () => {
+    const options = [
+      { metricSymbol: ':FIELD_TYPE_HEART_RATE' },
+      { metricSymbol: ':FIELD_TYPE_LUNAR_DATE' },
+      { metricSymbol: ':FIELD_TYPE_WEEKDAY_SHORT_ZH' },
+    ]
+    expect(filterDataOptionsForAppLanguage(options, 'zhs')).toEqual(options)
+    expect(filterDataOptionsForAppLanguage(options, 'eng')).toEqual([options[0]])
+  })
+
   it('filters Chinese-only data items out of English designs', () => {
     const options = [
       { metricSymbol: ':FIELD_TYPE_HEART_RATE' },

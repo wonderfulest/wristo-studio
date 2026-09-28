@@ -176,9 +176,26 @@
     :close-on-click-modal="false"
     :close-on-press-escape="false"
   >
+    <div class="add-options-toolbar">
+      <el-checkbox
+        :model-value="allFilteredOptionsSelected"
+        :indeterminate="someFilteredOptionsSelected && !allFilteredOptionsSelected"
+        :disabled="filteredAddableOptions.length === 0"
+        @change="toggleAllFilteredOptions"
+      >
+        {{ t('property.selectAllMatching') }}
+      </el-checkbox>
+      <span>{{ t('asset.selectedCount', { count: pendingOptionValues.length }) }}</span>
+      <el-button link :disabled="pendingOptionValues.length === 0" @click="pendingOptionValues = []">
+        {{ t('asset.clearSelection') }}
+      </el-button>
+    </div>
     <el-select
       v-model="pendingOptionValues"
       multiple
+      collapse-tags
+      collapse-tags-tooltip
+      :max-collapse-tags="3"
       filterable
       :filter-method="filterAddableOptions"
       :placeholder="t('property.selectDataTypesToAdd')"
@@ -217,7 +234,6 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { usePropertiesStore } from '@/stores/properties'
-import { useDesignStore } from '@/stores/designStore'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
@@ -249,9 +265,8 @@ const pendingOptionValues = ref([])
 const defaultOptionsQuery = ref('')
 const addableOptionsQuery = ref('')
 const dataCatalogStore = useDataCatalogStore()
-const designStore = useDesignStore()
 const propertiesStore = usePropertiesStore()
-const catalogOptions = computed(() => getDataTypePropertyOptions(designStore.appLanguage))
+const catalogOptions = computed(() => getDataTypePropertyOptions())
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions.value)
 const iconGlyph = (option) => resolveMetricIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
@@ -278,6 +293,16 @@ const selectedOption = computed(() => defaultValueOptions.value.find((option) =>
 const addableOptions = computed(() => createAddableDataOptions(catalogOptions.value, resolvedOptions.value))
 const filteredAddableOptions = computed(() => addableOptions.value
   .filter(option => matchesDataOptionSearch(option, addableOptionsQuery.value)))
+const someFilteredOptionsSelected = computed(() => filteredAddableOptions.value
+  .some(option => pendingOptionValues.value.includes(option.metricSymbol)))
+const allFilteredOptionsSelected = computed(() => filteredAddableOptions.value.length > 0
+  && filteredAddableOptions.value.every(option => pendingOptionValues.value.includes(option.metricSymbol)))
+const toggleAllFilteredOptions = (checked) => {
+  const filteredSymbols = filteredAddableOptions.value.map(option => option.metricSymbol)
+  pendingOptionValues.value = checked
+    ? appendOrderedOptionIds(pendingOptionValues.value, filteredSymbols)
+    : pendingOptionValues.value.filter(symbol => !filteredSymbols.includes(symbol))
+}
 const filterDefaultOptions = (query) => { defaultOptionsQuery.value = query }
 const filterAddableOptions = (query) => { addableOptionsQuery.value = query }
 
@@ -417,6 +442,14 @@ defineExpose({
 </script>
 
 <style scoped>
+.add-options-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .section-actions {
   display: flex;
   align-items: center;

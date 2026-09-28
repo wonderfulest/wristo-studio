@@ -28,6 +28,15 @@ describe('DataPropertyDialog contract', () => {
     expect(source).toContain('matchesDataOptionSearch(option, addableOptionsQuery.value)')
   })
 
+  it('offers the full catalog and batch selection controls', () => {
+    const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
+    expect(source).toContain('getDataTypePropertyOptions()')
+    expect(source).not.toContain('getDataTypePropertyOptions(designStore.appLanguage)')
+    expect(source).toContain('@change="toggleAllFilteredOptions"')
+    expect(source).toContain('appendOrderedOptionIds(pendingOptionValues.value, filteredSymbols)')
+    expect(source).toContain('pendingOptionValues.value.filter(symbol => !filteredSymbols.includes(symbol))')
+  })
+
   it('emits symbol references instead of full options', () => {
     const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
 

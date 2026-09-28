@@ -141,7 +141,7 @@ export function filterDataOptionsForAppLanguage<T extends { metricSymbol: string
 ): T[] {
   return options.filter((option) => {
     const requiredLanguage = option.appLanguage
-      || (isChineseOnlyDataSymbol(option.metricSymbol) ? 'zh' : undefined)
+      || (isChineseOnlyDataSymbol(option.metricSymbol) ? 'zhs' : undefined)
     return !requiredLanguage || requiredLanguage === appLanguage
   })
 }
