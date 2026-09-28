@@ -1019,15 +1019,14 @@ const applyEditorValue = async (value: string) => {
 }
 .tokens-toolbar {
   position: sticky;
-  top: 56px;
+  top: 0;
   z-index: 3;
   margin: 16px 0;
   padding: 14px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-lg);
-  background: color-mix(in srgb, var(--studio-surface-raised) 94%, transparent);
+  background: var(--studio-surface);
   box-shadow: var(--studio-shadow-sm);
-  backdrop-filter: blur(14px);
 }
 .tokens-toolbar :deep(.el-input) {
   max-width: 420px;

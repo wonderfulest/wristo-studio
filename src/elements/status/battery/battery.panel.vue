@@ -2,10 +2,17 @@
   <div class="settings-section text-settings-panel battery-settings-panel">
     <section class="text-settings-card">
       <div class="battery-settings-group-label">{{ t('elementSettings.basicSize') }}</div>
+      <div class="text-setting-field">
+        <label>{{ t('elementSettings.orientation') }}</label>
+        <el-radio-group :model-value="currentModel.orientation || 'horizontal'" @change="changeOrientation">
+          <el-radio-button label="horizontal">{{ t('elementSettings.horizontal') }}</el-radio-button>
+          <el-radio-button label="vertical">{{ t('elementSettings.vertical') }}</el-radio-button>
+        </el-radio-group>
+      </div>
       <div class="text-settings-grid">
         <div class="text-setting-field">
           <label>{{ t('elementSettings.width') }}</label>
-          <el-input-number v-model="currentModel.width" :min="20" :max="500" @change="updateElement" />
+          <el-input-number v-model="currentModel.width" :min="10" :max="500" @change="updateElement" />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.height') }}</label>
@@ -133,7 +140,7 @@
 import { computed, onMounted } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import ColorPicker from '@/components/color-picker/index.vue'
-import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, resolveBatteryParts } from '@/elements/status/battery/battery.encoder'
+import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, encodeBattery } from '@/elements/status/battery/battery.encoder'
 import { useI18n } from '@/i18n'
 
 const props = defineProps({
@@ -224,39 +231,7 @@ const initElementProperties = () => {
   const group = elementManager.getElementById((props.element as any).id) as any
   if (!group) return
 
-  const parts = resolveBatteryParts(group)
-  if (!parts) return
-  const batteryBody = parts.body
-  const batteryHead = parts.head
-  const batteryLevel = parts.level
-
-  ;(props.element as any).width = Math.round((batteryBody as any).width)
-  ;(props.element as any).height = Math.round((batteryBody as any).height)
-  ;(props.element as any).bodyFill = (batteryBody as any).fill
-  ;(props.element as any).bodyStroke = (batteryBody as any).stroke
-  ;(props.element as any).bodyStrokeWidth = Math.round((batteryBody as any).strokeWidth)
-  ;(props.element as any).bodyRx = Math.round((batteryBody as any).rx)
-  ;(props.element as any).bodyRy = Math.round((batteryBody as any).ry)
-
-  ;(props.element as any).headWidth = Math.round((batteryHead as any).width)
-  ;(props.element as any).headHeight = Math.round((batteryHead as any).height)
-  ;(props.element as any).headFill = (batteryHead as any).fill
-  ;(props.element as any).headRx = Math.round((batteryHead as any).rx)
-  ;(props.element as any).headRy = Math.round((batteryHead as any).ry)
-
-  const padding = Math.round((batteryLevel as any).left - (batteryBody as any).left)
-  ;(props.element as any).padding = padding
-
-  ;(props.element as any).level = (batteryLevel as any).width / ((batteryBody as any).width - padding * 2)
-
-  const headGap = Math.round((batteryHead as any).left - ((batteryBody as any).left + (batteryBody as any).width))
-  ;(props.element as any).headGap = headGap
-
-  if (group) {
-    if ((props.element as any).levelColorLow == null) (props.element as any).levelColorLow = (group as any).levelColorLow || DEFAULT_LEVEL_COLOR_LOW
-    if ((props.element as any).levelColorMedium == null) (props.element as any).levelColorMedium = (group as any).levelColorMedium || DEFAULT_LEVEL_COLOR_MEDIUM
-    if ((props.element as any).levelColorHigh == null) (props.element as any).levelColorHigh = (group as any).levelColorHigh || DEFAULT_LEVEL_COLOR_HIGH
-  }
+  Object.assign(props.element, encodeBattery(group))
 }
 
 onMounted(() => {
@@ -265,9 +240,32 @@ onMounted(() => {
   }
 })
 
+const changeOrientation = (value: string | number | boolean | undefined) => {
+  const orientation = value === 'vertical' ? 'vertical' : 'horizontal'
+  if (orientation === (currentModel.value.orientation || 'horizontal')) return
+  const model = currentModel.value
+  const patch = {
+    orientation,
+    width: model.height ?? 18,
+    height: model.width ?? 28,
+    headWidth: model.headHeight ?? 9,
+    headHeight: model.headWidth ?? 2,
+    bodyRx: model.bodyRy ?? 2,
+    bodyRy: model.bodyRx ?? 2,
+    headRx: model.headRy ?? 1,
+    headRy: model.headRx ?? 1,
+  }
+  if (props.applyPatch && props.config) {
+    props.applyPatch(patch)
+  } else if (props.element) {
+    elementManager.updateElement(props.element as any, patch).then(initElementProperties)
+  }
+}
+
 const updateElement = () => {
   if (props.applyPatch && props.config) {
     props.applyPatch({
+      orientation: currentModel.value.orientation || 'horizontal',
       width: currentModel.value.width,
       height: currentModel.value.height,
       padding: currentModel.value.padding,
@@ -299,6 +297,7 @@ const updateElement = () => {
   if (!props.element) return
 
   elementManager.updateElement(props.element as any, {
+    orientation: (props.element as any).orientation || 'horizontal',
     width: (props.element as any).width,
     height: (props.element as any).height,
     bodyFill: (props.element as any).bodyFill,

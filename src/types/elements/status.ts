@@ -2,6 +2,7 @@
 import type { BaseElementConfig } from './base'
 
 export interface BatteryElementConfig extends BaseElementConfig {
+  orientation?: 'horizontal' | 'vertical'
   width: number
   height: number
   headWidth?: number

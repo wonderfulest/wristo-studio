@@ -62,7 +62,12 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
 
   const safePadding = Math.round(((anyElement.padding ?? 2) as number))
 
+  const orientation = anyElement.orientation === 'vertical' ? 'vertical' : 'horizontal'
+  const innerSize = Math.max(0, (orientation === 'vertical' ? batteryBody.height : batteryBody.width) - safePadding * 2)
+  const fillSize = orientation === 'vertical' ? batteryLevel.height : batteryLevel.width
+
   const config: BatteryElementConfig = {
+    orientation,
     id: String(anyElement.id ?? ''),
     eleType: 'battery',
     originX: (anyElement.originX ?? 'center') as any,
@@ -85,7 +90,7 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
     headRx: Math.round(((batteryHead.rx ?? 0) as number)),
     headRy: Math.round(((batteryHead.ry ?? 0) as number)),
     padding: safePadding,
-    level: Number(((batteryLevel.width as number) / ((batteryBody.width as number) - safePadding * 2)).toFixed(2)),
+    level: innerSize > 0 ? Number(Math.min(1, Math.max(0, fillSize / innerSize)).toFixed(2)) : 0,
     levelColorLow: (anyElement.levelColorLow ?? DEFAULT_LEVEL_COLOR_LOW) as string,
     levelColorLowProperty: anyElement.levelColorLowProperty ?? undefined,
     levelColorMedium: (anyElement.levelColorMedium ?? DEFAULT_LEVEL_COLOR_MEDIUM) as string,
@@ -100,6 +105,7 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
 
 export function decodeBattery(config: BatteryElementConfig): Partial<FabricElement> {
   const decoded: Partial<FabricElement> = {
+    orientation: config.orientation === 'vertical' ? 'vertical' : 'horizontal',
     eleType: 'battery',
     left: config.left,
     top: config.top,
