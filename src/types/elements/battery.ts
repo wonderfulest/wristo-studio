@@ -2,6 +2,7 @@ import type { BaseElementConfig } from './base'
 
 // Battery config; many properties are optional and have sensible defaults in the store
 export interface BatteryElementConfig extends BaseElementConfig {
+  orientation?: 'horizontal' | 'vertical'
   eleType: 'battery'
   width?: number
   height?: number

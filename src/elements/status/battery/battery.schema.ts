@@ -5,6 +5,7 @@ export type BatteryElementSchema = {
   name: string
   icon: string
   defaultConfig: {
+    orientation: 'horizontal' | 'vertical'
     width: number
     height: number
     padding: number
@@ -33,6 +34,7 @@ export const batterySchema: BatteryElementSchema = {
   name: 'Battery',
   icon: 'mdi:battery',
   defaultConfig: {
+    orientation: 'horizontal',
     width: 28,
     height: 18,
     padding: 2,
