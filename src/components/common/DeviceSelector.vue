@@ -150,7 +150,7 @@ onMounted(() => {
   // 已经是可见状态时不再重复触发
   if (visible.value) return
 
-  const currentDeviceId = (userStore.userInfo as any)?.device?.deviceId
+  const currentDeviceId = userStore.editorDevice?.deviceId
   if (!currentDeviceId) {
     visible.value = true
     emit('update:modelValue', true)
@@ -206,6 +206,13 @@ const confirmSelection = async () => {
       displayName: selected.displayName
     }
 
+    if (!userStore.isAuthenticated) {
+      userStore.setGuestDevice(displayDeviceDetail)
+      emit('device-selected', displayDeviceDetail)
+      handleClose()
+      return
+    }
+    userStore.setGuestDevice(null)
     // 调用后端接口更新当前用户设备
     await updateMyInfo({ deviceId: displayDeviceDetail.deviceId })
 

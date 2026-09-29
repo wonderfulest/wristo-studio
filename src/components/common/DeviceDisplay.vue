@@ -57,7 +57,7 @@ const { t } = useI18n()
 
 // 当前设备仅来源于 userStore
 const currentDevice = computed(() => {
-  return userStore.userInfo?.device ?? null
+  return userStore.editorDevice ?? null
 })
 
 // Handle select device click

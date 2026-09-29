@@ -13,15 +13,8 @@ import type { ApiResponse } from '@/types/api/api'
 import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
-import {
-  cancelPendingSsoRedirect,
-  clearLocalAuthState,
-  clearPendingStudioPath,
-  getPendingStudioPath,
-  getSsoRedirectUri,
-  redirectToSsoLogin,
-} from '@/utils/ssoRedirect'
-import { rejectStudioSession } from '@/auth/studioAccess'
+import { clearPendingStudioPath, getPendingStudioPath, getSsoRedirectUri } from '@/utils/ssoRedirect'
+import { consumeStudioLoginTransaction, isValidPendingStudioPath } from '@/utils/studioPkce'
 
 const loading = ref(true)
 const error = ref('')
@@ -29,88 +22,33 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const { t } = useI18n()
-
 const clientId = 'studio'
 const redirectUri = getSsoRedirectUri()
 
-const rejectAccess = () => {
-  const forbiddenPath = rejectStudioSession({
-    cancelPendingRedirect: cancelPendingSsoRedirect,
-    clearStoreAuth: () => userStore.clearAuth(),
-    clearLocalAuth: clearLocalAuthState,
-    clearPendingPath: clearPendingStudioPath,
-  })
-  router.replace(forbiddenPath)
-}
-
-const getCallbackNextPath = () => {
-  const raw = route.query.next
-  const value = Array.isArray(raw) ? raw[0] : raw
-  return typeof value === 'string'
-    && value.startsWith('/')
-    && !value.startsWith('/auth/callback')
-    && !value.startsWith('/auth/signed-out')
-    ? value
-    : ''
-}
-
 onMounted(async () => {
-  
-  const code = route.query.code as string
-  if (!code) {
-    error.value = t('auth.missingCode')
-    loading.value = false
-    return
-  }
   try {
-    const res: ApiResponse<SsoTokenResponseData> = await fetchSsoToken({
-      code,
-      clientId,
-      redirectUri
-    })
-    
-    if (res.code === 0 && res.data?.accessToken) {
-      userStore.setToken(res.data.accessToken)
-      
-      
-      // 获取用户信息并保存
-      try {
-        const userRes = await getUserInfo()
-        
-        if (userRes.code === 0 && userRes.data) {
-          userStore.setUserInfo(userRes.data)
-
-          if (!userStore.hasFullStudioAccess) {
-            rejectAccess()
-            return
-          }
-        } else {
-          rejectAccess()
-          return
-        }
-      } catch (e) {
-        console.error('Failed to get user info', e)
-        rejectAccess()
-        return
-      }
-      
-      // 延迟跳转，确保数据保存完成
-      setTimeout(() => {
-        const pendingPath = getCallbackNextPath() || getPendingStudioPath()
-        clearPendingStudioPath()
-        router.replace(pendingPath || '/')
-      }, 100)
-    } else {
-      error.value = res.msg || t('auth.requestFailed')
-      redirectToSsoLogin('studio', 5000)
-    }
+    const code = route.query.code
+    if (typeof code !== 'string' || !code) throw new Error(t('auth.missingCode'))
+    const codeVerifier = consumeStudioLoginTransaction(route.query.state)
+    const res: ApiResponse<SsoTokenResponseData> = await fetchSsoToken({ code, clientId, redirectUri, codeVerifier })
+    if (res.code !== 0 || !res.data?.accessToken) throw new Error(res.msg || t('auth.requestFailed'))
+    userStore.setToken(res.data.accessToken)
+    const userRes = await getUserInfo()
+    if (userRes.code !== 0 || !userRes.data) throw new Error(userRes.msg || t('auth.requestFailed'))
+    userStore.setUserInfo(userRes.data)
+    const queryNext = route.query.next
+    const pendingPath = getPendingStudioPath()
+      || (typeof queryNext === 'string' && isValidPendingStudioPath(queryNext) ? queryNext : '/')
+    clearPendingStudioPath()
+    await router.replace(pendingPath)
   } catch (e: any) {
+    userStore.clearAuth()
     error.value = e?.response?.data?.msg || e.message || t('auth.requestFailed')
-    redirectToSsoLogin('studio', 12200)
   } finally {
     loading.value = false
   }
 })
+
 </script>
 
 <style scoped>

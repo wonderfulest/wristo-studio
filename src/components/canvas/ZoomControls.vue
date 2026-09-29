@@ -98,7 +98,7 @@ const baseStore = useBaseStore()
 const designStore = useDesignStore()
 const userStore = useUserStore()
 const isCollapsed = ref(false)
-const currentDevice = computed(() => userStore.userInfo?.device || null)
+const currentDevice = computed(() => userStore.editorDevice || null)
 const currentDeviceName = computed(() => currentDevice.value?.displayName || t('canvas.noDeviceSelected'))
 const deviceImageUrl = computed(() => currentDevice.value?.imageUrl || currentDevice.value?.devicePng || '')
 const deviceResolutionLabel = computed(() => {

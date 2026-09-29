@@ -13,10 +13,9 @@ describe('useDesignLoader contract', () => {
     expect(loaderSource).toContain('designLoadGeneration += 1')
   })
 
-  it('projects the default theme after fonts and before themes, properties, and elements', () => {
+  it('projects the default theme before themes, properties, and elements', () => {
     const applyStart = loaderSource.indexOf('const applyRuntimeDesignConfig = async')
-    const fontFetch = loaderSource.indexOf('await fontStore.fetchFonts()', applyStart)
-    const generationGuard = loaderSource.indexOf('if (!isCurrentDesignLoad(generation)) return false', fontFetch)
+    const generationGuard = loaderSource.indexOf('if (!isCurrentDesignLoad(generation)) return false', applyStart)
     const projection = loaderSource.indexOf('const projectedConfig = projectDefaultVisualThemeForLoad(config)', generationGuard)
     const hydrate = loaderSource.indexOf('visualThemeStore.hydrate(', projection)
     const normalization = loaderSource.indexOf('normalizeDataPropertyConfig(loadConfig, dataCatalogStore.options)', hydrate)
@@ -24,8 +23,7 @@ describe('useDesignLoader contract', () => {
     const elements = loaderSource.indexOf('const runtimeElements = (loadConfig.elements as AnyElementConfig[]).map', properties)
 
     expect(applyStart).toBeGreaterThan(-1)
-    expect(fontFetch).toBeGreaterThan(applyStart)
-    expect(generationGuard).toBeGreaterThan(fontFetch)
+    expect(generationGuard).toBeGreaterThan(applyStart)
     expect(projection).toBeGreaterThan(generationGuard)
     expect(hydrate).toBeGreaterThan(projection)
     expect(normalization).toBeGreaterThan(hydrate)

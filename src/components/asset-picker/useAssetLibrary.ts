@@ -10,6 +10,7 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 
 export interface UseAssetLibraryOptions {
   assetType: () => AnalogAssetType
+  enabled?: () => boolean
   api?: AssetLibraryApi
   translate?: Translate
   onError?: (error: unknown) => void
@@ -59,6 +60,7 @@ export function useAssetLibrary(options: UseAssetLibraryOptions) {
   }
 
   const loadAssets = async (reset = false): Promise<void> => {
+    if (options.enabled?.() === false) { assets.value = []; hasMore.value = false; return }
     if (loading.value) return
     if (reset) {
       pageNum.value = 1

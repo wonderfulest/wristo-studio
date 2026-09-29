@@ -183,7 +183,7 @@ export const useBaseStore = defineStore('baseStore', {
       if (!includeDeviceFrame) return canvasDataURL
 
       const userStore = useUserStore()
-      const currentDevice = userStore.userInfo?.device
+      const currentDevice = userStore.editorDevice
       if (!currentDevice?.deviceId) return canvasDataURL
 
       let device = currentDevice as GarminDeviceDetailVO

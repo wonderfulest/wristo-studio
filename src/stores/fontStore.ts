@@ -427,6 +427,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
        * 初始化最近使用字体，默认拉取 5 个
        */
       async initRecentFonts(type?: string, types?: string[]): Promise<void> {
+        if (!useUserStore().isAuthenticated) return
         try {
           const userStore = useUserStore()
           const recentFonts: ApiResponse<DesignFontVO[]> = await getRecentFonts(5, type, userStore.userInfo?.id, types)

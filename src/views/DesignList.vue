@@ -61,6 +61,7 @@ import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Promotion } from '@element-plus/icons-vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
+import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 
 const router = useRouter()
@@ -89,7 +90,7 @@ const navigateTo = async (routeName: string) => {
 }
 
 onMounted(() => {
-  pendingStore.fetch()
+  if (useUserStore().isAuthenticated) pendingStore.fetch()
 })
 </script>
 

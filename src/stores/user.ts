@@ -3,9 +3,15 @@ import { getUserInfo, logout as logoutApi, updateMyInfo } from '@/api/wristo/aut
 import { type UserInfo, type GarminDeviceVO } from '@/types/user'
 import { hasStudioAccess } from '@/auth/studioAccess'
 
+const GUEST_DEVICE_KEY = 'wristo-studio-guest-device'
+const readGuestDevice = (): GarminDeviceVO | null => {
+  try { return JSON.parse(localStorage.getItem(GUEST_DEVICE_KEY) || 'null') } catch { return null }
+}
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     token: '',
+    guestDevice: readGuestDevice(),
     userInfo: null as UserInfo | null
   }),
   getters: {
@@ -20,6 +26,7 @@ export const useUserStore = defineStore('user', {
       })
       return hasToken && hasUserInfo
     },
+    editorDevice: (state) => state.guestDevice || state.userInfo?.device || null,
     studioMembership: (state) => state.userInfo?.studioMembership || null,
     hasFullStudioAccess: (state) => hasStudioAccess(state.userInfo),
     canUsePremiumStudioAssets: (state) => {
@@ -42,6 +49,11 @@ export const useUserStore = defineStore('user', {
     }
   },
   actions: {
+    setGuestDevice(device: GarminDeviceVO | null) {
+      this.guestDevice = device
+      if (device) localStorage.setItem(GUEST_DEVICE_KEY, JSON.stringify(device))
+      else localStorage.removeItem(GUEST_DEVICE_KEY)
+    },
     clearAuth() {
       this.token = ''
       this.userInfo = null

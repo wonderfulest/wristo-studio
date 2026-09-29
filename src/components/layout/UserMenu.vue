@@ -139,6 +139,7 @@
 
     <DesignerDefaultConfigDialog ref="designerConfigDialogRef" />
   </div>
+  <button v-else type="button" class="guest-sign-in" @click="signIn">{{ t('auth.signIn') }}</button>
 </template>
 
 <script setup lang="ts">
@@ -147,7 +148,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
 import { useI18n } from '@/i18n'
-import { cancelPendingSsoRedirect, clearLocalAuthState } from '@/utils/ssoRedirect'
+import { showErrorOnce } from '@/utils/errorMessage'
+import { cancelPendingSsoRedirect, clearLocalAuthState, redirectToSsoLogin } from '@/utils/ssoRedirect'
 
 const DesignerDefaultConfigDialog = defineAsyncComponent(() => import('@/components/dialogs/DesignerDefaultConfigDialog.vue'))
 
@@ -155,6 +157,10 @@ const router = useRouter()
 const userStore = useUserStore()
 const { t } = useI18n()
 
+const signIn = async () => {
+  try { await redirectToSsoLogin('studio') }
+  catch (error) { showErrorOnce(error, error instanceof Error ? error.message : t('auth.requestFailed')) }
+}
 const showDropdown = ref(false)
 const designerConfigDialogRef = ref<{ show: () => void } | null>(null)
 
@@ -254,6 +260,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.guest-sign-in {
+  cursor: pointer; padding: 8px 16px; border-radius: 8px;
+  border: 1px solid var(--studio-border); background: var(--studio-surface); color: var(--studio-text);
+}
 .user-menu {
   position: relative;
   height: 56px;

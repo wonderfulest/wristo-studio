@@ -1,3 +1,4 @@
+import { useUserStore } from '@/stores/user'
 import instance from '@/config/axios'
 import type { DesignFontVO, DesignFontSearchDTO, IconFontBuildStatusVO } from '@/types/font'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
@@ -62,6 +63,20 @@ export const getIconFontBuildStatus = (
 export const searchFonts = (
   params: DesignFontSearchDTO
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
+  if (!useUserStore().isAuthenticated) {
+    return getSystemFonts(params.type).then(response => {
+      const name = params.name?.trim().toLowerCase() || ''
+      const all = (response.data || []).filter(font =>
+        (!params.types?.length || params.types.includes(font.type))
+        && (!name || [font.fullName, font.slug, font.family].some(value => String(value || '').toLowerCase().includes(name)))
+        && (!params.languages?.length || params.languages.includes(font.language))
+      )
+      const pageSize = Math.max(1, params.pageSize)
+      const pageNum = Math.max(1, params.pageNum)
+      return { code: 0, msg: '', data: { pageNum, pageSize, total: all.length,
+        pages: Math.ceil(all.length / pageSize), list: all.slice((pageNum - 1) * pageSize, pageNum * pageSize) } }
+    })
+  }
   // server supports extended filters including type; userId may be provided for auditing/stat
   return instance.post('/dsn/fonts/search?populate=ttf', params)
 }
@@ -78,6 +93,7 @@ export const getDesignerUsageFontsPage = (
     languages?: string[]
   }
 ): Promise<ApiResponse<PageResponse<DesignFontVO>>> => {
+  if (!useUserStore().isAuthenticated) return searchFonts({ ...params, isSystem: 1 })
   return instance.post('/dsn/fonts/usage/page?populate=ttf', params)
 }
 
@@ -88,7 +104,7 @@ export const getFontByName = (name: string): Promise<ApiResponse<DesignFontVO>> 
 
 // 根据 slug 获取字体详情
 export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> => {
-  return instance.get(`/dsn/fonts/get-by-slug/${slug}?populate=ttf`)
+  return instance.get(`/${useUserStore().isAuthenticated ? 'dsn' : 'public'}/fonts/get-by-slug/${encodeURIComponent(slug)}?populate=ttf`)
 }
 
 export const getFontById = (id: number): Promise<ApiResponse<DesignFontVO>> => {
@@ -118,6 +134,7 @@ export const unfavoriteFont = (id: number): Promise<ApiResponse<DesignFontVO>> =
 }
 
 export const getFontStyleTags = (): Promise<ApiResponse<string[]>> => {
+  if (!useUserStore().isAuthenticated) return Promise.resolve({ code: 0, msg: '', data: [] })
   return instance.get('/dsn/fonts/style-tags')
 }
 
@@ -133,6 +150,7 @@ export const getSystemFonts = (type?: string, userId?: number): Promise<ApiRespo
 
 // increase usage by slug
 export const increaseFontUsage = (slug: string, userId?: number): Promise<ApiResponse<number>> => {
+  if (!useUserStore().isAuthenticated) return Promise.resolve({ code: 0, data: 0, msg: '' })
   const params = new URLSearchParams()
   if (typeof userId === 'number') params.set('user_id', String(userId))
   const q = params.toString()

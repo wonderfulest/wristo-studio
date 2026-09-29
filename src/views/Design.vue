@@ -119,6 +119,9 @@ import {
   resolveLocalDesignDraft,
   buildLocalDesignDraftKey,
 } from '@/engine/services/localDesignDraft'
+import { isLocalProject } from '@/auth/guestProject'
+import { writeLocalProject, readLocalProject } from '@/engine/services/guestProjectDraft'
+import { registerBeforeStudioLogin } from '@/utils/studioLoginPreparation'
 import { accessProjectDraft, captureProjectSnapshot, restoreProjectSnapshot } from '@/engine/services/localProjectSnapshot'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
 import { useFontStore } from '@/stores/fontStore'
@@ -149,9 +152,9 @@ let loadedDesignId = ''
 let draftRevision = 0
 const saveRevisions = new Map<string, number>()
 const getDraftDeviceKey = (): string => String(
-  userStore.userInfo?.device?.deviceId
-  || userStore.userInfo?.device?.hardwarePartNumber
-  || userStore.userInfo?.device?.partNumber
+  userStore.editorDevice?.deviceId
+  || userStore.editorDevice?.hardwarePartNumber
+  || userStore.editorDevice?.partNumber
   || `${designStore.designSpec.width}x${designStore.designSpec.height}`,
 )
 let draftWriteQueue: Promise<unknown> = Promise.resolve()
@@ -160,6 +163,12 @@ const persistLocalDraft = (): void => {
   if (!loadedDesignId || baseStore.designLoading) return
   const config = baseStore.generateConfig({ validateBindings: false })
   if (!config) return
+  if (isLocalProject(loadedDesignId)) {
+    const id = loadedDesignId
+    draftWriteQueue = writeLocalProject(id, config)
+      .catch(error => { draftAutosave.markDirty(); console.error(error) })
+    return
+  }
   const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
   const savedAt = Date.now()
   // Capture while object URLs are still valid; serialize writes to prevent stale completion.
@@ -212,6 +221,14 @@ const confirmDraftRestore = async (): Promise<boolean> => {
   } catch { return false }
 }
 const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<any> => {
+  // A login snapshot is explicit and restored without the server-draft choice.
+  const loginId = sessionStorage.getItem('studio-login-draft')
+  if (loginId === designId) {
+    const loginDraft = await readLocalProject(designId)
+    if (loginDraft) {
+      return loginDraft
+    }
+  }
   const key = buildLocalDesignDraftKey(designId, getDraftDeviceKey())
   await draftWriteQueue
   const draft = await accessProjectDraft(key, 'read')
@@ -311,7 +328,7 @@ useKeyboardShortcuts()
 const backgroundColor = computed(() => (themeStore.currentTheme === 'dark' ? editorStore.darkCanvasBackgroundColor : editorStore.lightCanvasBackgroundColor))
 
 const syncDesignSizeFromSelectedDevice = (): void => {
-  const device = userStore.userInfo?.device
+  const device = userStore.editorDevice
   const width = Number(device?.resolutionWidth ?? 0)
   const height = Number(device?.resolutionHeight ?? 0)
   if (!width || !height) return
@@ -322,11 +339,11 @@ const syncDesignSizeFromSelectedDevice = (): void => {
 
 watch(
   () => [
-    userStore.userInfo?.device?.deviceId,
-    userStore.userInfo?.device?.hardwarePartNumber,
-    userStore.userInfo?.device?.partNumber,
-    userStore.userInfo?.device?.resolutionWidth,
-    userStore.userInfo?.device?.resolutionHeight,
+    userStore.editorDevice?.deviceId,
+    userStore.editorDevice?.hardwarePartNumber,
+    userStore.editorDevice?.partNumber,
+    userStore.editorDevice?.resolutionWidth,
+    userStore.editorDevice?.resolutionHeight,
     designStore.appLanguage,
   ],
   () => {
@@ -366,6 +383,14 @@ const setupAutoSave = () => {
   saveTimer = window.setInterval(saveDirtyDraft, 10_000)
 }
 
+const unregisterBeforeLogin = registerBeforeStudioLogin(async () => {
+  if (!loadedDesignId || baseStore.designLoading) throw new Error('Wait for the design to finish loading before signing in.')
+  await draftWriteQueue
+  const config = baseStore.generateConfig({ validateBindings: false })
+  if (!config) throw new Error('Unable to save your design. Please try again before signing in.')
+  await writeLocalProject(loadedDesignId, config)
+  sessionStorage.setItem('studio-login-draft', loadedDesignId)
+})
 const handleBeforeUnload = (): void => saveDirtyDraft()
 const handleDesignSaveStarted = (input: any): void => {
   if (input?.designId !== loadedDesignId) return
@@ -387,6 +412,12 @@ const handleDesignSaved = (input: any): void => {
   removeLocalDesignDraft(window.localStorage, loadedDesignId, getDraftDeviceKey())
 }
 
+const handleLocalDesignPromoted = ({ designId }: { designId: string }) => {
+  startDraftTracking(designId)
+  draftAutosave.markDirty()
+  saveDirtyDraft()
+  void router.replace({ path: '/design', query: { id: designId } })
+}
 // 替换元素加载逻辑
 
 const handleAppPropertiesShortcut = (event: KeyboardEvent): void => {
@@ -411,7 +442,7 @@ onMounted(() => {
     loadDesign(designId)
   } else {
     // 如果没有设计ID，跳转到设计列表页面
-    router.push('/designs')
+    router.push('/designs/new-projects')
   }
 
   // 设置自动保存
@@ -419,6 +450,7 @@ onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   emitter.on('design-save-started', handleDesignSaveStarted as any)
   emitter.on('design-saved', handleDesignSaved as any)
+  emitter.on('local-design-promoted', handleLocalDesignPromoted as any)
 
   window.addEventListener('resize', handleWorkspaceResize)
   persistNormalizedPanelWidths()
@@ -435,6 +467,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  unregisterBeforeLogin()
   saveDirtyDraft()
   clearTimeout(draftChangeTimer)
   disposeCanvasPan()
@@ -446,6 +479,7 @@ onBeforeUnmount(() => {
   emitter.off('import-wrt-design', importWrtDesign as any)
   emitter.off('design-save-started', handleDesignSaveStarted as any)
   emitter.off('design-saved', handleDesignSaved as any)
+  emitter.off('local-design-promoted', handleLocalDesignPromoted as any)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 
   // 清除自动保存定时器

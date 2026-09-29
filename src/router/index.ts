@@ -8,7 +8,7 @@ import {
   clearPendingStudioPath,
   redirectToSsoLogin,
 } from '@/utils/ssoRedirect'
-import { guardStudioRoute, rejectStudioSession } from '@/auth/studioAccess'
+import { guardStudioRoute, rejectStudioSession, requiresStudioLogin } from '@/auth/studioAccess'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 import { initializeEditorRuntime } from '@/startup/editorRuntime'
 import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
@@ -38,44 +38,44 @@ const routes: RouteRecordRaw[] = [
     path: '/moon',
     name: 'MoonPreview',
     component: () => import('@/views/MoonView.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true, allowsAllUsers: true },
   },
   {
     path: '/academy',
     component: Layout,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true, allowsAllUsers: true },
     children: [
       {
         path: '',
         name: 'CreatorAcademy',
         component: () => import('@/views/CreatorAcademy.vue'),
-        meta: { requiresAuth: false },
+        meta: { requiresAuth: true, allowsAllUsers: true },
       },
     ],
   },
   {
     path: '/prg-installer',
     component: Layout,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true, allowsAllUsers: true },
     children: [
       {
         path: '',
         name: 'PrgInstallerGuide',
         component: () => import('@/views/PrgInstallerGuide.vue'),
-        meta: { requiresAuth: false },
+        meta: { requiresAuth: true, allowsAllUsers: true },
       },
     ],
   },
   {
     path: '/tokens',
     component: Layout,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true, allowsAllUsers: true },
     children: [
       {
         path: '',
         name: 'Tokens',
         component: () => import('@/views/Tokens.vue'),
-        meta: { requiresAuth: false },
+        meta: { requiresAuth: true, allowsAllUsers: true },
       },
     ],
   },
@@ -226,14 +226,14 @@ router.onError((error, to) => {
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
   // 检查路由是否需要认证
-  const requiresAuth = to.matched.some((record) => (record.meta as any).requiresAuth)
+  const requiresAuth = requiresStudioLogin(to.path)
 
   const accessResult = guardStudioRoute({
     requiresAuth,
     isAuthenticated: userStore.isAuthenticated,
-    hasAccess: userStore.hasFullStudioAccess,
+    hasAccess: userStore.hasFullStudioAccess || to.matched.some(record => record.meta.allowsAllUsers) || ['/data-catalog-unavailable', '/design', '/designs', '/profile', '/pricing', '/packaging-logs'].some(path => to.path === path || to.path.startsWith(path + '/')),
     fullPath: to.fullPath,
-    redirectToLogin: (fullPath) => redirectToSsoLogin('studio', 1000, fullPath),
+    redirectToLogin: (fullPath) => { void redirectToSsoLogin('studio', 0, fullPath).catch(error => console.error('Sign in failed', error)) },
     rejectForbidden: () => rejectStudioSession({
       cancelPendingRedirect: cancelPendingSsoRedirect,
       clearStoreAuth: () => userStore.clearAuth(),

@@ -30,11 +30,17 @@ const redirectToLogin = (error: unknown, message = getFallbackMessage('auth.sess
   const userStore = useUserStore()
   userStore.clearAuth()
   showErrorOnce(error, message)
-  redirectToSsoLogin('studio', 1000)
+  if (!window.location.pathname.startsWith('/auth/')) {
+    void redirectToSsoLogin('studio', 1000).catch(error => showErrorOnce(error, String(error)))
+  }
 }
 
 const handleForbidden = (error: unknown, config?: { suppressForbiddenRedirect?: boolean }, message = getFallbackMessage('auth.forbidden')) => {
   const redirectPath = forbiddenRedirectPath(config)
+  if (window.location.pathname === '/design' || !useUserStore().isAuthenticated) {
+    showErrorOnce(error, message)
+    return
+  }
   if (!redirectPath) {
     showErrorOnce(error, message)
     return

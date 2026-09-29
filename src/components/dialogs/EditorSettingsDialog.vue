@@ -197,7 +197,7 @@ const selectedElements = computed<FabricElement[]>(() => {
 })
 
 const deviceCodeLabel = computed(() => {
-  const device = userStore.userInfo?.device
+  const device = userStore.editorDevice
   return device?.deviceId || device?.partNumber || device?.hardwarePartNumber || device?.displayName || '-'
 })
 

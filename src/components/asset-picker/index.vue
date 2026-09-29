@@ -351,6 +351,7 @@ const {
   toggleFavoriteAsset,
   downloadAsset: handleDownloadAsset,
 } = useAssetLibrary({
+  enabled: () => userStore.isAuthenticated,
   assetType: () => props.assetType,
   translate: t,
 })

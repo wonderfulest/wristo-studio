@@ -62,6 +62,7 @@ import type { AppLanguage } from '@/types/localization'
 import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSource'
 
 import { readWrtDesignPackage, restoreDesignAssetBundle, WrtDesignPackageError, clearRestoredDesignAssetUrls } from '@/engine/services/designAssetBundleService'
+import { writeLocalProject } from '@/engine/services/guestProjectDraft'
 import { newProjectConfig } from './newProjectConfig'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
 import { saveWrtProject } from '@/engine/services/saveWrtProject'
@@ -77,7 +78,7 @@ const designStore = useDesignStore()
 const { t } = useI18n()
 
 const getCurrentDeviceParams = () => {
-  const deviceId = (userStore.userInfo as any)?.device?.deviceId
+  const deviceId = userStore.editorDevice?.deviceId
   return deviceId ? { device: deviceId } : undefined
 }
 
@@ -160,6 +161,15 @@ const handleConfirmDialog = async (input: { name: string; appLanguage: AppLangua
     const imported = input.wrtFile ? await readWrtDesignPackage(input.wrtFile, importProgress.update) : undefined
     packageRead = Boolean(imported)
     if (imported) importProgress.finalize('saving')
+    if (!userStore.isAuthenticated) {
+      const id = `local-${crypto.randomUUID()}`
+      const config = newProjectConfig(imported?.config, id, name, appLanguage)
+      await writeLocalProject(id, config)
+      releaseImportedAssets()
+      dialogVisible.value = false
+      await router.push({ path: '/design', query: { id } })
+      return
+    }
     // 情况一：从 Sample 复制
     if (currentTemplate.value) {
       const copyRes = await designApi.createDesignByCopy({ uid: currentTemplate.value.designUid }) as ApiResponse<Design>
@@ -301,12 +311,13 @@ const deleteRecentDesign = async () => {
 }
 
 const fetchDesigns = async () => {
+  if (!userStore.isAuthenticated) return
   try {
     const params: { device?: string; populate?: string } = {
       populate: 'user,product,payment,cover',
     }
 
-    const deviceId = (userStore.userInfo as any)?.device?.deviceId
+    const deviceId = userStore.editorDevice?.deviceId
     if (deviceId) {
       params.device = deviceId
     }
@@ -327,6 +338,7 @@ const fetchDesigns = async () => {
 
 // 获取最近项目（最近 12 个）
 const fetchRecentDesigns = async () => {
+  if (!userStore.isAuthenticated) return
   try {
     const params: DesignPageParams = {
       pageNum: 1,
@@ -335,7 +347,7 @@ const fetchRecentDesigns = async () => {
       populate: 'user,product,payment,release,cover,package_log',
     }
 
-    const deviceId = (userStore.userInfo as any)?.device?.deviceId
+    const deviceId = userStore.editorDevice?.deviceId
     if (deviceId) {
       params.device = deviceId
     }

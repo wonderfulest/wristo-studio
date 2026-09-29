@@ -124,6 +124,7 @@ import {
   isThemeRuleActive,
 } from '@/engine/services/visualThemeService'
 import { useI18n } from '@/i18n'
+import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -172,6 +173,7 @@ const selectTheme = (themeId: string) => {
 }
 
 const loadDynamicRuleActive = async (requestedAppId: number) => {
+  if (!useUserStore().isAuthenticated || requestedAppId <= 0) return
   try {
     const response = await getThemeRuleDetail(requestedAppId)
     const body = response && response.data !== undefined ? response.data : response
@@ -201,7 +203,7 @@ const ensureDynamicRuleLoaded = (requestedAppId: number) => {
 }
 
 const checkCurrentDynamicRule = async () => {
-  while (baseStore.appId) {
+  while (useUserStore().isAuthenticated && baseStore.appId > 0) {
     const requestedAppId = Number(baseStore.appId)
     await ensureDynamicRuleLoaded(requestedAppId)
     if (Number(baseStore.appId) !== requestedAppId) continue

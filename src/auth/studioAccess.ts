@@ -48,3 +48,5 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
 
   return undefined
 }
+
+export const requiresStudioLogin = (path: string) => !['/auth/callback', '/auth/signed-out'].includes(path)

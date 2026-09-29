@@ -40,7 +40,7 @@ const statusLabel = computed(() => isForbidden.value ? t('auth.accessRestricted'
 const statusIcon = computed(() => isForbidden.value ? 'material-symbols:lock-rounded' : 'material-symbols:logout-rounded')
 
 const goLogin = () => {
-  redirectToSsoLogin('studio', 0, undefined, { allowFromSignedOut: true, forceLogin: true })
+  void redirectToSsoLogin('studio', 0, undefined, { allowFromSignedOut: true, forceLogin: true }).catch(error => console.error('Sign in failed', error))
 }
 </script>
 

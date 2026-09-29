@@ -39,7 +39,7 @@ const imageFailed = ref(false)
 const detailDevice = ref<GarminDeviceVO | null>(null)
 let detailRequestSeq = 0
 
-const currentDevice = computed(() => userStore.userInfo?.device ?? null)
+const currentDevice = computed(() => userStore.editorDevice ?? null)
 const resolvedDevice = computed(() => detailDevice.value ?? currentDevice.value)
 const deviceFrameUrl = computed(() => resolvedDevice.value?.deviceTransparentPng || '')
 const deviceAlt = computed(() => resolvedDevice.value?.displayName || 'Garmin device frame')

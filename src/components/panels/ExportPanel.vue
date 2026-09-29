@@ -61,6 +61,12 @@
 </template>
 
 <script setup>
+import { writeLocalProject } from '@/engine/services/guestProjectDraft'
+import { prepareLocalProjectPromotion } from '@/engine/services/promoteLocalProject'
+import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { isLocalProject } from '@/auth/guestProject'
+import { useDesignStore } from '@/stores/designStore'
+import { getUserInfo } from '@/api/wristo/auth'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 /**
@@ -292,7 +298,7 @@ const requestCoverImageSaveChoice = async () => {
 }
 
 const getCoverImageSaveChoice = async () => {
-  if (!baseStore.id) return 'update'
+  if (!baseStore.id || isLocalProject(baseStore.id)) return 'update'
   const response = await designApi.getDesignByUid(baseStore.id)
   if (response.code !== 0 || !response.data) {
     throw new Error(response.msg || t('export.loadDesignFailed'))
@@ -305,6 +311,7 @@ const isOperationLocked = ref(false)
 
 // 定时轮训保存配置，只需要保存 name, kpayId, configJson 即可
 const saveConfig = async (options = {}) => {
+  if (!userStore.isAuthenticated || isLocalProject(baseStore.id)) return ''
   const saveToken = crypto.randomUUID()
   emitter.emit('design-save-started', { designId: baseStore.id, saveToken })
   if (router.currentRoute.value.path !== '/design') {
@@ -341,6 +348,29 @@ const saveConfig = async (options = {}) => {
 
 // 上传配置到服务器
 const uploadApp = async () => {
+  if (uploading.value || isOperationLocked.value) return -1
+  isOperationLocked.value = true
+  try {
+    if (!userStore.isAuthenticated) {
+      await redirectToSsoLogin('studio')
+      return -1
+    }
+    // Check an expired persisted session before any upload or design mutation.
+    try { await getUserInfo() }
+    catch (error) {
+      if (!userStore.isAuthenticated) await redirectToSsoLogin('studio')
+      else throw error
+      return -1
+    }
+    return await uploadAuthenticatedApp()
+  } catch (error) {
+    showErrorOnce(error, error?.message || t('export.loadDesignFailed'))
+    return -1
+  } finally {
+    isOperationLocked.value = false
+  }
+}
+const uploadAuthenticatedApp = async () => {
   const saveToken = crypto.randomUUID()
   emitter.emit('design-save-started', { designId: baseStore.id, saveToken })
   // 检查应用名称
@@ -393,6 +423,26 @@ const uploadApp = async () => {
       loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
     }
 
+    if (isLocalProject(baseStore.id)) {
+      const serverId = await prepareLocalProjectPromotion({
+        localId: baseStore.id,
+        storage: sessionStorage,
+        create: async () => {
+          const created = await designApi.createDesign({ name: baseStore.watchFaceName, description: '', originalType: 'original' })
+          if (created.code !== 0 || !created.data?.designUid) throw new Error(created.msg || 'Failed to create design')
+          return created.data.designUid
+        },
+        saveRecovery: async (id) => {
+          await writeLocalProject(id, { ...config, designId: id })
+          sessionStorage.setItem('studio-login-draft', id)
+        },
+      })
+      baseStore.id = serverId
+      useDesignStore().id = serverId
+      config.designId = serverId
+      emitter.emit('local-design-promoted', { designId: serverId })
+      emitter.emit('design-save-started', { designId: baseStore.id, saveToken })
+    }
     const resolvedConfig = await resolvePackageAssetUrls(config)
     if (!resolvedConfig) {
       throw new Error('Failed to resolve package asset URLs')
@@ -436,6 +486,7 @@ const uploadApp = async () => {
     if (res.code !== 0) throw new Error(res.msg || 'Failed to update design')
     baseStore.id = res.data?.designUid || baseStore.id
     emitter.emit('design-saved', { designId: baseStore.id, saveToken })
+    if (sessionStorage.getItem('studio-login-draft') === baseStore.id) sessionStorage.removeItem('studio-login-draft')
     historyStore.saveInitial()
 
     // 更新WPay产品信息(必须在设计创建或更新之后)

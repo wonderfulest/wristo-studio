@@ -1,3 +1,5 @@
+import { isLocalProject } from '@/auth/guestProject'
+import { readLocalProject } from '@/engine/services/guestProjectDraft'
 import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
@@ -86,7 +88,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
   let designLoadQueue: Promise<void> = Promise.resolve()
 
   const getCurrentDeviceParams = () => {
-    const deviceId = userStore.userInfo?.device?.deviceId
+    const deviceId = userStore.editorDevice?.deviceId
     return deviceId ? { device: deviceId } : undefined
   }
 
@@ -548,6 +550,18 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     try {
       await enqueueDesignLoad(async () => {
         if (!isCurrentDesignLoad(generation)) return
+        if (isLocalProject(designUid)) {
+          const config = await readLocalProject(designUid)
+          if (!config) throw new Error('Local design could not be found in this browser')
+          if (!isCurrentDesignLoad(generation)) return
+          baseStore.id = designUid
+          designStore.id = designUid
+          baseStore.appId = -1
+          baseStore.setWatchFaceName(config.name)
+          designStore.setWatchFaceName(config.name)
+          if (await applyRuntimeDesignConfig(config, generation)) options.onDesignLoaded?.(designUid)
+          return
+        }
         const response: ApiResponse<Design> = await designApi.getDesignByUid(designUid, getCurrentDeviceParams())
         if (!isCurrentDesignLoad(generation)) return
         if (!response.data) {

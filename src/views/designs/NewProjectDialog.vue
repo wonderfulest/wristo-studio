@@ -149,7 +149,7 @@ const sourceId = ref('')
 const deviceSelectorVisible = ref(false)
 const canSelectDesignSource = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 
-const currentDevice = computed(() => userStore.userInfo?.device ?? null)
+const currentDevice = computed(() => userStore.editorDevice ?? null)
 
 const selectedDeviceName = computed(() => {
   return currentDevice.value?.displayName || t('project.noDeviceSelected')
@@ -209,7 +209,7 @@ const handleDeviceSelected = (device: GarminDeviceVO) => {
 
 const handleOk = () => {
   if (props.busy) return
-  if (!currentDevice.value?.deviceId) {
+  if (userStore.isAuthenticated && !currentDevice.value?.deviceId) {
     openDeviceSelector()
     return
   }
