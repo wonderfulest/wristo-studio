@@ -13,7 +13,7 @@ describe('DynamicImageGroupCopyDialog', () => {
 
   it('loads source design details and emits the selected complete group', () => {
     expect(source).toContain('designApi.getDesignByUid')
-    expect(source).toContain('extractDynamicImageGroups(response.data.configJson)')
+    expect(source).toContain('await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl)')
     expect(source).toContain("emit('copy', selectedGroup.value.items)")
   })
 })

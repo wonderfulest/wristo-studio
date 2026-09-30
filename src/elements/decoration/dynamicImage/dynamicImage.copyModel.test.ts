@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import JSZip from 'jszip'
+import { afterEach, vi, describe, expect, it } from 'vitest'
 import { reactive } from 'vue'
 import {
   appendCopiedDynamicImageItems,
   extractDynamicImageGroups,
+  loadCopyableDynamicImageGroups,
 } from './dynamicImage.copyModel'
 
 describe('dynamic image group copying', () => {
@@ -80,5 +82,48 @@ describe('dynamic image group copying', () => {
       imageUrl: '/source.png',
       expression: { source: 'false', ast: { type: 'literal', value: false } },
     })
+  })
+})
+
+
+describe('packaged dynamic image group copying', () => {
+  afterEach(() => { vi.unstubAllGlobals() })
+
+  it.each(['', '123-watch/'])('restores embedded images from a %s package without mutating the current project', async (root) => {
+    const zip = new JSZip()
+    const config = { elements: [{ eleType: 'dynamicImage', id: 'group', items: [
+      { id: 'rule', imageUrl: 'bundle://assets/sun.svg', minProgress: 0.5 },
+    ] }] }
+    zip.file(root + 'manifest.json', JSON.stringify({ design: { path: 'design.json' }, studio: { assetRefs: [] } }))
+    zip.file(root + 'design.json', JSON.stringify(config))
+    zip.file(root + 'assets/sun.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    const bytes = await zip.generateAsync({ type: 'arraybuffer' })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => bytes }))
+    const groups = await loadCopyableDynamicImageGroups({}, 'https://cdn.wristo.io/project.wrt')
+    expect(groups[0].items[0].imageUrl).toBe('data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg"/>'))
+    expect(groups[0].items[0].minProgress).toBe(0.5)
+    expect(config.elements[0].items[0].imageUrl).toBe('bundle://assets/sun.svg')
+  })
+
+  it('restores old blob references through the manifest and rejects missing files', async () => {
+    const zip = new JSZip()
+    const config = { elements: [{ eleType: 'dynamicImage', items: [{ id: 'rule', imageUrl: 'blob:old-session' }] }] }
+    zip.file('manifest.json', JSON.stringify({ studio: { assetRefs: [{ path: 'assets/sun.png', sourceUrl: 'blob:old-session' }] } }))
+    zip.file('assets/sun.png', 'image-bytes')
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => ({ ok: true, arrayBuffer: () => zip.generateAsync({ type: 'arraybuffer' }) })))
+    const groups = await loadCopyableDynamicImageGroups(config, '/legacy.zip')
+    expect(groups[0].items[0].imageUrl).toBe('data:image/png;base64,' + btoa('image-bytes'))
+    expect(config.elements[0].items[0].imageUrl).toBe('blob:old-session')
+    zip.remove('assets/sun.png')
+    await expect(loadCopyableDynamicImageGroups(config, '/legacy.zip')).rejects.toThrow('Source design image is missing')
+  })
+
+  it('keeps legacy public URLs when there is no package', async () => {
+    const config = { elements: [{ eleType: 'dynamicImage', items: [{ id: 'rule', imageUrl: 'https://cdn.wristo.io/sun.png' }] }] }
+    expect(await loadCopyableDynamicImageGroups(config)).toEqual(extractDynamicImageGroups(config))
+  })
+
+  it('rejects unresolved package references instead of offering broken images', async () => {
+    await expect(loadCopyableDynamicImageGroups({ elements: [{ eleType: 'dynamicImage', items: [{ imageUrl: 'bundle://missing.png' }] }] })).rejects.toThrow()
   })
 })

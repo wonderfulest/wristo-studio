@@ -90,7 +90,7 @@ import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import type { Design, DesignPageParams } from '@/types/api/design'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
-import { extractDynamicImageGroups, type CopyableDynamicImageGroup } from './dynamicImage.copyModel'
+import { loadCopyableDynamicImageGroups, type CopyableDynamicImageGroup } from './dynamicImage.copyModel'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{
@@ -155,7 +155,7 @@ const selectProject = async (project: Design) => {
     const deviceId = (userStore.userInfo as any)?.device?.deviceId
     const response = await designApi.getDesignByUid(project.designUid, deviceId ? { device: deviceId } : {})
     if (response.code !== 0 || !response.data) throw new Error(response.msg)
-    sourceGroups.value = extractDynamicImageGroups(response.data.configJson)
+    sourceGroups.value = await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl)
   } catch (error) {
     showErrorOnce(error, error instanceof Error && error.message ? error.message : t('dynamicImage.loadGroupsFailed'))
   } finally {
