@@ -36,7 +36,8 @@ export function getSsoRedirectUri() {
 }
 
 function getSsoLoginBaseUrl() {
-  return import.meta.env.VITE_WRISTO_STUDIO_SSO_LOGIN_URL || 'https://sso.wristo.cn/auth'
+  return import.meta.env.VITE_WRISTO_STUDIO_SSO_LOGIN_URL
+    || new URL('/auth', import.meta.env.VITE_WRISTO_SSO_URL || 'https://sso.wristo.io').toString()
 }
 
 function readLocaleValue(value: string | null): SupportedLocale | null {

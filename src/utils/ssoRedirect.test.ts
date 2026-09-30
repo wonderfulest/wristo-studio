@@ -14,6 +14,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.stubEnv('VITE_WRISTO_STUDIO_SSO_REDIRECT_URI', '')
   vi.stubEnv('VITE_WRISTO_STUDIO_SSO_LOGIN_URL', '')
+  vi.stubEnv('VITE_WRISTO_SSO_URL', '')
   vi.stubGlobal('crypto', webcrypto)
   vi.stubGlobal('sessionStorage', storage())
   vi.stubGlobal('localStorage', storage())
@@ -54,7 +55,7 @@ describe('Studio login redirect', () => {
     expect(getPendingStudioPath()).toBe('/design?device=166#canvas')
     await vi.runAllTimersAsync()
     const url = new URL(window.location.href)
-    expect(url.origin).toBe('https://sso.wristo.cn')
+    expect(url.origin).toBe('https://sso.wristo.io')
     expect(url.pathname).toBe('/auth')
     expect(url.searchParams.get('client')).toBe('studio')
     expect(url.searchParams.get('redirect_uri')).toBe('https://studio.wristo.io/auth/callback')
@@ -68,10 +69,26 @@ describe('Studio login redirect', () => {
     expect(getPendingStudioPath()).toBeNull()
   })
 
+  it('uses the configured SSO origin', async () => {
+    vi.stubEnv('VITE_WRISTO_SSO_URL', 'https://sso.staging.wristo.io/')
+    const url = new URL(await buildSsoLoginUrl('studio'))
+    expect(url.origin).toBe('https://sso.staging.wristo.io')
+    expect(url.pathname).toBe('/auth')
+  })
+
+  it('prefers an explicit Studio login URL over the shared SSO origin', async () => {
+    vi.stubEnv('VITE_WRISTO_SSO_URL', 'https://sso.wristo.io')
+    vi.stubEnv('VITE_WRISTO_STUDIO_SSO_LOGIN_URL', 'https://sso.staging.wristo.io/custom-auth')
+    const url = new URL(await buildSsoLoginUrl('studio'))
+    expect(url.origin).toBe('https://sso.staging.wristo.io')
+    expect(url.pathname).toBe('/custom-auth')
+  })
+
   it('preserves locale and omits unsafe next paths', async () => {
     localStorage.setItem('wristo-studio-locale', 'zh')
     const url = new URL(await buildSsoLoginUrl('studio', {}, '//evil.test'))
     expect(url.searchParams.get('locale')).toBe('zh')
+    expect(url.origin).toBe('https://sso.wristo.io')
     expect(url.searchParams.has('next')).toBe(false)
     sessionStorage.setItem('wristo-studio-pending-path', '/\\evil.test')
     expect(getPendingStudioPath()).toBeNull()
