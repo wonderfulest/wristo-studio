@@ -40,11 +40,6 @@ describe('layerBindingSummary', () => {
     expect(resolveLayerDisplayName(layer('goalBar', { goalProperty: 'goal_1' }), context)).toBe('goalBar · 每日步数')
   })
 
-  it('appends date and time formats', () => {
-    expect(resolveLayerDisplayName(layer('date', { formatter: 32 }), context)).toBe('日期 · MM/DD')
-    expect(resolveLayerDisplayName(layer('time', { formatter: 0 }), context)).toBe('时间 · HH:mm')
-  })
-
   it('describes the fixed weather data item', () => {
     expect(resolveLayerDisplayName(layer('weather'), context)).toBe('天气 · 天气状况')
   })

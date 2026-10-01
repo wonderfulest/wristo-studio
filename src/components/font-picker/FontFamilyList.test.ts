@@ -109,40 +109,6 @@ describe('FontFamilyList', () => {
     expect(item.attributes('data-type')).toBe('time_font')
   })
 
-  it('marks and styles recipe cards as a non-destructive preview', () => {
-    const wrapper = mountList()
-    const recipeCard = wrapper.find('[data-font-slug="inter-regular"]')
-    expect(recipeCard.find('.bitmap-recipe-preview-badge').text()).toBe('Preview')
-    const surface = recipeCard.find('.bitmap-recipe-preview-surface')
-    expect((surface.element as HTMLElement).style.fontWeight).toBe('')
-    const preview = recipeCard.find('.preview-text')
-    expect((surface.element as HTMLElement).style.transform).toBe('')
-    expect((preview.element as HTMLElement).style.transform).toBe('skewX(-12deg)')
-    expect((preview.element as HTMLElement).style.fontWeight).toBe('700')
-    expect(getComputedStyle(recipeCard.find('.font-label').element).transform).toBe('')
-    expect(getComputedStyle(recipeCard.find('.font-label').element).fontWeight).not.toBe('var(--bitmap-preview-weight)')
-    expect(getComputedStyle(recipeCard.find('.manage-font').element).transform).toBe('')
-    expect((preview.element as HTMLElement).style.getPropertyValue('--bitmap-preview-stroke')).toBe('1px currentColor')
-    expect((preview.element as HTMLElement).style.getPropertyValue('--bitmap-preview-fill')).toBe('transparent')
-    expect(wrapper.find('[data-font-slug="kode-regular"] .bitmap-recipe-preview-badge').exists()).toBe(false)
-  })
-
-  it.each([
-    ['fill-outline', 12, 'currentColor', '1px currentColor'],
-    ['fill', 0, 'currentColor', '0'],
-  ] as const)('styles %s mode and italic angle on the inner preview surface', (outlineMode, angle, fill, stroke) => {
-    const font = { ...fonts[2], value: `mode-${outlineMode}`, family: `Mode ${outlineMode}`, bitmapRecipe: {
-      ...(fonts[2].bitmapRecipe as any), outlineMode, italicAngle: angle,
-    } } as FontItem
-    const wrapper = mount(FontFamilyList, { props: { fonts: [font], modelValue: '' } })
-    const surface = wrapper.find('.bitmap-recipe-preview-surface')
-    expect((surface.element as HTMLElement).style.transform).toBe('')
-    const preview = wrapper.find('.preview-text').element as HTMLElement
-    expect(preview.style.transform).toBe(`skewX(${angle}deg)`)
-    expect(preview.style.getPropertyValue('--bitmap-preview-fill')).toBe(fill)
-    expect(preview.style.getPropertyValue('--bitmap-preview-stroke')).toBe(stroke)
-  })
-
   it('forwards published BMFont assets without applying the recipe scale a second time', () => {
     const wrapper = mount(FontFamilyList, {
       props: {

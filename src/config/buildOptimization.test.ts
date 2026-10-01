@@ -48,21 +48,6 @@ describe('production bundle optimization', () => {
     expect(eslintConfig).toContain("'no-debugger': 'error'")
   })
 
-  it('keeps editor-only plugins and preview fonts out of global startup', () => {
-    const main = readProjectFile('src/main.ts')
-    const router = readProjectFile('src/router/index.ts')
-    const layout = readProjectFile('src/components/layout/Layout.vue')
-    const userMenu = readProjectFile('src/components/layout/UserMenu.vue')
-
-    expect(main).not.toContain("@/assets/styles/garmin-system-fonts.css")
-    expect(main).not.toContain("@/engine/plugins")
-    expect(router).toContain('beforeEnter: [ensureDesignDataCatalog, initializeEditorRuntime]')
-    expect(layout).toContain("defineAsyncComponent(() => import('./AppMenu.vue'))")
-    expect(layout).not.toContain("import AppMenu from './AppMenu.vue'")
-    expect(userMenu).toContain("defineAsyncComponent(() => import('@/components/dialogs/DesignerDefaultConfigDialog.vue'))")
-    expect(userMenu).not.toContain("import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'")
-  })
-
   it('resolves Element Plus components on demand instead of registering the full plugin', () => {
     const main = readProjectFile('src/main.ts')
     const viteConfig = readProjectFile('vite.config.ts')

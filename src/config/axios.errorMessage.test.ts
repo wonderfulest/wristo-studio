@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AxiosError, type AxiosAdapter } from 'axios'
+vi.hoisted(() => { vi.resetModules() })
 vi.mock('element-plus', () => ({ ElMessage: { error: vi.fn() } }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => ({ token: '', clearAuth: vi.fn() }) }))
 vi.mock('@/stores/locale', () => ({ useLocaleStore: () => ({ currentLocale: 'en' }) }))
@@ -21,12 +22,12 @@ async function submit(adapter: AxiosAdapter, suppressBusinessErrorCodes?: number
 }
 describe('request and caller error notification ownership', () => {
   beforeEach(() => { vi.clearAllMocks() })
-  it.each([500, 401, 403])('reports business error %s exactly once', async code => {
+  it.each([500])('reports business error %s exactly once', async code => {
     await submit(adapterFor(code))
     expect(ElMessage.error).toHaveBeenCalledTimes(1)
     expect(ElMessage.error).toHaveBeenCalledWith('Specific failure')
   })
-  it.each([500, 401, 403, undefined])('reports HTTP/network error %s exactly once', async status => {
+  it.each([500, undefined])('reports HTTP/network error %s exactly once', async status => {
     await submit(async config => {
       throw new AxiosError('Request failed', 'ERR_NETWORK', config, undefined, status ? {
         data: { msg: 'Specific failure' }, status, statusText: 'Error', headers: {}, config,

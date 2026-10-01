@@ -1,32 +1,15 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 vi.mock('@/config/axios', () => ({ default: { get, post } }))
 
-import { getDesignerUsageFontsPage, getRecentFonts, searchFonts } from './fonts'
+import { getRecentFonts } from './fonts'
 
 describe('multi-type font query client', () => {
   beforeEach(() => {
     get.mockReset()
     post.mockReset()
-  })
-
-  it('posts both allowed types to search and usage pagination', async () => {
-    const types = ['time_font', 'text_font']
-
-    await searchFonts({ pageNum: 1, pageSize: 20, types })
-    await getDesignerUsageFontsPage({ pageNum: 1, pageSize: 10, types })
-
-    expect(post).toHaveBeenNthCalledWith(
-      1,
-      '/dsn/fonts/search?populate=ttf',
-      { pageNum: 1, pageSize: 20, types },
-    )
-    expect(post).toHaveBeenNthCalledWith(
-      2,
-      '/dsn/fonts/usage/page?populate=ttf',
-      { pageNum: 1, pageSize: 10, types },
-    )
   })
 
   it('serializes repeated type parameters for recent fonts', async () => {

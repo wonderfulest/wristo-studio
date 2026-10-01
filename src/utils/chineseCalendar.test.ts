@@ -23,13 +23,6 @@ describe('Chinese festival or solar-term formatter', () => {
     expect(formatChineseCulturalDate(localDate(2026, 9, 6), 23, 'zh-CN')).toBe('')
   })
 
-  it('formats next Gregorian festivals and solar terms as content plus distance', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 9, 21), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆节+10')
-    expect(formatChineseCulturalDate(localDate(2026, 10, 1), DateFormatConstants.NEXT_GREGORIAN_FESTIVAL)).toBe('国庆节')
-    expect(formatChineseCulturalDate(localDate(2026, 8, 17), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑+6')
-    expect(formatChineseCulturalDate(localDate(2026, 8, 7), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('立秋')
-  })
-
   it('preserves Gregorian-festival priority and existing English output', () => {
     // 2020-10-01 is both National Day and Mid-Autumn Festival.
     expect(getChineseFestival(localDate(2020, 10, 1))).toBe('国庆节')

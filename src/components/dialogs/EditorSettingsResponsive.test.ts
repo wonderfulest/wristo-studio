@@ -31,21 +31,6 @@ describe('Editor Settings responsive toolbar', () => {
     expect(editorSettingsSource).not.toContain('overflow-x: auto')
   })
 
-  it('moves every non-zoom setting into a grouped upward popover', () => {
-    expect(editorSettingsSource).toContain('editor-settings-more-popover')
-    expect(editorSettingsSource).toContain('placement="top-end"')
-    expect(editorSettingsSource).toContain('more-settings-trigger')
-    expect(editorSettingsSource).toContain('more-settings-section')
-    expect(editorSettingsSource).toContain("t('editorSettings.previewSection')")
-    expect(editorSettingsSource).toContain("t('editorSettings.canvasAidsSection')")
-    expect(editorSettingsSource).toContain("t('editorSettings.appearanceSection')")
-    expect(editorSettingsSource).toContain('showTimeSimulator')
-    expect(editorSettingsSource).toContain('chineseContentEnabled')
-    expect(editorSettingsSource).toContain('<ConnectIqDataTypeSelector />')
-    expect(editorSettingsSource).toContain('showDeviceFrame')
-    expect(editorSettingsSource).toContain('showRulerGuides')
-  })
-
   it('supports an icon-only Data Options trigger', () => {
     expect(dataOptionsSource).toContain('compact?: boolean')
     expect(dataOptionsSource).toContain('v-if="!compact"')

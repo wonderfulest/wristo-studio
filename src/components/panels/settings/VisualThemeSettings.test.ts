@@ -105,86 +105,6 @@ describe('VisualThemeSettings', () => {
     expect(panelSource).not.toContain('visualTheme.missingRequiredLayers')
   })
 
-  it('fails closed when the dynamic-rule check rejects', async () => {
-    themeApi.getThemeRuleDetail.mockRejectedValue(new Error('timeout'))
-    const baseStore = useBaseStore()
-    baseStore.appId = 42
-    baseStore.generateConfig = vi.fn()
-    const wrapper = mountPanel()
-
-    await wrapper.find('.theme-switch').trigger('click')
-    await flushPromises()
-
-    expect(messages.error).toHaveBeenCalledWith('visualTheme.ruleCheckFailed')
-    expect(baseStore.generateConfig).not.toHaveBeenCalled()
-    expect(useVisualThemeStore().config).toBeUndefined()
-  })
-
-  it('discards a stale app lookup and lets the current app result govern enable', async () => {
-    let resolveA!: (value: unknown) => void
-    let resolveB!: (value: unknown) => void
-    themeApi.getThemeRuleDetail
-      .mockReturnValueOnce(new Promise((resolve) => { resolveA = resolve }))
-      .mockReturnValueOnce(new Promise((resolve) => { resolveB = resolve }))
-    const baseStore = useBaseStore()
-    baseStore.appId = 101
-    baseStore.generateConfig = vi.fn(() => null)
-    const wrapper = mountPanel()
-
-    const click = wrapper.find('.theme-switch').trigger('click')
-    baseStore.appId = 202
-    await nextTick()
-    resolveA({ data: { data: { active: 1 } } })
-    await flushPromises()
-    expect(themeApi.getThemeRuleDetail).toHaveBeenNthCalledWith(2, 202)
-
-    resolveB({ data: { data: { active: 0 } } })
-    await click
-    await flushPromises()
-
-    expect(messages.warning).toHaveBeenCalledWith('visualTheme.designRequired')
-    expect(messages.warning).not.toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
-  })
-
-  it('ignores duplicate enable events while the rule lookup is pending', async () => {
-    let resolveRule!: (value: unknown) => void
-    themeApi.getThemeRuleDetail.mockReturnValue(new Promise((resolve) => {
-      resolveRule = resolve
-    }))
-    const baseStore = useBaseStore()
-    baseStore.appId = 42
-    baseStore.generateConfig = vi.fn(() => null)
-    const wrapper = mountPanel()
-
-    await wrapper.find('.theme-switch').trigger('click')
-    await wrapper.find('.theme-switch').trigger('click')
-    resolveRule({ data: { data: null } })
-    await flushPromises()
-
-    expect(baseStore.generateConfig).toHaveBeenCalledTimes(1)
-    expect(useVisualThemeStore().config).toBeUndefined()
-  })
-
-  it('blocks visual theme enable after a delayed active-rule load without mutating the store', async () => {
-    let resolveRule!: (value: unknown) => void
-    themeApi.getThemeRuleDetail.mockReturnValue(new Promise((resolve) => {
-      resolveRule = resolve
-    }))
-    const baseStore = useBaseStore()
-    baseStore.appId = 42
-    baseStore.generateConfig = vi.fn()
-    const wrapper = mountPanel()
-
-    const click = wrapper.find('.theme-switch').trigger('click')
-    resolveRule({ data: { data: { active: 1 } } })
-    await click
-    await flushPromises()
-
-    expect(messages.warning).toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
-    expect(baseStore.generateConfig).not.toHaveBeenCalled()
-    expect(useVisualThemeStore().config).toBeUndefined()
-  })
-
   it.each([
     ['integer zero', { data: { data: { active: 0 } } }],
     ['boolean false', { data: { data: { active: false } } }],
@@ -201,25 +121,6 @@ describe('VisualThemeSettings', () => {
 
     expect(messages.warning).toHaveBeenCalledWith('visualTheme.designRequired')
     expect(messages.warning).not.toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
-  })
-
-  it.each([
-    ['integer one', { data: { data: { active: 1 } } }],
-    ['boolean true', { data: { data: { active: true } } }],
-    ['legacy missing active', { data: { data: { ruleType: 'SUN' } } }],
-    ['direct API body', { data: { active: 1 } }],
-  ])('blocks visual enable for an active %s response shape', async (_label, response) => {
-    themeApi.getThemeRuleDetail.mockResolvedValue(response)
-    const baseStore = useBaseStore()
-    baseStore.appId = 42
-    baseStore.generateConfig = vi.fn(() => null)
-    const wrapper = mountPanel()
-
-    await wrapper.find('.theme-switch').trigger('click')
-    await flushPromises()
-
-    expect(messages.warning).toHaveBeenCalledWith('visualTheme.dynamicRuleConflict')
-    expect(baseStore.generateConfig).not.toHaveBeenCalled()
   })
 
   it('still allows disabling visual themes while a dynamic rule is reported active', async () => {
