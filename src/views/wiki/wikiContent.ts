@@ -1,31 +1,35 @@
-export type AcademyLink = {
+export type WikiLink = {
   label: string
   href: string
   external?: boolean
 }
 
-export type AcademyTable = {
+export type WikiTable = {
   columns: string[]
   rows: string[][]
 }
 
-export type AcademySection = {
+export type WikiSection = {
+  id?: string
+  steps?: string[]
+  example?: string
+  expected?: string
   title: string
   paragraphs?: string[]
   items?: string[]
   note?: string
-  links?: AcademyLink[]
-  table?: AcademyTable
+  links?: WikiLink[]
+  table?: WikiTable
 }
 
-export type AcademyChapter = {
+export type WikiChapter = {
   id: string
   title: string
   summary: string
-  sections: AcademySection[]
+  sections: WikiSection[]
 }
 
-export const academyChapters: AcademyChapter[] = [
+export const wikiChapters: WikiChapter[] = [
   {
     id: 'introduction',
     title: 'Wristo Studio 是什么',
@@ -53,26 +57,47 @@ export const academyChapters: AcademyChapter[] = [
   },
   {
     id: 'getting-started',
-    title: '快速开始与创建项目',
-    summary: '从项目列表创建第一个表盘，并建立可维护的项目命名习惯。',
+    title: '快速开始：制作第一个表盘',
+    summary: '从一个空白项目开始，添加时间、日期和电量，再保存并重新打开。',
     sections: [
       {
-        title: '创建项目',
-        items: [
-          '登录 Studio，进入 My Projects 或 New Projects。',
-          '点击 New Project，填写能区分产品和版本的项目名称。',
-          '选择首个目标 Garmin 设备；画布尺寸和形状会以该设备为准。',
-          '确认后进入编辑器，先保存一次空白或基础版本。'
+        id: 'create-project',
+        title: '1. 创建项目',
+        steps: [
+          '登录后打开 My Designs（我的设计），点击 New Project（新建项目）。',
+          '填写项目名称，例如 Daily 01；选择 App Language（应用语言），它用于表盘内容，不是网站界面语言。',
+          '点击设备卡片选择自己的 Garmin 型号，核对分辨率，再点击确定进入编辑器。已有 WRT 文件时可在这个对话框中通过 Import（导入）创建项目。'
+        ],
+        expected: '进入编辑器，画布尺寸对应选择的设备。',
+        links: [
+          {
+            label: '打开 My Designs · 需登录',
+            href: '/designs'
+          }
         ]
       },
       {
-        title: '完成第一个可用布局',
-        items: [
-          '添加 Time 元素，并放在画布的主要视觉位置。',
-          '添加日期或一个常用 Metric，例如步数、电量或心率。',
-          '使用对齐工具建立稳定的版式，不要只依赖目测拖动。',
-          '保存并返回项目列表，确认项目卡片可以重新打开。'
-        ]
+        id: 'first-watch-face',
+        title: '2. 添加时间、日期和电量',
+        steps: [
+          '打开 Insert（插入）→ Time（时间）→ hour:minute（时:分），将时间放在画布中央偏上。',
+          '在同一个 Time 菜单选择 month day（月日），把日期放在时间下方。',
+          '打开 Insert（插入）→ Indicator（指示器）→ Battery Level（电量），把电量放在下方空白区域。',
+          '逐个选中元素，在右侧设置中调整位置、字号和颜色；通过图层列表重新选择被遮挡的对象。'
+        ],
+        example: '454 × 454 画布：时间可以先用默认 96 号；日期至少 30 号，数据推荐 36 号、图标推荐 30 号。其他分辨率按比例调整，先调整间距再考虑缩小字号。',
+        expected: '画布包含独立的时间、日期、电量元素。它们来自动态元素，不是写死的文本或截图。'
+      },
+      {
+        id: 'first-save',
+        title: '3. 保存并确认项目可继续编辑',
+        steps: [
+          '点击顶部 Save（保存），等到保存成功提示。',
+          '通过 My Designs 返回项目列表，找到刚才的项目并重新打开。',
+          '核对时间、日期、电量的位置与设置；需要安装到手表时继续阅读“保存、构建与导出”和“PRG 安装与真机测试”。'
+        ],
+        expected: '重新打开后，元素仍可单独选择与修改。',
+        note: '浏览器中的数据用于预览，不等于手表当前的真实数据。'
       }
     ]
   },
@@ -160,7 +185,13 @@ export const academyChapters: AcademyChapter[] = [
     summary: '把步数、心率、电量、天气等动态数据绑定到表盘元素。',
     sections: [
       {
-        title: '选择数据字段',
+        title: '添加步数数据',
+        steps: [
+          '在编辑器打开 Insert（插入）→ Data Field（数据字段）→ Steps（步数）。',
+          '选中刚添加的元素，在右侧调整图标、数据的样式与位置，再移动到需要的信息区域。',
+          '在画布中检查数据和图标的间距；保存后构建到目标设备，确认真实步数显示。'
+        ],
+        expected: '得到一个动态步数信息块，而不是固定数字。',
         paragraphs: ['Token 是 Studio 中引用 Garmin 时间、健康、运动、设备和环境数据的标识。选择数据时应同时考虑返回类型、刷新频率、缺失状态和显示长度。'],
         items: [
           '步数和距离可能变长，要为高位数预留宽度。',
@@ -172,7 +203,7 @@ export const academyChapters: AcademyChapter[] = [
       {
         title: 'Token 参考与试算',
         paragraphs: ['完整 Token 列表、分类、格式化示例和动态图片表达式统一维护在 Tokens 专页。'],
-        links: [{ label: '打开 Tokens 参考', href: '/tokens' }]
+        links: [{ label: '打开 Tokens 参考 · 需登录', href: '/tokens' }]
       }
     ]
   },
@@ -187,15 +218,17 @@ export const academyChapters: AcademyChapter[] = [
         items: ['使用 Token 选择器插入变量，避免手工输入错误标识。', '在预览上下文中测试短值、长值、零值和缺失值。', '使用格式化功能处理小数、补零、单位或其他展示规则。']
       },
       {
-        title: '表达式与可见性',
-        items: [
-          '表达式可以进行比较、逻辑组合和基础计算。',
-          '可见性条件适合根据电量、连接状态、时间或用户设置切换对象。',
-          '互斥状态应确保至少有一个合理的默认显示，避免整组信息消失。',
-          '复杂表达式分步验证；先确认 Token 的实际类型和值，再增加条件。'
+        id: 'visibility-example',
+        title: '示例：低电量时显示一个对象',
+        steps: [
+          '选中要控制的文字或图标，在右侧找到可见性表达式设置并开启。',
+          '输入 (ds3) <= 20，再点击该设置中的 Save（保存）。',
+          '用表达式下方的预览控件分别测试电量 15 和 80，检查对象显示与隐藏。',
+          '检查数据不可用时的默认可见选项，再保存整个项目。'
         ],
-        note: '动态可见性决定运行时显示；编辑器中的图层隐藏只影响设计时操作，两者不要混淆。',
-        links: [{ label: '查看 Token 与表达式示例', href: '/tokens' }]
+        example: '(ds3) <= 20',
+        expected: '当电量数据可用且不高于 20 时显示，较高时隐藏。',
+        note: '这个示例使用 Studio 的表达式语法。不要直接粘贴其他平台的 Token 或表达式。'
       }
     ]
   },
@@ -272,19 +305,60 @@ export const academyChapters: AcademyChapter[] = [
   {
     id: 'save-build-export',
     title: '保存、构建与导出',
-    summary: '区分项目保存、可编辑备份、PRG 构建和发布文件。',
+    summary: '保存源项目、备份 WRT、构建 PRG 是不同的操作。',
     sections: [
       {
-        title: '保存与备份',
-        items: ['重要调整前后分别保存，确保可以回到稳定版本。', '项目名称、目标设备和当前设计应保持一致。', '使用 Studio 支持的项目导入导出能力保存可编辑副本时，导出后应再次验证文件可用。']
+        id: 'file-formats',
+        title: '先选对文件与操作',
+        table: {
+          columns: ['操作或格式', '用途', '不能替代什么'],
+          rows: [
+            ['Save（保存）', '保存当前项目，方便下次继续编辑', '不能代替独立文件备份'],
+            ['WRT（File → Export）', '可编辑的设计素材包，用于导入和备份', '不能直接安装到手表'],
+            ['PRG（Build）', '面向所选设备的应用文件，用于设备测试', '不能作为可编辑源项目'],
+            ['PNG / GIF', '展示设计效果的图片或动图', '不能代替动态表盘'],
+            ['IQ 发布包', '用于 Connect IQ 发布流程', '不能把 PRG 改扩展名得到']
+          ]
+        }
       },
       {
-        title: '构建前检查',
-        items: [
-          '移除测试文字、临时图层和未使用素材。',
-          '确认数据字段、字体、图片和 App Properties 都来自当前版本。',
-          '保存后再触发构建，并等待当前任务完成，不要重复提交。',
-          'PRG 用于目标设备测试；发布到 Connect IQ 需要相应的发布包和商店资料。'
+        id: 'wrt-backup',
+        title: '导出 WRT 备份',
+        steps: [
+          '在编辑器点击 Save（保存），确认成功。',
+          '打开 File（文件）→ Export（导出），等待打包进度完成和 .wrt 文件下载。',
+          '保留原始文件名或加上日期、版本号；在新建项目对话框中导入这个文件，验证元素和素材可以重新编辑。'
+        ],
+        expected: '得到 .wrt 文件；通过 Studio 导入后可以继续修改设计。',
+        note: '不要把 WRT 当作普通 ZIP 手动解压或修改扩展名。不要用唯一一份源文件测试转换。'
+      },
+      {
+        id: 'wrt-import',
+        title: '从 WRT 继续制作',
+        steps: [
+          '打开 My Designs → New Project，在对话框中点击 Import（导入）并选择 .wrt 文件。',
+          '核对项目名称、应用语言和设备后确认，等待导入完成。',
+          '逐项检查图层、字体、图片和动态数据，再保存为自己的项目。'
+        ],
+        note: '编辑器的 File → Import 也可导入 WRT。在已有项目中使用前，先保存并导出当前设计；如有替换确认，确认目标后再继续。'
+      },
+      {
+        id: 'build-prg',
+        title: '构建用于手表测试的 PRG',
+        steps: [
+          '确认编辑器所选设备就是要测试的手表型号，点击 File → Verify design 检查设计。',
+          '点击顶部 Build（构建）。Studio 会先保存；保存失败时应先排除错误。',
+          '在提交对话框中核对信息，点击 Build PRG，等待任务完成，避免重复提交。',
+          '返回 My Designs，在对应项目中查看所选设备的 PRG 状态；成功后使用 PRG 下载入口获取文件。',
+          '按安装指南把 PRG 安装到对应型号，再检查真实数据和显示效果。'
+        ],
+        expected: '构建状态显示成功，并有该设备的 PRG 可下载。',
+        note: '构建成功只说明生成了文件；安装、传感器数据与功耗需要另外测试。',
+        links: [
+          {
+            label: '阅读安装与测试步骤',
+            href: '/wiki#install-prg'
+          }
         ]
       }
     ]
@@ -302,7 +376,7 @@ export const academyChapters: AcademyChapter[] = [
           '按系统和设备连接方式使用 Wristo PRG Installer 或 Garmin 文件目录。',
           '手动复制时只把解压后的 PRG 放入 GARMIN/APPS，不要复制 ZIP。'
         ],
-        links: [{ label: '打开 PRG Installer 指南', href: '/prg-installer' }]
+        links: [{ label: '打开 PRG Installer 指南 · 需登录', href: '/prg-installer' }]
       },
       {
         title: '真机检查',
@@ -349,31 +423,131 @@ export const academyChapters: AcademyChapter[] = [
   },
   {
     id: 'troubleshooting',
-    title: '常见问题与排错',
-    summary: '从项目状态、数据、素材、构建、安装和设备差异逐层定位问题。',
+    title: 'FAQ 与排错',
+    summary: '先找到对应现象，再按步骤检查。每个问题都可以复制链接分享。',
     sections: [
       {
-        title: '编辑器与显示问题',
-        table: {
-          columns: ['现象', '优先检查'],
-          rows: [
-            ['对象选不中或被遮挡', '检查图层顺序、锁定状态、隐藏状态和当前多选。'],
-            ['文字被截断', '检查字体、字号、对齐、宽度，以及最长数据和本地化文本。'],
-            ['数据不显示', '确认 Token、预览上下文、权限、设备支持和缺失值状态。'],
-            ['可见性不符合预期', '分步验证表达式，区分运行时条件和编辑器图层隐藏。'],
-            ['图片模糊或有黑边', '检查源图尺寸、缩放、透明通道和目标屏幕颜色表现。']
-          ]
-        }
+        id: 'faq-login',
+        title: '为什么能看 Wiki，却不能打开编辑器？',
+        paragraphs: ['Wiki & FAQ 无需登录。创建、保存和构建项目需要登录；素材或其他功能也可能受账号权限限制。'],
+        steps: ['通过页面右上角账号入口登录，再重新打开目标项目。', '确认使用的是创建该项目的账号；若出现权限提示，记录提示文字后反馈。']
       },
       {
-        title: '构建与安装问题',
-        items: [
-          '先保存项目并确认构建使用的是最新版本。',
-          '确认设备型号匹配，PRG 不能默认跨所有 Garmin 设备通用。',
-          '连接失败时检查 USB 线、系统权限、设备模式和 Installer 指南。',
-          '模拟器成功不代表真机安装、传感器数据或实际功耗已经验证。'
+        id: 'faq-save',
+        title: '保存失败，应该先做什么？',
+        steps: [
+          '保留当前编辑器页面，记录错误提示，检查网络和登录状态。',
+          '若 File → Export 仍可用，先下载一份 WRT 备份，再处理登录或网络问题。',
+          '重新保存，确认成功后再离开页面；不要把画布仍有内容当作已保存。'
+        ]
+      },
+      {
+        id: 'faq-wrt',
+        title: 'WRT、PRG 和图片可以互相替代吗？',
+        paragraphs: ['WRT 用于继续编辑；PRG 用于对应设备安装；PNG、GIF 只用于展示。不能通过改扩展名互相转换。只有图片时，需要重新添加时间、日期和数据元素，才能得到动态表盘。'],
+        links: [
+          {
+            label: '查看格式与导入导出步骤',
+            href: '/wiki#file-formats'
+          }
+        ]
+      },
+      {
+        id: 'faq-import',
+        title: 'WRT 导入失败或素材不完整怎么办？',
+        steps: [
+          '确认选择的是原始 .wrt 文件，且下载已完成，不要导入改名后的 ZIP 或 PRG。',
+          '保留原文件，记录导入提示；若可以进入编辑器，检查图层列表及缺失字体、图片。',
+          '反馈时提供文件来源、错误文字和复现步骤。未经核对，不要用异常导入的结果覆盖唯一备份。'
+        ]
+      },
+      {
+        id: 'faq-select',
+        title: '为什么对象选不中、移动不了或看不见？',
+        steps: [
+          '在图层列表中直接选择对象，检查锁定与隐藏状态。',
+          '检查是否被其他图层遮挡，以及是否选中了多个对象。',
+          '如果设置了可见性表达式，检查预览数据和条件结果；编辑器隐藏与运行时条件是不同设置。'
+        ]
+      },
+      {
+        id: 'faq-font',
+        title: '文字被截断或出现方框怎么办？',
+        steps: [
+          '选中文字，检查字号、位置和可用宽度，用最长可能的内容检查布局。',
+          '如果缺字，换成包含相应数字、字母或中文字符的字体；只有数字的位图字体不能显示任意文字。',
+          '日期还要检查应用语言与字体字符覆盖。在目标设备上再次验证。'
         ],
-        links: [{ label: '查看 PRG 安装排错', href: '/prg-installer' }]
+        note: '454 × 454 画布优先保留日期至少 30 号、数据 36 号的可读性，先调整位置与间距。'
+      },
+      {
+        id: 'faq-data',
+        title: '数据为空，或预览与手表数值不同？',
+        steps: [
+          '确认添加的是动态数据元素，并核对选择的数据类型或 Token。',
+          '浏览器预览使用模拟数据；手表依赖设备支持、数据权限、传感器和同步状态。',
+          '分别测试零值、较大值和缺失值；天气、心率等暂时不可用时，检查显示是否合理。'
+        ],
+        links: [
+          {
+            label: '阅读数据绑定说明',
+            href: '/wiki#data-and-tokens'
+          }
+        ]
+      },
+      {
+        id: 'faq-visibility',
+        title: '可见性条件为什么没有生效？',
+        steps: [
+          '选中对象，在可见性设置中确认开关已开启，表达式已保存且没有错误提示。',
+          '先用简单条件测试，再通过预览控件改变引用的数据，检查条件两侧的效果。',
+          '核对数据不可用时的默认可见设置；同时检查图层隐藏与所属布局状态。'
+        ],
+        links: [
+          {
+            label: '查看低电量条件示例',
+            href: '/wiki#visibility-example'
+          }
+        ]
+      },
+      {
+        id: 'faq-build',
+        title: '构建失败或一直在排队怎么办？',
+        steps: [
+          '先查看当前任务状态和错误信息，不要连续点击 Build。',
+          '确认项目已保存、目标设备已选择，使用 File → Verify design 检查设计。',
+          '失败后记录任务信息、设备型号和错误文字；修正明确指出的问题后再构建。',
+          '持续排队或失败且没有可操作提示时，通过编辑器 Help → Send Feedback 反馈。'
+        ]
+      },
+      {
+        id: 'faq-install',
+        title: 'PRG 安装后没有出现，或手表无法识别？',
+        steps: [
+          '核对 PRG 的构建设备与手表型号完全匹配，不要仅按分辨率判断。',
+          '若下载的是压缩包，先取出 .prg；按安装指南使用 Installer 或设备支持的文件传输方式。',
+          '使用支持数据传输的 USB 线，按指南处理连接权限，安全断开设备后再检查表盘列表。'
+        ],
+        links: [
+          {
+            label: 'PRG Installer 详细指南 · 需登录',
+            href: '/prg-installer'
+          }
+        ]
+      },
+      {
+        id: 'faq-device',
+        title: '同样分辨率的手表可以共用一个 PRG 吗？',
+        paragraphs: ['不要假定可以。不同型号可能具有不同的能力、内存或运行环境。为实际目标设备构建，并在该设备上检查字体、数据和屏幕边缘。']
+      },
+      {
+        id: 'faq-battery',
+        title: '装到手表后耗电偏高，怎么排查？',
+        steps: [
+          '先减少秒级变化、动画和复杂叠加，保留时间与必要数据，比较同一设备的表现。',
+          '检查低功耗或 AOD 场景的显示；不要用浏览器预览推断实际续航。',
+          '记录设备、固件、设计版本和相近使用条件下的耗电情况，再逐项恢复元素定位原因。'
+        ]
       }
     ]
   },

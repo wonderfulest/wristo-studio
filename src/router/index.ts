@@ -1,3 +1,4 @@
+import { wikiRoutes } from './wikiRoutes'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
@@ -52,19 +53,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/MoonView.vue'),
     meta: { requiresAuth: true, allowsAllUsers: true },
   },
-  {
-    path: '/academy',
-    component: Layout,
-    meta: { requiresAuth: true, allowsAllUsers: true },
-    children: [
-      {
-        path: '',
-        name: 'CreatorAcademy',
-        component: () => import('@/views/CreatorAcademy.vue'),
-        meta: { requiresAuth: true, allowsAllUsers: true },
-      },
-    ],
-  },
+  ...wikiRoutes,
   {
     path: '/prg-installer',
     component: Layout,

@@ -24,6 +24,18 @@ async function setup() {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it('shows supported data fields and hides the card for an app without configuration', async () => {
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, configJson: {
+      dataOptions: { ':FIELD_TYPE_STEPS': { label: { eng: { long: 'Daily Steps' } } } },
+    } })
+    const { wrapper, router } = await setup()
+    expect(wrapper.get('.supported-data-fields').text()).toContain('Supported data fields 1')
+    expect(wrapper.get('.data-field-list li').text()).toBe('Daily Steps')
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, appId: 456 })
+    await router.push('/faces/456')
+    await flushPromises()
+    expect(wrapper.find('.supported-data-fields').exists()).toBe(false)
+  })
   it('opens the actual design and renders untrusted descriptions as text', async () => {
     const { wrapper, router } = await setup()
     expect(wrapper.get('h1').text()).toBe('Test face')
@@ -38,6 +50,34 @@ describe('watch face details', () => {
     const { wrapper } = await setup()
     expect(wrapper.find('a.primary-button').exists()).toBe(false)
     expect(wrapper.text()).toContain('not available in the builder')
+  })
+  it('offers social sharing for the selected app in separate tabs', async () => {
+    const { wrapper, router } = await setup()
+    expect(wrapper.findAll('.share-row a')).toHaveLength(3)
+    for (const link of wrapper.findAll('.share-row a')) {
+      expect(link.attributes('target')).toBe('_blank')
+      expect(link.attributes('rel')).toContain('noopener')
+    }
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, appId: 456, name: 'Second & face' })
+    await router.push('/faces/456?tracking=private#preview')
+    await flushPromises()
+    const url = new URL(wrapper.get('.share-row a').attributes('href')!)
+    expect(url.searchParams.get('text')).toBe('Second & face')
+    expect(url.searchParams.get('url')).toBe(new URL('/faces/456', window.location.origin).href)
+  })
+  it('copies the detail link and reports clipboard failure', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const { wrapper } = await setup()
+    await wrapper.get('.share-button').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith(new URL('/faces/123', window.location.origin).href)
+    expect(wrapper.get('.share-row [role="status"]').text()).toBe('Link copied')
+    writeText.mockRejectedValueOnce(new Error('Denied'))
+    await wrapper.get('.share-button').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.share-row [role="status"]').text()).toContain('Could not copy')
+    Reflect.deleteProperty(navigator, 'clipboard')
   })
   it('shows errors and retries', async () => {
     vi.mocked(loadFaceDetail).mockRejectedValueOnce(new Error('Offline'))

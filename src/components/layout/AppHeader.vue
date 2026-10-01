@@ -151,7 +151,7 @@ const openPrgInstallerGuide = () => {
 </script>
 
 <style scoped>
-.studio-header { height: 56px; flex: 0 0 56px; display: flex; align-items: center; gap: 20px; padding: 0 14px; background: var(--studio-surface-raised); color: var(--studio-text); border-bottom: 1px solid var(--studio-border); position: relative; z-index: var(--studio-z-app-header); }
+.studio-header { box-sizing: border-box; height: var(--studio-header-height, 56px); flex: 0 0 var(--studio-header-height, 56px); display: flex; align-items: center; gap: 20px; padding: 0 14px; background: var(--studio-surface-raised); color: var(--studio-text); border-bottom: 1px solid var(--studio-border); position: relative; z-index: var(--studio-z-app-header); }
 .studio-leading, .studio-document, .studio-tools, .history-actions, .preferences { display: flex; align-items: center; }
 .studio-leading { gap: 18px; flex-shrink: 0; }
 .brand { display: flex; align-items: center; gap: 7px; padding: 0; border: 0; color: inherit; background: transparent; cursor: pointer; white-space: nowrap; font-size: 12px; letter-spacing: -0.3px; font-weight: 800; }

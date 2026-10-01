@@ -44,7 +44,6 @@ import { serializeDataPropertyConfig } from './dataPropertyConfig'
 import { validateSunEventsElement } from '@/elements/sunEvents/common/sunEvents.validation'
 import { validateVisibilityExpression } from '@/engine/expression/validation'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
-import { calculateConnectIqSettingsBudget } from './connectIqSettingsBudget'
 import { resolveDatePropertyConfig } from './datePropertyConfig'
 import { validateCustomDateTemplate } from '@/elements/time/date/dateTemplate'
 import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
@@ -314,18 +313,6 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     // blobs. Imported theme images do not need separate library database records.
     { allowEmbeddedBlobAssets: true },
   )
-  const settingsBudget = calculateConnectIqSettingsBudget({
-    properties: config.properties,
-    dataOptions: config.dataOptions,
-    elements: config.elements as unknown as Array<Record<string, unknown>>,
-    appLanguage: config.localization?.appLanguage,
-    visualThemes: config.visualThemes,
-  })
-  if (settingsBudget.status === 'exceeded') {
-    if (typeof document !== 'undefined') {
-      ElMessage.warning(t('property.budgetExceeded'))
-    }
-  }
   const errors = [...dateErrors, ...visualThemeErrors]
   for (const element of config.elements) if (element.eleType === 'dynamicImage') errors.push(...validateDynamicImage(element as any, config.properties))
   errors.push(...validateLayoutConfig(config.properties, config.elements))

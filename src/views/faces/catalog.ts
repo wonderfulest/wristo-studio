@@ -24,6 +24,7 @@ export interface FaceDevice {
   displayName: string
 }
 export interface FaceDetail extends PublishedFace {
+  configJson?: unknown
   description?: string | null
   user?: { nickname?: string | null; username?: string | null; avatar?: string | null } | null
   createdAt?: string | null

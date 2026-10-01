@@ -51,11 +51,11 @@
           <span v-if="paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
       </div>
-      <component :is="viewMode === 'list' ? 'details' : 'div'" class="design-details">
-        <summary v-if="viewMode === 'list'" class="details-summary">
+      <div class="design-details">
+        <div v-if="viewMode === 'list'" class="details-heading">
           <span v-if="isMerchantUser || isAdminUser" class="list-status" :style="{ color: statusColor }">{{ statusText }}</span>
           <span>{{ t('project.designDetails') }}</span>
-        </summary>
+        </div>
       <div class="meta">
        
         <div v-if="design.product?.appId">
@@ -146,7 +146,7 @@
           </div>
         </div>
       </div>
-      </component>
+      </div>
       <div class="actions-bar">
         <el-button v-if="canEditCurrentDesign" class="primary-edit-action" type="default" size="small" @click="emit('open', design)">
           <el-icon><Edit /></el-icon>
@@ -1263,7 +1263,7 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 }
 .design-card--list .background-image { object-fit: contain; }
 .design-card--list .design-details { grid-column: 3; grid-row: 1; min-width: 0; }
-.details-summary { cursor: pointer; color: var(--studio-text-muted); font-size: 12px; line-height: 1.8; }
+.details-heading { color: var(--studio-text-muted); font-size: 12px; line-height: 1.8; }
 .list-status { margin-right: 8px; font-weight: 600; }
 .design-card--list .meta { font-size: 12px; overflow-wrap: anywhere; }
 .design-card--list .actions-bar { grid-column: 4; grid-row: 1; align-self: center; }

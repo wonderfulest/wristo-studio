@@ -103,11 +103,10 @@
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
               </div>
               <div class="face-actions">
-                <RouterLink v-if="face.designId" :to="{ path: '/design', query: { id: face.designId } }">
-                  Edit in Builder
+                <RouterLink :to="faceDetailsUrl(face.appId)">
+                  View details
                   <span aria-hidden="true">↗</span>
                 </RouterLink>
-                <a v-if="faceDownloadUrl(face)" :href="faceDownloadUrl(face)" target="_blank" rel="noopener noreferrer" :aria-label="`Download ${face.name} on Connect IQ`">Download ↓</a>
               </div>
             </div>
           </article>
@@ -119,10 +118,42 @@
         </div>
       </section>
     </main>
-    <footer>
-      <span>Wristo Studio</span>
-      <p>A little more you. Every time you check the time.</p>
-      <RouterLink to="/design">Create a watch face →</RouterLink>
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-intro">
+          <RouterLink to="/faces" class="footer-brand">
+            <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" width="28" height="28" />
+            <span>Wristo Studio</span>
+          </RouterLink>
+          <p>Create and share watch faces for Garmin devices — no coding needed.</p>
+          <small>Not affiliated with Garmin Ltd.</small>
+        </div>
+        <nav aria-label="Footer tools" class="footer-column">
+          <h2>Tools</h2>
+          <RouterLink to="/design">Wristo Studio</RouterLink>
+          <RouterLink to="/fonts/bitmap-maker">Bitmap Font Maker</RouterLink>
+          <RouterLink to="/prg-installer">Installer</RouterLink>
+        </nav>
+        <nav aria-label="Footer resources" class="footer-column">
+          <h2>Resources</h2>
+          <RouterLink to="/wiki">Wiki & FAQ</RouterLink>
+          <RouterLink to="/FAQ">Help &amp; FAQ</RouterLink>
+          <a href="https://wiki.wristo.io/" target="_blank" rel="noopener noreferrer">Wristo Wiki</a>
+        </nav>
+        <nav aria-label="Footer account" class="footer-column">
+          <h2>Account</h2>
+          <RouterLink to="/profile">My account</RouterLink>
+          <RouterLink to="/pricing" class="footer-premium">Premium plans <span aria-hidden="true">✦</span></RouterLink>
+          <a href="mailto:support@wristo.io">Contact us</a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>© {{ new Date().getFullYear() }} Wristo. All rights reserved.</p>
+        <nav aria-label="Legal">
+          <a href="https://wristo.io/terms-and-conditions">Terms and Conditions</a>
+          <a href="https://wristo.io/privacy-policy">Privacy Policy</a>
+        </nav>
+      </div>
     </footer>
   </div>
 </template>
@@ -134,7 +165,7 @@ import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
-import { faceDetailsUrl, faceDownloadUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
+import { faceDetailsUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
 const faces = ref<PublishedFace[]>([])
 const featured = ref<PublishedFace[]>([])
 const devices = ref<FaceDevice[]>([])
@@ -539,22 +570,80 @@ button:disabled {
   width: 70%;
   margin: 18px 0 6px;
 }
-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+.site-footer {
   border-top: 1px solid var(--line);
-  padding: 28px max(24px, calc((100vw - 1232px) / 2));
-  font-size: 13px;
-  color: var(--muted);
+  background: #fff;
+  color: #626963;
+  font-size: 14px;
 }
-footer > span {
+.footer-main {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 48px;
+  padding: 36px 32px 30px;
+}
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: var(--ink);
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 18px;
   font-weight: 700;
 }
-footer p {
-  margin: 0;
+.footer-intro p {
+  max-width: 290px;
+  margin: 12px 0 8px;
+  line-height: 1.6;
+}
+.footer-intro small { font-size: 12px; }
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.footer-column h2 {
+  margin: 3px 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+.footer-column a { line-height: 1.6; }
+.footer-column .footer-premium { color: #94651b; }
+.site-footer a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px 32px;
+  border-top: 1px solid #f0f1ee;
+  padding: 16px 32px;
+  font-size: 12px;
+}
+.footer-bottom p { margin: 0; }
+.footer-bottom nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+@media (max-width: 800px) {
+  .footer-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+    padding: 28px 24px;
+  }
+  .footer-bottom { flex-wrap: wrap; padding: 16px 24px; }
+}
+@media (max-width: 520px) {
+  .footer-main { gap: 24px 16px; padding: 28px 20px; }
+  .footer-intro { grid-column: 1 / -1; }
+  .footer-bottom { padding: 16px 20px; }
 }
 .sr-only {
   position: absolute;
@@ -599,9 +688,6 @@ select:focus-visible {
   .hero-copy {
     max-width: 600px;
   }
-  footer {
-    flex-wrap: wrap;
-  }
 }
 @media (max-width: 520px) {
   .face-grid {
@@ -640,10 +726,6 @@ select:focus-visible {
   }
   .pagination button {
     padding: 8px 10px;
-  }
-  footer p {
-    width: 100%;
-    order: 3;
   }
 }
 </style>

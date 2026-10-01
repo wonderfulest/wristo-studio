@@ -24,33 +24,6 @@
         </div>
       </section>
 
-      <section class="settings-budget" :class="`settings-budget-${settingsBudget.status}`">
-        <div class="settings-budget-heading">
-          <div>
-            <strong>{{ t('property.connectIqBudget') }}</strong>
-            <span>{{ t('property.connectIqBudgetHint') }}</span>
-          </div>
-          <b>{{ formatBudgetBytes(settingsBudget.usedBytes) }} / {{ formatBudgetBytes(settingsBudget.limitBytes) }}</b>
-        </div>
-        <el-progress
-          :percentage="settingsBudget.percentage"
-          :status="settingsBudget.status === 'exceeded' ? 'exception' : (settingsBudget.status === 'warning' ? 'warning' : 'success')"
-          :stroke-width="8"
-        />
-        <div class="settings-budget-details">
-          <span>{{ t('property.settingsCount', { count: settingsBudget.totalSettings }) }}</span>
-          <span>{{ t('property.optionCount', { count: settingsBudget.listOptions }) }}</span>
-          <span>{{ t('property.remainingBudget', { size: formatBudgetBytes(settingsBudget.remainingBytes) }) }}</span>
-        </div>
-        <el-alert
-          v-if="settingsBudget.status !== 'normal'"
-          :type="settingsBudget.status === 'exceeded' ? 'error' : 'warning'"
-          :title="t(settingsBudget.status === 'exceeded' ? 'property.budgetExceeded' : 'property.budgetWarning')"
-          :closable="false"
-          show-icon
-        />
-      </section>
-
       <div class="properties-layout">
         <section class="properties-main" :aria-label="t('property.drawerTitle')">
           <div class="settings-stack">
@@ -348,7 +321,6 @@ import {
   getColorPropertyValue,
   setColorPropertyValue,
 } from '@/engine/services/colorPropertyValueService'
-import { calculateConnectIqSettingsBudget } from '@/engine/services/connectIqSettingsBudget'
 import { syncMetricPropertyBindings } from '@/engine/layout/layoutGroupPropertySync'
 
 const visible = ref(false)
@@ -470,23 +442,6 @@ const groupedProperties = computed(() =>
     }))
     .filter((group) => group.items.length > 0)
 )
-
-const budgetElements = computed(() => elementDataStore.elements.map((snapshot) => snapshot.config || {}))
-const settingsBudget = computed(() => calculateConnectIqSettingsBudget({
-  properties: propertiesStore.allProperties,
-  dataOptions: propertiesStore.dataOptions,
-  elements: budgetElements.value,
-  appLanguage: designStore.appLanguage,
-  visualThemes: visualThemeStore.config,
-  secondTimeZone: { ...propertiesStore.secondTimeZone },
-        textCase: propertiesStore.textCase,
-  dataNumberFormat: propertiesStore.dataNumberFormat,
-  maxFieldLength: propertiesStore.maxFieldLength,
-  bitmapMode: propertiesStore.bitmapMode,
-}))
-const formatBudgetBytes = (bytes) => bytes >= 1024
-  ? `${(bytes / 1024).toFixed(1)} KB`
-  : `${bytes} B`
 
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
@@ -953,32 +908,6 @@ defineExpose({
   line-height: 18px;
   text-align: center;
 }
-
-.settings-budget {
-  padding: 14px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  background: var(--el-fill-color-blank);
-}
-
-.settings-budget-warning { border-color: var(--el-color-warning-light-5); }
-.settings-budget-exceeded { border-color: var(--el-color-danger-light-5); }
-
-.settings-budget-heading,
-.settings-budget-details {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.settings-budget-heading { margin-bottom: 10px; }
-.settings-budget-heading strong { display: block; font-size: 14px; }
-.settings-budget-heading span,
-.settings-budget-details { color: var(--el-text-color-secondary); font-size: 12px; }
-.settings-budget-heading b { white-space: nowrap; font-size: 14px; }
-.settings-budget-details { justify-content: flex-start; margin-top: 8px; }
-.settings-budget :deep(.el-alert) { margin-top: 10px; }
 
 .properties-layout {
   display: flex;

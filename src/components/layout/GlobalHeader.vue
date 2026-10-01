@@ -4,7 +4,7 @@
       <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" class="logo" />
       <span>Wristo <strong>Studio</strong></span>
     </RouterLink>
-    <nav class="header-nav" aria-label="Main navigation">
+    <nav class="header-nav" :aria-label="t('header.mainNavigation')">
       <RouterLink
         v-for="item in navigation"
         :key="item.to"
@@ -12,7 +12,7 @@
         class="nav-link"
         :class="{ active: isActive(item.to) }"
         :aria-current="isActive(item.to) ? 'page' : undefined"
-      >{{ item.label }}</RouterLink>
+      >{{ t(item.label) }}</RouterLink>
     </nav>
     <div class="header-tools">
       <RouterLink to="/tokens" class="tokens-link" :aria-label="t('tokens.nav')" :title="t('tokens.nav')">
@@ -38,11 +38,11 @@ import { useI18n } from '@/i18n'
 const route = useRoute()
 const { t } = useI18n()
 const navigation = [
-  { to: '/faces', label: 'Faces' },
-  { to: '/designs', label: 'My Designs' },
-  { to: '/design', label: 'Studio' },
-  { to: '/prg-installer', label: 'Installer' },
-  { to: '/academy', label: 'Creator Academy' },
+  { to: '/faces', label: 'header.faces' },
+  { to: '/designs', label: 'header.myDesigns' },
+  { to: '/design', label: 'header.studio' },
+  { to: '/prg-installer', label: 'header.installer' },
+  { to: '/wiki', label: 'header.wiki' },
 ]
 const isActive = (path: string): boolean => {
   return route.path === path || route.path.startsWith(`${path}/`)
@@ -55,15 +55,17 @@ const isActive = (path: string): boolean => {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 24px;
-  min-height: 76px;
-  padding: 0 32px;
+  box-sizing: border-box;
+  height: var(--studio-header-height, 56px);
+  min-height: var(--studio-header-height, 56px);
+  padding: 0 14px;
   background: var(--studio-surface-raised);
   color: var(--studio-text);
   border-bottom: 1px solid var(--studio-border);
   position: sticky;
   top: 0;
   z-index: var(--studio-z-app-header);
-  flex: 0 0 auto;
+  flex: 0 0 var(--studio-header-height, 56px);
   font-family: 'Yantramanav', sans-serif;
 }
 .brand, .header-nav, .header-tools, .tokens-link {
@@ -105,12 +107,11 @@ const isActive = (path: string): boolean => {
   outline-offset: -2px;
 }
 @media (max-width: 1200px) {
-  .app-header { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 20px 0; }
-  .header-tools { grid-column: 2; grid-row: 1; }
-  .header-nav { grid-column: 1 / -1; padding-bottom: 8px; }
+  .app-header { gap: 12px; padding: 0 10px; }
+  .brand > span { display: none; }
 }
 @media (max-width: 600px) {
-  .app-header { padding: 8px 12px 0; gap: 4px; }
+  .app-header { padding: 0 10px; gap: 4px; }
   .brand { gap: 6px; font-size: 18px; }
   .logo { width: 26px; height: 26px; }
   .header-tools { gap: 0; }

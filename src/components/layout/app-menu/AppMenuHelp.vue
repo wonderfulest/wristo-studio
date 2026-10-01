@@ -18,9 +18,9 @@
         <el-icon><Mouse /></el-icon>
         <span>{{ t('editor.keyboardMouseUsage') }}</span>
       </el-menu-item>
-      <el-menu-item index="help/academy" @click="onOpenAcademy">
+      <el-menu-item index="help/wiki" @click="onOpenWiki">
         <el-icon><Document /></el-icon>
-        <span>{{ t('editor.creatorAcademy') }}</span>
+        <span>{{ t('editor.wikiFaq') }}</span>
       </el-menu-item>
       <el-menu-item index="help/feedback" @click="onOpenFeedback">
         <el-icon><ChatLineSquare /></el-icon>
@@ -49,7 +49,7 @@ const props = defineProps({
     type: Function,
     required: true,
   },
-  onOpenAcademy: {
+  onOpenWiki: {
     type: Function,
     required: true,
   },
@@ -67,8 +67,8 @@ const onOpenFeedback = () => {
   props.onOpenFeedback && props.onOpenFeedback()
 }
 
-const onOpenAcademy = () => {
-  props.onOpenAcademy && props.onOpenAcademy()
+const onOpenWiki = () => {
+  props.onOpenWiki && props.onOpenWiki()
 }
 const onOpenTokens = () => { props.onOpenTokens && props.onOpenTokens() }
 </script>

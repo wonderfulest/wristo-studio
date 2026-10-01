@@ -25,10 +25,6 @@
         <AppMenuIndicator @add-element="handleAddElement" />
         <AppMenuWeatherGroup @add-element="handleAddElement" />
         <AppMenuImageGroup @add-element="handleAddElement" />
-        <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
-          <Icon icon="material-symbols:font-download-outline" />
-          <span>Bitmap Fonts</span>
-        </el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="appearance">
         <template #title>{{ t('studioMenu.design') }}</template>
@@ -37,9 +33,12 @@
           <LayoutQuickSelect />
         </div>
       </el-sub-menu>
+      <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
+        <span>{{ t('studioMenu.bitmapFonts') }}</span>
+      </el-menu-item>
       <AppMenuHelp
         :on-open-shortcuts="() => shortcutsDialogVisible = true"
-        :on-open-academy="handleOpenCreatorAcademy"
+        :on-open-wiki="handleOpenWiki"
         :on-open-tokens="handleOpenTokens"
         :on-open-feedback="showFeedbackDialog"
       >
@@ -1199,8 +1198,8 @@ const showFeedbackDialog = () => {
   feedbackDialog.value?.showDialog()
 }
 
-const handleOpenCreatorAcademy = () => {
-  window.open('/academy', '_blank', 'noopener')
+const handleOpenWiki = () => {
+  window.open('/wiki', '_blank', 'noopener')
 }
 const handleOpenTokens = () => openRouteInNewTab(router, { name: 'Tokens' })
 const handleOpenBitmapFonts = () => openRouteInNewTab(router, { name: 'BitmapFontMaker' })
@@ -1215,7 +1214,8 @@ const handleOpenBitmapFonts = () => openRouteInNewTab(router, { name: 'BitmapFon
   border: 0;
   background: transparent;
 }
-.menu-list :deep(> .el-sub-menu > .el-sub-menu__title) {
+.menu-list :deep(> .el-sub-menu > .el-sub-menu__title),
+.menu-list :deep(> .el-menu-item) {
   height: 36px;
   line-height: 36px;
   padding: 0 24px 0 10px;
@@ -1225,9 +1225,12 @@ const handleOpenBitmapFonts = () => openRouteInNewTab(router, { name: 'BitmapFon
   font-size: 13px;
   font-weight: 500;
 }
+.menu-list :deep(> .el-menu-item) { padding: 0 10px; }
 .menu-list :deep(> .el-sub-menu > .el-sub-menu__title > .el-icon:not(.el-sub-menu__icon-arrow)) { display: none; }
 .menu-list :deep(.el-sub-menu__icon-arrow) { right: 8px; margin-top: -5px; }
-.menu-list :deep(.el-sub-menu__title:hover) { background: var(--studio-surface-soft); color: var(--studio-text); }
+.menu-list :deep(.el-sub-menu__title:hover),
+.menu-list :deep(> .el-menu-item:hover),
+.menu-list :deep(> .el-menu-item:focus) { background: var(--studio-surface-soft); color: var(--studio-text); }
 .appearance-options { display: flex; flex-direction: column; padding: 4px; gap: 4px; }
 
 :deep(.menu-group) {

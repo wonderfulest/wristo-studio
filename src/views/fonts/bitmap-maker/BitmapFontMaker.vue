@@ -4,10 +4,10 @@
       <div class="maker-directory-content">
         <div>
           <p class="eyebrow">BITMAP FONT GENERATORS</p>
-          <h1>位图字体生成器</h1>
-          <p>在同一目录中通过字体文件或 SVG 图库生成 BMFont 字体包。</p>
+          <h1>{{ t('bitmapMaker.directoryTitle') }}</h1>
+          <p>{{ t('bitmapMaker.directoryDescription') }}</p>
         </div>
-        <div class="source-tabs" role="tablist" aria-label="位图字体来源">
+        <div class="source-tabs" role="tablist" :aria-label="t('bitmapMaker.sourceLabel')">
           <button
             v-for="option in sourceOptions"
             :key="option.value"
@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from '@/i18n'
 import { useRoute, useRouter } from 'vue-router'
 import TtfBitmapFontMaker from './TtfBitmapFontMaker.vue'
 import IconLibrary from '../icons/IconLibrary.vue'
@@ -44,10 +45,11 @@ type BitmapSource = 'ttf' | 'svg'
 
 const route = useRoute()
 const router = useRouter()
-const sourceOptions: Array<{ value: BitmapSource; title: string; description: string }> = [
-  { value: 'ttf', title: 'TTF / OTF 字体', description: '从字体文件生成数字、英文或中文位图字体' },
-  { value: 'svg', title: 'SVG 图库', description: '从图标或天气 SVG 图库生成位图字体' },
-]
+const { t } = useI18n()
+const sourceOptions = computed<Array<{ value: BitmapSource; title: string; description: string }>>(() => [
+  { value: 'ttf', title: t('bitmapMaker.ttfSourceTitle'), description: t('bitmapMaker.ttfSourceDescription') },
+  { value: 'svg', title: t('bitmapMaker.svgSourceTitle'), description: t('bitmapMaker.svgSourceDescription') },
+])
 const source = computed<BitmapSource>(() => route.query.source === 'svg' ? 'svg' : 'ttf')
 const svgFontType = computed<'icon_font' | 'weather_font'>(() => route.query.fontType === 'weather_font' ? 'weather_font' : 'icon_font')
 
