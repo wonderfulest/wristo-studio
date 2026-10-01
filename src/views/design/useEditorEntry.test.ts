@@ -12,12 +12,12 @@ beforeEach(() => {
   mocks.createDesign.mockResolvedValue({ code: 0, data: { designUid: 'created-design' } })
   mocks.replace.mockResolvedValue(undefined)
 })
-function setup(id = '') {
+function setup(id = '', recovery: Record<string, any> = {}) {
   const scope = effectScope()
   const route = reactive({ query: { id }, path: '/design' })
   const load = vi.fn().mockResolvedValue(undefined)
   const flush = vi.fn().mockResolvedValue(undefined)
-  const entry = scope.run(() => useEditorEntry({ route, replace: mocks.replace, load, flush, currentId: () => '' }))!
+  const entry = scope.run(() => useEditorEntry({ route, replace: mocks.replace, load, flush, currentId: () => '', ...recovery }))!
   return { scope, route, load, flush, ...entry }
 }
 describe('direct Studio entry', () => {
@@ -68,4 +68,59 @@ describe('direct Studio entry', () => {
     await pending
     expect(mocks.replace).not.toHaveBeenCalled()
   })
+})
+
+describe('unsaved Studio entry', () => {
+  it.each(['resume', 'new', 'dismiss'])('handles %s without implicit creation', async (choice) => {
+    const draft = { designId: 'previous', name: 'My draft', savedAt: 10 }
+    const choose = vi.fn().mockResolvedValue(choice)
+    const s = setup('', { findUnsaved: () => draft, chooseUnsaved: choose })
+    await s.open()
+    expect(choose).toHaveBeenCalledWith(draft)
+    expect(mocks.createDesign).toHaveBeenCalledTimes(choice === 'new' ? 1 : 0)
+    expect(mocks.replace).toHaveBeenCalledWith(choice === 'dismiss' ? '/designs' : { path: '/design', query: { id: choice === 'resume' ? 'previous' : 'created-design' } })
+    s.scope.stop()
+  })
+  it('can resume when project creation is disallowed', async () => {
+    mocks.user.canCreateDesign = false
+    const s = setup('', { findUnsaved: () => ({ designId: 'previous' }), chooseUnsaved: async () => 'resume' })
+    await s.open()
+    expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'previous' } })
+    expect(s.error.value).toBe('')
+    s.scope.stop()
+  })
+  it('bypasses the choice for an explicit design link', async () => {
+    const findUnsaved = vi.fn()
+    const s = setup('explicit', { findUnsaved })
+    await s.open()
+    expect(findUnsaved).not.toHaveBeenCalled()
+    s.scope.stop()
+  })
+  it('does not create after leaving while the dialog is open', async () => {
+    let choose!: (value: string) => void
+    const s = setup('', { findUnsaved: () => ({ designId: 'previous' }), chooseUnsaved: () => new Promise(resolve => { choose = resolve }) })
+    const pending = s.open()
+    await vi.waitFor(() => expect(choose).toBeTypeOf('function'))
+    s.scope.stop()
+    choose('new')
+    await pending
+    expect(mocks.createDesign).not.toHaveBeenCalled()
+  })
+})
+
+it('records new projects and flushes changes before looking for drafts', async () => {
+  const onCreated = vi.fn()
+  const findUnsaved = vi.fn()
+  const s = setup('', { onCreated, findUnsaved })
+  await s.open()
+  expect(s.flush.mock.invocationCallOrder[0]).toBeLessThan(findUnsaved.mock.invocationCallOrder[0])
+  expect(onCreated).toHaveBeenCalledWith('created-design')
+  s.scope.stop()
+})
+it('keeps the current design when closing the entry dialog', async () => {
+  const s = setup('', { currentId: () => 'current', findUnsaved: () => ({ designId: 'current' }), chooseUnsaved: async () => 'dismiss' })
+  await s.open()
+  expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'current' } })
+  expect(mocks.createDesign).not.toHaveBeenCalled()
+  s.scope.stop()
 })

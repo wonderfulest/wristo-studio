@@ -31,7 +31,8 @@
     <button type="button" class="user-avatar-container" :aria-label="t('nav.accountMenu')" @click.stop="toggleDropdown">
       <span class="user-avatar-wrap">
         <img :src="userAvatar" class="user-avatar" alt="user avatar" />
-        <span v-if="showAvatarDot" class="avatar-dot" />
+        <span v-if="pendingPublishStore.count > 0" class="avatar-pending-count" :aria-label="t('nav.pendingWorkDesc', { count: pendingPublishStore.count })">{{ pendingPublishStore.count > 99 ? '99+' : pendingPublishStore.count }}</span>
+        <span v-else-if="showAvatarDot" class="avatar-dot" />
         <span
           v-if="isPremiumMember"
           class="premium-badge"
@@ -70,6 +71,14 @@
             <small>{{ t('nav.userInfoDesc') }}</small>
           </span>
           <Icon icon="solar:arrow-right-up-line-duotone" class="dropdown-trailing-icon" />
+        </button>
+        <button type="button" class="dropdown-item pending-work-item" @click="go('/designs/pending')">
+          <span class="user-dropdown-icon"><Icon icon="material-symbols:pending-actions" /></span>
+          <span class="user-dropdown-copy">
+            <strong>{{ t('nav.pendingWork') }}</strong>
+            <small>{{ t('project.pendingGoLive') }}</small>
+          </span>
+          <span v-if="pendingPublishStore.count > 0" class="menu-badge">{{ pendingPublishStore.count }}</span>
         </button>
         <button v-if="!userStore.isMerchantUser" type="button" class="dropdown-item" @click="openMembership">
           <span class="user-dropdown-icon accent"><Icon icon="material-symbols:workspace-premium" /></span>
@@ -143,8 +152,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'
 import { useI18n } from '@/i18n'
@@ -155,6 +165,11 @@ const DesignerDefaultConfigDialog = defineAsyncComponent(() => import('@/compone
 
 const router = useRouter()
 const userStore = useUserStore()
+const pendingPublishStore = usePendingGoLiveStore()
+watch(() => userStore.isAuthenticated ? userStore.userInfo?.id : null, (id) => {
+  pendingPublishStore.setItems([])
+  if (id != null) void pendingPublishStore.fetch()
+}, { immediate: true })
 const { t } = useI18n()
 
 const signIn = async () => {
@@ -190,6 +205,7 @@ const triggerStatusLabel = computed(() => {
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
+  if (showDropdown.value) void pendingPublishStore.fetch()
 }
 
 const handleLogout = async () => {
@@ -260,6 +276,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.avatar-pending-count {
+  position: absolute;
+  bottom: -5px;
+  right: -8px;
+  z-index: 1;
+  min-width: 18px;
+  padding: 0 4px;
+  border: 2px solid var(--studio-surface-raised);
+  border-radius: 12px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
 .guest-sign-in {
   cursor: pointer; padding: 8px 16px; border-radius: 8px;
   border: 1px solid var(--studio-border); background: var(--studio-surface); color: var(--studio-text);

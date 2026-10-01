@@ -2,35 +2,6 @@
   <div class="design-list">
     <div class="header">
       <div class="header-left">
-        <div class="icon-buttons">
-          <el-tooltip :content="t('project.pendingGoLive')" placement="bottom">
-            <template #default>
-              <el-badge 
-                v-if="hasPending"
-                :value="pendingCount"
-                :max="99"
-                type="danger"
-                class="pending-badge"
-              >
-                <el-button 
-                  class="icon-btn"
-                  :class="{ 'is-active': isPendingRoute }"
-                  @click="navigateTo('pending-go-live')"
-                >
-                  <el-icon><Promotion /></el-icon>
-                </el-button>
-              </el-badge>
-              <el-button 
-                v-else
-                class="icon-btn"
-                :class="{ 'is-active': isPendingRoute }"
-                @click="navigateTo('pending-go-live')"
-              >
-                <el-icon><Promotion /></el-icon>
-              </el-button>
-            </template>
-          </el-tooltip>
-        </div>
         <h2 
           :class="{ 'active': isMyDesignsRoute }" 
           @click="navigateTo('my-designs')"
@@ -57,11 +28,8 @@
 <script setup lang="ts">
 import { showErrorOnce } from '@/utils/errorMessage'
 
-import { onMounted, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Promotion } from '@element-plus/icons-vue'
-import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
-import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 
 const router = useRouter()
@@ -70,11 +38,7 @@ const { t } = useI18n()
 
 // 计算当前路由状态
 const isMyDesignsRoute = computed(() => route.name === 'my-designs')
-const isPendingRoute = computed(() => route.name === 'pending-go-live')
 
-const pendingStore = usePendingGoLiveStore()
-const pendingCount = computed<number>(() => pendingStore.count)
-const hasPending = computed<boolean>(() => pendingStore.count > 0)
 
 // 导航方法
 const navigateTo = async (routeName: string) => {
@@ -89,9 +53,6 @@ const navigateTo = async (routeName: string) => {
   }
 }
 
-onMounted(() => {
-  if (useUserStore().isAuthenticated) pendingStore.fetch()
-})
 </script>
 
 <style scoped>
@@ -107,9 +68,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px 0 16px;
-  border-bottom: 1px solid var(--studio-border);
+  margin-bottom: 16px;
+  padding: 18px 0 12px;
   position: sticky;
   top: 0;
   z-index: 5;
@@ -120,38 +80,17 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
-}
-
-.icon-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-.icon-btn {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: var(--studio-radius-md);
-  border-color: var(--studio-border);
-  background: var(--studio-surface);
-  
-  &:hover {
-    background-color: var(--el-fill-color-light);
-  }
-  
-  .el-icon {
-    font-size: 20px;
-  }
+  gap: 14px;
 }
 
 h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 23px;
+  letter-spacing: -0.025em;
   cursor: pointer;
   color: var(--studio-text-muted);
   transition: color 0.3s;
-  font-weight: 800;
+  font-weight: 700;
   
   &:hover {
     color: var(--el-text-color-primary);
@@ -159,7 +98,7 @@ h2 {
   
   &.active {
     color: var(--studio-text);
-    font-weight: 850;
+    font-weight: 700;
   }
 }
 
@@ -167,17 +106,6 @@ h2 {
   background:
     linear-gradient(180deg, rgba(24, 33, 47, 0.72), rgba(24, 33, 47, 0) 190px),
     var(--studio-bg);
-}
-
-:global(html[data-studio-theme='dark']) .icon-btn:hover {
-  background-color: var(--el-fill-color-dark);
-}
-
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .icon-btn:hover {
-    background-color: var(--el-fill-color-dark);
-  }
 }
 
 /* 添加路由过渡动画 */
@@ -189,13 +117,6 @@ h2 {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-/* 激活状态样式 */
-.icon-btn.is-active {
-  color: var(--studio-primary);
-  background-color: var(--studio-primary-soft);
-  border-color: var(--studio-primary-border);
 }
 
 @media (max-width: 720px) {

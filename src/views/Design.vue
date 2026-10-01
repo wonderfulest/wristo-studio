@@ -8,7 +8,7 @@
         <RouterLink to="/designs">My Designs</RouterLink>
         <RouterLink to="/pricing">View plans</RouterLink>
       </template>
-      <p v-else>Creating your project…</p>
+      <p v-else>Opening Studio…</p>
     </div>
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
@@ -128,6 +128,7 @@ import {
   resolveLocalDesignDraft,
   buildLocalDesignDraftKey,
 } from '@/engine/services/localDesignDraft'
+import { readUnsavedDesigns, rememberUnsavedDesign, forgetUnsavedDesign, type UnsavedDesign } from '@/engine/services/unsavedDesigns'
 import { isLocalProject } from '@/auth/guestProject'
 import { writeLocalProject, readLocalProject } from '@/engine/services/guestProjectDraft'
 import { registerBeforeStudioLogin } from '@/utils/studioLoginPreparation'
@@ -158,6 +159,21 @@ const themeStore = useThemeStore()
 let saveTimer: number | null = null
 let stopElementDataSubscription: (() => void) | null = null
 let loadedDesignId = ''
+const draftOwner = () => userStore.userInfo?.id ?? 'guest'
+const rememberDraft = (id: string, name = designStore.watchFaceName, savedAt = Date.now(), owner = draftOwner()) =>
+  rememberUnsavedDesign(window.localStorage, owner, { designId: id, name: name || 'Untitled', savedAt })
+let resumeDraftId = ''
+const chooseUnsavedDesign = async (draft: UnsavedDesign): Promise<'resume' | 'new' | 'dismiss'> => {
+  try {
+    await ElMessageBox.confirm(t('editor.unsavedEntry.message', { name: draft.name }), t('editor.unsavedEntry.title'), {
+      confirmButtonText: t('editor.unsavedEntry.resume'), cancelButtonText: t('editor.unsavedEntry.new'),
+      distinguishCancelAndClose: true, closeOnClickModal: false, type: 'warning',
+    })
+    resumeDraftId = draft.designId === loadedDesignId ? '' : draft.designId
+    return 'resume'
+  } catch (action) { return action === 'cancel' ? 'new' : 'dismiss' }
+}
+
 let draftRevision = 0
 const saveRevisions = new Map<string, number>()
 const getDraftDeviceKey = (): string => String(
@@ -174,11 +190,17 @@ const persistLocalDraft = (): void => {
   if (!config) return
   if (isLocalProject(loadedDesignId)) {
     const id = loadedDesignId
+    const owner = draftOwner()
+    const name = designStore.watchFaceName
     draftWriteQueue = writeLocalProject(id, config)
+      .then(() => rememberDraft(id, name, Date.now(), owner))
       .catch(error => { draftAutosave.markDirty(); console.error(error) })
     return
   }
-  const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
+  const id = loadedDesignId
+  const owner = draftOwner()
+  const name = designStore.watchFaceName
+  const key = buildLocalDesignDraftKey(id, getDraftDeviceKey())
   const savedAt = Date.now()
   // Capture while object URLs are still valid; serialize writes to prevent stale completion.
   const serializedConfig = JSON.stringify(config)
@@ -193,6 +215,7 @@ const persistLocalDraft = (): void => {
     const result = await captured
     if ('error' in result) throw result.error
     await accessProjectDraft(key, 'write', { ...result.value, savedAt, fontBuildFiles, archiveExtras })
+    rememberDraft(id, name, savedAt, owner)
   }).catch((error) => {
     draftAutosave.markDirty()
     console.error('Failed to save local project assets:', error)
@@ -242,7 +265,10 @@ const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<
   await draftWriteQueue
   const draft = await accessProjectDraft(key, 'read')
   if (draft) {
-    if (await confirmDraftRestore()) {
+    rememberDraft(designId, draft.config?.config?.name || designStore.watchFaceName, draft.savedAt)
+    const resume = resumeDraftId === designId
+    resumeDraftId = ''
+    if (resume || await confirmDraftRestore()) {
       const restored = restoreProjectSnapshot(draft)
       packageFonts.clear()
       restored.fonts.forEach((font) => useFontStore().registerServerFont(font))
@@ -256,6 +282,7 @@ const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<
       return restored.config.config
     }
     await accessProjectDraft(key, 'delete')
+    forgetUnsavedDesign(window.localStorage, draftOwner(), designId)
     removeLocalDesignDraft(window.localStorage, designId, getDraftDeviceKey())
     return serverConfig
   }
@@ -386,10 +413,12 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   replace: (to) => router.replace(to),
   load: loadDesign,
   currentId: () => loadedDesignId,
+  findUnsaved: () => readUnsavedDesigns(window.localStorage, draftOwner())[0],
+  chooseUnsaved: chooseUnsavedDesign,
+  onCreated: (id) => rememberDraft(id, 'Untitled'),
   flush: async () => {
     saveDirtyDraft()
     await draftWriteQueue
-    loadedDesignId = ''
   },
 })
 
@@ -423,7 +452,12 @@ const handleDesignSaved = (input: any): void => {
   draftAutosave.markClean()
   clearTimeout(draftChangeTimer)
   const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
-  draftWriteQueue = draftWriteQueue.then(() => accessProjectDraft(key, 'delete')).catch(console.error)
+  const owner = draftOwner()
+  const id = loadedDesignId
+  draftWriteQueue = draftWriteQueue.then(async () => {
+    await accessProjectDraft(key, 'delete')
+    forgetUnsavedDesign(window.localStorage, owner, id)
+  }).catch(console.error)
   removeLocalDesignDraft(window.localStorage, loadedDesignId, getDraftDeviceKey())
 }
 

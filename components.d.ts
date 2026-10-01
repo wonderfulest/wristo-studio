@@ -52,7 +52,6 @@ declare module 'vue' {
     EditDesignDialog: typeof import('./src/components/dialogs/EditDesignDialog.vue')['default']
     EditorSettingsDialog: typeof import('./src/components/dialogs/EditorSettingsDialog.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
-    ElBadge: typeof import('element-plus/es')['ElBadge']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']
     ElCard: typeof import('element-plus/es')['ElCard']

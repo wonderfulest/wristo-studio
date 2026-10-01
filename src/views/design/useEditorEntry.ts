@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, watch } from 'vue'
 import type { LocationQuery, RouteLocationRaw } from 'vue-router'
 import { designApi } from '@/api/wristo/design'
+import type { UnsavedDesign } from '@/engine/services/unsavedDesigns'
 import { useUserStore } from '@/stores/user'
 
 export function useEditorEntry(options: {
@@ -9,6 +10,9 @@ export function useEditorEntry(options: {
   load: (id: string) => Promise<unknown>
   flush: () => Promise<unknown>
   currentId: () => string
+  findUnsaved?: () => UnsavedDesign | undefined
+  chooseUnsaved?: (draft: UnsavedDesign) => Promise<'resume' | 'new' | 'dismiss'>
+  onCreated?: (id: string) => void
 }) {
   const user = useUserStore()
   const creating = ref(false)
@@ -34,9 +38,24 @@ export function useEditorEntry(options: {
         await options.load(id)
         return
       }
-      if (!user.canCreateDesign) throw new Error('Your project limit has been reached. Open an existing design or review your plan.')
+      const draft = options.findUnsaved?.()
+      if (draft && options.chooseUnsaved) {
+        const choice = await options.chooseUnsaved(draft)
+        if (!active || current !== generation || options.route.path !== '/design') return
+        if (choice === 'dismiss') {
+          const previousId = options.currentId()
+          await options.replace(previousId ? { path: '/design', query: { id: previousId } } : '/designs')
+          return
+        }
+        if (choice === 'resume') {
+          await options.replace({ path: '/design', query: { id: draft.designId } })
+          return
+        }
+      }
+      if (!user.canCreateDesign) throw new Error('Your creation limit has been reached. Open an existing creation or delete one before creating another.')
       const response = await designApi.createDesign({ name: 'Untitled', description: '', originalType: 'original' })
       if (response.code !== 0 || !response.data?.designUid) throw new Error(response.msg || 'Unable to create a project. Please try again.')
+      options.onCreated?.(response.data.designUid)
       if (active && current === generation) {
         await options.replace({ path: '/design', query: { id: response.data.designUid } })
       }

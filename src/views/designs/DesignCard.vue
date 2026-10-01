@@ -18,7 +18,7 @@
             @keydown.esc.prevent="cancelRename"
             @blur="submitRename"
           />
-          <span v-else class="title" @dblclick.stop="startRename">{{ design.name }}</span>
+          <span v-else class="title" :title="design.name" @dblclick.stop="startRename">{{ design.name }}</span>
           <el-tooltip
             v-if="isMerchantUser || isAdminUser"
             :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
@@ -33,7 +33,8 @@
         <div v-if="viewMode === 'list'" class="list-subtitle">
           <span v-if="showCreator">{{ creatorName }}</span>
           <span v-if="paymentMethodLabel">{{ paymentMethodLabel }}</span>
-          <span>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
+          <span v-if="canManageAppDetails" class="list-design-uid" :title="design.designUid">{{ design.designUid }}</span>
+          <span v-else>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
         </div>
       </div>
     </template>
@@ -53,17 +54,17 @@
       </div>
       <div class="design-details">
         <div v-if="viewMode === 'list'" class="details-heading">
-          <span v-if="isMerchantUser || isAdminUser" class="list-status" :style="{ color: statusColor }">{{ statusText }}</span>
-          <span>{{ t('project.designDetails') }}</span>
+          <span v-if="isMerchantUser || isAdminUser" class="list-status" :style="{ color: statusColor }" :title="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText">{{ statusText }}</span>
         </div>
       <div class="meta">
        
-        <div v-if="design.product?.appId">
-           <span v-if="canManageAppDetails">{{ t('card.appId') }}: {{ design.product?.appId }}</span>
+        <div v-if="design.product?.appId" class="product-meta">
+           <span v-if="canManageAppDetails" class="app-id"><span class="meta-label">{{ t('card.appId') }}: </span>{{ design.product?.appId }}</span>
            <div v-if="isAdminUser" class="store-weight-editor">
              <span>{{ t('card.storeWeight') }}</span>
              <el-input-number
                v-model="storeWeightDraft"
+               :aria-label="t('card.storeWeight')"
                :min="MIN_STORE_WEIGHT"
                :max="MAX_STORE_WEIGHT"
                :step="1"
@@ -98,16 +99,16 @@
           </span>
         </div>
         
-        <span v-if="canManageAppDetails">{{ t('card.design') }}: {{ design.designUid }}</span>
+        <span v-if="canManageAppDetails && viewMode !== 'list'">{{ t('card.design') }}: {{ design.designUid }}</span>
         <!-- 显示最后一次设计更新时间 -->
-        <div v-if="canManageAppDetails" class="last-go-live-row">
-          <span>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
+        <div v-if="canManageAppDetails" class="last-go-live-row updated-cell">
+          <span><span class="meta-label">{{ t('card.lastUpdated') }}: </span>{{ lastUpdatedText }}</span>
         </div>
-        <div v-if="canManageAppDetails && hasDownloadablePackage" class="last-go-live-row">
-          <span>{{ t('card.lastPackage') }}: {{ lastPackageTimeText }}</span>
+        <div v-if="canManageAppDetails && hasDownloadablePackage" class="last-go-live-row packaged-cell">
+          <span><span class="meta-label">{{ t('card.lastPackage') }}: </span>{{ lastPackageTimeText }}</span>
         </div>
-        <div v-if="canManageAppDetails" class="last-go-live-row">
-          <span>{{ t('card.lastGoLive') }}: {{ lastGoLiveText }}</span>
+        <div v-if="canManageAppDetails" class="last-go-live-row published-cell">
+          <span><span class="meta-label">{{ t('card.lastGoLive') }}: </span>{{ lastGoLiveText }}</span>
           <el-tooltip v-if="hasNewRelease" :content="t('card.newRelease')" placement="top">
             <span class="new-release-indicator" role="img" :aria-label="t('card.newRelease')">
               <span class="dot"></span>
@@ -1233,47 +1234,43 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card.design-card--list {
   height: auto;
   display: grid;
-  grid-template-columns: 60px minmax(0, 1fr) minmax(180px, 0.7fr) 190px;
-  gap: 20px;
+  grid-template-columns: var(--design-list-columns);
+  gap: 16px;
   align-items: center;
-  padding: 16px 18px;
+  padding: 12px 18px;
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  font-size: 12px;
 }
 .design-card--list:hover { transform: none; background: var(--studio-surface-raised); }
-.design-card--list :deep(.el-card__header) {
-  grid-column: 2;
-  grid-row: 1;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
+.design-card--list :deep(.el-card__header) { grid-column: 2; grid-row: 1; padding: 0; border: 0; min-width: 0; }
 .design-card--list :deep(.el-card__body),
-.design-card--list .design-info { display: contents; }
+.design-card--list .design-info,
+.design-card--list .design-details,
+.design-card--list .meta,
+.design-card--list .product-meta { display: contents; }
+.design-card--list .meta { font-size: 12px; }
 .design-card--list .card-header { padding: 0; }
 .design-card--list .title { font-weight: 650; font-size: 14px; }
-.design-card--list .design-background {
-  grid-column: 1;
-  grid-row: 1;
-  width: 60px;
-  height: 60px;
-  padding: 0;
-  border-radius: 10px;
-}
+.design-card--list .status-dot { display: none; }
+.design-card--list .design-background { grid-column: 1; grid-row: 1; width: 48px; height: 48px; padding: 0; border-radius: 10px; }
 .design-card--list .background-image { object-fit: contain; }
-.design-card--list .design-details { grid-column: 3; grid-row: 1; min-width: 0; }
-.details-heading { color: var(--studio-text-muted); font-size: 12px; line-height: 1.8; }
-.list-status { margin-right: 8px; font-weight: 600; }
-.design-card--list .meta { font-size: 12px; overflow-wrap: anywhere; }
-.design-card--list .actions-bar { grid-column: 4; grid-row: 1; align-self: center; }
+.design-card--list .details-heading { grid-column: 3; grid-row: 1; font-weight: 600; }
+.design-card--list .app-id { grid-column: 4; grid-row: 1; }
+.design-card--list .store-weight-editor { grid-column: 5; grid-row: 1; margin: 0; }
+.design-card--list .store-weight-editor > span,
+.design-card--list .meta-label { display: none; }
+.design-card--list .app-ops-entry:not(:first-child) { margin-left: 0; }
+.design-card--list .app-ops-entry { grid-column: 6; grid-row: 1; margin: 0; }
+.design-card--list .business-metrics-row { grid-column: 7; grid-row: 1; flex-direction: column; align-items: flex-start; gap: 4px; }
+.design-card--list .updated-cell { grid-column: 8; grid-row: 1; }
+.design-card--list .packaged-cell { grid-column: 9; grid-row: 1; }
+.design-card--list .published-cell { grid-column: 10; grid-row: 1; }
+.design-card--list .package-info { grid-column: 11; grid-row: 1; }
+.design-card--list .actions-bar { grid-column: 12; grid-row: 1; align-self: center; }
+.design-card--list .last-go-live-row { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.design-card--list .list-subtitle { flex-wrap: nowrap; margin-top: 4px; }
+.list-design-uid { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .design-card--list .primary-edit-action { background: var(--studio-primary); border-color: var(--studio-primary); color: var(--studio-on-primary, #fff); }
-@media (max-width: 800px) {
-  .design-card.design-card--list { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 14px; }
-  .design-card--list .design-background { width: 52px; height: 52px; }
-  .design-card--list .design-details { grid-column: 2; grid-row: 2; }
-  .design-card--list .actions-bar { grid-column: 2; grid-row: 3; justify-content: flex-start; max-width: 230px; }
-}
-
-
 </style>

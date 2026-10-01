@@ -7,7 +7,7 @@ const pageSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'ut
 describe('My Designs Store weight administration', () => {
   it('renders the editor only for administrators with an application', () => {
     expect(cardSource).toContain('v-if="isAdminUser" class="store-weight-editor"')
-    expect(cardSource).toContain('<div v-if="design.product?.appId">')
+    expect(cardSource).toContain('<div v-if="design.product?.appId" class="product-meta">')
   })
 
   it('uses independent per-application saving state', () => {

@@ -12,7 +12,7 @@ describe('published face catalog', () => {
     expect(await loadFaces({ keyword: '', device: '42', sort: 'createdAt:desc', page: 2 })).toEqual(page)
     const [url, options] = fetch.mock.calls[0]
     const parsed = new URL(url, 'https://studio.wristo.io')
-    expect(parsed.pathname).toBe('/wristo-api/public/products/page/category')
+    expect(parsed.pathname).toBe('/wristo-api/public/products/faces')
     expect(parsed.searchParams.get('device')).toBe('42')
     expect(parsed.searchParams.get('orderBy')).toBe('createdAt:desc')
     expect(parsed.searchParams.get('pageNum')).toBe('2')
@@ -24,7 +24,7 @@ describe('published face catalog', () => {
     vi.stubGlobal('fetch', fetch)
     expect(await loadFaces({ keyword: '  A&B  ', device: '', sort: 'download:desc', page: 1 })).toEqual(page)
     const parsed = new URL(fetch.mock.calls[0][0], 'https://studio.wristo.io')
-    expect(parsed.pathname).toBe('/wristo-api/public/products/search/v2')
+    expect(parsed.pathname).toBe('/wristo-api/public/products/faces')
     expect(parsed.searchParams.get('keyword')).toBe('A&B')
   })
   it('reports unauthenticated API errors without redirecting', async () => {

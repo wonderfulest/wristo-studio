@@ -2,6 +2,7 @@
   <div class="my-designs">
     <!-- 搜索栏 -->
     <div class="search-bar">
+      <div class="filter-fields">
       <!-- 当前设备展示与选择 -->
       <DeviceDisplay ref="deviceDisplayRef" />
       <el-input v-model="searchName" :placeholder="t('project.searchName')" class="name-filter" clearable @keyup.enter="handleSearch" />
@@ -39,6 +40,13 @@
         <el-option label="WPay" value="wpay" />
         <el-option :label="t('payment.garminOfficial')" value="garmin" />
       </el-select>
+      <el-button type="primary" @click="handleSearch">
+        <Icon icon="material-symbols:search" />
+        {{ t('common.search') }}
+      </el-button>
+      </div>
+      <div class="filter-preferences">
+        <Icon class="sort-icon" icon="material-symbols:sort-rounded" aria-hidden="true" />
       <el-select v-model="sortField" :placeholder="t('project.sortField')" @change="handleSortChange" class="sort-field-filter">
         <el-option :label="t('project.createdTime')" value="created_at" />
         <el-option :label="t('project.updatedTime')" value="updated_at" />
@@ -48,10 +56,6 @@
         <el-option :label="t('project.ascending')" value="asc" />
         <el-option :label="t('project.descending')" value="desc" />
       </el-select>
-      <el-button type="primary" @click="handleSearch">
-        <Icon icon="material-symbols:search" />
-        {{ t('common.search') }}
-      </el-button>
       <el-segmented
         v-if="isAdminUser"
         v-model="designScope"
@@ -63,8 +67,9 @@
         <el-switch
           v-model="showCreator"
           :active-text="t('project.showCreator')"
-          :inactive-text="t('project.hideCreator')"
+          :aria-label="t('project.showCreator')"
         />
+      </div>
       </div>
     </div>
 
@@ -91,9 +96,18 @@
       </div>
     </div>
 
+    <div class="design-table-scroll" :class="{ 'is-list': viewMode === 'list' }">
     <div v-if="viewMode === 'list' && designs.length" class="list-heading" aria-hidden="true">
       <span>{{ t('card.design') }}</span>
-      <span>{{ t('project.designDetails') }}</span>
+      <span>{{ t('project.status') }}</span>
+      <span>{{ t('card.appId') }}</span>
+      <span>{{ t('card.storeWeight') }}</span>
+      <span>{{ t('card.score') }}</span>
+      <span>{{ t('meter.downloads') }} / {{ t('meter.orders') }}</span>
+      <span>{{ t('card.lastUpdated') }}</span>
+      <span>{{ t('card.lastPackage') }}</span>
+      <span>{{ t('card.lastGoLive') }}</span>
+      <span>{{ t('card.buildActions') }}</span>
       <span>{{ t('card.actions') }}</span>
     </div>
     <div class="design-collection" :class="`design-collection--${viewMode}`">
@@ -137,6 +151,8 @@
           @transfer-owner="openTransferOwnerDialog"
         />
       </div>
+    </div>
+
     </div>
 
     <el-dialog
@@ -1170,13 +1186,15 @@ const handleGoLiveSuccess = () => {
 .view-switch button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .design-collection--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
 .design-item { min-width: 0; }
+.design-table-scroll.is-list { overflow-x: auto; --design-list-columns: 48px minmax(200px, 1fr) 80px 80px 100px 130px 125px 140px 140px 140px 150px 190px; }
+.design-table-scroll.is-list > * { min-width: 1835px; }
 .design-collection--list { border: 1px solid var(--studio-border); border-radius: 0 0 14px 14px; overflow: hidden; }
 .design-collection--list .design-item + .design-item { border-top: 1px solid var(--studio-border); }
 .list-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr) 190px;
-  gap: 20px;
-  padding: 10px 18px 10px 98px;
+  grid-template-columns: var(--design-list-columns);
+  gap: 16px;
+  padding: 10px 18px;
   border: 1px solid var(--studio-border);
   border-bottom: 0;
   border-radius: 14px 14px 0 0;
@@ -1186,11 +1204,9 @@ const handleGoLiveSuccess = () => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.list-heading span:first-child { grid-column: 1 / 3; padding-left: 64px; }
 .list-heading span:last-child { text-align: right; }
-@media (max-width: 800px) {
-  .list-heading { display: none; }
-  .design-collection--list { border-radius: 14px; }
-}
+
 
 .pagination-container {
   display: flex;
@@ -1204,78 +1220,72 @@ const handleGoLiveSuccess = () => {
 /* Header action button tweaks now live in DesignCard.vue */
 
 .search-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-  padding: 14px;
+  margin-bottom: 20px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-lg);
   background: var(--studio-surface-raised);
-  box-shadow: var(--studio-shadow-sm);
+  overflow: hidden;
+}
+
+.filter-fields,
+.filter-preferences {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
 }
 
-.name-filter {
-  width: 220px;
+.filter-preferences {
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--studio-border);
+  background: var(--studio-surface-soft);
 }
 
-.app-id-filter {
-  width: 160px;
-}
-
-.designer-filter {
-  flex: 0 0 200px;
-  width: 200px;
-}
-
-.payment-filter {
-  width: 220px;
-}
-
-.status-filter {
-  width: 180px;
-}
-
-.sort-field-filter {
-  width: 180px;
-}
-
-.sort-order-filter {
-  width: 180px;
-}
-
-.scope-filter {
-  min-height: 40px;
-  flex: 0 0 auto;
-}
-
+.sort-icon { flex-shrink: 0; font-size: 18px; color: var(--studio-text-muted); }
+.name-filter { width: 220px; }
+.app-id-filter { width: 144px; }
+.designer-filter { flex: 0 0 200px; width: 200px; }
+.payment-filter { width: 190px; }
+.status-filter { width: 170px; }
+.sort-field-filter { width: 170px; }
+.sort-order-filter { width: 150px; }
+.scope-filter { min-height: 36px; flex: 0 0 auto; }
 .search-bar :deep(.scope-filter .el-segmented__item) {
   min-width: 72px;
   padding: 0 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
-
 .display-options {
   display: flex;
   align-items: center;
   margin-left: auto;
-  min-height: 40px;
-  padding-left: 8px;
+  min-height: 36px;
+  padding-left: 12px;
   color: var(--studio-text-muted);
-  font-weight: 650;
 }
-
+.display-options :deep(.el-switch__label) { color: var(--studio-text-muted); font-weight: 500; }
+.display-options :deep(.el-switch__label.is-active) { color: var(--studio-primary); }
 .search-bar :deep(.el-input__wrapper),
 .search-bar :deep(.el-select__wrapper) {
   min-height: 40px;
+  border-radius: 9px;
   background: var(--studio-surface);
+  box-shadow: 0 0 0 1px var(--studio-border) inset;
+  transition: box-shadow 0.18s ease;
 }
-
-.search-bar :deep(.el-button) {
-  min-height: 40px;
-  padding: 0 16px;
+.search-bar :deep(.el-input__wrapper:hover),
+.search-bar :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--studio-primary-border) inset;
 }
+.search-bar :deep(.el-input__wrapper.is-focus),
+.search-bar :deep(.el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 1px var(--studio-primary) inset;
+}
+.filter-preferences :deep(.el-select__wrapper) { min-height: 34px; }
+.search-bar :deep(.el-button) { min-height: 40px; padding: 0 18px; border-radius: 9px; }
+.search-bar :deep(.el-button .iconify) { margin-right: 6px; }
 
 /* Package rank color is styled within DesignCard.vue */
 
@@ -1294,6 +1304,7 @@ const handleGoLiveSuccess = () => {
     align-items: stretch;
   }
 
+  .status-filter,
   .name-filter,
   .app-id-filter,
   .designer-filter,
@@ -1304,9 +1315,10 @@ const handleGoLiveSuccess = () => {
     width: 100%;
   }
 
-  .display-options {
-    margin-left: 0;
-  }
+  .designer-filter { flex-basis: 100%; }
+  .filter-fields, .filter-preferences { padding: 12px; gap: 10px; }
+  .sort-icon { display: none; }
+  .display-options { margin-left: 0; padding-left: 0; }
   
   .el-col {
     padding: 0 10px;

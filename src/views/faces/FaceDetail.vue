@@ -22,6 +22,7 @@
               <img :src="item.url" :alt="item.alt" loading="lazy" />
             </button>
           </div>
+          <FaceImageUpload v-if="isOwner" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
           <section class="information-section">
             <h2>Compatible devices <span v-if="face.devices?.length">{{ face.devices.length }}</span></h2>
             <div v-if="face.devices?.length" class="devices">
@@ -41,17 +42,22 @@
             <div><dt>Price</dt><dd>{{ face.price === 0 ? 'Free' : face.price == null ? 'See Connect IQ' : `$${face.price.toFixed(2)}` }}</dd></div>
           </dl>
           <div class="primary-actions">
-            <RouterLink v-if="face.designId" class="primary-button" :to="{ path: '/design', query: { id: face.designId } }">
+            <RouterLink v-if="isOwner && face.designId" class="primary-button" :to="{ path: '/design', query: { id: face.designId } }">
               <Icon icon="material-symbols:edit-square-outline" /> Edit in Builder <span aria-hidden="true">↗</span>
             </RouterLink>
+            <button v-else-if="face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">
+              {{ remixing ? 'Creating your copy…' : 'Remix in Builder' }}
+            </button>
             <p v-else class="source-unavailable">This watch face is not available in the builder.</p>
             <a v-if="downloadUrl" class="secondary-button" :href="downloadUrl" target="_blank" rel="noopener noreferrer">
               <Icon icon="material-symbols:download-rounded" /> Download on Connect IQ
             </a>
           </div>
+          <p v-if="remixError" class="sharing-error" role="alert">{{ remixError }}</p>
+          <p v-if="!isOwner && face.allowRemix" class="muted">Create your own copy with attribution to the original design.</p>
           <div class="share-row">
             <span>SHARE</span>
-            <a v-for="item in socialLinks" :key="item.label" :href="item.href" target="_blank" rel="noopener noreferrer" :aria-label="`Share ${face.name} on ${item.label} (opens in a new tab)`">{{ item.label }}</a>
+            <button v-for="platform in socialPlatforms" :key="platform" class="share-button" aria-haspopup="dialog" @click="sharePlatform = platform">{{ platform }}</button>
             <button class="share-button" @click="copyLink">Copy link <span aria-hidden="true">↗</span></button>
             <span role="status">{{ shareStatus }}</span>
           </div>
@@ -63,11 +69,22 @@
             <span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>
             <span>Designed by <strong>{{ creator }}</strong></span>
           </div>
-          <section class="information-section">
-            <h2>Description</h2>
-            <p class="description">{{ face.description?.trim() || 'No description provided.' }}</p>
-            <div v-if="face.tags?.length" class="tags"><span v-for="tag in face.tags" :key="tag.id">{{ tag.name }}</span></div>
+          <section v-if="isOwner" class="information-section sharing-settings" aria-labelledby="sharing-heading">
+            <h2 id="sharing-heading">Sharing settings</h2>
+            <div class="sharing-setting">
+              <div><strong id="gallery-label">Show in gallery</strong><p id="gallery-help">List this watch face in the public gallery. When off, anyone with the link can still view it.</p></div>
+              <button type="button" role="switch" :aria-checked="!!face.publiclyVisible" aria-labelledby="gallery-label" aria-describedby="gallery-help" :disabled="saving" @click="toggleSharing('publiclyVisible')">{{ face.publiclyVisible ? 'On' : 'Off' }}</button>
+            </div>
+            <div class="sharing-setting">
+              <div><strong id="remix-label">Allow remixing</strong><p id="remix-help">Let others copy and edit this design. Turning this off stops new copies; existing copies remain.</p></div>
+              <button type="button" role="switch" :aria-checked="!!face.allowRemix" aria-labelledby="remix-label" aria-describedby="remix-help" :disabled="saving" @click="toggleSharing('allowRemix')">{{ face.allowRemix ? 'On' : 'Off' }}</button>
+            </div>
+            <p v-if="sharingError" class="sharing-error" role="alert">{{ sharingError }}</p>
+            <p class="muted" role="status">{{ saving ? 'Saving…' : sharingStatus }}</p>
           </section>
+          <FaceDescription :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section" :app-id="face.appId" :description="face.description" :is-owner="isOwner" @saved="face.description = $event">
+            <div v-if="face.tags?.length" class="tags"><span v-for="tag in face.tags" :key="tag.id">{{ tag.name }}</span></div>
+          </FaceDescription>
           <section v-if="dataFields.length" class="information-section supported-data-fields" aria-labelledby="data-fields-heading">
             <h2 id="data-fields-heading">Supported data fields <span>{{ dataFields.length }}</span></h2>
             <ul class="data-field-list">
@@ -81,32 +98,78 @@
         </section>
       </article>
     </main>
+    <SocialShareDialog v-if="sharePlatform && face" :key="`${face.appId}-${sharePlatform}`" :face="face" :platform="sharePlatform" @close="sharePlatform = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { updateFaceSharing, remixFace, type FaceSharingSettings } from './permissions'
 import { Icon } from '@iconify/vue'
 import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
-import { buildFaceShareLinks, faceShareUrl } from './sharing'
+import SocialShareDialog from './SocialShareDialog.vue'
+import { faceShareUrl, type SocialPlatform } from './sharing'
 import { faceDownloadUrl, faceImage, loadFaceDetail, type FaceDetail } from './catalog'
+
+import FaceImageUpload from './FaceImageUpload.vue'
+import FaceDescription from './FaceDescription.vue'
+import type { FaceImages } from './content'
 
 import { supportedDataFields } from './dataFields'
 
+const sharePlatform = ref<SocialPlatform | null>(null)
+const socialPlatforms: SocialPlatform[] = ['X', 'Facebook', 'Reddit']
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+const isOwner = computed(() => userStore.userInfo?.id != null && face.value?.ownerId != null && String(userStore.userInfo.id) === String(face.value.ownerId))
+const saving = ref(false)
+const sharingError = ref('')
+const sharingStatus = ref('')
+const remixing = ref(false)
+const remixError = ref('')
+async function toggleSharing(key: keyof FaceSharingSettings) {
+  if (!face.value || !isOwner.value || saving.value) return
+  const current = request
+  const appId = face.value.appId
+  const ownerId = userStore.userInfo?.id
+  saving.value = true
+  sharingError.value = ''
+  sharingStatus.value = ''
+  try {
+    const result = await updateFaceSharing(appId, { [key]: !face.value[key] })
+    if (current !== request || !face.value || ownerId !== userStore.userInfo?.id) return
+    Object.assign(face.value, result)
+    sharingStatus.value = 'Sharing settings saved.'
+  } catch (cause) {
+    if (current === request) sharingError.value = cause instanceof Error ? cause.message : 'Could not save. Please try again.'
+  } finally { if (current === request) saving.value = false }
+}
+async function remix() {
+  if (!face.value?.designId || !face.value.allowRemix || remixing.value) return
+  const current = request
+  remixing.value = true
+  remixError.value = ''
+  try {
+    const designUid = await remixFace(face.value.designId)
+    if (current === request) await router.push({ path: '/design', query: { id: designUid } })
+  } catch (cause) {
+    if (current === request) remixError.value = cause instanceof Error ? cause.message : 'Could not create a copy. Please try again.'
+  } finally { if (current === request) remixing.value = false }
+}
 const face = ref<FaceDetail | null>(null)
-const dataFields = computed(() => supportedDataFields(face.value?.configJson))
+const dataFields = computed(() => supportedDataFields(face.value?.dataFieldCatalog ?? face.value?.configJson))
 const loading = ref(true)
 const error = ref('')
 const selectedImage = ref('')
 const imageFailed = ref(false)
 const shareStatus = ref('')
 const shareUrl = computed(() => face.value ? faceShareUrl(window.location.origin, face.value.appId) : '')
-const socialLinks = computed(() => buildFaceShareLinks(shareUrl.value, face.value?.name || ''))
 async function copyLink() {
   try {
     await navigator.clipboard.writeText(shareUrl.value)
@@ -128,6 +191,13 @@ const images = computed(() => {
   if (cover) items.unshift({ url: cover, alt: face.value.name })
   return items.filter((item, index) => item.url && items.findIndex(other => other.url === item.url) === index)
 })
+function onImagesUploaded(updated: FaceImages) {
+  if (!face.value || !isOwner.value) return
+  const previous = new Set(images.value.map(image => image.url))
+  face.value.productImages = updated
+  const added = images.value.find(image => !previous.has(image.url))
+  if (added) selectImage(added.url)
+}
 const selectImage = (url: string) => {
   selectedImage.value = url
   imageFailed.value = false
@@ -138,10 +208,16 @@ const formatDate = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 async function load() {
+  sharePlatform.value = null
   const current = ++request
   loading.value = true
   error.value = ''
   shareStatus.value = ''
+  sharingError.value = ''
+  sharingStatus.value = ''
+  remixError.value = ''
+  saving.value = false
+  remixing.value = false
   face.value = null
   try {
     const result = await loadFaceDetail(String(route.params.appId || ''))
@@ -159,6 +235,12 @@ onBeforeUnmount(() => { request += 1 })
 </script>
 
 <style scoped>
+.sharing-setting { display: flex; align-items: center; gap: 20px; justify-content: space-between; margin: 16px 0; }
+.sharing-setting p { color: var(--studio-text-muted); font-size: 14px; line-height: 1.5; margin: 6px 0 0; }
+.sharing-setting button { flex: 0 0 60px; min-height: 44px; border: 1px solid var(--studio-border-strong); border-radius: 22px; background: var(--studio-surface-soft); color: var(--studio-text); font: inherit; cursor: pointer; }
+.sharing-setting button[aria-checked='true'] { background: var(--studio-primary); color: #fff; }
+button:disabled { opacity: .6; cursor: wait; }
+.sharing-error { color: var(--studio-danger, #c93838); }
 .face-detail-page { min-height: 100vh; background: var(--studio-bg); color: var(--studio-text); font-family: 'Yantramanav', sans-serif; }
 .detail-main { max-width: 1280px; padding: 48px 40px 80px; margin: auto; }
 .back-link { display: inline-block; margin-bottom: 30px; color: var(--studio-text-muted); font-size: 15px; text-decoration: none; }

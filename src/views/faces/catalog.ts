@@ -24,7 +24,11 @@ export interface FaceDevice {
   displayName: string
 }
 export interface FaceDetail extends PublishedFace {
+  ownerId?: number
+  publiclyVisible?: boolean
+  allowRemix?: boolean
   configJson?: unknown
+  dataFieldCatalog?: unknown
   description?: string | null
   user?: { nickname?: string | null; username?: string | null; avatar?: string | null } | null
   createdAt?: string | null
@@ -33,6 +37,8 @@ export interface FaceDetail extends PublishedFace {
   tags?: Array<{ id: number; name: string }> | null
   productImages?: Array<{
     id: number
+    type?: string
+    downloadUrl?: string | null
     imageUrl?: string | null
     previewUrl?: string | null
     altText?: string | null
@@ -63,9 +69,9 @@ export function loadFaces(query: FaceQuery): Promise<FacePage> {
   if (query.device) params.device = query.device
   if (query.keyword.trim()) {
     params.keyword = query.keyword.trim()
-    return publicGet('search/v2', params)
+    return publicGet('faces', { ...params, orderBy: query.sort })
   }
-  return publicGet('page/category', { ...params, slug: 'whole', orderBy: query.sort })
+  return publicGet('faces', { ...params, orderBy: query.sort })
 }
 export const loadFaceDevices = () => publicGet<FaceDevice[]>('garmin-devices/list', {})
 export const faceImage = (face: PublishedFace) => face.garminImageUrl || face.previewImageUrl || face.heroFile?.url || face.rawImageUrl || face.fallbackImageUrl || ''

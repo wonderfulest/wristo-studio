@@ -102,12 +102,6 @@
                 <span v-if="face.download != null">↓ {{ face.download.toLocaleString() }}</span>
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
               </div>
-              <div class="face-actions">
-                <RouterLink :to="faceDetailsUrl(face.appId)">
-                  View details
-                  <span aria-hidden="true">↗</span>
-                </RouterLink>
-              </div>
             </div>
           </article>
         </div>
@@ -172,7 +166,7 @@ const devices = ref<FaceDevice[]>([])
 const draft = ref(''),
   keyword = ref(''),
   device = ref(String(useRoute().query.device || '')),
-  sort = ref('download:desc')
+  sort = ref('createdAt:desc')
 const page = ref(1),
   pages = ref(0),
   total = ref(0),
@@ -510,18 +504,6 @@ h2 {
 .face-meta span:first-child {
   margin-right: auto;
 }
-.face-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-  margin-top: 12px;
-  font-size: 12px;
-}
-.face-actions a:hover {
-  text-decoration: underline;
-}
 .image-placeholder {
   font-size: 12px;
   color: var(--muted);
@@ -696,9 +678,6 @@ select:focus-visible {
   }
   .face-info {
     padding: 11px;
-  }
-  .face-actions {
-    font-size: 11px;
   }
   .catalog {
     padding: 28px 16px 42px;

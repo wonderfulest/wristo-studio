@@ -10,19 +10,24 @@ export const usePendingGoLiveStore = defineStore('pendingGoLive', () => {
 
   const count = computed<number>(() => items.value.length)
 
+  let requestVersion = 0
+
   async function fetch(): Promise<void> {
+    const version = ++requestVersion
     loading.value = true
     try {
       const res: ApiResponse<Product[]> = await productsApi.getGoLivePendingList()
-      items.value = Array.isArray(res.data) ? res.data : []
+      if (version === requestVersion) items.value = Array.isArray(res.data) ? res.data : []
     } catch {
-      items.value = []
+      if (version === requestVersion) items.value = []
     } finally {
-      loading.value = false
+      if (version === requestVersion) loading.value = false
     }
   }
 
   function setItems(list: Product[]): void {
+    requestVersion++
+    loading.value = false
     items.value = list
   }
 
