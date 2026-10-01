@@ -5,7 +5,7 @@ describe('Studio access policy', () => {
   it.each([
     ['administrator', [{ roleCode: 'ROLE_ADMIN' }]],
     ['merchant', [{ roleCode: 'ROLE_MERCHANT' }]],
-    ['multi-role merchant', [{ roleCode: 'ROLE_USER' }, { roleCode: 'ROLE_MERCHANT' }]],
+    ['multi-role merchant', [{ roleCode: 'ROLE_USER' }, { roleCode: 'ROLE_MERCHANT' }]]
   ])('allows a %s user', (_label, roles) => {
     expect(hasStudioAccess({ roles })).toBe(true)
   })
@@ -14,7 +14,7 @@ describe('Studio access policy', () => {
     ['designer', [{ roleCode: 'ROLE_DESIGNER' }]],
     ['ordinary user', [{ roleCode: 'ROLE_USER' }]],
     ['no roles', []],
-    ['missing roles', undefined],
+    ['missing roles', undefined]
   ])('rejects a user with %s', (_label, roles) => {
     expect(hasStudioAccess({ roles })).toBe(false)
   })
@@ -24,7 +24,7 @@ describe('Studio access policy', () => {
       cancelPendingRedirect: vi.fn(),
       clearStoreAuth: vi.fn(),
       clearLocalAuth: vi.fn(),
-      clearPendingPath: vi.fn(),
+      clearPendingPath: vi.fn()
     }
 
     expect(rejectStudioSession(cleanup)).toBe('/auth/signed-out?reason=forbidden')
@@ -38,38 +38,42 @@ describe('Studio access policy', () => {
     const redirectToLogin = vi.fn()
     const rejectForbidden = vi.fn(() => '/auth/signed-out?reason=forbidden')
 
-    expect(guardStudioRoute({
-      requiresAuth: true,
-      isAuthenticated: true,
-      hasAccess: false,
-      fullPath: '/designs',
-      redirectToLogin,
-      rejectForbidden,
-    })).toBe('/auth/signed-out?reason=forbidden')
+    expect(
+      guardStudioRoute({
+        requiresAuth: true,
+        isAuthenticated: true,
+        hasAccess: false,
+        fullPath: '/designs',
+        redirectToLogin,
+        rejectForbidden
+      })
+    ).toBe('/auth/signed-out?reason=forbidden')
     expect(redirectToLogin).not.toHaveBeenCalled()
     expect(rejectForbidden).toHaveBeenCalledOnce()
   })
 
   it('leaves public routes available without Studio roles', () => {
-    expect(guardStudioRoute({
-      requiresAuth: false,
-      isAuthenticated: false,
-      hasAccess: false,
-      fullPath: '/prg-installer',
-      redirectToLogin: vi.fn(),
-      rejectForbidden: vi.fn(),
-    })).toBeUndefined()
+    expect(
+      guardStudioRoute({
+        requiresAuth: false,
+        isAuthenticated: false,
+        hasAccess: false,
+        fullPath: '/prg-installer',
+        redirectToLogin: vi.fn(),
+        rejectForbidden: vi.fn()
+      })
+    ).toBeUndefined()
   })
 })
 
 describe('mandatory Studio login', () => {
-  it.each(['/', '/designs/new-projects', '/design', '/designs', '/tokens', '/academy', '/moon', '/prg-installer', '/data-catalog-unavailable'])('requires authentication for %s', path => {
+  it.each(['/designs/new-projects', '/design', '/designs', '/tokens', '/academy', '/moon', '/prg-installer', '/data-catalog-unavailable'])('requires authentication for %s', (path) => {
     const redirectToLogin = vi.fn()
     expect(requiresStudioLogin(path)).toBe(true)
     expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: true, fullPath: path, redirectToLogin, rejectForbidden: vi.fn() })).toBe(false)
     expect(redirectToLogin).toHaveBeenCalledWith(path)
   })
-  it.each(['/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', path => {
+  it.each(['/', '/faces', '/faces/', '/faces/123', '/faces/123/', '/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
     expect(requiresStudioLogin(path)).toBe(false)
   })
 })

@@ -43,7 +43,7 @@ onMounted(async () => {
     await router.replace(pendingPath)
   } catch (e: any) {
     userStore.clearAuth()
-    error.value = e?.response?.data?.msg || e.message || t('auth.requestFailed')
+    error.value = e?.response?.data?.msg || e?.msg || e.message || t('auth.requestFailed')
   } finally {
     loading.value = false
   }

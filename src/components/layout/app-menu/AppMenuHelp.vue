@@ -9,6 +9,7 @@
       <span>{{ t('editor.help') }}</span>
     </template>
     <div class="menu-group menu-group--help">
+      <slot />
       <div class="menu-group-title">
         <el-icon><QuestionFilled /></el-icon>
         <span>{{ t('editor.help') }}</span>

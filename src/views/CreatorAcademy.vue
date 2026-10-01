@@ -1,13 +1,5 @@
 <template>
   <div class="academy-page">
-    <header class="academy-topbar">
-      <button type="button" class="academy-brand" @click="startProject">
-        <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" class="academy-logo" />
-        <span>Wristo Studio</span>
-      </button>
-      <el-button type="primary" @click="startProject">进入 Studio</el-button>
-    </header>
-
     <main class="academy-shell">
       <header class="academy-hero">
         <p class="eyebrow">Creator Academy · 中文版</p>
@@ -108,10 +100,6 @@ const chapterIdFromHash = (hash: string) => {
 const activeChapterId = ref(chapterIdFromHash(route.hash))
 let chapterObserver: IntersectionObserver | null = null
 
-const startProject = () => {
-  router.push('/designs/new-projects')
-}
-
 const openChapter = async (id: string) => {
   activeChapterId.value = id
   await router.replace({ path: '/academy', hash: `#${id}` })
@@ -157,44 +145,6 @@ onBeforeUnmount(() => chapterObserver?.disconnect())
   min-height: 100%;
   color: var(--studio-text);
   background: radial-gradient(circle at 72% 0%, color-mix(in srgb, var(--studio-primary) 8%, transparent), transparent 34rem), var(--studio-bg);
-}
-
-.academy-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 58px;
-  padding: 0 24px;
-  background: color-mix(in srgb, var(--studio-surface-raised) 94%, transparent);
-  border-bottom: 1px solid var(--studio-border);
-  backdrop-filter: saturate(160%) blur(14px);
-}
-
-.academy-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0;
-  color: var(--studio-text);
-  font: inherit;
-  font-weight: 750;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.academy-brand:hover {
-  color: var(--studio-primary);
-}
-
-.academy-logo {
-  display: block;
-  width: 28px;
-  height: 28px;
 }
 
 .academy-shell {
@@ -456,10 +406,6 @@ onBeforeUnmount(() => chapterObserver?.disconnect())
 }
 
 @media (max-width: 900px) {
-  .academy-topbar {
-    padding: 0 16px;
-  }
-
   .academy-shell {
     width: min(100% - 24px, 760px);
     padding-top: 30px;
@@ -493,9 +439,6 @@ onBeforeUnmount(() => chapterObserver?.disconnect())
 }
 
 @media (max-width: 560px) {
-  .academy-brand span {
-    display: none;
-  }
   .academy-hero h1 {
     font-size: 36px;
   }

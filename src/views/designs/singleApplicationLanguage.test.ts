@@ -16,10 +16,4 @@ describe('single application language creation', () => {
     expect(source).toContain('appLanguage: appLanguage.value,')
   })
 
-  it('persists the selected metadata for blank and copied applications', () => {
-    const source = readSource('./NewProjects.vue')
-    expect(source.match(/configJson: withAppLanguage/g)).toHaveLength(2)
-    expect(source).toContain('designStore.setAppLanguage(appLanguage)')
-    expect(source).toContain("if (!copyUpdateRes || copyUpdateRes.code !== 0)")
-  })
 })

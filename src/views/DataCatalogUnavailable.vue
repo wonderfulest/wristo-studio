@@ -19,7 +19,7 @@ const retrying = ref(false)
 
 const returnTo = computed(() => {
   const value = route.query.returnTo
-  return typeof value === 'string' && /^\/(?!\/)/.test(value) ? value : '/designs/new-projects'
+  return typeof value === 'string' && /^\/(?!\/)/.test(value) ? value : '/design'
 })
 
 const retry = async () => {

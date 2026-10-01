@@ -23,6 +23,18 @@ const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/faces/:appId',
+    name: 'FaceDetail',
+    component: () => import('@/views/faces/FaceDetail.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/faces',
+    name: 'Faces',
+    component: () => import('@/views/Faces.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/auth/callback',
     name: 'AuthCallback',
     component: () => import('@/views/AuthCallback.vue'),
@@ -83,7 +95,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Home',
     component: Layout,
-    redirect: '/designs/new-projects',
+    redirect: '/faces',
     meta: { requiresAuth: true },
     children: [
       {
@@ -116,7 +128,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'new-projects',
             name: 'new-projects',
-            component: () => import('@/views/designs/NewProjects.vue'),
+            redirect: (to) => ({ path: '/design', query: to.query }),
           },
           {
             path: 'copy',
@@ -246,11 +258,11 @@ router.beforeEach(async (to) => {
   }
 
   if ((to.meta as any).hideForMerchant && userStore.isMerchantUser) {
-    return '/designs/new-projects'
+    return '/design'
   }
 
   if ((to.meta as any).requiresMerchant && !userStore.isMerchantUser) {
-    return '/designs/new-projects'
+    return '/design'
   }
 })
 

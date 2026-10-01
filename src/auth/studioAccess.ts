@@ -1,8 +1,11 @@
 const STUDIO_ROLE_CODES = new Set(['ROLE_ADMIN', 'ROLE_MERCHANT'])
 
-type StudioUser = {
-  roles?: Array<{ roleCode: string }>
-} | null | undefined
+type StudioUser =
+  | {
+      roles?: Array<{ roleCode: string }>
+    }
+  | null
+  | undefined
 
 export type StudioSessionCleanup = {
   cancelPendingRedirect: () => void
@@ -49,4 +52,8 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
   return undefined
 }
 
-export const requiresStudioLogin = (path: string) => !['/auth/callback', '/auth/signed-out'].includes(path)
+export const requiresStudioLogin = (path: string) => {
+  const normalized = path.replace(/\/$/, '') || '/'
+  return !['/', '/faces', '/auth/callback', '/auth/signed-out'].includes(normalized)
+    && !/^\/faces\/[^/]+$/.test(normalized)
+}

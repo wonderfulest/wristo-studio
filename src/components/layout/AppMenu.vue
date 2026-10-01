@@ -1,71 +1,50 @@
 <template>
-  <nav class="app-menu">
-    <el-menu
-      :default-active="activeMenu"
-      mode="horizontal"
-      @select="handleSelect"
-      class="menu-list"
-    >
-      <div class="menu-leading-zone">
-        <!-- Actions group and items -->
-        <AppMenuActions
-          :on-screenshot="handleScreenshot"
-          :on-record-gif="handleRecordGif"
-          :on-verify="() => verificationDrawerVisible = true"
-          :on-export-wrt="handleExportWrt"
-          :exporting-wrt="exportingWrt"
-          :on-import-wrt="handleImportWrt"
-          :on-open-properties="() => propertiesPanel && propertiesPanel.value && propertiesPanel.value.show && propertiesPanel.value.show()"
+  <nav class="app-menu" :inert="disabled || undefined" :aria-disabled="disabled">
+    <el-menu :default-active="activeMenu" mode="horizontal" :ellipsis="false" @select="handleSelect" class="menu-list">
+      <AppMenuActions
+        :on-screenshot="handleScreenshot"
+        :on-record-gif="handleRecordGif"
+        :on-verify="() => verificationDrawerVisible = true"
+        :on-export-wrt="handleExportWrt"
+        :exporting-wrt="exportingWrt"
+        :on-import-wrt="handleImportWrt"
+        :on-open-properties="() => propertiesPanel?.show()"
+      >
+        <slot name="file-actions" />
+      </AppMenuActions>
+      <el-sub-menu index="insert">
+        <template #title>{{ t('studioMenu.insert') }}</template>
+        <AppMenuTimeGroup @add-element="handleAddElement" />
+        <AppMenuDataFieldGroup
+          @add-data-field="handleAddDataField"
+          @add-goal-progress-bar="handleAddGoalProgressBarField"
+          @add-goal-arc="handleAddGoalArcField"
+          @add-element="handleAddElement"
         />
-        <el-menu-item index="actions/save" @click="handleSave">
-          <el-icon><CircleCheck /></el-icon>
-          <span>{{ t('common.save') }}</span>
+        <AppMenuShape @add-element="handleAddElement" />
+        <AppMenuIndicator @add-element="handleAddElement" />
+        <AppMenuWeatherGroup @add-element="handleAddElement" />
+        <AppMenuImageGroup @add-element="handleAddElement" />
+        <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
+          <Icon icon="material-symbols:font-download-outline" />
+          <span>Bitmap Fonts</span>
         </el-menu-item>
-        <VisualThemeQuickSelect @edit="openVisualThemeEditor" />
-        <LayoutQuickSelect />
-
-        <!-- Main menu divider -->
-        <el-divider direction="vertical" class="menu-divider" />
-      </div>
-      <!-- Time group and items -->
-      <AppMenuTimeGroup @add-element="handleAddElement" />
-      <!-- Health data group -->
-      <AppMenuDataFieldGroup
-        @add-data-field="handleAddDataField"
-        @add-goal-progress-bar="handleAddGoalProgressBarField"
-        @add-goal-arc="handleAddGoalArcField"
-        @add-element="handleAddElement"
-      />
-  
-      <!-- Shape group -->
-      <AppMenuShape @add-element="handleAddElement" />
-
-      <!-- Status indicator group -->
-      <AppMenuIndicator @add-element="handleAddElement" />
-
-      <AppMenuWeatherGroup @add-element="handleAddElement" />
-      <!-- Image group -->
-      <AppMenuImageGroup @add-element="handleAddElement" />
-
-      <!-- Auxiliary menu divider -->
-      <el-divider direction="vertical" class="menu-divider" />
-
-      <el-menu-item index="navigation/tokens" @click="handleOpenTokens">
-        <Icon icon="material-symbols:data-object" />
-        <span>{{ t('tokens.nav') }}</span>
-      </el-menu-item>
-
-      <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
-        <Icon icon="material-symbols:font-download-outline" />
-        <span>Bitmap Fonts</span>
-      </el-menu-item>
-
+      </el-sub-menu>
+      <el-sub-menu index="appearance">
+        <template #title>{{ t('studioMenu.design') }}</template>
+        <div class="appearance-options">
+          <VisualThemeQuickSelect @edit="openVisualThemeEditor" />
+          <LayoutQuickSelect />
+        </div>
+      </el-sub-menu>
       <AppMenuHelp
         :on-open-shortcuts="() => shortcutsDialogVisible = true"
         :on-open-academy="handleOpenCreatorAcademy"
         :on-open-tokens="handleOpenTokens"
         :on-open-feedback="showFeedbackDialog"
-      />
+      >
+        <slot name="help-actions" />
+      </AppMenuHelp>
     </el-menu>
   </nav>
 
@@ -159,13 +138,13 @@
 </template>
 
 <script setup lang="ts">
+defineProps<{ disabled?: boolean }>()
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { nanoid } from 'nanoid'
 import { useBaseStore } from '@/stores/baseStore'
-import { useExportStore } from '@/stores/exportStore'
 import { useMessageStore } from '@/stores/message'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -180,7 +159,6 @@ import { hasIconFont } from '@/utils/elementUtils'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { resolveQuickAddDataFieldOptions } from '@/components/properties/dialogs/dataPropertyOptions'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
-import { CircleCheck } from '@element-plus/icons-vue'
 
 import {
   addElement,
@@ -248,7 +226,6 @@ import { applyLastEditedElementStyle } from '@/engine/services/elementStyleMemor
 const route = useRoute()
 const router = useRouter()
 const baseStore = useBaseStore()
-const exportStore = useExportStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
 const propertiesStore = usePropertiesStore()
@@ -1218,23 +1195,6 @@ const confirmRecordGif = async () => {
   }
 }
 
-// Save current design
-const handleSave =async () => {
-  baseStore.deactivateObject()
-  try {
-    const result = await exportStore.uploadApp()
-    if (result === 0) {
-      // After successful upload, navigate to designs list
-      router.push({
-        path: '/designs'
-      })
-    }
-  } catch (error: any) {
-    console.error('Upload failed:', error)
-    showErrorOnce(error, t('editor.uploadFailedWithReason', { reason: error.message || t('common.unknown') }))
-  }
-}
-
 const showFeedbackDialog = () => {
   feedbackDialog.value?.showDialog()
 }
@@ -1248,127 +1208,27 @@ const handleOpenBitmapFonts = () => openRouteInNewTab(router, { name: 'BitmapFon
 </script>
 
 <style scoped>
-.app-menu {
-  height: 48px;
-  position: sticky;
-  top: 56px;
-  z-index: var(--studio-z-app-menu);
-  flex: 0 0 48px;
-  display: flex;
-  align-items: center;
-  background: var(--studio-surface);
-  border-bottom: 1px solid var(--studio-border);
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
-
+.app-menu { display: flex; align-items: center; min-width: 0; }
 .menu-list {
-  width: max-content;
-  min-width: 100%;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0;
+  --el-menu-horizontal-height: 40px;
+  height: 40px;
+  border: 0;
   background: transparent;
-  border-bottom: 0;
-  flex: 0 0 auto;
 }
-
-.menu-leading-zone {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
-  height: 48px;
-  display: flex;
-  align-items: center;
-}
-
-.menu-list :deep(.el-sub-menu__title),
-.menu-list :deep(.el-menu-item) {
-  flex: 0 0 auto;
+.menu-list :deep(> .el-sub-menu > .el-sub-menu__title) {
   height: 36px;
-  min-width: 44px;
-  margin: 0 3px;
-  padding: 0 11px;
-  border-radius: var(--studio-radius-md);
+  line-height: 36px;
+  padding: 0 24px 0 10px;
+  border: 0;
+  border-radius: 5px;
   color: var(--studio-text-muted);
   font-size: 13px;
-  font-weight: 650;
-  line-height: 36px;
-  border: 1px solid transparent;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  font-weight: 500;
 }
-
-.menu-list :deep(> .el-sub-menu),
-.menu-list :deep(> .el-menu-item) {
-  flex: 0 0 auto;
-}
-
-.menu-list :deep(.el-sub-menu__title:hover),
-.menu-list :deep(.el-menu-item:hover),
-.menu-list :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  color: var(--studio-primary);
-  background: var(--studio-primary-soft);
-  border-color: var(--studio-primary-border);
-}
-
-.menu-list :deep(.el-icon) {
-  margin-right: 6px;
-  color: inherit;
-}
-
-.menu-divider {
-  height: 24px;
-  margin: 0 6px;
-  border-left-color: var(--studio-border);
-}
-
-.menu-leading-zone + :deep(.el-sub-menu),
-.menu-leading-zone + :deep(.el-menu-item) {
-  margin-left: 0;
-}
-
-@media (max-width: 1180px) {
-  .menu-leading-zone {
-    min-width: 0;
-  }
-}
-
-@media (max-width: 920px) {
-  .menu-leading-zone {
-    min-width: 0;
-  }
-
-  .app-menu {
-    scroll-padding-inline: 8px;
-  }
-
-  .menu-list {
-    padding-right: 8px;
-  }
-
-  .menu-list :deep(.el-sub-menu__title),
-  .menu-list :deep(.el-menu-item) {
-    margin: 0 2px;
-    padding: 0 10px;
-  }
-}
-
-@media (max-width: 640px) {
-  .menu-leading-zone {
-    min-width: 0;
-  }
-
-  .menu-list :deep(.el-sub-menu__title),
-  .menu-list :deep(.el-menu-item) {
-    min-width: 44px;
-  }
-}
+.menu-list :deep(> .el-sub-menu > .el-sub-menu__title > .el-icon:not(.el-sub-menu__icon-arrow)) { display: none; }
+.menu-list :deep(.el-sub-menu__icon-arrow) { right: 8px; margin-top: -5px; }
+.menu-list :deep(.el-sub-menu__title:hover) { background: var(--studio-surface-soft); color: var(--studio-text); }
+.appearance-options { display: flex; flex-direction: column; padding: 4px; gap: 4px; }
 
 :deep(.menu-group) {
   padding: 8px 6px;

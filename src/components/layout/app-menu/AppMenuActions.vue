@@ -2,8 +2,9 @@
   <el-sub-menu index="actions">
     <template #title>
       <el-icon><Operation /></el-icon>
-      <span>{{ t('editor.actions') }}</span>
+      <span>{{ t('studioMenu.file') }}</span>
     </template>
+    <slot />
     <!-- View Json Config -->
     <el-menu-item index="actions/viewJsonConfig">
       <el-icon><View /></el-icon>

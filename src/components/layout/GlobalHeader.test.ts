@@ -10,14 +10,14 @@ describe('global header dependency boundary', () => {
     expect(source).not.toContain("@/stores/baseStore")
     expect(source).not.toContain("@/stores/exportStore")
     expect(source).not.toContain("@/stores/historyStore")
-    expect(source).toContain("router.push('/designs/new-projects')")
+    expect(source).toContain("to: '/design'")
   })
 
   it('loads the editor header only for the design route', () => {
     const source = readSource('./Layout.vue')
 
     expect(source).toContain('<AppHeader v-if="isDesignPage" />')
-    expect(source).toContain('<GlobalHeader v-else-if="!isAcademyPage" />')
+    expect(source).toContain('<GlobalHeader v-else />')
     expect(source).toContain("defineAsyncComponent(() => import('./AppHeader.vue'))")
   })
 })

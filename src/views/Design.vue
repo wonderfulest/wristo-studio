@@ -1,5 +1,15 @@
 <template>
   <div class="design-layout">
+    <div v-if="entryCreating || entryError" class="editor-entry-state" :role="entryError ? 'alert' : 'status'">
+      <template v-if="entryError">
+        <h2>Unable to open a new project</h2>
+        <p>{{ entryError }}</p>
+        <el-button @click="openEditorEntry">Try again</el-button>
+        <RouterLink to="/designs">My Designs</RouterLink>
+        <RouterLink to="/pricing">View plans</RouterLink>
+      </template>
+      <p v-else>Creating your project…</p>
+    </div>
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
     <div class="editor-workspace">
@@ -42,7 +52,6 @@
           :ruler-offset="RULER_OFFSET"
         />
         <!-- 缩放控件 -->
-        <HistoryControls class="history-controls-anchor" :canvas-ref="canvasRef" />
         <TimeSimulatorPanel v-if="editorStore.showTimeSimulator" />
       </div>
       <!-- 右侧设置面板 -->
@@ -92,7 +101,6 @@ import CanvasView from '@/views/Canvas.vue'
 import ElementSettings from '@/components/panels/ElementSettings.vue'
 import SidePanel from '@/components/panels/SidePanel.vue'
 import ExportPanel from '@/components/panels/ExportPanel.vue'
-import HistoryControls from '@/components/canvas/HistoryControls.vue'
 import TimeSimulatorPanel from '@/components/canvas/TimeSimulatorPanel.vue'
 import ElementContextMenu from '@/components/canvas/ElementContextMenu.vue'
 import { useDesignStore } from '@/stores/designStore'
@@ -102,6 +110,7 @@ import { useI18n } from '@/i18n'
 import { useResizableEditorPanels } from '@/views/design/useResizableEditorPanels'
 import { RULER_OFFSET, useCanvasPan } from '@/views/design/useCanvasPan'
 import { useDesignLoader } from '@/views/design/useDesignLoader'
+import { useEditorEntry } from '@/views/design/useEditorEntry'
 import {
   copySelectedElements,
   deleteSelectedElements,
@@ -352,12 +361,6 @@ watch(
   { immediate: true }
 )
 
-const getRouteDesignId = (): string => {
-  const raw = route.query.id || route.query.designId || route.query.from
-  const value = Array.isArray(raw) ? raw[0] : raw
-  return typeof value === 'string' ? value.trim() : ''
-}
-
 const {
   loadDesign,
   importWrtDesign,
@@ -375,6 +378,18 @@ const {
     draftRevision += 1
     draftAutosave.markDirty()
     saveDirtyDraft()
+  },
+})
+
+const { creating: entryCreating, error: entryError, open: openEditorEntry } = useEditorEntry({
+  route,
+  replace: (to) => router.replace(to),
+  load: loadDesign,
+  currentId: () => loadedDesignId,
+  flush: async () => {
+    saveDirtyDraft()
+    await draftWriteQueue
+    loadedDesignId = ''
   },
 })
 
@@ -436,14 +451,7 @@ onMounted(() => {
   changelogDialog.value?.checkShowChangelog()
   emitter.on('import-wrt-design', importWrtDesign as any)
 
-  // 检查URL参数中是否有设计ID
-  const designId = getRouteDesignId()
-  if (designId) {
-    loadDesign(designId)
-  } else {
-    // 如果没有设计ID，跳转到设计列表页面
-    router.push('/designs/new-projects')
-  }
+  void openEditorEntry()
 
   // 设置自动保存
   setupAutoSave()
@@ -502,6 +510,22 @@ defineExpose({
 </script>
 
 <style scoped>
+.editor-entry-state {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  text-align: center;
+  padding: 24px;
+}
+.editor-entry-state h2, .editor-entry-state p { margin: 0; }
+.editor-entry-state a { color: var(--studio-primary); }
 .center-area {
   position: relative;
 }
@@ -541,6 +565,7 @@ defineExpose({
 }
 
 .design-layout {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -673,13 +698,6 @@ defineExpose({
   background: var(--studio-ruler-bg);
   border-right: 1px solid var(--studio-border);
   z-index: var(--studio-z-canvas-backdrop);
-}
-
-.history-controls-anchor {
-  position: absolute;
-  top: 56px;
-  left: 56px;
-  z-index: var(--studio-z-workspace-control);
 }
 
 @media (max-width: 1180px) {

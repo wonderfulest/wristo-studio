@@ -11,7 +11,7 @@ const createAcademyWrapper = async (hash = '') => {
     history: createMemoryHistory(),
     routes: [
       { path: '/academy', component: CreatorAcademy },
-      { path: '/designs/new-projects', component: { template: '<div>Studio</div>' } },
+      { path: '/design', component: { template: '<div>Studio</div>' } },
       { path: '/tokens', component: { template: '<div>Tokens</div>' } },
       { path: '/prg-installer', component: { template: '<div>Installer</div>' } }
     ]

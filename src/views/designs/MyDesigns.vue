@@ -68,11 +68,39 @@
       </div>
     </div>
 
-    <!-- 设计列表 -->
-    <el-row :gutter="20" class="design-grid">
-      <el-col :xs="24" :sm="8" :md="6" :lg="4" v-for="design in designs" :key="design.id">
+    <div class="collection-toolbar">
+      <span class="collection-count">{{ t('project.designCount', { count: total }) }}</span>
+      <div class="collection-controls">
+        <div class="view-switch" role="group" :aria-label="t('project.viewMode')">
+          <button
+            v-for="mode in viewModes"
+            :key="mode"
+            type="button"
+            :aria-pressed="viewMode === mode"
+            :class="{ active: viewMode === mode }"
+            @click="viewMode = mode"
+          >
+            <Icon :icon="mode === 'list' ? 'material-symbols:format-list-bulleted-rounded' : 'material-symbols:grid-view-outline-rounded'" />
+            {{ t(mode === 'list' ? 'project.listView' : 'project.gridView') }}
+          </button>
+        </div>
+        <el-button type="primary" @click="confirmGoToNewProject">
+          <Icon icon="material-symbols:add-rounded" />
+          {{ t('project.newProject') }}
+        </el-button>
+      </div>
+    </div>
+
+    <div v-if="viewMode === 'list' && designs.length" class="list-heading" aria-hidden="true">
+      <span>{{ t('card.design') }}</span>
+      <span>{{ t('project.designDetails') }}</span>
+      <span>{{ t('card.actions') }}</span>
+    </div>
+    <div class="design-collection" :class="`design-collection--${viewMode}`">
+      <div class="design-item" v-for="design in designs" :key="design.id">
         <DesignCard
           :design="design"
+          :view-mode="viewMode"
           :is-merchant-user="isMerchantUser"
           :is-admin-user="isAdminUser"
           :can-delete-design="canDeleteDesign"
@@ -108,8 +136,8 @@
           @rename="renameDesign"
           @transfer-owner="openTransferOwnerDialog"
         />
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
     <el-dialog
       v-model="duplicateLanguageDialogVisible"
@@ -260,6 +288,24 @@ const baseStore = useBaseStore()
 const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
+const viewModes = ['list', 'grid'] as const
+const viewMode = ref<'list' | 'grid'>(readViewMode())
+
+function readViewMode(): 'list' | 'grid' {
+  try {
+    return window.localStorage.getItem('wristo-studio:design-view-mode') === 'grid' ? 'grid' : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
+watch(viewMode, (mode) => {
+  try {
+    window.localStorage.setItem('wristo-studio:design-view-mode', mode)
+  } catch {
+    // The view remains usable when browser storage is unavailable.
+  }
+})
 const membershipGate = useStudioMembershipGate()
 let prgInstallerPromptStorage: Pick<Storage, 'getItem' | 'setItem'> | undefined
 try {
@@ -632,7 +678,7 @@ watch(currentDeviceId, (deviceId, previousDeviceId) => {
 // 引导用户前往 New Project 创建第一个应用
 const confirmGoToNewProject = () => {
   noDesignDialogVisible.value = false
-  router.push('/designs/new-projects')
+  router.push('/design')
 }
 
 // 处理页码变化
@@ -1087,50 +1133,64 @@ const handleGoLiveSuccess = () => {
 </script>
 
 <style scoped>
-.design-grid {
-  margin-bottom: 24px;
-  margin-top: 20px;
-}
-
-.design-card {
-  border-radius: 12px;
-  transition: all 0.3s;
-  height: 100%;
-  overflow: hidden;
-}
-
-.design-card :deep(.el-card__body) {
-  padding: 8px;
-}
-
-.design-card :deep(.el-card__header) {
-  padding: 6px 8px;
-}
-
-.card-header {
-  display: flex;
-  flex-direction: column;
-  padding: 0 4px;
-  position: relative;
-}
-
-.title-row {
+.collection-toolbar,
+.collection-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.collection-toolbar { margin: 20px 0 16px; }
+.collection-count { color: var(--studio-text-muted); font-size: 13px; }
+.view-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+  background: var(--studio-surface);
+}
+.view-switch button {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--studio-text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
-
-.title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-  word-break: break-word;
-  line-height: 1.2;
-  flex: 1;
+.view-switch button.active { background: var(--studio-primary-soft); color: var(--studio-primary); }
+.view-switch button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
+.design-collection--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
+.design-item { min-width: 0; }
+.design-collection--list { border: 1px solid var(--studio-border); border-radius: 0 0 14px 14px; overflow: hidden; }
+.design-collection--list .design-item + .design-item { border-top: 1px solid var(--studio-border); }
+.list-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr) 190px;
+  gap: 20px;
+  padding: 10px 18px 10px 98px;
+  border: 1px solid var(--studio-border);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: var(--studio-surface-soft);
+  color: var(--studio-text-subtle);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-
-/* Card-internal layout is now styled inside DesignCard.vue */
+.list-heading span:last-child { text-align: right; }
+@media (max-width: 800px) {
+  .list-heading { display: none; }
+  .design-collection--list { border-radius: 14px; }
+}
 
 .pagination-container {
   display: flex;
@@ -1221,8 +1281,13 @@ const handleGoLiveSuccess = () => {
 
 /* 响应式布局调整 */
 @media screen and (max-width: 768px) {
-  .design-grid {
-    margin: 20px -10px 24px;
+  .design-collection--grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+  .pagination-container :deep(.el-pagination) {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 100%;
   }
 
   .search-bar {

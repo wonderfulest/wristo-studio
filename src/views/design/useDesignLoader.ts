@@ -2,7 +2,7 @@ import { isLocalProject } from '@/auth/guestProject'
 import { readLocalProject } from '@/engine/services/guestProjectDraft'
 import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
 import { showErrorOnce } from '@/utils/errorMessage'
-import { packageFonts } from '@/engine/services/packageAssetRegistry'
+import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
 import { normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { nextTick, type Ref } from 'vue'
@@ -329,6 +329,10 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       visualThemeStore.hydrate(loadConfig.visualThemes)
       designStore.setConnectIqSettingsExcludedDataTypeValues([])
       propertiesStore.clearProperties()
+      propertiesStore.textCase = 0
+      propertiesStore.bitmapMode = true
+      propertiesStore.dataNumberFormat = DATA_NUMBER_FORMAT_AUTO
+      propertiesStore.maxFieldLength = DEFAULT_MAX_FIELD_LENGTH
       elementDataStore.clearAll()
       layoutGroupStore.clear()
       clearLayoutGroupProjections()
@@ -446,7 +450,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     return true
   }
 
-  const clearEditableDesignCanvas = async (generation: number): Promise<boolean> => {
+  const clearEditableDesignCanvas = async (generation: number, includeBackground = false): Promise<boolean> => {
     const canvas = baseStore.canvas
     if (!canvas || !isCurrentDesignLoad(generation)) return false
 
@@ -455,13 +459,22 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
 
     canvas.discardActiveObject?.()
     const objects = canvas.getObjects?.() || []
-    objects.filter((object: any) => !['global', 'background'].includes(String(object?.eleType ?? ''))).forEach((object: any) => canvas.remove?.(object))
+    const preservedTypes = includeBackground ? ['global'] : ['global', 'background']
+    objects.filter((object: any) => !preservedTypes.includes(String(object?.eleType ?? ''))).forEach((object: any) => canvas.remove?.(object))
     elementDataStore.clearAll()
-    syncElementInstancesFromCanvas(canvas.getObjects() as any)
+    syncElementInstancesFromCanvas((canvas.getObjects?.() || []) as any)
     syncLayersFromCanvas()
     canvas.requestRenderAll?.()
     await nextTick()
     return isCurrentDesignLoad(generation)
+  }
+
+  const prepareProjectCanvas = async (generation: number): Promise<boolean> => {
+    await waitCanvasReady()
+    if (!isCurrentDesignLoad(generation)) return false
+    if (!(await clearEditableDesignCanvas(generation, true))) return false
+    propertiesStore.clearProperties()
+    return true
   }
 
   const importWrtDesign = async (file: File): Promise<void> => {
@@ -554,6 +567,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           const config = await readLocalProject(designUid)
           if (!config) throw new Error('Local design could not be found in this browser')
           if (!isCurrentDesignLoad(generation)) return
+          if (!(await prepareProjectCanvas(generation))) return
           baseStore.id = designUid
           designStore.id = designUid
           baseStore.appId = -1
@@ -572,6 +586,15 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         const designData = response.data
         importProgress.fileName = designData.name
         const config: Partial<DesignConfig> = (designData.configJson as DesignConfig) ?? {}
+        if (!designData.assetBundleUrl) {
+          clearRestoredDesignAssetUrls()
+          packageFonts.clear()
+          packageFontBuildFiles.clear()
+          packageBitmapChars.clear()
+          packageArchiveExtras.files.clear()
+          packageArchiveExtras.productImages = []
+          packageArchiveExtras.preview = undefined
+        }
         const restoredConfig = await restoreDesignAssetBundle(config as unknown as RuntimeDesignConfig, {
           assetBundleUrl: designData.assetBundleUrl,
           onProgress: progress => {
@@ -596,6 +619,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           ? await options.resolveLoadedConfig(designUid, projectConfig)
           : projectConfig
         if (!isCurrentDesignLoad(generation)) return
+        if (!(await prepareProjectCanvas(generation))) return
         if (await applyRuntimeDesignConfig(selectedConfig, generation)) {
           options.onDesignLoaded?.(designUid)
         }

@@ -1,106 +1,122 @@
 <template>
   <header class="app-header">
-    <div class="header-left">
-      <button class="brand" type="button" aria-label="Wristo Studio" @click="goWorkspace">
-        <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" class="logo">
-        <h1 class="brand-title">Wristo Studio</h1>
-      </button>
-      <nav class="header-nav">
-        <button type="button" class="nav-link" @click="openNewProject">
-          <Icon icon="material-symbols:edit-square" />
-          {{ t('nav.newProject') }}
-        </button>
-        <button type="button" class="nav-link" @click="goWorkspace">
-          <Icon icon="material-symbols:list" />
-          {{ t('nav.workspace') }}
-        </button>
-        <button type="button" class="nav-link" @click="openAcademy">
-          <Icon icon="material-symbols:school-outline" />
-          {{ t('editor.creatorAcademy') }}
-        </button>
-        <button type="button" class="nav-link" @click="openPrgInstallerGuide">
-          <Icon icon="material-symbols:desktop-windows-outline" />
-          {{ t('nav.prgInstaller') }}
-        </button>
-        <button type="button" class="nav-link" @click="openTokens">
-          <Icon icon="material-symbols:data-object" />
-          {{ t('tokens.nav') }}
-        </button>
-      </nav>
+    <RouterLink to="/faces" class="brand" aria-label="Wristo Studio">
+      <img src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="" class="logo" />
+      <span>Wristo <strong>Studio</strong></span>
+    </RouterLink>
+    <nav class="header-nav" aria-label="Main navigation">
+      <RouterLink
+        v-for="item in navigation"
+        :key="item.to"
+        :to="item.to"
+        class="nav-link"
+        :class="{ active: isActive(item.to) }"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+      >{{ item.label }}</RouterLink>
+    </nav>
+    <div class="header-tools">
+      <RouterLink to="/tokens" class="tokens-link" :aria-label="t('tokens.nav')" :title="t('tokens.nav')">
+        <Icon icon="material-symbols:data-object" />
+      </RouterLink>
+      <ThemeSwitcher />
+      <LanguageSwitcher />
+      <UserMenu />
     </div>
-
-    <DeviceDisplay />
-    <ThemeSwitcher />
-    <LanguageSwitcher />
-    <UserMenu />
   </header>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
+import { Icon } from '@iconify/vue'
+import { useRoute } from 'vue-router'
+import '@fontsource/yantramanav/latin-400.css'
+import '@fontsource/yantramanav/latin-700.css'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 import { useI18n } from '@/i18n'
-import { openRouteInNewTab } from '@/utils/openRouteInNewTab'
 
-const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
-const openNewProject = (): void => {
-  void router.push('/designs/new-projects')
+const navigation = [
+  { to: '/faces', label: 'Faces' },
+  { to: '/designs', label: 'My Designs' },
+  { to: '/design', label: 'Studio' },
+  { to: '/prg-installer', label: 'Installer' },
+  { to: '/academy', label: 'Creator Academy' },
+]
+const isActive = (path: string): boolean => {
+  return route.path === path || route.path.startsWith(`${path}/`)
 }
-
-const goWorkspace = (): void => {
-  void router.push('/designs')
-}
-
-const openAcademy = (): void => {
-  window.open('/academy', '_blank', 'noopener')
-}
-
-const openPrgInstallerGuide = (): void => {
-  void router.push({ name: 'PrgInstallerGuide' })
-}
-const openTokens = (): void => openRouteInNewTab(router, { name: 'Tokens' })
 </script>
 
 <style scoped>
 .app-header {
-  height: 56px;
-  background: var(--studio-surface-raised);
-  border-bottom: 1px solid var(--studio-border);
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 0 20px;
-  box-shadow: var(--studio-shadow-sm);
+  gap: 24px;
+  min-height: 76px;
+  padding: 0 32px;
+  background: var(--studio-surface-raised);
+  color: var(--studio-text);
+  border-bottom: 1px solid var(--studio-border);
   position: sticky;
   top: 0;
   z-index: var(--studio-z-app-header);
-  flex: 0 0 56px;
-  min-width: 0;
+  flex: 0 0 auto;
+  font-family: 'Yantramanav', sans-serif;
 }
-
-.header-left, .brand, .header-nav, .nav-link {
+.brand, .header-nav, .header-tools, .tokens-link {
   display: flex;
   align-items: center;
 }
-
-.header-left { gap: 22px; min-width: 0; flex: 1 1 auto; }
-.brand { gap: 10px; min-width: max-content; border: 0; background: transparent; padding: 0; cursor: pointer; }
-.logo { width: 30px; height: 30px; border-radius: 8px; }
-.brand-title { font-size: 1.05rem; font-weight: 750; color: var(--studio-text); margin: 0; }
-.header-nav { gap: 8px; min-width: 0; }
-.nav-link { justify-content: center; gap: 7px; min-height: 40px; padding: 0 13px; color: var(--studio-text-muted); font-size: 14px; font-weight: 650; border: 1px solid transparent; border-radius: var(--studio-radius-md); background: transparent; cursor: pointer; white-space: nowrap; }
-.nav-link:hover { color: var(--studio-primary); background: var(--studio-primary-soft); border-color: var(--studio-primary-border); }
-.nav-link :deep(svg) { width: 18px; height: 18px; }
-
-@media (max-width: 720px) {
-  .app-header { gap: 8px; padding: 0 12px; overflow: hidden; }
-  .header-left { gap: 10px; overflow: hidden; }
-  .brand-title, .nav-link { font-size: 0; }
-  .nav-link { width: 44px; padding: 0; flex: 0 0 44px; }
-  .nav-link :deep(svg) { width: 20px; height: 20px; }
+.brand {
+  gap: 10px;
+  min-width: 0;
+  font-size: 23px;
+  white-space: nowrap;
+  text-decoration: none;
+  color: inherit;
+}
+.brand > span { overflow: hidden; text-overflow: ellipsis; }
+.brand strong { font-weight: 400; color: var(--studio-text-muted); }
+.logo { width: 32px; height: 32px; flex-shrink: 0; }
+.header-nav { gap: 8px; min-width: 0; overflow-x: auto; }
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-link:hover { background: var(--studio-surface-soft); }
+.nav-link.active { background: var(--studio-primary-soft); color: var(--studio-primary); }
+.header-tools { gap: 4px; min-width: 0; }
+.tokens-link { justify-content: center; width: 36px; min-height: 44px; color: var(--studio-text-muted); }
+.tokens-link svg { width: 20px; height: 20px; }
+.brand:focus-visible, .nav-link:focus-visible, .tokens-link:focus-visible {
+  outline: 2px solid var(--studio-primary);
+  outline-offset: -2px;
+}
+@media (max-width: 1200px) {
+  .app-header { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 20px 0; }
+  .header-tools { grid-column: 2; grid-row: 1; }
+  .header-nav { grid-column: 1 / -1; padding-bottom: 8px; }
+}
+@media (max-width: 600px) {
+  .app-header { padding: 8px 12px 0; gap: 4px; }
+  .brand { gap: 6px; font-size: 18px; }
+  .logo { width: 26px; height: 26px; }
+  .header-tools { gap: 0; }
+  .tokens-link { width: 32px; }
+  .header-tools :deep(.theme-button), .header-tools :deep(.language-button) { width: 32px; padding: 0; justify-content: center; }
+  .header-tools :deep(.theme-button span), .header-tools :deep(.language-button span), .header-tools :deep(.language-button .el-icon) { display: none; }
+  .nav-link { padding: 0 12px; }
 }
 </style>

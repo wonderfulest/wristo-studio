@@ -1,6 +1,6 @@
 <template>
   <!-- 设计卡片 -->
-  <el-card class="design-card" shadow="hover">
+  <el-card class="design-card" :class="{ 'design-card--list': viewMode === 'list' }" shadow="hover">
     <template #header>
       <div class="card-header">
         <div class="title-row">
@@ -30,6 +30,11 @@
             />
           </el-tooltip>
         </div>
+        <div v-if="viewMode === 'list'" class="list-subtitle">
+          <span v-if="showCreator">{{ creatorName }}</span>
+          <span v-if="paymentMethodLabel">{{ paymentMethodLabel }}</span>
+          <span>{{ t('card.lastUpdated') }}: {{ lastUpdatedText }}</span>
+        </div>
       </div>
     </template>
     <div class="design-info">
@@ -41,11 +46,16 @@
           class="background-image"
         />
         <div v-else class="placeholder-circle"></div>
-        <div v-if="showCreator || paymentMethodLabel" class="card-badges">
+        <div v-if="viewMode !== 'list' && (showCreator || paymentMethodLabel)" class="card-badges">
           <span v-if="showCreator" class="creator-badge">{{ creatorName }}</span>
           <span v-if="paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
       </div>
+      <component :is="viewMode === 'list' ? 'details' : 'div'" class="design-details">
+        <summary v-if="viewMode === 'list'" class="details-summary">
+          <span v-if="isMerchantUser || isAdminUser" class="list-status" :style="{ color: statusColor }">{{ statusText }}</span>
+          <span>{{ t('project.designDetails') }}</span>
+        </summary>
       <div class="meta">
        
         <div v-if="design.product?.appId">
@@ -136,6 +146,7 @@
           </div>
         </div>
       </div>
+      </component>
       <div class="actions-bar">
         <el-button v-if="canEditCurrentDesign" class="primary-edit-action" type="default" size="small" @click="emit('open', design)">
           <el-icon><Edit /></el-icon>
@@ -298,6 +309,7 @@ interface LoadingStates {
 
 const props = defineProps<{
   design: T
+  viewMode?: 'list' | 'grid'
   isMerchantUser: boolean
   isAdminUser: boolean
   canDeleteDesign: boolean
@@ -1209,4 +1221,59 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   background: var(--studio-surface-soft);
   box-shadow: var(--studio-shadow-lg);
 }
+.list-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 7px;
+  color: var(--studio-text-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.design-card.design-card--list {
+  height: auto;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) minmax(180px, 0.7fr) 190px;
+  gap: 20px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.design-card--list:hover { transform: none; background: var(--studio-surface-raised); }
+.design-card--list :deep(.el-card__header) {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.design-card--list :deep(.el-card__body),
+.design-card--list .design-info { display: contents; }
+.design-card--list .card-header { padding: 0; }
+.design-card--list .title { font-weight: 650; font-size: 14px; }
+.design-card--list .design-background {
+  grid-column: 1;
+  grid-row: 1;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 10px;
+}
+.design-card--list .background-image { object-fit: contain; }
+.design-card--list .design-details { grid-column: 3; grid-row: 1; min-width: 0; }
+.details-summary { cursor: pointer; color: var(--studio-text-muted); font-size: 12px; line-height: 1.8; }
+.list-status { margin-right: 8px; font-weight: 600; }
+.design-card--list .meta { font-size: 12px; overflow-wrap: anywhere; }
+.design-card--list .actions-bar { grid-column: 4; grid-row: 1; align-self: center; }
+.design-card--list .primary-edit-action { background: var(--studio-primary); border-color: var(--studio-primary); color: var(--studio-on-primary, #fff); }
+@media (max-width: 800px) {
+  .design-card.design-card--list { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .design-card--list .design-background { width: 52px; height: 52px; }
+  .design-card--list .design-details { grid-column: 2; grid-row: 2; }
+  .design-card--list .actions-bar { grid-column: 2; grid-row: 3; justify-content: flex-start; max-width: 230px; }
+}
+
+
 </style>

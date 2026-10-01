@@ -48,6 +48,7 @@ export interface UpdateDesignParamsV2 {
  * 提交设计的请求参数
  */
 export interface DesignSubmitDTO {
+  targetDeviceIds?: string[]
   designUid: string
   paymentMethod: string
   originalType: DesignOriginalType

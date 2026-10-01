@@ -6,6 +6,7 @@ import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
+  getPackagingDevices: vi.fn(),
   getDesignByUid: vi.fn(),
   submitDesign: vi.fn(),
   checkSourceDuplicate: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/wristo/design', () => ({
   designApi: {
+    getPackagingDevices: mocks.getPackagingDevices,
     getDesignByUid: mocks.getDesignByUid,
     submitDesign: mocks.submitDesign,
     checkSourceDuplicate: mocks.checkSourceDuplicate,
@@ -104,6 +106,8 @@ const stubs = {
   },
   ElForm: ElFormStub,
   ElFormItem: { template: '<div><slot/></div>' },
+  ElSelect: true,
+  ElOption: true,
   ElInput: true,
   ElInputNumber: true,
   ElRadioGroup: { template: '<div><slot/></div>' },
@@ -135,6 +139,10 @@ const confirm = async (wrapper: ReturnType<typeof mountDialog>) => {
 describe('SubmitDesignDialog style tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getPackagingDevices.mockResolvedValue({ code: 0, data: {
+      devices: [{ deviceId: 'venu2', displayName: 'Venu 2', memoryBytes: 131072 }, { deviceId: 'venu3', displayName: 'Venu 3', memoryBytes: 524288 }],
+      selectedDeviceIds: ['venu2', 'venu3'],
+    } })
     mocks.getDesignByUid.mockResolvedValue({ code: 0, data: designDetail })
     mocks.getDsnProductTagsPage.mockResolvedValue({
       code: 0,
@@ -145,6 +153,48 @@ describe('SubmitDesignDialog style tag behavior', () => {
     mocks.checkSourceDuplicate.mockResolvedValue({ code: 0, data: false })
     mocks.updateDesign.mockResolvedValue({ code: 0, data: true })
     mocks.submitPrgPackageTask.mockResolvedValue({ code: 0, data: true })
+  })
+
+  it('shows devices by memory, submits selection, and rejects empty selection', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    const checkboxes = wrapper.findAll('input[type="checkbox"][data-device-id]')
+    expect(checkboxes.map(input => input.attributes('data-device-id'))).toEqual(['venu3', 'venu2'])
+    expect(checkboxes.every(input => (input.element as HTMLInputElement).checked)).toBe(true)
+    await checkboxes[1].setValue(false)
+    await confirm(wrapper)
+    expect(mocks.submitDesign.mock.calls[0][0].targetDeviceIds).toEqual(['venu3'])
+    await showDialog(wrapper)
+    for (const input of wrapper.findAll('input[data-device-id]')) await input.setValue(false)
+    mocks.submitDesign.mockClear()
+    await confirm(wrapper)
+    expect(mocks.submitDesign).not.toHaveBeenCalled()
+    expect(wrapper.findAll('button').at(-1)!.attributes('disabled')).toBeDefined()
+  })
+
+  it('restores saved device selection and does not load choices for single PRG builds', async () => {
+    mocks.getPackagingDevices.mockResolvedValueOnce({ code: 0, data: {
+      devices: [{ deviceId: 'venu2', displayName: 'Venu 2', memoryBytes: 131072 }, { deviceId: 'venu3', displayName: 'Venu 3', memoryBytes: 524288 }],
+      selectedDeviceIds: ['venu3'],
+    } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect((wrapper.find('input[data-device-id="venu2"]').element as HTMLInputElement).checked).toBe(false)
+    await confirm(wrapper)
+    expect(mocks.submitDesign.mock.calls[0][0].targetDeviceIds).toEqual(['venu3'])
+    mocks.getPackagingDevices.mockClear()
+    await showDialog(wrapper, { mode: 'prg-build', deviceId: 'venu2' })
+    expect(mocks.getPackagingDevices).not.toHaveBeenCalled()
+    expect(wrapper.find('input[data-device-id]').exists()).toBe(false)
+  })
+
+  it('does not open a submit dialog if loading device choices fails', async () => {
+    mocks.getPackagingDevices.mockResolvedValueOnce({ code: 500, msg: 'Device catalog unavailable' })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(wrapper.find('.dialog').exists()).toBe(false)
+    expect(mocks.submitDesign).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('Device catalog unavailable')
   })
 
   it.each([undefined, { mode: 'prg-build' as const, deviceId: 'fenix8' }])('submits without editing publishing metadata (%s)', async (options) => {
@@ -167,6 +217,10 @@ describe('SubmitDesignDialog style tag behavior', () => {
     [5.99, 5.99],
     [6, null],
   ])('enforces paid pricing for input %s', async (price, expectedPrice) => {
+    mocks.getPackagingDevices.mockResolvedValue({ code: 0, data: {
+      devices: [{ deviceId: 'venu2', displayName: 'Venu 2', memoryBytes: 131072 }, { deviceId: 'venu3', displayName: 'Venu 3', memoryBytes: 524288 }],
+      selectedDeviceIds: ['venu2', 'venu3'],
+    } })
     mocks.getDesignByUid.mockResolvedValueOnce({
       code: 0,
       data: {
@@ -198,6 +252,10 @@ describe('SubmitDesignDialog style tag behavior', () => {
   })
 
   it('blocks submission when the source platform and source ID already exist', async () => {
+    mocks.getPackagingDevices.mockResolvedValue({ code: 0, data: {
+      devices: [{ deviceId: 'venu2', displayName: 'Venu 2', memoryBytes: 131072 }, { deviceId: 'venu3', displayName: 'Venu 3', memoryBytes: 524288 }],
+      selectedDeviceIds: ['venu2', 'venu3'],
+    } })
     mocks.getDesignByUid.mockResolvedValueOnce({
       code: 0,
       data: {

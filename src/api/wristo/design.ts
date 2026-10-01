@@ -178,6 +178,13 @@ export const designApi = {
    * @param designUid 设计UID
    * @returns 提交结果
    */
+  getPackagingDevices(designUid: string): Promise<ApiResponse<{
+    devices: { deviceId: string; displayName: string; memoryBytes: number | null }[]
+    selectedDeviceIds: string[]
+  }>> {
+    return instance.get(`/dsn/design/${encodeURIComponent(designUid)}/packaging-devices`)
+  },
+
   submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
     // 清理 name 和 description 中的特殊空白字符
     const cleanedData = {

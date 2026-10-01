@@ -81,6 +81,23 @@
         />
         <div class="form-tip">{{ t('submitDesign.trialTip') }}</div>
       </el-form-item>
+      <el-form-item v-if="dialogMode === 'submit'" :label="t('submitDesign.devices')">
+        <div class="packaging-devices">
+          <label class="device-select-all">
+            <input type="checkbox" :checked="allDevicesSelected" :indeterminate="selectedDeviceIds.length > 0 && !allDevicesSelected"
+              :disabled="loading" @change="toggleAllDevices" />
+            {{ t('submitDesign.selectAllDevices') }} · {{ selectedDeviceIds.length }}/{{ packagingDevices.length }}
+          </label>
+          <div class="device-options">
+            <label v-for="device in packagingDevices" :key="device.deviceId" class="device-option">
+              <input v-model="selectedDeviceIds" type="checkbox" :value="device.deviceId" :data-device-id="device.deviceId" :disabled="loading" />
+              <span class="device-name">{{ device.displayName }}<small>{{ device.deviceId }}</small></span>
+              <span class="device-memory">{{ device.memoryBytes == null ? t('submitDesign.unknownMemory') : `${device.memoryBytes / 1024} KiB` }}</span>
+            </label>
+          </div>
+          <div class="form-tip">{{ t('submitDesign.deviceMemoryHint') }}</div>
+        </div>
+      </el-form-item>
     </el-form>
     
     <template #footer>
@@ -90,6 +107,7 @@
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
+          :disabled="loading || (dialogMode === 'submit' && selectedDeviceIds.length === 0)"
         >
           {{ confirmText }}
         </el-button>
@@ -117,6 +135,12 @@ const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 const dialogMode = ref<'submit' | 'prg-build'>('submit')
 const prgDeviceId = ref<string>('')
+const packagingDevices = ref<{ deviceId: string; displayName: string; memoryBytes: number | null }[]>([])
+const selectedDeviceIds = ref<string[]>([])
+const allDevicesSelected = computed(() => packagingDevices.value.length > 0 && selectedDeviceIds.value.length === packagingDevices.value.length)
+const toggleAllDevices = (event: Event) => {
+  selectedDeviceIds.value = (event.target as HTMLInputElement).checked ? packagingDevices.value.map(device => device.deviceId) : []
+}
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
@@ -235,6 +259,8 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
     currentDesign.value = null
     dialogMode.value = options?.mode || 'submit'
     prgDeviceId.value = options?.deviceId || ''
+    packagingDevices.value = []
+    selectedDeviceIds.value = []
 
     // First, fetch design details
     const response: ApiResponse<Design> = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams())
@@ -274,6 +300,16 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
           form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
         }
       }
+      if (dialogMode.value === 'submit') {
+        const devicesResponse = await designApi.getPackagingDevices(design.designUid)
+        if (devicesResponse.code !== 0 || !devicesResponse.data) {
+          messageStore.error(devicesResponse.msg || t('submitDesign.loadDetailsFailed'))
+          return
+        }
+        packagingDevices.value = [...devicesResponse.data.devices].sort((a, b) =>
+          (b.memoryBytes ?? -1) - (a.memoryBytes ?? -1) || a.deviceId.localeCompare(b.deviceId))
+        selectedDeviceIds.value = [...devicesResponse.data.selectedDeviceIds]
+      }
       dialogVisible.value = true
     } else {
       messageStore.error(response.msg || t('submitDesign.loadDetailsFailed'))
@@ -291,6 +327,10 @@ const handleConfirm = async () => {
   if (!formRef.value) return
   try {
     await formRef.value.validate()
+    if (dialogMode.value === 'submit' && selectedDeviceIds.value.length === 0) {
+      messageStore.error(t('submitDesign.selectDeviceRequired'))
+      return
+    }
     if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 5.99)) {
       messageStore.error(t('submitDesign.priceRange'))
       return
@@ -305,6 +345,7 @@ const handleConfirm = async () => {
     const resolvedOriginalType = canSelectDesignSource.value ? form.originalType : 'original'
     const submitData: DesignSubmitDTO = {
       designUid: form.designUid,
+      ...(dialogMode.value === 'submit' ? { targetDeviceIds: [...selectedDeviceIds.value] } : {}),
       paymentMethod: form.paymentMethod,
       originalType: resolvedOriginalType,
       sourcePlatform: resolvedOriginalType === 'non_original' ? form.sourcePlatform || undefined : undefined,
@@ -396,6 +437,18 @@ defineExpose({
 </script>
 
 <style scoped>
+.packaging-devices { width: 100%; }
+.device-select-all, .device-option { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.device-select-all { padding: 8px 0; }
+.device-options { max-height: 280px; overflow-y: auto; border: 1px solid var(--el-border-color); border-radius: 6px; }
+.device-option { padding: 8px 12px; border-bottom: 1px solid var(--el-border-color-lighter); }
+.device-option:last-child { border-bottom: 0; }
+.device-option:hover { background: var(--el-fill-color-light); }
+.device-name { flex: 1; line-height: 1.5; min-width: 0; }
+.device-name small { display: block; color: var(--el-text-color-secondary); }
+.device-memory { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.packaging-devices input { accent-color: var(--el-color-primary); width: 16px; height: 16px; flex-shrink: 0; }
+
 .submit-form {
   padding: 20px 0;
 }
