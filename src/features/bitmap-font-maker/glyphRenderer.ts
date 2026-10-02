@@ -1,3 +1,4 @@
+import { baselineSlope } from './baselineLayout'
 import type { PathCommand } from 'opentype.js'
 import type { BitmapFontRecipe } from './contracts'
 import { BITMAP_FONT_SIZES } from './contracts'
@@ -167,13 +168,13 @@ function interpolateCurve(command: CurveCommand, start: Point): Point[] {
   return points
 }
 
-function flatten(commands: PathCommand[], shear: number, horizontalScale: number, baseline: number): Contour[] {
+function flatten(commands: PathCommand[], shear: number, horizontalScale: number, baseline: number, slope = 0, advance = 0): Contour[] {
   const contours: Contour[] = []
   let contour: Contour = []
   let current: Point = { x: 0, y: 0 }
   const transform = (point: Point): Point => ({
     x: (point.x + shear * (baseline - point.y)) * horizontalScale,
-    y: point.y
+    y: point.y + slope * ((point.x + shear * (baseline - point.y)) * horizontalScale - advance / 2)
   })
   const finish = () => {
     if (contour.length > 1) contours.push(contour)
@@ -423,7 +424,7 @@ export async function createGlyphRendererSession(source: ParsedFontSource, envir
     rendererPath: registration ? 'font-face-canvas' : 'opentype-path',
     render: (size, recipe, codepoints) => {
       if (disposed) throw new GlyphRenderError('GLYPH_RENDER_INVALID_INPUT')
-      const needsDeterministicTransform = recipe.timeMonospace === true || recipe.fontWeight !== source.sourceWeight || recipe.italicAngle !== 0 || (recipe.horizontalScale ?? 1) !== 1
+      const needsDeterministicTransform = recipe.timeMonospace === true || recipe.fontWeight !== source.sourceWeight || (recipe.baselineAngle ?? 0) !== 0 || recipe.italicAngle !== 0 || (recipe.horizontalScale ?? 1) !== 1
       return registration && !needsDeterministicTransform
         ? renderGlyphsWithWorkerCanvas(source, codepoints, size, recipe, environment, registration)
         : renderGlyphs(source, codepoints, size, recipe)
@@ -471,7 +472,7 @@ function renderProportionalGlyphs(source: ParsedFontSource, codepoints: number[]
     const glyph = source.font.charToGlyph(String.fromCodePoint(codepoint))
     if (glyph.index === 0 && codepoint !== 0) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
     const xadvance = Math.max(1, Math.round(((glyph.advanceWidth ?? source.unitsPerEm) * scale + weightRadius) * horizontalScale))
-    const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, horizontalScale, baseline)
+    const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, horizontalScale, baseline, baselineSlope(recipe.baselineAngle), xadvance)
     if (contours.length === 0) {
       if (codepoint !== 0x20) throw new GlyphRenderError('GLYPH_RENDER_EMPTY', codepoint)
       return { codepoint, width: 0, height: 0, xoffset: 0, yoffset: 0, xadvance, alpha: new Uint8Array() }
@@ -533,7 +534,9 @@ export function renderGlyphs(source: ParsedFontSource, codepoints: number[], siz
   const byCodepoint = new Map(rendered.glyphs.map(glyph => {
     if (glyph.codepoint >= 48 && glyph.codepoint <= 58) {
       const xadvance = glyph.codepoint === 58 ? width / ratio : width
-      return [glyph.codepoint, { ...glyph, xadvance, xoffset: Math.floor((xadvance - glyph.width) / 2) }] as const
+      const xoffset = Math.floor((xadvance - glyph.width) / 2)
+      const yoffset = glyph.yoffset + Math.round(baselineSlope(recipe.baselineAngle) * (xoffset - glyph.xoffset - (xadvance - glyph.xadvance) / 2))
+      return [glyph.codepoint, { ...glyph, xadvance, xoffset, yoffset }] as const
     }
     return [glyph.codepoint, glyph] as const
   }))

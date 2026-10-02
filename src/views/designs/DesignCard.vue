@@ -40,8 +40,23 @@
     </template>
     <div class="design-info">
       <div class="design-background">
+        <el-popover
+          v-if="viewMode === 'list' && designImageUrl"
+          trigger="hover"
+          placement="right"
+          :width="336"
+          :show-after="120"
+          :hide-after="0"
+          :teleported="true"
+          :popper-style="{ maxWidth: 'calc(100vw - 24px)', padding: '8px' }"
+        >
+          <template #reference>
+            <img :src="designImageUrl" :alt="design.name" class="background-image list-preview-trigger" />
+          </template>
+          <img :src="designImageUrl" :alt="design.name" class="design-hover-preview" />
+        </el-popover>
         <img
-          v-if="designImageUrl"
+          v-else-if="designImageUrl"
           :src="designImageUrl"
           :alt="design.name"
           class="background-image"
@@ -901,6 +916,20 @@ const downloadPackage = (type: 'prg' | 'iq') => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.list-preview-trigger {
+  cursor: zoom-in;
+}
+
+.design-hover-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: calc(100vh - 40px);
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .placeholder-circle {

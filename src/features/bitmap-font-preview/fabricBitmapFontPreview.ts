@@ -1,3 +1,4 @@
+import { baselineRise, baselinePadding } from '../bitmap-font-maker/baselineLayout'
 import { loadBmFontDescriptor } from './bmFontDescriptorLoader'
 import { kerningKey, type BmFontDescriptor } from './bmFontTextParser'
 import { traceStudioUnit } from '@/utils/studioUnitTrace'
@@ -77,6 +78,7 @@ const syncBitmapTextWidth = (object: any, state: PreviewState): void => {
   const widths = String(object.text ?? '').split('\n').map(line => lineWidth(descriptor, line, spacing))
   if (widths.some(width => width < 0)) return
   object.width = Math.max(1, ...widths) * scale
+  if (descriptor.baselineAngle) object.height = descriptor.lineHeight * scale * widths.length + 2 * baselinePadding(descriptor.baselineAngle, object.width)
   object.setCoords?.()
 }
 
@@ -105,7 +107,8 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
   const totalHeight = Math.max(lineHeight, lines.length * lineHeight)
   const maxWidth = Math.max(1, ...widths) * scale
   const renderWidth = Math.max(1, Math.ceil(maxWidth))
-  const renderHeight = Math.max(1, Math.ceil(totalHeight))
+  const padding = baselinePadding(descriptor.baselineAngle, maxWidth)
+  const renderHeight = Math.max(1, Math.ceil(totalHeight + 2 * padding))
   const density = renderDensity(object, sourceSize)
   const renderCanvas = document.createElement('canvas')
   renderCanvas.width = Math.max(1, Math.ceil(renderWidth * density))
@@ -126,7 +129,7 @@ const renderBitmapText = (object: any, state: PreviewState, context: CanvasRende
         atlas,
         glyph.x, glyph.y, glyph.width, glyph.height,
         (cursor + glyph.xoffset * scale) * densityX,
-        ((renderHeight - totalHeight) / 2 + lineIndex * lineHeight + glyph.yoffset * scale) * densityY,
+        ((renderHeight - totalHeight) / 2 + lineIndex * lineHeight + glyph.yoffset * scale + baselineRise(descriptor.baselineAngle, cursor, glyph.xadvance * scale, renderWidth)) * densityY,
         glyph.width * scale * densityX,
         glyph.height * scale * densityY,
       )

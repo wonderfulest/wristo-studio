@@ -14,6 +14,8 @@ export interface BitmapFontRecipe {
   rendererVersion: '1'
   fontWeight: number
   italicAngle: number
+  /** Positive angles raise the baseline from left to right. */
+  baselineAngle?: number
   /** Horizontal glyph scale. 1 keeps the uploaded font's original width. */
   horizontalScale?: number
   /** Fixed digit cells for time fonts only; colon defaults to half a cell. */
@@ -111,6 +113,7 @@ export function normalizeBitmapFontRecipe(input: BitmapFontRecipeInput): BitmapF
 
   return {
     ...(input.timeMonospace === true ? { timeMonospace: true, colonWidth: input.colonWidth === 'full' ? 'full' as const : 'half' as const } : {}),
+    ...(input.baselineAngle ? { baselineAngle: clamp(finiteOrDefault(input.baselineAngle, 0), -20, 20) } : {}),
     schemaVersion: 1,
     rendererVersion: '1',
     fontWeight: clamp(finiteOrDefault(input.fontWeight, 400), 100, 900),

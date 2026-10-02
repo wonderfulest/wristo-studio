@@ -5,6 +5,19 @@ import { applyFabricBitmapFontPreview } from './fabricBitmapFontPreview'
 import type { BmFontDescriptor } from './bmFontTextParser'
 
 describe('Fabric BMFont preview', () => {
+  it('uses the font baseline slope for glyph positions and selection height', async () => {
+    const descriptor: BmFontDescriptor = { baselineAngle: 12, lineHeight: 30, base: 24, scaleW: 32, scaleH: 32, pageFile: 'slope.png', glyphs: new Map([[65, { id: 65, x: 0, y: 0, width: 10, height: 12, xoffset: 0, yoffset: 3, xadvance: 12, page: 0 }]]), kernings: new Map() }
+    const object: any = { text: 'AA', fontSize: 30, fill: '#fff', _renderText: vi.fn() }
+    await applyFabricBitmapFontPreview(object, { descriptorUrl: '/slope.fnt', atlasUrl: '/slope.png', sourceSize: 30 }, { loadDescriptor: async () => descriptor, loadAtlas: async () => ({} as CanvasImageSource) })
+    const drawImage = vi.fn()
+    vi.spyOn(document, 'createElement').mockReturnValue({ width: 0, height: 0, getContext: () => ({ drawImage, fillRect: vi.fn() }) } as any)
+    object._renderText({ drawImage: vi.fn() })
+    expect(object.height).toBeCloseTo(30 + Math.tan(12 * Math.PI / 180) * 24)
+    const first = drawImage.mock.calls[0]
+    const second = drawImage.mock.calls[1]
+    expect(second[6] - first[6]).toBeCloseTo(-Math.tan(12 * Math.PI / 180) * 12)
+  })
+
   it('keeps the Fabric selection width aligned with BMFont glyph advances', async () => {
     const descriptor: BmFontDescriptor = {
       lineHeight: 312,

@@ -3,6 +3,7 @@ import type { CSSProperties } from 'vue'
 
 export interface FabricRecipePreviewProps {
   fontWeight: number
+  skewY?: number
   skewX: number
   stroke?: string
   strokeWidth: number
@@ -13,6 +14,7 @@ export interface FabricRecipePreviewProps {
 export interface SavedTextStyle {
   fill: unknown
   fontWeight: unknown
+  skewY?: unknown
   skewX: unknown
   stroke: unknown
   strokeWidth: unknown
@@ -81,7 +83,13 @@ export function parseBitmapFontRecipe(value: unknown): BitmapFontRecipe | null {
     }
   }
   if (!isPlainRecord(candidate)) return null
-  const keys = Object.keys(candidate)
+  const optionalKeys = ['baselineAngle', 'timeMonospace', 'colonWidth', 'gradientStartColor', 'gradientEndColor', 'gradientAngle']
+  const keys = Object.keys(candidate).filter(key => !optionalKeys.includes(key))
+  if (candidate.baselineAngle !== undefined && (typeof candidate.baselineAngle !== 'number' || !Number.isFinite(candidate.baselineAngle) || Math.abs(candidate.baselineAngle) > 20)) return null
+  if (candidate.timeMonospace !== undefined && typeof candidate.timeMonospace !== 'boolean') return null
+  if (candidate.colonWidth !== undefined && !['half', 'full'].includes(String(candidate.colonWidth))) return null
+  const gradientKeys = ['gradientStartColor', 'gradientEndColor', 'gradientAngle']
+  if (gradientKeys.some(key => key in candidate) && (!gradientKeys.every(key => key in candidate) || !/^#[0-9a-f]{6}$/i.test(String(candidate.gradientStartColor)) || !/^#[0-9a-f]{6}$/i.test(String(candidate.gradientEndColor)) || typeof candidate.gradientAngle !== 'number' || !Number.isFinite(candidate.gradientAngle) || candidate.gradientAngle < 0 || candidate.gradientAngle >= 360)) return null
   const hasHorizontalScale = Object.prototype.hasOwnProperty.call(candidate, 'horizontalScale')
   const expectedKeys = hasHorizontalScale ? recipeKeySet : legacyRecipeKeySet
   if (keys.length !== expectedKeys.size || keys.some((key) => !expectedKeys.has(key))) return null
@@ -118,6 +126,7 @@ export function recipeToFabricProps(value: unknown, fontSize: unknown, elementCo
   return {
     fontWeight: recipe.fontWeight,
     skewX: recipe.italicAngle,
+    ...(recipe.baselineAngle ? { skewY: -recipe.baselineAngle } : {}),
     stroke: hasOutline ? color : undefined,
     strokeWidth: hasOutline ? recipe.outlineWidthEm * safeFontSize(fontSize) : 0,
     strokeLineJoin: 'round',
@@ -131,7 +140,7 @@ export function recipeToCssPreviewStyle(value: unknown, fontSize = 24): CSSPrope
   const outlined = recipe.outlineMode !== 'fill' && recipe.outlineWidthEm > 0
   return {
     fontWeight: recipe.fontWeight,
-    transform: `skewX(${recipe.italicAngle}deg) scaleX(${recipe.horizontalScale ?? 1})`,
+    transform: `${recipe.baselineAngle ? `skewY(${-recipe.baselineAngle}deg) ` : ''}skewX(${recipe.italicAngle}deg) scaleX(${recipe.horizontalScale ?? 1})`,
     transformOrigin: 'center',
     WebkitTextStroke: outlined ? `${Math.max(1, Math.round(recipe.outlineWidthEm * fontSize))}px currentColor` : '0',
     WebkitTextFillColor: recipe.outlineMode === 'outline-only' ? 'transparent' : 'currentColor'
@@ -142,6 +151,7 @@ const currentStyle = (object: any): SavedTextStyle => ({
   fill: object?.fill,
   fontWeight: object?.fontWeight,
   skewX: object?.skewX,
+  ...(object?.skewY !== undefined ? { skewY: object.skewY } : {}),
   stroke: object?.stroke,
   strokeWidth: object?.strokeWidth,
   strokeLineJoin: object?.strokeLineJoin
@@ -166,6 +176,7 @@ export function applyFabricRecipePreviewPropsToObject(
   if (!props) {
     if (baseline) {
       if (typeof elementColor === 'string' && elementColor) baseline.fill = elementColor
+      if (object.skewY !== undefined && baseline.skewY === undefined) baseline.skewY = 0
       object.set?.(baseline) ?? Object.assign(object, baseline)
       delete object[previewBaseline]
     }
@@ -183,5 +194,6 @@ export function applyFabricRecipePreviewPropsToObject(
   } else if (typeof elementColor === 'string' && elementColor) {
     baseline.fill = elementColor
   }
-  object.set?.(props) ?? Object.assign(object, props)
+  const applied = object.skewY !== undefined && props.skewY === undefined ? { ...props, skewY: baseline?.skewY ?? 0 } : props
+  object.set?.(applied) ?? Object.assign(object, applied)
 }

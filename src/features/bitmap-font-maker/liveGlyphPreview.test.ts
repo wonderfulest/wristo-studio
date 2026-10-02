@@ -20,6 +20,22 @@ const recipe = (outlineMode: 'fill' | 'fill-outline' | 'outline-only') => normal
 })
 
 describe('buildLiveGlyphPreview', () => {
+  it('moves repeated glyphs along a continuous baseline and reserves vertical room', async () => {
+    const bytes = await readFile(fileURLToPath(fixtureUrl))
+    const source = await parseFontSource(new File([bytes], 'minimal-latin.ttf'))
+    const plain = buildLiveGlyphPreview(source, [79, 79], 120, recipe('fill'), false)
+    for (const angle of [-20, 12, 20]) {
+      const tilted = buildLiveGlyphPreview(source, [79, 79], 120, { ...recipe('fill'), baselineAngle: angle }, false)
+      const [first, second] = tilted.glyphs
+      expect(second.top - first.top).toBeCloseTo(-Math.tan(angle * Math.PI / 180) * (second.left - first.left))
+      expect(tilted.lineHeight).toBeGreaterThan(plain.lineHeight)
+      for (const glyph of tilted.glyphs) {
+        expect(glyph.top).toBeGreaterThanOrEqual(0)
+        expect(glyph.top + glyph.height).toBeLessThanOrEqual(tilted.lineHeight)
+      }
+    }
+  })
+
   it('keeps time width stable when digits change', async () => {
     const bytes = await readFile(fileURLToPath(fixtureUrl))
     const source = await parseFontSource(new File([bytes], 'minimal-latin.ttf'))

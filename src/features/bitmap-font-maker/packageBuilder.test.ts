@@ -77,6 +77,16 @@ function adapters(options?: {
 }
 
 describe('buildBitmapFontPackage', () => {
+  it('exports the baseline angle in recipe, descriptors and runtime layout', async () => {
+    const fixture = adapters()
+    const result = await buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'baseline', fontType: 'time_font', recipe: { ...recipe, baselineAngle: 12 } }, fixture.value)
+    const archive = await JSZip.loadAsync(result.zip)
+    expect(JSON.parse(await archive.file('recipe.json')!.async('string')).baselineAngle).toBe(12)
+    expect(await archive.file('48/baseline-g.fnt')!.async('string')).toContain('baselineAngle=12')
+    const layout = JSON.parse(await archive.file('connectiq-layout.json')!.async('string'))
+    expect(layout.sizes['48']).toMatchObject({ baselineAngle: 12, lineHeight: 48, drawOffsetY: 0 })
+  })
+
   it('preserves source styling and visible glyphs without rasterizing invisible control characters', async () => {
     const fixture = adapters()
     fixture.value.parseSource.mockResolvedValue({

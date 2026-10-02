@@ -26,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import { baselineRise, baselinePadding } from '../bitmap-font-maker/baselineLayout'
 import { computed, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
 import { kerningKey, type BmFontDescriptor } from './bmFontTextParser'
 import { loadBmFontDescriptor } from './bmFontDescriptorLoader'
@@ -67,6 +68,16 @@ onBeforeUnmount(() => { generation += 1 })
 const layout = computed(() => {
   const font = descriptor.value
   if (!font) return null
+  let width = 0
+  let prev: number | null = null
+  for (const codepoint of props.codepoints) {
+    const glyph = font.glyphs.get(codepoint)
+    if (!glyph) continue
+    if (prev != null) width += font.kernings.get(kerningKey(prev, codepoint)) || 0
+    width += glyph.xadvance
+    prev = codepoint
+  }
+  const padding = baselinePadding(font.baselineAngle, width)
   let cursor = 0
   let previous: number | null = null
   const glyphs: Array<{ key: string, style: CSSProperties }> = []
@@ -79,7 +90,7 @@ const layout = computed(() => {
       key: `${codepoint}-${index}`,
       style: {
         left: `${left}px`,
-        top: `${glyph.yoffset}px`,
+        top: `${glyph.yoffset + padding + baselineRise(font.baselineAngle, cursor, glyph.xadvance, width)}px`,
         width: `${glyph.width}px`,
         height: `${glyph.height}px`,
         maskImage: `url("${props.atlasUrl}")`,
@@ -94,7 +105,7 @@ const layout = computed(() => {
     previous = codepoint
   })
   if (!glyphs.length) return null
-  return { glyphs, width: Math.max(1, cursor), lineHeight: font.lineHeight }
+  return { glyphs, width: Math.max(1, cursor), lineHeight: font.lineHeight + 2 * padding }
 })
 </script>
 

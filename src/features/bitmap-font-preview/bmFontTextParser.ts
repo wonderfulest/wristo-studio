@@ -11,6 +11,7 @@ export interface BmFontGlyph {
 }
 
 export interface BmFontDescriptor {
+  baselineAngle?: number
   lineHeight: number
   base: number
   scaleW: number
@@ -50,6 +51,8 @@ export function parseBmFontText(text: string): BmFontDescriptor {
 
   const common = fieldsFor(commonLine)
   const lineHeight = integer(common, 'lineHeight')
+  const baselineAngle = Number(common.get('baselineAngle') ?? 0)
+  if (!Number.isFinite(baselineAngle) || Math.abs(baselineAngle) > 20) throw new Error('Invalid BMFont baseline angle')
   const base = integer(common, 'base')
   const scaleW = integer(common, 'scaleW')
   const scaleH = integer(common, 'scaleH')
@@ -94,5 +97,5 @@ export function parseBmFontText(text: string): BmFontDescriptor {
     kernings.set(kerningKey(first, second), integer(fields, 'amount'))
   }
 
-  return { lineHeight, base, scaleW, scaleH, pageFile, glyphs, kernings }
+  return { ...(baselineAngle ? { baselineAngle } : {}), lineHeight, base, scaleW, scaleH, pageFile, glyphs, kernings }
 }

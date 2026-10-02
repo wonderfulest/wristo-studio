@@ -43,6 +43,7 @@
           <div class="panel-heading"><span>02</span><div><h2>{{ t('bitmapMaker.style') }}</h2><p>{{ t('bitmapMaker.styleHint') }}</p></div></div>
           <label class="range-row"><span>{{ t('bitmapMaker.weight') }} <output>{{ recipe.fontWeight }}</output></span><input v-model.number="recipe.fontWeight" type="range" min="100" max="900" step="100" :disabled="!sourceParsed || actionsLocked" /></label>
           <label class="range-row"><span>{{ t('bitmapMaker.italic') }} <output>{{ recipe.italicAngle }}°</output></span><input v-model.number="recipe.italicAngle" type="range" min="-20" max="20" step="1" :disabled="!sourceParsed || actionsLocked" /></label>
+          <label class="range-row"><span>{{ t('bitmapMaker.baselineAngle') }} <output>{{ recipe.baselineAngle }}°</output></span><input v-model.number="recipe.baselineAngle" data-test="baseline-angle" type="range" min="-20" max="20" step="1" :disabled="!sourceParsed || actionsLocked" /></label>
           <label class="range-row"><span>{{ t('bitmapMaker.horizontalScale') }} <output>{{ Math.round((recipe.horizontalScale ?? 1) * 100) }}%</output></span><input v-model.number="recipe.horizontalScale" data-test="horizontal-scale" type="range" min="0.5" max="1.5" step="0.01" :disabled="!sourceParsed || actionsLocked" /></label>
           <div v-if="fontType === 'time_font'" data-test="time-monospace-controls">
             <label class="gradient-toggle"><span>{{ t('bitmapMaker.timeMonospace') }}</span><input v-model="recipe.timeMonospace" data-test="time-monospace" type="checkbox" :disabled="!sourceParsed || actionsLocked" /></label>
@@ -196,7 +197,7 @@ const editingOriginalRecipe = shallowRef<BitmapFontRecipe | null>(null)
 const sourceRevision = ref(0)
 const sourceSha256 = ref('')
 const sourceSlugBase = ref('')
-const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, horizontalScale: 1, timeMonospace: false, colonWidth: 'half', outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 })
+const recipe = reactive<BitmapFontRecipe>({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, baselineAngle: 0, horizontalScale: 1, timeMonospace: false, colonWidth: 'half', outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true, gradientStartColor: '#ffffff', gradientEndColor: '#ffffff', gradientAngle: 90 })
 const gradientEnabled = ref(false)
 const metadata = reactive<BitmapFontPublishMetadata>({ fullName: '', slug: '', type: 'time_font', language: 'en', styleTags: [], searchKeywords: '', redistributionRightsAttested: false, rightsAttestationVersion: 'v1' })
 const manualStyleTags = ref<string[]>([])
@@ -285,7 +286,7 @@ const sourceSummary = computed(() => sourceParsed.value ? `${sourceParsed.value.
 const supportedCharset = computed(() => charsetForType(fontType.value))
 const supportedCharacters = computed(() => String.fromCodePoint(...supportedCharset.value.codepoints))
 const missingGlyphLabels = computed(() => missingGlyphs.value.slice(0, 12).map(code => code === 32 ? t('bitmapMaker.space') : String.fromCodePoint(code)).join(', '))
-const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${Math.round((recipe.horizontalScale ?? 1) * 100)}% · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
+const recipeSummary = computed(() => `${recipe.fontWeight} · ${recipe.italicAngle}° · ${t('bitmapMaker.baselineAngle')} ${recipe.baselineAngle ?? 0}° · ${Math.round((recipe.horizontalScale ?? 1) * 100)}% · ${recipe.outlineWidthEm.toFixed(2)} em · ${recipe.outlineMode}`)
 const previewSample = computed(() => fontType.value === 'time_font' ? '10:09' : fontType.value === 'text_font_zh' ? '周三 24' : 'WED 24')
 const previewCodepoints = computed(() => Array.from(previewText.value, character => character.codePointAt(0)!))
 const livePreview = computed(() => {
@@ -468,7 +469,7 @@ async function loadEditingFont() {
     await loadSourceFile(new File([blob], sourceName, { type: blob.type || 'font/ttf' }))
     const storedRecipe = parseStoredRecipe(font.bitmapRecipe)
     editingOriginalRecipe.value = storedRecipe || normalizeBitmapFontRecipe(JSON.parse(JSON.stringify(recipe)))
-    if (storedRecipe) Object.assign(recipe, storedRecipe)
+    if (storedRecipe) Object.assign(recipe, { baselineAngle: 0 }, storedRecipe)
     metadata.fullName = font.fullName || font.family
     metadata.slug = font.slug
     metadata.type = font.type as BitmapFontType

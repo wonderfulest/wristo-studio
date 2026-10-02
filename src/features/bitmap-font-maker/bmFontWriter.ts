@@ -18,6 +18,7 @@ export interface BmFontTextInput {
   face: string
   /** Positive source pixel size; Wristo descriptors serialize it with a negative sign. */
   size: number
+  baselineAngle?: number
   lineHeight: number
   base: number
   scaleW: number
@@ -88,13 +89,14 @@ export function writeBmFontText(input: BmFontTextInput): string {
   if (!Number.isInteger(input.size) || input.size <= 0 || input.size > 8192) {
     throw new RangeError('Bitmap font pixel size must be an integer between 1 and 8192')
   }
+  if (input.baselineAngle !== undefined && (!Number.isFinite(input.baselineAngle) || Math.abs(input.baselineAngle) > 20)) invalid('baselineAngle')
   validateSlug(input.slug)
   validateInput(input)
   const chars = [...input.chars].sort((a, b) => a.id - b.id)
   const kernings = [...(input.kernings ?? [])].sort((a, b) => a.first - b.first || a.second - b.second)
   const lines = [
     `info face=${quote(input.face)} size=${-Math.abs(input.size)} unicode=1 bold=0 italic=0 charset="" stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=1,1`,
-    `common lineHeight=${input.lineHeight} base=${input.base} scaleW=${input.scaleW} scaleH=${input.scaleH} pages=1 packed=0`,
+    `common lineHeight=${input.lineHeight} base=${input.base} scaleW=${input.scaleW} scaleH=${input.scaleH} pages=1 packed=0${input.baselineAngle ? ` baselineAngle=${input.baselineAngle}` : ''}`,
     `page id=0 file=${quote(`${input.slug}-g_0.png`)}`,
     `chars count=${chars.length}`,
     ...chars.map(

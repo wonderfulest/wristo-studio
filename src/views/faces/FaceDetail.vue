@@ -22,7 +22,7 @@
               <img :src="item.url" :alt="item.alt" loading="lazy" />
             </button>
           </div>
-          <FaceImageUpload v-if="isOwner" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
+          <FaceImageUpload v-if="canEdit" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
           <section class="information-section">
             <h2>Compatible devices <span v-if="face.devices?.length">{{ face.devices.length }}</span></h2>
             <div v-if="face.devices?.length" class="devices">
@@ -42,7 +42,7 @@
             <div><dt>Price</dt><dd>{{ face.price === 0 ? 'Free' : face.price == null ? 'See Connect IQ' : `$${face.price.toFixed(2)}` }}</dd></div>
           </dl>
           <div class="primary-actions">
-            <RouterLink v-if="isOwner && face.designId" class="primary-button" :to="{ path: '/design', query: { id: face.designId } }">
+            <RouterLink v-if="canEdit && face.designId" class="primary-button" :to="{ path: '/design', query: { id: face.designId } }">
               <Icon icon="material-symbols:edit-square-outline" /> Edit in Builder <span aria-hidden="true">↗</span>
             </RouterLink>
             <button v-else-if="face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">
@@ -54,7 +54,7 @@
             </a>
           </div>
           <p v-if="remixError" class="sharing-error" role="alert">{{ remixError }}</p>
-          <p v-if="!isOwner && face.allowRemix" class="muted">Create your own copy with attribution to the original design.</p>
+          <p v-if="!canEdit && face.allowRemix" class="muted">Create your own copy with attribution to the original design.</p>
           <div class="share-row">
             <span>SHARE</span>
             <button v-for="platform in socialPlatforms" :key="platform" class="share-button" aria-haspopup="dialog" @click="sharePlatform = platform">{{ platform }}</button>
@@ -69,7 +69,7 @@
             <span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>
             <span>Designed by <strong>{{ creator }}</strong></span>
           </div>
-          <section v-if="isOwner" class="information-section sharing-settings" aria-labelledby="sharing-heading">
+          <section v-if="canEdit" class="information-section sharing-settings" aria-labelledby="sharing-heading">
             <h2 id="sharing-heading">Sharing settings</h2>
             <div class="sharing-setting">
               <div><strong id="gallery-label">Show in gallery</strong><p id="gallery-help">List this watch face in the public gallery. When off, anyone with the link can still view it.</p></div>
@@ -82,7 +82,7 @@
             <p v-if="sharingError" class="sharing-error" role="alert">{{ sharingError }}</p>
             <p class="muted" role="status">{{ saving ? 'Saving…' : sharingStatus }}</p>
           </section>
-          <FaceDescription :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section" :app-id="face.appId" :description="face.description" :is-owner="isOwner" @saved="face.description = $event">
+          <FaceDescription :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section" :app-id="face.appId" :description="face.description" :is-owner="canEdit" @saved="face.description = $event">
             <div v-if="face.tags?.length" class="tags"><span v-for="tag in face.tags" :key="tag.id">{{ tag.name }}</span></div>
           </FaceDescription>
           <section v-if="dataFields.length" class="information-section supported-data-fields" aria-labelledby="data-fields-heading">
@@ -128,13 +128,14 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const isOwner = computed(() => userStore.userInfo?.id != null && face.value?.ownerId != null && String(userStore.userInfo.id) === String(face.value.ownerId))
+const canEdit = computed(() => isOwner.value || userStore.isAdminUser)
 const saving = ref(false)
 const sharingError = ref('')
 const sharingStatus = ref('')
 const remixing = ref(false)
 const remixError = ref('')
 async function toggleSharing(key: keyof FaceSharingSettings) {
-  if (!face.value || !isOwner.value || saving.value) return
+  if (!face.value || !canEdit.value || saving.value) return
   const current = request
   const appId = face.value.appId
   const ownerId = userStore.userInfo?.id
@@ -192,7 +193,7 @@ const images = computed(() => {
   return items.filter((item, index) => item.url && items.findIndex(other => other.url === item.url) === index)
 })
 function onImagesUploaded(updated: FaceImages) {
-  if (!face.value || !isOwner.value) return
+  if (!face.value || !canEdit.value) return
   const previous = new Set(images.value.map(image => image.url))
   face.value.productImages = updated
   const added = images.value.find(image => !previous.has(image.url))

@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import FaceDetail from './FaceDetail.vue'
 import { updateFaceSharing, remixFace } from './permissions'
-const auth = vi.hoisted(() => ({ userInfo: { id: 7 } as { id: number } | null }))
+const auth = vi.hoisted(() => ({ isAdminUser: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
@@ -14,7 +14,7 @@ vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { auth.userInfo = { id: 7 }; vi.mocked(updateFaceSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue(fixture) })
+beforeEach(() => { auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(updateFaceSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup() {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -39,6 +39,29 @@ describe('watch face details', () => {
     expect(router.currentRoute.value.path).toBe('/faces/123')
     await wrapper.get('dialog .close').trigger('click')
     expect(wrapper.find('dialog').exists()).toBe(false)
+  })
+  it('lets an administrator edit another author’s app without remixing', async () => {
+    auth.userInfo = { id: 8 }
+    auth.isAdminUser = true
+    const { wrapper, router } = await setup()
+    expect(wrapper.find('input[type=file]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Edit description')
+    const switches = wrapper.findAll('[role="switch"]')
+    expect(switches).toHaveLength(2)
+    vi.mocked(updateFaceSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
+    await switches[0].trigger('click'); await flushPromises()
+    expect(switches[0].attributes('aria-checked')).toBe('true')
+    await wrapper.get('a.primary-button').trigger('click'); await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/design?id=actual-design')
+    expect(remixFace).not.toHaveBeenCalled()
+  })
+  it('does not allow a signed-in non-owner to edit', async () => {
+    auth.userInfo = { id: 8 }
+    const { wrapper } = await setup()
+    expect(wrapper.find('.primary-button').exists()).toBe(false)
+    expect(wrapper.find('[role="switch"]').exists()).toBe(false)
+    expect(wrapper.find('input[type=file]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Edit description')
   })
   it('shows independent author controls and only applies successful saves', async () => {
     const { wrapper } = await setup()

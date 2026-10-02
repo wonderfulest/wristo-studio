@@ -1,3 +1,4 @@
+import { baselineSlope } from './baselineLayout'
 import JSZip from 'jszip'
 import { packGlyphAtlas, type PackedGlyphAtlas } from './atlasPacker'
 import { bmFontDescriptorFilename, writeBmFontText } from './bmFontWriter'
@@ -177,6 +178,11 @@ export function connectIqSafeHorizontalMetrics(glyph: RenderedGlyph): Pick<Rende
   }
 }
 
+export function connectIqSafeGlyphYOffset(glyph: RenderedGlyph, angle = 0): number {
+  const safe = connectIqSafeHorizontalMetrics(glyph)
+  return glyph.yoffset + Math.round(baselineSlope(angle) * (safe.xoffset - glyph.xoffset - (safe.xadvance - glyph.xadvance) / 2))
+}
+
 interface ConnectIqGlyphLayout {
   advance: number
   drawOffsetX: number
@@ -186,6 +192,8 @@ interface ConnectIqLayoutManifest {
   schemaVersion: 1
   sizes: Record<string, {
     drawOffsetY: number
+    baselineAngle?: number
+    lineHeight?: number
     glyphs: Record<string, ConnectIqGlyphLayout>
   }>
 }
@@ -335,13 +343,14 @@ export async function buildBitmapFontPackage(
         assertNotCancelled(isCancelled)
         const placements = new Map(packed.placements.map((placement) => [placement.codepoint, placement]))
         connectIqLayout.sizes[size.toString()] = {
-          drawOffsetY: connectIqDrawOffsetY(size, rendered.lineHeight, rendered.baseline, rendered.glyphs),
+          ...(normalizedRecipe.baselineAngle ? { baselineAngle: normalizedRecipe.baselineAngle, lineHeight: rendered.lineHeight } : {}),
+          drawOffsetY: normalizedRecipe.baselineAngle ? 0 : connectIqDrawOffsetY(size, rendered.lineHeight, rendered.baseline, rendered.glyphs),
           glyphs: Object.fromEntries(
             rendered.glyphs.map((glyph) => [
               glyph.codepoint.toString(),
               {
-                advance: glyph.xadvance,
-                drawOffsetX: Math.min(0, glyph.xoffset),
+                advance: normalizedRecipe.baselineAngle ? connectIqSafeHorizontalMetrics(glyph).xadvance : glyph.xadvance,
+                drawOffsetX: normalizedRecipe.baselineAngle ? 0 : Math.min(0, glyph.xoffset),
               },
             ]),
           ),
@@ -349,6 +358,7 @@ export async function buildBitmapFontPackage(
         const descriptor = writeBmFontText({
           slug: request.slug,
           face: source.family,
+          baselineAngle: normalizedRecipe.baselineAngle,
           size,
           lineHeight: rendered.lineHeight,
           base: rendered.baseline,
@@ -358,7 +368,7 @@ export async function buildBitmapFontPackage(
             const placement = placements.get(glyph.codepoint)
             if (!placement) throw new Error(`Missing atlas placement for U+${glyph.codepoint.toString(16)}`)
             const horizontalMetrics = connectIqSafeHorizontalMetrics(glyph)
-            return { id: glyph.codepoint, x: placement.x, y: placement.y, width: glyph.width, height: glyph.height, xoffset: horizontalMetrics.xoffset, yoffset: glyph.yoffset, xadvance: horizontalMetrics.xadvance }
+            return { id: glyph.codepoint, x: placement.x, y: placement.y, width: glyph.width, height: glyph.height, xoffset: horizontalMetrics.xoffset, yoffset: connectIqSafeGlyphYOffset(glyph, normalizedRecipe.baselineAngle), xadvance: horizontalMetrics.xadvance }
           }),
         })
         assertNotCancelled(isCancelled)
