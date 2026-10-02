@@ -13,6 +13,7 @@ export type PropertyType =
   | 'data'
   | 'chart'
   | 'dial'
+  | 'complication'
 
 export interface PropertyOption {
   label: string

@@ -1,3 +1,4 @@
+import { captureInteraction } from '@/engine/interaction/elementInteraction'
 import type { ElementType, FabricElement } from '@/types/element'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizeFields } from '@/utils/fontSize'
@@ -76,6 +77,7 @@ export const encodeElementByRegistry = (
       values: [...element.layoutVisibility.values],
     }
   }
+  if (element.interaction !== undefined) normalized.interaction = captureInteraction(element)
   return normalized
 }
 

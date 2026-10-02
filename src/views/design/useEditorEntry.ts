@@ -1,8 +1,12 @@
 import { onScopeDispose, ref, watch } from 'vue'
+import { customAlphabet } from 'nanoid'
 import type { LocationQuery, RouteLocationRaw } from 'vue-router'
 import { designApi } from '@/api/wristo/design'
 import type { UnsavedDesign } from '@/engine/services/unsavedDesigns'
+import { BizErrorCode } from '@/config/errorCode'
 import { useUserStore } from '@/stores/user'
+
+const randomNameSuffix = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 6)
 
 export function useEditorEntry(options: {
   route: { path: string; query: LocationQuery }
@@ -12,7 +16,7 @@ export function useEditorEntry(options: {
   currentId: () => string
   findUnsaved?: () => UnsavedDesign | undefined
   chooseUnsaved?: (draft: UnsavedDesign) => Promise<'resume' | 'new' | 'dismiss'>
-  onCreated?: (id: string) => void
+  onCreated?: (id: string, name: string) => void
 }) {
   const user = useUserStore()
   const creating = ref(false)
@@ -52,14 +56,24 @@ export function useEditorEntry(options: {
           return
         }
       }
-      if (!user.canCreateDesign) throw new Error('Your creation limit has been reached. Open an existing creation or delete one before creating another.')
-      const response = await designApi.createDesign({ name: 'Untitled', description: '', originalType: 'original' })
+      if (!user.canCreateDesign) {
+        await options.replace('/pricing')
+        return
+      }
+      const name = `App${randomNameSuffix()}`
+      const response = await designApi.createDesign({ name, description: '', originalType: 'original' })
+      if (response.code === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) throw response
       if (response.code !== 0 || !response.data?.designUid) throw new Error(response.msg || 'Unable to create a project. Please try again.')
-      options.onCreated?.(response.data.designUid)
+      options.onCreated?.(response.data.designUid, name)
       if (active && current === generation) {
         await options.replace({ path: '/design', query: { id: response.data.designUid } })
       }
     } catch (cause) {
+      const failure = cause as { code?: number; response?: { data?: { code?: number } } } | null
+      if ((failure?.code ?? failure?.response?.data?.code) === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) {
+        if (active && current === generation) await options.replace('/pricing')
+        return
+      }
       if (active && current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to open this project.'
     } finally {
       if (!id) creating.value = false

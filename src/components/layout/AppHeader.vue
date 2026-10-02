@@ -9,7 +9,7 @@
         <template #file-actions>
           <el-menu-item index="file/new" :disabled="busy || !editorReady" @click="showDesignerConfirm">{{ t('nav.newProject') }}</el-menu-item>
           <el-menu-item index="file/workspace" @click="showDesignsListConfirm">{{ t('nav.workspace') }}</el-menu-item>
-          <el-menu-item index="file/save" :disabled="busy || !editorReady" @click="saveDesign">{{ t('common.save') }} <span class="shortcut">⌘ S</span></el-menu-item>
+          <el-menu-item index="file/save" :disabled="busy || !editorReady" @click="confirmOpenDesignsList">{{ t('common.save') }} <span class="shortcut">⌘ S</span></el-menu-item>
           <el-divider />
         </template>
         <template #help-actions>
@@ -29,7 +29,7 @@
     </div>
     <div class="studio-tools">
       <DeviceDisplay ref="deviceDisplay" />
-      <button type="button" class="save-button" :disabled="busy || !editorReady" @click="saveDesign">{{ t('common.save') }}</button>
+      <button type="button" class="save-button" :disabled="busy || !editorReady" @click="confirmOpenDesignsList">{{ t('common.save') }}</button>
       <button type="button" class="build-button" :disabled="busy || !editorReady" @click="buildDesign">
         <Icon icon="material-symbols:build-outline" /> {{ t('studioMenu.build') }}
       </button>

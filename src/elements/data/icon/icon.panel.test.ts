@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { shallowMount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import IconPanel from './icon.panel.vue'
+import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
+import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
+import { useFontStore } from '@/stores/fontStore'
 import { useHistoryStore } from '@/stores/historyStore'
 
 vi.mock('opentype.js', () => ({
@@ -12,18 +15,56 @@ vi.mock('opentype.js', () => ({
 }))
 
 vi.mock('@/utils/amoledIconCandidates', () => ({
-  getAmoledIconCandidateFromElement: () => ({
+  getAmoledIconCandidateFromElement: vi.fn(() => ({
     iconUnicode: '0063',
     symbolCode: '3',
     metricSymbol: 'calories',
     label: 'Cal',
     source: 'from-element',
-  }),
+  })),
 }))
 
 describe('icon settings panel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.mocked(getAmoledIconCandidateFromElement).mockClear()
+  })
+
+  it.each(['0030', '0063'])('renders glyph %s from bitmap resources and updates when its font changes', async (unicode) => {
+    vi.mocked(getAmoledIconCandidateFromElement).mockReturnValue({
+      iconUnicode: unicode, symbolCode: '1', metricSymbol: 'heartRate', label: 'HR', source: 'from-element',
+    })
+    const fonts = useFontStore()
+    for (const slug of ['pulse-solid', 'wristo-icon']) {
+      fonts.serverFonts.set(slug, {
+        slug,
+        bitmapPreviewDescriptorUrl: `/${slug}.fnt`,
+        bitmapPreviewAtlasUrl: `/${slug}.png`,
+      } as any)
+    }
+    const config = { eleType: 'icon', fontFamily: 'pulse-solid', text: 'c' }
+    const wrapper = shallowMount(IconPanel, {
+      props: { config },
+      global: { stubs: {
+        'el-form': { template: '<form><slot /></form>' },
+        'el-form-item': { template: '<div><slot /></div>' },
+        'el-tabs': { template: '<div><slot /></div>' },
+        'el-tab-pane': { template: '<div><slot /></div>' },
+        'el-dialog': true,
+        'el-icon': true,
+        'el-button': true,
+      } },
+    })
+    const preview = wrapper.findComponent(BitmapFontPreview)
+    expect(preview.exists()).toBe(true)
+    expect(preview.props()).toMatchObject({
+      descriptorUrl: '/pulse-solid.fnt', atlasUrl: '/pulse-solid.png', codepoints: [parseInt(unicode, 16)],
+    })
+    expect(wrapper.find('.mip-icon-glyph').exists()).toBe(false)
+    await wrapper.setProps({ config: { ...config, fontFamily: 'wristo-icon' } })
+    expect(preview.props('descriptorUrl')).toBe('/wristo-icon.fnt')
+    expect(preview.props('atlasUrl')).toBe('/wristo-icon.png')
+    wrapper.unmount()
   })
 
   it('does not write the selected AMOLED icon back when the panel first mounts', async () => {

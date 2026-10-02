@@ -1,3 +1,4 @@
+import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { findInvalidUnicodePaths } from './unicodeValidation'
 import { packageFonts } from '@/engine/services/packageAssetRegistry'
@@ -313,7 +314,7 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     // blobs. Imported theme images do not need separate library database records.
     { allowEmbeddedBlobAssets: true },
   )
-  const errors = [...dateErrors, ...visualThemeErrors]
+  const errors = [...dateErrors, ...visualThemeErrors, ...validateComplicationConfig(config.properties, config.elements, config.dataOptions || {})]
   for (const element of config.elements) if (element.eleType === 'dynamicImage') errors.push(...validateDynamicImage(element as any, config.properties))
   errors.push(...validateLayoutConfig(config.properties, config.elements))
   if (errors.length > 0) {
@@ -406,7 +407,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
   // ── 导出前校验：数据属性 / 目标属性必须绑定到元素 ──
   if (validateBindings) {
-    const bindingErrors = validateDataGoalBindings(objects, properties, t)
+    const bindingErrors = validateDataGoalBindings(objects, properties, t, config.dataOptions)
     if (bindingErrors.length > 0) {
       ElMessage.error(bindingErrors.join(t('common.listSeparator')))
       console.error('Export validation failed:', bindingErrors)

@@ -62,6 +62,8 @@ export interface UserProfileVO {
 }
 
 export interface UserInfo {
+  hasPassword?: boolean
+  googleBound?: boolean
   id: number
   username: string
   nickname: string | null

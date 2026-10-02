@@ -1,3 +1,4 @@
+import type { ElementInteraction } from '@/types/interaction'
 // Base element shared config
 
 import { TOriginX, TOriginY } from "fabric"
@@ -7,6 +8,7 @@ import type { DynamicValue } from '@/engine/expression/types'
 import type { LayoutVisibility } from '@/types/layout'
 
 export interface BaseElementConfig {
+  interaction?: ElementInteraction
   id: string
   eleType: string
   layerName?: string

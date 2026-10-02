@@ -1,3 +1,4 @@
+import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import { GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import type { WrtImportProgress } from './wrtImportProgress'
@@ -1195,7 +1196,7 @@ export async function buildWrtDesignPackage(
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
 ): Promise<File> {
-  const layoutErrors = validateLayoutConfig(config.properties || {}, config.elements || [])
+  const layoutErrors = [...validateLayoutConfig(config.properties || {}, config.elements || []), ...validateComplicationConfig(config.properties || {}, config.elements || [], config.dataOptions || {})]
   if (layoutErrors.length) throw new Error(layoutErrors.join(' '))
   for (const element of config.elements || []) if (element.eleType === 'dynamicImage') {
     const errors = validateDynamicImage(element as any, config.properties)

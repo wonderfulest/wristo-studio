@@ -1,3 +1,4 @@
+import { supportsElementInteraction, INTERACTION_DEFAULTS, captureInteraction } from '@/engine/interaction/elementInteraction'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -254,6 +255,7 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
 }
 
 export const canBindMetricPropertyToSelection = (type: PropertyType): boolean => {
+  if (type === 'complication') return getActiveElements().some(element => element?.eleType === 'complication' || supportsElementInteraction(element))
   if (type === 'date') return getActiveElements().some((element) => String(element?.eleType ?? '') === 'date')
   if (type !== 'data' && type !== 'goal') return false
   return getActiveElements().some((element) => isMetricBindableElement(type, String(element?.eleType ?? '')))
@@ -263,16 +265,22 @@ export const bindMetricPropertyToSelection = async (
   propertyKey: string,
   type: PropertyType,
 ): Promise<number> => {
-  if (type === 'date') {
+  if (type === 'date' || type === 'complication') {
     let boundCount = 0
     for (const element of getActiveElements()) {
-      if (String(element?.eleType ?? '') !== 'date' || element?.id == null) continue
-      await elementManager.updateElementById(String(element.id), { dateProperty: propertyKey })
+      if (type === 'complication' && element?.id != null && supportsElementInteraction(element)) {
+        const interaction = captureInteraction(element, { ...INTERACTION_DEFAULTS, ...element.interaction, action: 'complication', target: 'property', complicationProperty: propertyKey })
+        await elementManager.updateElementById(String(element.id), { interaction })
+        boundCount += 1
+        continue
+      }
+      if (String(element?.eleType ?? '') !== type || element?.id == null) continue
+      await elementManager.updateElementById(String(element.id), { [type === 'complication' ? 'complicationProperty' : 'dateProperty']: propertyKey })
       boundCount += 1
     }
     if (boundCount > 0) {
       useCanvasStore().canvas?.requestRenderAll?.()
-      useHistoryStore().saveState('settings:bind-date-property')
+      useHistoryStore().saveState(`settings:bind-${type}-property`)
     }
     return boundCount
   }

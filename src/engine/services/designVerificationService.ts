@@ -16,7 +16,7 @@ export type DesignVerificationReport = {
   summary: { errors: number; warnings: number; infos: number }
 }
 
-const BINDING_FIELDS = ['dataProperty', 'goalProperty', 'chartProperty', 'textProperty', 'dateProperty'] as const
+const BINDING_FIELDS = ['dataProperty', 'goalProperty', 'chartProperty', 'textProperty', 'dateProperty', 'complicationProperty'] as const
 
 /**
  * Performs Studio-only checks against the generated runtime configuration.
@@ -31,8 +31,10 @@ export function verifyDesignConfig(config: Pick<RuntimeDesignConfig, 'properties
 
   for (const element of elements as unknown as Array<Record<string, unknown>>) {
     const elementId = String(element.id || '')
-    for (const field of BINDING_FIELDS) {
-      const key = String(element[field] || '').trim()
+    const activeInteraction = (element as any).interaction
+    const interactionKey = activeInteraction?.action === 'complication' && activeInteraction.target === 'property' ? activeInteraction.complicationProperty : ''
+    for (const field of [...BINDING_FIELDS, '__interactionProperty']) {
+      const key = String((field === '__interactionProperty' ? interactionKey : element[field]) || '').trim()
       if (!key) continue
       referenced.add(key)
       if (!properties[key]) {

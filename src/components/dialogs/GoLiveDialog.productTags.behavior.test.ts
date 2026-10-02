@@ -239,7 +239,7 @@ describe('GoLiveDialog product tag behavior', () => {
     mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Refreshed body\n\n\\#tag-49 #tag-28\n\n#tag-28 #tag-49' })
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    await wrapper.findAll('button').find((button) => button.text() === 'common.refresh')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === 'goLive.generateDescription')!.trigger('click')
     await flushPromises()
     await confirm(wrapper)
     expect(mocks.publish.mock.calls[0][0].description).toBe('Refreshed body\n\n#tag-28 #tag-49')

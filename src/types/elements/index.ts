@@ -2,6 +2,9 @@
  * 元素配置类型聚合入口 - 按元素类型拆分后在此统一导出
  */
 
+export type { ComplicationElementConfig } from './complication'
+import type { ComplicationElementConfig as _Complication } from './complication'
+
 // base & common
 export type { BaseElementConfig } from './base'
 export type { TextElementConfig } from './text'
@@ -68,6 +71,7 @@ import type { BackgroundElementConfig as _Background } from './background'
 import type { ArcSunEventsElementConfig as _ArcSunEvents, CurveSunEventsElementConfig as _CurveSunEvents, LineSunEventsElementConfig as _LineSunEvents } from './sunEvents'
 
 export type AnyElementConfig =
+  | _Complication
   | _WorldMap
   | _Time
   | _Date
@@ -105,6 +109,7 @@ export type AnyElementConfig =
 
 // 类型映射 - 根据元素类型获取对应的配置类型
 export interface ElementConfigMap {
+  'complication': _Complication
   'worldMap': _WorldMap
   'time': _Time
   'date': _Date

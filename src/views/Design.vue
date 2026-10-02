@@ -415,7 +415,7 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   currentId: () => loadedDesignId,
   findUnsaved: () => readUnsavedDesigns(window.localStorage, draftOwner())[0],
   chooseUnsaved: chooseUnsavedDesign,
-  onCreated: (id) => rememberDraft(id, 'Untitled'),
+  onCreated: (id, name) => rememberDraft(id, name),
   flush: async () => {
     saveDirtyDraft()
     await draftWriteQueue

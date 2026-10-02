@@ -46,6 +46,35 @@ describe('font asset collection', () => {
 })
 
 describe('archive progress', () => {
+  it('round-trips Interaction on an existing element without replacing its appearance', async () => {
+    setActivePinia(createPinia())
+    const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const config = newProjectConfig('{}', 'interaction-roundtrip', 'Interaction Test', 'eng')
+    config.properties = { shortcut: { type: 'complication', title: 'Shortcut', value: 18, options: [{ value: 18, label: 'Heart Rate' }, { value: 2, label: 'Steps' }] } }
+    config.elements = [{ id: 'original', eleType: 'rectangle', left: 100, top: 200, width: 100, height: 60, fill: '#123456', originX: 'center', originY: 'center', interaction: { action: 'complication', target: 'property', complicationProperty: 'shortcut', touchMode: 'auto', touchShape: 'circle', touchPadding: 10, touchOffsetX: 5, touchOffsetY: -3, bounds: { centerOffsetX: 0, centerOffsetY: 0, width: 100, height: 60 } } } as any]
+    const loaded = await readWrtDesignPackage(await buildWrtDesignPackage(config))
+    expect(loaded.config.elements).toEqual(config.elements)
+    delete config.properties.shortcut
+    await expect(buildWrtDesignPackage(config)).rejects.toThrow('Missing interaction Complication property')
+    config.elements[0].interaction = { action: 'none' }
+    await expect(buildWrtDesignPackage(config)).resolves.toBeInstanceOf(Blob)
+  })
+
+  it('round-trips fixed and dynamic Complications and rejects dangling sources', async () => {
+    setActivePinia(createPinia())
+    const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const config = newProjectConfig('{}', 'complication-roundtrip', 'Complication Test', 'eng')
+    config.properties = { complication_1: { type: 'complication', title: 'Complication 1', value: 18, options: [{ value: 18, label: 'Heart Rate' }, { value: 2, label: 'Steps' }] } }
+    config.elements = [{ id: 'comp', eleType: 'complication', complicationType: 1, complicationProperty: 'complication_1', displayMode: 'iconValue', displayWidth: 180, displayHeight: 64, iconSource: 'custom', customIcon: 'bike', iconSize: 30, iconGap: 8, backgroundShape: 'rounded', backgroundColor: '#202020', touchMode: 'auto', touchShape: 'circle', touchPadding: 12, touchOffsetX: 8, touchOffsetY: -4, progressRange: 'custom', progressMin: 0, progressMax: 10000, progressThickness: 6, progressTrackColor: '#333333', left: 227, top: 350, originX: 'center', originY: 'center', touchWidth: 96, touchHeight: 64, launchOnPress: true } as any]
+    const loaded = await readWrtDesignPackage(await buildWrtDesignPackage(config))
+    expect(loaded.config.properties).toEqual(config.properties)
+    expect(loaded.config.elements).toEqual(config.elements)
+    delete config.properties.complication_1
+    await expect(buildWrtDesignPackage(config)).rejects.toThrow('Missing Complication property')
+  })
+
   it('preserves vertical battery geometry and colors in WRT export and re-import', async () => {
     setActivePinia(createPinia())
     const { newProjectConfig } = await import('@/views/designs/newProjectConfig')

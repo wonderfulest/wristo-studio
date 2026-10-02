@@ -164,7 +164,7 @@
                           <code>{{ item.key }}</code>
                         </div>
                         <div class="property-preview">
-                          <template v-if="item.prop.type === 'date'">
+                          <template v-if="item.prop.type === 'date' || item.prop.type === 'complication'">
                             <el-select
                               :model-value="item.prop.value"
                               class="date-format-select"
@@ -273,6 +273,7 @@
     <ChartPropertyDialog ref="chartPropertyDialog" @confirm="handlePropertyConfirm" />
     <TextPropertyDialog ref="textPropertyDialog" @confirm="handlePropertyConfirm" />
     <DialPropertyDialog ref="dialPropertyDialog" @confirm="handlePropertyConfirm" />
+    <ComplicationPropertyDialog ref="complicationPropertyDialog" @confirm="handlePropertyConfirm" />
     <DatePropertyDialog ref="datePropertyDialog" @confirm="handlePropertyConfirm" />
     <LayoutPropertyDialog ref="layoutPropertyDialog" @confirm="handlePropertyConfirm" />
   </el-drawer>
@@ -307,6 +308,8 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useEditorLayoutStore } from '@/stores/editorLayoutStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
+import ComplicationPropertyDialog from './dialogs/ComplicationPropertyDialog.vue'
+import { refreshComplication } from '@/elements/complication/complication.renderer'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { useDesignStore } from '@/stores/designStore'
 import emitter from '@/utils/eventBus'
@@ -333,6 +336,7 @@ const dataPropertyDialog = ref(null)
 const chartPropertyDialog = ref(null)
 const textPropertyDialog = ref(null)
 const dialPropertyDialog = ref(null)
+const complicationPropertyDialog = ref(null)
 const datePropertyDialog = ref(null)
 const layoutPropertyDialog = ref(null)
 const titleEditorRef = ref(null)
@@ -347,7 +351,7 @@ const visualThemeStore = useVisualThemeStore()
 const designStore = useDesignStore()
 const { t } = useI18n()
 
-const typeOrder = ['color', 'layout', 'data', 'goal', 'chart', 'text', 'dial', 'date']
+const typeOrder = ['complication', 'color', 'layout', 'data', 'goal', 'chart', 'text', 'dial', 'date']
 const addablePropertyTypes = typeOrder
 
 const getPropertyDisplayValue = (key, prop) =>
@@ -362,6 +366,7 @@ const getPropertyOptionCount = (prop) => {
 }
 
 const typeMeta = computed(() => ({
+  complication: { label: 'Complication', icon: DataLine },
   color: { label: t('property.colorSelect'), icon: Brush },
   data: { label: t('property.dataSelect'), icon: DataLine },
   goal: { label: t('property.goalSelect'), icon: Histogram },
@@ -545,7 +550,9 @@ onMounted(() => {
       clampPropertiesDrawerWidth(editorLayoutStore.getWidth('propertiesDrawer'))
     )
     visible.value = true
-    if (request?.type === 'dial') {
+    if (request?.type === 'complication') {
+      nextTick(() => complicationPropertyDialog.value?.show())
+    } else if (request?.type === 'dial') {
       dialPropertyDialog.value?.show({ dialMode: request.dialMode })
     } else if (request?.type === 'date') {
       datePropertyDialog.value?.show()
@@ -562,6 +569,7 @@ onUnmounted(() => {
 
 // 添加属性
 const addProperty = (type) => {
+  if (type === 'complication') { complicationPropertyDialog.value?.show(); return }
   if (type === 'color') {
     colorPropertyDialog.value?.show()
   } else if (type === 'goal') {
@@ -582,6 +590,7 @@ const addProperty = (type) => {
 }
 // 编辑属性
 const editProperty = (key, prop, elementId = null) => {
+  if (prop.type === 'complication') { complicationPropertyDialog.value?.show({ ...prop, propertyKey: key }); return }
   if (prop.type === 'layout') {
     layoutPropertyDialog.value?.show({ ...prop, propertyKey: key })
     return
@@ -630,7 +639,7 @@ const canBindProperty = (type) => {
 }
 
 const getBindTooltip = (type) => {
-  if (type !== 'data' && type !== 'goal' && type !== 'date') return t('property.bindUnsupported')
+  if (type !== 'data' && type !== 'goal' && type !== 'date' && type !== 'complication') return t('property.bindUnsupported')
   if (!canBindProperty(type)) return t('property.bindRequiresSelection')
   return t('property.bindToSelection')
 }
@@ -647,6 +656,9 @@ const bindProperty = async (key, type) => {
 
 // 删除属性
 const deleteProperty = async (key) => {
+  if (elementDataStore.elements.some(snapshot => snapshot.config?.complicationProperty === key || (snapshot.config?.interaction?.action === 'complication' && snapshot.config?.interaction?.target === 'property' && snapshot.config?.interaction?.complicationProperty === key))) {
+    ElMessage.warning('Unbind this Complication property before deleting it.'); return
+  }
   if (propertiesStore.allProperties[key]?.type === 'layout'
     && elementDataStore.elements.some(snapshot => snapshot.config?.layoutVisibility?.propertyKey === key)) {
     ElMessage.warning('Update element layout bindings before deleting this parameter.')
@@ -728,6 +740,12 @@ const handlePropertyConfirm = async (propertyData) => {
       ? { defaultValue: previous.value }
       : {}),
   })
+  if (propertyPayload.type === 'complication') {
+    for (const element of canvasStore.canvas?.getObjects() || []) {
+      if (element.eleType === 'complication') refreshComplication(element)
+    }
+    canvasStore.canvas?.requestRenderAll()
+  }
   if (propertyPayload.type === 'data') {
     propertiesStore.registerDataOptions(dataOptions)
   }

@@ -70,10 +70,6 @@
           :aria-label="t('project.showCreator')"
         />
       </div>
-      </div>
-    </div>
-
-    <div class="collection-toolbar">
       <span class="collection-count">{{ t('project.designCount', { count: total }) }}</span>
       <div class="collection-controls">
         <div class="view-switch" role="group" :aria-label="t('project.viewMode')">
@@ -93,6 +89,7 @@
           <Icon icon="material-symbols:add-rounded" />
           {{ t('project.newProject') }}
         </el-button>
+      </div>
       </div>
     </div>
 
@@ -1149,17 +1146,14 @@ const handleGoLiveSuccess = () => {
 </script>
 
 <style scoped>
-.collection-toolbar,
 .collection-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
-
-.collection-toolbar { margin: 20px 0 16px; }
-.collection-count { color: var(--studio-text-muted); font-size: 13px; }
+.collection-count { white-space: nowrap; color: var(--studio-text-muted); font-size: 13px; }
 .view-switch {
   display: inline-flex;
   gap: 4px;
@@ -1220,7 +1214,7 @@ const handleGoLiveSuccess = () => {
 /* Header action button tweaks now live in DesignCard.vue */
 
 .search-bar {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-lg);
   background: var(--studio-surface-raised);
@@ -1231,24 +1225,30 @@ const handleGoLiveSuccess = () => {
 .filter-preferences {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+
+.filter-fields > *,
+.filter-preferences > * {
+  flex-shrink: 0;
 }
 
 .filter-preferences {
   gap: 10px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   border-top: 1px solid var(--studio-border);
   background: var(--studio-surface-soft);
 }
 
 .sort-icon { flex-shrink: 0; font-size: 18px; color: var(--studio-text-muted); }
-.name-filter { width: 220px; }
+.name-filter { width: 200px; }
 .app-id-filter { width: 144px; }
-.designer-filter { flex: 0 0 200px; width: 200px; }
-.payment-filter { width: 190px; }
-.status-filter { width: 170px; }
+.designer-filter { flex: 0 0 180px; width: 180px; }
+.payment-filter { width: 160px; }
+.status-filter { width: 150px; }
 .sort-field-filter { width: 170px; }
 .sort-order-filter { width: 150px; }
 .scope-filter { min-height: 36px; flex: 0 0 auto; }
@@ -1300,25 +1300,9 @@ const handleGoLiveSuccess = () => {
     max-width: 100%;
   }
 
-  .search-bar {
-    align-items: stretch;
-  }
-
-  .status-filter,
-  .name-filter,
-  .app-id-filter,
-  .designer-filter,
-  .payment-filter,
-  .sort-field-filter,
-  .sort-order-filter,
-  .scope-filter {
-    width: 100%;
-  }
-
-  .designer-filter { flex-basis: 100%; }
-  .filter-fields, .filter-preferences { padding: 12px; gap: 10px; }
+  .filter-fields, .filter-preferences { padding: 8px 10px; gap: 8px; }
   .sort-icon { display: none; }
-  .display-options { margin-left: 0; padding-left: 0; }
+  .display-options { padding-left: 0; }
   
   .el-col {
     padding: 0 10px;

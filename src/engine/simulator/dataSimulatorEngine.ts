@@ -289,6 +289,12 @@ export class DataSimulatorEngine {
       try {
       const eleType = String(obj.eleType ?? '')
 
+      if (eleType === 'complication') {
+        obj.refreshPreview?.(propertiesStore.allProperties)
+        changed = true
+        return
+      }
+
       if (eleType === 'time') {
         const isBitmap = obj.fontRenderType === 'bitmap' || obj.type === 'group'
         if (isBitmap) {

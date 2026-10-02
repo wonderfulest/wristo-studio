@@ -32,7 +32,7 @@ describe('direct Studio entry', () => {
     const s = setup()
     await Promise.all([s.open(), s.open()])
     expect(mocks.createDesign).toHaveBeenCalledTimes(1)
-    expect(mocks.createDesign).toHaveBeenCalledWith({ name: 'Untitled', description: '', originalType: 'original' })
+    expect(mocks.createDesign).toHaveBeenCalledWith({ name: expect.stringMatching(/^App[A-Za-z]{6}$/), description: '', originalType: 'original' })
     expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'created-design' } })
     s.route.query.id = 'created-design'
     await nextTick()
@@ -53,7 +53,8 @@ describe('direct Studio entry', () => {
     mocks.user.canCreateDesign = false
     const s = setup()
     await s.open()
-    expect(s.error.value).toContain('limit')
+    expect(s.error.value).toBe('')
+    expect(mocks.replace).toHaveBeenCalledWith('/pricing')
     expect(mocks.createDesign).not.toHaveBeenCalled()
     s.scope.stop()
   })
@@ -114,7 +115,7 @@ it('records new projects and flushes changes before looking for drafts', async (
   const s = setup('', { onCreated, findUnsaved })
   await s.open()
   expect(s.flush.mock.invocationCallOrder[0]).toBeLessThan(findUnsaved.mock.invocationCallOrder[0])
-  expect(onCreated).toHaveBeenCalledWith('created-design')
+  expect(onCreated).toHaveBeenCalledWith('created-design', mocks.createDesign.mock.calls[0][0].name)
   s.scope.stop()
 })
 it('keeps the current design when closing the entry dialog', async () => {
@@ -122,5 +123,22 @@ it('keeps the current design when closing the entry dialog', async () => {
   await s.open()
   expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'current' } })
   expect(mocks.createDesign).not.toHaveBeenCalled()
+  s.scope.stop()
+})
+
+it.each([{ code: 2004 }, { response: { data: { code: 2004 } } }])('redirects backend quota failures to membership upgrades', async failure => {
+  mocks.createDesign.mockRejectedValueOnce(failure)
+  const s = setup()
+  await s.open()
+  expect(mocks.replace).toHaveBeenCalledWith('/pricing')
+  expect(s.error.value).toBe('')
+  s.scope.stop()
+})
+it('allows existing designs to load at the creation limit', async () => {
+  mocks.user.canCreateDesign = false
+  const s = setup('existing-id')
+  await s.open()
+  expect(s.load).toHaveBeenCalledWith('existing-id')
+  expect(mocks.replace).not.toHaveBeenCalled()
   s.scope.stop()
 })

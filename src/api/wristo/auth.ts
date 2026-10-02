@@ -42,3 +42,12 @@ export const updateMyInfo = async (payload: UpdateMyInfoPayload): Promise<any> =
 export const fetchSsoToken = (data: SsoTokenRequestDto): Promise<ApiResponse<SsoTokenResponseData>> => {
   return instance.post('/public/sso/token', data)
 }
+
+export interface AuthMe {
+  providers: { apple?: boolean; google?: boolean }
+}
+
+export const getAuthMe = (): Promise<ApiResponse<AuthMe>> => instance.get('/auth/me')
+export const bindGoogle = (credential: string): Promise<ApiResponse<boolean>> =>
+  instance.post('/users/bind-google', { credential })
+export const unbindGoogle = (): Promise<ApiResponse<boolean>> => instance.post('/users/unbind-google')

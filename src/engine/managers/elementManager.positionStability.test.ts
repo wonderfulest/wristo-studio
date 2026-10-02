@@ -1,4 +1,9 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/engine/layout/studioLayoutController', () => ({
+  scheduleReflowForElement: vi.fn(),
+}))
 
 const runtime = vi.hoisted(() => ({
   canvas: null as any,

@@ -20,6 +20,7 @@
       @update="handleUpdate"
       ref="settingsComponent"
     />
+    <InteractionField v-if="supportsElementInteraction(activeConfig ?? activeElement)" :config="activeConfig" :element="activeElement" :apply-patch="applyConfigPatch" />
     <VisibilityExpressionField
       v-if="activeElement?.eleType !== 'dynamicImage'"
       :config="activeConfig"
@@ -37,6 +38,8 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { useLayerStore } from '@/stores/layerStore'
 import GroupSettings from '@/components/panels/settings/GroupSettings.vue'
 import LayoutGroupSettings from '@/components/panels/settings/LayoutGroupSettings.vue'
+import { supportsElementInteraction } from '@/engine/interaction/elementInteraction'
+import InteractionField from '@/components/panels/settings/InteractionField.vue'
 import VisibilityExpressionField from '@/components/panels/settings/VisibilityExpressionField.vue'
 import LayoutVisibilityField from '@/components/panels/settings/LayoutVisibilityField.vue'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'

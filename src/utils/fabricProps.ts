@@ -15,6 +15,7 @@ const DEFAULT_FABRIC_PROPS = [
   'goalProperty',
   'layoutVisibility',
   'visibility',
+  'interaction',
   'displayStates',
   // 滚动字段
   'scrollAreaWidth',

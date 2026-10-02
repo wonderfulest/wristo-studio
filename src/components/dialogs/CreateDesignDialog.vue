@@ -45,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import { BizErrorCode } from '@/config/errorCode'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { ref, reactive, computed } from 'vue'
@@ -138,6 +139,7 @@ const handleConfirm = async (): Promise<void> => {
       sourceId: resolvedOriginalType === 'non_original' ? form.sourceId.trim() || undefined : undefined
     })
 
+    if (response.code === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) throw response
     if (response.code === 0 && response.data && response.data.designUid) {
       const initialized = await designApi.updateDesign({
         uid: response.data.designUid,
@@ -160,6 +162,12 @@ const handleConfirm = async (): Promise<void> => {
       ElMessage.error(t('createDesign.createFailed'))
     }
   } catch (error) {
+    const failure = error as { code?: number; response?: { data?: { code?: number } } } | null
+    if ((failure?.code ?? failure?.response?.data?.code) === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) {
+      dialogVisible.value = false
+      await router.push('/pricing')
+      return
+    }
     console.error('Failed to create design:', error)
     showErrorOnce(error, t('createDesign.createFailed'))
   } finally {
@@ -186,6 +194,10 @@ const resetForm = (): void => {
 
 // show dialog
 const show = (): void => {
+  if (!userStore.canCreateDesign) {
+    void router.push('/pricing')
+    return
+  }
   resetForm()
   dialogVisible.value = true
 }

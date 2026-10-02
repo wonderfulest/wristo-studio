@@ -1,5 +1,6 @@
+import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import type { FabricElement } from '@/types/element'
-import type { PropertiesMap } from '@/types/properties'
+import type { PropertiesMap, DataOptionsMap } from '@/types/properties'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 
@@ -34,8 +35,9 @@ export function validateDataGoalBindings(
   objects: FabricElement[],
   properties: PropertiesMap,
   t: Translate,
+  dataOptions: DataOptionsMap = {},
 ): string[] {
-  const errors: string[] = []
+  const errors: string[] = validateComplicationConfig(properties, objects, dataOptions)
   const elements = objects.filter((o) => {
     const type = (o as any).eleType
     return type && type !== 'background' && type !== 'global'

@@ -23,9 +23,13 @@
         <div class="icon-preview-card selected">
           <div class="condition-name">{{ currentAmoledCandidate?.label || currentAmoledCandidate?.iconUnicode || 'Icon' }}</div>
           <div class="asset mip-asset">
-            <span class="mip-icon-glyph" :style="{ fontFamily: mipIconFontFamily }">
-              {{ currentGlyph }}
-            </span>
+            <BitmapFontPreview
+              v-if="mipPreviewFont?.bitmapPreviewDescriptorUrl && mipPreviewFont?.bitmapPreviewAtlasUrl"
+              :descriptor-url="mipPreviewFont.bitmapPreviewDescriptorUrl"
+              :atlas-url="mipPreviewFont.bitmapPreviewAtlasUrl"
+              :codepoints="currentGlyphCodepoints"
+            />
+            <span v-else class="no-preview" title="Bitmap preview unavailable">—</span>
           </div>
         </div>
       </el-tab-pane>
@@ -123,6 +127,10 @@ import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { normalizeIconUnicode } from '@/types/amoledIcons'
 import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
+import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
+import { useFontStore } from '@/stores/fontStore'
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 
@@ -139,6 +147,7 @@ const { t } = useI18n()
 const amoledIconAssetStore = useAmoledIconAssetStore()
 const historyStore = useHistoryStore()
 const propertiesStore = usePropertiesStore()
+const fontStore = useFontStore()
 const amoledFileInputRef = ref<HTMLInputElement | null>(null)
 const activeTab = ref<'mip' | 'amoled'>('mip')
 const uploadDialogVisible = ref(false)
@@ -167,6 +176,13 @@ const mipIconFontFamily = computed(() => {
   return String(model?.fontFamily || model?.iconFont || 'wristo-icon').trim()
 })
 const currentGlyph = computed(() => glyph(currentAmoledCandidate.value?.iconUnicode || (currentModel.value as any)?.text || ''))
+const currentGlyphCodepoints = computed(() => Array.from(currentGlyph.value, char => char.codePointAt(0)!))
+const mipPreviewFont = computed(() => {
+  const slug = canonicalFontSlug(mipIconFontFamily.value)
+  return packageFonts.get(slug)
+    || fontStore.serverFonts.get(slug)
+    || fontStore.fontSections.flatMap(section => section.fonts).find(font => canonicalFontSlug(font.value) === slug)
+})
 const currentAmoledPreviewSource = computed(() => {
   const iconUnicode = currentAmoledCandidate.value?.iconUnicode
   if (!iconUnicode) return ''
@@ -727,10 +743,8 @@ defineExpose({
   object-fit: contain;
 }
 
-.mip-icon-glyph {
+.mip-asset {
   color: #111827;
-  font-size: 36px;
-  line-height: 1;
 }
 
 .amoled-asset {

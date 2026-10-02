@@ -1,3 +1,5 @@
+import { captureInteraction } from '@/engine/interaction/elementInteraction'
+import { installInteractionGuides } from '@/engine/interaction/interactionGuides'
 /**
  * ElementManager
  * 统一入口：基于 ElementRegistry 分发到各自元素 handler
@@ -75,6 +77,9 @@ export function applySharedElementPatch(
   element: FabricElement | Record<string, unknown>,
   patch: Partial<AnyElementConfig> | Record<string, unknown>,
 ): void {
+  if (Object.prototype.hasOwnProperty.call(patch, 'interaction')) {
+    element.interaction = patch.interaction == null ? undefined : JSON.parse(JSON.stringify(patch.interaction))
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'layoutVisibility')) {
     element.layoutVisibility = patch.layoutVisibility
   }
@@ -109,6 +114,12 @@ export async function addElement(
   if (element) {
     ;(element as any).displayStates = normalizeDisplayStates((element as any).displayStates ?? (config as any).displayStates)
     applySharedElementPatch(element, config)
+    const canvas = useCanvasStore().canvas
+    if (canvas && element.interaction?.action === 'complication') installInteractionGuides(canvas as any)
+    if (config.interaction !== undefined && element.id != null) {
+      element.interaction = captureInteraction(element)
+      useElementDataStore().patchElement(String(element.id), { interaction: element.interaction } as any)
+    }
     const colorBindings = collectExplicitColorBindings(config as unknown as Record<string, unknown>)
     Object.assign(element as any, colorBindings)
     const id = (element as any).id
@@ -148,6 +159,8 @@ export async function updateElement(element: FabricElement, patch: any): Promise
   const handler = getElementHandler(type)
   const handlerOwnsRuntimePosition = type === 'rotatingHand'
   applySharedElementPatch(resolved, patch)
+  const interactionCanvas = useCanvasStore().canvas
+  if (interactionCanvas && resolved.interaction?.action === 'complication') installInteractionGuides(interactionCanvas as any)
   if (!handler || !handler.update) {
     console.warn('[ElementManager] updateElement: no update handler for type', { type, element: resolved, patch })
     if (id != null) {
@@ -196,6 +209,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
     const current = ((canvas?.getObjects?.() || []).find(
       (o: any) => o?.id != null && String(o.id) === String(id),
     ) as FabricElement | undefined) ?? resolved
+    applySharedElementPatch(current, { interaction: resolved.interaction })
     const positionRestored = handlerOwnsRuntimePosition
       ? false
       : restoreUnpatchedRuntimePosition(current, runtimePositionBefore, positionPatch)
@@ -205,6 +219,7 @@ export async function updateElement(element: FabricElement, patch: any): Promise
       const encoded = handler.encode?.(current)
       if (encoded) {
         applySharedElementPatch(encoded as any, current as any)
+        if (current.interaction !== undefined) encoded.interaction = captureInteraction(current)
         Object.assign(encoded as any, collectExplicitColorBindings(current as unknown as Record<string, unknown>))
         const stableEncoded = applyStableBusinessPosition(encoded as any, businessPositionBefore, positionPatch)
         stableBusinessPosition = stableEncoded

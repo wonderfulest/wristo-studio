@@ -61,7 +61,7 @@
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="form.description || ''" />
-          <el-button size="small" type="primary" @click="refreshDescription">{{ t('common.refresh') }}</el-button>
+          <el-button size="small" type="primary" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
         </div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
