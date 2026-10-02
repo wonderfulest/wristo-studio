@@ -11,9 +11,9 @@
 - 蓝色虚线只用于编辑器选中状态，不进入导出图片。关闭交互后不注册热区。
 - 交互配置随元素保存、复制及 WRT 导入导出；生成器按当前可见状态注册热区，并读取当前设置确定动态目标。真实设备是否能打开来源取决于型号与固件。
 
-需要内容也随来源切换时，使用下面的独立 Complication 元素。
+Metric 列表不再提供独立 Complication 元素的添加入口。以下说明用于已有设计中的独立 Complication 元素。
 
-Studio 的 `Metric → Complication` 是一个元素，属性分成三个独立组。支持 Garmin 系统 Complication ID 1–42；来源可用性取决于设备和固件。
+已有设计中的独立 Complication 元素，其属性分成三个独立组。支持 Garmin 系统 Complication ID 1–42；来源可用性取决于设备和固件。
 
 ## Content Source
 

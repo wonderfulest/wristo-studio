@@ -1,8 +1,6 @@
 import type { AnyElementConfig } from '@/types/elements'
 import type { EDITOR_ELEMENT } from '@/types/editorElement'
 
-import { complicationSchema } from '@/elements/complication/complication.schema'
-
 // time
 import { timeSchema } from '@/elements/time/time/time.schema'
 import { dateSchema } from '@/elements/time/date/date.schema'
@@ -102,7 +100,6 @@ export const elementConfigs: ElementConfigs = {
     date: buildConfigFromSchema(dateSchema as AnySchema),
   },
   metric: {
-    complication: buildConfigFromSchema(complicationSchema as AnySchema),
     icon: buildConfigFromSchema(iconSchema as AnySchema),
     data: buildConfigFromSchema(dataSchema as AnySchema),
     label: buildConfigFromSchema(labelSchema as AnySchema),
