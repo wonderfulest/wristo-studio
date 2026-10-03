@@ -91,12 +91,6 @@ it('adds bulk matches and retains unmatched input', async () => {
   expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 28, 38]]])
   expect((wrapper.get('input').element as HTMLInputElement).value).toBe('Unknown')
 })
-it('auto-fills relevant existing tags', async () => {
-  const wrapper = mountSelector({ suggestionText: 'Everyday AMOLED' })
-  await wrapper.findAll('button')[1].trigger('click')
-  expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 28, 38]]])
-})
-
 it('accepts twenty tags and rejects the twenty-first by default', async () => {
   const ids = Array.from({ length: 20 }, (_, index) => index + 1)
   const wrapper = mountSelector({ tagIds: ids })
@@ -107,31 +101,46 @@ it('accepts twenty tags and rejects the twenty-first by default', async () => {
   expect(warning).toHaveBeenCalledWith('productTags.limit:20')
 })
 
-it('auto-fills from the saved design and preserves manual selections', async () => {
-  const wrapper = mountSelector({
-    suggestionText: 'App BNLYRC',
-    suggestionConfig: { elements: [{ eleType: 'time' }] },
-    tags: [{ id: 2, name: 'Digital', slug: 'digital', tagGroup: 'style', sort: 0, status: 1 }]
-  })
-  await wrapper.findAll('button')[1].trigger('click')
-  expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 2]]])
+it('starts empty and only emits a generation request when clicked', async () => {
+  const wrapper = mountSelector({ tagIds: [], canGenerate: true })
+  expect(wrapper.emitted('generate')).toBeUndefined()
+  await wrapper.get('[data-testid="generate-tags"]').trigger('click')
+  expect(wrapper.emitted('generate')).toHaveLength(1)
+  expect(wrapper.emitted('update:tagIds')).toBeUndefined()
 })
 
-it('adds a common tag even when the design name has no matching words', async () => {
-  const wrapper = mountSelector({ suggestionText: 'App BNLYRC' })
-  await wrapper.findAll('button')[1].trigger('click')
-  expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 38]]])
+it.each([{ tagIds: [1], canGenerate: true }, { tagIds: [], canGenerate: false }, { tagIds: [], canGenerate: true, generating: true }])('disables AI generation for unavailable or nonempty selections', async (props) => {
+  const wrapper = mountSelector(props)
+  expect(wrapper.get('[data-testid="generate-tags"]').attributes('disabled')).toBeDefined()
+  await wrapper.get('[data-testid="generate-tags"]').trigger('click')
+  expect(wrapper.emitted('generate')).toBeUndefined()
 })
 
-it('passes packaged devices to auto-fill and includes compatible model tags', async () => {
-  const wrapper = mountSelector({
-    supportedDeviceIds: 'fenix7,fr265',
-    tags: [
-      { id: 2, name: 'Fenix', slug: 'fenix', tagGroup: 'device', sort: 0, status: 1 },
-      { id: 3, name: 'Forerunner', slug: 'forerunner', tagGroup: 'device', sort: 0, status: 1 },
-      { id: 4, name: 'Venu', slug: 'venu', tagGroup: 'device', sort: 0, status: 1 }
-    ]
+it('retains the final tag and warns instead of clearing the selection', async () => {
+  warning.mockClear()
+  const wrapper = mountSelector()
+  wrapper.getComponent(stubs.ElSelect).vm.$emit('change', [])
+  await wrapper.vm.$nextTick()
+  expect(wrapper.emitted('update:tagIds')).toEqual([[[1]]])
+  expect(warning).toHaveBeenCalledWith('productTags.keepOne')
+})
+
+it('keeps the final tag visibly selected with the real Element Plus select', async () => {
+  const { defineComponent, h, ref } = await import('vue')
+  const { flushPromises } = await import('@vue/test-utils')
+  const ep = await vi.importActual<typeof import('element-plus')>('element-plus')
+  const Host = defineComponent({
+    setup() {
+      const ids = ref([1])
+      return () => h(ProductTagSelector, { tagIds: ids.value, tags, 'onUpdate:tagIds': value => { ids.value = value } })
+    }
   })
-  await wrapper.findAll('button')[1].trigger('click')
-  expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 2, 3]]])
+  const wrapper = mount(Host, { global: { components: { ElFormItem: ep.ElFormItem, ElSelect: ep.ElSelect, ElOption: ep.ElOption } } })
+  await flushPromises()
+  await wrapper.get('.el-tag__close').trigger('click')
+  await flushPromises()
+  expect(wrapper.findAll('.el-tag')).toHaveLength(1)
+  expect(wrapper.get('.el-tag').text()).toBe('Minimal')
+  expect(wrapper.getComponent(ProductTagSelector).props('tagIds')).toEqual([1])
+  wrapper.unmount()
 })

@@ -6,6 +6,7 @@ import type { Design } from '@/types/api/design'
 
 const mocks = vi.hoisted(() => ({
   getProductTagsPage: vi.fn(),
+  getProductTagGeneration: vi.fn(),
   getBundles: vi.fn(),
   publish: vi.fn(),
   messageError: vi.fn(),
@@ -15,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   saveProductImageArchive: vi.fn(),
 }))
 
-vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage }))
+vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
@@ -154,6 +155,7 @@ const showDialog = async (wrapper: ReturnType<typeof mountDialog>, value = desig
 describe('GoLiveDialog product image behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: [] } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })

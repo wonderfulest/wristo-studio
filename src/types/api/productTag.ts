@@ -23,3 +23,9 @@ export interface ProductTagPageData {
 }
 
 export type ProductTagPageResponse = ApiResponse<ProductTagPageData>
+
+export interface ProductTagGeneration {
+  status: 'ready' | 'existing' | 'processing' | 'completed' | 'failed' | 'unavailable'
+  canGenerate: boolean
+  tags: ProductTag[]
+}

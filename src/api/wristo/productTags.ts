@@ -1,5 +1,6 @@
 import instance from '@/config/axios'
-import type { ProductTagPageResponse } from '@/types/api/productTag'
+import type { ApiResponse } from '@/types/api/api'
+import type { ProductTagGeneration, ProductTagPageResponse } from '@/types/api/productTag'
 
 export const getProductTagsPage = async (): Promise<ProductTagPageResponse> => {
   const pageSize = 50
@@ -28,3 +29,9 @@ export const getProductTagsPage = async (): Promise<ProductTagPageResponse> => {
     },
   }
 }
+
+export const getProductTagGeneration = (appId: number) =>
+  instance.get(`/dsn/products/${appId}/tag-generation`) as unknown as Promise<ApiResponse<ProductTagGeneration>>
+
+export const generateProductTags = (appId: number) =>
+  instance.post(`/dsn/products/${appId}/tag-generation`, undefined, { timeout: 65000 }) as unknown as Promise<ApiResponse<ProductTagGeneration>>

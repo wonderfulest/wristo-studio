@@ -8,6 +8,8 @@ import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
   getProductTagsPage: vi.fn(),
+  getProductTagGeneration: vi.fn(),
+  generateProductTags: vi.fn(),
   getDesignByUid: vi.fn(),
   getBundles: vi.fn(),
   publish: vi.fn(),
@@ -18,7 +20,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
-vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage }))
+vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: mocks.generateProductTags }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
@@ -95,9 +97,12 @@ const ProductTagSelectorStub = defineComponent({
     tagIds: { type: Array, required: true },
     tags: { type: Array, required: true },
     loading: Boolean,
-    disabled: Boolean
+    disabled: Boolean,
+    canGenerate: Boolean,
+    generating: Boolean,
+    generationStatus: String
   },
-  emits: ['update:tagIds'],
+  emits: ['update:tagIds', 'generate'],
   template: '<div class="product-tag-selector" />'
 })
 
@@ -131,7 +136,7 @@ const stubs = {
 const mountDialog = () => mount(GoLiveDialog, { global: { stubs } })
 
 const showDialog = async (wrapper: ReturnType<typeof mountDialog>) => {
-  ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(design)
+  ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(structuredClone(design))
   await flushPromises()
   await nextTick()
 }
@@ -145,6 +150,7 @@ describe('GoLiveDialog product tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+    mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'existing', canGenerate: false, tags: design.product.tags } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })
   })
@@ -263,4 +269,75 @@ describe('GoLiveDialog product tag behavior', () => {
     expect(mocks.publish).not.toHaveBeenCalled()
     consoleError.mockRestore()
   })
+})
+
+const emptyDesign = () => ({ ...structuredClone(design), product: { ...structuredClone(design.product), name: 'tag-1', tags: [] } })
+
+it('opens an untagged app empty without generating, saves once, and restores on reopening', async () => {
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
+  let resolve!: (value: unknown) => void
+  mocks.generateProductTags.mockClear()
+  mocks.generateProductTags.mockImplementation(() => new Promise(r => { resolve = r }))
+  const wrapper = mountDialog()
+  const show = (value: Design) => (wrapper.vm as unknown as { show: (value: Design) => void }).show(value)
+  show(emptyDesign())
+  await flushPromises()
+  const selector = wrapper.getComponent(ProductTagSelectorStub)
+  expect(selector.props('tagIds')).toEqual([])
+  expect(selector.props('canGenerate')).toBe(true)
+  expect(mocks.generateProductTags).not.toHaveBeenCalled()
+  selector.vm.$emit('generate')
+  selector.vm.$emit('generate')
+  await flushPromises()
+  expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
+  expect(selector.props('generating')).toBe(true)
+  const completed = { status: 'completed', canGenerate: false, tags: [apiTags[0]] }
+  resolve({ code: 0, data: completed })
+  await flushPromises()
+  expect(selector.props('tagIds')).toEqual([1])
+  expect(selector.props('canGenerate')).toBe(false)
+  mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: completed })
+  show(emptyDesign())
+  await flushPromises()
+  expect(selector.props('tagIds')).toEqual([1])
+  selector.vm.$emit('generate')
+  expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
+})
+
+it('reads status after a timeout without retrying the generation request', async () => {
+  mocks.getProductTagGeneration.mockResolvedValueOnce({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
+    .mockResolvedValue({ code: 0, data: { status: 'processing', canGenerate: false, tags: [] } })
+  mocks.generateProductTags.mockReset().mockRejectedValue(new Error('timeout'))
+  const wrapper = mountDialog()
+  ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(emptyDesign())
+  await flushPromises()
+  const selector = wrapper.getComponent(ProductTagSelectorStub)
+  selector.vm.$emit('generate')
+  await flushPromises()
+  expect(selector.props('canGenerate')).toBe(false)
+  expect(selector.props('generationStatus')).toBe('processing')
+  selector.vm.$emit('generate')
+  expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
+})
+
+it('ignores an old app response after switching to a different app', async () => {
+  mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
+  let resolve!: (value: unknown) => void
+  mocks.generateProductTags.mockReset().mockImplementation(() => new Promise(r => { resolve = r }))
+  const wrapper = mountDialog()
+  const show = (value: Design) => (wrapper.vm as unknown as { show: (value: Design) => void }).show(value)
+  show(emptyDesign())
+  await flushPromises()
+  const selector = wrapper.getComponent(ProductTagSelectorStub)
+  selector.vm.$emit('generate')
+  await flushPromises()
+  const another = emptyDesign()
+  another.product.appId = 201
+  show(another)
+  await flushPromises()
+  resolve({ code: 0, data: { status: 'completed', canGenerate: false, tags: [apiTags[0]] } })
+  await flushPromises()
+  expect(selector.props('tagIds')).toEqual([])
+  expect(selector.props('canGenerate')).toBe(true)
 })

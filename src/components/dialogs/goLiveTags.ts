@@ -51,41 +51,6 @@ export const suggestProductTags = (text: string, tags: ProductTag[], config?: un
     .slice(0, MAX_PRODUCT_TAGS)
 }
 
-// General search terms only: do not randomly claim hardware support or features.
-const commonSearchSlugs = new Set([
-  'garmin', 'garmin-watch-face', 'watch-face', 'watchface', 'connect-iq',
-  'smartwatch', 'wrist-watch', 'watch-face-design', 'watch-face-style',
-  'daily', 'everyday', 'lifestyle', 'personal-style',
-  'watch-collection', 'wrist-style', 'daily-look', 'watch-inspiration'
-])
-
-export const autoFillProductTags = (
-  text: string, tags: ProductTag[], selectedIds: number[], config?: unknown,
-  limit = MAX_PRODUCT_TAGS, random: () => number = Math.random, supportedDeviceIds = ''
-): number[] => {
-  const selected = new Set(selectedIds)
-  const available = tags.filter((tag) => tag.status === 1 && !selected.has(tag.id))
-  const devices = supportedDeviceIds.toLowerCase().split(',').map((id) => id.trim()).filter(Boolean)
-  const families: Record<string, RegExp> = {
-    fenix: /^fenix\d/, forerunner: /^(?:fr|forerunner)\d/, venu: /^venu(?:\d|sq)/,
-    epix: /^epix(?:\d|gen|pro)/, instinct: /^instinct\d/, vivoactive: /^vivoactive\d/
-  }
-  const deviceMatches = available.filter((tag) => {
-    const pattern = families[tag.slug]
-    return tag.tagGroup === 'device' && devices.some((id) =>
-      pattern ? pattern.test(id) : id === tag.slug.toLowerCase().replace(/[- ]/g, '')
-    )
-  }).map((tag) => tag.id)
-  const matches = [...deviceMatches, ...suggestProductTags(text, available.filter((tag) => tag.tagGroup !== 'device'), config)]
-  const matched = new Set(matches)
-  const pool = available.filter((tag) => commonSearchSlugs.has(tag.slug) && !matched.has(tag.id)).map((tag) => tag.id)
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1))
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
-  }
-  return [...new Set([...matches, ...pool])].slice(0, Math.max(0, Math.min(8, limit - selected.size)))
-}
-
 export const tagDescriptionSuffix = (ids: number[], tags: ProductTag[]): string => {
   const seen = new Set<string>()
   return ids

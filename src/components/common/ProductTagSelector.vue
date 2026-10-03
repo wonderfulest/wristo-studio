@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MAX_PRODUCT_TAGS, matchPastedTags, autoFillProductTags } from '../dialogs/goLiveTags'
+import { MAX_PRODUCT_TAGS, matchPastedTags } from '../dialogs/goLiveTags'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
 import type { ProductTag } from '@/types/api/productTag'
@@ -13,20 +13,23 @@ const props = withDefaults(
     loading?: boolean
     disabled?: boolean
     limit?: number
-    suggestionText?: string
-    suggestionConfig?: unknown
-    supportedDeviceIds?: string
+    canGenerate?: boolean
+    generating?: boolean
+    generationStatus?: string
   }>(),
   {
     loading: false,
     disabled: false,
     limit: MAX_PRODUCT_TAGS,
-    suggestionText: ''
+    canGenerate: false,
+    generating: false,
+    generationStatus: 'ready'
   }
 )
 
 const emit = defineEmits<{
   (event: 'update:tagIds', value: number[]): void
+  (event: 'generate'): void
 }>()
 
 const { t } = useI18n()
@@ -53,17 +56,17 @@ const addPastedTags = () => {
     .join(', ')
   if (bulkText.value.trim()) ElMessage.warning(t('productTags.noMatch'))
 }
-const autoFill = () => {
-  if (props.tagIds.length >= props.limit) {
-    ElMessage.warning(t('productTags.limit', { limit: props.limit }))
-    return
-  }
-  const ids = autoFillProductTags(props.suggestionText, props.tags, props.tagIds, props.suggestionConfig, props.limit, undefined, props.supportedDeviceIds)
-  if (!ids.length) ElMessage.warning(t('productTags.noSuggestions'))
-  else addTags(ids)
+const generate = () => {
+  if (!props.disabled && !props.loading && !props.generating && props.canGenerate && !props.tagIds.length) emit('generate')
 }
 
 const handleChange = (next: number[]) => {
+  if (props.disabled || props.loading || props.generating) return
+  if (!next.length && props.tagIds.length) {
+    ElMessage.warning(t('productTags.keepOne'))
+    emit('update:tagIds', [...props.tagIds])
+    return
+  }
   const result = limitTagSelection(props.tagIds, next, props.limit)
   emit('update:tagIds', result.ids)
   if (result.exceeded) {
@@ -83,7 +86,7 @@ const handleChange = (next: number[]) => {
       :multiple-limit="limit"
       :placeholder="t('productTags.placeholder')"
       :loading="loading"
-      :disabled="disabled"
+      :disabled="disabled || loading || generating"
       @change="handleChange">
       <el-option v-for="tag in tags" :key="tag.id" :value="tag.id" :label="tag.name" />
     </el-select>
@@ -93,13 +96,16 @@ const handleChange = (next: number[]) => {
         class="product-tag-bulk"
         :aria-label="t('productTags.bulkPlaceholder')"
         :placeholder="t('productTags.bulkPlaceholder')"
-        :disabled="disabled || loading"
+        :disabled="disabled || loading || generating"
         @keydown.enter.prevent="addPastedTags" />
-      <button type="button" :disabled="disabled || loading || !bulkText.trim()" @click="addPastedTags">{{ t('productTags.addBulk') }}</button>
-      <button type="button" :disabled="disabled || loading" @click="autoFill">{{ t('productTags.autoFill') }}</button>
+      <button type="button" :disabled="disabled || loading || generating || !bulkText.trim()" @click="addPastedTags">{{ t('productTags.addBulk') }}</button>
+      <button type="button" data-testid="generate-tags" :disabled="disabled || loading || generating || !canGenerate || tagIds.length > 0" @click="generate">
+        {{ t(generating ? 'productTags.generating' : 'productTags.generate') }}
+      </button>
       <span>{{ tagIds.length }} / {{ limit }}</span>
     </div>
-    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }}</div>
+    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} {{ t('productTags.generateOnce') }}</div>
+    <div v-if="generationStatus === 'failed' || generationStatus === 'processing' || generationStatus === 'unavailable'" class="product-tag-tip" role="status">{{ t(`productTags.generation.${generationStatus}`) }}</div>
   </el-form-item>
 </template>
 

@@ -48,13 +48,14 @@
       </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
-        :suggestion-text="tagSuggestionText"
-        :suggestion-config="currentDesign?.configJson"
-        :supported-device-ids="currentDesign?.product?.release?.deviceIds"
+        :can-generate="canGenerateTags"
+        :generating="generatingTags"
+        :generation-status="tagGenerationStatus"
+        @generate="generateTags"
         :limit="MAX_PRODUCT_TAGS"
         @update:tag-ids="updateProductTags"
         :tags="productTags"
-        :loading="loadingProductTags"
+        :loading="loadingProductTags || loadingTagGeneration"
         :disabled="productTagsLoadFailed"
       />
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
@@ -276,8 +277,8 @@ import { showErrorOnce } from '@/utils/errorMessage'
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { computed, ref, reactive, onMounted } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
-import type { ProductTag } from '@/types/api/productTag'
-import { getProductTagsPage } from '@/api/wristo/productTags'
+import type { ProductTag, ProductTagGeneration } from '@/types/api/productTag'
+import { getProductTagsPage, getProductTagGeneration, generateProductTags } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -307,7 +308,7 @@ import {
   saveProductImageArchive,
   type ProductImageDownloadMode,
 } from '@/components/common/productImageDownload'
-import { MAX_PRODUCT_TAGS, suggestProductTags, tagDescriptionSuffix, syncTagDescription, filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
+import { MAX_PRODUCT_TAGS, tagDescriptionSuffix, syncTagDescription, filterEnabledProductTags, restorePublishedTagIds, validatePublishedTagIds } from './goLiveTags'
 import {
   PRODUCT_IMAGE_LIMIT,
   groupProductImages,
@@ -398,6 +399,11 @@ const openSettings = (): void => {
 const productTags = ref<ProductTag[]>([])
 const loadingProductTags = ref(false)
 const productTagsLoadFailed = ref(false)
+const loadingTagGeneration = ref(false)
+const generatingTags = ref(false)
+const canGenerateTags = ref(false)
+const tagGenerationStatus = ref<ProductTagGeneration['status']>('ready')
+let tagGenerationVersion = 0
 
 const bundles = ref<Bundle[]>([])
 const loadingBundles = ref(false)
@@ -469,7 +475,6 @@ const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 
 let descriptionTagSuffix = ''
-const tagSuggestionText = computed(() => `${form.name} ${syncTagDescription(form.description, descriptionTagSuffix, '')}`)
 const updateProductTags = (ids: number[]) => {
   const next = tagDescriptionSuffix(ids, productTags.value)
   form.description = syncTagDescription(form.description, descriptionTagSuffix, next)
@@ -481,7 +486,51 @@ const restoreCurrentProductTags = () => {
   const selectedIds = currentDesign.value?.product?.tags?.map((tag) => tag.id) ?? []
   descriptionTagSuffix = tagDescriptionSuffix(selectedIds, productTags.value)
   const restored = restorePublishedTagIds(productTags.value, selectedIds)
-  updateProductTags(restored.length ? restored : suggestProductTags(tagSuggestionText.value, productTags.value, currentDesign.value?.configJson))
+  updateProductTags(restored)
+}
+
+const applyTagGeneration = (data: ProductTagGeneration) => {
+  tagGenerationStatus.value = data.status
+  canGenerateTags.value = data.canGenerate
+  if (!currentDesign.value) return
+  currentDesign.value.product.tags = data.tags
+  // Status can return before the tag dictionary finishes loading.
+  productTags.value = [...new Map([...productTags.value, ...data.tags].map(tag => [tag.id, tag])).values()]
+  restoreCurrentProductTags()
+}
+
+const loadTagGeneration = async (appId: number, version: number) => {
+  try {
+    const response = await getProductTagGeneration(appId)
+    if (version !== tagGenerationVersion) return
+    if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationStatusFailed'))
+    applyTagGeneration(response.data)
+  } catch (error) {
+    if (version === tagGenerationVersion) showErrorOnce(error, t('productTags.generationStatusFailed'))
+  } finally {
+    if (version === tagGenerationVersion) loadingTagGeneration.value = false
+  }
+}
+
+const generateTags = async () => {
+  if (!currentDesign.value || !canGenerateTags.value || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
+  const appId = currentDesign.value.product.appId
+  const version = tagGenerationVersion
+  generatingTags.value = true
+  canGenerateTags.value = false
+  try {
+    const response = await generateProductTags(appId)
+    if (version !== tagGenerationVersion) return
+    if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationFailed'))
+    applyTagGeneration(response.data)
+  } catch (error) {
+    if (version !== tagGenerationVersion) return
+    showErrorOnce(error, t('productTags.generationFailed'))
+    // Read state after a timeout; never retry an ambiguous AI request.
+    await loadTagGeneration(appId, version)
+  } finally {
+    if (version === tagGenerationVersion) generatingTags.value = false
+  }
 }
 
 const handlePaymentMethodChange = (value: string) => {
@@ -804,8 +853,14 @@ const refreshDescription = async () => {
 
 // 定义 show 方法
 const show = (design: Design) => {
+  tagGenerationVersion += 1
+  canGenerateTags.value = false
+  generatingTags.value = false
+  loadingTagGeneration.value = true
+  tagGenerationStatus.value = 'ready'
   loadDesign(design)
   dialogVisible.value = true
+  void loadTagGeneration(design.product.appId, tagGenerationVersion)
 }
 
 // 暴露方法给父组件
