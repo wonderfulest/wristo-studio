@@ -1155,6 +1155,13 @@ const buildDesignAssetArchive = async (
     const refs = await buildMissingWrtFonts(zip, manifest.fonts || [], undefined, config)
     manifest.studio!.assetRefs.push(...refs)
     await refreshFontAssetRefs(zip, manifest)
+    // Configs already use bundle URLs. Keeping the original data URL here
+    // duplicates image bytes in JSON and can exceed the server's JSON limit.
+    for (const asset of manifest.studio!.assetRefs) {
+      if (asset.sourceRef && isDataUrl(asset.sourceRef)) {
+        asset.sourceRef = `bundle://${asset.path}`
+      }
+    }
   }
   zip.file('README.md', createReadme(config, manifest))
   zip.file('manifest.json', JSON.stringify(manifest, null, 2))

@@ -348,6 +348,25 @@ describe('visual theme assets', () => {
 })
 
 describe('self-contained WRT v2', () => {
+  it('keeps large inline image data out of the manifest and round-trips the embedded asset', async () => {
+    setActivePinia(createPinia())
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><!--${'x'.repeat(9 * 1024 * 1024)}--></svg>`
+    const source = `data:image/svg+xml,${encodeURIComponent(svg)}`
+    const config = { elements: [{ id: 'large-image', eleType: 'image', imageUrl: source }] }
+    const file = await buildWrtDesignPackage(config as any)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifestText = await zip.file('manifest.json')!.async('string')
+    expect(new TextEncoder().encode(manifestText).length).toBeLessThan(8 * 1024 * 1024)
+    const manifest = JSON.parse(manifestText)
+    const asset = manifest.studio.assetRefs.find((ref: any) => ref.elementId === 'large-image')
+    expect(asset.sourceRef).toBe(`bundle://${asset.path}`)
+    expect(await zip.file(asset.path)!.async('string')).toBe(svg)
+    const restored = await readWrtDesignPackage(file)
+    expect(restored.config.elements[0]).toMatchObject({ imageUrl: expect.stringMatching(/^blob:/) })
+    expect(config.elements[0].imageUrl).toBe(source)
+  })
+
   it('removes dynamic image preview IDs while embedding every item', async () => {
     setActivePinia(createPinia())
     const service = await import('./designAssetBundleService')
