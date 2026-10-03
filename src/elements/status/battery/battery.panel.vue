@@ -99,6 +99,20 @@
 
     <section class="text-settings-card">
       <div class="battery-settings-group-label">{{ t('elementSettings.levelStyle') }}</div>
+      <div class="text-setting-field">
+        <label>{{ t('elementSettings.segmentMode') }}</label>
+        <el-switch v-model="currentModel.segmentMode" @change="updateElement" />
+      </div>
+      <div v-if="currentModel.segmentMode" class="text-settings-grid">
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.segments') }}</label>
+          <el-input-number v-model="currentModel.segments" :min="1" :max="50" :precision="0" @change="updateElement" />
+        </div>
+        <div class="text-setting-field">
+          <label>{{ t('elementSettings.segmentGap') }}</label>
+          <el-input-number v-model="currentModel.segmentGap" :min="0" :precision="3" @change="updateElement" />
+        </div>
+      </div>
       <div class="text-settings-grid">
         <div class="text-setting-field full battery-level-control">
           <label>
@@ -266,6 +280,9 @@ const updateElement = () => {
   if (props.applyPatch && props.config) {
     props.applyPatch({
       orientation: currentModel.value.orientation || 'horizontal',
+      segmentMode: currentModel.value.segmentMode === true,
+      segments: currentModel.value.segments ?? 5,
+      segmentGap: currentModel.value.segmentGap ?? 2,
       width: currentModel.value.width,
       height: currentModel.value.height,
       padding: currentModel.value.padding,
@@ -298,6 +315,9 @@ const updateElement = () => {
 
   elementManager.updateElement(props.element as any, {
     orientation: (props.element as any).orientation || 'horizontal',
+    segmentMode: (props.element as any).segmentMode === true,
+    segments: (props.element as any).segments ?? 5,
+    segmentGap: (props.element as any).segmentGap ?? 2,
     width: (props.element as any).width,
     height: (props.element as any).height,
     bodyFill: (props.element as any).bodyFill,

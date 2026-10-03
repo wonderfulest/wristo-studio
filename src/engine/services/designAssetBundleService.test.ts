@@ -75,7 +75,7 @@ describe('archive progress', () => {
     await expect(buildWrtDesignPackage(config)).rejects.toThrow('Missing Complication property')
   })
 
-  it('preserves vertical battery geometry and colors in WRT export and re-import', async () => {
+  it('preserves vertical battery segments, geometry and colors in WRT export and re-import', async () => {
     setActivePinia(createPinia())
     const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
     const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
@@ -83,6 +83,7 @@ describe('archive progress', () => {
     const battery = {
       id: 'battery', eleType: 'battery', orientation: 'vertical', left: 120, top: 130,
       width: 20, height: 40, headWidth: 10, headHeight: 4, padding: 2, headGap: 1,
+      segmentMode: true, segments: 7, segmentGap: 3,
       level: 0.5, bodyStroke: '#FFFFFF', bodyFill: 'transparent', bodyStrokeWidth: 2,
       levelColorLow: '#FF0000', levelColorMedium: '#FFAA00', levelColorHigh: '#00FF00',
     }

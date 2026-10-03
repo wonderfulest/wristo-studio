@@ -3,6 +3,9 @@ import type { BaseElementConfig } from './base'
 // Battery config; many properties are optional and have sensible defaults in the store
 export interface BatteryElementConfig extends BaseElementConfig {
   orientation?: 'horizontal' | 'vertical'
+  segmentMode?: boolean
+  segments?: number
+  segmentGap?: number
   eleType: 'battery'
   width?: number
   height?: number

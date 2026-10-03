@@ -8,6 +8,7 @@ import { useLayerStore } from '@/stores/layerStore'
 import * as elementManager from '@/engine/managers/elementManager'
 import { DEFAULT_LEVEL_COLOR_HIGH, DEFAULT_LEVEL_COLOR_LOW, DEFAULT_LEVEL_COLOR_MEDIUM, encodeBattery, resolveBatteryParts } from '@/elements/status/battery/battery.encoder'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
+import { createBatterySegmentClip, normalizeBatterySegments } from './battery.segments'
 
 function getLevelColor(
   level: number,
@@ -75,6 +76,7 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
   const headRy = Math.round(config.headRy ?? headWidth * 0.2)
 
   const geometry = batteryGeometry(width, height, padding, headGap, level, vertical)
+  const segmentOptions = normalizeBatterySegments(config)
 
   const batteryBody: any = new Rect({
     width,
@@ -106,6 +108,8 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
     fill: getLevelColor(level, colorLow, colorMedium, colorHigh),
     id: id + '_level',
     ...geometry.level,
+    ...(segmentOptions.segmentMode ? { strokeWidth: 0 } : {}),
+    clipPath: createBatterySegmentClip({ ...config, width, height, padding }, geometry.level.width, geometry.level.height),
   })
 
   const group: any = new Group([
@@ -118,6 +122,7 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
     id,
     eleType: 'battery',
     orientation,
+    ...segmentOptions,
     selectable: true,
     hasControls: false,
     hasBorders: true,
@@ -216,8 +221,11 @@ export function updateBattery(
   batteryLevel.set({
     fill: getLevelColor(level, nextLow, nextMedium, nextHigh),
     ...geometry.level,
+    ...(next.segmentMode ? { strokeWidth: 0 } : {}),
+    clipPath: createBatterySegmentClip({ ...next, width, height, padding }, geometry.level.width, geometry.level.height),
   })
 
+  group.set(normalizeBatterySegments(next))
   ;(group as any).set('orientation', orientation)
   ;(group as any).set('padding', padding)
   ;(group as any).set('headGap', nextHeadGap)

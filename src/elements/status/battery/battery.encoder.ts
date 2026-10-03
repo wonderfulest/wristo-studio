@@ -1,5 +1,6 @@
 import type { FabricElement } from '@/types/element'
 import type { BatteryElementConfig } from '@/types/elements/battery'
+import { normalizeBatterySegments } from './battery.segments'
 
 export const DEFAULT_LEVEL_COLOR_LOW = '#ff0000'
 export const DEFAULT_LEVEL_COLOR_MEDIUM = '#ffaa00'
@@ -67,6 +68,7 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
   const fillSize = orientation === 'vertical' ? batteryLevel.height : batteryLevel.width
 
   const config: BatteryElementConfig = {
+    ...normalizeBatterySegments(anyElement),
     orientation,
     id: String(anyElement.id ?? ''),
     eleType: 'battery',
@@ -105,6 +107,7 @@ export function encodeBattery(element: Partial<FabricElement>): BatteryElementCo
 
 export function decodeBattery(config: BatteryElementConfig): Partial<FabricElement> {
   const decoded: Partial<FabricElement> = {
+    ...normalizeBatterySegments(config),
     orientation: config.orientation === 'vertical' ? 'vertical' : 'horizontal',
     eleType: 'battery',
     left: config.left,

@@ -40,6 +40,7 @@ const SCALAR_FIELDS = new Set([
   'headRx',
   'headRy',
   'headGap',
+  'segmentGap',
 ])
 const UNIFORM_SIZE_ELEMENT_TYPES = new Set(['image'])
 const HAND_ELEMENT_TYPES = new Set(['hourHand', 'minuteHand', 'secondHand', 'rotatingHand'])
@@ -323,6 +324,16 @@ export function scaleFabricCanvasForDesignSize(
     const children = typeof obj.getObjects === 'function' ? obj.getObjects() : []
     for (const child of children) {
       changed = scaleKnownObjectFields(child, from, to) || changed
+      if (obj.eleType === 'battery' && child.clipPath) {
+        const clip = child.clipPath
+        clip.set({
+          left: clip.left * ratioX,
+          top: clip.top * ratioY,
+          scaleX: clip.scaleX * ratioX,
+          scaleY: clip.scaleY * ratioY,
+        })
+        child.set('dirty', true)
+      }
     }
 
     if (!changed) {
