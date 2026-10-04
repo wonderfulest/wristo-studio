@@ -6,7 +6,7 @@
     :top="'5vh'"
     class="go-live-dialog"
   >
-    <p class="ai-credit-hint">{{ t('credits.aiCost') }}</p>
+    <p v-if="aiPrices" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
       <el-form-item :label="t('card.appId')">
         <el-input v-model="form.appId" disabled>
@@ -115,7 +115,7 @@
             circle
             size="small"
             :icon="Refresh"
-            :loading="generatingBanner"
+            :loading="generatingBanner || loadingBannerPrice"
             :disabled="loading || !aiCapabilities.BANNER"
             :title="t('goLive.generateBanner')"
             :aria-label="t('goLive.generateBanner')"
@@ -286,6 +286,19 @@
       </span>
     </template>
   </el-dialog>
+  <el-dialog v-model="bannerConfirmVisible" :title="t('goLive.generateBanner')" width="min(520px, 94vw)" append-to-body :close-on-click-modal="false">
+    <p v-if="bannerCreditCost !== null">{{ t('goLive.bannerCreditCost', { cost: bannerCreditCost }) }}</p>
+    <p class="form-tip">{{ t('goLive.bannerChargeNotice') }}</p>
+    <el-form label-position="top">
+      <el-form-item :label="t('goLive.bannerCustomPrompt')">
+        <el-input v-model="bannerCustomPrompt" type="textarea" :rows="5" maxlength="2000" show-word-limit :placeholder="t('goLive.bannerPromptPlaceholder')" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="bannerConfirmVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :disabled="bannerCreditCost === null || generatingBanner" @click="confirmBannerGeneration">{{ t('goLive.bannerConfirmGenerate', { cost: bannerCreditCost ?? 0 }) }}</el-button>
+    </template>
+  </el-dialog>
   <DesignerDefaultConfigDialog ref="designerConfigDialog" />
 </template>
 
@@ -301,7 +314,7 @@ import { productsApi } from '@/api/wristo/products'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
-import { getAiCapabilities, type AiCapabilities } from '@/api/wristo/studioAi'
+import { getAiCapabilities, getAiPrices, type AiCapabilities, type AiPrices } from '@/api/wristo/studioAi'
 import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
@@ -337,6 +350,7 @@ import {
 } from '@/components/common/productImageModel'
 
 const aiCapabilities = ref<AiCapabilities>({ TAGS: false, DESCRIPTION: false, BANNER: false })
+const aiPrices = ref<AiPrices | null>(null)
 const loadingAiCapabilities = ref(false)
 let aiCapabilitiesVersion = 0
 const loadAiCapabilities = async () => {
@@ -344,9 +358,11 @@ const loadAiCapabilities = async () => {
   aiCapabilities.value = { TAGS: false, DESCRIPTION: false, BANNER: false }
   loadingAiCapabilities.value = true
   try {
-    const response = await getAiCapabilities()
+    const [response, prices] = await Promise.all([getAiCapabilities(), getAiPrices()])
     if (version !== aiCapabilitiesVersion) return
     if (response.code !== 0 || !response.data) throw new Error('AI capabilities unavailable')
+    if (prices.code !== 0 || !prices.data) throw new Error('AI prices unavailable')
+    aiPrices.value = prices.data
     aiCapabilities.value = { TAGS: response.data.TAGS === true, DESCRIPTION: response.data.DESCRIPTION === true, BANNER: response.data.BANNER === true }
   } catch (error) {
     if (version === aiCapabilitiesVersion) showErrorOnce(error, t('goLive.aiStatusFailed'))
@@ -867,9 +883,16 @@ const removeBannerImage = () => {
   form.bannerImageUrl = ''
 }
 
+const bannerConfirmVisible = ref(false)
+const bannerCustomPrompt = ref('')
+const bannerCreditCost = ref<number | null>(null)
+const loadingBannerPrice = ref(false)
 const generatingBanner = ref(false)
 let bannerGenerationVersion = 0
 const invalidateBannerGeneration = () => {
+  bannerConfirmVisible.value = false
+  bannerCreditCost.value = null
+  bannerCustomPrompt.value = ''
   bannerGenerationVersion += 1
   generatingBanner.value = false
 }
@@ -877,6 +900,25 @@ watch(dialogVisible, (visible) => { if (!visible) invalidateBannerGeneration() }
 onBeforeUnmount(invalidateBannerGeneration)
 
 const refreshBanner = async () => {
+  if (!currentDesign.value || generatingBanner.value || loadingBannerPrice.value || loading.value || !aiCapabilities.value.BANNER) return
+  if (!userStore.editorDevice?.deviceId) { ElMessage.error(t('goLive.bannerDeviceRequired')); return }
+  const version = bannerGenerationVersion
+  loadingBannerPrice.value = true
+  bannerCreditCost.value = null
+  try {
+    const response = await getAiPrices()
+    if (version !== bannerGenerationVersion || !dialogVisible.value) return
+    if (response.code !== 0 || !response.data || !Number.isInteger(response.data.BANNER) || response.data.BANNER < 1) throw new Error(t('goLive.aiStatusFailed'))
+    aiPrices.value = response.data
+    bannerCreditCost.value = response.data.BANNER
+    bannerConfirmVisible.value = true
+  } catch (error) {
+    if (version === bannerGenerationVersion) showErrorOnce(error, t('goLive.aiStatusFailed'))
+  } finally { loadingBannerPrice.value = false }
+}
+
+const confirmBannerGeneration = async () => {
+  if (!bannerConfirmVisible.value || bannerCreditCost.value === null || !dialogVisible.value) return
   if (!currentDesign.value || generatingBanner.value || loading.value || !aiCapabilities.value.BANNER) return
   const deviceId = userStore.editorDevice?.deviceId
   if (!deviceId) {
@@ -888,7 +930,9 @@ const refreshBanner = async () => {
   const version = ++bannerGenerationVersion
   generatingBanner.value = true
   try {
-    let response = await productsApi.generateBanner({ productId, deviceId })
+    const expectedCreditCost = bannerCreditCost.value
+    bannerConfirmVisible.value = false
+    let response = await productsApi.generateBanner({ productId, deviceId, customPrompt: bannerCustomPrompt.value.trim() || undefined, expectedCreditCost })
     const deadline = Date.now() + 6 * 60 * 1000
     while (response.data?.status === 'running') {
       const jobId = response.data.id

@@ -8,6 +8,7 @@ import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
   getAiCapabilities: vi.fn(),
+  getAiPrices: vi.fn(),
   getProductTagsPage: vi.fn(),
   getProductTagGeneration: vi.fn(),
   generateProductTags: vi.fn(),
@@ -21,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
-vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities }))
+vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: mocks.generateProductTags }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
@@ -151,6 +152,7 @@ const confirm = async (wrapper: ReturnType<typeof mountDialog>) => {
 describe('GoLiveDialog product tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'existing', canGenerate: false, tags: design.product.tags } })

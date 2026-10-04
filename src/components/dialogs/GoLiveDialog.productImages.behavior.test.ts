@@ -6,6 +6,7 @@ import type { Design } from '@/types/api/design'
 
 const mocks = vi.hoisted(() => ({
   getAiCapabilities: vi.fn(),
+  getAiPrices: vi.fn(),
   getProductTagsPage: vi.fn(),
   getProductTagGeneration: vi.fn(),
   getBundles: vi.fn(),
@@ -19,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   saveProductImageArchive: vi.fn(),
 }))
 
-vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities }))
+vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
@@ -127,7 +128,7 @@ const stubs = {
   },
   ElForm: ElFormStub,
   ElFormItem: { template: '<div><slot/></div>' },
-  ElInput: { template: '<div><slot name="append"/></div>' },
+  ElInput: { name: 'ElInput', emits: ['update:modelValue'], template: '<div><slot name="append"/></div>' },
   ElInputNumber: true,
   ElRadioGroup: { template: '<div><slot/></div>' },
   ElRadio: { template: '<span><slot/></span>' },
@@ -159,9 +160,15 @@ const showDialog = async (wrapper: ReturnType<typeof mountDialog>, value = desig
   await nextTick()
 }
 
+const confirmBanner = async (wrapper: ReturnType<typeof mountDialog>) => {
+  await flushPromises()
+  await wrapper.findAll('button').find(button => button.text().startsWith('goLive.bannerConfirmGenerate'))!.trigger('click')
+}
+
 describe('GoLiveDialog product image behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: [] } })
@@ -189,6 +196,7 @@ describe('GoLiveDialog product image behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
     await wrapper.get('.banner-refresh').trigger('click')
+    await confirmBanner(wrapper)
     await flushPromises()
     expect(wrapper.find('[role="status"]').exists()).toBe(true)
     await vi.advanceTimersByTimeAsync(2500)
@@ -196,6 +204,7 @@ describe('GoLiveDialog product image behavior', () => {
     expect(mocks.getBannerGeneration).toHaveBeenCalledWith(20, 'job')
     expect(wrapper.get('.banner-area img').attributes('src')).toContain('polled.jpg')
     await wrapper.get('.banner-refresh').trigger('click')
+    await confirmBanner(wrapper)
     await flushPromises()
     const cancel = wrapper.findAll('button').find(button => button.text() === 'common.cancel')!
     await cancel.trigger('click')
@@ -209,8 +218,9 @@ describe('GoLiveDialog product image behavior', () => {
     await showDialog(wrapper)
     expect(mocks.generateBanner).not.toHaveBeenCalled()
     await wrapper.get('.banner-refresh').trigger('click')
+    await confirmBanner(wrapper)
     await flushPromises()
-    expect(mocks.generateBanner).toHaveBeenCalledWith({ productId: 20, deviceId: 'fenix7' })
+    expect(mocks.generateBanner).toHaveBeenCalledWith({ productId: 20, deviceId: 'fenix7', expectedCreditCost: 7, customPrompt: undefined })
     expect(wrapper.get('.banner-area img').attributes('src')).toBe('https://cdn.wristo.io/banner.jpg')
   })
 
@@ -220,17 +230,38 @@ describe('GoLiveDialog product image behavior', () => {
     await showDialog(wrapper, original)
     mocks.generateBanner.mockResolvedValue({ data: { id: 'job', status: 'failed' } })
     await wrapper.get('.banner-refresh').trigger('click')
+    await confirmBanner(wrapper)
     await flushPromises()
     expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
     let resolve!: (value: unknown) => void
     mocks.generateBanner.mockImplementation(() => new Promise((done) => { resolve = done }))
     await wrapper.get('.banner-refresh').trigger('click')
+    await confirmBanner(wrapper)
     await wrapper.get('.banner-refresh').trigger('click')
     expect(mocks.generateBanner).toHaveBeenCalledTimes(2)
     await showDialog(wrapper, { ...original, product: { ...original.product, id: 21 } } as Design)
     resolve({ data: { id: 'job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/stale.jpg' } })
     await flushPromises()
     expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
+  })
+
+  it('shows a fresh price, cancels without generation, and sends the custom prompt only after confirmation', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 12 } })
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('goLive.bannerCreditCost:{"cost":12}')
+    expect(mocks.generateBanner).not.toHaveBeenCalled()
+    await wrapper.findAll('button').filter(button => button.text() === 'common.cancel').at(-1)!.trigger('click')
+    expect(mocks.generateBanner).not.toHaveBeenCalled()
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    wrapper.findAllComponents({ name: 'ElInput' }).at(-1)?.vm.$emit('update:modelValue', 'Golden woodland')
+    await nextTick()
+    mocks.generateBanner.mockResolvedValue({ data: { status: 'failed' } })
+    await confirmBanner(wrapper)
+    expect(mocks.generateBanner).toHaveBeenCalledWith({ productId: 20, deviceId: 'fenix7', expectedCreditCost: 12, customPrompt: 'Golden woodland' })
   })
 
   it('shows product and social images separately with one shared count', async () => {

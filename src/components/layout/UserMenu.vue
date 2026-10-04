@@ -1,6 +1,5 @@
 <template>
   <div class="user-menu" v-if="userStore.isAuthenticated">
-    <StudioCredits />
     <div v-if="showMerchantEntrypoints && pendingCount > 0" class="ticket-reminder">
       <button class="ticket-reminder-button" type="button" @click.stop="goTickets">
         <Icon icon="material-symbols:confirmation-number-outline" />
@@ -51,12 +50,13 @@
       <Icon icon="material-symbols:keyboard-arrow-down-rounded" class="user-trigger-arrow" />
     </button>
 
-    <div class="dropdown-menu" v-if="showDropdown">
+    <div class="dropdown-menu" v-show="showDropdown">
       <div class="user-dropdown-profile">
         <img :src="userAvatar" class="user-dropdown-avatar" alt="user avatar" />
         <div class="user-dropdown-identity">
           <strong>{{ userDisplayName }}</strong>
           <span>{{ userEmail }}</span>
+          <StudioCredits />
         </div>
         <span class="user-dropdown-status" :class="{ premium: isPremiumMember }">
           {{ accountStatusLabel }}

@@ -20,7 +20,7 @@ export interface BannerGenerationJob {
  * 产品相关API接口
  */
 export const productsApi = {
-  generateBanner(data: { productId: number; deviceId: string }): Promise<ApiResponse<BannerGenerationJob>> {
+  generateBanner(data: { productId: number; deviceId: string; customPrompt?: string; expectedCreditCost: number }): Promise<ApiResponse<BannerGenerationJob>> {
     return instance.post('/dsn/products/generate-banner', data)
   },
   getBannerGeneration(productId: number, jobId: string): Promise<ApiResponse<BannerGenerationJob>> {
