@@ -70,13 +70,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/tokens',
     component: Layout,
-    meta: { requiresAuth: true, allowsAllUsers: true },
+    meta: { requiresAuth: false },
     children: [
       {
         path: '',
         name: 'Tokens',
         component: () => import('@/views/Tokens.vue'),
-        meta: { requiresAuth: true, allowsAllUsers: true },
+        meta: { requiresAuth: false },
       },
     ],
   },

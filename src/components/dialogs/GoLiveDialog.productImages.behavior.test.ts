@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { defineComponent, h, nextTick } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Design } from '@/types/api/design'
 
 const mocks = vi.hoisted(() => ({
+  getAiCapabilities: vi.fn(),
   getProductTagsPage: vi.fn(),
   getProductTagGeneration: vi.fn(),
   getBundles: vi.fn(),
+  generateBanner: vi.fn(),
+  getBannerGeneration: vi.fn(),
   publish: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
@@ -16,12 +19,15 @@ const mocks = vi.hoisted(() => ({
   saveProductImageArchive: vi.fn(),
 }))
 
+vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
     publish: mocks.publish,
     generateDescription: vi.fn(),
+    generateBanner: mocks.generateBanner,
+    getBannerGeneration: mocks.getBannerGeneration,
   },
 }))
 vi.mock('@/stores/message', () => ({
@@ -36,6 +42,7 @@ vi.mock('@/stores/user', () => ({
     isMerchantUser: true,
     isAdminUser: false,
     userInfo: { id: 10 },
+    editorDevice: { deviceId: 'fenix7' },
   }),
 }))
 vi.mock('@/i18n', () => ({
@@ -125,17 +132,17 @@ const stubs = {
   ElRadioGroup: { template: '<div><slot/></div>' },
   ElRadio: { template: '<span><slot/></span>' },
   ElRadioButton: { template: '<span><slot/></span>' },
-  ElButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot/></button>' },
+  ElButton: { emits: ['click'], template: '<button @click="$emit(\'click\', $event)"><slot/></button>' },
   ElLink: true,
   ElTooltip: { template: '<div><slot/></div>' },
   ElIcon: { template: '<span><slot/></span>' },
-  ElUpload: true,
+  ElUpload: { template: '<div><slot/></div>' },
   ElDropdown: ElDropdownStub,
   ElDropdownMenu: { template: '<div><slot/></div>' },
   ElDropdownItem: {
     props: ['command'],
     emits: ['click'],
-    template: '<button :data-download-mode="command" @click="$emit(\'click\')"><slot/></button>',
+    template: '<button :data-download-mode="command" @click="$emit(\'click\', $event)"><slot/></button>',
   },
   ImageUpload: true,
   ProductImagesEditor: ProductImagesEditorStub,
@@ -155,10 +162,75 @@ const showDialog = async (wrapper: ReturnType<typeof mountDialog>, value = desig
 describe('GoLiveDialog product image behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: [] } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })
+  })
+
+  afterEach(() => { vi.useRealTimers() })
+
+  it('blocks disabled banner generation and preserves the uploaded image', async () => {
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: false } })
+    const wrapper = mountDialog()
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show({ ...design, product: { ...design.product, bannerImageUrl: 'https://cdn.wristo.io/old.jpg' } } as Design)
+    await flushPromises()
+    await wrapper.get('.banner-refresh').trigger('click')
+    expect(mocks.generateBanner).not.toHaveBeenCalled()
+    expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
+    expect(wrapper.text()).toContain('goLive.aiUnavailable')
+  })
+
+  it('polls a running task and stops polling when the dialog closes', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    mocks.generateBanner.mockResolvedValue({ data: { id: 'job', status: 'running' } })
+    mocks.getBannerGeneration.mockResolvedValue({ data: { id: 'job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/polled.jpg' } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
+    await vi.advanceTimersByTimeAsync(2500)
+    await flushPromises()
+    expect(mocks.getBannerGeneration).toHaveBeenCalledWith(20, 'job')
+    expect(wrapper.get('.banner-area img').attributes('src')).toContain('polled.jpg')
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    const cancel = wrapper.findAll('button').find(button => button.text() === 'common.cancel')!
+    await cancel.trigger('click')
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(mocks.getBannerGeneration).toHaveBeenCalledTimes(1)
+  })
+
+  it('generates only on click and displays the completed banner', async () => {
+    mocks.generateBanner.mockResolvedValue({ data: { id: 'job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/banner.jpg' } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(mocks.generateBanner).not.toHaveBeenCalled()
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    expect(mocks.generateBanner).toHaveBeenCalledWith({ productId: 20, deviceId: 'fenix7' })
+    expect(wrapper.get('.banner-area img').attributes('src')).toBe('https://cdn.wristo.io/banner.jpg')
+  })
+
+  it('retains the old banner on failure and ignores a result after switching designs', async () => {
+    const wrapper = mountDialog()
+    const original = { ...design, product: { ...design.product, bannerImageUrl: 'https://cdn.wristo.io/old.jpg' } } as Design
+    await showDialog(wrapper, original)
+    mocks.generateBanner.mockResolvedValue({ data: { id: 'job', status: 'failed' } })
+    await wrapper.get('.banner-refresh').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
+    let resolve!: (value: unknown) => void
+    mocks.generateBanner.mockImplementation(() => new Promise((done) => { resolve = done }))
+    await wrapper.get('.banner-refresh').trigger('click')
+    await wrapper.get('.banner-refresh').trigger('click')
+    expect(mocks.generateBanner).toHaveBeenCalledTimes(2)
+    await showDialog(wrapper, { ...original, product: { ...original.product, id: 21 } } as Design)
+    resolve({ data: { id: 'job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/stale.jpg' } })
+    await flushPromises()
+    expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
   })
 
   it('shows product and social images separately with one shared count', async () => {

@@ -34,4 +34,4 @@ export const getProductTagGeneration = (appId: number) =>
   instance.get(`/dsn/products/${appId}/tag-generation`) as unknown as Promise<ApiResponse<ProductTagGeneration>>
 
 export const generateProductTags = (appId: number) =>
-  instance.post(`/dsn/products/${appId}/tag-generation`, undefined, { timeout: 65000 }) as unknown as Promise<ApiResponse<ProductTagGeneration>>
+  instance.post(`/dsn/products/${appId}/tag-generation`, undefined, { timeout: 65000, params: { replaceExisting: true } }) as unknown as Promise<ApiResponse<ProductTagGeneration>>

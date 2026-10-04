@@ -6,6 +6,7 @@
     :top="'5vh'"
     class="go-live-dialog"
   >
+    <p class="ai-credit-hint">{{ t('credits.aiCost') }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
       <el-form-item :label="t('card.appId')">
         <el-input v-model="form.appId" disabled>
@@ -48,7 +49,7 @@
       </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
-        :can-generate="canGenerateTags"
+        :can-generate="canGenerateTags && aiCapabilities.TAGS"
         :generating="generatingTags"
         :generation-status="tagGenerationStatus"
         @generate="generateTags"
@@ -58,12 +59,14 @@
         :loading="loadingProductTags || loadingTagGeneration"
         :disabled="productTagsLoadFailed"
       />
+      <div v-if="!loadingAiCapabilities && !aiCapabilities.TAGS" class="form-tip">{{ t('goLive.aiUnavailable') }}</div>
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="form.description || ''" />
-          <el-button size="small" type="primary" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
+          <el-button size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
         </div>
+        <div v-if="!loadingAiCapabilities && !aiCapabilities.DESCRIPTION" class="form-tip">{{ t('goLive.aiDescriptionUnavailable') }}</div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
         </div>
@@ -106,7 +109,18 @@
         </div>
       </el-form-item>
       <el-form-item :label="t('goLive.homepageBanner')">
-        <div class="image-upload-container">
+        <div class="image-upload-container banner-container" :aria-busy="generatingBanner">
+          <el-button
+            class="banner-refresh"
+            circle
+            size="small"
+            :icon="Refresh"
+            :loading="generatingBanner"
+            :disabled="loading || !aiCapabilities.BANNER"
+            :title="t('goLive.generateBanner')"
+            :aria-label="t('goLive.generateBanner')"
+            @click.stop="refreshBanner"
+          />
           <el-tooltip
             :content="t('goLive.bannerTip')"
             placement="top"
@@ -121,6 +135,7 @@
             accept=".jpg,.jpeg,.png,.gif"
             :before-upload="beforeBannerUpload"
             :on-change="handleBannerChange"
+            :disabled="generatingBanner"
           >
             <div class="upload-area banner-area">
               <img v-if="form.bannerImageUrl" :src="form.bannerImageUrl" class="uploaded-image" />
@@ -131,10 +146,12 @@
             </div>
           </el-upload>
           <div class="upload-actions" v-if="form.bannerImageUrl">
-            <el-button size="small" type="danger" @click="removeBannerImage">
+            <el-button size="small" type="danger" :disabled="generatingBanner" @click="removeBannerImage">
               {{ t('goLive.removeImage') }}
             </el-button>
           </div>
+          <div v-if="!loadingAiCapabilities && !aiCapabilities.BANNER" class="form-tip">{{ t('goLive.aiUnavailable') }}</div>
+          <div v-if="generatingBanner" class="form-tip" role="status">{{ t('goLive.generatingBanner') }}</div>
         </div>
       </el-form-item>
 
@@ -262,6 +279,7 @@
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
+          :disabled="generatingBanner"
         >
           {{ t('common.submit') }}
         </el-button>
@@ -275,7 +293,7 @@
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
-import { computed, ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
 import type { ProductTag, ProductTagGeneration } from '@/types/api/productTag'
 import { getProductTagsPage, getProductTagGeneration, generateProductTags } from '@/api/wristo/productTags'
@@ -283,7 +301,8 @@ import { productsApi } from '@/api/wristo/products'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { Design } from '@/types/api/design'
-import { Plus, CopyDocument, Download, QuestionFilled } from '@element-plus/icons-vue'
+import { getAiCapabilities, type AiCapabilities } from '@/api/wristo/studioAi'
+import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
@@ -316,6 +335,25 @@ import {
   replaceProductImageGroup,
   toProductImageSelections,
 } from '@/components/common/productImageModel'
+
+const aiCapabilities = ref<AiCapabilities>({ TAGS: false, DESCRIPTION: false, BANNER: false })
+const loadingAiCapabilities = ref(false)
+let aiCapabilitiesVersion = 0
+const loadAiCapabilities = async () => {
+  const version = ++aiCapabilitiesVersion
+  aiCapabilities.value = { TAGS: false, DESCRIPTION: false, BANNER: false }
+  loadingAiCapabilities.value = true
+  try {
+    const response = await getAiCapabilities()
+    if (version !== aiCapabilitiesVersion) return
+    if (response.code !== 0 || !response.data) throw new Error('AI capabilities unavailable')
+    aiCapabilities.value = { TAGS: response.data.TAGS === true, DESCRIPTION: response.data.DESCRIPTION === true, BANNER: response.data.BANNER === true }
+  } catch (error) {
+    if (version === aiCapabilitiesVersion) showErrorOnce(error, t('goLive.aiStatusFailed'))
+  } finally {
+    if (version === aiCapabilitiesVersion) loadingAiCapabilities.value = false
+  }
+}
 
 const dialogVisible = ref(false)
 const loading = ref(false)
@@ -489,22 +527,22 @@ const restoreCurrentProductTags = () => {
   updateProductTags(restored)
 }
 
-const applyTagGeneration = (data: ProductTagGeneration) => {
+const applyTagGeneration = (data: ProductTagGeneration, preserveDraft = false) => {
   tagGenerationStatus.value = data.status
   canGenerateTags.value = data.canGenerate
-  if (!currentDesign.value) return
+  if (!currentDesign.value || preserveDraft) return
   currentDesign.value.product.tags = data.tags
   // Status can return before the tag dictionary finishes loading.
   productTags.value = [...new Map([...productTags.value, ...data.tags].map(tag => [tag.id, tag])).values()]
   restoreCurrentProductTags()
 }
 
-const loadTagGeneration = async (appId: number, version: number) => {
+const loadTagGeneration = async (appId: number, version: number, preserveDraft = false) => {
   try {
     const response = await getProductTagGeneration(appId)
     if (version !== tagGenerationVersion) return
     if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationStatusFailed'))
-    applyTagGeneration(response.data)
+    applyTagGeneration(response.data, preserveDraft)
   } catch (error) {
     if (version === tagGenerationVersion) showErrorOnce(error, t('productTags.generationStatusFailed'))
   } finally {
@@ -513,7 +551,7 @@ const loadTagGeneration = async (appId: number, version: number) => {
 }
 
 const generateTags = async () => {
-  if (!currentDesign.value || !canGenerateTags.value || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
+  if (!currentDesign.value || !canGenerateTags.value || !aiCapabilities.value.TAGS || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
   const appId = currentDesign.value.product.appId
   const version = tagGenerationVersion
   generatingTags.value = true
@@ -527,7 +565,7 @@ const generateTags = async () => {
     if (version !== tagGenerationVersion) return
     showErrorOnce(error, t('productTags.generationFailed'))
     // Read state after a timeout; never retry an ambiguous AI request.
-    await loadTagGeneration(appId, version)
+    await loadTagGeneration(appId, version, true)
   } finally {
     if (version === tagGenerationVersion) generatingTags.value = false
   }
@@ -603,7 +641,7 @@ const loadDesign = (design: Design) => {
 
 // 提交表单
 const handleConfirm = async () => {
-  if (!currentDesign.value) return
+  if (!currentDesign.value || generatingBanner.value) return
 
   if (productTagsLoadFailed.value) {
     messageStore.error(t('productTags.loadFailed'))
@@ -829,30 +867,85 @@ const removeBannerImage = () => {
   form.bannerImageUrl = ''
 }
 
+const generatingBanner = ref(false)
+let bannerGenerationVersion = 0
+const invalidateBannerGeneration = () => {
+  bannerGenerationVersion += 1
+  generatingBanner.value = false
+}
+watch(dialogVisible, (visible) => { if (!visible) invalidateBannerGeneration() })
+onBeforeUnmount(invalidateBannerGeneration)
+
+const refreshBanner = async () => {
+  if (!currentDesign.value || generatingBanner.value || loading.value || !aiCapabilities.value.BANNER) return
+  const deviceId = userStore.editorDevice?.deviceId
+  if (!deviceId) {
+    ElMessage.error(t('goLive.bannerDeviceRequired'))
+    return
+  }
+  const productId = currentDesign.value.product.id
+  const originalBanner = form.bannerImageUrl
+  const version = ++bannerGenerationVersion
+  generatingBanner.value = true
+  try {
+    let response = await productsApi.generateBanner({ productId, deviceId })
+    const deadline = Date.now() + 6 * 60 * 1000
+    while (response.data?.status === 'running') {
+      const jobId = response.data.id
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      if (version !== bannerGenerationVersion || !dialogVisible.value) return
+      if (Date.now() >= deadline) throw new Error(t('goLive.generateBannerFailed'))
+      response = await productsApi.getBannerGeneration(productId, jobId)
+    }
+    if (version !== bannerGenerationVersion || !dialogVisible.value || currentDesign.value?.product.id !== productId
+        || form.bannerImageUrl !== originalBanner) return
+    if (response.data?.status !== 'succeeded' || !response.data.imageUrl?.startsWith('https://')) throw new Error(t('goLive.generateBannerFailed'))
+    form.bannerImageUrl = response.data.imageUrl
+    ElMessage.success(t('goLive.bannerGenerated'))
+  } catch (error) {
+    if (version === bannerGenerationVersion) showErrorOnce(error, t('goLive.generateBannerFailed'))
+  } finally {
+    if (version === bannerGenerationVersion) generatingBanner.value = false
+  }
+}
+
+const generatingDescription = ref(false)
+let descriptionGenerationVersion = 0
+
 const refreshDescription = async () => {
-  if (!currentDesign.value) return
+  if (!currentDesign.value || generatingDescription.value) return
   const uid = userStore.userInfo?.id
   if (!uid) {
     ElMessage.error(t('auth.userNotLoggedIn'))
     return
   }
   const pid = currentDesign.value.product.id
+  const version = ++descriptionGenerationVersion
+  const originalDescription = form.description
+  const paymentMethod = form.paymentMethod
+  generatingDescription.value = true
   try {
     const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
     const payload = { ...buildGenerateDescriptionPayload(uid, pid, language), paymentMethod: form.paymentMethod }
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
+    if (version !== descriptionGenerationVersion || form.description !== originalDescription || form.paymentMethod !== paymentMethod) return
     if (typeof res.data === 'string') {
       form.description = res.data
       updateProductTags(form.tagIds)
       ElMessage.success(t('goLive.descriptionUpdated'))
     }
   } catch (e) {
-    showErrorOnce(e, t('goLive.generateDescriptionFailed'))
+    if (version === descriptionGenerationVersion) showErrorOnce(e, t('goLive.generateDescriptionFailed'))
+  } finally {
+    if (version === descriptionGenerationVersion) generatingDescription.value = false
   }
 }
 
 // 定义 show 方法
 const show = (design: Design) => {
+  invalidateBannerGeneration()
+  descriptionGenerationVersion += 1
+  generatingDescription.value = false
   tagGenerationVersion += 1
   canGenerateTags.value = false
   generatingTags.value = false
@@ -861,6 +954,7 @@ const show = (design: Design) => {
   loadDesign(design)
   dialogVisible.value = true
   void loadTagGeneration(design.product.appId, tagGenerationVersion)
+  void loadAiCapabilities()
 }
 
 // 暴露方法给父组件
@@ -870,6 +964,9 @@ defineExpose({
 </script>
 
 <style scoped>
+.banner-container { position: relative; width: 240px; max-width: 100%; }
+.banner-refresh { position: absolute; right: 8px; top: 8px; z-index: 2; }
+.banner-container > .tip-icon { right: 44px; }
 .source-design-links {
   display: flex;
   align-items: center;

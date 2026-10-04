@@ -9,10 +9,23 @@ import type {
 import type { Bundle } from '@/types/api/bundle'
 import type { Product as ProductVo, GenerateDescriptionDto } from '@/types/api/product'
 
+export interface BannerGenerationJob {
+  id: string
+  productId: number
+  status: 'running' | 'succeeded' | 'failed'
+  imageUrl: string | null
+}
+
 /**
  * 产品相关API接口
  */
 export const productsApi = {
+  generateBanner(data: { productId: number; deviceId: string }): Promise<ApiResponse<BannerGenerationJob>> {
+    return instance.post('/dsn/products/generate-banner', data)
+  },
+  getBannerGeneration(productId: number, jobId: string): Promise<ApiResponse<BannerGenerationJob>> {
+    return instance.get(`/dsn/products/${productId}/banner-generation/${encodeURIComponent(jobId)}`)
+  },
   /**
    * 根据设计ID获取或创建产品
    * @param data 产品创建数据
@@ -63,7 +76,7 @@ export const productsApi = {
    * Generate product description from template
    */
   generateDescription(data: GenerateDescriptionDto): Promise<ApiResponse<string>> {
-    return instance.post('/dsn/products/generate-description', data)
+    return instance.post('/dsn/products/generate-description', data, { timeout: 65000 })
   },
 
   updateStoreWeight(appId: number, storeWeight: number): Promise<ApiResponse<ProductVo>> {

@@ -12,7 +12,7 @@
         >
           <template #content>
             <a
-              href="https://www.wristo.io/template-editor"
+              href="https://studio.wristo.io/tokens"
               target="_blank"
               rel="noopener noreferrer"
             >

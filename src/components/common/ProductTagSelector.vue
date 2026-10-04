@@ -62,11 +62,6 @@ const generate = () => {
 
 const handleChange = (next: number[]) => {
   if (props.disabled || props.loading || props.generating) return
-  if (!next.length && props.tagIds.length) {
-    ElMessage.warning(t('productTags.keepOne'))
-    emit('update:tagIds', [...props.tagIds])
-    return
-  }
   const result = limitTagSelection(props.tagIds, next, props.limit)
   emit('update:tagIds', result.ids)
   if (result.exceeded) {
@@ -80,6 +75,7 @@ const handleChange = (next: number[]) => {
     <el-select
       :model-value="tagIds"
       multiple
+      clearable
       filterable
       class="product-tag-select"
       popper-class="product-tag-options"
@@ -104,7 +100,7 @@ const handleChange = (next: number[]) => {
       </button>
       <span>{{ tagIds.length }} / {{ limit }}</span>
     </div>
-    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} {{ t('productTags.generateOnce') }}</div>
+    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} {{ t('productTags.generateWhenEmpty') }}</div>
     <div v-if="generationStatus === 'failed' || generationStatus === 'processing' || generationStatus === 'unavailable'" class="product-tag-tip" role="status">{{ t(`productTags.generation.${generationStatus}`) }}</div>
   </el-form-item>
 </template>

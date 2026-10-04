@@ -7,6 +7,7 @@ import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
+  getAiCapabilities: vi.fn(),
   getProductTagsPage: vi.fn(),
   getProductTagGeneration: vi.fn(),
   generateProductTags: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
+vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: mocks.generateProductTags }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
@@ -149,6 +151,7 @@ const confirm = async (wrapper: ReturnType<typeof mountDialog>) => {
 describe('GoLiveDialog product tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'existing', canGenerate: false, tags: design.product.tags } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
@@ -241,6 +244,49 @@ describe('GoLiveDialog product tag behavior', () => {
     expect(description.split('#tag-1')).toHaveLength(2)
   })
 
+  it('preserves the description on generation failure and permits retry', async () => {
+    mocks.generateDescription.mockRejectedValueOnce(new Error('AI unavailable'))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    const original = wrapper.getComponent(ElFormStub).props('model').description
+    const button = wrapper.findAll('button').find((button) => button.text() === 'goLive.generateDescription')!
+    await button.trigger('click')
+    await flushPromises()
+    expect(wrapper.getComponent(ElFormStub).props('model').description).toBe(original)
+    mocks.generateDescription.mockResolvedValueOnce({ code: 0, data: 'New AI description' })
+    await button.trigger('click')
+    await flushPromises()
+    expect(wrapper.getComponent(ElFormStub).props('model').description).toContain('New AI description')
+  })
+
+  it('ignores repeated generation clicks while the request is pending', async () => {
+    let resolveRequest!: (value: { code: number; data: string }) => void
+    mocks.generateDescription.mockImplementationOnce(() => new Promise((resolve) => { resolveRequest = resolve }))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    const button = wrapper.findAll('button').find((button) => button.text() === 'goLive.generateDescription')!
+    await button.trigger('click')
+    await button.trigger('click')
+    expect(mocks.generateDescription).toHaveBeenCalledTimes(1)
+    resolveRequest({ code: 0, data: 'Generated description' })
+    await flushPromises()
+  })
+
+  it.each(['edit', 'reopen', 'payment'])('does not overwrite newer description state after %s', async (action) => {
+    let resolveRequest!: (value: { code: number; data: string }) => void
+    mocks.generateDescription.mockImplementationOnce(() => new Promise((resolve) => { resolveRequest = resolve }))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.findAll('button').find((button) => button.text() === 'goLive.generateDescription')!.trigger('click')
+    if (action === 'reopen') await showDialog(wrapper)
+    else if (action === 'payment') wrapper.getComponent(ElFormStub).props('model').paymentMethod = 'garmin'
+    else wrapper.getComponent(ElFormStub).props('model').description = 'My manual edit'
+    const expected = wrapper.getComponent(ElFormStub).props('model').description
+    resolveRequest({ code: 0, data: 'Stale AI description' })
+    await flushPromises()
+    expect(wrapper.getComponent(ElFormStub).props('model').description).toBe(expected)
+  })
+
   it('rebuilds refreshed server tags from the current selection without duplicates', async () => {
     mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Refreshed body\n\n\\#tag-49 #tag-28\n\n#tag-28 #tag-49' })
     const wrapper = mountDialog()
@@ -273,7 +319,7 @@ describe('GoLiveDialog product tag behavior', () => {
 
 const emptyDesign = () => ({ ...structuredClone(design), product: { ...structuredClone(design.product), name: 'tag-1', tags: [] } })
 
-it('opens an untagged app empty without generating, saves once, and restores on reopening', async () => {
+it('opens empty without generating and allows regeneration after clearing', async () => {
   mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
   mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
   let resolve!: (value: unknown) => void
@@ -292,17 +338,25 @@ it('opens an untagged app empty without generating, saves once, and restores on 
   await flushPromises()
   expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
   expect(selector.props('generating')).toBe(true)
-  const completed = { status: 'completed', canGenerate: false, tags: [apiTags[0]] }
+  const completed = { status: 'completed', canGenerate: true, tags: [apiTags[0]] }
   resolve({ code: 0, data: completed })
   await flushPromises()
   expect(selector.props('tagIds')).toEqual([1])
-  expect(selector.props('canGenerate')).toBe(false)
+  expect(selector.props('canGenerate')).toBe(true)
   mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: completed })
   show(emptyDesign())
   await flushPromises()
   expect(selector.props('tagIds')).toEqual([1])
   selector.vm.$emit('generate')
   expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
+  selector.vm.$emit('update:tagIds', [])
+  await flushPromises()
+  selector.vm.$emit('generate')
+  await flushPromises()
+  expect(mocks.generateProductTags).toHaveBeenCalledTimes(2)
+  resolve({ code: 0, data: completed })
+  await flushPromises()
+  expect(selector.props('tagIds')).toEqual([1])
 })
 
 it('reads status after a timeout without retrying the generation request', async () => {

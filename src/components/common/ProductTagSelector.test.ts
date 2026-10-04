@@ -116,31 +116,31 @@ it.each([{ tagIds: [1], canGenerate: true }, { tagIds: [], canGenerate: false },
   expect(wrapper.emitted('generate')).toBeUndefined()
 })
 
-it('retains the final tag and warns instead of clearing the selection', async () => {
+it('allows clearing the final tag', async () => {
   warning.mockClear()
   const wrapper = mountSelector()
   wrapper.getComponent(stubs.ElSelect).vm.$emit('change', [])
   await wrapper.vm.$nextTick()
-  expect(wrapper.emitted('update:tagIds')).toEqual([[[1]]])
-  expect(warning).toHaveBeenCalledWith('productTags.keepOne')
+  expect(wrapper.emitted('update:tagIds')).toEqual([[[]]])
+  expect(warning).not.toHaveBeenCalled()
 })
 
-it('keeps the final tag visibly selected with the real Element Plus select', async () => {
+it('clears the final tag and enables generation with the real Element Plus select', async () => {
   const { defineComponent, h, ref } = await import('vue')
   const { flushPromises } = await import('@vue/test-utils')
   const ep = await vi.importActual<typeof import('element-plus')>('element-plus')
   const Host = defineComponent({
     setup() {
       const ids = ref([1])
-      return () => h(ProductTagSelector, { tagIds: ids.value, tags, 'onUpdate:tagIds': value => { ids.value = value } })
+      return () => h(ProductTagSelector, { tagIds: ids.value, tags, canGenerate: true, 'onUpdate:tagIds': value => { ids.value = value } })
     }
   })
   const wrapper = mount(Host, { global: { components: { ElFormItem: ep.ElFormItem, ElSelect: ep.ElSelect, ElOption: ep.ElOption } } })
   await flushPromises()
   await wrapper.get('.el-tag__close').trigger('click')
   await flushPromises()
-  expect(wrapper.findAll('.el-tag')).toHaveLength(1)
-  expect(wrapper.get('.el-tag').text()).toBe('Minimal')
-  expect(wrapper.getComponent(ProductTagSelector).props('tagIds')).toEqual([1])
+  expect(wrapper.findAll('.el-tag')).toHaveLength(0)
+  expect(wrapper.getComponent(ProductTagSelector).props('tagIds')).toEqual([])
+  expect(wrapper.get('[data-testid="generate-tags"]').attributes('disabled')).toBeUndefined()
   wrapper.unmount()
 })

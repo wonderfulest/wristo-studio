@@ -54,6 +54,6 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
 
 export const requiresStudioLogin = (path: string) => {
   const normalized = path.replace(/\/$/, '') || '/'
-  return !['/', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
+  return !['/', '/tokens', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
     && !/^\/faces\/[^/]+$/.test(normalized)
 }

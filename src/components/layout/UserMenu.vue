@@ -1,5 +1,6 @@
 <template>
   <div class="user-menu" v-if="userStore.isAuthenticated">
+    <StudioCredits />
     <div v-if="showMerchantEntrypoints && pendingCount > 0" class="ticket-reminder">
       <button class="ticket-reminder-button" type="button" @click.stop="goTickets">
         <Icon icon="material-symbols:confirmation-number-outline" />
@@ -154,6 +155,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import StudioCredits from './StudioCredits.vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import { useUserStore } from '@/stores/user'
 import { ticketsApi } from '@/api/wristo/tickets'

@@ -63,8 +63,18 @@ const instance = axios.create({
   }
 })
 
+const isAiGeneration = (url = '') => /\/(generate-description|generate-banner)$|\/tag-generation$/.test(url)
+const refreshCredits = (config?: { url?: string; method?: string }) => {
+  if ((config?.method === 'post' && isAiGeneration(config.url)) || config?.url?.includes('/banner-generation/')) {
+    window.dispatchEvent(new Event('studio-credits-changed'))
+  }
+}
+
 // 请求拦截器
 instance.interceptors.request.use(config => {
+  if (config.method === 'post' && isAiGeneration(config.url) && !config.headers['X-AI-Request-Id']) {
+    config.headers['X-AI-Request-Id'] = crypto.randomUUID()
+  }
   const userStore = useUserStore()
   const token = userStore.token
   if (token) {
@@ -76,6 +86,7 @@ instance.interceptors.request.use(config => {
 // 响应拦截器
 instance.interceptors.response.use(
   (response) => {
+    refreshCredits(response.config)
     const res: ApiResponse<any> = response.data
     if (res.code === BizErrorCode.SUCCESS) {
       return response.data // 返回原始 response
@@ -93,6 +104,7 @@ instance.interceptors.response.use(
     }
   },
   error => {
+    refreshCredits(error.config)
     const status = error.response?.status
     if (status === 401) {
       redirectToLogin(error, getResponseMessage(error.response?.data, 'auth.sessionExpired'))
