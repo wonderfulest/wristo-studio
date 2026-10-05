@@ -1,7 +1,7 @@
 import instance from '@/config/axios'
 import type { ApiResponse } from '@/types/api/api'
 
-export type CreditType = 'REGISTRATION_GIFT' | 'AI_TAGS' | 'AI_DESCRIPTION' | 'AI_BANNER'
+export type CreditType = 'REGISTRATION_GIFT' | 'AI_TAGS' | 'AI_DESCRIPTION' | 'AI_BANNER' | 'AI_WATCHFACE' | 'AI_WATCHFACE_REFUND' | 'AI_WATCHFACE_ADJUST' | 'AI_WATCHFACE_ADJUST_REFUND'
 export interface CreditEntry {
   id: string
   type: CreditType

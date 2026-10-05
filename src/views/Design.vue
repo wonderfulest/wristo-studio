@@ -1,5 +1,6 @@
 <template>
   <div class="design-layout">
+    <div v-if="aiAdjustment.applying.value" class="ai-applying-overlay" role="status" aria-live="polite">Applying adjustment…</div>
     <div v-if="entryCreating || entryError" class="editor-entry-state" :role="entryError ? 'alert' : 'status'">
       <template v-if="entryError">
         <h2>Unable to open a new project</h2>
@@ -10,6 +11,7 @@
       </template>
       <p v-else>Opening Studio…</p>
     </div>
+    <AiWatchfaceDialog v-model="aiWatchfaceVisible" :project-id="baseStore.id || ''" :width="designStore.designSpec.width" :height="designStore.designSpec.height" :import-file="importAiWatchface" :canvas-version="() => draftRevision" />
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
     <div class="editor-workspace">
@@ -55,7 +57,7 @@
         <TimeSimulatorPanel v-if="editorStore.showTimeSimulator" />
       </div>
       <!-- 右侧设置面板 -->
-      <div class="right-panel" :style="{ width: `${rightPanelWidth}px` }">
+      <div class="right-panel" :class="{ 'show-ai-adjustment': aiAdjustmentVisible }" :style="{ width: `${rightPanelWidth}px` }">
         <div
           class="panel-resize-handle panel-resize-handle-right"
           :class="{ active: resizingPanel === 'right' }"
@@ -65,7 +67,12 @@
           @mousedown.prevent="startPanelResize('right', $event)"
           @dblclick.prevent="resetPanelWidth('right')"
         />
-        <ElementSettings v-if="baseStore.canvas != null" />
+        <div class="editor-panel-tabs" role="tablist" aria-label="Editor panel">
+          <button role="tab" :aria-selected="!aiAdjustmentVisible" @click="aiAdjustmentVisible = false">Properties</button>
+          <button role="tab" :aria-selected="aiAdjustmentVisible" @click="aiAdjustmentVisible = true">✦ AI Adjust</button>
+        </div>
+        <AiAdjustmentPanel v-if="aiAdjustmentVisible && baseStore.id" :project-id="String(baseStore.id)" :selected-count="aiAdjustment.selectedIds.value.length" :capture="aiAdjustment.capture" :apply-result="aiAdjustment.applyResult" @close="aiAdjustmentVisible = false" />
+        <ElementSettings v-else-if="baseStore.canvas != null" />
       </div>
     </div>
     <EditorSettingsDialog :canvas-ref="canvasRef" />
@@ -110,6 +117,9 @@ import { useI18n } from '@/i18n'
 import { useResizableEditorPanels } from '@/views/design/useResizableEditorPanels'
 import { RULER_OFFSET, useCanvasPan } from '@/views/design/useCanvasPan'
 import { useDesignLoader } from '@/views/design/useDesignLoader'
+import AiWatchfaceDialog from '@/views/design/AiWatchfaceDialog.vue'
+import AiAdjustmentPanel from '@/views/design/AiAdjustmentPanel.vue'
+import { useAiAdjustmentEditor } from '@/views/design/useAiAdjustmentEditor'
 import { useEditorEntry } from '@/views/design/useEditorEntry'
 import {
   copySelectedElements,
@@ -159,6 +169,10 @@ const themeStore = useThemeStore()
 let saveTimer: number | null = null
 let stopElementDataSubscription: (() => void) | null = null
 let loadedDesignId = ''
+const aiWatchfaceVisible = ref(false)
+const aiAdjustmentVisible = ref(false)
+const aiAdjustment = useAiAdjustmentEditor()
+let newAiProjectId = ''
 const draftOwner = () => userStore.userInfo?.id ?? 'guest'
 const rememberDraft = (id: string, name = designStore.watchFaceName, savedAt = Date.now(), owner = draftOwner()) =>
   rememberUnsavedDesign(window.localStorage, owner, { designId: id, name: name || 'Untitled', savedAt })
@@ -223,6 +237,7 @@ const persistLocalDraft = (): void => {
 }
 const draftAutosave = createLocalDesignDraftAutosave(persistLocalDraft)
 const saveDirtyDraft = (): void => {
+  if (aiAdjustment.applying.value) return
   try {
     draftAutosave.saveIfDirty()
   } catch (error) {
@@ -400,7 +415,10 @@ const {
     void router.push('/designs')
   },
   resolveLoadedConfig: resolveLoadedDraft,
-  onDesignLoaded: startDraftTracking,
+  onDesignLoaded: (id) => {
+    startDraftTracking(id)
+    if (newAiProjectId === id) { newAiProjectId = ''; aiWatchfaceVisible.value = true }
+  },
   onDesignImported: () => {
     draftRevision += 1
     draftAutosave.markDirty()
@@ -415,12 +433,29 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   currentId: () => loadedDesignId,
   findUnsaved: () => readUnsavedDesigns(window.localStorage, draftOwner())[0],
   chooseUnsaved: chooseUnsavedDesign,
-  onCreated: (id, name) => rememberDraft(id, name),
+  onCreated: (id, name) => { rememberDraft(id, name); newAiProjectId = id },
   flush: async () => {
     saveDirtyDraft()
     await draftWriteQueue
   },
 })
+
+const openAiWatchface = () => { aiWatchfaceVisible.value = true }
+const importAiWatchface = async (file: File, automatic: boolean, projectId: string, revision: number): Promise<boolean> => {
+  if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
+  const hasContent = elementDataStore.elements.some((element: any) => !['global', 'background'].includes(element.eleType))
+  if (hasContent) {
+    if (automatic) return false
+    try {
+      await ElMessageBox.confirm('Import this AI design into the current canvas? Existing elements will be replaced.', 'Import AI Design', { type: 'warning', confirmButtonText: 'Import', cancelButtonText: 'Keep Canvas' })
+    } catch { return false }
+  }
+  if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
+  saveDirtyDraft()
+  await draftWriteQueue
+  if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
+  return importWrtDesign(file)
+}
 
 // 设置自动保存
 const setupAutoSave = () => {
@@ -484,6 +519,7 @@ onMounted(() => {
 
   changelogDialog.value?.checkShowChangelog()
   emitter.on('import-wrt-design', importWrtDesign as any)
+  emitter.on('open-ai-watchface', openAiWatchface)
 
   void openEditorEntry()
 
@@ -519,6 +555,7 @@ onBeforeUnmount(() => {
   stopElementDataSubscription?.()
   stopElementDataSubscription = null
   emitter.off('import-wrt-design', importWrtDesign as any)
+  emitter.off('open-ai-watchface', openAiWatchface)
   emitter.off('design-save-started', handleDesignSaveStarted as any)
   emitter.off('design-saved', handleDesignSaved as any)
   emitter.off('local-design-promoted', handleLocalDesignPromoted as any)
@@ -544,6 +581,11 @@ defineExpose({
 </script>
 
 <style scoped>
+.ai-applying-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: rgba(15,23,42,.35); color: white; cursor: wait; }
+.editor-panel-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--studio-border); padding-bottom: 10px; flex-shrink: 0; }
+.editor-panel-tabs button { border: 0; border-radius: 6px; padding: 8px 14px; background: transparent; color: var(--studio-text); cursor: pointer; font-size: 13px; }
+.editor-panel-tabs button[aria-selected="true"] { background: var(--studio-bg); color: var(--studio-primary); font-weight: 600; }
+.right-panel.show-ai-adjustment { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 18px; }
 .editor-entry-state {
   position: absolute;
   inset: 0;

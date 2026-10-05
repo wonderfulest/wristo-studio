@@ -477,9 +477,9 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     return true
   }
 
-  const importWrtDesign = async (file: File): Promise<void> => {
+  const importWrtDesign = async (file: File): Promise<boolean> => {
     const importProgress = useWrtImportProgressStore()
-    if (importProgress.active) return
+    if (importProgress.active) return false
     importProgress.begin(file.name)
     baseStore.setDesignLoading(true)
     const generation = ++designLoadGeneration
@@ -536,7 +536,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
     } catch (error) {
       if (!isCurrentDesignLoad(generation)) {
         if (packageRead) clearRestoredDesignAssetUrls()
-        return
+        return false
       }
       if (error instanceof WrtDesignPackageError) {
         showErrorOnce(error, t(`editor.wrtImport.${error.code}`))
@@ -551,6 +551,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         if (applied) options.onDesignImported?.(baseStore.id)
       }
     }
+    return applied
   }
 
   // 加载设计配置

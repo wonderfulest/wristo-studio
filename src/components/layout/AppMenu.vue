@@ -12,6 +12,7 @@
       >
         <slot name="file-actions" />
       </AppMenuActions>
+      <el-menu-item index="ai-watchface" @click="emitter.emit('open-ai-watchface')">AI Design</el-menu-item>
       <el-sub-menu index="insert">
         <template #title>{{ t('studioMenu.insert') }}</template>
         <AppMenuTimeGroup @add-element="handleAddElement" />
