@@ -195,6 +195,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'credits',
+        name: 'BuyCredits',
+        component: () => import('@/views/BuyCredits.vue'),
+        meta: { requiresAuth: true, allowsAllUsers: true },
+      },
+      {
         path: 'pricing',
         name: 'Pricing',
         component: () => import('@/views/Pricing.vue'),

@@ -26,3 +26,17 @@ export const buildGenerateDescriptionPayload = (
   productId: number,
   language: DescriptionTemplateLanguage,
 ): GenerateDescriptionDto => ({ userId, productId, language })
+
+export const descriptionTemplateUsesAi = (
+  config: Partial<import('@/types/api/designer-default-config').DesignerDefaultConfigVO>,
+  paymentMethod: string,
+  language: DescriptionTemplateLanguage,
+): boolean => {
+  const zh = language === 'zh'
+  const template = paymentMethod === 'garmin'
+    ? (zh ? config.descriptionTemplateGarminZh : config.descriptionTemplateGarmin)
+    : paymentMethod === 'free'
+      ? (zh ? config.descriptionTemplateFreeZh : config.descriptionTemplateFree)
+      : (zh ? config.descriptionTemplateZh : config.descriptionTemplate)
+  return /\[\[\s*\$\{\s*app_ai_description\s*}\s*]]/.test(template || '')
+}

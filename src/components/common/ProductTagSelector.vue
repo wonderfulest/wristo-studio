@@ -13,6 +13,7 @@ const props = withDefaults(
     loading?: boolean
     disabled?: boolean
     limit?: number
+    showGeneration?: boolean
     canGenerate?: boolean
     generating?: boolean
     generationStatus?: string
@@ -21,6 +22,7 @@ const props = withDefaults(
     loading: false,
     disabled: false,
     limit: MAX_PRODUCT_TAGS,
+    showGeneration: true,
     canGenerate: false,
     generating: false,
     generationStatus: 'ready'
@@ -57,7 +59,7 @@ const addPastedTags = () => {
   if (bulkText.value.trim()) ElMessage.warning(t('productTags.noMatch'))
 }
 const generate = () => {
-  if (!props.disabled && !props.loading && !props.generating && props.canGenerate && !props.tagIds.length) emit('generate')
+  if (props.showGeneration && !props.disabled && !props.loading && !props.generating && props.canGenerate && !props.tagIds.length) emit('generate')
 }
 
 const handleChange = (next: number[]) => {
@@ -95,13 +97,13 @@ const handleChange = (next: number[]) => {
         :disabled="disabled || loading || generating"
         @keydown.enter.prevent="addPastedTags" />
       <button type="button" :disabled="disabled || loading || generating || !bulkText.trim()" @click="addPastedTags">{{ t('productTags.addBulk') }}</button>
-      <button type="button" data-testid="generate-tags" :disabled="disabled || loading || generating || !canGenerate || tagIds.length > 0" @click="generate">
+      <button v-if="showGeneration" type="button" data-testid="generate-tags" :disabled="disabled || loading || generating || !canGenerate || tagIds.length > 0" @click="generate">
         {{ t(generating ? 'productTags.generating' : 'productTags.generate') }}
       </button>
       <span>{{ tagIds.length }} / {{ limit }}</span>
     </div>
-    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} {{ t('productTags.generateWhenEmpty') }}</div>
-    <div v-if="generationStatus === 'failed' || generationStatus === 'processing' || generationStatus === 'unavailable'" class="product-tag-tip" role="status">{{ t(`productTags.generation.${generationStatus}`) }}</div>
+    <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} <template v-if="showGeneration">{{ t('productTags.generateWhenEmpty') }}</template></div>
+    <div v-if="showGeneration && (generationStatus === 'failed' || generationStatus === 'processing' || generationStatus === 'unavailable')" class="product-tag-tip" role="status">{{ t(`productTags.generation.${generationStatus}`) }}</div>
   </el-form-item>
 </template>
 

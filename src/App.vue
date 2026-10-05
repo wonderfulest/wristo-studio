@@ -2,11 +2,13 @@
 <template>
   <router-view></router-view>
   <CookieConsent />
+  <InsufficientCreditsDialog />
   <WrtImportProgressDialog />
 </template>
 
 <script setup>
 import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
+import InsufficientCreditsDialog from '@/components/InsufficientCreditsDialog.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
 import { useLocaleStore } from '@/stores/locale'
 import { useThemeStore } from '@/stores/theme'

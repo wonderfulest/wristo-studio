@@ -43,6 +43,14 @@ const mountSelector = (props: Record<string, unknown> = {}) =>
   })
 
 describe('ProductTagSelector', () => {
+  it('hides all AI controls while keeping manual tags usable', () => {
+    const wrapper = mountSelector({ showGeneration: false, canGenerate: true, generationStatus: 'unavailable' })
+    expect(wrapper.find('[data-testid="generate-tags"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('productTags.generateWhenEmpty')
+    expect(wrapper.text()).not.toContain('productTags.generation.unavailable')
+    expect(wrapper.findAll('.option')).toHaveLength(3)
+  })
+
   it('renders every tag group in API order', () => {
     const wrapper = mountSelector()
 

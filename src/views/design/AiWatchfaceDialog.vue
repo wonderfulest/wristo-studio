@@ -18,6 +18,7 @@
     </div>
     <p v-if="imageError" role="alert" class="ai-error">{{ imageError }}</p>
     <div class="ai-price"><span>Failed generations are refunded.</span><span>{{ balance ?? '—' }} credits available</span></div>
+    <p v-if="price != null && balance != null && balance < price" class="ai-hint">This request needs {{ price }} credits. <a href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a></p>
     <p v-if="!available && !loading" class="ai-hint">AI generation is currently unavailable. Your saved results are still accessible below.</p>
     <p v-if="error" role="alert" class="ai-error">{{ error }} <el-button text @click="refresh">Refresh</el-button></p>
     <div v-if="job" class="ai-status" role="status" aria-live="polite">
@@ -48,6 +49,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { prepareReferenceImage } from './referenceImage'
 import { aiWatchfaceApi, isWatchfacePending, type WatchfaceJob } from '@/api/wristo/aiWatchface'
 import { getAiCapabilities, getAiPrices } from '@/api/wristo/studioAi'
+import { useCreditBalanceRefresh } from '@/composables/useCreditBalanceRefresh'
 import { studioCreditsApi } from '@/api/wristo/studioCredits'
 import { useUserStore } from '@/stores/user'
 function downloadBlob(blob: Blob, name: string) {
@@ -93,6 +95,7 @@ async function selectReference(event: Event) {
   }
 }
 const balance = ref<number>()
+useCreditBalanceRefresh(balance, () => props.modelValue)
 const price = ref<number>()
 const available = ref(false)
 const loading = ref(false)

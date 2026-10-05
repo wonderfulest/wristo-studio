@@ -2,6 +2,11 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'credits.PURCHASE_REFUND_REVERSAL': 'Refund Reversal',
+  'credits.PURCHASE': 'Credit Purchase',
+  'credits.PURCHASE_REFUND': 'Purchase Refund',
+  'credits.ADMIN_CREDIT': 'Credit Adjustment',
+  'credits.ADMIN_DEBIT': 'Debit Adjustment',
   'credits.title': "AI Credit History",
   'credits.balance': "Credits: {count}",
   'credits.type': "Type",

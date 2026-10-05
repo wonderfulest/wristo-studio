@@ -178,15 +178,15 @@ describe('GoLiveDialog product image behavior', () => {
 
   afterEach(() => { vi.useRealTimers() })
 
-  it('blocks disabled banner generation and preserves the uploaded image', async () => {
+  it('hides disabled banner generation and preserves the uploaded image', async () => {
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: false } })
     const wrapper = mountDialog()
     ;(wrapper.vm as unknown as { show: (value: Design) => void }).show({ ...design, product: { ...design.product, bannerImageUrl: 'https://cdn.wristo.io/old.jpg' } } as Design)
     await flushPromises()
-    await wrapper.get('.banner-refresh').trigger('click')
+    expect(wrapper.find('.banner-refresh').exists()).toBe(false)
     expect(mocks.generateBanner).not.toHaveBeenCalled()
     expect(wrapper.get('.banner-area img').attributes('src')).toContain('old.jpg')
-    expect(wrapper.text()).toContain('goLive.aiUnavailable')
+    expect(wrapper.text()).not.toContain('goLive.aiUnavailable')
   })
 
   it('polls a running task and stops polling when the dialog closes', async () => {

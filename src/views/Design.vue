@@ -11,7 +11,7 @@
       </template>
       <p v-else>Opening Studio…</p>
     </div>
-    <AiWatchfaceDialog v-model="aiWatchfaceVisible" :project-id="baseStore.id || ''" :width="designStore.designSpec.width" :height="designStore.designSpec.height" :import-file="importAiWatchface" :canvas-version="() => draftRevision" />
+    <AiWatchfaceDialog v-if="editorAiCapabilities.WATCHFACE" v-model="aiWatchfaceVisible" :project-id="baseStore.id || ''" :width="designStore.designSpec.width" :height="designStore.designSpec.height" :import-file="importAiWatchface" :canvas-version="() => draftRevision" />
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
     <div class="editor-workspace">
@@ -67,11 +67,11 @@
           @mousedown.prevent="startPanelResize('right', $event)"
           @dblclick.prevent="resetPanelWidth('right')"
         />
-        <div class="editor-panel-tabs" role="tablist" aria-label="Editor panel">
+        <div v-if="editorAiCapabilities.WATCHFACE_ADJUST" class="editor-panel-tabs" role="tablist" aria-label="Editor panel">
           <button role="tab" :aria-selected="!aiAdjustmentVisible" @click="aiAdjustmentVisible = false">Properties</button>
           <button role="tab" :aria-selected="aiAdjustmentVisible" @click="aiAdjustmentVisible = true">✦ AI Adjust</button>
         </div>
-        <AiAdjustmentPanel v-if="aiAdjustmentVisible && baseStore.id" :project-id="String(baseStore.id)" :selected-count="aiAdjustment.selectedIds.value.length" :capture="aiAdjustment.capture" :apply-result="aiAdjustment.applyResult" @close="aiAdjustmentVisible = false" />
+        <AiAdjustmentPanel v-if="editorAiCapabilities.WATCHFACE_ADJUST && aiAdjustmentVisible && baseStore.id" :project-id="String(baseStore.id)" :selected-count="aiAdjustment.selectedIds.value.length" :capture="aiAdjustment.capture" :apply-result="aiAdjustment.applyResult" @close="aiAdjustmentVisible = false" />
         <ElementSettings v-else-if="baseStore.canvas != null" />
       </div>
     </div>
@@ -119,6 +119,7 @@ import { RULER_OFFSET, useCanvasPan } from '@/views/design/useCanvasPan'
 import { useDesignLoader } from '@/views/design/useDesignLoader'
 import AiWatchfaceDialog from '@/views/design/AiWatchfaceDialog.vue'
 import AiAdjustmentPanel from '@/views/design/AiAdjustmentPanel.vue'
+import { useStudioAiCapabilities } from '@/views/design/useStudioAiCapabilities'
 import { useAiAdjustmentEditor } from '@/views/design/useAiAdjustmentEditor'
 import { useEditorEntry } from '@/views/design/useEditorEntry'
 import {
@@ -169,6 +170,7 @@ const themeStore = useThemeStore()
 let saveTimer: number | null = null
 let stopElementDataSubscription: (() => void) | null = null
 let loadedDesignId = ''
+const { capabilities: editorAiCapabilities, refresh: refreshEditorAiCapabilities } = useStudioAiCapabilities()
 const aiWatchfaceVisible = ref(false)
 const aiAdjustmentVisible = ref(false)
 const aiAdjustment = useAiAdjustmentEditor()
@@ -417,7 +419,12 @@ const {
   resolveLoadedConfig: resolveLoadedDraft,
   onDesignLoaded: (id) => {
     startDraftTracking(id)
-    if (newAiProjectId === id) { newAiProjectId = ''; aiWatchfaceVisible.value = true }
+    if (newAiProjectId === id) {
+      newAiProjectId = ''
+      void refreshEditorAiCapabilities().then(() => {
+        if (loadedDesignId === id && editorAiCapabilities.value.WATCHFACE) aiWatchfaceVisible.value = true
+      })
+    }
   },
   onDesignImported: () => {
     draftRevision += 1
@@ -440,7 +447,6 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   },
 })
 
-const openAiWatchface = () => { aiWatchfaceVisible.value = true }
 const importAiWatchface = async (file: File, automatic: boolean, projectId: string, revision: number): Promise<boolean> => {
   if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
   const hasContent = elementDataStore.elements.some((element: any) => !['global', 'background'].includes(element.eleType))
@@ -519,8 +525,8 @@ onMounted(() => {
 
   changelogDialog.value?.checkShowChangelog()
   emitter.on('import-wrt-design', importWrtDesign as any)
-  emitter.on('open-ai-watchface', openAiWatchface)
 
+  void refreshEditorAiCapabilities()
   void openEditorEntry()
 
   // 设置自动保存
@@ -555,7 +561,6 @@ onBeforeUnmount(() => {
   stopElementDataSubscription?.()
   stopElementDataSubscription = null
   emitter.off('import-wrt-design', importWrtDesign as any)
-  emitter.off('open-ai-watchface', openAiWatchface)
   emitter.off('design-save-started', handleDesignSaveStarted as any)
   emitter.off('design-saved', handleDesignSaved as any)
   emitter.off('local-design-promoted', handleLocalDesignPromoted as any)

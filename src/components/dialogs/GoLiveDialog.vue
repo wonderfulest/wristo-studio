@@ -6,7 +6,7 @@
     :top="'5vh'"
     class="go-live-dialog"
   >
-    <p v-if="aiPrices" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
+    <p v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
       <el-form-item :label="t('card.appId')">
         <el-input v-model="form.appId" disabled>
@@ -49,6 +49,7 @@
       </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
+        :show-generation="aiCapabilities.TAGS"
         :can-generate="canGenerateTags && aiCapabilities.TAGS"
         :generating="generatingTags"
         :generation-status="tagGenerationStatus"
@@ -59,14 +60,12 @@
         :loading="loadingProductTags || loadingTagGeneration"
         :disabled="productTagsLoadFailed"
       />
-      <div v-if="!loadingAiCapabilities && !aiCapabilities.TAGS" class="form-tip">{{ t('goLive.aiUnavailable') }}</div>
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
         <el-input v-model="form.description" type="textarea" :rows="10" />
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="form.description || ''" />
-          <el-button size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
+          <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
         </div>
-        <div v-if="!loadingAiCapabilities && !aiCapabilities.DESCRIPTION" class="form-tip">{{ t('goLive.aiDescriptionUnavailable') }}</div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
         </div>
@@ -111,6 +110,7 @@
       <el-form-item :label="t('goLive.homepageBanner')">
         <div class="image-upload-container banner-container" :aria-busy="generatingBanner">
           <el-button
+            v-if="aiCapabilities.BANNER"
             class="banner-refresh"
             circle
             size="small"
@@ -150,7 +150,6 @@
               {{ t('goLive.removeImage') }}
             </el-button>
           </div>
-          <div v-if="!loadingAiCapabilities && !aiCapabilities.BANNER" class="form-tip">{{ t('goLive.aiUnavailable') }}</div>
           <div v-if="generatingBanner" class="form-tip" role="status">{{ t('goLive.generatingBanner') }}</div>
         </div>
       </el-form-item>
@@ -323,6 +322,8 @@ import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
 import type { FormInstance, FormRules } from 'element-plus'
+import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
+import type { DesignerDefaultConfigVO } from '@/types/api/designer-default-config'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
 import ProductTagSelector from '@/components/common/ProductTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
@@ -331,6 +332,7 @@ import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useI18n } from '@/i18n'
 import {
   buildGenerateDescriptionPayload,
+  descriptionTemplateUsesAi,
   resolveDescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
@@ -352,10 +354,15 @@ import {
 const aiCapabilities = ref<AiCapabilities>({ TAGS: false, DESCRIPTION: false, BANNER: false })
 const aiPrices = ref<AiPrices | null>(null)
 const loadingAiCapabilities = ref(false)
+const descriptionConfig = ref<DesignerDefaultConfigVO | null>(null)
+const descriptionConfigLoaded = ref(false)
 let aiCapabilitiesVersion = 0
 const loadAiCapabilities = async () => {
   const version = ++aiCapabilitiesVersion
   aiCapabilities.value = { TAGS: false, DESCRIPTION: false, BANNER: false }
+  descriptionConfigLoaded.value = false
+  descriptionConfig.value = null
+  aiPrices.value = null
   loadingAiCapabilities.value = true
   try {
     const [response, prices] = await Promise.all([getAiCapabilities(), getAiPrices()])
@@ -364,6 +371,14 @@ const loadAiCapabilities = async () => {
     if (prices.code !== 0 || !prices.data) throw new Error('AI prices unavailable')
     aiPrices.value = prices.data
     aiCapabilities.value = { TAGS: response.data.TAGS === true, DESCRIPTION: response.data.DESCRIPTION === true, BANNER: response.data.BANNER === true }
+    if (!aiCapabilities.value.DESCRIPTION && userStore.userInfo?.id) {
+      const config = await designerDefaultConfigApi.getByUserId(userStore.userInfo.id)
+      if (version !== aiCapabilitiesVersion) return
+      if (config.code === 0) {
+        descriptionConfig.value = config.data ?? null
+        descriptionConfigLoaded.value = true
+      }
+    }
   } catch (error) {
     if (version === aiCapabilitiesVersion) showErrorOnce(error, t('goLive.aiStatusFailed'))
   } finally {
@@ -484,6 +499,12 @@ const form = reactive({
   // productImages: keep id + imageUrl, used by ProductImagesEditor and goLive payload
   productImages: [] as ProductImageItem[]
 })
+
+const canGenerateDescription = computed(() => aiCapabilities.value.DESCRIPTION || (
+  descriptionConfigLoaded.value && !descriptionTemplateUsesAi(
+    descriptionConfig.value || {}, form.paymentMethod, resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
+  )
+))
 
 const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
@@ -957,7 +978,7 @@ const generatingDescription = ref(false)
 let descriptionGenerationVersion = 0
 
 const refreshDescription = async () => {
-  if (!currentDesign.value || generatingDescription.value) return
+  if (!currentDesign.value || generatingDescription.value || !canGenerateDescription.value) return
   const uid = userStore.userInfo?.id
   if (!uid) {
     ElMessage.error(t('auth.userNotLoggedIn'))

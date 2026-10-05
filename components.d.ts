@@ -122,6 +122,7 @@ declare module 'vue' {
     HandPicker: typeof import('./src/components/hand-picker/index.vue')['default']
     HistoryControls: typeof import('./src/components/canvas/HistoryControls.vue')['default']
     ImageUpload: typeof import('./src/components/common/ImageUpload.vue')['default']
+    InsufficientCreditsDialog: typeof import('./src/components/InsufficientCreditsDialog.vue')['default']
     InteractionField: typeof import('./src/components/panels/settings/InteractionField.vue')['default']
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']
     LayerPanel: typeof import('./src/components/panels/LayerPanel.vue')['default']

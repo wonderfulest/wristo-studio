@@ -23,7 +23,7 @@
       <el-button v-if="uncertain" size="small" :loading="submitting" @click="recoverRequest">Recover request · no extra charge</el-button>
       <p v-if="!user.isAuthenticated" class="hint">Sign in to use AI adjustments.</p>
       <p v-else-if="!available && !loading" class="hint">AI adjustments are currently unavailable.</p>
-      <p v-if="price != null && balance != null && balance < price" class="hint">Not enough credits for this adjustment.</p>
+      <p v-if="price != null && balance != null && balance < price" class="hint">This adjustment needs {{ price }} credits. <a href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a></p>
       <label for="ai-adjust-prompt">Your adjustment</label>
       <textarea id="ai-adjust-prompt" v-model="prompt" maxlength="2000" rows="3" :disabled="busy" placeholder="Make the time a little larger…" @keydown.meta.enter.prevent="send" @keydown.ctrl.enter.prevent="send" />
       <div class="balance"><span>Balance: {{ balance ?? '—' }} credits</span><button class="text-button" :disabled="loading || submitting" @click="refresh">Refresh</button></div>
@@ -36,6 +36,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { aiAdjustmentApi, type AdjustmentElement, type AdjustmentJob, type AdjustmentRequest, type AdjustmentResult } from '@/api/wristo/aiAdjustment'
 import { getAiCapabilities, getAiPrices } from '@/api/wristo/studioAi'
+import { useCreditBalanceRefresh } from '@/composables/useCreditBalanceRefresh'
 import { studioCreditsApi } from '@/api/wristo/studioCredits'
 import { useUserStore } from '@/stores/user'
 import { validateAdjustment } from './aiAdjustmentPatch'
@@ -48,6 +49,7 @@ const user = useUserStore()
 const prompt = ref(''), error = ref('')
 const conversation = ref<HTMLElement>()
 const price = ref<number>(), balance = ref<number>()
+useCreditBalanceRefresh(balance)
 const available = ref(false), loading = ref(false), submitting = ref(false), applying = ref(false)
 const pending = ref<Pending>(), turns = ref<Turn[]>([])
 let generation = 0, timer: ReturnType<typeof setTimeout> | undefined

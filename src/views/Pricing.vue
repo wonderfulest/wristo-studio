@@ -179,7 +179,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { loadPaddle, onPaddleEvent } from '@/utils/paddleCheckout'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -203,8 +204,6 @@ const checkoutTotals = ref({
   tax: '',
   total: '',
 })
-let paddleReadyPromise: Promise<void> | null = null
-let paddleInitialized = false
 const checkoutTotalsUpdateEvents = new Set(['checkout.loaded', 'checkout.updated', 'checkout.items.updated'])
 
 interface PlanCard {
@@ -541,63 +540,10 @@ const formatPrice = (plan: StudioMembershipPlan) => {
 }
 
 const getPaddleClientToken = () => normalizeText(import.meta.env.VITE_WRISTO_PADDLE_CLIENT_TOKEN)
-const getPaddleEnvironment = () => normalizeText(import.meta.env.VITE_WRISTO_PADDLE_ENVIRONMENT)
 
 const loadPlans = async () => {
   const response = await membershipApi.getStudioPlans()
   backendPlans.value = response.data || []
-}
-
-const loadPaddle = () => {
-  if (paddleReadyPromise) return paddleReadyPromise
-
-  paddleReadyPromise = new Promise<void>((resolve, reject) => {
-    const token = getPaddleClientToken()
-    if (!token) {
-      reject(new Error('Paddle client token is missing'))
-      return
-    }
-
-    const win = window as any
-    if (win.Paddle) {
-      initializePaddle(win, token)
-      resolve()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js'
-    script.async = true
-    script.onload = () => {
-      initializePaddle(win, token)
-      resolve()
-    }
-    script.onerror = () => reject(new Error('Paddle failed to load'))
-    document.body.appendChild(script)
-  })
-
-  return paddleReadyPromise
-}
-
-const initializePaddle = (win: any, token: string) => {
-  if (paddleInitialized) return
-  const environment = getPaddleEnvironment()
-  if (environment && win.Paddle?.Environment?.set) {
-    win.Paddle.Environment.set(environment)
-  }
-  win.Paddle.Initialize({
-    token,
-    checkout: {
-      settings: {
-        displayMode: 'inline',
-        frameTarget: 'studio-membership-checkout-frame',
-        frameInitialHeight: 520,
-        frameStyle: 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
-      },
-    },
-    eventCallback: handlePaddleEvent,
-  })
-  paddleInitialized = true
 }
 
 const handlePaddleEvent = async (event: any) => {
@@ -652,6 +598,9 @@ const buildCheckoutRequest = (plan: PlanCard) => ({
 const buildInlineCheckoutOpenRequest = (plan: PlanCard) => ({
   settings: {
     displayMode: 'inline',
+    frameTarget: 'studio-membership-checkout-frame',
+    frameInitialHeight: 520,
+    frameStyle: 'width: 100%; min-width: 312px; background-color: transparent; border: none;',
   },
   ...buildCheckoutRequest(plan),
 })
@@ -723,6 +672,9 @@ const handleCheckout = async (plan: (typeof plans.value)[number]) => {
   selectedPlanCode.value = plan.code
   await updateInlineCheckout(plan)
 }
+
+const removePaddleListener = onPaddleEvent(handlePaddleEvent)
+onUnmounted(() => { removePaddleListener(); (window as any).Paddle?.Checkout?.close() })
 
 onMounted(async () => {
   await Promise.allSettled([

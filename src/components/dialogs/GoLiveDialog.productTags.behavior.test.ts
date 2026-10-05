@@ -7,6 +7,7 @@ import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
+  getDescriptionConfig: vi.fn(),
   getAiCapabilities: vi.fn(),
   getAiPrices: vi.fn(),
   getProductTagsPage: vi.fn(),
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
+vi.mock('@/api/wristo/designerDefaultConfig', () => ({ designerDefaultConfigApi: { getByUserId: mocks.getDescriptionConfig } }))
 vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: mocks.generateProductTags }))
 vi.mock('@/api/wristo/products', () => ({
@@ -101,6 +103,7 @@ const ProductTagSelectorStub = defineComponent({
     tags: { type: Array, required: true },
     loading: Boolean,
     disabled: Boolean,
+    showGeneration: Boolean,
     canGenerate: Boolean,
     generating: Boolean,
     generationStatus: String
@@ -184,6 +187,28 @@ describe('GoLiveDialog product tag behavior', () => {
     await showDialog(wrapper)
     expect(wrapper.find('.source-design-links').exists()).toBe(false)
     open.mockRestore()
+  })
+
+  it('hides AI entries when disabled but preserves plain template generation', async () => {
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: false, BANNER: false } })
+    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: 'Plain template' } })
+    const wrapper = mountDialog()
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(design)
+    await flushPromises()
+    expect(wrapper.getComponent(ProductTagSelectorStub).props('showGeneration')).toBe(false)
+    expect(wrapper.find('.banner-refresh').exists()).toBe(false)
+    expect(wrapper.find('.ai-credit-hint').exists()).toBe(false)
+    expect(wrapper.findAll('button').some(button => button.text() === 'goLive.generateDescription')).toBe(true)
+  })
+
+  it('hides description generation when its template needs disabled AI', async () => {
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: false, BANNER: false } })
+    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: '[[${app_ai_description}]]' } })
+    const wrapper = mountDialog()
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(design)
+    await flushPromises()
+    expect(wrapper.findAll('button').some(button => button.text() === 'goLive.generateDescription')).toBe(false)
+    expect(mocks.generateDescription).not.toHaveBeenCalled()
   })
 
   it('closes the blank tab and reports a missing source store URL', async () => {

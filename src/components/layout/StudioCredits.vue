@@ -2,6 +2,7 @@
   <button type="button" class="credits-button" :title="t('credits.title')" @click="open">
     {{ t('credits.balance', { count: balance ?? '—' }) }}
   </button>
+  <a class="credits-button credits-buy" href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a>
   <el-dialog v-model="visible" :title="t('credits.title')" width="min(800px, 94vw)" append-to-body>
     <div class="credits-summary">
       <strong>{{ t('credits.balance', { count: balance ?? '—' }) }}</strong>
@@ -10,6 +11,7 @@
         <el-option v-for="value in types" :key="value" :label="t(`credits.${value}`)" :value="value" />
       </el-select>
     </div>
+    <a href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a>
     <p class="credits-hint">{{ t('credits.policy') }}</p>
     <p v-if="error" role="alert">{{ error }} <el-button @click="loadHistory">{{ t('credits.retry') }}</el-button></p>
     <el-table v-loading="loading" :data="items" max-height="45vh" :empty-text="t('credits.empty')">
@@ -41,7 +43,7 @@ const user = useUserStore()
 const balance = ref<number | null>(null)
 const visible = ref(false)
 const type = ref<CreditType | ''>('')
-const types: CreditType[] = ['REGISTRATION_GIFT', 'AI_TAGS', 'AI_DESCRIPTION', 'AI_BANNER', 'AI_WATCHFACE', 'AI_WATCHFACE_REFUND', 'AI_WATCHFACE_ADJUST', 'AI_WATCHFACE_ADJUST_REFUND']
+const types: CreditType[] = ['PURCHASE', 'PURCHASE_REFUND', 'PURCHASE_REFUND_REVERSAL', 'ADMIN_CREDIT', 'ADMIN_DEBIT', 'REGISTRATION_GIFT', 'AI_TAGS', 'AI_DESCRIPTION', 'AI_BANNER', 'AI_WATCHFACE', 'AI_WATCHFACE_REFUND', 'AI_WATCHFACE_ADJUST', 'AI_WATCHFACE_ADJUST_REFUND']
 const items = ref<CreditEntry[]>([])
 const page = ref(1)
 const total = ref(0)
@@ -73,6 +75,7 @@ async function loadHistory() {
 }
 function open() { visible.value = true; page.value = 1; void refreshBalance(); void loadHistory() }
 function filterChanged() { page.value = 1; void loadHistory() }
+function storageRefresh(event: StorageEvent) { if (event.key === 'studio-credits-updated') refresh() }
 function refresh() { void refreshBalance(); if (visible.value) void loadHistory() }
 watch(() => user.isAuthenticated ? user.userInfo?.id : null, () => {
   balanceVersion++; historyVersion++
@@ -80,15 +83,22 @@ watch(() => user.isAuthenticated ? user.userInfo?.id : null, () => {
   type.value = ''; page.value = 1; loading.value = false; error.value = ''
   void refreshBalance()
 }, { immediate: true })
-onMounted(() => window.addEventListener('studio-credits-changed', refresh))
+onMounted(() => {
+  window.addEventListener('studio-credits-changed', refresh)
+  window.addEventListener('focus', refresh)
+  window.addEventListener('storage', storageRefresh)
+})
 onUnmounted(() => {
   balanceVersion++; historyVersion++
   window.removeEventListener('studio-credits-changed', refresh)
+  window.removeEventListener('focus', refresh)
+  window.removeEventListener('storage', storageRefresh)
 })
 </script>
 
 <style scoped>
 .credits-button { background: var(--studio-surface-soft); color: var(--studio-text); border: 1px solid var(--studio-border); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.credits-buy { text-decoration: none; margin-left: 6px; white-space: nowrap; }
 .credits-button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .credits-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .credits-hint { color: var(--studio-text-muted); line-height: 1.6; }
