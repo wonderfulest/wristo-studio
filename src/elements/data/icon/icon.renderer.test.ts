@@ -39,7 +39,8 @@ vi.mock('fabric', () => {
 
 vi.mock('@/stores/canvasStore', () => ({ useCanvasStore: () => ({ canvas, setActiveIds: vi.fn(), activeIds: [] }) }))
 vi.mock('@/stores/layerStore', () => ({ useLayerStore: () => ({ previewMode: 'active', addLayer: vi.fn(), selectOne: vi.fn(), selectedLayerIds: [] }) }))
-vi.mock('@/stores/properties', () => ({ usePropertiesStore: () => ({ getMetricByOptions: () => ({ metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', iconUnicode: '0067' }) }) }))
+import { usePropertiesStore } from '@/stores/properties'
+import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 vi.mock('@/stores/elementDataStore', () => ({ useElementDataStore: () => ({ upsertElement, patchElement: vi.fn() }) }))
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))
 vi.mock('@/utils/baselineUtil', () => ({ encodeTopBaseForElement: () => 0 }))
@@ -49,9 +50,28 @@ import { createIcon, updateIcon } from './icon.renderer'
 describe('icon bitmap font rendering', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useDataCatalogStore().snapshot = { dataTypeOptions: [
+      { category: 'field', metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', iconUnicode: '0067' },
+      { category: 'goal', valueCode: 101, metricSymbol: ':GOAL_TYPE_STEPS', iconUnicode: '0031' },
+    ] } as any
+    usePropertiesStore().loadProperties({ data_1: { type: 'data', value: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT' } } as any)
     canvas.objects = []
     originalTextRender.mockClear()
     upsertElement.mockClear()
+  })
+
+  it('renders an imported goal ring icon without any data element or data property', async () => {
+    usePropertiesStore().loadProperties({
+      goal_ring: { type: 'goal', title: 'Ring', value: 101, options: [{ label: 'Steps', value: 101 }] },
+    } as any)
+    const icon: any = await createIcon({
+      id: 'goal-icon', eleType: 'icon', left: 57, top: 252,
+      fontFamily: 'wonderful', fontSize: 22, fill: '#fff',
+      goalProperty: 'goal_ring', iconDisplayType: 'mip',
+    } as any)
+    expect(icon.text).toBe('1')
+    expect(canvas.objects).toEqual([icon])
+    expect(icon.dataProperty).toBeUndefined()
   })
 
   it('renders imported icon glyphs with the selected TTF when bitmap assets are missing', async () => {

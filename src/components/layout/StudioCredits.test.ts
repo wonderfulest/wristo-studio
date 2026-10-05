@@ -2,7 +2,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { reactive, nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ balance: vi.fn(), history: vi.fn(), user: null as any }))
+const mocks = vi.hoisted(() => ({ balance: vi.fn(), history: vi.fn(), creatorRewards: vi.fn(), user: null as any }))
 vi.mock('@/api/wristo/studioCredits', () => ({ studioCreditsApi: mocks }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string, params?: { count: number }) => params ? `${key} ${params.count}` : key }) }))
@@ -23,11 +23,31 @@ function setup() {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.user = reactive({ isAuthenticated: true, userInfo: { id: 7 } })
+  mocks.creatorRewards.mockResolvedValue({ data: { pendingDownloads: 9, settings: { downloadEnabled: true, downloadsPerReward: 10, downloadCredits: 1, purchaseEnabled: true, purchaseCredits: 3 }, lastSettledDay: '2026-10-04' } })
   mocks.balance.mockResolvedValue({ code: 0, data: { balance: 100 } })
   mocks.history.mockResolvedValue({ code: 0, data: { items: [{ id: '1', type: 'REGISTRATION_GIFT', delta: 100 }], total: 42 } })
 })
 afterEach(() => { wrappers.splice(0).forEach(w => w.unmount()) })
 describe('Studio credits wallet', () => {
+  it('loads daily creator rewards and supports reward history filtering', async () => {
+    const w=setup(); await flushPromises()
+    expect(mocks.creatorRewards).not.toHaveBeenCalled()
+    await w.find('button').trigger('click'); await flushPromises()
+    expect(mocks.creatorRewards).toHaveBeenCalledTimes(1)
+    expect(w.text()).toContain('credits.creatorProgress')
+    const filter=w.findComponent({ name: 'ElSelect' })
+    filter.vm.$emit('update:modelValue','CREATOR_DOWNLOAD'); filter.vm.$emit('change','CREATOR_DOWNLOAD')
+    await flushPromises(); expect(mocks.history).toHaveBeenLastCalledWith(1,'CREATOR_DOWNLOAD')
+  })
+  it('keeps history available when reward progress fails and permits retry', async () => {
+    mocks.creatorRewards.mockRejectedValueOnce(new Error('offline'))
+    const w=setup(); await flushPromises(); await w.find('button').trigger('click'); await flushPromises()
+    expect(w.text()).toContain('REGISTRATION_GIFT')
+    expect(w.text()).toContain('credits.creatorLoadFailed')
+    await w.find('[data-testid="creator-rewards-error"] button').trigger('click'); await flushPromises()
+    expect(w.text()).toContain('credits.creatorProgress')
+  })
+
   it('shows the balance and opens paged history', async () => {
     const w=setup(); await flushPromises()
     expect(w.find('button').text()).toContain('100')

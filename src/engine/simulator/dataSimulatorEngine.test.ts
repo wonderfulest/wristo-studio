@@ -324,6 +324,17 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(set).toHaveBeenCalledWith('text', '80')
   })
 
+  it('formats converted display values alongside their unit tokens', () => {
+    const set = vi.fn()
+    getSimulatedDataByTokenCode.mockImplementationOnce(() => ({ display: '3.9', numeric: 1200, unit: 'kft' }))
+    getSimulatedDataByTokenCode.mockImplementationOnce(() => ({ display: 'kft', numeric: null as unknown as number, unit: '' }))
+    canvas.getObjects.mockReturnValue([
+      { id: 'altitude-template', eleType: 'angledText', textTemplate: '(ds8).format("%.1f") + " " + (ds8u)', text: '', set },
+    ])
+    new DataSimulatorEngine().updateCanvas()
+    expect(set).toHaveBeenCalledWith('text', '3.9 kft')
+  })
+
   it('passes the resolved token text to radial-text updates', () => {
     const updateRadialText = vi.fn()
     canvas.getObjects.mockReturnValue([

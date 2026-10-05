@@ -3,8 +3,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import FaceDetail from './FaceDetail.vue'
+import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
+vi.mock('@/api/wristo/shareRewards', () => ({ loadShareRewardProfile: vi.fn() }))
 import { updateFaceSharing, remixFace } from './permissions'
-const auth = vi.hoisted(() => ({ isAdminUser: false, userInfo: { id: 7 } as { id: number } | null }))
+const auth = vi.hoisted(() => ({ isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
@@ -14,7 +16,7 @@ vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(updateFaceSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
+beforeEach(() => { auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(updateFaceSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup() {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -39,6 +41,30 @@ describe('watch face details', () => {
     expect(router.currentRoute.value.path).toBe('/faces/123')
     await wrapper.get('dialog .close').trigger('click')
     expect(wrapper.find('dialog').exists()).toBe(false)
+  })
+  it('shares the signed-in user code through caption, Facebook preview and copy link', async () => {
+    auth.isAuthenticated = true
+    vi.mocked(loadShareRewardProfile).mockResolvedValue({ code: 'abcdefgh12345678', enabled: true, creditsPerVisit: 1, minimumVisibleSeconds: 10, userDailyCredits: 20, earnedToday: 0 })
+    HTMLDialogElement.prototype.showModal = vi.fn()
+    HTMLDialogElement.prototype.close = vi.fn()
+    const { wrapper } = await setup()
+    await wrapper.findAll('button[aria-haspopup="dialog"]').find(button => button.text() === 'Facebook')!.trigger('click'); await flushPromises()
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toContain('?ref=abcdefgh12345678&via=Facebook')
+    expect(new URL(wrapper.get('.link-only').attributes('href')).searchParams.get('u')).toContain('?ref=abcdefgh12345678&via=Facebook')
+    await wrapper.get('dialog .close').trigger('click')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    await wrapper.get('.share-button:not([aria-haspopup])').trigger('click'); await flushPromises()
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('?ref=abcdefgh12345678&via=copy'))
+    expect(loadShareRewardProfile).toHaveBeenCalledTimes(1)
+    Reflect.deleteProperty(navigator, 'clipboard')
+  })
+  it('does not silently share an untracked link when personal code loading fails', async () => {
+    auth.isAuthenticated = true
+    vi.mocked(loadShareRewardProfile).mockRejectedValue(new Error('Unavailable'))
+    const { wrapper } = await setup()
+    await wrapper.findAll('button[aria-haspopup="dialog"]').find(button => button.text() === 'X')!.trigger('click'); await flushPromises()
+    expect(wrapper.find('dialog').exists()).toBe(false)
+    expect(wrapper.get('.share-row [role="status"]').text()).toContain('Could not prepare your personal sharing link')
   })
   it('lets an administrator edit another author’s app without remixing', async () => {
     auth.userInfo = { id: 8 }

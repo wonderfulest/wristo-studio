@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from './tokenCatalog'
+import { TOKEN_DISPLAY_UNIT_EXAMPLES } from './practicalTokenDefinitions'
 
 const EXPECTED_CODES = [
   'dt1', 'dt1.1', 'dt2.1', 'dt2.2', 'dt3', 'dt4', 'dt5.1', 'dt5.2', 'dt6',
@@ -46,7 +47,18 @@ describe('default expression token catalog', () => {
   })
 
   it('contains the complete first practical scalar token release', () => {
-    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.map(({ code }) => code)).toEqual(EXPECTED_CODES)
+    expect(DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.filter(({ code }) => !code.endsWith('u')).map(({ code }) => code)).toEqual(EXPECTED_CODES)
+  })
+
+  it('provides string unit companions only for data with units', () => {
+    for (const base of DEFAULT_EXPRESSION_TOKEN_CATALOG.definitions.filter(({ code }) => !code.endsWith('u'))) {
+      const unit = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(`${base.code}u`)
+      if (base.unit) {
+        expect(unit).toMatchObject({ id: `${base.id}.unit`, valueType: 'string', exampleValue: TOKEN_DISPLAY_UNIT_EXAMPLES[base.code] || base.unit })
+      } else {
+        expect(unit).toBeUndefined()
+      }
+    }
   })
 
   it('provides complete unique metadata for every supported token', () => {

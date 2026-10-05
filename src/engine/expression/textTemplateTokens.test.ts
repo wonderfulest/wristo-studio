@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { resolveTokenTemplate, validateTokenTemplate } from './textTemplateTokens'
 
 describe('token text templates', () => {
+  it('pairs values with string unit tokens and rejects numeric unit formatting', () => {
+    const template = '"TEMP " + (w10) + (w10u)'
+    expect(validateTokenTemplate(template)).toEqual([])
+    expect(resolveTokenTemplate(template)).toBe('TEMP 27°C')
+    expect(resolveTokenTemplate(template, undefined, (code) => ({ w10: 81, w10u: '°F' } as Record<string, unknown>)[code])).toBe('TEMP 81°F')
+    expect(resolveTokenTemplate('(ds8u).format("%s")')).toBe('m')
+    expect(validateTokenTemplate('(w10u).format("%d")').length).toBeGreaterThan(0)
+    expect(validateTokenTemplate('((w10u) * 2).format("%d")').length).toBeGreaterThan(0)
+    expect(validateTokenTemplate('(w10.1u)').length).toBeGreaterThan(0)
+  })
+
   it('validates unfinished expression syntax even without a complete token', () => {
     for (const source of ['(ai12', '"Steps', '“Steps” + (ai12)', '"Steps" +']) {
       expect(validateTokenTemplate(source).length).toBeGreaterThan(0)

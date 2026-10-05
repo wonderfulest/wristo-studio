@@ -13,6 +13,18 @@
     </div>
     <a href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a>
     <p class="credits-hint">{{ t('credits.policy') }}</p>
+    <UserCreditTasks :active="visible" />
+    <div v-if="rewards" class="credits-hint">
+      <strong>{{ t('credits.creatorTitle') }}</strong>
+      <p>{{ t('credits.creatorDaily') }}</p>
+      <p v-if="rewards.settings.downloadEnabled">{{ t('credits.creatorDownload', { threshold: rewards.settings.downloadsPerReward, credits: rewards.settings.downloadCredits }) }}</p>
+      <p v-else>{{ t('credits.creatorDownloadPaused') }}</p>
+      <p>{{ t('credits.creatorProgress', { count: rewards.pendingDownloads }) }}</p>
+      <p v-if="rewards.settings.purchaseEnabled">{{ t('credits.creatorPurchase', { credits: rewards.settings.purchaseCredits }) }}</p>
+      <p v-else>{{ t('credits.creatorPurchasePaused') }}</p>
+      <p v-if="rewards.lastSettledDay">{{ t('credits.creatorSettled', { date: rewards.lastSettledDay }) }}</p>
+    </div>
+    <p v-if="rewardsError" role="alert" data-testid="creator-rewards-error">{{ rewardsError }} <el-button @click="loadRewards">{{ t('credits.retry') }}</el-button></p>
     <p v-if="error" role="alert">{{ error }} <el-button @click="loadHistory">{{ t('credits.retry') }}</el-button></p>
     <el-table v-loading="loading" :data="items" max-height="45vh" :empty-text="t('credits.empty')">
       <el-table-column :label="t('credits.time')" min-width="170">
@@ -35,20 +47,24 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import UserCreditTasks from './UserCreditTasks.vue'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
-import { studioCreditsApi, type CreditEntry, type CreditType } from '@/api/wristo/studioCredits'
+import { studioCreditsApi, type CreditEntry, type CreditType, type CreatorRewardProgress } from '@/api/wristo/studioCredits'
 const { t } = useI18n()
 const user = useUserStore()
 const balance = ref<number | null>(null)
 const visible = ref(false)
 const type = ref<CreditType | ''>('')
-const types: CreditType[] = ['PURCHASE', 'PURCHASE_REFUND', 'PURCHASE_REFUND_REVERSAL', 'ADMIN_CREDIT', 'ADMIN_DEBIT', 'REGISTRATION_GIFT', 'AI_TAGS', 'AI_DESCRIPTION', 'AI_BANNER', 'AI_WATCHFACE', 'AI_WATCHFACE_REFUND', 'AI_WATCHFACE_ADJUST', 'AI_WATCHFACE_ADJUST_REFUND']
+const types: CreditType[] = ['SHARE_VISIT_REWARD', 'USER_CHECK_IN', 'USER_DOWNLOAD', 'USER_PURCHASE', 'USER_PURCHASE_REFUND', 'CREATOR_DOWNLOAD', 'CREATOR_PURCHASE', 'CREATOR_PURCHASE_REFUND', 'PURCHASE', 'PURCHASE_REFUND', 'PURCHASE_REFUND_REVERSAL', 'ADMIN_CREDIT', 'ADMIN_DEBIT', 'REGISTRATION_GIFT', 'AI_TAGS', 'AI_DESCRIPTION', 'AI_BANNER', 'AI_WATCHFACE', 'AI_WATCHFACE_REFUND', 'AI_WATCHFACE_ADJUST', 'AI_WATCHFACE_ADJUST_REFUND']
 const items = ref<CreditEntry[]>([])
 const page = ref(1)
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
+const rewards = ref<CreatorRewardProgress | null>(null)
+const rewardsError = ref('')
+let rewardsVersion = 0
 let balanceVersion = 0
 let historyVersion = 0
 async function refreshBalance() {
@@ -73,12 +89,25 @@ async function loadHistory() {
     if (version === historyVersion) { items.value = []; total.value = 0; error.value = t('credits.loadFailed') }
   } finally { if (version === historyVersion) loading.value = false }
 }
-function open() { visible.value = true; page.value = 1; void refreshBalance(); void loadHistory() }
+async function loadRewards() {
+  const version = ++rewardsVersion
+  rewardsError.value = ''
+  try {
+    const response = await studioCreditsApi.creatorRewards()
+    if (version !== rewardsVersion) return
+    if (!response.data) throw new Error('Missing creator rewards')
+    rewards.value = response.data
+  } catch {
+    if (version === rewardsVersion) { rewards.value = null; rewardsError.value = t('credits.creatorLoadFailed') }
+  }
+}
+function open() { visible.value = true; page.value = 1; void refreshBalance(); void loadHistory(); void loadRewards() }
 function filterChanged() { page.value = 1; void loadHistory() }
 function storageRefresh(event: StorageEvent) { if (event.key === 'studio-credits-updated') refresh() }
-function refresh() { void refreshBalance(); if (visible.value) void loadHistory() }
+function refresh() { void refreshBalance(); if (visible.value) { void loadHistory(); void loadRewards() } }
 watch(() => user.isAuthenticated ? user.userInfo?.id : null, () => {
-  balanceVersion++; historyVersion++
+  balanceVersion++; historyVersion++; rewardsVersion++
+  rewards.value = null; rewardsError.value = ''
   balance.value = null; items.value = []; total.value = 0; visible.value = false
   type.value = ''; page.value = 1; loading.value = false; error.value = ''
   void refreshBalance()
@@ -89,7 +118,7 @@ onMounted(() => {
   window.addEventListener('storage', storageRefresh)
 })
 onUnmounted(() => {
-  balanceVersion++; historyVersion++
+  balanceVersion++; historyVersion++; rewardsVersion++
   window.removeEventListener('studio-credits-changed', refresh)
   window.removeEventListener('focus', refresh)
   window.removeEventListener('storage', storageRefresh)

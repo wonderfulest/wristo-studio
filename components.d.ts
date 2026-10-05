@@ -157,6 +157,7 @@ declare module 'vue' {
     TokenPicker: typeof import('./src/components/expression/TokenPicker.vue')['default']
     TokenPreviewControls: typeof import('./src/components/expression/TokenPreviewControls.vue')['default']
     UploadSharingDecisionDialog: typeof import('./src/components/asset-picker/UploadSharingDecisionDialog.vue')['default']
+    UserCreditTasks: typeof import('./src/components/layout/UserCreditTasks.vue')['default']
     UserMenu: typeof import('./src/components/layout/UserMenu.vue')['default']
     VisibilityExpressionField: typeof import('./src/components/panels/settings/VisibilityExpressionField.vue')['default']
     VisualThemeAssetFields: typeof import('./src/components/panels/settings/VisualThemeAssetFields.vue')['default']

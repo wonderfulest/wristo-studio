@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { resolveMetricIconGlyph } from '@/utils/metricIcon'
 import { usePropertiesStore } from './properties'
 import { getDataTypePropertyOptions, useDataCatalogStore, validateDataCatalog } from './dataCatalogStore'
 
@@ -120,6 +121,34 @@ describe('Dial Properties', () => {
     })
 
     expect(store.getMetricByOptions({ dataProperty: 'data_1' })).toBe(catalog.dataTypeOptions[0])
+  })
+
+  it('resolves goal-only icons from full definitions and follows the selected goal', () => {
+    const store = usePropertiesStore()
+    const steps = { category: 'goal', valueCode: 101, metricSymbol: ':GOAL_TYPE_STEPS', iconUnicode: '0031' } as any
+    const calories = { category: 'goal', valueCode: 102, metricSymbol: ':GOAL_TYPE_CALORIES', iconUnicode: '0032' } as any
+    useDataCatalogStore().snapshot = { dataTypeOptions: [steps, calories] } as any
+    store.loadDataPropertyConfig({
+      goal_ring: { type: 'goal', title: 'Ring', value: 101, options: [
+        { label: 'Steps', value: 101, metricSymbol: steps.metricSymbol },
+        { label: 'Calories', value: 102, metricSymbol: calories.metricSymbol },
+      ] },
+    } as any, { [steps.metricSymbol]: steps })
+    const binding = { goalProperty: 'goal_ring', metricSymbol: steps.metricSymbol }
+    expect(resolveMetricIconGlyph(store.getMetricByOptions(binding))).toBe('1')
+    store.properties.goal_ring.value = 102
+    expect(resolveMetricIconGlyph(store.getMetricByOptions(binding))).toBe('2')
+  })
+
+  it('resolves numeric goal options without a symbol and preserves legacy embedded icons', () => {
+    const store = usePropertiesStore()
+    const goal = { category: 'goal', valueCode: 101, metricSymbol: ':GOAL_TYPE_STEPS', iconUnicode: '0031' } as any
+    useDataCatalogStore().snapshot = { dataTypeOptions: [goal] } as any
+    store.loadProperties({ goal_ring: { type: 'goal', title: 'Ring', value: 101, options: [{ label: 'Steps', value: 101 }] } } as any)
+    expect(resolveMetricIconGlyph(store.getMetricByOptions({ goalProperty: 'goal_ring' }))).toBe('1')
+    useDataCatalogStore().snapshot = null
+    store.properties.goal_ring.options = [{ label: 'Legacy', value: 101, icon: '0033' }] as any
+    expect(resolveMetricIconGlyph(store.getMetricByOptions({ goalProperty: 'goal_ring' }))).toBe('3')
   })
 
   it('clears top-level data options with the properties', () => {

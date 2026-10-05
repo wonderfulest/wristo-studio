@@ -57,9 +57,10 @@
           <p v-if="!canEdit && face.allowRemix" class="muted">Create your own copy with attribution to the original design.</p>
           <div class="share-row">
             <span>SHARE</span>
-            <button v-for="platform in socialPlatforms" :key="platform" class="share-button" aria-haspopup="dialog" @click="sharePlatform = platform">{{ platform }}</button>
-            <button class="share-button" @click="copyLink">Copy link <span aria-hidden="true">↗</span></button>
+            <button v-for="platform in socialPlatforms" :key="platform" class="share-button" aria-haspopup="dialog" :disabled="shareLoading" @click="openShare(platform)">{{ platform }}</button>
+            <button class="share-button" :disabled="shareLoading" @click="copyLink">Copy link <span aria-hidden="true">↗</span></button>
             <span role="status">{{ shareStatus }}</span>
+            <span v-if="shareProfile?.enabled">Earn {{ shareProfile.creditsPerVisit }} credits per eligible visit · up to {{ shareProfile.userDailyCredits }} credits/day.</span>
           </div>
         </section>
         <section class="detail-copy">
@@ -98,7 +99,7 @@
         </section>
       </article>
     </main>
-    <SocialShareDialog v-if="sharePlatform && face" :key="`${face.appId}-${sharePlatform}`" :face="face" :platform="sharePlatform" @close="sharePlatform = null" />
+    <SocialShareDialog v-if="sharePlatform && face" :key="`${face.appId}-${sharePlatform}`" :face="face" :platform="sharePlatform" :referral-code="shareProfile?.code" @close="sharePlatform = null" />
   </div>
 </template>
 
@@ -113,6 +114,7 @@ import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
 import SocialShareDialog from './SocialShareDialog.vue'
+import { loadShareRewardProfile, type ShareRewardProfile } from '@/api/wristo/shareRewards'
 import { faceShareUrl, type SocialPlatform } from './sharing'
 import { faceDownloadUrl, faceImage, loadFaceDetail, type FaceDetail } from './catalog'
 
@@ -170,13 +172,34 @@ const error = ref('')
 const selectedImage = ref('')
 const imageFailed = ref(false)
 const shareStatus = ref('')
-const shareUrl = computed(() => face.value ? faceShareUrl(window.location.origin, face.value.appId) : '')
+const shareProfile = ref<ShareRewardProfile>()
+const shareLoading = ref(false)
+let shareRequest = 0
+watch(() => userStore.userInfo?.id, () => { shareRequest++; shareProfile.value = undefined; sharePlatform.value = null; shareLoading.value = false })
+async function prepareShare() {
+  if (!userStore.isAuthenticated) return
+  if (shareProfile.value) return
+  const current = ++shareRequest
+  shareLoading.value = true
+  try {
+    const profile = await loadShareRewardProfile()
+    if (current !== shareRequest) throw new Error('Account changed. Please try again.')
+    shareProfile.value = profile
+  } finally { if (current === shareRequest) shareLoading.value = false }
+}
+async function openShare(platform: SocialPlatform) {
+  if (shareLoading.value) return
+  try { await prepareShare(); sharePlatform.value = platform; shareStatus.value = '' }
+  catch { shareStatus.value = 'Could not prepare your personal sharing link. Please try again.' }
+}
+const shareUrl = computed(() => face.value ? faceShareUrl(window.location.origin, face.value.appId, shareProfile.value?.code, 'copy') : '')
 async function copyLink() {
   try {
+    await prepareShare()
     await navigator.clipboard.writeText(shareUrl.value)
     shareStatus.value = 'Link copied'
   } catch {
-    shareStatus.value = 'Could not copy. Copy the address from your browser.'
+    shareStatus.value = 'Could not copy your personal sharing link. Please try again.'
   }
 }
 let request = 0
@@ -232,7 +255,7 @@ async function load() {
   }
 }
 watch(() => route.params.appId, load, { immediate: true })
-onBeforeUnmount(() => { request += 1 })
+onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 </script>
 
 <style scoped>

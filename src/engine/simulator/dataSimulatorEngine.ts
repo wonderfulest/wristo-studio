@@ -184,7 +184,9 @@ function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeo
     const data = getSimulatedDataByTokenCode(code)
     if (!data) return undefined
     if (usage === 'numeric') return data.numeric
-    return format ? (data.numeric ?? data.display) : formatSimulatedDisplay(data, propertiesStore)
+    const displayNumber = data.unit ? Number(data.display.replace(/,/g, '')) : NaN
+    const displayData = Number.isFinite(displayNumber) ? { ...data, numeric: displayNumber } : data
+    return format ? (displayData.numeric ?? data.display) : formatSimulatedDisplay(displayData, propertiesStore)
   })
 }
 

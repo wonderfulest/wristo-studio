@@ -316,7 +316,7 @@ import { Design } from '@/types/api/design'
 import { getAiCapabilities, getAiPrices, type AiCapabilities, type AiPrices } from '@/api/wristo/studioAi'
 import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
-import { ElMessage, ElLoading } from 'element-plus'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
@@ -587,13 +587,39 @@ const loadTagGeneration = async (appId: number, version: number, preserveDraft =
   }
 }
 
+const confirmTextGenerationCost = async (scene: 'TAGS' | 'DESCRIPTION', isCurrent: () => boolean) => {
+  const response = await getAiPrices()
+  if (!isCurrent()) return false
+  if (response.code !== 0 || !response.data) throw new Error(t('goLive.aiStatusFailed'))
+  const cost = response.data[scene]
+  if (!Number.isInteger(cost) || cost < 1) throw new Error(t('goLive.aiStatusFailed'))
+  aiPrices.value = response.data
+  if (cost < 5) return true
+  try {
+    await ElMessageBox.confirm(t('goLive.bannerCreditCost', { cost }), t(scene === 'TAGS' ? 'goLive.confirmTagsGeneration' : 'goLive.generateDescription'), {
+      confirmButtonText: t('goLive.bannerConfirmGenerate', { cost }),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+      closeOnClickModal: false,
+    })
+    return isCurrent()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return false
+    throw error
+  }
+}
+
 const generateTags = async () => {
   if (!currentDesign.value || !canGenerateTags.value || !aiCapabilities.value.TAGS || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
   const appId = currentDesign.value.product.appId
   const version = tagGenerationVersion
   generatingTags.value = true
-  canGenerateTags.value = false
+  let dispatched = false
   try {
+    if (!await confirmTextGenerationCost('TAGS', () => version === tagGenerationVersion && dialogVisible.value)) return
+    if (form.tagIds.length) return
+    canGenerateTags.value = false
+    dispatched = true
     const response = await generateProductTags(appId)
     if (version !== tagGenerationVersion) return
     if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationFailed'))
@@ -602,7 +628,7 @@ const generateTags = async () => {
     if (version !== tagGenerationVersion) return
     showErrorOnce(error, t('productTags.generationFailed'))
     // Read state after a timeout; never retry an ambiguous AI request.
-    await loadTagGeneration(appId, version, true)
+    if (dispatched) await loadTagGeneration(appId, version, true)
   } finally {
     if (version === tagGenerationVersion) generatingTags.value = false
   }
@@ -990,6 +1016,8 @@ const refreshDescription = async () => {
   const paymentMethod = form.paymentMethod
   generatingDescription.value = true
   try {
+    if (aiCapabilities.value.DESCRIPTION && !await confirmTextGenerationCost('DESCRIPTION', () => version === descriptionGenerationVersion && dialogVisible.value)) return
+    if (version !== descriptionGenerationVersion || !dialogVisible.value || form.description !== originalDescription || form.paymentMethod !== paymentMethod) return
     const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
     const payload = { ...buildGenerateDescriptionPayload(uid, pid, language), paymentMethod: form.paymentMethod }
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>

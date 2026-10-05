@@ -82,7 +82,16 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         if (goalProperty && state.properties[goalProperty]?.options && state.properties[goalProperty]?.value !== undefined) {
           const sel = state.properties[goalProperty].value
           const found = state.properties[goalProperty].options!.find((opt) => opt.value === sel)
-          if (found) return found as unknown as DataTypeOption
+          if (found) {
+            // Settings options may only carry a label/value; resolve the full
+            // goal definition before asking renderers for its icon or units.
+            const symbol = (found as PropertyOption & Partial<DataTypeOption>).metricSymbol
+            const snapshot = symbol ? state.dataOptions[symbol] : undefined
+            const canonical = useDataCatalogStore().options.find((opt) =>
+              opt.category === 'goal' && (symbol ? opt.metricSymbol === symbol : opt.valueCode === sel)
+            )
+            return snapshot || canonical || found as unknown as DataTypeOption
+          }
         }
 
         // 2) 其次使用 dataProperty 的 symbol 引用和顶层快照

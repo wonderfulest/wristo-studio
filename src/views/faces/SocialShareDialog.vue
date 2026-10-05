@@ -39,8 +39,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { FaceDetail } from './catalog'
-import { socialCaption, socialImages, facebookShareDialogUrl, downloadSocialImage, type SocialPlatform } from './sharing'
-const props = defineProps<{ face: FaceDetail; platform: SocialPlatform }>()
+import { socialCaption, socialImages, faceShareUrl, facebookShareDialogUrl, downloadSocialImage, type SocialPlatform } from './sharing'
+const props = defineProps<{ face: FaceDetail; platform: SocialPlatform; referralCode?: string }>()
 const guide = computed(() => ({
   Facebook: {
     intro: 'Facebook’s link-sharing window cannot automatically attach this image or fill in your caption. To publish them together, create a photo post:',
@@ -62,14 +62,14 @@ const guide = computed(() => ({
   },
 })[props.platform])
 const linkUrl = computed(() => {
-  const url = `https://studio.wristo.io/faces/${props.face.appId}`
-  if (props.platform === 'Facebook') return facebookShareDialogUrl(props.face.appId)
+  const url = faceShareUrl('https://studio.wristo.io', props.face.appId, props.referralCode, props.platform)
+  if (props.platform === 'Facebook') return facebookShareDialogUrl(props.face.appId, props.referralCode)
   if (props.platform === 'X') return `https://twitter.com/intent/tweet?${new URLSearchParams({ url })}`
   return `https://www.reddit.com/submit?${new URLSearchParams({ url, title: props.face.name })}`
 })
 const emit = defineEmits<{ (event: 'close'): void }>()
 const dialog = ref<HTMLDialogElement>()
-const caption = ref(socialCaption(props.face))
+const caption = ref(socialCaption(props.face, props.referralCode, props.platform))
 const images = computed(() => socialImages(props.face))
 const selectedIndex = ref(0)
 const selected = computed(() => images.value[selectedIndex.value])

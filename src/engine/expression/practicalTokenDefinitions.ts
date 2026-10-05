@@ -255,7 +255,7 @@ const MOON_PHASE_VALUES: NonNullable<ExpressionTokenDefinition['enumValues']> = 
   { value: 7, label: 'Waning Crescent', labelCn: '残月' },
 ]
 
-export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
+const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = [
   token({ id: 'date.year', code: 'dt1', label: 'Year', labelCn: '年份', category: 'date-time', exampleValue: 2026, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.shortYear', code: 'dt1.1', label: 'Short Year', labelCn: '两位年份', category: 'date-time', exampleValue: 26, source: 'time', providerKey: 'clock' }),
   token({ id: 'date.monthShort', code: 'dt2.1', label: 'Month Short', labelCn: '月份简称', category: 'date-time', valueType: 'string', exampleValue: 'Jun', source: 'time', providerKey: 'clock' }),
@@ -408,9 +408,9 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
     descriptionCn: 'Connect IQ 未公开 Garmin 独立的活动热量数值，因此返回今日热量兼容值。',
     requirement: 'Activity Monitor support; value falls back to documented daily calories',
   }),
-  activity('distanceToday', 'ai5', 'Distance Today', '今日距离', 645000, 'cm'),
-  activity('floorsClimbedToday', 'ai6', 'Floors Climbed', '今日爬楼层数', 7),
-  activity('floorsDescendedToday', 'ai8', 'Floors Descended', '今日下楼层数', 6),
+  activity('distanceToday', 'ai5', 'Distance Today', '今日距离', 6.5, 'km'),
+  activity('floorsClimbedToday', 'ai6', 'Floors Climbed', '今日爬楼层数', 7, 'floors'),
+  activity('floorsDescendedToday', 'ai8', 'Floors Descended', '今日下楼层数', 6, 'floors'),
   token({
     id: 'activity.moveBarLevel', code: 'ai11', label: 'Move Bar', labelCn: '久坐提醒等级',
     category: 'activity', exampleValue: 2, enumValues: MOVE_BAR_LEVEL_VALUES, source: 'activity',
@@ -590,3 +590,34 @@ export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDef
   token({ id: 'status.bluetoothConnected', code: 'wr.bluetoothConnected', label: 'Bluetooth Connected', labelCn: '蓝牙已连接', category: 'status', valueType: 'boolean', exampleValue: true, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Bluetooth indicator support', wfbEquivalent: undefined }),
   token({ id: 'status.doNotDisturb', code: 'wr.dnd', label: 'Do Not Disturb', labelCn: '勿扰模式', category: 'status', valueType: 'boolean', exampleValue: false, source: 'wristo', updateFrequency: 'event', providerKey: 'deviceSettings', nullable: true, requirement: 'Do Not Disturb status exposed by the device', wfbEquivalent: undefined }),
 ]
+
+// Canonical logic units can differ from provider display units (e.g. Pa/hPa).
+export const TOKEN_DISPLAY_UNIT_EXAMPLES: Readonly<Record<string, string>> = {
+  ai4: 'CAL', 'ai4.1': 'CAL', ds11: 'hPa', 'as2.6': 'deg', 'as2.7': 'deg', w11: 'deg',
+}
+
+// Unit tokens describe the displayed value, including device units and scaled
+// elevation units. They are strings, never numeric operands or stage tokens.
+export const PRACTICAL_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] =
+  BASE_EXPRESSION_TOKEN_DEFINITIONS.flatMap((base) => {
+    if (!base.unit) return [base]
+    const code = `${base.code}u`
+    const example = `(${base.code}) + " " + (${code})`
+    return [base, {
+      ...base,
+      id: `${base.id}.unit`,
+      code,
+      label: `${base.label} Unit`,
+      labelCn: `${base.labelCn}单位`,
+      description: `Display unit for (${base.code}). Follows the corresponding value and device settings; may be empty when unavailable. Use ${example}.`,
+      descriptionCn: `(${base.code}) 的显示单位，跟随对应数值和设备设置；不可用时可能为空。用法：${example}。`,
+      valueType: 'string' as const,
+      nullable: false,
+      unit: undefined,
+      exampleValue: TOKEN_DISPLAY_UNIT_EXAMPLES[base.code] || base.unit,
+      enumValues: undefined,
+      exampleExpression: example,
+      exampleExpressions: [{ expression: example, description: 'Value with its current display unit', descriptionCn: '数值与当前显示单位组合' }],
+      wfbEquivalent: undefined,
+    }]
+  })

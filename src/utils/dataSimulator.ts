@@ -2,6 +2,7 @@
 // 参考 Monkey C 中的 DataFetcher/DataProvider，但这里不做缓存和复杂逻辑
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
 import { DEFAULT_EXPRESSION_TOKEN_CATALOG } from '@/engine/expression/tokenCatalog'
+import { TOKEN_DISPLAY_UNIT_EXAMPLES } from '@/engine/expression/practicalTokenDefinitions'
 
 export interface SimulatedData {
   /** 用于界面显示的字符串 */
@@ -431,10 +432,28 @@ const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
 
 export function getSimulatedDataByTokenCode(code: string): SimulatedData | undefined {
   const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)
-  if (!definition || definition.source === 'time' || code.startsWith('cn')) return undefined
+  if (!definition) return undefined
+  if (code.endsWith('u')) {
+    const baseCode = code.slice(0, -1)
+    const base = getSimulatedDataByTokenCode(baseCode)
+    return {
+      display: base ? (base.unit || '') : String(definition.exampleValue || ''),
+      numeric: null,
+      unit: '',
+      label: definition.label,
+    }
+  }
+  if (definition.source === 'time' || code.startsWith('cn')) return undefined
+
+  if (code === 'ds11') return { display: '1013', numeric: 101325, unit: 'hPa', label: 'BARO' }
 
   const simulationKey = COMPACT_TOKEN_SIMULATION_KEYS[code]
-  if (simulationKey) return getSimulatedDataByName(simulationKey)
+  if (simulationKey) {
+    const data = getSimulatedDataByName(simulationKey)
+    return data.unit && TOKEN_DISPLAY_UNIT_EXAMPLES[code]
+      ? { ...data, unit: TOKEN_DISPLAY_UNIT_EXAMPLES[code] }
+      : data
+  }
 
   const value = definition.exampleValue
   return {

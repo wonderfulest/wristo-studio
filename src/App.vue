@@ -11,7 +11,10 @@ import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
 import InsufficientCreditsDialog from '@/components/InsufficientCreditsDialog.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
 import { useLocaleStore } from '@/stores/locale'
+import { useShareVisit } from '@/composables/useShareVisit'
 import { useThemeStore } from '@/stores/theme'
+
+useShareVisit()
 
 const localeStore = useLocaleStore()
 localeStore.syncDocumentLang()

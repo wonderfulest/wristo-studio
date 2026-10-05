@@ -2,8 +2,8 @@ export type SocialPlatform = 'Facebook' | 'X' | 'Reddit'
 import { faceDetailsUrl, faceImage, faceDownloadUrl, type FaceDetail } from './catalog'
 import { supportedDataFields } from './dataFields'
 
-export function faceShareUrl(origin: string, appId: number): string {
-  return new URL(faceDetailsUrl(appId), origin).href
+export function faceShareUrl(origin: string, appId: number, code?: string, channel?: string): string {
+  return withReferral(new URL(faceDetailsUrl(appId), origin).href, code, channel)
 }
 
 export function buildFaceShareLinks(url: string, title: string) {
@@ -14,7 +14,7 @@ export function buildFaceShareLinks(url: string, title: string) {
   ]
 }
 
-export function socialCaption(face: FaceDetail): string {
+export function socialCaption(face: FaceDetail, code?: string, channel?: string): string {
   const preferred = [':FIELD_TYPE_STEPS', ':FIELD_TYPE_HEART_RATE', ':FIELD_TYPE_BATTERY', ':FIELD_TYPE_TEMPERATURE']
   const priority = (symbol: string) => preferred.includes(symbol) ? preferred.indexOf(symbol) : preferred.length
   const fields = supportedDataFields(face.dataFieldCatalog ?? face.configJson)
@@ -24,7 +24,7 @@ export function socialCaption(face: FaceDetail): string {
     `⌚ ${face.name} — Garmin watch face`,
     fields.length ? `✨ Data options: ${fields.join(' • ')}` : 'Find a fresh look for your wrist.',
     author ? `Designed by ${author}` : '',
-    `Explore: https://studio.wristo.io/faces/${face.appId}`,
+    `Explore: ${faceShareUrl('https://studio.wristo.io', face.appId, code, channel)}`,
     faceDownloadUrl(face) ? `Download on Connect IQ: ${faceDownloadUrl(face)}` : '',
     '#Garmin #WatchFace #Wristo',
   ].filter(Boolean).join('\n\n')
@@ -42,8 +42,8 @@ export function socialImages(face: FaceDetail): Array<{ url: string; alt: string
   return images.filter((image, index) => image.url && images.findIndex(other => other.url === image.url) === index)
 }
 
-export function facebookShareDialogUrl(appId: number): string {
-  return `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams({ u: `https://api.wristo.io/api/public/share/faces/${appId}` })}`
+export function facebookShareDialogUrl(appId: number, code?: string): string {
+  return `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams({ u: withReferral(`https://api.wristo.io/api/public/share/faces/${appId}`, code, 'Facebook') })}`
 }
 
 export async function downloadSocialImage(url: string, appId: number): Promise<void> {
@@ -60,4 +60,13 @@ export async function downloadSocialImage(url: string, appId: number): Promise<v
   anchor.click()
   anchor.remove()
   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+}
+
+function withReferral(value: string, code?: string, channel?: string): string {
+  const url = new URL(value)
+  if (code && /^[A-Za-z0-9_-]{8,32}$/.test(code)) {
+    url.searchParams.set('ref', code)
+    if (channel) url.searchParams.set('via', channel)
+  }
+  return url.href
 }

@@ -7,6 +7,7 @@ import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
+  confirmCost: vi.fn(),
   getDescriptionConfig: vi.fn(),
   getAiCapabilities: vi.fn(),
   getAiPrices: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock('@/stores/user', () => ({
 }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('element-plus', () => ({
+  ElMessageBox: { confirm: mocks.confirmCost },
   ElMessage: { error: vi.fn(), success: vi.fn() },
   ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) }
 }))
@@ -305,6 +307,7 @@ describe('GoLiveDialog product tag behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
     await wrapper.findAll('button').find((button) => button.text() === 'goLive.generateDescription')!.trigger('click')
+    await flushPromises()
     if (action === 'reopen') await showDialog(wrapper)
     else if (action === 'payment') wrapper.getComponent(ElFormStub).props('model').paymentMethod = 'garmin'
     else wrapper.getComponent(ElFormStub).props('model').description = 'My manual edit'
@@ -421,4 +424,42 @@ it('ignores an old app response after switching to a different app', async () =>
   await flushPromises()
   expect(selector.props('tagIds')).toEqual([])
   expect(selector.props('canGenerate')).toBe(true)
+})
+
+
+it.each([4, 5, 6])('confirms text generation only at five credits or more (%s)', async (cost) => {
+  mocks.confirmCost.mockReset().mockResolvedValue('confirm')
+  mocks.generateProductTags.mockReset().mockResolvedValue({ code: 0, data: { status: 'succeeded', canGenerate: false, tags: [apiTags[0]] } })
+  mocks.generateDescription.mockReset().mockResolvedValue({ code: 0, data: 'Generated description' })
+  mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
+  const wrapper = mountDialog()
+  ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(emptyDesign())
+  await flushPromises()
+  mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: cost, DESCRIPTION: cost, BANNER: 10 } })
+  wrapper.getComponent(ProductTagSelectorStub).vm.$emit('generate')
+  await flushPromises()
+  await wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!.trigger('click')
+  await flushPromises()
+  expect(mocks.confirmCost).toHaveBeenCalledTimes(cost < 5 ? 0 : 2)
+  expect(mocks.generateProductTags).toHaveBeenCalledTimes(1)
+  expect(mocks.generateDescription).toHaveBeenCalledTimes(1)
+})
+
+it('cancels paid text generation without dispatch and lets tags be retried', async () => {
+  mocks.confirmCost.mockReset().mockRejectedValue('cancel')
+  mocks.generateProductTags.mockReset()
+  mocks.generateDescription.mockReset()
+  mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
+  const wrapper = mountDialog()
+  ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(emptyDesign())
+  await flushPromises()
+  mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 5, DESCRIPTION: 5, BANNER: 10 } })
+  const selector = wrapper.getComponent(ProductTagSelectorStub)
+  selector.vm.$emit('generate')
+  await flushPromises()
+  expect(selector.props('canGenerate')).toBe(true)
+  await wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!.trigger('click')
+  await flushPromises()
+  expect(mocks.generateProductTags).not.toHaveBeenCalled()
+  expect(mocks.generateDescription).not.toHaveBeenCalled()
 })

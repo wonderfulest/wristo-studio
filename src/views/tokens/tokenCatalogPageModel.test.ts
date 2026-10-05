@@ -4,10 +4,10 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(130)
+    expect(model.total).toBe(170)
     expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(31)
-    expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(14)
-    expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(15)
+    expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(22)
+    expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(24)
     expect(model.categories.find(({ value }) => value === 'status')?.count).toBe(4)
   })
 
@@ -17,8 +17,8 @@ describe('token catalog page model', () => {
     expect(model.filter({ category: 'astronomy', query: '' }).map(({ code }) => code))
       .toEqual([
         'as1', 'as1.1', 'as1.2',
-        'as2', 'as2.1', 'as2.2', 'as2.3', 'as2.4', 'as2.5', 'as2.6', 'as2.7',
-        'as3', 'as3.1', 'as3.2', 'as3.3',
+        'as2', 'as2u', 'as2.1', 'as2.1u', 'as2.2', 'as2.3', 'as2.3u', 'as2.4', 'as2.4u', 'as2.5', 'as2.5u', 'as2.6', 'as2.6u', 'as2.7', 'as2.7u',
+        'as3', 'as3.1', 'as3.2', 'as3.2u', 'as3.3', 'as3.3u',
       ])
     expect(model.filter({ category: 'weather', query: '' }).map(({ code }) => code))
       .not.toContain('w13')
@@ -44,7 +44,7 @@ describe('token catalog page model', () => {
   it('combines category and multilingual search filters', () => {
     const model = createTokenCatalogPageModel()
     expect(model.filter({ category: 'weather', query: '温度' }).map(({ code }) => code))
-      .toEqual(['w03', 'w04', 'w05', 'w10', 'w10.1'])
+      .toEqual(['w03', 'w03u', 'w04', 'w04u', 'w05', 'w05u', 'w10', 'w10u', 'w10.1'])
     expect(model.filter({ category: 'all', query: 'wr.' })).toHaveLength(4)
   })
 
@@ -73,7 +73,7 @@ describe('token catalog page model', () => {
     const model = createTokenCatalogPageModel()
 
     expect(model.filter({ category: 'system', query: 'ds3' }).map(({ code }) => code))
-      .toEqual(['ds3', 'ds3.1', 'ds3.3'])
+      .toEqual(['ds3', 'ds3u', 'ds3.1', 'ds3.3', 'ds3.3u'])
     expect(model.filter({ category: 'system', query: 'ds3.1' })[0]?.enumValues).toEqual([
       { value: 0, label: 'Low (below 25%)', labelCn: '电量不足（原值 < 25%）' },
       { value: 1, label: 'Fair (25% to below 50%)', labelCn: '电量一般（原值 >= 25% 且 < 50%）' },
@@ -86,7 +86,7 @@ describe('token catalog page model', () => {
     const model = createTokenCatalogPageModel()
 
     expect(model.filter({ category: 'weather', query: 'w08' }).map(({ code }) => code))
-      .toEqual(['w08', 'w08.1'])
+      .toEqual(['w08', 'w08u', 'w08.1'])
     expect(model.filter({ category: 'weather', query: 'w08.1' })[0]?.enumValues).toEqual([
       { value: 0, label: 'No rain (below 30%)', labelCn: '无雨（原值 < 30%）' },
       { value: 1, label: 'Rain possible (30% to below 70%)', labelCn: '可能下雨（原值 >= 30% 且 < 70%）' },

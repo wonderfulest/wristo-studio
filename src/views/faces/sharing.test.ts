@@ -40,3 +40,13 @@ describe('Facebook share preparation', () => {
     expect(url.searchParams.has('quote')).toBe(false)
   })
 })
+
+describe('referral sharing', () => {
+  it('uses the sharer code and channel only, including Facebook preview and captions', () => {
+    const code = 'abcdefgh12345678'
+    expect(faceShareUrl('https://studio.wristo.io/?ref=someoneelse&token=secret', 123, code, 'copy')).toBe('https://studio.wristo.io/faces/123?ref=abcdefgh12345678&via=copy')
+    const facebook = new URL(facebookShareDialogUrl(123, code))
+    expect(facebook.searchParams.get('u')).toBe('https://api.wristo.io/api/public/share/faces/123?ref=abcdefgh12345678&via=Facebook')
+    expect(socialCaption({appId:123,name:'Test',price:0}, code, 'X')).toContain('https://studio.wristo.io/faces/123?ref=abcdefgh12345678&via=X')
+  })
+})
