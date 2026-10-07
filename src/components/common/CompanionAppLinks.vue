@@ -1,14 +1,12 @@
 <template>
   <section class="companion-app-links" :aria-label="t('companionApps.title')" :aria-busy="loading">
-    <h3>{{ t('companionApps.title') }}</h3>
-    <p>{{ t('companionApps.hint') }}</p>
     <p v-if="loading" role="status">{{ t('companionApps.loading') }}</p>
     <div v-else-if="failed" role="alert">
       {{ t('companionApps.loadFailed') }}
       <el-button size="small" @click="load">{{ t('companionApps.retry') }}</el-button>
     </div>
     <template v-else>
-      <el-form-item v-for="row in rows" :key="row.key" :label="row.label" label-width="180px">
+      <el-form-item v-for="row in rows" :key="row.key" :label="row.label">
         <el-input :model-value="row.url" readonly :aria-label="row.label" :placeholder="t('companionApps.notConfigured')">
           <template #append>
             <el-button :disabled="!row.url" @click="copy(row.url)">{{ t('common.copy') }}</el-button>
@@ -66,7 +64,5 @@ async function copy(url: string) {
 </script>
 
 <style scoped>
-.companion-app-links { margin: 20px 0; padding: 16px; border: 1px solid var(--el-border-color); border-radius: 8px; }
-h3 { margin: 0 0 8px; }
 p { margin: 0 0 16px; color: var(--el-text-color-secondary); }
 </style>

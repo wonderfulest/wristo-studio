@@ -96,6 +96,7 @@ export interface Product {
   designId: string
   name: string
   description: string
+  descriptions?: Record<string, string> | null
   price: number
   rawImageUrl: string
   garminImageUrl: string

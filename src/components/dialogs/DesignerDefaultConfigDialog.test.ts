@@ -123,3 +123,37 @@ describe('DesignerDefaultConfigDialog localized templates', () => {
     ])
   })
 })
+
+it('edits an added language per payment method, saves and restores it, then removes it', async () => {
+  apiMocks.getByUserId.mockResolvedValue({ data: {
+    id: 10, userId: 7, defaultPaymentMethod: 'wpay', descriptionTemplate: 'English', descriptionTemplateZh: '中文',
+    descriptionTemplates: { fr: { wpay: 'Payant', free: 'Gratuit' } },
+  } })
+  apiMocks.update.mockResolvedValue({ data: { id: 10 } })
+  const wrapper = mount(DesignerDefaultConfigDialog, { global: { stubs } })
+  const show = (language = 'fr') => (wrapper.vm as unknown as { show: (id: number, payment: string, language: string) => Promise<void> }).show(42, 'wpay', language)
+  await show()
+  await flushPromises()
+  const tabs = wrapper.findComponent({ name: 'DescriptionLanguageTabs' })
+  expect(tabs.props('modelValue')).toBe('fr')
+  const editor = wrapper.findAllComponents(stubs.TemplateTextEditor)[2]
+  expect(editor.props('modelValue')).toBe('Payant')
+  editor.vm.$emit('update:modelValue', 'Edited French')
+  await wrapper.findAll('button.el-button').at(-1)!.trigger('click')
+  await flushPromises()
+  expect(apiMocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ descriptionTemplates: { fr: { wpay: 'Edited French', free: 'Gratuit' } } }))
+  expect(wrapper.emitted('saved')).toHaveLength(1)
+  // Editing the dialog must not mutate the API response used to reopen it.
+  await show()
+  await flushPromises()
+  expect(wrapper.findAllComponents(stubs.TemplateTextEditor)[2].props('modelValue')).toBe('Payant')
+  tabs.vm.$emit('remove', 'fr')
+  await flushPromises()
+  await wrapper.findAll('button.el-button').at(-1)!.trigger('click')
+  await flushPromises()
+  expect(apiMocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ descriptionTemplates: {} }))
+  await show('ja')
+  await flushPromises()
+  expect(tabs.props('languages')).toContain('ja')
+  expect(tabs.props('modelValue')).toBe('ja')
+})

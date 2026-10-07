@@ -2,6 +2,11 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'descriptionLanguages.add': 'Add',
+  'descriptionLanguages.select': 'Select language',
+  'descriptionLanguages.missingTemplate': 'No template for this language and payment method. Add one in Settings to generate a description.',
+  'descriptionLanguages.loadFailed': 'Unable to load description templates. Reopen this dialog to retry.',
+
   "credits.browseDownloads": "Browse watch faces",
   "credits.USER_CHECK_IN": "Daily Check-in Reward",
   "credits.USER_DOWNLOAD": "First Download Reward",
@@ -2623,6 +2628,11 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'descriptionLanguages.add': 'Add',
+  'descriptionLanguages.select': '选择语言',
+  'descriptionLanguages.missingTemplate': '当前语言及付费方式尚未配置模板，请在设置中添加后生成描述。',
+  'descriptionLanguages.loadFailed': '描述模板加载失败，请重新打开弹窗重试。',
+
   "credits.browseDownloads": "浏览表盘",
   "credits.USER_CHECK_IN": "每日签到奖励",
   "credits.USER_DOWNLOAD": "首次下载奖励",

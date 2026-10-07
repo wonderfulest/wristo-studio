@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   saveProductImageArchive: vi.fn(),
 }))
 
+vi.mock('@/api/wristo/designerDefaultConfig', () => ({ designerDefaultConfigApi: { getByUserId: vi.fn().mockResolvedValue({ code: 0, data: {} }) } }))
 vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
 vi.mock('@/api/wristo/products', () => ({
@@ -122,6 +123,11 @@ const ElDropdownStub = defineComponent({
 })
 
 const stubs = {
+  CompanionAppLinks: true,
+  ElSelect: { template: '<div><slot/></div>' },
+  ElOption: true,
+  ElTabs: { template: '<div><slot/></div>' },
+  ElTabPane: { template: '<div><slot/></div>' },
   ElDialog: {
     props: ['modelValue'],
     template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>',

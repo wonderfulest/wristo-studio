@@ -5,6 +5,7 @@ export interface DesignerDefaultConfigVO {
   defaultPrice: number | null
   defaultCurrency: string | null
   descriptionTemplate: string | null
+  descriptionTemplates?: Record<string, Partial<Record<'wpay' | 'garmin' | 'free', string>>> | null
   descriptionTemplateZh: string | null
   descriptionTemplateGarmin?: string | null
   descriptionTemplateGarminZh?: string | null
@@ -20,6 +21,7 @@ export interface DesignerDefaultConfigCreateDTO {
   defaultPrice?: number | null
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
+  descriptionTemplates?: Record<string, Partial<Record<'wpay' | 'garmin' | 'free', string>>> | null
   descriptionTemplateZh?: string | null
   descriptionTemplateGarmin?: string | null
   descriptionTemplateGarminZh?: string | null
@@ -36,6 +38,7 @@ export interface DesignerDefaultConfigUpdateDTO {
   defaultPrice?: number | null
   defaultCurrency?: string | null
   descriptionTemplate?: string | null
+  descriptionTemplates?: Record<string, Partial<Record<'wpay' | 'garmin' | 'free', string>>> | null
   descriptionTemplateZh?: string | null
   descriptionTemplateGarmin?: string | null
   descriptionTemplateGarminZh?: string | null

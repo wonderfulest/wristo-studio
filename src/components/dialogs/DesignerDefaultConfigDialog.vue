@@ -25,24 +25,17 @@
       </el-form-item>
       <el-form-item :label="t('designerSettings.descriptionTemplate')">
         <div class="template-payment-tip">{{ t('designerSettings.templatePaymentTip') }}</div>
-        <el-tabs v-model="descriptionLanguage" class="description-template-tabs">
-          <el-tab-pane :label="t('designerSettings.languageEnglish')" name="en">
+        <DescriptionLanguageTabs v-model="descriptionLanguage" :languages="templateLanguages" :fixed-languages="['en', 'zh']" @add="addTemplateLanguage" @remove="removeTemplateLanguage">
+          <template #default="{ language }">
             <TemplateTextEditor
-              v-model="englishTemplate"
+              :model-value="getDescriptionTemplate(form, templatePaymentMethod, language)"
+              @update:model-value="setDescriptionTemplate(form, templatePaymentMethod, language, $event)"
               :user-id="userStore.userInfo?.id || 0"
               :product-id="previewProductId"
               :placeholder="t('designerSettings.descriptionPlaceholder')"
             />
-          </el-tab-pane>
-          <el-tab-pane :label="t('designerSettings.languageChinese')" name="zh">
-            <TemplateTextEditor
-              v-model="chineseTemplate"
-              :user-id="userStore.userInfo?.id || 0"
-              :product-id="previewProductId"
-              :placeholder="t('designerSettings.descriptionPlaceholder')"
-            />
-          </el-tab-pane>
-        </el-tabs>
+          </template>
+        </DescriptionLanguageTabs>
       </el-form-item>
       <el-form-item :label="t('designerSettings.autoPublish')">
         <el-switch v-model="autoPublish" disabled/>
@@ -66,9 +59,12 @@ import { useUserStore } from '@/stores/user'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO, DesignerDefaultConfigUpdateDTO, DesignerDefaultConfigCreateDTO } from '@/types/api/designer-default-config'
 import { useI18n } from '@/i18n'
+import DescriptionLanguageTabs from '@/components/common/DescriptionLanguageTabs.vue'
+import { getDescriptionTemplate, setDescriptionTemplate } from '@/utils/descriptionTemplateLanguage'
 
 const TemplateTextEditor = defineAsyncComponent(() => import('@/components/inputs/TemplateTextEditor.vue'))
 
+const emit = defineEmits<{ (event: 'saved'): void }>()
 const visible = ref(false)
 const loading = ref(false)
 const saving = ref(false)
@@ -80,6 +76,7 @@ const form = reactive<DesignerDefaultConfigVO>({
   defaultPrice: 2.39,
   defaultCurrency: 'USD',
   descriptionTemplate: null,
+  descriptionTemplates: {},
   descriptionTemplateZh: null,
   descriptionTemplateFreeZh: null,
   descriptionTemplateFree: null,
@@ -91,24 +88,21 @@ const form = reactive<DesignerDefaultConfigVO>({
 
 const autoPublish = ref(true)
 const active = ref(true)
-const descriptionLanguage = ref<'en' | 'zh'>('en')
+const descriptionLanguage = ref('en')
 const templatePaymentMethod = computed(() => {
   const method = form.defaultPaymentMethod
   return method === 'garmin' ? 'garmin' : (method === 'none' || method === 'free') ? 'free' : 'wpay'
 })
-const templateFields = {
-  wpay: ['descriptionTemplate', 'descriptionTemplateZh'],
-  garmin: ['descriptionTemplateGarmin', 'descriptionTemplateGarminZh'],
-  free: ['descriptionTemplateFree', 'descriptionTemplateFreeZh'],
-} as const
-const englishTemplate = computed({
-  get: () => form[templateFields[templatePaymentMethod.value][0]] ?? null,
-  set: (value: string | null) => { form[templateFields[templatePaymentMethod.value][0]] = value },
-})
-const chineseTemplate = computed({
-  get: () => form[templateFields[templatePaymentMethod.value][1]] ?? null,
-  set: (value: string | null) => { form[templateFields[templatePaymentMethod.value][1]] = value },
-})
+const templateLanguages = computed(() => ['en', 'zh', ...Object.keys(form.descriptionTemplates || {}).filter(language => language !== 'en' && language !== 'zh')])
+const addTemplateLanguage = (language: string) => {
+  form.descriptionTemplates ??= {}
+  form.descriptionTemplates[language] ??= {}
+}
+const removeTemplateLanguage = (language: string) => {
+  if (language === 'en' || language === 'zh') return
+  delete form.descriptionTemplates?.[language]
+  if (descriptionLanguage.value === language) descriptionLanguage.value = 'en'
+}
 
 const userStore = useUserStore()
 const { t } = useI18n()
@@ -126,6 +120,7 @@ const load = async () => {
       form.defaultPaymentMethod = data.defaultPaymentMethod
       form.defaultPrice = data.defaultPrice ?? 2.39
       form.defaultCurrency = data.defaultCurrency
+      form.descriptionTemplates = JSON.parse(JSON.stringify(data.descriptionTemplates || {}))
       form.descriptionTemplate = data.descriptionTemplate
       form.descriptionTemplateZh = data.descriptionTemplateZh
       form.descriptionTemplateFreeZh = data.descriptionTemplateFreeZh ?? null
@@ -137,6 +132,13 @@ const load = async () => {
       autoPublish.value = (data.enableAutoPublish ?? 0) === 1
       active.value = (data.isActive ?? 0) === 1
     } else {
+      form.descriptionTemplate = null
+      form.descriptionTemplateZh = null
+      form.descriptionTemplateFree = null
+      form.descriptionTemplateFreeZh = null
+      form.descriptionTemplateGarmin = null
+      form.descriptionTemplateGarminZh = null
+      form.descriptionTemplates = {}
       form.userId = uid
       form.id = 0
       autoPublish.value = false
@@ -159,6 +161,7 @@ const handleSave = async () => {
         defaultPrice: form.defaultPrice,
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
+        descriptionTemplates: form.descriptionTemplates,
         descriptionTemplateZh: form.descriptionTemplateZh,
         descriptionTemplateFreeZh: form.descriptionTemplateFreeZh,
         descriptionTemplateFree: form.descriptionTemplateFree,
@@ -171,6 +174,7 @@ const handleSave = async () => {
       if (res.data) {
         form.id = res.data.id
         visible.value = false
+        emit('saved')
       }
     } else {
       const dto: DesignerDefaultConfigUpdateDTO = {
@@ -180,6 +184,7 @@ const handleSave = async () => {
         defaultPrice: form.defaultPrice,
         defaultCurrency: form.defaultCurrency,
         descriptionTemplate: form.descriptionTemplate,
+        descriptionTemplates: form.descriptionTemplates,
         descriptionTemplateZh: form.descriptionTemplateZh,
         descriptionTemplateFreeZh: form.descriptionTemplateFreeZh,
         descriptionTemplateFree: form.descriptionTemplateFree,
@@ -191,6 +196,7 @@ const handleSave = async () => {
       const res = await designerDefaultConfigApi.update(dto)
       if (res.data) {
         visible.value = false
+        emit('saved')
       }
     }
   } finally {
@@ -199,10 +205,11 @@ const handleSave = async () => {
 }
 
 const previewProductId = ref<number>()
-const show = async (productId?: number, paymentMethod?: string) => {
+const show = async (productId?: number, paymentMethod?: string, language = 'en') => {
   previewProductId.value = productId
-  descriptionLanguage.value = 'en'
   await load()
+  if (language !== 'en' && language !== 'zh') addTemplateLanguage(language)
+  descriptionLanguage.value = language
   if (paymentMethod != null) {
     form.defaultPaymentMethod = paymentMethod === 'free' ? 'none' : paymentMethod
   }

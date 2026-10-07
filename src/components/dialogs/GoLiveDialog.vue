@@ -2,7 +2,7 @@
   <el-dialog 
     v-model="dialogVisible" 
     :title="t('goLive.title')" 
-    width="60%" 
+    width="min(960px, 94vw)"
     :top="'5vh'"
     class="go-live-dialog"
   >
@@ -60,11 +60,16 @@
         :disabled="productTagsLoadFailed"
       />
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
-        <el-input v-model="form.description" type="textarea" :rows="10" />
+        <DescriptionLanguageTabs v-model="descriptionLanguage" :languages="descriptionLanguages" :disabled="loading" @add="addDescriptionLanguage" @remove="removeDescriptionLanguage">
+          <template #default="{ language }">
+            <el-input :model-value="readDescription(language)" @update:model-value="writeDescription(language, $event)" type="textarea" :rows="10" maxlength="20000" :aria-label="descriptionLanguageLabel(language)" dir="auto" />
+          </template>
+        </DescriptionLanguageTabs>
         <div class="description-actions">
-          <CopyGarminDescriptionButton :text="form.description || ''" />
+          <CopyGarminDescriptionButton :text="activeDescription" />
           <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
         </div>
+        <div v-if="descriptionConfigLoaded && !hasDescriptionTemplate" class="form-tip" role="status">{{ t('descriptionLanguages.missingTemplate') }}</div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
         </div>
@@ -73,7 +78,6 @@
           <el-link type="primary" @click="openSettings" style="font-size: 12px;">{{ t('nav.settings') }}</el-link>
         </div>
       </el-form-item>
-      <CompanionAppLinks :visible="dialogVisible" />
       <el-form-item :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
@@ -270,6 +274,7 @@
           {{ t('goLive.priceTip') }}
         </div>
       </el-form-item>
+      <CompanionAppLinks :visible="dialogVisible" />
     </el-form>
     <template #footer>
       <span class="dialog-footer">
@@ -298,10 +303,11 @@
       <el-button type="primary" :disabled="bannerCreditCost === null || generatingBanner" @click="confirmBannerGeneration">{{ t('goLive.bannerConfirmGenerate', { cost: bannerCreditCost ?? 0 }) }}</el-button>
     </template>
   </el-dialog>
-  <DesignerDefaultConfigDialog ref="designerConfigDialog" />
+  <DesignerDefaultConfigDialog ref="designerConfigDialog" @saved="loadDescriptionConfig" />
 </template>
 
 <script setup lang="ts">
+import DescriptionLanguageTabs from '@/components/common/DescriptionLanguageTabs.vue'
 import CompanionAppLinks from '@/components/common/CompanionAppLinks.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 
@@ -334,7 +340,9 @@ import { useI18n } from '@/i18n'
 import {
   buildGenerateDescriptionPayload,
   descriptionTemplateUsesAi,
-  resolveDescriptionTemplateLanguage,
+  getDescriptionTemplate,
+  descriptionLanguageLabel,
+  type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
 import type { ProductImageItem } from '@/types/product'
@@ -361,8 +369,6 @@ let aiCapabilitiesVersion = 0
 const loadAiCapabilities = async () => {
   const version = ++aiCapabilitiesVersion
   aiCapabilities.value = { TAGS: false, DESCRIPTION: false, BANNER: false }
-  descriptionConfigLoaded.value = false
-  descriptionConfig.value = null
   aiPrices.value = null
   loadingAiCapabilities.value = true
   try {
@@ -372,18 +378,29 @@ const loadAiCapabilities = async () => {
     if (prices.code !== 0 || !prices.data) throw new Error('AI prices unavailable')
     aiPrices.value = prices.data
     aiCapabilities.value = { TAGS: response.data.TAGS === true, DESCRIPTION: response.data.DESCRIPTION === true, BANNER: response.data.BANNER === true }
-    if (!aiCapabilities.value.DESCRIPTION && userStore.userInfo?.id) {
-      const config = await designerDefaultConfigApi.getByUserId(userStore.userInfo.id)
-      if (version !== aiCapabilitiesVersion) return
-      if (config.code === 0) {
-        descriptionConfig.value = config.data ?? null
-        descriptionConfigLoaded.value = true
-      }
-    }
+
   } catch (error) {
     if (version === aiCapabilitiesVersion) showErrorOnce(error, t('goLive.aiStatusFailed'))
   } finally {
     if (version === aiCapabilitiesVersion) loadingAiCapabilities.value = false
+  }
+}
+
+let descriptionConfigVersion = 0
+const loadDescriptionConfig = async () => {
+  const version = ++descriptionConfigVersion
+  descriptionConfigLoaded.value = false
+  descriptionConfig.value = null
+  const uid = userStore.userInfo?.id
+  if (!uid) return
+  try {
+    const response = await designerDefaultConfigApi.getByUserId(uid)
+    if (version !== descriptionConfigVersion) return
+    if (response.code !== 0) throw new Error('Description templates unavailable')
+    descriptionConfig.value = response.data ?? null
+    descriptionConfigLoaded.value = true
+  } catch (error) {
+    if (version === descriptionConfigVersion) showErrorOnce(error, t('descriptionLanguages.loadFailed'))
   }
 }
 
@@ -430,7 +447,7 @@ const openSourceStore = async (store: 'wristo' | 'garmin') => {
 }
 
 const formRef = ref<FormInstance | null>(null)
-type DesignerConfigDialogRef = { show: (productId?: number, paymentMethod?: string) => void | Promise<void> }
+type DesignerConfigDialogRef = { show: (productId?: number, paymentMethod?: string, language?: string) => void | Promise<void> }
 const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 const { t } = useI18n()
 
@@ -465,7 +482,7 @@ const rules: FormRules = {
 
 const openSettings = (): void => {
   if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
-    designerConfigDialog.value.show(currentDesign.value?.product?.id, form.paymentMethod)
+    designerConfigDialog.value.show(currentDesign.value?.product?.id, form.paymentMethod, descriptionLanguage.value)
   }
 }
 
@@ -485,6 +502,7 @@ const form = reactive({
   appId: 0,
   name: '',
   description: '',
+  descriptions: {} as Record<string, string>,
   // Hero / raw image URLs used by goLive payload
   garminImageUrl: '',
   rawImageUrl: '',
@@ -504,11 +522,28 @@ const form = reactive({
   productImages: [] as ProductImageItem[]
 })
 
-const canGenerateDescription = computed(() => aiCapabilities.value.DESCRIPTION || (
-  descriptionConfigLoaded.value && !descriptionTemplateUsesAi(
-    descriptionConfig.value || {}, form.paymentMethod, resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
-  )
-))
+const descriptionLanguage = ref('en')
+const descriptionRevisions: Record<string, number> = {}
+const descriptionLanguages = computed(() => ['en', ...Object.keys(form.descriptions)])
+const readDescription = (language: string): string => language === 'en' ? form.description : form.descriptions[language] || ''
+const writeDescription = (language: string, value: string) => {
+  descriptionRevisions[language] = (descriptionRevisions[language] || 0) + 1
+  if (language === 'en') form.description = value
+  else form.descriptions[language] = value
+}
+const activeDescription = computed(() => readDescription(descriptionLanguage.value))
+const addDescriptionLanguage = (language: string) => {
+  if (language !== 'en' && !(language in form.descriptions)) form.descriptions[language] = ''
+}
+const removeDescriptionLanguage = (language: string) => {
+  if (language === 'en') return
+  delete form.descriptions[language]
+  descriptionRevisions[language] = (descriptionRevisions[language] || 0) + 1
+  if (descriptionLanguage.value === language) descriptionLanguage.value = 'en'
+}
+const hasDescriptionTemplate = computed(() => !!getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value).trim())
+const selectedTemplateUsesAi = computed(() => descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value as DescriptionTemplateLanguage))
+const canGenerateDescription = computed(() => descriptionConfigLoaded.value && hasDescriptionTemplate.value && (!selectedTemplateUsesAi.value || aiCapabilities.value.DESCRIPTION))
 
 const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
@@ -642,7 +677,10 @@ const loadDesign = (design: Design) => {
   // 设置表单数据
   form.appId = design.product.appId
   form.name = design.product.name
-  form.description = design.product.description
+  form.description = design.product.description || ''
+  form.descriptions = { ...(design.product.descriptions || {}) }
+  delete form.descriptions.en
+  descriptionLanguage.value = 'en'
   restoreCurrentProductTags()
   form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
   
@@ -722,6 +760,7 @@ const handleConfirm = async () => {
     const data: any = {
       name: form.name.trim(),
       description: form.description.trim(),
+      descriptions: Object.fromEntries(Object.entries(form.descriptions).map(([language, text]) => [language, text.trim()])),
       heroImage: form.garminImageUrl.trim(),
       rawImage: form.rawImageUrl.trim(),
       previewImage: form.previewImageUrl.trim(),
@@ -992,19 +1031,24 @@ const refreshDescription = async () => {
   }
   const pid = currentDesign.value.product.id
   const version = ++descriptionGenerationVersion
-  const originalDescription = form.description
+  const language = descriptionLanguage.value
+  const originalDescription = readDescription(language)
+  const revision = descriptionRevisions[language] || 0
   const paymentMethod = form.paymentMethod
+  const template = getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, language)
+  const stillCurrent = () => version === descriptionGenerationVersion && dialogVisible.value &&
+    descriptionLanguages.value.includes(language) && (descriptionRevisions[language] || 0) === revision && readDescription(language) === originalDescription &&
+    form.paymentMethod === paymentMethod && getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, language) === template
   generatingDescription.value = true
   try {
-    if (aiCapabilities.value.DESCRIPTION && !await confirmTextGenerationCost('DESCRIPTION', () => version === descriptionGenerationVersion && dialogVisible.value)) return
-    if (version !== descriptionGenerationVersion || !dialogVisible.value || form.description !== originalDescription || form.paymentMethod !== paymentMethod) return
-    const language = resolveDescriptionTemplateLanguage(currentDesign.value?.configJson)
-    const payload = { ...buildGenerateDescriptionPayload(uid, pid, language), paymentMethod: form.paymentMethod }
+    if (selectedTemplateUsesAi.value && !await confirmTextGenerationCost('DESCRIPTION', stillCurrent)) return
+    if (!stillCurrent()) return
+    const payload = { ...buildGenerateDescriptionPayload(uid, pid, language as DescriptionTemplateLanguage), paymentMethod }
     const res = await productsApi.generateDescription(payload) as ApiResponse<string>
-    if (version !== descriptionGenerationVersion || form.description !== originalDescription || form.paymentMethod !== paymentMethod) return
+    if (!stillCurrent()) return
     if (typeof res.data === 'string') {
-      form.description = res.data
-      updateProductTags(form.tagIds)
+      writeDescription(language, res.data)
+      if (language === 'en') updateProductTags(form.tagIds)
       ElMessage.success(t('goLive.descriptionUpdated'))
     }
   } catch (e) {
@@ -1028,6 +1072,7 @@ const show = (design: Design) => {
   dialogVisible.value = true
   void loadTagGeneration(design.product.appId, tagGenerationVersion)
   void loadAiCapabilities()
+  void loadDescriptionConfig()
 }
 
 // 暴露方法给父组件
@@ -1205,13 +1250,20 @@ defineExpose({
 
 /* 响应式调整 */
 @media screen and (max-width: 768px) {
-  :deep(.go-live-dialog .el-dialog) {
-    width: 90% !important;
-  }
-  
   .go-live-form {
-    padding: 16px;
+    padding: 0;
   }
+  .go-live-form :deep(.el-form-item) {
+    display: block;
+  }
+  .go-live-form :deep(.el-form-item__label) {
+    width: auto !important;
+    justify-content: flex-start;
+  }
+  .go-live-form :deep(.el-form-item__content) {
+    margin-left: 0 !important;
+  }
+  .image-pair { flex-wrap: wrap; }
   
   .upload-area {
     width: 100%;
