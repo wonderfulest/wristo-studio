@@ -271,7 +271,7 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
     metricSymbol: (metric as any)?.metricSymbol,
     text: iconUnicode ? resolveIconGlyphText(iconUnicode) : model.text,
     iconDisplayType: keepAmoled ? 'amoled' : 'mip',
-    amoledImageUrl: keepAmoled ? imageUrl : null,
+    amoledImageUrl: imageUrl || null,
     amoledIconUnicode: iconUnicode || null,
     width: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
     height: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
@@ -320,7 +320,7 @@ const applyMipDisplay = async () => {
   const candidate = getAmoledIconCandidateFromElement(config)
   await applyUpdate({
     iconDisplayType: 'mip',
-    amoledImageUrl: undefined,
+    amoledImageUrl: currentAmoledImageSource.value || null,
     amoledIconUnicode: candidate?.iconUnicode,
     fontFamily: config?.fontFamily || config?.iconFont || mipIconFontFamily.value,
     iconFont: config?.iconFont || config?.fontFamily || mipIconFontFamily.value,
@@ -337,8 +337,7 @@ const applyAmoledDisplay = async () => {
   if (!candidate) return
 
   const fontSlug = currentAmoledFontSlug.value || config?.fontFamily || config?.iconFont || ''
-  const pending = amoledIconAssetStore.getPending(fontSlug, candidate.iconUnicode)
-  const imageUrl = (pending ? amoledIconAssetStore.getDisplayUrl(fontSlug, candidate.iconUnicode) : '') || config?.amoledImageUrl || ''
+  const imageUrl = currentAmoledImageSource.value
   const size = Number(config?.iconSize || config?.fontSize || currentAmoledImageSize.value)
   if (!imageUrl) {
     console.warn('[amoled-icon-panel] skip AMOLED set for current icon without image URL', {

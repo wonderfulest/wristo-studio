@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 import { shallowMount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import IconPanel from './icon.panel.vue'
 import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
+import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useHistoryStore } from '@/stores/historyStore'
@@ -103,6 +105,42 @@ describe('icon settings panel', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(applyPatch).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('preserves a saved AMOLED asset through MIP edits and repeated display switches', async () => {
+    vi.mocked(getAmoledIconCandidateFromElement).mockReturnValue({
+      iconUnicode: '0063', symbolCode: '3', metricSymbol: 'calories', label: 'Cal', source: 'from-element',
+    })
+    const config = reactive({
+      id: 'calories-icon', eleType: 'icon', fontFamily: 'pulse-solid',
+      fontSize: 30, iconSize: 30, iconDisplayType: 'amoled',
+      amoledIconUnicode: '0063', amoledImageUrl: '/saved/calories.svg', text: 'c',
+    })
+    const wrapper = shallowMount(IconPanel, {
+      props: { config, applyPatch: (patch) => { Object.assign(config, patch) } },
+      global: { stubs: {
+        'el-form': { template: '<form><slot /></form>' },
+        'el-form-item': { template: '<div><slot /></div>' },
+        'el-tabs': { name: 'TestTabs', template: '<div><slot /></div>' },
+        'el-tab-pane': { template: '<div><slot /></div>' },
+        'el-dialog': true, 'el-button': true, 'el-icon': true,
+      } },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const tabs = wrapper.findComponent({ name: 'TestTabs' })
+    for (let cycle = 0; cycle < 2; cycle++) {
+      tabs.vm.$emit('update:modelValue', 'mip')
+      await vi.waitFor(() => expect(config.iconDisplayType).toBe('mip'))
+      expect(config.amoledImageUrl).toBe('/saved/calories.svg')
+      wrapper.findComponent(FontPicker).vm.$emit('change')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(config.amoledImageUrl).toBe('/saved/calories.svg')
+      expect(wrapper.find('.amoled-asset img').attributes('src')).toBe('/saved/calories.svg')
+      tabs.vm.$emit('update:modelValue', 'amoled')
+      await vi.waitFor(() => expect(config.iconDisplayType).toBe('amoled'))
+      expect(config.amoledImageUrl).toBe('/saved/calories.svg')
+    }
     wrapper.unmount()
   })
 
