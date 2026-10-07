@@ -473,6 +473,23 @@ it('cancels paid description generation and keeps tag generation unavailable', a
 
 
 describe('multilingual descriptions', () => {
+  it('restores, edits and removes translated names independently from English', async () => {
+    const wrapper = mountDialog()
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' } } })
+    await flushPromises()
+    const french = wrapper.get<HTMLInputElement>('.product-name-languages [data-language="fr"] input')
+    expect(french.element.value).toBe('Nom français')
+    await french.setValue(' Nouveau nom ')
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { fr: 'Nouveau nom' } }))
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nouveau nom' } } })
+    await flushPromises()
+    wrapper.findAllComponents(DescriptionLanguageTabs)[0]!.vm.$emit('remove', 'fr')
+    await flushPromises()
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ names: {} }))
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: true, BANNER: false } })
@@ -491,9 +508,9 @@ describe('multilingual descriptions', () => {
     const wrapper = mountDialog()
     ;(wrapper.vm as any).show({ ...design, configJson: { localization: { appLanguage: 'zhs' } }, product: { ...design.product, descriptions: { fr: 'Bonjour' } } })
     await flushPromises()
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     expect(tabs.props('modelValue')).toBe('en')
-    expect(wrapper.get<HTMLInputElement>('[data-language="fr"] input').element.value).toBe('Bonjour')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="fr"] input').element.value).toBe('Bonjour')
     await confirm(wrapper)
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('Description'), descriptions: { fr: 'Bonjour' } }))
   })
@@ -501,7 +518,7 @@ describe('multilingual descriptions', () => {
   it('adds, generates and removes a language without changing English or charging for a plain template', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     tabs.vm.$emit('add', 'fr')
     tabs.vm.$emit('update:modelValue', 'fr')
     await flushPromises()
@@ -509,8 +526,8 @@ describe('multilingual descriptions', () => {
     await flushPromises()
     expect(mocks.generateDescription).toHaveBeenCalledWith({ userId: 10, productId: 20, language: 'fr', paymentMethod: 'wpay' })
     expect(mocks.confirmCost).not.toHaveBeenCalled()
-    expect(wrapper.get<HTMLInputElement>('[data-language="fr"] input').element.value).toBe('Generated French')
-    expect(wrapper.get<HTMLInputElement>('[data-language="en"] input').element.value).toContain('Description')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="fr"] input').element.value).toBe('Generated French')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="en"] input').element.value).toContain('Description')
     tabs.vm.$emit('remove', 'fr')
     await flushPromises()
     expect(tabs.props('modelValue')).toBe('en')
@@ -521,7 +538,7 @@ describe('multilingual descriptions', () => {
   it('shows missing-template guidance and does not offer generation for that language', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     tabs.vm.$emit('add', 'ja')
     tabs.vm.$emit('update:modelValue', 'ja')
     await flushPromises()
@@ -535,7 +552,7 @@ describe('multilingual descriptions', () => {
     mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     tabs.vm.$emit('add', 'fr')
     tabs.vm.$emit('update:modelValue', 'fr')
     await flushPromises()
@@ -544,8 +561,8 @@ describe('multilingual descriptions', () => {
     tabs.vm.$emit('update:modelValue', 'en')
     resolve({ code: 0, data: 'French result' })
     await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('[data-language="fr"] input').element.value).toBe('French result')
-    expect(wrapper.get<HTMLInputElement>('[data-language="en"] input').element.value).toContain('Description')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="fr"] input').element.value).toBe('French result')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="en"] input').element.value).toContain('Description')
   })
 
   it('does not restore a removed language when a generation response arrives', async () => {
@@ -553,7 +570,7 @@ describe('multilingual descriptions', () => {
     mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     tabs.vm.$emit('add', 'fr')
     tabs.vm.$emit('update:modelValue', 'fr')
     await flushPromises()
@@ -570,7 +587,7 @@ describe('multilingual descriptions', () => {
     mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const tabs = wrapper.getComponent(DescriptionLanguageTabs)
+    const tabs = wrapper.findAllComponents(DescriptionLanguageTabs)[1]!
     tabs.vm.$emit('add', 'fr')
     tabs.vm.$emit('add', 'de')
     tabs.vm.$emit('update:modelValue', 'fr')
@@ -585,7 +602,7 @@ describe('multilingual descriptions', () => {
     expect(mocks.generateDescription).toHaveBeenCalledTimes(1)
     resolve({ code: 0, data: 'French result' })
     await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('[data-language="fr"] input').element.value).toBe('French result')
+    expect(wrapper.get<HTMLInputElement>('.product-description-languages [data-language="fr"] input').element.value).toBe('French result')
   })
 
 })

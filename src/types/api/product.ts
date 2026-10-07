@@ -91,6 +91,7 @@ export interface ProductReleasePrgVo {
 }
 
 export interface Product {
+  names?: Record<string, string> | null
   id: number
   appId: number
   designId: string

@@ -16,11 +16,15 @@
         </el-input>
       </el-form-item>
       <el-form-item :label="t('submitDesign.designName')" prop="name">
-        <el-input v-model="form.name" :disabled="loading">
-          <template #append>
-            <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
+        <DescriptionLanguageTabs class="product-name-languages" v-model="nameLanguage" :languages="nameLanguages" :disabled="loading" @add="addNameLanguage" @remove="removeNameLanguage">
+          <template #default="{ language }">
+            <el-input :model-value="readName(language)" @update:model-value="writeName(language, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(language)" dir="auto">
+              <template #append>
+                <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
+              </template>
+            </el-input>
           </template>
-        </el-input>
+        </DescriptionLanguageTabs>
       </el-form-item>
       <el-form-item v-if="currentDesign?.copiedFromDesignUid" :label="t('goLive.sourceDesign')">
         <div class="source-design-links">
@@ -60,7 +64,7 @@
         :disabled="productTagsLoadFailed"
       />
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
-        <DescriptionLanguageTabs v-model="descriptionLanguage" :languages="descriptionLanguages" :disabled="loading" @add="addDescriptionLanguage" @remove="removeDescriptionLanguage">
+        <DescriptionLanguageTabs class="product-description-languages" v-model="descriptionLanguage" :languages="descriptionLanguages" :disabled="loading" @add="addDescriptionLanguage" @remove="removeDescriptionLanguage">
           <template #default="{ language }">
             <el-input :model-value="readDescription(language)" @update:model-value="writeDescription(language, $event)" type="textarea" :rows="10" maxlength="20000" :aria-label="descriptionLanguageLabel(language)" dir="auto" />
           </template>
@@ -501,6 +505,7 @@ const loadingBundles = ref(false)
 const form = reactive({
   appId: 0,
   name: '',
+  names: {} as Record<string, string>,
   description: '',
   descriptions: {} as Record<string, string>,
   // Hero / raw image URLs used by goLive payload
@@ -522,6 +527,21 @@ const form = reactive({
   productImages: [] as ProductImageItem[]
 })
 
+const nameLanguage = ref('en')
+const nameLanguages = computed(() => ['en', ...Object.keys(form.names)])
+const readName = (language: string): string => language === 'en' ? form.name : form.names[language] || ''
+const writeName = (language: string, value: string) => {
+  if (language === 'en') form.name = value
+  else form.names[language] = value
+}
+const addNameLanguage = (language: string) => {
+  if (language !== 'en' && !(language in form.names)) form.names[language] = ''
+}
+const removeNameLanguage = (language: string) => {
+  if (language === 'en') return
+  delete form.names[language]
+  if (nameLanguage.value === language) nameLanguage.value = 'en'
+}
 const descriptionLanguage = ref('en')
 const descriptionRevisions: Record<string, number> = {}
 const descriptionLanguages = computed(() => ['en', ...Object.keys(form.descriptions)])
@@ -677,6 +697,9 @@ const loadDesign = (design: Design) => {
   // 设置表单数据
   form.appId = design.product.appId
   form.name = design.product.name
+  form.names = { ...(design.product.names || {}) }
+  delete form.names.en
+  nameLanguage.value = 'en'
   form.description = design.product.description || ''
   form.descriptions = { ...(design.product.descriptions || {}) }
   delete form.descriptions.en
@@ -759,6 +782,7 @@ const handleConfirm = async () => {
     loading.value = true
     const data: any = {
       name: form.name.trim(),
+      names: Object.fromEntries(Object.entries(form.names).map(([language, text]) => [language, text.trim()])),
       description: form.description.trim(),
       descriptions: Object.fromEntries(Object.entries(form.descriptions).map(([language, text]) => [language, text.trim()])),
       heroImage: form.garminImageUrl.trim(),
@@ -805,7 +829,7 @@ const copyAppId = async (): Promise<void> => {
 
 const copyDesignName = async (): Promise<void> => {
   try {
-    await navigator.clipboard.writeText(String(form.name || ''))
+    await navigator.clipboard.writeText(readName(nameLanguage.value))
     ElMessage.success(t('common.copied'))
   } catch (caughtError) {
     showErrorOnce(caughtError, t('common.copyFailed'))
