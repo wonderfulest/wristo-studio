@@ -2,7 +2,7 @@
   <el-dialog 
     v-model="dialogVisible" 
     :title="t('goLive.title')" 
-    width="min(960px, 94vw)"
+    width="min(1200px, 94vw)"
     :top="'5vh'"
     class="go-live-dialog"
   >
@@ -53,10 +53,11 @@
       </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
-        :show-generation="false"
+        :show-generation="aiCapabilities.TAGS"
         :can-generate="canGenerateTags && aiCapabilities.TAGS"
         :generating="generatingTags"
         :generation-status="tagGenerationStatus"
+        @generate="generateTags"
         :limit="MAX_PRODUCT_TAGS"
         @update:tag-ids="updateProductTags"
         :tags="productTags"
@@ -319,7 +320,7 @@ import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescripti
 import { computed, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
 import type { ProductTag, ProductTagGeneration } from '@/types/api/productTag'
-import { getProductTagsPage, getProductTagGeneration } from '@/api/wristo/productTags'
+import { getProductTagsPage, getProductTagGeneration, generateProductTags } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -665,6 +666,31 @@ const confirmTextGenerationCost = async (scene: 'TAGS' | 'DESCRIPTION', isCurren
   } catch (error) {
     if (error === 'cancel' || error === 'close') return false
     throw error
+  }
+}
+
+const generateTags = async () => {
+  if (!currentDesign.value || !canGenerateTags.value || !aiCapabilities.value.TAGS || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
+  const appId = currentDesign.value.product.appId
+  const version = tagGenerationVersion
+  generatingTags.value = true
+  let dispatched = false
+  try {
+    if (!await confirmTextGenerationCost('TAGS', () => version === tagGenerationVersion && dialogVisible.value)) return
+    if (form.tagIds.length) return
+    canGenerateTags.value = false
+    dispatched = true
+    const response = await generateProductTags(appId)
+    if (version !== tagGenerationVersion) return
+    if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationFailed'))
+    applyTagGeneration(response.data)
+  } catch (error) {
+    if (version !== tagGenerationVersion) return
+    showErrorOnce(error, t('productTags.generationFailed'))
+    // Read state after a timeout; never retry an ambiguous AI request.
+    if (dispatched) await loadTagGeneration(appId, version, true)
+  } finally {
+    if (version === tagGenerationVersion) generatingTags.value = false
   }
 }
 
