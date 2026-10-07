@@ -33,6 +33,7 @@ declare module 'vue' {
     CollapsibleJsonTree: typeof import('./src/components/common/CollapsibleJsonTree.vue')['default']
     ColorPicker: typeof import('./src/components/color-picker/index.vue')['default']
     ColorPropertyDialog: typeof import('./src/components/properties/dialogs/ColorPropertyDialog.vue')['default']
+    CompanionAppLinks: typeof import('./src/components/common/CompanionAppLinks.vue')['default']
     ComplicationPropertyDialog: typeof import('./src/components/properties/dialogs/ComplicationPropertyDialog.vue')['default']
     ConnectIqDataTypeSelector: typeof import('./src/components/dialogs/ConnectIqDataTypeSelector.vue')['default']
     CookieConsent: typeof import('./src/components/CookieConsent.vue')['default']

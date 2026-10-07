@@ -218,8 +218,8 @@ export const designApi = {
     })
   },
 
-  uploadAssetBundle(designUid: string, file: File): Promise<ApiResponse<DesignAssetBundleVO>> {
-    return uploadDesignAssetBundle(designUid, file)
+  uploadAssetBundle(designUid: string, file: File, onProgress?: Parameters<typeof uploadDesignAssetBundle>[2]): Promise<ApiResponse<DesignAssetBundleVO>> {
+    return uploadDesignAssetBundle(designUid, file, onProgress)
   },
 
   getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {

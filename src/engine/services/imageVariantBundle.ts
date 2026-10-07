@@ -1,3 +1,4 @@
+import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import JSZip from 'jszip'
 import { findImageByUrl } from '@/api/image'
 import type { Image, ImageBase, ImageFormatSize } from '@/types/api/image'
@@ -19,10 +20,7 @@ export type ImageVariantManifest = {
 
 type VariantSource = { name: string; value: ImageFormatSize }
 
-const sha256Hex = async (blob: Blob): Promise<string> => {
-  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
+const sha256Hex = hashPackageBlob
 
 const dimensionsFrom = async (blob: Blob, format: string): Promise<{ width?: number; height?: number }> => {
   if (format === 'png') {
@@ -58,12 +56,17 @@ export const writeImageVariants = async (
   input: { imageId: number | string; basePath: string; image: ImageBase },
 ): Promise<ImageVariantManifest[]> => {
   const result: ImageVariantManifest[] = []
-  for (const variant of enumerateImageVariants(input.image)) {
-    const response = await fetch(variant.value.url)
-    if (!response.ok) {
+  const variants = enumerateImageVariants(input.image)
+  const reads = createPackageAssetReads(async source => {
+    const response = await fetch(source)
+    if (!response.ok) throw new Error(`Failed to download image ${input.imageId}`)
+    return response.blob()
+  })
+  await reads.prefetch(variants.map(variant => variant.value.url))
+  for (const variant of variants) {
+    const blob = await reads.read(variant.value.url).catch(() => {
       throw new Error(`Failed to download image ${input.imageId} variant ${variant.name}`)
-    }
-    const blob = await response.blob()
+    })
     const format = inferMarketingImageFormat(blob.type, variant.value.url)
     const path = `${input.basePath}/${variant.name}.${format}`
     zip.file(path, await blob.arrayBuffer())

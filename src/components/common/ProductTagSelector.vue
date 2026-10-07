@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MAX_PRODUCT_TAGS, matchPastedTags } from '../dialogs/goLiveTags'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
@@ -35,6 +35,16 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const groupedTags = computed(() => {
+  const groups = new Map<string, ProductTag[]>()
+  for (const tag of props.tags) {
+    const parent = tag.tagGroup || ''
+    if (!groups.has(parent)) groups.set(parent, [])
+    groups.get(parent)!.push(tag)
+  }
+  return [...groups].map(([slug, tags]) => ({ slug, label: slug ? t(`styleTags.group.${slug}`) : 'Other tags', tags }))
+})
 const bulkText = ref('')
 const addTags = (ids: number[]) => {
   const next = [...new Set([...props.tagIds, ...ids])]
@@ -86,7 +96,9 @@ const handleChange = (next: number[]) => {
       :loading="loading"
       :disabled="disabled || loading || generating"
       @change="handleChange">
-      <el-option v-for="tag in tags" :key="tag.id" :value="tag.id" :label="tag.name" />
+      <el-option-group v-for="group in groupedTags" :key="group.slug" :label="group.label">
+        <el-option v-for="tag in group.tags" :key="tag.id" :value="tag.id" :label="tag.name" />
+      </el-option-group>
     </el-select>
     <div class="product-tag-actions">
       <input
@@ -152,7 +164,7 @@ const handleChange = (next: number[]) => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
-:global(.product-tag-options .el-select-dropdown__list) {
+:global(.product-tag-options .el-select-group) {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -169,4 +181,8 @@ const handleChange = (next: number[]) => {
   background: var(--el-color-primary-light-9);
   border-color: var(--el-color-primary);
 }
+</style>
+
+<style>
+.product-tag-options .el-select-group__wrap { width: 100%; }
 </style>

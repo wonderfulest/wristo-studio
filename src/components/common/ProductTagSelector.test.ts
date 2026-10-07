@@ -30,6 +30,10 @@ const stubs = {
     template:
       '<div class="select" :data-value="JSON.stringify(modelValue)" :data-multiple="multiple" :data-filterable="filterable" :data-placeholder="placeholder" :data-loading="loading" :data-disabled="disabled"><slot /></div>'
   },
+  ElOptionGroup: {
+    props: ['label'],
+    template: '<div class="option-group" :data-label="label"><slot /></div>'
+  },
   ElOption: {
     props: ['value', 'label'],
     template: '<span class="option" :data-value="value" :data-label="label" />'
@@ -143,7 +147,7 @@ it('clears the final tag and enables generation with the real Element Plus selec
       return () => h(ProductTagSelector, { tagIds: ids.value, tags, canGenerate: true, 'onUpdate:tagIds': value => { ids.value = value } })
     }
   })
-  const wrapper = mount(Host, { global: { components: { ElFormItem: ep.ElFormItem, ElSelect: ep.ElSelect, ElOption: ep.ElOption } } })
+  const wrapper = mount(Host, { global: { components: { ElFormItem: ep.ElFormItem, ElSelect: ep.ElSelect, ElOption: ep.ElOption, ElOptionGroup: ep.ElOptionGroup } } })
   await flushPromises()
   await wrapper.get('.el-tag__close').trigger('click')
   await flushPromises()
@@ -151,4 +155,15 @@ it('clears the final tag and enables generation with the real Element Plus selec
   expect(wrapper.getComponent(ProductTagSelector).props('tagIds')).toEqual([])
   expect(wrapper.get('[data-testid="generate-tags"]').attributes('disabled')).toBeUndefined()
   wrapper.unmount()
+})
+
+it('groups base tags by parent without making parents selectable', () => {
+  const wrapper = mountSelector({ tags: [
+    { ...tags[0], tagGroup: 'layout' },
+    { ...tags[1], tagGroup: 'display-type' },
+    { ...tags[2], tagGroup: 'layout' }
+  ] })
+  expect(wrapper.findAll('.option-group').map(group => group.attributes('data-label'))).toEqual(['styleTags.group.layout', 'styleTags.group.display-type'])
+  expect(wrapper.findAll('.option-group')[0].findAll('.option').map(option => option.attributes('data-value'))).toEqual(['1', '38'])
+  expect(wrapper.findAll('.option')).toHaveLength(3)
 })

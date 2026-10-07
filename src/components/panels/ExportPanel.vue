@@ -195,6 +195,7 @@ const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
       previewDataUrl: options.previewDataUrl || null,
       appId: baseStore.appId > 0 ? baseStore.appId : undefined,
       product,
+      onSaveProgress: options.onSaveProgress,
     })
   } catch (error) {
     console.error('Failed to upload design asset bundle:', error)
@@ -465,16 +466,24 @@ const uploadAuthenticatedApp = async () => {
     }
 
     // 配置更新
-    currentStatus = t('export.updatingConfig')
-    currentProgress = 60
-    if (loadingInstance) {
-      loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
-    }
+    currentStatus = t('export.saveLoadingProduct')
+    loadingInstance?.setText(currentStatus)
 
     // Publish the complete project before updating optional app metadata.
     await uploadDesignAssetBundle(baseStore.id, resolvedConfig, {
       previewDataUrl: screenshotResult.dataUrl,
+      onSaveProgress: ({ stage, percent }) => {
+        const labels = {
+          assets: 'export.saveAssets', fonts: 'export.saveFonts', compressing: 'export.saveCompressing',
+          ticket: 'export.savePreparingUpload', uploading: 'export.saveUploading',
+          queued: 'export.saveQueued', processing: 'export.saveProcessing', saved: 'export.saveMetadata',
+        }
+        currentStatus = t(labels[stage])
+        // Percent is meaningful only inside measurable work; waiting stages stay indeterminate.
+        loadingInstance?.setText(`${currentStatus}${percent == null ? '' : ` (${Math.round(percent)}%)`}`)
+      },
     })
+    loadingInstance?.setText(t('export.saveMetadata'))
     const data = {
       uid: baseStore.id,
       name: baseStore.watchFaceName,
@@ -489,12 +498,6 @@ const uploadAuthenticatedApp = async () => {
     if (sessionStorage.getItem('studio-login-draft') === baseStore.id) sessionStorage.removeItem('studio-login-draft')
     historyStore.saveInitial()
 
-    // 更新WPay产品信息(必须在设计创建或更新之后)
-    currentStatus = t('export.updatingProduct')
-    currentProgress = 80
-    if (loadingInstance) {
-      loadingInstance.setText(`${currentStatus} (${currentProgress}%)`)
-    }
     currentStatus = t('export.uploadCompleted')
     currentProgress = 100
     if (loadingInstance) {

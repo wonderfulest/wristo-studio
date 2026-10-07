@@ -46,6 +46,38 @@ describe('font asset collection', () => {
 })
 
 describe('archive progress', () => {
+  it('fetches images concurrently while preserving archive references and stage progress', async () => {
+    setActivePinia(createPinia())
+    const { newProjectConfig } = await import('@/views/designs/newProjectConfig')
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    const config = newProjectConfig('{}', 'parallel-assets', 'Parallel assets', 'eng')
+    config.elements = Array.from({ length: 5 }, (_, index) => ({
+      id: `image-${index}`, eleType: 'image', imageUrl: `https://example.test/${index % 4}.svg`,
+    })) as any
+    let active = 0; let maximum = 0
+    const download = vi.fn(async () => {
+      active++; maximum = Math.max(maximum, active)
+      await new Promise(resolve => setTimeout(resolve, 2))
+      active--
+      return { ok: true, blob: async () => new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'], { type: 'image/svg+xml' }) }
+    })
+    vi.stubGlobal('fetch', download)
+    const onStage = vi.fn()
+    try {
+      const archive = await JSZip.loadAsync(await (await buildWrtDesignPackage(config, { onStage })).arrayBuffer())
+      const saved = JSON.parse(await archive.file('design.json')!.async('string'))
+      expect(maximum).toBe(4)
+      expect(download).toHaveBeenCalledTimes(4)
+      expect(saved.elements).toHaveLength(5)
+      for (const element of saved.elements) {
+        expect(element.imageUrl).toMatch(/^bundle:\/\//)
+        expect(archive.file(element.imageUrl.slice(9))).not.toBeNull()
+      }
+      expect(onStage.mock.calls[0][0]).toBe('assets')
+      expect(onStage.mock.calls.at(-1)).toEqual(['compressing', 100])
+    } finally { vi.unstubAllGlobals() }
+  })
+
   it('round-trips Interaction on an existing element without replacing its appearance', async () => {
     setActivePinia(createPinia())
     const { newProjectConfig } = await import('@/views/designs/newProjectConfig')

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-const { post, get } = vi.hoisted(() => ({ post: vi.fn(), get: vi.fn() }))
+const { post, get, direct } = vi.hoisted(() => ({ post: vi.fn(), get: vi.fn(), direct: vi.fn() }))
+vi.mock('./directAssetUpload', () => ({ directAssetUpload: direct }))
 vi.mock('@/config/axios', () => ({ default: { post, get } }))
 import { uploadDesignAssetBundle } from './designAssetUpload'
 
@@ -10,7 +11,7 @@ const ticket = { taskId: 'task-1', uploadUrl: 'https://s3.example/upload', heade
 
 beforeEach(() => {
   vi.useFakeTimers()
-  post.mockReset(); get.mockReset()
+  post.mockReset(); get.mockReset(); direct.mockReset().mockResolvedValue({ ok: true, status: 200 })
   post.mockResolvedValueOnce(ok(ticket)).mockResolvedValue(ok({ status: 'QUEUED' }))
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
 })
@@ -27,6 +28,23 @@ describe('direct upload and asynchronous save', () => {
     expect(post.mock.calls[0]).toEqual(['/dsn/design/design-1/asset-uploads', { filename: file.name, size: file.size }])
     expect(post.mock.calls[1][0]).toBe('/dsn/design/design-1/asset-uploads/task-1/complete')
     expect(get).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports upload, queue and processing without claiming success early', async () => {
+    const progress = vi.fn()
+    direct.mockImplementation(async (_url, _file, _headers, _signal, report) => {
+      report(50)
+      return { ok: true, status: 200 }
+    })
+    get.mockResolvedValueOnce(ok({ status: 'PROCESSING' })).mockResolvedValueOnce(ok({ status: 'SUCCEEDED', result }))
+    const promise = uploadDesignAssetBundle('id', file, progress)
+    await vi.runAllTimersAsync()
+    await promise
+    expect(progress.mock.calls.map(([value]) => value)).toEqual([
+      { stage: 'ticket' }, { stage: 'uploading' }, { stage: 'uploading', percent: 50 },
+      { stage: 'queued' }, { stage: 'processing' }, { stage: 'saved' },
+    ])
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('reports validation failure instead of save success', async () => {

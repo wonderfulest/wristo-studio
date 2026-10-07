@@ -1,3 +1,4 @@
+import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import { GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
@@ -152,6 +153,7 @@ type DesignAssetManifest = {
 type BuildDesignAssetBundleOptions = {
   /** Weighted work progress, not elapsed time. 100 means the file is ready. */
   onProgress?: (percent: number) => void
+  onStage?: (stage: 'assets' | 'fonts' | 'compressing', percent?: number) => void
   previewDataUrl?: string | null
   appId?: number | null
   product?: {
@@ -569,11 +571,7 @@ const fetchBlob = async (source: string): Promise<Blob> => {
   return response.blob()
 }
 
-const sha256Hex = async (blob: Blob): Promise<string> => {
-  const bytes = await blob.arrayBuffer()
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
+const sha256Hex = hashPackageBlob
 
 const readImageDimensions = async (blob: Blob, format: string): Promise<{ width?: number; height?: number }> => {
   if (format === 'svg') {
@@ -604,6 +602,7 @@ const addReferencedAssetToBundle = async (
     elementType?: string
     field?: string
   },
+  readBlob = fetchBlob,
 ) => {
   const source = String(input.source || '').trim()
   if (!source) return
@@ -659,7 +658,7 @@ const addReferencedAssetToBundle = async (
   }
 
   try {
-    const blob = await fetchBlob(source)
+    const blob = await readBlob(source)
     const format = getFormatFromBlob(blob, source)
     if (manifest.selfContained && format === 'svg') assertSelfContainedSvg(await blob.text())
     const sha256 = await sha256Hex(blob)
@@ -982,9 +981,17 @@ const buildDesignAssetArchive = async (
     options.onProgress?.(totalAssets ? 80 * completedAssets / totalAssets : 80)
   }
   options.onProgress?.(0)
-  for (const ref of [...elementRefs, ...themeRefs, ...configRefs]) {
-    await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, ref)
-    assetCompleted()
+  options.onStage?.('assets')
+  const reads = createPackageAssetReads(fetchBlob)
+  const refsToRead = [...elementRefs, ...themeRefs, ...configRefs]
+  // Fetch a bounded window concurrently, then mutate archive paths in their original order.
+  for (let offset = 0; offset < refsToRead.length; offset += 4) {
+    const window = refsToRead.slice(offset, offset + 4)
+    if (manifest.selfContained) await reads.prefetch(window.map(ref => ref.source))
+    for (const ref of window) {
+      await addReferencedAssetToBundle(zip, manifest, sourcePathByUrl, contentAssetByHash, usedPaths, ref, reads.read)
+      assetCompleted()
+    }
   }
 
   for (const scalar of marketingInputs.scalars) {
@@ -1013,6 +1020,7 @@ const buildDesignAssetArchive = async (
     assetCompleted()
   }
 
+  options.onStage?.('fonts')
   for (const slug of fontSlugs) {
     await addFontAssetToBundle(zip, manifest, usedPaths, slug)
     assetCompleted()
@@ -1152,7 +1160,7 @@ const buildDesignAssetArchive = async (
   }
   if (manifest.selfContained) {
     const { buildMissingWrtFonts } = await import('./wrtFontBuild')
-    const refs = await buildMissingWrtFonts(zip, manifest.fonts || [], undefined, config)
+    const refs = await buildMissingWrtFonts(zip, manifest.fonts || [], progress => options.onStage?.('fonts', progress.fraction * 100), config)
     manifest.studio!.assetRefs.push(...refs)
     await refreshFontAssetRefs(zip, manifest)
     // Configs already use bundle URLs. Keeping the original data URL here
@@ -1179,9 +1187,13 @@ const buildDesignAssetArchive = async (
     fileBaseName = root
   }
   options.onProgress?.(80)
+  options.onStage?.('compressing', 0)
   const blob = await outputZip.generateAsync(
     { type: 'blob', compression: 'DEFLATE' },
-    ({ percent }) => options.onProgress?.(Math.min(99, 80 + percent * 0.19)),
+    ({ percent }) => {
+      options.onProgress?.(Math.min(99, 80 + percent * 0.19))
+      options.onStage?.('compressing', percent)
+    },
   )
   const file = new File([blob], `${fileBaseName}${packageOptions.fileNameSuffix}`, { type: packageOptions.mimeType })
   options.onProgress?.(100)

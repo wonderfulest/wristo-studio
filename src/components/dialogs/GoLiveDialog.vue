@@ -15,8 +15,8 @@
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item :label="t('submitDesign.designName')">
-        <el-input v-model="form.name" disabled>
+      <el-form-item :label="t('submitDesign.designName')" prop="name">
+        <el-input v-model="form.name" :disabled="loading">
           <template #append>
             <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
           </template>
@@ -49,11 +49,10 @@
       </el-form-item>
       <ProductTagSelector
         :tag-ids="form.tagIds"
-        :show-generation="aiCapabilities.TAGS"
+        :show-generation="false"
         :can-generate="canGenerateTags && aiCapabilities.TAGS"
         :generating="generatingTags"
         :generation-status="tagGenerationStatus"
-        @generate="generateTags"
         :limit="MAX_PRODUCT_TAGS"
         @update:tag-ids="updateProductTags"
         :tags="productTags"
@@ -74,6 +73,7 @@
           <el-link type="primary" @click="openSettings" style="font-size: 12px;">{{ t('nav.settings') }}</el-link>
         </div>
       </el-form-item>
+      <CompanionAppLinks :visible="dialogVisible" />
       <el-form-item :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
@@ -302,13 +302,14 @@
 </template>
 
 <script setup lang="ts">
+import CompanionAppLinks from '@/components/common/CompanionAppLinks.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
 import { computed, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
 import type { ProductTag, ProductTagGeneration } from '@/types/api/productTag'
-import { getProductTagsPage, getProductTagGeneration, generateProductTags } from '@/api/wristo/productTags'
+import { getProductTagsPage, getProductTagGeneration } from '@/api/wristo/productTags'
 import { productsApi } from '@/api/wristo/products'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -434,6 +435,9 @@ const designerConfigDialog = ref<DesignerConfigDialogRef | null>(null)
 const { t } = useI18n()
 
 const rules: FormRules = {
+  name: [
+    { required: true, whitespace: true, message: t('createDesign.enterNameRequired'), trigger: ['blur', 'change'] },
+  ],
   description: [
     { required: true, whitespace: true, message: t('submitDesign.enterDescription'), trigger: ['blur', 'change'] },
   ],
@@ -609,31 +613,6 @@ const confirmTextGenerationCost = async (scene: 'TAGS' | 'DESCRIPTION', isCurren
   }
 }
 
-const generateTags = async () => {
-  if (!currentDesign.value || !canGenerateTags.value || !aiCapabilities.value.TAGS || generatingTags.value || loadingTagGeneration.value || loadingProductTags.value || productTagsLoadFailed.value || form.tagIds.length) return
-  const appId = currentDesign.value.product.appId
-  const version = tagGenerationVersion
-  generatingTags.value = true
-  let dispatched = false
-  try {
-    if (!await confirmTextGenerationCost('TAGS', () => version === tagGenerationVersion && dialogVisible.value)) return
-    if (form.tagIds.length) return
-    canGenerateTags.value = false
-    dispatched = true
-    const response = await generateProductTags(appId)
-    if (version !== tagGenerationVersion) return
-    if (response.code !== 0 || !response.data) throw new Error(t('productTags.generationFailed'))
-    applyTagGeneration(response.data)
-  } catch (error) {
-    if (version !== tagGenerationVersion) return
-    showErrorOnce(error, t('productTags.generationFailed'))
-    // Read state after a timeout; never retry an ambiguous AI request.
-    if (dispatched) await loadTagGeneration(appId, version, true)
-  } finally {
-    if (version === tagGenerationVersion) generatingTags.value = false
-  }
-}
-
 const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
     form.paymentMethod = 'free'
@@ -741,6 +720,7 @@ const handleConfirm = async () => {
   try {
     loading.value = true
     const data: any = {
+      name: form.name.trim(),
       description: form.description.trim(),
       heroImage: form.garminImageUrl.trim(),
       rawImage: form.rawImageUrl.trim(),

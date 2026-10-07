@@ -1,6 +1,12 @@
+import { directAssetUpload } from './directAssetUpload'
 import instance from '@/config/axios'
 import type { ApiResponse } from '@/types/api/api'
 import type { DesignAssetBundleVO } from './design'
+
+export type DesignUploadProgress = {
+  stage: 'ticket' | 'uploading' | 'queued' | 'processing' | 'saved'
+  percent?: number
+}
 
 interface UploadTicket {
   taskId: string
@@ -27,9 +33,11 @@ function data<T>(response: ApiResponse<T>): T {
 export async function uploadDesignAssetBundle(
   designUid: string,
   file: File,
+  onProgress?: (progress: DesignUploadProgress) => void,
 ): Promise<ApiResponse<DesignAssetBundleVO>> {
   if (!file.size || file.size > 128 * 1024 * 1024) throw new Error('Project must be between 1 byte and 128 MiB')
   const base = `/dsn/design/${encodeURIComponent(designUid)}/asset-uploads`
+  onProgress?.({ stage: 'ticket' })
   const ticket = data(await instance.post<never, ApiResponse<UploadTicket>>(base, {
     filename: file.name,
     size: file.size,
@@ -39,7 +47,11 @@ export async function uploadDesignAssetBundle(
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5 * 60_000)
     try {
-      const response = await fetch(ticket.uploadUrl, {
+      onProgress?.({ stage: 'uploading' })
+      const response = onProgress
+        ? await directAssetUpload(ticket.uploadUrl, file, ticket.headers, controller.signal,
+          percent => onProgress({ stage: 'uploading', percent }))
+        : await fetch(ticket.uploadUrl, {
         method: 'PUT', body: file, headers: ticket.headers, credentials: 'omit', signal: controller.signal,
       })
       if (!response.ok) {
@@ -72,8 +84,12 @@ export async function uploadDesignAssetBundle(
   const deadline = Date.now() + 15 * 60_000
   let failures = 0
   while (Date.now() < deadline) {
-    if (state?.status === 'SUCCEEDED' && state.result) return { code: 0, msg: 'success', data: state.result }
+    if (state?.status === 'SUCCEEDED' && state.result) {
+      onProgress?.({ stage: 'saved' })
+      return { code: 0, msg: 'success', data: state.result }
+    }
     if (state?.status === 'FAILED') throw new Error(state.error || 'Project processing failed. Please save again.')
+    onProgress?.({ stage: state?.status === 'PROCESSING' ? 'processing' : 'queued' })
     await delay(2000)
     try {
       state = data(await instance.get<never, ApiResponse<UploadStatus>>(taskUrl))

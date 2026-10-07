@@ -154,6 +154,8 @@ export interface ProductPaymentDto {
 
 /** 产品上线数据传输对象 */
 export interface GoToLiveDto {
+  /** 设计名称与产品名称共用 */
+  name?: string
   /** 应用ID */
   appId: number
   /** 产品描述 */
