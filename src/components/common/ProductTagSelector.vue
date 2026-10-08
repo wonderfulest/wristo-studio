@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { MAX_PRODUCT_TAGS, matchPastedTags } from '../dialogs/goLiveTags'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '@/i18n'
@@ -45,7 +45,6 @@ const groupedTags = computed(() => {
   }
   return [...groups].map(([slug, tags]) => ({ slug, label: slug ? t(`styleTags.group.${slug}`) : 'Other tags', tags }))
 })
-const bulkText = ref('')
 const addTags = (ids: number[]) => {
   const next = [...new Set([...props.tagIds, ...ids])]
   if (next.length > props.limit) ElMessage.warning(t('productTags.limit', { limit: props.limit }))
@@ -53,20 +52,16 @@ const addTags = (ids: number[]) => {
   emit('update:tagIds', selected)
   return selected
 }
-const addPastedTags = () => {
-  const ids = matchPastedTags(bulkText.value, props.tags)
-  if (!ids.length) {
-    ElMessage.warning(t('productTags.noMatch'))
-    return
-  }
+const handlePaste = (event: ClipboardEvent) => {
+  if (props.disabled || props.loading || props.generating) return
+  const text = event.clipboardData?.getData('text') || ''
+  const ids = matchPastedTags(text, props.tags)
+  if (!ids.length) return // Leave unmatched text in the select's search input.
+  event.preventDefault()
   const selected = addTags(ids)
-  // Keep unmatched names visible so a partial match never silently discards them.
-  const matched = new Set(props.tags.filter((tag) => selected.includes(tag.id)).flatMap((tag) => [tag.name.toLowerCase(), tag.slug.toLowerCase()]))
-  bulkText.value = bulkText.value
-    .split(/[,，;；\n]+/)
-    .filter((value) => !matched.has(value.trim().replace(/^#/, '').toLowerCase()))
-    .join(', ')
-  if (bulkText.value.trim()) ElMessage.warning(t('productTags.noMatch'))
+  const matched = new Set(props.tags.filter(tag => selected.includes(tag.id)).flatMap(tag => [tag.name.toLowerCase(), tag.slug.toLowerCase()]))
+  const unmatched = text.split(/[,，;；\n]+/).filter(value => value.trim() && !matched.has(value.trim().replace(/^#/, '').toLowerCase()))
+  if (unmatched.length) ElMessage.warning(`${t('productTags.noMatch')}: ${unmatched.join(', ')}`)
 }
 const generate = () => {
   if (props.showGeneration && !props.disabled && !props.loading && !props.generating && props.canGenerate && !props.tagIds.length) emit('generate')
@@ -84,35 +79,29 @@ const handleChange = (next: number[]) => {
 
 <template>
   <el-form-item :label="t('productTags.label')" prop="tagIds">
-    <el-select
-      :model-value="tagIds"
-      multiple
-      clearable
-      filterable
-      class="product-tag-select"
-      popper-class="product-tag-options"
-      :multiple-limit="limit"
-      :placeholder="t('productTags.placeholder')"
-      :loading="loading"
-      :disabled="disabled || loading || generating"
-      @change="handleChange">
-      <el-option-group v-for="group in groupedTags" :key="group.slug" :label="group.label">
-        <el-option v-for="tag in group.tags" :key="tag.id" :value="tag.id" :label="tag.name" />
-      </el-option-group>
-    </el-select>
-    <div class="product-tag-actions">
-      <input
-        v-model="bulkText"
-        class="product-tag-bulk"
-        :aria-label="t('productTags.bulkPlaceholder')"
+    <div class="product-tag-row" @paste.capture="handlePaste">
+      <el-select
+        :model-value="tagIds"
+        multiple
+        clearable
+        filterable
+        class="product-tag-select"
+        popper-class="product-tag-options"
+        :multiple-limit="limit"
         :placeholder="t('productTags.bulkPlaceholder')"
+        :loading="loading"
         :disabled="disabled || loading || generating"
-        @keydown.enter.prevent="addPastedTags" />
-      <button type="button" :disabled="disabled || loading || generating || !bulkText.trim()" @click="addPastedTags">{{ t('productTags.addBulk') }}</button>
-      <button v-if="showGeneration" type="button" data-testid="generate-tags" :disabled="disabled || loading || generating || !canGenerate || tagIds.length > 0" @click="generate">
-        {{ t(generating ? 'productTags.generating' : 'productTags.generate') }}
-      </button>
-      <span>{{ tagIds.length }} / {{ limit }}</span>
+        @change="handleChange">
+        <el-option-group v-for="group in groupedTags" :key="group.slug" :label="group.label">
+          <el-option v-for="tag in group.tags" :key="tag.id" :value="tag.id" :label="tag.name" />
+        </el-option-group>
+      </el-select>
+      <div class="product-tag-actions">
+        <button v-if="showGeneration" type="button" data-testid="generate-tags" :disabled="disabled || loading || generating || !canGenerate || tagIds.length > 0" @click="generate">
+          {{ t(generating ? 'productTags.generating' : 'productTags.generate') }}
+        </button>
+        <span>{{ tagIds.length }} / {{ limit }}</span>
+      </div>
     </div>
     <div class="product-tag-tip">{{ t('productTags.tip', { limit }) }} <template v-if="showGeneration">{{ t('productTags.generateWhenEmpty') }}</template></div>
     <div v-if="showGeneration && (generationStatus === 'failed' || generationStatus === 'processing' || generationStatus === 'unavailable')" class="product-tag-tip" role="status">{{ t(`productTags.generation.${generationStatus}`) }}</div>
@@ -120,8 +109,10 @@ const handleChange = (next: number[]) => {
 </template>
 
 <style scoped>
+.product-tag-row { display: flex; align-items: center; gap: 8px; width: 100%; }
 .product-tag-select {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .product-tag-tip {
@@ -136,17 +127,7 @@ const handleChange = (next: number[]) => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  margin-top: 8px;
-}
-.product-tag-bulk {
-  flex: 1;
-  min-width: 180px;
-  padding: 7px 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-  background: var(--el-fill-color-blank);
-  color: var(--el-text-color-primary);
+  flex: 0 0 auto;
 }
 .product-tag-actions button {
   border: 1px solid var(--el-border-color);

@@ -96,12 +96,17 @@ describe('ProductTagSelector', () => {
   })
 })
 
-it('adds bulk matches and retains unmatched input', async () => {
+it('adds pasted matches directly in the selector and reports unmatched names', async () => {
   const wrapper = mountSelector()
-  await wrapper.get('input').setValue('AMOLED，Everyday,Unknown')
-  await wrapper.findAll('button')[0].trigger('click')
+  await wrapper.get('.select').trigger('paste', { clipboardData: { getData: () => 'AMOLED，Everyday,Unknown' } })
   expect(wrapper.emitted('update:tagIds')).toEqual([[[1, 28, 38]]])
-  expect((wrapper.get('input').element as HTMLInputElement).value).toBe('Unknown')
+  expect(warning).toHaveBeenCalledWith('productTags.noMatch: Unknown')
+  expect(wrapper.find('.product-tag-bulk').exists()).toBe(false)
+})
+it.each([{ disabled: true }, { loading: true }, { generating: true }])('blocks pasting while unavailable', async props => {
+  const wrapper = mountSelector(props)
+  await wrapper.get('.select').trigger('paste', { clipboardData: { getData: () => 'AMOLED' } })
+  expect(wrapper.emitted('update:tagIds')).toBeUndefined()
 })
 it('accepts twenty tags and rejects the twenty-first by default', async () => {
   const ids = Array.from({ length: 20 }, (_, index) => index + 1)
@@ -149,6 +154,11 @@ it('clears the final tag and enables generation with the real Element Plus selec
   })
   const wrapper = mount(Host, { global: { components: { ElFormItem: ep.ElFormItem, ElSelect: ep.ElSelect, ElOption: ep.ElOption, ElOptionGroup: ep.ElOptionGroup } } })
   await flushPromises()
+  await wrapper.get('.el-select__input').trigger('paste', { clipboardData: { getData: () => 'AMOLED,Everyday' } })
+  await flushPromises()
+  expect(wrapper.getComponent(ProductTagSelector).props('tagIds')).toEqual([1, 28, 38])
+  await wrapper.get('.el-tag__close').trigger('click')
+  await wrapper.get('.el-tag__close').trigger('click')
   await wrapper.get('.el-tag__close').trigger('click')
   await flushPromises()
   expect(wrapper.findAll('.el-tag')).toHaveLength(0)

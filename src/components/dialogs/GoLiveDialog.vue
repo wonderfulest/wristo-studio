@@ -6,6 +6,22 @@
     :top="'5vh'"
     class="go-live-dialog"
   >
+    <template #header>
+      <div class="publish-header">
+        <span class="el-dialog__title">{{ t('goLive.title') }}</span>
+        <el-dropdown trigger="click" :disabled="loading" @command="selectLanguage">
+          <el-button size="small" :disabled="loading">{{ descriptionLanguageLabel(descriptionLanguage) }} ▾</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="language in DESCRIPTION_LANGUAGES" :key="language.code" :command="language.code">
+                {{ language.code === descriptionLanguage ? '✓ ' : '' }}{{ language.label }}
+              </el-dropdown-item>
+              <el-dropdown-item v-if="descriptionLanguage !== 'en'" divided command="remove">{{ t('common.delete') }} · {{ descriptionLanguageLabel(descriptionLanguage) }}</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </template>
     <p v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
       <el-form-item :label="t('card.appId')">
@@ -16,15 +32,11 @@
         </el-input>
       </el-form-item>
       <el-form-item :label="t('submitDesign.designName')" prop="name">
-        <DescriptionLanguageTabs class="product-name-languages" v-model="nameLanguage" :languages="nameLanguages" :disabled="loading" @add="addNameLanguage" @remove="removeNameLanguage">
-          <template #default="{ language }">
-            <el-input :model-value="readName(language)" @update:model-value="writeName(language, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(language)" dir="auto">
-              <template #append>
-                <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
-              </template>
-            </el-input>
+        <el-input class="product-name-input" :model-value="readName(descriptionLanguage)" @update:model-value="writeName(descriptionLanguage, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto">
+          <template #append>
+            <el-button @click="copyDesignName" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
           </template>
-        </DescriptionLanguageTabs>
+        </el-input>
       </el-form-item>
       <el-form-item v-if="currentDesign?.copiedFromDesignUid" :label="t('goLive.sourceDesign')">
         <div class="source-design-links">
@@ -65,11 +77,7 @@
         :disabled="productTagsLoadFailed"
       />
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
-        <DescriptionLanguageTabs class="product-description-languages" v-model="descriptionLanguage" :languages="descriptionLanguages" :disabled="loading" @add="addDescriptionLanguage" @remove="removeDescriptionLanguage">
-          <template #default="{ language }">
-            <el-input :model-value="readDescription(language)" @update:model-value="writeDescription(language, $event)" type="textarea" :rows="10" maxlength="20000" :aria-label="descriptionLanguageLabel(language)" dir="auto" />
-          </template>
-        </DescriptionLanguageTabs>
+        <el-input class="product-description-input" :model-value="activeDescription" @update:model-value="writeDescription(descriptionLanguage, $event)" :disabled="loading" type="textarea" :rows="10" maxlength="20000" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto" />
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="activeDescription" />
           <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
@@ -312,7 +320,6 @@
 </template>
 
 <script setup lang="ts">
-import DescriptionLanguageTabs from '@/components/common/DescriptionLanguageTabs.vue'
 import CompanionAppLinks from '@/components/common/CompanionAppLinks.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 
@@ -347,6 +354,7 @@ import {
   descriptionTemplateUsesAi,
   getDescriptionTemplate,
   descriptionLanguageLabel,
+  DESCRIPTION_LANGUAGES,
   type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
@@ -528,8 +536,6 @@ const form = reactive({
   productImages: [] as ProductImageItem[]
 })
 
-const nameLanguage = ref('en')
-const nameLanguages = computed(() => ['en', ...Object.keys(form.names)])
 const readName = (language: string): string => language === 'en' ? form.name : form.names[language] || ''
 const writeName = (language: string, value: string) => {
   if (language === 'en') form.name = value
@@ -541,7 +547,6 @@ const addNameLanguage = (language: string) => {
 const removeNameLanguage = (language: string) => {
   if (language === 'en') return
   delete form.names[language]
-  if (nameLanguage.value === language) nameLanguage.value = 'en'
 }
 const descriptionLanguage = ref('en')
 const descriptionRevisions: Record<string, number> = {}
@@ -561,6 +566,19 @@ const removeDescriptionLanguage = (language: string) => {
   delete form.descriptions[language]
   descriptionRevisions[language] = (descriptionRevisions[language] || 0) + 1
   if (descriptionLanguage.value === language) descriptionLanguage.value = 'en'
+}
+const selectLanguage = (language: string) => {
+  if (loading.value) return
+  if (language === 'remove') {
+    const active = descriptionLanguage.value
+    removeNameLanguage(active)
+    removeDescriptionLanguage(active)
+    return
+  }
+  if (!DESCRIPTION_LANGUAGES.some(item => item.code === language)) return
+  addNameLanguage(language)
+  addDescriptionLanguage(language)
+  descriptionLanguage.value = language
 }
 const hasDescriptionTemplate = computed(() => !!getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value).trim())
 const selectedTemplateUsesAi = computed(() => descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value as DescriptionTemplateLanguage))
@@ -725,7 +743,6 @@ const loadDesign = (design: Design) => {
   form.name = design.product.name
   form.names = { ...(design.product.names || {}) }
   delete form.names.en
-  nameLanguage.value = 'en'
   form.description = design.product.description || ''
   form.descriptions = { ...(design.product.descriptions || {}) }
   delete form.descriptions.en
@@ -855,7 +872,7 @@ const copyAppId = async (): Promise<void> => {
 
 const copyDesignName = async (): Promise<void> => {
   try {
-    await navigator.clipboard.writeText(readName(nameLanguage.value))
+    await navigator.clipboard.writeText(readName(descriptionLanguage.value))
     ElMessage.success(t('common.copied'))
   } catch (caughtError) {
     showErrorOnce(caughtError, t('common.copyFailed'))
@@ -1132,6 +1149,8 @@ defineExpose({
 </script>
 
 <style scoped>
+.publish-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-right: 24px; }
+
 .banner-container { position: relative; width: 240px; max-width: 100%; }
 .banner-refresh { position: absolute; right: 8px; top: 8px; z-index: 2; }
 .banner-container > .tip-icon { right: 44px; }
