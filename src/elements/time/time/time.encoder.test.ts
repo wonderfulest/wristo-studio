@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
-import { encodeTime } from './time.encoder'
+import { encodeTime, decodeTime } from './time.encoder'
 
 const baseElement = {
   id: 'time-1',
@@ -26,6 +26,7 @@ describe('encodeTime', () => {
     } as any)
 
     expect(encoded.fontRenderType).toBe('bitmap')
+    expect(encoded.bitmapFontId).toBe(42)
   })
 
   it('normalizes the hour format indicator to TrueType', () => {
@@ -36,6 +37,13 @@ describe('encodeTime', () => {
     } as any)
 
     expect(encoded.fontRenderType).toBe('truetype')
+    expect(encoded).not.toHaveProperty('bitmapFontId')
     expect(encoded.fontFamily).toBe('roboto-condensed-regular')
   })
+})
+
+it('removes stale bitmap references when saving and loading TrueType time', () => {
+  const legacy = { ...baseElement, formatter: 0, fontRenderType: 'truetype' } as any
+  expect(encodeTime(legacy)).not.toHaveProperty('bitmapFontId')
+  expect(decodeTime(legacy)).not.toHaveProperty('bitmapFontId')
 })

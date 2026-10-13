@@ -6,9 +6,19 @@
     </div>
 
     <!-- Bitmap font selection panel -->
-    <div v-if="isOpen" class="font-panel">
+    <div v-if="isOpen" ref="panelRef" class="font-panel">
       <!-- Add bitmap font button -->
       <div v-if="canUsePremiumAssets" class="font-panel-toolbar">
+        <button
+          class="locate-font-btn"
+          type="button"
+          title="Locate current font"
+          aria-label="Locate current font"
+          :disabled="!props.modelValue || locatingFont"
+          @click.stop.prevent="locateCurrentFont"
+        >
+          <el-icon><Aim /></el-icon>
+        </button>
         <button class="add-font-btn" type="button" @click.stop.prevent="openNewBitmapFont">{{ t('font.addBitmapFont') }}</button>
         <el-segmented
           v-if="canViewAllBitmapFonts"
@@ -21,7 +31,7 @@
       <!-- Bitmap font list -->
       <BitmapFontList
         v-if="canUsePremiumAssets"
-        :fonts="bitmapFonts"
+        :fonts="displayFonts"
         :active-id="props.modelValue"
         :page-num="pageNum"
         :page-size="pageSize"
@@ -54,13 +64,14 @@
 <script setup lang="ts">
 import { showErrorOnce } from '@/utils/errorMessage'
 
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import JSZip from 'jszip'
+import { Aim } from '@element-plus/icons-vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, favoriteBitmapFont, unfavoriteBitmapFont, removeBitmapFont, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
+import { getBitmapFontDetail, createBitmapFont, updateBitmapFont, listBitmapFontChars, bindBitmapFontAsset, unbindBitmapFontAsset, favoriteBitmapFont, unfavoriteBitmapFont, removeBitmapFont, type BitmapFontAssetRelationVO, type BitmapFontVO } from '@/api/wristo/bitmapFont'
 import BitmapDigitDialog, { type DigitRowState } from '@/components/font-picker/BitmapDigitDialog.vue'
 import BitmapFontList from '@/components/font-picker/BitmapFontList.vue'
 import { useBitmapFontStore } from '@/stores/bitmapFontStore'
@@ -88,6 +99,9 @@ const { t } = useI18n()
 
 const bitmapType = BITMAP_FONT_TYPE
 
+const panelRef = ref<HTMLElement | null>(null)
+const locatingFont = ref(false)
+const locatedFont = ref<BitmapFontVO | null>(null)
 const isOpen = ref<boolean>(false)
 const fontScope = ref<'mine' | 'all'>('mine')
 const settingsPopupId = `bitmap-font-picker_${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -116,6 +130,12 @@ const symbolRowList = ref<BitmapRow[]>([{ index: ':', hasValue: false }])
 // bitmap font list state from store
 const bitmapFontStore = useBitmapFontStore()
 const bitmapFonts = computed<BitmapFontVO[]>(() => bitmapFontStore.fonts)
+const displayFonts = computed(() => {
+  const font = locatedFont.value
+  return font && !bitmapFonts.value.some(item => item.id === font.id)
+    ? [font, ...bitmapFonts.value]
+    : bitmapFonts.value
+})
 const pageNum = computed(() => bitmapFontStore.pageNum)
 const pageSize = computed(() => bitmapFontStore.pageSize)
 const bitmapTotal = computed(() => bitmapFontStore.total)
@@ -147,6 +167,32 @@ const setEditingBitmapFont = (fontId: number | null, fontName = '') => {
   editingBitmapFontName.value = fontName || (fontId ? findBitmapFontName(fontId) : '')
   editingBitmapFontIsTempRand.value = typeof editingBitmapFontName.value === 'string' && editingBitmapFontName.value.startsWith('rand_')
 }
+
+const locateCurrentFont = async () => {
+  const id = props.modelValue
+  if (!isOpen.value || locatingFont.value || !id) return
+  locatingFont.value = true
+  try {
+    if (!displayFonts.value.some(font => font.id === id)) {
+      const { data } = await getBitmapFontDetail(id)
+      if (!isOpen.value || props.modelValue !== id || data?.id !== id) return
+      locatedFont.value = data
+    }
+    currentFontName.value = displayFonts.value.find(font => font.id === id)?.fontName || ''
+    await nextTick()
+    panelRef.value?.querySelector<HTMLElement>('.bitmap-font-item.active')
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  } catch (error) {
+    showErrorOnce(error, 'Unable to locate current font')
+  } finally {
+    locatingFont.value = false
+  }
+}
+
+watch(() => props.modelValue, () => {
+  currentFontName.value = ''
+  locatedFont.value = null
+})
 
 const togglePanel = () => {
   if (!canUsePremiumAssets.value) {
@@ -448,6 +494,7 @@ const handleDeleteBitmapFont = async (font: BitmapFontVO) => {
         rows.value = rows.value.map(row => ({ index: row.index, hasValue: false }))
         symbolRowList.value = symbolRowList.value.map(row => ({ index: row.index, hasValue: false }))
       }
+      if (locatedFont.value?.id === font.id) locatedFont.value = null
       bitmapFontStore.removeLocal(font.id)
       bitmapFontStore.clearSession()
       ElMessage.success(t('common.deleteSuccess'))
@@ -469,6 +516,9 @@ const handleToggleBitmapFontFavorite = async (font: BitmapFontVO) => {
     const res = favorited
       ? await unfavoriteBitmapFont(font.id)
       : await favoriteBitmapFont(font.id)
+    if (locatedFont.value?.id === font.id) {
+      locatedFont.value = { ...locatedFont.value, favoriteWeight: res.data?.favoriteWeight }
+    }
     bitmapFontStore.updateFavorite(font.id, res.data?.favoriteWeight)
     bitmapFontStore.clearSession()
     await bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
@@ -654,6 +704,25 @@ onUnmounted(() => {
   padding: 8px;
   background: var(--studio-surface-raised);
   border-bottom: 1px solid var(--studio-border);
+}
+
+.locate-font-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: var(--studio-surface);
+  color: var(--studio-primary);
+  cursor: pointer;
+}
+
+.locate-font-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .font-scope-toggle {

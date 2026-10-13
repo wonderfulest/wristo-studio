@@ -61,6 +61,6 @@ export const getDeviceDetail = async (id: number): Promise<GarminDeviceVO> => {
  */
 export const getDeviceDetailByDeviceId = async (deviceId: string): Promise<GarminDeviceVO> => {
   const encodedDeviceId = encodeURIComponent(deviceId)
-  const res = (await instance.get(`/public/products/garmin-devices/getByDeviceId/${encodedDeviceId}?populate=*`)) as ApiResponse<GarminDeviceVO>
+  const res = (await instance.get(`/public/products/garmin-devices/getByDeviceId/${encodedDeviceId}?populate=simulator`)) as ApiResponse<GarminDeviceVO>
   return res.data as GarminDeviceVO
 }

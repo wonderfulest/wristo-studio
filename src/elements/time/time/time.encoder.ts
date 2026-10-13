@@ -22,9 +22,11 @@ export function encodeTime(element: FabricElement): TimeElementConfig {
     fontRenderType: requiresTrueType
       ? 'truetype'
       : ((element as any).fontRenderType ?? 'truetype'),
-    bitmapFontId: (element as any).bitmapFontId ?? null,
     fontGap: (element as any).fontGap,
     topBase: encodeTopBaseForElement(element),
+  }
+  if (config.fontRenderType === 'bitmap') {
+    config.bitmapFontId = (element as any).bitmapFontId ?? null
   }
   return config as TimeElementConfig
 }
@@ -42,8 +44,10 @@ export function decodeTime(config: TimeElementConfig): Partial<FabricElement> {
     originY: config.originY,
     formatter: config.formatter,
     fontRenderType: config.fontRenderType ?? 'truetype',
-    bitmapFontId: config.bitmapFontId ?? null,
     fontGap: config.fontGap,
+  }
+  if (elementConfig.fontRenderType === 'bitmap') {
+    elementConfig.bitmapFontId = config.bitmapFontId ?? null
   }
   return elementConfig as Partial<FabricElement>
 }

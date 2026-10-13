@@ -17,6 +17,9 @@ const FontPickerStub = {
   template: '<div class="font-picker-stub" />',
 }
 
+const RadioGroupStub = { name: 'ElRadioGroup', props: ['modelValue'], emits: ['update:modelValue'], template: '<div><slot /></div>' }
+const SelectStub = { name: 'ElSelect', emits: ['change'], template: '<div />' }
+
 const SlotStub = { template: '<div><slot /></div>' }
 
 const BitmapFontPickerStub = {
@@ -25,7 +28,7 @@ const BitmapFontPickerStub = {
   template: '<button class="bitmap-font-picker-stub" @click="$emit(\'change\', 22)" />',
 }
 
-const mountPanel = (formatter: TimeFormatConstants) => {
+const mountPanel = (formatter: TimeFormatConstants, overrides = {}, applyPatch = vi.fn()) => {
   const fontStore = useFontStore()
   fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
   fontStore.loadFont = vi.fn().mockResolvedValue(true)
@@ -35,7 +38,9 @@ const mountPanel = (formatter: TimeFormatConstants) => {
         formatter,
         fontFamily: 'roboto-condensed-regular',
         fontRenderType: 'truetype',
+        ...overrides,
       },
+      applyPatch,
     },
     global: {
       stubs: {
@@ -46,10 +51,10 @@ const mountPanel = (formatter: TimeFormatConstants) => {
         FontSizeSelect: true,
         'el-form': SlotStub,
         'el-form-item': SlotStub,
-        'el-radio-group': SlotStub,
+        'el-radio-group': RadioGroupStub,
         'el-radio': true,
         'el-input-number': true,
-        'el-select': true,
+        'el-select': SelectStub,
         'el-option': true,
       },
     },
@@ -105,10 +110,10 @@ describe('time panel font picker types', () => {
           FontSizeSelect: true,
           'el-form': SlotStub,
           'el-form-item': SlotStub,
-          'el-radio-group': SlotStub,
+          'el-radio-group': RadioGroupStub,
           'el-radio': true,
           'el-input-number': true,
-          'el-select': true,
+          'el-select': SelectStub,
           'el-option': true,
         },
       },
@@ -118,5 +123,27 @@ describe('time panel font picker types', () => {
     await vi.waitFor(() => {
       expect(applyPatch).toHaveBeenCalledWith({ fontRenderType: 'bitmap', bitmapFontId: 22 })
     })
+  })
+})
+
+describe('leaving bitmap mode', () => {
+  beforeEach(() => { setActivePinia(createPinia()) })
+
+  it('clears the current bitmap selection and includes the clear in the update patch', async () => {
+    const applyPatch = vi.fn()
+    const wrapper = mountPanel(TimeFormatConstants.HH_MM, { fontRenderType: 'bitmap', bitmapFontId: 11 }, applyPatch)
+    wrapper.getComponent(RadioGroupStub).vm.$emit('update:modelValue', 'truetype')
+    expect(wrapper.props('config')?.bitmapFontId).toBeNull()
+    expect(applyPatch).toHaveBeenCalledWith(expect.objectContaining({ fontRenderType: 'truetype', bitmapFontId: null }))
+    wrapper.getComponent(RadioGroupStub).vm.$emit('update:modelValue', 'bitmap')
+    expect(applyPatch).toHaveBeenLastCalledWith({ fontRenderType: 'bitmap' })
+  })
+
+  it('clears the bitmap selection when the hour indicator forces TrueType', () => {
+    const applyPatch = vi.fn()
+    const wrapper = mountPanel(TimeFormatConstants.HH_MM, { fontRenderType: 'bitmap', bitmapFontId: 11 }, applyPatch)
+    wrapper.getComponent(SelectStub).vm.$emit('change', TimeFormatConstants.HOUR_FORMAT)
+    expect(wrapper.props('config')?.bitmapFontId).toBeNull()
+    expect(applyPatch).toHaveBeenCalledWith(expect.objectContaining({ fontRenderType: 'truetype', bitmapFontId: null }))
   })
 })

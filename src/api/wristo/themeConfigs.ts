@@ -43,7 +43,7 @@ export const listThemeConfigsByKey = (
   appId: number,
   key: string,
 ): Promise<ApiResponse<ThemeConfigVO[]>> => {
-  return instance.get('/dsn/themes/configs/all?populate=*', {
+  return instance.get('/dsn/themes/configs/all?populate=image', {
     params: { appId, key },
   })
 }

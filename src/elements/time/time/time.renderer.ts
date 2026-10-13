@@ -212,7 +212,7 @@ export async function createTime(
       fontFamily: String(previewFont.fontFamily ?? 'roboto-condensed-regular'),
       formatter: config.formatter,
       fontRenderType: config.fontRenderType ?? 'truetype',
-      bitmapFontId: config.bitmapFontId ?? null,
+      bitmapFontId: config.fontRenderType === 'bitmap' ? config.bitmapFontId ?? null : null,
       hasControls: false,
       evented: true,
       selectable: true,
@@ -238,7 +238,7 @@ export async function createTime(
       ...getPersistedTextFont(config, element),
       formatter: config.formatter,
       fontRenderType: (element as any).fontRenderType,
-      bitmapFontId: config.bitmapFontId ?? null,
+      bitmapFontId: config.fontRenderType === 'bitmap' ? config.bitmapFontId ?? null : null,
       fontGap: (config as any).fontGap,
     } as any)
     return element as any
@@ -290,7 +290,6 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
     try {
       const formatter = config.formatter ?? (obj as any).formatter ?? 0
       const text = formatTime(getSimulatedNow(), Number(formatter))
-      const preservedBitmapFontId = (obj as any).bitmapFontId ?? config.bitmapFontId ?? null
 
       const timeOptions: Partial<TimeElementOptions> = {
         id: String(obj.id || element.id || nanoid()),
@@ -304,7 +303,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
         fontFamily: config.fontFamily ?? getSavedFontFamily(obj, 'roboto-condensed-regular'),
         formatter,
         fontRenderType: 'truetype',
-        bitmapFontId: preservedBitmapFontId,
+        bitmapFontId: null,
         hasControls: false,
         evented: true,
         selectable: true,
@@ -321,7 +320,7 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
       newText.id = (timeOptions as any).id
       newText.eleType = 'time'
       newText.fontRenderType = 'truetype'
-      newText.bitmapFontId = preservedBitmapFontId
+      newText.bitmapFontId = null
       newText.set({
         scaleX: Number(obj.scaleX ?? 1),
         scaleY: Number(obj.scaleY ?? 1),
@@ -512,7 +511,9 @@ export async function updateTime(element: FabricElement, config: TimeElementConf
   if (config.fontRenderType !== undefined) {
     updateProps.fontRenderType = config.fontRenderType
   }
-  if (config.bitmapFontId !== undefined) {
+  if ((config.fontRenderType ?? (obj as any).fontRenderType ?? 'truetype') !== 'bitmap') {
+    updateProps.bitmapFontId = null
+  } else if (config.bitmapFontId !== undefined) {
     updateProps.bitmapFontId = config.bitmapFontId
   }
   if (config.originX !== undefined) {

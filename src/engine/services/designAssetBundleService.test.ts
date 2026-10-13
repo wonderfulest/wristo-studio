@@ -665,6 +665,19 @@ describe('bitmap font colon validation on save', () => {
     vi.clearAllMocks()
   })
 
+  it('ignores an unused bitmap font retained after switching to TrueType', async () => {
+    setActivePinia(createPinia())
+    const { listBitmapFontChars } = await import('@/api/wristo/bitmapFont')
+    vi.mocked(listBitmapFontChars).mockResolvedValue({ data: [glyph('0')] } as any)
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    const design = config()
+    design.elements[0].fontRenderType = 'truetype'
+    const archive = await JSZip.loadAsync(await (await buildWrtDesignPackage(design as any)).arrayBuffer())
+    const manifest = JSON.parse(await archive.file('manifest.json')!.async('string'))
+    expect(manifest.bitmapFonts).toEqual([])
+    expect(listBitmapFontChars).not.toHaveBeenCalled()
+  })
+
   it('blocks digit-only embedded fonts even for a digit-only time format', async () => {
     setActivePinia(createPinia())
     const { packageBitmapChars } = await import('./packageAssetRegistry')

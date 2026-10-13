@@ -80,7 +80,7 @@ export function faceDetailsUrl(appId: number) {
 }
 export async function loadFaceDetail(appId: string): Promise<FaceDetail> {
   if (!/^\d+$/.test(appId)) throw new Error('Watch face not found.')
-  const face = await publicGet<FaceDetail | null>(`app/${appId}`, { populate: '*', lang: 'en' })
+  const face = await publicGet<FaceDetail | null>(`app/${appId}`, { populate: 'user,image,devices,configJson', lang: 'en' })
   if (!face?.appId) throw new Error('Watch face not found.')
   return face
 }

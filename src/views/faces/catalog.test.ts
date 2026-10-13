@@ -44,7 +44,9 @@ describe('published face catalog', () => {
     vi.stubGlobal('fetch', fetch)
     expect(await loadFaceDetail('123')).toEqual(face)
     const [url, options] = fetch.mock.calls[0]
-    expect(new URL(url, 'http://localhost').pathname).toBe('/wristo-api/public/products/app/123')
+    const parsed = new URL(url, 'http://localhost')
+    expect(parsed.pathname).toBe('/wristo-api/public/products/app/123')
+    expect(parsed.searchParams.get('populate')).toBe('user,image,devices,configJson')
     expect(options.credentials).toBe('omit')
   })
   it('does not request an invalid app id and reports missing apps', async () => {

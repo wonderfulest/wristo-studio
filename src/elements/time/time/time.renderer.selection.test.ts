@@ -3,13 +3,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const runtime = vi.hoisted(() => ({
+  patchElement: vi.fn(),
   objects: [] as any[],
+  upsertElement: vi.fn(),
   activeObject: null as any,
   setActiveObject: vi.fn((object: any) => { runtime.activeObject = object }),
 }))
 
 vi.mock('fabric', () => ({
-  FabricText: class {},
+  FabricText: class {
+    type = 'text'
+    constructor(public text: string, options: any) { Object.assign(this, options) }
+    set(properties: Record<string, unknown>) { Object.assign(this, properties) }
+  },
   FabricImage: {
     fromURL: vi.fn().mockResolvedValue({
       width: 10,
@@ -43,7 +49,7 @@ vi.mock('@/stores/layerStore', () => ({
   useLayerStore: () => ({ layers: [{ id: 'time-1', element: null }], addLayer: vi.fn() }),
 }))
 vi.mock('@/stores/elementDataStore', () => ({
-  useElementDataStore: () => ({ patchElement: vi.fn(), upsertElement: vi.fn() }),
+  useElementDataStore: () => ({ patchElement: runtime.patchElement, upsertElement: runtime.upsertElement }),
 }))
 vi.mock('@/api/wristo/bitmapFont', () => ({
   listBitmapFontChars: vi.fn().mockResolvedValue({
@@ -58,13 +64,15 @@ vi.mock('@/engine/simulator/simulatedClock', () => ({
 }))
 vi.mock('@/composables/useGarminSystemFont', () => ({
   applyCurrentElementPreviewFont: vi.fn(),
-  resolveCurrentElementPreviewFont: vi.fn(),
+  resolveCurrentElementPreviewFont: vi.fn((config: any) => config),
 }))
 
-import { updateTime } from './time.renderer'
+import { createTime, updateTime } from './time.renderer'
 
 describe('bitmap time replacement selection', () => {
   beforeEach(() => {
+    runtime.upsertElement.mockClear()
+    runtime.patchElement.mockClear()
     runtime.setActiveObject.mockClear()
     runtime.activeObject = { id: 'other-element' }
     runtime.objects = [{
@@ -104,4 +112,27 @@ describe('bitmap time replacement selection', () => {
     expect(runtime.setActiveObject).toHaveBeenCalledTimes(1)
     expect(runtime.activeObject).toMatchObject({ id: 'time-1', type: 'group', text: '20:34' })
   })
+
+  it('clears the bitmap reference when replacing a bitmap group with TrueType text', async () => {
+    await updateTime(runtime.objects[0], { fontRenderType: 'truetype' } as any)
+    expect(runtime.objects[0].fontRenderType).toBe('truetype')
+    expect(runtime.objects[0].bitmapFontId).toBeNull()
+    expect(runtime.patchElement).toHaveBeenCalledWith('time-1', expect.objectContaining({
+      fontRenderType: 'truetype', bitmapFontId: null,
+    }))
+  })
+
+  it('clears a legacy bitmap reference when loading TrueType text', async () => {
+    const element = await createTime({ ...runtime.objects[0], fontRenderType: 'truetype' } as any)
+    expect(element.bitmapFontId).toBeNull()
+    expect(runtime.upsertElement).toHaveBeenCalledWith(expect.objectContaining({ bitmapFontId: null }))
+  })
+
+  it('clears a stale reference on an existing TrueType text update', async () => {
+    runtime.objects[0].type = 'text'
+    runtime.objects[0].fontRenderType = 'truetype'
+    await updateTime(runtime.objects[0], { fill: '#123456' } as any)
+    expect(runtime.objects[0].bitmapFontId).toBeNull()
+  })
+
 })

@@ -113,10 +113,11 @@ const fontRenderType = computed({
   set(v) {
     ;(currentModel.value as any).fontRenderType = v
     if (v === 'truetype') {
+      currentModel.value.bitmapFontId = null
       if (!(currentModel.value as any).fontFamily) {
         ;(currentModel.value as any).fontFamily = 'roboto-condensed-regular'
       }
-      applyUpdate({ fontRenderType: 'truetype', fontFamily: (currentModel.value as any).fontFamily })
+      applyUpdate({ fontRenderType: 'truetype', bitmapFontId: null, fontFamily: (currentModel.value as any).fontFamily })
     } else {
       const existingBitmapId = (currentModel.value as any).bitmapFontId
       if (existingBitmapId) {
@@ -167,7 +168,8 @@ const handleFormatterChange = (formatter: number) => {
     const fontFamily = safeFontFamily.value || 'roboto-condensed-regular'
     ;(currentModel.value as any).fontRenderType = 'truetype'
     ;(currentModel.value as any).fontFamily = fontFamily
-    applyUpdate({ formatter, fontRenderType: 'truetype', fontFamily })
+    currentModel.value.bitmapFontId = null
+    applyUpdate({ formatter, fontRenderType: 'truetype', bitmapFontId: null, fontFamily })
     return
   }
   applyUpdate({ formatter })

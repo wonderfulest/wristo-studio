@@ -1083,7 +1083,11 @@ const buildDesignAssetArchive = async (
     const bitmapIds = new Set<number>()
     const collectBitmapIds = (value: any): void => {
       if (!value || typeof value !== 'object') return
-      if (Number(value.bitmapFontId) > 0) bitmapIds.add(Number(value.bitmapFontId))
+      // Older designs may retain an unused bitmap selection after switching
+      // to TrueType. Only active bitmap fonts are design dependencies.
+      if (value.fontRenderType === 'bitmap' && Number(value.bitmapFontId) > 0) {
+        bitmapIds.add(Number(value.bitmapFontId))
+      }
       Object.values(value).forEach(collectBitmapIds)
     }
     collectBitmapIds(config)
