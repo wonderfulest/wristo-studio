@@ -1,3 +1,4 @@
+import { hasBitmapFontColon } from './bitmapFontValidation'
 import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import { GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
@@ -1089,6 +1090,9 @@ const buildDesignAssetArchive = async (
     manifest.bitmapFonts = []
     for (const id of bitmapIds) {
       const chars = packageBitmapChars.get(id) || (await listBitmapFontChars(id)).data
+      if (!hasBitmapFontColon(chars)) {
+        throw new Error(translate('font.missingBitmapColon', useLocaleStore().currentLocale, { font: `#${id}` }))
+      }
       if (!chars?.length) throw new Error(`Missing bitmap characters: ${id}`)
       const entries = []
       for (const char of chars) {

@@ -67,6 +67,7 @@ import { useBitmapFontStore } from '@/stores/bitmapFontStore'
 import { useI18n } from '@/i18n'
 import { invalidateBitmapTimeFontCache } from '@/elements/time/time/time.renderer'
 import emitter from '@/utils/eventBus'
+import { hasBitmapFontColon } from '@/engine/services/bitmapFontValidation'
 
 const BITMAP_FONT_TYPE = 'bitmap_font'
 
@@ -212,6 +213,19 @@ const confirmBitmapDialog = async () => {
   if (!canUsePremiumAssets.value) {
     membershipGate.requirePremium('font.premiumAssetRequired')
     bitmapDialogVisible.value = false
+    return
+  }
+  // Re-read persisted assets: local previews can still be uploading or have failed.
+  const fontId = editingBitmapFontId.value
+  if (!fontId) return
+  try {
+    const { data } = await listBitmapFontChars(fontId)
+    if (!hasBitmapFontColon(data)) {
+      ElMessage.error(t('font.missingBitmapColon', { font: editingBitmapFontName.value || `#${fontId}` }))
+      return
+    }
+  } catch (error) {
+    showErrorOnce(error, t('font.bitmapValidationFailed'))
     return
   }
   try {

@@ -19,6 +19,7 @@ vi.hoisted(() => {
 
 vi.mock('@/api/image', () => ({ findImageByUrl: vi.fn(async () => ({ data: null })) }))
 vi.mock('@/api/wristo/weather', () => ({ getWeatherConditions }))
+vi.mock('@/api/wristo/bitmapFont', () => ({ listBitmapFontChars: vi.fn() }))
 vi.mock('@/api/wristo/fonts', () => ({ getFontBySlug: vi.fn(async () => ({ data: null })) }))
 
 describe('design asset bundle MIME types', () => {
@@ -645,5 +646,50 @@ describe('legacy cloud bundle restoration', () => {
     const snapshot = await captureProjectSnapshot(restored, [...registry.packageFonts.values()])
     expect(Object.keys(snapshot.assets)).toHaveLength(2)
     service.clearRestoredDesignAssetUrls()
+  })
+})
+
+
+describe('bitmap font colon validation on save', () => {
+  const glyph = (charValue: string) => ({
+    charValue,
+    image: { url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="20"/>') },
+  })
+  const config = () => ({ designId: 'colon-check', name: 'Colon check', elements: [
+    { id: 'time', eleType: 'time', fontRenderType: 'bitmap', bitmapFontId: 156, fontSize: 78, formatter: 2 },
+  ] })
+
+  afterEach(async () => {
+    const { packageBitmapChars } = await import('./packageAssetRegistry')
+    packageBitmapChars.clear()
+    vi.clearAllMocks()
+  })
+
+  it('blocks digit-only embedded fonts even for a digit-only time format', async () => {
+    setActivePinia(createPinia())
+    const { packageBitmapChars } = await import('./packageAssetRegistry')
+    packageBitmapChars.set(156, Array.from({ length: 10 }, (_, n) => glyph(String(n))) as any)
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    await expect(buildWrtDesignPackage(config() as any)).rejects.toThrow(/156.*colon/)
+  })
+
+  it('blocks a remote colon record without a source image', async () => {
+    setActivePinia(createPinia())
+    const { listBitmapFontChars } = await import('@/api/wristo/bitmapFont')
+    vi.mocked(listBitmapFontChars).mockResolvedValue({ data: [glyph('0'), { charValue: ':' }] } as any)
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    await expect(buildWrtDesignPackage(config() as any)).rejects.toThrow(/156.*colon/)
+  })
+
+  it('keeps the colon image in the saved self-contained package', async () => {
+    setActivePinia(createPinia())
+    const { packageBitmapChars } = await import('./packageAssetRegistry')
+    packageBitmapChars.set(156, [...Array.from({ length: 10 }, (_, n) => glyph(String(n))), glyph(':')] as any)
+    const { buildWrtDesignPackage } = await import('./designAssetBundleService')
+    const archive = await JSZip.loadAsync(await (await buildWrtDesignPackage(config() as any)).arrayBuffer())
+    const manifest = JSON.parse(await archive.file('manifest.json')!.async('string'))
+    const colon = manifest.bitmapFonts[0].chars.find((char: any) => char.charValue === ':')
+    expect(colon).toBeDefined()
+    expect(archive.file(colon.path)).not.toBeNull()
   })
 })

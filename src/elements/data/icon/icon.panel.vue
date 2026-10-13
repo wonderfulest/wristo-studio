@@ -59,6 +59,9 @@
               <span>{{ currentAmoledCandidate ? 'Upload AMOLED asset' : 'No icon unicode' }}</span>
             </button>
           </div>
+          <el-button v-if="currentAmoledImageSource" type="danger" plain size="small" @click="removeCurrentAmoledAsset">
+            Remove AMOLED image
+          </el-button>
           <div v-if="!currentAmoledCandidate" class="amoled-hint">No icon unicode found for this icon.</div>
         </div>
       </el-tab-pane>
@@ -194,8 +197,10 @@ const currentPendingAmoledAsset = computed(() => {
   return amoledIconAssetStore.getPending(currentAmoledFontSlug.value, iconUnicode)
 })
 const currentAmoledImageSource = computed(() => {
-  if (currentAmoledPreviewSource.value) return currentAmoledPreviewSource.value
   const model = currentModel.value as any
+  // An explicit empty URL detaches this element from the shared pending asset.
+  if (model?.amoledImageUrl === '') return ''
+  if (currentAmoledPreviewSource.value) return currentAmoledPreviewSource.value
   const candidateUnicode = normalizeIconUnicode(currentAmoledCandidate.value?.iconUnicode)
   const modelUnicode = normalizeIconUnicode(model?.amoledIconUnicode || model?.iconUnicode || model?.text)
   if (candidateUnicode && modelUnicode && candidateUnicode !== modelUnicode) return ''
@@ -264,14 +269,14 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
   const fontSlug = String(model.fontFamily || model.iconFont || currentAmoledFontSlug.value || '').trim()
   const existingUnicode = normalizeIconUnicode(model.amoledIconUnicode || model.iconUnicode || model.text)
   const existingImageUrl = iconUnicode && existingUnicode === iconUnicode ? String(model.amoledImageUrl || '') : ''
-  const imageUrl = (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
+  const imageUrl = model.amoledImageUrl === '' ? '' : (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
   const keepAmoled = String(model.iconDisplayType || 'mip') === 'amoled' && Boolean(imageUrl)
 
   return {
     metricSymbol: (metric as any)?.metricSymbol,
     text: iconUnicode ? resolveIconGlyphText(iconUnicode) : model.text,
     iconDisplayType: keepAmoled ? 'amoled' : 'mip',
-    amoledImageUrl: imageUrl || null,
+    amoledImageUrl: model.amoledImageUrl === '' ? '' : imageUrl || null,
     amoledIconUnicode: iconUnicode || null,
     width: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
     height: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
@@ -320,7 +325,7 @@ const applyMipDisplay = async () => {
   const candidate = getAmoledIconCandidateFromElement(config)
   await applyUpdate({
     iconDisplayType: 'mip',
-    amoledImageUrl: currentAmoledImageSource.value || null,
+    amoledImageUrl: config.amoledImageUrl === '' ? '' : currentAmoledImageSource.value || null,
     amoledIconUnicode: candidate?.iconUnicode,
     fontFamily: config?.fontFamily || config?.iconFont || mipIconFontFamily.value,
     iconFont: config?.iconFont || config?.fontFamily || mipIconFontFamily.value,
@@ -329,6 +334,20 @@ const applyMipDisplay = async () => {
     text: candidate?.iconUnicode || config?.text
   })
   historyStore.saveState('icon-display-set:mip')
+}
+
+const removeCurrentAmoledAsset = async () => {
+  const config = currentModel.value as any
+  const candidate = getAmoledIconCandidateFromElement(config)
+  await applyUpdate({
+    iconDisplayType: 'mip',
+    amoledImageUrl: '',
+    imageUrl: '',
+    originX: 'center',
+    originY: 'center',
+    text: candidate?.iconUnicode || config?.text
+  })
+  historyStore.saveState('amoled-icon-asset-remove')
 }
 
 const applyAmoledDisplay = async () => {
@@ -634,6 +653,7 @@ const saveLocalUploads = async () => {
 
   uploadDialogVisible.value = false
   if (savedRows.some((row) => row.iconUnicode === currentAmoledCandidate.value?.iconUnicode)) {
+    await applyUpdate({ amoledImageUrl: currentAmoledPreviewSource.value })
     activeTab.value = 'amoled'
     await applyAmoledDisplay()
   }

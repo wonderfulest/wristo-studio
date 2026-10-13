@@ -9,6 +9,7 @@ import { getAmoledIconCandidateFromElement } from '@/utils/amoledIconCandidates'
 import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 import { useFontStore } from '@/stores/fontStore'
+import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
 import { useHistoryStore } from '@/stores/historyStore'
 
 vi.mock('opentype.js', () => ({
@@ -141,6 +142,47 @@ describe('icon settings panel', () => {
       await vi.waitFor(() => expect(config.iconDisplayType).toBe('amoled'))
       expect(config.amoledImageUrl).toBe('/saved/calories.svg')
     }
+    wrapper.unmount()
+  })
+
+  it('removes the current image without deleting shared assets and stays removed after remount', async () => {
+    vi.mocked(getAmoledIconCandidateFromElement).mockReturnValue({
+      iconUnicode: '0063', symbolCode: '3', metricSymbol: 'calories', label: 'Cal', source: 'from-element',
+    })
+    const assets = useAmoledIconAssetStore()
+    assets.pendingByKey['pulse-solid::0063'] = {
+      fontSlug: 'pulse-solid', iconUnicode: '0063', objectUrl: 'blob:shared',
+      fileName: 'icon.png', file: new File(['image'], 'icon.png'), updatedAt: 1,
+    }
+    const config = reactive({
+      eleType: 'icon', fontFamily: 'pulse-solid', iconDisplayType: 'amoled',
+      amoledIconUnicode: '0063', amoledImageUrl: '/saved/icon.png', text: 'c',
+    })
+    const mountPanel = () => shallowMount(IconPanel, {
+      props: { config, applyPatch: (patch) => { Object.assign(config, patch) } },
+      global: { stubs: {
+        'el-form': { template: '<form><slot /></form>' },
+        'el-form-item': { template: '<div><slot /></div>' },
+        'el-tabs': { template: '<div><slot /></div>' },
+        'el-tab-pane': { template: '<div><slot /></div>' },
+        'el-button': { template: '<button><slot /></button>' },
+        'el-dialog': true, 'el-icon': true,
+      } },
+    })
+    let wrapper = mountPanel()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const remove = wrapper.findAll('button').find(button => button.text() === 'Remove AMOLED image')!
+    await remove.trigger('click')
+    await vi.waitFor(() => expect(config.iconDisplayType).toBe('mip'))
+    expect(config.amoledImageUrl).toBe('')
+    expect(wrapper.find('.amoled-asset img').exists()).toBe(false)
+    expect(assets.getDisplayUrl('pulse-solid', '0063')).toBe('blob:shared')
+    wrapper.unmount()
+    wrapper = mountPanel()
+    wrapper.findComponent(FontPicker).vm.$emit('change')
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(config.amoledImageUrl).toBe('')
+    expect(wrapper.find('.upload-empty-button').exists()).toBe(true)
     wrapper.unmount()
   })
 
