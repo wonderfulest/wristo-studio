@@ -3,9 +3,8 @@ import { packageBitmapChars } from './packageAssetRegistry'
 import { createBitmapFontColon } from './bitmapFontColon'
 
 const required = Array.from('0123456789:')
-const complete = (chars: BitmapFontAssetRelationVO[]) => required.every((value) => chars.some((c) => c.charValue === value && c.image?.url))
 
-/** Register package-local time fonts before applying the imported canvas. */
+/** Register package-local bitmap fonts before applying the imported canvas. */
 export async function importBitmapFonts(config: unknown, isCurrent = () => true): Promise<void> {
   const elements: Record<string, any>[] = []
   const visit = (value: any) => {
@@ -15,7 +14,7 @@ export async function importBitmapFonts(config: unknown, isCurrent = () => true)
   }
   visit(config)
   const replacements = new Map<number, { id: number; chars: BitmapFontAssetRelationVO[] }>()
-  for (const id of new Set(elements.filter((e) => e.eleType === 'time').map((e) => Number(e.bitmapFontId)))) {
+  for (const id of new Set(elements.map((e) => Number(e.bitmapFontId)))) {
     if (!isCurrent()) throw new Error('WRT import cancelled')
     let detail
     try {
@@ -23,8 +22,11 @@ export async function importBitmapFonts(config: unknown, isCurrent = () => true)
     } catch (error: any) {
       if (Number(error?.code ?? error?.response?.status) !== 404) throw error
     }
+    const needsTimeDigits = elements.some((e) => Number(e.bitmapFontId) === id && e.eleType === 'time')
     const remote = detail ? (await listBitmapFontChars(id)).data || [] : []
-    if (detail && complete(remote)) {
+    const expected = needsTimeDigits ? required : (packageBitmapChars.get(id) || remote).map(c => c.charValue)
+    const isComplete = (chars: BitmapFontAssetRelationVO[]) => expected.length > 0 && expected.every(value => chars.some(c => c.charValue === value && c.image?.url))
+    if (detail && isComplete(remote)) {
       replacements.set(id, { id, chars: remote })
       continue
     }
@@ -37,8 +39,9 @@ export async function importBitmapFonts(config: unknown, isCurrent = () => true)
       if (!response.ok) throw new Error(`Unable to read bitmap glyph ${id}/${char.charValue}`)
       files.set(char.charValue, await response.blob())
     }
-    for (const digit of '0123456789') if (!files.has(digit)) throw new Error(`Missing bitmap digit ${id}/${digit}`)
-    if (!files.has(':')) files.set(':', await createBitmapFontColon(chars.find((c) => c.charValue === '8')!.image!.url!))
+    if (!chars.length) throw new Error(`Missing bitmap glyphs: ${id}`)
+    for (const digit of needsTimeDigits ? '0123456789' : '') if (!files.has(digit)) throw new Error(`Missing bitmap digit ${id}/${digit}`)
+    if (needsTimeDigits && !files.has(':')) files.set(':', await createBitmapFontColon(chars.find((c) => c.charValue === '8')!.image!.url!))
     if (!isCurrent()) throw new Error('WRT import cancelled')
     const created = (await createBitmapFont({ fontName: `${(config as any)?.name || 'WRT'} ${id}` })).data
     if (!created?.id) throw new Error('Bitmap font creation returned no ID')
@@ -53,7 +56,7 @@ export async function importBitmapFonts(config: unknown, isCurrent = () => true)
       if (result.data !== true) throw new Error(`Bitmap glyph upload failed: ${charValue}`)
     }
     const uploaded = (await listBitmapFontChars(created.id)).data || []
-    if (!complete(uploaded)) throw new Error(`Uploaded bitmap font ${created.id} is incomplete`)
+    if (!isComplete(uploaded)) throw new Error(`Uploaded bitmap font ${created.id} is incomplete`)
     replacements.set(id, { id: created.id, chars: uploaded })
   }
   if (!isCurrent()) throw new Error('WRT import cancelled')

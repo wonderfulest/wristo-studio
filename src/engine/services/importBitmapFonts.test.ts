@@ -71,6 +71,12 @@ it('rejects a package missing a digit before creating a font', async () => {
   expect(createBitmapFont).not.toHaveBeenCalled()
 })
 it('does not require digits or colon for non-time bitmap fonts', async () => {
-  await importBitmapFonts({ elements: [{ eleType: 'text', fontRenderType: 'bitmap', bitmapFontId: 900 }] })
-  expect(getBitmapFontDetail).not.toHaveBeenCalled()
+  const chars = [{ charValue: 'A', image: { url: 'data:image/png;base64,AA==' } }] as any
+  packageBitmapChars.set(900, chars)
+  vi.mocked(getBitmapFontDetail).mockResolvedValue({ data: null } as any)
+  vi.mocked(listBitmapFontChars).mockResolvedValue({ data: chars } as any)
+  const design = { elements: [{ eleType: 'text', fontRenderType: 'bitmap', bitmapFontId: 900 }] }
+  await importBitmapFonts(design)
+  expect(bindBitmapFontAsset).toHaveBeenCalledTimes(1)
+  expect(design.elements[0].bitmapFontId).toBe(42)
 })

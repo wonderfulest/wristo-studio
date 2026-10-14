@@ -1,3 +1,4 @@
+import { importPackageFonts } from '@/engine/services/importPackageFonts'
 import { importBitmapFonts } from '@/engine/services/importBitmapFonts'
 import { isLocalProject } from '@/auth/guestProject'
 import { readLocalProject } from '@/engine/services/guestProjectDraft'
@@ -499,6 +500,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           if (isCurrentDesignLoad(generation)) importProgress.update(progress)
         })
         packageRead = true
+        await importPackageFonts(imported.config, () => isCurrentDesignLoad(generation))
         await importBitmapFonts(imported.config, () => isCurrentDesignLoad(generation))
         importProgress.finalize('applying')
         const fontStore = useFontStore()
