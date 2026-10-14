@@ -1,3 +1,4 @@
+import { importBitmapFonts } from '@/engine/services/importBitmapFonts'
 import { isLocalProject } from '@/auth/guestProject'
 import { readLocalProject } from '@/engine/services/guestProjectDraft'
 import { useWrtImportProgressStore } from '@/stores/wrtImportProgress'
@@ -498,6 +499,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           if (isCurrentDesignLoad(generation)) importProgress.update(progress)
         })
         packageRead = true
+        await importBitmapFonts(imported.config, () => isCurrentDesignLoad(generation))
         importProgress.finalize('applying')
         const fontStore = useFontStore()
         for (const [slug, font] of packageFonts) {
