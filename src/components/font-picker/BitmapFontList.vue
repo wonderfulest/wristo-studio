@@ -1,5 +1,17 @@
 <template>
-  <div class="bitmap-font-list" @scroll="onScroll">
+  <div class="bitmap-font-list" :data-preview-background="previewBackground" @scroll="onScroll">
+    <div class="preview-background-controls" role="group" :aria-label="t('font.previewBackground')">
+      <span>{{ t('font.previewBackground') }}</span>
+      <button
+        v-for="background in PREVIEW_BACKGROUNDS"
+        :key="background"
+        type="button"
+        :aria-pressed="previewBackground === background"
+        @click.stop="previewBackground = background"
+      >
+        {{ t(`font.previewBackground.${background}`) }}
+      </button>
+    </div>
     <div
       v-for="font in fonts"
       :key="font.id"
@@ -90,6 +102,8 @@ import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
+const PREVIEW_BACKGROUNDS = ['dark', 'light', 'checkerboard'] as const
+const previewBackground = ref<(typeof PREVIEW_BACKGROUNDS)[number]>('dark')
 
 const props = defineProps<{
   fonts: BitmapFontVO[]
@@ -211,11 +225,60 @@ const onScroll = (e: Event) => {
 
 <style scoped>
 .bitmap-font-list {
+  --glyph-preview-background: #1f2329;
+  --glyph-preview-pattern: none;
+  --glyph-preview-text: #fff;
   margin-top: 8px;
   border-top: 1px solid var(--studio-border);
   padding-top: 8px;
   max-height: 660px;
   overflow-y: auto;
+}
+
+.bitmap-font-list[data-preview-background='light'] {
+  --glyph-preview-background: #fff;
+  --glyph-preview-text: #1f2329;
+}
+
+.bitmap-font-list[data-preview-background='checkerboard'] {
+  --glyph-preview-background: #808080;
+  --glyph-preview-pattern: conic-gradient(#737373 25%, #8c8c8c 0 50%, #737373 0 75%, #8c8c8c 0);
+}
+
+.preview-background-controls {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  margin-bottom: 6px;
+  background: var(--studio-surface);
+  color: var(--studio-text-subtle);
+  font-size: 12px;
+}
+
+.preview-background-controls button {
+  padding: 4px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: var(--studio-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.preview-background-controls button[aria-pressed='true'] {
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+}
+
+.preview-background-controls button:focus-visible {
+  outline: 2px solid var(--studio-primary);
+  outline-offset: 2px;
 }
 
 .bitmap-font-item {
@@ -296,7 +359,10 @@ const onScroll = (e: Event) => {
   align-items: center;
   justify-content: center;
   border-radius: 3px;
-  background: var(--studio-surface-soft);
+  /* Preview only: preserve the original glyph colors in every UI theme. */
+  background-color: var(--glyph-preview-background);
+  background-image: var(--glyph-preview-pattern);
+  background-size: 12px 12px;
   overflow: hidden;
 }
 
@@ -308,7 +374,7 @@ const onScroll = (e: Event) => {
 
 .glyph-placeholder {
   font-size: 11px;
-  color: var(--studio-text-subtle);
+  color: var(--glyph-preview-text);
 }
 
 .tag {
