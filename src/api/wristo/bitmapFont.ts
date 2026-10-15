@@ -80,8 +80,9 @@ export const listAllBitmapFonts = (): Promise<ApiResponse<BitmapFontVO[]>> => {
 
 export const createBitmapFont = (
   dto: BitmapFontCreateDTO,
+  handleConflict = false,
 ): Promise<ApiResponse<BitmapFontVO>> => {
-  return instance.post('/dsn/bitmap-font/create', dto)
+  return instance.post('/dsn/bitmap-font/create', dto, { suppressBusinessErrorCodes: handleConflict ? [411] : [] })
 }
 
 export const updateBitmapFont = (

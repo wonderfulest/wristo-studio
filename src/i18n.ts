@@ -2,6 +2,15 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'font.conflictTitle': 'Font name already exists',
+  'font.conflictChoice': '“{name}” already exists online. Use its glyphs for this design, or choose a different name to upload your own.',
+  'font.conflictUnavailable': '“{name}” is already taken. The online font is unavailable or missing required characters. Choose another name.',
+  'font.conflictUse': 'Use online font',
+  'font.conflictRename': 'Change name',
+  'font.conflictName': 'Enter a different font name',
+  'font.conflictInvalid': 'Enter a name between 1 and 64 characters.',
+  'font.conflictCancel': 'Cancel',
+
   'descriptionLanguages.add': 'Add',
   'descriptionLanguages.select': 'Select language',
   'descriptionLanguages.missingTemplate': 'No template for this language and payment method. Add one in Settings to generate a description.',
@@ -2630,6 +2639,15 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'font.conflictTitle': '字体名称已存在',
+  'font.conflictChoice': '线上已有“{name}”。使用它的字形，或修改名称后上传自己的字体。',
+  'font.conflictUnavailable': '“{name}”已被占用，线上字体不可用或缺少所需字符，请修改名称。',
+  'font.conflictUse': '使用线上字体',
+  'font.conflictRename': '修改名称',
+  'font.conflictName': '请输入其他字体名称',
+  'font.conflictInvalid': '请输入 1–64 个字符的名称。',
+  'font.conflictCancel': '取消',
+
   'descriptionLanguages.add': 'Add',
   'descriptionLanguages.select': '选择语言',
   'descriptionLanguages.missingTemplate': '当前语言及付费方式尚未配置模板，请在设置中添加后生成描述。',

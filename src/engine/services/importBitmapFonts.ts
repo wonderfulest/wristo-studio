@@ -1,3 +1,6 @@
+import { ElMessageBox } from 'element-plus'
+import { translate } from '@/i18n'
+import { useLocaleStore } from '@/stores/locale'
 import { getBitmapFontDetail, listBitmapFontChars, createBitmapFont, bindBitmapFontAsset, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import { packageBitmapChars } from './packageAssetRegistry'
 import { createBitmapFontColon } from './bitmapFontColon'
@@ -43,7 +46,49 @@ export async function importBitmapFonts(config: unknown, isCurrent = () => true)
     for (const digit of needsTimeDigits ? '0123456789' : '') if (!files.has(digit)) throw new Error(`Missing bitmap digit ${id}/${digit}`)
     if (needsTimeDigits && !files.has(':')) files.set(':', await createBitmapFontColon(chars.find((c) => c.charValue === '8')!.image!.url!))
     if (!isCurrent()) throw new Error('WRT import cancelled')
-    const created = (await createBitmapFont({ fontName: `${(config as any)?.name || 'WRT'} ${id}` })).data
+    let fontName = `${(config as any)?.name || 'WRT'} ${id}`
+    let created
+    let reused = false
+    while (!created) {
+      if (!isCurrent()) throw new Error('WRT import cancelled')
+      try {
+        created = (await createBitmapFont({ fontName }, true)).data
+        if (!created?.id) throw new Error('Bitmap font creation returned no ID')
+      } catch (error: any) {
+        if (Number(error?.code) !== 411) throw error
+        const candidate = error.data
+        const onlineChars = candidate?.id ? (await listBitmapFontChars(candidate.id)).data || [] : []
+        const canReuse = candidate?.id && candidate.isActive !== 0 && isComplete(onlineChars)
+        const t = (key: Parameters<typeof translate>[0]) => translate(key, useLocaleStore().currentLocale, { name: fontName })
+        if (!isCurrent()) throw new Error('WRT import cancelled')
+        if (canReuse) {
+          try {
+            await ElMessageBox.confirm(t('font.conflictChoice'), t('font.conflictTitle'), {
+              confirmButtonText: t('font.conflictUse'), cancelButtonText: t('font.conflictRename'),
+              distinguishCancelAndClose: true, closeOnClickModal: false, type: 'warning'
+            })
+            if (!isCurrent()) throw new Error('WRT import cancelled')
+            replacements.set(id, { id: candidate.id, chars: onlineChars })
+            reused = true
+            break
+          } catch (action) {
+            if (action !== 'cancel') throw new Error('WRT import cancelled')
+          }
+        }
+        try {
+          const result = await ElMessageBox.prompt(
+            t(canReuse ? 'font.conflictName' : 'font.conflictUnavailable'), t('font.conflictTitle'), {
+              inputValue: fontName, confirmButtonText: t('font.conflictRename'), cancelButtonText: t('font.conflictCancel'),
+              closeOnClickModal: false,
+              inputValidator: value => !!value?.trim() && Array.from(value.trim()).length <= 64 || t('font.conflictInvalid')
+            })
+          fontName = result.value.trim()
+        } catch {
+          throw new Error('WRT import cancelled')
+        }
+      }
+    }
+    if (reused) continue
     if (!created?.id) throw new Error('Bitmap font creation returned no ID')
     for (const [charValue, blob] of files) {
       if (!isCurrent()) throw new Error('WRT import cancelled')
