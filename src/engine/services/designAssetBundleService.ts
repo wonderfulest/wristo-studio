@@ -1237,6 +1237,42 @@ export async function buildWrtDesignPackage(
   })
 }
 
+async function restoreLegacyIconPreviews(
+  zip: JSZip,
+  font: ManifestFontAsset,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  if (!['icon', 'icon_font', 'weather_font'].includes(String(metadata.type)) || !font.buildPath) return
+  const candidates: Array<{ size: number; descriptor: string; atlas: string }> = []
+  for (const entry of font.buildFiles || []) {
+    if (!entry.path.startsWith(`${font.buildPath}/`) || !entry.path.endsWith('.fnt')) continue
+    const descriptor = zip.file(entry.path)
+    if (!descriptor) continue
+    const text = await descriptor.async('string')
+    const size = Math.abs(Number(text.match(/^info\s[^\n]*\bsize=(-?\d+)/m)?.[1]))
+    const pages = [...text.matchAll(/^page\s+id=(\d+)\s+file="([^"]+)"/gm)]
+    if (!size || pages.length !== 1 || pages[0][1] !== '0') continue
+    const atlas = `${entry.path.slice(0, entry.path.lastIndexOf('/') + 1)}${pages[0][2]}`
+    if (zip.file(atlas)) candidates.push({ size, descriptor: entry.path, atlas })
+  }
+  candidates.sort((a, b) => a.size - b.size)
+  for (const [prefix, candidate] of [
+    ['bitmapPreview', candidates.find(item => item.size === 30) || candidates[0]],
+    ['bitmapCanvasPreview', candidates[candidates.length - 1]],
+  ] as const) {
+    if (!candidate || (metadata[`${prefix}DescriptorUrl`] && metadata[`${prefix}AtlasUrl`] && Number(metadata[`${prefix}Size`]) > 0)) continue
+    for (const [suffix, path, type] of [
+      ['DescriptorUrl', candidate.descriptor, 'text/plain'],
+      ['AtlasUrl', candidate.atlas, 'image/png'],
+    ] as const) {
+      const url = URL.createObjectURL(new Blob([await zip.file(path)!.async('arraybuffer')], { type }))
+      restoredDesignAssetUrls.add(url)
+      metadata[`${prefix}${suffix}`] = url
+    }
+    metadata[`${prefix}Size`] = candidate.size
+  }
+}
+
 export async function restoreDesignAssetBundleFromZip(
   config: RuntimeDesignConfig,
   zip: JSZip,
@@ -1298,6 +1334,7 @@ export async function restoreDesignAssetBundleFromZip(
       }
       const metadata = { ...font.metadata, slug: font.slug, ttfFile }
       restoreElementAssetUrls(metadata)
+      await restoreLegacyIconPreviews(zip, font, metadata)
       packageFonts.set(canonicalFontSlug(font.slug), metadata as any)
       if (font.buildPath) {
         const files = new Map<string, Blob>()

@@ -35,6 +35,46 @@ describe('design asset bundle MIME types', () => {
 })
 
 describe('font asset collection', () => {
+  it.each(['icon', 'icon_font', 'weather_font'])('restores legacy %s previews from packaged build glyphs instead of the differently sized TTF', async (type) => {
+    setActivePinia(createPinia())
+    const { restoreDesignAssetBundleFromZip } = await import('./designAssetBundleService')
+    const { packageFonts } = await import('./packageAssetRegistry')
+    const slug = 'legacy-icon-preview'
+    const buildPath = `fonts/bitmaps/${slug}`
+    const zip = new JSZip()
+    const buildFiles: any[] = []
+    for (const size of [30, 312]) {
+      for (const [name, content] of [
+        [`${slug}-g.fnt`, `info size=-${size}\ncommon lineHeight=${size}\npage id=0 file="atlas.png"\nchar id=49 width=${size === 30 ? 29 : 305} height=26`],
+        ['atlas.png', `atlas-${size}`],
+      ]) {
+        const path = `${buildPath}/${size}/${name}`
+        zip.file(path, content)
+        buildFiles.push({ path })
+      }
+    }
+    await restoreDesignAssetBundleFromZip({ elements: [] } as any, zip, {
+      fonts: [{ slug, buildPath, buildFiles, metadata: { type } }],
+    } as any)
+    const font = packageFonts.get(slug)!
+    expect(font.bitmapPreviewSize).toBe(30)
+    expect(font.bitmapCanvasPreviewSize).toBe(312)
+    expect(await (await fetch(font.bitmapPreviewDescriptorUrl!)).text()).toContain('width=29')
+    expect(await (await fetch(font.bitmapCanvasPreviewAtlasUrl!)).text()).toBe('atlas-312')
+  })
+
+  it('does not invent a preview when a legacy icon atlas is missing', async () => {
+    setActivePinia(createPinia())
+    const { restoreDesignAssetBundleFromZip } = await import('./designAssetBundleService')
+    const { packageFonts } = await import('./packageAssetRegistry')
+    const path = 'fonts/bitmaps/incomplete/30/font.fnt'
+    const zip = new JSZip().file(path, 'info size=-30\npage id=0 file="missing.png"')
+    await restoreDesignAssetBundleFromZip({ elements: [] } as any, zip, {
+      fonts: [{ slug: 'incomplete', buildPath: 'fonts/bitmaps/incomplete', buildFiles: [{ path }], metadata: { type: 'icon_font' } }],
+    } as any)
+    expect(packageFonts.get('incomplete')?.bitmapPreviewDescriptorUrl).toBeUndefined()
+  })
+
   it('restores and packages the custom font from legacy system-font elements', async () => {
     const { collectFontSlugs } = await import('./designAssetBundleService')
     expect(collectFontSlugs({

@@ -103,7 +103,7 @@ import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
 const PREVIEW_BACKGROUNDS = ['dark', 'light', 'checkerboard'] as const
-const previewBackground = ref<(typeof PREVIEW_BACKGROUNDS)[number]>('dark')
+const previewBackground = ref<(typeof PREVIEW_BACKGROUNDS)[number]>('checkerboard')
 
 const props = defineProps<{
   fonts: BitmapFontVO[]

@@ -20,7 +20,7 @@ describe('bitmap font preview background', () => {
     await flushPromises()
     const list = wrapper.get('.bitmap-font-list')
     const buttons = wrapper.findAll('.preview-background-controls button')
-    expect(list.attributes('data-preview-background')).toBe('dark')
+    expect(list.attributes('data-preview-background')).toBe('checkerboard')
     for (const [index, background] of ['dark', 'light', 'checkerboard'].entries()) {
       await buttons[index].trigger('click')
       expect(list.attributes('data-preview-background')).toBe(background)

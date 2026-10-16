@@ -9,7 +9,9 @@ export async function importPackageFonts(config: unknown, isCurrent = () => true
   const checkCurrent = () => {
     if (!isCurrent()) throw new Error('WRT import cancelled')
   }
-  for (const [slug, packaged] of Array.from(packageFonts)) {
+  for (const [slug, sourceFont] of Array.from(packageFonts)) {
+    // Older WRT archives used `icon`; the upload API accepts `icon_font`.
+    const packaged = sourceFont.type === 'icon' ? { ...sourceFont, type: 'icon_font' } : sourceFont
     checkCurrent()
     let remote: DesignFontVO | undefined
     try {

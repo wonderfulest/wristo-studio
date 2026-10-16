@@ -61,3 +61,15 @@ it.runIf(Boolean(process.env.WRISTO_IMPORT_TEST_WRT))('registers the supplied WR
   expect(uploadFontFile).toHaveBeenCalledTimes(manifest.fonts.length)
   for (const entry of manifest.fonts) expect(packageFonts.has(`registered-${entry.slug}`)).toBe(true)
 })
+
+it('normalizes legacy WRT icon metadata before registering the source font', async () => {
+  packageFonts.set('super-icons', font('super-icons', 'icon'))
+  vi.mocked(getFontBySlug).mockResolvedValue({ data: null } as any)
+  vi.mocked(uploadFontFile).mockImplementation(async (_file, type) => {
+    if (type !== 'icon_font') throw { code: 400, msg: '缺少请求参数: type' }
+    return { data: font('super-icons', type) } as any
+  })
+  await importPackageFonts({ elements: [{ fontFamily: 'super-icons' }] })
+  expect(vi.mocked(uploadFontFile).mock.calls[0][1]).toBe('icon_font')
+  expect(packageFonts.get('super-icons')?.type).toBe('icon_font')
+})
