@@ -854,49 +854,87 @@ onMounted(() => {
   }
 }
 
-:global(html[data-studio-theme='dark']) .ticket-nudge,
-:global(html[data-studio-theme='dark']) .dropdown-menu {
+html[data-studio-theme='dark'] .ticket-nudge,
+html[data-studio-theme='dark'] .dropdown-menu {
   background-color: var(--studio-surface-raised);
   border-color: var(--studio-border);
   box-shadow: var(--studio-shadow-md);
 }
 
-:global(html[data-studio-theme='dark']) .ticket-nudge-copy strong,
-:global(html[data-studio-theme='dark']) .dropdown-item {
+html[data-studio-theme='dark'] .ticket-nudge-copy strong,
+html[data-studio-theme='dark'] .dropdown-item {
   color: var(--studio-text);
 }
 
-:global(html[data-studio-theme='dark']) .user-avatar-container {
+html[data-studio-theme='dark'] .user-avatar-container {
   background: var(--studio-surface-raised);
   border-color: var(--studio-border);
   box-shadow: var(--studio-shadow-sm);
 }
 
-:global(html[data-studio-theme='dark']) .user-dropdown-profile {
+html[data-studio-theme='dark'] .user-dropdown-profile {
   background:
     linear-gradient(135deg, rgba(15, 107, 104, 0.18), rgba(245, 179, 68, 0.12)),
     var(--studio-surface);
   border-color: var(--studio-border);
 }
 
-:global(html[data-studio-theme='dark']) .ticket-nudge-copy span {
+html[data-studio-theme='dark'] .ticket-nudge-copy span {
   color: var(--studio-text-muted);
 }
 
-:global(html[data-studio-theme='dark']) .ticket-nudge-close {
+html[data-studio-theme='dark'] .ticket-nudge-close {
   color: var(--studio-text-muted);
 }
 
-:global(html[data-studio-theme='dark']) .ticket-nudge-close:hover,
-:global(html[data-studio-theme='dark']) .dropdown-item:hover {
+html[data-studio-theme='dark'] .ticket-nudge-close:hover,
+html[data-studio-theme='dark'] .dropdown-item:hover {
   background-color: var(--studio-primary-soft);
   color: var(--studio-primary);
 }
 
-:global(html[data-studio-theme='dark']) .user-avatar,
-:global(html[data-studio-theme='dark']) .user-dropdown-avatar,
-:global(html[data-studio-theme='dark']) .avatar-dot {
+html[data-studio-theme='dark'] .user-avatar,
+html[data-studio-theme='dark'] .user-dropdown-avatar,
+html[data-studio-theme='dark'] .avatar-dot {
   border-color: var(--studio-surface-raised);
+}
+
+
+html[data-studio-theme='dark'] .user-trigger-copy small,
+html[data-studio-theme='dark'] .user-trigger-arrow,
+html[data-studio-theme='dark'] .user-dropdown-identity span,
+html[data-studio-theme='dark'] .user-dropdown-copy small {
+  color: var(--studio-text-muted);
+}
+
+html[data-studio-theme='dark'] .user-avatar-container:hover,
+html[data-studio-theme='dark'] .user-avatar-container:focus-visible {
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary-border);
+  box-shadow: var(--studio-shadow-sm);
+}
+
+html[data-studio-theme='dark'] .user-avatar-container:focus-visible {
+  outline-color: var(--studio-focus-ring);
+}
+
+html[data-studio-theme='dark'] .user-dropdown-status:not(.premium) {
+  color: var(--studio-text-muted);
+  background: var(--studio-surface-soft);
+}
+
+html[data-studio-theme='dark'] .user-dropdown-section,
+html[data-studio-theme='dark'] .dropdown-logout {
+  border-color: var(--studio-border);
+}
+
+html[data-studio-theme='dark'] .user-dropdown-icon.accent {
+  color: var(--studio-warning);
+}
+
+html[data-studio-theme='dark'] .user-dropdown-icon.danger,
+html[data-studio-theme='dark'] .dropdown-logout {
+  color: var(--studio-danger);
 }
 
 .menu-badge {
