@@ -92,7 +92,9 @@
             <label v-for="device in packagingDevices" :key="device.deviceId" class="device-option">
               <input v-model="selectedDeviceIds" type="checkbox" :value="device.deviceId" :data-device-id="device.deviceId" :disabled="loading" />
               <span class="device-name">{{ device.displayName }}<small>{{ device.deviceId }}</small></span>
-              <span class="device-memory">{{ device.memoryBytes == null ? t('submitDesign.unknownMemory') : `${device.memoryBytes / 1024} KiB` }}</span>
+              <span class="device-details"><span class="device-memory">{{ device.memoryBytes == null ? t('submitDesign.unknownMemory') : `${device.memoryBytes / 1024} KiB` }}</span>
+                <small class="device-extended-code" :class="{ unsupported: device.supportsExtendedCode === false }">{{ t(device.supportsExtendedCode === false ? 'submitDesign.extendedCodeUnsupported' : device.supportsExtendedCode === true ? 'submitDesign.extendedCodeSupported' : 'submitDesign.extendedCodeUnknown') }}</small>
+              </span>
             </label>
           </div>
           <div class="form-tip">{{ t('submitDesign.deviceMemoryHint') }}</div>
@@ -117,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { comparePackagingDevices } from '@/utils/packagingDevices'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { ref, reactive, computed } from 'vue'
@@ -135,7 +138,7 @@ const currentDesign = ref<Design | null>(null)
 const formRef = ref()
 const dialogMode = ref<'submit' | 'prg-build'>('submit')
 const prgDeviceId = ref<string>('')
-const packagingDevices = ref<{ deviceId: string; displayName: string; memoryBytes: number | null }[]>([])
+const packagingDevices = ref<{ deviceId: string; displayName: string; memoryBytes: number | null; supportsExtendedCode?: boolean | null }[]>([])
 const selectedDeviceIds = ref<string[]>([])
 const allDevicesSelected = computed(() => packagingDevices.value.length > 0 && selectedDeviceIds.value.length === packagingDevices.value.length)
 const toggleAllDevices = (event: Event) => {
@@ -306,8 +309,7 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
           messageStore.error(devicesResponse.msg || t('submitDesign.loadDetailsFailed'))
           return
         }
-        packagingDevices.value = [...devicesResponse.data.devices].sort((a, b) =>
-          (b.memoryBytes ?? -1) - (a.memoryBytes ?? -1) || a.deviceId.localeCompare(b.deviceId))
+        packagingDevices.value = [...devicesResponse.data.devices].sort(comparePackagingDevices)
         selectedDeviceIds.value = [...devicesResponse.data.selectedDeviceIds]
       }
       dialogVisible.value = true
@@ -446,6 +448,9 @@ defineExpose({
 .device-option:hover { background: var(--el-fill-color-light); }
 .device-name { flex: 1; line-height: 1.5; min-width: 0; }
 .device-name small { display: block; color: var(--el-text-color-secondary); }
+.device-details { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; line-height: 1.5; }
+.device-extended-code { color: var(--el-text-color-secondary); }
+.device-extended-code.unsupported { color: var(--el-color-warning-dark-2); }
 .device-memory { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .packaging-devices input { accent-color: var(--el-color-primary); width: 16px; height: 16px; flex-shrink: 0; }
 

@@ -43,6 +43,10 @@ vi.mock('@/stores/dataCatalogStore', () => ({
   useDataCatalogStore: () => ({
     snapshot: {
       dataTypeOptions: [
+        { valueCode: 1011, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' },
+        { valueCode: 1010, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' },
+        { valueCode: 1009, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_10K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' },
+        { valueCode: 1008, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_5K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' },
         { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' },
         { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' },
         { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' },
@@ -53,6 +57,10 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' },
       ],
       optionsByValueCode: new Map([
+        [1011, { valueCode: 1011, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [1010, { valueCode: 1010, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [1009, { valueCode: 1009, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_10K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [1008, { valueCode: 1008, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_5K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [1007, { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' }],
         [0, { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
         [20, { valueCode: 20, metricSymbol: ':FIELD_TYPE_DISTANCE', label: { eng: 'DIST', zhs: '距离' }, unitKey: 'distance', defaultValue: '8.5' }],
@@ -63,6 +71,10 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [48, { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       optionsByMetricSymbol: new Map([
+        [':FIELD_TYPE_RACE_PREDICTOR_MARATHON', { valueCode: 1011, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', { valueCode: 1010, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [':FIELD_TYPE_RACE_PREDICTOR_10K', { valueCode: 1009, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_10K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
+        [':FIELD_TYPE_RACE_PREDICTOR_5K', { valueCode: 1008, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_5K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [':FIELD_TYPE_TRUE_SOLAR_TIME', { valueCode: 1007, metricSymbol: ':FIELD_TYPE_TRUE_SOLAR_TIME', label: { eng: 'SOLAR', zhs: '太阳时' }, unitKey: 'none' }],
         [':FIELD_TYPE_SECOND_TIME_ZONE', { valueCode: 1215, metricSymbol: ':FIELD_TYPE_SECOND_TIME_ZONE', label: { eng: 'TZ', zhs: '时区' }, unitKey: 'none', defaultValue: '00:00' }],
         [':FIELD_TYPE_HEART_RATE', { valueCode: 0, metricSymbol: ':FIELD_TYPE_HEART_RATE', label: { eng: 'HR', zhs: '心率' }, unitKey: 'none' }],
@@ -269,6 +281,17 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     new DataSimulatorEngine().updateCanvas()
 
     expect(numericYear.text).toBe('2026')
+  })
+
+  it.each([
+    ['5K', 'racePredictor5k', 1008], ['10K', 'racePredictor10k', 1009],
+    ['HALF_MARATHON', 'racePredictorHalfMarathon', 1010], ['MARATHON', 'racePredictorMarathon', 1011],
+  ])('maps race prediction %s to its preview', (suffix, key, valueCode) => {
+    const metricSymbol = ':FIELD_TYPE_RACE_PREDICTOR_' + suffix
+    getMetricByOptions.mockReturnValue({ valueCode, metricSymbol, label: { eng: 'Race' }, unitKey: 'none' })
+    canvas.getObjects.mockReturnValue([{ id: 'race', eleType: 'data', metricSymbol, text: '', set: vi.fn() }])
+    new DataSimulatorEngine().updateCanvas()
+    expect(getSimulatedDataByName).toHaveBeenCalledWith(key)
   })
 
   it('maps the sleep score symbol to the distinct sleep score simulation', () => {

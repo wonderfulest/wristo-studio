@@ -179,7 +179,7 @@ export const designApi = {
    * @returns 提交结果
    */
   getPackagingDevices(designUid: string): Promise<ApiResponse<{
-    devices: { deviceId: string; displayName: string; memoryBytes: number | null }[]
+    devices: { deviceId: string; displayName: string; memoryBytes: number | null; supportsExtendedCode?: boolean | null }[]
     selectedDeviceIds: string[]
   }>> {
     return instance.get(`/dsn/design/${encodeURIComponent(designUid)}/packaging-devices`)

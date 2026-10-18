@@ -4,7 +4,7 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(170)
+    expect(model.total).toBe(178)
     expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(31)
     expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(22)
     expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(24)
@@ -45,7 +45,7 @@ describe('token catalog page model', () => {
     const model = createTokenCatalogPageModel()
     expect(model.filter({ category: 'weather', query: '温度' }).map(({ code }) => code))
       .toEqual(['w03', 'w03u', 'w04', 'w04u', 'w05', 'w05u', 'w10', 'w10u', 'w10.1'])
-    expect(model.filter({ category: 'all', query: 'wr.' })).toHaveLength(4)
+    expect(model.filter({ category: 'all', query: 'wr.' })).toHaveLength(12)
   })
 
   it('formats a code for copying into an expression', () => {

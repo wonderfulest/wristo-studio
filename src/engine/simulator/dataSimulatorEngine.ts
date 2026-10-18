@@ -112,6 +112,14 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'stress'
     case ':FIELD_TYPE_SLEEP_TIME':
       return 'sleep'
+    case ':FIELD_TYPE_RACE_PREDICTOR_5K':
+      return 'racePredictor5k'
+    case ':FIELD_TYPE_RACE_PREDICTOR_10K':
+      return 'racePredictor10k'
+    case ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON':
+      return 'racePredictorHalfMarathon'
+    case ':FIELD_TYPE_RACE_PREDICTOR_MARATHON':
+      return 'racePredictorMarathon'
     case ':FIELD_TYPE_SLEEP_SCORE':
       return 'sleepScore'
     case ':FIELD_TYPE_MOVE_BAR':

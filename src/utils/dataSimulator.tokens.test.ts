@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { getSimulatedDataByTokenCode, setDataSimulatorScenario } from './dataSimulator'
 
 describe('compact token simulation', () => {
+  it('resolves running and cycling VO2 tokens and their units', () => {
+    expect(getSimulatedDataByTokenCode('wr.vo2Running')).toMatchObject({ numeric: 52, unit: 'ml/kg/min' })
+    expect(getSimulatedDataByTokenCode('wr.vo2Cycling')).toMatchObject({ numeric: 55, unit: 'ml/kg/min' })
+    for (const code of ['wr.vo2Running', 'wr.vo2Cycling']) {
+      expect(getSimulatedDataByTokenCode(`${code}u`)?.display).toBe('ml/kg/min')
+    }
+  })
+
   it('reads units from the same simulation as their values', () => {
     for (const code of ['w10', 'w03', 'w04', 'w05', 'ds8', 'ds12', 'ai5', 'w12', 'ds9', 'ai6', 'ai4', 'ds11']) {
       expect(getSimulatedDataByTokenCode(`${code}u`)).toMatchObject({

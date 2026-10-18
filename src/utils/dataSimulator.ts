@@ -26,6 +26,9 @@ export function setDataSimulatorScenario(scenario: DataSimulatorScenario): void 
 }
 
 function scenarioData(key: string): SimulatedData | null {
+  if (activeScenario === 'missing-data' && ["racePredictor5k", "racePredictor10k", "racePredictorHalfMarathon", "racePredictorMarathon"].includes(key)) {
+    return { display: '--:--', numeric: null, unit: '' }
+  }
   if (activeScenario === 'low-battery' && (key === 'battery' || key === 'batteryDays' || key === 'batteryInDays')) {
     return key === 'battery'
       ? { display: '12', numeric: 12, unit: '%', label: 'BAT' }
@@ -371,6 +374,14 @@ export function getSimulatedDataByName(name: string, now: Date = new Date()): Si
     // 用户配置的入睡时间
     case 'sleep':
       return { display: '22:30', numeric: 81000, unit: '', label: 'BDTM' }
+    case 'racePredictor5k':
+      return { display: '21:48', numeric: 1308, unit: '', label: '5K' }
+    case 'racePredictor10k':
+      return { display: '45:30', numeric: 2730, unit: '', label: '10K' }
+    case 'racePredictorHalfMarathon':
+      return { display: '1:41:12', numeric: 6072, unit: '', label: 'HALF' }
+    case 'racePredictorMarathon':
+      return { display: '3:32:05', numeric: 12725, unit: '', label: 'FULL' }
     case 'sleepScore':
       return { display: '86', numeric: 86, unit: '', label: 'SLPS' }
 
@@ -416,6 +427,12 @@ const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
   ds9: 'hr',
   ds12: 'sensorTemperature',
   ds14: 'restingHeart',
+  'wr.race5k': 'racePredictor5k',
+  'wr.race10k': 'racePredictor10k',
+  'wr.raceHalf': 'racePredictorHalfMarathon',
+  'wr.raceFull': 'racePredictorMarathon',
+  'wr.vo2Running': 'runningVo2Max',
+  'wr.vo2Cycling': 'cyclingVo2Max',
   ds330: 'bodyBattery',
   ds331: 'stress',
   w02: 'weatherDesc',

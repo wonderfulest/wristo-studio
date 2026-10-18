@@ -239,7 +239,15 @@ export function resolveTokenTemplate(
       const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(part.code)
       if (!definition) return ''
       const resolved = resolver?.(part.code, part.format, 'display')
-      return applyFormat(resolved === undefined ? tokenValue(definition, date) : resolved, part.format)
+      const value = resolved === undefined ? tokenValue(definition, date) : resolved
+      if (resolved === undefined && !part.format && definition.id.startsWith('user.racePredictor')) {
+        if (typeof value !== 'number' || value <= 0) return '--:--'
+        const hours = Math.floor(value / 3600)
+        const minutes = String(Math.floor(value % 3600 / 60)).padStart(2, '0')
+        const seconds = String(value % 60).padStart(2, '0')
+        return `${hours ? `${hours}:` : ''}${minutes}:${seconds}`
+      }
+      return applyFormat(value, part.format)
     }).join('')
     return invalidNumeric ? '' : result
   } catch {
