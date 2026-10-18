@@ -5,6 +5,8 @@ import { uploadPersistentDesignAsset } from '@/api/wristo/upload'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
 
+import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
+
 type FileRefs = Array<[string, string]>
 export interface JsonProjectResources {
   version: 1
@@ -111,22 +113,49 @@ export async function hydrateJsonProjectFiles(): Promise<void> {
     const blob = await readBlob(url); uploadedBlobs.set(blob, Promise.resolve(url)); packageArchiveExtras.files.set(path, blob)
   }
 }
-async function snapshotResources(): Promise<JsonProjectResources> {
-  const builds = new Map(deferredBuildFiles.map(([slug, files]) => [slug, new Map(files)]))
-  for (const [slug, files] of packageFontBuildFiles) {
+/** Select dependencies without mutating the editor's registry (undo may still need them). */
+function selectResources(design: unknown) {
+  const slugs = new Set<string>()
+  const paths = new Set<string>()
+  const walk = (value: any, key = ''): void => {
+    if (typeof value === 'string') {
+      paths.add(value)
+      if (['fontFamily', 'iconFont', 'assetFontFamily'].includes(key)) slugs.add(canonicalFontSlug(value))
+    } else if (Array.isArray(value)) value.forEach(child => walk(child, key))
+    else if (value && typeof value === 'object') Object.entries(value).forEach(([key, child]) => walk(child, key))
+  }
+  walk(design)
+  // Preserve explicitly attached export images and preview for WRT round trips.
+  walk(packageArchiveExtras.productImages)
+  walk(packageArchiveExtras.preview)
+  const fonts = [...packageFonts].filter(([slug]) => slugs.has(canonicalFontSlug(slug)))
+  const ids = new Set(fonts.map(([, font]) => font.id))
+  return {
+    fonts,
+    bitmapChars: [...packageBitmapChars].filter(([id]) => ids.has(id)),
+    builds: [...packageFontBuildFiles].filter(([slug]) => slugs.has(canonicalFontSlug(slug))),
+    deferredBuilds: deferredBuildFiles.filter(([slug]) => slugs.has(canonicalFontSlug(slug))),
+    files: [...packageArchiveExtras.files].filter(([path]) => paths.has(path)),
+    deferredFiles: deferredFiles.filter(([path]) => paths.has(path)),
+  }
+}
+type SelectedResources = ReturnType<typeof selectResources>
+async function snapshotResources(resources: SelectedResources): Promise<JsonProjectResources> {
+  const builds = new Map(resources.deferredBuilds.map(([slug, files]) => [slug, new Map(files)]))
+  for (const [slug, files] of resources.builds) {
     const refs = builds.get(slug) || new Map<string, string>()
     for (const [path, blob] of files) refs.set(path, await uploadBlob(blob, path.split('/').pop()))
     builds.set(slug, refs)
   }
-  const files = new Map(deferredFiles)
-  for (const [path, blob] of packageArchiveExtras.files) files.set(path, await uploadBlob(blob, path.split('/').pop()))
-  return persistValue({ version: 1, fonts: [...packageFonts], bitmapChars: [...packageBitmapChars],
+  const files = new Map(resources.deferredFiles)
+  for (const [path, blob] of resources.files) files.set(path, await uploadBlob(blob, path.split('/').pop()))
+  return persistValue({ version: 1, fonts: resources.fonts, bitmapChars: resources.bitmapChars,
     fontBuildFiles: [...builds].map(([slug, refs]) => [slug, [...refs]]), files: [...files],
     productImages: packageArchiveExtras.productImages, preview: packageArchiveExtras.preview })
 }
 
 /** Warm the existing persistence caches in bounded batches before replacing references. */
-async function persistResources(design: unknown, preview: string | null | undefined,
+async function persistResources(design: unknown, resources: SelectedResources, preview: string | null | undefined,
   onProgress?: (progress: SaveWrtProgress) => void): Promise<void> {
   const urls = new Set<string>()
   const blobs = new Map<Blob, string>()
@@ -137,16 +166,16 @@ async function persistResources(design: unknown, preview: string | null | undefi
   }
   collect(design)
   collect(preview)
-  collect([...packageFonts])
-  collect([...packageBitmapChars])
-  collect(deferredBuildFiles)
-  collect(deferredFiles)
+  collect(resources.fonts)
+  collect(resources.bitmapChars)
+  collect(resources.deferredBuilds)
+  collect(resources.deferredFiles)
   collect(packageArchiveExtras.productImages)
   collect(packageArchiveExtras.preview)
-  for (const files of packageFontBuildFiles.values()) {
+  for (const [, files] of resources.builds) {
     for (const [path, blob] of files) blobs.set(blob, path.split('/').pop()!)
   }
-  for (const [path, blob] of packageArchiveExtras.files) blobs.set(blob, path.split('/').pop()!)
+  for (const [path, blob] of resources.files) blobs.set(blob, path.split('/').pop()!)
   const jobs = [
     ...[...urls].map(url => () => persistValue(url)),
     ...[...blobs].map(([blob, name]) => () => uploadBlob(blob, name)),
@@ -164,9 +193,10 @@ export async function saveJsonProject(designUid: string, config: RuntimeDesignCo
   if (!designUid) throw new Error('A design ID is required to save a project')
   options.onSaveProgress?.({ stage: 'assets' })
   const { studioResources: _previous, ...design } = config
-  await persistResources(design, options.previewDataUrl, options.onSaveProgress)
+  const resources = selectResources(design)
+  await persistResources(design, resources, options.previewDataUrl, options.onSaveProgress)
   const persisted = await persistValue(migrateWeekdayTokens({ ...design, designId: designUid }))
-  persisted.studioResources = await snapshotResources()
+  persisted.studioResources = await snapshotResources(resources)
   const preview = options.previewDataUrl ? await persistValue(options.previewDataUrl) : undefined
   options.onSaveProgress?.({ stage: 'uploading' })
   const response = await designApi.updateDesign({ uid: designUid, name: config.name, configJson: persisted,

@@ -21,7 +21,7 @@ it('saves JSON directly with the target identity and no archive', async () => {
 it('persists imported font metadata and image bytes once across repeat saves', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['font'], { type: 'font/ttf' }) }))
   packageFonts.set('local-test', { slug: 'local-test', ttfFile: { url: 'blob:unique-font' } } as any)
-  const input = config(); input.elements = [{ imageUrl: 'data:image/png;base64,AQ==' }]
+  const input = config(); input.elements = [{ fontFamily: 'local-test', imageUrl: 'data:image/png;base64,AQ==' }]
   await saveJsonProject('target', input)
   await saveJsonProject('target', input)
   expect(upload).toHaveBeenCalledTimes(2)
@@ -43,7 +43,7 @@ it('restores font metadata without fetching build files until export', async () 
 it('preserves lazy file references when saving without exporting first', async () => {
   const input = { ...config(), studioResources: { version: 1, fonts: [], bitmapChars: [], fontBuildFiles: [['local-test', [['font.fnt', 'https://assets.test/font.fnt']]]], files: [], productImages: [] } }
   restoreJsonProject(input)
-  await saveJsonProject('target', config())
+  await saveJsonProject('target', { ...config(), elements: [{ fontFamily: 'local-test' }] })
   expect(update.mock.calls[0][0].configJson.studioResources.fontBuildFiles).toEqual(input.studioResources.fontBuildFiles)
   expect(upload).not.toHaveBeenCalled()
 })
@@ -113,11 +113,33 @@ it('includes imported build files in the same progress and concurrency limit', a
   })
   packageFontBuildFiles.set('font', new Map(Array.from({ length: 6 }, (_, i) => [`font-${i}.fnt`, new Blob([String(i)])])))
   packageArchiveExtras.files.set('preview.png', new Blob(['preview']))
+  packageArchiveExtras.preview = { path: 'preview.png', sha256: 'hash' }
   const progress = vi.fn()
-  await saveJsonProject('target', config(), { onSaveProgress: progress })
+  await saveJsonProject('target', { ...config(), elements: [{ fontFamily: 'font' }] }, { onSaveProgress: progress })
   expect(peak).toBe(4)
   expect(upload).toHaveBeenCalledTimes(7)
   expect(progress).toHaveBeenCalledWith({ stage: 'assets', percent: 100 })
   await saveJsonProject('target', config())
   expect(upload).toHaveBeenCalledTimes(7)
+})
+
+it('skips unused library fonts, glyphs and build files before reading or uploading them', async () => {
+  const fetcher = vi.fn().mockRejectedValue(new Error('unused resource must not be fetched'))
+  vi.stubGlobal('fetch', fetcher)
+  packageFonts.set('unused', { id: 99, slug: 'unused', ttfFile: { url: 'blob:unused-font' } } as any)
+  packageBitmapChars.set(99, [{ imageUrl: 'blob:unused-glyph' }] as any)
+  packageFontBuildFiles.set('unused', new Map([['unused.fnt', new Blob(['unused'])]]))
+  packageArchiveExtras.files.set('orphan.png', new Blob(['unused']))
+  packageFonts.set('used', { id: 42, slug: 'used', ttfFile: { url: 'https://assets.test/used.ttf' } } as any)
+  packageBitmapChars.set(42, [{ imageUrl: 'https://assets.test/glyph.png' }] as any)
+  await saveJsonProject('target', { ...config(), elements: [{ iconFont: 'used' }],
+    studioResources: { version: 1, fonts: [['unused', { fontFamily: 'unused' }]] } })
+  expect(fetcher).not.toHaveBeenCalled()
+  expect(upload).not.toHaveBeenCalled()
+  const resources = update.mock.calls[0][0].configJson.studioResources
+  expect(resources.fonts.map(([slug]: any) => slug)).toEqual(['used'])
+  expect(resources.bitmapChars.map(([id]: any) => id)).toEqual([42])
+  expect(resources.fontBuildFiles).toEqual([])
+  expect(resources.files).toEqual([])
+  expect(packageFonts.has('unused')).toBe(true)
 })
