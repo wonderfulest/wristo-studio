@@ -68,3 +68,56 @@ it('copies expiring OSS and S3 links to durable resources while leaving public U
     'https://assets.test/persisted', 'https://assets.test/persisted', 'https://public.test/permanent.png',
   ])
 })
+
+it('persists resources with bounded concurrency and reports collection progress', async () => {
+  let active = 0, peak = 0
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['image']) }))
+  upload.mockImplementation(async () => {
+    active++; peak = Math.max(peak, active)
+    await new Promise(resolve => setTimeout(resolve, 5))
+    active--
+    return 'https://assets.test/concurrent'
+  })
+  const progress = vi.fn()
+  await saveJsonProject('target', { ...config(), elements: Array.from({ length: 9 }, (_, i) => ({ imageUrl: `blob:concurrency-${i}` })) }, { onSaveProgress: progress })
+  expect(peak).toBe(4)
+  expect(upload).toHaveBeenCalledTimes(9)
+  expect(progress).toHaveBeenCalledWith({ stage: 'assets', percent: 100 })
+})
+
+it('times out a stalled resource body and allows a later retry', async () => {
+  vi.useFakeTimers()
+  try {
+    const fetcher = vi.fn().mockResolvedValue({ ok: true, blob: () => new Promise(() => {}) })
+    vi.stubGlobal('fetch', fetcher)
+    const input = { ...config(), imageUrl: 'blob:stalled-retry' }
+    const pending = saveJsonProject('target', input)
+    const rejected = expect(pending).rejects.toThrow(/timed out/i)
+    await vi.advanceTimersByTimeAsync(30000)
+    await rejected
+    expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(update).not.toHaveBeenCalled()
+    fetcher.mockResolvedValue({ ok: true, blob: async () => new Blob(['ok']) })
+    await saveJsonProject('target', input)
+    expect(update).toHaveBeenCalledTimes(1)
+  } finally { vi.useRealTimers() }
+})
+
+it('includes imported build files in the same progress and concurrency limit', async () => {
+  let active = 0, peak = 0
+  upload.mockImplementation(async () => {
+    active++; peak = Math.max(peak, active)
+    await new Promise(resolve => setTimeout(resolve, 2))
+    active--
+    return 'https://assets.test/build-file'
+  })
+  packageFontBuildFiles.set('font', new Map(Array.from({ length: 6 }, (_, i) => [`font-${i}.fnt`, new Blob([String(i)])])))
+  packageArchiveExtras.files.set('preview.png', new Blob(['preview']))
+  const progress = vi.fn()
+  await saveJsonProject('target', config(), { onSaveProgress: progress })
+  expect(peak).toBe(4)
+  expect(upload).toHaveBeenCalledTimes(7)
+  expect(progress).toHaveBeenCalledWith({ stage: 'assets', percent: 100 })
+  await saveJsonProject('target', config())
+  expect(upload).toHaveBeenCalledTimes(7)
+})

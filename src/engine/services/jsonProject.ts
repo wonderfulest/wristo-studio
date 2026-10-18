@@ -25,9 +25,21 @@ const extensions: Record<string, string> = {
   'image/gif': 'gif', 'font/ttf': 'ttf', 'font/otf': 'otf', 'application/json': 'json',
 }
 async function readBlob(url: string): Promise<Blob> {
-  const response = await fetch(url)
-  if (!response.ok) throw new Error('Failed to read project resource')
-  return response.blob()
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('Reading a project resource timed out (30s). Please retry saving.'))
+      controller.abort()
+    }, 30000)
+  })
+  try {
+    return await Promise.race([timeout, (async () => {
+      const response = await fetch(url, { signal: controller.signal })
+      if (!response.ok) throw new Error(`Failed to read project resource (HTTP ${response.status})`)
+      return response.blob()
+    })()])
+  } finally { clearTimeout(timer!) }
 }
 function uploadBlob(blob: Blob, name?: string): Promise<string> {
   let pending = uploadedBlobs.get(blob)
@@ -112,11 +124,47 @@ async function snapshotResources(): Promise<JsonProjectResources> {
     fontBuildFiles: [...builds].map(([slug, refs]) => [slug, [...refs]]), files: [...files],
     productImages: packageArchiveExtras.productImages, preview: packageArchiveExtras.preview })
 }
+
+/** Warm the existing persistence caches in bounded batches before replacing references. */
+async function persistResources(design: unknown, preview: string | null | undefined,
+  onProgress?: (progress: SaveWrtProgress) => void): Promise<void> {
+  const urls = new Set<string>()
+  const blobs = new Map<Blob, string>()
+  const collect = (value: any): void => {
+    if (typeof value === 'string') { if (needsPersistence(value)) urls.add(value) }
+    else if (Array.isArray(value)) value.forEach(collect)
+    else if (value && typeof value === 'object') Object.values(value).forEach(collect)
+  }
+  collect(design)
+  collect(preview)
+  collect([...packageFonts])
+  collect([...packageBitmapChars])
+  collect(deferredBuildFiles)
+  collect(deferredFiles)
+  collect(packageArchiveExtras.productImages)
+  collect(packageArchiveExtras.preview)
+  for (const files of packageFontBuildFiles.values()) {
+    for (const [path, blob] of files) blobs.set(blob, path.split('/').pop()!)
+  }
+  for (const [path, blob] of packageArchiveExtras.files) blobs.set(blob, path.split('/').pop()!)
+  const jobs = [
+    ...[...urls].map(url => () => persistValue(url)),
+    ...[...blobs].map(([blob, name]) => () => uploadBlob(blob, name)),
+  ]
+  let completed = 0
+  for (let offset = 0; offset < jobs.length; offset += 4) {
+    await Promise.all(jobs.slice(offset, offset + 4).map(async job => {
+      await job()
+      onProgress?.({ stage: 'assets', percent: 100 * ++completed / jobs.length })
+    }))
+  }
+}
 export async function saveJsonProject(designUid: string, config: RuntimeDesignConfig,
   options: { previewDataUrl?: string | null; onSaveProgress?: (progress: SaveWrtProgress) => void } = {}) {
   if (!designUid) throw new Error('A design ID is required to save a project')
   options.onSaveProgress?.({ stage: 'assets' })
   const { studioResources: _previous, ...design } = config
+  await persistResources(design, options.previewDataUrl, options.onSaveProgress)
   const persisted = await persistValue(migrateWeekdayTokens({ ...design, designId: designUid }))
   persisted.studioResources = await snapshotResources()
   const preview = options.previewDataUrl ? await persistValue(options.previewDataUrl) : undefined
