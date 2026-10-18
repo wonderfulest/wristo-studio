@@ -9,13 +9,14 @@
       <button
         :id="`${designUid}-${field.key}`"
         type="button"
+        class="sharing-toggle"
         role="switch"
         :aria-label="t(field.label)"
         :aria-describedby="`${designUid}-${field.key}-help`"
         :aria-checked="settings?.[field.key] ?? false"
         :disabled="loading || saving || !settings"
         @click="toggle(field.key)"
-      >{{ settings?.[field.key] ? t('designSharing.on') : t('designSharing.off') }}</button>
+      ><span class="toggle-thumb" aria-hidden="true"></span></button>
     </div>
     <p v-if="error" class="sharing-error" role="alert">{{ error }}</p>
     <button v-if="error && !settings" type="button" :disabled="loading" @click="load">{{ t('designSharing.retry') }}</button>
@@ -29,7 +30,7 @@ import { useI18n } from '@/i18n'
 import { getDesignSharing, updateDesignSharing, type DesignSharingSettings } from '@/api/wristo/designSharing'
 
 const props = defineProps<{ designUid: string }>()
-const emit = defineEmits<{ saved: [] }>()
+const emit = defineEmits<{ saved: [settings: DesignSharingSettings] }>()
 const { t } = useI18n()
 const fields = [
   { key: 'publiclyVisible', label: 'designSharing.public', help: 'designSharing.publicHelp' },
@@ -68,7 +69,7 @@ async function toggle(key: keyof DesignSharingSettings) {
     if (current !== request) return
     settings.value = result
     status.value = t('designSharing.saved')
-    emit('saved')
+    emit('saved', result)
   } catch {
     if (current === request) error.value = t('designSharing.saveFailed')
   } finally {
@@ -84,9 +85,12 @@ onBeforeUnmount(() => { request++ })
 .sharing-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 16px 0; }
 .sharing-row label { font-weight: 600; }
 .sharing-row p, .sharing-status { margin: 6px 0 0; color: var(--studio-text-muted); font-size: 13px; line-height: 1.5; }
-.sharing-row button { flex: 0 0 64px; min-height: 36px; border: 1px solid var(--studio-border-strong); border-radius: 20px; background: var(--studio-surface-soft); color: var(--studio-text); cursor: pointer; }
-.sharing-row button[aria-checked='true'] { background: var(--studio-primary); color: white; }
-.sharing-row button:disabled { opacity: .55; cursor: wait; }
-.sharing-row button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
+.sharing-toggle { position: relative; flex: 0 0 48px; width: 48px; height: 28px; padding: 3px; border: 0; border-radius: 999px; background: var(--studio-border-strong, #aeb8c8); cursor: pointer; transition: background-color .2s ease; }
+.toggle-thumb { display: block; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0003; transform: translateX(0); transition: transform .2s ease; }
+.sharing-toggle[aria-checked='true'] { background: var(--studio-primary, #5263e8); }
+.sharing-toggle[aria-checked='true'] .toggle-thumb { transform: translateX(20px); }
+.sharing-toggle:disabled { opacity: .55; cursor: wait; }
+.sharing-toggle:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .sharing-toggle, .toggle-thumb { transition: none; } }
 .sharing-error { color: var(--studio-danger, #c93838); font-size: 13px; }
 </style>

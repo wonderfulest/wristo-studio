@@ -5,18 +5,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import FaceDetail from './FaceDetail.vue'
 import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
 vi.mock('@/api/wristo/shareRewards', () => ({ loadShareRewardProfile: vi.fn() }))
-import { updateFaceSharing, remixFace } from './permissions'
+import { remixFace } from './permissions'
+import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
+vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
+vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 const auth = vi.hoisted(() => ({ isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
-vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
+vi.mock('./permissions', () => ({ updateDesignSharing: vi.fn(), remixFace: vi.fn() }))
 import { loadFaceDetail, type FaceDetail as FaceDetailData } from './catalog'
 
 vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<header>Public navigation</header>' } }))
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(updateFaceSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
+beforeEach(() => { auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup() {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -76,7 +79,7 @@ describe('watch face details', () => {
     expect(wrapper.text()).toContain('Edit description')
     const switches = wrapper.findAll('[role="switch"]')
     expect(switches).toHaveLength(2)
-    vi.mocked(updateFaceSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
+    vi.mocked(updateDesignSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
     await switches[0].trigger('click'); await flushPromises()
     expect(switches[0].attributes('aria-checked')).toBe('true')
     await wrapper.get('a.primary-button').trigger('click'); await flushPromises()
@@ -95,15 +98,15 @@ describe('watch face details', () => {
     const { wrapper } = await setup()
     const switches = wrapper.findAll('[role="switch"]')
     expect(switches).toHaveLength(2)
-    vi.mocked(updateFaceSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
+    vi.mocked(updateDesignSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
     await switches[0].trigger('click'); await flushPromises()
-    expect(updateFaceSharing).toHaveBeenCalledWith(123, { publiclyVisible: true })
+    expect(updateDesignSharing).toHaveBeenCalledWith('actual-design', { publiclyVisible: true })
     expect(switches[0].attributes('aria-checked')).toBe('true')
     expect(switches[1].attributes('aria-checked')).toBe('false')
-    vi.mocked(updateFaceSharing).mockRejectedValueOnce(new Error('Save failed'))
+    vi.mocked(updateDesignSharing).mockRejectedValueOnce(new Error('Save failed'))
     await switches[1].trigger('click'); await flushPromises()
     expect(switches[1].attributes('aria-checked')).toBe('false')
-    expect(wrapper.get('.sharing-error').text()).toContain('Save failed')
+    expect(wrapper.get('.sharing-error').text()).toContain('designSharing.saveFailed')
   })
   it('hides controls and editing from visitors when remix is disabled', async () => {
     auth.userInfo = null

@@ -70,19 +70,13 @@
             <span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>
             <span>Designed by <strong>{{ creator }}</strong></span>
           </div>
-          <section v-if="canEdit" class="information-section sharing-settings" aria-labelledby="sharing-heading">
-            <h2 id="sharing-heading">Sharing settings</h2>
-            <div class="sharing-setting">
-              <div><strong id="gallery-label">Public design</strong><p id="gallery-help">Let other users see this design. When off, only you and administrators can access it.</p></div>
-              <button type="button" role="switch" :aria-checked="!!face.publiclyVisible" aria-labelledby="gallery-label" aria-describedby="gallery-help" :disabled="saving" @click="toggleSharing('publiclyVisible')">{{ face.publiclyVisible ? 'On' : 'Off' }}</button>
-            </div>
-            <div class="sharing-setting">
-              <div><strong id="remix-label">Allow copying</strong><p id="remix-help">Let others copy this design when it is public. Turning this off stops new copies; existing copies remain.</p></div>
-              <button type="button" role="switch" :aria-checked="!!face.allowRemix" aria-labelledby="remix-label" aria-describedby="remix-help" :disabled="saving" @click="toggleSharing('allowRemix')">{{ face.allowRemix ? 'On' : 'Off' }}</button>
-            </div>
-            <p v-if="sharingError" class="sharing-error" role="alert">{{ sharingError }}</p>
-            <p class="muted" role="status">{{ saving ? 'Saving…' : sharingStatus }}</p>
-          </section>
+          <DesignSharingSettings
+            v-if="canEdit && face.designId"
+            :key="`${face.designId}-${userStore.userInfo?.id}`"
+            class="information-section sharing-settings"
+            :design-uid="face.designId"
+            @saved="Object.assign(face, $event)"
+          />
           <FaceDescription :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section" :app-id="face.appId" :description="face.description" :is-owner="canEdit" @saved="face.description = $event">
             <div v-if="face.tags?.length" class="tags"><span v-for="tag in face.tags" :key="tag.id">{{ tag.name }}</span></div>
           </FaceDescription>
@@ -107,7 +101,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { updateFaceSharing, remixFace, type FaceSharingSettings } from './permissions'
+import { remixFace } from './permissions'
+import DesignSharingSettings from '@/components/dialogs/DesignSharingSettings.vue'
 import { Icon } from '@iconify/vue'
 import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
@@ -131,28 +126,8 @@ const router = useRouter()
 const userStore = useUserStore()
 const isOwner = computed(() => userStore.userInfo?.id != null && face.value?.ownerId != null && String(userStore.userInfo.id) === String(face.value.ownerId))
 const canEdit = computed(() => isOwner.value || userStore.isAdminUser)
-const saving = ref(false)
-const sharingError = ref('')
-const sharingStatus = ref('')
 const remixing = ref(false)
 const remixError = ref('')
-async function toggleSharing(key: keyof FaceSharingSettings) {
-  if (!face.value || !canEdit.value || saving.value) return
-  const current = request
-  const appId = face.value.appId
-  const ownerId = userStore.userInfo?.id
-  saving.value = true
-  sharingError.value = ''
-  sharingStatus.value = ''
-  try {
-    const result = await updateFaceSharing(appId, { [key]: !face.value[key] })
-    if (current !== request || !face.value || ownerId !== userStore.userInfo?.id) return
-    Object.assign(face.value, result)
-    sharingStatus.value = 'Sharing settings saved.'
-  } catch (cause) {
-    if (current === request) sharingError.value = cause instanceof Error ? cause.message : 'Could not save. Please try again.'
-  } finally { if (current === request) saving.value = false }
-}
 async function remix() {
   if (!face.value?.designId || !face.value.allowRemix || remixing.value) return
   const current = request
@@ -237,10 +212,7 @@ async function load() {
   loading.value = true
   error.value = ''
   shareStatus.value = ''
-  sharingError.value = ''
-  sharingStatus.value = ''
   remixError.value = ''
-  saving.value = false
   remixing.value = false
   face.value = null
   try {
@@ -259,10 +231,6 @@ onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 </script>
 
 <style scoped>
-.sharing-setting { display: flex; align-items: center; gap: 20px; justify-content: space-between; margin: 16px 0; }
-.sharing-setting p { color: var(--studio-text-muted); font-size: 14px; line-height: 1.5; margin: 6px 0 0; }
-.sharing-setting button { flex: 0 0 60px; min-height: 44px; border: 1px solid var(--studio-border-strong); border-radius: 22px; background: var(--studio-surface-soft); color: var(--studio-text); font: inherit; cursor: pointer; }
-.sharing-setting button[aria-checked='true'] { background: var(--studio-primary); color: #fff; }
 button:disabled { opacity: .6; cursor: wait; }
 .sharing-error { color: var(--studio-danger, #c93838); }
 .face-detail-page { min-height: 100vh; background: var(--studio-bg); color: var(--studio-text); font-family: 'Yantramanav', sans-serif; }
