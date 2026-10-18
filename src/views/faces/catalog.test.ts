@@ -45,9 +45,15 @@ describe('published face catalog', () => {
     expect(await loadFaceDetail('123')).toEqual(face)
     const [url, options] = fetch.mock.calls[0]
     const parsed = new URL(url, 'http://localhost')
-    expect(parsed.pathname).toBe('/wristo-api/public/products/app/123')
+    expect(parsed.pathname).toBe('/wristo-api/public/products/faces/123')
     expect(parsed.searchParams.get('populate')).toBe('user,image,devices,configJson')
     expect(options.credentials).toBe('omit')
+  })
+  it('passes an optional owner token only for detail reads', async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ code: 0, data: { appId: 123 } }) })
+    vi.stubGlobal('fetch', fetch)
+    await loadFaceDetail('123', 'owner-token')
+    expect(fetch.mock.calls[0][1].headers).toEqual({ Authorization: 'Bearer owner-token' })
   })
   it('does not request an invalid app id and reports missing apps', async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ code: 0, data: null }) })

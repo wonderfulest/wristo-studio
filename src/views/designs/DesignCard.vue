@@ -255,7 +255,7 @@
                   <el-icon><DocumentCopy /></el-icon>
                   {{ t('card.duplicate') }}
                 </el-button>
-                <el-button v-if="canManageAppDetails" size="small" @click="closeActions(); emit('edit', design)">
+                <el-button v-if="canManageAppDetails || (currentUserId != null && design.user?.id === currentUserId)" size="small" @click="closeActions(); emit('edit', design)">
                   <el-icon><EditPen /></el-icon>
                   {{ t('editDesign.title') }}
                 </el-button>

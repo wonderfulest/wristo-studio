@@ -73,11 +73,11 @@
           <section v-if="canEdit" class="information-section sharing-settings" aria-labelledby="sharing-heading">
             <h2 id="sharing-heading">Sharing settings</h2>
             <div class="sharing-setting">
-              <div><strong id="gallery-label">Show in gallery</strong><p id="gallery-help">List this watch face in the public gallery. When off, anyone with the link can still view it.</p></div>
+              <div><strong id="gallery-label">Public design</strong><p id="gallery-help">Let other users see this design. When off, only you and administrators can access it.</p></div>
               <button type="button" role="switch" :aria-checked="!!face.publiclyVisible" aria-labelledby="gallery-label" aria-describedby="gallery-help" :disabled="saving" @click="toggleSharing('publiclyVisible')">{{ face.publiclyVisible ? 'On' : 'Off' }}</button>
             </div>
             <div class="sharing-setting">
-              <div><strong id="remix-label">Allow remixing</strong><p id="remix-help">Let others copy and edit this design. Turning this off stops new copies; existing copies remain.</p></div>
+              <div><strong id="remix-label">Allow copying</strong><p id="remix-help">Let others copy this design when it is public. Turning this off stops new copies; existing copies remain.</p></div>
               <button type="button" role="switch" :aria-checked="!!face.allowRemix" aria-labelledby="remix-label" aria-describedby="remix-help" :disabled="saving" @click="toggleSharing('allowRemix')">{{ face.allowRemix ? 'On' : 'Off' }}</button>
             </div>
             <p v-if="sharingError" class="sharing-error" role="alert">{{ sharingError }}</p>
@@ -244,7 +244,7 @@ async function load() {
   remixing.value = false
   face.value = null
   try {
-    const result = await loadFaceDetail(String(route.params.appId || ''))
+    const result = await loadFaceDetail(String(route.params.appId || ''), userStore.token)
     if (current !== request) return
     face.value = result
     selectImage(images.value[0]?.url || '')

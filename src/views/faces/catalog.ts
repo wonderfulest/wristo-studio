@@ -54,8 +54,8 @@ export interface FaceQuery {
 }
 
 // Public catalog requests must never start Studio's authentication redirect flow.
-async function publicGet<T>(path: string, params: Record<string, string>): Promise<T> {
-  const response = await fetch(`/wristo-api/public/products/${path}?${new URLSearchParams(params)}`, { credentials: 'omit' })
+async function publicGet<T>(path: string, params: Record<string, string>, token?: string): Promise<T> {
+  const response = await fetch(`/wristo-api/public/products/${path}?${new URLSearchParams(params)}`, { credentials: 'omit', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) })
   if (!response.ok) throw new Error('The face catalog is unavailable. Please try again.')
   const body = await response.json()
   if ('code' in body) {
@@ -78,9 +78,9 @@ export const faceImage = (face: PublishedFace) => face.garminImageUrl || face.pr
 export function faceDetailsUrl(appId: number) {
   return `/faces/${appId}`
 }
-export async function loadFaceDetail(appId: string): Promise<FaceDetail> {
+export async function loadFaceDetail(appId: string, token?: string): Promise<FaceDetail> {
   if (!/^\d+$/.test(appId)) throw new Error('Watch face not found.')
-  const face = await publicGet<FaceDetail | null>(`app/${appId}`, { populate: 'user,image,devices,configJson', lang: 'en' })
+  const face = await publicGet<FaceDetail | null>(`faces/${appId}`, { populate: 'user,image,devices,configJson', lang: 'en' }, token)
   if (!face?.appId) throw new Error('Watch face not found.')
   return face
 }

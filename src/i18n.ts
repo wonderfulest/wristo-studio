@@ -2,6 +2,20 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'designSharing.title': "Design Sharing",
+  'designSharing.public': "Public Design",
+  'designSharing.publicHelp': "Let other users see this design. When off, only you and administrators can access it.",
+  'designSharing.copy': "Allow Copying",
+  'designSharing.copyHelp': "Let other users copy this design when it is public. Existing copies are kept.",
+  'designSharing.on': "On",
+  'designSharing.off': "Off",
+  'designSharing.retry': "Retry",
+  'designSharing.loading': "Loading settings…",
+  'designSharing.saving': "Saving…",
+  'designSharing.saved': "Saved automatically.",
+  'designSharing.loadFailed': "Could not load sharing settings. Please retry.",
+  'designSharing.saveFailed': "Could not save. Your settings have not changed. Please retry.",
+
   'font.conflictTitle': 'Font name already exists',
   'font.conflictChoice': '“{name}” already exists online. Use its glyphs for this design, or choose a different name to upload your own.',
   'font.conflictUnavailable': '“{name}” is already taken. The online font is unavailable or missing required characters. Choose another name.',
@@ -2643,6 +2657,20 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'designSharing.title': "设计分享设置",
+  'designSharing.public': "是否公开",
+  'designSharing.publicHelp': "允许其他用户看到此设计。关闭后，仅作者和管理员可访问。",
+  'designSharing.copy': "允许其他用户复制",
+  'designSharing.copyHelp': "设计公开时，允许其他用户复制。关闭后不影响已有副本。",
+  'designSharing.on': "开",
+  'designSharing.off': "关",
+  'designSharing.retry': "重试",
+  'designSharing.loading': "正在加载设置…",
+  'designSharing.saving': "正在保存…",
+  'designSharing.saved': "已自动保存。",
+  'designSharing.loadFailed': "分享设置加载失败，请重试。",
+  'designSharing.saveFailed': "保存失败，设置未更改，请重试。",
+
   'font.conflictTitle': '字体名称已存在',
   'font.conflictChoice': '线上已有“{name}”。使用它的字形，或修改名称后上传自己的字体。',
   'font.conflictUnavailable': '“{name}”已被占用，线上字体不可用或缺少所需字符，请修改名称。',

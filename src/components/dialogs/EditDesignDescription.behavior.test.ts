@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getDesignByUid: vi.fn(), updateDesign: vi.fn(),
+  user: { isMerchantUser: true, isAdminUser: false, userInfo: { id: 1 } },
   route: { path: '/designs', query: {} as Record<string, string> }
 }))
 vi.mock('@/api/wristo/design', () => ({ designApi: mocks }))
 vi.mock('vue-router', () => ({ useRoute: () => mocks.route, useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/stores/baseStore', () => ({ useBaseStore: () => ({ generateConfig: () => ({}) }) }))
-vi.mock('@/stores/user', () => ({ useUserStore: () => ({ isMerchantUser: true, userInfo: { id: 1 } }) }))
+vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('@/stores/message', () => ({ useMessageStore: () => ({ error: vi.fn(), success: vi.fn() }) }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/utils/errorMessage', () => ({ showErrorOnce: vi.fn() }))
@@ -27,13 +28,13 @@ const Slot = defineComponent({ setup(_, { slots }) { return () => h('div', [slot
 const Button = defineComponent({ setup(_, { slots }) { return () => h('button', slots.default?.()) } })
 const show = async (description: string | null = 'product text', hasProduct = true) => {
   mocks.getDesignByUid.mockResolvedValue({ code: 0, data: {
-    id: 1, designUid: 'd1', name: 'Face', description: 'legacy text', configJson: {},
+    id: 1, designUid: 'd1', name: 'Face', description: 'legacy text', configJson: {}, user: { id: 1 },
     product: hasProduct ? { id: 2, appId: 100, description, payment: { paymentMethod: 'free' } } : null
   } })
   const wrapper = mount(EditDesignDialog, { global: { stubs: {
     ElDialog: Slot, ElButton: Button, ElButtonGroup: Slot, ElIcon: Slot, ElInput: true, ElSelect: Slot,
     ElOption: true, ElRadioGroup: Slot, ElRadio: true, ElInputNumber: true,
-    CollapsibleJsonTree: true, CopyGarminDescriptionButton: true
+    DesignSharingSettings: true, CollapsibleJsonTree: true, CopyGarminDescriptionButton: true
   } } })
   await (wrapper.vm as unknown as { show: (uid: string) => Promise<void> }).show('d1')
   await flushPromises()
@@ -41,7 +42,23 @@ const show = async (description: string | null = 'product text', hasProduct = tr
 }
 
 describe('EditDesignDialog canonical description', () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.route.path = '/designs'; mocks.route.query = {}; mocks.updateDesign.mockResolvedValue({ code: 0 }) })
+  beforeEach(() => { vi.clearAllMocks(); mocks.user.isMerchantUser = true; mocks.user.isAdminUser = false; mocks.user.userInfo.id = 1; mocks.route.path = '/designs'; mocks.route.query = {}; mocks.updateDesign.mockResolvedValue({ code: 0 }) })
+  it('lets ordinary authors manage sharing without merchant privileges', async () => {
+    mocks.user.isMerchantUser = false
+    const wrapper = await show()
+    expect(wrapper.findComponent({ name: 'DesignSharingSettings' }).exists()).toBe(true)
+    wrapper.unmount()
+  })
+  it('hides sharing controls from non-owners and allows administrators', async () => {
+    mocks.user.userInfo.id = 9
+    const viewer = await show()
+    expect(viewer.findComponent({ name: 'DesignSharingSettings' }).exists()).toBe(false)
+    viewer.unmount()
+    mocks.user.isAdminUser = true
+    const admin = await show()
+    expect(admin.findComponent({ name: 'DesignSharingSettings' }).exists()).toBe(true)
+    admin.unmount()
+  })
   it.each([false, true])('shows the product text in canvas mode %s', async (canvas) => {
     if (canvas) { mocks.route.path = '/design'; mocks.route.query = { id: 'd1' } }
     const wrapper = await show()

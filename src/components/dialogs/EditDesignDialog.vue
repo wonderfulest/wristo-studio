@@ -132,6 +132,10 @@
         </div>
       </div>
 
+      <div v-if="canManageSharing && currentDesign" class="form-section">
+        <DesignSharingSettings :key="currentDesign.designUid" :design-uid="currentDesign.designUid" @saved="emit('success')" />
+      </div>
+
       <div v-if="form.description" class="form-section">
         <div class="form-field full-width">
           <label class="field-label">{{ t('submitDesign.description') }}</label>
@@ -317,6 +321,7 @@ import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import { Box, DocumentCopy, Download, Link, Picture } from '@element-plus/icons-vue'
 import CollapsibleJsonTree from '@/components/common/CollapsibleJsonTree.vue'
+import DesignSharingSettings from './DesignSharingSettings.vue'
 import emitter from '@/utils/eventBus.ts'
 import { useBaseStore } from '@/stores/baseStore'
 import { useUserStore } from '@/stores/user'
@@ -367,6 +372,10 @@ const messageStore = useMessageStore()
 
 const emit = defineEmits(['cancel', 'success'])
 
+const canManageSharing = computed(() => userStore.isAdminUser || (
+  userStore.userInfo?.id != null && currentDesign.value?.user?.id != null
+  && String(userStore.userInfo.id) === String(currentDesign.value.user.id)
+))
 const canManageAppDetails = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const WRISTO_STORE_BASE_URL = (import.meta.env.VITE_WRISTO_STORE_URL || 'https://wristo.io').replace(/\/+$/, '')
