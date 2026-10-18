@@ -1,3 +1,4 @@
+import { clearJsonProjectFiles, isJsonProject, restoreJsonProject, hydrateJsonProjectFiles } from './jsonProject'
 import { hasBitmapFontColon } from './bitmapFontValidation'
 import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
@@ -209,6 +210,7 @@ const restoredDesignAssetUrls = new Set<string>()
 export const clearRestoredDesignAssetUrls = (): void => {
   restoredDesignAssetUrls.forEach((url) => URL.revokeObjectURL(url))
   restoredDesignAssetUrls.clear()
+  clearJsonProjectFiles()
 }
 
 const ASSET_URL_FIELDS = new Set([
@@ -1223,6 +1225,10 @@ export async function buildWrtDesignPackage(
   config: RuntimeDesignConfig,
   options: BuildDesignAssetBundleOptions = {},
 ): Promise<File> {
+  await hydrateJsonProjectFiles()
+  // JSON persistence metadata is not part of a portable WRT archive.
+  const { studioResources: _resources, ...portableConfig } = config
+  config = portableConfig
   const layoutErrors = [...validateLayoutConfig(config.properties || {}, config.elements || []), ...validateComplicationConfig(config.properties || {}, config.elements || [], config.dataOptions || {})]
   if (layoutErrors.length) throw new Error(layoutErrors.join(' '))
   for (const element of config.elements || []) if (element.eleType === 'dynamicImage') {
@@ -1424,6 +1430,10 @@ export async function restoreDesignAssetBundle(
   config: RuntimeDesignConfig,
   options: RestoreBundleOptions,
 ): Promise<RuntimeDesignConfig> {
+  if (isJsonProject(config)) {
+    clearRestoredDesignAssetUrls()
+    return restoreJsonProject(config)
+  }
   const assetBundleUrl = String(options.assetBundleUrl || '').trim()
   if (!assetBundleUrl) return config
 

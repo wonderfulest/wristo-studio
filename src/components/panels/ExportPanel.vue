@@ -95,8 +95,7 @@ import { isDefaultBackgroundUrl } from '@/elements/decoration/background/backgro
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import { resolvePackageAssetUrls, validateRuntimeConfigForExport } from '@/engine/services/exportService'
 import { buildDesignAssetBundle } from '@/engine/services/designAssetBundleService'
-import { saveWrtProject } from '@/engine/services/saveWrtProject'
-import { getProduct } from '@/api/products'
+import { saveJsonProject } from '@/engine/services/jsonProject'
 import { resolveCoverImageSaveChoice } from './coverImageSaveChoice'
 import emitter from '@/utils/eventBus'
 const messageStore = useMessageStore()
@@ -178,23 +177,11 @@ const prepareExportConfig = async (config) => {
   }
 }
 
-const loadAssetBundleProduct = async () => {
-  if (!baseStore.appId || baseStore.appId <= 0) return undefined
-  const response = await getProduct(baseStore.appId)
-  if (response.code !== 0 || !response.data) {
-    throw new Error(response.msg || 'Failed to load product images')
-  }
-  return response.data
-}
-
 const uploadDesignAssetBundle = async (designUid, config, options = {}) => {
   if (!designUid || !config) return null
   try {
-    const product = await loadAssetBundleProduct()
-    return await saveWrtProject(designUid, config, {
+    return await saveJsonProject(designUid, config, {
       previewDataUrl: options.previewDataUrl || null,
-      appId: baseStore.appId > 0 ? baseStore.appId : undefined,
-      product,
       onSaveProgress: options.onSaveProgress,
     })
   } catch (error) {
@@ -469,9 +456,9 @@ const uploadAuthenticatedApp = async () => {
     currentStatus = t('export.saveLoadingProduct')
     loadingInstance?.setText(currentStatus)
 
-    // Publish the complete project before updating optional app metadata.
+    // Persist JSON and newly added resources before updating optional app metadata.
     await uploadDesignAssetBundle(baseStore.id, resolvedConfig, {
-      previewDataUrl: screenshotResult.dataUrl,
+
       onSaveProgress: ({ stage, percent }) => {
         const labels = {
           assets: 'export.saveAssets', fonts: 'export.saveFonts', compressing: 'export.saveCompressing',

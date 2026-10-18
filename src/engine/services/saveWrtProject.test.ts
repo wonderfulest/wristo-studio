@@ -11,7 +11,7 @@ describe('save complete WRT project', () => {
     upload.mockResolvedValue({ code: 0, data: { version: 2 } })
     await expect(saveWrtProject('target', { designId: 'source' } as any)).resolves.toEqual({ version: 2 })
     expect(build.mock.calls[0][0].designId).toBe('target')
-    expect(upload).toHaveBeenCalledWith('target', file, expect.any(Function))
+    expect(upload).toHaveBeenCalledWith('target', file, expect.any(Function), undefined)
   })
   it('forwards build and server stages and records timing without private content', async () => {
     const progress = vi.fn()

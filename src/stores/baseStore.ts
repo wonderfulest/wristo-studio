@@ -12,13 +12,12 @@ import {
   resolvePackageAssetUrls,
   validateRuntimeConfigForExport,
 } from '@/engine/services/exportService'
-import { saveWrtProject } from '@/engine/services/saveWrtProject'
+import { saveJsonProject } from '@/engine/services/jsonProject'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import { useEditorStore } from '@/stores/editorStore'
 import { useUserStore } from '@/stores/user'
 import { getDeviceDetailByDeviceId, type GarminDeviceVO as GarminDeviceDetailVO } from '@/api/device'
-import { getProduct } from '@/api/products'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
@@ -363,19 +362,8 @@ export const useBaseStore = defineStore('baseStore', {
       } catch (error) {
         console.warn('Failed to capture preview for asset bundle:', error)
       }
-      let bundleProduct: AnyObject | undefined
-      if (this.appId > 0) {
-        try {
-          const productResponse = await getProduct(this.appId)
-          if (productResponse.code === 0 && productResponse.data) {
-            bundleProduct = productResponse.data
-          }
-        } catch (error) {
-          console.warn('Failed to load product images for asset bundle:', error)
-        }
-      }
-      await saveWrtProject(designUid, exportConfig, {
-        previewDataUrl, appId: this.appId > 0 ? this.appId : undefined, product: bundleProduct,
+      await saveJsonProject(designUid, exportConfig, {
+        previewDataUrl,
       })
       return true
     },

@@ -81,3 +81,9 @@ describe('direct upload and asynchronous save', () => {
     expect(post).not.toHaveBeenCalled()
   })
 })
+
+it('pins the upload to the JSON revision captured before packaging', async () => {
+  post.mockReset().mockResolvedValueOnce(ok(ticket)).mockResolvedValueOnce(ok({ status: 'SUCCEEDED', result }))
+  await uploadDesignAssetBundle('design-1', file, undefined, 17)
+  expect(post.mock.calls[0][1]).toMatchObject({ version: 17 })
+})

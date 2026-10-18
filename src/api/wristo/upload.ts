@@ -19,11 +19,12 @@ export const uploadPersistentDesignAsset = async (file: File): Promise<string> =
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', 'design-assets')
-  const response = await instance.post('/dsn/file/upload', formData, {
+  const response = await instance.post('/dsn/file/resource', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   }) as unknown as ApiResponse<string>
+  if (response.code !== 0) throw new Error(response.msg || 'Design asset upload failed')
   const url = String(response.data || '').trim()
   if (!url || /^blob:/i.test(url)) {
     throw new Error('Design asset upload returned an invalid URL')

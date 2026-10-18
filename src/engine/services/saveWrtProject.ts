@@ -13,7 +13,7 @@ export type SaveWrtProgress = {
 export async function saveWrtProject(
   designUid: string,
   config: RuntimeDesignConfig,
-  options: Parameters<typeof buildWrtDesignPackage>[1] & { onSaveProgress?: (progress: SaveWrtProgress) => void } = {},
+  options: Parameters<typeof buildWrtDesignPackage>[1] & { expectedVersion?: number; onSaveProgress?: (progress: SaveWrtProgress) => void } = {},
 ) {
   if (!designUid) throw new Error('A design ID is required to save a project')
   const started = performance.now()
@@ -40,7 +40,7 @@ export async function saveWrtProject(
       },
     })
     packageBytes = file.size
-    const response = await designApi.uploadAssetBundle(designUid, file, report)
+    const response = await designApi.uploadAssetBundle(designUid, file, report, options.expectedVersion)
     if (response.code !== 0 || !response.data) throw new Error(response.msg || 'Failed to save WRT project')
     succeeded = true
     return response.data

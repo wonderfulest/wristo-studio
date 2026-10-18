@@ -185,7 +185,9 @@ export const designApi = {
     return instance.get(`/dsn/design/${encodeURIComponent(designUid)}/packaging-devices`)
   },
 
-  submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
+  async submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
+    const { prepareWrtBuild } = await import('@/engine/services/prepareWrtBuild')
+    await prepareWrtBuild(data.designUid)
     // 清理 name 和 description 中的特殊空白字符
     const cleanedData = {
       ...data,
@@ -208,7 +210,9 @@ export const designApi = {
    * @param designUid 设计UID
    * @param deviceId 设备ID
    */
-  submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
+  async submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
+    const { prepareWrtBuild } = await import('@/engine/services/prepareWrtBuild')
+    await prepareWrtBuild(designUid)
     return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
   },
 
@@ -218,8 +222,8 @@ export const designApi = {
     })
   },
 
-  uploadAssetBundle(designUid: string, file: File, onProgress?: Parameters<typeof uploadDesignAssetBundle>[2]): Promise<ApiResponse<DesignAssetBundleVO>> {
-    return uploadDesignAssetBundle(designUid, file, onProgress)
+  uploadAssetBundle(designUid: string, file: File, onProgress?: Parameters<typeof uploadDesignAssetBundle>[2], expectedVersion?: number): Promise<ApiResponse<DesignAssetBundleVO>> {
+    return uploadDesignAssetBundle(designUid, file, onProgress, expectedVersion)
   },
 
   getPackagingBuildLog(logId: number): Promise<ApiResponse<ProductPackagingBuildLogVo>> {

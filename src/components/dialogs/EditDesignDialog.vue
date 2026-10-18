@@ -324,7 +324,7 @@ import { useI18n } from '@/i18n'
 import { downloadPackageFile, type PackageFileType } from '@/utils/packageDownload'
 import { resolvePackageAssetUrls } from '@/engine/services/exportService'
 import { buildWrtDesignPackage, restoreDesignAssetBundle } from '@/engine/services/designAssetBundleService'
-import { saveWrtProject } from '@/engine/services/saveWrtProject'
+import { saveJsonProject } from '@/engine/services/jsonProject'
 import { encryptWrtFile } from '@/engine/services/wrtCryptoService'
 import { DESIGN_SOURCE_PLATFORM_OPTIONS, requiresDesignSourceId, type DesignOriginalType, type DesignSourcePlatform } from '@/domain/designSource'
 const designId = ref<string | null>(null)
@@ -735,7 +735,7 @@ const handleSave = async () => {
     const resolvedConfigJson = await resolvePackageAssetUrls(restoredConfig)
     if (!resolvedConfigJson) return
     const nextConfigJson = migrateWeekdayTokens({ ...resolvedConfigJson, name: form.name })
-    await saveWrtProject(currentDesign.value.designUid, nextConfigJson)
+    await saveJsonProject(currentDesign.value.designUid, nextConfigJson)
     form.configJson = nextConfigJson
     const payload = {
       uid: currentDesign.value.designUid,

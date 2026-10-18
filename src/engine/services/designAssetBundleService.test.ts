@@ -746,3 +746,26 @@ describe('bitmap font colon validation on save', () => {
     expect(archive.file(colon.path)).not.toBeNull()
   })
 })
+
+
+describe('JSON project loading', () => {
+  it('uses saved JSON even if an older WRT URL exists, without fetching that archive', async () => {
+    const service = await import('./designAssetBundleService')
+    const fetcher = vi.fn().mockRejectedValue(new Error('WRT must not be downloaded'))
+    vi.stubGlobal('fetch', fetcher)
+    const config = { name: 'JSON source', elements: [], studioResources: { version: 1, fonts: [], bitmapChars: [], fontBuildFiles: [], files: [], productImages: [] } }
+    expect(await service.restoreDesignAssetBundle(config as any, { assetBundleUrl: 'https://old.test/design.wrt' })).toBe(config)
+    expect(fetcher).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+  it('exports a restored JSON design as a portable WRT without editor persistence metadata', async () => {
+    const service = await import('./designAssetBundleService')
+    const config = { name: 'JSON source', elements: [], studioResources: { version: 1, fonts: [], bitmapChars: [], fontBuildFiles: [], files: [], productImages: [] } }
+    await service.restoreDesignAssetBundle(config as any, {})
+    const file = await service.buildWrtDesignPackage(config as any)
+    const imported = await service.readWrtDesignPackage(file)
+    expect(imported.config.name).toBe('JSON source')
+    expect(imported.config.studioResources).toBeUndefined()
+    expect(imported.failures).toEqual([])
+  })
+})

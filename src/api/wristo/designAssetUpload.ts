@@ -34,11 +34,13 @@ export async function uploadDesignAssetBundle(
   designUid: string,
   file: File,
   onProgress?: (progress: DesignUploadProgress) => void,
+  expectedVersion?: number,
 ): Promise<ApiResponse<DesignAssetBundleVO>> {
   if (!file.size || file.size > 128 * 1024 * 1024) throw new Error('Project must be between 1 byte and 128 MiB')
   const base = `/dsn/design/${encodeURIComponent(designUid)}/asset-uploads`
   onProgress?.({ stage: 'ticket' })
   const ticket = data(await instance.post<never, ApiResponse<UploadTicket>>(base, {
+    version: expectedVersion,
     filename: file.name,
     size: file.size,
   }))

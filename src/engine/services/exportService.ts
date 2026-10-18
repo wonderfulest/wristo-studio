@@ -310,8 +310,8 @@ export async function validateRuntimeConfigForExport(config: RuntimeDesignConfig
     config.visualThemes,
     config.properties,
     config.elements as unknown as Array<Record<string, unknown>>,
-    // Save/export embeds asset bytes in WRT; the archive builder rejects unreadable
-    // blobs. Imported theme images do not need separate library database records.
+    // Save persists asset URLs; WRT export embeds their bytes. Imported theme
+    // images do not need separate library database records.
     { allowEmbeddedBlobAssets: true },
   )
   const errors = [...dateErrors, ...visualThemeErrors, ...validateComplicationConfig(config.properties, config.elements, config.dataOptions || {})]

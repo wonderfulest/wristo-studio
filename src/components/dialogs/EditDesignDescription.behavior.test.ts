@@ -18,7 +18,7 @@ vi.mock('@/engine/services/exportService', () => ({ resolvePackageAssetUrls: asy
 vi.mock('@/engine/services/designAssetBundleService', () => ({
   restoreDesignAssetBundle: async (value: unknown) => value, buildWrtDesignPackage: vi.fn()
 }))
-vi.mock('@/engine/services/saveWrtProject', () => ({ saveWrtProject: vi.fn() }))
+vi.mock('@/engine/services/jsonProject', () => ({ saveJsonProject: vi.fn() }))
 vi.mock('@/engine/services/wrtCryptoService', () => ({ encryptWrtFile: vi.fn() }))
 vi.mock('@/utils/packageDownload', () => ({ downloadPackageFile: vi.fn() }))
 import EditDesignDialog from './EditDesignDialog.vue'
