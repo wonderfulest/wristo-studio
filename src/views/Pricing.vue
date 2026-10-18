@@ -250,7 +250,7 @@ const fallbackPlans: PlanCard[] = [
     priceSuffixKey: 'membership.priceSuffix.forever',
     termKey: 'membership.term.free',
     noteKey: 'membership.freeNote',
-    featureKeys: ['membership.feature.oneApp', 'membership.feature.basicEditor', 'membership.feature.communitySupport'],
+    featureKeys: ['membership.feature.unlimitedApps', 'membership.feature.basicEditor', 'membership.feature.communitySupport'],
     paddlePriceId: '',
   },
   {
@@ -321,7 +321,7 @@ const fallbackPlans: PlanCard[] = [
     priceSuffixKey: 'membership.priceSuffix.oneTime',
     termKey: 'membership.term.premium_30d',
     noteKey: 'membership.oneTimeNote',
-    featureKeys: ['membership.feature.thirtyDayAccess', 'membership.feature.upTo10Apps', 'membership.feature.noWristoAds', 'membership.feature.experimentWindow'],
+    featureKeys: ['membership.feature.thirtyDayAccess', 'membership.feature.unlimitedApps', 'membership.feature.noWristoAds', 'membership.feature.experimentWindow'],
     paddlePriceId: '',
   },
 ]
@@ -437,22 +437,11 @@ const hasActivePaidMembership = computed(() => {
 const membershipLabel = computed(() => {
   return t(`membership.level.${currentLevel.value}`)
 })
-const membershipUsageText = computed(() => {
-  const count = studioMembership.value?.designCount ?? 0
-  const max = studioMembership.value?.maxDesigns
-  return max == null ? t('membership.unlimitedUsage', { count }) : t('membership.limitedUsage', { count, max })
-})
-const usagePercent = computed(() => {
-  const count = studioMembership.value?.designCount ?? 0
-  const max = studioMembership.value?.maxDesigns
-  if (!max) return canCreateDesign.value ? '100%' : '0%'
-  return `${Math.min(100, Math.round((count / max) * 100))}%`
-})
-const membershipHint = computed(() => {
-  const max = studioMembership.value?.maxDesigns
-  if (canCreateDesign.value) return t('membership.profileHint')
-  return max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max })
-})
+const membershipUsageText = computed(() => t('membership.unlimitedUsage', {
+  count: studioMembership.value?.designCount ?? 0,
+}))
+const usagePercent = computed(() => '100%')
+const membershipHint = computed(() => t('membership.profileHint'))
 const selectedPlan = computed(() => {
   const selected = plans.value.find((plan) => plan.code === selectedPlanCode.value)
   if (selected && !isPlanActionDisabled(selected)) return selected
