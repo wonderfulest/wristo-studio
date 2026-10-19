@@ -68,6 +68,7 @@ const apiTags = [tag(7), tag(2), tag(100, 'feature'), tag(9), tag(101, 'style', 
 
 const designDetail = {
   designUid: 'design-uid',
+  version: 17,
   name: 'Design',
   description: 'Description',
   product: {
@@ -153,6 +154,14 @@ describe('SubmitDesignDialog style tag behavior', () => {
     mocks.checkSourceDuplicate.mockResolvedValue({ code: 0, data: false })
     mocks.updateDesign.mockResolvedValue({ code: 0, data: true })
     mocks.submitPrgPackageTask.mockResolvedValue({ code: 0, data: true })
+  })
+
+  it('submits the version fetched when opening the dialog', async () => {
+    mocks.getDesignByUid.mockResolvedValueOnce({ code: 0, data: { ...designDetail, version: 23 } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(mocks.submitDesign.mock.calls[0][0].expectedVersion).toBe(23)
   })
 
   it('shows devices by memory, submits selection, and rejects empty selection', async () => {

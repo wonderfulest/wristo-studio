@@ -347,6 +347,7 @@ const handleConfirm = async () => {
     const resolvedOriginalType = canSelectDesignSource.value ? form.originalType : 'original'
     const submitData: DesignSubmitDTO = {
       designUid: form.designUid,
+      expectedVersion: currentDesign.value?.version,
       ...(dialogMode.value === 'submit' ? { targetDeviceIds: [...selectedDeviceIds.value] } : {}),
       paymentMethod: form.paymentMethod,
       originalType: resolvedOriginalType,

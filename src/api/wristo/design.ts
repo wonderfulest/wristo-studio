@@ -186,8 +186,6 @@ export const designApi = {
   },
 
   async submitDesign(data: DesignSubmitDTO): Promise<ApiResponse<Design>> {
-    const { prepareWrtBuild } = await import('@/engine/services/prepareWrtBuild')
-    await prepareWrtBuild(data.designUid)
     // 清理 name 和 description 中的特殊空白字符
     const cleanedData = {
       ...data,
@@ -211,8 +209,6 @@ export const designApi = {
    * @param deviceId 设备ID
    */
   async submitPrgPackageTask(designUid: string, deviceId: string): Promise<ApiResponse<boolean>> {
-    const { prepareWrtBuild } = await import('@/engine/services/prepareWrtBuild')
-    await prepareWrtBuild(designUid)
     return instance.post(`/dsn/design/submit-prg-package?designUid=${designUid}&deviceId=${deviceId}`)
   },
 
