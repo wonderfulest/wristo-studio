@@ -20,6 +20,9 @@ export interface BannerGenerationJob {
  * 产品相关API接口
  */
 export const productsApi = {
+  updateAppUuid(designId: string, uuid: string): Promise<ApiResponse<boolean>> {
+    return instance.post(`/admin/products/${encodeURIComponent(designId)}/uploadGarminAppUuid/${encodeURIComponent(uuid)}`)
+  },
   generateBanner(data: { productId: number; deviceId: string; customPrompt?: string; expectedCreditCost: number }): Promise<ApiResponse<BannerGenerationJob>> {
     return instance.post('/dsn/products/generate-banner', data)
   },

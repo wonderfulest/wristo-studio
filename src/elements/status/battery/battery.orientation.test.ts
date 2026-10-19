@@ -47,6 +47,19 @@ describe('battery direction', () => {
     expect(element._level.getBoundingRect()).toMatchObject({ left: 112, top: 132, width: 16, height: 18 })
   })
 
+  it('keeps -1 body fill transparent after updates and reload', () => {
+    const element: any = createBattery({ ...vertical, bodyFill: -1 } as any)
+    expect(element._body.fill).toBe('transparent')
+    updateBattery(element, { bodyFill: '#000000' })
+    expect(element._body.fill).toBe('#000000')
+    updateBattery(element, { bodyFill: -1 } as any)
+    expect(element._body.fill).toBe('transparent')
+    updateBattery(element, { level: 0.75 })
+    expect(element._body.fill).toBe('transparent')
+    const reloaded: any = createBattery(decodeBattery(encodeBattery(element)) as any)
+    expect(reloaded._body.fill).toBe('transparent')
+  })
+
   it('keeps horizontal defaults for old designs', () => {
     const element: any = createBattery({ ...vertical, orientation: undefined, level: 0.5 } as any)
     expect(element._level.width).toBe(8)

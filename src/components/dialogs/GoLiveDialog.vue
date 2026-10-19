@@ -31,6 +31,14 @@
           </template>
         </el-input>
       </el-form-item>
+      <el-form-item :label="t('goLive.appUuid')">
+        <el-input class="app-uuid-input" v-model="form.garminAppUuid" :readonly="!userStore.isAdminUser" :disabled="loading || savingAppUuid" maxlength="36">
+          <template #append>
+            <el-button @click="copyAppUuid" :icon="CopyDocument" :disabled="!form.garminAppUuid">{{ t('common.copy') }}</el-button>
+            <el-button v-if="userStore.isAdminUser" @click="saveAppUuid" :loading="savingAppUuid" :disabled="loading || form.garminAppUuid === currentDesign?.product.garminAppUuid">{{ t('common.save') }}</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
       <el-form-item :label="t('submitDesign.designName')" prop="name">
         <el-input class="product-name-input" :model-value="readName(descriptionLanguage)" @update:model-value="writeName(descriptionLanguage, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto">
           <template #append>
@@ -513,6 +521,7 @@ const loadingBundles = ref(false)
 
 const form = reactive({
   appId: 0,
+  garminAppUuid: '',
   name: '',
   names: {} as Record<string, string>,
   description: '',
@@ -739,6 +748,7 @@ const loadDesign = (design: Design) => {
   currentDesign.value = design
   
   // 设置表单数据
+  form.garminAppUuid = design.product.garminAppUuid || ''
   form.appId = design.product.appId
   form.name = design.product.name
   form.names = { ...(design.product.names || {}) }
@@ -859,6 +869,37 @@ const handleConfirm = async () => {
 const handleCancel = () => {
   emit('cancel')
   dialogVisible.value = false
+}
+
+const savingAppUuid = ref(false)
+
+const saveAppUuid = async (): Promise<void> => {
+  if (!userStore.isAdminUser || !currentDesign.value || savingAppUuid.value) return
+  const uuid = form.garminAppUuid.trim()
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+    messageStore.error(t('goLive.invalidAppUuid'))
+    return
+  }
+  savingAppUuid.value = true
+  try {
+    await productsApi.updateAppUuid(currentDesign.value.designUid, uuid)
+    currentDesign.value.product.garminAppUuid = uuid
+    form.garminAppUuid = uuid
+    messageStore.success(t('common.savedSuccessfully'))
+  } catch (error) {
+    showErrorOnce(error, t('common.saveFailed'))
+  } finally {
+    savingAppUuid.value = false
+  }
+}
+
+const copyAppUuid = async (): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(form.garminAppUuid)
+    ElMessage.success(t('common.copied'))
+  } catch (error) {
+    showErrorOnce(error, t('common.copyFailed'))
+  }
 }
 
 const copyAppId = async (): Promise<void> => {

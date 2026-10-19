@@ -7,6 +7,8 @@ import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
+  isAdmin: false,
+  updateAppUuid: vi.fn(),
   confirmCost: vi.fn(),
   getDescriptionConfig: vi.fn(),
   getAiCapabilities: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
     publish: mocks.publish,
+    updateAppUuid: mocks.updateAppUuid,
     generateDescription: mocks.generateDescription
   }
 }))
@@ -44,7 +47,7 @@ vi.mock('@/stores/message', () => ({
 vi.mock('@/stores/user', () => ({
   useUserStore: () => ({
     isMerchantUser: true,
-    isAdminUser: false,
+    get isAdminUser() { return mocks.isAdmin },
     userInfo: { id: 10 }
   })
 }))
@@ -70,9 +73,11 @@ const tag = (id: number, tagGroup: string, status = 1): ProductTag => ({
 const apiTags = [tag(1, 'style'), tag(28, 'function'), tag(38, 'scene'), tag(49, 'seasonal'), tag(99, 'style', 0)]
 
 const design = {
+  designUid: 'test-design',
   product: {
     id: 20,
     appId: 200,
+    garminAppUuid: 'b2c219cf-4d59-4e60-a5cb-4021c3491b43',
     name: 'Product',
     description: 'Description',
     categories: [{ id: 777 }],
@@ -130,9 +135,9 @@ const stubs = {
   ElForm: ElFormStub,
   ElFormItem: { template: '<div><slot/></div>' },
   ElInput: {
-    props: ['modelValue', 'disabled'],
+    props: ['modelValue', 'disabled', 'readonly'],
     emits: ['update:modelValue'],
-    template: '<div><input :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)"/><slot name="append"/></div>'
+    template: '<div><input :value="modelValue" :disabled="disabled" :readonly="readonly" @input="$emit(\'update:modelValue\', $event.target.value)"/><slot name="append"/></div>'
   },
   ElInputNumber: true,
   ElRadioGroup: { template: '<div><slot/></div>' },
@@ -170,6 +175,8 @@ beforeEach(() => {
 describe('GoLiveDialog product tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.isAdmin = false
+    mocks.updateAppUuid.mockResolvedValue({ code: 0, data: true })
     mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
@@ -178,10 +185,44 @@ describe('GoLiveDialog product tag behavior', () => {
     mocks.publish.mockResolvedValue({ code: 0, data: true })
   })
 
+  it('shows the application UUID as read-only for non-admin users', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    const input = wrapper.get<HTMLInputElement>('.app-uuid-input input')
+    expect(input.element.value).toBe(design.product.garminAppUuid)
+    expect(input.element.readOnly).toBe(true)
+    expect(wrapper.get('.app-uuid-input').text()).not.toContain('common.save')
+    expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+  })
+
+  it('lets an admin save a valid UUID through the admin endpoint without publishing', async () => {
+    mocks.isAdmin = true
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    const input = wrapper.get<HTMLInputElement>('.app-uuid-input input')
+    expect(input.element.readOnly).toBe(false)
+    await input.setValue('ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
+    await wrapper.get('.app-uuid-input').findAll('button')[1].trigger('click')
+    await flushPromises()
+    expect(mocks.updateAppUuid).toHaveBeenCalledWith('test-design', 'ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed UUIDs before saving', async () => {
+    mocks.isAdmin = true
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('.app-uuid-input input').setValue('invalid')
+    await wrapper.get('.app-uuid-input').findAll('button')[1].trigger('click')
+    await flushPromises()
+    expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('goLive.invalidAppUuid')
+  })
+
   it('publishes the edited shared name after trimming whitespace', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    const input = wrapper.findAll('input')[1]
+    const input = wrapper.get<HTMLInputElement>('.product-name-input input')
     expect(input.element.disabled).toBe(false)
     expect(input.element.value).toBe('Product')
     await input.setValue('  New watchface name  ')
@@ -193,7 +234,7 @@ describe('GoLiveDialog product tag behavior', () => {
   it('rejects a whitespace-only name before publishing', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
-    await wrapper.findAll('input')[1].setValue('   ')
+    await wrapper.find('.product-name-input input').setValue('   ')
     await confirm(wrapper)
     expect(mocks.publish).not.toHaveBeenCalled()
   })

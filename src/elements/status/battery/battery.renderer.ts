@@ -197,7 +197,7 @@ export function updateBattery(
   batteryBody.set({
     width,
     height,
-    fill: next.bodyFill,
+    fill: decodeColor(next.bodyFill ?? 'transparent'),
     stroke: next.bodyStroke,
     strokeWidth: next.bodyStrokeWidth,
     rx: next.bodyRx,
