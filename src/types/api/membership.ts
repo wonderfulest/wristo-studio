@@ -9,6 +9,8 @@ export type StudioMembershipLevel =
 export interface StudioMembership {
   level: StudioMembershipLevel | string
   roleCode: string
+  baseDesignLimit?: number | null
+  extraDesignSlots?: number
   maxDesigns: number | null
   designCount: number
   canCreateDesign: boolean

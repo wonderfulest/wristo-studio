@@ -57,7 +57,7 @@ export function useEditorEntry(options: {
         }
       }
       if (!user.canCreateDesign) {
-        await options.replace('/pricing')
+        await options.replace('/design-slots')
         return
       }
       const name = `App${randomNameSuffix()}`
@@ -71,7 +71,7 @@ export function useEditorEntry(options: {
     } catch (cause) {
       const failure = cause as { code?: number; response?: { data?: { code?: number } } } | null
       if ((failure?.code ?? failure?.response?.data?.code) === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) {
-        if (active && current === generation) await options.replace('/pricing')
+        if (active && current === generation) await options.replace('/design-slots')
         return
       }
       if (active && current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to open this project.'

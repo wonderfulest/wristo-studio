@@ -3,12 +3,14 @@
   <router-view></router-view>
   <CookieConsent />
   <InsufficientCreditsDialog />
+  <DesignLimitDialog />
   <WrtImportProgressDialog />
 </template>
 
 <script setup>
 import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
 import InsufficientCreditsDialog from '@/components/InsufficientCreditsDialog.vue'
+import DesignLimitDialog from '@/components/DesignLimitDialog.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
 import { useLocaleStore } from '@/stores/locale'
 import { useShareVisit } from '@/composables/useShareVisit'

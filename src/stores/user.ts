@@ -34,7 +34,7 @@ export const useUserStore = defineStore('user', {
       const hasFullStudioAccess = roles.some((role) => role.roleCode === 'ROLE_MERCHANT' || role.roleCode === 'ROLE_ADMIN')
       return hasFullStudioAccess || state.userInfo?.studioMembership?.canUsePremiumAssets === true
     },
-    canCreateDesign: () => true,
+    canCreateDesign: (state) => state.userInfo?.studioMembership?.canCreateDesign !== false,
     isMerchantUser: (state) => {
       const roles = state.userInfo?.roles || []
       return roles.some((role) => role.roleCode === 'ROLE_MERCHANT')

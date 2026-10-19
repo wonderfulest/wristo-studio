@@ -1,5 +1,9 @@
 <template>
   <div class="my-designs">
+    <div v-if="userStore.studioMembership" class="design-capacity">
+      <span>{{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns ?? '∞' }} {{ t('membership.appsUsed') }}</span>
+      <RouterLink to="/design-slots">{{ t('membership.addSlots') }}</RouterLink>
+    </div>
     <!-- 搜索栏 -->
     <div class="search-bar">
       <div class="filter-fields">
@@ -868,7 +872,7 @@ const copyDesign = async (design: DesignListItem) => {
   if (!userStore.canCreateDesign) {
     const max = userStore.studioMembership?.maxDesigns
     messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
-    router.push('/pricing')
+    router.push('/design-slots')
     return
   }
 
@@ -1109,6 +1113,7 @@ const handleRefresh = (event: any ) => {
 
 // 首次挂载时加载数据
 onMounted(() => {
+  void userStore.refreshUserInfo().catch(() => {})
   prgClockTimer = setInterval(() => { nowMs.value = Date.now() }, 30000)
   fetchDesigns()
 })
@@ -1146,6 +1151,8 @@ const handleGoLiveSuccess = () => {
 </script>
 
 <style scoped>
+.design-capacity { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; color: var(--studio-text-muted); }
+.design-capacity a { color: var(--studio-primary); }
 .collection-controls {
   display: flex;
   align-items: center;

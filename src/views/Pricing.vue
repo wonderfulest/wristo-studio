@@ -40,6 +40,7 @@
           <span>{{ canCreateDesign ? t('membership.available') : t('membership.limitReached') }}</span>
         </div>
         <p>{{ membershipHint }}</p>
+        <RouterLink to="/design-slots">{{ t('membership.addSlots') }}</RouterLink>
       </aside>
     </section>
 
@@ -84,7 +85,7 @@
           <ul>
             <li v-for="featureKey in plan.featureKeys" :key="featureKey">
               <Icon icon="material-symbols:check-rounded" />
-              <span>{{ t(featureKey) }}</span>
+              <span>{{ featureLabel(featureKey, plan) }}</span>
             </li>
           </ul>
           <el-button
@@ -135,7 +136,7 @@
           <ul>
             <li v-for="featureKey in inlineCheckoutPlan.featureKeys" :key="featureKey">
               <Icon icon="material-symbols:check-rounded" />
-              <span>{{ t(featureKey) }}</span>
+              <span>{{ featureLabel(featureKey, inlineCheckoutPlan) }}</span>
             </li>
           </ul>
           <p class="summary-note">
@@ -208,6 +209,7 @@ const checkoutTotalsUpdateEvents = new Set(['checkout.loaded', 'checkout.updated
 
 interface PlanCard {
   code: string
+  maxDesigns?: number | null
   planCode: string
   nameKey: string
   price: string
@@ -250,7 +252,7 @@ const fallbackPlans: PlanCard[] = [
     priceSuffixKey: 'membership.priceSuffix.forever',
     termKey: 'membership.term.free',
     noteKey: 'membership.freeNote',
-    featureKeys: ['membership.feature.unlimitedApps', 'membership.feature.basicEditor', 'membership.feature.communitySupport'],
+    featureKeys: ['membership.feature.roleAllowance', 'membership.feature.basicEditor', 'membership.feature.communitySupport'],
     paddlePriceId: '',
   },
   {
@@ -326,6 +328,13 @@ const fallbackPlans: PlanCard[] = [
   },
 ]
 
+function featureLabel(key: string, plan: PlanCard) {
+  if (['membership.feature.oneApp', 'membership.feature.unlimitedApps', 'membership.feature.upTo10Apps'].includes(key)) {
+    return plan.maxDesigns == null ? t('membership.feature.unlimitedApps') : t('membership.feature.designLimit', { max: plan.maxDesigns })
+  }
+  return t(key)
+}
+
 const planOrder = ['free', 'monthly', 'quarterly', 'semiannual', 'annual', 'premium_30d']
 
 const plans = computed(() => {
@@ -346,6 +355,7 @@ const plans = computed(() => {
           noteKey: meta?.noteKey || 'membership.trialNote',
           badgeKey: meta?.badgeKey,
           featured: code === 'annual',
+          maxDesigns: backend.maxDesigns,
           featureKeys: backend.featureKeys?.length ? backend.featureKeys : meta?.featureKeys || [],
           paddlePriceId: getPaddlePriceId(code, planCode, backend.paddlePriceId),
         } as PlanCard
@@ -437,10 +447,13 @@ const hasActivePaidMembership = computed(() => {
 const membershipLabel = computed(() => {
   return t(`membership.level.${currentLevel.value}`)
 })
-const membershipUsageText = computed(() => t('membership.unlimitedUsage', {
-  count: studioMembership.value?.designCount ?? 0,
-}))
-const usagePercent = computed(() => '100%')
+const membershipUsageText = computed(() => studioMembership.value?.maxDesigns == null
+  ? t('membership.unlimitedUsage', { count: studioMembership.value?.designCount ?? 0 })
+  : `${studioMembership.value.designCount} / ${studioMembership.value.maxDesigns}`)
+const usagePercent = computed(() => {
+  const membership = studioMembership.value
+  return membership?.maxDesigns == null ? '100%' : `${Math.min(100, membership.designCount / Math.max(1, membership.maxDesigns) * 100)}%`
+})
 const membershipHint = computed(() => t('membership.profileHint'))
 const selectedPlan = computed(() => {
   const selected = plans.value.find((plan) => plan.code === selectedPlanCode.value)

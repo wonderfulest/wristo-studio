@@ -46,6 +46,7 @@ declare module 'vue' {
     DesignerDefaultConfigDialog: typeof import('./src/components/dialogs/DesignerDefaultConfigDialog.vue')['default']
     DesignerFontList: typeof import('./src/components/font-picker/DesignerFontList.vue')['default']
     DesignerSelect: typeof import('./src/components/users/DesignerSelect.vue')['default']
+    DesignLimitDialog: typeof import('./src/components/DesignLimitDialog.vue')['default']
     DesignSharingSettings: typeof import('./src/components/dialogs/DesignSharingSettings.vue')['default']
     DesignVerificationDrawer: typeof import('./src/components/dialogs/DesignVerificationDrawer.vue')['default']
     DeviceDisplay: typeof import('./src/components/common/DeviceDisplay.vue')['default']

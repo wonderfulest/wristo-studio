@@ -195,6 +195,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'design-slots',
+        name: 'DesignSlots',
+        component: () => import('@/views/DesignSlots.vue'),
+        meta: { requiresAuth: true, allowsAllUsers: true },
+      },
+      {
         path: 'credits',
         name: 'BuyCredits',
         component: () => import('@/views/BuyCredits.vue'),

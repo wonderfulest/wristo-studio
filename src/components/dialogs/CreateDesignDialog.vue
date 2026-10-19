@@ -165,7 +165,7 @@ const handleConfirm = async (): Promise<void> => {
     const failure = error as { code?: number; response?: { data?: { code?: number } } } | null
     if ((failure?.code ?? failure?.response?.data?.code) === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) {
       dialogVisible.value = false
-      await router.push('/pricing')
+      await router.push('/design-slots')
       return
     }
     console.error('Failed to create design:', error)
@@ -195,7 +195,7 @@ const resetForm = (): void => {
 // show dialog
 const show = (): void => {
   if (!userStore.canCreateDesign) {
-    void router.push('/pricing')
+    void router.push('/design-slots')
     return
   }
   resetForm()

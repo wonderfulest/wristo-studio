@@ -1,9 +1,12 @@
 <template>
   <div class="copy-entry-page">
     <div class="copy-entry-panel">
-      <div class="copy-entry-spinner" aria-hidden="true"></div>
+      <div v-if="!failed" class="copy-entry-spinner" aria-hidden="true"></div>
       <h1>{{ title }}</h1>
-      <p>{{ description }}</p>
+      <p>{{ failed || description }}</p>
+      <RouterLink v-if="quotaReached" to="/design-slots">Add slots or upgrade</RouterLink>
+      <RouterLink v-if="failed" to="/designs">My designs</RouterLink>
+      <button v-if="failed && sourceDesignId" @click="copyDesign">Try again</button>
     </div>
   </div>
 </template>
@@ -11,7 +14,7 @@
 <script setup lang="ts">
 import { showErrorOnce } from '@/utils/errorMessage'
 
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -32,16 +35,20 @@ const sourceDesignId = computed(() => {
   return typeof value === 'string' ? value.trim() : ''
 })
 
-const title = computed(() => t('project.copyingTemplate'))
+const failed = ref('')
+const quotaReached = ref(false)
+const title = computed(() => failed.value ? t('project.copyFailed') : t('project.copyingTemplate'))
 const description = computed(() => t('project.copyingTemplateHint'))
 
 const getErrorMessage = (error: any): string | undefined => {
   return error?.msg || error?.message || error?.response?.data?.msg || error?.response?.data?.message
 }
 
-onMounted(async () => {
+const copyDesign = async () => {
+  failed.value = ''; quotaReached.value = false
   if (!sourceDesignId.value) {
-    messageStore.error(t('project.missingDesignId'))
+    failed.value = t('project.missingDesignId')
+    messageStore.error(failed.value)
     return
   }
 
@@ -54,15 +61,21 @@ onMounted(async () => {
       return
     }
 
-    messageStore.error(response.msg || t('project.copyFailed'))
+    failed.value = response.msg || t('project.copyFailed')
+    messageStore.error(failed.value)
   } catch (error) {
-    console.error('复制并打开设计失败:', error)
+    const failure = error as { code?: number; response?: { data?: { code?: number } } } | null
+    quotaReached.value = (failure?.code ?? failure?.response?.data?.code) === 2004
+    failed.value = getErrorMessage(error) || t('project.copyFailed')
     showErrorOnce(error, getErrorMessage(error) || t('project.copyFailed'))
   }
-})
+}
+onMounted(copyDesign)
 </script>
 
 <style scoped>
+.copy-entry-panel a, .copy-entry-panel button { display: inline-block; margin: 16px 8px 0; color: var(--studio-primary); }
+.copy-entry-panel button { border: 1px solid var(--studio-border); border-radius: 6px; padding: 8px 14px; background: var(--studio-surface); cursor: pointer; }
 .copy-entry-page {
   min-height: 100%;
   display: flex;
