@@ -184,6 +184,20 @@ describe('GoLiveDialog product image behavior', () => {
 
   afterEach(() => { vi.useRealTimers() })
 
+  it('publishes an already published product without a payment record as free', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper, {
+      ...design,
+      product: { ...design.product, lastGoLive: '2026-10-19T11:44:14', payment: null },
+    } as unknown as Design)
+    await wrapper.findAll('button').find(button => button.text() === 'common.submit')!.trigger('click')
+    await flushPromises()
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
+      payment: { paymentMethod: 'free', price: 0, trialLasts: 0 },
+    }))
+    wrapper.unmount()
+  })
+
   it('hides disabled banner generation and preserves the uploaded image', async () => {
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: false } })
     const wrapper = mountDialog()

@@ -769,7 +769,7 @@ const loadDesign = (design: Design) => {
     form.garminStoreUrl = design.product.garminStoreUrl || ''
     form.youtubeUrl = design.product.youtubeUrl || ''
     form.paymentMethod = canPublishPaid.value && design.product.payment?.paymentMethod !== 'free'
-      ? (design.product.payment?.paymentMethod || 'wpay')
+      ? (design.product.payment?.paymentMethod || 'free')
       : 'free'
     form.trialLasts = normalizeTrialLasts(form.paymentMethod, design.product.trialLasts ?? 0.25)
     form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.39)
