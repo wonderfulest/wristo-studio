@@ -26,6 +26,20 @@ const makeElement = (overrides: Record<string, unknown> = {}) => {
 }
 
 describe('measureStudioLayoutMember', () => {
+  it('centers visible glyphs rather than unequal line-box padding for labels and data', () => {
+    for (const [eleType, lineHeight, inkTop, inkBottom] of [['label', 44, 8, 31], ['data', 53, 9, 37]] as const) {
+      const pixels = new Uint8ClampedArray(2 * lineHeight * 2 * 4)
+      for (let y = inkTop * 2; y < inkBottom * 2; y++) pixels[(y * 2) * 4 + 3] = 255
+      const element = makeElement({ eleType, height: lineHeight, toCanvasElement: () => ({
+        width: 2, height: lineHeight * 2,
+        getContext: () => ({ getImageData: () => ({ data: pixels }) }),
+      }) })
+      const measurement = measureStudioLayoutMember(element, 'active')
+      measurement.placeAtVisualCenter(100, 400)
+      expect(element.top - lineHeight / 2 + (inkTop + inkBottom) / 2).toBe(400)
+      expect(measurement.height).toBe(inkBottom - inkTop)
+    }
+  })
   it('excludes empty text but keeps visible placeholder text', () => {
     expect(measureStudioLayoutMember(makeElement({ text: '' }), 'active').participates).toBe(false)
     expect(measureStudioLayoutMember(makeElement({ text: '--' }), 'active')).toMatchObject({
