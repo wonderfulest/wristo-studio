@@ -13,7 +13,7 @@ const EXPECTED_CODES = [
   'as1', 'as1.1', 'as1.2',
   'as2', 'as2.1', 'as2.2', 'as2.3', 'as2.4', 'as2.5', 'as2.6', 'as2.7',
   'ai1', 'ai1.1', 'ai1.2', 'ai4', 'ai4.1', 'ai5', 'ai6', 'ai8', 'ai11', 'ai12', 'ai13', 'ai14',
-  'ds1', 'ds2', 'ds3', 'ds3.1', 'ds3.3', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'wr.race5k', 'wr.race10k', 'wr.raceHalf', 'wr.raceFull', 'wr.vo2Running', 'wr.vo2Cycling', 'ds14', 'ds15', 'ds330', 'ds330.1', 'ds331', 'ds331.1',
+  'ds1', 'ds2', 'ds3', 'ds3.1', 'ds3.3', 'ds4', 'ds6', 'ds7', 'ds8', 'ds9', 'ds10', 'ds11', 'ds12', 'wr.race5k', 'wr.race10k', 'wr.raceHalf', 'wr.raceFull', 'wr.vo2Running', 'wr.vo2Cycling', 'ds14', 'ds15', 'ds330', 'ds330.1', 'ds332', 'ds331', 'ds331.1',
   'w01', 'w02', 'w03', 'w04', 'w05', 'w06', 'w08', 'w08.1', 'w09', 'w09.1', 'w10', 'w10.1', 'w11', 'w12',
   'as3', 'as3.1', 'as3.2', 'as3.3',
   'cn1', 'cn1.1', 'cn1.2', 'cn1.3', 'cn1.4', 'cn1.5', 'cn1.6', 'cn1.7',

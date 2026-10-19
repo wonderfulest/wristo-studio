@@ -188,32 +188,18 @@ function ensureWidget(group: Group): { config: GoalArcElementConfig; bgRing: any
 }
 
 function getProgressAngle(startAngle: number, endAngle: number, counterClockwise: boolean, progress: number) {
-  // 规范到 0-359 区间
-  startAngle = ((startAngle % 360) + 360) % 360
-  endAngle = ((endAngle % 360) + 360) % 360
-  const clamped = clampProgress(progress)
-
-  if (counterClockwise) {
-    if (endAngle > startAngle) {
-      endAngle -= 360
-    }
-    return startAngle + (endAngle - startAngle) * clamped
-  } else {
-    if (endAngle < startAngle) {
-      endAngle += 360
-    }
-    return startAngle + (endAngle - startAngle) * clamped
-  }
+  return startAngle + getSignedSweep(startAngle, endAngle, counterClockwise) * clampProgress(progress)
 }
 
 function getSignedSweep(startAngle: number, endAngle: number, counterClockwise: boolean) {
-  let start = ((startAngle % 360) + 360) % 360
+  // Coincident endpoints represent one complete revolution in the selected direction.
+  const start = ((startAngle % 360) + 360) % 360
   let end = ((endAngle % 360) + 360) % 360
 
   if (counterClockwise) {
-    if (end > start) end -= 360
+    if (end >= start) end -= 360
   } else {
-    if (end < start) end += 360
+    if (end <= start) end += 360
   }
 
   return end - start
@@ -593,7 +579,7 @@ function layoutGoalArc(group: Group) {
       strokeWidth: Number(config.bgStrokeWidth ?? config.strokeWidth),
       stroke: config.bgColor,
       startAngle,
-      endAngle,
+      endAngle: getProgressAngle(startAngle, endAngle, counterClockwise, 1),
       counterClockwise,
       strokeLineCap: endCap,
     })

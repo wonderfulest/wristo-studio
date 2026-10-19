@@ -163,3 +163,40 @@ describe('goal arc updates', () => {
     )
   })
 })
+
+
+describe('full circle goal arcs', () => {
+  for (const counterClockwise of [false, true]) {
+    for (const progress of [0, 0.41, 1]) {
+      it(`draws equal angles as a full track, direction=${counterClockwise}, progress=${progress}`, () => {
+        const { group } = createSelectedGoalArc()
+        updateGoalArc(group, { startAngle: 270, endAngle: 270, counterClockwise, progress })
+        const { bgRing, mainRing } = group.__element.children
+        const sweep = counterClockwise ? -360 : 360
+        expect(bgRing.endAngle - bgRing.startAngle).toBe(sweep)
+        expect(mainRing.endAngle - mainRing.startAngle).toBeCloseTo(sweep * progress)
+        expect(group.__element.config.endAngle).toBe(270)
+      })
+    }
+    it(`draws a complete gradient, direction=${counterClockwise}`, () => {
+      const { group } = createSelectedGoalArc()
+      updateGoalArc(group, { startAngle: 270, endAngle: 270, counterClockwise,
+        gradientEnabled: true, progress: 1, endCap: 'butt' })
+      const ctx = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), stroke: vi.fn() }
+      group.drawObject(ctx)
+      expect(ctx.arc).toHaveBeenCalledTimes(90)
+      const calls = ctx.arc.mock.calls
+      expect(calls[calls.length - 1][4] - calls[0][3]).toBeCloseTo(counterClockwise ? -2 * Math.PI : 2 * Math.PI)
+    })
+    it(`draws all segments around equal angles, direction=${counterClockwise}`, () => {
+      const { group } = createSelectedGoalArc()
+      updateGoalArc(group, { startAngle: 270, endAngle: 270, counterClockwise,
+        segmentMode: true, segments: 4, gapAngle: 0, progress: 1, endCap: 'butt' })
+      const ctx = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), stroke: vi.fn() }
+      group.drawObject(ctx)
+      expect(ctx.arc).toHaveBeenCalledTimes(8)
+      const sweep = counterClockwise ? -Math.PI / 2 : Math.PI / 2
+      for (const call of ctx.arc.mock.calls) expect(call[4] - call[3]).toBeCloseTo(sweep)
+    })
+  }
+})

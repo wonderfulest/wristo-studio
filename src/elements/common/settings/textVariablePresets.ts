@@ -7,7 +7,7 @@ export type TextVariablePreset = {
 export const textVariablePresets: TextVariablePreset[] = [
   { key: 'text_today_activity', title: "Today's Activity", value: '"Activity " + (ai12) + " steps"' },
   { key: 'text_weekly_progress', title: 'Weekly Progress', value: '"Week " + (tm4) + " progress"' },
-  { key: 'text_recovery_status', title: 'Recovery Status', value: '"Recovery " + (ds330) + "%"' },
+  { key: 'text_recovery_status', title: 'Recovery Time', value: '"Recovery " + (ds332) + " " + (ds332u)' },
   { key: 'text_training_readiness', title: 'Training Readiness', value: '"Ready " + (ds330) + "%"' },
   { key: 'text_battery_estimate', title: 'Battery Estimate', value: '"Battery " + (ds3) + "%"' },
   { key: 'text_weather_description', title: 'Weather Description', value: '(w02)' },

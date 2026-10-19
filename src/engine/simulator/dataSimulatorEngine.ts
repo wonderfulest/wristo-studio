@@ -106,6 +106,8 @@ function metricSymbolToSimKey(symbol: string | undefined | null): string | null 
       return 'runningVo2Max'
     case ':FIELD_TYPE_VO2_MAX_CYCLING':
       return 'cyclingVo2Max'
+    case ':FIELD_TYPE_TIME_TO_RECOVERY':
+      return 'recoveryTime'
     case ':FIELD_TYPE_BODY_BATTERY':
       return 'bodyBattery'
     case ':FIELD_TYPE_STRESS':

@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { getSimulatedDataByTokenCode, setDataSimulatorScenario } from './dataSimulator'
 
 describe('compact token simulation', () => {
+  it('resolves recovery hours and units, preserving missing data', () => {
+    expect(getSimulatedDataByTokenCode('ds332')).toMatchObject({ display: '24', numeric: 24, unit: 'h' })
+    expect(getSimulatedDataByTokenCode('ds332u')?.display).toBe('h')
+    setDataSimulatorScenario('missing-data')
+    try {
+      expect(getSimulatedDataByTokenCode('ds332')).toMatchObject({ display: '--', numeric: null })
+    } finally {
+      setDataSimulatorScenario('default')
+    }
+  })
+
   it('resolves running and cycling VO2 tokens and their units', () => {
     expect(getSimulatedDataByTokenCode('wr.vo2Running')).toMatchObject({ numeric: 52, unit: 'ml/kg/min' })
     expect(getSimulatedDataByTokenCode('wr.vo2Cycling')).toMatchObject({ numeric: 55, unit: 'ml/kg/min' })

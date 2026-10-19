@@ -470,6 +470,7 @@ const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = 
     description: 'Body Battery stage: 0 below 25; 1 from 25 to below 50; 2 from 50 to below 75; 3 at or above 75.',
     descriptionCn: '身体电量阶段：原值低于 25 返回 0；25（含）至 50（不含）返回 1；50（含）至 75（不含）返回 2；75 及以上返回 3。',
   }),
+  token({ id: 'sensor.recoveryTime', code: 'ds332', label: 'Recovery Time', labelCn: '恢复时间', category: 'sensor', exampleValue: 24, unit: 'h', source: 'sensor', providerKey: 'activityMonitor', nullable: true, requirement: 'ActivityMonitor.Info.timeToRecovery support (Connect IQ API 3.3.0+)', description: 'Recovery time from the last activity in hours. Unavailable data displays -- and has no numeric value.', descriptionCn: '上次活动后的恢复时间，单位为小时；无数据时显示 --，数值为空。' }),
   sensor('stress', 'ds331', 'Stress', '压力', 31),
   token({
     id: 'sensor.stressStage', code: 'ds331.1', label: 'Stress Stage', labelCn: '压力阶段',

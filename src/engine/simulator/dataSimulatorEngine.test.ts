@@ -57,6 +57,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' },
       ],
       optionsByValueCode: new Map([
+        [14, { valueCode: 14, metricSymbol: ":FIELD_TYPE_TIME_TO_RECOVERY", label: { eng: "Recovery Time" }, unitKey: "time" }],
         [1011, { valueCode: 1011, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [1010, { valueCode: 1010, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [1009, { valueCode: 1009, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_10K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
@@ -71,6 +72,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [48, { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       optionsByMetricSymbol: new Map([
+        [":FIELD_TYPE_TIME_TO_RECOVERY", { valueCode: 14, metricSymbol: ":FIELD_TYPE_TIME_TO_RECOVERY", label: { eng: "Recovery Time" }, unitKey: "time" }],
         [':FIELD_TYPE_RACE_PREDICTOR_MARATHON', { valueCode: 1011, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', { valueCode: 1010, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_HALF_MARATHON', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
         [':FIELD_TYPE_RACE_PREDICTOR_10K', { valueCode: 1009, metricSymbol: ':FIELD_TYPE_RACE_PREDICTOR_10K', label: { eng: 'Race', zhs: '预测' }, unitKey: 'none' }],
@@ -86,6 +88,7 @@ vi.mock('@/stores/dataCatalogStore', () => ({
         [':FIELD_TYPE_SUN_RISE_SET', { valueCode: 48, metricSymbol: ':FIELD_TYPE_SUN_RISE_SET', label: { eng: 'Sunrise & Sunset', zhs: '日出日落' }, unitKey: 'none', defaultValue: '' }],
       ]),
       unitsByKey: new Map([
+        ["time", { unitKey: "time", defaultVariant: "hour", selectionPolicy: { type: "provider" }, variants: { hour: { aliases: ["h"], label: { eng: "h", zhs: "小时" } } } }],
         ['none', { unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {} }],
         ['distance', { unitKey: 'distance', defaultVariant: 'km', selectionPolicy: { type: 'fixed', variant: 'km' }, variants: { km: { label: { eng: 'km', zhs: '公里' } } } }],
         ['percentage', { unitKey: 'percentage', defaultVariant: 'percent', selectionPolicy: { type: 'fixed', variant: 'percent' }, variants: { percent: { label: { eng: '%', zhs: '%' } } } }],
@@ -292,6 +295,17 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     canvas.getObjects.mockReturnValue([{ id: 'race', eleType: 'data', metricSymbol, text: '', set: vi.fn() }])
     new DataSimulatorEngine().updateCanvas()
     expect(getSimulatedDataByName).toHaveBeenCalledWith(key)
+  })
+
+  it('maps the recovery data item to the recovery preview', () => {
+    const metricSymbol = ':FIELD_TYPE_TIME_TO_RECOVERY'
+    getSimulatedDataByName.mockReturnValueOnce({ display: '24', numeric: 24, unit: 'h' })
+    const set = vi.fn()
+    getMetricByOptions.mockReturnValue({ valueCode: 14, metricSymbol, label: { eng: 'Recovery Time' }, unitKey: 'time' })
+    canvas.getObjects.mockReturnValue([{ id: 'recovery', eleType: 'data', metricSymbol, text: '', set }])
+    new DataSimulatorEngine().updateCanvas()
+    expect(getSimulatedDataByName).toHaveBeenCalledWith('recoveryTime')
+    expect(set).toHaveBeenCalledWith('text', '24')
   })
 
   it('maps the sleep score symbol to the distinct sleep score simulation', () => {

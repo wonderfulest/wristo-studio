@@ -34,7 +34,7 @@ function scenarioData(key: string): SimulatedData | null {
       ? { display: '12', numeric: 12, unit: '%', label: 'BAT' }
       : { display: '1.2', numeric: 1.2, unit: 'd', label: 'BAT DAYS' }
   }
-  if (activeScenario === 'missing-data' && ['heart', 'hr', 'weather', 'wthr', 'temperature', 'temp', 'weatherDescription', 'weatherDesc'].includes(key)) {
+  if (activeScenario === 'missing-data' && ['recoveryTime', 'heart', 'hr', 'weather', 'wthr', 'temperature', 'temp', 'weatherDescription', 'weatherDesc'].includes(key)) {
     return { display: '--', numeric: null, unit: '', label: 'UNAVAILABLE' }
   }
   if (activeScenario === 'long-text' && ['quote', 'qt', 'location', 'loc', 'weatherDescription', 'weatherDesc'].includes(key)) {
@@ -71,6 +71,7 @@ type SimState = {
   pm25: number
   pm10: number
   aqi: number
+  recoveryTime: number
   bodyBattery: number
   stress: number
   sedentaryMinutes: number
@@ -104,6 +105,7 @@ const simState: SimState = {
   pm25: 18,
   pm10: 32,
   aqi: 32,
+  recoveryTime: 24,
   bodyBattery: 72,
   stress: 21,
   sedentaryMinutes: 36
@@ -310,6 +312,9 @@ export function getSimulatedDataByName(name: string, now: Date = new Date()): Si
       return { display: String(simState.pm10), numeric: simState.pm10, unit: 'µg/m³', label: 'PM10' }
 
     // 身体电量 / 压力
+    case 'recoveryTime':
+      return { display: String(simState.recoveryTime), numeric: simState.recoveryTime, unit: 'h', label: 'TTR' }
+
     case 'bodyBattery':
     case 'bb':
       return { display: String(simState.bodyBattery), numeric: simState.bodyBattery, unit: '%', label: 'BODY' }
@@ -433,6 +438,7 @@ const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
   'wr.raceFull': 'racePredictorMarathon',
   'wr.vo2Running': 'runningVo2Max',
   'wr.vo2Cycling': 'cyclingVo2Max',
+  ds332: 'recoveryTime',
   ds330: 'bodyBattery',
   ds331: 'stress',
   w02: 'weatherDesc',
